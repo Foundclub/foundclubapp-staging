@@ -20,7 +20,8 @@ const HAUTEUR = 44;
 
 /** @typedef {'app' | 'attente' | 'bloque' | 'exterieur' | 'ferme' | 'libre'} EtatDuCreneau */
 /**
- * @typedef {{ etat: EtatDuCreneau, from: string, libelle?: string, to: string }} CreneauDeLaFrise
+ * @typedef {{ etat: EtatDuCreneau, from: string, libelle?: string, reservationId?: string | null,
+ *   to: string }} CreneauDeLaFrise
  * @typedef {{ cle: string, couleur?: string | null, creneaux: CreneauDeLaFrise[],
  *   nom: string }} LigneDeLaFrise
  */
@@ -38,9 +39,14 @@ const HAUTEUR = 44;
  * @param {number} [props.largeurNoms] - La colonne des noms : 84 sur téléphone, 120 sur
  *   ordinateur (planche OR1 : « noms des terrains en clair »).
  * @param {number} props.maintenant - L'heure courante, en minutes depuis minuit.
+ * @param {(ligne: LigneDeLaFrise, creneau: CreneauDeLaFrise) => void} [props.onToucher] - RESA-L5A2
+ *   (14/10/2026) : la case se touche (l'accueil ouvre la fiche d'une réservation, ou le planning
+ *   sur une case libre) ; sans lui, la case n'est qu'une vue.
  * @returns {import('react').ReactElement | null} La frise, ou rien sans créneau.
  */
-function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
+function FriseDuJour({
+  largeurNoms = NOMS, lignes, maintenant, onToucher = undefined,
+}) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const [legende, setLegende] = useState(false);
@@ -67,8 +73,9 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
     const a = Number(minutesDe(creneau.to));
     const couleur = ligne.couleur || Colors.primary500;
     const libelle = creneau.libelle || libelleDe(creneau.etat);
+    const Case = onToucher ? TouchableOpacity : View;
     return (
-      <View
+      <Case
         accessibilityLabel={t(
           'complexeGerant.frise.a11y',
           '{{terrain}}, {{de}} – {{a}}, {{etat}}',
@@ -80,8 +87,10 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
             ...SANS_ECHAPPEMENT,
           },
         )}
+        accessibilityRole={onToucher ? 'button' : undefined}
         accessible
         key={`${ligne.cle}-${creneau.from}`}
+        onPress={onToucher ? () => onToucher(ligne, creneau) : undefined}
         style={[
           Alignments.justifyCenter,
           {
@@ -99,7 +108,7 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
         testID={`frise-creneau-${ligne.cle}-${creneau.from}`}
       >
         <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary100]}>{libelle}</Text>
-      </View>
+      </Case>
     );
   };
 

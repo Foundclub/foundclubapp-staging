@@ -1,5 +1,6 @@
 import {
   aujourdhuiAParis,
+  chiffresDuPlanning,
   enJours,
   etatDeFrise,
   expireDans,
@@ -12,6 +13,7 @@ import {
   joursLisibles,
   libelleDuCreneau,
   libelleStatut,
+  lignesDeLaFrise,
   lignesDesPages,
   messageDeRefusResa,
   minutesAParis,
@@ -19,6 +21,7 @@ import {
   MOTIFS_DE_REFUS,
   nomCourt,
   plageHoraire,
+  prochainesReservations,
   regrouperFermetures,
   semaineLisible,
   telephoneLisible,
@@ -157,6 +160,110 @@ describe('RESA-L5A2 — le planning (E-G03)', () => {
     ]);
     // Un créneau qui n'est pas libre n'ouvre pas de plage ; une fermeture l'arrête.
     expect(finsPossibles(jour, '18:00')).toEqual([]);
+  });
+});
+
+describe('RESA-L5A2 — l’accueil (E-G02) : frise, chiffres, prochaines, hier', () => {
+  /**
+   * Un créneau d'une heure (heure d'été : Paris = UTC+2).
+   * @param {string} date - Le jour.
+   * @param {number} heure - L'heure de début, à Paris.
+   * @param {string} state - L'état.
+   * @param {Record<string, any>} [autres] - La réservation, la fermeture.
+   * @returns {Record<string, any>} Le créneau.
+   */
+  const creneau = (date, heure, state, autres = {}) => ({
+    closure: null,
+    endsAt: `${date}T${String(heure - 1).padStart(2, '0')}:00:00.000Z`,
+    from: `${String(heure).padStart(2, '0')}:00`,
+    reservation: null,
+    startsAt: `${date}T${String(heure - 2).padStart(2, '0')}:00:00.000Z`,
+    state,
+    to: `${String(heure + 1).padStart(2, '0')}:00`,
+    ...autres,
+  });
+  const PLANNING = {
+    terrains: [{
+      days: [
+        {
+          date: '2026-10-13',
+          slots: [
+            creneau('2026-10-13', 18, 'reserve-app'),
+            creneau('2026-10-13', 19, 'reserve-exterieur'),
+          ],
+        },
+        {
+          date: '2026-10-14',
+          slots: [
+            creneau('2026-10-14', 18, 'reserve-app', {
+              reservation: { documentId: 'r-1', label: 'Julien M.' },
+            }),
+            creneau('2026-10-14', 19, 'libre'),
+            creneau('2026-10-14', 20, 'en-attente', {
+              reservation: { documentId: 'r-2', label: 'Lina T.' },
+            }),
+            creneau('2026-10-14', 21, 'ferme', { closure: { kind: 'closure', reason: 'travaux' } }),
+          ],
+        },
+      ],
+      documentId: 't-1',
+      name: 'Terrain 1',
+    }],
+  };
+
+  it('la frise : chaque créneau du jour, son état, une réservation nommée', () => {
+    expect(lignesDeLaFrise(t, PLANNING, '2026-10-14')).toEqual([{
+      cle: 't-1',
+      creneaux: [
+        {
+          etat: 'app', from: '18:00', libelle: 'Julien M.', reservationId: 'r-1', to: '19:00',
+        },
+        {
+          etat: 'libre', from: '19:00', reservationId: null, to: '20:00',
+        },
+        {
+          etat: 'attente', from: '20:00', libelle: 'Lina T.', reservationId: 'r-2', to: '21:00',
+        },
+        {
+          etat: 'ferme',
+          from: '21:00',
+          libelle: 'Fermé : travaux',
+          reservationId: null,
+          to: '22:00',
+        },
+      ],
+      nom: 'Terrain 1',
+    }]);
+    expect(lignesDeLaFrise(t, PLANNING, '2026-10-20')).toEqual([]);
+  });
+
+  it('les chiffres : du jour, de la semaine (fermé = pas offert), d’hier', () => {
+    // Semaine : 6 créneaux dont 1 fermé ⇒ 5 h offertes, 4 h occupées (2 hier, 2 aujourd'hui).
+    expect(chiffresDuPlanning(PLANNING, '2026-10-14')).toEqual({
+      hier: 2, occupation: 80, reservations: 2,
+    });
+    expect(chiffresDuPlanning(undefined, '2026-10-14')).toEqual({
+      hier: 0, occupation: 0, reservations: 0,
+    });
+  });
+
+  it('les 3 prochaines : actives, à venir, dans l’ordre', () => {
+    const maintenant = new Date('2026-10-14T16:30:00.000Z');
+    const ligne = (
+      /** @type {string} */ id,
+      /** @type {string} */ debut,
+      status = 'confirmee',
+    ) => ({
+      documentId: id, startsAt: debut, status,
+    });
+    expect(prochainesReservations([
+      ligne('passee', '2026-10-14T16:00:00.000Z'),
+      ligne('d', '2026-10-16T17:00:00.000Z'),
+      ligne('a', '2026-10-14T17:00:00.000Z'),
+      ligne('annulee', '2026-10-14T18:00:00.000Z', 'annulee'),
+      ligne('b', '2026-10-14T19:00:00.000Z', 'en_attente'),
+      ligne('c', '2026-10-15T17:00:00.000Z'),
+    ], maintenant).map((l) => l.documentId)).toEqual(['a', 'b', 'c']);
   });
 });
 

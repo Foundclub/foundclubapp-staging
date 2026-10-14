@@ -6608,6 +6608,12 @@ export default {
     },
   },
   complexeReservations: {
+    accueil: {
+      hier_one: 'Yesterday: {{count}} booking. Did someone not show up?',
+      hier_other: 'Yesterday: {{count}} bookings. Did someone not show up?',
+      toutVoir: 'See all',
+      verifier: 'Check',
+    },
     demandes: {
       acceptee: 'Request accepted. {{nom}} has been notified.',
       accepter: 'Accept',

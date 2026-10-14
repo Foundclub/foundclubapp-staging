@@ -1,5 +1,5 @@
 import { messageDeRefus } from '@/domains/complexe/complexeGerant';
-import { texteHeure } from '@/domains/complexe/complexeTerrain';
+import { heureDe, texteHeure } from '@/domains/complexe/complexeTerrain';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
@@ -406,6 +406,117 @@ export const finsPossibles = (creneaux, depuis) => {
   }
   return fins;
 };
+
+// ---------------------------------------------------------------------------------------------
+// L'accueil (E-G02) : la frise, les chiffres, les prochaines réservations, « Hier »
+// ---------------------------------------------------------------------------------------------
+
+/** Les créneaux qu'une réservation (ou une demande, AT-08) occupe. */
+const ETATS_OCCUPES = Object.freeze(['en-attente', 'reserve-app', 'reserve-exterieur']);
+
+/**
+ * Les créneaux d'un terrain, un jour, dans le planning du serveur.
+ * @param {any} terrain - Une ligne `terrains[]` du planning.
+ * @param {string} date - « AAAA-MM-JJ ».
+ * @returns {any[]} Les créneaux.
+ */
+const creneauxDe = (terrain, date) => {
+  const jour = (Array.isArray(terrain?.days) ? terrain.days : []).find((d) => d?.date === date);
+  return Array.isArray(jour?.slots) ? jour.slots : [];
+};
+
+/**
+ * Les heures « HH:MM » d'un créneau (son modèle, sinon ses instants à Paris : une réservation hors
+ * du modèle n'a pas d'heures de modèle).
+ * @param {any} creneau - Le créneau.
+ * @returns {{ from: string, to: string }} Les heures.
+ */
+const heuresDe = (creneau) => ({
+  from: creneau?.from || heureDe(minutesAParis(new Date(creneau?.startsAt))),
+  to: creneau?.to || heureDe(minutesAParis(new Date(creneau?.endsAt))),
+});
+
+/**
+ * Les lignes de la frise « Aujourd'hui » (E-G02 bloc 3) depuis le planning : chaque créneau avec
+ * son état et, pour une réservation, son nom et son identifiant (la toucher ouvre sa fiche).
+ * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {any} planning - `{ terrains }` du serveur.
+ * @param {string} date - Le jour.
+ * @returns {Array<{ cle: string, creneaux: any[], nom: string }>} Les lignes (sans couleur).
+ */
+export const lignesDeLaFrise = (t, planning, date) => (
+  Array.isArray(planning?.terrains) ? planning.terrains : []
+)
+  .map((/** @type {any} */ terrain) => ({
+    cle: String(terrain.documentId),
+    creneaux: creneauxDe(terrain, date).map((/** @type {any} */ creneau) => {
+      const etat = etatDeFrise(creneau.state);
+      const libelle = creneau.reservation?.label || libelleDuCreneau(t, creneau);
+      return {
+        ...heuresDe(creneau),
+        etat,
+        ...(etat === 'libre' ? {} : { libelle }),
+        reservationId: creneau.reservation?.documentId || null,
+      };
+    }),
+    nom: String(terrain.name || ''),
+  }))
+  .filter((ligne) => ligne.creneaux.length > 0);
+
+/**
+ * Les chiffres de l'accueil (RC-G01) tirés du planning de la semaine : les réservations du jour,
+ * l'occupation de la semaine (minutes occupées sur minutes OUVERTES : un créneau fermé ou bloqué
+ * n'est pas offert), et les réservations d'hier (l'alerte « Hier : … »).
+ * ponytail: calculé sur le téléphone à partir du planning (8 jours au plus). Plafond : le taux
+ * suit le modèle de créneaux, pas les horaires d'ouverture du complexe (plan E-G02 §8). Voie de
+ * sortie : la lecture serveur « accueil du complexe » prévue par le plan, branchée ici.
+ * @param {any} planning - `{ terrains }` du serveur, du lundi (ou d'hier) au dimanche.
+ * @param {string} date - Aujourd'hui.
+ * @returns {{ hier: number, occupation: number, reservations: number }} Les chiffres.
+ */
+export const chiffresDuPlanning = (planning, date) => {
+  const terrains = Array.isArray(planning?.terrains) ? planning.terrains : [];
+  const occupesLe = (
+    /** @type {string} */ jour,
+    /** @type {ReadonlyArray<string>} */ etats,
+  ) => terrains
+    .flatMap((/** @type {any} */ terrain) => creneauxDe(terrain, jour))
+    .filter((/** @type {any} */ creneau) => etats.includes(creneau.state)).length;
+  const duree = (/** @type {any} */ creneau) => {
+    const debut = new Date(creneau.startsAt).getTime();
+    const fin = new Date(creneau.endsAt).getTime();
+    const valide = Number.isFinite(debut) && Number.isFinite(fin) && fin > debut;
+    return valide ? (fin - debut) / 60000 : 0;
+  };
+  let ouvertes = 0;
+  let occupees = 0;
+  joursDeLaSemaine(date).forEach((jour) => {
+    const duJour = terrains.flatMap((/** @type {any} */ terrain) => creneauxDe(terrain, jour));
+    duJour.forEach((creneau) => {
+      if (ETATS_FERMES.includes(creneau.state)) return;
+      ouvertes += duree(creneau);
+      if (ETATS_OCCUPES.includes(creneau.state)) occupees += duree(creneau);
+    });
+  });
+  return {
+    hier: occupesLe(enJours(date, -1), ['reserve-app', 'reserve-exterieur']),
+    occupation: ouvertes ? Math.round((100 * occupees) / ouvertes) : 0,
+    reservations: occupesLe(date, ETATS_OCCUPES),
+  };
+};
+
+/**
+ * « Prochaines réservations » (E-G02 bloc 5) : les 3 prochaines, demandes comprises (elles tiennent
+ * le créneau), d'aujourd'hui puis des jours suivants.
+ * @param {any[]} lignes - Les lignes des vues « aujourd'hui » et « à venir ».
+ * @param {Date} maintenant - L'instant.
+ * @returns {any[]} Les 3 prochaines.
+ */
+export const prochainesReservations = (lignes, maintenant) => lignes
+  .filter((ligne) => STATUTS_ACTIFS.includes(ligne?.status)
+    && new Date(ligne?.startsAt).getTime() > maintenant.getTime())
+  .sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)))
+  .slice(0, 3);
 
 // ---------------------------------------------------------------------------------------------
 // Les fermetures (E-G10)

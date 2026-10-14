@@ -41,7 +41,13 @@ const monter = async (props) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
-    arbre = renderer.create(<FriseDuJour lignes={props.lignes} maintenant={props.maintenant} />);
+    arbre = renderer.create(
+      <FriseDuJour
+        lignes={props.lignes}
+        maintenant={props.maintenant}
+        onToucher={props.onToucher}
+      />,
+    );
   });
   return arbre;
 };
@@ -77,6 +83,25 @@ describe('RESA-L5A1 E-G02 — la frise du jour', () => {
       'Bloqué',
       'Fermé',
     ]));
+  });
+
+  it('RESA-L5A2 — une case se touche quand l’accueil le demande (réservée ⇒ fiche)', async () => {
+    const onToucher = jest.fn();
+    const lignes = [{
+      ...LIGNES[0],
+      creneaux: [{
+        etat: 'app', from: '18:00', libelle: 'Julien M.', reservationId: 'r-1', to: '19:00',
+      }],
+    }];
+    const arbre = await monter({ lignes, maintenant: 0, onToucher });
+    await act(async () => {
+      parRepere(arbre, 'frise-creneau-t-1-18:00').props.onPress();
+    });
+    expect(onToucher).toHaveBeenCalledWith(lignes[0], lignes[0].creneaux[0]);
+    expect(textes(arbre)).toContain('Julien M.');
+    // Sans `onToucher`, la case reste une simple vue (aucun appui).
+    const muette = await monter({ lignes: LIGNES, maintenant: 0 });
+    expect(parRepere(muette, 'frise-creneau-t-1-18:00').props.onPress).toBeUndefined();
   });
 
   it('aucun créneau : pas de frise', async () => {

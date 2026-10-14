@@ -7049,6 +7049,12 @@ export default {
     },
   },
   complexeReservations: {
+    accueil: {
+      hier_one: 'Hier : {{count}} réservation. Quelqu’un n’est pas venu ?',
+      hier_other: 'Hier : {{count}} réservations. Quelqu’un n’est pas venu ?',
+      toutVoir: 'Tout voir',
+      verifier: 'Vérifier',
+    },
     demandes: {
       acceptee: 'Demande acceptée. {{nom}} est prévenu.',
       accepter: 'Accepter',

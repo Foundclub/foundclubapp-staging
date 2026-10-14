@@ -39,9 +39,22 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 let mockMes = /** @type {any} */ ({});
+// RESA-L5A2 (14/10/2026) — le planning de la semaine et les listes du serveur L2A.
+let mockPlanning = /** @type {any} */ ({});
+/** @type {any[]} */
+const mockPeriodes = [];
+/** @type {Record<string, any>} */
+let mockListes = {};
 let mockTerrains = /** @type {any} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useMesComplexes: () => mockMes,
+  usePlanning: (/** @type {any} */ _id, /** @type {any} */ periode) => {
+    mockPeriodes.push(periode);
+    return mockPlanning;
+  },
+  useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => (
+    mockListes[filtres.vue]
+  ),
   useTerrains: () => mockTerrains,
 }));
 
@@ -69,6 +82,16 @@ jest.mock('@/theme/themeContext', () => (
 ));
 
 const refetchMes = jest.fn();
+
+/**
+ * Une lecture par pages (`useInfiniteQuery`).
+ * @param {any[]} items - Les lignes.
+ * @returns {any} La lecture.
+ */
+const pages = (items) => ({
+  data: { pages: [{ items, pagination: { page: 1, pageSize: 20, total: items.length } }] },
+  isLoading: false,
+});
 const refetchTerrains = jest.fn();
 
 /**
@@ -147,6 +170,9 @@ beforeEach(() => {
     isLoading: false,
     refetch: refetchTerrains,
   };
+  mockPeriodes.length = 0;
+  mockPlanning = { data: undefined, isLoading: false };
+  mockListes = { 'a-venir': pages([]), aujourdhui: pages([]), demandes: pages([]) };
 });
 
 describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
@@ -176,7 +202,7 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
     expect(parRepere(arbre, 'frise-du-jour')).not.toBeNull();
   });
 
-  it('les chiffres partent de 0 tant que les réservations (L2A) ne sont pas servies', async () => {
+  it('sans réservation, les chiffres sont à 0', async () => {
     const arbre = await monter();
     expect(parRepere(arbre, 'complexe-accueil-chiffre-reservations')?.props.accessibilityLabel)
       .toBe('0 réservations aujourd’hui');
@@ -261,9 +287,14 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReglages, {
       complexeId: 'cx-five',
     });
-    const planning = parRepere(arbre, 'complexe-accueil-case-planning');
-    expect(planning?.props.accessibilityState).toEqual({ disabled: true });
-    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(9);
+    // RESA-L5A2 : Demandes, Planning et Réservations ont leur écran ; 6 cases restent « Bientôt ».
+    await appuyer(arbre, 'Planning');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
+      complexeId: 'cx-five',
+    });
+    const complexe = parRepere(arbre, 'complexe-accueil-case-complexe');
+    expect(complexe?.props.accessibilityState).toEqual({ disabled: true });
+    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(6);
   });
 });
 
@@ -291,5 +322,134 @@ describe('RESA-L5A1 E-G02 — chargement, erreur, accès retiré', () => {
     expect(textes(arbre)).toContain('Tu ne gères plus ce complexe.');
     await appuyer(arbre, 'Revenir en mode joueur');
     expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+  });
+});
+
+describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () => {
+  /**
+   * Un créneau d'une heure du planning (heure d'été : Paris = UTC+2).
+   * @param {string} date - Le jour.
+   * @param {number} heure - L'heure, à Paris.
+   * @param {string} state - L'état.
+   * @param {any} [reservation] - La réservation.
+   * @returns {Record<string, any>} Le créneau.
+   */
+  const creneau = (date, heure, state, reservation = null) => ({
+    closure: null,
+    endsAt: `${date}T${String(heure - 1).padStart(2, '0')}:00:00.000Z`,
+    from: `${String(heure).padStart(2, '0')}:00`,
+    reservation,
+    startsAt: `${date}T${String(heure - 2).padStart(2, '0')}:00:00.000Z`,
+    state,
+    to: `${String(heure + 1).padStart(2, '0')}:00`,
+  });
+
+  beforeEach(() => {
+    mockPlanning = {
+      data: {
+        terrains: [{
+          days: [
+            {
+              date: '2026-10-13',
+              slots: [
+                creneau('2026-10-13', 18, 'reserve-app'),
+                creneau('2026-10-13', 19, 'reserve-app'),
+              ],
+            },
+            {
+              date: '2026-10-14',
+              slots: [
+                creneau('2026-10-14', 18, 'reserve-app', { documentId: 'r-1', label: 'Julien M.' }),
+                creneau('2026-10-14', 19, 'libre'),
+              ],
+            },
+          ],
+          documentId: 't-1',
+          name: 'Terrain 1',
+        }],
+      },
+      isLoading: false,
+    };
+    mockListes.demandes = pages([{ documentId: 'd-1' }, { documentId: 'd-2' }]);
+    mockListes['a-venir'] = pages([{
+      date: '2026-10-15',
+      documentId: 'r-9',
+      from: '19:00',
+      label: 'Lina T.',
+      source: 'app',
+      startsAt: '2026-10-15T17:00:00.000Z',
+      status: 'confirmee',
+      terrain: { documentId: 't-1', name: 'Terrain 1' },
+      to: '20:00',
+    }]);
+  });
+
+  it('le planning lu : du lundi (ou d’hier) au dimanche de la semaine', async () => {
+    await monter();
+    expect(mockPeriodes[mockPeriodes.length - 1]).toEqual({ from: '2026-10-12', to: '2026-10-18' });
+  });
+
+  it('la frise : une réservation ouvre sa fiche, une case libre le planning', async () => {
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('Julien M.');
+    await act(async () => {
+      parRepere(arbre, 'frise-creneau-t-1-18:00').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservation, {
+      complexeId: 'cx-five', reservationId: 'r-1',
+    });
+    await act(async () => {
+      parRepere(arbre, 'frise-creneau-t-1-19:00').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
+      complexeId: 'cx-five', date: '2026-10-14', terrainId: 't-1',
+    });
+  });
+
+  it('les chiffres du serveur ; « réservations » et « demandes » s’ouvrent', async () => {
+    const arbre = await monter();
+    const libelle = (/** @type {string} */ cle) => (
+      parRepere(arbre, `complexe-accueil-chiffre-${cle}`)?.props.accessibilityLabel
+    );
+    expect(libelle('reservations')).toBe('1 réservations aujourd’hui');
+    expect(libelle('occupation')).toBe('75 % d’occupation cette semaine');
+    expect(libelle('demandes')).toBe('2 demandes en attente');
+    await act(async () => {
+      parRepere(arbre, 'complexe-accueil-chiffre-reservations').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservations, {
+      complexeId: 'cx-five', vue: 'aujourdhui',
+    });
+    await act(async () => {
+      parRepere(arbre, 'complexe-accueil-chiffre-demandes').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeDemandes, {
+      complexeId: 'cx-five',
+    });
+  });
+
+  it('« Prochaines réservations » : la carte ouvre sa fiche, « Tout voir » la liste', async () => {
+    const arbre = await monter();
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['19 h – 20 h', 'Lina T. · Terrain 1']));
+    expect(textes(arbre)).not.toContain('Aucune réservation à venir. Fais connaître ta page.');
+    await act(async () => {
+      parRepere(arbre, 'complexe-accueil-prochaine-r-9').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservation, {
+      complexeId: 'cx-five', reservationId: 'r-9',
+    });
+    await appuyer(arbre, 'Tout voir');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservations, {
+      complexeId: 'cx-five', vue: 'a-venir',
+    });
+  });
+
+  it('l’alerte « Hier » : « Vérifier » ouvre les réservations passées', async () => {
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('Hier : 2 réservations. Quelqu’un n’est pas venu ?');
+    await appuyer(arbre, 'Vérifier');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservations, {
+      complexeId: 'cx-five', vue: 'passees',
+    });
   });
 });
