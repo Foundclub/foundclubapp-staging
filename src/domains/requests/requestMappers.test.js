@@ -184,16 +184,17 @@ describe('requestMappers', () => {
     });
 
     expect(item).toEqual(expect.objectContaining({
-      actions: { primary: 'respond', secondary: 'chat' },
+      actions: { primary: 'chat', secondary: 'respond' },
       id: 'interest:interest-1',
       status: 'pending',
-      subtitle: 'Mina Diallo est intéressé par Senior 1.',
-      title: 'Intérêt club',
+      subtitle: 'Mina Diallo est intéressé·e par Senior 1.',
+      title: 'Intérêt pour le club',
       type: 'interest',
     }));
     expect(item.meta).toEqual(expect.objectContaining({
       clubId: 'club-1',
       requesterAvatarUrl: '/uploads/player.jpg',
+      requesterFirstname: 'Mina',
       requesterId: 'user-1',
       requesterName: 'Mina Diallo',
       requestId: 'interest-1',
@@ -222,13 +223,13 @@ describe('requestMappers', () => {
       },
     });
 
-    expect(item.subtitle).toBe('Mina Diallo est intéressé par le club FC Test.');
+    expect(item.subtitle).toBe('Mina Diallo est intéressé·e par le club FC Test.');
     // 🔒 Aucune equipe inventee dans les metadonnees non plus : c'est cette
     // absence qui distingue les deux intentions, ici comme cote serveur.
     expect(item.meta.teamId).toBe('');
     expect(item.meta.teamName).toBe('');
     // La conversation reste atteignable : elle ne depend que du demandeur.
-    expect(item.actions).toEqual({ primary: 'respond', secondary: 'chat' });
+    expect(item.actions).toEqual({ primary: 'chat', secondary: 'respond' });
     expect(item.meta.requesterId).toBe('user-2');
   });
 

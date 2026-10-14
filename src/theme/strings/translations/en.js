@@ -2803,6 +2803,10 @@ export default {
         label: 'Offer a trial',
         message: 'We can offer you a trial, send us your availability.',
       },
+      unsuitable: {
+        label: 'Profile not suited to the team',
+        message: "Your profile doesn't match what the team is looking for right now. Thanks for your interest.",
+      },
     },
   },
   clubLicenseCampaignSettings: {
@@ -16168,7 +16172,7 @@ export default {
       childWithAge: '{{firstname}} ({{age}} years old)',
       club: '{{requester}} is interested in the club {{club}}.',
       team: '{{requester}} is interested in {{team}}.',
-      title: 'Club interest',
+      title: 'Interest in the club',
     },
     requesterFallback: 'User',
     team: {
@@ -16225,7 +16229,7 @@ export default {
     actions: {
       approveOverflow: 'Allow',
       open: 'View proposal',
-      openChat: 'Open chat',
+      openChat: 'Open a conversation',
       respond: 'Reply',
       viewEvent: 'View event',
       viewProfile: 'View profile',
@@ -16256,6 +16260,19 @@ export default {
     clubAssignedTitle: 'Coach added',
     clubClaimAssignedMessage: '{{name}} has been added as a club manager.',
     clubClaimAssignedTitle: 'Club manager added',
+    conversation: {
+      coachRow: '{{name}} · coach {{team}}',
+      info: 'Opening a conversation does not mean joining the team.',
+      listError: 'The list of coaches is unavailable: you can talk yourself.',
+      listLoading: 'Loading coaches…',
+      noCoach: 'No coach in {{team}}',
+      open: 'Open the conversation',
+      optionCoach: 'A coach of {{team}} — I choose who.',
+      optionMe: 'Me — I talk directly with {{firstname}}.',
+      subtitleClub: '{{name}} · interest in the club',
+      subtitleTeam: '{{name}} · interest in {{team}}',
+      title: 'Open a conversation',
+    },
     empty: 'No pending requests',
     filters: {
       all: 'All',
@@ -16279,10 +16296,18 @@ export default {
       summary: 'An additional team is requesting this slot at the facility.',
     },
     interest: {
-      responseDescription: 'Choose a quick reply to send to the interested player.',
+      noteLabel: 'Add a note (optional)',
+      recipient: '{{firstname}} will receive this message.',
+      responseDescription: 'Choose a quick reply to send to the interested person.',
       responseMissing: 'Choose a response to process this interest.',
       responsePreview: 'Message sent',
       responseTitle: 'Reply to this interest',
+      sectionRefuse: 'DECLINE',
+      sectionReply: 'REPLY',
+      send: 'Send the reply',
+      sentMessage: 'Message sent: “{{message}}”',
+      sentTitle: 'Reply sent to {{firstname}}.',
+      sentTitleNoName: 'Reply sent.',
       targetTeam: 'Target team: {{team}}',
     },
     invitations: {
