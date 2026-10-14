@@ -21,12 +21,16 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * 🎨 FINITIONS13-COLL (04/10) : `closures` (une liste) pose un bandeau par fermeture, la plus
  * proche d'abord (tournée T13 : la fermeture du 15 restait invisible tant qu'une autre existait
  * le 10).
+ * 🚧 CRFERM (13/10, « D8 B », planche P8v4-fermee état 3) : `pourUnMembre` — le bandeau d'un
+ * joueur ou d'un parent : sans le mot de la Ville, avec ce qui va se passer (« Ton club peut
+ * déplacer ou annuler la séance : tu seras prévenu·e. »).
  * @param {{
  *   closure?: any,
  *   closures?: any[],
  *   facilityType?: string | null,
  *   onMove?: () => void,
  *   onCancel?: () => void,
+ *   pourUnMembre?: boolean,
  *   testID?: string,
  *   withDays?: boolean,
  * }} props
@@ -38,6 +42,7 @@ function FacilityClosureBanner({
   facilityType = null,
   onCancel,
   onMove,
+  pourUnMembre = false,
   testID = 'bandeau-fermeture',
   withDays = false,
 }) {
@@ -70,7 +75,17 @@ function FacilityClosureBanner({
     );
   }
   if (!closure) return null;
-  const { texte, titre } = closureBannerText(t, closure, { facilityType, withDays });
+  const lu = closureBannerText(t, pourUnMembre ? { ...closure, message: null } : closure, {
+    facilityType,
+    withDays,
+  });
+  const { titre } = lu;
+  const texte = pourUnMembre
+    ? [lu.texte, t(
+      'collectiviteFermetures.seance.membre',
+      'Ton club peut déplacer ou annuler la séance : tu seras prévenu·e.',
+    )].filter(Boolean).join(' ')
+    : lu.texte;
   const gestes = Boolean(onMove || onCancel);
   // FINITIONS-VILLE (T20) : lu d'une traite, le titre (sans point) se collait au nom de la
   // fermeture (« … 4 novembre T20 essai. ») : la région se lit « titre. nom. ».
