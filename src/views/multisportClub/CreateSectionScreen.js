@@ -8,8 +8,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   View,
@@ -266,11 +264,12 @@ function CreateSectionScreen({ navigation, route }) {
         Alignments.column,
         Alignments.fill,
       ]}
+      keyboardAvoiding
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[Alignments.fill]}
-      >
+      {/* 🤖 ANDROIDBAR-6 — l'évitement du clavier est celui du ScreenContainer : le décalage 0
+          le croyait en haut de l'écran alors qu'il vit sous l'en-tête ⇒ « Créer la section »
+          110 dp SOUS le clavier sur Android 15/16 (Pixel 9), 103 pt sur iPhone 15. */}
+      <View style={[Alignments.fill]}>
         <ScrollView
           contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
           keyboardShouldPersistTaps="handled"
@@ -406,7 +405,7 @@ function CreateSectionScreen({ navigation, route }) {
             variant="Primary"
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 }

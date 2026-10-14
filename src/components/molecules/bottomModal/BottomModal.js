@@ -45,7 +45,8 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
  * @param {boolean} [props.enableContentPanningGesture] - Enables content panning gesture
  * @param {boolean} [props.enablePanDownToClose] - Enables pan-down-to-close gesture
- * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode]
+ * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode] - Par
+ * defaut : `adjustPan` sur Android 15+ (bord a bord), `adjustResize` ailleurs (ANDROIDBAR-6).
  * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
  * @param {number} [props.maxContentHeightRatio] - Fraction de la hauteur d'ecran
  * que la zone defilante peut occuper. Sans effet avec `snapPoints`.
@@ -58,7 +59,7 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({
-  androidKeyboardInputMode = 'adjustResize',
+  androidKeyboardInputMode,
   children,
   close,
   closeIconTintColor = 'primary200',
@@ -267,6 +268,22 @@ function BottomModal({
     [close, closeOnBackdropPress, Colors, Alignments.fill],
   );
 
+  // 🤖 ANDROIDBAR-6 — Android 15 et 16 imposent le bord à bord (targetSdk 35) : `adjustResize`
+  // ne rétrécit plus la fenêtre, et `@gorhom/bottom-sheet` 5.2.4 ne déplace PAS la feuille en
+  // `adjustResize` (il laisse faire Android : BottomSheet.tsx:826-839 et :1656-1673). Personne ne
+  // la remontait : mesuré le 14/10 (Pixel 9, Android 16), « Nouvelle tâche » et « Adresse »
+  // restaient immobiles, champ et boutons SOUS le clavier. `adjustPan` rend la main à l'évitement
+  // de la bibliothèque — celui que l'iPhone suit déjà (D31 l'avait fait pour 4 feuilles).
+  // Android ≤ 14 (fenêtre rétrécie par `adjustResize`) et iPhone : le réglage d'avant, au mot près.
+  // Une feuille qui passe son réglage le garde.
+  // Témoin : __tests__/BottomModalANDROIDBAR6.clavier.test.js.
+  // ponytail: seuil 35 comme ScreenContainer ; si `edgeToEdgeEnabled` passe à true, Android ≤ 14
+  // en aura besoin aussi.
+  const modeDuClavierAndroid = androidKeyboardInputMode ?? (
+    Platform.OS === 'android' && typeof Platform.Version === 'number' && Platform.Version >= 35
+      ? 'adjustPan'
+      : 'adjustResize'
+  );
   const sheetBottomInset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
@@ -289,7 +306,7 @@ function BottomModal({
 
   return (
     <BottomSheetModal
-      android_keyboardInputMode={androidKeyboardInputMode}
+      android_keyboardInputMode={modeDuClavierAndroid}
       backdropComponent={renderBackdrop}
       backgroundStyle={[
         ApplicationStyle.borderRadius32,
