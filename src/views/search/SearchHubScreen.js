@@ -31,6 +31,11 @@ import { markSearchPerf } from '@/utils/performance/searchPerformance';
 import SearchScreenShell from './components/SearchScreenShell';
 import { coerceSearchHubType, consumeSearchHubGuidanceSignal } from './searchRouteHelpers';
 
+// RESA-L6A (14/10/2026) — l'interrupteur de la réservation côté joueur. Lu par `require`, comme
+// dans PrivateNavigator.js : un `import` ici fait se contredire les deux règles d'ordre des
+// imports.
+const { COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
+
 const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'events',
   'clubs',
@@ -214,6 +219,19 @@ function SearchHubScreen({ navigation, route }) {
     }
 
     if (type === 'reservations') {
+      // RESA-L6A (14/10/2026) — l'interrupteur `COMPLEXES_JOUEUR` allumé, l'onglet
+      // cherche les terrains libres des complexes (E-P01). Chargé à l'appel : éteint,
+      // l'écran ne tire rien de la réservation (ni la position, ni le serveur des complexes).
+      if (COMPLEXES_JOUEUR) {
+        // eslint-disable-next-line global-require
+        const RechercheDeTerrains = require('@/views/reserverTerrain/RechercheDeTerrains').default;
+        return (
+          <RechercheDeTerrains
+            refreshSignal={refreshSignals.reservations}
+            screenActive={activeType === 'reservations'}
+          />
+        );
+      }
       // C30 (décision D5) : l'onglet reste, mais la réservation n'est pas encore
       // ouverte -> écran « Bientôt disponible » au lieu de la liste.
       return (
