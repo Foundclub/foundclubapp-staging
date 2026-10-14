@@ -300,6 +300,92 @@ export const prixDuTerrainPublic = (t, terrain) => {
 };
 
 /**
+ * Le prix d'un terrain sur la page du complexe, en deux lignes (RA2, A-G28) : « 60 € le créneau »
+ * puis « soit 6 € par joueur à 10, à régler sur place » ; « par joueur » puis le prix du terrain
+ * plein. Plusieurs tarifs (`price.min < price.max`) : « dès … ». Jamais un total à payer (D4).
+ * @param {Traduire} t - Traduction.
+ * @param {{ capacity?: number | null, price?: { max?: number, min?: number, unit?: string }
+ *   | null }} terrain - Le terrain public.
+ * @returns {{ principal: string, secondaire: string } | null} Les deux lignes, ou null.
+ */
+export const lignesDuTerrainPublic = (t, terrain) => {
+  const prix = terrain?.price;
+  if (!prix || !Number.isFinite(Number(prix.min))) return null;
+  const lignes = lignesDePrix(t, {
+    basePrice: Number(prix.min),
+    capacity: Number(terrain?.capacity) > 0 ? Number(terrain?.capacity) : null,
+    priceUnit: prix.unit === 'joueur' ? 'joueur' : 'creneau',
+  });
+  if (!lignes) return null;
+  const principal = Number(prix.max) > Number(prix.min)
+    ? t('reserverTerrain.prix.des', 'dès {{prix}}', { prix: lignes.principal, ...SANS_ECHAPPEMENT })
+    : lignes.principal;
+  const secondaire = lignes.secondaire
+    ? t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
+      prix: lignes.secondaire,
+      ...SANS_ECHAPPEMENT,
+    })
+    : t('reserverTerrain.prix.aReglerSurPlace', 'à régler sur place');
+  return { principal, secondaire };
+};
+
+/**
+ * Les horaires d'accueil d'un complexe (`openingHours` : `[{ day 1-7, ranges [{ from, to }] }]`),
+ * en lignes : les jours qui se suivent avec les mêmes heures vont ensemble (« Lundi – Vendredi »,
+ * « 17 h – 23 h »).
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} horaires - Les horaires du complexe.
+ * @returns {Array<{ heures: string, jours: string }>} Les lignes.
+ */
+export const horairesLisibles = (t, horaires) => {
+  const jours = nomsDesJours(t);
+  // 1 = lundi … 7 = dimanche ; `nomsDesJours` commence au dimanche.
+  const nomDuJourIso = (/** @type {number} */ jour) => jours[jour % 7];
+  const lignes = (Array.isArray(horaires) ? horaires : [])
+    .filter((jour) => Number.isInteger(jour?.day) && jour.day >= 1 && jour.day <= 7)
+    .sort((a, b) => a.day - b.day)
+    .map((jour) => ({
+      day: jour.day,
+      heures: (Array.isArray(jour.ranges) ? jour.ranges : [])
+        .map((/** @type {any} */ plage) => texteCreneau(plage?.from, plage?.to))
+        .filter(Boolean)
+        .join(', '),
+    }))
+    .filter((jour) => jour.heures);
+  /** @type {Array<{ debut: number, fin: number, heures: string }>} */
+  const groupes = [];
+  lignes.forEach((jour) => {
+    const dernier = groupes[groupes.length - 1];
+    if (dernier && dernier.heures === jour.heures && dernier.fin === jour.day - 1) {
+      dernier.fin = jour.day;
+    } else {
+      groupes.push({ debut: jour.day, fin: jour.day, heures: jour.heures });
+    }
+  });
+  return groupes.map((groupe) => ({
+    heures: groupe.heures,
+    jours: groupe.debut === groupe.fin
+      ? nomDuJourIso(groupe.debut)
+      : `${nomDuJourIso(groupe.debut)} – ${nomDuJourIso(groupe.fin)}`,
+  }));
+};
+
+/**
+ * Le délai d'annulation d'un complexe en mots (E-P02 bloc « Règles », E-P04).
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} heures - `cancellationDelayHours` (0 à 48).
+ * @returns {string} « Annulation gratuite jusqu'à 24 h avant ».
+ */
+export const texteAnnulation = (t, heures) => (Number(heures) > 0
+  ? t('reserverTerrain.regles.annulation', 'Annulation gratuite jusqu’à {{heures}} h avant', {
+    heures: Number(heures),
+  })
+  : t(
+    'reserverTerrain.regles.annulationJusquauDebut',
+    'Annulation gratuite jusqu’au début du créneau',
+  ));
+
+/**
  * Un numéro français lisible : « +33639981234 » ⇒ « 06 39 98 12 34 » (le serveur garde le format
  * E.164). Un numéro étranger ou inattendu reste tel quel.
  * @param {unknown} numero - Le numéro.

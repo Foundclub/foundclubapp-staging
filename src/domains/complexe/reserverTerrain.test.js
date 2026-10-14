@@ -3,13 +3,16 @@ import {
   contenuDEchec,
   demandeDeReservation,
   filtresDeRecherche,
+  horairesLisibles,
   jourDeParis,
   libelleEtatDuCreneau,
   libelleModeJoueur,
+  lignesDuTerrainPublic,
   numeroLisible,
   prixDuCreneau,
   prixDuTerrainPublic,
   quatorzeJours,
+  texteAnnulation,
   texteCreneau,
   texteJourCourt,
   texteJourLong,
@@ -107,6 +110,48 @@ describe('les mots d’un créneau, du mode, du prix (P00 blocs 3 et 5, RA2)', (
     expect(numeroLisible('0639981234')).toBe('06 39 98 12 34');
     expect(numeroLisible('+41 22 123 45 67')).toBe('+41 22 123 45 67');
     expect(numeroLisible(null)).toBe('');
+  });
+
+  it('le prix d’un terrain en deux lignes (RA2) : le créneau et la part d’un joueur', () => {
+    expect(lignesDuTerrainPublic(t, {
+      capacity: 10, price: { max: 60, min: 60, unit: 'creneau' },
+    })).toEqual({
+      principal: '60 € le créneau',
+      secondaire: 'soit 6 € par joueur à 10, à régler sur place',
+    });
+    expect(lignesDuTerrainPublic(t, {
+      capacity: 4, price: { max: 8, min: 6, unit: 'joueur' },
+    })).toEqual({
+      principal: 'dès 6 € par joueur',
+      secondaire: '24 € pour 4 joueurs, à régler sur place',
+    });
+    const sansJoueurs = { capacity: null, price: { max: 40, min: 40, unit: 'creneau' } };
+    expect(lignesDuTerrainPublic(t, sansJoueurs))
+      .toEqual({ principal: '40 € le créneau', secondaire: 'à régler sur place' });
+    expect(lignesDuTerrainPublic(t, { capacity: 10, price: null })).toBeNull();
+  });
+
+  it('les horaires d’accueil : les jours qui se suivent avec les mêmes heures, ensemble', () => {
+    expect(horairesLisibles(t, [
+      { day: 1, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 2, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 3, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 4, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 5, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 6, ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '22:00' }] },
+      { day: 7, ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '22:00' }] },
+    ])).toEqual([
+      { heures: '17 h – 23 h', jours: 'Lundi – Vendredi' },
+      { heures: '9 h – 12 h, 14 h – 22 h', jours: 'Samedi – Dimanche' },
+    ]);
+    expect(horairesLisibles(t, [{ day: 3, ranges: [{ from: '10:00', to: '12:00' }] }]))
+      .toEqual([{ heures: '10 h – 12 h', jours: 'Mercredi' }]);
+    expect(horairesLisibles(t, null)).toEqual([]);
+  });
+
+  it('le délai d’annulation du complexe, en mots', () => {
+    expect(texteAnnulation(t, 24)).toBe('Annulation gratuite jusqu’à 24 h avant');
+    expect(texteAnnulation(t, 0)).toBe('Annulation gratuite jusqu’au début du créneau');
   });
 
   it('une distance en kilomètres', () => {

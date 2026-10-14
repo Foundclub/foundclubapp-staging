@@ -53,7 +53,7 @@ const Stack = createStackNavigator();
 
 // RESA-L5A1 (13/10/2026) — l'interrupteur du gérant de complexe. Lu par `require` : un `import`
 // ici ferait se contredire les deux règles d'ordre des imports (import/order et perfectionist).
-const { COMPLEXES_GERANT } = require('@/config/fonctionsMasquees');
+const { COMPLEXES_GERANT, COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
 
 /**
  *
@@ -1440,6 +1440,17 @@ function PrivateNavigator() {
           <Stack.Screen
             getComponent={() => require('@/views/complexe/ComplexeReglages').default}
             name={RouteNames.ComplexeReglages}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6A (14/10/2026) — le joueur (chantier Réservation) : ses écrans ne sont DÉCLARÉS
+            que si l'interrupteur `COMPLEXES_JOUEUR` est allumé (éteint : aucune porte, aucun lien
+            ne les atteint). La recherche (E-P01) est le panneau « Réservations » de SearchHub.
+            E-P02 — la page du complexe. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverComplexe').default}
+            name={RouteNames.ReserverComplexe}
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
