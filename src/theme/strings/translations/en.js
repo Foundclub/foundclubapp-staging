@@ -5030,6 +5030,19 @@ export default {
     vide: 'No news published yet. Members of your clubs will read it in their messages.',
   },
   collectiviteClubs: {
+    couleur: {
+      autoCourt: 'automatic',
+      automatique: 'Automatic',
+      avertissement: '{{couleur}} is already used by {{clubs}}. Would you still like to give this club that colour?',
+      changer: 'Change',
+      chargement: 'Loading club colours…',
+      confirmer: 'Use anyway',
+      enregistrement: 'Saving…',
+      fermer: 'Close',
+      prise: 'Already used by {{clubs}}',
+      retour: 'Choose another colour',
+      titre: 'Their colour in your schedules',
+    },
     // COLL-R-A6 (13/10/2026, COL-001, P7v4-clubs board, D1 A′): a club card in 3 lines.
     carte: {
       ecrire: 'Write to the leaders of {{club}}',

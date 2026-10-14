@@ -38,6 +38,7 @@ import SeasonSlotForm, {
   TunnelEnAttente,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CouleurClubPlanning from '@/views/collectivite/components/CouleurClubPlanning';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -835,6 +836,9 @@ function CollectiviteClubDetails() {
           {renderQuiJoindre()}
           {renderCoordonnees()}
           {renderNombres()}
+          {peutAttribuer ? (
+            <CouleurClubPlanning club={club} collectiviteId={String(collectiviteId)} />
+          ) : null}
           {renderOffre()}
         </View>
         <View style={{ flex: 1, gap: 14, minWidth: 0 }}>
@@ -850,6 +854,9 @@ function CollectiviteClubDetails() {
       <View style={{ gap: 14 }}>
         {renderQuiJoindre()}
         {renderNombres()}
+        {peutAttribuer ? (
+          <CouleurClubPlanning club={club} collectiviteId={String(collectiviteId)} />
+        ) : null}
         {renderCreneaux()}
         {renderDemandes()}
         {renderCoordonnees()}

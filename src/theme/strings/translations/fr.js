@@ -5393,6 +5393,20 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    couleur: {
+      autoCourt: 'automatique',
+      automatique: 'Automatique',
+      avertissement: '{{couleur}} est déjà utilisée par {{clubs}}. '
+        + 'Voulez-vous quand même donner cette couleur à ce club ?',
+      changer: 'Changer',
+      chargement: 'Chargement des couleurs des clubs…',
+      confirmer: 'Utiliser quand même',
+      enregistrement: 'Enregistrement…',
+      fermer: 'Fermer',
+      prise: 'Déjà utilisée par {{clubs}}',
+      retour: 'Choisir une autre couleur',
+      titre: 'Sa couleur dans vos plannings',
+    },
     // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
     carte: {
       ecrire: 'Écrire aux dirigeants de {{club}}',
