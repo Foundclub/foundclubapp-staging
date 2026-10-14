@@ -3189,9 +3189,11 @@ function TeamDetails({ navigation, route }) {
                 horizontal
                 showsHorizontalScrollIndicator={false}
               >
-                {team?.club?.sponsor?.map((/** @type {Sponsor} */ sponsor) => (
+                {team?.club?.sponsor?.map((/** @type {Sponsor} */ sponsor, sponsorIndex) => (
                   <View
-                    key={sponsor.link}
+                    // SPONSRV (14/10) : le lien est facultatif (null, ou partage) ; l'id ne
+                    // l'est pas. Comme ClubDetails depuis SPONSOR-SUPPR.
+                    key={sponsor.id ?? `rang-${sponsorIndex}`}
                     style={[Alignments.relative, Spaces.marginTop[8]]}
                   >
                     <SponsorLogoTile
