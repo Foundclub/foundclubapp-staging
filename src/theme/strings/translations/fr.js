@@ -22922,6 +22922,28 @@ export default {
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
     },
+    // PAR-L8 (13/10, design parent E19, planche 8) — annuler une demande de place en attente,
+    // depuis la fiche de l'enfant : la feuille de confirmation, puis l'issue dite dans un bandeau.
+    cancelRequest: {
+      accepted: 'Le club a déjà répondu.',
+      acceptedHint: '{{firstname}} est dans {{team}}. Rien n’a été annulé.',
+      answered: 'Le club a déjà répondu à cette demande.',
+      answeredHint: 'Il n’y a plus rien à annuler.',
+      confirm: 'Annuler la demande',
+      confirmMessage: 'Les responsables de {{team}} ne la verront plus.'
+        + ' {{firstname}} pourra faire une nouvelle demande.',
+      confirmTitle: 'Annuler la demande pour {{firstname}} ?',
+      done: 'Demande annulée.',
+      doneHint: '{{firstname}} peut faire une nouvelle demande.',
+      failed: 'La demande n’a pas pu être annulée.',
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      keep: 'Garder la demande',
+      link: 'Annuler la demande',
+      linkLabel: 'Annuler la demande pour {{team}}',
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: 'L’annulation n’est pas encore disponible.',
+      unavailableHint: 'La demande est toujours en attente. Réessaie plus tard.',
+    },
     // PAR-L13 (13/10, design parent E28-E30) — la carte de collection d'un enfant de moins de
     // 13 ans, « pareille que les autres » (Adel, 12/10, registre des mineurs lignes 22-23) :
     // photo, ville et nationalité oui, code QR non, « ce qui part » avant tout partage.
