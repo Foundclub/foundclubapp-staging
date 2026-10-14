@@ -118,6 +118,26 @@ const appuyer = async (arbre, libelle) => {
  */
 const derniersFiltres = () => mockAppels[mockAppels.length - 1]?.filtres;
 
+// Préchauffage (demande du chef de soutien, 14/10) : le PREMIER montage paie la mise en route du
+// panneau (premier rendu de tout son arbre) — 2,4 s mesurées avec un processeur chargé à 79 %,
+// au-delà des 5 s du délai par témoin sous plus forte charge (« cherche autour de la position »
+// rouge deux fois sur deux). Un montage à blanc ici, avec son propre délai, sort ce coût des
+// témoins.
+beforeAll(async () => {
+  mockPositionAccordee = { lat: 48.83, lng: 1.48 };
+  mockRecherche = {
+    data: { complexes: [carteDeRecherche()], date: '2026-10-14' },
+    error: null,
+    isLoading: false,
+    isRefetching: false,
+    refetch,
+  };
+  const arbre = await monter();
+  act(() => {
+    arbre.unmount();
+  });
+}, 30000);
+
 beforeEach(() => {
   jest.useFakeTimers({ now: new Date('2026-10-14T08:00:00Z') });
   jest.clearAllMocks();
