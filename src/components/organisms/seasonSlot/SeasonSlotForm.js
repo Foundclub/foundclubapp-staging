@@ -312,6 +312,24 @@ export function ChargementDesChoix() {
 }
 
 /**
+ * Une lecture refusée ou interrompue, avec son geste de reprise.
+ * @param {{ erreur: any, onRetry?: () => any }} props - Lecture concernée.
+ * @returns {import('react').ReactElement} Le message et Réessayer.
+ */
+export function LectureEnErreur({ erreur: refus, onRetry }) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  return (
+    <View style={{ gap: 12 }}>
+      <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral200]}>
+        {getErrorMessage(refus)}
+      </Text>
+      <Button onPress={onRetry} title={t('common.retry', 'Réessayer')} variant="Secondary" />
+    </View>
+  );
+}
+
+/**
  * Les creneaux d un jour de la semaine type, sans celui qu on modifie.
  * @param {any} creneaux - Les creneaux de l installation (lecture).
  * @param {number | null} numero - Le jour ISO.
@@ -545,6 +563,8 @@ function SeasonSlotForm({
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
   const disponibilitesEnCours = !repartition && (lecture.isLoading
     || Boolean(parametresApercu && apercu.isFetching));
+  const disponibilitesEnErreur = !repartition && (lecture.error
+    || (parametresApercu ? apercu.error : null));
   const place = conflit || apercu.data?.data || null;
   // VILLE-T18A — planche 23, etat 3 : le « complet » se decide pendant la saisie, ou par le 409.
   const besoinDeConfirmer = Boolean(conflit)
@@ -568,6 +588,7 @@ function SeasonSlotForm({
     || '';
   const pret = Boolean(facilityId && club && jour && ordreJuste)
     && !disponibilitesEnCours
+    && !disponibilitesEnErreur
     && (!modification || Boolean(aPartirDu))
     && periodeJuste;
 
@@ -786,7 +807,7 @@ function SeasonSlotForm({
   })();
 
   // VILLE-T18A — « Libre ce mardi : » et une puce par plage ; un appui pose ses heures.
-  const lesHeuresLibres = voirLibres && jour && !repartition ? (
+  const lesHeuresLibres = voirLibres && jour && !repartition && !lecture.isLoading && !lecture.error ? (
     <View style={{ gap: 8 }} testID="attribuer-heures-libres">
       <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
         {t('collectiviteCreneaux.attribuer.libreCe', 'Libre ce {{jour}} :', {
@@ -887,10 +908,10 @@ function SeasonSlotForm({
   };
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
-    if (etapeCourante === 'club') return !club || Boolean(lectureDesClubs?.isLoading);
-    if (etapeCourante === 'equipe') return !club || equipes.isLoading;
-    if (etapeCourante === 'jour') return !jour || lecture.isLoading;
-    if (etapeCourante === 'horaires') return !ordreJuste || disponibilitesEnCours;
+    if (etapeCourante === 'club') return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+    if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
+    if (etapeCourante === 'jour') return !jour || lecture.isLoading || Boolean(lecture.error);
+    if (etapeCourante === 'horaires') return !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur);
     const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
     return !periodeJuste || (modification && !dateEffetValide);
   })();
@@ -1032,6 +1053,7 @@ function SeasonSlotForm({
 
   // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
   const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+    && !lecture.isLoading && !lecture.error
     && !heuresFigees && !repartition ? (
       <Text style={[Fonts.p3, Fonts.neutral200]}>
         {heuresLibres.length
@@ -1137,7 +1159,9 @@ function SeasonSlotForm({
           {libelleDuChamp(compact
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
             : t('collectiviteCreneaux.attribuer.club', 'Club'))}
-          {lectureDesClubs?.isLoading ? <ChargementDesChoix /> : clubs.length === 0 ? (
+          {lectureDesClubs?.error ? (
+            <LectureEnErreur erreur={lectureDesClubs.error} onRetry={lectureDesClubs.refetch} />
+          ) : lectureDesClubs?.isLoading ? <ChargementDesChoix /> : clubs.length === 0 ? (
             <View style={{ alignItems: 'center', gap: 12 }}>
               <SvgIcon color={Colors.primary200} height={40} name="shield" width={40} />
               <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -1173,7 +1197,8 @@ function SeasonSlotForm({
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
-          {equipes.isLoading ? <ChargementDesChoix /> : listeDeChoix([
+          {equipes.error ? <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />
+            : equipes.isLoading ? <ChargementDesChoix /> : listeDeChoix([
             {
               actif: !equipe,
               detail: t(
@@ -1197,7 +1222,8 @@ function SeasonSlotForm({
       {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
-          {lecture.isLoading ? <ChargementDesChoix /> : listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
+          {lecture.error ? <LectureEnErreur erreur={lecture.error} onRetry={lecture.refetch} />
+            : lecture.isLoading ? <ChargementDesChoix /> : listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
             // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
             // certaines heures le dit sous son nom (les mots de la planche P4v2).
             const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
@@ -1317,7 +1343,12 @@ function SeasonSlotForm({
       {tunnelPleinEcran && confirmationFinale ? recapEnLignes : null}
       {libresDuJour}
       {visible('horaires') || confirmationFinale ? (
-        disponibilitesEnCours ? <ChargementDesChoix /> : carteDeLaPlace
+        disponibilitesEnErreur ? (
+          <LectureEnErreur
+            erreur={disponibilitesEnErreur}
+            onRetry={lecture.error ? lecture.refetch : apercu.refetch}
+          />
+        ) : disponibilitesEnCours ? <ChargementDesChoix /> : carteDeLaPlace
       ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 

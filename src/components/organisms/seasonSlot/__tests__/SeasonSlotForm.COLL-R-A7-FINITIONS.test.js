@@ -302,3 +302,54 @@ describe('COLL-R-A7-FINITIONS 3 — les lectures ont un squelette', () => {
     expect(tunnel(arbre).isNextDisabled).toBe(false);
   });
 });
+
+describe('COLL-R-A7-FINITIONS 4 — une lecture en échec peut être relancée', () => {
+  test('clubs : erreur annoncée, Réessayer relance la lecture, pas de faux vide', async () => {
+    const refetch = jest.fn();
+    const arbre = await monter({ clubs: [], lectureDesClubs: { error: new Error('Network Error'), refetch } });
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n).includes('Aucun club'))).toBe(false);
+    await appuyerSur(arbre, 'Réessayer');
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('équipes : relance réelle puis retrouve les équipes du club choisi', async () => {
+    /** @type {any} */ (getClubTeamsForSlot).mockRejectedValueOnce(new Error('Network Error'));
+    const arbre = await monter(DEPUIS_LE_PLANNING);
+    await choisir(arbre, 'Montrivage Basket');
+    await avancer(arbre);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+    expect(choix(arbre, 'Tout le club')).toBeUndefined();
+    await appuyerSur(arbre, 'Réessayer');
+    expect(getClubTeamsForSlot).toHaveBeenCalledTimes(2);
+    expect(choix(arbre, 'U13')).toBeDefined();
+    expect(tunnel(arbre).isNextDisabled).toBe(false);
+  });
+
+  test.each(['semaine type', 'aperçu'])('%s : erreur visible, attribution bloquée puis reprise', async (lecture) => {
+    const service = lecture === 'aperçu' ? previewFacilitySeasonSlot : listFacilitySeasonSlots;
+    /** @type {any} */ (service).mockRejectedValueOnce(new Error('Network Error'));
+    const arbre = await monter(DEPUIS_LE_PLANNING);
+    await jusquAuRecap(arbre);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+    await appuyerSur(arbre, 'Réessayer');
+    expect(service).toHaveBeenCalledTimes(2);
+    expect(tunnel(arbre).isNextDisabled).toBe(false);
+  });
+
+  test('envoi refusé : motif visible, saisie conservée et nouvel envoi identique', async () => {
+    /** @type {any} */ (attributeSeasonSlot).mockRejectedValueOnce(Object.assign(new Error('x'), {
+      response: { data: { error: { details: { code: 'SEASON_SLOT_OUTSIDE_OPENING_HOURS' } } }, status: 400 },
+    }));
+    const arbre = await monter(DEPUIS_LE_PLANNING);
+    await jusquAuRecap(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    const alertes = arbre.root.findAll((n) => n.type === Text && n.props.accessibilityRole === 'alert');
+    expect(alertes).toHaveLength(1);
+    expect(texte(alertes[0])).toBe('Ce créneau sort des horaires d’ouverture de l’installation.');
+    expect(tunnel(arbre).title).toBe('Récapitulatif');
+    const premierCorps = /** @type {any} */ (attributeSeasonSlot).mock.calls[0];
+    await appeler(() => tunnel(arbre).onNext());
+    expect(/** @type {any} */ (attributeSeasonSlot).mock.calls[1]).toEqual(premierCorps);
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+  });
+});
