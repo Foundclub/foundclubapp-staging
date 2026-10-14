@@ -16723,6 +16723,15 @@ export default {
       terrainParti: 'This pitch is no longer offered.',
       tropTard: 'Too late to book here: call the venue.',
     },
+    etat: {
+      annuleeParLeComplexe: 'Cancelled by the venue',
+      annuleeParToi: 'Cancelled by you',
+      confirmee: 'Confirmed',
+      enAttente: 'Pending',
+      jouee: 'Played',
+      refusee: 'Declined',
+      sansReponse: 'No answer',
+    },
     jours: {
       aujourdhuiCourt: 'Today',
       court: '{{jour}} {{numero}}/{{mois}}',
@@ -16846,6 +16855,16 @@ export default {
       annulation: 'Free cancellation up to {{heures}} h before',
       annulationJusquauDebut: 'Free cancellation until the slot starts',
       paiement: 'Payment on site',
+    },
+    resultat: {
+      demandeEcheance: '{{complexe}} will answer you before {{date}} at {{heure}}. The slot is held for you until then.',
+      demandeEnvoyee: 'Request sent',
+      demandeSansEcheance: '{{complexe}} will answer you soon. The slot is held for you until then.',
+      reserve: 'It’s booked!',
+      resume: '{{jour}} · {{creneau}} · {{terrain}}',
+      retourAccueil: 'Back to home',
+      voirMaDemande: 'See my request',
+      voirMaReservation: 'See my booking',
     },
     telephone: {
       appeler: 'Call {{numero}}',

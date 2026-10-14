@@ -1470,6 +1470,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* E-P05 — le résultat : pas d'en-tête de retour (il ne ramène pas au récapitulatif). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverResultat').default}
+            name={RouteNames.ReserverResultat}
+            options={{ headerShown: false }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>

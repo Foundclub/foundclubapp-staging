@@ -17460,6 +17460,15 @@ export default {
       terrainParti: 'Ce terrain n’est plus proposé.',
       tropTard: 'Trop tard pour réserver ici : appelle le complexe.',
     },
+    etat: {
+      annuleeParLeComplexe: 'Annulée par le complexe',
+      annuleeParToi: 'Annulée par toi',
+      confirmee: 'Confirmée',
+      enAttente: 'En attente',
+      jouee: 'Jouée',
+      refusee: 'Refusée',
+      sansReponse: 'Sans réponse',
+    },
     jours: {
       aujourdhuiCourt: 'Auj.',
       court: '{{jour}} {{numero}}/{{mois}}',
@@ -17586,6 +17595,17 @@ export default {
       annulation: 'Annulation gratuite jusqu’à {{heures}} h avant',
       annulationJusquauDebut: 'Annulation gratuite jusqu’au début du créneau',
       paiement: 'Paiement sur place',
+    },
+    resultat: {
+      // eslint-disable-next-line max-len
+      demandeEcheance: '{{complexe}} te répond avant le {{date}} à {{heure}}. Le créneau t’est gardé jusque-là.',
+      demandeEnvoyee: 'Demande envoyée',
+      demandeSansEcheance: '{{complexe}} te répond bientôt. Le créneau t’est gardé jusque-là.',
+      reserve: 'C’est réservé !',
+      resume: '{{jour}} · {{creneau}} · {{terrain}}',
+      retourAccueil: 'Retour à l’accueil',
+      voirMaDemande: 'Voir ma demande',
+      voirMaReservation: 'Voir ma réservation',
     },
     telephone: {
       appeler: 'Appeler le {{numero}}',

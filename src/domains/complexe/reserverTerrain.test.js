@@ -1,7 +1,9 @@
 import {
   ajouterJours,
   contenuDEchec,
+  dateEtHeureDeParis,
   demandeDeReservation,
+  etatAffiche,
   filtresDeRecherche,
   horairesLisibles,
   jourDeParis,
@@ -273,6 +275,29 @@ describe('les refus du serveur, NOMMÉS (E-P13)', () => {
     expect(tard.titre).toBe('Trop tard pour réserver ici : appelle le complexe.');
     expect(tard.telephone).toBe('+33639981234');
     expect(tard.actions).toEqual(['appeler']);
+  });
+});
+
+describe('l’état AFFICHÉ d’une réservation (P00 bloc 4) et l’heure de Paris', () => {
+  const maintenant = new Date('2026-10-14T08:00:00Z');
+
+  it('les états du serveur, et « Jouée » quand une confirmée est passée', () => {
+    const etat = (/** @type {any} */ r) => etatAffiche(r, maintenant);
+    expect(etat({ endsAt: '2026-10-16T17:00:00Z', status: 'en_attente' })).toBe('enAttente');
+    expect(etat({ endsAt: '2026-10-16T17:00:00Z', status: 'confirmee' })).toBe('confirmee');
+    expect(etat({ endsAt: '2026-10-13T17:00:00Z', status: 'confirmee' })).toBe('jouee');
+    expect(etat({ status: 'refusee' })).toBe('refusee');
+    expect(etat({ status: 'sans_reponse' })).toBe('sansReponse');
+    expect(etat({ cancelledBy: 'reserveur', status: 'annulee' })).toBe('annuleeParToi');
+    expect(etat({ cancelledBy: 'complexe', status: 'annulee' })).toBe('annuleeParLeComplexe');
+  });
+
+  it('le jour et l’heure de Paris d’un instant', () => {
+    expect(dateEtHeureDeParis('2026-10-16T14:00:00.000Z'))
+      .toEqual({ date: '2026-10-16', heure: '16:00' });
+    expect(dateEtHeureDeParis('2026-10-13T22:30:00.000Z'))
+      .toEqual({ date: '2026-10-14', heure: '00:30' });
+    expect(dateEtHeureDeParis(null)).toBeNull();
   });
 });
 
