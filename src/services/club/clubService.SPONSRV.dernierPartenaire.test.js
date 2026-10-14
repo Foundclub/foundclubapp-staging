@@ -103,7 +103,7 @@ describe('updateClub — retirer le DERNIER partenaire (SPONSRV)', () => {
     });
   });
 
-  it('🔒 une liste vide SANS intention (modifier les sports) ne parle pas des partenaires', async () => {
+  it('🔒 liste vide SANS intention (modifier les sports) : rien sur les partenaires', async () => {
     await updateClub({ ...CLUB, activites: ['sport-1'], sponsor: [] });
 
     expect(champsDesPartenaires()).toEqual([]);
