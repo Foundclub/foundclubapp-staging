@@ -28,6 +28,13 @@ export const myChildRegistrationsKey = (eventId) => [
 ];
 
 /**
+ * 👪 PAR-L11c (14/10) — la clef de TOUTES les inscriptions de mes enfants (fiche de l enfant,
+ * « Ses evenements »). Sous le meme prefixe que les listes par evenement : relire
+ * `['eventChildRegistrations', 'mine']` les relit toutes.
+ */
+export const allMyChildRegistrationsKey = ['eventChildRegistrations', 'mine', 'all'];
+
+/**
  * La clef des inscriptions d enfants vues par l organisateur.
  * @param {string} eventId - L evenement.
  * @returns {string[]} La clef react-query.
@@ -46,6 +53,18 @@ export const useMyChildRegistrations = (eventId, options = {}) => useQuery({
   enabled: Boolean(eventId),
   queryFn: () => getMyChildRegistrations(eventId),
   queryKey: myChildRegistrationsKey(eventId),
+  staleTime: 30 * 1000,
+  ...options,
+});
+
+/**
+ * 👪 PAR-L11c (14/10) — toutes les inscriptions de mes enfants (la fiche garde celles du sien).
+ * @param {object} [options] - Options react-query (`enabled`).
+ * @returns {object} Le resultat react-query.
+ */
+export const useAllMyChildRegistrations = (options = {}) => useQuery({
+  queryFn: () => getMyChildRegistrations(),
+  queryKey: allMyChildRegistrationsKey,
   staleTime: 30 * 1000,
   ...options,
 });
@@ -79,6 +98,8 @@ const useRegistrationMutation = (eventId, mutationFn, extraKeys = []) => {
       await Promise.all([
         queryClient.refetchQueries({ queryKey: myChildRegistrationsKey(eventId) }),
         queryClient.refetchQueries({ queryKey: eventChildRegistrationsKey(eventId) }),
+        // PAR-L11c — la fiche de l enfant (« Ses evenements ») se relira a son ouverture.
+        queryClient.invalidateQueries({ queryKey: allMyChildRegistrationsKey }),
         ...extraKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       ]);
     },

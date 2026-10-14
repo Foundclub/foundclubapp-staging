@@ -14513,6 +14513,17 @@ export default {
       unavailable: 'Cancelling is not available yet.',
       unavailableHint: 'The registration is still there. Try again later.',
     },
+    // 👪 PAR-L11c (14/10) — child page, "Their events" block (DeclaredChildPage).
+    childPage: {
+      accepted: 'Registration confirmed',
+      declined: 'Declined',
+      error: 'Could not load their events.',
+      on: 'On {{date}}',
+      open: 'See the event',
+      pending: 'Pending',
+      reason: 'Reason: {{reason}}',
+      title: 'Their events',
+    },
     errors: {
       alreadyDecided: 'This request has already been handled.',
       generic: 'The registration could not be sent. Try again in a moment.',

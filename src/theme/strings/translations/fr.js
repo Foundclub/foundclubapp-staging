@@ -23195,6 +23195,17 @@ export default {
       unavailable: "L'annulation n'est pas encore disponible.",
       unavailableHint: "L'inscription est toujours là. Réessaie plus tard.",
     },
+    // 👪 PAR-L11c (14/10) — fiche de l'enfant, bloc « Ses événements » (DeclaredChildPage).
+    childPage: {
+      accepted: 'Inscription confirmée',
+      declined: 'Refusée',
+      error: 'Impossible de charger ses événements.',
+      on: 'Le {{date}}',
+      open: "Voir l'événement",
+      pending: 'En attente',
+      reason: 'Motif : {{reason}}',
+      title: 'Ses événements',
+    },
     errors: {
       alreadyDecided: 'Cette demande a déjà été traitée.',
       generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",

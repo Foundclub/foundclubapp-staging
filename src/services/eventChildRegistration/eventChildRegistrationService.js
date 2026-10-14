@@ -26,13 +26,15 @@ export const registerChildrenToEvent = async ({ childIds, eventId }) => {
 };
 
 /**
- * GET /event-child-registrations/mine?event= — les inscriptions de MES enfants ici.
- * @param {string} eventId - L evenement.
+ * GET /event-child-registrations/mine?event= — les inscriptions de MES enfants ici. Sans
+ * evenement (PAR-L11c, fiche de l enfant « Ses evenements ») : TOUTES mes lignes, les plus
+ * recentes d abord (200 au plus, plafond du serveur).
+ * @param {string} [eventId] - L evenement, ou rien.
  * @returns {Promise<any[]>} Mes lignes.
  */
 export const getMyChildRegistrations = async (eventId) => {
   const response = await client.get('/event-child-registrations/mine', {
-    params: { event: eventId },
+    params: eventId ? { event: eventId } : {},
   });
   return Array.isArray(response?.data?.data) ? response.data.data : [];
 };
