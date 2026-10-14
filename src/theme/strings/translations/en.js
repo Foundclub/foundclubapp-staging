@@ -16298,6 +16298,7 @@ export default {
     },
     assignNow: 'Assign now',
     celebration: {
+      childInterest: '{{firstname}} joins {{team}}.',
       close: 'Great',
       club: '{{name}} has joined the club.',
       event: 'The participation has been confirmed.',

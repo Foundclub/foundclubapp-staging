@@ -17059,6 +17059,8 @@ export default {
     // ⚠️ `{{name}}` est remplacé À LA MAIN par l'écran : le repli passé en
     // second argument de `t` n'est pas interpolé par i18next.
     celebration: {
+      // PARENT-FINITIONS 5 (14/10) — la place d'un enfant acceptée : il entre dans l'équipe.
+      childInterest: '{{firstname}} rejoint {{team}}.',
       close: 'Super',
       club: '{{name}} rejoint le club.',
       event: 'La participation est validée.',

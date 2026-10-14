@@ -20,6 +20,13 @@
 
 /** Les types de demande qui portent une acceptation. `unknown` est le repli. */
 const CELEBRATION_BY_TYPE = /** @type {const} */ ({
+  // 👶 PARENT-FINITIONS 5 (14/10) — la place d'un ENFANT (`interest` + `meta.childId`) :
+  // l'accepter le fait ENTRER dans l'equipe, et la fenetre le dit. Avant : « Ta réponse est
+  // partie. », la phrase de l'interet d'un adulte (`interest` ci-dessous).
+  childInterest: {
+    fallback: '{{firstname}} rejoint {{team}}.',
+    key: 'requestsHub.celebration.childInterest',
+  },
   club: {
     fallback: '{{name}} rejoint le club.',
     key: 'requestsHub.celebration.club',
@@ -79,6 +86,21 @@ const fillName = (template, name) => (
  */
 export const buildRequestAcceptanceCelebration = (item, t) => {
   const type = String(item?.type || '').trim();
+  const title = t('requestsHub.celebration.title', 'Félicitations');
+
+  // 👶 PARENT-FINITIONS 5 — « Anissa rejoint U11 Filles. » : le prenom de l'ENFANT, jamais
+  // celui du parent qui a demande ; l'equipe, ou le club si la place visait le club.
+  const childFirstname = String(item?.meta?.childFirstname || '').trim();
+  if (type === 'interest' && item?.meta?.childId && childFirstname) {
+    const destination = String(item?.meta?.teamName || item?.meta?.clubName || '').trim();
+    const entry = CELEBRATION_BY_TYPE.childInterest;
+    return {
+      message: String(t(entry.key, entry.fallback) || '')
+        .replace('{{firstname}}', childFirstname)
+        .replace('{{team}}', destination),
+      title,
+    };
+  }
   const entry = CELEBRATION_BY_TYPE[/** @type {keyof typeof CELEBRATION_BY_TYPE} */ (type)]
     || CELEBRATION_BY_TYPE.unknown;
 
@@ -90,7 +112,7 @@ export const buildRequestAcceptanceCelebration = (item, t) => {
 
   return {
     message: fillName(t(entry.key, entry.fallback), name),
-    title: t('requestsHub.celebration.title', 'Félicitations'),
+    title,
   };
 };
 

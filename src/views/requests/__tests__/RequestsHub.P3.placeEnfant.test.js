@@ -258,6 +258,22 @@ describe('P3 — trancher une place demandee pour un enfant', () => {
     expect(respondClubInterestRequest).toHaveBeenCalledWith('interest-lea', {
       responseType: 'accept_child',
     });
+    // 👶 PARENT-FINITIONS 5 — la fenetre dit que Lea ENTRE dans l'equipe (avant : « Ta réponse
+    // est partie. », la phrase de l'interet d'un adulte).
+    /**
+     * Les textes rendus, aplatis.
+     * @param {any} noeud Le noeud de départ.
+     * @returns {string[]} Les chaînes trouvées.
+     */
+    const textes = (noeud) => {
+      if (noeud === null || noeud === undefined) return [];
+      if (typeof noeud === 'string') return [noeud];
+      if (Array.isArray(noeud)) return noeud.flatMap(textes);
+      return textes(noeud.children);
+    };
+    const texte = textes(tree.toJSON()).join(' | ');
+    expect(texte).toContain('Léa rejoint U11.');
+    expect(texte).not.toContain('Ta réponse est partie.');
   });
 
   test('② « Refuser » demande CONFIRMATION, et n envoie `refuse_child` qu apres', async () => {
