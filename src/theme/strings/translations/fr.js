@@ -17524,6 +17524,15 @@ export default {
       voirLesTerrains: 'Voir les terrains',
     },
     telephone: {
+      appeler: 'Appeler le {{numero}}',
+      copie: 'Numéro copié.',
+      copier: 'Copier le numéro',
+      fermer: 'Fermer',
+      mention: 'Une réservation par téléphone n’apparaît pas dans tes réservations.',
+      // eslint-disable-next-line max-len
+      mentionCreneau: 'Demande ce créneau au complexe. Une réservation par téléphone n’apparaît pas dans tes réservations.',
+      terrainEtJour: '{{terrain}} · {{jour}}',
+      texteEtNumero: '{{texte}} {{numero}}.',
       texteParDefaut: 'Ce terrain ne peut être réservé que par appel au',
     },
   },

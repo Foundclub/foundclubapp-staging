@@ -300,6 +300,20 @@ export const prixDuTerrainPublic = (t, terrain) => {
 };
 
 /**
+ * Un numéro français lisible : « +33639981234 » ⇒ « 06 39 98 12 34 » (le serveur garde le format
+ * E.164). Un numéro étranger ou inattendu reste tel quel.
+ * @param {unknown} numero - Le numéro.
+ * @returns {string} Le numéro à afficher, ou ''.
+ */
+export const numeroLisible = (numero) => {
+  const brut = String(numero || '').replace(/[\s.-]/g, '');
+  const francais = /^\+33([1-9]\d{8})$/.exec(brut);
+  const chiffres = francais ? `0${francais[1]}` : brut;
+  if (!/^0[1-9]\d{8}$/.test(chiffres)) return String(numero || '').trim();
+  return chiffres.replace(/(\d{2})(?=\d)/g, '$1 ');
+};
+
+/**
  * Une distance en kilomètres : « 2,4 km », « 600 m ».
  * @param {unknown} kilometres - La distance.
  * @returns {string} Le texte, ou ''.

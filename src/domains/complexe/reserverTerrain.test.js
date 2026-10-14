@@ -6,6 +6,7 @@ import {
   jourDeParis,
   libelleEtatDuCreneau,
   libelleModeJoueur,
+  numeroLisible,
   prixDuCreneau,
   prixDuTerrainPublic,
   quatorzeJours,
@@ -99,6 +100,13 @@ describe('les mots d’un créneau, du mode, du prix (P00 blocs 3 et 5, RA2)', (
     expect(prixDuTerrainPublic(t, { price: { max: 6, min: 6, unit: 'joueur' } }))
       .toBe('6 € par joueur, à régler sur place');
     expect(prixDuTerrainPublic(t, { price: null })).toBe('');
+  });
+
+  it('un numéro français lisible, un numéro étranger tel quel', () => {
+    expect(numeroLisible('+33639981234')).toBe('06 39 98 12 34');
+    expect(numeroLisible('0639981234')).toBe('06 39 98 12 34');
+    expect(numeroLisible('+41 22 123 45 67')).toBe('+41 22 123 45 67');
+    expect(numeroLisible(null)).toBe('');
   });
 
   it('une distance en kilomètres', () => {
