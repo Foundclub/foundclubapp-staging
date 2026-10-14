@@ -9,18 +9,22 @@ import {
   initialesDe,
   jourCourt,
   joursDeLaSemaine,
+  joursLisibles,
   libelleDuCreneau,
   libelleStatut,
   lignesDesPages,
   messageDeRefusResa,
   minutesAParis,
+  MOTIFS_DE_FERMETURE,
   MOTIFS_DE_REFUS,
   nomCourt,
   plageHoraire,
+  regrouperFermetures,
   semaineLisible,
   telephoneLisible,
   titreDuJour,
   totalDesPages,
+  versJourIso,
 } from '@/domains/complexe/complexeReservation';
 
 // RESA-L5A2 (14/10/2026) — les règles PURES des réservations côté gérant (E-G03 à E-G06, E-G10) :
@@ -153,6 +157,59 @@ describe('RESA-L5A2 — le planning (E-G03)', () => {
     ]);
     // Un créneau qui n'est pas libre n'ouvre pas de plage ; une fermeture l'arrête.
     expect(finsPossibles(jour, '18:00')).toEqual([]);
+  });
+});
+
+describe('RESA-L5A2 — les fermetures (E-G10)', () => {
+  it('les 4 motifs et ce qu’ils envoient au serveur', () => {
+    expect(MOTIFS_DE_FERMETURE.map((motif) => [motif.texte(t), motif.corps(t)])).toEqual([
+      ['Travaux', { reason: 'travaux' }],
+      ['Jour férié', { label: 'Jour férié', reason: 'autre' }],
+      ['Météo', { label: 'Météo', reason: 'autre' }],
+      ['Autre', { reason: 'autre' }],
+    ]);
+  });
+
+  it('les dates saisies, les jours lisibles', () => {
+    expect(versJourIso('25/10/2026')).toBe('2026-10-25');
+    expect(versJourIso('2026-10-25')).toBe('');
+    expect(joursLisibles('2026-10-25', '2026-10-26')).toBe('25/10 – 26/10');
+    expect(joursLisibles('2026-10-25', '2026-10-25')).toBe('25/10');
+  });
+
+  it('une ligne par geste : les terrains réunis, les blocages et les rouvertes à part', () => {
+    const terrains = [
+      { documentId: 't-1', name: 'Terrain 1' },
+      { documentId: 't-2', name: 'Terrain 2' },
+      { documentId: 't-3', name: 'Padel A' },
+    ];
+    const fermeture = (/** @type {Record<string, any>} */ autres) => ({
+      endDate: '2026-10-26',
+      kind: 'closure',
+      label: null,
+      reason: 'travaux',
+      startDate: '2026-10-25',
+      status: 'active',
+      ...autres,
+    });
+    const lignes = regrouperFermetures(t, [
+      fermeture({ documentId: 'f-1', terrainId: 't-1' }),
+      fermeture({ documentId: 'f-2', terrainId: 't-2' }),
+      fermeture({ documentId: 'f-3', kind: 'block', terrainId: 't-1' }),
+      fermeture({ documentId: 'f-5', status: 'reopened', terrainId: 't-3' }),
+      fermeture({
+        documentId: 'f-4',
+        endDate: '2026-10-15',
+        label: 'Météo',
+        reason: 'autre',
+        startDate: '2026-10-13',
+        terrainId: 't-3',
+      }),
+    ], terrains, '2026-10-14');
+    expect(lignes.map((ligne) => [ligne.motif, ligne.terrains, ligne.ids, ligne.enCours])).toEqual([
+      ['Météo', ['Padel A'], ['f-4'], true],
+      ['Travaux', ['Terrain 1', 'Terrain 2'], ['f-1', 'f-2'], false],
+    ]);
   });
 });
 

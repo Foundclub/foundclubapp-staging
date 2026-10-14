@@ -562,6 +562,21 @@ function ComplexePlanning() {
         </View>
       </>
     );
+  } else if (feuille?.quoi === 'ferme') {
+    contenuDeLaFeuille = (
+      <View testID="creneau-voir-fermetures">
+        <Button
+          onPress={() => {
+            setFeuille(null);
+            navigation.navigate(RouteNames.ComplexeFermetures, {
+              complexeId, terrainId: creneauOuvert?.terrainId,
+            });
+          }}
+          title={t('complexeReservations.planning.voirFermetures', 'Voir les fermetures')}
+          variant="Secondary"
+        />
+      </View>
+    );
   } else if (feuille?.quoi === 'bloque') {
     contenuDeLaFeuille = (
       <View testID="creneau-debloquer">
@@ -650,6 +665,20 @@ function ComplexePlanning() {
         {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
         {corps}
         {terrains.length ? legende : null}
+        {terrains.length ? (
+          <TouchableOpacity
+            accessibilityRole="link"
+            onPress={() => navigation.navigate(RouteNames.ComplexeFermetures, {
+              complexeId, terrainId: terrainChoisi || undefined,
+            })}
+            style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+            testID="planning-fermer-des-jours"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('complexeReservations.planning.fermerDesJours', 'Fermer des jours')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
       <BottomModal close={fermer} isVisible={Boolean(feuille)} webPresentation="dialog">
         <View style={{ gap: 16 }} testID="feuille-creneau">

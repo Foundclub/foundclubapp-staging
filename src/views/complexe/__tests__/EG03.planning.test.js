@@ -394,6 +394,26 @@ describe('RESA-L5A2 E-G03 — bloquer une plage, débloquer (états 4, 9 ter)', 
   });
 });
 
+describe('RESA-L5A2 E-G03 — vers les fermetures (E-G10)', () => {
+  it('« Fermer des jours », au pied du planning', async () => {
+    const arbre = await monter();
+    await toucher(arbre, 'planning-fermer-des-jours');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeFermetures, {
+      complexeId: 'cx-five', terrainId: undefined,
+    });
+  });
+
+  it('un créneau fermé : son motif, et « Voir les fermetures » de ce terrain', async () => {
+    const arbre = await monter();
+    await toucher(arbre, 'creneau-t-3-2026-10-16-18:00');
+    expect(lisibles(arbre)).toContain('Fermé : travaux');
+    await toucher(arbre, 'creneau-voir-fermetures');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeFermetures, {
+      complexeId: 'cx-five', terrainId: 't-3',
+    });
+  });
+});
+
 describe('RESA-L5A2 E-G03 — vues Semaine et Liste (états 2, 9 bis)', () => {
   it('Semaine : un terrain, du lundi au dimanche', async () => {
     const arbre = await monter();

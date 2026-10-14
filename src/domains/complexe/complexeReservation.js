@@ -407,6 +407,110 @@ export const finsPossibles = (creneaux, depuis) => {
   return fins;
 };
 
+// ---------------------------------------------------------------------------------------------
+// Les fermetures (E-G10)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Les motifs d'une fermeture (planche EG10 : Travaux · Jour férié · Météo · Autre) et ce qu'ils
+ * envoient : le serveur connaît `travaux | vacances | manifestation | autre` ; « Jour férié » et
+ * « Météo » partent en « autre » avec leur NOM (`label`, 40 caractères au plus), que le joueur lit
+ * dans la notification (« Fermeture (Météo) »).
+ * @type {ReadonlyArray<{ cle: string, corps: (t: (cle: string, defaut: string) => string) =>
+ *   { label?: string, reason: string }, texte: (t: (cle: string, defaut: string) => string) =>
+ *   string }>}
+ */
+export const MOTIFS_DE_FERMETURE = Object.freeze([
+  {
+    cle: 'travaux',
+    corps: () => ({ reason: 'travaux' }),
+    texte: (t) => t('complexeReservations.fermetures.travaux', 'Travaux'),
+  },
+  {
+    cle: 'ferie',
+    corps: (t) => ({
+      label: t('complexeReservations.fermetures.ferie', 'Jour férié'), reason: 'autre',
+    }),
+    texte: (t) => t('complexeReservations.fermetures.ferie', 'Jour férié'),
+  },
+  {
+    cle: 'meteo',
+    corps: (t) => ({ label: t('complexeReservations.fermetures.meteo', 'Météo'), reason: 'autre' }),
+    texte: (t) => t('complexeReservations.fermetures.meteo', 'Météo'),
+  },
+  {
+    cle: 'autre',
+    corps: () => ({ reason: 'autre' }),
+    texte: (t) => t('complexeReservations.motifs.autre', 'Autre'),
+  },
+]);
+
+/**
+ * La première lettre en capitale (« travaux » ⇒ « Travaux »).
+ * @param {string} texte - Le texte.
+ * @returns {string} Le texte.
+ */
+const majuscule = (texte) => (texte ? texte.charAt(0).toUpperCase() + texte.slice(1) : '');
+
+/**
+ * « 25/10/2026 » (le champ de date de l'app) en « 2026-10-25 ».
+ * @param {unknown} saisie - La date saisie.
+ * @returns {string} Le jour, ou '' s'il est illisible.
+ */
+export const versJourIso = (saisie) => {
+  const morceaux = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(saisie || '').trim());
+  return morceaux ? `${morceaux[3]}-${morceaux[2]}-${morceaux[1]}` : '';
+};
+
+/**
+ * « 25/10 – 26/10 », ou « 25/10 » pour un seul jour.
+ * @param {string} debut - « AAAA-MM-JJ ».
+ * @param {string} fin - « AAAA-MM-JJ ».
+ * @returns {string} Les jours.
+ */
+export const joursLisibles = (debut, fin) => {
+  const court = (/** @type {string} */ jour) => `${jour.slice(8, 10)}/${jour.slice(5, 7)}`;
+  return debut === fin ? court(debut) : `${court(debut)} – ${court(fin)}`;
+};
+
+/**
+ * Les fermetures à venir d'un complexe, regroupées : une fermeture PAR terrain côté serveur, une
+ * ligne par geste à l'écran (« 25/10 – 26/10 · Travaux · Terrain 1, Terrain 2 »). Les blocages
+ * (une plage d'heures) vivent dans le planning, pas ici.
+ * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {any[]} fermetures - Les fermetures (`terrainId` ajouté par le service).
+ * @param {any[]} terrains - Les terrains (leurs noms).
+ * @param {string} aujourdhui - « AAAA-MM-JJ ».
+ * @returns {Array<{ cle: string, debut: string, enCours: boolean, fin: string, ids: string[],
+ *   motif: string, terrains: string[] }>} Les lignes, la plus proche d'abord.
+ */
+export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
+  /** @type {Map<string, any>} */
+  const groupes = new Map();
+  fermetures
+    .filter((fermeture) => fermeture?.kind === 'closure' && fermeture?.status !== 'reopened')
+    .forEach((fermeture) => {
+      const cle = [
+        fermeture.startDate, fermeture.endDate, fermeture.reason, fermeture.label || '',
+      ].join('|');
+      const nom = terrains.find((terrain) => terrain.documentId === fermeture.terrainId)?.name;
+      const groupe = groupes.get(cle) || {
+        cle,
+        debut: fermeture.startDate,
+        enCours: fermeture.startDate <= aujourdhui,
+        fin: fermeture.endDate,
+        ids: [],
+        motif: majuscule(motifDeFermeture(t, fermeture))
+          || t('complexeReservations.motifs.autre', 'Autre'),
+        terrains: [],
+      };
+      groupe.ids.push(fermeture.documentId);
+      if (nom) groupe.terrains.push(String(nom));
+      groupes.set(cle, groupe);
+    });
+  return [...groupes.values()].sort((a, b) => a.debut.localeCompare(b.debut));
+};
+
 /**
  * Le nom court d'un réserveur : prénom et initiale (« Julien M. »), la règle du serveur
  * (`bookerLabel`).

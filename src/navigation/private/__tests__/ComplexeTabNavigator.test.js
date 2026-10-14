@@ -43,6 +43,7 @@ describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est all
       'ComplexeDevenirGerant',
       'ComplexeEspace',
       // RESA-L5A2 (14/10/2026)
+      'ComplexeFermetures',
       'ComplexeReservation',
       'ComplexeReservations',
     ].forEach((nom) => {

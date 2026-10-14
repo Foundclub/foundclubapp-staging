@@ -202,6 +202,8 @@ const MOBILE_ONLY_SCREENS = {
   // La suite du gérant (serveur RESA-L2A, non livré) : même raison, même lot web à venir.
   [RouteNames.ComplexeDemandes]:
     'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexeFermetures]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexePlanning]:
     'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeReservation]:
