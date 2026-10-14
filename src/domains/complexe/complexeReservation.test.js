@@ -1,12 +1,15 @@
 import {
   aujourdhuiAParis,
   enJours,
+  etatDeFrise,
   expireDans,
+  finsPossibles,
   grouperParJour,
   historiqueLisible,
   initialesDe,
   jourCourt,
   joursDeLaSemaine,
+  libelleDuCreneau,
   libelleStatut,
   lignesDesPages,
   messageDeRefusResa,
@@ -14,6 +17,7 @@ import {
   MOTIFS_DE_REFUS,
   nomCourt,
   plageHoraire,
+  semaineLisible,
   telephoneLisible,
   titreDuJour,
   totalDesPages,
@@ -94,6 +98,61 @@ describe('RESA-L5A2 — les jours et les heures', () => {
     ]);
     expect(groupes.map((groupe) => [groupe.date, groupe.items.length]))
       .toEqual([['2026-10-15', 2], ['2026-10-16', 1]]);
+  });
+});
+
+describe('RESA-L5A2 — le planning (E-G03)', () => {
+  const creneau = (/** @type {Record<string, any>} */ autres) => ({
+    closure: null, from: '20:00', reservation: null, state: 'libre', to: '21:00', ...autres,
+  });
+
+  it('chaque créneau dit son état et sa source', () => {
+    expect([
+      creneau({ reservation: { label: 'Julien M.' }, state: 'reserve-app' }),
+      creneau({ reservation: { label: 'M. Dupont' }, state: 'reserve-exterieur' }),
+      creneau({ reservation: { label: 'Lina T.' }, state: 'en-attente' }),
+      creneau({ closure: { kind: 'block', label: 'entretien' }, state: 'bloque' }),
+      creneau({ closure: { kind: 'block', label: null }, state: 'bloque' }),
+      creneau({ closure: { kind: 'closure', reason: 'travaux' }, state: 'ferme' }),
+      creneau({
+        closure: { kind: 'closure', label: 'Jour férié', reason: 'autre' }, state: 'ferme',
+      }),
+      creneau({}),
+    ].map((c) => libelleDuCreneau(t, c))).toEqual([
+      'Julien M. · App',
+      'M. Dupont · Extérieur',
+      'Lina T. · En attente',
+      'Bloqué : entretien',
+      'Bloqué',
+      'Fermé : travaux',
+      'Fermé : Jour férié',
+      'Libre',
+    ]);
+    expect(['reserve-app', 'reserve-exterieur', 'en-attente', 'bloque', 'ferme', 'libre', '?']
+      .map(etatDeFrise))
+      .toEqual(['app', 'exterieur', 'attente', 'bloque', 'ferme', 'libre', 'libre']);
+  });
+
+  it('« 12 – 18 octobre », « 28 septembre – 4 octobre »', () => {
+    expect(semaineLisible('2026-10-12')).toBe('12 – 18 octobre');
+    expect(semaineLisible('2026-09-28')).toBe('28 septembre – 4 octobre');
+  });
+
+  it('bloquer à partir d’ici : les fins possibles, les créneaux réservés gardés', () => {
+    const jour = [
+      creneau({ from: '18:00', state: 'reserve-app', to: '19:00' }),
+      creneau({ from: '20:00', to: '21:00' }),
+      creneau({ from: '21:00', state: 'en-attente', to: '22:00' }),
+      creneau({ from: '22:00', to: '23:00' }),
+      creneau({ from: '23:00', state: 'ferme', to: '23:30' }),
+    ];
+    expect(finsPossibles(jour, '20:00')).toEqual([
+      { bloques: 1, gardes: 0, to: '21:00' },
+      { bloques: 1, gardes: 1, to: '22:00' },
+      { bloques: 2, gardes: 1, to: '23:00' },
+    ]);
+    // Un créneau qui n'est pas libre n'ouvre pas de plage ; une fermeture l'arrête.
+    expect(finsPossibles(jour, '18:00')).toEqual([]);
   });
 });
 

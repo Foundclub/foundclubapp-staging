@@ -117,6 +117,13 @@ function ComplexeTabNavigator() {
         )}
       />
       <Tab.Screen
+        getComponent={() => require('@/views/complexe/ComplexePlanning').default}
+        initialParams={{ complexeId: params?.complexeId }}
+        listeners={createFocusedTabResetListener}
+        name={RouteNames.ComplexePlanning}
+        options={optionsDe(t('complexeGerant.gerer.planning', 'Planning'), Images.calendar, 0)}
+      />
+      <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}
         initialParams={{ chatScope: 'classic' }}
         listeners={createFocusedTabResetListener}

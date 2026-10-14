@@ -14,9 +14,13 @@ const lire = (/** @type {string} */ nom) => fs.readFileSync(
 describe('RESA-L5A1 E-G02 — la barre du bas de l’espace du complexe', () => {
   const source = lire('ComplexeTabNavigator.js');
 
-  it('Accueil, Demandes (RESA-L5A2), puis Messages', () => {
+  it('Accueil, Demandes, Planning (RESA-L5A2), puis Messages', () => {
     const noms = [...source.matchAll(/name=\{RouteNames\.(\w+)\}/g)].map((m) => m[1]);
-    expect(noms).toEqual(['ComplexeAccueil', 'ComplexeDemandes', 'Chat']);
+    expect(noms).toEqual(['ComplexeAccueil', 'ComplexeDemandes', 'ComplexePlanning', 'Chat']);
+  });
+
+  it('RESA-L5A2 — « Planning » ouvre E-G03', () => {
+    expect(source).toContain("require('@/views/complexe/ComplexePlanning')");
   });
 
   it('RESA-L5A2 — « Demandes » ouvre E-G06 et porte le nombre de demandes en attente', () => {

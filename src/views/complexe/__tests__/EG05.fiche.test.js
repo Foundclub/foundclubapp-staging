@@ -3,6 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import ComplexeReservation from '@/views/complexe/ComplexeReservation';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
 
 // RESA-L5A2 (14/10/2026) — E-G05 « La fiche d'une réservation, côté gérant » (planche EG05) : quand
@@ -169,6 +171,15 @@ describe('RESA-L5A2 E-G05 — confirmée, à venir, source App (état 1)', () =>
     ].map((texte) => lus.indexOf(texte));
     expect(ordre.every((index) => index > -1)).toBe(true);
     expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
+  });
+
+  it('« Voir dans le planning » ouvre l’onglet Planning au jour et au terrain', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Voir dans le planning');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeEspace, {
+      params: { complexeId: 'cx-five', date: '2026-10-16', terrainId: 't-1' },
+      screen: RouteNames.ComplexePlanning,
+    });
   });
 
   it('« Appeler » compose le numéro accordé', async () => {

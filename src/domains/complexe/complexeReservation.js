@@ -286,6 +286,127 @@ export const historiqueLisible = (t, etapes, { reserveur }) => (Array.isArray(et
   })
   .filter(Boolean);
 
+// ---------------------------------------------------------------------------------------------
+// Le planning (E-G03)
+// ---------------------------------------------------------------------------------------------
+
+/** Les états d'un créneau que le serveur ne laisse pas « Bloquer » par-dessus. */
+const ETATS_FERMES = Object.freeze(['bloque', 'ferme']);
+
+/** L'état d'un créneau du serveur (`gestion.ts`, `stateOf`) dans le vocabulaire de la frise. */
+const VERS_LA_FRISE = Object.freeze({
+  bloque: 'bloque',
+  'en-attente': 'attente',
+  ferme: 'ferme',
+  libre: 'libre',
+  'reserve-app': 'app',
+  'reserve-exterieur': 'exterieur',
+});
+
+/**
+ * L'état d'un créneau pour la frise et la grille (`FriseDuJour`, `GrillePlanning`).
+ * @param {unknown} etat - `libre | reserve-app | reserve-exterieur | en-attente | bloque | ferme`.
+ * @returns {'app' | 'attente' | 'bloque' | 'exterieur' | 'ferme' | 'libre'} L'état.
+ */
+export const etatDeFrise = (etat) => /** @type {any} */ (VERS_LA_FRISE)[String(etat)] || 'libre';
+
+/**
+ * Le motif d'une fermeture ou d'un blocage : le nom donné, sinon le motif de la liste du serveur
+ * (« travaux », « vacances », « manifestation »).
+ * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {any} fermeture - `closure` d'un créneau, ou une fermeture.
+ * @returns {string} Le motif, ou ''.
+ */
+export const motifDeFermeture = (t, fermeture) => {
+  const nom = String(fermeture?.label || '').trim();
+  if (nom) return nom;
+  switch (fermeture?.reason) {
+    case 'manifestation':
+      return t('complexeReservations.fermetures.motifManifestation', 'manifestation');
+    case 'travaux':
+      return t('complexeReservations.fermetures.motifTravaux', 'travaux');
+    case 'vacances':
+      return t('complexeReservations.fermetures.motifVacances', 'vacances');
+    default:
+      return '';
+  }
+};
+
+/**
+ * Ce qu'un créneau dit dans la grille : « Julien M. · App », « M. Dupont · Extérieur », « Lina T. ·
+ * En attente », « Bloqué : entretien », « Fermé : travaux », « Libre ».
+ * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {any} creneau - Un créneau du planning.
+ * @returns {string} Le libellé.
+ */
+export const libelleDuCreneau = (t, creneau) => {
+  const nom = String(creneau?.reservation?.label || '');
+  const motif = motifDeFermeture(t, creneau?.closure);
+  const avecMotif = { motif, ...SANS_ECHAPPEMENT };
+  switch (creneau?.state) {
+    case 'bloque':
+      return motif
+        ? t('complexeReservations.planning.bloqueMotif', 'Bloqué : {{motif}}', avecMotif)
+        : t('complexeReservations.planning.bloque', 'Bloqué');
+    case 'en-attente':
+      return `${nom} · ${t('complexeReservations.statut.enAttente', 'En attente')}`;
+    case 'ferme':
+      return motif
+        ? t('complexeReservations.planning.fermeMotif', 'Fermé : {{motif}}', avecMotif)
+        : t('complexeReservations.planning.ferme', 'Fermé');
+    case 'reserve-app':
+      return `${nom} · ${t('complexeReservations.source.app', 'App')}`;
+    case 'reserve-exterieur':
+      return `${nom} · ${t('complexeReservations.source.exterieur', 'Extérieur')}`;
+    default:
+      return t('complexeReservations.planning.libre', 'Libre');
+  }
+};
+
+/**
+ * « 12 – 18 octobre » ; « 28 septembre – 4 octobre » à cheval sur deux mois.
+ * @param {string} lundi - Le premier jour, « AAAA-MM-JJ ».
+ * @returns {string} La semaine.
+ */
+export const semaineLisible = (lundi) => {
+  const dimanche = enJours(lundi, 6);
+  const jourMois = { day: 'numeric', month: 'long' };
+  const fin = midi(dimanche).toLocaleDateString(localeDesFormats(), /** @type {any} */ (jourMois));
+  const memeMois = lundi.slice(0, 7) === dimanche.slice(0, 7);
+  const debut = memeMois
+    ? String(midi(lundi).getDate())
+    : midi(lundi).toLocaleDateString(localeDesFormats(), /** @type {any} */ (jourMois));
+  return `${debut} – ${fin}`;
+};
+
+/**
+ * « Bloquer à partir d'ici » (E-G03 état 4, le repli accessible du glisser) : depuis un créneau
+ * LIBRE, les heures de fin possibles, créneau après créneau tant qu'ils se suivent et qu'aucun
+ * n'est déjà bloqué ou fermé. Un créneau réservé dans la plage est GARDÉ par le serveur (un blocage
+ * n'annule rien) : il est compté à part.
+ * @param {any[]} creneaux - Les créneaux d'un terrain, un jour.
+ * @param {string} depuis - L'heure de début du créneau touché, « HH:MM ».
+ * @returns {Array<{ bloques: number, gardes: number, to: string }>} Les fins possibles.
+ */
+export const finsPossibles = (creneaux, depuis) => {
+  const tries = [...creneaux].sort((a, b) => String(a.from).localeCompare(String(b.from)));
+  const index = tries.findIndex((creneau) => creneau.from === depuis);
+  if (index < 0 || tries[index].state !== 'libre') return [];
+  /** @type {Array<{ bloques: number, gardes: number, to: string }>} */
+  const fins = [];
+  let bloques = 0;
+  let gardes = 0;
+  for (let i = index; i < tries.length; i += 1) {
+    const creneau = tries[i];
+    const suit = i === index || creneau.from === tries[i - 1].to;
+    if (!suit || ETATS_FERMES.includes(creneau.state)) break;
+    if (creneau.state === 'libre') bloques += 1;
+    else gardes += 1;
+    fins.push({ bloques, gardes, to: creneau.to });
+  }
+  return fins;
+};
+
 /**
  * Le nom court d'un réserveur : prénom et initiale (« Julien M. »), la règle du serveur
  * (`bookerLabel`).
