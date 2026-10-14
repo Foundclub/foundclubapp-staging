@@ -14,9 +14,14 @@ const lire = (/** @type {string} */ nom) => fs.readFileSync(
 describe('RESA-L5A1 E-G02 — la barre du bas de l’espace du complexe', () => {
   const source = lire('ComplexeTabNavigator.js');
 
-  it('Accueil, puis Messages (le lot L5A2 insère Demandes et Planning)', () => {
+  it('Accueil, Demandes (RESA-L5A2), puis Messages', () => {
     const noms = [...source.matchAll(/name=\{RouteNames\.(\w+)\}/g)].map((m) => m[1]);
-    expect(noms).toEqual(['ComplexeAccueil', 'Chat']);
+    expect(noms).toEqual(['ComplexeAccueil', 'ComplexeDemandes', 'Chat']);
+  });
+
+  it('RESA-L5A2 — « Demandes » ouvre E-G06 et porte le nombre de demandes en attente', () => {
+    expect(source).toContain("require('@/views/complexe/ComplexeDemandes')");
+    expect(source).toContain("useReservationsDuComplexe(complexeId, { vue: 'demandes' })");
   });
 
   it('l’accueil est celui du gérant, la messagerie celle du compte', () => {

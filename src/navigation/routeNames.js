@@ -427,4 +427,12 @@ export const RouteNames = /** @type {const} */ ({
   ComplexeInstallations: 'ComplexeInstallations',
   ComplexeReglages: 'ComplexeReglages',
   ComplexeTerrain: 'ComplexeTerrain',
+  // RESA-L5A2 (14/10/2026) — la suite du gérant, sur le serveur RESA-L2A : les demandes (E-G06) et
+  // le planning (E-G03) en onglets de son espace, ses réservations (E-G04), la fiche d'une
+  // réservation (E-G05) et les fermetures (E-G10). Cachés par `COMPLEXES_GERANT`.
+  ComplexeDemandes: 'ComplexeDemandes',
+  ComplexeFermetures: 'ComplexeFermetures',
+  ComplexePlanning: 'ComplexePlanning',
+  ComplexeReservation: 'ComplexeReservation',
+  ComplexeReservations: 'ComplexeReservations',
 });

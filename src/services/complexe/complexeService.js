@@ -125,6 +125,254 @@ export const enregistrerCreneaux = async (
   ),
 );
 
+// ---------------------------------------------------------------------------------------------
+// RESA-L5A2 (14/10/2026) — les routes ajoutées par RESA-L2A (contrat, partie « Ajouté après
+// RESA-L2A » ; admin `origin/feat/RESAL2A-admin`, `routes/reservation-custom.ts`). NON LIVRÉES :
+// cachées, comme le reste, par `COMPLEXES_GERANT`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Les paramètres non vides, seulement : une adresse sans `terrain=` ni `statut=` vides.
+ * @param {Record<string, unknown>} params - Les paramètres.
+ * @returns {Record<string, unknown>} Les paramètres remplis.
+ */
+const remplis = (params) => Object.fromEntries(
+  Object.entries(params)
+    .filter(([, valeur]) => valeur !== undefined && valeur !== null && valeur !== ''),
+);
+
+/**
+ * Les réservations de SON complexe (E-G04, E-G06), par pages de 20.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ page?: number, source?: string, statut?: string, terrain?: string,
+ *   vue: 'a-venir' | 'aujourdhui' | 'demandes' | 'passees' | 'traitees' }} filtres - La vue.
+ * @returns {Promise<any>} `{ data: { items, pagination: { page, pageSize, total } } }`.
+ */
+export const lireReservationsDuComplexe = async (complexeId, filtres) => corps(
+  client().get(`/complexes/${enc(complexeId)}/reservations`, { params: remplis(filtres) }),
+);
+
+/**
+ * La fiche d'une réservation (E-G05) : le nom, le téléphone SEULEMENT s'il est accordé.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const lireReservationGeree = async (complexeId, reservationId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}`),
+);
+
+/**
+ * Le planning de SES terrains (E-G03, la frise de E-G02) : 31 jours au plus.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ from: string, terrain?: string, to: string }} periode - Les jours, un terrain.
+ * @returns {Promise<any>} `{ data: { from, to, terrains: [{ days: [{ date, slots }] }] } }`.
+ */
+export const lirePlanning = async (complexeId, periode) => corps(
+  client().get(`/complexes/${enc(complexeId)}/planning`, { params: remplis(periode) }),
+);
+
+/**
+ * Accepter, ou refuser avec un motif (obligatoire), une demande (E-G06, E-G05).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la demande.
+ * @param {{ decision: 'accepter' | 'refuser', reason?: string }} decision - La décision.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const deciderDemande = async (complexeId, reservationId, decision) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/decision`,
+    { data: decision },
+  ),
+);
+
+/**
+ * Annuler une réservation (motif obligatoire pour une réservation de l'app, N-18), ou supprimer
+ * une note « extérieur » (sans motif).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {string | null} motif - Le motif, ou null.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const annulerReservationGeree = async (complexeId, reservationId, motif) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/annuler`,
+    { data: motif ? { reason: motif } : {} },
+  ),
+);
+
+/**
+ * « Réservé à l'extérieur » (E-G03, A-G17) : un créneau du modèle, un nom libre.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ date: string, externalName: string, from: string, terrain: string }} note - Le créneau.
+ * @returns {Promise<any>} `{ data: reservation }` (201).
+ */
+export const noterExterieur = async (complexeId, note) => corps(
+  client().post(`/complexes/${enc(complexeId)}/reservations`, { data: note }),
+);
+
+/**
+ * « Modifier le nom » d'une note « extérieur » (E-G05).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la note.
+ * @param {string} nom - Le nom libre.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const modifierExterieur = async (complexeId, reservationId, nom) => corps(
+  client().put(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}`,
+    { data: { externalName: nom } },
+  ),
+);
+
+/**
+ * « Retirer » SON terrain (E-G07, E-G08) : `apercu` compte ses réservations à venir sans rien
+ * écrire (`dryRun` DANS LE CORPS, `terrain.ts` `retirerTerrain`) ; sinon le terrain sort et ses
+ * réservations à venir sont annulées et prévenues (N-18).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} terrainId - documentId du terrain.
+ * @param {{ apercu?: boolean }} [options] - L'aperçu seulement.
+ * @returns {Promise<any>} `{ data: { dryRun, reservationsTouchees } }` ou
+ *   `{ data: { reservationsAnnulees, retired } }`.
+ */
+export const retirerTerrain = async (complexeId, terrainId, { apercu = false } = {}) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/terrains/${enc(terrainId)}/retirer`,
+    apercu ? { dryRun: true } : {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
+// Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
+// des fermetures est chargé À L'APPEL (même raison que le client, en tête de ce fichier).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Le service des fermetures, chargé à l'appel.
+ * @returns {any} Le module.
+ */
+// eslint-disable-next-line global-require
+const fermetures = () => require('../facilityClosure/facilityClosureService');
+
+/**
+ * Lance un geste par terrain, l'un après l'autre : ce qui est fait reste fait. Tout échoue ⇒ le
+ * premier refus est levé (l'écran le dit) ; une partie échoue ⇒ les échecs sont rendus.
+ * @param {string[]} ids - Les identifiants.
+ * @param {(id: string) => Promise<any>} geste - Le geste.
+ * @returns {Promise<{ echecs: Array<{ erreur: any, id: string }>, reponses: any[] }>} Le bilan.
+ */
+const unParUn = async (ids, geste) => {
+  /** @type {any[]} */
+  const reponses = [];
+  /** @type {Array<{ erreur: any, id: string }>} */
+  const echecs = [];
+  // Un par un, exprès : une fermeture annule des réservations, l'ordre est celui de l'écran.
+  // eslint-disable-next-line no-restricted-syntax
+  for (const id of ids) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      reponses.push(await geste(id));
+    } catch (erreur) {
+      echecs.push({ erreur, id });
+    }
+  }
+  if (!reponses.length && echecs.length) throw echecs[0].erreur;
+  return { echecs, reponses };
+};
+
+/**
+ * Les fermetures à venir (actives) de ces terrains, chacune avec son terrain.
+ * @param {string[]} terrainIds - Les terrains.
+ * @returns {Promise<any[]>} Les fermetures (`terrainId` ajouté).
+ */
+export const lireFermetures = async (terrainIds) => {
+  const listes = await Promise.all(terrainIds.map(async (terrainId) => {
+    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'active' });
+    return (Array.isArray(reponse?.data) ? reponse.data : [])
+      .map((/** @type {any} */ fermeture) => ({ ...fermeture, terrainId }));
+  }));
+  return listes.flat();
+};
+
+/**
+ * L'aperçu d'une fermeture sur ces terrains (E-G10) : les réservations touchées, réunies.
+ * @param {string[]} terrainIds - Les terrains.
+ * @param {{ endDate: string, startDate: string }} dates - Les jours.
+ * @returns {Promise<{ count: number, items: any[] }>} Les réservations touchées.
+ */
+export const lireApercuFermeture = async (terrainIds, { endDate, startDate }) => {
+  const apercus = await Promise.all(terrainIds.map(async (terrainId) => {
+    const reponse = await fermetures().previewFacilityClosure(terrainId, {
+      endDate, kind: 'closure', startDate,
+    });
+    const touchees = reponse?.meta?.reservations;
+    return {
+      count: Number(touchees?.count) || 0,
+      items: (Array.isArray(touchees?.items) ? touchees.items : [])
+        .map((/** @type {any} */ item) => ({ ...item, terrainId })),
+    };
+  }));
+  return {
+    count: apercus.reduce((somme, apercu) => somme + apercu.count, 0),
+    items: apercus.flatMap((apercu) => apercu.items),
+  };
+};
+
+/**
+ * Fermer des jours (E-G10) : UNE fermeture PAR terrain. Sans actualité (la case « Publier aussi une
+ * actualité » est celle de la Ville).
+ * @param {string[]} terrainIds - Les terrains.
+ * @param {{ endDate: string, label?: string | null, message?: string | null, reason: string,
+ *   startDate: string }} fermeture - Les jours, le motif, le mot aux joueurs.
+ * @returns {Promise<{ annulees: number, echecs: Array<{ erreur: any, id: string }>,
+ *   faits: number }>} Le bilan.
+ */
+export const fermerTerrains = async (terrainIds, fermeture) => {
+  const { echecs, reponses } = await unParUn(terrainIds, (terrainId) => fermetures().closeFacility(
+    terrainId,
+    { ...fermeture, kind: 'closure', publishActualite: false },
+  ));
+  return {
+    annulees: reponses.reduce(
+      (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),
+      0,
+    ),
+    echecs,
+    faits: reponses.length,
+  };
+};
+
+/**
+ * « Rouvrir » des fermetures, ou « Débloquer » un créneau : un état, jamais une suppression.
+ * @param {string[]} fermetureIds - Les fermetures.
+ * @returns {Promise<{ echecs: Array<{ erreur: any, id: string }>, faits: number }>} Le bilan.
+ */
+export const rouvrirFermetures = async (fermetureIds) => {
+  const { echecs, reponses } = await unParUn(
+    fermetureIds,
+    (fermetureId) => fermetures().reopenFacilityClosure(fermetureId),
+  );
+  return { echecs, faits: reponses.length };
+};
+
+/**
+ * « Bloquer ce créneau » (E-G03) : une plage d'UN jour, motif facultatif pour un complexe.
+ * @param {string} terrainId - Le terrain.
+ * @param {{ date: string, from: string, motif?: string, to: string }} blocage - La plage.
+ * @returns {Promise<any>} `{ data: fermeture }` (avec `reservations.gardees`).
+ */
+export const bloquerCreneau = async (terrainId, {
+  date, from, motif, to,
+}) => fermetures().closeFacility(terrainId, {
+  endDate: date,
+  endTime: to,
+  kind: 'block',
+  startDate: date,
+  startTime: from,
+  ...(motif ? { label: motif } : {}),
+});
+
 /**
  * Téléverse UNE photo (`POST /upload`, le chemin des actualités de la Ville) ; le serveur du
  * complexe vérifie ensuite qu'elle n'est liée à rien d'autre (COMPLEXE_FILE_NOT_ALLOWED).

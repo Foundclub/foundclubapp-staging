@@ -97,6 +97,35 @@ const parRepere = (arbre, testID) => {
   return noeuds[0] || null;
 };
 
+/**
+ * RESA-L5A2 (14/10/2026) — le sélecteur d'onglets de l'app (`SegmentedControl`) charge les gestes
+ * natifs, que jest ne lit pas : sa doublure, un bouton par onglet (libellé, choisi ou non). La
+ * fabrique d'un `jest.mock('@/components/molecules/segmentedControl/SegmentedControl', …)`.
+ * @returns {{ __esModule: true, default: (props: any) => any }} Le module doublé.
+ */
+const ongletsDeTemoin = () => {
+  // Chargés à l'appel : la fabrique s'exécute dans un `jest.mock`, avant les imports du témoin.
+  // eslint-disable-next-line global-require
+  const { createElement } = require('react');
+  // eslint-disable-next-line global-require
+  const { TouchableOpacity, View } = require('react-native');
+  return {
+    __esModule: true,
+    default: function FauxOnglets(/** @type {any} */ { onChange, options, value }) {
+      return createElement(View, null, options.map((/** @type {any} */ option) => createElement(
+        TouchableOpacity,
+        {
+          accessibilityRole: 'tab',
+          accessibilityState: { selected: option.value === value },
+          key: option.value,
+          onPress: () => onChange(option.value),
+        },
+        createElement(Text, null, option.label),
+      )));
+    },
+  };
+};
+
 /** Le complexe d'exemple de la toile (données fictives). */
 const COMPLEXE_FIVE = Object.freeze({
   city: 'Montrivage',
@@ -151,6 +180,7 @@ const PLAN_OUVERT = Object.freeze({
 module.exports = {
   COMPLEXE_FIVE,
   lisibles,
+  ongletsDeTemoin,
   parRepere,
   PLAN_OUVERT,
   pressable,
