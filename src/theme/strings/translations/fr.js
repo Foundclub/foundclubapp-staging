@@ -15463,6 +15463,8 @@ export default {
       club: 'CLUB',
       nationality: 'NATIONALITÉ',
       position: 'POSTE',
+      // PAR-L13 — la carte d'un enfant déclaré porte son équipe.
+      team: 'ÉQUIPE',
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
@@ -22919,6 +22921,52 @@ export default {
       createdElided: 'La fiche d’{{firstname}} est créée.',
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
+    },
+    // PAR-L13 (13/10, design parent E28-E30) — la carte de collection d'un enfant de moins de
+    // 13 ans, « pareille que les autres » (Adel, 12/10, registre des mineurs lignes 22-23) :
+    // photo, ville et nationalité oui, code QR non, « ce qui part » avant tout partage.
+    card: {
+      addPhoto: 'Ajouter sa photo',
+      // Le bloc « Sa carte » de sa fiche (prototype, planche 3).
+      blockCaption: 'Carte de collection',
+      blockOpen: 'Voir',
+      blockTitle: 'Sa carte',
+      changePhoto: 'Changer sa photo',
+      cityLabel: 'Ville (facultatif)',
+      cityPlaceholder: 'Ex. Marseille',
+      edit: 'Modifier sa carte',
+      eyebrow: 'Nouveau',
+      hint: 'C’est pour sa carte qu’on te demande ça. Tu peux le faire plus tard.',
+      nationalityLabel: 'Nationalité (facultatif)',
+      nationalityPlaceholder: 'Ex. Française',
+      noLink: 'Ni code ni lien : la carte ne mène à aucune page.',
+      numberLabel: 'Numéro de maillot',
+      numberPlaceholder: 'Ex. 7',
+      photoError: 'La photo n’a pas pu être enregistrée. Réessaie.',
+      positionLabel: 'Poste',
+      removePhoto: 'Retirer sa photo',
+      save: 'Enregistrer sa carte',
+      savedDescription: 'La carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
+      saveError: 'La carte n’a pas pu être enregistrée. Réessaie.',
+      share: 'Partager la carte de {{firstname}}',
+      sharedGallery: 'La carte est enregistrée dans tes photos (album FoundClub).'
+        + ' Choisis maintenant où la publier.',
+      shareElided: 'Partager la carte d’{{firstname}}',
+      shareOpenWith: 'Ouvrir la carte avec…',
+      // E30 — AVANT tout partage : ce qui part, et ce qui ne part jamais.
+      sheet: {
+        confirm: 'Partager l’image',
+        never: 'Un code ou un lien vers sa fiche.',
+        neverTitle: 'Ce qui n’apparaît jamais',
+        shown: 'Sa photo si tu en as mis une, son prénom et son nom, son âge, son équipe,'
+          + ' son numéro, son poste, sa ville et sa nationalité.',
+        shownTitle: 'Ce qui apparaît',
+        subtitle: 'Tu envoies une image, sans lien vers elle.',
+        title: 'Partager la carte de {{firstname}} ?',
+        titleElided: 'Partager la carte d’{{firstname}} ?',
+      },
+      title: 'La carte de {{firstname}}',
+      titleElided: 'La carte d’{{firstname}}',
     },
     confirmDelete: {
       cancel: 'Annuler',

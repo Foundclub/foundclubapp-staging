@@ -28,6 +28,7 @@ const mockCreer = jest.fn();
 const mockModifier = jest.fn();
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
+const mockReplace = jest.fn();
 /** @type {any} */
 let mockParams;
 /** @type {any} */
@@ -74,7 +75,7 @@ jest.mock('@/views/profile/parent/annonceDeLaFiche', () => ({
 }));
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
+  useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, replace: mockReplace }),
   useRoute: () => ({ name: mockRouteName, params: mockParams }),
 }));
 
@@ -770,7 +771,10 @@ describe('PAR-L5L6 E08 — ajouter un enfant', () => {
     expect(texteVisible(arbre)).not.toContain('Poste');
   });
 
-  test('🔴 fiche créée : la liste l annonce, avec l enfant, puis on y revient', async () => {
+  // PAR-L13 (13/10, design parent E28) — ce témoin évolue : après « Déclarer mon enfant », on
+  // ne revient plus tout de suite à la liste, on ouvre SA CARTE (une vue de « Mes enfants »,
+  // qui REMPLACE le formulaire : « Plus tard » ramène ensuite à la liste, où l annonce attend).
+  test('🔴 fiche créée : la liste l annonce, et sa CARTE remplace le formulaire', async () => {
     const arbre = await rendre();
     await remplir(arbre);
     await enregistrer(arbre);
@@ -785,6 +789,19 @@ describe('PAR-L5L6 E08 — ajouter un enfant', () => {
     expect(mockAnnoncer).toHaveBeenCalledWith({
       documentId: 'anissa', firstname: 'Anissa', type: 'creee',
     });
+    expect(mockReplace).toHaveBeenCalledWith('MyChildren', {
+      carte: 'nouvelle', childDocumentId: 'anissa',
+    });
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('PAR-L13 — réponse sans identifiant : pas de carte, retour à la liste', async () => {
+    const arbre = await rendre();
+    await remplir(arbre);
+    await enregistrer(arbre);
+    await act(async () => { mockCreer.mock.calls[0][1].onSuccess(null); });
+
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
