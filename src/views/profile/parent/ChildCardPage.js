@@ -91,8 +91,13 @@ function ChildCardPage({ enfant, nouvelle = false, onFini }) {
   const {
     cardRef, isBusy, saveCardToGallery, shareCard,
   } = useShareCard();
-  const { isPending: enregistrementEnCours, mutate: modifierLaFiche } = useUpdateDeclaredChild();
-  const { isPending: envoiDeLaPhoto, mutate: poserLaPhoto } = useSetDeclaredChildPhoto();
+  // Les crochets de requête viennent d'un fichier sans types (`@ts-nocheck`).
+  const {
+    isPending: enregistrementEnCours, mutate: modifierLaFiche,
+  } = /** @type {any} */ (useUpdateDeclaredChild());
+  const {
+    isPending: envoiDeLaPhoto, mutate: poserLaPhoto,
+  } = /** @type {any} */ (useSetDeclaredChildPhoto());
 
   const [enEdition, setEnEdition] = useState(nouvelle);
   const [saisie, setSaisie] = useState(() => champsDeLaFiche(enfant));
@@ -107,14 +112,15 @@ function ChildCardPage({ enfant, nouvelle = false, onFini }) {
   const aUnePhoto = Boolean(enfant?.photo?.url);
 
   const carte = useMemo(() => {
-    const { photoUrl, ...props } = buildDeclaredChildCardProps({
+    // Les props de la carte (`PlayerCard`, sans types : `@ts-nocheck`).
+    const { photoUrl, ...props } = /** @type {any} */ (buildDeclaredChildCardProps({
       enfant,
       libelles: {
         noTeam: t('myChildren.screen.noTeam'),
         years: t('playerCard.field.yearsUnit'),
       },
       saisie: enEdition ? saisie : null,
-    });
+    }));
     return { ...props, photo: photoUrl ? { uri: getImageUrl(photoUrl) } : undefined };
   }, [enEdition, enfant, saisie, t]);
 
