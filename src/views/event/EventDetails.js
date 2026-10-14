@@ -2706,6 +2706,23 @@ function EventDetails({ navigation, route }) {
     // jamais.
   }, [event, eventId, navigation, queryClient, t]);
 
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » du bandeau, et « Choisir
+  // une autre place » de la proposition de la Ville, ouvrent « Déplacer la séance » (la
+  // modification en mode « deplacer » : aucune route neuve ; un serveur d'avant y retrouve la
+  // modification). Un stage ou un tournoi garde le refus de « Modifier » (`handleEditEvent`).
+  const handleMoveEvent = useCallback((/** @type {string | undefined} */ proposalId) => {
+    if (!getEventEditSupport(event).isSupported) {
+      handleEditEvent();
+      return;
+    }
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+      },
+      screen: RouteNames.EventEdit,
+    });
+  }, [event, eventId, handleEditEvent, navigation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
     if (!teamDocumentId) return;
@@ -8216,7 +8233,7 @@ function EventDetails({ navigation, route }) {
                 closure={event.facilityClosure}
                 facilityType={event?.facility?.type}
                 onCancel={canEdit ? handleCancelEvent : undefined}
-                onMove={canEdit ? handleEditEvent : undefined}
+                onMove={canEdit ? () => handleMoveEvent() : undefined}
                 pourUnMembre={!canEdit}
               />
             ) : null}

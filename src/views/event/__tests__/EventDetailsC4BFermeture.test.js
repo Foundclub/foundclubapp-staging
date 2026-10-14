@@ -488,12 +488,16 @@ describe('COLL-C4B · le bandeau de la seance touchee par une fermeture', () => 
     expect(contient(racine, 'Les joueurs ne sont prévenus que si le club déplace ou annule.')).toBe(true);
   });
 
-  test('« Changer l heure ou le lieu » ouvre la modification de la seance', () => {
+  // COLL-R-DEPLACER (14/10, COL-013) : le geste ouvre « Déplacer la séance » (EventEdit en mode
+  // « deplacer » ; un serveur d'avant y retrouve la modification).
+  test('« Changer l heure ou le lieu » ouvre « Déplacer la séance »', () => {
     const racine = monter({ auth: ORGANISATEUR(), event: touchee() });
     const bouton = boutonAvecTitre(racine, 'Changer l’heure ou le lieu');
     expect(bouton).toBeTruthy();
     act(() => { bouton.props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventStack', { params: { eventId: 'event-1' }, screen: 'EventEdit' });
+    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'event-1', mode: 'deplacer' }, screen: 'EventEdit',
+    });
   });
 
   test('« Annuler l entrainement » ouvre l annulation de la fiche (la confirmation d aujourd hui)', () => {

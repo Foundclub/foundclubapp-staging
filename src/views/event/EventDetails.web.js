@@ -800,6 +800,14 @@ function EventDetails({ navigation, route }) {
   const openOpponentEdit = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [eventId, navigation]);
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » et « Choisir une autre
+  // place » ouvrent « Déplacer la séance » (la modification en mode « deplacer » ; un serveur
+  // d'avant y retrouve la modification).
+  const ouvrirDeplacer = useCallback((/** @type {string | undefined} */ proposalId) => {
+    navigation.navigate(RouteNames.EventEdit, {
+      eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+    });
+  }, [eventId, navigation]);
   // CRFERM (13/10, COL-010) — « Annuler l entraînement » du bandeau de fermeture : CETTE séance,
   // jamais la série (règle « déplacer A »), après confirmation, comme l annulation du téléphone.
   const annulerSeanceFermee = useMutation({
@@ -2459,7 +2467,7 @@ function EventDetails({ navigation, route }) {
                   closure={event.facilityClosure}
                   facilityType={event?.facility?.type}
                   onCancel={canEdit ? annulerLaSeanceFermee : undefined}
-                  onMove={canEdit ? openOpponentEdit : undefined}
+                  onMove={canEdit ? () => ouvrirDeplacer() : undefined}
                   pourUnMembre={!canEdit}
                 />
               ) : null}

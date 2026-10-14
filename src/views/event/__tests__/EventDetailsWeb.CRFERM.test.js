@@ -267,7 +267,8 @@ describe('CRFERM · la fiche du site dit la fermeture', () => {
     expect(textes(root)).toContain('Le gymnase est fermé ce jour-là');
     expect(textes(root)).toContain('Travaux. Mot de la Ville : « Réfection du sol ».');
     act(() => { geste(root, 'Changer l’heure ou le lieu').props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1' });
+    // COLL-R-DEPLACER (14/10, COL-013) : « Déplacer la séance » (EventEdit en mode « deplacer »).
+    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1', mode: 'deplacer' });
     await act(async () => { geste(root, 'Annuler l’entraînement').props.onPress(); });
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(mockCancelEvent).toHaveBeenCalledWith({ documentId: 'event-1' });
