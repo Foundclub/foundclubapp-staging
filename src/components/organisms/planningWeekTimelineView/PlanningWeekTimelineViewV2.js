@@ -835,6 +835,15 @@ function PlanningWeekTimelineView({
     }
     // COLL-C4B — une seance que la fermeture touche GARDE sa place (D16), cernee d orange.
     const aDeplacer = Boolean(event?.raw?.closure);
+    // COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a la seance touchee, dit a sa place : la
+    // Ville a propose une place (« proposition envoyee », planche P5v4-deplacer-ville-tel ecran
+    // 6 b) ; un creneau de SAISON sans seance posee « n a pas lieu » ; sinon « a deplacer ».
+    let motDeFermeture = t('collectiviteFermetures.planning.aDeplacer', 'à déplacer');
+    if (event?.raw?.relocationProposal?.status === 'pending') {
+      motDeFermeture = t('deplacerSeance.planning.propositionEnvoyee', 'proposition envoyée');
+    } else if (event?.raw?.kind === 'slot' && event?.raw?.origin === 'slot') {
+      motDeFermeture = t('deplacerSeance.planning.nAPasLieu', 'n’a pas lieu');
+    }
     const color = event.color || Colors.primary500;
     const isPendingParticipation = isPlanningPendingParticipation(event);
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
@@ -1038,7 +1047,7 @@ function PlanningWeekTimelineView({
             {/* l equipe : en troisieme, le bloc le coupait (`overflow: hidden` ; T11, C25_3). */}
             {aDeplacer ? (
               <Text style={{ color: pendingAccentColor }} testID="a-deplacer">
-                {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
+                {` · ${motDeFermeture}`}
               </Text>
             ) : null}
             {nonTranchee ? (
@@ -1086,7 +1095,7 @@ function PlanningWeekTimelineView({
             ]}
             testID="a-deplacer"
           >
-            {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+            {motDeFermeture}
           </Text>
         ) : null}
         {montreTertiaire ? (

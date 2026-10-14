@@ -35,6 +35,7 @@ import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -806,6 +807,14 @@ function EventDetails({ navigation, route }) {
   }, []);
   const openOpponentEdit = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
+  }, [eventId, navigation]);
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » et « Choisir une autre
+  // place » ouvrent « Déplacer la séance » (la modification en mode « deplacer » ; un serveur
+  // d'avant y retrouve la modification).
+  const ouvrirDeplacer = useCallback((/** @type {string | undefined} */ proposalId) => {
+    navigation.navigate(RouteNames.EventEdit, {
+      eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+    });
   }, [eventId, navigation]);
   // CRFERM (13/10, COL-010) — « Annuler l entraînement » du bandeau de fermeture : CETTE séance,
   // jamais la série (règle « déplacer A »), après confirmation, comme l annulation du téléphone.
@@ -2464,12 +2473,21 @@ function EventDetails({ navigation, route }) {
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
                   deux gestes pour qui peut modifier la séance ; un joueur lit le bandeau seul. La
                   fiche du site n en disait rien (écart de parité). */}
+              {/* COLL-R-DEPLACER (14/10, « D9 = b », planche P5v4-deplacer-ordi état D) : la
+                  proposition de la Ville, au-dessus du bandeau, pour qui peut déplacer la
+                  séance. */}
+              {canEdit && event?.relocationProposal ? (
+                <RelocationProposalCard
+                  onChooseOther={() => ouvrirDeplacer(event.relocationProposal?.documentId)}
+                  proposal={event.relocationProposal}
+                />
+              ) : null}
               {event?.facilityClosure ? (
                 <FacilityClosureBanner
                   closure={event.facilityClosure}
                   facilityType={event?.facility?.type}
                   onCancel={canEdit ? annulerLaSeanceFermee : undefined}
-                  onMove={canEdit ? openOpponentEdit : undefined}
+                  onMove={canEdit ? () => ouvrirDeplacer() : undefined}
                   pourUnMembre={!canEdit}
                 />
               ) : null}

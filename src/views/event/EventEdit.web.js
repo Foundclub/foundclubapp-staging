@@ -38,7 +38,12 @@ import { getTeams } from '@/services/team/teamService';
 import { getEntityDocumentId } from '@/utils/entityId';
 import safeJsonParse from '@/utils/safeJsonParse';
 
+// COLL-R-DEPLACER (14/10) : `import/order` veut `@/responsive` avant le chemin relatif,
+// `perfectionist` l inverse ; la regle du depot (EventDetails.web.js, ClubDetails.js) :
+// `import/order` gagne.
+/* eslint-disable perfectionist/sort-imports */
 import { BREAKPOINTS } from '@/responsive';
+import DeplacerLaSeance from './deplacer/DeplacerLaSeance';
 
 const toDateInputValue = (value) => {
   if (!value) return '';
@@ -82,7 +87,7 @@ const dedupeTeams = (teams = []) => {
  * @param root0.navigation
  * @param root0.route
  */
-function EventEdit({ navigation, route }) {
+function EventEditForm({ navigation, route }) {
   const { t } = useTranslation();
   const { eventId } = route?.params || {};
   const { width } = useWindowDimensions();
@@ -1078,6 +1083,32 @@ function EventEdit({ navigation, route }) {
       </div>
     </ScreenContainer>
   );
+}
+
+/**
+ * COLL-R-DEPLACER A8 (14/10, COL-013) — le mode « déplacer » sur le site, comme au téléphone
+ * (`?mode=deplacer`, `&as=ville` pour la Ville) : le tunnel « Déplacer la séance ». Un serveur
+ * d'avant ce lot ne connaît pas la route des places : la modification de la séance, comme avant.
+ * @param {any} props - Les propriétés d'écran.
+ * @returns {import('react').ReactElement} Le tunnel, ou le formulaire.
+ */
+function EventEdit({ navigation, route }) {
+  const {
+    as, eventId, mode, proposalId,
+  } = route?.params || {};
+  const [formulaire, setFormulaire] = useState(false);
+  if (mode === 'deplacer' && eventId && !formulaire) {
+    return (
+      <DeplacerLaSeance
+        eventId={eventId}
+        navigation={navigation}
+        onIndisponible={() => setFormulaire(true)}
+        proposalId={proposalId || undefined}
+        viewer={as === 'ville' ? 'ville' : 'club'}
+      />
+    );
+  }
+  return <EventEditForm navigation={navigation} route={route} />;
 }
 
 export default EventEdit;

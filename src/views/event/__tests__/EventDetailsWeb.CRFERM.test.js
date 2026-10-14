@@ -21,6 +21,7 @@ const mockUseAuth = jest.fn();
 const mockEventQuery = { data: null };
 const mockCreateEventReport = jest.fn(() => Promise.resolve({ data: { id: 1 } }));
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
+const mockDecideRelocation = jest.fn(() => Promise.resolve({ documentId: 'prop-1', status: 'accepted' }));
 
 // La mutation APPELLE sa fonction : c'est l'envoi du signalement qu'on veut voir partir.
 // 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
@@ -110,6 +111,8 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 
 jest.mock('@/services/event/eventService', () => ({
   cancelEvent: (/** @type {any} */ variables) => mockCancelEvent(variables),
+  // COLL-R-DEPLACER (14/10) : « Accepter » la proposition de la Ville.
+  decideRelocation: (/** @type {any[]} */ ...args) => mockDecideRelocation(...args),
   updateEvent: jest.fn(),
 }));
 
@@ -274,7 +277,8 @@ describe('CRFERM · la fiche du site dit la fermeture', () => {
     expect(textes(root)).toContain('Le gymnase est fermé ce jour-là');
     expect(textes(root)).toContain('Travaux. Mot de la Ville : « Réfection du sol ».');
     act(() => { geste(root, 'Changer l’heure ou le lieu').props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1' });
+    // COLL-R-DEPLACER (14/10, COL-013) : « Déplacer la séance » (EventEdit en mode « deplacer »).
+    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1', mode: 'deplacer' });
     await act(async () => { geste(root, 'Annuler l’entraînement').props.onPress(); });
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(mockCancelEvent).toHaveBeenCalledWith({ documentId: 'event-1' });
@@ -294,6 +298,37 @@ describe('CRFERM · la fiche du site dit la fermeture', () => {
     expect(textes(root).join('|')).not.toContain('Réfection du sol');
     expect(geste(root, 'Changer l’heure ou le lieu')).toBeUndefined();
     expect(geste(root, 'Annuler l’entraînement')).toBeUndefined();
+  });
+
+  // COLL-R-DEPLACER (14/10, « D9 = b », planche P5v4-deplacer-ordi état D) : la proposition de la Ville
+  // dans la fiche du site, au-dessus du bandeau, avec ses deux gestes.
+  test('CRDEP — la proposition de la Ville : « Accepter » répond, « Choisir une autre place » ouvre le tunnel', async () => {
+    const proposition = {
+      collectivite: { name: 'Ville de Montrivage' },
+      date: '2099-09-05',
+      documentId: 'prop-1',
+      endTime: '19:30',
+      facility: { documentId: 'stade-1', name: 'Stade municipal' },
+      fromFacility: { documentId: 'gym-1', name: 'Gymnase des Tilleuls' },
+      startTime: '18:00',
+      status: 'pending',
+    };
+    const root = mountScreen({ event: { ...touchee(), relocationProposal: proposition } });
+    const ordre = root.findAll((/** @type {any} */ n) => (
+      ['bandeau-fermeture', 'proposition-de-la-ville'].includes(n.props?.testID)
+    )).map((/** @type {any} */ n) => n.props.testID);
+    expect(ordre[0]).toBe('proposition-de-la-ville');
+    expect(ordre).toContain('bandeau-fermeture');
+    expect(textes(root)).toContain('Proposition de la Ville de Montrivage');
+    act(() => { geste(root, 'Choisir une autre place').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1', mode: 'deplacer', proposalId: 'prop-1' });
+    await act(async () => { geste(root, 'Accepter').props.onPress(); });
+    expect(mockDecideRelocation).toHaveBeenCalledWith('prop-1', 'accept');
+  });
+
+  test('CRDEP — un joueur ne voit pas la proposition', () => {
+    const root = mountScreen({ auth: JOUEUR, event: { ...touchee(), relocationProposal: { documentId: 'prop-1', status: 'pending' } } });
+    expect(root.findAll((/** @type {any} */ n) => n.props?.testID === 'proposition-de-la-ville')).toHaveLength(0);
   });
 
   test('CRFERM-5/10 sans fermeture (ou serveur d avant) : aucun bandeau', () => {

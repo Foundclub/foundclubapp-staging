@@ -74,6 +74,7 @@ import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -2709,6 +2710,23 @@ function EventDetails({ navigation, route }) {
     // calcule sur l'evenement du premier rendu — donc sur `undefined`, donc
     // jamais.
   }, [event, eventId, navigation, queryClient, t]);
+
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » du bandeau, et « Choisir
+  // une autre place » de la proposition de la Ville, ouvrent « Déplacer la séance » (la
+  // modification en mode « deplacer » : aucune route neuve ; un serveur d'avant y retrouve la
+  // modification). Un stage ou un tournoi garde le refus de « Modifier » (`handleEditEvent`).
+  const handleMoveEvent = useCallback((/** @type {string | undefined} */ proposalId) => {
+    if (!getEventEditSupport(event).isSupported) {
+      handleEditEvent();
+      return;
+    }
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+      },
+      screen: RouteNames.EventEdit,
+    });
+  }, [event, eventId, handleEditEvent, navigation]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
@@ -8227,12 +8245,21 @@ function EventDetails({ navigation, route }) {
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
             {/* CRFERM (13/10, « D8 B ») : TOUS les membres lisent le bandeau ; un joueur, sans
                 les gestes ni le mot de la Ville (planche P8v4-fermee, état 3). */}
+            {/* COLL-R-DEPLACER (14/10, « D9 = b ») : la proposition de la Ville, AU-DESSUS du
+                bandeau (planche P5v4-deplacer-ville-tel écran 5 b) ; le serveur ne la rend qu'à qui
+                peut déplacer la séance. */}
+            {canEdit && event?.relocationProposal ? (
+              <RelocationProposalCard
+                onChooseOther={() => handleMoveEvent(event.relocationProposal?.documentId)}
+                proposal={event.relocationProposal}
+              />
+            ) : null}
             {event?.facilityClosure ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}
                 facilityType={event?.facility?.type}
                 onCancel={canEdit ? handleCancelEvent : undefined}
-                onMove={canEdit ? handleEditEvent : undefined}
+                onMove={canEdit ? () => handleMoveEvent() : undefined}
                 pourUnMembre={!canEdit}
               />
             ) : null}
