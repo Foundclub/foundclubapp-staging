@@ -103,7 +103,7 @@ jest.setTimeout(30000);
 const SAISON = { validFrom: '2026-09-01', validUntil: '2027-06-30' };
 const INSTALLATIONS = [
   {
-    documentId: 'salle-t18', maxSlots: 2, name: 'T18 Salle essai', planningColor: '#3B82F6', type: 'gymnase',
+    documentId: 'salle-t18', maxSlots: 2, name: 'T18 Salle essai', type: 'gymnase',
   },
   { documentId: 'terrain', maxSlots: 2, name: 'Terrain' },
   { documentId: 'dojo', maxSlots: 1, name: 'Dojo' },
