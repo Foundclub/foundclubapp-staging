@@ -164,7 +164,9 @@ function LigneDeChoix({
           />
         ) : null}
       </View>
-      {club ? <ClubLogoMark logoUrl={club.logoUrl || null} name={club.name} size={28} /> : null}
+      {club ? (
+        <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+      ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{libelle}</Text>
         {detail ? (
