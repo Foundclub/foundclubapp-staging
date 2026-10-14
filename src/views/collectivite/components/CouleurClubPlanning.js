@@ -97,6 +97,8 @@ export default function CouleurClubPlanning({ club, collectiviteId }) {
         accessibilityState={{
           checked: selectionne, disabled: sauver.isPending, selected: selectionne,
         }}
+        aria-checked={selectionne}
+        aria-disabled={sauver.isPending}
         disabled={sauver.isPending}
         key={valeur || 'auto'}
         onPress={() => choisir(valeur)}

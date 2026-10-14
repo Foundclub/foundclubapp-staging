@@ -57,6 +57,7 @@ it('11 choix nommes, radio et hauteur >= 44 ; automatique sauve en un appui', as
   const radios = tree.root.findAllByType(TouchableOpacity).filter((x) => x.props.accessibilityRole === 'radio');
   expect(radios).toHaveLength(11);
   expect(radios[0].props.accessibilityState.checked).toBe(true);
+  expect(radios[0].props['aria-checked']).toBe(true);
   radios.forEach((x) => {
     expect(x.props.accessibilityLabel).toBeTruthy();
     expect(x.props.style.minHeight).toBeGreaterThanOrEqual(44);
