@@ -16357,6 +16357,9 @@ export default {
       summary: 'An additional team is requesting this slot at the facility.',
     },
     interest: {
+      conversationNamesJoin: ' and ',
+      conversationOpened: 'Conversation opened with {{names}}.',
+      conversationReopened: 'Your conversation with {{names}} is reopened.',
       noteLabel: 'Add a note (optional)',
       recipient: '{{firstname}} will receive this message.',
       responseDescription: 'Choose a quick reply to send to the interested person.',

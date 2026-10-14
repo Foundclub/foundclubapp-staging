@@ -71,6 +71,7 @@ import {
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useClubScope } from '@/context/ClubScopeContext';
 
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
@@ -131,6 +132,56 @@ const getSourceErrorDescription = (sourceError, t) => {
 };
 
 /**
+ * 👪 PARENT-FINITIONS 4 (14/10, design E16) — un fil cree plus d'une minute AVANT l'appui
+ * existait deja : on le dit « rouvert ».
+ */
+const FIL_DEJA_LA_APRES_MS = 60 * 1000;
+
+/**
+ * 👪 PARENT-FINITIONS 4 (14/10, design E16, planche 7) — LA PHRASE DU BANDEAU D'ARRIVEE DANS
+ * LE FIL : « Conversation ouverte avec Maryline et Karim. » ; si le fil existait deja, « Ta
+ * conversation avec Maryline est rouverte. ». Avant, on arrivait dans le fil sans un mot.
+ * ⛔ Pas un parametre de la route : sur le site, ils vont dans l'adresse, et un prenom n'a rien
+ * a y faire. Le bandeau est celui de l'app (`showBanner`, app ET site), pose apres l'arrivee.
+ * ponytail: « existait » se lit sur `createdAt` — ni la recherche locale du fil ni la route
+ * serveur (`chat.ts`, fil prive deja la) ne le disent. Plafond : une horloge de telephone
+ * decalee de plus d'une minute se trompe de VERBE (le fil, lui, est le bon). Sortie : un
+ * drapeau « deja la » rendu par la route de creation du fil.
+ * @param {{
+ *   appuyeA: number,
+ *   chat: any,
+ *   coach: any,
+ *   item: any,
+ *   t: (key: string, options?: any) => string,
+ * }} entree L'appui, le fil rendu, le coach choisi (ou null), la demande, la traduction.
+ * @returns {string} La phrase.
+ */
+const phraseDArriveeDansLeFil = ({
+  appuyeA, chat, coach, item, t,
+}) => {
+  const noms = [
+    item?.meta?.requesterFirstname || item?.meta?.requesterName,
+    coach?.firstname,
+  ]
+    .map((prenom) => String(prenom || '').trim())
+    .filter(Boolean)
+    .join(t('requestsHub.interest.conversationNamesJoin', ' et '));
+  const creeA = Date.parse(String(chat?.createdAt || chat?.data?.createdAt || ''));
+  if (Number.isFinite(creeA) && creeA < appuyeA - FIL_DEJA_LA_APRES_MS) {
+    return t('requestsHub.interest.conversationReopened', {
+      defaultValue: 'Ta conversation avec {{names}} est rouverte.',
+      names: noms,
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t('requestsHub.interest.conversationOpened', {
+    defaultValue: 'Conversation ouverte avec {{names}}.',
+    names: noms,
+    ...SANS_ECHAPPEMENT,
+  });
+};
+
+/**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
 function RequestsHub({ navigation, route }) {
@@ -151,6 +202,7 @@ function RequestsHub({ navigation, route }) {
   const clubScope = useClubScope() || {};
   const queryClient = useQueryClient();
   const { startWhisperChat } = useMessaging();
+  const { showBanner } = useAppFeedback();
 
   const [activeFilter, setActiveFilter] = useState(() => normalizeFilter(route?.params?.initialFilter));
   const [interestResponseItem, setInterestResponseItem] = useState(/** @type {any | null} */ (null));
@@ -673,6 +725,8 @@ function RequestsHub({ navigation, route }) {
   ) => {
     const item = conversationItem;
     if (!item) return;
+    // PARENT-FINITIONS 4 — le moment de l'appui : un fil cree avant existait deja.
+    const appuyeA = Date.now();
 
     try {
       setProcessingItemId(item.id);
@@ -700,6 +754,12 @@ function RequestsHub({ navigation, route }) {
       invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', { requestType: 'interest' });
       navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
+      showBanner({
+        title: phraseDArriveeDansLeFil({
+          appuyeA, chat, coach, item, t,
+        }),
+        tone: 'success',
+      });
     } catch (conversationError) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(conversationError);
       if (subscriptionDecision) {
@@ -720,6 +780,7 @@ function RequestsHub({ navigation, route }) {
     invalidateRequestsInBackground,
     navigation,
     openSubscriptionPaywall,
+    showBanner,
     startWhisperChat,
     t,
   ]);
