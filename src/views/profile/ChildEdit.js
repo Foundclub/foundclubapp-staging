@@ -249,6 +249,9 @@ function ChildEdit() {
     // AVANCE — revenir en arriere renverrait le parent sur la photo.
     // PAR-L5L6 (E08) — une fiche CREEE se dit sur la liste : « La fiche d'Anissa est créée. »
     // et « Chercher un club pour Anissa » (aujourd'hui : aucun message).
+    // PAR-L13 (E28, D2 d'Adel) — puis SA CARTE s'ouvre à la place du formulaire : c'est là
+    // qu'on demande maillot, poste, ville et nationalité. Une vue de « Mes enfants » qui
+    // REMPLACE le formulaire : « Plus tard » ramène à la liste, où l'annonce attend.
     const surSucces = (/** @type {any} */ cree) => {
       if (estUneEtapeDInscription) {
         continuerLInscription();
@@ -260,6 +263,12 @@ function ChildEdit() {
           firstname: cree?.firstname || firstname.trim(),
           type: 'creee',
         });
+        if (cree?.documentId) {
+          navigation.replace(RouteNames.MyChildren, {
+            carte: 'nouvelle', childDocumentId: cree.documentId,
+          });
+          return;
+        }
       }
       navigation.goBack();
     };

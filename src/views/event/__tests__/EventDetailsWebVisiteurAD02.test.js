@@ -36,6 +36,16 @@ const mockUseAuth = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
 
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services :
+// double ici par son NOM, pour verifier QUI le voit (FINITIONS16 1 / PAR-L11b, plus bas).
+jest.mock('@/views/event/components/EventChildRegistration', () => {
+  const { makeTextDouble } = jest.requireActual('@/testSupport/textDouble');
+  return {
+    __esModule: true,
+    default: makeTextDouble('DOUBLURE_InscrireMesEnfants'),
+    EventChildRegistrationsForOrganizer: makeTextDouble('DOUBLURE_EnfantsInscritsOrganisateur'),
+  };
+});
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
@@ -560,6 +570,16 @@ describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant'
 
     expect(buttonWithText(root, 'Participer')).toBeUndefined();
     expect(buttonWithText(root, 'Se connecter')).toBeUndefined();
+  });
+
+  // 👪 PAR-L11b (13/10, D4 B) — sur le site aussi, le parent inscrit SES ENFANTS (meme bloc
+  // que le telephone).
+  test('PAR-L11b — Papa Test voit « Inscrire mes enfants » ; le joueur, non', () => {
+    monterEn(PAPA);
+    expect(screenText()).toContain('DOUBLURE_InscrireMesEnfants');
+
+    monterEn(JOUEUR_DEHORS);
+    expect(screenText()).not.toContain('DOUBLURE_InscrireMesEnfants');
   });
 
   test('🔒 un joueur hors de l equipe garde « Participer » (il demande sa place)', () => {

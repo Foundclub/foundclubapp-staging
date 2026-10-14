@@ -28,12 +28,16 @@ import {
   effacerLAnnonce,
   useAnnonceDeLaFiche,
 } from '@/views/profile/parent/annonceDeLaFiche';
+import { situationDeLAnnulation } from '@/views/profile/parent/annulationDeLaDemande';
+import BandeauDAnnulation from '@/views/profile/parent/BandeauDAnnulation';
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
+import ChildCardPage from '@/views/profile/parent/ChildCardPage';
 import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
 import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
 import CommentCaMarche from '@/views/profile/parent/CommentCaMarche';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
+import FeuilleDAnnulation from '@/views/profile/parent/FeuilleDAnnulation';
 import MenuDeLEnfant from '@/views/profile/parent/MenuDeLEnfant';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 
@@ -43,6 +47,7 @@ import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { useGetUserById } from '@/services/auth/authQueries';
 import {
+  useCancelClubInterestRequest,
   useGetMyClubInterestRequests,
 } from '@/services/clubInterestRequest/clubInterestRequestQueries';
 import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
@@ -389,6 +394,11 @@ function MyChildren({ route } = {}) {
     navigation.push(RouteNames.MyChildren, { childDocumentId: enfant?.documentId });
   }, [navigation]);
 
+  // PAR-L13 (E29) — SA CARTE : une vue de la même route (`carte`), comme sa fiche.
+  const ouvrirSaCarte = useCallback((enfant) => {
+    navigation.push(RouteNames.MyChildren, { carte: 'voir', childDocumentId: enfant?.documentId });
+  }, [navigation]);
+
   const ouvrirFormulaire = useCallback((enfant) => {
     navigation.navigate(RouteNames.ChildEdit, enfant
       ? { childDocumentId: enfant.documentId }
@@ -468,6 +478,31 @@ function MyChildren({ route } = {}) {
     );
   }, [annulerDemande, t]);
 
+  // PAR-L8 (13/10, design parent E19, planche 8) — « Annuler la demande », depuis SA fiche : la
+  // demande dont la feuille de confirmation est ouverte, puis l'issue, dite dans un bandeau.
+  // Le serveur relit la demande sous le verrou de l'enfant : si le club l'a acceptée entre-temps,
+  // rien n'est annulé et on le dit. La fiche se relit dans tous les cas (son équipe a pu changer).
+  const {
+    isPending: annulationEnvoyee,
+    mutate: annulerLaDemande,
+    variables: demandeEnvoyee,
+  } = useCancelClubInterestRequest();
+  const [demandeAAnnuler, setDemandeAAnnuler] = useState(/** @type {any} */ (null));
+  const [issueDeLAnnulation, setIssueDeLAnnulation] = useState(/** @type {any} */ (null));
+  const fermerLAnnulation = useCallback(() => setDemandeAAnnuler(null), []);
+  const envoyerLAnnulation = useCallback((demande) => {
+    setDemandeAAnnuler(null);
+    setIssueDeLAnnulation(null);
+    const conclure = (situation) => {
+      setIssueDeLAnnulation({ demande, situation });
+      relireLesEnfants?.();
+    };
+    annulerLaDemande(demande?.documentId, {
+      onError: (erreur) => conclure(situationDeLAnnulation(erreur)),
+      onSuccess: () => conclure('annulee'),
+    });
+  }, [annulerLaDemande, relireLesEnfants]);
+
   // E05 — le menu « … » d'un enfant : la fiche dont il est ouvert, ou rien.
   const [menuDe, setMenuDe] = useState(/** @type {any} */ (null));
   const fermerLeMenu = useCallback(() => setMenuDe(null), []);
@@ -490,6 +525,17 @@ function MyChildren({ route } = {}) {
   // le site la sert deja. Les donnees : la liste deja lue. Placee apres tous les hooks.
   if (ficheOuverte) {
     const enfantOuvert = enfants.find((enfant) => enfant?.documentId === ficheOuverte);
+    // PAR-L13 (13/10, E28 et E29) — SA CARTE DE COLLECTION, une autre vue de la route :
+    // « nouvelle » juste après sa déclaration (ChildEdit), « voir » depuis sa fiche.
+    if (route?.params?.carte && enfantOuvert) {
+      return (
+        <ChildCardPage
+          enfant={enfantOuvert}
+          nouvelle={route.params.carte === 'nouvelle'}
+          onFini={() => navigation.goBack()}
+        />
+      );
+    }
     return (
       <ScreenContainer
         bgImage="bg2"
@@ -497,19 +543,27 @@ function MyChildren({ route } = {}) {
         contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
+          <BandeauDAnnulation
+            enfant={enfantOuvert}
+            onRetry={() => envoyerLAnnulation(issueDeLAnnulation?.demande)}
+            resultat={issueDeLAnnulation}
+          />
           <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
             {enfantOuvert ? (
               <DeclaredChildPage
+                annulationEnCours={annulationEnvoyee ? demandeEnvoyee : ''}
                 demandes={demandesDe(enfantOuvert?.documentId, lignesDeDemandes)}
                 demandesEnErreur={Boolean(erreurDemandes)}
                 enfant={enfantOuvert}
+                onCancelRequest={setDemandeAAnnuler}
                 onDelete={supprimerDepuisLaFiche}
                 onEdit={ouvrirFormulaire}
                 onGiveAccount={relierUnCompte}
+                onOpenCard={ouvrirSaCarte}
                 onRetryDemandes={relireLesDemandes ? () => relireLesDemandes() : undefined}
                 onSearchClub={chercherUnClub}
               />
@@ -520,6 +574,12 @@ function MyChildren({ route } = {}) {
             )}
           </WithDataWrapper>
         </ScrollView>
+        <FeuilleDAnnulation
+          demande={demandeAAnnuler}
+          enfant={enfantOuvert}
+          onClose={fermerLAnnulation}
+          onConfirm={envoyerLAnnulation}
+        />
       </ScreenContainer>
     );
   }

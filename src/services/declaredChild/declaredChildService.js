@@ -1,6 +1,8 @@
 // @ts-nocheck
 import Joi from 'joi';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import { createLogger } from '@/utils/logger/logger';
 
 import client from '../client';
@@ -114,6 +116,46 @@ export const createDeclaredChild = async (payload) => {
 export const updateDeclaredChild = async (documentId, payload) => {
   const response = await client.put(`/declared-children/${documentId}`, { data: payload });
   return response?.data?.data || null;
+};
+
+/**
+ * PAR-L13 (13/10, design parent E29) — LA PHOTO DE SA CARTE : `PUT /declared-children/:id`, en
+ * multipart, UN fichier dans le champ `photo`. Le serveur n'accepte jamais l'identifiant d'un
+ * fichier déjà téléversé : on envoie l'image elle-même, et lui contrôle que la fiche est à nous
+ * avant de la garder (admin PAR-L13).
+ *
+ * Même chemin d'envoi que la photo d'un groupe (`groupPhotoService`) : `fetch` natif, jeton en
+ * en-tête, sans `Content-Type` (le moteur pose la frontière du formulaire) — le client HTTP de
+ * l'app a des soucis connus avec un `FormData` sur Android. Une réponse en erreur garde son
+ * statut (`response.status`).
+ * @param {string} documentId - L'identifiant de la fiche.
+ * @param {any} photo - `{ uri, name, type }` au téléphone, un `File` sur le site.
+ * @returns {Promise<any>} La fiche, avec sa photo.
+ */
+export const setDeclaredChildPhoto = async (documentId, photo) => {
+  const formulaire = new FormData();
+  if (typeof File !== 'undefined' && photo instanceof File) {
+    formulaire.append('photo', photo, photo.name || 'photo.jpg');
+  } else {
+    formulaire.append('photo', /** @type {any} */ (photo));
+  }
+  const base = String(client?.defaults?.baseURL || '').replace(/\/$/, '');
+  const jeton = getAuthTokens()?.token;
+
+  const reponse = await fetch(`${base}/declared-children/${documentId}`, {
+    body: formulaire,
+    headers: jeton ? { Authorization: `Bearer ${jeton}` } : {},
+    method: 'PUT',
+  });
+
+  const corps = await reponse.json().catch(() => null);
+  if (!reponse.ok) {
+    const message = corps?.error?.message || `HTTP ${reponse.status}`;
+    const erreur = /** @type {any} */ (new Error(message));
+    erreur.response = { data: corps, status: reponse.status };
+    throw erreur;
+  }
+  return corps?.data || null;
 };
 
 /**
