@@ -12,6 +12,7 @@ const path = require('path');
 const {
   CARTES_ACCUEIL_MASQUEES,
   COMPLEXES_GERANT,
+  COMPLEXES_JOUEUR,
   LEAGUE_SUR_ACCUEIL,
   RESERVATIONS_SUR_ACCUEIL,
 } = require('../fonctionsMasquees');
@@ -27,6 +28,10 @@ describe('les interrupteurs de l accueil (décisions d Adel du 30/09)', () => {
 
   it('RESA-L5A1 (13/10) — l espace du gérant de complexe est ÉTEINT (serveur non livré)', () => {
     expect(COMPLEXES_GERANT).toBe(false);
+  });
+
+  it('RESA-L6A (14/10) — la réservation côté joueur est ÉTEINTE (serveur non livré)', () => {
+    expect(COMPLEXES_JOUEUR).toBe(false);
   });
 
   it('les deux cases retirées de l accueil, par leur clef', () => {

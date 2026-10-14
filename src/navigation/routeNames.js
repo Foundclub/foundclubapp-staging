@@ -435,4 +435,11 @@ export const RouteNames = /** @type {const} */ ({
   ComplexePlanning: 'ComplexePlanning',
   ComplexeReservation: 'ComplexeReservation',
   ComplexeReservations: 'ComplexeReservations',
+  // RESA-L6A (14/10/2026) — le joueur (chantier Réservation, toile BLG79NHv2) : la page du complexe
+  // (E-P02), choisir un créneau (E-P03), le récapitulatif (E-P04), le résultat (E-P05), ma
+  // réservation (E-P07) et les messages d'échec (E-P13). La recherche (E-P01) n'est pas un écran :
+  // c'est le panneau « Réservations » de la recherche. Cachés par l'interrupteur `COMPLEXES_JOUEUR`
+  // (src/config/fonctionsMasquees.js).
+  ReserverComplexe: 'ReserverComplexe',
+  ReserverCreneau: 'ReserverCreneau',
 });
