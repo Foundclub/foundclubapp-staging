@@ -413,9 +413,12 @@ function MyChildren({ route } = {}) {
     // ecran : un nom nu remonterait vers les PARENTS, il ne descend jamais chez
     // un voisin. `allerDansLOnglet` ecrit ce chemin UNE fois (defaut du 08/09,
     // cinq navigations mortes de la meme facon).
+    // 🔒 PARENT-FINITIONS 1 (14/10) — l'identifiant SEUL : sur le site, les parametres de la
+    // route passent dans l'adresse (`buildWebPath`), et le PRENOM d'un mineur finissait dans
+    // `…/search/clubs?childFirstname=Anissa` (journaux, historique). La recherche et la fiche
+    // du club ne lisent que `childDocumentId` (PAR-L4) et retrouvent le prenom par la fiche.
     allerDansLOnglet(navigation, RouteNames.SearchClubs, {
       childDocumentId: enfant?.documentId,
-      childFirstname: enfant?.firstname,
     });
   }, [navigation]);
 

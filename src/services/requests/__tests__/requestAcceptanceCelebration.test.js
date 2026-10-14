@@ -78,3 +78,40 @@ describe('Y04 — les huit phrases de felicitations', () => {
     expect(message).not.toContain('{{name}}');
   });
 });
+
+// 👶 PARENT-FINITIONS 5 (14/10) — ACCEPTER LA PLACE D'UN ENFANT le fait ENTRER dans l'equipe :
+// la fenetre le dit. Avant : « Ta réponse est partie. », la phrase de l'interet d'un ADULTE.
+describe('PARENT-FINITIONS 5 — la place d un enfant acceptee', () => {
+  const placeEnfant = (meta) => ({
+    id: 'interest:place-anissa',
+    meta: {
+      childFirstname: 'Anissa',
+      childId: 'enfant-anissa',
+      clubName: 'FoundClub',
+      requesterName: 'Maryline Monroe',
+      teamName: 'U11 Filles',
+      ...meta,
+    },
+    type: 'interest',
+  });
+
+  it('« Anissa rejoint U11 Filles. », jamais « Ta réponse est partie. »', () => {
+    const { message, title } = buildRequestAcceptanceCelebration(placeEnfant({}), t);
+
+    expect(title).toBe('Félicitations');
+    expect(message).toBe('Anissa rejoint U11 Filles.');
+    expect(message).not.toContain('Maryline');
+  });
+
+  it('une place demandee au club sans equipe nommee : le club', () => {
+    const { message } = buildRequestAcceptanceCelebration(placeEnfant({ teamName: '' }), t);
+
+    expect(message).toBe('Anissa rejoint FoundClub.');
+  });
+
+  it('l interet d un ADULTE garde sa phrase', () => {
+    const { message } = buildRequestAcceptanceCelebration(item('interest', 'Maryline'), t);
+
+    expect(message).toBe('Ta réponse est partie.');
+  });
+});

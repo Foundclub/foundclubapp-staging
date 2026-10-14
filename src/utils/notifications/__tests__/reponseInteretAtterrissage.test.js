@@ -78,6 +78,45 @@ describe('PAR-L9a — la notification « Réponse du club » ouvre la conversati
   });
 });
 
+/**
+ * 👪 PARENT-FINITIONS 7 (14/10, décision d'Adel « annulation A ») — « Karim a retiré sa demande pour
+ * Lea (U11). » arrive chez l'encadrement (`clubInterestRequestCancelled`, serveur
+ * `club-interest-request.cancel`). La demande est EFFACÉE : l'appui ouvre la boîte « Demandes »,
+ * jamais une fiche disparue. Avant : étiquette inconnue, l'appui ne menait nulle part.
+ */
+describe('PARENT-FINITIONS 7 — « Demande retirée » ouvre la boîte « Demandes »', () => {
+  const RETRAIT = 'clubInterestRequestCancelled';
+  const plateformeDOrigine = Platform.OS;
+  afterEach(() => { Platform.OS = plateformeDOrigine; });
+
+  test.each(['ios', 'android', 'web'])('%s : l appui ouvre « Demandes » (Intérêts)', (os) => {
+    Platform.OS = os;
+    const destination = destinationDe({
+      childFirstname: 'Lea',
+      parentFirstname: 'Karim',
+      teamId: 'team-u11',
+      teamName: 'U11',
+      type: RETRAIT,
+    });
+
+    expect(destination).toContain(RouteNames.RequestsHub);
+    expect(destination).toContain('"initialFilter":"interest"');
+  });
+
+  test('la notification RANGÉE dans la cloche (données imbriquées) mène au même endroit', () => {
+    const destination = destinationDe({
+      body: 'Karim a retiré sa demande pour Lea (U11).',
+      data: { childFirstname: 'Lea', teamId: 'team-u11', teamName: 'U11' },
+      documentId: 'notif-3',
+      title: 'Demande retirée',
+      type: RETRAIT,
+    });
+
+    expect(destination).toContain(RouteNames.RequestsHub);
+    expect(destination).not.toContain(RouteNames.NotificationDetails);
+  });
+});
+
 describe('PAR-L9a — la notification « Nouveau profil intéressé » mène quelque part aussi', () => {
   test('sans fil : l onglet Demandes, filtré sur les intérêts', () => {
     const destination = destinationDe({ teamId: 'team-u11f', type: DEMANDE });

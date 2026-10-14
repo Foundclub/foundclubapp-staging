@@ -4792,6 +4792,21 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
+          {/* 👪 PARENT-FINITIONS 2 (design parent E10) — deux portes cote a cote, celle de la
+              place (l'enfant) et celle-ci (l'adulte) : la ligne dit laquelle est pour le parent.
+              Sans la porte de la place, il n'y a rien a distinguer. */}
+          {showClubInterestAction && showChildInterestAction ? (
+            <Text
+              style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
+              testID="club-details-adult-interest-hint"
+            >
+              {t(
+                'clubDetails.clubInterest.forYouHint',
+                'Pour toi : une prise de contact avec le club.',
+              )}
+            </Text>
+          ) : null}
+
           {/* S02 — LA SECONDE PORTE, toujours en dernier et en Secondary : elle
               est le repli de celui qui ne peut pas signer la premiere. « C'est
               mon club » dit ce qu'on DECLARE ; celle-ci dit ce qu'on OBTIENT. */}

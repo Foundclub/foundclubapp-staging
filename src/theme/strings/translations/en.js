@@ -2582,6 +2582,7 @@ export default {
       confirmTitle: 'Send your interest?',
       error: 'Unable to send your interest right now.',
       forbidden: "Your account doesn't have permission to send interest yet. Try again in a moment.",
+      forYouHint: 'For you: a way to get in touch with the club.',
       noTeams: 'No teams are available in this club right now.',
       pickerDescription: 'Select a team, or the club in general, to show your interest without creating a membership request.',
       pickerTitle: 'What are you interested in?',
@@ -16412,6 +16413,7 @@ export default {
     },
     assignNow: 'Assign now',
     celebration: {
+      childInterest: '{{firstname}} joins {{team}}.',
       close: 'Great',
       club: '{{name}} has joined the club.',
       event: 'The participation has been confirmed.',
@@ -16425,6 +16427,8 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      goneMessage: 'The parent has withdrawn this request.',
+      goneTitle: 'Request withdrawn',
       parent: 'Parent: {{name}}',
       refuseMessage: 'The request for {{firstname}} will be deleted. Their parent will be notified.',
       refuseTitle: 'Decline the request?',
@@ -16471,6 +16475,9 @@ export default {
       summary: 'An additional team is requesting this slot at the facility.',
     },
     interest: {
+      conversationNamesJoin: ' and ',
+      conversationOpened: 'Conversation opened with {{names}}.',
+      conversationReopened: 'Your conversation with {{names}} is reopened.',
       noteLabel: 'Add a note (optional)',
       recipient: '{{firstname}} will receive this message.',
       responseDescription: 'Choose a quick reply to send to the interested person.',

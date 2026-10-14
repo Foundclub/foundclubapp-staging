@@ -355,11 +355,15 @@ test('P2/7 ⑦ « chercher un club » emmène la recherche AVEC l\'enfant visé'
   // COMPLÈTE — un nom nu ne descend jamais chez un voisin (défaut du 08/09).
   // RETOUR-ONGLET (30/09) : et avec `pop`, sinon React Navigation 7 EMPILE un second
   // onglet d'accueil au lieu de revenir au premier (A22 de l'audit V1).
+  // 🔒 PARENT-FINITIONS 1 (14/10) — l'enfant voyage par son identifiant SEUL : sur le site, les
+  // paramètres de la route passent dans l'adresse (`…/search/clubs?childFirstname=Léa`), et le
+  // prénom d'un mineur finissait dans les journaux et l'historique. La recherche ne lit que
+  // `childDocumentId` (PAR-L4).
   expect(mockNavigate).toHaveBeenCalledWith(
     'HomeTab',
     {
       params: {
-        params: { childDocumentId: 'enfant-1', childFirstname: 'Léa' },
+        params: { childDocumentId: 'enfant-1' },
         pop: true,
         screen: 'SearchClubs',
       },
@@ -867,7 +871,7 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
       'HomeTab',
       {
         params: {
-          params: { childDocumentId: 'lea', childFirstname: 'Lea' },
+          params: { childDocumentId: 'lea' },
           pop: true,
           screen: 'SearchClubs',
         },
@@ -1386,7 +1390,7 @@ describe('PAR-L5L6 E08 — le bandeau après une création', () => {
       'HomeTab',
       {
         params: {
-          params: { childDocumentId: 'anissa', childFirstname: 'Anissa' },
+          params: { childDocumentId: 'anissa' },
           pop: true,
           screen: 'SearchClubs',
         },

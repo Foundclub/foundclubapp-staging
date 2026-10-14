@@ -2819,6 +2819,7 @@ export default {
       error: "Impossible d'envoyer ton intérêt pour le moment.",
       // eslint-disable-next-line max-len
       forbidden: "Ton compte n'a pas encore l'autorisation d'envoyer un intérêt. Réessaie dans quelques instants.",
+      forYouHint: 'Pour toi : une prise de contact avec le club.',
       noTeams: "Aucune équipe n'est disponible dans ce club pour le moment.",
       // eslint-disable-next-line max-len
       pickerDescription: 'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt sans créer de demande d’adhésion.',
@@ -17097,6 +17098,8 @@ export default {
     // ⚠️ `{{name}}` est remplacé À LA MAIN par l'écran : le repli passé en
     // second argument de `t` n'est pas interpolé par i18next.
     celebration: {
+      // PARENT-FINITIONS 5 (14/10) — la place d'un enfant acceptée : il entre dans l'équipe.
+      childInterest: '{{firstname}} rejoint {{team}}.',
       close: 'Super',
       club: '{{name}} rejoint le club.',
       event: 'La participation est validée.',
@@ -17110,6 +17113,9 @@ export default {
       unknown: 'La demande est acceptée.',
     },
     childInterest: {
+      // PARENT-FINITIONS 6 (14/10) — la demande a été retirée par le parent avant la décision.
+      goneMessage: 'Le parent a retiré cette demande.',
+      goneTitle: 'Demande retirée',
       parent: 'Parent : {{name}}',
       refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
       refuseTitle: 'Refuser la demande ?',
@@ -17158,6 +17164,10 @@ export default {
       summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
     },
     interest: {
+      // PARENT-FINITIONS 4 (14/10, E16) — le bandeau en arrivant dans le fil ouvert.
+      conversationNamesJoin: ' et ',
+      conversationOpened: 'Conversation ouverte avec {{names}}.',
+      conversationReopened: 'Ta conversation avec {{names}} est rouverte.',
       // PAR-L9b (13/10, E17) — à qui part le message, les deux familles de réponses, le mot libre.
       noteLabel: 'Ajouter un mot (facultatif)',
       recipient: '{{firstname}} recevra ce message.',

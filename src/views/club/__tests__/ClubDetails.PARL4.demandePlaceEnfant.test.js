@@ -929,3 +929,35 @@ describe('PAR-L4 point 4 — les erreurs nomment l enfant, dans la feuille', () 
     );
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// PARENT-FINITIONS 2 (14/10) — LA LIGNE D'AIDE DU DESIGN E10, laissee PARTIELLE par PAR-L4.
+// Sous la porte de la place (« Demander une place pour un enfant »), la porte de l'ADULTE
+// (« Intéressé par le club ») porte une ligne p3 : « Pour toi : une prise de contact avec le
+// club. » — deux portes cote a cote, et le parent doit savoir laquelle est pour lui.
+// Sans enfant, il n'y a qu'une porte : rien a distinguer, la ligne n'a pas lieu d'etre.
+// ───────────────────────────────────────────────────────────────────────────
+describe('PARENT-FINITIONS 2 — la ligne d aide sous « Intéressé par le club » (E10)', () => {
+  const AIDE = 'Pour toi : une prise de contact avec le club.';
+
+  it('un parent : la ligne d aide est la, SOUS la porte de l adulte', () => {
+    const arbre = monter();
+    const texte = texteDe(arbre.root);
+
+    expect(porteEnfant(arbre)).toBeDefined();
+    expect(texte).toContain(AIDE);
+    expect(texte.indexOf(AIDE)).toBeGreaterThan(texte.indexOf('Intéressé par le club'));
+    expect(texte.indexOf('Intéressé par le club'))
+      .toBeGreaterThan(texte.indexOf('Demander une place pour un enfant'));
+  });
+
+  it('sans enfant : une seule porte, pas de ligne d aide', () => {
+    mockEnfants = [];
+    const arbre = monter();
+    const texte = texteDe(arbre.root);
+
+    expect(porteEnfant(arbre)).toBeUndefined();
+    expect(texte).toContain('Intéressé par le club');
+    expect(texte).not.toContain(AIDE);
+  });
+});
