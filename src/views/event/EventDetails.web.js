@@ -34,6 +34,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -60,7 +61,7 @@ import {
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
-import { respondToEventRsvp, updateEvent } from '@/services/event/eventService';
+import { cancelEvent, respondToEventRsvp, updateEvent } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   createEventParticipation,
@@ -799,6 +800,22 @@ function EventDetails({ navigation, route }) {
   const openOpponentEdit = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [eventId, navigation]);
+  // CRFERM (13/10, COL-010) — « Annuler l entraînement » du bandeau de fermeture : CETTE séance,
+  // jamais la série (règle « déplacer A »), après confirmation, comme l annulation du téléphone.
+  const annulerSeanceFermee = useMutation({
+    mutationFn: cancelEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+    },
+  });
+  const annulerLaSeanceFermee = useCallback(() => {
+    if (!eventId || typeof window?.confirm !== 'function') return;
+    const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
+      'eventDetails.modals.cancelEvent.description',
+    )}`);
+    if (ok) annulerSeanceFermee.mutate({ documentId: eventId });
+  }, [annulerSeanceFermee, eventId, t]);
   const matchEncartSummary = useMemo(() => {
     if (!isMatchEvent) return null;
     const summary = buildMatchHeaderScoreSummary({
@@ -2433,6 +2450,19 @@ function EventDetails({ navigation, route }) {
               alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
+              {/* CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee-ordi B et C) — la Ville a
+                  fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
+                  deux gestes pour qui peut modifier la séance ; un joueur lit le bandeau seul. La
+                  fiche du site n en disait rien (écart de parité). */}
+              {event?.facilityClosure ? (
+                <FacilityClosureBanner
+                  closure={event.facilityClosure}
+                  facilityType={event?.facility?.type}
+                  onCancel={canEdit ? annulerLaSeanceFermee : undefined}
+                  onMove={canEdit ? openOpponentEdit : undefined}
+                  pourUnMembre={!canEdit}
+                />
+              ) : null}
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
                   le telephone : c est la seule chose a FAIRE maintenant, tout
                   le reste de la page est de la consultation. */}

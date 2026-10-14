@@ -1,3 +1,5 @@
+import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
+
 /**
  * Reads an API refusal without depending on the HTTP transport wrapper.
  * @param {any} error API error.
@@ -18,12 +20,11 @@ export const getErrorCode = (error) => (
 export const getCreationErrorMessage = (error, fallback, t) => {
   const message = error?.response?.data?.error?.message
     || error?.response?.data?.error || error?.response?.data?.message || error?.message || fallback;
+  // CRFERM (13/10, COL-011) : le refus porte la fermeture (`details.closure`, admin CRFERM S2-2) ;
+  // la phrase la dit au « tu » (lieu inconnu ici : « Cette installation est fermée … »).
   if (getErrorCode(error) === 'EVENT_FACILITY_CLOSED') {
-    return t(
-      'eventWizard.steps.location.facilityClosed',
-      'La mairie a rendu cette installation indisponible sur ce créneau. '
-        + 'Choisissez un autre horaire ou une autre installation.',
-    );
+    const details = error?.details || error?.response?.data?.error?.details || null;
+    return closureRefusalText(t, details?.closure || null);
   }
   const normalized = String(message).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   if (normalized.includes('entrainements ouverts exigent au moins une place externe')) {

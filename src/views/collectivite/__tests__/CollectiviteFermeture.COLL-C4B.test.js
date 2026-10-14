@@ -313,6 +313,8 @@ test('C4B-A1/2 le motif « Travaux » est choisi par defaut ; la case « Publier
 test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer » envoie le bon corps, puis revient', async () => {
   const arbre = await rendre();
   await choisirDate('Du', '02/10/2026');
+  // CRFERM (planche P4v4) : le nom et le mot sont repliés derrière un lien.
+  await appuyer(parTestID(arbre, 'fermeture-deplier'));
   await saisir('Un mot pour les clubs (facultatif)', 'Réfection du sol');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(closeFacility).not.toHaveBeenCalled();
@@ -411,6 +413,7 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
 
   // SAIS (08/10, T20 lot 2) : « Pour quoi » est devenu les pastilles « Motif » + « Nom (facultatif) ».
   await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+  await appuyer(parTestID(arbre, 'fermeture-deplier')); // CRFERM : nom et mot repliés
   await saisir('Nom (facultatif)', 'Forum des associations');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
@@ -480,7 +483,8 @@ test('C4B-A1/7 sans installation, on la choisit ; un refus du serveur se dit, l 
     },
   });
   const arbre = await rendre();
-  expect(textes(arbre)).toContain('Choisissez l’installation');
+  // CRFERM (planche P4v4, état 1) : d abord une seule question, une carte par installation.
+  expect(textes(arbre)).toContain('Quelle installation fermez-vous ?');
   await appuyer(parTestID(arbre, 'fermeture-installation-dojo'));
   expect(textes(arbre)).toContain('Dojo municipal');
   await choisirDate('Du', '02/10/2026');
@@ -519,6 +523,9 @@ test('FIN11-COLL/1 « Fermer le gymnase ce jour-là », « Fermer la piscine ce 
 // Pas pour un blocage : son « Pour quoi » est deja son nom. ROUGE avant le lot.
 test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermeture ; 40 caracteres ; pas pour un blocage', async () => {
   const arbre = await rendre();
+  // CRFERM (planche P4v4, état 4) : replié derrière « Ajouter un nom ou un mot pour les clubs ».
+  expect(champ('Nom (facultatif)')).toBeUndefined();
+  await appuyer(parTestID(arbre, 'fermeture-deplier'));
   expect(champ('Nom (facultatif)')).toBeDefined();
   expect(champ('Nom (facultatif)').maxLength).toBe(40);
   expect(champ('Nom (facultatif)').placeholder).toBe('Ascension');
@@ -536,7 +543,8 @@ test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermet
   mockParams = {
     collectiviteId: 'ville-montrivage', date: '2026-10-03', facilityId: 'gym-tilleuls', mode: 'bloquer',
   };
-  await rendre();
+  const blocage = await rendre();
+  await appuyer(parTestID(blocage, 'fermeture-deplier'));
   // SAIS (08/10, T20 lot 2) : un blocage a désormais le même « Nom (facultatif) » (son ancien
   // « Pour quoi »), avec son exemple ; le témoin complet est CollectiviteFermeture.SAIS.test.js.
   expect(champ('Pour quoi')).toBeUndefined();
