@@ -127,7 +127,7 @@ beforeEach(() => {
 });
 
 describe('RESA-L5A2 OR1 — E-G04 + E-G05 en deux volets', () => {
-  it('la 1re ligne s’ouvre dans le volet ; une autre la remplace, sans changer d’écran', async () => {
+  it('la 1re ligne s’ouvre dans le volet ; une autre la remplace, même écran', async () => {
     const arbre = await monter(ComplexeReservations);
     expect(parRepere(arbre, 'volet-fiche')).not.toBeNull();
     expect(lisibles(arbre)).toContain('Fiche r-1');
