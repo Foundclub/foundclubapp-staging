@@ -25,16 +25,18 @@ import ClubListContent from '@/components/organisms/clubListContent/ClubListCont
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
+import SearchScreenShell from '@/views/search/components/SearchScreenShell';
+import {
+  coerceSearchHubType,
+  consumeSearchHubGuidanceSignal,
+} from '@/views/search/searchRouteHelpers';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
-import SearchScreenShell from './components/SearchScreenShell';
-import { coerceSearchHubType, consumeSearchHubGuidanceSignal } from './searchRouteHelpers';
-
-// RESA-L6A (14/10/2026) — l'interrupteur de la réservation côté joueur. Lu par `require`, comme
-// dans PrivateNavigator.js : un `import` ici fait se contredire les deux règles d'ordre des
-// imports.
-const { COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
+// RESA-L6A (14/10/2026) — par `import`, jamais par `require` : le serveur de dev du site
+// (web) sert ce fichier tel quel au navigateur, où `require` n'existe pas. Les deux imports
+// voisins passent par `@/views/search` pour que les deux règles d'ordre des imports s'accordent.
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'events',
@@ -222,6 +224,8 @@ function SearchHubScreen({ navigation, route }) {
       // RESA-L6A (14/10/2026) — l'interrupteur `COMPLEXES_JOUEUR` allumé, l'onglet
       // cherche les terrains libres des complexes (E-P01). Chargé à l'appel : éteint,
       // l'écran ne tire rien de la réservation (ni la position, ni le serveur des complexes).
+      // Le site ne sert pas cet onglet (RechercheUnique : Club et Événement) ; son lot (L7)
+      // passera par un `import`, `require` n'existant pas dans le navigateur.
       if (COMPLEXES_JOUEUR) {
         // eslint-disable-next-line global-require
         const RechercheDeTerrains = require('@/views/reserverTerrain/RechercheDeTerrains').default;

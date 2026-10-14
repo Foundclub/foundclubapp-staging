@@ -11,9 +11,7 @@ import {
   NOTIFICATION_TYPES,
 } from '@/utils/notifications/notificationTypes';
 
-// RESA-L6A (14/10/2026) — l'interrupteur de la réservation côté joueur, lu par `require` comme dans
-// PrivateNavigator.js (les deux règles d'ordre des imports se contredisent sur `@/config`).
-const { COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 /**
  * @typedef {Record<string, unknown> & {
