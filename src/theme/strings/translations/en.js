@@ -2582,6 +2582,7 @@ export default {
       confirmTitle: 'Send your interest?',
       error: 'Unable to send your interest right now.',
       forbidden: "Your account doesn't have permission to send interest yet. Try again in a moment.",
+      forYouHint: 'For you: a way to get in touch with the club.',
       noTeams: 'No teams are available in this club right now.',
       pickerDescription: 'Select a team, or the club in general, to show your interest without creating a membership request.',
       pickerTitle: 'What are you interested in?',

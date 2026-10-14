@@ -2819,6 +2819,7 @@ export default {
       error: "Impossible d'envoyer ton intérêt pour le moment.",
       // eslint-disable-next-line max-len
       forbidden: "Ton compte n'a pas encore l'autorisation d'envoyer un intérêt. Réessaie dans quelques instants.",
+      forYouHint: 'Pour toi : une prise de contact avec le club.',
       noTeams: "Aucune équipe n'est disponible dans ce club pour le moment.",
       // eslint-disable-next-line max-len
       pickerDescription: 'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt sans créer de demande d’adhésion.',
