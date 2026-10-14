@@ -34,6 +34,16 @@ const mockAttendanceQuery = { serverNow: /** @type {string | null} */ (null) };
 // — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
 // doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
 // service (piege documente, deja paye plusieurs fois).
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » et la liste de l organisateur,
+// doubles par leur NOM : ce fichier verifie QUI les voit (section PAR-L11b, en fin).
+jest.mock('@/views/event/components/EventChildRegistration', () => {
+  const { makeTextDouble } = jest.requireActual('@/testSupport/textDouble');
+  return {
+    __esModule: true,
+    default: makeTextDouble('DOUBLURE_InscrireMesEnfants'),
+    EventChildRegistrationsForOrganizer: makeTextDouble('DOUBLURE_EnfantsInscritsOrganisateur'),
+  };
+});
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
@@ -1828,5 +1838,32 @@ describe('AC10 — le match est fini quand le SERVEUR le dit, pas le telephone',
     });
 
     expect(hasText(root, 'pour signaler ton arrivée ou ton retard.')).toBe(true);
+  });
+});
+
+// 👪 PAR-L11b (13/10, D4 B d Adel du 12/10) — QUI VOIT « INSCRIRE MES ENFANTS ».
+// Le parent ne repond pas pour lui : son pied d ecran est le bloc de ses enfants, jamais
+// les boutons de reponse. Le joueur ne change pas (« pour un role Joueur, rien ne change »,
+// design E20). L organisateur voit la liste des enfants inscrits sous les participants.
+describe('PAR-L11b — le pied d ecran du parent', () => {
+  test('un parent : « Inscrire mes enfants », et AUCUN bouton de reponse pour lui', () => {
+    const root = mountScreen({
+      auth: { userData: { documentId: 'parent-1', role: { name: 'Parent' } } },
+    });
+
+    expect(hasText(root, 'DOUBLURE_InscrireMesEnfants')).toBe(true);
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(false);
+  });
+
+  test('🔒 un joueur : ses boutons de reponse, pas le bloc des enfants', () => {
+    const root = mountScreen();
+
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    expect(hasText(root, 'DOUBLURE_InscrireMesEnfants')).toBe(false);
+  });
+
+  test('l organisateur voit la liste des enfants inscrits ; un joueur, non', () => {
+    expect(hasText(asOrganiser(), 'DOUBLURE_EnfantsInscritsOrganisateur')).toBe(true);
+    expect(hasText(mountScreen(), 'DOUBLURE_EnfantsInscritsOrganisateur')).toBe(false);
   });
 });

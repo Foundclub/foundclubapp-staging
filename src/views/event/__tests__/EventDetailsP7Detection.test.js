@@ -59,6 +59,13 @@ const mockParticipationsPages = { pages: /** @type {any} */ (null) };
 // 🧨 R9 — MEME PIEGE QUE DANS LES 19 SUITES VOISINES (`@/services/client`
 // jette au chargement sans `.env`), mais ici la doublure est PILOTABLE : c est
 // cette suite qui prouve les etats du bouton « Inviter ».
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: (/** @type {any} */ invitation) => mockInviterDansLEquipe(invitation),
   resolveTeamInvitationAvailability: (
