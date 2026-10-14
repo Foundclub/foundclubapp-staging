@@ -205,6 +205,12 @@ const ERROR_KEY_BY_CODE = {
 export const errorKey = (error) => ERROR_KEY_BY_CODE[String(error?.details?.code || '')]
   || 'childEventRegistration.errors.generic';
 
+/**
+ * 👪 PAR-L11c (14/10) point 4 — la longueur d un motif de refus : celle que le serveur garde
+ * (admin `child-registration-rules.js`, `REASON_MAX_LENGTH`). Au-dela, il couperait.
+ */
+export const REFUSAL_REASON_MAX_LENGTH = 500;
+
 const CANCELLABLE_STATUSES = new Set(['accepted', 'pending']);
 
 /**

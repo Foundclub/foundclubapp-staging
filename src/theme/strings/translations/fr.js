@@ -23217,6 +23217,14 @@ export default {
       errorTitle: 'Action impossible',
       parentLine: 'Parent : {{name}}',
       refuse: 'Refuser',
+      // 👪 PAR-L11c (14/10) — la feuille du refus, avec son motif facultatif.
+      refuseSheet: {
+        confirm: "Refuser l'inscription",
+        hint: 'Le parent verra ce motif.',
+        label: 'Motif (facultatif)',
+        placeholder: 'Ex. : groupe complet',
+        title: "Refuser l'inscription pour {{firstname}} ?",
+      },
       title: 'Enfants inscrits par leurs parents',
     },
     reasons: {

@@ -14535,6 +14535,14 @@ export default {
       errorTitle: 'Action not possible',
       parentLine: 'Parent: {{name}}',
       refuse: 'Decline',
+      // 👪 PAR-L11c (14/10) — the decline sheet, with its optional reason.
+      refuseSheet: {
+        confirm: 'Decline the registration',
+        hint: 'The parent will see this reason.',
+        label: 'Reason (optional)',
+        placeholder: 'E.g. group is full',
+        title: 'Decline the registration for {{firstname}}?',
+      },
       title: 'Children registered by their parents',
     },
     reasons: {

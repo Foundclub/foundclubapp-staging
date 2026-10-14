@@ -6,6 +6,7 @@ import {
   canCancelRegistration,
   describeChildChoices,
   errorKey,
+  REFUSAL_REASON_MAX_LENGTH,
   resolveChildRegistrationOffer,
   resultLine,
   statusLine,
@@ -16,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import Input from '@/components/molecules/input/Input';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import {
   ChildRegistrationCancelBanner,
@@ -399,6 +401,34 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
     }
   }, [decide, t]);
 
+  // 👪 PAR-L11c (14/10) point 4 — « Refuser » ouvre une feuille : la ligne visee, le motif
+  // saisi (facultatif, borne comme au serveur), et le refus du serveur, dit DANS la feuille
+  // pour que le motif ne se perde pas.
+  const [refusing, setRefusing] = useState(/** @type {any} */ (null));
+  const [reason, setReason] = useState('');
+  const [refuseError, setRefuseError] = useState('');
+  // La mutation des services (`@ts-nocheck`), lue telle qu elle est.
+  const refuseMutation = /** @type {any} */ (decide);
+  const openRefuse = useCallback((/** @type {any} */ row) => {
+    setReason('');
+    setRefuseError('');
+    setRefusing(row);
+  }, []);
+  const closeRefuse = useCallback(() => setRefusing(null), []);
+  const confirmRefuse = useCallback(async () => {
+    setRefuseError('');
+    try {
+      await refuseMutation.mutateAsync({
+        decision: 'refuse',
+        reason: reason.trim(),
+        registrationId: refusing?.documentId,
+      });
+      setRefusing(null);
+    } catch (error) {
+      setRefuseError(t(errorKey(error)));
+    }
+  }, [reason, refuseMutation, refusing, t]);
+
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
   const rowStyle = [
@@ -445,7 +475,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
               variant="Primary"
             />
             <Button
-              onPress={() => run({ decision: 'refuse', registrationId: row.documentId })}
+              onPress={() => openRefuse(row)}
               style={{ flex: 1 }}
               title={t('childEventRegistration.organizer.refuse')}
               variant="Secondary"
@@ -475,6 +505,50 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
         {t('childEventRegistration.organizer.title')}
       </Text>
       {rows.map(renderRow)}
+      <BottomModal
+        close={closeRefuse}
+        footerComponent={(
+          <View style={[Spaces.gap[8]]}>
+            <Button
+              isLoading={refuseMutation.isPending}
+              onPress={confirmRefuse}
+              title={t('childEventRegistration.organizer.refuseSheet.confirm')}
+              variant="Danger"
+            />
+            <Button
+              onPress={closeRefuse}
+              title={t('childEventRegistration.actions.cancel')}
+              variant="Ghost"
+            />
+          </View>
+        )}
+        isVisible={Boolean(refusing)}
+      >
+        <View style={[Spaces.gap[12]]} testID="child-registration-refuse-sheet">
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('childEventRegistration.organizer.refuseSheet.title', {
+              firstname: String(refusing?.child?.firstname || ''),
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('childEventRegistration.organizer.refuseSheet.hint')}
+          </Text>
+          <Input
+            label={t('childEventRegistration.organizer.refuseSheet.label')}
+            maxLength={REFUSAL_REASON_MAX_LENGTH}
+            multiline
+            onChangeText={setReason}
+            placeholder={t('childEventRegistration.organizer.refuseSheet.placeholder')}
+            value={reason}
+          />
+          {refuseError ? (
+            <Text accessibilityLiveRegion="polite" style={[Fonts.p2Bold, Fonts.error300]}>
+              {refuseError}
+            </Text>
+          ) : null}
+        </View>
+      </BottomModal>
     </View>
   );
 }

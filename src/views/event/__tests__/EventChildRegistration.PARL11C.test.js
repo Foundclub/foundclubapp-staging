@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EventChildRegistration, {
@@ -282,5 +282,83 @@ describe('PAR-L11c point 3 — chez l organisateur, sur le telephone comme sur l
     expect(byTestId('child-registration-error-r-1')).not.toHaveLength(0);
     expect(getByText('Plus de place.')).toBeTruthy();
     alerte.mockRestore();
+  });
+});
+
+// Point 4 — « Refuser » ne part plus SANS motif possible : une feuille nomme l enfant, offre un
+// champ « Motif (facultatif) » (500 caracteres, plafond du serveur), et le motif voyage dans
+// `{ data: { reason } }` — le parent le lit sous l evenement et sur la fiche de l enfant.
+describe('PAR-L11c point 4 — le motif saisi au refus', () => {
+  const MARYLINE = { firstname: 'Maryline', lastname: 'Monroe' };
+  const champDuMotif = () => arbre.root.findAll((node) => node.type === TextInput)[0];
+
+  beforeEach(() => {
+    mockRows.current = [{
+      child: { age: 9, firstname: 'Anissa' },
+      documentId: 'r-1',
+      parent: MARYLINE,
+      status: 'pending',
+    }];
+  });
+
+  test('🔴 « Refuser » ouvre une feuille qui nomme l enfant, avec un champ motif', () => {
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    press('Refuser');
+
+    expect(getByText("Refuser l'inscription pour Anissa ?")).toBeTruthy();
+    expect(getByText('Le parent verra ce motif.')).toBeTruthy();
+    expect(getByText('Motif (facultatif)')).toBeTruthy();
+    expect(champDuMotif().props.maxLength).toBe(500);
+    expect(mockDecide).not.toHaveBeenCalled();
+  });
+
+  test('🔴 le motif saisi part avec le refus ; la feuille se ferme', async () => {
+    mockDecide.mockResolvedValue({});
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    press('Refuser');
+    act(() => { champDuMotif().props.onChangeText('  Groupe complet  '); });
+    await pressAsync("Refuser l'inscription");
+
+    expect(mockDecide).toHaveBeenCalledWith({
+      decision: 'refuse', reason: 'Groupe complet', registrationId: 'r-1',
+    });
+    expect(queryByText("Refuser l'inscription pour Anissa ?")).toBeNull();
+  });
+
+  test('sans motif, le refus part quand meme (le motif est facultatif)', async () => {
+    mockDecide.mockResolvedValue({});
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    press('Refuser');
+    await pressAsync("Refuser l'inscription");
+
+    expect(mockDecide).toHaveBeenCalledWith({
+      decision: 'refuse', reason: '', registrationId: 'r-1',
+    });
+  });
+
+  test('un refus du serveur reste DANS la feuille, le motif saisi n est pas perdu', async () => {
+    mockDecide.mockRejectedValue({ details: { code: 'NOT_PENDING' }, status: 400 });
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    press('Refuser');
+    act(() => { champDuMotif().props.onChangeText('Groupe complet'); });
+    await pressAsync("Refuser l'inscription");
+
+    expect(getByText('Cette demande a déjà été traitée.')).toBeTruthy();
+    expect(getByText("Refuser l'inscription pour Anissa ?")).toBeTruthy();
+    expect(champDuMotif().props.value).toBe('Groupe complet');
+  });
+
+  test('« Annuler » referme la feuille, rien ne part', () => {
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    press('Refuser');
+    press('Annuler');
+
+    expect(queryByText("Refuser l'inscription pour Anissa ?")).toBeNull();
+    expect(mockDecide).not.toHaveBeenCalled();
   });
 });
