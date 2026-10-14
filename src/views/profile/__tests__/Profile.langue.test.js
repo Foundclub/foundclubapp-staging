@@ -21,6 +21,10 @@ const mockEnregistrer = jest.fn((/** @type {'fr' | 'en' | null} */ choix) => {
 /** @type {boolean} */
 let mockAnglaisDisponible = true;
 
+// PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant ».
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/theme/strings/langue', () => ({
   anglaisDisponible: () => mockAnglaisDisponible,
   enregistrerChoixDeLangue: (/** @type {any} */ choix) => mockEnregistrer(choix),

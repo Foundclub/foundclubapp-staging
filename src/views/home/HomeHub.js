@@ -65,8 +65,15 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
+import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
+import {
+  lignesAAfficher,
+  lignesDeLaCarte,
+  peutAvoirDesEnfants,
+} from '@/views/profile/parent/mesEnfantsEnBref';
+import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -176,7 +183,10 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  highlighted?: boolean;
  *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
- *  subtitleLines?: 1 | 2;
+ *  subtitleLines?: number;
+ *  lignes?: Array<{
+ *    cle: string, texte: string, accessibilityLabel?: string, onPress?: () => void,
+ *  }>;
  *  tutorial?: any;
  * }} HomeCard
  */
@@ -253,6 +263,7 @@ function HomeSection({
               icon={card.icon}
               illustration={card.illustration || illustrationsParFamille[card.icon]}
               illustrationPlacement={card.illustrationPlacement}
+              lignes={card.lignes}
               locked={card.locked}
               onPress={card.onPress}
               premiumScope={card.premiumScope}
@@ -402,14 +413,16 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
+    canUseParentMode,
     canUsePlayerMode,
     clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
     governedPublishingBlockReason,
+    isParentMode,
     isPlayerMode,
     nonPartnerCoachPublishingAccess,
-    setPlayerMode,
+    setDisplayMode,
     subscriptionAccessLevel,
     userData,
   } = auth;
@@ -455,13 +468,34 @@ function HomeHubContent({ auth, navigation, route }) {
   // LOT RÔLES (2026-09-28) — en MODE JOUEUR, l'accueil est celui d'un joueur :
   // tout ce qui suit (section Gérer, bandeau, cartes) se déduit de `roleKey`.
   // `userData` n'est pas réécrit, et les droits ne bougent pas (useAuth).
-  const roleKey = isPlayerMode ? 'player' : getUserRoleKey(roleName);
+  // PAR-L12 (13/10, décision D6 A d'Adel) — et en MODE PARENT (un sportif qui a des enfants),
+  // l'accueil est celui d'un parent : « Mes enfants » en tête, les mêmes cases que le parent.
+  /** @type {'player' | 'parent' | null} */
+  let modeActif = null;
+  if (isPlayerMode) modeActif = 'player';
+  else if (isParentMode) modeActif = 'parent';
+  const roleKey = modeActif || getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const isSuperAdmin = roleKey === 'superAdmin';
   // P0 — `getUserRoleKey` rend deja 'parent' (authUseCases.js:37) : le trou
   // n'etait pas la, il etait ici, ou personne ne lisait cette valeur.
   const isParent = roleKey === 'parent';
+  // PAR-L7 (13/10, design parent E01) — mes enfants en bref : les lectures de « Mes enfants »,
+  // avec ses cles (l'ecran s'ouvrira deja rempli). Sur le role du COMPTE : les quatre roles du
+  // club peuvent avoir des enfants ; le super admin et un compte neuf, non (rien ne part).
+  const mesEnfants = useMesEnfantsEnBref({
+    actif: Boolean(userData?.documentId) && peutAvoirDesEnfants(getUserRoleKey(roleName)),
+  });
+  // PAR-L12 (E25) — le bandeau nomme les enfants qui attendent dans le mode parent.
+  const prenomsDesEnfants = useMemo(
+    () => mesEnfants.lignes.map((ligne) => ligne.prenom),
+    [mesEnfants.lignes],
+  );
+  // PAR-L12 (E27) — « Tu pratiques aussi un sport ? » : le premier appui d'un compte Parent.
+  const [feuillePratiqueOuverte, setFeuillePratiqueOuverte] = useState(false);
+  const ouvrirLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(true), []);
+  const fermerLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(false), []);
   // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
   // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
   const canShowSubscriptionExperience = isCoach || isPresident;
@@ -2412,37 +2446,50 @@ function HomeHubContent({ auth, navigation, route }) {
     // jusqu a la fiche du club (`MyChildren.js`, `chercherUnClub`).
     // 🧪 `accueilParRole.test.js` compte les cases qui ouvrent la recherche de
     // clubs : il en exige UNE.
-    if (isParent) {
-      // 👨‍👧 PARENT P2 (10/09) — LA PORTE QUI MANQUAIT.
-      //
-      // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUN chemin vers
-      // « Mes enfants ». Il fallait passer par le menu du profil — pour
-      // quelqu un dont c est la SEULE raison d etre dans l app. Le plan le
-      // demandait deja (A3) : « Mes enfants » sur l accueil du parent.
-      //
-      // ⛔ Elle ne lit PAS la liste des enfants : ce serait une requete de plus
-      // sur le premier ecran de l app, pour un libelle. C est une PORTE, et
-      // l ecran qu elle ouvre sait dire s il est vide.
-      // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
-      // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
-      // (meme raison que « Mes reponses », posee par D57).
-      const carteMesEnfants = {
-        accentColor: Colors.primary500,
-        emphasis: 'primary',
-        icon: 'users',
-        key: 'search-my-children',
-        layout: 'full',
-        onPress: () => navigation.navigate(RouteNames.ProfileStack, {
-          screen: RouteNames.MyChildren,
-        }),
-        subtitle: t(
+    // 👨‍👧 LA PORTE « MES ENFANTS »
+    // PARENT P2 (10/09) — LA PORTE QUI MANQUAIT. 🖥️ Trouve sur emulateur : l accueil
+    // du parent n avait AUCUN chemin vers « Mes enfants ». Il fallait passer par le menu
+    // du profil — pour quelqu un dont c est la SEULE raison d etre dans l app.
+    //
+    // PAR-L7 (13/10, design parent E01, decision D1 A d'Adel du 12/10) — elle DIT ses
+    // enfants : « Anissa · U11 Filles », « Martin · Demande en attente », 3 au plus puis
+    // « + 2 autres » (`useMesEnfantsEnBref`, les lectures de « Mes enfants » et leurs
+    // cles). Tant qu'elles n'ont pas repondu, ou si elles echouent, la phrase d'avant :
+    // la carte ne bloque jamais l'accueil, et l'ecran qu'elle ouvre sait dire s'il est vide.
+    // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
+    // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
+    // (meme raison que « Mes reponses », posee par D57).
+    const lignesDesEnfants = lignesAAfficher(t, mesEnfants);
+    // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
+    // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
+    const carteMesEnfants = /** @type {any} */ ({
+      accentColor: Colors.primary500,
+      emphasis: 'primary',
+      icon: 'users',
+      key: 'search-my-children',
+      layout: 'full',
+      // PAR-L7 E01 (14/10) — « une ligne d'enfant → sa fiche » : chaque ligne s'ouvre sur SA
+      // destination dans « Mon compte » ; un appui ailleurs sur la carte ouvre « Mes enfants ».
+      lignes: mesEnfants.total > 0
+        ? lignesDeLaCarte(t, mesEnfants, (destination) => (
+          navigation.navigate(RouteNames.ProfileStack, destination)
+        ))
+        : undefined,
+      onPress: () => navigation.navigate(RouteNames.ProfileStack, {
+        screen: RouteNames.MyChildren,
+      }),
+      subtitle: mesEnfants.total > 0
+        ? lignesDesEnfants.join('\n')
+        : t(
           'homeHub.cards.search.myChildren.subtitle',
           'Declare-les, corrige leur fiche, cherche-leur un club.',
         ),
-        subtitleLines: 2,
-        title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
-      };
+      // Une ligne par enfant nomme (et « + 2 autres ») : rien n'est coupe par « … ».
+      subtitleLines: Math.max(2, lignesDesEnfants.length),
+      title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+    });
 
+    if (isParent) {
       // ⚠️ Pour poser une 2e case en tete : UN SEUL `unshift(a, b)`. Deux
       // `unshift` successifs sortent dans l ordre INVERSE, et le temoin, qui lit
       // la source comme du texte, reste VERT (vu a l ecran le 10/09).
@@ -2450,6 +2497,11 @@ function HomeHubContent({ auth, navigation, route }) {
 
       return cards.filter(estVisiblePourLeParent).filter(estAfficheeSurLAccueil);
     }
+
+    // PAR-L7 — un Joueur, un Entraineur ou un Dirigeant qui a des enfants gagne la MEME
+    // porte, EN FIN de « Rechercher » : le role decide de l'INSISTANCE (le parent l'a en
+    // tete), jamais de la capacite (« avoir des enfants » est une capacite, GO Adel 07/09).
+    if (mesEnfants.total > 0) cards.push(carteMesEnfants);
 
     return cards.filter(estAfficheeSurLAccueil);
   }, [
@@ -2459,6 +2511,7 @@ function HomeHubContent({ auth, navigation, route }) {
     homeCounters,
     isParent,
     makeTutorial,
+    mesEnfants,
     navigation,
     scrollDownLabel,
     scrollToLeagueSection,
@@ -2574,12 +2627,26 @@ function HomeHubContent({ auth, navigation, route }) {
         />
         {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
         <CollectivitePorteRow />
-        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
+        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
+            PAR-L12 (E25) — trois positions : rôle du compte, joueur, parent. Le mode parent ne
+            s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27. */}
         <PlayerModeBanner
           accountRoleKey={getUserRoleKey(roleName)}
+          canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
           canUsePlayerMode={canUsePlayerMode === true}
-          isPlayerMode={isPlayerMode === true}
-          onChange={setPlayerMode}
+          displayMode={modeActif}
+          onChange={setDisplayMode}
+          onPratiqueAussi={ouvrirLaFeuillePratique}
+          prenoms={prenomsDesEnfants}
+        />
+        <FeuillePratiqueAussi
+          isVisible={feuillePratiqueOuverte}
+          onClose={fermerLaFeuillePratique}
+          onDone={() => {
+            setFeuillePratiqueOuverte(false);
+            showBanner({ title: t('playerMode.sheet.done'), tone: 'success' });
+          }}
+          prenoms={prenomsDesEnfants}
         />
         {headBanner ? (
           <HomeHeadBanner

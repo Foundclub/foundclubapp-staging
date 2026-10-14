@@ -45,6 +45,10 @@ const mockPush = jest.fn();
 const mockGoBack = jest.fn();
 const mockDeleteHistory = jest.fn();
 
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
   useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),
@@ -412,6 +416,15 @@ const parent = {
   role: { name: 'Parent' },
 };
 
+// PAR-L7 (13/10) — un compte SANS ROLE (« Membre ») : depuis L7, c'est le seul proprietaire qui
+// arrive sur cette page avec la liste d'experiences (le parent n'a plus d'historique sportif).
+const membre = {
+  documentId: 'user-membre',
+  firstname: 'Nadia',
+  lastname: 'Lemaire',
+  role: { name: 'Authenticated', type: 'authenticated' },
+};
+
 const experiences = [
   {
     category: { name: 'U15' },
@@ -568,11 +581,17 @@ describe('PROFIL-JOUEUR · A18 — l\'apercu « comme les autres » est en LECTU
     });
   });
 
-  it('temoin : hors apercu, sur SON profil public (compte parent), l\'ajout reste', async () => {
-    // Le garde-fou ne doit rien retirer a un proprietaire : un compte parent
+  it('temoin : hors apercu, sur SON profil public (compte sans role), l\'ajout reste', async () => {
+    // Le garde-fou ne doit rien retirer a un proprietaire : un compte sans role
     // n'a pas d'ecran « voir = modifier », il edite depuis cette page-ci.
+    // PAR-L7 (13/10, design parent E03) — ce temoin passait par un compte PARENT. Le profil
+    // du parent n'a plus d'historique sportif (le design le lui RETIRE : il ne joue pas) :
+    // il ne porte donc plus « Ajouter une experience ». Le contrat de ce temoin (l'apercu
+    // ne retire rien au proprietaire) est tenu par le seul proprietaire qui garde la liste
+    // sur cette page : un compte sans role. Le parent a son temoin dans
+    // `UserDetails.caracterisation.test.js` (« Mon profil » d'un PARENT).
     mockMyHistories = experiences;
-    const arbre = await rendre(parent, { userId: 'user-parent' });
+    const arbre = await rendre(membre, { userId: 'user-membre' });
     const texte = texteVisible(arbre);
 
     expect(texte).toContain('Ajouter une expérience');

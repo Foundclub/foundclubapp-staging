@@ -42,6 +42,10 @@ const mockPush = jest.fn();
 // `.env` — absent de TOUT worktree. Sans cette doublure, la suite ENTIERE
 // echoue AU CHARGEMENT, sans executer un seul test (« Test Suites: 1 failed,
 // Tests: 0 »).
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
   useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),

@@ -34,6 +34,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
+import BlocMesEnfants from '@/views/profile/parent/BlocMesEnfants';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -683,6 +684,10 @@ function SelfProfileUnified({ navigation }) {
             </View>
           ))}
         </View>
+
+        {/* PAR-L7 (13/10, design parent E03) — un sportif qui a des enfants les retrouve ici,
+            sous son identité ; sans enfant, rien (`BlocMesEnfants` ne rend rien). */}
+        <BlocMesEnfants navigation={navigation} />
 
         {/* D65 — « Voir mon profil comme les autres ». Le bouton existait pour
             le joueur et l'entraineur (`SelfProfilePlayerCoach.js:629`) ; le

@@ -34,6 +34,8 @@ let mockFetchedUser;
 let mockPersonalStats;
 /** @type {any} */
 let mockPersonalStatsError;
+/** PAR-L12 — le mode parent d'un compte sportif. */
+let mockIsParentMode = false;
 const mockNavigate = jest.fn();
 
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
@@ -122,6 +124,10 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
   useGetMyHistories: () => ({ refetch: jest.fn() }),
   useGetUserHistories: () => ({ refetch: jest.fn() }),
 }));
+
+// PAR-L7 (13/10) — « Mon profil » d'un parent porte le bloc « Mes enfants » (`BlocMesEnfants`,
+// qui lit trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
@@ -279,6 +285,8 @@ const rendre = async (utilisateurCourant, parametresRoute = {}) => {
       superAdmin: 'SuperAdmin',
     },
     userData: utilisateurCourant,
+    // PAR-L12 — le mode parent (choix d'affichage) : faux, sauf quand un temoin le demande.
+    isParentMode: mockIsParentMode,
   };
   /** @type {any} */
   let arbre;
@@ -315,12 +323,21 @@ describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marc
   // (`preview: true`) pour atteindre la page publique en proprietaire : ils
   // EXIGEAIENT donc que l'apercu garde « + Ajouter » et le crayon, c'est-a-dire
   // le defaut lui-meme. Ils atteignent desormais la meme page par un compte qui
-  // y edite pour de vrai : un PARENT, qui n'a pas d'ecran « voir = modifier ».
-  // Le contrat D40 (la route de retour) est inchange.
-  const parentConnecte = { documentId: 'user-p', role: { name: 'Parent', type: 'parent' } };
+  // y edite pour de vrai, sans ecran « voir = modifier ».
+  // PAR-L7 (13/10, design parent E03) — ce compte etait un PARENT. Son profil n'a plus
+  // d'historique sportif (le design le RETIRE au parent : il ne joue pas), donc il ne peut
+  // plus porter ce contrat. Le design proposait de le rejouer « sur un profil de joueur » :
+  // impossible ici, le joueur a son propre ecran (`SelfProfilePlayerCoach`, sans cette
+  // liste). Le seul proprietaire qui arrive encore sur CETTE page avec la liste est un
+  // compte SANS ROLE (« Membre ») : c'est lui qui la porte. Le contrat D40 (la route de
+  // retour) est inchange, mot pour mot.
+  const membreConnecte = {
+    documentId: 'user-m',
+    role: { name: 'Authenticated', type: 'authenticated' },
+  };
 
   it('« + Ajouter » annonce la LISTE comme route de retour, pas le profil', async () => {
-    await rendre(parentConnecte);
+    await rendre(membreConnecte);
 
     const { onAddPress } = propsSectionHistorique.current;
     expect(onAddPress).toBeDefined();
@@ -333,7 +350,7 @@ describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marc
   });
 
   it('modifier une ligne revient AUSSI sur la liste', async () => {
-    await rendre(parentConnecte);
+    await rendre(membreConnecte);
 
     const { onEditPress } = propsSectionHistorique.current;
     expect(onEditPress).toBeDefined();
@@ -502,5 +519,90 @@ describe('UserDetails — mon propre profil part vers l\'ecran unifie', () => {
     const arbre = await rendre(dirigeantConnecte, { userId: 'user-1' });
 
     expect(texteVisible(arbre)).toContain('ECRAN PROFIL UNIFIE');
+  });
+});
+
+// PAR-L7 (13/10, design parent E03, decision D1 A d'Adel du 12/10) — « MON PROFIL » D'UN PARENT :
+// son identite, SES ENFANTS, ses infos personnelles. Rien de sportif : il ne joue pas.
+describe('PAR-L7 — « Mon profil » d un PARENT : ses enfants, ses infos, rien de sportif', () => {
+  const parentConnecte = {
+    documentId: 'user-p',
+    email: 'nadia@exemple.test',
+    firstname: 'Nadia',
+    lastname: 'Haddad',
+    role: { name: 'Parent', type: 'parent' },
+  };
+
+  it('le titre dit « MON PROFIL », et le role reste dit dessous (« PARENT »)', async () => {
+    const texte = texteVisible(await rendre(parentConnecte));
+
+    expect(texte).toContain('MON PROFIL');
+    expect(texte).not.toContain('INFOS PROFIL');
+    expect(texte).toContain('PARENT');
+  });
+
+  it('dans l ordre : son identite, « Mes enfants », puis « Infos personnelles »', async () => {
+    const texte = texteVisible(await rendre(parentConnecte));
+    const identite = texte.indexOf('AVATAR:');
+    const enfants = texte.indexOf('Mes enfants');
+    const infos = texte.indexOf('Infos personnelles');
+
+    expect(identite).toBeGreaterThan(-1);
+    expect(enfants).toBeGreaterThan(identite);
+    expect(infos).toBeGreaterThan(enfants);
+  });
+
+  it.each([
+    ['SECTION HISTORIQUE SPORTIF', 'son historique sportif'],
+    ['Profil sportif', 'son profil sportif'],
+    ['Retours du coach', 'les retours d un coach (vides pour un parent)'],
+    ['Équipes', 'ses equipes'],
+  ])('il ne voit plus « %s » : %s', async (bloc) => {
+    expect(texteVisible(await rendre(parentConnecte))).not.toContain(bloc);
+  });
+
+  it('LE GARDE-FOU : le profil d un parent vu par QUELQU UN D AUTRE ne change pas', async () => {
+    mockFetchedUser = {
+      documentId: 'user-parent-vu',
+      firstname: 'Nadia',
+      lastname: 'Haddad',
+      role: { name: 'Parent', type: 'parent' },
+    };
+    const texte = texteVisible(await rendre(dirigeantConnecte, { userId: 'user-parent-vu' }));
+
+    expect(texte).toContain('INFOS PROFIL');
+    expect(texte).toContain('Profil sportif');
+    expect(texte).not.toContain('Mes enfants');
+  });
+});
+
+// PAR-L12 (13/10, design parent §2 bis, décision D6 A d'Adel du 12/10) — EN MODE PARENT, « Mon
+// profil » d'un compte sportif est celui d'un parent (ses enfants, ses infos) ; hors mode parent,
+// son écran sportif (« voir = modifier ») ne change pas. Son rôle de compte reste le sien.
+describe('PAR-L12 — « Mon profil » suit le mode parent', () => {
+  const joueurConnecte = {
+    documentId: 'user-j',
+    firstname: 'Youss',
+    lastname: 'B',
+    role: { name: 'Joueur', type: 'joueur' },
+  };
+
+  afterEach(() => { mockIsParentMode = false; });
+
+  it('en mode parent : « MON PROFIL », « PARENT », ses enfants, sans l ecran sportif', async () => {
+    mockIsParentMode = true;
+    const texte = texteVisible(await rendre(joueurConnecte));
+
+    expect(texte).toContain('MON PROFIL');
+    expect(texte).toContain('PARENT');
+    expect(texte).toContain('Mes enfants');
+    expect(texte).not.toContain('ECRAN PROFIL JOUEUR OU ENTRAINEUR');
+    expect(texte).not.toContain('Profil sportif');
+  });
+
+  it('hors mode parent : son ecran de joueur, comme avant', async () => {
+    const texte = texteVisible(await rendre(joueurConnecte));
+
+    expect(texte).toContain('ECRAN PROFIL JOUEUR OU ENTRAINEUR');
   });
 });

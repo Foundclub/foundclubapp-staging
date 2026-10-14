@@ -25,6 +25,10 @@ let mockNavigation;
 /** @type {any[]} */
 const mockDeleteMutations = [];
 
+// PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant ».
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));

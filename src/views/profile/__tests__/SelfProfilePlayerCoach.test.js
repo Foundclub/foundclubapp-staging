@@ -31,6 +31,10 @@ const mockUpdateMe = jest.fn();
 // `.env` — absent de TOUT worktree. Sans cette doublure, la suite ENTIERE
 // echoue AU CHARGEMENT, sans executer un seul test (« Test Suites: 1 failed,
 // Tests: 0 »).
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
   useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),
@@ -579,5 +583,41 @@ describe('D39 · « Voir mon profil comme les autres »', () => {
     // Les retours du coach sont prives : jamais dans l'apercu.
     expect(texte).not.toContain('Retours du coach');
     expect(pressablePortant(arbre, 'Contacter')).toBeUndefined();
+  });
+});
+
+// PAR-L7 (13/10, design parent E03, decision D1 A d'Adel du 12/10) — un JOUEUR ou un ENTRAINEUR
+// qui a des enfants garde TOUT son profil sportif, et gagne le bloc « Mes enfants », juste sous
+// sa carte d'identite. Sans enfant, son profil ne change pas d'une ligne.
+describe('PAR-L7 — un sportif qui a des enfants les retrouve sur « Mon profil »', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+
+  afterEach(() => useMesEnfantsEnBref.regler());
+
+  it('joueur avec 2 enfants : le bloc sous son identite, profil sportif intact', async () => {
+    useMesEnfantsEnBref.regler({
+      lignes: [
+        {
+          cible: { id: 'f-a', type: 'fiche' }, cle: 'a', etat: 'U11 Filles', prenom: 'Anissa',
+        },
+        {
+          cible: { id: 'u-h', type: 'compte' }, cle: 'h', etat: 'A son compte', prenom: 'Hugo',
+        },
+      ],
+      reste: 0,
+      total: 2,
+    });
+    const texte = texteVisible(await rendre(joueur));
+
+    expect(texte).toContain('Mes enfants');
+    expect(texte).toContain('Anissa · U11 Filles');
+    expect(texte.indexOf('Mes enfants'))
+      .toBeLessThan(texte.indexOf('Voir mon profil comme les autres'));
+    expect(texte).toContain('Poste');
+  });
+
+  it('entraineur sans enfant : aucun bloc « Mes enfants »', async () => {
+    expect(texteVisible(await rendre(entraineur))).not.toContain('Mes enfants');
   });
 });

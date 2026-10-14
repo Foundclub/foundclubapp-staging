@@ -31,6 +31,10 @@ const PLACEHOLDER_PROFIL = 'Rechercher une ville';
 const PLACEHOLDER_EQUIPE = 'Rechercher une ville...';
 const PLACEHOLDER_RECHERCHE = 'Rechercher...';
 
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: (/** @type {any} */ props) => props.children,
   useSafeAreaInsets: () => ({
