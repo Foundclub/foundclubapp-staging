@@ -534,6 +534,10 @@ function SelfProfileUnified({ navigation }) {
           padding: 16,
         }}
         >
+          {/* PROFIL-CRAYON (14/10) — `zIndex` OBLIGATOIRE : la rangee avatar + nom,
+              rendue APRES le crayon, est dessinee AU-DESSUS et le nom le recouvrait.
+              Le doigt touchait le nom, jamais le crayon (3 appuis, aucun ecran).
+              Le crayon reste le premier enfant : l'ordre de lecture ne bouge pas. */}
           <TouchableOpacity
             accessibilityLabel={t('profile.actions.editIdentity', 'Modifier mon nom et ma photo')}
             accessibilityRole="button"
@@ -550,6 +554,7 @@ function SelfProfileUnified({ navigation }) {
               right: 12,
               top: 12,
               width: 34,
+              zIndex: 1,
             }}
           >
             <Image

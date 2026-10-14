@@ -514,6 +514,7 @@ function InfoRow({
  * @param props.bottomPanel
  * @param props.club
  * @param props.disposition
+ * @param {string} [props.equipe] PAR-L13 : la rangee ÉQUIPE (carte d'un enfant declare)
  * @param props.historique
  * @param {string} [props.historiqueEmptyLabel]
  * @param {number} [props.historiqueTotal] clubs distincts (PAR-L14), sinon le nombre de lignes
@@ -529,7 +530,7 @@ function InfoRow({
  * @param props.rarity
  * @param props.rarityLabel
  * @param props.sport
- * @param props.statut
+ * @param {string|null} [props.statut] `null` : aucune rangee STATUT (PAR-L13, fiche d'enfant)
  * @param props.ville
  */
 function PlayerCardBase({
@@ -538,6 +539,7 @@ function PlayerCardBase({
   bottomPanel = 'historique',
   club,
   disposition,
+  equipe = undefined,
   historique = [],
   historiqueEmptyLabel = undefined,
   historiqueTotal = undefined,
@@ -579,9 +581,12 @@ function PlayerCardBase({
     [t('playerCard.info.age', 'ÂGE'), age],
     [t('playerCard.info.nationality', 'NATIONALITÉ'), nationalite],
     [t('playerCard.info.club', 'CLUB'), club],
+    [t('playerCard.info.team'), equipe],
     [t('playerCard.info.city', 'VILLE'), ville],
   ].filter(([, valeur]) => !estVide(valeur));
-  const plan = planHistorique(rangees.length + 1, historique.length);
+  // PAR-L13 : une fiche d'enfant n'a pas de statut (« disponible » n'existe pas pour elle).
+  const afficherStatut = statut !== null;
+  const plan = planHistorique(rangees.length + (afficherStatut ? 1 : 0), historique.length);
 
   return (
     <View collapsable={false} style={{ height: h, width }}>
@@ -812,39 +817,47 @@ function PlayerCardBase({
               paddingVertical: LAYOUT.infoPadV * s,
             }]}
             >
-              {rangees.map(([label, valeur]) => (
-                <InfoRow key={label} label={label} s={s} value={up(valeur)} />
+              {rangees.map(([label, valeur], rang) => (
+                <InfoRow
+                  isLast={!afficherStatut && rang === rangees.length - 1}
+                  key={label}
+                  label={label}
+                  s={s}
+                  value={up(valeur)}
+                />
               ))}
-              <InfoRow
-                isLast
-                label="STATUT"
-                s={s}
-                value={(
-                  <View style={styles.row}>
-                    <View
-                      style={{
-                        backgroundColor: statusColor,
-                        borderRadius: 7 * s,
-                        height: 14 * s,
-                        marginRight: 12 * s,
-                        width: 14 * s,
-                      }}
-                    />
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: statusColor,
-                        fontFamily: 'Montserrat-Black',
-                        ...font(s, 36, 44),
-                        textShadowColor: statusColor,
-                        textShadowRadius: 9 * s,
-                      }}
-                    >
-                      {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
-                    </Text>
-                  </View>
-                )}
-              />
+              {afficherStatut ? (
+                <InfoRow
+                  isLast
+                  label="STATUT"
+                  s={s}
+                  value={(
+                    <View style={styles.row}>
+                      <View
+                        style={{
+                          backgroundColor: statusColor,
+                          borderRadius: 7 * s,
+                          height: 14 * s,
+                          marginRight: 12 * s,
+                          width: 14 * s,
+                        }}
+                      />
+                      <Text
+                        allowFontScaling={false}
+                        style={{
+                          color: statusColor,
+                          fontFamily: 'Montserrat-Black',
+                          ...font(s, 36, 44),
+                          textShadowColor: statusColor,
+                          textShadowRadius: 9 * s,
+                        }}
+                      >
+                        {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
+                      </Text>
+                    </View>
+                  )}
+                />
+              ) : null}
             </View>
             <View
               style={{

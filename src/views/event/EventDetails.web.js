@@ -98,6 +98,7 @@ import {
   resolveCallMode,
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
+import EventChildRegistration from './components/EventChildRegistration';
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
@@ -489,10 +490,14 @@ function EventDetails({ navigation, route }) {
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
   // FINITIONS16 · POINT 1 (T15) — la regle du telephone : un compte connecte qui n est ni
   // joueur ni membre d une equipe conviee (Papa Test, role Parent) n a rien a repondre.
-  const rienARepondre = resolveParticipationOffer({
+  // 👪 PAR-L11b (13/10) — un parent ('children') n a rien a repondre POUR LUI non plus : il
+  // inscrit ses enfants, par le meme bloc que le telephone (EventChildRegistration).
+  const offreDeParticipation = resolveParticipationOffer({
     isConvenedMember,
     user: isSignedIn ? userData : null,
-  }) === 'none';
+  });
+  const offreAuxEnfants = offreDeParticipation === 'children';
+  const rienARepondre = ['children', 'none'].includes(offreDeParticipation);
   const afficherParticiper = !canEdit
     && !rienARepondre
     && !peutPasserPresentApresCoup
@@ -2279,6 +2284,9 @@ function EventDetails({ navigation, route }) {
                         {t('eventList.actions.declareLatePresence', 'Je passe en présent')}
                       </button>
                     </div>
+                  ) : null}
+                  {offreAuxEnfants && !canEdit ? (
+                    <EventChildRegistration event={event} navigation={navigation} />
                   ) : null}
                   {afficherParticiper ? (
                     <button

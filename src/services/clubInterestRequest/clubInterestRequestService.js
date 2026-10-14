@@ -294,6 +294,23 @@ export const getMyClubInterestRequests = async (params = {}) => {
   return validatePaginatedResponse(response.data);
 };
 
+/**
+ * PAR-L8 (13/10, design parent E19) — le parent RETIRE sa demande de place pour son enfant,
+ * encore en attente. Le serveur l'efface (comme un refus) ; si le club a répondu entre-temps,
+ * il refuse avec un code que l'écran traduit (`views/profile/parent/annulationDeLaDemande.js`).
+ * POST, comme l'annulation joueur : le serveur ne lit pas le corps d'un DELETE.
+ * @param {string} requestId - Le `documentId` de la demande.
+ * @returns {Promise<any>} La réponse du serveur (`{ data: { deleted, documentId } }`).
+ */
+export const cancelClubInterestRequest = async (requestId) => {
+  const id = String(requestId || '').trim();
+  if (!id) {
+    throw new Error('A request id is required to cancel a club interest request');
+  }
+  const response = await client.post(`/club-interest-requests/${id}/cancel`);
+  return response.data;
+};
+
 export const respondClubInterestRequest = async (requestId, responsePayload = {}) => {
   const response = await client.post(`/club-interest-requests/${requestId}/respond`, {
     data: responsePayload,

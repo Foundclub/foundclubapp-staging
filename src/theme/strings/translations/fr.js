@@ -15463,6 +15463,8 @@ export default {
       club: 'CLUB',
       nationality: 'NATIONALITÉ',
       position: 'POSTE',
+      // PAR-L13 — la carte d'un enfant déclaré porte son équipe.
+      team: 'ÉQUIPE',
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
@@ -22959,6 +22961,74 @@ export default {
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
     },
+    // PAR-L8 (13/10, design parent E19, planche 8) — annuler une demande de place en attente,
+    // depuis la fiche de l'enfant : la feuille de confirmation, puis l'issue dite dans un bandeau.
+    cancelRequest: {
+      accepted: 'Le club a déjà répondu.',
+      acceptedHint: '{{firstname}} est dans {{team}}. Rien n’a été annulé.',
+      answered: 'Le club a déjà répondu à cette demande.',
+      answeredHint: 'Il n’y a plus rien à annuler.',
+      confirm: 'Annuler la demande',
+      confirmMessage: 'Les responsables de {{team}} ne la verront plus.'
+        + ' {{firstname}} pourra faire une nouvelle demande.',
+      confirmTitle: 'Annuler la demande pour {{firstname}} ?',
+      done: 'Demande annulée.',
+      doneHint: '{{firstname}} peut faire une nouvelle demande.',
+      failed: 'La demande n’a pas pu être annulée.',
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      keep: 'Garder la demande',
+      link: 'Annuler la demande',
+      linkLabel: 'Annuler la demande pour {{team}}',
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: 'L’annulation n’est pas encore disponible.',
+      unavailableHint: 'La demande est toujours en attente. Réessaie plus tard.',
+    },
+    // PAR-L13 (13/10, design parent E28-E30) — la carte de collection d'un enfant de moins de
+    // 13 ans, « pareille que les autres » (Adel, 12/10, registre des mineurs lignes 22-23) :
+    // photo, ville et nationalité oui, code QR non, « ce qui part » avant tout partage.
+    card: {
+      addPhoto: 'Ajouter sa photo',
+      // Le bloc « Sa carte » de sa fiche (prototype, planche 3).
+      blockCaption: 'Carte de collection',
+      blockOpen: 'Voir',
+      blockTitle: 'Sa carte',
+      changePhoto: 'Changer sa photo',
+      cityLabel: 'Ville (facultatif)',
+      cityPlaceholder: 'Ex. Marseille',
+      edit: 'Modifier sa carte',
+      eyebrow: 'Nouveau',
+      hint: 'C’est pour sa carte qu’on te demande ça. Tu peux le faire plus tard.',
+      nationalityLabel: 'Nationalité (facultatif)',
+      nationalityPlaceholder: 'Ex. Française',
+      noLink: 'Ni code ni lien : la carte ne mène à aucune page.',
+      numberLabel: 'Numéro de maillot',
+      numberPlaceholder: 'Ex. 7',
+      photoError: 'La photo n’a pas pu être enregistrée. Réessaie.',
+      positionLabel: 'Poste',
+      removePhoto: 'Retirer sa photo',
+      save: 'Enregistrer sa carte',
+      savedDescription: 'La carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
+      saveError: 'La carte n’a pas pu être enregistrée. Réessaie.',
+      share: 'Partager la carte de {{firstname}}',
+      sharedGallery: 'La carte est enregistrée dans tes photos (album FoundClub).'
+        + ' Choisis maintenant où la publier.',
+      shareElided: 'Partager la carte d’{{firstname}}',
+      shareOpenWith: 'Ouvrir la carte avec…',
+      // E30 — AVANT tout partage : ce qui part, et ce qui ne part jamais.
+      sheet: {
+        confirm: 'Partager l’image',
+        never: 'Un code ou un lien vers sa fiche.',
+        neverTitle: 'Ce qui n’apparaît jamais',
+        shown: 'Sa photo si tu en as mis une, son prénom et son nom, son âge, son équipe,'
+          + ' son numéro, son poste, sa ville et sa nationalité.',
+        shownTitle: 'Ce qui apparaît',
+        subtitle: 'Tu envoies une image, sans lien vers elle.',
+        title: 'Partager la carte de {{firstname}} ?',
+        titleElided: 'Partager la carte d’{{firstname}} ?',
+      },
+      title: 'La carte de {{firstname}}',
+      titleElided: 'La carte d’{{firstname}}',
+    },
     confirmDelete: {
       cancel: 'Annuler',
       confirm: 'Supprimer',
@@ -23121,6 +23191,87 @@ export default {
       more_one: '+ {{count}} autre',
       more_other: '+ {{count}} autres',
       seeAll: 'Voir tout',
+    },
+  },
+  // 👪 PAR-L11b (13/10, D4 B) — « Inscrire mes enfants » sur un evenement public
+  // (EventChildRegistration.js).
+  childEventRegistration: {
+    actions: {
+      addChild: 'Ajouter un enfant',
+      back: 'Retour',
+      cancel: 'Annuler',
+      close: 'Fermer',
+      continue: 'Continuer ({{count}})',
+      register: 'Inscrire mes enfants',
+      send_one: 'Envoyer 1 inscription',
+      send_other: 'Envoyer {{count}} inscriptions',
+    },
+    blocked: {
+      cancelled: 'Cet événement est annulé.',
+      externalQuotaFull: 'Plus de place pour les participants extérieurs.',
+      friendly: 'Ce match amical oppose des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      full: 'Plus de place.',
+      invitedTeamsOnly: 'Réservé aux équipes invitées.',
+      past: 'Cet événement est passé.',
+      reservationClosed: 'Cette réservation ne cherche pas de joueurs.',
+      stageDay: 'On inscrit un enfant au stage entier, depuis la page du stage.',
+      teamsOnly: 'Cet événement inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      tournament: 'Ce tournoi inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+    },
+    errors: {
+      alreadyDecided: 'Cette demande a déjà été traitée.',
+      generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",
+    },
+    organizer: {
+      accept: 'Accepter',
+      accepted: 'Inscription acceptée',
+      childLine: '{{firstname}}, {{age}} ans',
+      errorTitle: 'Action impossible',
+      parentLine: 'Parent : {{name}}',
+      refuse: 'Refuser',
+      title: 'Enfants inscrits par leurs parents',
+    },
+    reasons: {
+      alreadyPending: "Demande déjà envoyée, en attente de l'organisateur.",
+      alreadyRegistered: 'Inscription déjà acceptée.',
+      tooOld: "À partir de 13 ans, {{firstname}} s'inscrit depuis son propre compte.",
+    },
+    recap: {
+      immediate: 'Inscription immédiate : une place par enfant.',
+      request: "L'organisateur valide chaque inscription.",
+      title: 'Récapitulatif',
+    },
+    result: {
+      accepted: '{{firstname}} — inscription confirmée',
+      pending: "{{firstname}} — demande envoyée, en attente de l'organisateur",
+      refused: {
+        ALREADY_PENDING: '{{firstname}} — demande déjà en attente',
+        ALREADY_REGISTERED: '{{firstname}} — inscription déjà acceptée',
+        CHILD_ALREADY_MEMBER: '{{firstname}} — son équipe est déjà conviée à cet événement',
+        CHILD_TOO_OLD: '{{firstname}} — à partir de 13 ans, '
+          + "l'inscription se fait depuis son propre compte",
+        default: '{{firstname}} — inscription impossible',
+        EXTERNAL_QUOTA_FULL: '{{firstname}} — plus de place pour les extérieurs',
+        FULL: '{{firstname}} — plus de place',
+      },
+      title: 'Résultat',
+    },
+    sheet: {
+      childLine: '{{firstname}} · {{age}} ans',
+      defaultType: 'Événement',
+      noChild: "Tu n'as pas encore déclaré d'enfant. "
+        + 'Ajoute-le depuis « Mes enfants », puis reviens ici.',
+      reminder: '{{type}} · {{date}}',
+      title: 'Qui inscris-tu ?',
+    },
+    status: {
+      accepted: '{{firstname}} — inscription confirmée',
+      declined: '{{firstname}} — demande refusée',
+      declinedWithReason: '{{firstname}} — demande refusée : {{reason}}',
+      pending: "{{firstname}} — en attente de l'organisateur",
     },
   },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.
