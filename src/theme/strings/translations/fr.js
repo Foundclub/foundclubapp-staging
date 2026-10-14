@@ -17074,6 +17074,9 @@ export default {
       unknown: 'La demande est acceptée.',
     },
     childInterest: {
+      // PARENT-FINITIONS 6 (14/10) — la demande a été retirée par le parent avant la décision.
+      goneMessage: 'Le parent a retiré cette demande.',
+      goneTitle: 'Demande retirée',
       parent: 'Parent : {{name}}',
       refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
       refuseTitle: 'Refuser la demande ?',

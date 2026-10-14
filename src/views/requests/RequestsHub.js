@@ -36,6 +36,7 @@ import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedI
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { CODE_DEMANDE_DISPARUE } from '@/views/profile/parent/annulationDeLaDemande';
 import InterestConversationSheet from '@/views/requests/InterestConversationSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -70,6 +71,8 @@ import {
   acceptTeamMembershipRequest,
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useClubScope } from '@/context/ClubScopeContext';
@@ -136,6 +139,18 @@ const getSourceErrorDescription = (sourceError, t) => {
  * existait deja : on le dit « rouvert ».
  */
 const FIL_DEJA_LA_APRES_MS = 60 * 1000;
+
+/**
+ * 👶 PARENT-FINITIONS 6 (14/10) — LA PLACE D'UN ENFANT N'EXISTE PLUS : son parent l'a retiree
+ * (PAR-L8) pendant que l'encadrement la regardait. Le serveur le dit par un 404 : avec le code
+ * `CLUB_INTEREST_REQUEST_GONE` quand l'annulation gagne la course (relue sous le verrou de
+ * l'enfant), sans code quand elle etait faite avant la lecture (`respond`, premiere lecture).
+ * @param {any} erreur L'erreur rendue par l'appel.
+ * @returns {boolean} Vrai si la demande a disparu.
+ */
+const laDemandeADisparu = (erreur) => (
+  getServerErrorCode(erreur) === CODE_DEMANDE_DISPARUE || getErrorStatus(erreur) === 404
+);
 
 /**
  * 👪 PARENT-FINITIONS 4 (14/10, design E16, planche 7) — LA PHRASE DU BANDEAU D'ARRIVEE DANS
@@ -592,6 +607,20 @@ function RequestsHub({ navigation, route }) {
         invalidateRequestsInBackground();
         emitGuidanceAction('requests.processed', { requestType: 'interest' });
       } catch (childDecisionError) {
+        // 👶 PARENT-FINITIONS 6 — avant : « Erreur » + « Club interest request not found », brut
+        // et en anglais, et la carte RESTAIT. La carte part, la liste se relit, la phrase dit
+        // ce qui s'est passe.
+        if (laDemandeADisparu(childDecisionError)) {
+          setSettledItemIds((current) => (
+            item?.id && !current.includes(item.id) ? [...current, item.id] : current
+          ));
+          invalidateRequestsInBackground();
+          Alert.alert(
+            t('requestsHub.childInterest.goneTitle', 'Demande retirée'),
+            t('requestsHub.childInterest.goneMessage', 'Le parent a retiré cette demande.'),
+          );
+          return;
+        }
         Alert.alert(
           t('common.error', 'Erreur'),
           /** @type {any} */ (childDecisionError)?.message

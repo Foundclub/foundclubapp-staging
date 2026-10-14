@@ -16312,6 +16312,8 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      goneMessage: 'The parent has withdrawn this request.',
+      goneTitle: 'Request withdrawn',
       parent: 'Parent: {{name}}',
       refuseMessage: 'The request for {{firstname}} will be deleted. Their parent will be notified.',
       refuseTitle: 'Decline the request?',

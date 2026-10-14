@@ -303,4 +303,51 @@ describe('P3 — trancher une place demandee pour un enfant', () => {
 
     expect(respondClubInterestRequest).not.toHaveBeenCalled();
   });
+
+  // 👶 PARENT-FINITIONS 6 (14/10) — LE PARENT A RETIRE SA DEMANDE (PAR-L8) PENDANT QUE LE COACH
+  // LA REGARDAIT. Avant : alerte « Erreur » avec le message brut anglais « Club interest request
+  // not found », et la carte restait. Le serveur le dit par un 404 : avec le code
+  // CLUB_INTEREST_REQUEST_GONE quand l'annulation gagne la course (relue sous le verrou de
+  // l'enfant), sans code quand elle etait deja faite avant la lecture.
+  test.each([
+    ['le code GONE (annulation pendant la decision)', {
+      details: { code: 'CLUB_INTEREST_REQUEST_GONE' },
+      message: 'Club interest request not found',
+      status: 404,
+    }],
+    ['un 404 sans code (annulation faite avant)', {
+      message: 'Club interest request not found',
+      status: 404,
+    }],
+  ])('④ accepter une demande retiree, %s : « Le parent a retiré cette demande. »', async (
+    _cas,
+    erreur,
+  ) => {
+    respondClubInterestRequest.mockRejectedValue(erreur);
+    const relire = jest.spyOn(mockClientDeTest, 'invalidateQueries');
+    const tree = await monterLeHub([PLACE_POUR_LEA]);
+    const carte = carteDe(tree, PLACE_POUR_LEA.id);
+
+    await act(async () => { await carte.props.onPrimaryPress(carte.props.item); });
+
+    expect(alerte).toHaveBeenCalledTimes(1);
+    const [titre, message] = alerte.mock.calls[0];
+    expect(titre).toBe('Demande retirée');
+    expect(message).toBe('Le parent a retiré cette demande.');
+    expect(String(message)).not.toContain('not found');
+    // La carte part tout de suite, et la liste se relit derriere.
+    expect(carteDe(tree, PLACE_POUR_LEA.id)).toBeUndefined();
+    expect(relire).toHaveBeenCalled();
+  });
+
+  test('④ une autre panne garde son message, et la carte reste', async () => {
+    respondClubInterestRequest.mockRejectedValue(new Error('Network Error'));
+    const tree = await monterLeHub([PLACE_POUR_LEA]);
+    const carte = carteDe(tree, PLACE_POUR_LEA.id);
+
+    await act(async () => { await carte.props.onPrimaryPress(carte.props.item); });
+
+    expect(alerte).toHaveBeenCalledWith('Erreur', 'Network Error');
+    expect(carteDe(tree, PLACE_POUR_LEA.id)).toBeDefined();
+  });
 });
