@@ -1417,6 +1417,12 @@ function PlanningWeekFullscreen() {
           libelle: t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville'),
           onPress: bloquerLaCase,
         } : null}
+        ajouterUnClub={() => {
+          fermerPanneau();
+          /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+            collectiviteId: managingCollectiviteId, onglet: 'recherche',
+          });
+        }}
         clubs={clubsPourAttribuer}
         compact={panneau.type === 'attribuer' && panneau.compact !== false}
         facilityId={facilityId}
@@ -1437,6 +1443,12 @@ function PlanningWeekFullscreen() {
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
         <SeasonSlotForm
+          ajouterUnClub={() => {
+            fermerPanneau();
+            /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+              collectiviteId: managingCollectiviteId, onglet: 'recherche',
+            });
+          }}
           clubs={clubsPourAttribuer}
           compact={panneau.type === 'attribuer' && panneau.compact !== false}
           facilityId={facilityId}

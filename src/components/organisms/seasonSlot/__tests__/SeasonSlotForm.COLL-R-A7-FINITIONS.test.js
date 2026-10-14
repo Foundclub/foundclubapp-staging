@@ -252,3 +252,14 @@ describe('COLL-R-A7-FINITIONS 1 — la bulle de confirmation au retour sur l’�
     expect(mockShowBanner).not.toHaveBeenCalled();
   });
 });
+
+describe('COLL-R-A7-FINITIONS 2 — aucun club rattaché', () => {
+  test('dit pourquoi et permet de rejoindre le rattachement existant', async () => {
+    const ajouterUnClub = jest.fn();
+    const arbre = await monter({ clubs: [], ajouterUnClub });
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n).includes('Aucun club'))).toBe(true);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+    await appuyerSur(arbre, 'Ajouter un club');
+    expect(ajouterUnClub).toHaveBeenCalledTimes(1);
+  });
+});

@@ -363,6 +363,7 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  * panneau de droite du site en grand ecran), rien ne change.
  * @param {{
  *   actionSecondaire?: { libelle: string, onPress: () => void } | null,
+ *   ajouterUnClub?: () => void,
  *   clubs?: Array<{ documentId: string, logoUrl?: string | null, name: string }>,
  *   compact?: boolean,
  *   facilities?: Array<{ documentId: string, name: string }>,
@@ -380,6 +381,7 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  */
 function SeasonSlotForm({
   actionSecondaire = null,
+  ajouterUnClub,
   clubs = [],
   compact = false,
   facilities = [],
@@ -1107,12 +1109,22 @@ function SeasonSlotForm({
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
             : t('collectiviteCreneaux.attribuer.club', 'Club'))}
           {clubs.length === 0 ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'collectiviteCreneaux.attribuer.aucunClub',
-                'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
-              )}
-            </Text>
+            <View style={{ alignItems: 'center', gap: 12 }}>
+              <SvgIcon color={Colors.primary200} height={40} name="shield" width={40} />
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'collectiviteCreneaux.attribuer.aucunClub',
+                  'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+                )}
+              </Text>
+              {ajouterUnClub ? (
+                <Button
+                  onPress={ajouterUnClub}
+                  title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
+                  variant="Primary"
+                />
+              ) : null}
+            </View>
           ) : listeDeChoix((fixedClubId
             ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
             : clubs).map((ligne) => ({

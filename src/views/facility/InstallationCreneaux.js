@@ -499,6 +499,10 @@ function InstallationCreneaux() {
     titreDuPanneau = t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau');
     contenuDuPanneau = (
       <SeasonSlotForm
+        ajouterUnClub={() => {
+          fermer();
+          navigation.navigate(RouteNames.CollectiviteInviteClub, { collectiviteId, onglet: 'recherche' });
+        }}
         clubs={clubsRattaches}
         facilityId={facilityId}
         guided
