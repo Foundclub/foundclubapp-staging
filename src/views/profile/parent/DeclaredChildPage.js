@@ -106,19 +106,23 @@ function LigneDInfo({
 /**
  * Un lien texte de la fiche (44 px de haut au moins).
  * @param {object} props - Les propriétés.
+ * @param {string} [props.accessibilityLabel] - Ce que dit le lecteur d écran, s il faut plus.
  * @param {boolean} [props.danger] - En rouge.
+ * @param {boolean} [props.disabled] - Éteint (un envoi est en cours).
  * @param {string} props.libelle - Ce qu il fait.
  * @param {() => void} props.onPress - Le geste.
  * @param {string} props.testID - L étiquette de test.
  * @returns {import('react').ReactElement} - Le lien.
  */
 function Lien({
-  danger = false, libelle, onPress, testID,
+  accessibilityLabel = undefined, danger = false, disabled = false, libelle, onPress, testID,
 }) {
   const { Alignments, Colors, Fonts } = useTheme();
   return (
     <TouchableOpacity
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      disabled={disabled}
       onPress={onPress}
       style={[Alignments.justifyCenter, { minHeight: 44 }]}
       testID={testID}
@@ -138,8 +142,10 @@ function Lien({
  *      (remarque d Adel du 13/10 : « on voit bien que les enfants sont dans aucun club »), et
  *      « Acceptée le 11/10 » quand la demande acceptee est lue. Sans equipe seulement :
  *      « Chercher un club pour Anissa » ;
- *   3. « Ses demandes » en attente (masque s il n y en a pas) — sans « Annuler la demande » :
- *      la route serveur n existe pas encore (lot L8) ;
+ *   3. « Ses demandes » en attente (masque s il n y en a pas) ; sous chacune, « Annuler la
+ *      demande » en rouge (PAR-L8, E19) quand l ecran qui monte la fiche sait annuler ;
+ *   3 bis. PAR-L13 (13/10, E29, prototype planche 3) — « Sa carte » (moins de 13 ans) : son
+ *      numéro et son poste, « Carte de collection », « Voir » ouvre sa carte ;
  *   4. « Infos sportives » (maillot, poste), « Compléter » / « Modifier » ;
  *   5. « Stats et retours de match » (moins de 13 ans) ;
  *   6. « Modifier sa fiche », « Supprimer la fiche ».
@@ -149,23 +155,29 @@ function Lien({
  * Le premier temoin de ce fichier (ST-RETOURS2, planche 22 etat 6) est
  * `__tests__/DeclaredChildPage.caracterisation.test.js`.
  * @param {object} props - Les proprietes.
+ * @param {string} [props.annulationEnCours] - La demande en cours d annulation (lien eteint).
  * @param {any[]} [props.demandes] - SES demandes (`demandesDe`), la plus recente d abord.
  * @param {boolean} [props.demandesEnErreur] - La lecture des demandes a echoue.
  * @param {any} props.enfant - La fiche (`GET` des enfants declares).
+ * @param {(demande: any) => void} [props.onCancelRequest] - « Annuler la demande » (PAR-L8).
  * @param {(enfant: any) => void} [props.onDelete] - « Supprimer la fiche ».
  * @param {(enfant: any) => void} [props.onEdit] - « Modifier sa fiche » / « Compléter ».
  * @param {(enfant: any) => void} [props.onGiveAccount] - F20 « Donner un compte à Lina ».
+ * @param {(enfant: any) => void} [props.onOpenCard] - PAR-L13 « Voir » sa carte de collection.
  * @param {() => void} [props.onRetryDemandes] - Relire les demandes.
  * @param {(enfant: any) => void} props.onSearchClub - « Chercher un club pour Lea ».
  * @returns {import('react').ReactElement} - La page.
  */
 function DeclaredChildPage({
+  annulationEnCours = '',
   demandes = [],
   demandesEnErreur = false,
   enfant,
+  onCancelRequest = undefined,
   onDelete = undefined,
   onEdit = undefined,
   onGiveAccount = undefined,
+  onOpenCard = undefined,
   onRetryDemandes = undefined,
   onSearchClub,
 }) {
@@ -307,8 +319,41 @@ function DeclaredChildPage({
                   })}
                 </Text>
               ) : null}
+              {onCancelRequest ? (
+                <Lien
+                  accessibilityLabel={t('myChildren.cancelRequest.linkLabel', {
+                    team: demande?.team?.name || clubDeLaDemande(demande), ...SANS_ECHAPPEMENT,
+                  })}
+                  danger
+                  disabled={annulationEnCours === demande?.documentId}
+                  libelle={t('myChildren.cancelRequest.link')}
+                  onPress={() => onCancelRequest(demande)}
+                  testID={`declared-child-cancel-${demande?.documentId}`}
+                />
+              ) : null}
             </View>
           ))}
+        </Carte>
+      ) : null}
+
+      {moinsDe13Ans && onOpenCard ? (
+        <Carte
+          action={(
+            <Lien
+              libelle={t('myChildren.card.blockOpen')}
+              onPress={() => onOpenCard(enfant)}
+              testID="declared-child-card-open"
+            />
+          )}
+          testID="declared-child-card"
+          titre={t('myChildren.card.blockTitle')}
+        >
+          {maillot || poste ? (
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {[maillot, poste].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          <Text style={[Fonts.p3, Fonts.neutral200]}>{t('myChildren.card.blockCaption')}</Text>
         </Carte>
       ) : null}
 

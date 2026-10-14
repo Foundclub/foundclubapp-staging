@@ -466,7 +466,9 @@ function EventAnswerButtons({
   // 👪 FINITIONS13-STATS (6, T13) — UN COMPTE CONNECTE N EST PAS UN VISITEUR. Papa Test
   // (role Parent), sur la page du match de son fils, lisait « Participer » : cette branche, celle
   // du visiteur NON connecte, ouvrait… la connexion. Connecte, ni joueur ni encadrant : rien.
-  if (participationOffer === 'none') return null;
+  // 👪 PAR-L11b (13/10) — un parent n a rien a repondre POUR LUI : son bloc « Inscrire mes enfants »
+  // vit a part (EventChildRegistration.js), jamais dans cette rangee.
+  if (participationOffer === 'none' || participationOffer === 'children') return null;
 
   // For non-logged in users, show login button
   return (

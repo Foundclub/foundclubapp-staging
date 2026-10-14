@@ -87,19 +87,25 @@ jest.mock('react-i18next', () => {
 let mockDemandes = [];
 /** @type {any[]} */
 const mockLecturesDesDemandes = [];
+// PAR-L8 (13/10) — « Annuler la demande » : la mutation, doublee ; le temoin rejoue ses issues.
+const mockAnnulerLaDemande = jest.fn();
 jest.mock('@/services/clubInterestRequest/clubInterestRequestQueries', () => ({
+  useCancelClubInterestRequest: () => ({ isPending: false, mutate: mockAnnulerLaDemande }),
   useGetMyClubInterestRequests: (/** @type {any} */ params, /** @type {any} */ options) => {
     mockLecturesDesDemandes.push({ options, params });
     return { data: { data: mockDemandes } };
   },
 }));
 
+// PAR-L8 — la fiche se RELIT apres une annulation (le club a pu accepter entre-temps).
+const mockRelireEnfants = jest.fn();
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useDeleteDeclaredChild: () => ({ isPending: false, mutate: mockSupprimer }),
   useGetMyDeclaredChildren: () => ({
     data: mockEnfants,
     error: undefined,
     isLoading: mockIsLoading,
+    refetch: mockRelireEnfants,
   }),
 }));
 
@@ -1434,5 +1440,248 @@ describe('PAR-L5L6 E04 — le chargement', () => {
 
     expect(hote(arbre, 'my-children-loading')).toBeUndefined();
     expect(hote(arbre, 'my-children-list')).toBeTruthy();
+  });
+});
+
+// ===========================================================================
+// PAR-L8 (13/10, design parent E19, planche 8) — ANNULER UNE DEMANDE EN ATTENTE, depuis la fiche
+// de l'enfant. La confirmation est une FEUILLE (sur le site, `Alert` devient `window.confirm` :
+// deux choix, aucune mise en forme) ; puis un bandeau dit ce qui s'est passé — y compris quand le
+// club a répondu entre-temps (décision d'Adel : l'acceptation gagne), et quand le serveur ne sait
+// pas encore annuler (l'app doit marcher contre le serveur d'avant).
+// ===========================================================================
+
+describe('PAR-L8 E19 — annuler une demande depuis la fiche', () => {
+  const FOUNDCLUB = { documentId: 'club-fc', name: 'FoundClub' };
+  const DEMANDE = {
+    club: FOUNDCLUB,
+    createdAt: '2026-10-11T09:00:00.000Z',
+    declaredChild: { documentId: 'enfant-1', firstname: 'Léa' },
+    documentId: 'dem-1',
+    status: 'pending',
+    team: { club: FOUNDCLUB, documentId: 'u11', name: 'U11 Garçons' },
+  };
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant()];
+    mockDemandes = [DEMANDE];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  /**
+   * Monte la fiche de Léa (la route « Mes enfants » avec `childDocumentId`).
+   * @returns {Promise<any>} L'arbre rendu.
+   */
+  const rendreLaFiche = async () => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params: { childDocumentId: 'enfant-1' } }} />);
+    });
+    return arbre;
+  };
+
+  /**
+   * Le bouton (atome `Button`, qui ne transmet pas `testID`) qui porte ce titre.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} titre - Son libellé.
+   * @returns {any} Le bouton, ou undefined.
+   */
+  const bouton = (arbre, titre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.title === titre && typeof n.props?.onPress === 'function'
+  ))[0];
+
+  /**
+   * « Annuler la demande » sur la fiche, puis la confirmation dans la feuille.
+   * @param {any} arbre - L'arbre rendu.
+   * @returns {Promise<any[]>} Les arguments de l'envoi : l'identifiant et les rappels.
+   */
+  const confirmer = async (arbre) => {
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+    await act(async () => { bouton(arbre, 'Annuler la demande').props.onPress(); });
+    return mockAnnulerLaDemande.mock.calls[mockAnnulerLaDemande.mock.calls.length - 1];
+  };
+
+  test('🔴 « Annuler la demande » ouvre une FEUILLE qui nomme l enfant et l équipe', async () => {
+    const arbre = await rendreLaFiche();
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('Annuler la demande pour Léa ?');
+    expect(texte).toContain(
+      'Les responsables de U11 Garçons ne la verront plus. Léa pourra faire une nouvelle demande.',
+    );
+    expect(bouton(arbre, 'Annuler la demande').props.variant).toBe('Danger');
+    expect(bouton(arbre, 'Garder la demande').props.variant).toBe('Ghost');
+    expect(mockAnnulerLaDemande).not.toHaveBeenCalled();
+  });
+
+  test('« Garder la demande » referme la feuille, et rien ne part', async () => {
+    const arbre = await rendreLaFiche();
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+
+    await act(async () => { bouton(arbre, 'Garder la demande').props.onPress(); });
+
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+    expect(mockAnnulerLaDemande).not.toHaveBeenCalled();
+  });
+
+  test('🔴 confirmer : CETTE demande part, puis « Demande annulée. »', async () => {
+    const arbre = await rendreLaFiche();
+    const [id, rappels] = await confirmer(arbre);
+
+    expect(id).toBe('dem-1');
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+    await act(async () => { rappels.onSuccess(); });
+    expect(texteVisible(arbre))
+      .toContain('Demande annulée. | Léa peut faire une nouvelle demande.');
+    expect(mockRelireEnfants).toHaveBeenCalled();
+  });
+
+  test('🔴 COURSE — acceptée entre-temps : on le dit, rien n est annulé', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({
+        details: { accepted: true, code: 'CLUB_INTEREST_REQUEST_ALREADY_RESPONDED' },
+        message: 'Club interest request already responded',
+        status: 400,
+      });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'Le club a déjà répondu. | Léa est dans U11 Garçons. Rien n’a été annulé.',
+    );
+    expect(texteVisible(arbre)).not.toContain('Demande annulée.');
+    expect(mockRelireEnfants).toHaveBeenCalled();
+  });
+
+  test('🔴 refusée ou disparue : « Le club a déjà répondu à cette demande »', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({ details: { code: 'CLUB_INTEREST_REQUEST_GONE' }, status: 404 });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'Le club a déjà répondu à cette demande. | Il n’y a plus rien à annuler.',
+    );
+  });
+
+  test('🔴 serveur d AVANT (sans la route) : un message clair, pas de plantage', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({
+        details: {}, message: 'Not Found', name: 'NotFoundError', status: 404,
+      });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'L’annulation n’est pas encore disponible. | '
+      + 'La demande est toujours en attente. Réessaie plus tard.',
+    );
+    expect(porteDe(arbre, 'cancel-request-retry')).toBeUndefined();
+  });
+
+  test('🔴 pas de réseau : on le dit, et « Réessayer » renvoie la MÊME demande', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => { rappels.onError('Network Error'); });
+
+    expect(texteVisible(arbre)).toContain(
+      'La demande n’a pas pu être annulée. | Vérifie ta connexion, puis réessaie. | Réessayer',
+    );
+    await act(async () => { porteDe(arbre, 'cancel-request-retry').props.onPress(); });
+    expect(mockAnnulerLaDemande).toHaveBeenCalledTimes(2);
+    expect(mockAnnulerLaDemande.mock.calls[1][0]).toBe('dem-1');
+  });
+});
+
+// ===========================================================================
+// PAR-L13 (13/10, design parent E28 et E29) — LA CARTE DE L ENFANT, UNE VUE DE « MES ENFANTS ».
+// Comme sa fiche (ST-RETOURS2), sa carte est une VUE de la route : `carte` = « nouvelle »
+// (juste après sa déclaration) ou « voir » (depuis sa fiche). Aucune route neuve : le site la
+// sert déjà (`/profile/children?childDocumentId=…&carte=…`).
+// ===========================================================================
+
+/** @type {any[]} */
+const mockCartesOuvertes = [];
+jest.mock('@/views/profile/parent/ChildCardPage', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => {
+      mockCartesOuvertes.push(props);
+      const vue = props.nouvelle ? 'nouvelle' : 'voir';
+      return <TexteRN>{`CARTE:${props.enfant?.firstname}:${vue}`}</TexteRN>;
+    },
+  };
+});
+
+describe('PAR-L13 — sa carte, vue de la route « Mes enfants »', () => {
+  const MARTIN = unEnfant({
+    age: 9, documentId: 'martin', firstname: 'Martin', lastname: 'Test',
+  });
+
+  /**
+   * Monte la route avec ces paramètres.
+   * @param {any} params - Les paramètres.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const monter = async (params) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params }} />);
+    });
+    return arbre;
+  };
+
+  beforeEach(() => {
+    mockCartesOuvertes.length = 0;
+    mockEnfants = [unEnfant(), MARTIN];
+    mockDemandes = [];
+  });
+
+  test('🔴 « Voir » sur sa fiche ouvre SA carte (une vue de la même route)', async () => {
+    const fiche = await monter({ childDocumentId: 'martin' });
+
+    await act(async () => { porteDe(fiche, 'declared-child-card-open').props.onPress(); });
+    expect(mockPush).toHaveBeenCalledWith('MyChildren', {
+      carte: 'voir', childDocumentId: 'martin',
+    });
+  });
+
+  test('🔴 `carte: nouvelle` monte la carte de CET enfant en mode « juste déclarée »', async () => {
+    const arbre = await monter({ carte: 'nouvelle', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:nouvelle');
+    expect(texteVisible(arbre)).not.toContain('Ses demandes');
+  });
+
+  test('`carte: voir` monte la carte complète ; « fini » revient en arrière', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:voir');
+    await act(async () => { mockCartesOuvertes[mockCartesOuvertes.length - 1].onFini(); });
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  test('une carte dont la fiche n existe plus le DIT', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'disparue' });
+
+    expect(texteVisible(arbre)).toContain('Cette fiche n’existe plus.');
+    expect(mockCartesOuvertes).toHaveLength(0);
   });
 });

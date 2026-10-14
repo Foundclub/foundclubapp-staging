@@ -52,6 +52,7 @@ import {
   resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
   resolveParticipationFlow,
+  resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import {
   canManageCompositionForClub,
@@ -171,6 +172,9 @@ import {
   resolveAttendanceWindow,
   resolveCallMode,
 } from './attendance/attendanceCallModel';
+import EventChildRegistration, {
+  EventChildRegistrationsForOrganizer,
+} from './components/EventChildRegistration';
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
@@ -7708,6 +7712,18 @@ function EventDetails({ navigation, route }) {
   };
 
   const renderActionButtons = () => {
+    // 👪 PAR-L11b (13/10, D4 B d Adel du 12/10) — UN PARENT NE REPOND PAS POUR LUI : IL
+    // INSCRIT SES ENFANTS. Sur tout evenement public (reservation et tournoi compris : la
+    // regle par type est dans le bloc), son pied d ecran est « Inscrire mes enfants », ou la
+    // phrase qui dit pourquoi pas.
+    const parentOffer = resolveParticipationOffer({
+      isConvenedMember: isConvenedTeamMember,
+      user: userData,
+    });
+    if (parentOffer === 'children') {
+      return <EventChildRegistration event={event} navigation={navigation} nowMs={serverNowMs} />;
+    }
+
     const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
       || event?.type?.name?.toLowerCase()?.includes('reservation');
 
@@ -8474,6 +8490,13 @@ function EventDetails({ navigation, route }) {
                   rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
                   teamParticipationSections={teamParticipationSections}
                 />
+              ) : null}
+
+              {/* 👪 PAR-L11b — chez l organisateur, les enfants inscrits par leurs parents
+                  (prenom, age, parent), a accepter ou refuser. Rien ne s affiche quand aucun
+                  enfant n est inscrit. */}
+              {showParticipantsTab && canApprovePendingRequests ? (
+                <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
               ) : null}
 
               {/* 👥 N2 — « Personnes » SUR UN TOURNOI. La liste des participations
