@@ -153,7 +153,7 @@ jest.mock(
 
 const TROIS = [
   {
-    documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: '#4D79FF', type: 'Gymnase',
+    documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', type: 'Gymnase',
   },
   {
     documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', type: 'Dojo',

@@ -99,7 +99,7 @@ const FERMETURE = {
 const SEANCE = {
   date: new Date(Date.now() + (2 * 24 * 60 * 60 * 1000)).toISOString(),
   documentId: 'e1',
-  facility: { documentId: 'gym-cosec', name: 'Gymnase Cosec', planningColor: '#FF4D4D' },
+  facility: { documentId: 'gym-cosec', name: 'Gymnase Cosec' },
   missings: [],
   name: 'Entrainement U20',
   participationRequests: [],
