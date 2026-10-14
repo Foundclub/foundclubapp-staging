@@ -319,4 +319,42 @@ export const buildPlayerCardModel = ({
   };
 };
 
+/**
+ * PAR-L13 (13/10, design parent E28 et E29) — la carte d'un ENFANT DÉCLARÉ (moins de 13 ans),
+ * « pareille que les autres » (décision d'Adel du 12/10, registre des mineurs ligne 23) : les
+ * props de `PlayerCard`, tirées de la fiche que rend le serveur (prénom, nom, ÂGE — jamais la
+ * date —, équipe, club, numéro, poste, photo, ville, nationalité).
+ *  - JAMAIS de code QR ni de lien : aucune `qrValue` (la case reste « FC »).
+ *  - AUCUN statut : « disponible » n'existe pas pour une fiche.
+ *  - Numéro « ? » tant qu'il n'est pas choisi (le dos de maillot le porte aussi).
+ *  - Rareté COMMUNE (la maquette) : la rareté d'un adulte mesure un profil et un parcours
+ *    qu'une fiche n'a pas.
+ * @param {object} params
+ * @param {object} [params.enfant] la fiche (`GET /declared-children/mine`)
+ * @param {{ noTeam?: string, years?: string }} [params.libelles] « Pas encore d'équipe », « ANS »
+ * @param {Record<string, unknown> | null} [params.saisie] ce que le parent tape (E28) : passe
+ *   devant la fiche, la carte se remplit
+ * @returns {object} les props de la carte, plus `photoUrl` (à résoudre par l'écran)
+ */
+export const buildDeclaredChildCardProps = ({ enfant = {}, libelles = {}, saisie = null } = {}) => {
+  const lire = (cle) => String((saisie && cle in saisie ? saisie[cle] : enfant[cle]) ?? '').trim();
+  const equipe = [enfant.team?.name, enfant.club?.name]
+    .map((nom) => String(nom || '').trim())
+    .filter(Boolean)
+    .join(' · ');
+  return {
+    age: typeof enfant.age === 'number' ? `${enfant.age} ${libelles.years || 'ANS'}` : '',
+    equipe: equipe || libelles.noTeam || '',
+    nationalite: lire('nationality'),
+    nom: String(enfant.lastname || '').trim().toUpperCase(),
+    numero: lire('number') || '?',
+    photoUrl: enfant.photo?.url || null,
+    poste: lire('position'),
+    prenom: String(enfant.firstname || '').trim(),
+    rarity: 'COMMON',
+    statut: null,
+    ville: lire('city'),
+  };
+};
+
 export default buildPlayerCardModel;

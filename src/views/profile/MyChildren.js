@@ -31,6 +31,7 @@ import {
 import { situationDeLAnnulation } from '@/views/profile/parent/annulationDeLaDemande';
 import BandeauDAnnulation from '@/views/profile/parent/BandeauDAnnulation';
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
+import ChildCardPage from '@/views/profile/parent/ChildCardPage';
 import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
 import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
 import CommentCaMarche from '@/views/profile/parent/CommentCaMarche';
@@ -393,6 +394,11 @@ function MyChildren({ route } = {}) {
     navigation.push(RouteNames.MyChildren, { childDocumentId: enfant?.documentId });
   }, [navigation]);
 
+  // PAR-L13 (E29) — SA CARTE : une vue de la même route (`carte`), comme sa fiche.
+  const ouvrirSaCarte = useCallback((enfant) => {
+    navigation.push(RouteNames.MyChildren, { carte: 'voir', childDocumentId: enfant?.documentId });
+  }, [navigation]);
+
   const ouvrirFormulaire = useCallback((enfant) => {
     navigation.navigate(RouteNames.ChildEdit, enfant
       ? { childDocumentId: enfant.documentId }
@@ -519,6 +525,17 @@ function MyChildren({ route } = {}) {
   // le site la sert deja. Les donnees : la liste deja lue. Placee apres tous les hooks.
   if (ficheOuverte) {
     const enfantOuvert = enfants.find((enfant) => enfant?.documentId === ficheOuverte);
+    // PAR-L13 (13/10, E28 et E29) — SA CARTE DE COLLECTION, une autre vue de la route :
+    // « nouvelle » juste après sa déclaration (ChildEdit), « voir » depuis sa fiche.
+    if (route?.params?.carte && enfantOuvert) {
+      return (
+        <ChildCardPage
+          enfant={enfantOuvert}
+          nouvelle={route.params.carte === 'nouvelle'}
+          onFini={() => navigation.goBack()}
+        />
+      );
+    }
     return (
       <ScreenContainer
         bgImage="bg2"
@@ -546,6 +563,7 @@ function MyChildren({ route } = {}) {
                 onDelete={supprimerDepuisLaFiche}
                 onEdit={ouvrirFormulaire}
                 onGiveAccount={relierUnCompte}
+                onOpenCard={ouvrirSaCarte}
                 onRetryDemandes={relireLesDemandes ? () => relireLesDemandes() : undefined}
                 onSearchClub={chercherUnClub}
               />

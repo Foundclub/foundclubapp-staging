@@ -1607,3 +1607,81 @@ describe('PAR-L8 E19 — annuler une demande depuis la fiche', () => {
     expect(mockAnnulerLaDemande.mock.calls[1][0]).toBe('dem-1');
   });
 });
+
+// ===========================================================================
+// PAR-L13 (13/10, design parent E28 et E29) — LA CARTE DE L ENFANT, UNE VUE DE « MES ENFANTS ».
+// Comme sa fiche (ST-RETOURS2), sa carte est une VUE de la route : `carte` = « nouvelle »
+// (juste après sa déclaration) ou « voir » (depuis sa fiche). Aucune route neuve : le site la
+// sert déjà (`/profile/children?childDocumentId=…&carte=…`).
+// ===========================================================================
+
+/** @type {any[]} */
+const mockCartesOuvertes = [];
+jest.mock('@/views/profile/parent/ChildCardPage', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => {
+      mockCartesOuvertes.push(props);
+      const vue = props.nouvelle ? 'nouvelle' : 'voir';
+      return <TexteRN>{`CARTE:${props.enfant?.firstname}:${vue}`}</TexteRN>;
+    },
+  };
+});
+
+describe('PAR-L13 — sa carte, vue de la route « Mes enfants »', () => {
+  const MARTIN = unEnfant({
+    age: 9, documentId: 'martin', firstname: 'Martin', lastname: 'Test',
+  });
+
+  /**
+   * Monte la route avec ces paramètres.
+   * @param {any} params - Les paramètres.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const monter = async (params) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params }} />);
+    });
+    return arbre;
+  };
+
+  beforeEach(() => {
+    mockCartesOuvertes.length = 0;
+    mockEnfants = [unEnfant(), MARTIN];
+    mockDemandes = [];
+  });
+
+  test('🔴 « Voir » sur sa fiche ouvre SA carte (une vue de la même route)', async () => {
+    const fiche = await monter({ childDocumentId: 'martin' });
+
+    await act(async () => { porteDe(fiche, 'declared-child-card-open').props.onPress(); });
+    expect(mockPush).toHaveBeenCalledWith('MyChildren', {
+      carte: 'voir', childDocumentId: 'martin',
+    });
+  });
+
+  test('🔴 `carte: nouvelle` monte la carte de CET enfant en mode « juste déclarée »', async () => {
+    const arbre = await monter({ carte: 'nouvelle', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:nouvelle');
+    expect(texteVisible(arbre)).not.toContain('Ses demandes');
+  });
+
+  test('`carte: voir` monte la carte complète ; « fini » revient en arrière', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:voir');
+    await act(async () => { mockCartesOuvertes[mockCartesOuvertes.length - 1].onFini(); });
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  test('une carte dont la fiche n existe plus le DIT', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'disparue' });
+
+    expect(texteVisible(arbre)).toContain('Cette fiche n’existe plus.');
+    expect(mockCartesOuvertes).toHaveLength(0);
+  });
+});

@@ -363,8 +363,11 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
     };
   }
 
+  // 👪 PAR-L9a (13/10, E15) — la CONVERSATION est le geste principal de la carte, « Repondre »
+  // le second (la carte les empile dans cet ordre). Le prenom seul sert aux phrases qui
+  // s adressent a la personne : « Reponse envoyee a Maryline. ».
   return {
-    actions: { primary: 'respond', secondary: 'chat' },
+    actions: { primary: 'chat', secondary: 'respond' },
     createdAt: toIsoString(request?.createdAt),
     id: `interest:${requestId}`,
     meta: {
@@ -372,6 +375,7 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
       clubName,
       raw: request,
       requesterAvatarUrl,
+      requesterFirstname: normalizeString(requester?.firstname || requester?.firstName),
       requesterId: normalizeString(requester?.documentId),
       requesterName,
       requestId,
@@ -382,15 +386,15 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
     subtitle: teamName
       ? i18next.t(
         'requestMappers.interest.team',
-        '{{requester}} est intéressé par {{team}}.',
+        '{{requester}} est intéressé·e par {{team}}.',
         { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT },
       )
       : i18next.t(
         'requestMappers.interest.club',
-        '{{requester}} est intéressé par le club {{club}}.',
+        '{{requester}} est intéressé·e par le club {{club}}.',
         { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT },
       ),
-    title: i18next.t('requestMappers.interest.title', 'Intérêt club'),
+    title: i18next.t('requestMappers.interest.title', 'Intérêt pour le club'),
     type: 'interest',
   };
 };

@@ -80,7 +80,7 @@ const getActionLabel = (action, item, t) => {
       }
       return t('common.accept', 'Accepter');
     case 'chat':
-      return t('requestsHub.actions.openChat', 'Ouvrir chat');
+      return t('requestsHub.actions.openChat', 'Ouvrir une conversation');
     // D92 — la proposition de match se traite sur l ecran de l annonce, la ou
     // les modalites se lisent. Sans ce libelle, le bouton s appellerait « OK ».
     case 'open':
@@ -137,7 +137,9 @@ function RequestFeedItem({
   // 📚 PAR-L2L3 · L2 (PAR-008) — la carte d'interet d'un ADULTE empile ses deux
   // boutons en pleine largeur : cote a cote, chaque libelle n'avait qu'environ
   // 84 points et le retrecissement automatique d'iOS le faisait tomber a ~4
-  // points. ⛔ Leur ORDRE et leurs libelles appartiennent au lot L9a.
+  // points.
+  // 👪 PAR-L9a (13/10, E15) — et dans CET ordre : le geste principal d'abord
+  // (« Ouvrir une conversation »), « Repondre » ensuite, le profil en lien dessous.
   const stackActions = isInterestRequest && !isChildPlaceRequest;
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
   const isTeamInvitation = item?.type === 'teamInvite';
@@ -356,6 +358,47 @@ function RequestFeedItem({
     );
   }
 
+  const profileButton = canOpenRequesterProfile ? (
+    <View>
+      <Button
+        accessibilityHint={isChildPlaceRequest
+          ? t('requestsHub.childInterest.viewParentHint', 'Ouvre le profil du parent')
+          : t('requestsHub.actions.viewProfileHint', 'Ouvre le profil du demandeur')}
+        accessibilityLabel={requesterProfileLabel}
+        disabled={isBusy}
+        onPress={() => onRequesterPress && onRequesterPress(item)}
+        title={requesterProfileLabel}
+        variant={stackActions ? 'Ghost' : 'Secondary'}
+      />
+    </View>
+  ) : null;
+
+  const secondaryButton = hasSecondaryAction ? (
+    <View style={actionSlotStyle}>
+      <Button
+        disabled={isBusy}
+        icon={['chat', 'respond'].includes(item?.actions?.secondary || '') ? undefined : 'close'}
+        isOption={!stackActions}
+        onPress={() => onSecondaryPress && onSecondaryPress(item)}
+        title={getActionLabel(item?.actions?.secondary, item, t)}
+        variant="Secondary"
+      />
+    </View>
+  ) : null;
+
+  const primaryButton = hasPrimaryAction ? (
+    <View style={actionSlotStyle}>
+      <Button
+        disabled={isBusy}
+        icon={item?.actions?.primary === 'chat' ? 'envelope' : 'check'}
+        isOption={!stackActions}
+        onPress={() => onPrimaryPress && onPrimaryPress(item)}
+        title={getActionLabel(item?.actions?.primary, item, t)}
+        variant="Primary"
+      />
+    </View>
+  ) : null;
+
   const cardSurfaceStyle = isInstallationRequest
     ? {
       backgroundColor: 'rgba(10, 37, 49, 0.96)',
@@ -435,20 +478,7 @@ function RequestFeedItem({
 
       {bodyContent}
 
-      {canOpenRequesterProfile ? (
-        <View>
-          <Button
-            accessibilityHint={isChildPlaceRequest
-              ? t('requestsHub.childInterest.viewParentHint', 'Ouvre le profil du parent')
-              : t('requestsHub.actions.viewProfileHint', 'Ouvre le profil du demandeur')}
-            accessibilityLabel={requesterProfileLabel}
-            disabled={isBusy}
-            onPress={() => onRequesterPress && onRequesterPress(item)}
-            title={requesterProfileLabel}
-            variant="Secondary"
-          />
-        </View>
-      ) : null}
+      {stackActions ? null : profileButton}
 
       {canOpenEvent ? (
         <View>
@@ -466,32 +496,12 @@ function RequestFeedItem({
 
       {hasActions ? (
         <View style={stackActions ? [Spaces.gap[12]] : [Alignments.row, Spaces.gap[12]]}>
-          {hasSecondaryAction ? (
-            <View style={actionSlotStyle}>
-              <Button
-                disabled={isBusy}
-                icon={item?.actions?.secondary === 'chat' ? undefined : 'close'}
-                isOption={!stackActions}
-                onPress={() => onSecondaryPress && onSecondaryPress(item)}
-                title={getActionLabel(item?.actions?.secondary, item, t)}
-                variant="Secondary"
-              />
-            </View>
-          ) : null}
-          {hasPrimaryAction ? (
-            <View style={actionSlotStyle}>
-              <Button
-                disabled={isBusy}
-                icon={item?.actions?.primary === 'validate' ? 'check' : 'check'}
-                isOption={!stackActions}
-                onPress={() => onPrimaryPress && onPrimaryPress(item)}
-                title={getActionLabel(item?.actions?.primary, item, t)}
-                variant="Primary"
-              />
-            </View>
-          ) : null}
+          {stackActions ? primaryButton : secondaryButton}
+          {stackActions ? secondaryButton : primaryButton}
         </View>
       ) : null}
+
+      {stackActions ? profileButton : null}
     </View>
   );
 }
