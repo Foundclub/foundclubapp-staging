@@ -185,23 +185,10 @@ describe('ANDROIDBAR-4 — infos du groupe : Android 15 et 16, clavier ouvert', 
   });
 });
 
-describe('ANDROIDBAR-4 — caractérisation : iPhone et Android ≤ 14 ne bougent pas', () => {
-  it('iPhone : la page ne bouge pas', async () => {
-    telephone('ios', '18.0', 34);
-    const arbre = renommer();
-    await act(async () => {
-      DeviceEventEmitter.emit('keyboardWillShow', {
-        duration: 0,
-        easing: 'keyboard',
-        endCoordinates: {
-          height: 336, screenX: 0, screenY: 852 - 336, width: 393,
-        },
-      });
-    });
-
-    expect(basDuDefilement(arbre)).toBeCloseTo(ECRAN, 5);
-  });
-
+// 📱 CLAVIER-MODALES (13/10) — l'iPhone ne fait plus partie de cette caractérisation : le
+// défilement y passait aussi sous le clavier, la page le suit désormais. Témoin :
+// InfosDuGroupeCLAVMOD.iphone.test.js.
+describe('ANDROIDBAR-4 — caractérisation : Android ≤ 14 ne bouge pas', () => {
   it.each([30, 34])('Android API %s : la page ne bouge pas (fenêtre rétrécie)', async (api) => {
     telephone('android', api, 0);
     const arbre = renommer();

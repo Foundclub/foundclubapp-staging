@@ -7,8 +7,6 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Switch,
   Text,
@@ -1273,12 +1271,12 @@ function FacilityForm() {
         Spaces.paddingVertical[16],
         Alignments.fill,
       ]}
+      keyboardAvoiding
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-        style={[Alignments.fill]}
-      >
+      {/* 🤖 ANDROIDBAR-6 — l'évitement du clavier est celui du ScreenContainer : le décalage
+          écrit à la main (0 sur Android, 100 sur iPhone) le croyait en haut de l'écran alors
+          qu'il vit sous l'en-tête ⇒ 110 dp SOUS le clavier sur Android 15/16 (Pixel 9). */}
+      <View style={[Alignments.fill]}>
         <ScrollView
           contentContainerStyle={[
             Spaces.gap[12],
@@ -1393,7 +1391,7 @@ function FacilityForm() {
             {boutons}
           </View>
         ) : null}
-      </KeyboardAvoidingView>
+      </View>
 
       {feuilleDesTypes}
 

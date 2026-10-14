@@ -73,15 +73,17 @@ describe('P3 — une place pour un enfant, dans « Demandes »', () => {
     expect(ligne.subtitle).toBe('Demande une place dans U11.');
   });
 
-  it('l interet d un ADULTE ne change pas d un pixel', () => {
+  // 👪 PAR-L9a (13/10, E15) — « pas d'un pixel » côté ENFANT : l'adulte, lui, a reçu
+  // l'ordre et les textes de L9a (conversation d'abord, écriture inclusive, titre).
+  it('l interet d un ADULTE garde son chemin (conversation, réponse), sans rien d enfant', () => {
     const { declaredChild, ...demandeAdulte } = DEMANDE_POUR_LEA;
     expect(declaredChild).toBeDefined();
 
     const ligne = mapClubInterestRequestToHubItem(demandeAdulte);
 
-    expect(ligne.actions).toEqual({ primary: 'respond', secondary: 'chat' });
-    expect(ligne.subtitle).toContain('est intéressé par U11');
-    expect(ligne.title).toBe('Intérêt club');
+    expect(ligne.actions).toEqual({ primary: 'chat', secondary: 'respond' });
+    expect(ligne.subtitle).toContain('est intéressé·e par U11');
+    expect(ligne.title).toBe('Intérêt pour le club');
     expect(ligne.meta.childId).toBeUndefined();
   });
 });

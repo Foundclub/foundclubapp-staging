@@ -120,7 +120,12 @@ function ConvocationWizard({
   // au-dessus du clavier, qui recouvrait le pied et le bas des champs. Le pied garde déjà la
   // barre système (`Math.max(insets.bottom, 12)`, plus bas) : le retrait ne la compte pas
   // deux fois.
-  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(Math.max(insets.bottom, 12));
+  // 📱 CLAVIER-MODALES — sur iPhone non plus, rien ne la remonte : « Envoyer la convocation »
+  // était sous le clavier (vu par Adel, 2.6.75).
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(
+    Math.max(insets.bottom, 12),
+    { iPhone: true },
+  );
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { userData } = useAuth();

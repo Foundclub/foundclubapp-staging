@@ -53,6 +53,7 @@ import {
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
 import { lireLeMomentCourt } from '@/utils/date';
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 
 import {
@@ -451,6 +452,15 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   const [excludedPlayerIds, setExcludedPlayerIds] = useState(initialExcludedPlayerIds);
   const [compositionStep, setCompositionStep] = useState(STEP_PLAYERS);
   const [isManualPlayerModalVisible, setIsManualPlayerModalVisible] = useState(false);
+  // 📱 CLAVIER-MODALES — « Ajouter un joueur » : sur iPhone, une `<Modal>` n'évite rien, la carte
+  // centrée gardait son bas (« Numéro », « Annuler / Ajouter ») sous le clavier. Le voile lui
+  // rend le haut du clavier, fenêtre ouverte seulement. Android : fenêtre NON translucide,
+  // Android la remonte lui-même (`android: false`, sinon remontée deux fois).
+  // Témoin : MultiTeamCompositionBoard.CLAVMOD.ajouterUnJoueur.test.js.
+  const { retrait: retraitDuClavierAjout } = useRetraitDuClavierAndroid(0, {
+    android: false,
+    iPhone: isManualPlayerModalVisible && !readOnly,
+  });
   const [manualFirstname, setManualFirstname] = useState('');
   const [manualLastname, setManualLastname] = useState('');
   const [manualNumber, setManualNumber] = useState('');
@@ -1927,7 +1937,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
           transparent
           visible={isManualPlayerModalVisible && !readOnly}
         >
-          <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalOverlay,
+              retraitDuClavierAjout > 0 ? { paddingBottom: retraitDuClavierAjout } : null,
+            ]}
+          >
             <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00, styles.headerTitle]}>
                 {t('multiTeamCompositionBoard.addPlayer', 'Ajouter un joueur')}
