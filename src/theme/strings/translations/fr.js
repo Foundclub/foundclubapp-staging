@@ -2570,6 +2570,10 @@ export default {
       title: 'À propos',
     },
     actions: {
+      // PAR-L4 (13/10, design parent E10) — la porte du parent. Le prenom n'apparait que pour
+      // l'enfant venu de SA fiche ; sinon la feuille demande « pour quel enfant ? ».
+      askPlaceForChild: 'Demander une place pour un enfant',
+      askPlaceForNamedChild: 'Demander une place pour {{firstname}}',
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
       // l'AUTRE bouton : ce bouton-ci, lui, ouvre le formulaire « je suis deja
@@ -2756,17 +2760,51 @@ export default {
       alreadyPlaced: 'Ton enfant a déjà une équipe.',
       alreadySentShort: 'Demande envoyée',
       cardHint: 'Les responsables accepteront ou refuseront la demande.',
+      change: 'Changer',
+      childWithAge: '{{firstname}} · {{age}} ans',
+      chooseTeamAction: 'Choisir l’équipe',
       confirmDescription: 'Les responsables de {{teamName}} verront son prénom et son âge,'
         + ' et pourront accepter ou refuser.',
       confirmTitle: 'Demander une place pour {{firstname}} ?',
+      continueAction: 'Continuer',
+      errorDuplicate: 'Une demande pour {{firstname}} est déjà en attente dans {{teamName}}.',
+      errorForbidden: 'La demande pour {{firstname}} n’a pas pu partir : ton compte n’a pas'
+        + ' encore l’autorisation. Réessaie dans quelques instants.',
+      errorGeneric: 'Impossible d’envoyer la demande pour {{firstname}} pour le moment.',
+      errorPlaced: '{{firstname}} a déjà une équipe.',
+      errorTeamGone: '{{teamName}} n’est plus disponible. Choisis une autre équipe pour'
+        + ' {{firstname}}.',
+      forChild: 'Pour {{firstname}}',
+      forChildWithAge: 'Pour {{firstname}} ({{age}} ans)',
+      fromChildPage: 'Tu viens de la fiche de {{firstname}} : son nom est déjà coché.',
+      noneEligible: 'Aucun de tes enfants ne peut demander une place ici pour le moment.',
+      noTeamYet: 'Pas encore d’équipe',
+      onlyOneEligible: 'Choix fait pour toi : {{firstname}}, seul enfant qui peut demander'
+        + ' une place ici.',
+      pendingHereMany: '{{count}} demandes en attente ici',
+      pendingHereOne: '1 demande en attente ici',
       pickerDescription: 'Choisis l’équipe. Ses responsables verront le prénom et l’âge'
         + ' de ton enfant, et pourront accepter ou refuser.',
       pickerTitle: 'Une place pour ton enfant',
       pickerTitleNamed: 'Une place pour {{firstname}}',
+      reasonPlaced: 'Déjà dans {{teamName}}',
+      reasonTeen: 'À partir de 13 ans, {{firstname}} fait sa demande depuis son propre compte.',
+      reasonUnknownAge: 'Âge inconnu : complète sa date de naissance',
+      recapChild: 'Enfant',
+      recapChildValue: '{{name}}, {{age}} ans',
+      recapClub: 'Club',
+      recapTeam: 'Équipe',
       sendAction: 'Demander une place',
+      sendRequestAction: 'Envoyer la demande',
       sentDescription: 'Les responsables de {{teamName}} vont examiner la demande pour'
         + ' {{firstname}}. Tu recevras leur réponse.',
       sentTitle: 'Demande envoyée',
+      sheetTitle: 'Demander une place',
+      stepChild: 'Pour quel enfant ?',
+      stepRecap: 'Récapitulatif',
+      stepTeam: 'Quelle équipe ?',
+      teamAlreadyAsked: 'Demande déjà envoyée pour {{firstname}}',
+      viewChildPage: 'Voir sa fiche',
     },
     clubInterest: {
       alreadyMember: 'Tu es déjà rattaché à ce club.',
@@ -3014,11 +3052,11 @@ export default {
     presets: {
       full: {
         label: 'Équipe complète',
-        message: "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
+        message: "L'équipe est complète pour le moment, on garde ton profil pour la suite.",
       },
       profile: {
         label: 'Compléter le profil',
-        message: 'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
+        message: 'Peux-tu compléter ton profil et préciser ton poste ou ton niveau ?',
       },
       thanks: {
         label: 'Merci, on revient vers toi',
@@ -3027,6 +3065,12 @@ export default {
       trial: {
         label: 'Proposer un essai',
         message: 'On peut te proposer un essai, envoie-nous tes disponibilités.',
+      },
+      // PAR-L9b (13/10, E17) — le refus motivé ajouté, connu du serveur sous la même clé.
+      unsuitable: {
+        label: "Profil non adapté à l'équipe",
+        message: "Ton profil ne correspond pas à ce que l'équipe recherche pour le moment. "
+          + 'Merci pour ton intérêt.',
       },
     },
   },
@@ -15419,6 +15463,8 @@ export default {
       club: 'CLUB',
       nationality: 'NATIONALITÉ',
       position: 'POSTE',
+      // PAR-L13 — la carte d'un enfant déclaré porte son équipe.
+      team: 'ÉQUIPE',
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
@@ -16938,9 +16984,9 @@ export default {
       childPlaceTitle: 'Place pour un enfant',
       childTitleWithAge: '{{firstname}}, {{age}} ans',
       childWithAge: '{{firstname}} ({{age}} ans)',
-      club: '{{requester}} est intéressé par le club {{club}}.',
-      team: '{{requester}} est intéressé par {{team}}.',
-      title: 'Intérêt club',
+      club: '{{requester}} est intéressé·e par le club {{club}}.',
+      team: '{{requester}} est intéressé·e par {{team}}.',
+      title: 'Intérêt pour le club',
     },
     requesterFallback: 'Utilisateur',
     team: {
@@ -16997,7 +17043,7 @@ export default {
     actions: {
       approveOverflow: 'Autoriser',
       open: 'Voir la proposition',
-      openChat: 'Ouvrir chat',
+      openChat: 'Ouvrir une conversation',
       respond: 'Répondre',
       viewEvent: "Voir l'événement",
       viewProfile: 'Voir le profil',
@@ -17035,6 +17081,21 @@ export default {
     clubAssignedTitle: 'Entraîneur ajouté',
     clubClaimAssignedMessage: '{{name}} a été ajouté comme dirigeant du club.',
     clubClaimAssignedTitle: 'Dirigeant ajouté',
+    // PAR-L9b (13/10, E16, D3) — « Ouvrir une conversation » : moi, ou un·e coach que je
+    // choisis. Aucun choix fait à la place du dirigeant.
+    conversation: {
+      coachRow: '{{name}} · coach {{team}}',
+      info: "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
+      listError: 'La liste des coachs est indisponible : tu peux discuter toi-même.',
+      listLoading: 'Chargement des coachs…',
+      noCoach: 'Aucun·e coach dans {{team}}',
+      open: 'Ouvrir la conversation',
+      optionCoach: 'Un·e coach de {{team}} — je choisis qui.',
+      optionMe: 'Moi — je discute directement avec {{firstname}}.',
+      subtitleClub: '{{name}} · intérêt pour le club',
+      subtitleTeam: '{{name}} · intérêt pour {{team}}',
+      title: 'Ouvrir une conversation',
+    },
     empty: 'Aucune demande en attente',
     filters: {
       all: 'Toutes',
@@ -17058,10 +17119,22 @@ export default {
       summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
     },
     interest: {
-      responseDescription: 'Choisis une réponse rapide à envoyer au joueur intéresse.',
+      // PAR-L9b (13/10, E17) — à qui part le message, les deux familles de réponses, le mot libre.
+      noteLabel: 'Ajouter un mot (facultatif)',
+      recipient: '{{firstname}} recevra ce message.',
+      responseDescription: 'Choisis une réponse rapide à envoyer à la personne intéressée.',
       responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
       responsePreview: 'Message envoyé',
       responseTitle: 'Répondre à cet intérêt',
+      sectionRefuse: 'REFUSER',
+      sectionReply: 'RÉPONDRE',
+      // PAR-L9a (13/10, E17) — le pied de la feuille et la fenêtre qui suit l'envoi :
+      // « Réponse envoyée à Maryline. », jamais « Félicitations » (« Équipe complète »
+      // n'est pas une victoire).
+      send: 'Envoyer la réponse',
+      sentMessage: 'Message envoyé : « {{message}} »',
+      sentTitle: 'Réponse envoyée à {{firstname}}.',
+      sentTitleNoName: 'Réponse envoyée.',
       targetTeam: 'Équipe visée : {{team}}',
     },
     // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
@@ -22848,6 +22921,74 @@ export default {
       createdElided: 'La fiche d’{{firstname}} est créée.',
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
+    },
+    // PAR-L8 (13/10, design parent E19, planche 8) — annuler une demande de place en attente,
+    // depuis la fiche de l'enfant : la feuille de confirmation, puis l'issue dite dans un bandeau.
+    cancelRequest: {
+      accepted: 'Le club a déjà répondu.',
+      acceptedHint: '{{firstname}} est dans {{team}}. Rien n’a été annulé.',
+      answered: 'Le club a déjà répondu à cette demande.',
+      answeredHint: 'Il n’y a plus rien à annuler.',
+      confirm: 'Annuler la demande',
+      confirmMessage: 'Les responsables de {{team}} ne la verront plus.'
+        + ' {{firstname}} pourra faire une nouvelle demande.',
+      confirmTitle: 'Annuler la demande pour {{firstname}} ?',
+      done: 'Demande annulée.',
+      doneHint: '{{firstname}} peut faire une nouvelle demande.',
+      failed: 'La demande n’a pas pu être annulée.',
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      keep: 'Garder la demande',
+      link: 'Annuler la demande',
+      linkLabel: 'Annuler la demande pour {{team}}',
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: 'L’annulation n’est pas encore disponible.',
+      unavailableHint: 'La demande est toujours en attente. Réessaie plus tard.',
+    },
+    // PAR-L13 (13/10, design parent E28-E30) — la carte de collection d'un enfant de moins de
+    // 13 ans, « pareille que les autres » (Adel, 12/10, registre des mineurs lignes 22-23) :
+    // photo, ville et nationalité oui, code QR non, « ce qui part » avant tout partage.
+    card: {
+      addPhoto: 'Ajouter sa photo',
+      // Le bloc « Sa carte » de sa fiche (prototype, planche 3).
+      blockCaption: 'Carte de collection',
+      blockOpen: 'Voir',
+      blockTitle: 'Sa carte',
+      changePhoto: 'Changer sa photo',
+      cityLabel: 'Ville (facultatif)',
+      cityPlaceholder: 'Ex. Marseille',
+      edit: 'Modifier sa carte',
+      eyebrow: 'Nouveau',
+      hint: 'C’est pour sa carte qu’on te demande ça. Tu peux le faire plus tard.',
+      nationalityLabel: 'Nationalité (facultatif)',
+      nationalityPlaceholder: 'Ex. Française',
+      noLink: 'Ni code ni lien : la carte ne mène à aucune page.',
+      numberLabel: 'Numéro de maillot',
+      numberPlaceholder: 'Ex. 7',
+      photoError: 'La photo n’a pas pu être enregistrée. Réessaie.',
+      positionLabel: 'Poste',
+      removePhoto: 'Retirer sa photo',
+      save: 'Enregistrer sa carte',
+      savedDescription: 'La carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
+      saveError: 'La carte n’a pas pu être enregistrée. Réessaie.',
+      share: 'Partager la carte de {{firstname}}',
+      sharedGallery: 'La carte est enregistrée dans tes photos (album FoundClub).'
+        + ' Choisis maintenant où la publier.',
+      shareElided: 'Partager la carte d’{{firstname}}',
+      shareOpenWith: 'Ouvrir la carte avec…',
+      // E30 — AVANT tout partage : ce qui part, et ce qui ne part jamais.
+      sheet: {
+        confirm: 'Partager l’image',
+        never: 'Un code ou un lien vers sa fiche.',
+        neverTitle: 'Ce qui n’apparaît jamais',
+        shown: 'Sa photo si tu en as mis une, son prénom et son nom, son âge, son équipe,'
+          + ' son numéro, son poste, sa ville et sa nationalité.',
+        shownTitle: 'Ce qui apparaît',
+        subtitle: 'Tu envoies une image, sans lien vers elle.',
+        title: 'Partager la carte de {{firstname}} ?',
+        titleElided: 'Partager la carte d’{{firstname}} ?',
+      },
+      title: 'La carte de {{firstname}}',
+      titleElided: 'La carte d’{{firstname}}',
     },
     confirmDelete: {
       cancel: 'Annuler',

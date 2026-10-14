@@ -93,3 +93,36 @@ export const buildChildEditPayload = (champs = {}, affiche = {}) => {
 
   return payload;
 };
+
+/** Les champs texte de la carte, dans l'ordre de l'écran. */
+const CHAMPS_TEXTE_DE_LA_CARTE = ['position', 'city', 'nationality'];
+
+/**
+ * PAR-L13 (13/10, design parent E28) — LA CHARGE DE LA CARTE D'UN ENFANT : maillot, poste, ville
+ * et nationalité (ces deux-là ouvertes par la décision d'Adel du 12/10, registre des mineurs
+ * ligne 23).
+ *
+ * Même règle que la modification (E09) : ce qui n'est pas saisi ne part pas ; vider un champ
+ * que l'écran MONTRAIT l'efface (`null`). Une carte où rien n'a changé donne une charge vide.
+ * @param {{ city?: string, nationality?: string, number?: unknown, position?: string }} champs
+ *   - Les champs de la carte.
+ * @param {Record<string, unknown>} [affiche] - Ce que l'écran montrait à l'ouverture (mêmes
+ *   clés).
+ * @returns {object} La charge.
+ */
+export const buildChildCardPayload = (champs = {}, affiche = {}) => {
+  /** @type {Record<string, unknown>} */
+  const payload = {};
+
+  const maillot = toJerseyNumber(champs?.number);
+  if (maillot !== null) payload.number = maillot;
+  else if (toJerseyNumber(affiche?.number) !== null) payload.number = null;
+
+  CHAMPS_TEXTE_DE_LA_CARTE.forEach((cle) => {
+    const valeur = String(champs?.[cle] ?? '').trim();
+    if (valeur) payload[cle] = valeur;
+    else if (String(affiche?.[cle] ?? '').trim()) payload[cle] = null;
+  });
+
+  return payload;
+};

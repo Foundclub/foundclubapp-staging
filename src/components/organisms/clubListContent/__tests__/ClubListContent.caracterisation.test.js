@@ -110,8 +110,9 @@ jest.mock('@/components/molecules/clubCard/ClubCard', () => {
   const { Text } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { href, item }) => (
+    default: (/** @type {any} */ { href, item, onPress }) => (
       <Text
+        onPress={onPress}
         testID={`carte-${item?.documentId || ''}`}
         // L adresse de la fiche n est posee que si la liste en donne une.
         // eslint-disable-next-line react/jsx-props-no-spreading
@@ -647,5 +648,38 @@ describe('RECHERCHE-UNIQUE — un departement dans le champ Lieu', () => {
 
     expect(mockEtat.territoireDemande.region).toBe('provence-alpes-cote-d-azur');
     expect(mockEtat.territoireDemande.department).toBeUndefined();
+  });
+});
+
+// 👶 PAR-L4 (13/10, recette PAR-009) — « Chercher un club pour Anissa » : l'enfant venu de SA fiche
+// voyage jusqu'a la fiche club (son identifiant seul ; son prenom se relit la-bas).
+describe('PAR-L4 — la carte ouvre la fiche club avec l enfant vise', () => {
+  const SMUC = { documentId: 'abc', name: 'Stade Marseillais UC' };
+  const { navigateToStackScreenOrScreen } = jest.requireMock('@/navigation/navigationAvailability');
+
+  test('📌 la recherche ordinaire ouvre la fiche avec le seul club', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [SMUC] }] };
+    await monter();
+
+    await act(async () => { monte.root.findByProps({ testID: 'carte-abc' }).props.onPress(); });
+
+    expect(navigateToStackScreenOrScreen).toHaveBeenLastCalledWith(expect.anything(), {
+      params: { clubId: 'abc' },
+      screen: 'Club',
+      stack: 'ClubStack',
+    });
+  });
+
+  test('✅ venue de la fiche d Anissa, la carte emmene childDocumentId', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [SMUC] }] };
+    await monter({ childDocumentId: 'c-anissa' });
+
+    await act(async () => { monte.root.findByProps({ testID: 'carte-abc' }).props.onPress(); });
+
+    expect(navigateToStackScreenOrScreen).toHaveBeenLastCalledWith(expect.anything(), {
+      params: { childDocumentId: 'c-anissa', clubId: 'abc' },
+      screen: 'Club',
+      stack: 'ClubStack',
+    });
   });
 });

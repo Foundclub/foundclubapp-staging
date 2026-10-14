@@ -4,9 +4,14 @@ import Joi from 'joi';
 
 import client from '../client';
 
+// 👪 PAR-L9b (13/10, E17) — chaque réponse type dit si elle RÉPOND ou REFUSE (la feuille
+// les range sous deux intertitres), et un refus de plus : « Profil non adapté à l'équipe »
+// (`unsuitable`, connu du serveur depuis ce lot). Les messages sont ceux que le serveur envoie
+// (admin/.../club-interest-request/controllers/club-interest-request.ts), accents compris.
 export const CLUB_INTEREST_RESPONSE_PRESETS = [
   {
     key: 'thanks',
+    kind: 'reply',
     get label() {
       return i18next.t(
         'clubInterestRequestService.presets.thanks.label',
@@ -22,6 +27,7 @@ export const CLUB_INTEREST_RESPONSE_PRESETS = [
   },
   {
     key: 'trial',
+    kind: 'reply',
     get label() {
       return i18next.t('clubInterestRequestService.presets.trial.label', 'Proposer un essai');
     },
@@ -34,25 +40,44 @@ export const CLUB_INTEREST_RESPONSE_PRESETS = [
   },
   {
     key: 'profile',
+    kind: 'reply',
     get label() {
       return i18next.t('clubInterestRequestService.presets.profile.label', 'Compléter le profil');
     },
     get message() {
       return i18next.t(
         'clubInterestRequestService.presets.profile.message',
-        'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
+        'Peux-tu compléter ton profil et préciser ton poste ou ton niveau ?',
       );
     },
   },
   {
     key: 'full',
+    kind: 'refuse',
     get label() {
       return i18next.t('clubInterestRequestService.presets.full.label', 'Équipe complète');
     },
     get message() {
       return i18next.t(
         'clubInterestRequestService.presets.full.message',
-        "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
+        "L'équipe est complète pour le moment, on garde ton profil pour la suite.",
+      );
+    },
+  },
+  {
+    key: 'unsuitable',
+    kind: 'refuse',
+    get label() {
+      return i18next.t(
+        'clubInterestRequestService.presets.unsuitable.label',
+        "Profil non adapté à l'équipe",
+      );
+    },
+    get message() {
+      return i18next.t(
+        'clubInterestRequestService.presets.unsuitable.message',
+        "Ton profil ne correspond pas à ce que l'équipe recherche pour le moment. "
+          + 'Merci pour ton intérêt.',
       );
     },
   },
@@ -267,6 +292,23 @@ export const getMyClubInterestRequests = async (params = {}) => {
     },
   });
   return validatePaginatedResponse(response.data);
+};
+
+/**
+ * PAR-L8 (13/10, design parent E19) — le parent RETIRE sa demande de place pour son enfant,
+ * encore en attente. Le serveur l'efface (comme un refus) ; si le club a répondu entre-temps,
+ * il refuse avec un code que l'écran traduit (`views/profile/parent/annulationDeLaDemande.js`).
+ * POST, comme l'annulation joueur : le serveur ne lit pas le corps d'un DELETE.
+ * @param {string} requestId - Le `documentId` de la demande.
+ * @returns {Promise<any>} La réponse du serveur (`{ data: { deleted, documentId } }`).
+ */
+export const cancelClubInterestRequest = async (requestId) => {
+  const id = String(requestId || '').trim();
+  if (!id) {
+    throw new Error('A request id is required to cancel a club interest request');
+  }
+  const response = await client.post(`/club-interest-requests/${id}/cancel`);
+  return response.data;
 };
 
 export const respondClubInterestRequest = async (requestId, responsePayload = {}) => {

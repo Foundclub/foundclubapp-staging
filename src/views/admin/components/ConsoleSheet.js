@@ -11,6 +11,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
+
 // Au-dela de cette largeur (site, tablette), la feuille devient une fenetre centree.
 const LARGEUR_FENETRE = 768;
 
@@ -55,6 +57,15 @@ function ConsoleSheet({
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { width } = useWindowDimensions();
+  // 📱 CLAVIER-MODALES — sur iPhone, une `<Modal>` n'évite rien : le clavier recouvrait le bas de
+  // la feuille (le « Motif » d'« Offrir l'abonnement », ses boutons). Le voile lui rend le haut
+  // du clavier, fenêtre OUVERTE seulement (elle reste montée, fermée, sous les écrans de la
+  // console). Android : cette fenêtre n'est PAS translucide, Android la remonte lui-même ;
+  // la suivre aussi la remonterait deux fois (`android: false`).
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0, {
+    android: false,
+    iPhone: visible,
+  });
   if (!visible) return null;
   const fenetre = width >= LARGEUR_FENETRE;
   const enCours = Boolean(primary.isLoading);
@@ -92,6 +103,8 @@ function ConsoleSheet({
           fenetre ? Alignments.alignCenter : null,
           fenetre ? Spaces.padding[24] : null,
           { backgroundColor: withAlpha(Colors.neutral900, 0.7) },
+          // Clavier fermé : AUCUN retrait (la fenêtre centrée, site, tablette, garde sa marge).
+          retraitDuClavier > 0 ? { paddingBottom: retraitDuClavier } : null,
         ]}
       >
         <View

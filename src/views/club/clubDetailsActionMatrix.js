@@ -137,6 +137,18 @@ export const showsCityNewsBlock = ({
 };
 
 /**
+ * L'age d'une fiche, ou `null` s'il est inconnu. Le vide se teste AVANT la conversion
+ * (`Number(null)` vaut 0, la tranche la plus permissive) — meme ordre que `parentalPowerForAge`.
+ * @param {unknown} age - L'age rendu par le serveur.
+ * @returns {number | null} L'age, ou null.
+ */
+const ageConnu = (age) => {
+  if (age === null || age === undefined || age === '') return null;
+  const annees = typeof age === 'number' ? age : Number(age);
+  return Number.isFinite(annees) ? annees : null;
+};
+
+/**
  * PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
  *
  * Le comptage vit ICI, a cote de la matrice qui le consomme, et pas dans
@@ -147,42 +159,25 @@ export const showsCityNewsBlock = ({
  *
  * ⛔ Il rend DEUX NOMBRES, jamais des fiches : ni la matrice ni la fiche club
  * n ont de raison de manipuler le prenom ou la date de naissance d un mineur.
+ *
+ * 👶 PAR-L4 (13/10) — un troisieme nombre : les fiches dont l'AGE EST INCONNU. Elles ne sont pas
+ * des ados (la phrase « a partir de 13 ans » serait fausse) : la feuille les montre avec
+ * « Âge inconnu : complète sa date de naissance ».
  * @param {any[]} enfants - Les fiches enfants du compte, telles que le serveur les rend.
- * @returns {{ childrenUnder13Count: number, minorChildrenCount: number }} Les deux compteurs.
+ * @returns {{
+ *   childrenUnder13Count: number, childrenWithUnknownAgeCount: number, minorChildrenCount: number
+ * }} Les trois compteurs.
  */
 export const countChildrenByAgeBand = (enfants) => {
   const fiches = Array.isArray(enfants) ? enfants : [];
   return {
     childrenUnder13Count: fiches
       .filter((enfant) => parentalPowerForAge(enfant?.age) === 'full').length,
+    childrenWithUnknownAgeCount: fiches
+      .filter((enfant) => ageConnu(enfant?.age) === null).length,
     minorChildrenCount: fiches
       .filter((enfant) => parentalPowerForAge(enfant?.age) !== 'none').length,
   };
-};
-
-/**
- * 👶 PARENT P3 (2026-09-11) — LES ENFANTS QUI PEUVENT ENCORE DEMANDER UNE PLACE.
- *
- * Decision d'Adel du 11/09 (« 1- a ») : la demande porte l'enfant. Pour dire
- * « Une place pour Léa » et envoyer la demande, la fiche club a besoin de son
- * PRENOM et de son IDENTIFIANT — et de rien d'autre : ni nom, ni age, ni equipe.
- *
- * Deux conditions, les memes que celles du serveur : moins de 13 ans (E17 :
- * ensuite, l'enfant demande lui-meme), et pas deja dans une equipe (le serveur
- * refuserait une seconde equipe).
- * @param {any[]} enfants - Les fiches enfants du compte, telles que le serveur les rend.
- * @returns {Array<{ documentId: string, firstname: string }>} Les enfants a placer.
- */
-export const eligibleChildrenForTeamRequest = (enfants) => {
-  const fiches = Array.isArray(enfants) ? enfants : [];
-  return fiches
-    .filter((enfant) => enfant?.documentId
-      && parentalPowerForAge(enfant?.age) === 'full'
-      && !enfant?.team?.documentId)
-    .map((enfant) => ({
-      documentId: String(enfant.documentId),
-      firstname: String(enfant?.firstname || '').trim(),
-    }));
 };
 
 /**
@@ -220,13 +215,56 @@ export const pendingChildRequestKeys = (demandes) => new Set(
 );
 
 /**
- * Les enfants qui ont au moins une demande de place encore en attente.
- * @param {any[]} demandes - « Mes demandes ».
- * @returns {Set<string>} Les enfants qui ont au moins une demande en attente.
+ * @typedef {{
+ *   age: number | null, documentId: string, firstname: string, lastname: string,
+ *   pendingHereCount: number, reason: 'placed' | 'unknownAge' | 'teen' | null, teamName: string
+ * }} EnfantDeLaFeuille
  */
-export const childIdsWithPendingRequest = (demandes) => new Set(
-  pendingChildRequests(demandes).map((demande) => String(demande.declaredChild.documentId)),
-);
+
+/**
+ * 👶 PAR-L4 (13/10, design parent E11) — TOUS LES ENFANTS, CHACUN AVEC CE QU'IL PEUT FAIRE ICI.
+ *
+ * Avant (P3, 11/09), la fiche ne recevait que les enfants ADMISSIBLES : les autres disparaissaient
+ * sans un mot, et un seul enfant admissible donnait un bouton a son prenom — d'ou « seul le
+ * dernier enfant cree est propose » (recette PAR-009, 11/10). La feuille montre desormais TOUS les
+ * enfants mineurs, et nomme la raison quand l'un ne peut pas :
+ *   · `placed`     — deja dans une equipe (le serveur refuserait une seconde equipe) ;
+ *   · `unknownAge` — sa date de naissance manque (on ne presume pas qu'il a moins de 13 ans) ;
+ *   · `teen`       — 13 ans ou plus : il demande lui-meme (E17).
+ * Un enfant de 18 ans ou plus n'apparait pas : le lien parental est eteint.
+ *
+ * Ce que la feuille montre, et rien de plus : prenom, nom (recapitulatif), age, equipe actuelle,
+ * et le nombre de demandes deja en attente ICI (`demandes` vient de `mine?clubId=`, deja filtre
+ * par club). Ni date de naissance, ni photo.
+ * @param {any[]} enfants - Les fiches enfants du compte, telles que le serveur les rend.
+ * @param {any[]} [demandes] - « Mes demandes » pour ce club.
+ * @returns {EnfantDeLaFeuille[]} Les enfants, dans l'ordre du serveur.
+ */
+export const childrenForPlaceRequest = (enfants, demandes = []) => {
+  const fiches = Array.isArray(enfants) ? enfants : [];
+  const enAttente = pendingChildRequests(demandes);
+  return fiches
+    .filter((enfant) => enfant?.documentId && parentalPowerForAge(enfant?.age) !== 'none')
+    .map((enfant) => {
+      const documentId = String(enfant.documentId);
+      const age = ageConnu(enfant?.age);
+      /** @type {'placed' | 'unknownAge' | 'teen' | null} */
+      let reason = null;
+      if (enfant?.team?.documentId) reason = 'placed';
+      else if (age === null) reason = 'unknownAge';
+      else if (parentalPowerForAge(age) !== 'full') reason = 'teen';
+      return {
+        age,
+        documentId,
+        firstname: String(enfant?.firstname || '').trim(),
+        lastname: String(enfant?.lastname || '').trim(),
+        pendingHereCount: enAttente
+          .filter((demande) => String(demande.declaredChild.documentId) === documentId).length,
+        reason,
+        teamName: String(enfant?.team?.name || '').trim(),
+      };
+    });
+};
 
 export const resolveClubDetailsActionMatrix = ({
   areClubMembersHidden = false,
@@ -237,21 +275,15 @@ export const resolveClubDetailsActionMatrix = ({
   canPlayerSignalClubTeam = false,
   canPlayerSignalMissingTeam = false,
   canUseClubPartneringFlow = false,
-  // 👶 PARENT P3 — combien d'enfants de moins de 13 ans n'ont PAS encore
-  // d'equipe. Absent, il vaut `childrenUnder13Count` : la regle de P2 reste
-  // intacte pour qui ne le fournit pas.
-  childrenAwaitingTeamCount = null,
   // PARENT P2 — les deux seuls chiffres dont la matrice a besoin sur les
   // enfants : combien ont MOINS DE 13 ANS, et combien sont MINEURS. Deux
   // nombres, jamais une liste de fiches : une matrice de decision n a aucune
   // raison de voir le prenom ni la date de naissance d un mineur.
   childrenUnder13Count = 0,
+  // 👶 PAR-L4 — les fiches dont l'age est INCONNU : ni « moins de 13 ans », ni ado.
+  childrenWithUnknownAgeCount = 0,
   clubHasTeams = false,
   hasParentMultisportClub = false,
-  // PARENT P2 — la demande d interet de CE parent pour CE club est-elle deja
-  // partie ? Mon bouton envoie exactement la meme, la porte existante le dit
-  // deja : quand c est vrai, la mienne s efface au lieu de faire doublon.
-  hasPendingChildInterest = false,
   isAuthenticated = false,
   isClubStaffRole = false,
   isMultisportAdmin = false,
@@ -386,22 +418,19 @@ export const resolveClubDetailsActionMatrix = ({
   // Le rail d interet, lui, ne rattache PERSONNE : il previent les dirigeants,
   // qui repondent au parent. C est le partage tranche en C9 du plan.
   //
-  // 🖥️ `!hasPendingChildInterest` VIENT DE L EMULATEUR, le 2026-09-10. Une fois
-  // l interet envoye, la fiche club montrait TROIS boutons au libelle identique
-  // « Demande en attente » — le mien et les deux existants — et ces quatre
-  // boutons flottants RECOUVRAIENT les informations du club, illisibles.
-  // Mon bouton declenche la MEME demande que la porte d interet existante :
-  // quand elle est deja partie, l autre l annonce, la mienne n ajoute rien.
-  // 👶 PARENT P3 — un enfant deja place dans une equipe n'a plus de place a
-  // demander : le serveur refuserait une seconde equipe.
-  const childrenToPlaceCount = Number.isFinite(childrenAwaitingTeamCount)
-    ? childrenAwaitingTeamCount
-    : childrenUnder13Count;
+  // 👶 PAR-L4 (13/10, design parent E10, recette PAR-009) — LA PORTE NE DISPARAIT PLUS SANS UN
+  // MOT. P2 et P3 l'effacaient quand chaque enfant avait deja une demande ici, ou deja une
+  // equipe : le parent voyait le bouton s'evanouir et ne savait pas pourquoi. Elle reste des
+  // qu'un enfant de moins de 13 ans (ou d'age inconnu) est declare, et la FEUILLE explique,
+  // enfant par enfant (« Déjà dans U11 Garçons », « 1 demande en attente ici »…). Un enfant qui
+  // a deja une demande ici reste choisissable : seule la paire equipe + enfant est bloquee.
+  // Le doublon de libelles vu sur l'emulateur le 10/09 (trois « Demande en attente ») ne peut
+  // plus se produire : cette porte dit « Demander une place pour un enfant ».
+  // E17 ne bouge pas : un parent qui n'a QUE des ados n'a pas de porte, mais la phrase.
   const showChildInterestAction = Boolean(
     canShowAffiliationAction
-    && childrenToPlaceCount > 0
+    && (childrenUnder13Count + childrenWithUnknownAgeCount) > 0
     && !canEdit
-    && !hasPendingChildInterest
     && !isUserAlreadyAttachedToViewedClub,
   );
   // On EXPLIQUE l absence de la porte au lieu de la faire disparaitre sans un
@@ -409,6 +438,7 @@ export const resolveClubDetailsActionMatrix = ({
   const showTeenSelfRequestHint = Boolean(
     canShowAffiliationAction
     && childrenUnder13Count === 0
+    && childrenWithUnknownAgeCount === 0
     && minorChildrenCount > 0
     && !canEdit
     && !isUserAlreadyAttachedToViewedClub,
