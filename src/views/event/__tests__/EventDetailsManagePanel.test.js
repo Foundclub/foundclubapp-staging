@@ -754,6 +754,19 @@ describe('EventDetails — panneau organisateur : etats recenses', () => {
     expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
   });
 
+  // RESA-L6A (14/10/2026) — LE BOUTON ORGANISATEUR (référence réservation §8) : le type semé
+  // s'appelle « Réservation », AVEC l'accent (admin src/data/event-types.json:21). Le test
+  // « includes('reservation') » de EventDetails.js ne le trouvait jamais : le module des actions de
+  // l'organisateur n'était jamais rendu. Le témoin d'au-dessus, écrit sans accent, le cachait.
+  test('etat 6 bis — reservation au nom semé « Réservation » (accent) : module rendu', () => {
+    const root = mountScreen({
+      auth: { canManageEvent: () => true },
+      event: buildEvent({ type: { name: 'Réservation' } }),
+    });
+
+    expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
+  });
+
   test('etat 7 — tournoi : le panneau tournoi prend la main et propose ses actions', () => {
     const root = mountScreen({
       auth: { canManageEvent: () => true },

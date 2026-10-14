@@ -40,7 +40,11 @@ import {
   getUserKey,
   uniqueUsers,
 } from '@/domains/event/eventParticipantSections';
-import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import {
+  getEventEditSupport,
+  isBookingEventType,
+  resolveTrainingOpenConfig,
+} from '@/domains/event/eventUseCases';
 import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
@@ -7703,8 +7707,10 @@ function EventDetails({ navigation, route }) {
   };
 
   const renderActionButtons = () => {
-    const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
-      || event?.type?.name?.toLowerCase()?.includes('reservation');
+    // RESA-L6A (14/10/2026) — le type semé est « Réservation », avec l'accent : la règle partagée
+    // l'enlève (avant, deux fois le même test sans accent : le module de l'organisateur n'était
+    // jamais rendu ; référence réservation §8).
+    const isReservation = isBookingEventType(event?.type?.name);
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
