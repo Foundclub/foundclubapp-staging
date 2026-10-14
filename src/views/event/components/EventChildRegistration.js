@@ -40,6 +40,12 @@ import {
  * (EventDetails.js:123-128). Temoin : `__tests__/EventChildRegistration.PARL11.test.js`.
  */
 
+/**
+ * Ce que ce bloc lit des crochets react-query (leurs modules sont en `@ts-nocheck`).
+ * @typedef {{ data?: any[] }} ListeLue
+ * @typedef {{ isPending: boolean, mutateAsync: (variables: any) => Promise<any> }} GesteServeur
+ */
+
 const STEP_TITLES = {
   choose: 'childEventRegistration.sheet.title',
   recap: 'childEventRegistration.recap.title',
@@ -60,7 +66,7 @@ const toneStyles = (Fonts) => ({
 /**
  * Le rappel en tete de la feuille : « Detection / Seance d essai · 18/10/2026 ».
  * @param {any} event - L evenement.
- * @param {(key: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (TFunction d i18next, `any` comme ailleurs dans src/domains).
  * @returns {string} Le rappel.
  */
 const eventReminder = (event, t) => {
@@ -96,9 +102,9 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
     typeof nowMs === 'number' ? nowMs : Date.now(),
   );
 
-  const { data: children = [] } = useGetMyDeclaredChildren();
-  const { data: registrations = [] } = useMyChildRegistrations(eventId);
-  const registerChildren = useRegisterChildren(eventId);
+  const { data: children = [] } = /** @type {ListeLue} */ (useGetMyDeclaredChildren());
+  const { data: registrations = [] } = /** @type {ListeLue} */ (useMyChildRegistrations(eventId));
+  const registerChildren = /** @type {GesteServeur} */ (useRegisterChildren(eventId));
 
   const [step, setStep] = useState(/** @type {null|'choose'|'recap'|'result'} */ (null));
   const [selected, setSelected] = useState(/** @type {string[]} */ ([]));
@@ -123,7 +129,7 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
     setStep('choose');
   }, []);
   const close = useCallback(() => setStep(null), []);
-  const toggle = useCallback((documentId) => setSelected((previous) => (
+  const toggle = useCallback((/** @type {string} */ documentId) => setSelected((previous) => (
     previous.includes(documentId)
       ? previous.filter((id) => id !== documentId)
       : [...previous, documentId]
@@ -142,7 +148,7 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
     }
   }, [chosen, registerChildren, t]);
 
-  const childLabel = (choice) => (typeof choice.age === 'number'
+  const childLabel = (/** @type {any} */ choice) => (typeof choice.age === 'number'
     ? t('childEventRegistration.sheet.childLine', {
       age: choice.age,
       firstname: choice.firstname,
@@ -180,7 +186,7 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
     </View>
   );
 
-  const renderChoice = (choice) => (choice.selectable ? (
+  const renderChoice = (/** @type {any} */ choice) => (choice.selectable ? (
     <WizardOptionCard
       key={choice.documentId}
       multi
@@ -355,10 +361,11 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
-  const { data: rows = [] } = useEventChildRegistrations(eventId);
-  const decide = useDecideChildRegistration(eventId);
+  const { data: rows = [] } = /** @type {ListeLue} */ (useEventChildRegistrations(eventId));
+  const decide = /** @type {GesteServeur} */ (useDecideChildRegistration(eventId));
 
-  const run = useCallback(async (variables) => {
+  /** @typedef {{ decision: string, registrationId: string }} Decision */
+  const run = useCallback(async (/** @type {Decision} */ variables) => {
     try {
       await decide.mutateAsync(variables);
     } catch (error) {
@@ -375,7 +382,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
     Spaces.gap[8],
   ];
 
-  const renderRow = (row) => {
+  const renderRow = (/** @type {any} */ row) => {
     const firstname = String(row?.child?.firstname || '');
     const age = row?.child?.age;
     const parentName = `${row?.parent?.firstname || ''} ${row?.parent?.lastname || ''}`.trim();
