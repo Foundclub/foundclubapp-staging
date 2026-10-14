@@ -1478,6 +1478,14 @@ function PrivateNavigator() {
             options={{ headerShown: false }}
           />
         ) : null}
+        {/* E-P13 — les messages d'échec. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverEchec').default}
+            name={RouteNames.ReserverEchec}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
