@@ -832,8 +832,9 @@ function FormulaireDeFermeture({
   // CRFERM (13/10, planche P4v4) — une date vide attend « Choisir » : court, sur une ligne (S11 :
   // « Choisissez un jour » passait sur deux lignes).
   const choisir = t('collectiviteFermetures.form.choisir', 'Choisir');
-  // CRFERM (« heures : plage ») — « Toute la journée », activé par défaut. Il reste SOUS les dates
-  // dans les deux états : le doigt qui l éteint le retrouve au même endroit.
+  // CRFERM (« heures : plage ») — « Toute la journée », activé par défaut. CRFIN (14/10,
+  // planche P4v4 : téléphone état 3 bis, ordinateur état D) : allumé, SOUS les dates ; éteint,
+  // AU-DESSUS, et chaque jour porte son heure à côté.
   const interrupteur = (
     <View style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}>
       <View style={{ flex: 1, gap: 2 }}>
@@ -912,6 +913,7 @@ function FormulaireDeFermeture({
     <View style={{ gap: 12 }}>
       {avecHeures ? (
         <>
+          {interrupteur}
           <View style={[Alignments.row, { gap: 12 }]}>
             <View style={{ flex: 1 }}>{jourDu}</View>
             <View style={{ flex: 1 }}>
@@ -940,12 +942,14 @@ function FormulaireDeFermeture({
           </View>
         </>
       ) : (
-        <View style={[Alignments.row, { gap: 12 }]}>
-          <View style={{ flex: 1 }}>{jourDu}</View>
-          <View style={{ flex: 1 }}>{jourAu}</View>
-        </View>
+        <>
+          <View style={[Alignments.row, { gap: 12 }]}>
+            <View style={{ flex: 1 }}>{jourDu}</View>
+            <View style={{ flex: 1 }}>{jourAu}</View>
+          </View>
+          {interrupteur}
+        </>
       )}
-      {interrupteur}
       {ligneDErreur}
     </View>
   );
