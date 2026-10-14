@@ -19,6 +19,11 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 import { createLogger } from '@/utils/logger/logger';
 
 import { toAgreedInstant, toShortDay } from '../friendlyMatchDateLabels';
+// Les deux règles d'ordre se contredisent ici (perfectionist veut le voisin `../` d'abord,
+// import/order l'alias) : on suit perfectionist, comme ConvocationWizard, et on tait l'autre
+// sur CETTE ligne uniquement.
+// eslint-disable-next-line import/order
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 
 const logger = createLogger('friendly-match-terms');
 
@@ -50,6 +55,16 @@ function FriendlyMatchTermsSheet({
 }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  // 📱 CLAVIER-AMICAUX-IOS — la jumelle de « Proposer un match » : sur iPhone, une `<Modal>`
+  // n'évite rien, le clavier recouvrait le lieu et « Enregistrer ce qui est convenu ». Le voile
+  // lui rend le haut du clavier, feuille OUVERTE seulement (une par proposition, montée fermée
+  // dans chaque carte). Le pied garde déjà la barre d'accueil (`insets.bottom + 16`) : le
+  // retrait ne la compte pas deux fois. Android : fenêtre NON translucide, Android la remonte
+  // lui-même (MESURÉ sur la jumelle le 14/10) ; la suivre aussi la remonterait deux fois.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(insets.bottom, {
+    android: false,
+    iPhone: visible,
+  });
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -110,11 +125,15 @@ function FriendlyMatchTermsSheet({
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
-      <View style={{
-        backgroundColor: withAlpha(Colors.neutral900, 0.55),
-        flex: 1,
-        justifyContent: 'flex-end',
-      }}
+      <View style={[
+        {
+          backgroundColor: withAlpha(Colors.neutral900, 0.55),
+          flex: 1,
+          justifyContent: 'flex-end',
+        },
+        // Clavier fermé : AUCUN retrait.
+        retraitDuClavier > 0 ? { paddingBottom: retraitDuClavier } : null,
+      ]}
       >
         <View style={{
           backgroundColor: Colors.primary900,
