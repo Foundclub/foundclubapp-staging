@@ -1072,15 +1072,12 @@ function PlanningWeekFullscreen() {
 
     // COLL-R-DEPLACER (14/10, COL-013, planche P5v4-deplacer-tel écran 1) — le bloc « à
     // déplacer » de son club ouvre « Déplacer la séance » pour qui peut la déplacer ; les autres
-    // lisent la fiche.
+    // lisent la fiche. Forme imbriquée sur les deux plateformes : cet écran vit sur la RACINE
+    // (allerDansLOnglet.test.js), et le site en fait la même adresse (/events/:id/edit).
     if (event?.raw?.closure && canManageEvent?.(event.raw)) {
-      const deplacer = { eventId: event.documentId, mode: 'deplacer' };
-      if (Platform.OS === 'web') navigation.navigate(RouteNames.EventEdit, deplacer);
-      else {
-        navigation.navigate(RouteNames.EventStack, {
-          params: deplacer, screen: RouteNames.EventEdit,
-        });
-      }
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.documentId, mode: 'deplacer' }, screen: RouteNames.EventEdit,
+      });
       return;
     }
     navigation.navigate(RouteNames.EventStack, {
@@ -1589,12 +1586,9 @@ function PlanningWeekFullscreen() {
                 as: 'ville', eventId: readOnlyBlock.raw.eventId, mode: 'deplacer',
               };
               setReadOnlyBlock(null);
-              if (Platform.OS === 'web') navigation.navigate(RouteNames.EventEdit, proposer);
-              else {
-                navigation.navigate(RouteNames.EventStack, {
-                  params: proposer, screen: RouteNames.EventEdit,
-                });
-              }
+              navigation.navigate(RouteNames.EventStack, {
+                params: proposer, screen: RouteNames.EventEdit,
+              });
             }}
             title={t('deplacerSeance.ville.proposer', 'Proposer une autre place')}
             variant="Primary"
