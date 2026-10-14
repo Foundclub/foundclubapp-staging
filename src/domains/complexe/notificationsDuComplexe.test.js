@@ -72,3 +72,20 @@ describe('RESA-L5A2 RB — l’interrupteur éteint (aujourd’hui)', () => {
     expect(estNotificationDuComplexe('complexeReservationGerant')).toBe(false);
   });
 });
+
+describe('RESA-L5A2 RB — le site compile ces modules (Vite ne connaît pas `require`)', () => {
+  it('ni l’aiguillage ni la pastille n’appellent `require`', () => {
+    // eslint-disable-next-line global-require
+    const fs = require('fs');
+    // eslint-disable-next-line global-require
+    const path = require('path');
+    const racine = path.join(__dirname, '..', '..');
+    [
+      'domains/complexe/notificationsDuComplexe.js',
+      'views/complexe/components/PastilleModeComplexe.js',
+    ].forEach((fichier) => {
+      const source = fs.readFileSync(path.join(racine, fichier), 'utf8');
+      expect(`${fichier} : ${/\brequire\(/.test(source)}`).toBe(`${fichier} : false`);
+    });
+  });
+});

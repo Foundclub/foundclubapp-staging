@@ -1,5 +1,7 @@
 import { RouteNames } from '@/navigation/routeNames';
 
+import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
+
 /**
  * LES NOTIFICATIONS DU GÉRANT DE COMPLEXE — RESA-L5A2 (14/10/2026), planche RB état 4 et contrat
  * d'API L2A (« Notifications ») : `complexeReservationGerant`, `data.change` = `nouvelle |
@@ -14,10 +16,10 @@ import { RouteNames } from '@/navigation/routeNames';
  * Témoin : `notificationsDuComplexe.test.js`.
  */
 
-// Lu par `require`, comme PrivateNavigator : un `import` du réglage ferait se contredire les deux
-// règles d'ordre des imports ; et le témoin le double par module.
-// eslint-disable-next-line global-require
-const interrupteur = () => Boolean(require('@/config/fonctionsMasquees').COMPLEXES_GERANT);
+// L'interrupteur par un `import`, JAMAIS par `require` : ce module est chargé par la liste des
+// notifications, que le site compile (Vite ne connaît pas `require` : « require is not defined »).
+// Lu À L'APPEL (`COMPLEXES_GERANT` reste une liaison vivante : le témoin le bascule).
+const interrupteur = () => Boolean(COMPLEXES_GERANT);
 
 /** Le type de notification du gérant (serveur RESA-L2A, `notification-templates.ts`). */
 export const TYPE_DU_GERANT = 'complexeReservationGerant';
