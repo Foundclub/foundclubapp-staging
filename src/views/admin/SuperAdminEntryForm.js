@@ -1535,7 +1535,11 @@ function SuperAdminEntryForm({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer
+      bgImage="bg2"
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[32]]}>
         <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
