@@ -25,6 +25,7 @@ import ClubListContent from '@/components/organisms/clubListContent/ClubListCont
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
+import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
 import SearchScreenShell from '@/views/search/components/SearchScreenShell';
 import {
   coerceSearchHubType,
@@ -34,8 +35,8 @@ import {
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 // RESA-L6A (14/10/2026) — par `import`, jamais par `require` : le serveur de dev du site
-// (web) sert ce fichier tel quel au navigateur, où `require` n'existe pas. Les deux imports
-// voisins passent par `@/views/search` pour que les deux règles d'ordre des imports s'accordent.
+// (web) sert ce fichier tel quel au navigateur, où `require` n'existe pas. Les imports voisins
+// passent par `@/views/…` pour que les deux règles d'ordre des imports s'accordent.
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 const SEARCH_TAB_TYPES = /** @type {const} */ ([
@@ -222,13 +223,10 @@ function SearchHubScreen({ navigation, route }) {
 
     if (type === 'reservations') {
       // RESA-L6A (14/10/2026) — l'interrupteur `COMPLEXES_JOUEUR` allumé, l'onglet
-      // cherche les terrains libres des complexes (E-P01). Chargé à l'appel : éteint,
-      // l'écran ne tire rien de la réservation (ni la position, ni le serveur des complexes).
-      // Le site ne sert pas cet onglet (RechercheUnique : Club et Événement) ; son lot (L7)
-      // passera par un `import`, `require` n'existant pas dans le navigateur.
+      // cherche les terrains libres des complexes (E-P01). Importé en tête (jamais par
+      // `require` : le site compile ce fichier, le navigateur n'a pas `require`) ; éteint, il
+      // n'est jamais rendu, donc ne demande ni la position ni le serveur des complexes.
       if (COMPLEXES_JOUEUR) {
-        // eslint-disable-next-line global-require
-        const RechercheDeTerrains = require('@/views/reserverTerrain/RechercheDeTerrains').default;
         return (
           <RechercheDeTerrains
             refreshSignal={refreshSignals.reservations}

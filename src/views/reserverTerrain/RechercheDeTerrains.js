@@ -137,7 +137,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const [texteCherche, setTexteCherche] = useState('');
   const [sport, setSport] = useState(/** @type {string | null} */ (null));
   const [jour, setJour] = useState(/** @type {string | null} */ (null));
-  const [heure, setHeure] = useState(/** @type {string | null} */ (null));
+  const [heure, setHeure] = useState(/** @type {'matin' | 'apresMidi' | 'soir' | null} */ (null));
   const [distanceKm, setDistanceKm] = useState(DISTANCE_PAR_DEFAUT);
   const [cadre, setCadre] = useState(/** @type {string | null} */ (null));
   const [position, setPosition] = useState(/** @type {Lieu | null} */ (null));

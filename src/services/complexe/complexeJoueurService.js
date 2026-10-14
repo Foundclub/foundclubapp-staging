@@ -11,19 +11,12 @@
  * ⚠️ NON LIVRÉ (ni recette ni production, 14/10) : tout ce qui appelle ce module est caché par
  * l'interrupteur `COMPLEXES_JOUEUR` (`src/config/fonctionsMasquees.js`).
  *
- * ⚠️ Le client HTTP est chargé À L'APPEL (même motif que `complexeService.js`, RESA-L5A1) : un
- * écran qui importe ce module ne double pas le client, qui exige l'adresse du serveur dès son
- * chargement. Par `require`, pas par `import()` : jest n'exécute pas un import dynamique.
+ * Le client HTTP est IMPORTÉ, jamais chargé par `require` : le site compile ce fichier et le
+ * navigateur n'a pas `require` (témoin `views/reserverTerrain/__tests__/site.sansRequire.test.js`).
  *
  * Témoin : `__tests__/complexeJoueurService.test.js`.
  */
-
-/**
- * Le client HTTP de l'app, chargé à l'appel.
- * @returns {any} Le client axios.
- */
-// eslint-disable-next-line global-require
-const client = () => require('../client').default;
+import client from '../client';
 
 /**
  * Le corps d'une réponse.
@@ -54,7 +47,7 @@ const remplis = (filtres) => Object.fromEntries(
  * @returns {Promise<any>} `{ data: { complexes: [...], date } }`.
  */
 export const chercherDesTerrains = async (filtres) => corps(
-  client().get('/public-complexes', { params: remplis(filtres) }),
+  client.get('/public-complexes', { params: remplis(filtres) }),
 );
 
 /**
@@ -63,7 +56,7 @@ export const chercherDesTerrains = async (filtres) => corps(
  * @returns {Promise<any>} `{ data: complexe }` ; 404 COMPLEXE_NOT_FOUND s'il n'est plus là.
  */
 export const lireComplexePublic = async (slug) => corps(
-  client().get(`/public-complexes/${enc(slug)}`),
+  client.get(`/public-complexes/${enc(slug)}`),
 );
 
 /**
@@ -72,7 +65,7 @@ export const lireComplexePublic = async (slug) => corps(
  * @returns {Promise<any>} `{ data: [terrain] }`.
  */
 export const lireTerrainsPublics = async (slug) => corps(
-  client().get(`/public-complexes/${enc(slug)}/terrains`),
+  client.get(`/public-complexes/${enc(slug)}/terrains`),
 );
 
 /**
@@ -84,7 +77,7 @@ export const lireTerrainsPublics = async (slug) => corps(
  * @returns {Promise<any>} `{ data: { date, slots, terrain } }`.
  */
 export const lireCreneauxDuJour = async (slug, terrainId, date) => corps(
-  client().get(`/public-complexes/${enc(slug)}/terrains/${enc(terrainId)}/creneaux`, {
+  client.get(`/public-complexes/${enc(slug)}/terrains/${enc(terrainId)}/creneaux`, {
     params: { date },
   }),
 );
@@ -98,7 +91,7 @@ export const lireCreneauxDuJour = async (slug, terrainId, date) => corps(
  * @returns {Promise<any>} `{ data: { dryRun: true, willBe, price, … } }`.
  */
 export const apercuDeReservation = async (demande) => corps(
-  client().post('/reservations-terrain', { data: demande, dryRun: true }),
+  client.post('/reservations-terrain', { data: demande, dryRun: true }),
 );
 
 /**
@@ -108,7 +101,7 @@ export const apercuDeReservation = async (demande) => corps(
  * @returns {Promise<any>} `{ data: réservation vue par son réserveur }` (201).
  */
 export const reserverUnCreneau = async (demande) => corps(
-  client().post('/reservations-terrain', { data: demande }),
+  client.post('/reservations-terrain', { data: demande }),
 );
 
 /**
@@ -117,7 +110,7 @@ export const reserverUnCreneau = async (demande) => corps(
  * @returns {Promise<any>} `{ data: réservation }`.
  */
 export const lireMaReservation = async (reservationId) => corps(
-  client().get(`/reservations-terrain/${enc(reservationId)}`),
+  client.get(`/reservations-terrain/${enc(reservationId)}`),
 );
 
 /**
@@ -127,5 +120,5 @@ export const lireMaReservation = async (reservationId) => corps(
  * @returns {Promise<any>} `{ data: réservation annulée }`.
  */
 export const annulerMaReservation = async (reservationId) => corps(
-  client().post(`/reservations-terrain/${enc(reservationId)}/annuler`, {}),
+  client.post(`/reservations-terrain/${enc(reservationId)}/annuler`, {}),
 );
