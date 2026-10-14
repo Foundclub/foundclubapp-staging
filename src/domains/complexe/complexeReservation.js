@@ -18,6 +18,11 @@ import { getZonedDateParts } from '@/utils/parisTime';
  * Témoin : `complexeReservation.test.js`.
  */
 
+/**
+ * @typedef {any} Traduire - La traduction (le TFunction d'i18next, qui ne se réduit pas à une
+ *   signature : même choix que `complexeTerrain.js`).
+ */
+
 /** Les états d'une réservation, tels que le serveur L2A les écrit. */
 export const STATUTS = Object.freeze({
   annulee: 'annulee',
@@ -36,7 +41,7 @@ const JOUR = 24 * HEURE;
 
 /**
  * Le libellé d'un état (plan §1.2).
- * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {unknown} statut - L'état du serveur.
  * @returns {string} Le libellé, ou '' pour un état inconnu.
  */
@@ -59,7 +64,7 @@ export const libelleStatut = (t, statut) => {
 
 /**
  * « Expire dans 5 h » (E-G06) : en minutes sous l'heure, en heures sous le jour, en jours au-delà.
- * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {unknown} expiresAt - L'échéance (ISO).
  * @param {Date} [maintenant] - L'instant de référence.
  * @returns {string} Le texte, ou '' sans échéance ou une fois passée.
@@ -243,7 +248,7 @@ const quand = (iso) => {
 /**
  * L'historique de la fiche (E-G05) : des faits datés ; « par toi » pour le complexe, le nom court
  * pour le réserveur (jamais plus, `managerLabel` du serveur).
- * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {Array<{ at: string | null, by?: string | null, kind: string }>} etapes - `history`.
  * @param {{ reserveur: string }} noms - Le nom court du réserveur.
  * @returns {string[]} Les lignes.
@@ -265,8 +270,9 @@ export const historiqueLisible = (t, etapes, { reserveur }) => (Array.isArray(et
           );
         }
         return t('complexeReservations.historique.annuleePar', 'Annulée par {{nom}} le {{le}}', {
-          ...options,
+          le,
           nom: reserveur || t('complexeReservations.historique.leJoueur', 'le joueur'),
+          ...SANS_ECHAPPEMENT,
         });
       case 'notee':
         return t('complexeReservations.historique.notee', 'Notée par toi le {{le}}', options);
@@ -313,7 +319,7 @@ export const etatDeFrise = (etat) => /** @type {any} */ (VERS_LA_FRISE)[String(e
 /**
  * Le motif d'une fermeture ou d'un blocage : le nom donné, sinon le motif de la liste du serveur
  * (« travaux », « vacances », « manifestation »).
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {any} fermeture - `closure` d'un créneau, ou une fermeture.
  * @returns {string} Le motif, ou ''.
  */
@@ -335,7 +341,7 @@ export const motifDeFermeture = (t, fermeture) => {
 /**
  * Ce qu'un créneau dit dans la grille : « Julien M. · App », « M. Dupont · Extérieur », « Lina T. ·
  * En attente », « Bloqué : entretien », « Fermé : travaux », « Libre ».
- * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {any} creneau - Un créneau du planning.
  * @returns {string} Le libellé.
  */
@@ -421,7 +427,8 @@ const ETATS_OCCUPES = Object.freeze(['en-attente', 'reserve-app', 'reserve-exter
  * @returns {any[]} Les créneaux.
  */
 const creneauxDe = (terrain, date) => {
-  const jour = (Array.isArray(terrain?.days) ? terrain.days : []).find((d) => d?.date === date);
+  const jours = Array.isArray(terrain?.days) ? terrain.days : [];
+  const jour = jours.find((/** @type {any} */ d) => d?.date === date);
   return Array.isArray(jour?.slots) ? jour.slots : [];
 };
 
@@ -439,7 +446,7 @@ const heuresDe = (creneau) => ({
 /**
  * Les lignes de la frise « Aujourd'hui » (E-G02 bloc 3) depuis le planning : chaque créneau avec
  * son état et, pour une réservation, son nom et son identifiant (la toucher ouvre sa fiche).
- * @param {(cle: string, defaut: string, options?: any) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {any} planning - `{ terrains }` du serveur.
  * @param {string} date - Le jour.
  * @returns {Array<{ cle: string, creneaux: any[], nom: string }>} Les lignes (sans couleur).
@@ -461,7 +468,7 @@ export const lignesDeLaFrise = (t, planning, date) => (
     }),
     nom: String(terrain.name || ''),
   }))
-  .filter((ligne) => ligne.creneaux.length > 0);
+  .filter((/** @type {any} */ ligne) => ligne.creneaux.length > 0);
 
 /**
  * Les chiffres de l'accueil (RC-G01) tirés du planning de la semaine : les réservations du jour,
@@ -492,7 +499,7 @@ export const chiffresDuPlanning = (planning, date) => {
   let occupees = 0;
   joursDeLaSemaine(date).forEach((jour) => {
     const duJour = terrains.flatMap((/** @type {any} */ terrain) => creneauxDe(terrain, jour));
-    duJour.forEach((creneau) => {
+    duJour.forEach((/** @type {any} */ creneau) => {
       if (ETATS_FERMES.includes(creneau.state)) return;
       ouvertes += duree(creneau);
       if (ETATS_OCCUPES.includes(creneau.state)) occupees += duree(creneau);
@@ -527,8 +534,8 @@ export const prochainesReservations = (lignes, maintenant) => lignes
  * envoient : le serveur connaît `travaux | vacances | manifestation | autre` ; « Jour férié » et
  * « Météo » partent en « autre » avec leur NOM (`label`, 40 caractères au plus), que le joueur lit
  * dans la notification (« Fermeture (Météo) »).
- * @type {ReadonlyArray<{ cle: string, corps: (t: (cle: string, defaut: string) => string) =>
- *   { label?: string, reason: string }, texte: (t: (cle: string, defaut: string) => string) =>
+ * @type {ReadonlyArray<{ cle: string, corps: (t: Traduire) =>
+ *   { label?: string, reason: string }, texte: (t: Traduire) =>
  *   string }>}
  */
 export const MOTIFS_DE_FERMETURE = Object.freeze([
@@ -588,7 +595,7 @@ export const joursLisibles = (debut, fin) => {
  * Les fermetures à venir d'un complexe, regroupées : une fermeture PAR terrain côté serveur, une
  * ligne par geste à l'écran (« 25/10 – 26/10 · Travaux · Terrain 1, Terrain 2 »). Les blocages
  * (une plage d'heures) vivent dans le planning, pas ici.
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {any[]} fermetures - Les fermetures (`terrainId` ajouté par le service).
  * @param {any[]} terrains - Les terrains (leurs noms).
  * @param {string} aujourdhui - « AAAA-MM-JJ ».
@@ -662,7 +669,7 @@ export const telephoneLisible = (numero) => {
  * Les motifs d'un refus en un appui (E-G05 état 3, modèle `DecisionCreneauModal`) : ils remplissent
  * le champ, qu'on peut compléter. « Autre » laisse le champ vide.
  * @type {ReadonlyArray<{ cle: string,
- *   texte: (t: (cle: string, defaut: string) => string) => string }>}
+ *   texte: (t: Traduire) => string }>}
  */
 export const MOTIFS_DE_REFUS = Object.freeze([
   {
@@ -681,7 +688,7 @@ export const MOTIFS_DE_REFUS = Object.freeze([
  * Le refus du serveur, NOMMÉ (codes du contrat L2A), puis ceux du complexe (L5A1,
  * `messageDeRefus`).
  * Un refus d'état ou de saisie garde la phrase précise du serveur (déjà au « tu »).
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {any} erreur - Le refus.
  * @param {string} repli - La phrase de l'écran.
  * @returns {string} La phrase à afficher.

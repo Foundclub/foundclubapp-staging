@@ -198,7 +198,7 @@ export const useReservationsDuComplexe = (complexeId, filtres, { enabled = true 
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => (await lireReservationsDuComplexe(
       String(complexeId),
-      { ...filtres, page: /** @type {number} */ (pageParam) },
+      /** @type {any} */ ({ ...filtres, page: pageParam }),
     ))?.data ?? null,
     queryKey: reservationsClef(complexeId, filtres),
     staleTime: DEMI_MINUTE,

@@ -343,8 +343,10 @@ function ComplexePlanning() {
         terrain,
         (terrain.days || []).find((/** @type {any} */ d) => d.date === jour),
       ))
-      .filter((creneau) => creneau.state !== 'libre')
-      .sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));
+      .filter((/** @type {any} */ creneau) => creneau.state !== 'libre')
+      .sort((/** @type {any} */ a, /** @type {any} */ b) => (
+        String(a.startsAt).localeCompare(String(b.startsAt))
+      ));
     corps = (
       <View style={{ gap: 16 }}>
         {jours.map((jour) => {
@@ -354,7 +356,7 @@ function ComplexePlanning() {
               <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
                 {titreDuJour(jour).toUpperCase()}
               </Text>
-              {lignes.length ? lignes.map((creneau) => (
+              {lignes.length ? lignes.map((/** @type {any} */ creneau) => (
                 <TouchableOpacity
                   accessibilityRole="button"
                   key={`${creneau.terrainId}-${creneau.startsAt}`}

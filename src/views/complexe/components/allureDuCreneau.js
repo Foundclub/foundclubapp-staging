@@ -16,7 +16,7 @@ export const ETATS_DU_CRENEAU = /** @type {ReadonlyArray<EtatDuCreneau>} */ (Obj
 
 /**
  * Le libellé d'un état (la légende, la lecture d'écran).
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {any} t - Traduction (le TFunction d'i18next).
  * @param {EtatDuCreneau} etat - L'état.
  * @returns {string} Le libellé.
  */

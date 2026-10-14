@@ -10,11 +10,12 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} props.actif - Deux volets (ordinateur) ou la liste seule.
  * @param {import('react').ReactNode} props.children - La liste (le volet gauche).
  * @param {import('react').ReactNode} props.droite - La fiche (le volet droit).
- * @returns {import('react').ReactNode} Les volets.
+ * @returns {import('react').ReactElement} Les volets.
  */
 function DeuxVolets({ actif, children, droite }) {
   const { Alignments } = useTheme();
-  if (!actif) return children;
+  // Sur téléphone, la liste telle quelle (aucune vue de plus autour).
+  if (!actif) return /** @type {import('react').ReactElement} */ (children);
   return (
     <View style={[Alignments.row, Alignments.fill, { gap: 24 }]}>
       <View style={{ flex: 1, maxWidth: 560 }}>{children}</View>
