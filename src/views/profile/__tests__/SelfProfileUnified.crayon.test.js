@@ -353,6 +353,7 @@ const crayon = (arbre) => {
 };
 
 /**
+ * Le `zIndex` du style aplati (0 quand il n'est pas pose, comme les moteurs).
  * @param {any} noeud
  * @returns {number}
  */
@@ -376,7 +377,8 @@ describe('PROFIL-CRAYON · temoin 1 — le crayon est dessine AU-DESSUS de ce qu
 
     const recouvrants = voisins
       .slice(rang + 1)
-      .filter((/** @type {any} */ voisin) => typeof voisin === 'object' && zIndexDe(voisin) >= zIndexDe(bouton));
+      .filter((/** @type {any} */ voisin) => typeof voisin === 'object')
+      .filter((/** @type {any} */ voisin) => zIndexDe(voisin) >= zIndexDe(bouton));
     expect(recouvrants).toHaveLength(0);
   });
 });
