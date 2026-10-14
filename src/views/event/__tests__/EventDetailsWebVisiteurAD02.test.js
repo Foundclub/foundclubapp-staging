@@ -611,3 +611,31 @@ describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant'
     expect(screenText()).toContain('Rejoindre cet événement');
   });
 });
+
+// 👪 PAR-L11c (14/10) point 3 — SUR LE SITE, L ORGANISATEUR VOIT AUSSI « Enfants inscrits par
+// leurs parents » (Accepter / Refuser) : le MEME composant que le telephone, sous « Demandes en
+// attente ». Avant, le site ne le montait pas : un organisateur sur ordinateur ne voyait aucune
+// des demandes d enfants (design parent planche 9, E21 « Organisateur »).
+describe('PAR-L11c point 3 — la liste de l organisateur sur le site', () => {
+  const PAPA = {
+    documentId: 'compte-papa', firstname: 'Papa', lastname: 'Test', role: { name: 'Parent' },
+  };
+
+  test('🔴 l organisateur la voit, pour CET evenement', () => {
+    const root = mountAsManager();
+
+    expect(screenText()).toContain('DOUBLURE_EnfantsInscritsOrganisateur');
+    const liste = root.findAll((/** @type {any} */ node) => (
+      typeof node.type === 'function' && node.props?.eventId === 'event-1'
+    ));
+    expect(liste.length).toBeGreaterThan(0);
+  });
+
+  test('🔒 un visiteur, un parent : non', () => {
+    mountAsVisitor();
+    expect(screenText()).not.toContain('DOUBLURE_EnfantsInscritsOrganisateur');
+
+    mountScreen({ auth: { canManageEvent: () => false, userData: PAPA }, event: buildEvent() });
+    expect(screenText()).not.toContain('DOUBLURE_EnfantsInscritsOrganisateur');
+  });
+});

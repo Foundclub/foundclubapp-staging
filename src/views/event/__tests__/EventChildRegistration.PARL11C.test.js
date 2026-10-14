@@ -1,7 +1,9 @@
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import EventChildRegistration from '../components/EventChildRegistration';
+import EventChildRegistration, {
+  EventChildRegistrationsForOrganizer,
+} from '../components/EventChildRegistration';
 
 // 👪 PAR-L11c (14/10) — LES CINQ RESTES DE « INSCRIRE MES ENFANTS » (PAR-012, design parent
 // planche 9), A L ECRAN : annuler une inscription (point 1), le motif saisi au refus (point 4),
@@ -143,6 +145,12 @@ const press = (attendu, rang = 0) => {
   if (cible.props.disabled) return;
   act(() => { cible.props.onPress(); });
 };
+const pressAsync = async (attendu, rang = 0) => {
+  getByText(attendu);
+  const cible = pressables(attendu)[rang];
+  if (!cible) throw new Error(`rien a presser pour : ${attendu}`);
+  await act(async () => { await cible.props.onPress(); });
+};
 const byTestId = (testID) => arbre.root.findAll((node) => node.props?.testID === testID);
 
 beforeEach(() => {
@@ -249,5 +257,30 @@ describe('PAR-L11c point 1 — annuler une inscription, sous l evenement', () =>
     expect(mockCancel).toHaveBeenCalledTimes(2);
     expect(mockCancel.mock.calls[1][0])
       .toEqual(expect.objectContaining({ documentId: 'r-anissa' }));
+  });
+});
+
+// Point 3 — la liste de l organisateur sert AUSSI le site (EventDetails.web.js) : une
+// erreur se dit DANS le bloc, jamais par `Alert` (sur le site, une fenetre systeme).
+describe('PAR-L11c point 3 — chez l organisateur, sur le telephone comme sur le site', () => {
+  const MARYLINE = { firstname: 'Maryline', lastname: 'Monroe' };
+
+  test('🔴 un refus du serveur s ecrit sous la ligne, sans fenetre systeme', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRows.current = [{
+      child: { age: 9, firstname: 'Anissa' },
+      documentId: 'r-1',
+      parent: MARYLINE,
+      status: 'pending',
+    }];
+    mockDecide.mockRejectedValue({ details: { code: 'FULL' }, status: 400 });
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+
+    await pressAsync('Accepter');
+
+    expect(alerte).not.toHaveBeenCalled();
+    expect(byTestId('child-registration-error-r-1')).not.toHaveLength(0);
+    expect(getByText('Plus de place.')).toBeTruthy();
+    alerte.mockRestore();
   });
 });

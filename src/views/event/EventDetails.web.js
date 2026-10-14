@@ -98,7 +98,9 @@ import {
   resolveCallMode,
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
-import EventChildRegistration from './components/EventChildRegistration';
+import EventChildRegistration, {
+  EventChildRegistrationsForOrganizer,
+} from './components/EventChildRegistration';
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
@@ -2922,6 +2924,10 @@ function EventDetails({ navigation, route }) {
                       ))}
                     </div>
                   )}
+                  {/* 👪 PAR-L11c (14/10) point 3 — les enfants inscrits par leurs parents,
+                      a accepter ou refuser : le MEME bloc que le telephone (EventDetails.js),
+                      qui ne s affiche que s il y a au moins une inscription. */}
+                  <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
                 </>
               ) : null}
             </section>

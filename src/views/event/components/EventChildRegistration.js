@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   canCancelRegistration,
@@ -373,7 +373,8 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
  * 👪 PAR-L11b — CHEZ L ORGANISATEUR : les enfants inscrits par leurs parents, « Anissa,
  * 9 ans » et « Parent : Maryline Monroe », jamais une coordonnee (registre des mineurs,
  * lignes 9, 17, 19). Une demande en attente s accepte ou se refuse ici ; le serveur recompte
- * la place.
+ * la place. PAR-L11c (14/10) : le SITE la monte aussi (EventDetails.web.js) ; un refus du
+ * serveur s ecrit donc sous la ligne, jamais par `Alert` (une fenetre systeme sur le site).
  * @param {object} props - Les proprietes.
  * @param {string} props.eventId - L evenement.
  * @returns {import('react').ReactElement|null} La liste, ou rien sans enfant inscrit.
@@ -385,12 +386,16 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
   } = useTheme();
   const { data: rows = [] } = useEventChildRegistrations(eventId);
   const decide = useDecideChildRegistration(eventId);
+  // La phrase du dernier refus du serveur, par ligne.
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
 
   const run = useCallback(async (variables) => {
+    const id = variables.registrationId;
+    setErrors(({ [id]: _old, ...others }) => others);
     try {
       await decide.mutateAsync(variables);
     } catch (error) {
-      Alert.alert(t('childEventRegistration.organizer.errorTitle'), t(errorKey(error)));
+      setErrors((previous) => ({ ...previous, [id]: t(errorKey(error)) }));
     }
   }, [decide, t]);
 
@@ -451,6 +456,15 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
             {t('childEventRegistration.organizer.accepted')}
           </Text>
         )}
+        {errors[row.documentId] ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[Fonts.p2Bold, Fonts.error300]}
+            testID={`child-registration-error-${row.documentId}`}
+          >
+            {errors[row.documentId]}
+          </Text>
+        ) : null}
       </View>
     );
   };
