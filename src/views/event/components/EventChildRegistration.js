@@ -53,7 +53,7 @@ import {
 
 /**
  * Ce que ce bloc lit des crochets react-query (leurs modules sont en `@ts-nocheck`).
- * @typedef {{ data?: any[] }} ListeLue
+ * @typedef {{ data?: any[], isError?: boolean, isFetching?: boolean, refetch?: () => Promise<any> }} ListeLue
  * @typedef {{ isPending: boolean, mutateAsync: (variables: any) => Promise<any> }} GesteServeur
  */
 
@@ -402,7 +402,10 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
-  const { data: rows = [] } = /** @type {ListeLue} */ (useEventChildRegistrations(eventId));
+  const {
+    data, isError, isFetching, refetch,
+  } = /** @type {ListeLue} */ (useEventChildRegistrations(eventId));
+  const rows = Array.isArray(data) ? data : [];
   const decide = /** @type {GesteServeur} */ (useDecideChildRegistration(eventId));
   // La phrase du dernier refus du serveur, par ligne.
   const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
@@ -444,7 +447,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
     }
   }, [decide, reason, refusing, t]);
 
-  if (!Array.isArray(rows) || rows.length === 0) return null;
+  if (!isError && rows.length === 0) return null;
 
   const rowStyle = [
     ApplicationStyle.borderRadius16,
@@ -519,6 +522,19 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
       <Text style={[Fonts.p1Black, Fonts.neutral00]}>
         {t('childEventRegistration.organizer.title')}
       </Text>
+      {isError ? (
+        <View style={[Spaces.gap[8]]}>
+          <Text accessibilityLiveRegion="polite" style={[Fonts.p2, Fonts.error300]}>
+            {t('childEventRegistration.organizer.loadError')}
+          </Text>
+          <Button
+            isLoading={isFetching}
+            onPress={() => { refetch?.(); }}
+            title={t('childEventRegistration.organizer.retry')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
       {rows.map(renderRow)}
       <BottomModal
         close={closeRefuse}

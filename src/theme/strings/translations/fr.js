@@ -23380,6 +23380,7 @@ export default {
       accepted: 'Inscription acceptée',
       childLine: '{{firstname}}, {{age}} ans',
       errorTitle: 'Action impossible',
+      loadError: 'Impossible de charger les inscriptions des enfants.',
       parentLine: 'Parent : {{name}}',
       refuse: 'Refuser',
       // 👪 PAR-L11c (14/10) — la feuille du refus, avec son motif facultatif.
@@ -23390,6 +23391,7 @@ export default {
         placeholder: 'Ex. : groupe complet',
         title: "Refuser l'inscription pour {{firstname}} ?",
       },
+      retry: 'Réessayer',
       title: 'Enfants inscrits par leurs parents',
     },
     reasons: {

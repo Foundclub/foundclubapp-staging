@@ -14,6 +14,8 @@ import EventChildRegistration, {
 const mockChildren = { current: [] };
 const mockMine = { current: [] };
 const mockRows = { current: [] };
+const mockOrganizerQuery = { current: {} };
+const mockRefetchOrganizer = jest.fn();
 const mockRegister = jest.fn();
 const mockDecide = jest.fn();
 const mockCancel = jest.fn();
@@ -24,7 +26,11 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
 jest.mock('@/services/eventChildRegistration/eventChildRegistrationQueries', () => ({
   useCancelChildRegistration: () => ({ isPending: false, mutate: mockCancel }),
   useDecideChildRegistration: () => ({ isPending: false, mutateAsync: mockDecide }),
-  useEventChildRegistrations: () => ({ data: mockRows.current }),
+  useEventChildRegistrations: () => ({
+    data: mockRows.current,
+    refetch: mockRefetchOrganizer,
+    ...mockOrganizerQuery.current,
+  }),
   useMyChildRegistrations: () => ({ data: mockMine.current }),
   useRegisterChildren: () => ({ isPending: false, mutateAsync: mockRegister }),
 }));
@@ -160,9 +166,35 @@ beforeEach(() => {
   ];
   mockMine.current = [];
   mockRows.current = [];
+  mockOrganizerQuery.current = {};
+  mockRefetchOrganizer.mockReset();
   mockRegister.mockReset();
   mockDecide.mockReset();
   mockCancel.mockReset();
+});
+
+describe('PAR-L11c — lecture organisateur en echec', () => {
+  test('une panne initiale se distingue d une liste vide et permet une reprise', () => {
+    mockOrganizerQuery.current = { isError: true };
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+    expect(getByText('Impossible de charger les inscriptions des enfants.')).toBeTruthy();
+    press('Réessayer');
+    expect(mockRefetchOrganizer).toHaveBeenCalledTimes(1);
+  });
+
+  test('une relecture en echec conserve les inscriptions deja chargees', () => {
+    mockRows.current = [ligne('Anissa', 'pending')];
+    mockOrganizerQuery.current = { isError: true };
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+    expect(getByText('Impossible de charger les inscriptions des enfants.')).toBeTruthy();
+    expect(getByText('Anissa')).toBeTruthy();
+    expect(getByText('Accepter')).toBeTruthy();
+  });
+
+  test('une liste vide chargee sans erreur reste masquee', () => {
+    render(<EventChildRegistrationsForOrganizer eventId="evt-1" />);
+    expect(arbre.toJSON()).toBeNull();
+  });
 });
 
 describe('PAR-L11c point 1 — annuler une inscription, sous l evenement', () => {

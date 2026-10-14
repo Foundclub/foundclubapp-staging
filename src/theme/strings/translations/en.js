@@ -14643,6 +14643,7 @@ export default {
       accepted: 'Registration accepted',
       childLine: '{{firstname}}, {{age}} years old',
       errorTitle: 'Action not possible',
+      loadError: 'Unable to load child registrations.',
       parentLine: 'Parent: {{name}}',
       refuse: 'Decline',
       // 👪 PAR-L11c (14/10) — the decline sheet, with its optional reason.
@@ -14653,6 +14654,7 @@ export default {
         placeholder: 'E.g. group is full',
         title: 'Decline the registration for {{firstname}}?',
       },
+      retry: 'Try again',
       title: 'Children registered by their parents',
     },
     reasons: {
