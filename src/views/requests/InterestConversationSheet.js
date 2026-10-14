@@ -72,7 +72,8 @@ function InterestConversationSheet({
 
   // Le dirigeant qui entraîne aussi l'équipe ne se choisit pas : c'est « Moi ».
   const coaches = useMemo(() => {
-    const trainers = Array.isArray(teamQuery?.data?.trainers) ? teamQuery.data.trainers : [];
+    const teamTrainers = teamQuery?.data?.trainers;
+    const trainers = Array.isArray(teamTrainers) ? teamTrainers : [];
     return trainers.filter((trainer) => (
       trainer?.documentId && trainer.documentId !== currentUserId
     ));
@@ -225,7 +226,7 @@ function InterestConversationSheet({
                     team: teamName,
                     ...SANS_ECHAPPEMENT,
                   }),
-                  onPress: () => setCoachId(coach.documentId),
+                  onPress: () => setCoachId(String(coach.documentId || '')),
                 }))}
               </View>
             ) : null}

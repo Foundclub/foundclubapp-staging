@@ -344,7 +344,10 @@ function RequestsHub({ navigation, route }) {
    * @param {any} item La demande a laquelle on vient de repondre.
    * @param {string} message Le texte parti chez la personne.
    */
-  const announceInterestResponse = useCallback((item, message) => {
+  const announceInterestResponse = useCallback((
+    /** @type {any} */ item,
+    /** @type {string} */ message,
+  ) => {
     const firstname = String(item?.meta?.requesterFirstname || '').trim();
     setCelebration({
       closeLabel: t('common.actions.close', 'Fermer'),
@@ -665,7 +668,9 @@ function RequestsHub({ navigation, route }) {
    * ⛔ Rien n'est lié tant que le fil n'existe pas ; un échec se dit, la demande reste.
    * @param {{ coach: any | null }} choice Le coach choisi, ou null pour « moi ».
    */
-  const handleConversationConfirm = useCallback(async ({ coach }) => {
+  const handleConversationConfirm = useCallback(async (
+    /** @type {{ coach: any | null }} */ { coach },
+  ) => {
     const item = conversationItem;
     if (!item) return;
 
