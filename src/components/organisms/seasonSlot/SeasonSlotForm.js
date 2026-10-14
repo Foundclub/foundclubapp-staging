@@ -28,6 +28,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
@@ -289,6 +290,28 @@ export function TunnelEnAttente({
 }
 
 /**
+ * Les choix en cours de lecture, avec le squelette déjà utilisé dans l'app.
+ * @returns {import('react').ReactElement} Trois lignes en attente.
+ */
+export function ChargementDesChoix() {
+  const { Colors } = useTheme();
+  return (
+    <View accessibilityState={{ busy: true }} testID="season-slot-chargement">
+      <SkeletonLoader backgroundColor={Colors.primary200} highlightColor={Colors.neutral200} isActive>
+        <View style={{ gap: 12 }}>
+          {[0, 1, 2].map((ligne) => (
+            <View
+              key={ligne}
+              style={{ backgroundColor: Colors.primary200, borderRadius: 12, height: 56 }}
+            />
+          ))}
+        </View>
+      </SkeletonLoader>
+    </View>
+  );
+}
+
+/**
  * Les creneaux d un jour de la semaine type, sans celui qu on modifie.
  * @param {any} creneaux - Les creneaux de l installation (lecture).
  * @param {number | null} numero - Le jour ISO.
@@ -371,6 +394,7 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  *   fixedClubId?: string | null,
  *   guided?: boolean,
  *   initial?: { weekday?: number, startTime?: string, endTime?: string, plateau?: number | null },
+ *   lectureDesClubs?: { isLoading?: boolean, error?: any, refetch?: () => any } | null,
  *   onCancel?: () => void,
  *   onDone: (creneau: any) => void,
  *   pleinEcran?: boolean,
@@ -389,6 +413,7 @@ function SeasonSlotForm({
   fixedClubId = null,
   guided = false,
   initial = {},
+  lectureDesClubs = null,
   onCancel,
   onDone,
   pleinEcran = false,
@@ -518,6 +543,8 @@ function SeasonSlotForm({
     slot?.documentId,
   ]);
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
+  const disponibilitesEnCours = !repartition && (lecture.isLoading
+    || Boolean(parametresApercu && apercu.isFetching));
   const place = conflit || apercu.data?.data || null;
   // VILLE-T18A — planche 23, etat 3 : le « complet » se decide pendant la saisie, ou par le 409.
   const besoinDeConfirmer = Boolean(conflit)
@@ -540,6 +567,7 @@ function SeasonSlotForm({
     || clubs.find((ligne) => ligne.documentId === club)?.name
     || '';
   const pret = Boolean(facilityId && club && jour && ordreJuste)
+    && !disponibilitesEnCours
     && (!modification || Boolean(aPartirDu))
     && periodeJuste;
 
@@ -859,9 +887,10 @@ function SeasonSlotForm({
   };
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
-    if (etapeCourante === 'club' || etapeCourante === 'equipe') return !club;
-    if (etapeCourante === 'jour') return !jour;
-    if (etapeCourante === 'horaires') return !ordreJuste;
+    if (etapeCourante === 'club') return !club || Boolean(lectureDesClubs?.isLoading);
+    if (etapeCourante === 'equipe') return !club || equipes.isLoading;
+    if (etapeCourante === 'jour') return !jour || lecture.isLoading;
+    if (etapeCourante === 'horaires') return !ordreJuste || disponibilitesEnCours;
     const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
     return !periodeJuste || (modification && !dateEffetValide);
   })();
@@ -1108,7 +1137,7 @@ function SeasonSlotForm({
           {libelleDuChamp(compact
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
             : t('collectiviteCreneaux.attribuer.club', 'Club'))}
-          {clubs.length === 0 ? (
+          {lectureDesClubs?.isLoading ? <ChargementDesChoix /> : clubs.length === 0 ? (
             <View style={{ alignItems: 'center', gap: 12 }}>
               <SvgIcon color={Colors.primary200} height={40} name="shield" width={40} />
               <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -1144,7 +1173,7 @@ function SeasonSlotForm({
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
-          {listeDeChoix([
+          {equipes.isLoading ? <ChargementDesChoix /> : listeDeChoix([
             {
               actif: !equipe,
               detail: t(
@@ -1168,7 +1197,7 @@ function SeasonSlotForm({
       {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
-          {listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
+          {lecture.isLoading ? <ChargementDesChoix /> : listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
             // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
             // certaines heures le dit sous son nom (les mots de la planche P4v2).
             const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
@@ -1287,7 +1316,9 @@ function SeasonSlotForm({
       {/* COLL-R-A7 — en plein écran, le récapitulatif ouvre l'étape, la place vient dessous. */}
       {tunnelPleinEcran && confirmationFinale ? recapEnLignes : null}
       {libresDuJour}
-      {visible('horaires') || confirmationFinale ? carteDeLaPlace : null}
+      {visible('horaires') || confirmationFinale ? (
+        disponibilitesEnCours ? <ChargementDesChoix /> : carteDeLaPlace
+      ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 
       {!visible('periode') || modification || (compact && !parcoursGuide) ? null : (

@@ -1428,6 +1428,7 @@ function PlanningWeekFullscreen() {
         facilityId={facilityId}
         guided
         initial={panneau.initial}
+        lectureDesClubs={attachedClubs}
         key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
         onCancel={fermerPanneau}
         onDone={fermerPanneau}
@@ -1454,6 +1455,7 @@ function PlanningWeekFullscreen() {
           facilityId={facilityId}
           guided
           initial={panneau.initial}
+          lectureDesClubs={attachedClubs}
           key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
           onCancel={fermerPanneau}
           onDone={fermerPanneau}

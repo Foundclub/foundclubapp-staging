@@ -507,6 +507,7 @@ function InstallationCreneaux() {
         facilityId={facilityId}
         guided
         initial={panneau.initial}
+        lectureDesClubs={clubs}
         key={`attribuer-${panneau.initial?.weekday || 0}-${panneau.initial?.startTime || ''}`}
         onCancel={fermer}
         onDone={fermer}

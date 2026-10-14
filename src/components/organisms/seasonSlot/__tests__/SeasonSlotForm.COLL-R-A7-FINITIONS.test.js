@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 import {
   attributeSeasonSlot,
@@ -87,6 +88,7 @@ jest.mock('@/components/atoms/button/Button', () => {
   };
 });
 jest.mock('@/components/atoms/SvgIcon/SvgIcon', () => ({ SvgIcon: function SvgIconMock() { return null; } }));
+jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonMock({ children }) { return children; });
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) { return children; });
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => function ClubLogoMarkMock() { return null; });
 jest.mock('@/components/molecules/timePickerInput/TimePickerInput', () => function TimePickerInputMock(/** @type {any} */ props) {
@@ -261,5 +263,42 @@ describe('COLL-R-A7-FINITIONS 2 — aucun club rattaché', () => {
     expect(tunnel(arbre).isNextDisabled).toBe(true);
     await appuyerSur(arbre, 'Ajouter un club');
     expect(ajouterUnClub).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('COLL-R-A7-FINITIONS 3 — les lectures ont un squelette', () => {
+  test('clubs : attente explicite, sans faux état vide', async () => {
+    const arbre = await monter({ clubs: [], lectureDesClubs: { isLoading: true } });
+    expect(arbre.root.findByType(SkeletonLoader).props).toMatchObject({
+      backgroundColor: expect.any(String), highlightColor: expect.any(String), isActive: true,
+    });
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n).includes('Aucun club'))).toBe(false);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+  });
+
+  test('équipes : Suivant attend la lecture puis retrouve les choix', async () => {
+    let finir;
+    /** @type {any} */ (getClubTeamsForSlot).mockReturnValue(new Promise((resolve) => { finir = resolve; }));
+    const arbre = await monter(DEPUIS_LE_PLANNING);
+    await choisir(arbre, 'Montrivage Basket');
+    await avancer(arbre);
+    expect(arbre.root.findAllByType(SkeletonLoader)).toHaveLength(1);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+    await appeler(() => finir([{ documentId: 'u13', name: 'U13' }]));
+    expect(arbre.root.findAllByType(SkeletonLoader)).toHaveLength(0);
+    expect(choix(arbre, 'U13')).toBeDefined();
+    expect(tunnel(arbre).isNextDisabled).toBe(false);
+  });
+
+  test('disponibilités : le récapitulatif attend la place avant de pouvoir attribuer', async () => {
+    let finir;
+    /** @type {any} */ (previewFacilitySeasonSlot).mockReturnValue(new Promise((resolve) => { finir = resolve; }));
+    const arbre = await monter(DEPUIS_LE_PLANNING);
+    await jusquAuRecap(arbre);
+    expect(arbre.root.findAllByType(SkeletonLoader)).toHaveLength(1);
+    expect(tunnel(arbre).isNextDisabled).toBe(true);
+    await appeler(() => finir({ data: { capacity: 2, needsConfirmation: false, occupants: [] } }));
+    expect(arbre.root.findAllByType(SkeletonLoader)).toHaveLength(0);
+    expect(tunnel(arbre).isNextDisabled).toBe(false);
   });
 });
