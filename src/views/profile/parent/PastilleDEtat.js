@@ -14,7 +14,8 @@ import texteInsecable from '@/utils/texteInsecable';
  * 📱 Une pastille épouse son texte : espaces insécables, sinon Android 16 perd son dernier mot
  * (`texteInsecable`, recette du 28/09).
  * @param {object} props - Les propriétés.
- * @param {'ok' | 'attente' | 'neutre' | 'compte'} props.ton - L état.
+ * @param {'ok' | 'attente' | 'neutre' | 'compte' | 'refus'} props.ton - L état (`refus` :
+ * PAR-L11c, une inscription refusée).
  * @param {string} props.texte - Ce que dit la pastille.
  * @param {string} [props.testID] - L étiquette de test.
  * @returns {import('react').ReactElement} - La pastille.
@@ -26,6 +27,7 @@ function PastilleDEtat({ testID, texte, ton }) {
     compte: { encre: Colors.primary300, lisere: Colors.primary500 },
     neutre: { encre: Colors.neutral100, lisere: Colors.primary500 },
     ok: { encre: Colors.success200, lisere: Colors.success500 },
+    refus: { encre: Colors.error300, lisere: Colors.error500 },
   };
   const teinte = teintes[ton] || teintes.neutre;
 

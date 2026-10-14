@@ -14501,6 +14501,35 @@ export default {
       teamsOnly: "This event registers teams: your child's team staff handles it.",
       tournament: "This tournament registers teams: your child's team staff handles it.",
     },
+    // 👪 PAR-L11c (14/10) — "Cancel the registration": sheet, then outcome banner.
+    cancel: {
+      confirm: 'Cancel the registration',
+      confirmMessage: 'The organizer of "{{event}}" will no longer see it. '
+        + 'You can register {{firstname}} again.',
+      confirmTitle: 'Cancel the registration for {{firstname}}?',
+      done: 'Registration cancelled.',
+      doneHint: 'You can register {{firstname}} again.',
+      failed: 'The registration could not be cancelled.',
+      failedHint: 'Check your connection, then try again.',
+      gone: 'This registration no longer exists.',
+      goneHint: 'There is nothing left to cancel.',
+      keep: 'Keep the registration',
+      link: 'Cancel the registration',
+      linkLabel: 'Cancel the registration for {{firstname}}',
+      unavailable: 'Cancelling is not available yet.',
+      unavailableHint: 'The registration is still there. Try again later.',
+    },
+    // 👪 PAR-L11c (14/10) — child page, "Their events" block (DeclaredChildPage).
+    childPage: {
+      accepted: 'Registration confirmed',
+      declined: 'Declined',
+      error: 'Could not load their events.',
+      on: 'On {{date}}',
+      open: 'See the event',
+      pending: 'Pending',
+      reason: 'Reason: {{reason}}',
+      title: 'Their events',
+    },
     errors: {
       alreadyDecided: 'This request has already been handled.',
       generic: 'The registration could not be sent. Try again in a moment.',
@@ -14512,6 +14541,14 @@ export default {
       errorTitle: 'Action not possible',
       parentLine: 'Parent: {{name}}',
       refuse: 'Decline',
+      // 👪 PAR-L11c (14/10) — the decline sheet, with its optional reason.
+      refuseSheet: {
+        confirm: 'Decline the registration',
+        hint: 'The parent will see this reason.',
+        label: 'Reason (optional)',
+        placeholder: 'E.g. group is full',
+        title: 'Decline the registration for {{firstname}}?',
+      },
       title: 'Children registered by their parents',
     },
     reasons: {
@@ -14543,6 +14580,8 @@ export default {
       defaultType: 'Event',
       noChild: "You haven't added a child yet. Add them from \"My children\", then come back here.",
       reminder: '{{type}} · {{date}}',
+      // PAR-L11c (14/10) — the category is shown, nothing is blocked.
+      reminderWithCategory: '{{type}} · {{category}} · {{date}}',
       title: 'Who are you registering?',
     },
     status: {

@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
+  canCancelRegistration,
   describeChildChoices,
   errorKey,
+  REFUSAL_REASON_MAX_LENGTH,
   resolveChildRegistrationOffer,
   resultLine,
   statusLine,
@@ -15,7 +17,14 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import Input from '@/components/molecules/input/Input';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
+import {
+  ChildRegistrationCancelBanner,
+  ChildRegistrationCancelLink,
+  ChildRegistrationCancelSheet,
+  useChildRegistrationCancel,
+} from '@/views/event/components/ChildRegistrationCancel';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -35,6 +44,8 @@ import {
  * l evenement, il retrouve ensuite l etat de chacun (« en attente », « confirmee »,
  * « refusee : motif »). Tournoi, match amical, ferme : pas de bouton, une phrase qui dit
  * pourquoi. Le serveur reste juge ; l ecran ne fait que montrer (`childRegistrationFlow.js`).
+ * PAR-L11c (14/10) : sous chaque ligne en attente ou confirmee, « Annuler l inscription »
+ * (feuille + bandeau, `ChildRegistrationCancel.js`).
  *
  * ⚠️ Ce module charge des services : chaque temoin qui monte `EventDetails` le double
  * (EventDetails.js:123-128). Temoin : `__tests__/EventChildRegistration.PARL11.test.js`.
@@ -64,7 +75,10 @@ const toneStyles = (Fonts) => ({
 });
 
 /**
- * Le rappel en tete de la feuille : « Detection / Seance d essai · 18/10/2026 ».
+ * Le rappel en tete de la feuille : « Detection / Seance d essai · U11 · 18/10/2026 ».
+ * PAR-L11c (14/10) point 5 : la CATEGORIE de l equipe organisatrice, lue comme l en-tete de
+ * l evenement (EventHeader.js) ; montree, jamais bloquante (design planche 9). Sans
+ * categorie : « type · date », comme avant.
  * @param {any} event - L evenement.
  * @param {any} t - La traduction (TFunction d i18next, `any` comme ailleurs dans src/domains).
  * @returns {string} Le rappel.
@@ -74,11 +88,18 @@ const eventReminder = (event, t) => {
   const date = start && Number.isFinite(start.getTime())
     ? start.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '';
-  return t('childEventRegistration.sheet.reminder', {
-    date,
-    type: event?.type?.name || t('childEventRegistration.sheet.defaultType'),
-    ...SANS_ECHAPPEMENT,
-  });
+  const category = String(event?.team?.category?.name || '').trim();
+  return t(
+    category
+      ? 'childEventRegistration.sheet.reminderWithCategory'
+      : 'childEventRegistration.sheet.reminder',
+    {
+      category,
+      date,
+      type: event?.type?.name || t('childEventRegistration.sheet.defaultType'),
+      ...SANS_ECHAPPEMENT,
+    },
+  );
 };
 
 /**
@@ -97,10 +118,12 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
   } = useTheme();
   const tones = toneStyles(Fonts);
   const eventId = event?.documentId || '';
-  const offer = resolveChildRegistrationOffer(
-    event,
-    typeof nowMs === 'number' ? nowMs : Date.now(),
-  );
+  const now = typeof nowMs === 'number' ? nowMs : Date.now();
+  const offer = resolveChildRegistrationOffer(event, now);
+  // Le nom dit dans la feuille d annulation : le sien, sinon son type.
+  const eventName = String(event?.name || event?.type?.name || '').trim()
+    || t('childEventRegistration.sheet.defaultType');
+  const cancel = useChildRegistrationCancel();
 
   const { data: children = [] } = /** @type {ListeLue} */ (useGetMyDeclaredChildren());
   const { data: registrations = [] } = /** @type {ListeLue} */ (useMyChildRegistrations(eventId));
@@ -309,12 +332,23 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
 
   return (
     <View style={[Spaces.gap[12]]} testID="child-registration-block">
+      <ChildRegistrationCancelBanner onRetry={cancel.retry} outcome={cancel.outcome} />
       {registrations.map((registration) => {
         const line = statusLine(registration);
         return (
-          <Text key={registration.documentId} style={[Fonts.p2, tones[line.tone]]}>
-            {t(line.key, { ...line.params, ...SANS_ECHAPPEMENT })}
-          </Text>
+          <View key={registration.documentId}>
+            <Text style={[Fonts.p2, tones[line.tone]]}>
+              {t(line.key, { ...line.params, ...SANS_ECHAPPEMENT })}
+            </Text>
+            {canCancelRegistration(registration, now) ? (
+              <ChildRegistrationCancelLink
+                disabled={cancel.pendingId === registration.documentId}
+                firstname={String(registration?.child?.firstname || '')}
+                onPress={() => cancel.ask(registration)}
+                testID={`child-registration-cancel-${registration.documentId}`}
+              />
+            ) : null}
+          </View>
         );
       })}
       {offer.canAct ? (
@@ -343,6 +377,12 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
         {step === 'recap' ? renderRecap() : null}
         {step === 'result' ? renderResult() : null}
       </BottomModal>
+      <ChildRegistrationCancelSheet
+        eventName={eventName}
+        onClose={cancel.close}
+        onConfirm={cancel.confirm}
+        registration={cancel.toCancel}
+      />
     </View>
   );
 }
@@ -351,7 +391,8 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
  * 👪 PAR-L11b — CHEZ L ORGANISATEUR : les enfants inscrits par leurs parents, « Anissa,
  * 9 ans » et « Parent : Maryline Monroe », jamais une coordonnee (registre des mineurs,
  * lignes 9, 17, 19). Une demande en attente s accepte ou se refuse ici ; le serveur recompte
- * la place.
+ * la place. PAR-L11c (14/10) : le SITE la monte aussi (EventDetails.web.js) ; un refus du
+ * serveur s ecrit donc sous la ligne, jamais par `Alert` (une fenetre systeme sur le site).
  * @param {object} props - Les proprietes.
  * @param {string} props.eventId - L evenement.
  * @returns {import('react').ReactElement|null} La liste, ou rien sans enfant inscrit.
@@ -363,15 +404,45 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
   } = useTheme();
   const { data: rows = [] } = /** @type {ListeLue} */ (useEventChildRegistrations(eventId));
   const decide = /** @type {GesteServeur} */ (useDecideChildRegistration(eventId));
+  // La phrase du dernier refus du serveur, par ligne.
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
 
   /** @typedef {{ decision: string, registrationId: string }} Decision */
   const run = useCallback(async (/** @type {Decision} */ variables) => {
+    const id = variables.registrationId;
+    setErrors(({ [id]: _old, ...others }) => others);
     try {
       await decide.mutateAsync(variables);
     } catch (error) {
-      Alert.alert(t('childEventRegistration.organizer.errorTitle'), t(errorKey(error)));
+      setErrors((previous) => ({ ...previous, [id]: t(errorKey(error)) }));
     }
   }, [decide, t]);
+
+  // 👪 PAR-L11c (14/10) point 4 — « Refuser » ouvre une feuille : la ligne visee, le motif
+  // saisi (facultatif, borne comme au serveur), et le refus du serveur, dit DANS la feuille
+  // pour que le motif ne se perde pas.
+  const [refusing, setRefusing] = useState(/** @type {any} */ (null));
+  const [reason, setReason] = useState('');
+  const [refuseError, setRefuseError] = useState('');
+  const openRefuse = useCallback((/** @type {any} */ row) => {
+    setReason('');
+    setRefuseError('');
+    setRefusing(row);
+  }, []);
+  const closeRefuse = useCallback(() => setRefusing(null), []);
+  const confirmRefuse = useCallback(async () => {
+    setRefuseError('');
+    try {
+      await decide.mutateAsync({
+        decision: 'refuse',
+        reason: reason.trim(),
+        registrationId: refusing?.documentId,
+      });
+      setRefusing(null);
+    } catch (error) {
+      setRefuseError(t(errorKey(error)));
+    }
+  }, [decide, reason, refusing, t]);
 
   if (!Array.isArray(rows) || rows.length === 0) return null;
 
@@ -419,7 +490,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
               variant="Primary"
             />
             <Button
-              onPress={() => run({ decision: 'refuse', registrationId: row.documentId })}
+              onPress={() => openRefuse(row)}
               style={{ flex: 1 }}
               title={t('childEventRegistration.organizer.refuse')}
               variant="Secondary"
@@ -430,6 +501,15 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
             {t('childEventRegistration.organizer.accepted')}
           </Text>
         )}
+        {errors[row.documentId] ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[Fonts.p2Bold, Fonts.error300]}
+            testID={`child-registration-error-${row.documentId}`}
+          >
+            {errors[row.documentId]}
+          </Text>
+        ) : null}
       </View>
     );
   };
@@ -440,6 +520,50 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
         {t('childEventRegistration.organizer.title')}
       </Text>
       {rows.map(renderRow)}
+      <BottomModal
+        close={closeRefuse}
+        footerComponent={(
+          <View style={[Spaces.gap[8]]}>
+            <Button
+              isLoading={decide.isPending}
+              onPress={confirmRefuse}
+              title={t('childEventRegistration.organizer.refuseSheet.confirm')}
+              variant="Danger"
+            />
+            <Button
+              onPress={closeRefuse}
+              title={t('childEventRegistration.actions.cancel')}
+              variant="Ghost"
+            />
+          </View>
+        )}
+        isVisible={Boolean(refusing)}
+      >
+        <View style={[Spaces.gap[12]]} testID="child-registration-refuse-sheet">
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('childEventRegistration.organizer.refuseSheet.title', {
+              firstname: String(refusing?.child?.firstname || ''),
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('childEventRegistration.organizer.refuseSheet.hint')}
+          </Text>
+          <Input
+            label={t('childEventRegistration.organizer.refuseSheet.label')}
+            maxLength={REFUSAL_REASON_MAX_LENGTH}
+            multiline
+            onChangeText={setReason}
+            placeholder={t('childEventRegistration.organizer.refuseSheet.placeholder')}
+            value={reason}
+          />
+          {refuseError ? (
+            <Text accessibilityLiveRegion="polite" style={[Fonts.p2Bold, Fonts.error300]}>
+              {refuseError}
+            </Text>
+          ) : null}
+        </View>
+      </BottomModal>
     </View>
   );
 }

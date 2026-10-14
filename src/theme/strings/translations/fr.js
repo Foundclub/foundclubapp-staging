@@ -23231,6 +23231,37 @@ export default {
       tournament: 'Ce tournoi inscrit des équipes : '
         + "l'encadrement de l'équipe de ton enfant s'en occupe.",
     },
+    // 👪 PAR-L11c (14/10) — « Annuler l'inscription » : feuille, puis issue en bandeau
+    // (ChildRegistrationCancel.js). Même motif que myChildren.cancelRequest (PAR-L8).
+    cancel: {
+      confirm: "Annuler l'inscription",
+      confirmMessage: "L'organisateur de « {{event}} » ne la verra plus. "
+        + 'Tu pourras inscrire {{firstname}} de nouveau.',
+      confirmTitle: "Annuler l'inscription pour {{firstname}} ?",
+      done: 'Inscription annulée.',
+      doneHint: 'Tu peux inscrire {{firstname}} de nouveau.',
+      failed: "L'inscription n'a pas pu être annulée.",
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      gone: "Cette inscription n'existe plus.",
+      goneHint: "Il n'y a plus rien à annuler.",
+      keep: "Garder l'inscription",
+      link: "Annuler l'inscription",
+      linkLabel: "Annuler l'inscription pour {{firstname}}",
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: "L'annulation n'est pas encore disponible.",
+      unavailableHint: "L'inscription est toujours là. Réessaie plus tard.",
+    },
+    // 👪 PAR-L11c (14/10) — fiche de l'enfant, bloc « Ses événements » (DeclaredChildPage).
+    childPage: {
+      accepted: 'Inscription confirmée',
+      declined: 'Refusée',
+      error: 'Impossible de charger ses événements.',
+      on: 'Le {{date}}',
+      open: "Voir l'événement",
+      pending: 'En attente',
+      reason: 'Motif : {{reason}}',
+      title: 'Ses événements',
+    },
     errors: {
       alreadyDecided: 'Cette demande a déjà été traitée.',
       generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",
@@ -23242,6 +23273,14 @@ export default {
       errorTitle: 'Action impossible',
       parentLine: 'Parent : {{name}}',
       refuse: 'Refuser',
+      // 👪 PAR-L11c (14/10) — la feuille du refus, avec son motif facultatif.
+      refuseSheet: {
+        confirm: "Refuser l'inscription",
+        hint: 'Le parent verra ce motif.',
+        label: 'Motif (facultatif)',
+        placeholder: 'Ex. : groupe complet',
+        title: "Refuser l'inscription pour {{firstname}} ?",
+      },
       title: 'Enfants inscrits par leurs parents',
     },
     reasons: {
@@ -23275,6 +23314,8 @@ export default {
       noChild: "Tu n'as pas encore déclaré d'enfant. "
         + 'Ajoute-le depuis « Mes enfants », puis reviens ici.',
       reminder: '{{type}} · {{date}}',
+      // PAR-L11c (14/10) — la catégorie est montrée, rien n'est bloqué (design planche 9).
+      reminderWithCategory: '{{type}} · {{category}} · {{date}}',
       title: 'Qui inscris-tu ?',
     },
     status: {

@@ -23,6 +23,8 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useGetMyDeclaredChildren: () => ({ data: mockChildren.current }),
 }));
 jest.mock('@/services/eventChildRegistration/eventChildRegistrationQueries', () => ({
+  // PAR-L11c (14/10) : le bloc sait annuler (temoin : EventChildRegistration.PARL11C.test.js).
+  useCancelChildRegistration: () => ({ isPending: false, mutate: jest.fn() }),
   useDecideChildRegistration: () => ({ isPending: false, mutateAsync: mockDecide }),
   useEventChildRegistrations: () => ({ data: mockRows.current }),
   useMyChildRegistrations: () => ({ data: mockMine.current }),

@@ -18,6 +18,11 @@ import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  ChildRegistrationCancelBanner,
+  ChildRegistrationCancelSheet,
+  useChildRegistrationCancel,
+} from '@/views/event/components/ChildRegistrationCancel';
 import { feedbackCardStyle, NewPill } from '@/views/profile/coachFeedback/CoachFeedbackList';
 import {
   newFeedbackKeys,
@@ -55,6 +60,9 @@ import {
   useDeleteDeclaredChild,
   useGetMyDeclaredChildren,
 } from '@/services/declaredChild/declaredChildQueries';
+import {
+  useAllMyChildRegistrations,
+} from '@/services/eventChildRegistration/eventChildRegistrationQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
   useCancelParentLink,
@@ -375,6 +383,19 @@ function MyChildren({ route } = {}) {
     [mesDemandes?.data],
   );
 
+  // 👪 PAR-L11c (14/10) — « Ses événements » : TOUTES les inscriptions de mes enfants à des
+  // événements (une lecture, seulement quand une fiche est ouverte) ; la fiche garde celles du
+  // sien. Leur annulation : la feuille et le bandeau de l'événement (ChildRegistrationCancel).
+  const {
+    data: mesInscriptions,
+    error: erreurInscriptions,
+    refetch: relireLesInscriptions,
+  } = useAllMyChildRegistrations({ enabled: Boolean(route?.params?.childDocumentId) });
+  const annulationDInscription = useChildRegistrationCancel();
+  const ouvrirLEvenement = useCallback((inscription) => {
+    navigation.navigate(RouteNames.EventDetails, { eventId: inscription?.event?.documentId });
+  }, [navigation]);
+
   const relierUnCompte = useCallback((enfant) => {
     // Ecran pas encore route sur le site (webRouteExemptions) : le site EXPLIQUE au lieu
     // d atterrir en silence sur l accueil.
@@ -555,6 +576,10 @@ function MyChildren({ route } = {}) {
             onRetry={() => envoyerLAnnulation(issueDeLAnnulation?.demande)}
             resultat={issueDeLAnnulation}
           />
+          <ChildRegistrationCancelBanner
+            onRetry={annulationDInscription.retry}
+            outcome={annulationDInscription.outcome}
+          />
           <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
             {enfantOuvert ? (
               <DeclaredChildPage
@@ -562,12 +587,22 @@ function MyChildren({ route } = {}) {
                 demandes={demandesDe(enfantOuvert?.documentId, lignesDeDemandes)}
                 demandesEnErreur={Boolean(erreurDemandes)}
                 enfant={enfantOuvert}
+                evenements={(Array.isArray(mesInscriptions) ? mesInscriptions : []).filter(
+                  (inscription) => inscription?.child?.documentId === enfantOuvert?.documentId,
+                )}
+                evenementsEnErreur={Boolean(erreurInscriptions)}
+                inscriptionEnAnnulation={annulationDInscription.pendingId}
+                onCancelRegistration={annulationDInscription.ask}
                 onCancelRequest={setDemandeAAnnuler}
                 onDelete={supprimerDepuisLaFiche}
                 onEdit={ouvrirFormulaire}
                 onGiveAccount={relierUnCompte}
                 onOpenCard={ouvrirSaCarte}
+                onOpenEvent={ouvrirLEvenement}
                 onRetryDemandes={relireLesDemandes ? () => relireLesDemandes() : undefined}
+                onRetryEvenements={relireLesInscriptions
+                  ? () => relireLesInscriptions()
+                  : undefined}
                 onSearchClub={chercherUnClub}
               />
             ) : (
@@ -582,6 +617,13 @@ function MyChildren({ route } = {}) {
           enfant={enfantOuvert}
           onClose={fermerLAnnulation}
           onConfirm={envoyerLAnnulation}
+        />
+        <ChildRegistrationCancelSheet
+          eventName={String(annulationDInscription.toCancel?.event?.name || '').trim()
+            || t('childEventRegistration.sheet.defaultType')}
+          onClose={annulationDInscription.close}
+          onConfirm={annulationDInscription.confirm}
+          registration={annulationDInscription.toCancel}
         />
       </ScreenContainer>
     );
