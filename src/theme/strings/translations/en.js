@@ -5881,6 +5881,17 @@ export default {
       seancesOuCreneaux_one: '{{count}} session or slot affected',
       seancesOuCreneaux_other: '{{count}} sessions or slots affected',
     },
+    // CRFERM (13/10, board P4v4 states 1, 7, 8, 9) — from the home page: the facility first.
+    choix: {
+      ajouter: 'Add a facility',
+      erreur: 'The facilities could not be loaded.',
+      erreurAide: 'Check the connection, then try again. Nothing was lost.',
+      question: 'Which facility are you closing?',
+      questionBloquer: 'Which facility are you blocking?',
+      reessayer: 'Try again',
+      vide: 'No facility to close',
+      videAide: 'Add your gyms, pitches and halls first.',
+    },
     confirmer: {
       annuler: 'Cancel',
       bloquer: 'Block',
@@ -5900,10 +5911,28 @@ export default {
       introuvable: 'This closure no longer exists.',
       saisie: 'Check the dates, times and reason.',
     },
+    // CRFERM (13/10, COL-010) — the mark on a session card.
+    etiquette: {
+      bloque: 'Blocked by the town at this time',
+      bloqueDeplacer: 'Blocked by the town · to move',
+      deplacer: 'Facility closed · to move',
+      deplacerAide: 'Opens the session editing.',
+      deplacerFeminin: '{{lieu}} closed · to move',
+      deplacerMasculin: '{{lieu}} closed · to move',
+      fermeHeure: 'Facility closed at this time',
+      fermeHeureFeminin: '{{lieu}} closed at this time',
+      fermeHeureMasculin: '{{lieu}} closed at this time',
+      fermeJour: 'Facility closed that day',
+      fermeJourFeminin: '{{lieu}} closed that day',
+      fermeJourMasculin: '{{lieu}} closed that day',
+    },
     form: {
       a: 'To',
       au: 'To',
       boutonBloquer: 'Block for the town',
+      // CRFERM (13/10, board P4v4 state 3 bis): some hours only.
+      boutonFermer: 'Close the facility',
+      boutonFermerFeminin: 'Close the {{lieu}}',
       boutonFermerJour: 'Close the facility that day',
       // FINITIONS11-COLL (03/10) — board 25: worded after the facility type.
       boutonFermerJourFeminin: 'Close the {{lieu}} that day',
@@ -5911,14 +5940,22 @@ export default {
       boutonFermerJours: 'Close the facility on those days',
       boutonFermerJoursFeminin: 'Close the {{lieu}} on those days',
       boutonFermerJoursMasculin: 'Close the {{lieu}} on those days',
+      boutonFermerMasculin: 'Close the {{lieu}}',
       changer: 'Change',
+      // CRFERM (13/10, COL-008) — an empty date waits for “Choose”: short, on one line.
+      choisir: 'Choose',
       choisirInstallation: 'Choose the facility',
       // SAIS (08/10, T20 lot 1) — an empty date says so.
       choisirUnJour: 'Choose a day',
       de: 'From',
+      // CRFERM (13/10, board P4v4 state 4) — the name and the note, folded.
+      deplier: 'Add a name or a note for the clubs',
       du: 'From',
       enregistrer: 'Save changes',
       formatHeure: 'Write a time as HH:MM (for example 09:00).',
+      // CRFERM (13/10) — the time of the first and the last day.
+      heureDebut: 'Start time',
+      heureFin: 'End time',
       jour: 'Day',
       // SAIS (08/10, T20 lot 2) — a greyed-out button says what is missing.
       manque: {
@@ -5946,13 +5983,20 @@ export default {
       quitterPerdu: 'What you entered will be lost.',
       quitterTitre: 'Leave without saving?',
       rester: 'Stay',
+      sinonLesHeures: 'Otherwise, choose the times.',
       titreBloquer: 'Block a time slot',
       titreFermer: 'Close a facility',
       titreModifier: 'Edit the closure',
+      touteLaJournee: 'All day',
     },
     jours: {
+      // CRFERM (13/10): a closure may give the time of its first and last day.
+      a: '{{jour}} at {{heure}}',
+      deA: 'from {{debut}} to {{fin}}',
+      des: 'from {{heure}}',
       du: 'from {{debut}} to {{fin}}',
       journee: 'All day',
+      jusqua: 'until {{heure}}',
     },
     liste: {
       bloquer: 'Block a time slot',
@@ -5994,6 +6038,8 @@ export default {
       annuler: 'Cancel the training session',
       deplacer: 'Change the time or place',
       joueurs: 'Players are only notified if the club moves or cancels.',
+      // CRFERM (13/10) — the banner of a player or a parent, without any action.
+      membre: 'Your club may move or cancel the session: you will be notified.',
     },
   },
   // COLL-C5 (03/10/2026) — the City's figures (same keys as fr.js).
@@ -9605,7 +9651,19 @@ export default {
         allowAndNotifyConflict: 'This slot exceeds capacity, but it will remain allowed and will notify the club managers.',
         allowAndNotifyHint: 'Slot full at this time — the club allows it anyway, the event stays confirmed.',
         capacityAvailable: 'This facility still has capacity for this slot.',
+        // CRFERM (13/10, COL-011) — the back arrow, named.
+        changerLaDate: 'Change the date',
         disabledNextHint: 'Select a club facility or enter an external address to continue.',
+        // CRFERM (13/10, COL-011) — the closed facility, told to the club: place, days, reason.
+        fermeture: {
+          bloque: 'This facility is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          bloqueFeminin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          bloqueMasculin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          ferme: 'This facility is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          fermeFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          fermeMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          sansDetail: 'The town has closed this facility at that time. Choose another day or another facility.',
+        },
         focusSubtitle: 'Where does the event take place?',
         helper: 'Select a club venue or enter an external address.',
         installationHelper: 'Choose an existing facility from your club.',

@@ -610,6 +610,9 @@ function NewConversation({ navigation, route }) {
     );
   }
 
+  // 🤖 ANDROIDBAR-4 — « Nouveau groupe » ouvre le clavier dès l'arrivée (nom en `autoFocus`) :
+  // sans évitement, il recouvrait la barre « Créer le groupe » — sur Android 15/16 (bord à bord)
+  // comme sur iPhone. Celui du ScreenContainer remonte la barre ; la liste, elle, rétrécit.
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -619,6 +622,7 @@ function NewConversation({ navigation, route }) {
         Alignments.column,
         Alignments.fill,
       ]}
+      keyboardAvoiding
     >
       {/* Header — MSG1A (§3.15) : titre et sous-titre qui disent la regle, puis le compte. */}
       <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter]}>

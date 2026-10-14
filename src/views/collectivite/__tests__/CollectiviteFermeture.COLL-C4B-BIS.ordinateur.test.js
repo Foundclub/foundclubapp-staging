@@ -220,7 +220,8 @@ test('C4B-BIS-1/3 ordinateur, depuis l accueil (sans installation) : on la chois
   mockParams = { collectiviteId: 'ville-montrivage', mode: 'fermer' };
   const arbre = await rendre(<CollectiviteFermeture />);
   expect(mockNavigation.replace).not.toHaveBeenCalled();
-  expect(textes(arbre)).toContain('Choisissez l’installation');
+  // CRFERM (planche P4v4, état 1) : une seule question, une carte par installation.
+  expect(textes(arbre)).toContain('Quelle installation fermez-vous ?');
   await act(async () => { parTestID(arbre, 'fermeture-installation-dojo').props.onPress(); });
   expect(mockNavigation.replace).toHaveBeenCalledWith('PlanningWeekFullscreen', {
     espace: 'ville',
@@ -277,11 +278,15 @@ test('C4B-BIS-1/5 le PANNEAU : titre de la planche, sans choix d installation ; 
   expect(onCancel).toHaveBeenCalled();
 });
 
-test('C4B-BIS-5/1 telephone, « Fermer » : la boite de l installation dit aussi ses horaires (etat 1) ; « Bloquer », la capacite seule (etat 3)', async () => {
+// CRFERM (13/10, planche P4v4) : la boîte dit « type · capacité » (« Gymnase · 2 équipes à la
+// fois »), pour Fermer comme pour Bloquer ; les horaires d ouverture n y sont plus (une fermeture a
+// désormais ses propres heures, et les horaires ont quitté le formulaire de l installation le 07/10).
+test('C4B-BIS-5/1 telephone : la boite de l installation dit sa capacite (type · capacite), sans horaires, pour Fermer comme pour Bloquer', async () => {
   mockOrdinateur = false;
   mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
   const arbre = await rendre(<CollectiviteFermeture />);
-  expect(textes(arbre)).toContain('2 équipes à la fois · 08:00 – 22:00');
+  expect(textes(arbre)).toContain('2 équipes à la fois');
+  expect(textes(arbre).join('|')).not.toContain('08:00 – 22:00');
   mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' };
   const arbreBloquer = await rendre(<CollectiviteFermeture />);
   expect(textes(arbreBloquer)).toContain('2 équipes à la fois');
