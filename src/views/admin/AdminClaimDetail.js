@@ -258,6 +258,8 @@ function AdminClaimDetail() {
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={Spaces.padding[16]}
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
       title={t('adminClaimDetail.screenTitle', 'Detail demande')}
     >
       <ScrollView showsVerticalScrollIndicator={false}>

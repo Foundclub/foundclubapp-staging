@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -42,7 +43,7 @@ const buildDateTimeIso = (baseDate, timeValue) => {
  */
 function EventWizardLocation({ navigation, route }) {
   const { t } = useTranslation();
-  const { Fonts, Spaces } = useTheme();
+  const { Colors, Fonts, Spaces } = useTheme();
   const { userData } = useAuth();
   const { dispatch, state } = useEventWizard();
   // La creation d'installation est refusee cote serveur aux non-dirigeants (403) :
@@ -147,14 +148,30 @@ function EventWizardLocation({ navigation, route }) {
           teamId={state.team?.documentId || null}
           withVilleSlots
         />
+        {/* CRFERM (13/10, COL-011) : la phrase dit la fermeture que le serveur rend (`closure` :
+            lieu, jours, motif ; jamais le mot de la Ville), au « tu », en ORANGE (attention, pas
+            erreur) ; « Changer la date » ramène à l étape « Date & horaire » (le geste de la
+            flèche Retour, nommé). */}
         {isBlocked ? (
-          <Text style={[Fonts.p3, Fonts.error700]}>
-            {t(
-              'eventWizard.steps.location.facilityClosed',
-              'La mairie a rendu cette installation indisponible sur ce créneau. '
-                + 'Choisissez un autre horaire ou une autre installation.',
-            )}
-          </Text>
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p3, { color: Colors.warning500 }]} testID="lieu-fermeture">
+              {closureRefusalText(
+                t,
+                availability.data?.data?.closure || null,
+                availability.data?.data?.facility?.name,
+              )}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => navigation.goBack()}
+              style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+              testID="lieu-changer-la-date"
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizard.steps.location.changerLaDate', 'Changer la date')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
         {isAvailabilityUnknown ? (
           <View>

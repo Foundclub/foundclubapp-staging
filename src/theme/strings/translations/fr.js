@@ -6417,6 +6417,17 @@ export default {
       seancesOuCreneaux_one: '{{count}} séance ou créneau touché',
       seancesOuCreneaux_other: '{{count}} séances ou créneaux touchés',
     },
+    // CRFERM (13/10, planche P4v4 états 1, 7, 8, 9) — depuis l’accueil : d’abord l’installation.
+    choix: {
+      ajouter: 'Ajouter une installation',
+      erreur: 'Les installations n’ont pas pu être lues.',
+      erreurAide: 'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
+      question: 'Quelle installation fermez-vous ?',
+      questionBloquer: 'Quelle installation bloquez-vous ?',
+      reessayer: 'Réessayer',
+      vide: 'Aucune installation à fermer',
+      videAide: 'Ajoutez d’abord vos gymnases, terrains et salles.',
+    },
     confirmer: {
       annuler: 'Annuler',
       bloquer: 'Bloquer',
@@ -6436,10 +6447,28 @@ export default {
       introuvable: 'Cette fermeture n’existe plus.',
       saisie: 'Vérifiez les dates, les heures et le motif.',
     },
+    // CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee) — la marque sur la carte d’une séance.
+    etiquette: {
+      bloque: 'Bloqué par la Ville à cette heure',
+      bloqueDeplacer: 'Bloqué par la Ville · à déplacer',
+      deplacer: 'Installation fermée · à déplacer',
+      deplacerAide: 'Ouvre la modification de la séance.',
+      deplacerFeminin: '{{lieu}} fermée · à déplacer',
+      deplacerMasculin: '{{lieu}} fermé · à déplacer',
+      fermeHeure: 'Installation fermée à cette heure',
+      fermeHeureFeminin: '{{lieu}} fermée à cette heure',
+      fermeHeureMasculin: '{{lieu}} fermé à cette heure',
+      fermeJour: 'Installation fermée ce jour-là',
+      fermeJourFeminin: '{{lieu}} fermée ce jour-là',
+      fermeJourMasculin: '{{lieu}} fermé ce jour-là',
+    },
     form: {
       a: 'À',
       au: 'Au',
       boutonBloquer: 'Bloquer pour la Ville',
+      // CRFERM (13/10, planche P4v4 état 3 bis) : certaines heures seulement.
+      boutonFermer: 'Fermer l’installation',
+      boutonFermerFeminin: 'Fermer la {{lieu}}',
       boutonFermerJour: 'Fermer l’installation ce jour-là',
       // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
       boutonFermerJourFeminin: 'Fermer la {{lieu}} ce jour-là',
@@ -6447,14 +6476,22 @@ export default {
       boutonFermerJours: 'Fermer l’installation ces jours-là',
       boutonFermerJoursFeminin: 'Fermer la {{lieu}} ces jours-là',
       boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
+      boutonFermerMasculin: 'Fermer le {{lieu}}',
       changer: 'Changer',
+      // CRFERM (13/10, COL-008) — une date vide attend « Choisir » : court, sur une ligne.
+      choisir: 'Choisir',
       choisirInstallation: 'Choisissez l’installation',
       // SAIS (08/10, T20 lot 1) — une date vide le dit (l’espace de la Ville vouvoie).
       choisirUnJour: 'Choisissez un jour',
       de: 'De',
+      // CRFERM (13/10, planche P4v4 état 4) — le nom et le mot, repliés.
+      deplier: 'Ajouter un nom ou un mot pour les clubs',
       du: 'Du',
       enregistrer: 'Enregistrer les changements',
       formatHeure: 'Une heure s’écrit HH:MM (par exemple 09:00).',
+      // CRFERM (13/10, « heures : plage ») — l’heure du premier et du dernier jour.
+      heureDebut: 'Heure de début',
+      heureFin: 'Heure de fin',
       jour: 'Jour',
       // SAIS (08/10, T20 lot 2) — un bouton grisé dit ce qui manque.
       manque: {
@@ -6482,13 +6519,20 @@ export default {
       quitterPerdu: 'Ce que vous avez saisi sera perdu.',
       quitterTitre: 'Quitter sans enregistrer ?',
       rester: 'Rester',
+      sinonLesHeures: 'Sinon, choisissez les heures.',
       titreBloquer: 'Bloquer un créneau',
       titreFermer: 'Fermer une installation',
       titreModifier: 'Modifier la fermeture',
+      touteLaJournee: 'Toute la journée',
     },
     jours: {
+      // CRFERM (13/10, « heures : plage ») : l’heure du premier et du dernier jour.
+      a: '{{jour}} à {{heure}}',
+      deA: 'de {{debut}} à {{fin}}',
+      des: 'dès {{heure}}',
       du: 'du {{debut}} au {{fin}}',
       journee: 'Toute la journée',
+      jusqua: 'jusqu’à {{heure}}',
     },
     liste: {
       bloquer: 'Bloquer un créneau',
@@ -6531,6 +6575,8 @@ export default {
       annuler: 'Annuler l’entraînement',
       deplacer: 'Changer l’heure ou le lieu',
       joueurs: 'Les joueurs ne sont prévenus que si le club déplace ou annule.',
+      // CRFERM (13/10, « D8 B ») — le bandeau d’un joueur ou d’un parent, sans geste.
+      membre: 'Ton club peut déplacer ou annuler la séance : tu seras prévenu·e.',
     },
   },
   // COLL-C5 (03/10/2026) — les chiffres de la Ville : la page « Chiffres et export » (planche 30),
@@ -9904,8 +9950,27 @@ export default {
         // eslint-disable-next-line max-len
         allowAndNotifyHint: "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
         capacityAvailable: 'Cette installation a encore de la capacité pour ce créneau.',
+        // CRFERM (13/10, COL-011) — le geste de la flèche Retour, nommé.
+        changerLaDate: 'Changer la date',
         // eslint-disable-next-line max-len
         disabledNextHint: 'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.',
+        // CRFERM (13/10, COL-011) — l’installation fermée, dite au club : lieu, jours, motif.
+        fermeture: {
+          // eslint-disable-next-line max-len
+          bloque: 'Cette installation est réservée par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          bloqueFeminin: '{{lieu}} est réservée par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          bloqueMasculin: '{{lieu}} est réservé par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          ferme: 'Cette installation est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          sansDetail: 'La Ville a fermé cette installation à ce moment-là. Choisis un autre jour ou une autre installation.',
+        },
         focusSubtitle: "Où se déroule l'événement ?",
         helper: 'Sélectionne un lieu du club ou saisis une adresse externe.',
         installationHelper: 'Choisis une installation existante de ton club.',

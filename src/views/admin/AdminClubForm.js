@@ -426,7 +426,12 @@ function AdminClubForm() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="tab-scene"
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={[Spaces.padding[16], Spaces.paddingBottom[32], Spaces.gap[14]]} showsVerticalScrollIndicator={false}>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
