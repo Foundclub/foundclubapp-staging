@@ -258,7 +258,8 @@ test('SAIS-2/1 FERMER : « Au » avant « Du » ⇒ « La fin doit suivre le dé
   expect(lu).toContain(ORDRE);
   expect(lu.indexOf('«Au»')).toBeLessThan(lu.indexOf(ORDRE));
   expect(lu.indexOf(ORDRE)).toBeLessThan(lu.indexOf('Motif'));
-  expect(lu.indexOf(ORDRE)).toBeLessThan(lu.indexOf('«Nom (facultatif)»'));
+  // CRFERM (planche P4v4) : le nom est replié derrière ce lien, sous le motif.
+  expect(lu.indexOf(ORDRE)).toBeLessThan(lu.indexOf('Ajouter un nom ou un mot pour les clubs'));
 });
 
 test('SAIS-2/2 BLOQUER : « À » avant « De » ⇒ la MÊME phrase, juste SOUS les heures', async () => {
@@ -279,6 +280,7 @@ test('SAIS-2/3 BLOQUER : « Pour quoi » devient les pastilles « Motif » de Fe
   };
   let arbre = await rendre();
   expect(champ('Pour quoi')).toBeUndefined();
+  await appuyer(parTestID(arbre, 'fermeture-deplier')); // CRFERM : nom et mot repliés
   expect(champ('Nom (facultatif)')).toBeDefined();
   expect(champ('Nom (facultatif)').placeholder).toBe('Forum des associations');
   // Aucun motif n est choisi a la place de la Ville : le bouton attend.
@@ -302,6 +304,7 @@ test('SAIS-2/3 BLOQUER : « Pour quoi » devient les pastilles « Motif » de Fe
   mockInputProps.length = 0;
   arbre = await rendre();
   await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+  await appuyer(parTestID(arbre, 'fermeture-deplier'));
   await saisir('Nom (facultatif)', ' Forum des associations ');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
@@ -354,9 +357,12 @@ test('SAIS-2/5 un bouton grisé dit ce qui manque, dans l ordre de l écran', as
   arbre = await rendre();
   expect(textes(arbre)).toContain('Choisissez les dates.');
 
+  // CRFERM (planche P4v4, état 1) : sans installation, une seule question, pas de bouton grisé.
   mockParams = { collectiviteId: 'ville-montrivage', mode: 'fermer' };
   arbre = await rendre();
-  expect(textes(arbre)).toContain('Choisissez l’installation.');
+  expect(textes(arbre)).toContain('Quelle installation fermez-vous ?');
+  expect(textes(arbre)).not.toContain('Choisissez l’installation.');
+  expect(parTestID(arbre, 'fermeture-envoyer')).toBeUndefined();
 
   // Une erreur dite ne se double pas d un « Choisissez ».
   mockParams = {
@@ -407,13 +413,15 @@ test('SAIS-2/7 une fermeture ENVOYÉE sort sans question (le remplacement par la
 });
 
 // SAIS lot 1 (T20) — une date vide le dit (captures T04a, T06a : boîtes VIDES) ; la Ville vouvoie.
-test('SAIS-1/ville une date vide dit « Choisissez un jour » (Fermer : Du, Au ; Bloquer : Jour)', async () => {
+// CRFERM (13/10, planche P4v4 et COL-008) : « Choisissez un jour » passait sur deux lignes ; la date
+// vide attend « Choisir », court, sur une ligne.
+test('SAIS-1/ville une date vide dit « Choisir » (Fermer : Du, Au ; Bloquer : Jour)', async () => {
   await rendre();
-  expect(champ('Du').placeholder).toBe('Choisissez un jour');
-  expect(champ('Au').placeholder).toBe('Choisissez un jour');
+  expect(champ('Du').placeholder).toBe('Choisir');
+  expect(champ('Au').placeholder).toBe('Choisir');
   mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' };
   await rendre();
-  expect(champ('Jour').placeholder).toBe('Choisissez un jour');
+  expect(champ('Jour').placeholder).toBe('Choisir');
 });
 
 test('SAIS-2/8 dans le panneau d ordinateur, aucune garde : le planning a sa croix', async () => {
