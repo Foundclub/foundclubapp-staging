@@ -101,6 +101,13 @@ jest.mock('react-native-blob-util', () => ({
   default: { config: jest.fn(), fs: { dirs: {} } },
 }));
 
+// RESA-L6A (14/10/2026) — l'interrupteur des gestes de l'organisateur d'une réservation : allumé
+// ici (états 6, 6 bis, D4), éteint le temps de l'état 6 ter (la doublure est un objet modifiable).
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  __esModule: true,
+  COMPLEXES_JOUEUR: true,
+}));
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),
@@ -765,6 +772,26 @@ describe('EventDetails — panneau organisateur : etats recenses', () => {
     });
 
     expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
+  });
+
+  // RESA-L6A (14/10/2026) — décision du chef de soutien (14/10 ~11h50, option B) : Privatiser,
+  // Chercher / Ouvrir aux joueurs et SOS répondent 403 depuis SECU-RESA (référence §8) ; ils ne
+  // se rendent qu'interrupteur COMPLEXES_JOUEUR allumé (allumé : états 6 et 6 bis), tant qu'un
+  // lot serveur ne les rouvre pas. « Réserver » (joinReservation, resté ouvert) ne bouge pas.
+  test('etat 6 ter — COMPLEXES_JOUEUR éteint : gestes de l organisateur absents', () => {
+    // eslint-disable-next-line global-require
+    const interrupteurs = require('@/config/fonctionsMasquees');
+    interrupteurs.COMPLEXES_JOUEUR = false;
+    try {
+      const root = mountScreen({
+        auth: { canManageEvent: () => true },
+        event: buildEvent({ type: { name: 'Réservation' } }),
+      });
+
+      expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(false);
+    } finally {
+      interrupteurs.COMPLEXES_JOUEUR = true;
+    }
   });
 
   test('etat 7 — tournoi : le panneau tournoi prend la main et propose ses actions', () => {

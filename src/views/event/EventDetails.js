@@ -122,6 +122,7 @@ import {
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SharePlatform from '@/platform/share';
@@ -7722,12 +7723,17 @@ function EventDetails({ navigation, route }) {
       const hasAlreadyJoined = event?.participations?.some((/** @type {any} */ participation) => participation?.documentId === userDocumentId);
       return (
         <View>
-          <EventReservationActions
-            event={event}
-            hasAlreadyJoined={hasAlreadyJoined}
-            mutations={mutations}
-            userData={userData}
-          />
+          {/* Privatiser, Chercher / Ouvrir aux joueurs, SOS : 403 depuis SECU-RESA (§8).
+              Rendus seulement interrupteur COMPLEXES_JOUEUR allumé, tant qu'un lot serveur
+              ne les rouvre pas (chef de soutien, 14/10). Témoin : EventDetailsManagePanel. */}
+          {COMPLEXES_JOUEUR ? (
+            <EventReservationActions
+              event={event}
+              hasAlreadyJoined={hasAlreadyJoined}
+              mutations={mutations}
+              userData={userData}
+            />
+          ) : null}
           {hasAlreadyJoined && (
             <Button disabled title={t('eventDetails.iMIn', 'Je participe !')} variant="Primary" />
           )}
