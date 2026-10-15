@@ -37,6 +37,9 @@ const mockRelancer = jest.fn(() => Promise.resolve({ alreadyRemindedCount: 0, re
 
 // 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
 // comme chaque service de l ecran (EventDetails.js:123-128).
+// Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
+jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,
   default: () => null,
