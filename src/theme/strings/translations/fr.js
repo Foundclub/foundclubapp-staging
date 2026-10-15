@@ -17316,6 +17316,7 @@ export default {
       // PARENT-FINITIONS 4 (14/10, E16) — le bandeau en arrivant dans le fil ouvert.
       conversationNamesJoin: ' et ',
       conversationOpened: 'Conversation ouverte avec {{names}}.',
+      conversationReady: 'Conversation avec {{names}}.',
       conversationReopened: 'Ta conversation avec {{names}} est rouverte.',
       // PAR-L9b (13/10, E17) — à qui part le message, les deux familles de réponses, le mot libre.
       noteLabel: 'Ajouter un mot (facultatif)',

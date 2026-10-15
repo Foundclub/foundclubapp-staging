@@ -616,7 +616,7 @@ describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16
 
   test('« Moi », fil NEUF : « Conversation ouverte avec Maryline. », après l arrivée', async () => {
     mockStartWhisperChat.mockResolvedValue({
-      createdAt: new Date().toISOString(), documentId: 'fil-maryline',
+      documentId: 'fil-maryline', openingOutcome: 'created',
     });
 
     await ouvrirLeFil(null);
@@ -632,7 +632,7 @@ describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16
 
   test('coach choisi, fil NEUF : « Conversation ouverte avec Maryline et Karim. »', async () => {
     mockStartWhisperChat.mockResolvedValue({
-      createdAt: new Date().toISOString(), documentId: 'fil-a-trois',
+      documentId: 'fil-a-trois', openingOutcome: 'created',
     });
 
     await ouvrirLeFil('Karim B. · coach U11 Filles');
@@ -644,7 +644,7 @@ describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16
 
   test('le fil EXISTAIT : « Ta conversation avec Maryline est rouverte. »', async () => {
     mockStartWhisperChat.mockResolvedValue({
-      createdAt: '2026-09-01T10:00:00.000Z', documentId: 'fil-maryline',
+      documentId: 'fil-maryline', openingOutcome: 'reused',
     });
 
     await ouvrirLeFil(null);
@@ -652,6 +652,39 @@ describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16
     expect(mockShowBanner).toHaveBeenCalledTimes(1);
     expect(mockShowBanner.mock.calls[0][0])
       .toMatchObject({ title: 'Ta conversation avec Maryline est rouverte.' });
+  });
+
+  test.each([
+    ['existant depuis 30 s', -30000, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['existant sans date', null, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['existant daté demain', 86400000, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['créé avec horloge décalée', -86400000, 'created', 'Conversation ouverte avec Maryline.'],
+    ['ancien serveur, date ancienne', -86400000, undefined, 'Conversation avec Maryline.'],
+    ['ancien serveur, sans date', null, undefined, 'Conversation avec Maryline.'],
+    ['indicateur inconnu', -86400000, 'other', 'Conversation avec Maryline.'],
+  ])('%s : le résultat du geste décide du verbe', async (_cas, decalage, openingOutcome, title) => {
+    mockStartWhisperChat.mockResolvedValue({
+      ...(decalage === null ? {} : { createdAt: new Date(Date.now() + decalage).toISOString() }),
+      documentId: 'fil-maryline',
+      openingOutcome,
+    });
+
+    await ouvrirLeFil(null);
+
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner.mock.calls[0][0]).toMatchObject({ title });
+    expect(navigation.navigate)
+      .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'fil-maryline' });
+  });
+
+  test('un refus serveur ne lie pas la demande et ne montre aucun bandeau', async () => {
+    mockStartWhisperChat.mockRejectedValue(new Error('Contact refusé'));
+
+    await ouvrirLeFil(null);
+
+    expect(respondClubInterestRequest).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockShowBanner).not.toHaveBeenCalled();
   });
 
   test('si le lien à la demande échoue, on n arrive nulle part : aucun bandeau', async () => {
