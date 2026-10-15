@@ -49,6 +49,7 @@ function JoinEventModal({
     Fonts,
     Spaces,
   } = useTheme();
+  /** @type {import('react-native').ViewStyle[]} */
   const checkableWrapperStyle = [
     ApplicationStyle.borderWidth0,
     ApplicationStyle.backgroundColor.transparent,

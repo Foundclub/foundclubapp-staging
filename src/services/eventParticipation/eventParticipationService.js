@@ -27,7 +27,8 @@ export const eventParticipationSchema = Joi.object({
 
 /**
  * Create a new event participation request
- * @param {{user: string, event: string, reason?: string}} eventParticipationData
+ * @param {{user: string, event: string, reason?: string,
+ * acceptRiskDeclaration?: boolean}} eventParticipationData
  * @returns {Promise<EventParticipation>} - The created request
  */
 export const createEventParticipation = async (eventParticipationData) => {
