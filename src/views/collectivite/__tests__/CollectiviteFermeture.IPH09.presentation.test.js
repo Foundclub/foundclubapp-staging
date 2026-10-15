@@ -281,3 +281,11 @@ test('IPH09 FC-005 : titre aéré et actions alignées à largeur égale, action
   await act(async () => actions[0].props.onPress());
   expect(closeFacility).not.toHaveBeenCalled();
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

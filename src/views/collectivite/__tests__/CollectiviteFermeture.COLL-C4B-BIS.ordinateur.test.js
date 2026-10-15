@@ -307,3 +307,11 @@ test('FIN18-2 ordinateur : le planning ouvert par « Fermer » garde le menu de 
     expect(mockNavigation.replace).toHaveBeenLastCalledWith('PlanningWeekFullscreen', expect.objectContaining({ espace: 'ville' }));
   }
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

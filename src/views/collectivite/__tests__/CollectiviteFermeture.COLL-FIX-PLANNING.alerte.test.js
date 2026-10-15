@@ -265,3 +265,11 @@ test('COLL-FIX-PLANNING — un refus du serveur se dit DANS l ecran, sans alerte
   expect(textes(arbre)).toContain('Seule la Ville ferme ou bloque ses installations.');
   expect(mockAlerte).not.toHaveBeenCalled();
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

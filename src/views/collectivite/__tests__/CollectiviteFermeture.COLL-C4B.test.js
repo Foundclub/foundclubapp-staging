@@ -674,3 +674,11 @@ test('FINITIONS-VILLE : Fermer / Bloquer — le titre s’écrit une fois, l’e
   expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
   expect(mockNavigation.setOptions).not.toHaveBeenCalledWith({ headerTitle: 'Fermer une installation' });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
