@@ -112,7 +112,7 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
-  useCollectiviteClubs: () => ({ data: [], isLoading: false, isError: false }),
+  useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
   useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
   // COLL-C5 (03/10) : « Utilisation » lit la saison (temoin COLL-C5.utilisation).
   useCollectiviteChiffres: () => ({ data: null, error: null, isLoading: false }),

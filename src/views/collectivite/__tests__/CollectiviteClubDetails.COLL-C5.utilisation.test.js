@@ -62,8 +62,6 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
-  useCollectiviteClubs: () => ({ data: [], isLoading: false, isError: false }),
-  useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useCollectiviteChiffres: (/** @type {any} */ collectiviteId, /** @type {any} */ periode) => {
     mockLectures(collectiviteId, periode);
     return mockChiffres;
@@ -86,11 +84,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
   useCollectiviteInstallations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
   }),
+  useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock(
