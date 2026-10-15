@@ -451,3 +451,11 @@ test('CRFIN-3/1 « Toute la journée » : sous les dates allumé, AU-DESSUS éte
   await attendre();
   expect(ordre()).toEqual(['Du', 'Au', 'Toute la journée']);
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

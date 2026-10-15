@@ -437,3 +437,11 @@ test('SAIS-2/8 dans le panneau d ordinateur, aucune garde : le planning a sa cro
   await saisir('Du', '10/10/2030');
   expect(mockNavigation.addListener).not.toHaveBeenCalledWith('beforeRemove', expect.anything());
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
