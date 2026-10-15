@@ -544,6 +544,13 @@ describe('D31 ① — la feuille d`edition doit pouvoir remonter au-dessus du cl
 });
 
 describe('D31 ② — le nom du champ n`est plus ecrit deux fois', () => {
+  it('Email conserve son clavier et demande le champ de feuille', async () => {
+    const arbre = await rendre(dirigeant);
+    await appuyerSur(arbre, 'Email');
+    expect(mockChampsSheet[0].useBottomSheetInput).toBe(true);
+    expect(mockChampsSheet[0].keyboardType).toBe('email-address');
+  });
+
   it('le champ texte ne reprend plus le libelle deja porte par le titre', async () => {
     const arbre = await rendre(dirigeant);
 

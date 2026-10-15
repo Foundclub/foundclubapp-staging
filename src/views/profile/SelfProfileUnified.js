@@ -880,6 +880,7 @@ function SelfProfileUnified({ navigation }) {
                 accessibilityLabel={editedField.label}
                 keyboardType={editedField.keyboardType}
                 onChangeText={setDraftValue}
+                useBottomSheetInput
                 value={String(draftValue ?? '')}
               />
             )}

@@ -1,7 +1,9 @@
 import {
-  Alert, ScrollView, StyleSheet, Switch, Text, TextInput,
+  Alert, Platform, ScrollView, StyleSheet, Switch, Text, TextInput,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import MatchCallUpManualPlayer from '../MatchCallUpManualPlayer';
 
@@ -328,6 +330,18 @@ describe('D77 ecran 3 — ajouter un joueur hors app', () => {
 // utiles) et il deborde sur TOUS des que le clavier retracte la fenetre — or
 // c'est un formulaire, le clavier y est ouvert presque tout le temps.
 describe('D84 — les 2 boutons du bas restent atteignables', () => {
+  test.each(['android', 'ios', 'web'])('%s : evitement reserve a Android', async (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    try {
+      const arbre = await rendre();
+      expect(arbre.root.findByType(ScreenContainer).props.keyboardAvoiding).toBe(os === 'android');
+      expect(arbre.root.findByType(ScreenContainer).props.bottomInsetMode).toBe('edge-to-edge');
+    } finally {
+      Platform.OS = previousOS;
+    }
+  });
+
   test('🥇 LE CONTENEUR DEFILANT EST BORNE — il ne se mesure pas sur son contenu', async () => {
     const arbre = await rendre();
     const style = StyleSheet.flatten(arbre.root.findByType(ScrollView).props.style) || {};
