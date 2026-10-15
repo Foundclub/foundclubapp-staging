@@ -675,9 +675,9 @@ function SeasonSlotForm({
       }
       setConflit(null);
       // 📐 COLL-R-A7-FINITIONS (planche P4v4-attribuer-entrees-tel, « Attribué ») : le tunnel se
-      // ferme, la bannière de l'app confirme sur l'écran d'origine. Le panneau du site, lui, ne
-      // change pas.
-      if (tunnelPleinEcran) {
+      // ferme, la bannière de l'app confirme sur l'écran d'origine. Même retour après la
+      // fermeture du panneau large ; la répartition du dirigeant garde son propre parcours.
+      if (parcoursGuide) {
         showBanner({
           body: nomDuClub
             ? t('collectiviteCreneaux.tunnel.estPrevenu', '{{club}} est prévenu.', {

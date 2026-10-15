@@ -244,14 +244,27 @@ describe('COLL-R-A7-FINITIONS 1 — la bulle de confirmation au retour sur l’�
     expect(mockShowBanner).not.toHaveBeenCalled();
   });
 
-  test('le panneau du site en grand écran ne change pas : pas de bulle', async () => {
+  test('la fermeture du panneau large confirme aussi le créneau attribué', async () => {
     const arbre = await monter({ ...DEPUIS_LE_PLANNING, pleinEcran: false });
     await choisir(arbre, 'Montrivage Basket');
     await appuyerSur(arbre, 'Suivant');
     await appuyerSur(arbre, 'Suivant');
     await appuyerSur(arbre, 'Attribuer pour la saison');
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
-    expect(mockShowBanner).not.toHaveBeenCalled();
+    expect(mockShowBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Montrivage Basket est prévenu.', title: 'Créneau attribué', tone: 'success',
+    }));
+  });
+
+  test('la fermeture du panneau large confirme aussi le créneau modifié', async () => {
+    const arbre = await monter({ pleinEcran: false, slot: CRENEAU });
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Enregistrer');
+    expect(mockShowBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Montrivage Basket est prévenu.', title: 'Créneau modifié', tone: 'success',
+    }));
   });
 });
 
