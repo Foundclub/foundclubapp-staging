@@ -3,7 +3,9 @@ import {
 } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  ImageBackground, Modal, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import {
   formatDay,
@@ -26,8 +28,11 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 
 import {
@@ -39,6 +44,7 @@ import {
 } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import texteInsecable from '@/utils/texteInsecable';
 
 // Deux elements aux deux bouts d une rangee.
@@ -89,6 +95,207 @@ export function PuceDeChoix({
     </TouchableOpacity>
   );
 }
+
+/**
+ * 📐 COLL-R-A7 (COL-005, planche P4v4-attribuer) — une ligne a cocher du tunnel plein ecran
+ * (`radio-row` du systeme de design) : le rond a gauche, l ecusson du club s il y en a un, le nom
+ * EN ENTIER (« STADE MARSEILLAIS UNIVERSITE CLUB (SMUC) » passe a la ligne), une ligne de plus
+ * en dessous (la place d une installation, « complet … » d un jour). Moins de gris (Adel, 13/10).
+ * ponytail: `WizardOptionCard` (la carte des tunnels) coupe le nom a une ligne et met son rond a
+ * droite ; la planche validee dit l inverse. Voie de sortie : lui donner ces deux options.
+ * @param {{
+ *   actif: boolean,
+ *   avertissement?: boolean,
+ *   club?: { logoUrl?: string | null, name: string } | null,
+ *   couleur?: string | null,
+ *   detail?: string | null,
+ *   libelle: string,
+ *   onPress: () => void,
+ *   testID?: string,
+ * }} props
+ * @returns {import('react').ReactElement} La ligne.
+ */
+function LigneDeChoix({
+  actif, avertissement = false, club = null, couleur = null, detail = null, libelle, onPress,
+  testID,
+}) {
+  const { Alignments, Colors, Fonts } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ checked: actif }}
+      onPress={onPress}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        {
+          backgroundColor: actif
+            ? withAlpha(Colors.primary500, 0.08)
+            : withAlpha(Colors.primary800, 0.7),
+          borderColor: actif ? Colors.primary500 : withAlpha(Colors.primary500, 0.3),
+          borderLeftColor: couleur || undefined,
+          borderLeftWidth: couleur ? 4 : 1,
+          borderRadius: 12,
+          borderWidth: 1,
+          gap: 12,
+          minHeight: 56,
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+        },
+      ]}
+      testID={testID}
+    >
+      <View
+        style={{
+          alignItems: 'center',
+          borderColor: actif ? Colors.primary500 : Colors.primary200,
+          borderRadius: 12,
+          borderWidth: 2,
+          height: 24,
+          justifyContent: 'center',
+          width: 24,
+        }}
+      >
+        {actif ? (
+          <View
+            style={{
+              backgroundColor: Colors.primary500, borderRadius: 6, height: 12, width: 12,
+            }}
+          />
+        ) : null}
+      </View>
+      {club ? (
+        <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+      ) : null}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{libelle}</Text>
+        {detail ? (
+          <Text style={[Fonts.p3, avertissement ? Fonts.warning500 : Fonts.neutral200]}>
+            {detail}
+          </Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * 📐 COLL-R-A7 — une ligne du recapitulatif (planche P4v4-attribuer, 5/5) : ce qu elle dit, en
+ * petit ; sa valeur ; un crayon quand elle se touche (elle ramene a son etape, rien n est perdu).
+ * @param {{
+ *   cle: string,
+ *   derniere?: boolean,
+ *   libelleModifier: string,
+ *   onPress?: () => void,
+ *   testID: string,
+ *   valeur: string,
+ * }} props
+ * @returns {import('react').ReactElement} La ligne.
+ */
+function LigneDuRecap({
+  cle, derniere = false, libelleModifier, onPress, testID, valeur,
+}) {
+  const { Alignments, Colors, Fonts } = useTheme();
+  const contenu = (
+    <>
+      <View style={{ flex: 1 }}>
+        <Text style={[Fonts.p3, Fonts.primary200]}>{cle}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{valeur}</Text>
+      </View>
+      {onPress ? <SvgIcon color={Colors.neutral200} height={16} name="edit" width={16} /> : null}
+    </>
+  );
+  const style = [
+    Alignments.row,
+    Alignments.alignCenter,
+    {
+      borderBottomColor: withAlpha(Colors.neutral00, 0.08),
+      borderBottomWidth: derniere ? 0 : 1,
+      gap: 12,
+      minHeight: 56,
+      paddingVertical: 8,
+    },
+  ];
+  return onPress ? (
+    <TouchableOpacity
+      accessibilityLabel={libelleModifier}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={style}
+      testID={testID}
+    >
+      {contenu}
+    </TouchableOpacity>
+  ) : <View style={style} testID={testID}>{contenu}</View>;
+}
+
+/**
+ * 📐 COLL-R-A7 — la fenetre plein ecran du tunnel (le motif de « Convoquer », ConvocationWizard),
+ * posee par l ecran : aucune route neuve. Elle passe sous les barres d Android
+ * (`statusBarTranslucent`) ; le gabarit des tunnels reserve le haut (ScreenContainer) et le bas
+ * (`insets.bottom + 12`). Le retour d Android appelle `onRequestClose`.
+ * Elle peint son propre fond (le fond de l app) : sur le site, une fenetre est BLANCHE par defaut
+ * et le gabarit compte sur le fond de la page (banc du site, 13/10 : titre blanc sur blanc).
+ * @param {{ children: import('react').ReactNode, onRequestClose: () => void }} props
+ * @returns {import('react').ReactElement} La fenetre.
+ */
+export function FenetrePleinEcran({ children, onRequestClose }) {
+  const { Colors, Images } = useTheme();
+  return (
+    <Modal
+      animationType="slide"
+      onRequestClose={onRequestClose}
+      presentationStyle="fullScreen"
+      statusBarTranslucent
+      transparent={false}
+      visible
+    >
+      <ImageBackground
+        resizeMode="cover"
+        source={Images.bg2}
+        style={{ backgroundColor: Colors.primary700, flex: 1 }}
+      >
+        {children}
+      </ImageBackground>
+    </Modal>
+  );
+}
+
+/**
+ * 📐 COLL-R-A7 — le meme plein ecran quand le tunnel ne peut pas encore s ouvrir (chargement,
+ * erreur, Ville sans installation) : la question de l etape, la croix, ce qui l empeche.
+ * Ici, et pas dans l ecran qui l ouvre : le gabarit des tunnels reste hors de `src/views`, ou
+ * ANDROIDBAR-6 exige qu il soit rendu en racine (WizardStepLayoutANDROIDBAR6.clavier.test.js).
+ * @param {{
+ *   children: import('react').ReactNode,
+ *   onClose: () => void,
+ *   sousTitre?: string,
+ *   titre: string,
+ * }} props
+ * @returns {import('react').ReactElement} La fenetre.
+ */
+export function TunnelEnAttente({
+  children, onClose, sousTitre, titre,
+}) {
+  return (
+    <FenetrePleinEcran onRequestClose={onClose}>
+      <WizardStepLayout headerVariant="focus" onClose={onClose} subtitle={sousTitre} title={titre}>
+        {children}
+      </WizardStepLayout>
+    </FenetrePleinEcran>
+  );
+}
+
+/**
+ * Les creneaux d un jour de la semaine type, sans celui qu on modifie.
+ * @param {any} creneaux - Les creneaux de l installation (lecture).
+ * @param {number | null} numero - Le jour ISO.
+ * @param {string | undefined} exclu - Le creneau modifie.
+ * @returns {any[]} Les creneaux de ce jour.
+ */
+const creneauxDuJour = (creneaux, numero, exclu) => (Array.isArray(creneaux) ? creneaux : [])
+  .filter((creneau) => Number(creneau?.weekday) === Number(numero)
+    && creneau?.documentId !== exclu);
 
 /**
  * Le prochain jour civil (aujourd hui compris) qui tombe un jour ISO donne.
@@ -145,8 +352,16 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  * PENDANT la saisie (et plus seulement apres un 409), les 3 gestes de la planche : « Voir les
  * heures libres du <jour> » (les heures ou il reste une place, un appui les pose),
  * « Attribuer quand meme » (confirme d emblee) et « Changer l heure ».
+ *
+ * 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A, planche P4v4-attribuer) — `pleinEcran` :
+ * au telephone, le tunnel s ouvre dans une FENETRE PLEIN ECRAN posee par l ecran (aucune route
+ * neuve), avec le gabarit des tunnels « Creer un evenement » (`WizardStepLayout`, en-tete
+ * `focus`) : un titre en question par etape, la croix quitte, la fleche (et le retour d Android)
+ * revient d une etape sans rien perdre, le recapitulatif se touche ligne par ligne. Sans lui (le
+ * panneau de droite du site en grand ecran), rien ne change.
  * @param {{
- *   clubs?: Array<{ documentId: string, name: string }>,
+ *   actionSecondaire?: { libelle: string, onPress: () => void } | null,
+ *   clubs?: Array<{ documentId: string, logoUrl?: string | null, name: string }>,
  *   compact?: boolean,
  *   facilities?: Array<{ documentId: string, name: string }>,
  *   facilityId?: string | null,
@@ -155,12 +370,14 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  *   initial?: { weekday?: number, startTime?: string, endTime?: string, plateau?: number | null },
  *   onCancel?: () => void,
  *   onDone: (creneau: any) => void,
+ *   pleinEcran?: boolean,
  *   repartition?: boolean,
  *   slot?: any,
  * }} props
  * @returns {import('react').ReactElement} Le formulaire.
  */
 function SeasonSlotForm({
+  actionSecondaire = null,
   clubs = [],
   compact = false,
   facilities = [],
@@ -170,6 +387,7 @@ function SeasonSlotForm({
   initial = {},
   onCancel,
   onDone,
+  pleinEcran = false,
   repartition = false,
   slot = null,
 }) {
@@ -180,16 +398,37 @@ function SeasonSlotForm({
   const modification = Boolean(slot?.documentId);
   // IPH09 : tunnel local. La repartition du dirigeant garde son seul choix d'equipe.
   const parcoursGuide = guided && !repartition;
-  const etapes = modification
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) — une etape sans rien a choisir est
+  // SAUTEE : « Periode » (toute la saison, ecrite au recapitulatif), « Club » quand il est fixe
+  // (fiche d'un club), « Jour » et « Horaires » depuis une heure libre du planning (la case les
+  // apporte ; « Changer l'heure » les ROUVRE). « Modifier » garde ses 4 etapes : la periode s'y
+  // choisit (COLL-C2B-BIS).
+  const [heuresRouvertes, setHeuresRouvertes] = useState(false);
+  const heuresFigees = compact && !heuresRouvertes;
+  const etapesDu = (/** @type {boolean} */ rouvertes) => (modification
     ? ['jour', 'horaires', 'periode', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
-      'club', 'equipe', 'jour', 'horaires', 'periode', 'recap',
-    ];
+      ...(fixedClubId ? [] : ['club']),
+      'equipe',
+      ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
+      'recap',
+    ]);
+  const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
   const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
   const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
+  const tunnelPleinEcran = pleinEcran && parcoursGuide;
+  // Aller a une etape par son nom ; « Jour » et « Horaires » sautes (planning) se rouvrent.
+  const allerA = (/** @type {string} */ nom) => {
+    if (etapes.includes(nom)) {
+      setEtape(etapes.indexOf(nom));
+      return;
+    }
+    setHeuresRouvertes(true);
+    setEtape(etapesDu(true).indexOf(nom));
+  };
 
   const [installationChoisie, setInstallationChoisie] = useState(
     installationFixee
@@ -286,11 +525,10 @@ function SeasonSlotForm({
   // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
   const heuresLibres = useMemo(() => {
     if (!jour) return [];
-    /** @type {any[]} */
-    const creneauxDuJour = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
-      .filter((creneau) => Number(creneau?.weekday) === Number(jour)
-        && creneau?.documentId !== slot?.documentId);
-    return freeRanges(fullRangesOfSlots(creneauxDuJour, capacite));
+    return freeRanges(fullRangesOfSlots(
+      creneauxDuJour(lecture.data?.data, jour, slot?.documentId),
+      capacite,
+    ));
   }, [capacite, jour, lecture.data, slot?.documentId]);
 
   const nomDuClub = slot?.club?.name
@@ -326,8 +564,9 @@ function SeasonSlotForm({
   };
   // « Changer l heure » : les heures sont a choisir de nouveau, les heures libres sous les yeux.
   // En mode compact (planning), les heures viennent de la case : rien a vider.
+  // COLL-R-A7 : depuis le planning, l etape « Horaires » etait sautee ; elle se rouvre ici.
   const changerLHeure = () => {
-    if (parcoursGuide) setEtape(etapes.indexOf('horaires'));
+    if (parcoursGuide) allerA('horaires');
     if (!compact) {
       setDebut('');
       setFin('');
@@ -532,9 +771,48 @@ function SeasonSlotForm({
   const titreDuChamp = (/** @type {string} */ texte) => (
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
   );
+  // COLL-R-A7 — en plein ecran, le titre de l etape pose deja la question : pas de libelle.
+  const libelleDuChamp = (/** @type {string} */ texte) => (
+    tunnelPleinEcran ? null : titreDuChamp(texte)
+  );
   const rangee = (/** @type {import('react').ReactNode} */ enfants) => (
     <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>{enfants}</View>
   );
+  /**
+   * COLL-R-A7 — une liste de choix : des puces dans le panneau du site, des lignes a cocher en
+   * plein ecran (planche P4v4-attribuer).
+   * @param {Array<{
+   *   actif: boolean, avertissement?: boolean, club?: any, couleur?: string | null,
+   *   detail?: string | null, key: string, libelle: string, libelleCourt?: string,
+   *   onPress: () => void, testID?: string,
+   * }>} options
+   * @returns {import('react').ReactElement} La liste.
+   */
+  const listeDeChoix = (options) => (tunnelPleinEcran ? (
+    <View style={{ gap: 8 }}>
+      {options.map((option) => (
+        <LigneDeChoix
+          actif={option.actif}
+          avertissement={option.avertissement}
+          club={option.club}
+          couleur={option.couleur}
+          detail={option.detail}
+          key={option.key}
+          libelle={option.libelle}
+          onPress={option.onPress}
+          testID={option.testID}
+        />
+      ))}
+    </View>
+  ) : rangee(options.map((option) => (
+    <PuceDeChoix
+      actif={option.actif}
+      key={option.key}
+      libelle={option.libelleCourt || option.libelle}
+      onPress={option.onPress}
+      testID={option.testID}
+    />
+  ))));
 
   const saison = meta.season || null;
   const periode = saison
@@ -548,9 +826,182 @@ function SeasonSlotForm({
     ? equipes.data?.find((/** @type {any} */ ligne) => ligne.documentId === equipe)?.name
     : t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club');
 
-  return (
+  const capaciteLue = t('collectiviteCreneaux.liste.capacite', {
+    count: capacite,
+    defaultValue_one: '{{count}} équipe à la fois',
+    defaultValue_other: '{{count}} équipes à la fois',
+  });
+  const reculer = () => {
+    if (envoiEnCours) return;
+    if (etape > 0) setEtape(etape - 1);
+    else onCancel?.();
+  };
+  const suivantBloque = envoiEnCours || (() => {
+    if (etapeCourante === 'installation') return !facilityId;
+    if (etapeCourante === 'club' || etapeCourante === 'equipe') return !club;
+    if (etapeCourante === 'jour') return !jour;
+    if (etapeCourante === 'horaires') return !ordreJuste;
+    const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
+    return !periodeJuste || (modification && !dateEffetValide);
+  })();
+  const avancer = () => setEtape(Math.min(etape + 1, etapes.length - 1));
+  const libelleDeConfirmation = (() => {
+    if (modification) {
+      return besoinDeConfirmer
+        ? t('collectiviteCreneaux.attribuer.enregistrerQuandMeme', 'Enregistrer quand même')
+        : t('collectiviteCreneaux.attribuer.enregistrer', 'Enregistrer');
+    }
+    if (besoinDeConfirmer) {
+      return t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même');
+    }
+    if (compact && !tunnelPleinEcran) {
+      return t('collectiviteCreneaux.attribuer.pourLaSaison', 'Attribuer pour la saison');
+    }
+    return t('collectiviteCreneaux.attribuer.valider', 'Attribuer le créneau');
+  })();
+
+  // ─── COLL-R-A7 : la question de chaque etape, et ce que son sous-titre relit ───────────────
+  const leJour = jour ? weekdayName(Number(jour)).toLocaleLowerCase() : '';
+  const lesHeures = timeRange(debut, fin);
+  const chaqueJour = (/** @type {string} */ suite) => t(
+    'collectiviteCreneaux.tunnel.chaqueJour',
+    'Chaque {{jour}} · {{suite}}',
+    { jour: leJour, suite, ...SANS_ECHAPPEMENT },
+  );
+  const quiEtEquipe = modification
+    ? slotWho(slot)
+    : [nomDuClub, nomEquipe].filter(Boolean).join(' · ');
+  /** @type {Record<string, string>} */
+  const titres = {
+    club: t('collectiviteCreneaux.tunnel.club', 'Pour quel club ?'),
+    equipe: t('collectiviteCreneaux.tunnel.equipe', 'Pour quelle équipe ?'),
+    horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
+    installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
+    jour: t('collectiviteCreneaux.tunnel.jour', 'Quel jour ?'),
+    periode: t('collectiviteCreneaux.tunnel.periode', 'Quelle période ?'),
+    recap: t('eventWizard.steps.recap.title', 'Récapitulatif'),
+  };
+  /** @type {Record<string, string>} */
+  const sousTitres = {
+    club: (heuresFigees
+      ? [`${weekdayName(Number(jour))} ${lesHeures}`, installation?.name]
+      : [installation?.name, installation ? capaciteLue : null]
+    ).filter(Boolean).join(' · '),
+    equipe: t('collectiviteCreneaux.tunnel.equipeFacultative', '{{club}} · facultatif', {
+      club: nomDuClub, ...SANS_ECHAPPEMENT,
+    }),
+    horaires: chaqueJour(installation?.name || ''),
+    installation: t('collectiviteCreneaux.tunnel.pourLeClub', 'Pour {{club}}', {
+      club: nomDuClub, ...SANS_ECHAPPEMENT,
+    }),
+    jour: modification
+      ? [slotWho(slot), installation?.name].filter(Boolean).join(' · ')
+      : t('collectiviteCreneaux.tunnel.chaqueSemaine', '{{qui}} · chaque semaine de la saison', {
+        qui: quiEtEquipe, ...SANS_ECHAPPEMENT,
+      }),
+    periode: chaqueJour(lesHeures),
+    recap: modification
+      ? t(
+        'collectiviteCreneaux.tunnel.relisezEnregistrez',
+        'Relisez, puis enregistrez. Le club est prévenu.',
+      )
+      : t(
+        'collectiviteCreneaux.tunnel.relisezAttribuez',
+        'Relisez, puis attribuez. Le club est prévenu.',
+      ),
+  };
+
+  // COLL-R-A7 — le recapitulatif se touche ligne par ligne (« Creer un evenement ») : chaque
+  // ligne ramene a son etape, celles qui ne se choisissent pas ne se touchent pas.
+  const lignesDuRecap = [
+    {
+      cle: t('collectiviteCreneaux.tunnel.recapClub', 'Club · équipe'),
+      id: 'club',
+      onPress: modification ? undefined : () => allerA(etapes.includes('club') ? 'club' : 'equipe'),
+      valeur: quiEtEquipe,
+    },
+    {
+      cle: t('collectiviteCreneaux.attribuer.installation', 'Installation'),
+      id: 'installation',
+      onPress: etapes.includes('installation') ? () => allerA('installation') : undefined,
+      valeur: installation?.name || '',
+    },
+    {
+      cle: t('collectiviteCreneaux.tunnel.recapHeures', 'Jour et heures'),
+      id: 'heures',
+      onPress: () => allerA('jour'),
+      valeur: chaqueJour(lesHeures),
+    },
+    {
+      cle: t('collectiviteCreneaux.attribuer.periode', 'Période'),
+      id: 'periode',
+      onPress: modification ? () => allerA('periode') : undefined,
+      valeur: avecPeriode ? formatPeriod(nouveauDebut, nouvelleFin) : periode,
+    },
+    ...(modification ? [{
+      cle: t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du'),
+      id: 'effet',
+      onPress: () => allerA('periode'),
+      valeur: aPartirDu,
+    }] : []),
+    ...(plateau && plateaux.length ? [{
+      cle: t('collectiviteCreneaux.attribuer.plateau', 'Plateau'),
+      id: 'plateau',
+      onPress: () => allerA('horaires'),
+      valeur: String(plateaux[plateau - 1]),
+    }] : []),
+  ];
+  const recapEnLignes = (
+    <View
+      style={{
+        backgroundColor: withAlpha(Colors.primary500, 0.06),
+        borderColor: withAlpha(Colors.primary500, 0.22),
+        borderRadius: 16,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+      }}
+      testID="season-slot-recap"
+    >
+      {lignesDuRecap.map((ligne, rang) => (
+        <LigneDuRecap
+          cle={ligne.cle}
+          derniere={rang === lignesDuRecap.length - 1}
+          key={ligne.id}
+          libelleModifier={t(
+            'collectiviteCreneaux.tunnel.modifierLaLigne',
+            '{{cle}} : {{valeur}}. Modifier',
+            { cle: ligne.cle, valeur: ligne.valeur, ...SANS_ECHAPPEMENT },
+          )}
+          onPress={ligne.onPress}
+          testID={`recap-${ligne.id}`}
+          valeur={ligne.valeur}
+        />
+      ))}
+    </View>
+  );
+
+  // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
+  const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+    && !heuresFigees && !repartition ? (
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {heuresLibres.length
+          ? t('collectiviteCreneaux.tunnel.libresDuJour', 'Libre ce {{jour}} : {{heures}}.', {
+            heures: heuresLibres
+              .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+              .join(', '),
+            jour: leJour,
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('collectiviteCreneaux.attribuer.aucuneLibre', 'Aucune heure libre ce {{jour}}.', {
+            jour: leJour,
+            ...SANS_ECHAPPEMENT,
+          })}
+      </Text>
+    ) : null;
+
+  const corps = (
     <View style={{ gap: 16 }}>
-      {parcoursGuide ? (
+      {parcoursGuide && !tunnelPleinEcran ? (
         <View
           accessibilityLabel={t('eventWizard.common.stepCounter', {
             current: etape + 1, total: etapes.length,
@@ -561,7 +1012,9 @@ function SeasonSlotForm({
           <Button
             disabled={envoiEnCours}
             icon="arrowLeft"
-            onPress={() => { if (etape > 0) setEtape(etape - 1); else onCancel?.(); }}
+            // COL-005 : la fleche avant le mot (elle etait apres, capture S04).
+            iconPosition="before"
+            onPress={reculer}
             style={{ alignSelf: 'flex-start', minHeight: 44 }}
             title={t('common.back', 'Retour')}
             variant="Ghost"
@@ -586,18 +1039,11 @@ function SeasonSlotForm({
           </View>
         </View>
       ) : null}
-      {compact ? null : (
+      {compact || tunnelPleinEcran ? null : (
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {modification
             ? [slotWho(slot), installation?.name].filter(Boolean).join(' · ')
-            : [
-              installation?.name,
-              installation ? t('collectiviteCreneaux.liste.capacite', {
-                count: capacite,
-                defaultValue_one: '{{count}} équipe à la fois',
-                defaultValue_other: '{{count}} équipes à la fois',
-              }) : null,
-            ].filter(Boolean).join(' · ')}
+            : [installation?.name, installation ? capaciteLue : null].filter(Boolean).join(' · ')}
         </Text>
       )}
       {/* 📍 COLL-R-A6 (13/10, COL-018) — ouvert depuis une case vide de la semaine type (le site
@@ -613,25 +1059,32 @@ function SeasonSlotForm({
       {/* Depuis la fiche d un club (point 6) : l installation se choisit ici. */}
       {visible('installation') && !installationFixee && !modification && facilities.length > 1 ? (
         <View style={{ gap: 8 }}>
-          {titreDuChamp(t('collectiviteCreneaux.attribuer.installation', 'Installation'))}
-          {rangee(facilities.map((ligne) => (
-            <PuceDeChoix
-              actif={ligne.documentId === installationChoisie}
-              key={ligne.documentId}
-              libelle={ligne.name}
-              onPress={() => {
-                setInstallationChoisie(ligne.documentId);
-                setPlateau(null);
-                toucherLaSaisie();
-              }}
-            />
-          )))}
+          {libelleDuChamp(t('collectiviteCreneaux.attribuer.installation', 'Installation'))}
+          {listeDeChoix(facilities.map((/** @type {any} */ ligne) => ({
+            actif: ligne.documentId === installationChoisie,
+            couleur: ligne.planningColor || null,
+            detail: [
+              getFacilityTypeLabel(ligne.type),
+              t('collectiviteCreneaux.liste.capacite', {
+                count: Math.max(1, Number(ligne.maxSlots) || 1),
+                defaultValue_one: '{{count}} équipe à la fois',
+                defaultValue_other: '{{count}} équipes à la fois',
+              }),
+            ].filter(Boolean).join(' · '),
+            key: ligne.documentId,
+            libelle: ligne.name,
+            onPress: () => {
+              setInstallationChoisie(ligne.documentId);
+              setPlateau(null);
+              toucherLaSaisie();
+            },
+          })))}
         </View>
       ) : null}
 
       {!visible('club') || modification ? null : (
         <View style={{ gap: 8 }}>
-          {titreDuChamp(compact
+          {libelleDuChamp(compact
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
             : t('collectiviteCreneaux.attribuer.club', 'Club'))}
           {clubs.length === 0 ? (
@@ -641,67 +1094,82 @@ function SeasonSlotForm({
                 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
               )}
             </Text>
-          ) : rangee((fixedClubId
+          ) : listeDeChoix((fixedClubId
             ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
-            : clubs).map((ligne) => (
-              <PuceDeChoix
-                actif={ligne.documentId === club}
-                key={ligne.documentId}
-                libelle={ligne.name}
-                onPress={() => {
-                  setClub(ligne.documentId);
-                  setEquipe(null);
-                  toucherLaSaisie();
-                }}
-              />
-          )))}
+            : clubs).map((ligne) => ({
+            actif: ligne.documentId === club,
+            club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
+            key: ligne.documentId,
+            libelle: ligne.name,
+            onPress: () => {
+              setClub(ligne.documentId);
+              setEquipe(null);
+              toucherLaSaisie();
+            },
+          })))}
         </View>
       )}
 
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
-          {titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
-          {rangee([
-            <PuceDeChoix
-              actif={!equipe}
-              key="tout-le-club"
-              libelle={t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club')}
-              onPress={() => setEquipe(null)}
-            />,
-            ...(Array.isArray(equipes.data) ? equipes.data : []).map((/** @type {any} */ ligne) => (
-              <PuceDeChoix
-                actif={ligne.documentId === equipe}
-                key={ligne.documentId}
-                libelle={ligne.name}
-                onPress={() => setEquipe(ligne.documentId)}
-              />
-            )),
+          {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
+          {listeDeChoix([
+            {
+              actif: !equipe,
+              detail: t(
+                'collectiviteCreneaux.tunnel.toutLeClubDit',
+                'Le club répartit lui-même ses équipes.',
+              ),
+              key: 'tout-le-club',
+              libelle: t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
+              onPress: () => setEquipe(null),
+            },
+            ...(Array.isArray(equipes.data) ? equipes.data : []).map((/** @type {any} */ e) => ({
+              actif: e.documentId === equipe,
+              key: e.documentId,
+              libelle: e.name,
+              onPress: () => setEquipe(e.documentId),
+            })),
           ])}
         </View>
       ) : null}
 
-      {!visible('jour') || compact || repartition ? null : (
+      {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
-          {titreDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
-          {rangee(SEASON_SLOT_WEEKDAYS.map((numero) => (
-            <PuceDeChoix
-              actif={numero === jour}
-              key={`jour-${numero}`}
-              libelle={weekdayName(numero, { short: true })}
-              onPress={() => {
+          {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
+          {listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
+            // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
+            // certaines heures le dit sous son nom (les mots de la planche P4v2).
+            const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
+            const pleines = tunnelPleinEcran ? fullRangesOfSlots(ceJour, capacite) : [];
+            return {
+              actif: numero === jour,
+              avertissement: pleines.length > 0,
+              detail: pleines.length
+                ? t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                  heures: pleines
+                    .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                    .join(', '),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : null,
+              key: `jour-${numero}`,
+              libelle: weekdayName(numero),
+              libelleCourt: weekdayName(numero, { short: true }),
+              onPress: () => {
                 setJour(numero);
                 toucherLaSaisie();
-              }}
-              testID={`jour-${numero}`}
-            />
-          )))}
+              },
+              testID: `jour-${numero}`,
+            };
+          }))}
         </View>
       )}
 
       {/* VILLE-T18A (T18 G29a, G32a) — les heures se CHOISISSENT : le sélecteur d heure de la
           création d événement (décision d Adel du 07/10, « réutiliser ce qu on a déjà ») ; elles
           se tapaient au clavier. Même valeur « HH:MM ». */}
-      {!visible('horaires') || compact || repartition ? null : (
+      {!visible('horaires') || heuresFigees || repartition ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
             <TimePickerInput
@@ -733,7 +1201,7 @@ function SeasonSlotForm({
 
       {visible('periode') && avecPeriode ? (
         <View style={{ gap: 8 }}>
-          {titreDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
+          {libelleDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
           {dejaCommence ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {t(
@@ -785,6 +1253,9 @@ function SeasonSlotForm({
         />
       ) : null}
 
+      {/* COLL-R-A7 — en plein écran, le récapitulatif ouvre l'étape, la place vient dessous. */}
+      {tunnelPleinEcran && confirmationFinale ? recapEnLignes : null}
+      {libresDuJour}
       {visible('horaires') || confirmationFinale ? carteDeLaPlace : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 
@@ -824,7 +1295,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {confirmationFinale && compact && jour ? (
+      {confirmationFinale && compact && jour && !tunnelPleinEcran ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
             'collectiviteCreneaux.attribuer.chaqueSemaine',
@@ -847,8 +1318,8 @@ function SeasonSlotForm({
           )}
         </Text>
       ) : null}
-      {confirmationFinale && !compact && !repartition && nomDuClub ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
+      {confirmationFinale && (!compact || tunnelPleinEcran) && !repartition && nomDuClub ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
           {modification
             ? t(
               'collectiviteCreneaux.attribuer.prevenuChangement',
@@ -871,14 +1342,12 @@ function SeasonSlotForm({
           {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
         </Text>
       ) : null}
-      {parcoursGuide && confirmationFinale ? (
+      {parcoursGuide && confirmationFinale && !tunnelPleinEcran ? (
         <View style={{ gap: 8 }} testID="season-slot-recap">
           <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
             {t('eventWizard.steps.recap.title', 'Récapitulatif')}
           </Text>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {modification ? slotWho(slot) : [nomDuClub, nomEquipe].filter(Boolean).join(' · ')}
-          </Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{quiEtEquipe}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>{installation?.name}</Text>
           <Text style={[Fonts.p2, Fonts.neutral00]}>
             {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
@@ -901,72 +1370,78 @@ function SeasonSlotForm({
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
       ) : null}
 
-      {confirmationFinale ? (
-        <View style={{ gap: 8 }}>
-          {besoinDeConfirmer ? (
-            <>
-              <Button
-                disabled={!pret}
-                isLoading={envoiEnCours}
-                onPress={() => envoyer(true)}
-                title={modification
-                  ? t(
-                    'collectiviteCreneaux.attribuer.enregistrerQuandMeme',
-                    'Enregistrer quand même',
-                  )
-                  : t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même')}
-                variant="Primary"
-              />
+      {tunnelPleinEcran ? null : (() => {
+        if (!confirmationFinale) {
+          return (
+            <Button
+              disabled={suivantBloque}
+              onPress={avancer}
+              title={t('common.next', 'Suivant')}
+              variant="Primary"
+            />
+          );
+        }
+        return (
+          <View style={{ gap: 8 }}>
+            <Button
+              disabled={!pret}
+              isLoading={envoiEnCours}
+              onPress={() => envoyer(besoinDeConfirmer)}
+              title={libelleDeConfirmation}
+              variant="Primary"
+            />
+            {besoinDeConfirmer ? (
               <Button
                 onPress={changerLHeure}
                 title={t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure')}
                 variant="Ghost"
               />
-            </>
-          ) : (
-            <Button
-              disabled={!pret}
-              isLoading={envoiEnCours}
-              onPress={() => envoyer(false)}
-              title={(() => {
-                if (modification) {
-                  return t('collectiviteCreneaux.attribuer.enregistrer', 'Enregistrer');
-                }
-                if (compact) {
-                  return t(
-                    'collectiviteCreneaux.attribuer.pourLaSaison',
-                    'Attribuer pour la saison',
-                  );
-                }
-                return t('collectiviteCreneaux.attribuer.valider', 'Attribuer le créneau');
-              })()}
-              variant="Primary"
-            />
-          )}
-          {onCancel && !besoinDeConfirmer && !parcoursGuide ? (
-            <Button
-              onPress={onCancel}
-              title={t('common.cancel', 'Annuler')}
-              variant="Ghost"
-            />
-          ) : null}
-        </View>
-      ) : (
-        <Button
-          disabled={envoiEnCours || (() => {
-            if (etapeCourante === 'installation') return !facilityId;
-            if (etapeCourante === 'club' || etapeCourante === 'equipe') return !club;
-            if (etapeCourante === 'jour') return !jour;
-            if (etapeCourante === 'horaires') return !ordreJuste;
-            const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
-            return !periodeJuste || (modification && !dateEffetValide);
-          })()}
-          onPress={() => setEtape(Math.min(etape + 1, etapes.length - 1))}
-          title={t('common.next', 'Suivant')}
-          variant="Primary"
-        />
-      )}
+            ) : null}
+            {onCancel && !besoinDeConfirmer && !parcoursGuide ? (
+              <Button
+                onPress={onCancel}
+                title={t('common.cancel', 'Annuler')}
+                variant="Ghost"
+              />
+            ) : null}
+          </View>
+        );
+      })()}
     </View>
+  );
+
+  if (!tunnelPleinEcran) return corps;
+
+  // 📐 COLL-R-A7 — la fenetre plein ecran ; le retour d Android recule d une etape.
+  // Le bas du gabarit : « Changer l heure » quand c est complet, sinon l action de l ecran.
+  let actionDuBas = actionSecondaire;
+  if (confirmationFinale && besoinDeConfirmer) {
+    actionDuBas = {
+      libelle: t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure'),
+      onPress: changerLHeure,
+    };
+  }
+  return (
+    <FenetrePleinEcran onRequestClose={reculer}>
+      <WizardStepLayout
+        headerVariant="focus"
+        isNextDisabled={confirmationFinale ? !pret : suivantBloque}
+        isNextLoading={envoiEnCours}
+        nextLabel={confirmationFinale ? libelleDeConfirmation : t('common.next', 'Suivant')}
+        onBack={etape > 0 ? reculer : undefined}
+        onClose={onCancel}
+        onNext={confirmationFinale ? () => envoyer(besoinDeConfirmer) : avancer}
+        onSkip={actionDuBas?.onPress}
+        showSkip={Boolean(actionDuBas)}
+        skipLabel={actionDuBas?.libelle}
+        stepCount={etapes.length}
+        stepIndex={etape + 1}
+        subtitle={sousTitres[etapeCourante] || undefined}
+        title={titres[etapeCourante] || ''}
+      >
+        {corps}
+      </WizardStepLayout>
+    </FenetrePleinEcran>
   );
 }
 

@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+
 import {
   attributeSeasonSlot,
   getClubTeamsForSlot,
@@ -47,6 +49,8 @@ const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),
@@ -361,8 +365,10 @@ test('IPH09 FC-001 : retour unique, header rétabli à la fermeture', async () =
   expect(mockNavigation.setOptions).toHaveBeenLastCalledWith(
     expect.objectContaining({ headerShown: false }),
   );
-  expect(parTexte(arbre, 'Retour')).toBeDefined();
-  await appuyer(parTexte(arbre, 'Retour'));
+  // COLL-R-A7 (COL-005) : en plein écran, à l'étape 1, la croix seule (pas de flèche) ferme.
+  const gabarit = arbre.root.findByType(WizardStepLayout);
+  expect(gabarit.props.onBack).toBeUndefined();
+  await appuyer({ props: { onPress: gabarit.props.onClose } });
   expect(mockNavigation.setOptions).toHaveBeenLastCalledWith(
     expect.objectContaining({ headerShown: true }),
   );

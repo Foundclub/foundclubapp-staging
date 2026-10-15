@@ -129,8 +129,9 @@ const clesDesClubsDeLaVille = (clubsDeLaVille) => [...new Set(
  * rejoint la Ville decale ceux qui le suivent — voie de sortie : la couleur choisie a la main par
  * la Ville (lot « couleur a la main », un champ serveur).
  * @param {any[] | null | undefined} blocks - Les blocs du planning (deja normalises).
- * @param {Array<{ documentId?: string, name?: string }> | null} [clubsDeLaVille] - Les clubs
- *   rattaches a la Ville, dans l'ordre de sa liste.
+ * @param {Array<{
+ * documentId?: string, name?: string, planningColor?: string | null
+ * }> | null} [clubsDeLaVille] - Les clubs rattaches a la Ville, dans l'ordre de sa liste.
  * @returns {any[]} Les memes blocs, colores par club.
  */
 export const assignClubPlanningColors = (blocks, clubsDeLaVille = null) => {
@@ -151,6 +152,21 @@ export const assignClubPlanningColors = (blocks, clubsDeLaVille = null) => {
     [...ordreDeLaVille, ...horsDeLaListe]
       .map((key, index) => [key, CLUB_PLANNING_PALETTE[index % CLUB_PLANNING_PALETTE.length]]),
   );
+  // Un membre ne lit pas la liste de la Ville. Le planning serveur porte deja le choix
+  // ou l'automatique stable ; la normalisation garde ce contrat dans `raw.club`.
+  blocks.forEach((block) => {
+    const key = clubKeyOf(block);
+    const color = block?.club?.planningColor || block?.raw?.club?.planningColor;
+    if (!ordreDeLaVille.includes(key) && isValidFacilityPlanningColor(color)) {
+      colorByClub.set(key, normalizeHexColor(color));
+    }
+  });
+  // La Ville choisit d'abord ; sans choix valide, le rang automatique reste identique.
+  (clubsDeLaVille || []).forEach((club) => {
+    if (isValidFacilityPlanningColor(club?.planningColor)) {
+      colorByClub.set(clubKeyOf({ club }), normalizeHexColor(club.planningColor));
+    }
+  });
   return blocks.map((block) => {
     const color = colorByClub.get(clubKeyOf(block));
     return color ? { ...block, displayColor: color } : block;

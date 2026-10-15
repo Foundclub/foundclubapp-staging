@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import {
   attributeSeasonSlot,
@@ -47,6 +49,8 @@ const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),
@@ -410,7 +414,7 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // COLL-R-A7 (COL-005) : « Période » est sautée, écrite au récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
   };
 
@@ -433,13 +437,25 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     });
   });
 
-  // SAIS (08/10, T20 lot 1, capture T07b) — « Annuler » finissait coupé au bas de la feuille :
-  // elle peut désormais prendre 85 % de l écran (0,7 par défaut). ROUGE avant le lot.
-  it('SAIS : la feuille « Attribuer » peut prendre 85 % de l écran', async () => {
+  // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — au téléphone, « Attribuer » ne s'ouvre
+  // plus dans une feuille posée sur la fiche (S04 : le haut restait visible) : une fenêtre plein
+  // écran, le gabarit des tunnels « Créer un événement ». ROUGE avant : la feuille (SAIS, 85 %).
+  it('COL-005 : « Attribuer » s’ouvre en plein écran, plus dans la feuille du bas', async () => {
     const arbre = await rendre();
     mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
-    expect(mockFeuilles.at(-1)?.maxContentHeightRatio).toBe(0.85);
+    expect(mockFeuilles).toHaveLength(0);
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
+      headerVariant: 'focus',
+      stepCount: 5,
+      subtitle: 'Gymnase des Tilleuls · 2 équipes à la fois',
+      title: 'Pour quel club ?',
+    }));
+    await act(async () => { fenetre.findByType(WizardStepLayout).props.onClose(); });
+    await attendre();
+    expect(arbre.root.findAllByType(Modal)).toHaveLength(0);
   });
 
   it('un 409 de capacite : rien n est ecrit, puis « Attribuer quand meme »', async () => {
@@ -520,8 +536,16 @@ describe('COLL-C2B planche 3 — 4. gerer, modifier, retirer (D67), retablir (§
   it('modifier : « a partir du », le meme formulaire, PUT sur le creneau', async () => {
     const arbre = await rendre();
     await appuyer(parTestID(arbre, 'creneau-mar-u15'));
+    mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Modifier le créneau'));
-    expect(textes(arbre)).toContain('Modifier le créneau');
+    // 📐 COLL-R-A7 (COL-005, « modifier : pareil ») : le même plein écran, 4 étapes. ROUGE avant :
+    // la feuille du bas, titrée « Modifier le créneau ».
+    expect(mockFeuilles).toHaveLength(0);
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
+      headerVariant: 'focus', stepCount: 4, title: 'Quel jour ?',
+    }));
     await appuyer(parTexte(arbre, 'Suivant'));
     expect(champ('Début').value).toBe('17:30');
     await saisir('Début', '18:30');
@@ -588,7 +612,6 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     expect(textes(arbre)).toContain('Plateau');
     expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
-    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({

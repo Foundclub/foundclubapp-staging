@@ -5394,6 +5394,20 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    couleur: {
+      autoCourt: 'automatique',
+      automatique: 'Automatique',
+      avertissement: '{{couleur}} est déjà utilisée par {{clubs}}. '
+        + 'Voulez-vous quand même donner cette couleur à ce club ?',
+      changer: 'Changer',
+      chargement: 'Chargement des couleurs des clubs…',
+      confirmer: 'Utiliser quand même',
+      enregistrement: 'Enregistrement…',
+      fermer: 'Fermer',
+      prise: 'Déjà utilisée par {{clubs}}',
+      retour: 'Choisir une autre couleur',
+      titre: 'Sa couleur dans vos plannings',
+    },
     // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
     carte: {
       ecrire: 'Écrire aux dirigeants de {{club}}',
@@ -6143,6 +6157,28 @@ export default {
       plateau: 'Plateau : {{nom}}',
       tonClub: '{{club}}, ton club',
       trancher: 'Trancher',
+    },
+    // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — « Attribuer un créneau » en plein
+    // écran (planche P4v4-attribuer) : la question de chaque étape, ce que son sous-titre relit,
+    // les lignes du récapitulatif.
+    tunnel: {
+      chaqueJour: 'Chaque {{jour}} · {{suite}}',
+      chaqueSemaine: '{{qui}} · chaque semaine de la saison',
+      club: 'Pour quel club ?',
+      equipe: 'Pour quelle équipe ?',
+      equipeFacultative: '{{club}} · facultatif',
+      horaires: 'À quelle heure ?',
+      installation: 'Dans quelle installation ?',
+      jour: 'Quel jour ?',
+      libresDuJour: 'Libre ce {{jour}} : {{heures}}.',
+      modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
+      periode: 'Quelle période ?',
+      pourLeClub: 'Pour {{club}}',
+      recapClub: 'Club · équipe',
+      recapHeures: 'Jour et heures',
+      relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',
+      relisezEnregistrez: 'Relisez, puis enregistrez. Le club est prévenu.',
+      toutLeClubDit: 'Le club répartit lui-même ses équipes.',
     },
     vues: {
       enAttente: 'En attente : {{qui}}',

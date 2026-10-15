@@ -44,6 +44,8 @@ const mockTimelineProps = [];
 /** @type {any[]} */
 const mockFormProps = [];
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({ height: 844, width: 390 }),
@@ -256,7 +258,10 @@ describe('COLL-C2B-BIS — planches 24 et 29 : l heure libre d un plateau pré-r
     const arbre = await rendre();
     expect(grille().lanes.map((/** @type {any} */ colonne) => colonne.label)).toEqual(['Plateau A', 'Plateau B', 'Indifférent']);
     await toucher(18, 1);
-    expect(textes(arbre)).toContain('Mercredi 18:00 – 19:30');
+    // COLL-R-A7 (COL-005) : au téléphone, le tunnel s'ouvre en plein écran (le moment est dans
+    // son sous-titre, plus dans un titre de feuille).
+    expect(textes(arbre)).not.toContain('Mercredi 18:00 – 19:30');
+    expect(mockFormProps.at(-1)?.pleinEcran).toBe(true);
     expect(mockFormProps.at(-1)?.initial).toEqual({
       endTime: '19:30', plateau: 2, startTime: '18:00', weekday: 3,
     });
