@@ -82,7 +82,7 @@ jest.mock('@/components/atoms/button/Button', () => {
   return function ButtonMock(/** @type {any} */ props) {
     return reactActuel.createElement(
       PressableRN,
-      { disabled: props.disabled, onPress: props.onPress, testID: props.testID },
+      { disabled: props.disabled || props.isLoading, onPress: props.onPress },
       reactActuel.createElement(TexteRN, null, props.title),
     );
   };
@@ -156,9 +156,10 @@ const aplatir = (/** @type {any} */ enfants) => {
   return String(enfants);
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((noeud) => aplatir(noeud.props.children));
-const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
-  const bouton = arbre.root.findAll((noeud) => noeud.props.testID === testID && noeud.type === TouchableOpacity)[0];
-  if (!bouton) throw new Error(`bouton introuvable : ${testID}`);
+const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ repere) => {
+  const bouton = arbre.root.findAll((noeud) => noeud.type === TouchableOpacity
+    && (noeud.props.testID === repere || aplatir(noeud.props.children) === repere))[0];
+  if (!bouton) throw new Error(`bouton introuvable : ${repere}`);
   expect(bouton.props.disabled).toBeFalsy();
   await act(async () => { bouton.props.onPress(); });
 };
@@ -334,7 +335,7 @@ describe('CRDEP — Déplacer la séance, côté club', () => {
       'Aucune installation libre ven. 10 janv. à 18:00',
       'Garde un lieu et choisis un autre jour.',
     ]));
-    await appuyer(arbre, 'deplacer-autre-jour');
+    await appuyer(arbre, 'Choisir un autre jour');
     await attendre();
     expect(arbre.root.findAllByProps({ testID: 'etape-2' }).length).toBeGreaterThan(0);
     expect(getRelocationOptions).toHaveBeenLastCalledWith('seance-1', expect.objectContaining({ days: 7, facility: 'gym-ville' }));
@@ -349,7 +350,7 @@ describe('CRDEP — Déplacer la séance, côté club', () => {
     expect(textes(arbre)).toContain('Les places libres n’ont pas pu être lues. Vérifie la connexion, puis réessaie. Ta séance n’a pas bougé.');
     expect(indisponible).not.toHaveBeenCalled();
     servir();
-    await appuyer(arbre, 'deplacer-reessayer');
+    await appuyer(arbre, 'Réessayer');
     await attendre();
     expect(textes(arbre)).toContain('Stade municipal');
   });

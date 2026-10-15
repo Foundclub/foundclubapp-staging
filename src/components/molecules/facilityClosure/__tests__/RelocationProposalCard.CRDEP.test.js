@@ -55,7 +55,7 @@ jest.mock('@/components/atoms/button/Button', () => {
   return function ButtonMock(/** @type {any} */ props) {
     return reactActuel.createElement(
       PressableRN,
-      { disabled: props.disabled, onPress: props.onPress, testID: props.testID },
+      { disabled: props.disabled || props.isLoading, onPress: props.onPress },
       reactActuel.createElement(TexteRN, null, props.title),
     );
   };
@@ -97,7 +97,7 @@ const monter = async (/** @type {any} */ props) => {
   return arbre;
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((noeud) => aplatir(noeud.props.children));
-const bouton = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root.findAll((noeud) => noeud.props.testID === testID && noeud.type === TouchableOpacity)[0];
+const bouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => arbre.root.findAll((noeud) => noeud.type === TouchableOpacity && aplatir(noeud.props.children) === titre)[0];
 const attendre = async () => {
   for (let tour = 0; tour < 6; tour += 1) {
     // eslint-disable-next-line no-await-in-loop
@@ -125,7 +125,7 @@ test('la carte dit la place proposée, la fermeture, et ses deux gestes', async 
 test('« Accepter » : la réponse part au serveur ; la séance est déplacée, les joueurs prévenus', async () => {
   decideRelocation.mockResolvedValue({ documentId: 'prop-1', status: 'accepted' });
   const arbre = await monter({ onChooseOther: jest.fn(), proposal: PROPOSITION });
-  await act(async () => { bouton(arbre, 'proposition-accepter').props.onPress(); });
+  await act(async () => { bouton(arbre, 'Accepter').props.onPress(); });
   await attendre();
   expect(decideRelocation).toHaveBeenCalledWith('prop-1', 'accept');
   expect(Alert.alert).toHaveBeenCalledWith('Séance déplacée au Stade municipal', 'Tes joueurs sont prévenus.');
@@ -134,7 +134,7 @@ test('« Accepter » : la réponse part au serveur ; la séance est déplacée, 
 test('une place prise entre-temps : on le dit, rien n’a bougé', async () => {
   decideRelocation.mockRejectedValue({ details: { code: 'RELOCATION_PLACE_UNAVAILABLE', state: 'complet' }, status: 409 });
   const arbre = await monter({ onChooseOther: jest.fn(), proposal: PROPOSITION });
-  await act(async () => { bouton(arbre, 'proposition-accepter').props.onPress(); });
+  await act(async () => { bouton(arbre, 'Accepter').props.onPress(); });
   await attendre();
   expect(Alert.alert).toHaveBeenCalledWith('La séance n’a pas bougé', 'Cette place n’est plus libre. Choisis-en une autre.');
 });
@@ -142,7 +142,7 @@ test('une place prise entre-temps : on le dit, rien n’a bougé', async () => {
 test('« Choisir une autre place » ouvre le tunnel ; rien n’est envoyé', async () => {
   const autre = jest.fn();
   const arbre = await monter({ onChooseOther: autre, proposal: PROPOSITION });
-  await act(async () => { bouton(arbre, 'proposition-autre-place').props.onPress(); });
+  await act(async () => { bouton(arbre, 'Choisir une autre place').props.onPress(); });
   expect(autre).toHaveBeenCalledTimes(1);
   expect(decideRelocation).not.toHaveBeenCalled();
 });
