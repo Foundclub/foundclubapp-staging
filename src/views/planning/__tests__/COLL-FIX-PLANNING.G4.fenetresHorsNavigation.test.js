@@ -209,8 +209,8 @@ jest.mock('@/services/collectivite/collectiviteCanauxService', () => ({
   // Recolte (chef, 02/10) : depuis COLL-FIX-DEMANDES, l appui RETROUVE la conversation (GET, sans creer) ;
   // une conversation existante s ouvre. Ce temoin prouve toujours la meme chose : le bouton vit
   // hors navigation et ouvre la conversation par la navigation de l ecran.
-  trouverConversationAvecLeClub: (/** @type {any} */ args) => mockOuvrir(args),
   ecrireLePremierMessageAuClub: jest.fn(),
+  trouverConversationAvecLeClub: (/** @type {any} */ args) => mockOuvrir(args),
 }));
 
 // Des secrets semes : si l un s affiche, la mairie lirait une personne.
