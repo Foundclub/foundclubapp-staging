@@ -16,7 +16,7 @@ import {
   retraitBas,
   telephone,
   verifierDefilement,
-} from '../../team/__tests__/helpers/clavami2ModalGeometry';
+} from '@/testSupport/clavami2ModalGeometry';
 
 jest.setTimeout(30000);
 
