@@ -425,3 +425,11 @@ describe('COLL-C3B — le club demande depuis le planning d une installation de 
     expect(textes(arbre)).not.toContain('Demander un créneau');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

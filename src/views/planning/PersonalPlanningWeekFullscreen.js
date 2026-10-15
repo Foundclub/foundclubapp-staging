@@ -1428,12 +1428,19 @@ function PlanningWeekFullscreen() {
           libelle: t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville'),
           onPress: bloquerLaCase,
         } : null}
+        ajouterUnClub={() => {
+          fermerPanneau();
+          /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+            collectiviteId: managingCollectiviteId, onglet: 'recherche',
+          });
+        }}
         clubs={clubsPourAttribuer}
         compact={panneau.type === 'attribuer' && panneau.compact !== false}
         facilityId={facilityId}
         guided
         initial={panneau.initial}
         key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+        lectureDesClubs={attachedClubs}
         onCancel={fermerPanneau}
         onDone={fermerPanneau}
         pleinEcran
@@ -1448,12 +1455,19 @@ function PlanningWeekFullscreen() {
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
         <SeasonSlotForm
+          ajouterUnClub={() => {
+            fermerPanneau();
+            /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+              collectiviteId: managingCollectiviteId, onglet: 'recherche',
+            });
+          }}
           clubs={clubsPourAttribuer}
           compact={panneau.type === 'attribuer' && panneau.compact !== false}
           facilityId={facilityId}
           guided
           initial={panneau.initial}
           key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+          lectureDesClubs={attachedClubs}
           onCancel={fermerPanneau}
           onDone={fermerPanneau}
           slot={panneau.type === 'modifier' ? panneau.creneau : null}

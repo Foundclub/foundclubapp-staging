@@ -424,3 +424,11 @@ describe('COLL-R-A7 — COL-005 : les étapes sans choix sont sautées', () => {
     expect(jourChoisi(arbre)).toEqual(['jour-3']);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

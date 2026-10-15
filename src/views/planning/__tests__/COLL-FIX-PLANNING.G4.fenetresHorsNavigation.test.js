@@ -495,3 +495,11 @@ describe('COLL-FIX-PLANNING G4 — les fenetres du planning de la Ville, hors na
     });
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

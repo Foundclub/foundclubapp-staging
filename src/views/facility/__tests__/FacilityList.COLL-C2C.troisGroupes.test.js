@@ -306,3 +306,11 @@ describe('FINITIONS12-COLL point 4 — la porte permanente vers « Tes demandes 
     expect(lien(rendre())).toHaveLength(0);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

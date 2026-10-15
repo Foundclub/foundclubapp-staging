@@ -63,6 +63,13 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
   useRoute: () => ({ params: { clubId: 'as-montrivage', collectiviteId: 'ville-de-recette' } }),
 }));
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -416,6 +423,25 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     const gabarit = arbre.root.findByType(Modal).findByType(WizardStepLayout);
     await appuyer({ props: { onPress: gabarit.props.onClose } });
     expect(arbre.root.findAllByType(Modal)).toHaveLength(0);
+  });
+
+  it('CRA7F : installations en lecture, squelette dans le plein écran', async () => {
+    mockInstallations = { isLoading: true };
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
+    expect(arbre.root.findAll((n) => n.props.testID === 'season-slot-chargement').length)
+      .toBeGreaterThan(0);
+    expect(arbre.root.findAllByType(Modal)).toHaveLength(1);
+  });
+
+  it('CRA7F : lecture des installations refusée, Réessayer relance cette lecture', async () => {
+    const refetch = jest.fn();
+    mockInstallations = { error: new Error('Network Error'), isLoading: false, refetch };
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
+    await appuyer(parTexte(arbre, 'Réessayer'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockInputProps).toHaveLength(0);
   });
 
   it('5. hors de ses collectivites : aucun bouton d ecriture', async () => {

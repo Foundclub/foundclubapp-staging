@@ -418,3 +418,11 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(choix(arbre, 'Lundi').findAllByType(Text)).toHaveLength(1);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -55,6 +55,9 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),
 }));
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -374,6 +377,17 @@ test('IPH09 FC-001 : retour unique, header rétabli à la fermeture', async () =
   );
 });
 
+test('CRA7F : Ajouter un club ferme le tunnel puis ouvre le rattachement', async () => {
+  mockClubs = { data: [] };
+  const arbre = await rendre();
+  await appuyer(parTexte(arbre, 'Attribuer un créneau'));
+  await appuyer(parTexte(arbre, 'Ajouter un club'));
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInviteClub', {
+    collectiviteId: 'ville-montrivage', onglet: 'recherche',
+  });
+  expect(arbre.root.findAllByType(WizardStepLayout)).toHaveLength(0);
+});
+
 test('IPH09 FC-003 : détail compact et actions groupées', async () => {
   const arbre = await rendre();
   await appuyer(parTestID(arbre, 'creneau-mar-u15'));
@@ -386,3 +400,8 @@ test('IPH09 FC-003 : détail compact et actions groupées', async () => {
   expect(StyleSheet.flatten(feuille.contentContainerStyle).paddingTop).toBeGreaterThanOrEqual(20);
   expect(textes(arbre)).toContain('17:30 – 19:00');
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);

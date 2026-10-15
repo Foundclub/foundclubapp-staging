@@ -278,3 +278,11 @@ describe('COLL-C2B-BIS — planche 23, ordinateur : la semaine type à l échell
     expect(textes(arbre)).toEqual(expect.arrayContaining(['17:30', '18:00']));
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

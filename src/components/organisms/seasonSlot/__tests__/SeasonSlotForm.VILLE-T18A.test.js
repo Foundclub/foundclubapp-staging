@@ -285,3 +285,11 @@ describe('VILLE-T18A point 2 — planche 23 état 3 : la capacité dépassée, s
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

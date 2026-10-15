@@ -453,6 +453,18 @@ describe('WizardStepLayout — le bouton d action principal', () => {
     expect(textesVisibles(rendre({ onSkip, showSkip: true, skipLabel: 'Plus tard' })))
       .toContain('Plus tard');
   });
+
+  it.each(['Changer l’heure', 'Bloquer pour la Ville', 'Passer cette étape'])(
+    'CRA7F : %s garde une zone de 44 points et son geste',
+    (skipLabel) => {
+      const onSkip = jest.fn();
+      const arbre = rendre({ onSkip, showSkip: true, skipLabel });
+      const cible = arbre.root.findAll((n) => n.props.onPress === onSkip)[0];
+      expect(style(cible).minHeight).toBeGreaterThanOrEqual(44);
+      appuyerSurLeTexte(arbre, skipLabel);
+      expect(onSkip).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe('WizardStepLayout — le retour et la fermeture', () => {

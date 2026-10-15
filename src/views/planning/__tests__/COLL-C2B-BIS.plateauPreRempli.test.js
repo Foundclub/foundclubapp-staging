@@ -281,3 +281,11 @@ describe('COLL-C2B-BIS — planches 24 et 29 : l heure libre d un plateau pré-r
     expect(mockFormProps.at(-1)?.initial?.plateau ?? null).toBeNull();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

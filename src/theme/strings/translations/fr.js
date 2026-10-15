@@ -6162,15 +6162,19 @@ export default {
     // écran (planche P4v4-attribuer) : la question de chaque étape, ce que son sous-titre relit,
     // les lignes du récapitulatif.
     tunnel: {
+      // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
+      attribue: 'Créneau attribué',
       chaqueJour: 'Chaque {{jour}} · {{suite}}',
       chaqueSemaine: '{{qui}} · chaque semaine de la saison',
       club: 'Pour quel club ?',
       equipe: 'Pour quelle équipe ?',
       equipeFacultative: '{{club}} · facultatif',
+      estPrevenu: '{{club}} est prévenu.',
       horaires: 'À quelle heure ?',
       installation: 'Dans quelle installation ?',
       jour: 'Quel jour ?',
       libresDuJour: 'Libre ce {{jour}} : {{heures}}.',
+      modifie: 'Créneau modifié',
       modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
       periode: 'Quelle période ?',
       pourLeClub: 'Pour {{club}}',

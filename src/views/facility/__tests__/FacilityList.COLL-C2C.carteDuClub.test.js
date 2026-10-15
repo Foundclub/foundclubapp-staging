@@ -209,3 +209,11 @@ describe('COLL-C2C — un club sans Ville et sans installation (état 2)', () =>
     expect(lus.some((texte) => /Ville/.test(texte))).toBe(false);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

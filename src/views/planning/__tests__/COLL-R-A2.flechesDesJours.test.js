@@ -368,3 +368,11 @@ describe('COL-012 — sur ordinateur, les fleches du haut entourent les dates', 
     expect(rangDe(laBarre(arbre, 'Jour suivant'), 'Jour précédent')).toBe(0);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

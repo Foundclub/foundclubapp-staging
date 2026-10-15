@@ -35,6 +35,8 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SeasonSlotForm, {
+  ChargementDesChoix,
+  LectureEnErreur,
   TunnelEnAttente,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -115,13 +117,9 @@ function AttribuerAuClub({
   const liste = Array.isArray(installations.data) ? installations.data : [];
   let empechement = null;
   if (installations.isLoading) {
-    empechement = <Loader />;
+    empechement = <ChargementDesChoix />;
   } else if (installations.error) {
-    empechement = (
-      <Text style={[Fonts.p2, Fonts.neutral200]}>
-        {getErrorMessage(/** @type {any} */ (installations.error))}
-      </Text>
-    );
+    empechement = <LectureEnErreur erreur={installations.error} onRetry={installations.refetch} />;
   } else if (liste.length === 0) {
     empechement = (
       <Text style={[Fonts.p2, Fonts.neutral200]}>

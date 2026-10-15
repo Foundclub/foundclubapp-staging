@@ -291,3 +291,11 @@ describe('TEXTES-COLLECTIVITES — le compte des installations passe par le dict
     expect(textes(rendre())).toContain('2 installations');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

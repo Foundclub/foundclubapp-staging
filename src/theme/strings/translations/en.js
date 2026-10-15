@@ -5639,15 +5639,19 @@ export default {
     // 📐 COLL-R-A7 (13/10, COL-005) — "Assign a slot" full screen: step questions, subtitles,
     // summary rows.
     tunnel: {
+      // 📐 COLL-R-A7-FINITIONS (14/10) — the confirmation bubble on return.
+      attribue: 'Slot assigned',
       chaqueJour: 'Every {{jour}} · {{suite}}',
       chaqueSemaine: '{{qui}} · every week of the season',
       club: 'For which club?',
       equipe: 'For which team?',
       equipeFacultative: '{{club}} · optional',
+      estPrevenu: '{{club}} is notified.',
       horaires: 'At what time?',
       installation: 'In which facility?',
       jour: 'Which day?',
       libresDuJour: 'Free this {{jour}}: {{heures}}.',
+      modifie: 'Slot updated',
       modifierLaLigne: '{{cle}}: {{valeur}}. Edit',
       periode: 'Which period?',
       pourLeClub: 'For {{club}}',

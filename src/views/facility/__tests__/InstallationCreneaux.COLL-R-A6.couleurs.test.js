@@ -288,3 +288,11 @@ describe('COL-004 — « + Attribuer un créneau » (planche P4v2-creneaux-tel)'
     expect(bouton(await rendre()).props.icon).toBe('plus');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

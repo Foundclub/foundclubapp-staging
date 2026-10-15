@@ -293,3 +293,11 @@ describe('VILLE-T18C — la fiche d’un club dit comment se comptent ses demand
       .toBe('Une demande « chaque semaine » compte une fois par date.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

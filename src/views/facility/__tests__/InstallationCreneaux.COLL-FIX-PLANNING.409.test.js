@@ -459,3 +459,11 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     expect(textes(arbre)).toContain('Ce créneau est déjà retiré.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -506,3 +506,11 @@ describe('COLL-C2B planche 4 — la semaine, telephone tourne', () => {
     expect(grille().events.length).toBe(3);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

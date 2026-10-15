@@ -352,3 +352,11 @@ describe('COLL-FIX-PLANNING 3 — la grappe de la semaine ouvre la vue Jour', ()
     expect(grille().onSummaryPress).toBeUndefined();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -204,3 +204,11 @@ describe('COLL-C2C — D32 : le dirigeant répartit ses créneaux de la Ville', 
     expect(textes(arbre)).toContain('U15 · chaque mardi 17:30 – 19:00');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
