@@ -112,7 +112,8 @@ function DeplacerLaSeance({
     enabled: etape >= 2 && Boolean(lieu?.documentId && autreJour && fenetre),
     queryFn: () => getRelocationOptions(eventId, {
       as,
-      date: autreJour,
+      // La lecture n'est activée que lorsque cette date est renseignée.
+      date: /** @type {string} */ (autreJour),
       days: 1,
       end: fenetre?.end,
       facility: lieu?.documentId,
@@ -281,7 +282,6 @@ function DeplacerLaSeance({
           </Text>
           <Button
             onPress={() => places.refetch()}
-            testID="deplacer-reessayer"
             title={t('common.actions.retry', 'Réessayer')}
             variant="Secondary"
           />
@@ -331,7 +331,6 @@ function DeplacerLaSeance({
                     setLieu(actuelle);
                     setEtape(2);
                   }}
-                  testID="deplacer-autre-jour"
                   title={t('deplacerSeance.ou.autreJour', 'Choisir un autre jour')}
                   variant="Secondary"
                 />
@@ -587,15 +586,18 @@ function DeplacerLaSeance({
             .catch(() => null);
         }
         // UNE séance : aucun `recurrenceMode`. Le serveur rejuge (créneau, Ville, fermeture).
-        await updateEvent({
-          documentId: eventId,
-          eventData: {
-            date: placeFinale?.startAt || new Date(`${jourChoisi}T${heureDebut}:00`).toISOString(),
-            endTime: `${heureFin}:00.000`,
-            facility: lieu.documentId,
-            startTime: `${heureDebut}:00.000`,
-          },
-        });
+        /**
+         * @type {import('@/domains/event/types').FCEventForm & {
+         *   endTime: string, startTime: string,
+         * }}
+         */
+        const eventData = {
+          date: placeFinale?.startAt || new Date(`${jourChoisi}T${heureDebut}:00`).toISOString(),
+          endTime: `${heureFin}:00.000`,
+          facility: lieu.documentId,
+          startTime: `${heureDebut}:00.000`,
+        };
+        await updateEvent({ documentId: eventId, eventData });
       }
       await Promise.all(['event', 'events', 'planning', 'relocation-options']
         .map((cle) => queryClient.invalidateQueries({ queryKey: [cle] })));

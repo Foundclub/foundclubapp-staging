@@ -78,7 +78,8 @@ function EventStack() {
             headerTitle: getEventEditHeaderTitle(route, t),
             // COLL-R-DEPLACER (14/10) — « Déplacer la séance » porte son propre en-tête de tunnel
             // (« Étape n/4 », retour, fermer) : celui de la pile le doublerait.
-            ...(route?.params?.mode === 'deplacer' ? { headerShown: false } : {}),
+            ...(/** @type {{ mode?: string } | undefined} */ (route?.params)?.mode === 'deplacer'
+              ? { headerShown: false } : {}),
           })}
         />
         <Stack.Screen

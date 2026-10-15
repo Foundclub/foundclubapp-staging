@@ -252,10 +252,20 @@ const getPlanningQuery = ({
 };
 
 /**
+ * @typedef {import('@react-navigation/native').NavigationProp<{
+ *   EventStack: import('@react-navigation/native').NavigatorScreenParams<{
+ *     EventDetails: { eventId: string },
+ *     EventEdit: { as?: string, eventId: string, mode?: string },
+ *   }>,
+ * }>} PlanningEventNavigation
+ */
+
+/**
  * Dedicated fullscreen week-planning screen.
  * @returns {import('react').ReactElement}
  */
 function PlanningWeekFullscreen() {
+  /** @type {PlanningEventNavigation} */
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();

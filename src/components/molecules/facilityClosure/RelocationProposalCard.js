@@ -88,7 +88,6 @@ function RelocationProposalCard({ onChooseOther, proposal }) {
         <Button
           isLoading={accepter.isPending}
           onPress={() => accepter.mutate()}
-          testID="proposition-accepter"
           title={t('deplacerSeance.proposition.accepter', 'Accepter')}
           variant="Primary"
         />
@@ -96,7 +95,6 @@ function RelocationProposalCard({ onChooseOther, proposal }) {
           <Button
             disabled={accepter.isPending}
             onPress={onChooseOther}
-            testID="proposition-autre-place"
             title={t('deplacerSeance.proposition.autrePlace', 'Choisir une autre place')}
             variant="Secondary"
           />
