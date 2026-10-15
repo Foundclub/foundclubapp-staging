@@ -1257,7 +1257,9 @@ function EventDetails({ navigation, route }) {
 
   const createParticipationMutation = useMutation({
     mutationFn: (acceptance = {}) => createEventParticipation({
-      ...(isDetectionEvent ? { acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true } : {}),
+      ...(isDetectionEvent
+        ? { acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true }
+        : {}),
       event: eventId,
       user: userData?.documentId || '',
     }),
