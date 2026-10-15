@@ -92,6 +92,7 @@ import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 import { useIsDesktop } from '@/responsive';
 
 const TeamLocationIconView = /** @type {any} */ (TeamLocationIcon);
@@ -264,6 +265,10 @@ function TeamDetails({ navigation, route }) {
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
   const [showFFBBTeamModal, setShowFFBBTeamModal] = useState(false);
   const [showFFBBErrorModal, setShowFFBBErrorModal] = useState(false);
+  const { retrait: retraitClavierSignalement } = useRetraitDuClavierAndroid(0, {
+    android: false,
+    iPhone: showFFBBErrorModal,
+  });
   const [showExternalSyncReportModal, setShowExternalSyncReportModal] = useState(false);
   const [ffbbUrl, setFfbbUrl] = useState('');
   const [ffbbTeamsList, setFfbbTeamsList] = useState(/** @type {ExternalTeamOption[]} */ ([]));
@@ -5648,11 +5653,25 @@ function TeamDetails({ navigation, route }) {
         transparent
         visible={showFFBBErrorModal}
       >
-        <View style={{
-          alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
-        }}
+        <View style={[
+          {
+            alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', flex: 1, justifyContent: 'center',
+          },
+          retraitClavierSignalement > 0 ? { paddingBottom: retraitClavierSignalement } : null,
+        ]}
         >
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[24], { maxWidth: 400, width: '90%' }]}>
+          {/* CLAVAMI-2 : le contenu dépasse la zone du clavier sur iPhone SE. */}
+          <ScrollView
+            contentContainerStyle={Spaces.padding[24]}
+            keyboardShouldPersistTaps="handled"
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius24,
+              {
+                flexGrow: 0, flexShrink: 1, maxHeight: '100%', maxWidth: 400, width: '90%',
+              },
+            ]}
+          >
             <Text style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginBottom[16]]}>
               {t('teamDetails.ffbb.reportTitle', 'Signaler un problème')}
             </Text>
@@ -5735,7 +5754,7 @@ function TeamDetails({ navigation, route }) {
                 variant="Primary"
               />
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </ScreenContainer>
