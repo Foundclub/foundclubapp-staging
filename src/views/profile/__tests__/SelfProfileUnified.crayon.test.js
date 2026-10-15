@@ -32,6 +32,10 @@ let mockAuthValue;
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
 
+// PAR-L7/L12 — le bloc « Mes enfants » lit trois services : reprendre la doublure commune
+// des temoins du profil, sans charger le client HTTP dans ce temoin du crayon.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
 // bloquees. Ce module-la importe le client HTTP, qui refuse de se charger sans
 // `.env` — absent de TOUT worktree. Sans cette doublure, la suite ENTIERE
