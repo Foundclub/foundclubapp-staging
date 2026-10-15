@@ -32,6 +32,9 @@ import { creerQueryClientDeTest } from '@/testSupport/queryClientDeTest';
 // témoin n°2 compte donc les appels réseau et EXIGE qu'il y en ait ZÉRO.
 
 const mockGetChatMessages = jest.fn();
+const mockCreateWhisperChat = jest.fn();
+const mockGetChats = jest.fn(() => Promise.resolve({ data: [] }));
+const mockUnarchiveChat = jest.fn();
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -63,17 +66,17 @@ jest.mock('@/services/chat/chatService', () => ({
   createClubChat: jest.fn(),
   createGroupChat: jest.fn(),
   createTeamChat: jest.fn(),
-  createWhisperChat: jest.fn(),
+  createWhisperChat: mockCreateWhisperChat,
   deleteMessage: jest.fn(),
   editMessage: jest.fn(),
   // C'est CE compteur qui dit si un message est arrivé par le fil ou par le
   // réseau : s'il bouge, ce n'est plus du direct.
   getChatMessages: (/** @type {any[]} */ ...args) => mockGetChatMessages(...args),
-  getChats: jest.fn(() => Promise.resolve({ data: [] })),
+  getChats: mockGetChats,
   pinChat: jest.fn(),
   removeGroupMember: jest.fn(),
   respondProposalMessage: jest.fn(),
-  unarchiveChat: jest.fn(),
+  unarchiveChat: mockUnarchiveChat,
   unpinChat: jest.fn(),
   updateGroupMeta: jest.fn(),
   votePollMessage: jest.fn(),
@@ -108,17 +111,18 @@ const unMessage = (documentId, texte) => ({
 /**
  * Monte le vrai crochet de messagerie sur un vrai cache react-query.
  * @param {any} clientRequetes - Le client react-query du témoin.
- * @returns {{ arbre: any }} L'arbre monté.
+ * @returns {{ arbre: any, lireMessagerie: () => any }} L'arbre et la messagerie.
  */
 const monterMessagerie = (clientRequetes) => {
   // eslint-disable-next-line global-require
   const useMessaging = require('@/domains/messaging/useMessaging').default;
+  let messagerie;
   /**
    * Sonde minimale : elle ne fait qu'allumer le crochet.
    * @returns {null} Rien à l'écran.
    */
   function Sonde() {
-    useMessaging('chat-1');
+    messagerie = useMessaging('chat-1');
     return null;
   }
   let arbre;
@@ -129,7 +133,7 @@ const monterMessagerie = (clientRequetes) => {
       createElement(Sonde),
     ));
   });
-  return { arbre };
+  return { arbre, lireMessagerie: () => messagerie };
 };
 
 /**
@@ -253,5 +257,75 @@ describe('MSGLIVE — les messages arrivent-ils vraiment en direct ?', () => {
 
     expect(messagesEnCache(clientRequetes)).toHaveLength(0);
     expect(mockGetChatMessages).not.toHaveBeenCalled();
+  });
+});
+
+describe('PARFIN exact — recherche locale ou résultat du serveur, sans horodatage', () => {
+  let clientRequetes;
+  let arbre;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    reinitialiserSocketDeTest();
+    mockGetChats.mockResolvedValue({ data: [] });
+    clientRequetes = creerQueryClientDeTest();
+  });
+
+  afterEach(async () => {
+    if (arbre) await act(async () => { arbre.unmount(); });
+    arbre = null;
+    clientRequetes.clear();
+  });
+
+  it('un fil local de 30 s est réutilisé, même si son ancien résultat disait créé', async () => {
+    const fil = {
+      archivedBy: [{ documentId: 'moi' }],
+      createdAt: new Date(Date.now() - 30000).toISOString(),
+      documentId: 'fil-local',
+      openingOutcome: 'created',
+      participants: [{ documentId: 'moi' }, { documentId: 'maryline' }],
+    };
+    clientRequetes.setQueryData(['chats'], { pages: [{ data: [fil] }] });
+    const sonde = monterMessagerie(clientRequetes);
+    arbre = sonde.arbre;
+    let resultat;
+
+    await act(async () => {
+      resultat = await sonde.lireMessagerie().startWhisperChat(['maryline']);
+    });
+
+    expect(resultat).toMatchObject({ documentId: 'fil-local', openingOutcome: 'reused' });
+    expect(fil.openingOutcome).toBe('created');
+    expect(mockUnarchiveChat.mock.calls[0][0]).toBe('fil-local');
+    expect(mockCreateWhisperChat).not.toHaveBeenCalled();
+  });
+
+  it.each(['created', 'reused', 'unknown'])(
+    'un cache incomplet conserve le résultat %s de la réponse distante',
+    async (openingOutcome) => {
+      const fil = { documentId: 'fil-distant', openingOutcome };
+      mockCreateWhisperChat.mockResolvedValueOnce(fil);
+      const sonde = monterMessagerie(clientRequetes);
+      arbre = sonde.arbre;
+      let resultat;
+
+      await act(async () => {
+        resultat = await sonde.lireMessagerie().startWhisperChat(['moi', 'maryline', 'maryline']);
+      });
+
+      expect(resultat).toEqual(fil);
+      expect(mockCreateWhisperChat.mock.calls[0][0]).toEqual(['maryline']);
+    },
+  );
+
+  it('un refus serveur est propagé, aucun succès fabriqué', async () => {
+    mockCreateWhisperChat.mockRejectedValueOnce(new Error('Contact refusé'));
+    const sonde = monterMessagerie(clientRequetes);
+    arbre = sonde.arbre;
+
+    await act(async () => {
+      await expect(sonde.lireMessagerie().startWhisperChat(['maryline']))
+        .rejects.toThrow('Contact refusé');
+    });
   });
 });

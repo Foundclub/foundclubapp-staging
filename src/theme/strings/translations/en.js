@@ -16660,6 +16660,7 @@ export default {
     interest: {
       conversationNamesJoin: ' and ',
       conversationOpened: 'Conversation opened with {{names}}.',
+      conversationReady: 'Conversation with {{names}}.',
       conversationReopened: 'Your conversation with {{names}} is reopened.',
       noteLabel: 'Add a note (optional)',
       recipient: '{{firstname}} will receive this message.',

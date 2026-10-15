@@ -135,12 +135,6 @@ const getSourceErrorDescription = (sourceError, t) => {
 };
 
 /**
- * 👪 PARENT-FINITIONS 4 (14/10, design E16) — un fil cree plus d'une minute AVANT l'appui
- * existait deja : on le dit « rouvert ».
- */
-const FIL_DEJA_LA_APRES_MS = 60 * 1000;
-
-/**
  * 👶 PARENT-FINITIONS 6 (14/10) — LA PLACE D'UN ENFANT N'EXISTE PLUS : son parent l'a retiree
  * (PAR-L8) pendant que l'encadrement la regardait. Le serveur le dit par un 404 : avec le code
  * `CLUB_INTEREST_REQUEST_GONE` quand l'annulation gagne la course (relue sous le verrou de
@@ -158,21 +152,18 @@ const laDemandeADisparu = (erreur) => (
  * conversation avec Maryline est rouverte. ». Avant, on arrivait dans le fil sans un mot.
  * ⛔ Pas un parametre de la route : sur le site, ils vont dans l'adresse, et un prenom n'a rien
  * a y faire. Le bandeau est celui de l'app (`showBanner`, app ET site), pose apres l'arrivee.
- * ponytail: « existait » se lit sur `createdAt` — ni la recherche locale du fil ni la route
- * serveur (`chat.ts`, fil prive deja la) ne le disent. Plafond : une horloge de telephone
- * decalee de plus d'une minute se trompe de VERBE (le fil, lui, est le bon). Sortie : un
- * drapeau « deja la » rendu par la route de creation du fil.
+ * Le résultat exact vient de la recherche locale ou de la réponse de création serveur.
+ * Un ancien serveur sans cet indicateur garde un texte neutre, sans déduire depuis une date.
  * @param {{
- *   appuyeA: number,
  *   chat: any,
  *   coach: any,
  *   item: any,
  *   t: (key: string, options?: any) => string,
- * }} entree L'appui, le fil rendu, le coach choisi (ou null), la demande, la traduction.
+ * }} entree Le fil rendu, le coach choisi (ou null), la demande, la traduction.
  * @returns {string} La phrase.
  */
 const phraseDArriveeDansLeFil = ({
-  appuyeA, chat, coach, item, t,
+  chat, coach, item, t,
 }) => {
   const noms = [
     item?.meta?.requesterFirstname || item?.meta?.requesterName,
@@ -181,16 +172,18 @@ const phraseDArriveeDansLeFil = ({
     .map((prenom) => String(prenom || '').trim())
     .filter(Boolean)
     .join(t('requestsHub.interest.conversationNamesJoin', ' et '));
-  const creeA = Date.parse(String(chat?.createdAt || chat?.data?.createdAt || ''));
-  if (Number.isFinite(creeA) && creeA < appuyeA - FIL_DEJA_LA_APRES_MS) {
+  if (chat?.openingOutcome === 'reused') {
     return t('requestsHub.interest.conversationReopened', {
       defaultValue: 'Ta conversation avec {{names}} est rouverte.',
       names: noms,
       ...SANS_ECHAPPEMENT,
     });
   }
-  return t('requestsHub.interest.conversationOpened', {
-    defaultValue: 'Conversation ouverte avec {{names}}.',
+  const created = chat?.openingOutcome === 'created';
+  return t(created
+    ? 'requestsHub.interest.conversationOpened'
+    : 'requestsHub.interest.conversationReady', {
+    defaultValue: created ? 'Conversation ouverte avec {{names}}.' : 'Conversation avec {{names}}.',
     names: noms,
     ...SANS_ECHAPPEMENT,
   });
@@ -754,8 +747,6 @@ function RequestsHub({ navigation, route }) {
   ) => {
     const item = conversationItem;
     if (!item) return;
-    // PARENT-FINITIONS 4 — le moment de l'appui : un fil cree avant existait deja.
-    const appuyeA = Date.now();
 
     try {
       setProcessingItemId(item.id);
@@ -785,7 +776,7 @@ function RequestsHub({ navigation, route }) {
       navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
       showBanner({
         title: phraseDArriveeDansLeFil({
-          appuyeA, chat, coach, item, t,
+          chat, coach, item, t,
         }),
         tone: 'success',
       });

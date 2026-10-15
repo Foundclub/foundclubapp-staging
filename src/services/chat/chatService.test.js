@@ -1,9 +1,11 @@
 const mockGet = jest.fn();
+const mockPost = jest.fn();
 
 jest.mock('../client', () => ({
   __esModule: true,
   default: {
     get: mockGet,
+    post: mockPost,
   },
 }));
 
@@ -20,7 +22,43 @@ jest.mock('@/utils/logger/logger', () => ({
   })),
 }));
 
-const { getChatById, getChatMessages } = require('./chatService');
+const { createWhisperChat, getChatById, getChatMessages } = require('./chatService');
+
+describe('PARFIN exact — le résultat de création du fil traverse le service', () => {
+  test.each([
+    [true, 'created'],
+    [false, 'reused'],
+    [undefined, 'unknown'],
+    ['true', 'unknown'],
+    [null, 'unknown'],
+  ])('whisperChatCreated=%s donne %s, sans déduire depuis une date', async (flag, outcome) => {
+    mockPost.mockResolvedValueOnce({
+      data: {
+        data: { createdAt: '2000-01-01', documentId: 'fil-maryline' },
+        meta: { whisperChatCreated: flag },
+      },
+    });
+
+    await expect(createWhisperChat(['maryline'])).resolves.toMatchObject({
+      documentId: 'fil-maryline', openingOutcome: outcome,
+    });
+    expect(mockPost).toHaveBeenLastCalledWith('/chats/whisper', {
+      data: { participants: ['maryline'], type: 'whisper' },
+    });
+  });
+
+  test('un ancien serveur sans meta conserve le fil et donne inconnu', async () => {
+    mockPost.mockResolvedValueOnce({ data: { data: { documentId: 'fil-ancien' } } });
+    await expect(createWhisperChat(['maryline'])).resolves.toMatchObject({
+      documentId: 'fil-ancien', openingOutcome: 'unknown',
+    });
+  });
+
+  test('un refus serveur reste un refus', async () => {
+    mockPost.mockRejectedValueOnce(new Error('Contact refusé'));
+    await expect(createWhisperChat(['maryline'])).rejects.toThrow('Contact refusé');
+  });
+});
 
 describe('chatService', () => {
   beforeEach(() => {

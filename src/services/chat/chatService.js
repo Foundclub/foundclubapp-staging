@@ -293,7 +293,7 @@ export const createChatMessage = async ({
 /**
  * Create a new whisper chat (1to1)
  * @param {string[]} participants - The participant ids
- * @returns {Promise<Chat>}
+ * @returns {Promise<Chat & { openingOutcome: 'created' | 'reused' | 'unknown' }>}
  */
 export const createWhisperChat = async (participants) => {
   const response = await client.post('/chats/whisper', {
@@ -311,7 +311,16 @@ export const createWhisperChat = async (participants) => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    return validationResult.data;
+    // Le résultat du geste vient du serveur, jamais de l'âge du fil.
+    const created = response.data?.meta?.whisperChatCreated;
+    /** @type {'created' | 'reused' | 'unknown'} */
+    let openingOutcome = 'unknown';
+    if (created === true) openingOutcome = 'created';
+    if (created === false) openingOutcome = 'reused';
+    return {
+      ...validationResult.data,
+      openingOutcome,
+    };
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to create chat: ${errorToDisplay}`);
