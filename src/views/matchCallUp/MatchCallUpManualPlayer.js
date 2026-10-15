@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -127,7 +128,12 @@ function MatchCallUpManualPlayer() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
+      keyboardAvoiding={Platform.OS === 'android'}
+      style={[styles.screen]}
+    >
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerTexts}>

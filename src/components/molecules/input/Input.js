@@ -6,6 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import BottomModalTextInput from '@/components/atoms/bottomModalTextInput/BottomModalTextInput';
+
 // AUTOCOMPLETE-WEB (2026-09-23) — LA GEOMETRIE DE LA LIGNE, NOMMEE UNE SEULE FOIS.
 //
 // `AutocompleteSelect` pose une surcouche ABSOLUE par-dessus cet Input pour
@@ -40,6 +42,7 @@ export const INPUT_ROW_IOS_BOTTOM_PADDING = 12;
  * @property {() => void} [onBottomIconPress]
  * @property {string} [iconColor]
  * @property {boolean} [lightMode]
+ * @property {boolean} [useBottomSheetInput] Champ sous BottomModal : integration clavier Android.
  * @property {'default' | 'compact'} [density]
  * @property {string} [placeholderTextColor]
  * @property {string} [accessibilityLabel]
@@ -70,6 +73,7 @@ const Input = forwardRef(
     } = useTheme();
     const hasLabel = Boolean(props.label);
     const isCompact = props.density === 'compact';
+    const TextInputComponent = props.useBottomSheetInput ? BottomModalTextInput : TextInput;
 
     // methods
     const handleFocus = () => {
@@ -145,7 +149,7 @@ const Input = forwardRef(
                   )
                   : null
               }
-              <TextInput
+              <TextInputComponent
                 accessibilityHint={props.accessibilityHint}
                 accessibilityLabel={props.accessibilityLabel}
                 accessibilityRole={props.accessibilityRole}
