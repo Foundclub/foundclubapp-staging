@@ -482,3 +482,11 @@ describe('COLL-R-A6 — un club garde SA couleur d une semaine a l autre (Ville)
     expect(apresUnAutre.displayColor).toBe(seul.displayColor);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

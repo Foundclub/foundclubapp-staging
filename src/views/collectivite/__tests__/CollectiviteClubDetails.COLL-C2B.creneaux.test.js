@@ -66,7 +66,10 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
-jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonMock({ children }) { return children; });
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -424,7 +427,8 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     mockInstallations = { isLoading: true };
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
-    expect(arbre.root.findAll((n) => n.props.testID === 'season-slot-chargement').length).toBeGreaterThan(0);
+    expect(arbre.root.findAll((n) => n.props.testID === 'season-slot-chargement').length)
+      .toBeGreaterThan(0);
     expect(arbre.root.findAllByType(Modal)).toHaveLength(1);
   });
 

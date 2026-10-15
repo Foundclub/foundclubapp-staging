@@ -442,3 +442,11 @@ describe('COL-014 — la Ville ne compte que ce qu elle a encore a trancher', ()
     expect(lus).toContain('2 équipes à la fois · 1 place libre au plus chargé');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

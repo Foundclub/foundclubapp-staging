@@ -205,3 +205,11 @@ describe('COLL-C5 — planche 37 : « Utilisation » sur la fiche d’un club', 
     expect(lus).toContain('Les chiffres de la saison n’ont pas pu être lus.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

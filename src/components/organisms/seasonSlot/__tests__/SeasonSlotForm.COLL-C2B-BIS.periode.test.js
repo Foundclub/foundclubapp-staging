@@ -217,3 +217,11 @@ describe('COLL-C2B-BIS — planche 23 : la période d un créneau se modifie', (
     expect(champ('Au')).toBeUndefined();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

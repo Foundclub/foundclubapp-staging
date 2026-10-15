@@ -1428,8 +1428,8 @@ function PlanningWeekFullscreen() {
         facilityId={facilityId}
         guided
         initial={panneau.initial}
-        lectureDesClubs={attachedClubs}
         key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+        lectureDesClubs={attachedClubs}
         onCancel={fermerPanneau}
         onDone={fermerPanneau}
         pleinEcran
@@ -1455,8 +1455,8 @@ function PlanningWeekFullscreen() {
           facilityId={facilityId}
           guided
           initial={panneau.initial}
-          lectureDesClubs={attachedClubs}
           key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+          lectureDesClubs={attachedClubs}
           onCancel={fermerPanneau}
           onDone={fermerPanneau}
           slot={panneau.type === 'modifier' ? panneau.creneau : null}

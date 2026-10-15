@@ -265,3 +265,11 @@ describe('COLL-C2B-BIS — planche 21 : le « … » ouvre un petit menu ancré,
     expect(lus).toEqual(['Voir le planning', 'Modifier l’installation']);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

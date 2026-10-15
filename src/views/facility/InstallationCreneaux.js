@@ -501,14 +501,16 @@ function InstallationCreneaux() {
       <SeasonSlotForm
         ajouterUnClub={() => {
           fermer();
-          navigation.navigate(RouteNames.CollectiviteInviteClub, { collectiviteId, onglet: 'recherche' });
+          navigation.navigate(RouteNames.CollectiviteInviteClub, {
+            collectiviteId, onglet: 'recherche',
+          });
         }}
         clubs={clubsRattaches}
         facilityId={facilityId}
         guided
         initial={panneau.initial}
-        lectureDesClubs={clubs}
         key={`attribuer-${panneau.initial?.weekday || 0}-${panneau.initial?.startTime || ''}`}
+        lectureDesClubs={clubs}
         onCancel={fermer}
         onDone={fermer}
         pleinEcran={enPleinEcran}

@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import {
   attributeSeasonSlot,
@@ -258,7 +258,7 @@ describe('COLL-R-A7-FINITIONS 1 — la bulle de confirmation au retour sur l’�
 describe('COLL-R-A7-FINITIONS 2 — aucun club rattaché', () => {
   test('dit pourquoi et permet de rejoindre le rattachement existant', async () => {
     const ajouterUnClub = jest.fn();
-    const arbre = await monter({ clubs: [], ajouterUnClub });
+    const arbre = await monter({ ajouterUnClub, clubs: [] });
     expect(arbre.root.findAllByType(Text).some((n) => texte(n).includes('Aucun club'))).toBe(true);
     expect(tunnel(arbre).isNextDisabled).toBe(true);
     await appuyerSur(arbre, 'Ajouter un club');
@@ -355,7 +355,9 @@ describe('COLL-R-A7-FINITIONS 4 — une lecture en échec peut être relancée',
 });
 
 describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes', () => {
-  const occupation = (documentId, startTime, endTime) => ({ documentId, weekday: 2, startTime, endTime });
+  const occupation = (documentId, startTime, endTime) => ({
+    documentId, endTime, startTime, weekday: 2,
+  });
   const avecOccupation = () => {
     /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
       data: [occupation('a', '17:00', '19:00'), occupation('b', '18:00', '20:00')],

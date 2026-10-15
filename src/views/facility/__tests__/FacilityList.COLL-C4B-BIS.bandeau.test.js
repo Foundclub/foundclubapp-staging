@@ -210,3 +210,11 @@ describe('FINITIONS13-COLL point 8 — le bandeau dit toutes les fermetures à v
     delete mockBandeaux.dojo;
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

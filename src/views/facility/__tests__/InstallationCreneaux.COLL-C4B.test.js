@@ -509,3 +509,11 @@ describe('VILLE-T18A (3) la carte d une fermeture : sa date entière, « Rouvrir
     expect(lus).not.toContain('Rouvrir prévient les mêmes clubs.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

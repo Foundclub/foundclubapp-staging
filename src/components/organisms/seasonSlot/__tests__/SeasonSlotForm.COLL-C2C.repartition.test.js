@@ -208,3 +208,11 @@ describe('COLL-C2C — D32 : le panneau de C2B, en répartition', () => {
     expect(getClubTeamsForSlot).not.toHaveBeenCalled();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

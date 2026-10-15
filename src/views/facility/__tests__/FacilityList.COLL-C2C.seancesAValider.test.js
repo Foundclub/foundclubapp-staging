@@ -229,3 +229,11 @@ describe('COLL-C2C — D32 : les séances qui attendent le dirigeant', () => {
     expect(textes(rendre()).some((texte) => texte.startsWith('Séances à valider'))).toBe(false);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

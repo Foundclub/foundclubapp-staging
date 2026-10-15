@@ -429,3 +429,11 @@ describe('VILLE-T18A point 4 — la fiche : les 4 onglets tiennent dans la large
     expect(onglets.fitLabels).toBe(true);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

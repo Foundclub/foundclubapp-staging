@@ -222,3 +222,11 @@ describe('PARENT-PLANNING / calendrier plein ecran d un parent', () => {
     expect(/** @type {any} */ (getMyPlanning).mock.calls[0][0].withChildren).toBeUndefined();
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

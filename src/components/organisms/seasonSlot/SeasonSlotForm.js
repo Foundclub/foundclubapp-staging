@@ -297,7 +297,11 @@ export function ChargementDesChoix() {
   const { Colors } = useTheme();
   return (
     <View accessibilityState={{ busy: true }} testID="season-slot-chargement">
-      <SkeletonLoader backgroundColor={Colors.primary200} highlightColor={Colors.neutral200} isActive>
+      <SkeletonLoader
+        backgroundColor={Colors.primary200}
+        highlightColor={Colors.neutral200}
+        isActive
+      >
         <View style={{ gap: 12 }}>
           {[0, 1, 2].map((ligne) => (
             <View
@@ -807,36 +811,37 @@ function SeasonSlotForm({
   })();
 
   // VILLE-T18A — « Libre ce mardi : » et une puce par plage ; un appui pose ses heures.
-  const lesHeuresLibres = voirLibres && jour && !repartition && !lecture.isLoading && !lecture.error ? (
-    <View style={{ gap: 8 }} testID="attribuer-heures-libres">
-      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-        {t('collectiviteCreneaux.attribuer.libreCe', 'Libre ce {{jour}} :', {
-          jour: weekdayName(Number(jour)).toLocaleLowerCase(),
-          ...SANS_ECHAPPEMENT,
-        })}
-      </Text>
-      {heuresLibres.length ? (
-        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-          {heuresLibres.map((plage) => (
-            <PuceDeChoix
-              actif={false}
-              key={`libre-${plage.start}`}
-              libelle={timeRange(fromMinutes(plage.start), fromMinutes(plage.end))}
-              onPress={() => poserLaPlage(plage)}
-              testID={`attribuer-libre-${fromMinutes(plage.start)}`}
-            />
-          ))}
-        </View>
-      ) : (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('collectiviteCreneaux.attribuer.aucuneLibre', 'Aucune heure libre ce {{jour}}.', {
+  const lesHeuresLibres = voirLibres && jour && !repartition
+    && !lecture.isLoading && !lecture.error ? (
+      <View style={{ gap: 8 }} testID="attribuer-heures-libres">
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+          {t('collectiviteCreneaux.attribuer.libreCe', 'Libre ce {{jour}} :', {
             jour: weekdayName(Number(jour)).toLocaleLowerCase(),
             ...SANS_ECHAPPEMENT,
           })}
         </Text>
-      )}
-    </View>
-  ) : null;
+        {heuresLibres.length ? (
+          <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+            {heuresLibres.map((plage) => (
+              <PuceDeChoix
+                actif={false}
+                key={`libre-${plage.start}`}
+                libelle={timeRange(fromMinutes(plage.start), fromMinutes(plage.end))}
+                onPress={() => poserLaPlage(plage)}
+                testID={`attribuer-libre-${fromMinutes(plage.start)}`}
+              />
+            ))}
+          </View>
+        ) : (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('collectiviteCreneaux.attribuer.aucuneLibre', 'Aucune heure libre ce {{jour}}.', {
+              jour: weekdayName(Number(jour)).toLocaleLowerCase(),
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        )}
+      </View>
+    ) : null;
 
   const titreDuChamp = (/** @type {string} */ texte) => (
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
@@ -917,10 +922,14 @@ function SeasonSlotForm({
   };
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
-    if (etapeCourante === 'club') return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+    if (etapeCourante === 'club') {
+      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+    }
     if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
     if (etapeCourante === 'jour') return !jour || lecture.isLoading || Boolean(lecture.error);
-    if (etapeCourante === 'horaires') return !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur);
+    if (etapeCourante === 'horaires') {
+      return !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur);
+    }
     const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
     return !periodeJuste || (modification && !dateEffetValide);
   })();
@@ -1168,96 +1177,115 @@ function SeasonSlotForm({
           {libelleDuChamp(compact
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
             : t('collectiviteCreneaux.attribuer.club', 'Club'))}
-          {lectureDesClubs?.error ? (
-            <LectureEnErreur erreur={lectureDesClubs.error} onRetry={lectureDesClubs.refetch} />
-          ) : lectureDesClubs?.isLoading ? <ChargementDesChoix /> : clubs.length === 0 ? (
-            <View style={{ alignItems: 'center', gap: 12 }}>
-              <SvgIcon color={Colors.primary200} height={40} name="shield" width={40} />
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'collectiviteCreneaux.attribuer.aucunClub',
-                  'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
-                )}
-              </Text>
-              {ajouterUnClub ? (
-                <Button
-                  onPress={ajouterUnClub}
-                  title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
-                  variant="Primary"
-                />
-              ) : null}
-            </View>
-          ) : listeDeChoix((fixedClubId
-            ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
-            : clubs).map((ligne) => ({
-            actif: ligne.documentId === club,
-            club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
-            key: ligne.documentId,
-            libelle: ligne.name,
-            onPress: () => {
-              setClub(ligne.documentId);
-              setEquipe(null);
-              toucherLaSaisie();
-            },
-          })))}
+          {(() => {
+            if (lectureDesClubs?.error) {
+              return (
+                <LectureEnErreur erreur={lectureDesClubs.error} onRetry={lectureDesClubs.refetch} />
+              );
+            }
+            if (lectureDesClubs?.isLoading) return <ChargementDesChoix />;
+            if (clubs.length === 0) {
+              return (
+                <View style={{ alignItems: 'center', gap: 12 }}>
+                  <SvgIcon color={Colors.primary200} height={40} name="shield" width={40} />
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'collectiviteCreneaux.attribuer.aucunClub',
+                      'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+                    )}
+                  </Text>
+                  {ajouterUnClub ? (
+                    <Button
+                      onPress={ajouterUnClub}
+                      title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
+                      variant="Primary"
+                    />
+                  ) : null}
+                </View>
+              );
+            }
+            return listeDeChoix((fixedClubId
+              ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
+              : clubs).map((ligne) => ({
+              actif: ligne.documentId === club,
+              club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
+              key: ligne.documentId,
+              libelle: ligne.name,
+              onPress: () => {
+                setClub(ligne.documentId);
+                setEquipe(null);
+                toucherLaSaisie();
+              },
+            })));
+          })()}
         </View>
       )}
 
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
-          {equipes.error ? <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />
-            : equipes.isLoading ? <ChargementDesChoix /> : listeDeChoix([
-            {
-              actif: !equipe,
-              detail: t(
-                'collectiviteCreneaux.tunnel.toutLeClubDit',
-                'Le club répartit lui-même ses équipes.',
-              ),
-              key: 'tout-le-club',
-              libelle: t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
-              onPress: () => setEquipe(null),
-            },
-            ...(Array.isArray(equipes.data) ? equipes.data : []).map((/** @type {any} */ e) => ({
-              actif: e.documentId === equipe,
-              key: e.documentId,
-              libelle: e.name,
-              onPress: () => setEquipe(e.documentId),
-            })),
-          ])}
+          {(() => {
+            if (equipes.error) {
+              return <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />;
+            }
+            if (equipes.isLoading) return <ChargementDesChoix />;
+            return listeDeChoix([
+              {
+                actif: !equipe,
+                detail: t(
+                  'collectiviteCreneaux.tunnel.toutLeClubDit',
+                  'Le club répartit lui-même ses équipes.',
+                ),
+                key: 'tout-le-club',
+                libelle: t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
+                onPress: () => setEquipe(null),
+              },
+              ...(Array.isArray(equipes.data) ? equipes.data : []).map((/** @type {any} */ e) => ({
+                actif: e.documentId === equipe,
+                key: e.documentId,
+                libelle: e.name,
+                onPress: () => setEquipe(e.documentId),
+              })),
+            ]);
+          })()}
         </View>
       ) : null}
 
       {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
-          {lecture.error ? <LectureEnErreur erreur={lecture.error} onRetry={lecture.refetch} />
-            : lecture.isLoading ? <ChargementDesChoix /> : listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
+          {(() => {
+            if (lecture.error) {
+              return <LectureEnErreur erreur={lecture.error} onRetry={lecture.refetch} />;
+            }
+            if (lecture.isLoading) return <ChargementDesChoix />;
+            return listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
             // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
             // certaines heures le dit sous son nom (les mots de la planche P4v2).
-            const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
-            const pleines = fullRangesOfSlots(ceJour, capacite);
-            return {
-              actif: numero === jour,
-              avertissement: pleines.length > 0,
-              detail: pleines.length
-                ? t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
-                  heures: pleines
-                    .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
-                    .join(', '),
-                  ...SANS_ECHAPPEMENT,
-                })
-                : null,
-              key: `jour-${numero}`,
-              libelle: weekdayName(numero),
-              libelleCourt: weekdayName(numero, { short: true }),
-              onPress: () => {
-                setJour(numero);
-                toucherLaSaisie();
-              },
-              testID: `jour-${numero}`,
-            };
-          }))}
+              const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
+              const pleines = fullRangesOfSlots(ceJour, capacite);
+              return {
+                actif: numero === jour,
+                avertissement: pleines.length > 0,
+                detail: pleines.length
+                  ? t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                    heures: pleines
+                      .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                      .join(', '),
+                    ...SANS_ECHAPPEMENT,
+                  })
+                  : null,
+                key: `jour-${numero}`,
+                libelle: weekdayName(numero),
+                libelleCourt: weekdayName(numero, { short: true }),
+                onPress: () => {
+                  setJour(numero);
+                  toucherLaSaisie();
+                },
+                testID: `jour-${numero}`,
+              };
+            }));
+          })()}
         </View>
       )}
 
@@ -1352,12 +1380,18 @@ function SeasonSlotForm({
       {tunnelPleinEcran && confirmationFinale ? recapEnLignes : null}
       {libresDuJour}
       {visible('horaires') || confirmationFinale ? (
-        disponibilitesEnErreur ? (
-          <LectureEnErreur
-            erreur={disponibilitesEnErreur}
-            onRetry={lecture.error ? lecture.refetch : apercu.refetch}
-          />
-        ) : disponibilitesEnCours ? <ChargementDesChoix /> : carteDeLaPlace
+        (() => {
+          if (disponibilitesEnErreur) {
+            return (
+              <LectureEnErreur
+                erreur={disponibilitesEnErreur}
+                onRetry={lecture.error ? lecture.refetch : apercu.refetch}
+              />
+            );
+          }
+          if (disponibilitesEnCours) return <ChargementDesChoix />;
+          return carteDeLaPlace;
+        })()
       ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 

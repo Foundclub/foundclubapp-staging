@@ -450,3 +450,11 @@ describe('Incident 13 — une seule ligne dit les places libres', () => {
     expect(lus.join(' | ')).not.toMatch(/Places encore libres au moment le plus chargé/);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -687,3 +687,11 @@ describe('FINITIONS12-COLL point 8 — retiré plus tard : listé jusque-là, av
     expect(lus).toContain('17:30 – 19:00 · du 1 sept. au 31 mai');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -176,3 +176,11 @@ describe('SAIS lot 1 — « Attribuer un créneau » : un jour présélectionné
     expect(jourChoisi(arbre)).toEqual([`jour-${autre}`]);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
