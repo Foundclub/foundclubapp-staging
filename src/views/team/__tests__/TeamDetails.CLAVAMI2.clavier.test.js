@@ -16,7 +16,7 @@ import {
   style,
   telephone,
   verifierDefilement,
-} from './helpers/clavami2ModalGeometry';
+} from '@/testSupport/clavami2ModalGeometry';
 
 jest.setTimeout(30000);
 

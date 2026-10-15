@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import {
   DeviceEventEmitter, Platform, ScrollView, StyleSheet,
 } from 'react-native';
