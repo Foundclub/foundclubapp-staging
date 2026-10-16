@@ -571,6 +571,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
   return (
     <BottomModal
+      androidKeyboardBehavior="extend"
       close={handleClose}
       closeOnBackdropPress={surLeSite}
       contentContainerStyle={modalContentContainerStyle}

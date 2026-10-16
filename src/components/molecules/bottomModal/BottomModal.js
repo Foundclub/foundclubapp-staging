@@ -47,6 +47,8 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @param {boolean} [props.enablePanDownToClose] - Enables pan-down-to-close gesture
  * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode] - Par
  * defaut : `adjustPan` sur Android 15+ (bord a bord), `adjustResize` ailleurs (ANDROIDBAR-6).
+ * @param {'extend'} [props.androidKeyboardBehavior] - Opt-in Android 15+ en adjustPan :
+ * reduire le contenu au clavier sans animer la position d'une grande feuille.
  * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
  * @param {number} [props.maxContentHeightRatio] - Fraction de la hauteur d'ecran
  * que la zone defilante peut occuper. Sans effet avec `snapPoints`.
@@ -59,6 +61,7 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({
+  androidKeyboardBehavior,
   androidKeyboardInputMode,
   children,
   close,
@@ -284,7 +287,19 @@ function BottomModal({
       ? 'adjustPan'
       : 'adjustResize'
   );
-  const sheetBottomInset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
+  // Gorhom 5.2.4 : interactive borne la remontee a 0, puis cherche position + clavier
+  // dans les detents. Une grande feuille peut obtenir -1 et declencher onClose.
+  // Les formulaires qui le demandent utilisent extend : Gorhom reduit son contenu,
+  // sans cette animation. Aucun retrait clavier ne doit s'y ajouter une seconde fois.
+  const usesAndroidExtend = androidKeyboardBehavior === 'extend'
+    && Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35
+    && modeDuClavierAndroid === 'adjustPan';
+  const keyboardBehaviorForPlatform = usesAndroidExtend ? 'extend' : keyboardBehavior;
+  const sheetBottomInset = keyboardBehavior === 'interactive' || usesAndroidExtend
+    ? 0
+    : keyboardHeight;
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
   const contentBottomPadding = useMemo(
@@ -318,7 +333,7 @@ function BottomModal({
       enablePanDownToClose={enablePanDownToClose}
       handleComponent={null}
       index={0}
-      keyboardBehavior={keyboardBehavior}
+      keyboardBehavior={keyboardBehaviorForPlatform}
       keyboardBlurBehavior="restore"
       onDismiss={handleDismiss}
       ref={modalRef}

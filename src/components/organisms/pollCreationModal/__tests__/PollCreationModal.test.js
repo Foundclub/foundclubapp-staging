@@ -136,6 +136,7 @@ describe('MSG1A — PollCreationModal (caracterisation)', () => {
     }
     expect(arbre.root.findAllByType(BottomModalTextInput)).toHaveLength(6);
     expect(mockFeuilles[mockFeuilles.length - 1].androidKeyboardInputMode).toBeUndefined();
+    expect(mockFeuilles[mockFeuilles.length - 1].androidKeyboardBehavior).toBe('extend');
     ecrire(champs(arbre)[0], 'Quel jour ?');
     champs(arbre).slice(1).forEach((champ, index) => ecrire(champ, `Jour ${index + 1}`));
     await toucherLeTexte(arbre, 'Envoyer le sondage');
