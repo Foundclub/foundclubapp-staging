@@ -1,6 +1,7 @@
 import { InteractionManager } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import BottomModal from '../../bottomModal/BottomModal';
 import Input from '../../input/Input';
 import AutocompleteSelect from '../AutocompleteSelect';
 
@@ -149,9 +150,15 @@ test('seule la recherche interne demande le champ de feuille', () => {
   const inputs = arbre.root.findAllByType(Input);
   const recherche = inputs.find((input) => input.props.inputMode === 'search');
   expect(recherche.props.useBottomSheetInput).toBe(true);
+  expect(arbre.root.findByType(BottomModal).props.androidKeyboardBehavior).toBe('extend');
   inputs.filter((input) => input !== recherche).forEach((input) => {
     expect(input.props.useBottomSheetInput).toBeUndefined();
   });
+});
+
+test('un selecteur sans recherche ne demande pas le comportement clavier Android', () => {
+  const { arbre } = monterEtOuvrir({ isSearchable: false });
+  expect(arbre.root.findByType(BottomModal).props.androidKeyboardBehavior).toBeUndefined();
 });
 
 /**

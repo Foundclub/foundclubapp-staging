@@ -591,6 +591,7 @@ const AutocompleteSelect = forwardRef(
           </Text>
         ) : null}
         <BottomModal
+          androidKeyboardBehavior={props.isSearchable ? 'extend' : undefined}
           close={handleCloseModal}
           footerComponent={modalFooter}
           headerComponent={(

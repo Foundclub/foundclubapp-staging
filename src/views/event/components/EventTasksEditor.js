@@ -239,6 +239,7 @@ function EventTasksEditor({
 
       {isOpen ? (
         <BottomModal
+          androidKeyboardBehavior="extend"
           close={closeModal}
           enableContentPanningGesture={false}
           enablePanDownToClose={false}

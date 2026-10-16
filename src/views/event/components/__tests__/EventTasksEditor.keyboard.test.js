@@ -105,6 +105,7 @@ describe('Nouvelle tache — contrat de saisie', () => {
     const { arbre } = ouvrir();
     autre(arbre);
     expect(arbre.root.findAllByType(BottomModalTextInput)).toHaveLength(3);
+    expect(arbre.root.findByType(BottomModal).props.androidKeyboardBehavior).toBe('extend');
   });
 
   it.each(['android', 'ios', 'web'])('%s : seul Android change de zone defilante', (os) => {
