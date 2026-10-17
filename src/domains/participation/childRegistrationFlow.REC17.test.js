@@ -29,7 +29,7 @@ test.each([
 ])('REC17-003 : audience %s/%s ne remplace pas une inscription extérieure', (status, selectionMode) => {
   const rows = describeChildChoices([{ age: 11, documentId: 'c', team: { documentId: 'away' } }], [], {
     team: { documentId: 'host' },
-    teamAudiences: [{ team: { documentId: 'away' }, status, selectionMode }],
+    teamAudiences: [{ selectionMode, status, team: { documentId: 'away' } }],
   });
   expect(rows[0].selectable).toBe(true);
 });
