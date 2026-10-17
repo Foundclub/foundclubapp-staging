@@ -36,6 +36,8 @@ import {
   useRegisterChildren,
 } from '@/services/eventChildRegistration/eventChildRegistrationQueries';
 
+import EventChildResponses, { EventChildResponsesForOrganizer } from './EventChildResponses';
+
 /**
  * 👪 PAR-L11b (13/10) — « INSCRIRE MES ENFANTS » SUR UN EVENEMENT PUBLIC (PAR-012, D4 B).
  *
@@ -138,9 +140,11 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
   const [errorMessage, setErrorMessage] = useState('');
 
   const choices = useMemo(
-    () => describeChildChoices(children, registrations),
-    [children, registrations],
+    () => describeChildChoices(children, registrations, event),
+    [children, registrations, event],
   );
+  const showRegistration = children.length === 0
+    || choices.some((choice) => choice.reasonKey !== 'childEventResponse.alreadyMember');
   const chosen = choices.filter((choice) => selected.includes(choice.documentId));
   const canContinue = chosen.length > 0 && acceptResponsibility && acceptConditions;
 
@@ -333,6 +337,7 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
 
   return (
     <View style={[Spaces.gap[12]]} testID="child-registration-block">
+      <EventChildResponses eventId={eventId} />
       <ChildRegistrationCancelBanner onRetry={cancel.retry} outcome={cancel.outcome} />
       {registrations.map((registration) => {
         const line = statusLine(registration);
@@ -352,14 +357,14 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
           </View>
         );
       })}
-      {offer.canAct ? (
+      {offer.canAct && showRegistration ? (
         <Button
           onPress={open}
           title={t('childEventRegistration.actions.register')}
           variant="Primary"
         />
       ) : null}
-      {!offer.canAct && offer.blockedKey ? (
+      {!offer.canAct && offer.blockedKey && showRegistration ? (
         <Text style={[Fonts.p2, Fonts.neutral100]}>{t(offer.blockedKey)}</Text>
       ) : null}
       <BottomModal
@@ -448,7 +453,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
     }
   }, [decide, reason, refusing, t]);
 
-  if (!isError && rows.length === 0) return null;
+  if (!isError && rows.length === 0) return <EventChildResponsesForOrganizer eventId={eventId} />;
 
   const rowStyle = [
     ApplicationStyle.borderRadius16,
@@ -520,6 +525,7 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
 
   return (
     <View style={[Spaces.gap[12], { marginTop: 16 }]} testID="child-registrations-organizer">
+      <EventChildResponsesForOrganizer eventId={eventId} />
       <Text style={[Fonts.p1Black, Fonts.neutral00]}>
         {t('childEventRegistration.organizer.title')}
       </Text>

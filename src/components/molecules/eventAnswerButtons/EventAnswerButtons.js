@@ -65,7 +65,7 @@ function EventAnswerButtons({
   // hooks
   const { t } = useTranslation();
   const { Alignments, Fonts, Spaces } = useTheme();
-  const { userData } = useAuth();
+  const { isParentMode, userData } = useAuth();
   const { canEventBeJoined, haveIAlreadyAnsweredNo, haveIAlreadyJoined } = useEvent();
 
   // Check participation status
@@ -150,6 +150,7 @@ function EventAnswerButtons({
   // FINITIONS16 · POINT 1 (T15) — la MEME regle que le site (`EventDetails.web.js`).
   const participationOffer = resolveParticipationOffer({
     isConvenedMember: canAnswerAsMember,
+    isParentMode,
     user: userData,
   });
 

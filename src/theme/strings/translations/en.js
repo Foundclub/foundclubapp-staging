@@ -2329,6 +2329,29 @@ export default {
       title: 'Request sent',
     },
   },
+  childEventResponse: {
+    absent: 'Not attending',
+    absentFor: 'Not attending for {{firstname}}',
+    alreadyMember: 'Already a team member: use the response for this child.',
+    blocked: {
+      CHILD_NOT_TARGETED: 'This child is not invited to this event.',
+      CHILD_RESPONSE_UNSUPPORTED: 'This event type does not support responses for declared children.',
+      EVENT_INACTIVE: 'This event is cancelled or inactive.',
+      EVENT_PAST: 'This event has already started; respond before it begins.',
+      EVENT_RSVP_DISABLED: 'The organizer has disabled attending / not attending responses.',
+    },
+    organizerLine: '{{firstname}} · {{team}} · {{answer}}',
+    organizerTitle: 'Team children’s responses',
+    present: 'Attending',
+    presentFor: 'Attending for {{firstname}}',
+    readError: "Unable to read the children's responses. Try again.",
+    responseOnly: 'These responses announce participation; they are not attendance check-ins.',
+    retry: 'Try again',
+    sendError: 'The response could not be confirmed. Try again; the saved response appears after verification.',
+    state: { absent: 'Saved response: not attending', none: 'No response yet', present: 'Saved response: attending' },
+    title: 'Response for {{firstname}}',
+    unavailable: 'This child cannot respond to this event right now.',
+  },
   club: {
     fields: {
       address: {

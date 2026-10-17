@@ -2518,6 +2518,29 @@ export default {
       title: 'Demande envoyée',
     },
   },
+  childEventResponse: {
+    absent: 'Absent',
+    absentFor: 'Absent pour {{firstname}}',
+    alreadyMember: 'Déjà membre de cette équipe : utilise la réponse au nom de cet enfant.',
+    blocked: {
+      CHILD_NOT_TARGETED: "Cet enfant n'est pas convoqué à cet événement.",
+      CHILD_RESPONSE_UNSUPPORTED: "Ce type d'événement ne permet pas cette réponse pour un enfant déclaré.",
+      EVENT_INACTIVE: 'Cet événement est annulé ou inactif.',
+      EVENT_PAST: 'Cet événement a déjà commencé ; la réponse doit être donnée avant son début.',
+      EVENT_RSVP_DISABLED: "L'organisateur a désactivé les réponses présent / absent.",
+    },
+    organizerLine: '{{firstname}} · {{team}} · {{answer}}',
+    organizerTitle: 'Réponses des enfants de l’équipe',
+    present: 'Présent',
+    presentFor: 'Présent pour {{firstname}}',
+    readError: 'Impossible de lire les réponses des enfants. Réessaie.',
+    responseOnly: 'Ces réponses annoncent une participation ; elles ne constituent pas un pointage de présence.',
+    retry: 'Réessayer',
+    sendError: "La réponse n'a pas pu être confirmée. Réessaie ; la réponse enregistrée est affichée après vérification.",
+    state: { absent: 'Réponse enregistrée : absent', none: 'Pas encore de réponse', present: 'Réponse enregistrée : présent' },
+    title: 'Réponse pour {{firstname}}',
+    unavailable: 'Cet enfant ne peut pas répondre à cet événement pour le moment.',
+  },
   club: {
     fields: {
       address: {

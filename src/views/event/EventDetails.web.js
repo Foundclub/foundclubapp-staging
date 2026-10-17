@@ -201,6 +201,7 @@ function EventDetails({ navigation, route }) {
   } = useTheme();
   const {
     canManageEvent,
+    isParentMode,
     userData,
   } = useAuth();
   const {
@@ -499,6 +500,7 @@ function EventDetails({ navigation, route }) {
   // inscrit ses enfants, par le meme bloc que le telephone (EventChildRegistration).
   const offreDeParticipation = resolveParticipationOffer({
     isConvenedMember,
+    isParentMode,
     user: isSignedIn ? userData : null,
   });
   const offreAuxEnfants = offreDeParticipation === 'children';

@@ -95,10 +95,18 @@ export const resolveChildRegistrationOffer = (event, nowMs) => {
  * (comme la demande de place, PAR-009). Une demande refusee se renvoie.
  * @param {any[]} children - Les fiches (`documentId`, `firstname`, `age`).
  * @param {any[]} registrations - Ses inscriptions ici (`child.documentId`, `status`).
+ * @param {any} [event] - L'evenement : un enfant membre repond, il ne se reinscrit pas.
  * @returns {Array<{ age: number|null, documentId: string, firstname: string,
  *   reasonKey: string|null, selectable: boolean }>} Une ligne par enfant.
  */
-export const describeChildChoices = (children, registrations) => {
+export const describeChildChoices = (children, registrations, event = null) => {
+  const teamIds = new Set([event?.team, ...(event?.invitedTeams || []),
+    ...(event?.teamAudiences || [])
+      .filter((/** @type {any} */ audience) => (
+        String(audience?.status || 'ACCEPTED').toUpperCase() === 'ACCEPTED'
+        && String(audience?.selectionMode || 'ALL_MEMBERS').toUpperCase() === 'ALL_MEMBERS'
+      )).map((/** @type {any} */ audience) => audience?.team)]
+    .map((team) => team?.documentId).filter(Boolean));
   const statusByChild = new Map(
     (Array.isArray(registrations) ? registrations : []).map((registration) => [
       String(registration?.child?.documentId || ''),
@@ -113,6 +121,8 @@ export const describeChildChoices = (children, registrations) => {
       let reasonKey = null;
       if (age === null || age >= CHILD_SELF_SIGNUP_AGE) {
         reasonKey = 'childEventRegistration.reasons.tooOld';
+      } else if (teamIds.has(child?.team?.documentId)) {
+        reasonKey = 'childEventResponse.alreadyMember';
       } else if (status === 'pending') {
         reasonKey = 'childEventRegistration.reasons.alreadyPending';
       } else if (status === 'accepted') {

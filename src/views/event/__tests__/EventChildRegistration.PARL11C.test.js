@@ -20,6 +20,12 @@ const mockRegister = jest.fn();
 const mockDecide = jest.fn();
 const mockCancel = jest.fn();
 
+jest.mock('@/services/eventChildResponse/eventChildResponseQueries', () => ({
+  useAnswerForChild: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useChildEventResponsesForOrganizer: () => ({ data: [] }),
+  useMyChildEventResponses: () => ({ data: [] }),
+}));
+
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useGetMyDeclaredChildren: () => ({ data: mockChildren.current }),
 }));

@@ -849,6 +849,7 @@ function EventDetails({ navigation, route }) {
     canManageEvent,
     freeUsageSummary,
     getSubscriptionAccessLevelForClub,
+    isParentMode,
     subscriptionAccessLevel,
     userData,
   } = useAuth();
@@ -7739,6 +7740,7 @@ function EventDetails({ navigation, route }) {
     // phrase qui dit pourquoi pas.
     const parentOffer = resolveParticipationOffer({
       isConvenedMember: isConvenedTeamMember,
+      isParentMode,
       user: userData,
     });
     if (parentOffer === 'children') {

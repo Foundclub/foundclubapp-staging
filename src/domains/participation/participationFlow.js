@@ -202,13 +202,13 @@ export const resolveClientResponderDecision = (event, user) => {
  *   12/10 : « Inscrire mes enfants » sur tout evenement public, `childRegistrationFlow.js`) ;
  * - tout autre compte connecte (compte sans role sportif, encadrant ou dirigeant d ailleurs) :
  *   rien a repondre.
- * @param {{ isConvenedMember?: boolean, user?: any }} params
+ * @param {{ isConvenedMember?: boolean, isParentMode?: boolean, user?: any }} params
  * @returns {'login' | 'answer' | 'children' | 'none'} Ce que la page lui offre.
  */
-export const resolveParticipationOffer = ({ isConvenedMember = false, user = null }) => {
+export const resolveParticipationOffer = ({ isConvenedMember = false, isParentMode = false, user = null }) => {
   if (!user) return 'login';
+  if (isParentMode || user?.role?.name === USER_ROLES.parent) return 'children';
   if (user?.role?.name === USER_ROLES.player || isConvenedMember) return 'answer';
-  if (user?.role?.name === USER_ROLES.parent) return 'children';
   return 'none';
 };
 
