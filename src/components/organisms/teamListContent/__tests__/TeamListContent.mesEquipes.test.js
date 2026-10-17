@@ -39,6 +39,11 @@ import TeamListContent from '../TeamListContent';
 jest.setTimeout(30000);
 
 const mockUseAuth = jest.fn();
+const mockParentTeams = jest.fn();
+jest.mock('@/domains/team/useParentTeams', () => ({
+  __esModule: true,
+  default: (options) => mockParentTeams(options),
+}));
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),
@@ -381,17 +386,20 @@ let arbreMonte = null;
  * @param {boolean} [options.canManageTeam] - Peut-il creer une equipe ?
  * @param {string} [options.clubId] - Le club dont on liste les equipes.
  * @param {boolean} [options.showOnlyMyTeams] - Mode « mes equipes » seules.
+ * @param options.isParentMode
  * @returns {Promise<any>} - L'arbre rendu.
  */
 const monter = async ({
   canManageTeam = false,
   clubId = undefined,
+  isParentMode = false,
   showOnlyMyTeams = false,
   userData = LE_JOUEUR,
 } = {}) => {
   mockUseAuth.mockReturnValue({
     canManageTeam,
     freeUsageSummary: [],
+    isParentMode,
     subscriptionAccessLevel: 'FREE',
     userData,
   });
@@ -451,6 +459,9 @@ const equipesAffichees = (tree) => [...new Set(tree.root.findAllByType(Text)
 describe('TeamListContent — l onglet « Equipe » d un joueur (lot U03)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockParentTeams.mockReturnValue({
+      childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+    });
     mockParamsRecus.length = 0;
     mockLignesServies.length = 0;
   });
@@ -464,6 +475,59 @@ describe('TeamListContent — l onglet « Equipe » d un joueur (lot U03)', () =
       });
       arbreMonte = null;
     }
+  });
+
+  describe('REC17-002 — equipes des enfants en mode Parent', () => {
+    const parent = {
+      ...LE_JOUEUR, myTeams: [], role: { type: 'parent' }, trainedTeams: [],
+    };
+    const childrenByTeam = {
+      'equipe-du-club-1': ['Romain'],
+      'equipe-du-club-2': ['Greg'],
+    };
+
+    const enfants = () => mockParentTeams.mockReturnValue({
+      childrenByTeam,
+      error: null,
+      isLoading: false,
+      refetch: mockRefetch,
+      teamIds: Object.keys(childrenByTeam),
+    });
+
+    it('demande et affiche les deux equipes des enfants, sans inscrire le parent comme joueur', async () => {
+      enfants();
+      const arbre = await monter({ showOnlyMyTeams: true, userData: parent });
+      expect(derniersParams().teamIds).toEqual(Object.keys(childrenByTeam));
+      expect(texteVisible(arbre)).toContain('Autre equipe du club 1');
+      expect(texteVisible(arbre)).toContain('Autre equipe du club 2');
+      expect(texteVisible(arbre)).toContain('Romain');
+      expect(texteVisible(arbre)).toContain('Greg');
+      expect(texteVisible(arbre)).not.toContain('JOUEUR·SE');
+      expect(parent.myTeams).toEqual([]);
+      expect(mockParentTeams).toHaveBeenLastCalledWith({ enabled: true });
+    });
+
+    it('un compte Joueur bascule en Parent ne voit que les equipes de ses enfants', async () => {
+      enfants();
+      const arbre = await monter({ isParentMode: true, showOnlyMyTeams: true });
+      expect(derniersParams().teamIds).toEqual(Object.keys(childrenByTeam));
+      expect(texteVisible(arbre)).not.toContain('MON EQUIPE A MOI');
+      expect(texteVisible(arbre)).toContain('Autre equipe du club 1');
+    });
+
+    it('le mode Joueur conserve ses equipes personnelles, meme si des enfants sont en cache', async () => {
+      enfants();
+      const arbre = await monter({ showOnlyMyTeams: true });
+      expect(derniersParams().teamIds).toEqual(['equipe-a-moi']);
+      expect(texteVisible(arbre)).toContain('MON EQUIPE A MOI');
+      expect(texteVisible(arbre)).not.toContain('Greg');
+    });
+
+    it('un parent sans equipe enfant ne demande pas la table complete', async () => {
+      await monter({ showOnlyMyTeams: true, userData: parent });
+      expect(mockPagesDemandees).not.toHaveBeenCalled();
+      expect(derniersParams().teamIds).toEqual([]);
+    });
   });
 
   describe('① le temoin principal — un joueur voit SES equipes', () => {

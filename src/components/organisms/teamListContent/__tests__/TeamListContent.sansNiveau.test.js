@@ -2,6 +2,13 @@ import renderer, { act } from 'react-test-renderer';
 
 import TeamListContent from '../TeamListContent';
 
+jest.mock('@/domains/team/useParentTeams', () => ({
+  __esModule: true,
+  default: () => ({
+    childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+  }),
+}));
+
 // Filet AA03 (E6), volet « ET APRES ? » — LA CARTE D'UNE EQUIPE SANS NIVEAU.
 //
 // Depuis AA03, l'etape 6/8 du tunnel equipe peut etre passee sans rien choisir :
