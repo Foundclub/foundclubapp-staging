@@ -40,6 +40,30 @@ export const reportMomentLabel = (iso) => {
 };
 
 /**
+ * « 6 – 14 oct. », « 30 sept. – 2 oct. » (P10-securite-tel 1) : les bornes d une periode de
+ * l historique au telephone, le mois ecrit une fois s il ne change pas ; un seul jour, ou pas de
+ * fin : « 6 oct. ».
+ * @param {string | null | undefined} debutIso - Le debut (jour ou instant ISO).
+ * @param {string | null | undefined} finIso - La fin (jour ou instant ISO).
+ * @returns {{ debut: string, fin: string } | { jour: string } | null} Les bornes, ou null.
+ */
+export const reportShortSpan = (debutIso, finIso) => {
+  if (!debutIso) return null;
+  try {
+    const locale = localeDesFormats() === 'en-GB' ? enGB : fr;
+    const debut = parseISO(String(debutIso));
+    const jour = (/** @type {Date} */ date) => format(date, 'd MMM', { locale });
+    if (!finIso) return { jour: jour(debut) };
+    const fin = parseISO(String(finIso));
+    if (format(debut, 'yyyy-MM-dd') === format(fin, 'yyyy-MM-dd')) return { jour: jour(debut) };
+    const memeMois = format(debut, 'yyyy-MM') === format(fin, 'yyyy-MM');
+    return { debut: memeMois ? format(debut, 'd', { locale }) : jour(debut), fin: jour(fin) };
+  } catch {
+    return null;
+  }
+};
+
+/**
  * R17-SIGNALER-1 (19/10, REC17-011) — ce que les ecrans lisent d un signalement d installation.
  * Regles pures : aucune lecture reseau. Le serveur reste le seul juge (droits, photo, statuts).
  */

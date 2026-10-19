@@ -8,6 +8,7 @@ import {
 import {
   reportAuthorLabel,
   reportDayLabel,
+  reportShortSpan,
   reportStatusTone,
   securityHistory,
   splitReports,
@@ -26,6 +27,8 @@ import { useFacilityReports } from '@/services/facilityReport/facilityReportQuer
 
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { useIsDesktop } from '@/responsive';
+
 // Planche A : l historique se lit en 3 jalons, puis « Voir tout l historique ».
 const JALONS_VISIBLES = 3;
 
@@ -38,6 +41,8 @@ const JALONS_VISIBLES = 3;
  * La Ville est vouvoyee. Aucun nom de membre : le serveur ne rend que celui d un encadrant (Q2 A).
  * Un signalement s ouvre par `onOpenReport` quand l ecran le donne (sur ordinateur, le PANNEAU de
  * droite, planche B) ; sinon en page (le telephone).
+ * Au TELEPHONE (planche tel 1), la carte est compacte (titre, pastille dessous, « Sécurité ·
+ * sam. 18 oct. ») et l historique abrege (« 6 – 14 oct. · « Joint changé. » »).
  * @param {{ facilityId: string | null, onOpenClosures?: () => void,
  *   onOpenReport?: (reportId: string) => void, selectedReportId?: string | null }} props
  * @returns {import('react').ReactElement} L onglet.
@@ -47,6 +52,7 @@ function FacilitySecurityTab({
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Images } = useTheme();
+  const isDesktop = useIsDesktop();
   const navigation = /** @type {any} */ (useNavigation());
   const suivi = useFacilityReports(facilityId);
   const [toutLHistorique, setToutLHistorique] = useState(false);
@@ -266,30 +272,46 @@ function FacilitySecurityTab({
                   />
                 )}
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <View
-                  style={{
-                    alignItems: 'center',
-                    flexDirection: 'row',
-                    gap: 8,
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+              {isDesktop ? (
+                <View style={{ flex: 1, gap: 4 }}>
+                  <View
+                    style={{
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      gap: 8,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                      {report.title}
+                    </Text>
+                    {pastille(report.status)}
+                  </View>
+                  <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral100]}>
+                    {`${t(
+                      `facilityReports.categoriesCourtes.${report.category}`,
+                      report.category,
+                    )} · « ${report.description} »`}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {`${reportDayLabel(report.createdAt)} · ${reportAuthorLabel(t, report)}`}
+                  </Text>
+                </View>
+              ) : (
+                // Planche tel 1 : le titre, la pastille DESSOUS, « Sécurité · sam. 18 oct. ».
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {report.title}
                   </Text>
                   {pastille(report.status)}
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {`${t(
+                      `facilityReports.categoriesCourtes.${report.category}`,
+                      report.category,
+                    )} · ${reportDayLabel(report.createdAt)}`}
+                  </Text>
                 </View>
-                <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral100]}>
-                  {`${t(
-                    `facilityReports.categoriesCourtes.${report.category}`,
-                    report.category,
-                  )} · « ${report.description} »`}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {`${reportDayLabel(report.createdAt)} · ${reportAuthorLabel(t, report)}`}
-                </Text>
-              </View>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -306,6 +328,9 @@ function FacilitySecurityTab({
             if (signalement) {
               couleur = item.status === 'resolu' ? Colors.success500 : Colors.neutral300;
             }
+            const motifDuJalon = item.reason
+              ? t(`collectiviteFermetures.motifs.${item.reason}`, item.reason)
+              : item.label || '';
             let titre = t('facilityReports.ville.histoFermeture', {
               ...SANS_ECHAPPEMENT,
               debut: reportDayLabel(item.startDate),
@@ -315,10 +340,24 @@ function FacilitySecurityTab({
               ? t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte')
               : t('facilityReports.ville.histoFermetureMotif', {
                 ...SANS_ECHAPPEMENT,
-                motif: item.reason
-                  ? t(`collectiviteFermetures.motifs.${item.reason}`, item.reason)
-                  : item.label || '',
+                motif: motifDuJalon,
               });
+            if (!isDesktop) {
+              // Planche tel 1 : « Fermé du 5 au 9 oct. », puis le motif seul.
+              const periode = reportShortSpan(item.startDate, item.endDate);
+              if (periode && 'jour' in periode) {
+                titre = t('facilityReports.ville.histoFermetureJour', {
+                  ...SANS_ECHAPPEMENT,
+                  jour: periode.jour,
+                });
+              } else if (periode) {
+                titre = t('facilityReports.ville.histoFermeture', {
+                  ...SANS_ECHAPPEMENT,
+                  ...periode,
+                });
+              }
+              if (item.status !== 'reopened') detail = motifDuJalon;
+            }
             if (signalement) {
               titre = item.status === 'resolu'
                 ? t('facilityReports.ville.histoResolu', { ...SANS_ECHAPPEMENT, title: item.title })
@@ -331,7 +370,26 @@ function FacilitySecurityTab({
                 fin: reportDayLabel(item.closedAt),
               };
               const resolu = item.status === 'resolu';
-              if (item.cityNote) {
+              const court = isDesktop ? null : reportShortSpan(item.createdAt, item.closedAt);
+              let periode = '';
+              if (court && 'jour' in court) {
+                periode = court.jour;
+              } else if (court) {
+                periode = t('facilityReports.ville.histoPeriode', {
+                  ...SANS_ECHAPPEMENT,
+                  ...court,
+                });
+              }
+              if (court) {
+                // Planche tel 1 : « 6 – 14 oct. · « Joint changé. » ».
+                detail = item.cityNote
+                  ? t('facilityReports.ville.histoCourtMot', {
+                    ...SANS_ECHAPPEMENT,
+                    note: item.cityNote,
+                    periode,
+                  })
+                  : periode;
+              } else if (item.cityNote) {
                 detail = t(
                   resolu
                     ? 'facilityReports.ville.histoDatesMot'

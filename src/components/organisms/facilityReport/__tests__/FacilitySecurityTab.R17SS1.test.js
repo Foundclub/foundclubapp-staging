@@ -22,6 +22,9 @@ const frTemoin = require('@/theme/strings/translations/fr');
 let mockSuivi;
 /** @type {any} */
 let mockNavigation;
+// P10-securite-tel 1 : la carte et l historique changent de forme au telephone.
+let mockOrdinateur = true;
+jest.mock('@/responsive', () => ({ useIsDesktop: () => mockOrdinateur }));
 
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => mockNavigation }));
 jest.mock('react-i18next', () => ({
@@ -81,6 +84,7 @@ const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
 
 beforeEach(() => {
   mockNavigation = { navigate: jest.fn() };
+  mockOrdinateur = true;
 });
 
 describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
@@ -258,5 +262,92 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     const arbre = monter();
     expect(parId(arbre, 'securite-erreur').length).toBeGreaterThan(0);
     expect(textes(arbre).join(' | ')).toContain('Le suivi n’a pas pu être chargé.');
+  });
+});
+
+// R17-SIGNALER-1 (19/10/2026, planche P10-securite-tel 1 validée par Adel ; tri du chef d orchestre
+// du 19/10 : « fais-le maintenant ») — AU TÉLÉPHONE, la carte d un signalement ouvert est COMPACTE
+// (le titre, la pastille SOUS le titre, « Sécurité · sam. 18 oct. » — ni citation ni auteur) et
+// l historique est ABRÉGÉ (« 6 – 14 oct. · « Joint changé. » », « Fermé du 5 au 9 oct. »).
+describe('R17SS1 — P10-securite-tel 1 : l onglet au téléphone', () => {
+  const SUIVI = (/** @type {any[]} */ reports, /** @type {any[]} */ closures = []) => ({
+    data: {
+      data: reports,
+      meta: {
+        closures,
+        state: {
+          closure: null, code: 'a_surveiller', securityOpenCount: 1, securitySince: '2026-10-18T10:00:00Z',
+        },
+      },
+    },
+    isError: false,
+    isLoading: false,
+  });
+  /**
+   * Le premier ancêtre HÔTE (View) d un nœud.
+   * @param {any} noeud - Le nœud.
+   * @returns {any} L ancêtre hôte.
+   */
+  const parentHote = (/** @type {any} */ noeud) => {
+    let courant = noeud.parent;
+    while (courant && typeof courant.type !== 'string') courant = courant.parent;
+    return courant;
+  };
+  const style = (/** @type {any} */ noeud) => [].concat(noeud.props.style).filter(Boolean)
+    .reduce((/** @type {any} */ tout, /** @type {any} */ part) => ({ ...tout, ...part }), {});
+
+  beforeEach(() => {
+    mockOrdinateur = false;
+  });
+
+  it('la carte compacte : le titre, la pastille SOUS le titre, « Sécurité · dim. 18 oct. » — ni citation ni auteur', () => {
+    mockSuivi = SUIVI(OUVERTS);
+    const arbre = monter();
+    const [carte] = parId(arbre, 'securite-signalement-sig-1');
+    const lus = carte.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+    expect(lus).toEqual(['Panier côté nord descellé', 'Nouveau', 'Sécurité · dim. 18 oct.']);
+    const tout = textes(arbre).join(' | ');
+    expect(tout).toContain('Éclairage · ven. 16 oct.');
+    expect(tout).not.toContain('Lucas Morel');
+    expect(tout).not.toContain('« Le panier bouge');
+    // La pastille est SOUS le titre : leur parent commun est une colonne, pas une rangée.
+    const titre = carte.findAllByType(Text).find((/** @type {any} */ n) => n.props.children === 'Panier côté nord descellé');
+    expect(style(parentHote(titre)).flexDirection).not.toBe('row');
+  });
+
+  it('l historique abrégé : « 6 – 14 oct. · « Joint changé. » » ; la fermeture « Fermé du 5 au 9 oct. », son motif seul', () => {
+    mockSuivi = SUIVI([TRAITE], [{
+      documentId: 'f-1', endDate: '2026-10-09', kind: 'closure', reason: 'travaux', startDate: '2026-10-05', status: 'active',
+    }]);
+    const tout = textes(monter()).join(' | ');
+    expect(tout).toContain('Fuite de la douche · résolu');
+    expect(tout).toContain('6 – 14 oct. · « Joint changé. »');
+    expect(tout).not.toContain('Signalé le');
+    expect(tout).toContain('Fermé du 5 au 9 oct.');
+    expect(tout).toContain('Travaux');
+    expect(tout).not.toContain('Fermeture · Travaux');
+  });
+
+  it('sur deux mois : « 30 sept. – 2 oct. » ; le même jour : « 6 oct. » ; sans mot, la période seule', () => {
+    mockSuivi = SUIVI([
+      {
+        ...TRAITE, cityNote: null, closedAt: '2026-10-02T10:00:00Z', createdAt: '2026-09-30T10:00:00Z', documentId: 'sig-a', title: 'Porte',
+      },
+      {
+        ...TRAITE, cityNote: null, closedAt: '2026-10-06T18:00:00Z', createdAt: '2026-10-06T08:00:00Z', documentId: 'sig-b', status: 'sans_suite', title: 'Tag',
+      },
+    ]);
+    const lus = textes(monter());
+    expect(lus).toContain('30 sept. – 2 oct.');
+    expect(lus).toContain('6 oct.');
+    expect(lus).toContain('Tag · sans suite');
+  });
+
+  it('sur ORDINATEUR, rien ne change : la carte complète et l historique en toutes lettres', () => {
+    mockOrdinateur = true;
+    mockSuivi = SUIVI([...OUVERTS, TRAITE]);
+    const tout = textes(monter()).join(' | ');
+    expect(tout).toContain('dim. 18 oct. · Lucas Morel, entraîneur · AS Montrivage');
+    expect(tout).toContain('Signalé le mar. 6 oct. · résolu le mer. 14 oct. : « Joint changé. »');
   });
 });

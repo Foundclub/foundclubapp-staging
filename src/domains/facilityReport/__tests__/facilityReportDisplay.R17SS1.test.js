@@ -7,6 +7,7 @@ import {
   canAttachReportPhoto,
   closureParamsFromReport,
   reportAuthorLabel,
+  reportShortSpan,
   reportStatusTone,
   reportStepCount,
   securityHistory,
@@ -103,5 +104,16 @@ describe('R17SS1 — affichage du signalement d installation', () => {
       motif: 'travaux',
       reportId: 'sig-1',
     });
+  });
+});
+
+describe('R17SS1 — P10-securite-tel 1 : la période abrégée de l historique', () => {
+  it('le mois écrit une fois s il ne change pas ; deux mois ; un seul jour ; sans fin', () => {
+    expect(reportShortSpan('2026-10-06T10:00:00Z', '2026-10-14T10:00:00Z')).toEqual({ debut: '6', fin: '14 oct.' });
+    expect(reportShortSpan('2026-10-05', '2026-10-09')).toEqual({ debut: '5', fin: '9 oct.' });
+    expect(reportShortSpan('2026-09-30T10:00:00Z', '2026-10-02T10:00:00Z')).toEqual({ debut: '30 sept.', fin: '2 oct.' });
+    expect(reportShortSpan('2026-10-06T08:00:00Z', '2026-10-06T18:00:00Z')).toEqual({ jour: '6 oct.' });
+    expect(reportShortSpan('2026-10-06', null)).toEqual({ jour: '6 oct.' });
+    expect(reportShortSpan(null, null)).toBeNull();
   });
 });
