@@ -2,6 +2,7 @@ import { useRoute } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -21,6 +22,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
+
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import {
   useCollectiviteInvitationLink,
@@ -87,6 +90,7 @@ function CollectiviteInviteClub() {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const route = useRoute();
+  const { dockClearance } = useBottomDockLayout();
   const routeParams = /** @type {{ collectiviteId?: string, onglet?: string } | undefined} */ (
     route?.params
   );
@@ -368,13 +372,24 @@ function CollectiviteInviteClub() {
   );
 
   if (onglet === 'recherche') {
+    // Sur le SITE, la barre d'onglets flotte au-dessus du bas de l'écran : le lien du bas garde sa
+    // place au-dessus d'elle (`dockClearance`, comme la liste). Au téléphone, cet écran n'a pas
+    // de barre.
     const zoneDeRecherche = {
-      gap: 12, maxWidth: 720, paddingTop: 12, width: /** @type {'100%'} */ ('100%'),
+      gap: 12,
+      maxWidth: 720,
+      paddingBottom: Platform.OS === 'web' ? dockClearance : 0,
+      paddingTop: 12,
+      width: /** @type {'100%'} */ ('100%'),
     };
+    // `boundedHeight` (RECHERCHE-UNIQUE, comme SearchScreenShell) : sur le SITE, sans lui la liste
+    // prend la hauteur de tout son contenu, réclame toutes ses pages et pousse le lien du bas
+    // sous la barre d'onglets. Sans effet sur le téléphone.
     return (
       <ScreenContainer
         bgImage="bg2"
         bottomInsetMode="screen"
+        boundedHeight
         contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
       >
         <View style={[Alignments.fill, zoneDeRecherche]}>
