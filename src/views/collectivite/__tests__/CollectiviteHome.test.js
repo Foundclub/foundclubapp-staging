@@ -45,9 +45,12 @@ const mockGoBack = jest.fn();
 // COLL-ACCUEIL-BIS (03/10) — la largeur de l'écran : 390 (téléphone) par défaut, 1280 pour la
 // planche « ordinateur » (l'accueil passe en colonnes à partir de 1024).
 let mockLargeur = 390;
-// R17-SIGNALER-1 : la carte et l accueil lisent le resume des signalements (doublure, pas de reseau).
+// R17-SIGNALER-1 : la carte et l accueil lisent le resume des signalements (doublure, pas de
+// reseau).
+/** @type {any} */
+let mockSignalements = { data: null };
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
-  useCollectiviteFacilityReportsSummary: () => ({ data: null }),
+  useCollectiviteFacilityReportsSummary: () => mockSignalements,
 }));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -265,6 +268,7 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 };
 
 beforeEach(() => {
+  mockSignalements = { data: null };
   mockLargeur = 390;
   mockRetenu.clear();
   mockNavigate.mockClear();
@@ -1150,5 +1154,55 @@ describe('R17-INVITER — le raccourci « Inviter un club »', () => {
     expect(lus).toContain('Inviter un club');
     expect(lus).toContain('Le trouver sur FoundClub, ou l’inviter.');
     expect(lus).not.toContain('Un club de la commune absent de FoundClub.');
+  });
+});
+
+// R17-SIGNALER-1 (19/10/2026, REC17-011 ; planches P11-securite-ou-ca-vit, validées par Adel) —
+// « Ce qui vous attend » porte la ligne des signalements à traiter (statut « Nouveau ») : au-delà
+// de 0 seulement, avec le plus récent en détail ; elle ouvre CE signalement.
+describe('R17-SIGNALER-1 — « Ce qui vous attend » : les signalements à traiter', () => {
+  const A_TRAITER = {
+    category: 'securite',
+    documentId: 'sig-1',
+    facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' },
+    title: 'Panier côté nord descellé',
+  };
+
+  it('2 à traiter : « 2 signalements à traiter », le détail du 1er, et il s ouvre', async () => {
+    mockSignalements = { data: { data: [], meta: { toHandle: [A_TRAITER], toHandleCount: 2 } } };
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toContain('2 signalements à traiter');
+    expect(lus).toContain('Panier côté nord descellé · Sécurité · Gymnase des Tilleuls');
+    await appuyer(arbre, 'collectivite-home-signalements');
+    expect(mockNavigate).toHaveBeenCalledWith('FacilityReportDetails', {
+      collectiviteId: 'ville-montrivage', espace: 'ville', reportId: 'sig-1',
+    });
+  });
+
+  it('1 à traiter : le singulier', async () => {
+    mockSignalements = { data: { data: [], meta: { toHandle: [A_TRAITER], toHandleCount: 1 } } };
+    expect(textes(await monter())).toContain('1 signalement à traiter');
+  });
+
+  it('aucune demande, un signalement : « Ce qui vous attend » s affiche quand même', async () => {
+    mockRequetes = lu([]);
+    mockSignalements = { data: { data: [], meta: { toHandle: [A_TRAITER], toHandleCount: 1 } } };
+    const lus = textes(await monter());
+    expect(lus).toContain('Ce qui vous attend');
+    expect(lus).toContain('1 signalement à traiter');
+  });
+
+  it('0 à traiter (ou résumé pas encore lu) : la ligne est ABSENTE', async () => {
+    mockSignalements = { data: { data: [], meta: { toHandle: [], toHandleCount: 0 } } };
+    let arbre = await monter();
+    const lignes = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'collectivite-home-signalements',
+    );
+    expect(lignes).toHaveLength(0);
+    expect(textes(arbre).filter((texte) => /signalement/.test(texte))).toEqual([]);
+    mockSignalements = { data: null };
+    arbre = await monter();
+    expect(textes(arbre).filter((texte) => /signalement/.test(texte))).toEqual([]);
   });
 });

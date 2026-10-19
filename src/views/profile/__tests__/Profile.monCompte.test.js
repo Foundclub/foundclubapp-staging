@@ -22,8 +22,10 @@ import { RouteNames } from '@/navigation/routeNames';
 let mockAuth = null;
 
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+/** @type {any} */
+let mockMesSignalements = { data: null };
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
-  useMyFacilityReports: () => ({ data: null }),
+  useMyFacilityReports: () => mockMesSignalements,
 }));
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
 
@@ -202,6 +204,7 @@ const AUTH_PAR_ROLE = {
 /** @type {renderer.ReactTestRenderer[]} */
 const arbres = [];
 afterEach(() => {
+  mockMesSignalements = { data: null };
   arbres.splice(0).forEach((arbre) => act(() => { arbre.unmount(); }));
 });
 
@@ -410,4 +413,35 @@ describe('VILLE-T18B point 3 — « Changer de compte » porte une icône, pas u
       expect(iconeDe(arbre, 'Changer de compte')).toBe('users');
     },
   );
+});
+
+// R17-SIGNALER-1 (19/10/2026, REC17-011 ; planche P11-securite-ou-ca-vit 6, validée par Adel) —
+// « Mes signalements » n apparaît dans « Mon compte » que si l on en a envoyé AU MOINS UN ;
+// « n en cours » tant que la Ville ne les a pas clos. Elle ouvre la liste.
+describe('R17-SIGNALER-1 — « Mon compte » : la rangée « Mes signalements »', () => {
+  const ENVOYE = { documentId: 'sig-1', status: 'envoye' };
+  const RESOLU = { documentId: 'sig-0', status: 'resolu' };
+
+  it('2 envoyés, 1 en cours : « Mes signalements · 1 en cours », elle ouvre la liste', () => {
+    mockMesSignalements = { data: { data: [ENVOYE, RESOLU], meta: { openCount: 1 } } };
+    const { arbre, navigation } = monter('player');
+    expect(rangees(arbre)).toContain('Mes signalements · 1 en cours');
+    appuyerSur(arbre, 'Mes signalements · 1 en cours');
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.MyFacilityReports);
+  });
+
+  it('tous clos : « Mes signalements », sans compteur', () => {
+    mockMesSignalements = { data: { data: [RESOLU], meta: { openCount: 0 } } };
+    expect(rangees(monter('player').arbre)).toContain('Mes signalements');
+  });
+
+  it('aucun envoyé (ou liste pas encore lue) : la rangée est ABSENTE', () => {
+    mockMesSignalements = { data: { data: [], meta: { openCount: 0 } } };
+    const signalements = (/** @type {string} */ role) => rangees(
+      monter(/** @type {any} */ (role)).arbre,
+    ).filter((rangee) => rangee.startsWith('Mes signalements'));
+    expect(signalements('player')).toEqual([]);
+    mockMesSignalements = { data: null };
+    expect(signalements('coach')).toEqual([]);
+  });
 });
