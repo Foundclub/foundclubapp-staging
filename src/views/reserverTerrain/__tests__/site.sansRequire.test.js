@@ -9,11 +9,12 @@ const path = require('path');
 // par la recherche du site (web/src/pages/seo/RechercheUnique.tsx). Le greffon du site ne
 // traduit que les `require` d'IMAGES (vite.config.ts, « foundclub-app-require-images »).
 // Témoin : AUCUN `require(` (hors image, hors commentaire) dans les fichiers que ce lot a touchés
-// et que le site compile, ou compilera avec le lot web L7 (+ complexeService.js de RESA-L5A1, à la
-// demande du chef de soutien, 14/10). N'en sont pas : PrivateNavigator.js
-// (le site a son propre registre d'écrans, web/src/routes/screenRegistry.tsx) et
-// webRouteExemptions.js (module CommonJS que le site ne compile pas : son script de couverture
-// des routes le LIT comme un texte, web/scripts/check-web-route-coverage.mjs).
+// et que le site compile (+ complexeService.js de RESA-L5A1, à la demande du chef de soutien,
+// 14/10, et son chargeur du site complexeChargeurs.web.js, RESA-L7-1). N'en sont pas :
+// PrivateNavigator.js (le site a son propre registre d'écrans,
+// web/src/routes/screenRegistry.tsx) et webRouteExemptions.js (module CommonJS que le site ne
+// compile pas : son script de couverture des routes le LIT comme un texte,
+// web/scripts/check-web-route-coverage.mjs).
 
 const SRC = path.resolve(__dirname, '..', '..', '..');
 
@@ -25,6 +26,7 @@ const FICHIERS = [
   'navigation/routeNames.js',
   'services/complexe/complexeJoueurQueries.js',
   'services/complexe/complexeJoueurService.js',
+  'services/complexe/complexeChargeurs.web.js',
   'services/complexe/complexeService.js',
   'services/reservation/reservationService.js',
   'utils/notifications/notificationNavigation.js',
@@ -45,28 +47,32 @@ const TOUS = [...FICHIERS, ...vues(path.join(SRC, 'views', 'reserverTerrain'))];
 
 const IMAGE = /require\(\s*['"][^'"]+\.(png|jpe?g|gif|webp|svg)['"]\s*\)/g;
 
-// Les SEULES lignes tolérées, et pourquoi (décision du chef de soutien, 14/10) : le client HTTP de
-// complexeService.js (RESA-L5A1) et son service des fermetures restent chargés à l'appel. Importés
-// en tête, ils font échouer au chargement 10 suites de témoins dans toute copie de travail sans
-// `.env` ; un `import()` dynamique, jest ne l'exécute pas. Le site ne les appelle pas
-// avant L7.
-const TOLEREES = {
-  'services/complexe/complexeService.js': [
-    "const client = () => require('../client').default;",
-    "const fermetures = () => require('../facilityClosure/facilityClosureService');",
-  ],
-};
+// RESA-L7-1 (20/10/2026) — PLUS AUCUNE ligne tolérée. Le client HTTP et le service des fermetures
+// de complexeService.js passent par `complexeChargeurs` : l'app et jest prennent
+// `complexeChargeurs.js` (chargés à l'appel par `require` : les 10 suites sans `.env` restent
+// vertes), le site prend `complexeChargeurs.web.js` (Vite préfère `.web.js`, web/vite.config.ts
+// `resolve.extensions`), qui les importe en tête : le site n'exécute jamais un `require`.
+const CHARGEURS = path.join(SRC, 'services', 'complexe', 'complexeChargeurs');
 
 describe('RESA-L6A — aucun `require` dans un fichier que le site compile', () => {
   it.each(TOUS)('%s', (fichier) => {
     const lignes = fs.readFileSync(path.join(SRC, fichier), 'utf8').split('\n');
-    const tolerees = TOLEREES[fichier] || [];
     const fautives = lignes.filter((ligne) => {
       const code = ligne.trim();
-      if (tolerees.includes(code)) return false;
       if (code.startsWith('//') || code.startsWith('*') || code.startsWith('/*')) return false;
       return /\brequire\(/.test(code.replace(IMAGE, ''));
     });
     expect(fautives).toEqual([]);
+  });
+});
+
+describe('RESA-L7-1 — le chargeur du site a les mêmes exports que celui de l app', () => {
+  const exports = (fichier) => [...fs.readFileSync(fichier, 'utf8')
+    .matchAll(/^export const (\w+)/gm)].map((m) => m[1]).sort();
+
+  it('complexeChargeurs.web.js ≡ complexeChargeurs.js', () => {
+    const app = exports(`${CHARGEURS}.js`);
+    expect(app).toEqual(['client', 'fermetures']);
+    expect(exports(`${CHARGEURS}.web.js`)).toEqual(app);
   });
 });
