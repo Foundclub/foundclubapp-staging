@@ -2891,8 +2891,8 @@ export default {
         + ' lui-même depuis son propre compte.',
     },
     hub: {
-      coach: 'entraîneur',
-      coachs: 'entraîneurs',
+      coach: 'coach / prof',
+      coachs: 'coachs / profs',
       groups: {
         manage: 'Gérer',
         membership: 'Adhésions',

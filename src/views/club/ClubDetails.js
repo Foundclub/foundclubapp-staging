@@ -2033,8 +2033,8 @@ function ClubDetails({ navigation, route }) {
       ? t('clubDetails.hub.owners', 'dirigeants')
       : t('clubDetails.hub.owner', 'dirigeant')}`,
     `${clubTrainerCount} ${clubTrainerCount > 1
-      ? t('clubDetails.hub.coachs', 'entraîneurs')
-      : t('clubDetails.hub.coach', 'entraîneur')}`,
+      ? t('clubDetails.hub.coachs', 'coachs / profs')
+      : t('clubDetails.hub.coach', 'coach / prof')}`,
   ].join(' · ');
 
   // La rangee Adhesions affiche le reglage REEL de l'ecran « Modifier le club ».

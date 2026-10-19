@@ -2646,8 +2646,8 @@ export default {
       teenAsksAlone: 'From age 13, your child makes their own request from their own account.',
     },
     hub: {
-      coach: 'coach',
-      coachs: 'coaches',
+      coach: 'coach / instructor',
+      coachs: 'coaches / instructors',
       groups: {
         manage: 'Manage',
         membership: 'Memberships',

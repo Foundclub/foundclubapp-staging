@@ -26,6 +26,8 @@ const TABLE = /** @type {Record<string, [string, string]>} */ ({
   'adWizardAudienceType.subtitle': ['Choisis si tu publies une annonce pour recruter des pratiquants / joueurs ou un coach / prof.', 'Choose whether you are posting an ad to recruit players / participants or a coach / instructor.'],
   'adWizardRecap.adType.coach': ['Annonce coach / prof', 'Coach / instructor ad'],
   'clubDetails.alerts.inviteTrainer.message': ["Bonjour {{coachName}} !\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.\nTélécharge l'application Found Club pour finaliser la création de ton compte et commencer à gérer tes équipes et tes événements.", "Hi {{coachName}}!\nYou've been designated as coach / instructor at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events."],
+  'clubDetails.hub.coach': ['coach / prof', 'coach / instructor'],
+  'clubDetails.hub.coachs': ['coachs / profs', 'coaches / instructors'],
   'clubDetails.titles.coachs': ['Nos coachs / profs', 'Our coaches / instructors'],
   'clubLicenseCampaignSettings.review.audience.players': ['Pratiquants / Joueurs · {{teamCount}} équipe(s)', 'Players / Participants · {{teamCount}} team(s)'],
   'clubLicenseCampaignSettings.targetRoles.coaches': ['Coachs / Profs', 'Coaches / Instructors'],
