@@ -2639,6 +2639,7 @@ export default {
     compactHeader: {
       kicker: 'Club management',
     },
+    emptyFacilitiesAndSports: 'This club has not listed its facilities or its sports yet.',
     facilities: {
       nameFallback: 'Facility',
     },

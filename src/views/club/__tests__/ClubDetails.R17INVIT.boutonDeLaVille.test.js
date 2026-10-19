@@ -33,6 +33,8 @@ let mockRoute;
 
 /** @type {any[] | undefined} */
 let mockEntitlementsSummary;
+/** @type {any[]} */
+let mockVillesGerees = [];
 
 const mockHasClubAccess = jest.fn(() => false);
 
@@ -59,7 +61,12 @@ jest.mock('@tanstack/react-query', () => ({
         .catch((erreur) => options?.onError?.(erreur, variables));
     },
   }),
-  useQuery: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
+  // R17-INVITER : « mes Villes » (clé ['collectivites', 'mine']) rend les Villes que le compte gère.
+  useQuery: (/** @type {any} */ options) => ({
+    data: String(options?.queryKey) === 'collectivites,mine' ? mockVillesGerees : [],
+    isLoading: false,
+    refetch: jest.fn(),
+  }),
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
   // rafraichir « Demandes », « Accueil » et « Mes equipes » apres une demande
   // d'adhesion (`joinClub`). Sans cette doublure, le rendu jette.
@@ -509,5 +516,50 @@ describe('R17-INVITER — la fiche du club ouverte par la Ville', () => {
       collectiviteId: 'ville-de-recette',
       onglet: 'lien',
     });
+  });
+});
+
+// 🏛️ R17-INVITER — corrections du chef (2ᵉ passe de design, 19/10) sur la fiche ouverte par la
+// Ville : « Je dirige ce club » ne s'adresse pas à elle (F4), alors que le compte NEUF le garde
+// (F5) ; « Aucune donnée disponible » deux fois (Installations, Sports) devient UN état vide, avec
+// une phrase utile (F6), sans toucher au cas où une seule des deux est vide (F7).
+describe('R17-INVITER — la fiche vue par la Ville : ses portes et son état vide', () => {
+  const VILLE = { documentId: 'ville-de-recette', name: 'Ville de Recette' };
+  const UN_SEUL_ETAT_VIDE = 'Ce club n’a encore renseigné ni ses installations ni ses sports.';
+
+  beforeEach(() => {
+    mockBoutonsDeLaVille.length = 0;
+    mockVillesGerees = [];
+    mockUserData = {
+      documentId: 'u-mairie', firstname: 'Agent', myTeams: [], role: { name: 'Authenticated', type: 'authenticated' }, trainedTeams: [],
+    };
+    mockRoute = { params: { clubId: 'club-1', collectiviteId: VILLE.documentId } };
+  });
+
+  it('F4 la Ville seule ne voit pas « Je dirige ce club »', () => {
+    mockVillesGerees = [VILLE];
+    expect(texteDe(monter().root)).not.toContain('Je dirige ce club');
+  });
+
+  it('F5 le compte NEUF (aucune Ville gérée) garde « Je dirige ce club »', () => {
+    mockRoute = { params: { clubId: 'club-1' } };
+    expect(texteDe(monter().root)).toContain('Je dirige ce club');
+  });
+
+  it('F6 ni installations ni sports : UN état vide, une phrase utile', () => {
+    mockVillesGerees = [VILLE];
+    mockFacilities = [];
+    const lus = texteDe(monter().root);
+    expect(lus).not.toContain('Aucune donnée disponible');
+    expect(lus.split(UN_SEUL_ETAT_VIDE)).toHaveLength(2);
+  });
+
+  it('F7 une seule des deux vide : sa section garde son propre mot', () => {
+    mockFacilities = [];
+    mockClubQuery = { ...mockClubQuery, data: { ...CLUB_A, activites: [{ documentId: 'judo', name: 'Judo' }] } };
+    const lus = texteDe(monter().root);
+    expect(lus).toContain('Judo');
+    expect(lus).toContain('Aucune donnée disponible');
+    expect(lus).not.toContain(UN_SEUL_ETAT_VIDE);
   });
 });

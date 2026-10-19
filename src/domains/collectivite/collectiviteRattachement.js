@@ -256,3 +256,28 @@ export const demandeCouranteDuClub = (demandes) => {
  * en un appui dans la fenêtre « Refuser la demande » (celle des créneaux), chacun par sa clé.
  */
 export const MOTIFS_DE_REFUS_RATTACHEMENT = Object.freeze(['horsCommune', 'inconnu', 'doublon']);
+
+/**
+ * R17-INVITER (19/10/2026) — un compte sans rôle sportif : rôle « Authenticated », ou aucun.
+ * ponytail: lu ici sans `getUserRoleKey` (authUseCases est doublé par les 15 témoins de la fiche
+ * du club, qui lit cette règle) : un nom de rôle INCONNU n'est pas « sans rôle sportif » ici, alors
+ * que getUserRoleKey le range en `new` ; voie de sortie : sortir getUserRoleKey dans un module pur.
+ * @param {any} role - `userData.role`.
+ * @returns {boolean} Vrai sans rôle sportif.
+ */
+export const estSansRoleSportif = (role) => (
+  ['', 'authenticated'].includes(String(role?.type || role?.name || '').trim().toLowerCase())
+);
+
+/**
+ * R17-INVITER — un compte « Ville seule » vu d'un écran partagé (la fiche du club) : sans rôle
+ * sportif, et au moins une collectivité gérée — la règle d'isVilleOnlyAccount
+ * (collectiviteAccueil), sans la demande de gestion en cours. Un compte mixte (dirigeant qui gère
+ * aussi une Ville) n'en est pas un.
+ * @param {any} role - `userData.role`.
+ * @param {unknown} villesGerees - `GET /collectivites/mine`.
+ * @returns {boolean} Vrai pour un compte Ville seule.
+ */
+export const estUneVilleSeule = (role, villesGerees) => (
+  estSansRoleSportif(role) && Array.isArray(villesGerees) && villesGerees.length > 0
+);

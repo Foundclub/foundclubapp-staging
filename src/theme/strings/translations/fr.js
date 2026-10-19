@@ -2880,6 +2880,7 @@ export default {
     compactHeader: {
       kicker: 'Gestion du club',
     },
+    emptyFacilitiesAndSports: 'Ce club n’a encore renseigné ni ses installations ni ses sports.',
     facilities: {
       nameFallback: 'Installation',
     },
