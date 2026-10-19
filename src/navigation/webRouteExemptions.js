@@ -187,8 +187,6 @@ const MOBILE_ONLY_SCREENS = {
     'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeCreneaux]:
     'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeDevenirGerant]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeEspace]:
     'RESA-L5A1 : tab navigator of the venue space (hidden by COMPLEXES_GERANT), not a screen',
   [RouteNames.ComplexeInstallations]:

@@ -89,6 +89,10 @@ const WEB_ROUTE_PATTERNS = {
   // la demande. Hors de /collectivite/:collectiviteId : « demande » y serait lu comme un id.
   [RouteNames.CollectiviteSignup]: '/onboarding/collectivite',
   [RouteNames.CollectiviteSignupStatus]: '/collectivite-demande',
+  // RESA-INSCRIPTION (19/10/2026) — « Je gère un complexe » au choix du statut : le tunnel du
+  // gérant (E-G01), à côté de l'inscription de la mairie. Le site ne le déclare qu'interrupteur
+  // COMPLEXES_GERANT allumé (screenRegistry.tsx) ; les autres écrans du gérant : lot RESA-L7-1.
+  [RouteNames.ComplexeDevenirGerant]: '/onboarding/complexe',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',
