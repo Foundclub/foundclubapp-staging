@@ -59,6 +59,7 @@ import {
   useCollectiviteRequests,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
+import { useMyFacilityReports } from '@/services/facilityReport/facilityReportQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import {
@@ -242,6 +243,13 @@ function Profile({ navigation, route }) {
     ? demandesEnAttente.data.length
     : 0;
   const estVilleSeule = currentRoleKey === 'new' && managedCollectivites.length > 0;
+  // R17-SIGNALER-1 (19/10, P11-securite-ou-ca-vit 6) — « Mes signalements » n'apparaît que si on
+  // en a envoyé un ; « 1 en cours » tant que la Ville ne l'a pas clos.
+  const mesSignalements = useMyFacilityReports({ enabled: !estVilleSeule });
+  const nombreDeSignalements = Array.isArray(mesSignalements.data?.data)
+    ? mesSignalements.data.data.length
+    : 0;
+  const signalementsEnCours = Number(mesSignalements.data?.meta?.openCount) || 0;
   // VILLE-T18B point 4 — « Mon compte » est la porte de la feuille « Changer de compte » : il
   // retient, pour CE compte, la Ville qu'il gère (ou l'efface quand il n'en gère plus), et la
   // feuille ouverte depuis un AUTRE compte la relit (cleVilleGeree).
@@ -964,6 +972,17 @@ function Profile({ navigation, route }) {
     },
     ...(canManageTeam ? [{
       icon: Images.envelope, key: 'requests', label: t('profile.actions.manageRequests'), onPress: handleOpenRequestsHub,
+    }] : []),
+    ...(nombreDeSignalements > 0 ? [{
+      icon: Images.flag,
+      key: 'facilityReports',
+      label: signalementsEnCours
+        ? [
+          t('facilityReports.membre.mesTitre', 'Mes signalements'),
+          t('facilityReports.membre.compteur', { count: signalementsEnCours }),
+        ].join(' · ')
+        : t('facilityReports.membre.mesTitre', 'Mes signalements'),
+      onPress: () => navigation.navigate(RouteNames.MyFacilityReports),
     }] : []),
   ];
 

@@ -22,6 +22,10 @@ let mockUserData;
 /** PAR-L12 — le mode parent d'un compte sportif (choix d'affichage, `useAuth`). */
 let mockIsParentMode = false;
 
+// R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useMyFacilityReports: () => ({ data: null }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));

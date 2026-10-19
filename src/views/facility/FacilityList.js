@@ -66,6 +66,9 @@ import {
   getFacilitySections,
 } from '@/services/facility/facilityService';
 import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
+import {
+  useCollectiviteFacilityReportsSummary,
+} from '@/services/facilityReport/facilityReportQueries';
 import { useInstallationsWeekSummary } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -255,6 +258,13 @@ function FacilityList() {
     isCollectiviteMode ? facilities : [],
     collectiviteId,
   );
+  // R17-SIGNALER-1 (19/10, planche P11-securite-ou-ca-vit 2) — « 1 signalement ouvert · sécurité »
+  // sous « Cette semaine », par installation. Lue pour la Ville seulement.
+  const resumeDesSignalements = useCollectiviteFacilityReportsSummary(collectiviteId);
+  const signalementsParInstallation = useMemo(() => Object.fromEntries(
+    (Array.isArray(resumeDesSignalements.data?.data) ? resumeDesSignalements.data.data : [])
+      .map((/** @type {any} */ ligne) => [ligne.facilityDocumentId, ligne]),
+  ), [resumeDesSignalements.data]);
   // Le menu « Plus d actions » d une carte de la Ville : l installation ouverte, ou null.
   const [menuInstallation, setMenuInstallation] = useState(/** @type {any} */ (null));
   // COLL-C2B-BIS — sur ordinateur, la place du bouton qui l a ouvert (le menu s y ancre).
@@ -892,6 +902,22 @@ function FacilityList() {
                   {ligneSemaine}
                 </Text>
               ) : null}
+              {signalementsParInstallation[item.documentId]?.openCount ? (
+                <Text
+                  style={signalementsParInstallation[item.documentId].securityOpenCount
+                    ? [Fonts.p3Bold, Fonts.warning500]
+                    : [Fonts.p3Bold, Fonts.neutral100]}
+                  testID={`installation-signalements-${item.documentId}`}
+                >
+                  {signalementsParInstallation[item.documentId].securityOpenCount
+                    ? t('facilityReports.ville.carteSecurite', {
+                      count: signalementsParInstallation[item.documentId].openCount,
+                    })
+                    : t('facilityReports.ville.carte', {
+                      count: signalementsParInstallation[item.documentId].openCount,
+                    })}
+                </Text>
+              ) : null}
               {getFacilityConflictMode(item) === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY ? (
                 <View style={[Alignments.row, Spaces.marginTop[4]]}>
                   {renderMetaChip(
@@ -932,6 +958,7 @@ function FacilityList() {
     ouvrirInstallation,
     renderMetaChip,
     semaines,
+    signalementsParInstallation,
     t,
   ]);
 
