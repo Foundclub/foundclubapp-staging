@@ -35,6 +35,14 @@ export const STATUTS = Object.freeze({
 /** Une demande en attente ou une réservation confirmée TIENT le créneau (AT-08). */
 export const STATUTS_ACTIFS = Object.freeze([STATUTS.enAttente, STATUTS.confirmee]);
 
+/**
+ * RESA-L5B-1 (20/10/2026) — deux états LUS par l'écran, pas écrits par le serveur (plan §1.2) :
+ * « Non honorée » est une MARQUE sur une confirmée (`noShowAt`, RESA-L2B ; c'est aussi la valeur
+ * du filtre `statut=non_honoree` de la liste) ; « Jouée », une confirmée dont le créneau est fini,
+ * sans marque.
+ */
+export const ETATS_LUS = Object.freeze({ jouee: 'jouee', nonHonoree: 'non_honoree' });
+
 const MINUTE = 60 * 1000;
 const HEURE = 60 * MINUTE;
 const JOUR = 24 * HEURE;
@@ -47,6 +55,10 @@ const JOUR = 24 * HEURE;
  */
 export const libelleStatut = (t, statut) => {
   switch (statut) {
+    case ETATS_LUS.jouee:
+      return t('complexeReservations.statut.jouee', 'Jouée');
+    case ETATS_LUS.nonHonoree:
+      return t('complexeReservations.statut.nonHonoree', 'Non honorée');
     case STATUTS.annulee:
       return t('complexeReservations.statut.annulee', 'Annulée');
     case STATUTS.confirmee:
@@ -60,6 +72,55 @@ export const libelleStatut = (t, statut) => {
     default:
       return '';
   }
+};
+
+/**
+ * RESA-L5B-1 — l'état qu'une carte ou une fiche AFFICHE (plan §1.2) : « Non honorée » si le
+ * complexe l'a marquée, « Jouée » pour une confirmée dont le créneau est fini, sinon l'état du
+ * serveur.
+ * @param {{ endsAt?: unknown, noShowAt?: unknown, status?: unknown }} reservation - Une ligne ou
+ *   une fiche du gérant.
+ * @param {Date} [maintenant] - L'instant de référence.
+ * @returns {string} L'état affiché.
+ */
+export const etatAffiche = (reservation, maintenant = new Date()) => {
+  if (reservation?.noShowAt) return ETATS_LUS.nonHonoree;
+  const fin = new Date(String(reservation?.endsAt || '')).getTime();
+  if (reservation?.status === STATUTS.confirmee && Number.isFinite(fin)
+    && fin <= maintenant.getTime()) {
+    return ETATS_LUS.jouee;
+  }
+  return String(reservation?.status || '');
+};
+
+/**
+ * RESA-L5B-1 — « 1 non honorée sur 3 » (E-G05 « Qui », E-G15) : le seuil du bannissement
+ * automatique du complexe (`autoBanNoShows`, 0 = jamais) tant qu'il n'est pas atteint ; « 3 non
+ * honorées » une fois atteint, ou sans seuil.
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} nombre - Les non honorées du joueur ICI (`noShowsHere`, `noShows`).
+ * @param {unknown} seuil - `autoBanNoShows` du complexe, s'il est connu.
+ * @returns {string} Le texte, ou '' si le nombre est inconnu.
+ */
+export const nonHonoreesLisibles = (t, nombre, seuil) => {
+  const compte = Number(nombre);
+  if (nombre === null || nombre === undefined || !Number.isFinite(compte)) return '';
+  const plafond = Number(seuil);
+  if (Number.isInteger(plafond) && plafond > 0 && compte < plafond) {
+    return t('complexeReservations.nonHonorees.sur', '{{count}} non honorée sur {{seuil}}', {
+      count: compte,
+      defaultValue_one: '{{count}} non honorée sur {{seuil}}',
+      defaultValue_other: '{{count}} non honorées sur {{seuil}}',
+      seuil: plafond,
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t('complexeReservations.nonHonorees.seules', '{{count}} non honorée', {
+    count: compte,
+    defaultValue_one: '{{count}} non honorée',
+    defaultValue_other: '{{count}} non honorées',
+    ...SANS_ECHAPPEMENT,
+  });
 };
 
 /**
@@ -174,6 +235,17 @@ export const jourCourt = (date) => {
 };
 
 /**
+ * RESA-L5B-1 — « jeudi 19 h » (la confirmation « non honorée », plan E-G04 §4).
+ * @param {string} date - « AAAA-MM-JJ ».
+ * @param {unknown} de - L'heure de début, « HH:MM ».
+ * @returns {string} Le jour et l'heure.
+ */
+export const quandCourt = (date, de) => [
+  midi(date).toLocaleDateString(localeDesFormats(), { weekday: 'long' }),
+  texteHeure(String(de || '')),
+].filter(Boolean).join(' ');
+
+/**
  * « Jeudi 16 octobre » (intertitre d'une liste, en-tête d'une fiche).
  * @param {string} date - « AAAA-MM-JJ ».
  * @returns {string} Le jour.
@@ -248,8 +320,11 @@ const quand = (iso) => {
 /**
  * L'historique de la fiche (E-G05) : des faits datés ; « par toi » pour le complexe, le nom court
  * pour le réserveur (jamais plus, `managerLabel` du serveur).
+ * RESA-L5B-1 (20/10/2026) : « Marquée non honorée par toi » (`non-honoree`, RESA-L2B) et
+ * « — hors délai » sur une annulation du réserveur après le délai (`late`, AT-07).
  * @param {Traduire} t - Traduction.
- * @param {Array<{ at: string | null, by?: string | null, kind: string }>} etapes - `history`.
+ * @param {Array<{ at: string | null, by?: string | null, kind: string,
+ *   late?: boolean }>} etapes - `history`.
  * @param {{ reserveur: string }} noms - Le nom court du réserveur.
  * @returns {string[]} Les lignes.
  */
@@ -269,11 +344,25 @@ export const historiqueLisible = (t, etapes, { reserveur }) => (Array.isArray(et
             options,
           );
         }
-        return t('complexeReservations.historique.annuleePar', 'Annulée par {{nom}} le {{le}}', {
-          le,
-          nom: reserveur || t('complexeReservations.historique.leJoueur', 'le joueur'),
-          ...SANS_ECHAPPEMENT,
-        });
+        return t(
+          etape.late
+            ? 'complexeReservations.historique.annuleeParHorsDelai'
+            : 'complexeReservations.historique.annuleePar',
+          etape.late
+            ? 'Annulée par {{nom}} le {{le}} — hors délai'
+            : 'Annulée par {{nom}} le {{le}}',
+          {
+            le,
+            nom: reserveur || t('complexeReservations.historique.leJoueur', 'le joueur'),
+            ...SANS_ECHAPPEMENT,
+          },
+        );
+      case 'non-honoree':
+        return t(
+          'complexeReservations.historique.nonHonoree',
+          'Marquée non honorée par toi le {{le}}',
+          options,
+        );
       case 'notee':
         return t('complexeReservations.historique.notee', 'Notée par toi le {{le}}', options);
       case 'refusee':

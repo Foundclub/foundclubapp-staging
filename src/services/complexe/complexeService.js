@@ -255,6 +255,40 @@ export const retirerTerrain = async (complexeId, terrainId, { apercu = false } =
 );
 
 // ---------------------------------------------------------------------------------------------
+// RESA-L5B-1 (20/10/2026) — les routes ajoutées par RESA-L2B (admin `origin/feat/RESA-admin`,
+// `routes/protection-custom.ts`). NON LIVRÉES : cachées, comme le reste, par `COMPLEXES_GERANT`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * « Non honorée » (E-G04, E-G05, RG-NONHONOREE) : une réservation de l'app, confirmée, dont le
+ * créneau a commencé il y a 7 jours au plus ; le réserveur est prévenu (N-17) et, au x-ième, banni
+ * automatiquement ici (N-12 au gérant). Le serveur ne lit pas le corps.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }` (la fiche du gérant).
+ */
+export const marquerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree`,
+    {},
+  ),
+);
+
+/**
+ * « Annuler le marquage », dans les 7 jours (le même délai que le marquage) ; personne n'est
+ * prévenu, et le bannissement automatique que CE marquage avait déclenché part avec lui.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const annulerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree/annuler`,
+    {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
 // Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
 // des fermetures est chargé À L'APPEL (même raison que le client, en tête de ce fichier).

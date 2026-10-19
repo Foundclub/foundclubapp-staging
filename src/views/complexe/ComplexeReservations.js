@@ -1,14 +1,18 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
+  etatAffiche,
+  ETATS_LUS,
   grouperParJour,
   libelleStatut,
   lignesDesPages,
+  messageDeRefusResa,
+  quandCourt,
   STATUTS,
   titreDuJour,
   totalDesPages,
@@ -23,13 +27,20 @@ import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import DeuxVolets from '@/views/complexe/components/DeuxVolets';
+import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import FicheReservation from '@/views/complexe/components/FicheReservation';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useReservationsDuComplexe, useTerrains } from '@/services/complexe/complexeQueries';
+import {
+  useAnnulerNonHonoree,
+  useMarquerNonHonoree,
+  useReservationsDuComplexe,
+  useTerrains,
+} from '@/services/complexe/complexeQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -38,10 +49,17 @@ import { useIsDesktop } from '@/responsive';
 
 const VUES = /** @type {VueDesReservations[]} */ (['aujourdhui', 'a-venir', 'passees']);
 
-/** L'état d'une réservation que le filtre propose (Non honorée : lot L5b, après RESA-L2B). */
+/**
+ * L'état d'une réservation que le filtre propose. RESA-L5B-1 : « Non honorée » (le serveur RESA-L2B
+ * filtre `statut=non_honoree` ; « Confirmée » ne montre plus les marquées).
+ */
 const ETATS_FILTRES = Object.freeze([
-  STATUTS.confirmee, STATUTS.enAttente, STATUTS.annulee, STATUTS.refusee, STATUTS.sansReponse,
+  STATUTS.confirmee, STATUTS.enAttente, STATUTS.annulee, ETATS_LUS.nonHonoree, STATUTS.refusee,
+  STATUTS.sansReponse,
 ]);
+
+/** RESA-L5B-1 — « Marquée non honorée » et son « Annuler » restent 5 s (planche EG04). */
+const CINQ_SECONDES = 5000;
 
 /**
  * E-G04 — LES RÉSERVATIONS DU COMPLEXE — RESA-L5A2 (14/10/2026), planche EG04 : onglets
@@ -49,10 +67,15 @@ const ETATS_FILTRES = Object.freeze([
  * source · état (une feuille de choix chacun), une liste groupée par jour — l'heure, « Julien M. ·
  * Terrain 1 », les joueurs, la source, l'état (une note « extérieur » confirmée : sa source seule).
  * Toucher une carte ouvre sa fiche (E-G05). Pages de 20 : « Voir plus ».
- * Pas encore servi (dit dans le compte rendu du lot) : « Non honorée » sur les cartes passées et
- * l'état « Non honorée » du filtre (lot L5b, après RESA-L2B) ; « Confirmée la veille » (RG-VEILLE,
- * RESA-L2B) ; « 8/10 joueurs » (participants, lot L3 : la carte dit les joueurs DÉCLARÉS) ; « Créer
- * une affiche » sous « Aucune réservation à venir » (E-G13, lot L4).
+ * RESA-L5B-1 (20/10/2026, serveur RESA-L2B) : l'onglet Passées, planche EG04 états 2 à 4 — sur
+ * chaque réservation que le serveur dit marquable (`canMarkNoShow` : de l'app, confirmée, créneau
+ * commencé il y a 7 jours au plus), le bouton « Non honorée », sa confirmation (le réserveur est
+ * prévenu, N-17), puis « Marquée non honorée » et son « Annuler » pendant 5 s ; une note extérieure
+ * dit qu'elle ne se marque pas. Les pastilles « Jouée » et « Non honorée » (états lus, plan §1.2),
+ * la marque « Confirmée la veille » (RG-VEILLE) sur chaque carte, l'état « Non honorée » du filtre.
+ * Pas encore servi (dit dans le compte rendu du lot) : « 8/10 joueurs » (participants, lot L3 : la
+ * carte dit les joueurs DÉCLARÉS) ; « Annulée par Sami A. » (la ligne de liste du serveur ne dit
+ * pas qui a annulé) ; « Créer une affiche » sous « Aucune réservation à venir » (E-G13, lot L4).
  * Ordinateur (planche OR1, ≥ 1024 px) : deux volets, la liste à gauche, la fiche (E-G05) à droite ;
  * toucher une ligne l'ouvre dans le volet au lieu de changer d'écran.
  * Paramètres de route : `complexeId`, `vue` (l'onglet d'arrivée ; sinon Aujourd'hui). Caché par
@@ -77,6 +100,21 @@ function ComplexeReservations() {
   const [feuille, setFeuille] = useState(/** @type {NomDuFiltre | ''} */ (''));
   const surOrdinateur = useIsDesktop();
   const [choisie, setChoisie] = useState('');
+  // RESA-L5B-1 — « Non honorée » : la carte à marquer (la feuille), puis le message du bas.
+  const marquer = useMarquerNonHonoree();
+  const annulerMarquage = useAnnulerNonHonoree();
+  const [aMarquer, setAMarquer] = useState(/** @type {any} */ (null));
+  const [erreurMarquage, setErreurMarquage] = useState('');
+  /** @typedef {{ reservationId?: string, texte: string, ton: 'erreur' | 'ok' }} BulleDuBas */
+  const [bulle, setBulle] = useState(/** @type {BulleDuBas | null} */ (null));
+
+  // Planche EG04 état 4 : un message réussi (et son « Annuler ») s'efface au bout de 5 s ; un refus
+  // reste jusqu'au geste suivant.
+  useEffect(() => {
+    if (!bulle || bulle.ton !== 'ok') return undefined;
+    const minuterie = setTimeout(() => setBulle(null), CINQ_SECONDES);
+    return () => clearTimeout(minuterie);
+  }, [bulle]);
 
   const remplis = Object.fromEntries(Object.entries(filtres).filter(([, valeur]) => valeur));
   const aujourdhui = useReservationsDuComplexe(complexeId, { ...remplis, vue: 'aujourdhui' });
@@ -185,45 +223,118 @@ function ComplexeReservations() {
     </ScrollView>
   );
 
+  // ── « Non honorée » (RESA-L5B-1) ───────────────────────────────────────────────────────
+  const repli = t('complexeReservations.fiche.erreurGeste', 'Le geste n’a pas pu être fait.');
+  const ouvrirLeMarquage = (/** @type {any} */ ligne) => {
+    setErreurMarquage('');
+    setAMarquer(ligne);
+  };
+  const confirmerLeMarquage = async () => {
+    if (!aMarquer) return;
+    setErreurMarquage('');
+    try {
+      await marquer.mutateAsync({ complexeId, reservationId: aMarquer.documentId });
+      setBulle({
+        reservationId: aMarquer.documentId,
+        texte: t('complexeReservations.nonHonoree.marquee', 'Marquée non honorée'),
+        ton: 'ok',
+      });
+      setAMarquer(null);
+    } catch (erreur) {
+      setErreurMarquage(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+  const annulerLeMarquage = async () => {
+    const reservationId = bulle?.reservationId;
+    setBulle(null);
+    if (!reservationId) return;
+    try {
+      await annulerMarquage.mutateAsync({ complexeId, reservationId });
+      setBulle({
+        texte: t('complexeReservations.nonHonoree.annule', 'Marquage annulé.'),
+        ton: 'ok',
+      });
+    } catch (erreur) {
+      setBulle({ texte: messageDeRefusResa(t, erreur, repli), ton: 'erreur' });
+    }
+  };
+
   // ── Une réservation ────────────────────────────────────────────────────────────────────
-  const carteDe = (/** @type {any} */ ligne) => (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={{ selected: ouverte === ligne.documentId }}
-      key={ligne.documentId}
-      onPress={() => (surOrdinateur ? setChoisie(ligne.documentId) : navigation.navigate(
-        RouteNames.ComplexeReservation,
-        { complexeId, reservationId: ligne.documentId },
-      ))}
-      style={[
-        carte,
-        Alignments.row,
-        Spaces.padding[12],
-        { gap: 12 },
-        ouverte === ligne.documentId ? { borderColor: Colors.primary500, borderWidth: 2 } : null,
-      ]}
-      testID={`reservation-${ligne.documentId}`}
-    >
-      <Text style={[Fonts.p1Black, Fonts.neutral00, { width: 56 }]}>{texteHeure(ligne.from)}</Text>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {`${String(ligne.label || '')} · ${String(ligne.terrain?.name || '')}`}
-        </Text>
-        {ligne.players ? (
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t('complexeReservations.fiche.joueurs', '{{nombre}} joueurs', {
-              nombre: ligne.players, ...SANS_ECHAPPEMENT,
-            })}
+  const carteDe = (/** @type {any} */ ligne) => {
+    const exterieur = ligne.source === 'exterieur';
+    // Planche EG04 état 2 : le bouton n'existe que si le serveur dit la réservation marquable.
+    const marquable = vue === 'passees' && ligne.canMarkNoShow === true;
+    const noteExterieure = vue === 'passees' && exterieur && ligne.status === STATUTS.confirmee;
+    return (
+      <View
+        key={ligne.documentId}
+        style={[
+          carte,
+          ouverte === ligne.documentId ? { borderColor: Colors.primary500, borderWidth: 2 } : null,
+        ]}
+      >
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityState={{ selected: ouverte === ligne.documentId }}
+          onPress={() => (surOrdinateur ? setChoisie(ligne.documentId) : navigation.navigate(
+            RouteNames.ComplexeReservation,
+            { complexeId, reservationId: ligne.documentId },
+          ))}
+          style={[Alignments.row, Spaces.padding[12], { gap: 12 }]}
+          testID={`reservation-${ligne.documentId}`}
+        >
+          <Text style={[Fonts.p1Black, Fonts.neutral00, { width: 56 }]}>
+            {texteHeure(ligne.from)}
           </Text>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {`${String(ligne.label || '')} · ${String(ligne.terrain?.name || '')}`}
+            </Text>
+            {ligne.players ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('complexeReservations.fiche.joueurs', '{{nombre}} joueurs', {
+                  nombre: ligne.players, ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+            ) : null}
+            <PastillesReservation
+              sansEtat={exterieur && ligne.status === STATUTS.confirmee}
+              source={ligne.source}
+              statut={etatAffiche(ligne)}
+              veille={Boolean(ligne.dayBeforeConfirmedAt)}
+            />
+          </View>
+        </TouchableOpacity>
+        {marquable || noteExterieure ? (
+          <View
+            style={{
+              alignItems: 'flex-start', paddingBottom: 12, paddingLeft: 80, paddingRight: 12,
+            }}
+          >
+            {marquable ? (
+              <View testID={`non-honoree-${ligne.documentId}`}>
+                <Button
+                  icon="flag"
+                  iconPosition="before"
+                  onPress={() => ouvrirLeMarquage(ligne)}
+                  size="sm"
+                  title={t('complexeReservations.nonHonoree.bouton', 'Non honorée')}
+                  variant="Secondary"
+                />
+              </View>
+            ) : (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'complexeReservations.nonHonoree.exterieure',
+                  'Une réservation extérieure ne se marque pas.',
+                )}
+              </Text>
+            )}
+          </View>
         ) : null}
-        <PastillesReservation
-          sansEtat={ligne.source === 'exterieur' && ligne.status === STATUTS.confirmee}
-          source={ligne.source}
-          statut={ligne.status}
-        />
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   let corps;
   if (lecture.isLoading) {
@@ -355,6 +466,33 @@ function ComplexeReservations() {
           {corps}
         </ScrollView>
       </DeuxVolets>
+      {bulle ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            bottom: 16, left: 16, position: 'absolute', right: 16,
+          }}
+          testID="reservations-bulle"
+        >
+          <BandeauComplexe
+            action={bulle.reservationId
+              ? t('complexeReservations.feuille.annuler', 'Annuler')
+              : undefined}
+            onAction={bulle.reservationId ? annulerLeMarquage : undefined}
+            texte={bulle.texte}
+            ton={bulle.ton}
+          />
+        </View>
+      ) : null}
+      <FeuilleNonHonoree
+        enCours={Boolean(marquer.isPending)}
+        erreur={erreurMarquage}
+        nom={String(aMarquer?.label || '')}
+        onConfirmer={confirmerLeMarquage}
+        onFermer={() => setAMarquer(null)}
+        quand={aMarquer ? quandCourt(aMarquer.date, aMarquer.from) : ''}
+        visible={Boolean(aMarquer)}
+      />
       <BottomModal
         close={() => setFeuille('')}
         isVisible={Boolean(feuille)}

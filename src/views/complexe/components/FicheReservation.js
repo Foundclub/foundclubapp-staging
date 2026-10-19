@@ -5,12 +5,15 @@ import {
 } from 'react-native';
 
 import {
+  etatAffiche,
   expireDans,
   historiqueLisible,
   initialesDe,
   messageDeRefusResa,
   nomCourt,
+  nonHonoreesLisibles,
   plageHoraire,
+  quandCourt,
   STATUTS,
   telephoneLisible,
   titreDuJour,
@@ -25,11 +28,15 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
+import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import {
+  useAnnulerNonHonoree,
   useAnnulerReservation,
+  useComplexeGere,
   useDeciderDemande,
+  useMarquerNonHonoree,
   useModifierExterieur,
   useReservationGeree,
 } from '@/services/complexe/complexeQueries';
@@ -47,8 +54,12 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  *     créneau vient d'être pris. », seulement « Refuser avec un mot » ;
  *   · confirmée, à venir, de l'app : « Annuler la réservation » (motif obligatoire, N-18) ;
  *   · confirmée, à venir, extérieure : « Modifier le nom » · « Supprimer » (le créneau se libère).
- * Pas encore servi (dit dans le compte rendu du lot) : « 0 non honorée », « Marquer non honorée »
- * et « Annuler le marquage » (lot L5b, après RESA-L2B) ; « Participants · 8/10 » (lot L3) ;
+ * RESA-L5B-1 (20/10/2026, serveur RESA-L2B) : « 12 réservations ici · 1 non honorée sur 3 » (le
+ * seuil du bannissement automatique du complexe, `autoBanNoShows`) ; le pied « Marquer non
+ * honorée » (`canMarkNoShow`, avec sa confirmation, N-17) et « Annuler le marquage »
+ * (`canUndoNoShow`, 7 jours) ; la pastille « Jouée » / « Non honorée » ; l'historique « Marquée
+ * non honorée par toi » et « — hors délai » (AT-07).
+ * Pas encore servi (dit dans le compte rendu du lot) : « Participants · 8/10 » (lot L3) ;
  * « Écrire au réserveur » (conversation de la réservation, lot L3) ; « Récompense disponible » et
  * « Valider la partie offerte » (fidélité, lot L4) ; la fiche client E-G15 (lot L5b).
  * @param {object} props - Les propriétés.
@@ -66,7 +77,11 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
   const decider = useDeciderDemande();
   const annuler = useAnnulerReservation();
   const modifier = useModifierExterieur();
-  /** @typedef {'' | 'annuler' | 'nom' | 'refuser' | 'supprimer'} FeuilleDeLaFiche */
+  // RESA-L5B-1 — « non honorée », et le seuil du bannissement automatique (« 1 sur 3 »).
+  const marquer = useMarquerNonHonoree();
+  const annulerMarquage = useAnnulerNonHonoree();
+  const seuil = useComplexeGere(complexeId).data?.autoBanNoShows;
+  /** @typedef {'' | 'annuler' | 'nom' | 'nonHonoree' | 'refuser' | 'supprimer'} FeuilleDeLaFiche */
   const [feuille, setFeuille] = useState(/** @type {FeuilleDeLaFiche} */ (''));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflit, setConflit] = useState('');
@@ -136,7 +151,7 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
     setErreurFeuille('');
     setFeuille('');
   };
-  const ouvrir = (/** @type {'annuler' | 'nom' | 'refuser' | 'supprimer'} */ quoi) => {
+  const ouvrir = (/** @type {Exclude<FeuilleDeLaFiche, ''>} */ quoi) => {
     setErreurFeuille('');
     setMessage('');
     if (quoi === 'nom') setNom(String(r.externalName || ''));
@@ -157,6 +172,19 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
       setMessage(reussite);
     } catch (erreur) {
       setErreurFeuille(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+
+  // RESA-L5B-1 — « Annuler le marquage » (planche EG05 état 7) : un geste direct, personne n'est
+  // prévenu ; un refus du serveur (plus de 7 jours) s'affiche en haut de la fiche.
+  const annulerLeMarquage = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      await annulerMarquage.mutateAsync({ complexeId, reservationId });
+      setMessage(t('complexeReservations.nonHonoree.annule', 'Marquage annulé.'));
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
     }
   };
 
@@ -194,6 +222,18 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
   ].filter(Boolean).join(' · ');
   const echeance = enAttente ? expireDans(t, r.expiresAt) : '';
   const historique = historiqueLisible(t, r.history, { reserveur });
+  // « 12 réservations ici · 1 non honorée sur 3 » (plan E-G05 bloc 3 ; RESA-L2B : `noShowsHere`).
+  const chiffresDuReserveur = [
+    Number.isFinite(r.booker?.bookingsHere)
+      ? t('complexeReservations.fiche.reservationsIci', '{{count}} réservations ici', {
+        count: r.booker.bookingsHere,
+        defaultValue_one: '{{count}} réservation ici',
+        defaultValue_other: '{{count}} réservations ici',
+        ...SANS_ECHAPPEMENT,
+      })
+      : '',
+    nonHonoreesLisibles(t, r.booker?.noShowsHere, seuil),
+  ].filter(Boolean).join(' · ');
 
   // ── « Qui » ────────────────────────────────────────────────────────────────────────────
   const qui = exterieur ? (
@@ -222,15 +262,8 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
             {[r.booker?.firstname, r.booker?.lastname].filter(Boolean).join(' ')}
           </Text>
-          {Number.isFinite(r.booker?.bookingsHere) ? (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('complexeReservations.fiche.reservationsIci', '{{count}} réservations ici', {
-                count: r.booker.bookingsHere,
-                defaultValue_one: '{{count}} réservation ici',
-                defaultValue_other: '{{count}} réservations ici',
-                ...SANS_ECHAPPEMENT,
-              })}
-            </Text>
+          {chiffresDuReserveur ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{chiffresDuReserveur}</Text>
           ) : null}
         </View>
       </View>
@@ -312,6 +345,31 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
         />
       </View>
     );
+  } else if (r.canUndoNoShow === true) {
+    // RESA-L5B-1 — planche EG05 état 7 : non honorée, moins de 7 jours.
+    pied = (
+      <View testID="fiche-annuler-marquage">
+        <Button
+          isLoading={Boolean(annulerMarquage.isPending)}
+          onPress={annulerLeMarquage}
+          title={t('complexeReservations.nonHonoree.annulerLeMarquage', 'Annuler le marquage')}
+          variant="Secondary"
+        />
+      </View>
+    );
+  } else if (r.canMarkNoShow === true) {
+    // RESA-L5B-1 — planche EG05 état 6 : confirmée, commencée, moins de 7 jours.
+    pied = (
+      <View testID="fiche-marquer-non-honoree">
+        <Button
+          icon="flag"
+          iconPosition="before"
+          onPress={() => ouvrir('nonHonoree')}
+          title={t('complexeReservations.nonHonoree.marquerLaReservation', 'Marquer non honorée')}
+          variant="Secondary"
+        />
+      </View>
+    );
   }
 
   return (
@@ -331,7 +389,7 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
           <PastillesReservation
             sansEtat={exterieur && r.status === STATUTS.confirmee}
             source={r.source}
-            statut={r.status}
+            statut={etatAffiche(r)}
           />
         </View>
         {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
@@ -451,6 +509,18 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
           options,
         )}
         visible={feuille === 'annuler'}
+      />
+      <FeuilleNonHonoree
+        enCours={Boolean(marquer.isPending)}
+        erreur={erreurFeuille}
+        nom={reserveur}
+        onConfirmer={() => depuisLaFeuille(
+          () => marquer.mutateAsync({ complexeId, reservationId }),
+          t('complexeReservations.nonHonoree.marquee', 'Marquée non honorée'),
+        )}
+        onFermer={fermerLaFeuille}
+        quand={quandCourt(r.date, r.from)}
+        visible={feuille === 'nonHonoree'}
       />
       <BottomModal close={fermerLaFeuille} isVisible={feuille === 'nom'} webPresentation="dialog">
         <View style={{ gap: 16 }}>

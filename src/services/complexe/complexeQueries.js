@@ -5,6 +5,7 @@ import {
 import { complexeChoisi } from '@/domains/complexe/complexeGerant';
 
 import {
+  annulerNonHonoree,
   annulerReservationGeree,
   bloquerCreneau,
   creerMonComplexe,
@@ -20,6 +21,7 @@ import {
   lireReservationGeree,
   lireReservationsDuComplexe,
   lireTerrains,
+  marquerNonHonoree,
   modifierComplexeGere,
   modifierExterieur,
   modifierTerrain,
@@ -354,6 +356,29 @@ export const useRouvrirFermetures = () => useGeste(
  */
 export const useBloquerCreneau = () => useGeste(
   ({ blocage, terrainId }) => bloquerCreneau(terrainId, blocage),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5B-1 (20/10/2026) — « non honorée » (serveur RESA-L2B).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * « Non honorée » (E-G04, E-G05) : le serveur juge (`canMarkNoShow`), la liste et la fiche se
+ * relisent ensuite (le bannissement automatique a peut-être suivi).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })`.
+ */
+export const useMarquerNonHonoree = () => useGeste(
+  ({ complexeId, reservationId }) => marquerNonHonoree(complexeId, reservationId),
+);
+
+/**
+ * « Annuler le marquage » (E-G04 dans les 5 s, E-G05 dans les 7 jours).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })`.
+ */
+export const useAnnulerNonHonoree = () => useGeste(
+  ({ complexeId, reservationId }) => annulerNonHonoree(complexeId, reservationId),
 );
 
 /**

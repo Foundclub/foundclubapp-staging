@@ -28,6 +28,9 @@ let mockVues = {};
 /** @type {any[]} */
 const mockFiltresLus = [];
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  // RESA-L5B-1 : les gestes « non honorée » de l'onglet Passées (témoin EG04.nonHonoree.L5B1).
+  useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => {
     mockFiltresLus.push(filtres);
     return mockVues[filtres.vue];
