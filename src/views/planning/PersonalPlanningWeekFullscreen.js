@@ -2040,7 +2040,8 @@ function PlanningWeekFullscreen() {
           </View>
         ) : null}
 
-        {!isLandscape ? (
+        {/* R17-VUE (tri du chef, 19/10) : inutile quand la semaine est deja affichee. */}
+        {!isLandscape && vue !== VUES.semaine ? (
           <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter, Spaces.marginBottom[8]]}>
             {t(
               'personalPlanningWeekFullscreen.rotateForWeek',

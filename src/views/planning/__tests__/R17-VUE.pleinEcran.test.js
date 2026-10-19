@@ -346,6 +346,28 @@ describe('R17-VUE — plein ecran perso (club et omnisport : meme chemin)', () =
   });
 });
 
+describe('R17-VUE — la phrase « Téléphone à l’horizontale » (tri du chef, point 1 A)', () => {
+  const PHRASE = 'Téléphone à l’horizontale : toute la semaine.';
+
+  test('11 ROUGE-AVANT — tenu droit, la semaine deja affichee : la phrase disparait', async () => {
+    /** @type {any} */ (getMyPlanning).mockImplementation(serveur({
+      '2026-10-19': [bloc('2026-10-24')],
+    }));
+    const arbre = await rendre();
+    expect(grille().mode).toBe('week');
+    expect(textes(arbre)).not.toContain(PHRASE);
+  });
+
+  test('12 CARACTERISATION — tenu droit, la vue jour : la phrase reste', async () => {
+    /** @type {any} */ (getMyPlanning).mockImplementation(serveur({
+      '2026-10-19': [bloc('2026-10-21')],
+    }));
+    const arbre = await rendre();
+    expect(grille().mode).toBe('day');
+    expect(textes(arbre)).toContain(PHRASE);
+  });
+});
+
 describe('R17-VUE — plein ecran d une installation de la Ville', () => {
   beforeEach(() => {
     mockRoute = {
