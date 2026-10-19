@@ -10,6 +10,7 @@ import {
   splitReports,
 } from '@/domains/facilityReport/facilityReportDisplay';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -36,7 +37,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
   const navigation = /** @type {any} */ (useNavigation());
   const suivi = useFacilityReports(facilityId);
 
-  if (suivi.isLoading) return <Loader testID="securite-chargement" />;
+  if (suivi.isLoading) return <Loader />;
   if (suivi.isError || !suivi.data) {
     return (
       <View style={{ gap: 12, padding: 16 }} testID="securite-erreur">
@@ -75,6 +76,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
   );
   if (state.code === 'a_surveiller') {
     phraseEtat = t('facilityReports.ville.etatASurveiller', {
+      ...SANS_ECHAPPEMENT,
       count: state.securityOpenCount || 1,
       date: reportDayLabel(state.securitySince),
     });
@@ -85,7 +87,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
       fin: reportDayLabel(state.closure.endDate),
     };
     phraseEtat = motif
-      ? t('facilityReports.ville.etatFermeeMotif', { ...jours, motif })
+      ? t('facilityReports.ville.etatFermeeMotif', { ...SANS_ECHAPPEMENT, ...jours, motif })
       : t('facilityReports.ville.etatFermee', jours);
   }
 
@@ -129,7 +131,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
         testID={`securite-etat-${state.code}`}
       >
         <Text style={[Fonts.h5Bold, { color: couleurEtat }]}>
-          {t(`facilityReports.ville.etat.${state.code}`, state.code)}
+          {t(/** @type {string} */ (`facilityReports.ville.etat.${state.code}`), state.code)}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral100]}>{phraseEtat}</Text>
         {state.code === 'fermee' && onOpenClosures ? (
@@ -158,7 +160,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
         <View style={{ gap: 10 }}>
           <View style={{ gap: 2 }}>
             <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
-              {t('facilityReports.ville.ouverts', { count: ouverts.length })}
+              {t('facilityReports.ville.ouverts', { ...SANS_ECHAPPEMENT, count: ouverts.length })}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t(
@@ -169,7 +171,10 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
           </View>
           {ouverts.map((report) => (
             <TouchableOpacity
-              accessibilityLabel={t('facilityReports.ville.ouvrirFiche', { title: report.title })}
+              accessibilityLabel={t('facilityReports.ville.ouvrirFiche', {
+                ...SANS_ECHAPPEMENT,
+                title: report.title,
+              })}
               accessibilityRole="button"
               key={report.documentId}
               onPress={() => navigation.navigate(RouteNames.FacilityReportDetails, {
@@ -229,26 +234,35 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
               couleur = item.status === 'resolu' ? Colors.success500 : Colors.neutral300;
             }
             let titre = t('facilityReports.ville.histoFermeture', {
+              ...SANS_ECHAPPEMENT,
               debut: reportDayLabel(item.startDate),
               fin: reportDayLabel(item.endDate),
             });
             let detail = item.status === 'reopened'
               ? t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte')
               : t('facilityReports.ville.histoFermetureMotif', {
+                ...SANS_ECHAPPEMENT,
                 motif: item.reason
                   ? t(`collectiviteFermetures.motifs.${item.reason}`, item.reason)
                   : item.label || '',
               });
             if (signalement) {
               titre = item.status === 'resolu'
-                ? t('facilityReports.ville.histoResolu', { title: item.title })
-                : t('facilityReports.ville.histoSansSuite', { title: item.title });
+                ? t('facilityReports.ville.histoResolu', { ...SANS_ECHAPPEMENT, title: item.title })
+                : t('facilityReports.ville.histoSansSuite', {
+                  ...SANS_ECHAPPEMENT,
+                  title: item.title,
+                });
               const dates = {
                 debut: reportDayLabel(item.createdAt),
                 fin: reportDayLabel(item.closedAt),
               };
               detail = item.cityNote
-                ? t('facilityReports.ville.histoDatesMot', { ...dates, note: item.cityNote })
+                ? t('facilityReports.ville.histoDatesMot', {
+                  ...SANS_ECHAPPEMENT,
+                  ...dates,
+                  note: item.cityNote,
+                })
                 : t('facilityReports.ville.histoDates', dates);
             }
             return (

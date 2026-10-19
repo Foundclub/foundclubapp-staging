@@ -93,6 +93,19 @@ const PREFILL = {
   message: 'Panier côté nord descellé : il bouge quand on s y accroche : installation fermée le temps de la réparation.', reason: 'travaux', startDate: '2026-10-19',
 };
 
+/** Button ne porte pas d identifiant de test : ses titres, par identifiant du temoin. */
+const TITRES = /** @type {Record<string, string>} */ ({
+  'feuille-resolu': 'Marquer résolu',
+  'feuille-sans-suite': 'Classer sans suite',
+  'signalement-fermer': 'Fermer l’installation…',
+  'signalement-prendre': 'Prendre en charge',
+  'signalement-resolu': 'Résolu…',
+  'signalement-sans-suite': 'Sans suite…',
+  'signaler-autre-chose': 'Signaler autre chose',
+  'signaler-envoyer': 'Envoyer à la Ville',
+  'signaler-photo': 'Ajouter une photo (facultatif)',
+  'signaler-voir-mes': 'Voir mes signalements',
+});
 const monter = () => {
   /** @type {any} */
   let arbre;
@@ -100,7 +113,7 @@ const monter = () => {
   return arbre;
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
-const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props.testID === id && typeof n.type !== 'string');
+const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => (n.props.testID === id || (TITRES[id] && n.props.title === TITRES[id])) && typeof n.type !== 'string');
 const presser = async (/** @type {any} */ arbre, /** @type {string} */ id) => {
   const [cible] = parId(arbre, id);
   if (!cible) throw new Error(`introuvable : ${id}`);
@@ -154,19 +167,19 @@ describe('R17SS1 — la fiche d un signalement', () => {
   it('Q3 A : « Sans suite » exige un mot ; « Résolu » part avec le sien', async () => {
     const arbre = monter();
     await presser(arbre, 'signalement-sans-suite');
-    const [valider] = parId(arbre, 'signalement-feuille-valider');
+    const [valider] = parId(arbre, 'feuille-sans-suite');
     expect(valider.props.disabled).toBe(true);
     const [champ] = parId(arbre, 'signalement-feuille-mot');
     await act(async () => { champ.props.onChangeText('La clé est à l’accueil du gymnase.'); });
-    expect(parId(arbre, 'signalement-feuille-valider')[0].props.disabled).toBe(false);
-    await presser(arbre, 'signalement-feuille-valider');
+    expect(parId(arbre, 'feuille-sans-suite')[0].props.disabled).toBe(false);
+    await presser(arbre, 'feuille-sans-suite');
     expect(mockStatut.mutateAsync).toHaveBeenCalledWith({ note: 'La clé est à l’accueil du gymnase.', reportId: 'sig-1', status: 'sans_suite' });
 
     mockStatut.mutateAsync.mockClear();
     const autre = monter();
     await presser(autre, 'signalement-resolu');
-    expect(parId(autre, 'signalement-feuille-valider')[0].props.disabled).toBe(false);
-    await presser(autre, 'signalement-feuille-valider');
+    expect(parId(autre, 'feuille-resolu')[0].props.disabled).toBe(false);
+    await presser(autre, 'feuille-resolu');
     expect(mockStatut.mutateAsync).toHaveBeenCalledWith({ reportId: 'sig-1', status: 'resolu' });
   });
 

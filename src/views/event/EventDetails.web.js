@@ -2522,7 +2522,7 @@ function EventDetails({ navigation, route }) {
               ) : null}
               {/* R17-SIGNALER-1 (19/10) — « Signaler un problème ici » (installation de la
                   Ville). */}
-              <FacilityReportEntry event={event} />
+              <FacilityReportEntry event={event} navigation={navigation} />
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
                   le telephone : c est la seule chose a FAIRE maintenant, tout
                   le reste de la page est de la consultation. */}

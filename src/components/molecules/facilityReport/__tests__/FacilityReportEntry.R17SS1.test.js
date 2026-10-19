@@ -10,7 +10,6 @@ import FacilityReportEntry from '../FacilityReportEntry';
 /** @type {any} */
 let mockNavigation;
 
-jest.mock('@react-navigation/native', () => ({ useNavigation: () => mockNavigation }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (/** @type {string} */ _cle, /** @type {string} */ defaut) => defaut }),
 }));
@@ -25,7 +24,7 @@ jest.mock('@/theme/themeContext', () => {
 const monter = (/** @type {any} */ event) => {
   /** @type {any} */
   let arbre;
-  act(() => { arbre = renderer.create(<FacilityReportEntry event={event} />); });
+  act(() => { arbre = renderer.create(<FacilityReportEntry event={event} navigation={mockNavigation} />); });
   return arbre;
 };
 

@@ -12,6 +12,7 @@ import {
   REPORT_PHOTO_MAX_BYTES,
 } from '@/domains/facilityReport/facilityReportDisplay';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -64,7 +65,7 @@ function FacilityReportNew() {
       <Text style={[Fonts.p3Bold, Fonts.primary200]}>{params.facilityName || ''}</Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>
         {ville
-          ? t('facilityReports.membre.envoyeA', { ville })
+          ? t('facilityReports.membre.envoyeA', { ...SANS_ECHAPPEMENT, ville })
           : t('facilityReports.membre.envoyeALaVille', 'Envoyé à la Ville')}
       </Text>
     </View>
@@ -73,7 +74,7 @@ function FacilityReportNew() {
   if (ouverts.isLoading) {
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
-        <Loader testID="signaler-chargement" />
+        <Loader />
       </ScreenContainer>
     );
   }
@@ -128,12 +129,12 @@ function FacilityReportNew() {
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, { maxWidth: 320, textAlign: 'center' }]}>
             {t('facilityReports.membre.merciTexte', {
+              ...SANS_ECHAPPEMENT,
               ville: ville || t('facilityReports.membre.laVille', 'La Ville'),
             })}
           </Text>
           <Button
             onPress={() => navigation.navigate(RouteNames.MyFacilityReports)}
-            testID="signaler-voir-mes"
             title={t('facilityReports.membre.voirMes', 'Voir mes signalements')}
             variant="Secondary"
           />
@@ -156,7 +157,7 @@ function FacilityReportNew() {
           testID="signaler-deja"
         >
           {entete}
-          {deja.map((report, rang) => (
+          {deja.map((/** @type {any} */ report, /** @type {number} */ rang) => (
             <View
               key={report.documentId}
               style={{
@@ -176,6 +177,7 @@ function FacilityReportNew() {
               ) : null}
               <Text style={[Fonts.p3, Fonts.neutral100]}>
                 {t('facilityReports.membre.dejaLigne', {
+                  ...SANS_ECHAPPEMENT,
                   category: t(
                     `facilityReports.categoriesCourtes.${report.category}`,
                     report.category,
@@ -191,7 +193,6 @@ function FacilityReportNew() {
           </Text>
           <Button
             onPress={() => setAutreChose(true)}
-            testID="signaler-autre-chose"
             title={t('facilityReports.membre.autreChose', 'Signaler autre chose')}
             variant="Secondary"
           />
@@ -334,7 +335,6 @@ function FacilityReportNew() {
                 icon="camera"
                 iconPosition="before"
                 onPress={choisirPhoto}
-                testID="signaler-photo"
                 title={t('facilityReports.membre.ajouterPhoto', 'Ajouter une photo (facultatif)')}
                 variant="Secondary"
               />
@@ -403,7 +403,6 @@ function FacilityReportNew() {
         <Button
           isLoading={envoi.isPending}
           onPress={envoyer}
-          testID="signaler-envoyer"
           title={t('facilityReports.membre.envoyer', 'Envoyer à la Ville')}
           variant="Primary"
         />

@@ -28,7 +28,9 @@ const ilYa = (/** @type {number} */ ans, /** @type {number} */ jours = 0) => {
  * @returns {string} La cle et ses valeurs.
  */
 const t = (/** @type {string} */ cle, /** @type {any} */ valeurs) => (
-  valeurs && typeof valeurs === 'object' ? `${cle}${JSON.stringify(valeurs)}` : cle
+  valeurs && typeof valeurs === 'object'
+    ? `${cle}${JSON.stringify({ ...valeurs, interpolation: undefined })}`
+    : cle
 );
 
 describe('R17SS1 — affichage du signalement d installation', () => {

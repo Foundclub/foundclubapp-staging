@@ -571,10 +571,11 @@ function CollectiviteHome() {
       testID="collectivite-home-signalements"
     >
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {t('facilityReports.ville.accueil', { count: nombreATraiter })}
+        {t('facilityReports.ville.accueil', { ...SANS_ECHAPPEMENT, count: nombreATraiter })}
       </Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>
         {t('facilityReports.ville.accueilDetail', {
+          ...SANS_ECHAPPEMENT,
           category: t(
             `facilityReports.categoriesCourtes.${aTraiter[0].category}`,
             aTraiter[0].category,

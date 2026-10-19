@@ -10,6 +10,7 @@ import {
   reportStepCount,
 } from '@/domains/facilityReport/facilityReportDisplay';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -35,7 +36,7 @@ function MyFacilityReports() {
   const mes = useMyFacilityReports();
 
   let corps;
-  if (mes.isLoading) corps = <Loader testID="mes-signalements-chargement" />;
+  if (mes.isLoading) corps = <Loader />;
   else if (mes.isError) {
     corps = (
       <View style={{ gap: 12 }} testID="mes-signalements-erreur">
@@ -58,7 +59,7 @@ function MyFacilityReports() {
     corps = liste.length === 0 ? (
       <EmptyState title={t('facilityReports.membre.mesVide', 'Tu n’as encore rien signalé.')} />
     ) : (
-      liste.map((report) => {
+      liste.map((/** @type {any} */ report) => {
         const ton = reportStatusTone(report.status);
         const couleur = {
           neutral: Colors.neutral300,
@@ -105,12 +106,16 @@ function MyFacilityReports() {
                 }}
               >
                 <Text style={[Fonts.p3Bold, { color: couleur }]}>
-                  {t(`facilityReports.statutsAuteur.${report.status}`, report.status)}
+                  {t(
+                    /** @type {string} */ (`facilityReports.statutsAuteur.${report.status}`),
+                    report.status,
+                  )}
                 </Text>
               </View>
             </View>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t('facilityReports.membre.mesLigne', {
+                ...SANS_ECHAPPEMENT,
                 date: reportDayLabel(report.createdAt),
                 facility: report.facility?.name || '',
               })}
@@ -138,6 +143,7 @@ function MyFacilityReports() {
             {report.cityNote ? (
               <Text style={[Fonts.p3, Fonts.neutral100]}>
                 {t('facilityReports.membre.motDeLaVille', {
+                  ...SANS_ECHAPPEMENT,
                   note: report.cityNote,
                   ville:
                       report.collectivite?.name || t('facilityReports.membre.laVille', 'La Ville'),

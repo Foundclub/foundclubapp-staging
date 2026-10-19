@@ -81,6 +81,13 @@ export const useCollectiviteFacilityReportsSummary = (collectiviteId) => useQuer
   staleTime: QUART_DE_MINUTE,
 });
 
+/**
+ * Un geste, puis la relecture des signalements (et, pour une fermeture, du planning et des
+ * seances).
+ * @param {(variables: any) => Promise<any>} mutationFn - Le geste.
+ * @param {{ fermeture?: boolean }} [options] - `fermeture` : relire aussi les fermetures.
+ * @returns {any} La mutation.
+ */
 const useGesteSignalement = (mutationFn, { fermeture = false } = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -107,7 +114,7 @@ const useGesteSignalement = (mutationFn, { fermeture = false } = {}) => {
  * @returns {any} La mutation.
  */
 export const useSubmitFacilityReport = () => useGesteSignalement(
-  ({ facilityId, ...input }) => submitFacilityReport(facilityId, input),
+  (/** @type {any} */ { facilityId, ...input }) => submitFacilityReport(facilityId, input),
 );
 
 /**
@@ -115,7 +122,7 @@ export const useSubmitFacilityReport = () => useGesteSignalement(
  * @returns {any} La mutation.
  */
 export const useSetFacilityReportStatus = () => useGesteSignalement(
-  ({ reportId, ...data }) => setFacilityReportStatus(reportId, data),
+  (/** @type {any} */ { reportId, ...data }) => setFacilityReportStatus(reportId, data),
 );
 
 /**
@@ -123,7 +130,7 @@ export const useSetFacilityReportStatus = () => useGesteSignalement(
  * @returns {any} La mutation.
  */
 export const useCloseFacilityFromReport = () => useGesteSignalement(
-  ({ data, reportId }) => closeFacilityFromReport(reportId, data),
+  (/** @type {any} */ { data, reportId }) => closeFacilityFromReport(reportId, data),
   {
     fermeture: true,
   },

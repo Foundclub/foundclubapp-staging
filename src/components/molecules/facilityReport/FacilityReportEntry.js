@@ -1,4 +1,3 @@
-import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Image, Text, TouchableOpacity } from 'react-native';
 
@@ -12,14 +11,14 @@ import { RouteNames } from '@/navigation/routeNames';
  * seance (planche P10-signaler-tel, ecran 1 b ; P11-securite-ou-ca-vit 5). Le SERVEUR dit si la
  * seance s en sert : `event.facilityReportable` n existe que sur une installation de la Ville, pour
  * un compte qui peut la signaler (Q1 A). Sinon, rien ne s affiche.
- * @param {{ event: any }} props
+ * La fiche passe SA navigation (ses temoins doublent la navigation sans useNavigation).
+ * @param {{ event: any, navigation: any }} props
  * @returns {import('react').ReactElement | null} La rangee, ou rien.
  */
-function FacilityReportEntry({ event }) {
+function FacilityReportEntry({ event, navigation }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Images } = useTheme();
-  const navigation = /** @type {any} */ (useNavigation());
-  if (!event?.facilityReportable || !event?.facility?.documentId) return null;
+  if (!event?.facilityReportable || !event?.facility?.documentId || !navigation) return null;
   return (
     <TouchableOpacity
       accessibilityRole="button"

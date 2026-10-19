@@ -8282,7 +8282,7 @@ function EventDetails({ navigation, route }) {
             {/* R17-SIGNALER-1 (19/10) — « Signaler un problème ici », sous le lieu, si le
                 serveur dit que la séance s'en sert (installation de la Ville, lecteur qui peut
                 la signaler). */}
-            <FacilityReportEntry event={event} />
+            <FacilityReportEntry event={event} navigation={navigation} />
             {ligneDAttente ? (
               <Text
                 style={[Fonts.p2Bold, { color: Colors.warning500 }]}

@@ -2,6 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
 
@@ -83,7 +84,7 @@ export const reportStepCount = (status) => {
 /**
  * Q2 A — l auteur tel que la Ville le lit : « Lucas Morel, entraîneur · AS Montrivage » pour un
  * encadrant, « un joueur · AS Montrivage » sinon (le serveur ne rend le nom que d un encadrant).
- * @param {(key: string, fallbackOrOptions?: any, options?: any) => string} t - i18n.
+ * @param {any} t - La fonction de traduction (i18next).
  * @param {any} report - Le signalement (lecture de la Ville).
  * @returns {string} La ligne.
  */
@@ -93,8 +94,10 @@ export const reportAuthorLabel = (t, report) => {
   const club = report?.club?.name || '';
   const name = report?.author?.name || null;
   return name
-    ? t('facilityReports.auteurNomme', { club, name, role })
-    : t('facilityReports.auteurAnonyme', { club, role });
+    ? t('facilityReports.auteurNomme', {
+      ...SANS_ECHAPPEMENT, club, name, role,
+    })
+    : t('facilityReports.auteurAnonyme', { ...SANS_ECHAPPEMENT, club, role });
 };
 
 /**
@@ -105,8 +108,9 @@ export const reportAuthorLabel = (t, report) => {
  */
 export const splitReports = (reports) => {
   const liste = Array.isArray(reports) ? reports : [];
-  const recents = (a, b) => String(b?.createdAt || '').localeCompare(String(a?.createdAt || ''));
-  const ouverts = liste.filter(isOpenReport).sort((a, b) => {
+  const recents = (/** @type {any} */ a, /** @type {any} */ b) => String(b?.createdAt || '')
+    .localeCompare(String(a?.createdAt || ''));
+  const ouverts = liste.filter(isOpenReport).sort((/** @type {any} */ a, /** @type {any} */ b) => {
     const securite = Number(b?.category === 'securite') - Number(a?.category === 'securite');
     return securite || recents(a, b);
   });

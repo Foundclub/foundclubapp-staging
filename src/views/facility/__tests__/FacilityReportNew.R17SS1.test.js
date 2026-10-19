@@ -82,6 +82,17 @@ const ilYa = (/** @type {number} */ ans) => {
   return date.toISOString().slice(0, 10);
 };
 
+/** Button ne porte pas d identifiant de test : ses titres, par identifiant du temoin. */
+const TITRES = /** @type {Record<string, string>} */ ({
+  'signalement-fermer': 'Fermer l’installation…',
+  'signalement-prendre': 'Prendre en charge',
+  'signalement-resolu': 'Résolu…',
+  'signalement-sans-suite': 'Sans suite…',
+  'signaler-autre-chose': 'Signaler autre chose',
+  'signaler-envoyer': 'Envoyer à la Ville',
+  'signaler-photo': 'Ajouter une photo (facultatif)',
+  'signaler-voir-mes': 'Voir mes signalements',
+});
 const monter = () => {
   /** @type {any} */
   let arbre;
@@ -90,7 +101,7 @@ const monter = () => {
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => [].concat(noeud.props.children).join(''));
-const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props.testID === id && typeof n.type !== 'string');
+const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => (n.props.testID === id || (TITRES[id] && n.props.title === TITRES[id])) && typeof n.type !== 'string');
 const presser = async (/** @type {any} */ arbre, /** @type {string} */ id) => {
   const [cible] = parId(arbre, id);
   if (!cible) throw new Error(`introuvable : ${id}`);

@@ -14,6 +14,7 @@ import {
   shouldProposeResolved,
 } from '@/domains/facilityReport/facilityReportDisplay';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -61,7 +62,7 @@ function FacilityReportDetails() {
   if (fiche.isLoading) {
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
-        <Loader testID="signalement-chargement" />
+        <Loader />
       </ScreenContainer>
     );
   }
@@ -169,7 +170,10 @@ function FacilityReportDetails() {
             }}
           >
             <Text style={[Fonts.p3Bold, { color: couleur }]} testID="signalement-statut">
-              {t(`facilityReports.${statuts}.${report.status}`, report.status)}
+              {t(
+                /** @type {string} */ (`facilityReports.${statuts}.${report.status}`),
+                report.status,
+              )}
             </Text>
           </View>
           <Text style={[Fonts.p3, Fonts.neutral200]}>{reportDayLabel(report.createdAt)}</Text>
@@ -213,6 +217,7 @@ function FacilityReportDetails() {
         {report.closure?.startDate ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral100]} testID="signalement-fermeture-liee">
             {t('facilityReports.ville.liee', {
+              ...SANS_ECHAPPEMENT,
               debut: reportDayLabel(report.closure.startDate),
               fin: reportDayLabel(report.closure.endDate),
             })}
@@ -221,6 +226,7 @@ function FacilityReportDetails() {
         {report.cityNote ? (
           <Text style={[Fonts.p2, Fonts.neutral00]} testID="signalement-mot">
             {t('facilityReports.membre.motDeLaVille', {
+              ...SANS_ECHAPPEMENT,
               note: report.cityNote,
               ville: nomDeLaVille,
             })}
@@ -263,14 +269,12 @@ function FacilityReportDetails() {
               <Button
                 isLoading={statut.isPending && !feuilleOuverte}
                 onPress={() => changer('pris_en_charge')}
-                testID="signalement-prendre"
                 title={t('facilityReports.ville.prendre', 'Prendre en charge')}
                 variant="Primary"
               />
             ) : null}
             <Button
               onPress={fermerLInstallation}
-              testID="signalement-fermer"
               title={t('facilityReports.ville.fermer', 'Fermer l’installation…')}
               variant="Secondary"
             />
@@ -278,14 +282,12 @@ function FacilityReportDetails() {
               <Button
                 onPress={() => setFeuille('resolu')}
                 style={{ flex: 1 }}
-                testID="signalement-resolu"
                 title={t('facilityReports.ville.resoudre', 'Résolu…')}
                 variant="Ghost"
               />
               <Button
                 onPress={() => setFeuille('sans_suite')}
                 style={{ flex: 1 }}
-                testID="signalement-sans-suite"
                 title={t('facilityReports.ville.sansSuite', 'Sans suite…')}
                 variant="Ghost"
               />
@@ -317,7 +319,6 @@ function FacilityReportDetails() {
               isLoading={statut.isPending}
               onPress={() => changer(feuille || 'resolu', mot.trim() || null)}
               style={{ flex: 1 }}
-              testID="signalement-feuille-valider"
               title={
                 motRequis
                   ? t('facilityReports.ville.feuilleSansSuite', 'Classer sans suite')
