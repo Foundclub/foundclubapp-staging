@@ -218,7 +218,7 @@ describe('R17INVIT · I1 — la recherche habituelle, sans onglets', () => {
     expect(dans(arbre, 'recherche-habituelle')).toBeTruthy();
     expect(onglets(arbre)).toHaveLength(0);
     expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Ajouter un club déjà sur FoundClub',
+      'Ajouter un club',
       'Le club n’est pas sur FoundClub ?',
     ]));
     expect(mockListeProps.paramsDeFiche).toEqual({ collectiviteId: 'ville-de-recette' });

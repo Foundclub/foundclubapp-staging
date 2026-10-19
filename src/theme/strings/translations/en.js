@@ -6360,7 +6360,7 @@ export default {
       backToSearch: 'Search for a club already on FoundClub',
       belongs: 'This club is part of my local authority',
       elsewhere: 'Attached to another local authority',
-      introSearch: 'Search for the club as in the FoundClub search. « This club is part of my local authority » sends it your request: once accepted, it is attached to the town.',
+      introSearch: 'Find the club, then « This club is part of my local authority ».',
       inviteByLink: 'Invite with the link',
       loading: 'Searching…',
       noLeader: 'No manager on FoundClub: nobody could accept. Invite it with the link.',
@@ -6369,7 +6369,7 @@ export default {
       requested: 'This club is already asking to join you',
       resend: 'Send the request again',
       sent: 'Request sent',
-      title: 'Add a club already on FoundClub',
+      title: 'Add a club',
     },
     club: {
       accept: 'Accept',

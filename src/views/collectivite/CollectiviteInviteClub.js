@@ -395,13 +395,12 @@ function CollectiviteInviteClub() {
         <View style={[Alignments.fill, zoneDeRecherche]}>
           {enTete(t(
             'collectiviteRattachement.ajouter.title',
-            'Ajouter un club déjà sur FoundClub',
+            'Ajouter un club',
           ))}
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
               'collectiviteRattachement.ajouter.introSearch',
-              // eslint-disable-next-line max-len
-              'Cherchez le club comme dans la recherche de FoundClub. « Ce club fait partie de ma collectivité » lui envoie votre demande : accepté, il est rattaché à la Ville.',
+              'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
             )}
           </Text>
           <View style={Alignments.fill}>

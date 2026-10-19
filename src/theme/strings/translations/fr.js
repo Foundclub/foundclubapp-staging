@@ -5814,8 +5814,7 @@ export default {
       backToSearch: 'Chercher un club déjà sur FoundClub',
       belongs: 'Ce club fait partie de ma collectivité',
       elsewhere: 'Rattaché à une autre collectivité',
-      // eslint-disable-next-line max-len
-      introSearch: 'Cherchez le club comme dans la recherche de FoundClub. « Ce club fait partie de ma collectivité » lui envoie votre demande : accepté, il est rattaché à la Ville.',
+      introSearch: 'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
       inviteByLink: 'Inviter par le lien',
       loading: 'Recherche…',
       // eslint-disable-next-line max-len
@@ -5825,7 +5824,7 @@ export default {
       requested: 'Ce club demande déjà à vous rejoindre',
       resend: 'Renvoyer la demande',
       sent: 'Demande envoyée',
-      title: 'Ajouter un club déjà sur FoundClub',
+      title: 'Ajouter un club',
     },
     club: {
       accept: 'Accepter',
