@@ -6,6 +6,11 @@ import {
 } from 'react-native';
 
 import {
+  checkPill,
+  checkShortDate,
+  currentChecks,
+} from '@/domains/facilityCheck/facilityCheckDisplay';
+import {
   reportAuthorLabel,
   reportDayLabel,
   reportShortSpan,
@@ -23,6 +28,7 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useFacilityChecks } from '@/services/facilityCheck/facilityCheckQueries';
 import { useFacilityReports } from '@/services/facilityReport/facilityReportQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
@@ -31,31 +37,41 @@ import { useIsDesktop } from '@/responsive';
 
 // Planche A : l historique se lit en 3 jalons, puis « Voir tout l historique ».
 const JALONS_VISIBLES = 3;
+// R17-CONTROLES — planche A : la colonne des controles (380) a droite, quand l onglet a la place
+// (ordinateur, aucun panneau ouvert) ; sinon elle passe sous l historique (planche tel 1).
+const LARGEUR_DEUX_COLONNES = 880;
+const LARGEUR_DU_CARNET = 380;
 
 /**
  * R17-SIGNALER-1 (19/10, REC17-011) — le 5ᵉ ONGLET de la fiche d une installation, cote Ville :
  * « Sécurité et suivi » (planches P10-securite-ordi A, D, E, F et P10-securite-tel 1, validees par
  * Adel le 19/10). En tete l ETAT, deduit par le serveur (Q5 A) ; puis les signalements OUVERTS, la
  * securite d abord ; puis l HISTORIQUE (signalements traites, fermetures). Le carnet des controles
- * (Q6 B) est le lot R17-CONTROLES : il n est pas ici.
+ * (Q6 B, lot R17-CONTROLES, 20/10) : a droite sur ordinateur, sous l historique au telephone ;
+ * un appui ouvre un controle (`onOpenCheck`), « Ajouter un contrôle » le formulaire
+ * (`onAddCheck`). Les controles faits et les seances d une fermeture (« 6 séances touchées,
+ * 4 déplacées ») sont des jalons.
  * La Ville est vouvoyee. Aucun nom de membre : le serveur ne rend que celui d un encadrant (Q2 A).
  * Un signalement s ouvre par `onOpenReport` quand l ecran le donne (sur ordinateur, le PANNEAU de
  * droite, planche B) ; sinon en page (le telephone).
  * Au TELEPHONE (planche tel 1), la carte est compacte (titre, pastille dessous, « Sécurité ·
  * sam. 18 oct. ») et l historique abrege (« 6 – 14 oct. · « Joint changé. » »).
- * @param {{ facilityId: string | null, onOpenClosures?: () => void,
+ * @param {{ facilityId: string | null, onAddCheck?: () => void,
+ *   onOpenCheck?: (series: string) => void, onOpenClosures?: () => void,
  *   onOpenReport?: (reportId: string) => void, selectedReportId?: string | null }} props
  * @returns {import('react').ReactElement} L onglet.
  */
 function FacilitySecurityTab({
-  facilityId, onOpenClosures, onOpenReport, selectedReportId = null,
+  facilityId, onAddCheck, onOpenCheck, onOpenClosures, onOpenReport, selectedReportId = null,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Images } = useTheme();
   const isDesktop = useIsDesktop();
   const navigation = /** @type {any} */ (useNavigation());
   const suivi = useFacilityReports(facilityId);
+  const carnet = useFacilityChecks(facilityId);
   const [toutLHistorique, setToutLHistorique] = useState(false);
+  const [largeur, setLargeur] = useState(0);
   const ouvrir = (/** @type {string} */ reportId) => {
     if (onOpenReport) {
       onOpenReport(reportId);
@@ -98,7 +114,7 @@ function FacilitySecurityTab({
   const meta = suivi.data?.meta || {};
   const state = meta.state || { code: 'en_service' };
   const { ouverts, traites } = splitReports(reports);
-  const jalons = securityHistory(traites, meta.closures);
+  const jalons = securityHistory(traites, meta.closures, carnet.data?.data);
   const jalonsVisibles = toutLHistorique ? jalons : jalons.slice(0, JALONS_VISIBLES);
 
   const tons = {
@@ -157,8 +173,314 @@ function FacilitySecurityTab({
     );
   };
 
-  return (
-    <View style={{ gap: 16 }} testID="onglet-securite">
+  /**
+   * Le titre et le detail d un signalement clos (planches A et tel 1).
+   * @param {any} item - Le signalement.
+   * @returns {{ couleur: string, detail: string, titre: string }} Les lignes.
+   */
+  const decrireSignalement = (item) => {
+    const resolu = item.status === 'resolu';
+    const couleur = resolu ? Colors.success500 : Colors.neutral300;
+    const titre = resolu
+      ? t('facilityReports.ville.histoResolu', { ...SANS_ECHAPPEMENT, title: item.title })
+      : t('facilityReports.ville.histoSansSuite', { ...SANS_ECHAPPEMENT, title: item.title });
+    const court = isDesktop ? null : reportShortSpan(item.createdAt, item.closedAt);
+    if (court) {
+      // Planche tel 1 : « 6 – 14 oct. · « Joint changé. » ».
+      const periode = 'jour' in court
+        ? court.jour
+        : t('facilityReports.ville.histoPeriode', { ...SANS_ECHAPPEMENT, ...court });
+      return {
+        couleur,
+        detail: item.cityNote
+          ? t('facilityReports.ville.histoCourtMot', {
+            ...SANS_ECHAPPEMENT,
+            note: item.cityNote,
+            periode,
+          })
+          : periode,
+        titre,
+      };
+    }
+    const dates = { debut: reportDayLabel(item.createdAt), fin: reportDayLabel(item.closedAt) };
+    if (item.cityNote) {
+      return {
+        couleur,
+        detail: t(
+          resolu
+            ? 'facilityReports.ville.histoDatesMot'
+            : 'facilityReports.ville.histoDatesSansSuiteMot',
+          { ...SANS_ECHAPPEMENT, ...dates, note: item.cityNote },
+        ),
+        titre,
+      };
+    }
+    return {
+      couleur,
+      detail: t(
+        resolu ? 'facilityReports.ville.histoDates' : 'facilityReports.ville.histoDatesSansSuite',
+        dates,
+      ),
+      titre,
+    };
+  };
+
+  /**
+   * Les seances d une fermeture (R17-CONTROLES, reste de R17-SIGNALER-1) : « 6 séances touchées,
+   * 4 déplacées » ; null pour une fermeture d avant (le serveur n a pas le nombre).
+   * @param {any} item - La fermeture (meta.closures).
+   * @param {boolean} avecDeplacees - Faux au telephone (planche tel 1 : « 6 séances touchées »).
+   * @returns {string | null} Le texte, ou null.
+   */
+  const seancesDeLaFermeture = (item, avecDeplacees) => {
+    if (typeof item?.touchedSessionsCount !== 'number') return null;
+    const touchees = t('facilityReports.ville.seancesTouchees', {
+      ...SANS_ECHAPPEMENT,
+      count: item.touchedSessionsCount,
+    });
+    const deplacees = Number(item.movedSessionsCount) || 0;
+    if (!avecDeplacees || !deplacees) return touchees;
+    return t('facilityReports.ville.seancesEtDeplacees', {
+      ...SANS_ECHAPPEMENT,
+      deplacees: t('facilityReports.ville.seancesDeplacees', {
+        ...SANS_ECHAPPEMENT,
+        count: deplacees,
+      }),
+      touchees,
+    });
+  };
+
+  /**
+   * Le titre et le detail d un jalon de l historique (signalement, fermeture, controle fait).
+   * @param {any} item - L element.
+   * @param {'report' | 'closure' | 'check'} kind - Sa sorte.
+   * @returns {{ couleur: string, detail: string, titre: string }} Les lignes.
+   */
+  const decrireJalon = (item, kind) => {
+    if (kind === 'check') {
+      // R17-CONTROLES (planches A et tel 1) : « Contrôle : Buts et paniers », puis la date, qui
+      // l a fait et (ordinateur) le prochain.
+      const titreDuControle = t('facilityReports.controles.histoTitre', {
+        ...SANS_ECHAPPEMENT,
+        label: item.label,
+      });
+      if (!isDesktop) {
+        const date = reportShortSpan(item.doneOn, null);
+        const jour = date && 'jour' in date ? date.jour : '';
+        return {
+          couleur: Colors.primary200,
+          detail: item.doneBy
+            ? t('facilityReports.controles.histoCourt', {
+              ...SANS_ECHAPPEMENT,
+              date: jour,
+              par: item.doneBy,
+            })
+            : jour,
+          titre: titreDuControle,
+        };
+      }
+      const valeurs = {
+        ...SANS_ECHAPPEMENT,
+        date: reportDayLabel(item.doneOn),
+        par: item.doneBy,
+        prochain: checkShortDate(item.nextDue),
+      };
+      return {
+        couleur: Colors.primary200,
+        detail: item.doneBy
+          ? t('facilityReports.controles.histoDetail', valeurs)
+          : t('facilityReports.controles.histoDetailSansPar', valeurs),
+        titre: titreDuControle,
+      };
+    }
+    if (kind === 'report') return decrireSignalement(item);
+    const motifDuJalon = item.reason
+      ? t(`collectiviteFermetures.motifs.${item.reason}`, item.reason)
+      : item.label || '';
+    const rouverte = item.status === 'reopened';
+    const jours = { debut: reportDayLabel(item.startDate), fin: reportDayLabel(item.endDate) };
+    if (isDesktop) {
+      const seances = seancesDeLaFermeture(item, true);
+      if (seances !== null) {
+        // Planche A : « Fermé du 5 au 9 oct. · réfection du sol » / « Fermeture · 6 séances
+        // touchées, 4 déplacées ».
+        return {
+          couleur: Colors.warning500,
+          detail: rouverte
+            ? t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte')
+            : t('facilityReports.ville.histoFermetureSeances', { ...SANS_ECHAPPEMENT, seances }),
+          titre: t('facilityReports.ville.histoFermetureTitreMotif', {
+            ...SANS_ECHAPPEMENT,
+            ...jours,
+            motif: item.reason ? motifDuJalon.toLocaleLowerCase() : motifDuJalon,
+          }),
+        };
+      }
+      return {
+        couleur: Colors.warning500,
+        detail: rouverte
+          ? t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte')
+          : t('facilityReports.ville.histoFermetureMotif', {
+            ...SANS_ECHAPPEMENT,
+            motif: motifDuJalon,
+          }),
+        titre: t('facilityReports.ville.histoFermeture', { ...SANS_ECHAPPEMENT, ...jours }),
+      };
+    }
+    // Planche tel 1 : « Fermé du 5 au 9 oct. », puis « Réfection du sol · 6 séances touchées ».
+    const periode = reportShortSpan(item.startDate, item.endDate);
+    let titre = t('facilityReports.ville.histoFermeture', { ...SANS_ECHAPPEMENT, ...jours });
+    if (periode && 'jour' in periode) {
+      titre = t('facilityReports.ville.histoFermetureJour', {
+        ...SANS_ECHAPPEMENT,
+        jour: periode.jour,
+      });
+    } else if (periode) {
+      titre = t('facilityReports.ville.histoFermeture', { ...SANS_ECHAPPEMENT, ...periode });
+    }
+    const seances = seancesDeLaFermeture(item, false);
+    let detail = motifDuJalon;
+    if (rouverte) detail = t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte');
+    else if (seances !== null) {
+      detail = t('facilityReports.ville.histoMotifSeances', {
+        ...SANS_ECHAPPEMENT,
+        motif: motifDuJalon,
+        seances,
+      });
+    }
+    return { couleur: Colors.warning500, detail, titre };
+  };
+
+  const lignesDuCarnet = currentChecks(carnet.data?.data);
+  const jourDuCarnet = carnet.data?.meta?.today || meta.today || '';
+  const tonsDuCarnet = {
+    error: Colors.error500,
+    success: Colors.success500,
+    warning: Colors.warning500,
+  };
+  let contenuDuCarnet = null;
+  if (carnet.isLoading) {
+    contenuDuCarnet = (
+      <SkeletonLoader isActive wrapperStyle={[{ gap: 8 }]}>
+        <View style={{ backgroundColor: Colors.primary700, borderRadius: 8, height: 56 }} />
+      </SkeletonLoader>
+    );
+  } else if (carnet.isError || !carnet.data) {
+    contenuDuCarnet = (
+      <View style={{ gap: 8 }} testID="securite-controles-erreur">
+        <Text style={[Fonts.p3, Fonts.neutral100]}>
+          {t('facilityReports.controles.erreur', 'Les contrôles n’ont pas pu être chargés.')}
+        </Text>
+        <Button
+          onPress={() => carnet.refetch?.()}
+          size="sm"
+          title={t('facilityReports.ville.reessayer', 'Réessayer')}
+          variant="Secondary"
+        />
+      </View>
+    );
+  } else if (!lignesDuCarnet.length) {
+    contenuDuCarnet = (
+      <View style={{ gap: 4 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('facilityReports.controles.videTitre', 'Aucun contrôle noté')}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'facilityReports.controles.videTexte',
+            'Notez ici vos contrôles obligatoires : FoundClub vous prévient 30 jours avant '
+              + 'chaque échéance.',
+          )}
+        </Text>
+      </View>
+    );
+  } else {
+    contenuDuCarnet = lignesDuCarnet.map((ligne, rang) => {
+      const pastilleDuControle = checkPill(t, ligne, jourDuCarnet);
+      const couleur = tonsDuCarnet[pastilleDuControle.tone];
+      return (
+        <TouchableOpacity
+          accessibilityLabel={t('facilityReports.controles.ouvrir', {
+            ...SANS_ECHAPPEMENT,
+            label: ligne.label,
+          })}
+          accessibilityRole="button"
+          key={ligne.series}
+          onPress={() => onOpenCheck?.(ligne.series)}
+          style={{
+            alignItems: 'center',
+            borderTopColor: withAlpha(Colors.neutral00, 0.08),
+            borderTopWidth: rang ? 1 : 0,
+            flexDirection: 'row',
+            gap: 12,
+            minHeight: 56,
+            paddingVertical: 8,
+          }}
+          testID={`controle-${ligne.series}`}
+        >
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.label}</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t('facilityReports.controles.prochain', {
+                ...SANS_ECHAPPEMENT,
+                date: checkShortDate(ligne.nextDue),
+              })}
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: withAlpha(couleur, 0.16),
+              borderRadius: 999,
+              paddingHorizontal: 10,
+              paddingVertical: 2,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: couleur }]}>{pastilleDuControle.label}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    });
+  }
+  // Planche A (colonne de droite), tel 1 (bloc sous l historique) : le carnet des controles.
+  const blocDuCarnet = (
+    <View
+      style={{
+        backgroundColor: withAlpha(Colors.neutral00, 0.04),
+        borderColor: withAlpha(Colors.neutral00, 0.1),
+        borderRadius: 16,
+        borderWidth: 1,
+        gap: 10,
+        padding: 16,
+      }}
+      testID="securite-controles"
+    >
+      <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
+        {t('facilityReports.controles.titre', 'Contrôles obligatoires')}
+      </Text>
+      {contenuDuCarnet}
+      <Button
+        icon="plus"
+        iconPosition="before"
+        onPress={() => onAddCheck?.()}
+        size="sm"
+        title={t('facilityReports.controles.ajouter', 'Ajouter un contrôle')}
+        variant="Secondary"
+      />
+      {lignesDuCarnet.length ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'facilityReports.controles.rappel',
+            'Un rappel arrive 30 jours avant chaque échéance.',
+          )}
+        </Text>
+      ) : null}
+    </View>
+  );
+  const deuxColonnes = largeur >= LARGEUR_DEUX_COLONNES;
+
+  // La colonne principale : l etat, les signalements ouverts, l historique.
+  const colonnePrincipale = (
+    <View style={deuxColonnes ? { flex: 1, gap: 16, minWidth: 0 } : { gap: 16 }}>
       <View
         accessibilityRole="summary"
         style={{
@@ -193,8 +515,8 @@ function FacilitySecurityTab({
           description={t(
             'facilityReports.ville.videTexte',
             'Les membres des clubs qui utilisent l’installation peuvent signaler un problème '
-              + 'depuis son planning ou depuis une séance. '
-              + 'Vous êtes prévenus à chaque signalement.',
+          + 'depuis son planning ou depuis une séance. '
+          + 'Vous êtes prévenus à chaque signalement.',
           )}
           title={t('facilityReports.ville.videTitre', 'Aucun signalement')}
         />
@@ -226,9 +548,9 @@ function FacilitySecurityTab({
               style={{
                 backgroundColor: withAlpha(Colors.neutral00, 0.04),
                 borderColor:
-                  report.status === 'envoye'
-                    ? withAlpha(Colors.warning500, 0.5)
-                    : withAlpha(Colors.neutral00, 0.1),
+              report.status === 'envoye'
+                ? withAlpha(Colors.warning500, 0.5)
+                : withAlpha(Colors.neutral00, 0.1),
                 // Planche B : le signalement ouvert dans le panneau se lit dans la liste.
                 ...(report.documentId === selectedReportId ? {
                   backgroundColor: withAlpha(Colors.primary500, 0.12),
@@ -298,7 +620,7 @@ function FacilitySecurityTab({
                   </Text>
                 </View>
               ) : (
-                // Planche tel 1 : le titre, la pastille DESSOUS, « Sécurité · sam. 18 oct. ».
+              // Planche tel 1 : le titre, la pastille DESSOUS, « Sécurité · sam. 18 oct. ».
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {report.title}
@@ -323,94 +645,17 @@ function FacilitySecurityTab({
             {t('facilityReports.ville.historique', 'Historique')}
           </Text>
           {jalonsVisibles.map(({ item, kind }) => {
-            const signalement = kind === 'report';
-            let couleur = Colors.warning500;
-            if (signalement) {
-              couleur = item.status === 'resolu' ? Colors.success500 : Colors.neutral300;
-            }
-            const motifDuJalon = item.reason
-              ? t(`collectiviteFermetures.motifs.${item.reason}`, item.reason)
-              : item.label || '';
-            let titre = t('facilityReports.ville.histoFermeture', {
-              ...SANS_ECHAPPEMENT,
-              debut: reportDayLabel(item.startDate),
-              fin: reportDayLabel(item.endDate),
-            });
-            let detail = item.status === 'reopened'
-              ? t('facilityReports.ville.histoRouverte', 'Fermeture · rouverte')
-              : t('facilityReports.ville.histoFermetureMotif', {
-                ...SANS_ECHAPPEMENT,
-                motif: motifDuJalon,
-              });
-            if (!isDesktop) {
-              // Planche tel 1 : « Fermé du 5 au 9 oct. », puis le motif seul.
-              const periode = reportShortSpan(item.startDate, item.endDate);
-              if (periode && 'jour' in periode) {
-                titre = t('facilityReports.ville.histoFermetureJour', {
-                  ...SANS_ECHAPPEMENT,
-                  jour: periode.jour,
-                });
-              } else if (periode) {
-                titre = t('facilityReports.ville.histoFermeture', {
-                  ...SANS_ECHAPPEMENT,
-                  ...periode,
-                });
-              }
-              if (item.status !== 'reopened') detail = motifDuJalon;
-            }
-            if (signalement) {
-              titre = item.status === 'resolu'
-                ? t('facilityReports.ville.histoResolu', { ...SANS_ECHAPPEMENT, title: item.title })
-                : t('facilityReports.ville.histoSansSuite', {
-                  ...SANS_ECHAPPEMENT,
-                  title: item.title,
-                });
-              const dates = {
-                debut: reportDayLabel(item.createdAt),
-                fin: reportDayLabel(item.closedAt),
-              };
-              const resolu = item.status === 'resolu';
-              const court = isDesktop ? null : reportShortSpan(item.createdAt, item.closedAt);
-              let periode = '';
-              if (court && 'jour' in court) {
-                periode = court.jour;
-              } else if (court) {
-                periode = t('facilityReports.ville.histoPeriode', {
-                  ...SANS_ECHAPPEMENT,
-                  ...court,
-                });
-              }
-              if (court) {
-                // Planche tel 1 : « 6 – 14 oct. · « Joint changé. » ».
-                detail = item.cityNote
-                  ? t('facilityReports.ville.histoCourtMot', {
-                    ...SANS_ECHAPPEMENT,
-                    note: item.cityNote,
-                    periode,
-                  })
-                  : periode;
-              } else if (item.cityNote) {
-                detail = t(
-                  resolu
-                    ? 'facilityReports.ville.histoDatesMot'
-                    : 'facilityReports.ville.histoDatesSansSuiteMot',
-                  { ...SANS_ECHAPPEMENT, ...dates, note: item.cityNote },
-                );
-              } else {
-                detail = t(
-                  resolu
-                    ? 'facilityReports.ville.histoDates'
-                    : 'facilityReports.ville.histoDatesSansSuite',
-                  dates,
-                );
-              }
-            }
+            const { couleur, detail, titre } = decrireJalon(item, kind);
+            // Un signalement s ouvre ; un controle fait ouvre sa serie ; une fermeture se lit.
+            const ouvrable = kind === 'report' || (kind === 'check' && Boolean(onOpenCheck));
             return (
               <TouchableOpacity
-                accessibilityRole={signalement ? 'button' : 'text'}
-                disabled={!signalement}
+                accessibilityRole={ouvrable ? 'button' : 'text'}
+                disabled={!ouvrable}
                 key={`${kind}-${item.documentId}`}
-                onPress={() => ouvrir(item.documentId)}
+                onPress={() => (kind === 'check'
+                  ? onOpenCheck?.(item.series)
+                  : ouvrir(item.documentId))}
                 style={{ flexDirection: 'row', gap: 10, minHeight: 44 }}
                 testID={`securite-jalon-${kind}-${item.documentId}`}
               >
@@ -454,6 +699,25 @@ function FacilitySecurityTab({
           ) : null}
         </View>
       ) : null}
+    </View>
+  );
+
+  return (
+    <View
+      onLayout={(evenement) => setLargeur(evenement.nativeEvent.layout.width)}
+      testID="onglet-securite"
+    >
+      <View
+        style={deuxColonnes
+          ? { alignItems: 'flex-start', flexDirection: 'row', gap: 24 }
+          : { gap: 16 }}
+        testID="securite-colonnes"
+      >
+        {colonnePrincipale}
+        {deuxColonnes ? (
+          <View style={{ width: LARGEUR_DU_CARNET }}>{blocDuCarnet}</View>
+        ) : blocDuCarnet}
+      </View>
     </View>
   );
 }
