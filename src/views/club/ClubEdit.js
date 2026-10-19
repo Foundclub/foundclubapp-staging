@@ -19,6 +19,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -28,6 +29,7 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { updateClubInfo } from '@/services/club/clubService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import { normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 // L15 — apercu du logo : le cadre doit epouser le format reel de l'image.
@@ -47,10 +49,10 @@ const LOGO_PREVIEW_HEIGHT = 110;
 const LOGO_PREVIEW_MIN_RATIO = 0.5;
 const LOGO_PREVIEW_MAX_RATIO = 2.5;
 
-/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM'; teamCreationManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED'; teamCreationByCoachesRequiresValidation: boolean }} */
+/** @type {{ name: string; email: string; phoneNumber: string; address: object | null; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM'; teamCreationManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED'; teamCreationByCoachesRequiresValidation: boolean }} */
 const defaultValues = {
   activites: [],
-  addressDetails: '',
+  address: null,
   clubMembersPublicVisibility: true,
   email: '',
   membershipRequestManagementMode: 'COACH_ALLOWED_BY_TEAM',
@@ -64,9 +66,29 @@ const defaultValues = {
   teamCreationManagementMode: 'COACH_ALLOWED',
 };
 
+/**
+ * R17-ADRESSE (REC17-008, 19/10) — l'adresse enregistrée du club, AVEC son point quand il existe
+ * (`address`, que lit la recherche par distance) ; sinon son seul texte (`addressDetails`), et le
+ * champ dit qu'elle n'est pas sur la carte.
+ * @param {any} club - Le club lu.
+ * @returns {object | null} L'adresse pour le champ.
+ */
+const adresseDuClub = (club) => {
+  const adresse = normalizeLocationInput(club?.address) || {};
+  const details = safeJsonParse(club?.addressDetails, null);
+  const texte = typeof details?.address === 'object'
+    ? details.address?.description || details.address?.label || ''
+    : details?.address || club?.addressDetails || '';
+  const label = adresse.label || texte;
+  return label ? { ...adresse, label } : null;
+};
+
+const aUnPoint = (/** @type {any} */ adresse) => Number.isFinite(adresse?.lat)
+  && Number.isFinite(adresse?.lng);
+
 const clubSchema = Joi.object({
   activites: Joi.array().items(Joi.string().allow('')).optional(),
-  addressDetails: Joi.string().allow('').optional(),
+  address: Joi.object().allow(null).optional(),
   clubMembersPublicVisibility: Joi.boolean().required(),
   email: Joi.string().email({ tlds: { allow: false } }).allow('').optional(),
   membershipRequestManagementMode: Joi.string().valid('CLUB_OWNER_ONLY', 'COACH_ALLOWED_BY_TEAM').required(),
@@ -194,16 +216,14 @@ function ClubEdit({ navigation, route }) {
     shouldFocusError: false,
   });
 
+  const adresseInitiale = useMemo(() => adresseDuClub(clubData), [clubData]);
+  const villeDuClub = clubData?.cityName || adresseInitiale?.city || '';
+
   useEffect(() => {
     if (clubData) {
-      const parsedDetails = safeJsonParse(clubData.addressDetails, null);
-      const parsedAddress = typeof parsedDetails?.address === 'object'
-        ? parsedDetails.address?.description || parsedDetails.address?.label || ''
-        : parsedDetails?.address || clubData.addressDetails || '';
-
       reset({
         activites: (clubData.activites || []).map((activity) => activity.documentId).filter(Boolean),
-        addressDetails: parsedAddress,
+        address: adresseInitiale,
         clubMembersPublicVisibility: clubData.clubMembersPublicVisibility !== false,
         email: clubData.email || '',
         membershipRequestManagementMode: clubData.membershipRequestManagementMode || 'COACH_ALLOWED_BY_TEAM',
@@ -213,7 +233,7 @@ function ClubEdit({ navigation, route }) {
         teamCreationManagementMode: clubData.teamCreationManagementMode || 'COACH_ALLOWED',
       });
     }
-  }, [clubData, reset]);
+  }, [adresseInitiale, clubData, reset]);
 
   const isMissingClubId = !clubId;
   const isInitialClubLoading = isLoading && !clubData;
@@ -317,12 +337,28 @@ function ClubEdit({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     if (clubData) {
+      const { address: adresse, ...champs } = /** @type {any} */ (data);
+      // R17-ADRESSE — l'adresse ne part QUE si elle a changé, et alors AVEC son point. Un texte
+      // seul effaçait le point du club côté serveur, à chaque enregistrement.
+      const adresseChangee = aUnPoint(adresse) && (
+        adresse.label !== adresseInitiale?.label
+        || adresse.lat !== adresseInitiale?.lat
+        || adresse.lng !== adresseInitiale?.lng
+      );
       updateClubMutation.mutate(/** @type {any} */ ({
         documentId: clubData.documentId,
-        ...data,
+        ...champs,
         logo,
-        // We need to handle addressDetails specifically if we want to save it as JSON string
-        addressDetails: data.addressDetails ? JSON.stringify({ address: data.addressDetails }) : undefined,
+        ...(adresseChangee ? {
+          address: {
+            city: adresse.city || '',
+            label: adresse.label,
+            lat: adresse.lat,
+            lng: adresse.lng,
+            postcode: adresse.postcode || '',
+          },
+          addressDetails: JSON.stringify({ address: adresse.label }),
+        } : {}),
       }));
     }
   };
@@ -423,14 +459,13 @@ function ClubEdit({ navigation, route }) {
                   },
                 }) => (
                   <Input
-                    enterKeyHint="next"
+                    enterKeyHint="done"
                     error={getFieldError({ errors: formErrors, fieldName: name })}
                     inputMode="tel"
                     keyboardType="phone-pad"
                     label={t('club.fields.phoneNumber.label') || 'Téléphone'}
                     onBlur={onBlur}
                     onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('addressDetails')}
                     placeholder={t('club.fields.phoneNumber.placeholder') || 'Téléphone'}
                     ref={ref}
                     value={value}
@@ -438,23 +473,20 @@ function ClubEdit({ navigation, route }) {
                 )}
               />
 
+              {/* R17-ADRESSE (19/10) — plus de texte libre : la saisie des lieux publics. Le */}
+              {/* point enregistré suit l'adresse ; introuvable, le lieu se place sur la carte. */}
               <Controller
                 control={control}
-                name="addressDetails"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="done"
+                name="address"
+                render={({ field: { name, onChange, value } }) => (
+                  <AutocompleteAddressInput
+                    address={value || undefined}
                     error={getFieldError({ errors: formErrors, fieldName: name })}
                     label={t('club.fields.address.label') || 'Adresse'}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
+                    permettreLieuSurCarte
                     placeholder={t('club.fields.address.placeholder') || 'Adresse'}
-                    ref={ref}
-                    value={value}
+                    setAddress={onChange}
+                    villeConnue={villeDuClub}
                   />
                 )}
               />

@@ -73,10 +73,14 @@ import Input, {
  * @property {import('react-native').TextStyle
  * | Array<import('react-native').TextStyle>} [optionTextStyle]
  *  - Optional text style applied to option labels.
- * @property {{ label: string, onPress: () => void }} [lienSousLesOptions] - ADRESSE-CARTE
- *  (07/10) : un lien SOUS les propositions (« Adresse introuvable ? Placez-la sur la carte »).
- *  L'appui referme la feuille SANS toucher à la valeur choisie, puis appelle `onPress`.
- *  Absent : rien ne change.
+ * @property {{ label: string, onPress: () => void, texte?: string }} [lienSousLesOptions]
+ *  - ADRESSE-CARTE (07/10) : un lien SOUS les propositions (« Adresse introuvable ? Placez-la
+ *  sur la carte »). L'appui referme la feuille SANS toucher à la valeur choisie, puis appelle
+ *  `onPress`. R17-ADRESSE (19/10) : avec `texte`, une PHRASE et un bouton (`label`) à la place
+ *  du lien et du « aucune donnée ». Absent : rien ne change.
+ * @property {boolean} [garderLaRecherche] - R17-ADRESSE (19/10) : le texte tapé n'est plus
+ *  effacé à la fermeture de la feuille ; la saisie le montre à la réouverture. L'appelant
+ *  l'efface lui-même quand il a servi. Absent : effacé à la fermeture, comme avant.
  */
 
 /**
@@ -286,7 +290,7 @@ const AutocompleteSelect = forwardRef(
       }
 
       setAreValuesVisible(false);
-      if (props.setSearchValue) {
+      if (props.setSearchValue && !props.garderLaRecherche) {
         props.setSearchValue('');
       }
       if (props.onBlur) {
@@ -632,6 +636,7 @@ const AutocompleteSelect = forwardRef(
                 placeholder={t('modals.actions.search')}
                 ref={searchInputRef}
                 useBottomSheetInput
+                value={props.garderLaRecherche ? props.searchValue : undefined}
               />
             ) : null}
 
@@ -678,12 +683,25 @@ const AutocompleteSelect = forwardRef(
                 );
               })}
               {props.options.length === 0 && (props.searchValue?.length || 0) > 0
+                && !props.lienSousLesOptions?.texte
                 ? (
                   <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
                     {t('common.messages.noData')}
                   </Text>
                 ) : null}
-              {props.lienSousLesOptions ? (
+              {props.lienSousLesOptions?.texte ? (
+                <View style={[Spaces.marginTop[8], Spaces.gap[12]]}>
+                  <Text accessibilityLiveRegion="polite" style={[Fonts.p2, Fonts.neutral00]}>
+                    {props.lienSousLesOptions.texte}
+                  </Text>
+                  <Button
+                    onPress={handleLienSousLesOptions}
+                    title={props.lienSousLesOptions.label}
+                    variant="Secondary"
+                  />
+                </View>
+              ) : null}
+              {props.lienSousLesOptions && !props.lienSousLesOptions.texte ? (
                 <TouchableOpacity
                   accessibilityRole="button"
                   onPress={handleLienSousLesOptions}

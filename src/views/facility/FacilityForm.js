@@ -911,6 +911,8 @@ function FacilityForm() {
             permettreLieuSurCarte
             placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
             setAddress={onChange}
+            // R17-ADRESSE (19/10) : « Votre lieu n'est pas répertorié » pour la Ville.
+            vouvoyer={isCollectiviteMode}
           />
           {/* L'astuce d'aide a disparu : elle ne servait qu'a annoncer ce
               que cette ligne CONSTATE. Sans GPS, c'est le message
