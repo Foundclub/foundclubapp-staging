@@ -75,6 +75,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
+import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityReportEntry';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -8278,6 +8279,10 @@ function EventDetails({ navigation, route }) {
                 pourUnMembre={!canEdit}
               />
             ) : null}
+            {/* R17-SIGNALER-1 (19/10) — « Signaler un problème ici », sous le lieu, si le
+                serveur dit que la séance s'en sert (installation de la Ville, lecteur qui peut
+                la signaler). */}
+            <FacilityReportEntry event={event} />
             {ligneDAttente ? (
               <Text
                 style={[Fonts.p2Bold, { color: Colors.warning500 }]}

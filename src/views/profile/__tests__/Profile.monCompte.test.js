@@ -21,6 +21,10 @@ import { RouteNames } from '@/navigation/routeNames';
 /** @type {any} */
 let mockAuth = null;
 
+// R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useMyFacilityReports: () => ({ data: null }),
+}));
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
 
 jest.mock('@tanstack/react-query', () => {
