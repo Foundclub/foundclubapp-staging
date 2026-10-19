@@ -5241,6 +5241,8 @@ export default {
       texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
       // eslint-disable-next-line max-len
       textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      // R17-CANAUX (décision d'Adel « B », 19/10) : « Toute la ville » est réservé aux majeurs.
+      texteVille: 'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
       titreCanal: 'Tu ne fais plus partie de ce canal',
       titrePrivee: 'Tu ne fais plus partie de cette conversation',
     },
@@ -5268,6 +5270,22 @@ export default {
       mairieTitre: 'Les dirigeants des {{nombre}} clubs et vous',
       priveeClub: 'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
       priveeMairie: 'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+    },
+    // R17-CANAUX (19/10, REC17-004) : « Toute la ville », lu par les membres, écrit par la Ville.
+    ville: {
+      actualite: 'Nouvelle actualité de la Ville : « {{titre}} »',
+      ecrire: 'Écrire à toute la ville…',
+      ouvrirActualite: 'Voir l’actualité',
+      seuleLaVille: 'Seule la Ville écrit ici',
+      sousTitre: 'Lu par les membres des {{nombre}} clubs',
+      sousTitreUn: 'Lu par les membres d’1 club',
+      titre: 'Toute la ville',
+      titreMembre: 'Toute la ville · {{ville}}',
+      // eslint-disable-next-line max-len
+      videMairie: 'Vos actualités pour tous les membres y arrivent toutes seules, et vous pouvez y écrire. Les membres de vos {{nombre}} clubs le lisent ; personne ne voit qui le lit.',
+      // eslint-disable-next-line max-len
+      videMembre: 'Les actualités de {{ville}} arrivent ici. Seule la Ville écrit ; personne ne voit qui le lit.',
+      voirActualite: 'Voir l’actualité « {{titre}} »',
     },
   },
   collectiviteActualites: {

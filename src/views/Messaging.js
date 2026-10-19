@@ -13,7 +13,9 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
-import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
+} from '@/domains/collectivite/collectiviteCanaux';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -88,8 +90,9 @@ function Messaging({ navigation, route }) {
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
   const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
-  // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que ses
-  // conversations privées avec ses clubs ; ailleurs, le canal des dirigeants est épinglé en tête.
+  // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que SES
+  // fils : depuis R17-CANAUX (19/10), son canal des dirigeants y est une ligne comme les autres,
+  // avec ses conversations privées ; ailleurs, le canal des dirigeants est épinglé en tête.
   const espaceVille = route?.params?.espace === 'ville';
   const villeId = route?.params?.collectiviteId || null;
   const [chatScopeFilter, setChatScopeFilter] = useState(
@@ -217,11 +220,14 @@ function Messaging({ navigation, route }) {
     [filsTries, userData?.documentId],
   );
   const [afficheArchivees, setAfficheArchivees] = useState(false);
+  // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
+  const mineur = estMineurConnu(userData);
   const nombreArchivees = useMemo(() => filsDeLaMessagerie(filsArchives, {
     collectiviteId: villeId,
     espaceVille,
+    mineur,
     monClubId: userData?.club?.documentId || null,
-  }).length, [espaceVille, filsArchives, userData?.club?.documentId, villeId]);
+  }).length, [espaceVille, filsArchives, mineur, userData?.club?.documentId, villeId]);
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
   const enModeArchivees = afficheArchivees && nombreArchivees > 0;
   useEffect(() => {
@@ -324,6 +330,7 @@ function Messaging({ navigation, route }) {
     const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
       collectiviteId: villeId,
       espaceVille,
+      mineur,
       monClubId: userData?.club?.documentId || null,
     });
     // SMF — portee puis recherche : regle partagee avec la colonne du site (filtrerLesFils).
@@ -647,6 +654,9 @@ function Messaging({ navigation, route }) {
         },
       });
     }
+    // R17-CANAUX — « Toute la ville » : ni épingler ni archiver (le serveur ne rend à personne
+    // qui l'a fait : ce serait la liste de ses lecteurs).
+    if (chat?.type === CANAL_VILLE) return entrees;
     entrees.push({
       cle: 'epingler',
       icone: 'thumbtack',
@@ -742,10 +752,13 @@ function Messaging({ navigation, route }) {
       meId: userData?.documentId,
     });
 
+    // R17-CANAUX — « Toute la ville » : ni glisser pour épingler, ni glisser pour archiver.
+    const avecGestes = chat?.type !== CANAL_VILLE;
+
     return (
       <Swipeable
-        renderLeftActions={(p, d) => renderLeftActions(p, d, chat)}
-        renderRightActions={(p, d) => renderRightActions(p, d, chat)}
+        renderLeftActions={avecGestes ? (p, d) => renderLeftActions(p, d, chat) : undefined}
+        renderRightActions={avecGestes ? (p, d) => renderRightActions(p, d, chat) : undefined}
       >
         <TouchableOpacity
           delayLongPress={450}
@@ -880,7 +893,7 @@ function Messaging({ navigation, route }) {
               </View>
             ) : null}
           </View>
-          {renderWebChatActions(chat)}
+          {avecGestes ? renderWebChatActions(chat) : null}
         </TouchableOpacity>
       </Swipeable>
     );
@@ -987,6 +1000,7 @@ function Messaging({ navigation, route }) {
                         chats={allChats}
                         collectiviteId={villeId}
                         espaceVille={espaceVille}
+                        mineur={mineur}
                         navigation={navigation}
                       />
                       {renderLigneArchivees()}

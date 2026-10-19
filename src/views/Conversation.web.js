@@ -85,7 +85,9 @@ import {
   rangerLeFil,
 } from '@/views/conversationWeb/filDuSite';
 // MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
-import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  estMineurConnu, filsDeLaMessagerie, titreDuFil,
+} from '@/domains/collectivite/collectiviteCanaux';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -829,10 +831,12 @@ function ColonneDesConversations({
     return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
   }, [listeDesFils, meId, mesBlocages]);
   const monClubId = userData?.club?.documentId || null;
+  // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
+  const mineur = estMineurConnu(userData);
   const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
   const archivees = filsDeLaMessagerie(
     filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
-    { monClubId },
+    { mineur, monClubId },
   );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
   const enModeArchivees = afficheArchivees && archivees.length > 0;
@@ -892,7 +896,7 @@ function ColonneDesConversations({
     meId,
   }) || t('common.chat', 'Conversation');
   const fils = filtrerLesFils(
-    enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { monClubId }),
+    enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { mineur, monClubId }),
     { nomDuFil, portee, recherche },
   );
   let listeVide = t('messaging.noData', 'Aucune conversation trouvée.');
@@ -1072,13 +1076,17 @@ function ColonneDesConversations({
       </div>
       <nav ref={listeRef} style={{ overflowY: 'auto' }}>
         <style>{ARCHIVEES_STYLE}</style>
-        {/* SMF — les canaux de la Ville, en tete comme sur la page de la messagerie : le canal
-            des dirigeants n est dans aucune ligne (filsDeLaMessagerie l ecarte). */}
-        {enModeArchivees || recherche.trim() ? null : (
-          <div style={{ padding: '12px 14px 0' }}>
-            <CanauxDeLaVille chats={actifs} navigation={navigation} />
-          </div>
-        )}
+        {/* R17-CANAUX (19/10) — plus de canaux de la Ville épinglés au-dessus : le canal des
+            dirigeants et « Toute la ville » sont des lignes (filsDeLaMessagerie). Reste la
+            demande « mes canaux » et, GARDE (décision « C » du chef), la carte « Actualités de la
+            Ville » tant que la liste n a pas « Toute la ville » ; comme sur staging, ni en
+            archives ni en recherche, et rien avant que la liste soit lue. */}
+        <CanauxDeLaVille
+          chats={listeDesFils && !enModeArchivees && !recherche.trim() ? actifs : undefined}
+          mineur={mineur}
+          navigation={navigation}
+          style={{ paddingHorizontal: 14, paddingTop: 12 }}
+        />
         {archivees.length > 0 ? (
           <button
             data-testid="ARCH-colonne-archivees"
@@ -2141,9 +2149,13 @@ function Conversation({ navigation, route }) {
 
   // MSG1W §3.11 — qui peut ecrire ici : la regle du telephone (canWriteInChat.js). Un canal de
   // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
+  // R17-CANAUX — « Toute la ville » : la Ville seule (useFilDeLaVille), depuis son espace ou quand
+  // le serveur le dit ; un membre y lit « Seule la Ville écrit ici ».
   const peutEcrire = useMemo(
-    () => canWriteInChat({ chat: chatData, hasClubAccess, user: userData }),
-    [chatData, hasClubAccess, userData],
+    () => (
+      canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) || filDeLaVille.peutEcrire
+    ),
+    [chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
   );
   // MSG1W §3.10 (« avertissement B », Adel 07/10) — un fil rattache a un club (fil de club, fil
   // d equipe) peut etre lu par son dirigeant : une notice EN TETE DU FIL le dit. Un tete-a-tete ou
@@ -3786,6 +3798,45 @@ function Conversation({ navigation, route }) {
     // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une notice centrée, sans bulle.
     // MSG1W §3.17 — de meme pour une notice de groupe (contrat 1B §6 : `systemNotice` present,
     // jamais sur un message ordinaire) : sa phrase, dans le style discret du pack.
+    // 🏛️ R17-CANAUX — l'actualité posée par la Ville dans son canal : une notice qui mène à elle
+    // (bouton de 44 de haut au moins, nommé pour le lecteur d'écran).
+    const lienActualite = filDeLaVille.ligneDActualite(message);
+    if (lienActualite) {
+      return (
+        <div
+          data-msg1w-id={idMessage}
+          key={idMessage}
+          style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}
+        >
+          <button
+            aria-label={lienActualite.libelle}
+            data-testid={`R17CANAUX-actualite-${idMessage}`}
+            onClick={lienActualite.ouvrir}
+            style={{
+              background: PALETTE_DU_FIL.noticeFond,
+              border: 'none',
+              borderRadius: 8,
+              color: PALETTE_DU_FIL.texteDoux,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 11.5,
+              lineHeight: '15px',
+              maxWidth: 280,
+              minHeight: 44,
+              padding: '3px 10px',
+              textAlign: 'center',
+            }}
+            type="button"
+          >
+            {lienActualite.texte}
+            {' '}
+            <span style={{ color: PALETTE_DU_FIL.accent, textDecoration: 'underline' }}>
+              {lienActualite.voir}
+            </span>
+          </button>
+        </div>
+      );
+    }
     if (filDeLaVille.estLigneSysteme(message) || message?.systemNotice != null) {
       return (
         <div
@@ -4651,7 +4702,8 @@ function Conversation({ navigation, route }) {
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
   // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
   // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
-  const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
+  // R17-CANAUX — « Toute la ville » : pas de « Dans ce canal » (personne ne voit qui le lit).
+  const panneauDeDroite = filDeLaVille.afficheMembres && filDeLaVille.membres ? (
     <aside
       style={{
         alignContent: 'start',
@@ -4853,7 +4905,7 @@ function Conversation({ navigation, route }) {
             )}
             {/* COLL-C4A2 (regle du telephone) — un fil de la Ville : « Qui est dans ce canal »
                 remplace le menu ⋮. Sur ordinateur, la colonne de droite montre ses membres. */}
-            {filDeLaVille.estFil && !isDesktop ? (
+            {filDeLaVille.afficheMembres && !isDesktop ? (
               <BoutonMembresDuFil
                 estCanal={filDeLaVille.estCanal}
                 onPress={filDeLaVille.ouvrirMembres}
@@ -5030,6 +5082,7 @@ function Conversation({ navigation, route }) {
                 {!isMessagesLoading && filDeLaVille.estQuitte ? (
                   <FilDeLaVilleQuitte
                     estCanal={filDeLaVille.estCanal}
+                    estCanalVille={filDeLaVille.estCanalVille}
                     onRetour={() => navigation.navigate(RouteNames.Chat)}
                   />
                 ) : null}
@@ -5436,7 +5489,8 @@ function Conversation({ navigation, route }) {
               }}
             >
               <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="lockShut" size={16} />
-              {t('conversation.readOnly', "Canal d'annonce (lecture seule)")}
+              {filDeLaVille.texteLectureSeule
+                || t('conversation.readOnly', "Canal d'annonce (lecture seule)")}
             </footer>
           )}
         </section>
