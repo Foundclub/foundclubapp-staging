@@ -1076,9 +1076,16 @@ function ColonneDesConversations({
       <nav ref={listeRef} style={{ overflowY: 'auto' }}>
         <style>{ARCHIVEES_STYLE}</style>
         {/* R17-CANAUX (19/10) — plus de canaux de la Ville épinglés au-dessus : le canal des
-            dirigeants et « Toute la ville » sont des lignes (filsDeLaMessagerie). Ne reste que
-            la demande « mes canaux », sans rien à l écran. */}
-        <CanauxDeLaVille />
+            dirigeants et « Toute la ville » sont des lignes (filsDeLaMessagerie). Reste la
+            demande « mes canaux » et, GARDE (décision « C » du chef), la carte « Actualités de la
+            Ville » tant que la liste n a pas « Toute la ville » ; comme sur staging, ni en
+            archives ni en recherche, et rien avant que la liste soit lue. */}
+        <CanauxDeLaVille
+          chats={listeDesFils && !enModeArchivees && !recherche.trim() ? actifs : undefined}
+          mineur={mineur}
+          navigation={navigation}
+          style={{ paddingHorizontal: 14, paddingTop: 12 }}
+        />
         {archivees.length > 0 ? (
           <button
             data-testid="ARCH-colonne-archivees"

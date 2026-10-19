@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image, Text, TouchableOpacity, View,
+} from 'react-native';
 
+import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
 import {
   CANAL_DIRIGEANTS,
   CANAL_VILLE,
@@ -19,6 +22,7 @@ import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useMesActualitesDeLaVille } from '@/services/collectivite/collectiviteActualiteQueries';
 import { useMesCanauxDeLaVille } from '@/services/collectivite/collectiviteCanauxQueries';
 import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
 
@@ -41,6 +45,131 @@ import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries'
 function OuvrirLesCanauxDeLaVille() {
   useMesCanauxDeLaVille();
   return null;
+}
+
+/**
+ * La carte « Actualités de la Ville » (planche P3c-canal-tel, écrans 3 et 7), telle que sur
+ * staging avant R17-CANAUX (`LigneDeCanal`) : l'écusson de la Ville, le titre, la dernière
+ * actualité, une flèche. Toute la carte est un lien.
+ * @param {{ nomVille: string, onPress: () => void, precision: string, testID: string,
+ *   titre: string }} props
+ * @returns {import('react').ReactElement} La carte.
+ */
+function CarteDActualites({
+  nomVille, onPress, precision, testID, titre,
+}) {
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Images,
+  } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityRole="link"
+      onPress={onPress}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        {
+          backgroundColor: withAlpha(Colors.primary700, 0.45),
+          borderColor: withAlpha(Colors.primary500, 0.35),
+          borderRadius: 16,
+          borderWidth: 1,
+          gap: 12,
+          minHeight: 64,
+          padding: 16,
+        },
+      ]}
+      testID={testID}
+    >
+      <EcussonVille nom={nomVille} taille={40} />
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titre}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>{precision}</Text>
+      </View>
+      <Image
+        source={Images.arrowRight}
+        style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.neutral300]}
+      />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * ⏳ R17-CANAUX — LE GARDE (19/10/2026, décision « C » du chef d'orchestre, §1 ter). Le site est
+ * publié depuis staging AVANT le serveur CANAUX, qui part avec la publication des apps. Contre le
+ * serveur d'avant, aucun fil `collectivite_ville` n'arrive : sans garde, un membre perdrait
+ * l'entrée des actualités de « Messages ». Tant que SA liste ne porte pas la ligne « Toute la
+ * ville » d'une Ville, il garde la carte « Actualités de la Ville » de cette Ville (celle de
+ * staging, `CanauxDuMembre`, sans le canal des dirigeants, devenu une ligne, ni « Ton club ») ;
+ * la ligne arrivée, elle remplace la carte : jamais les deux. Un mineur ne voit jamais la ligne
+ * (décision « B ») : il garde la carte, selon sa règle d'avant (le serveur des actualités juge).
+ * Liste pas encore lue (`chats` absent) : rien, la carte ne clignote pas avant la ligne.
+ * @param {{ chats?: any[], mineur?: boolean, navigation: any, style?: any }} props
+ * @returns {import('react').ReactElement | null} Les cartes, ou rien.
+ */
+function CarteDesActualitesDuMembre({
+  chats, mineur = false, navigation, style,
+}) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  const lecture = useMesActualitesDeLaVille();
+  // La demande « mes canaux » crée les canaux de la Ville au serveur (collectivite-channels.ts).
+  const canaux = useMesCanauxDeLaVille();
+  if (!Array.isArray(chats)) return null;
+  const collectivites = Array.isArray(lecture.data?.collectivites)
+    ? [...lecture.data.collectivites]
+    : [];
+  // Règle de staging : une Ville dont le dirigeant a le canal, sans actualité lue, garde sa place.
+  (Array.isArray(canaux.data) ? canaux.data : []).forEach((/** @type {any} */ ligne) => {
+    const id = ligne?.collectivite?.documentId;
+    if (id && !collectivites.some((/** @type {any} */ c) => c?.documentId === id)) {
+      collectivites.push(ligne.collectivite);
+    }
+  });
+  // ponytail: garde temporaire (R17-CANAUX, décision « C » du chef, 19/10/2026). Plafond :
+  // jusqu'à la publication des apps avec le serveur CANAUX (APRES n°159). Sortie : retirer ce
+  // garde, `CarteDesActualitesDuMembre` et `CarteDActualites`, rendre `CanauxDeLaVille` à
+  // `OuvrirLesCanauxDeLaVille` seul, et les témoins « GARDE ».
+  const villesAvecLigne = new Set(mineur ? [] : chats
+    .filter((/** @type {any} */ chat) => chat?.type === CANAL_VILLE)
+    .map((/** @type {any} */ chat) => chat?.collectivite?.documentId)
+    .filter(Boolean));
+  const sansLigne = collectivites.filter((/** @type {any} */ collectivite) => (
+    !villesAvecLigne.has(collectivite?.documentId)
+  ));
+  if (!sansLigne.length) return null;
+  const actualites = Array.isArray(lecture.data?.actualites) ? lecture.data.actualites : [];
+  return (
+    <View style={[{ gap: 12 }, style]} testID="canaux-de-la-ville-membre">
+      {sansLigne.map((/** @type {any} */ collectivite) => {
+        const derniere = actualites.find((/** @type {any} */ actualite) => (
+          actualite?.collectivite?.documentId === collectivite.documentId
+        ));
+        const precision = derniere
+          ? t('collectiviteActualites.canaux.derniere', '{{date}} · {{titre}}', {
+            date: publicationDateLabel(t, derniere.publishedAt),
+            titre: derniere.title,
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('collectiviteActualites.canaux.aucune', 'Aucune actualité pour l’instant');
+        return (
+          <View key={collectivite.documentId} style={{ gap: 8 }}>
+            <Text accessibilityRole="header" style={[Fonts.p3Bold, Fonts.neutral300]}>
+              {collectivite.name}
+            </Text>
+            <CarteDActualites
+              nomVille={String(collectivite.name || '')}
+              onPress={() => navigation.navigate(RouteNames.CollectiviteActualitesCanal, {
+                collectiviteId: collectivite.documentId,
+              })}
+              precision={precision}
+              testID={`canal-actualites-${collectivite.documentId}`}
+              titre={t('collectiviteActualites.canaux.membreTitre', 'Actualités de la Ville')}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
 /**
@@ -192,13 +321,26 @@ export function ColonneDesFilsDeLaVille({
  * Ville), le canal des dirigeants et « Actualités de la Ville » (côté club), puis « Ton club ».
  * Adel : « la messagerie ne doit être que sous forme de message » ; le chef (correction 2) : le
  * bloc du membre double « Toute la ville ». Depuis, les canaux de la Ville sont des LIGNES de la
- * liste (`filsDeLaMessagerie`) et ce composant ne dessine plus rien : il garde la demande « mes
- * canaux » (création des canaux au serveur à la première ouverture). Les props des appelants
- * (Messaging.js, Conversation.web.js) ne servent plus.
- * @returns {import('react').ReactElement} La demande, sans rien à l'écran.
+ * liste (`filsDeLaMessagerie`) et ce composant garde la demande « mes canaux » (création des
+ * canaux au serveur à la première ouverture).
+ * ⏳ GARDE (19/10, décision « C » du chef) : côté club, tant que la liste ne porte pas « Toute la
+ * ville », la carte « Actualités de la Ville » de staging reste (`CarteDesActualitesDuMembre`).
+ * @param {{ chats?: any[], espaceVille?: boolean, mineur?: boolean, navigation?: any,
+ *   style?: any }} props
+ * @returns {import('react').ReactElement} La demande, et la carte du garde côté club.
  */
-function CanauxDeLaVille() {
-  return <OuvrirLesCanauxDeLaVille />;
+function CanauxDeLaVille({
+  chats, espaceVille = false, mineur = false, navigation, style,
+}) {
+  if (espaceVille) return <OuvrirLesCanauxDeLaVille />;
+  return (
+    <CarteDesActualitesDuMembre
+      chats={chats}
+      mineur={mineur}
+      navigation={navigation}
+      style={style}
+    />
+  );
 }
 
 export default CanauxDeLaVille;

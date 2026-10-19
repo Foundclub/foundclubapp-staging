@@ -133,7 +133,57 @@ describe('COLL-C4A — planche 4 : la messagerie du membre', () => {
   // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
   // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
   // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
-  it('R17-CANAUX : plus de bloc épinglé « Actualités de la Ville » au-dessus', async () => {
+  // ⏳ GARDE (19/10, décision « C » du chef) : le site part de staging AVANT le serveur CANAUX.
+  // Tant que la liste ne porte pas la ligne « Toute la ville » d'une Ville, la carte « Actualités
+  // de la Ville » de cette Ville reste (celle d'avant, sans le canal des dirigeants ni « Ton
+  // club ») ; la ligne arrivée, la carte part — jamais les deux. Sortie : avec le garde.
+  const TOUTE = { collectivite: VILLE, documentId: 'toute-la-ville', type: 'collectivite_ville' };
+  const lesTextes = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.children === 'string',
+  ).map((/** @type {any} */ n) => n.props.children);
+  // La carte la plus haute seulement (le composant et ses couches portent le même testID).
+  const carte = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === `canal-actualites-${id}`
+      && typeof n.props?.onPress === 'function'
+      && n.parent?.props?.testID !== `canal-actualites-${id}`,
+  );
+
+  it('GARDE, serveur d’avant : sans « Toute la ville », la carte reste', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(1);
+    expect(lesTextes(arbre)).toEqual(expect.arrayContaining([
+      'Ville de Montrivage', 'Actualités de la Ville',
+    ]));
+    // Ni le canal des dirigeants (une LIGNE de la liste), ni « Ton club » : la carte seule.
+    expect(lesTextes(arbre)).not.toContain('Dirigeants des clubs');
+    expect(lesTextes(arbre)).not.toContain('Ton club');
+    act(() => carte(arbre, 'ville-de-recette')[0].props.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteActualitesCanal', {
+      collectiviteId: 'ville-de-recette',
+    });
+    expect(mockMesCanaux).toHaveBeenCalled();
+  });
+
+  it('GARDE, serveur CANAUX : la ligne « Toute la ville » est là ⇒ plus de carte', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} navigation={navigation} />);
+    expect(arbre.toJSON()).toBeNull();
+    expect(mockMesCanaux).toHaveBeenCalled();
+  });
+
+  it('GARDE, Ville par Ville : seule la Ville sans sa ligne garde sa carte', async () => {
+    const AUTRE = { documentId: 'autre-ville', name: 'Ville de Bellerive' };
+    mockMine = { data: { actualites: [SUBVENTIONS], collectivites: [VILLE, AUTRE] } };
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(0);
+    expect(carte(arbre, 'autre-ville')).toHaveLength(1);
+  });
+
+  it('GARDE, un mineur : jamais la ligne (« B »), la carte suit sa règle d’avant', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} mineur navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(1);
+  });
+
+  it('GARDE : liste pas encore lue, rien (la carte ne clignote pas)', async () => {
     const arbre = await monter(<CanauxDeLaVille navigation={navigation} />);
     expect(arbre.toJSON()).toBeNull();
     expect(mockMesCanaux).toHaveBeenCalled();
@@ -141,7 +191,8 @@ describe('COLL-C4A — planche 4 : la messagerie du membre', () => {
 
   it('un club rattaché à aucune Ville : rien', async () => {
     mockMine = { data: { actualites: [], collectivites: [] } };
-    expect((await monter(<CanauxDeLaVille navigation={navigation} />)).toJSON()).toBeNull();
+    expect((await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />)).toJSON())
+      .toBeNull();
   });
 
   it('l onglet Messages de la Ville conserve sa portee et son espace', () => {

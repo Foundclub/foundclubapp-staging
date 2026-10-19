@@ -270,7 +270,10 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
   // conversations doublait la ligne « Toute la ville » : il est parti. La liste défile seule ; le
   // canal des dirigeants est une ligne qu'on épingle et qu'on archive, comme dans l'espace de la
   // Ville.
-  test('R17-CANAUX : plus de bloc de la Ville ; archives et 100 fils dans la liste', async () => {
+  // ⏳ GARDE (19/10, décision « C » du chef) : le site part de staging AVANT le serveur CANAUX.
+  // Sans ligne « Toute la ville » dans la liste (le serveur d'avant), la carte « Actualités de la
+  // Ville » reste en tête, comme sur staging — sans le canal des dirigeants, devenu une ligne.
+  test('GARDE : sans « Toute la ville », la carte reste ; archives et 100 fils', async () => {
     const fils = Array.from({ length: 100 }, (_, i) => ({
       ...CHATS[0], documentId: `fil-${i}`, groupName: `Fil ${i}`,
     }));
@@ -285,9 +288,13 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     });
     const arbre = await monter();
     const liste = contenu(arbre);
-    expect(parId(liste, 'canaux-de-la-ville-membre')).toBeUndefined();
+    expect(parId(liste, 'canaux-de-la-ville-membre')).toBeDefined();
     expect(parId(liste, 'canal-dirigeants-demouville-test')).toBeUndefined();
-    expect(parId(liste, 'canal-actualites-demouville-test')).toBeUndefined();
+    expect(parId(liste, 'canal-actualites-demouville-test')).toBeDefined();
+    act(() => parId(liste, 'canal-actualites-demouville-test').props.onPress());
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteActualitesCanal', {
+      collectiviteId: 'demouville-test',
+    });
     expect(parId(liste, 'liste-archivees')).toBeDefined();
     expect(dernieresProps().data).toHaveLength(100);
     expect(dernieresProps().contentContainerStyle.paddingBottom).toBe(100);
@@ -336,21 +343,27 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     const avant = mockAuth.userData.birthdate;
     mockAuth.userData.birthdate = '2014-06-01';
     try {
-      await monter();
+      const mineur = await monter();
       expect(dernieresProps().data.map((/** @type {any} */ c) => c.documentId)).toEqual(['chat-1']);
+      // ⏳ GARDE : sans la ligne, le mineur garde la carte d'actualités (sa règle d'avant).
+      expect(parId(contenu(mineur), 'canal-actualites-demouville-test')).toBeDefined();
     } finally {
       mockAuth.userData.birthdate = avant;
     }
-    await monter();
+    const majeur = await monter();
     expect(dernieresProps().data[0].documentId).toBe('toute-demouville');
+    // ⏳ GARDE : la ligne est là, la carte part — jamais les deux.
+    expect(parId(contenu(majeur), 'canaux-de-la-ville-membre')).toBeUndefined();
   });
 
-  test('R17-CANAUX : recherche ou filtre sans résultat, rien d’épinglé ne reste', async () => {
+  // ⏳ GARDE (19/10) : comme sur staging, la carte d'actualités reste quand la recherche ou le
+  // filtre ne laisse aucun fil (serveur d'avant, pas de « Toute la ville »).
+  test('GARDE : recherche ou filtre sans résultat, la carte d’actualités reste', async () => {
     mockChatsQuery = etatListe();
     const arbre = await monter();
     act(() => arbre.root.findByType(TextInput).props.onChangeText('introuvable'));
     expect(dernieresProps().data).toEqual([]);
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeUndefined();
+    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeDefined();
     act(() => arbre.root.findByType(TextInput).props.onChangeText(''));
     act(() => arbre.root.findByType(SegmentedControl).props.onChange('league'));
     expect(dernieresProps().data).toEqual([]);
@@ -359,7 +372,8 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
   test('en erreur, Reessayer relit sans mutation', async () => {
     mockChatsQuery = etatListe({ error: new Error('erreur fabriquee') });
     const arbre = await monter();
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeUndefined();
+    // ⏳ GARDE : comme sur staging, la carte d'actualités reste en tête de la liste en erreur.
+    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeDefined();
     expect(dernieresProps().onEndReached).toBeUndefined();
     const retry = parId(contenu(arbre), 'messaging-retry');
     await act(async () => { await retry.props.onPress(); });
@@ -435,6 +449,8 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, toute] }] } });
     const membre = await monter();
     expect(dernieresProps().data[0].documentId).toBe('toute-demouville');
+    // ⏳ GARDE : la ligne de SA Ville est là ⇒ plus de carte « Actualités de la Ville ».
+    expect(parId(contenu(membre), 'canaux-de-la-ville-membre')).toBeUndefined();
     // La doublure de traduction de ce fichier rend le repli sans l interpoler : le nom de la
     // Ville est verifie par collectiviteCanaux.test.js (titreDuFil).
     expect(membre.root.findAll((n) => String(n.props?.text || '').startsWith('Toute la ville · ')))
@@ -469,6 +485,8 @@ describe('COL-007 — le haut de « Messages » defile avec la liste', () => {
     const rangRecherche = ordre(liste, liste.findByType(TextInput));
     expect(rangTitre).toBeLessThan(rangPuces);
     expect(rangPuces).toBeLessThan(rangRecherche);
+    // ⏳ GARDE (serveur d'avant) : la carte d'actualités revient, sous la recherche.
+    expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'canaux-de-la-ville-membre')));
     expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'liste-archivees')));
   });
 

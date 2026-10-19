@@ -166,7 +166,14 @@ describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
     const arbre = await monter(
       <CanauxDeLaVille chats={listeAvec(premier)} navigation={navigation} />,
     );
-    expect(arbre.toJSON()).toBeNull();
+    // ⏳ GARDE (19/10, décision « C » du chef) : la carte d'actualités peut rester (pas de
+    // « Toute la ville » dans cette liste) ; le canal des dirigeants n'est plus épinglé, ni son
+    // heure.
+    const sansCanalEpingle = () => {
+      expect(textes(arbre)).not.toContain('Dirigeants des clubs');
+      expect(textes(arbre).filter((texte) => /^\d{2}:\d{2}$/.test(texte))).toEqual([]);
+    };
+    sansCanalEpingle();
 
     // Un message arrive (la socket a réécrit la liste) : la ligne suit, sans recharger.
     const suivant = {
@@ -178,7 +185,7 @@ describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
     await act(async () => {
       arbre.update(<CanauxDeLaVille chats={listeAvec(suivant, 2)} navigation={navigation} />);
     });
-    expect(arbre.toJSON()).toBeNull();
+    sansCanalEpingle();
   });
 
   it('canal encore vide : pas d’heure inventée', async () => {

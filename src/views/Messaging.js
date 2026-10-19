@@ -1000,6 +1000,7 @@ function Messaging({ navigation, route }) {
                         chats={allChats}
                         collectiviteId={villeId}
                         espaceVille={espaceVille}
+                        mineur={mineur}
                         navigation={navigation}
                       />
                       {renderLigneArchivees()}

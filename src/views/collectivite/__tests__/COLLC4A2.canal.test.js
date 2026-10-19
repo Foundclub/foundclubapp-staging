@@ -179,14 +179,19 @@ describe('COLL-C4A2 — planche 1 : le canal des dirigeants dans la messagerie',
       unreadCount: 1,
     }];
     const arbre = await monter(<CanauxDeLaVille chats={chats} navigation={navigation} />);
-    expect(arbre.toJSON()).toBeNull();
     expect(trouver(arbre, 'canal-dirigeants-ville-de-recette')).toHaveLength(0);
+    // ⏳ GARDE (19/10, décision « C » du chef) : sans « Toute la ville » dans la liste, la carte
+    // d'actualités reste (COLLC4A.messagesVille.test.js) — mais plus le canal des dirigeants.
+    const dirigeants = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.children === 'Dirigeants des clubs',
+    );
+    expect(dirigeants).toHaveLength(0);
   });
 
-  it('R17-CANAUX : un entraîneur, ni carte d’actualités ni canal épinglé', async () => {
+  it('R17-CANAUX : un entraîneur, pas de canal épinglé', async () => {
     mockCanaux = { data: [] };
     const arbre = await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />);
-    expect(arbre.toJSON()).toBeNull();
+    expect(trouver(arbre, 'canal-dirigeants-ville-de-recette')).toHaveLength(0);
   });
 });
 
