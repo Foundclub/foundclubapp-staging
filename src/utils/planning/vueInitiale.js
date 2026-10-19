@@ -119,5 +119,5 @@ export const vueInitiale = ({
  */
 export const vueDeBaseVide = (vueDeBase, aujourdhui, dates) => {
   const [debut, fin] = fenetreDeLaVue(vueDeBase, aujourdhui);
-  return !dates.some((jour) => Boolean(jour) && jour >= debut && jour <= fin);
+  return !dates.some((jour) => jour !== null && jour >= debut && jour <= fin);
 };
