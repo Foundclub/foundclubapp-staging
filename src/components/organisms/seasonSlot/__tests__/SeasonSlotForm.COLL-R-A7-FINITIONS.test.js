@@ -378,7 +378,8 @@ describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes
     });
   };
 
-  test('garde cinq étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
+  // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6 étapes).
+  test('garde six étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
     avecOccupation();
     const arbre = await monter({ pleinEcran: false });
     await choisir(arbre, 'Montrivage Basket');
@@ -387,7 +388,7 @@ describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes
     const mardi = choix(arbre, 'Mar.');
     expect(mardi).toBeDefined();
     expect(mardi.parent.parent.findAllByType(Text).some((n) => texte(n) === 'complet 18:00 – 19:00')).toBe(true);
-    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 3/5')).toBe(true);
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 3/6')).toBe(true);
   });
 
   test('ne compte pas le créneau modifié parmi les occupations', async () => {

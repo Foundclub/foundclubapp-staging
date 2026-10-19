@@ -39,6 +39,46 @@ const lireDate = (valeur) => {
 export const estDemandeHebdo = (demande) => Boolean(demande?.series) || Boolean(demande?.event?.isRecurring);
 
 /**
+ * 🗓️ R17-QUAND-1 bis (19/10) — LE RYTHME D'UNE SÉRIE, dans la langue de l'écran : « chaque
+ * mercredi », « un mercredi sur deux », « 3 dates ». Le serveur envoie sa forme en nombres
+ * (`series.everyWeeks`, `series.datesCount`, `describeSeries`) ; sans elle, « chaque … ».
+ * @param {Function} t - La traduction.
+ * @param {any} demande - La demande.
+ * @param {string} jourSemaine - Le jour tel qu'il s'écrit dans une phrase (`momentDeLaDemande`).
+ * @returns {string} Le rythme.
+ */
+export const rythmeDeLaSerie = (t, demande, jourSemaine) => {
+  const nombre = Number(demande?.series?.datesCount);
+  if (Number.isInteger(nombre) && nombre > 0) {
+    return t('collectiviteCreneaux.quand.pastilleDates', {
+      count: nombre, defaultValue_one: '{{count}} date', defaultValue_other: '{{count}} dates',
+    });
+  }
+  const valeurs = { jour: jourSemaine, ...SANS_ECHAPPEMENT };
+  return Number(demande?.series?.everyWeeks) === 2
+    ? t('collectiviteCreneaux.quand.unSurDeuxCourt', 'un {{jour}} sur deux', valeurs)
+    : t('collectiviteCreneaux.quand.chaqueJourCourt', 'chaque {{jour}}', valeurs);
+};
+
+/**
+ * R17-QUAND-1 bis — la pastille d'une série : « Chaque semaine », « 1 sem. sur 2 », « 3 dates ».
+ * @param {Function} t - La traduction.
+ * @param {any} demande - La demande (une série).
+ * @returns {string} La pastille.
+ */
+export const pastilleDuRythme = (t, demande) => {
+  const nombre = Number(demande?.series?.datesCount);
+  if (Number.isInteger(nombre) && nombre > 0) {
+    return t('collectiviteCreneaux.quand.pastilleDates', {
+      count: nombre, defaultValue_one: '{{count}} date', defaultValue_other: '{{count}} dates',
+    });
+  }
+  return Number(demande?.series?.everyWeeks) === 2
+    ? t('collectiviteCreneaux.quand.pastilleDeux', '1 sem. sur 2')
+    : t('collectiviteDemandes.pastille.chaqueSemaine', 'Chaque semaine');
+};
+
+/**
  * 🗓️ VILLE-T18C (07/10, tournée T18 G51) — UNE CARTE REFUSÉE D'UNE SÉRIE dit SES dates, jamais la
  * période de la série : `series` (serveur, `describeSeries`) décrit la récurrence entière, ses
  * séances NON annulées, donc les dates maintenues. Deux cartes de la même série, « Acceptée » et
