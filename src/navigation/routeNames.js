@@ -413,6 +413,11 @@ export const RouteNames = /** @type {const} */ ({
   // fermeture (design HY521H1, page 4, P4v3-fermer). D16 : les clubs sont prevenus, rien n est
   // annule.
   CollectiviteFermeture: 'CollectiviteFermeture',
+  // R17-SIGNALER-1 (19/10/2026, REC17-011) — signaler un probleme sur une installation de la Ville
+  // (membre), le signalement (la Ville le traite ; l auteur le suit), « Mes signalements ».
+  FacilityReportDetails: 'FacilityReportDetails',
+  FacilityReportNew: 'FacilityReportNew',
+  MyFacilityReports: 'MyFacilityReports',
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',

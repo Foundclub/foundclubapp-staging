@@ -39,15 +39,18 @@ export const capitalize = (texte) => (
 
 /**
  * Le nom d un jour ISO dans la langue de l app (« Lundi », ou « Lun. » en court).
+ * R17-QUAND-1 : `inSentence` le rend tel qu il s ecrit DANS une phrase, dans chaque langue
+ * (« chaque mercredi », « every Wednesday ») : un seul jeton {{jour}} pour fr et en.
  * @param {number} isoDay - 1 a 7.
- * @param {{ short?: boolean }} [options] - Court : « Lun. ».
- * @returns {string} Le nom, avec sa capitale ; vide pour un jour hors bornes.
+ * @param {{ short?: boolean, inSentence?: boolean }} [options] - Court : « Lun. ».
+ * @returns {string} Le nom, avec sa capitale (sauf dans une phrase) ; vide hors bornes.
  */
-export const weekdayName = (isoDay, { short = false } = {}) => {
+export const weekdayName = (isoDay, { inSentence = false, short = false } = {}) => {
   const jour = Number(isoDay);
   if (!Number.isInteger(jour) || jour < 1 || jour > 7) return '';
   const date = new Date(2026, 0, LUNDI_DE_REFERENCE + jour);
-  return capitalize(format(date, short ? 'EEE' : 'EEEE', { locale: dateLocale() }));
+  const nom = format(date, short ? 'EEE' : 'EEEE', { locale: dateLocale() });
+  return inSentence ? nom : capitalize(nom);
 };
 
 /**
@@ -79,6 +82,100 @@ export const unSeulPointFinal = (phrase) => String(phrase || '').replace(/\.\.$/
 export const finDuCreneau = (slot) => (
   String(slot?.effectiveUntil || slot?.validUntil || '').slice(0, 10) || null
 );
+
+// ---------------------------------------------------------------------------
+// 🗓️ R17-QUAND-1 (REC17-007, 19/10) — LA RÈGLE « LE CRÉNEAU TOMBE CE JOUR-LÀ », la même que le
+// serveur (admin `utils/season-slot.ts`, `occursOn`) : chaque semaine, toutes les 2 semaines à
+// compter de `anchorDate`, ou des dates choisies (`dates`) ; `skippedDates` : les dates
+// retirées une à une.
+// Jours civils « AAAA-MM-JJ », calculés en UTC : aucun fuseau ne s'en mêle.
+// Témoin : __tests__/seasonSlotOccurrence.R17Q1.test.js.
+// ---------------------------------------------------------------------------
+
+const JOUR_MS = 24 * 60 * 60 * 1000;
+const JOUR_CIVIL = /^\d{4}-\d{2}-\d{2}$/;
+const tempsDuJour = (/** @type {string} */ jour) => Date.parse(`${jour}T00:00:00.000Z`);
+const jourIso = (/** @type {string} */ jour) => (
+  ((new Date(tempsDuJour(jour)).getUTCDay() + 6) % 7) + 1
+);
+const plusJours = (/** @type {string} */ jour, /** @type {number} */ n) => (
+  new Date(tempsDuJour(jour) + (n * JOUR_MS)).toISOString().slice(0, 10)
+);
+const listeDeJours = (/** @type {unknown} */ valeur) => (Array.isArray(valeur)
+  ? [...new Set(valeur
+    .map((jour) => String(jour || '').slice(0, 10))
+    .filter((jour) => JOUR_CIVIL.test(jour)))].sort()
+  : []);
+
+/**
+ * La forme d'un créneau tel que le serveur le rend. Un créneau d'avant le lot (sans forme) revient
+ * chaque semaine.
+ * @param {any} creneau - Le créneau.
+ * @returns {{ anchorDate: string | null, dates: string[] | null, everyWeeks: number,
+ *   recurrence: 'weekly' | 'dates', skippedDates: string[], weekday: number | null }} Sa forme.
+ */
+export const slotShape = (creneau) => {
+  const recurrence = creneau?.recurrence === 'dates' ? 'dates' : 'weekly';
+  const everyWeeks = recurrence === 'weekly' && Number(creneau?.everyWeeks) === 2 ? 2 : 1;
+  const weekday = Number(creneau?.weekday);
+  return {
+    anchorDate: everyWeeks > 1 ? (String(creneau?.anchorDate || '').slice(0, 10) || null) : null,
+    dates: recurrence === 'dates' ? listeDeJours(creneau?.dates) : null,
+    everyWeeks,
+    recurrence,
+    skippedDates: listeDeJours(creneau?.skippedDates),
+    weekday: recurrence === 'weekly' && Number.isInteger(weekday) && weekday >= 1 && weekday <= 7
+      ? weekday
+      : null,
+  };
+};
+
+/**
+ * Le créneau a-t-il lieu ce jour-là ? Dans sa période (retrait compris), pas retiré ce jour-là
+ * seulement, et selon sa forme.
+ * @param {any} creneau - Le créneau.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {boolean} Vrai s'il a lieu.
+ */
+export const slotOccursOn = (creneau, jour) => {
+  const forme = slotShape(creneau);
+  const du = String(creneau?.validFrom || '0000-01-01').slice(0, 10);
+  const au = finDuCreneau(creneau) || '9999-12-31';
+  if (!JOUR_CIVIL.test(String(jour)) || jour < du || jour > au) return false;
+  if (forme.skippedDates.includes(jour)) return false;
+  if (forme.dates) return forme.dates.includes(jour);
+  if (jourIso(jour) !== forme.weekday) return false;
+  if (forme.everyWeeks === 1) return true;
+  const ecart = tempsDuJour(jour) - tempsDuJour(forme.anchorDate || du);
+  const semaines = Math.round(ecart / (7 * JOUR_MS));
+  return ((semaines % forme.everyWeeks) + forme.everyWeeks) % forme.everyWeeks === 0;
+};
+
+/**
+ * Les jours où le créneau a lieu, dans sa période (et entre `from` et `until` s'ils sont donnés).
+ * Sans fin connue, on s'arrête à un an : une saison n'en dure pas plus.
+ * @param {any} creneau - Le créneau.
+ * @param {{ from?: string | null, until?: string | null }} [bornes] - AAAA-MM-JJ.
+ * @returns {string[]} Les jours, dans l'ordre.
+ */
+export const slotOccurrences = (creneau, { from = null, until = null } = {}) => {
+  const forme = slotShape(creneau);
+  const du = String(creneau?.validFrom || '0000-01-01').slice(0, 10);
+  const lo = from && from > du ? from : du;
+  const fin = finDuCreneau(creneau) || plusJours(lo, 366);
+  const hi = until && until < fin ? until : fin;
+  if (forme.dates) {
+    return forme.dates.filter((jour) => jour >= lo && jour <= hi && slotOccursOn(creneau, jour));
+  }
+  if (!forme.weekday || lo > hi) return [];
+  /** @type {string[]} */
+  const jours = [];
+  let jour = plusJours(lo, (forme.weekday - jourIso(lo) + 7) % 7);
+  for (; jour <= hi; jour = plusJours(jour, 7)) {
+    if (slotOccursOn(creneau, jour)) jours.push(jour);
+  }
+  return jours;
+};
 
 /**
  * Une heure « HH:MM » valide ?
@@ -187,6 +284,24 @@ export const formatDay = (jour, { withYear = true } = {}) => {
 };
 
 /**
+ * R17-QUAND-1 — « 21 oct. » (le jour et le mois, sans le jour de la semaine).
+ * @param {string | null | undefined} jour - AAAA-MM-JJ.
+ * @returns {string} La date, ou vide.
+ */
+export const formatDayMonth = (jour) => (
+  jour ? format(parseISO(String(jour).slice(0, 10)), 'd MMM', { locale: dateLocale() }) : ''
+);
+
+/**
+ * R17-QUAND-1 — « Novembre 2026 ».
+ * @param {string} jour - AAAA-MM-JJ (un jour du mois).
+ * @returns {string} Le mois et l'année, avec sa capitale.
+ */
+export const formatMonthYear = (jour) => capitalize(
+  format(parseISO(String(jour).slice(0, 10)), 'MMMM yyyy', { locale: dateLocale() }),
+);
+
+/**
  * « 1 sept. 2026 – 30 juin 2027 ».
  * @param {string | null | undefined} debut - AAAA-MM-JJ.
  * @param {string | null | undefined} fin - AAAA-MM-JJ.
@@ -276,8 +391,9 @@ export const fullRanges = (intervalles, capacite) => {
  * 🐞 COLL-FIX2 (03/10), planche 23 (tournée T10) : deux créneaux ne prennent une place ENSEMBLE
  * que si leurs heures ET leurs périodes se chevauchent (`validFrom` / `validUntil`, jours
  * « AAAA-MM-JJ »). Avant, le même club sur deux périodes qui se suivent se lisait « complet ».
- * Des périodes qui se croisent ont un jour commun : le plus tardif de leurs débuts. On juge
- * donc les heures à chaque début de période, et on réunit les plages pleines.
+ * 🗓️ R17-QUAND-1 (19/10) : on juge les heures à chaque JOUR où au moins un créneau a lieu, par la
+ * règle partagée (`slotOccursOn`) : deux créneaux « 1 semaine sur 2 » de parité contraire ne sont
+ * jamais là le même jour.
  * @param {any[]} creneaux - Les creneaux d UN jour.
  * @param {number} capacite - maxSlots.
  * @returns {Array<{ start: number, end: number }>} Les plages pleines.
@@ -285,9 +401,25 @@ export const fullRanges = (intervalles, capacite) => {
 export const fullRangesOfSlots = (creneaux, capacite) => {
   const du = (/** @type {any} */ c) => String(c?.validFrom || '0000-01-01').slice(0, 10);
   const au = (/** @type {any} */ c) => String(c?.validUntil || '9999-12-31').slice(0, 10);
-  const pleines = [...new Set(creneaux.map(du))].flatMap((jour) => fullRanges(
-    creneaux
-      .filter((creneau) => du(creneau) <= jour && jour <= au(creneau))
+  const simple = (/** @type {any} */ c) => {
+    const forme = slotShape(c);
+    return !forme.dates && forme.everyWeeks === 1 && !forme.skippedDates.length;
+  };
+  // Tous « chaque semaine » : le calcul d'avant, à chaque début de période. Sinon, jour par jour
+  // par la règle ; les créneaux d'UN jour type sans `weekday` prennent celui des autres.
+  const jourType = creneaux.map((c) => slotShape(c).weekday).find(Boolean) || 1;
+  const lus = creneaux.every(simple)
+    ? null
+    : creneaux.map((c) => ({ ...c, weekday: c?.weekday ?? jourType }));
+  const jours = lus
+    ? [...new Set(lus.flatMap((creneau) => slotOccurrences(creneau)))]
+    : [...new Set(creneaux.map(du))];
+  const present = (/** @type {any} */ c, /** @type {string} */ jour) => (
+    lus ? slotOccursOn(c, jour) : du(c) <= jour && jour <= au(c)
+  );
+  const pleines = jours.flatMap((jour) => fullRanges(
+    (lus || creneaux)
+      .filter((creneau) => present(creneau, jour))
       .map((creneau) => ({
         end: toMinutes(creneau?.endTime) ?? 0,
         start: toMinutes(creneau?.startTime) ?? 0,
