@@ -147,6 +147,63 @@ export const createLieu = async (lieu) => {
   };
 };
 
+const sansAccents = (/** @type {string} */ texte) => (texte || '')
+  .normalize('NFD')
+  .replace(/[̀-ͯ]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+/**
+ * Essaie les textes un par un ; s'arrête à la première commune ÉCRITE dans le texte tapé.
+ * @param {string[]} essais - Les textes à chercher, dans l'ordre.
+ * @param {(commune: Place) => boolean} retenue - La garde.
+ * @returns {Promise<Place | null>}
+ */
+const premiereCommuneRetenue = async (essais, retenue) => {
+  if (essais.length === 0) return null;
+  const communes = await fetchPlacesByType(essais[0], 'municipality');
+  return communes.find(retenue) || premiereCommuneRetenue(essais.slice(1), retenue);
+};
+
+/**
+ * R17-ADRESSE (REC17-008, 19/10) — la commune que le texte tapé NOMME (« Gymnase Toto
+ * Aix-en-Provence », « … 13008 »), pour ouvrir la carte dessus quand la liste ne trouve pas le
+ * lieu. La recherche de commune de la BAN rend RIEN quand la commune est noyée dans le nom du
+ * lieu : on l'interroge sur le code postal tapé, le texte entier, puis les 3, 2 et 1 derniers
+ * (et premiers) mots — 8 requêtes au plus. Une commune n'est retenue que si son code postal ou son
+ * nom est ÉCRIT dans le texte : la recherche approchée rend toujours une commune, souvent fausse.
+ * @param {string} texte - Le texte tapé (ou la ville connue de l'objet).
+ * @returns {Promise<{ label: string, lat: number, lng: number } | null>} null : rien de reconnu,
+ *   ou la BAN injoignable (la carte s'ouvre alors ailleurs).
+ */
+export const chercherCommune = async (texte) => {
+  const propre = normalizeSearchQuery(texte);
+  if (!propre) return null;
+  const codePostal = propre.match(/\b\d{5}\b/)?.[0];
+  const ecrit = ` ${sansAccents(propre)} `;
+  const mots = propre.split(/[\s,]+/).filter(Boolean);
+  const essais = [...new Set([
+    codePostal,
+    propre,
+    ...[3, 2, 1].flatMap((n) => [mots.slice(-n).join(' '), mots.slice(0, n).join(' ')]),
+  ].filter((essai) => essai && essai.length >= 3))];
+  const retenue = (/** @type {Place} */ commune) => {
+    const { city, label, postcode } = commune?.properties || {};
+    if (codePostal && postcode === codePostal) return true;
+    const nom = sansAccents(city || label);
+    return Boolean(nom) && ecrit.includes(` ${nom} `);
+  };
+  try {
+    const commune = await premiereCommuneRetenue(essais, retenue);
+    const [lng, lat] = commune?.geometry?.coordinates || [];
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { label: commune?.properties?.label || '', lat, lng };
+  } catch (_panne) {
+    return null;
+  }
+};
+
 const fetchPlacesFromGeoSearch = async (/** @type {string} */ search, /** @type {string | undefined} */ type) => {
   /** @type {{ limit: number; q: string; type?: string }} */
   const params = {

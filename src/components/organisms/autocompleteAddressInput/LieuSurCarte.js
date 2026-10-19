@@ -11,6 +11,7 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 
 import { useCreateLieu, useGetPlacesFromCoordinates } from '@/services/places/placesQueries';
+import { chercherCommune } from '@/services/places/placesService';
 
 import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
@@ -25,8 +26,13 @@ import mapsPlatform from '@/platform/maps';
 // ♿ On valide SANS glisser : la carte s'ouvre déjà centrée sur la 1re proposition de ce qui a été
 // tapé, zoomée à la rue ; « Placer ici » suffit. Les boutons + et - de la carte zooment aussi.
 // 📍 La position de l'appareil ne sert que si elle est DÉJÀ accordée : rien n'est jamais demandé.
+//
+// R17-ADRESSE (REC17-008, 19/10) — sans proposition, la carte part de ce qu'on sait, dans cet
+// ordre : la commune que le texte tapé nomme, sinon la ville de l'objet (club, Ville, équipe),
+// sinon la position déjà accordée, sinon la France. Le texte tapé devient le nom proposé.
 
 const FRANCE = Object.freeze({ lat: 46.6, lng: 2.4, zoom: 5 });
+const ZOOM_DE_LA_COMMUNE = 13;
 const ZOOM_DE_LA_RUE = 16;
 // En deçà, l'épingle couvre un quartier entier : un lieu posé là serait faux pour tout le monde.
 const ZOOM_MIN_POUR_PLACER = 15;
@@ -93,9 +99,13 @@ const messageDuRefus = (t, erreur) => {
  * @param {() => void} props.onFermer - Referme sans rien changer.
  * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le
  *   lieu posé.
+ * @param {string} [props.texteTape] - Le texte tapé : nom proposé, et sa commune (départ).
+ * @param {string} [props.villeConnue] - La ville de l'objet (départ, à défaut de commune tapée).
  * @returns {import('react').ReactElement}
  */
-function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
+function LieuSurCarteOuvert({
+  onFermer, onLieuPose, premierResultat, texteTape, villeConnue,
+}) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -111,22 +121,40 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
     : null;
   const [cadrage, setCadrage] = useState(departTape || FRANCE);
   const [centre, setCentre] = useState(departTape || FRANCE);
-  const [nom, setNom] = useState('');
+  const [nom, setNom] = useState(
+    () => (texteTape || '').replace(/\s+/g, ' ').trim().slice(0, NOM_MAX),
+  );
   const [erreur, setErreur] = useState('');
   const [hauteurCarte, setHauteurCarte] = useState(0);
   const creerLieu = useCreateLieu();
 
-  // Rien de tapé ne se trouve : la position, SEULEMENT si elle est déjà accordée.
+  // Rien de tapé ne se trouve : la commune tapée, la ville de l'objet, puis la position
+  // SEULEMENT si elle est déjà accordée.
   useEffect(() => {
     if (departTape) return undefined;
     let actif = true;
-    // Par `platform/maps` : le module de position natif ne se charge qu'ici, carte ouverte.
-    Promise.resolve(mapsPlatform.readCurrentLocationIfGranted?.()).then((position) => {
-      if (!actif || !position) return;
-      const point = { lat: position.lat, lng: position.lng, zoom: ZOOM_DE_LA_RUE };
+    const communeDe = async (/** @type {string | undefined} */ texte) => {
+      if (!texte?.trim()) return null;
+      try {
+        return await chercherCommune(texte);
+      } catch (_panne) {
+        return null;
+      }
+    };
+    const partir = async () => {
+      const commune = (await communeDe(texteTape)) || (await communeDe(villeConnue));
+      // Par `platform/maps` : le module de position natif ne se charge qu'ici, carte ouverte.
+      const position = commune ? null : await Promise
+        .resolve(mapsPlatform.readCurrentLocationIfGranted?.())
+        .catch(() => null);
+      let point = null;
+      if (commune) point = { lat: commune.lat, lng: commune.lng, zoom: ZOOM_DE_LA_COMMUNE };
+      else if (position) point = { lat: position.lat, lng: position.lng, zoom: ZOOM_DE_LA_RUE };
+      if (!actif || !point) return;
       setCadrage(point);
       setCentre(point);
-    });
+    };
+    partir();
     return () => {
       actif = false;
     };
@@ -310,10 +338,12 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
  * @param {() => void} props.onFermer - Referme sans rien changer.
  * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le
  *   lieu posé.
+ * @param {string} [props.texteTape] - Le texte tapé (nom proposé, commune de départ).
+ * @param {string} [props.villeConnue] - La ville de l'objet (départ à défaut).
  * @returns {import('react').ReactElement | null}
  */
 function LieuSurCarte({
-  onFermer, onLieuPose, premierResultat = null, visible,
+  onFermer, onLieuPose, premierResultat = null, texteTape = '', villeConnue = '', visible,
 }) {
   if (!visible) return null;
   return (
@@ -321,6 +351,8 @@ function LieuSurCarte({
       onFermer={onFermer}
       onLieuPose={onLieuPose}
       premierResultat={premierResultat}
+      texteTape={texteTape}
+      villeConnue={villeConnue}
     />
   );
 }
