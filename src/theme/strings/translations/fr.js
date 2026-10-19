@@ -4913,7 +4913,7 @@ export default {
         titre: 'Fermer une installation',
       },
       inviteClub: {
-        dit: 'Un club de la commune absent de FoundClub.',
+        dit: 'Le trouver sur FoundClub, ou l’inviter.',
         titre: 'Inviter un club',
       },
       publishNews: {

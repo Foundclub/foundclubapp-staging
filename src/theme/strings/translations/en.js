@@ -4574,7 +4574,7 @@ export default {
         titre: 'Close a facility',
       },
       inviteClub: {
-        dit: 'A club of the town not yet on FoundClub.',
+        dit: 'Find it on FoundClub, or invite it.',
         titre: 'Invite a club',
       },
       publishNews: {

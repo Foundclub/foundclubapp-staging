@@ -1135,3 +1135,16 @@ describe('FINITIONS-VILLE — « Cette semaine » : des lignes qui s’ouvrent, 
     });
   });
 });
+
+// 🏛️ R17-INVITER (19/10, tri du chef, point 4 « OUI ») — « Inviter un club » ouvre désormais la
+// recherche de club habituelle (et le lien discret pour un club absent) : son sous-titre ne parle
+// plus du seul « club absent de FoundClub ».
+describe('R17-INVITER — le raccourci « Inviter un club »', () => {
+  it('dit ce qu’il ouvre : « Le trouver sur FoundClub, ou l’inviter. »', async () => {
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toContain('Inviter un club');
+    expect(lus).toContain('Le trouver sur FoundClub, ou l’inviter.');
+    expect(lus).not.toContain('Un club de la commune absent de FoundClub.');
+  });
+});
