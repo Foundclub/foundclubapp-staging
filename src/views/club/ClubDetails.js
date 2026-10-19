@@ -52,6 +52,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
+import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
 import MaCollectivite from '@/views/collectivite/components/MaCollectivite';
 import RattachementDuClub from '@/views/collectivite/components/RattachementDuClub';
@@ -294,6 +295,8 @@ function ClubDetails({ navigation, route }) {
     userData,
   } = useAuth();
   const routeClubId = route?.params?.clubId;
+  // R17-INVITER (19/10) : la Ville qui ouvre la fiche depuis « Ajouter un club ».
+  const routeCollectiviteId = route?.params?.collectiviteId || null;
   // ANNUAIRE-E1 (29/09) — posé par l'annuaire du site seulement : la fiche est montée dans la page
   // publique /annuaire/clubs/<id>/<slug>/. Absent, le téléphone ne change pas.
   const annuaire = route?.params?.annuaire === true;
@@ -3207,6 +3210,20 @@ function ClubDetails({ navigation, route }) {
               onPress={handleOpenClubPoster}
               title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
               variant="Secondary"
+            />
+          ) : null}
+
+          {/* R17-INVITER (19/10, REC17-009) — la Ville qui ouvre la fiche depuis « Ajouter un
+              club » : « Ce club fait partie de ma collectivité ». Rien pour les autres comptes (le
+              bouton ne s'affiche qu'au gestionnaire de CETTE Ville, garde serveur). */}
+          {routeCollectiviteId && club?.documentId ? (
+            <AjouterUnClub
+              club={club}
+              collectiviteId={routeCollectiviteId}
+              onInviterParLien={() => navigation.navigate(RouteNames.CollectiviteInviteClub, {
+                collectiviteId: routeCollectiviteId,
+                onglet: 'lien',
+              })}
             />
           ) : null}
 

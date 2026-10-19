@@ -1,4 +1,7 @@
-import { gesteDeLaVille } from '@/domains/collectivite/collectiviteRattachement';
+import {
+  etatDeDemandeVille,
+  gesteDeLaVille,
+} from '@/domains/collectivite/collectiviteRattachement';
 
 // 🏛️ R17-INVITER (19/10/2026, REC17-009) — « on prend la recherche de club comme elle est de base
 // sur l'app, et dès qu'on trouve le club on clique sur un bouton pour dire « ce club fait partie
@@ -63,5 +66,23 @@ describe('R17INVIT · G3 — seules les demandes de CE club comptent', () => {
     const autre = ligne({ club: { documentId: 'tennis-f' }, state: 'attached' });
     expect(gesteDeLaVille([autre], 'judo-e')).toBe('envoyer');
     expect(gesteDeLaVille([autre], 'tennis-f')).toBe('rattache');
+  });
+});
+
+describe('R17INVIT · G4 — la liste des demandes de la Ville le dit aussi', () => {
+  const t = (/** @type {string} */ _cle, /** @type {any} */ defaut) => String(defaut);
+
+  it('sa demande qui attend le premier dirigeant : « Demande enregistrée »', () => {
+    const demande = { awaitingLeader: true, kind: 'proposal', state: 'pending' };
+    expect(etatDeDemandeVille(t, demande)).toEqual({
+      ligne: 'Demande enregistrée : elle attend le premier dirigeant du club.',
+      pastille: 'En attente',
+      ton: 'neutre',
+    });
+  });
+
+  it('les autres demandes en attente gardent leur ligne', () => {
+    expect(etatDeDemandeVille(t, { kind: 'proposal', state: 'pending' }).ligne)
+      .toBe('Envoyée au club : ses dirigeants acceptent ou refusent.');
   });
 });
