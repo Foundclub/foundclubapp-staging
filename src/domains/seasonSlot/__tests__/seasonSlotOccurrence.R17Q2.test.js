@@ -13,7 +13,11 @@ const HUIT = [
   '2027-02-24', '2027-03-03', '2027-04-21', '2027-04-28',
 ];
 const MERCREDI = {
-  endTime: '19:00', startTime: '17:30', validFrom: '2026-10-21', validUntil: '2027-06-30', weekday: 3,
+  endTime: '19:00',
+  startTime: '17:30',
+  validFrom: '2026-10-21',
+  validUntil: '2027-06-30',
+  weekday: 3,
 };
 const SAUF = { ...MERCREDI, exceptHolidays: true, holidayDates: HUIT };
 
@@ -38,7 +42,7 @@ describe('R17-QUAND-2 — « sauf vacances » dans la règle de l’app', () => 
     expect(slotShape(MERCREDI)).toMatchObject({ exceptHolidays: false, holidayDates: [] });
   });
 
-  it('la place : « sauf vacances » et un créneau des mercredis de la Toussaint ne se croisent pas', () => {
+  it('la place : « sauf vacances » et les mercredis de la Toussaint ne se croisent pas', () => {
     const toussaint = {
       ...MERCREDI, dates: ['2026-10-21', '2026-10-28'], recurrence: 'dates', weekday: null,
     };
@@ -46,6 +50,7 @@ describe('R17-QUAND-2 — « sauf vacances » dans la règle de l’app', () => 
     // là qu'eux ; jamais deux équipes le même jour.
     expect(fullRangesOfSlots([SAUF, toussaint], 2)).toEqual([]);
     // Sans la case, ils se croisent les 21 et 28 oct. : plein.
-    expect(fullRangesOfSlots([{ ...MERCREDI }, toussaint], 2)).toEqual([{ end: 1140, start: 1050 }]);
+    const plein = [{ end: 1140, start: 1050 }];
+    expect(fullRangesOfSlots([{ ...MERCREDI }, toussaint], 2)).toEqual(plein);
   });
 });
