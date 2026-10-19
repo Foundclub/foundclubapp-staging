@@ -9,6 +9,7 @@ import {
 import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
 import {
   CANAL_DIRIGEANTS,
+  CANAL_VILLE,
   filsDeLaMessagerie,
   signatureDuMessage,
   titreDuFil,
@@ -309,7 +310,20 @@ export function ColonneDesFilsDeLaVille({
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
   if (!collectivite) return null;
   const liste = Array.isArray(chats) ? chats : [];
-  const conversations = filsDeLaMessagerie(liste, { collectiviteId, espaceVille: true });
+  const siens = filsDeLaMessagerie(liste, { collectiviteId, espaceVille: true });
+  // R17-CANAUX (point 5) — « Toute la ville » en tête, comme sur le téléphone ; les autres gardent
+  // l'ordre de la liste.
+  const conversations = [
+    ...siens.filter((/** @type {any} */ fil) => fil?.type === CANAL_VILLE),
+    ...siens.filter((/** @type {any} */ fil) => fil?.type !== CANAL_VILLE),
+  ];
+  const ecussonDe = (/** @type {any} */ fil) => {
+    if (fil.type === CANAL_DIRIGEANTS) return <IconeDuCanal taille={32} />;
+    if (fil.type === CANAL_VILLE) {
+      return <EcussonVille nom={String(collectivite.name || '')} taille={32} />;
+    }
+    return <ClubLogoMark club={fil.collectiviteClub} isNeutral size={32} />;
+  };
   // « Vous : … » quand la Ville a écrit, sinon « Prénom Nom : … » (P3c-canal-ordi).
   const apercu = (/** @type {any} */ fil, /** @type {string} */ repli) => {
     const dernier = Array.isArray(fil?.messages) ? fil.messages[0] : null;
@@ -364,9 +378,7 @@ export function ColonneDesFilsDeLaVille({
         return (
           <LigneDeColonne
             actif={fil.documentId === chatId}
-            ecusson={fil.type === CANAL_DIRIGEANTS
-              ? <IconeDuCanal taille={32} />
-              : <ClubLogoMark club={fil.collectiviteClub} isNeutral size={32} />}
+            ecusson={ecussonDe(fil)}
             key={fil.documentId}
             onPress={() => ouvrir(fil.documentId, fil.type, titre)}
             precision={apercu(fil, '')}

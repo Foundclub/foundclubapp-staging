@@ -1,5 +1,7 @@
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { getServerErrorCode } from '@/utils/errors/displayError';
 
 /**
@@ -14,6 +16,11 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  *     club. Côté Ville, elle se range dans « Conversations » ; côté club, elle porte le nom de la
  *     Ville.
  *
+ *   · `collectivite_ville` (R17-CANAUX, 19/10, REC17-004) — « Toute la ville » : les lecteurs des
+ *     actualités de la Ville le lisent (une ligne en tête de leur liste), seule la Ville y
+ *     écrit, et personne n'y voit qui le lit (un NOMBRE de clubs). Ses actualités « membres »
+ *     y arrivent seules, en lignes de la Ville qui mènent à l'actualité.
+ *
  * Design validé HY521H1 page 3 (P3c-canal-tel, P3v2-messages-tel). « Vous » pour la mairie,
  * « tu » pour le dirigeant. Chaque message dit qui écrit ET pour quel club : la signature est
  * écrite par le serveur, l'app ne fait que DEMANDER la voix de la Ville depuis l'espace de la
@@ -22,15 +29,19 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
 
 export const CANAL_DIRIGEANTS = 'collectivite_dirigeants';
 export const CONVERSATION_CLUB = 'collectivite_club';
+export const CANAL_VILLE = 'collectivite_ville';
 export const CODE_PLUS_DANS_LE_FIL = 'COLLECTIVITE_CANAL_NOT_MEMBER';
+/** R17-CANAUX — la notice d'une actualité posée par la Ville dans son canal (admin). */
+export const NOTICE_ACTUALITE = 'collectivite_actualite';
 
 /**
- * Ce fil est-il un fil de la Ville (canal des dirigeants ou conversation privée) ?
+ * Ce fil est-il un fil de la Ville (canal des dirigeants, conversation privée, « Toute la
+ * ville ») ?
  * @param {any} chat - Le fil.
- * @returns {boolean} Vrai pour les deux fils de la Ville.
+ * @returns {boolean} Vrai pour les trois fils de la Ville.
  */
 export const estFilDeLaVille = (chat) => (
-  chat?.type === CANAL_DIRIGEANTS || chat?.type === CONVERSATION_CLUB
+  chat?.type === CANAL_DIRIGEANTS || chat?.type === CONVERSATION_CLUB || chat?.type === CANAL_VILLE
 );
 
 /**
@@ -42,6 +53,15 @@ export const estFilDeLaVille = (chat) => (
 export const titreDuFil = (t, { chat, espaceVille = false }) => {
   if (chat?.type === CANAL_DIRIGEANTS) {
     return t('collectiviteCanaux.titre', 'Dirigeants des clubs');
+  }
+  // R17-CANAUX — la Ville sait de quelle ville il s'agit ; un membre peut en lire plusieurs.
+  if (chat?.type === CANAL_VILLE) {
+    return espaceVille
+      ? t('collectiviteCanaux.ville.titre', 'Toute la ville')
+      : t('collectiviteCanaux.ville.titreMembre', 'Toute la ville · {{ville}}', {
+        ...SANS_ECHAPPEMENT,
+        ville: chat?.collectivite?.name || '',
+      });
   }
   if (chat?.type === CONVERSATION_CLUB) {
     return String((espaceVille ? chat?.collectiviteClub?.name : chat?.collectivite?.name) || '');
@@ -56,6 +76,14 @@ export const titreDuFil = (t, { chat, espaceVille = false }) => {
  * @returns {string} La ligne sous le titre.
  */
 export const sousTitreDuFil = (t, { chat, clubsCount = 0, espaceVille = false }) => {
+  // R17-CANAUX — un NOMBRE, jamais une personne (le serveur ne rend que lui).
+  if (chat?.type === CANAL_VILLE) {
+    return clubsCount === 1
+      ? t('collectiviteCanaux.ville.sousTitreUn', 'Lu par les membres d’1 club')
+      : t('collectiviteCanaux.ville.sousTitre', 'Lu par les membres des {{nombre}} clubs', {
+        nombre: clubsCount,
+      });
+  }
   if (chat?.type === CANAL_DIRIGEANTS) {
     if (espaceVille) {
       return clubsCount === 1
@@ -118,6 +146,9 @@ export const signatureDuMessage = (t, message) => {
  * @returns {string | null} Le texte d'invite.
  */
 export const placeholderDuFil = (t, { chat, espaceVille = false }) => {
+  if (chat?.type === CANAL_VILLE) {
+    return t('collectiviteCanaux.ville.ecrire', 'Écrire à toute la ville…');
+  }
   if (chat?.type === CANAL_DIRIGEANTS) {
     return espaceVille
       ? t('collectiviteCanaux.ecrire.mairie', 'Écrire aux dirigeants…')
@@ -132,6 +163,52 @@ export const placeholderDuFil = (t, { chat, espaceVille = false }) => {
       : t('collectiviteCanaux.ecrire.priveeClub', 'Écris à la Ville…');
   }
   return null;
+};
+
+/**
+ * R17-CANAUX — qui écrit dans un fil de la Ville : tous ses membres, sauf dans « Toute la ville »
+ * où seule la Ville écrit — depuis son espace, ou quand le serveur le dit (`membres.peutEcrire` :
+ * un compte mixte qui l'ouvre depuis son club). Le serveur refuse de toute façon un membre
+ * (COLLECTIVITE_CANAL_READ_ONLY) : ceci ne fait que montrer, ou non, la saisie.
+ * @param {{ chat: any, espaceVille?: boolean, membres?: any }} params - Le fil, l'espace, la
+ *   réponse « qui est dans ce canal ».
+ * @returns {boolean} Vrai si la saisie doit être offerte (faux hors d'un fil de la Ville).
+ */
+export const peutEcrireDansLeFil = ({ chat, espaceVille = false, membres = null }) => {
+  if (chat?.type === CANAL_VILLE) return Boolean(espaceVille) || membres?.peutEcrire === true;
+  return estFilDeLaVille(chat);
+};
+
+/**
+ * R17-CANAUX — une actualité posée par la Ville dans son canal : où elle mène. Le membre ouvre le
+ * canal des actualités de sa Ville (l'écran de la notification d'actualité) ; la Ville, sa liste.
+ * @param {{ espaceVille?: boolean, message: any }} params - La ligne, et l'espace d'où on lit.
+ * @returns {{ name: string, params: Record<string, string> } | null} La route, ou null.
+ */
+export const routeDeLaLigne = ({ espaceVille = false, message }) => {
+  const notice = message?.systemNotice;
+  if (notice?.kind !== NOTICE_ACTUALITE) return null;
+  const collectiviteId = String(notice?.collectivite?.documentId || '');
+  const actualiteId = String(notice?.actualite?.documentId || '');
+  if (!collectiviteId || !actualiteId) return null;
+  return espaceVille
+    ? { name: RouteNames.CollectiviteActualites, params: { collectiviteId } }
+    : { name: RouteNames.CollectiviteActualitesCanal, params: { actualiteId, collectiviteId } };
+};
+
+/**
+ * R17-CANAUX — la phrase d'une ligne d'actualité, traduite ; toute autre ligne garde sa phrase.
+ * @param {any} t - La traduction (i18next).
+ * @param {any} message - La ligne.
+ * @returns {string} La phrase.
+ */
+export const texteDeLaLigne = (t, message) => {
+  const notice = message?.systemNotice;
+  if (notice?.kind !== NOTICE_ACTUALITE) return String(message?.message || '');
+  return t('collectiviteCanaux.ville.actualite', 'Nouvelle actualité de la Ville : « {{titre}} »', {
+    ...SANS_ECHAPPEMENT,
+    titre: String(notice?.actualite?.title || ''),
+  });
 };
 
 /**

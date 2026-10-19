@@ -85,6 +85,8 @@ const dateDuMessage = (message) => {
 
 /**
  * IPH09 (09/10, regle d Adel) — mes epingles, puis le canal du club restent en tete.
+ * R17-CANAUX (19/10, REC17-004) — « Toute la ville » (`collectivite_ville`) s affiche en tete de
+ * la liste : apres mes epingles, avant le canal du club.
  * Tous les autres types se melangent par DERNIER MESSAGE, jamais par `chat.updatedAt`
  * (renommage, lecture, adhesion). Les ex aequo et fils sans date gardent l ordre recu.
  * Regle partagee par Messaging.js et la colonne de Conversation.web.js.
@@ -97,6 +99,9 @@ export const trierLesFils = (chats, meId) => [...(Array.isArray(chats) ? chats :
     const epingleA = estEpinglePourMoi(a, meId);
     const epingleB = estEpinglePourMoi(b, meId);
     if (epingleA !== epingleB) return epingleA ? -1 : 1;
+    const villeA = a?.type === 'collectivite_ville';
+    const villeB = b?.type === 'collectivite_ville';
+    if (villeA !== villeB) return villeA ? -1 : 1;
     const clubA = a?.type === 'club';
     const clubB = b?.type === 'club';
     if (clubA !== clubB) return clubA ? -1 : 1;
@@ -167,6 +172,9 @@ export const getConversationName = ({
     // Ville <-> club (D73) se nomme par collectiviteCanaux.titreDuFil (qui sait de quel cote).
     case 'collectivite_dirigeants':
       return i18next.t('collectiviteCanaux.titre', 'Dirigeants des clubs');
+    // R17-CANAUX (19/10) — « Toute la ville » ; titreDuFil y ajoute le nom de la Ville.
+    case 'collectivite_ville':
+      return i18next.t('collectiviteCanaux.ville.titre', 'Toute la ville');
     case 'friendly_match':
       // Le serveur pose deja « Match amical : A vs B » dans groupName
       // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''

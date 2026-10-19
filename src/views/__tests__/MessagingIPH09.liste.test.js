@@ -355,6 +355,50 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     await act(async () => { await glissable.props.renderRightActions(0, 0).props.onPress(); });
     expect(mockArchive).toHaveBeenCalledWith('canal-demouville');
   });
+
+  // 🏛️ R17-CANAUX (19/10, REC17-004, point 5) — « Toute la ville » : une ligne de conversation,
+  // EN TÊTE ; ni épingler ni archiver (le serveur ne dit à personne qui l'a fait), le reste comme
+  // les autres lignes.
+  test('R17-CANAUX : « Toute la ville » en tête, chez la Ville et chez le membre', async () => {
+    const toute = {
+      collectivite: mockVille,
+      documentId: 'toute-demouville',
+      messages: [{
+        createdAt: '2026-09-01T10:00:00.000Z',
+        message: 'Nouvelle actualité de la Ville : « Dojo fermé »',
+        sender: null,
+      }],
+      participants: [],
+      type: 'collectivite_ville',
+      updatedAt: '2026-09-01T10:00:00.000Z',
+    };
+    mockChatsQuery = etatListe({ data: { pages: [{ data: [...FILS_DE_LA_VILLE, toute] }] } });
+    const ville = await monter({ collectiviteId: 'demouville-test', espace: 'ville' });
+    expect(dernieresProps().data.map((/** @type {any} */ c) => c.documentId))
+      .toEqual(['toute-demouville', 'canal-demouville', 'privee-demouville']);
+    const ligne = parId(contenu(ville), 'liste-fil-toute-demouville');
+    expect(ligne.findAllByType(Text).map((n) => n.props.children)).toContain('Toute la ville');
+    expect(ville.root.findAll((n) => n.props?.text === 'Toute la ville')).toHaveLength(1);
+    // Ni glisser pour épingler, ni glisser pour archiver.
+    const glissables = contenu(ville).findAll((n) => typeof n.props.renderLeftActions === 'function'
+      && n.findAll((m) => m.props?.testID === 'liste-fil-toute-demouville').length > 0);
+    expect(glissables).toHaveLength(0);
+    act(() => ligne.props.onPress());
+    expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({
+      chatId: 'toute-demouville',
+      chatType: 'collectivite_ville',
+      espace: 'ville',
+      title: 'Toute la ville',
+    }));
+    // Chez le membre : la même ligne, nommée avec sa Ville, en tête de SA liste.
+    mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, toute] }] } });
+    const membre = await monter();
+    expect(dernieresProps().data[0].documentId).toBe('toute-demouville');
+    // La doublure de traduction de ce fichier rend le repli sans l interpoler : le nom de la
+    // Ville est verifie par collectiviteCanaux.test.js (titreDuFil).
+    expect(membre.root.findAll((n) => String(n.props?.text || '').startsWith('Toute la ville · ')))
+      .toHaveLength(1);
+  });
 });
 
 // COL-007 (recette collectivite du 11/10, decision D6 A) — comme le pack MSG1A

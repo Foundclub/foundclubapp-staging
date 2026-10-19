@@ -4904,6 +4904,19 @@ export default {
       priveeClub: 'Private conversation: only the city and your club’s managers read it.',
       priveeMairie: 'Private conversation: only the managers of {{club}} read it.',
     },
+    ville: {
+      actualite: 'New from the city: “{{titre}}”',
+      ecrire: 'Write to the whole city…',
+      ouvrirActualite: 'See the news',
+      seuleLaVille: 'Only the city writes here',
+      sousTitre: 'Read by the members of the {{nombre}} clubs',
+      sousTitreUn: 'Read by the members of 1 club',
+      titre: 'The whole city',
+      titreMembre: 'The whole city · {{ville}}',
+      videMairie: 'Your news for all members lands here on its own, and you can write here. The members of your {{nombre}} clubs read it; nobody sees who reads it.',
+      videMembre: 'News from {{ville}} lands here. Only the city writes; nobody sees who reads it.',
+      voirActualite: 'See the news “{{titre}}”',
+    },
   },
   collectiviteActualites: {
     accueil: {

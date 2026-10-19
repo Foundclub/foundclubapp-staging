@@ -4,12 +4,16 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import {
   CANAL_DIRIGEANTS,
+  CANAL_VILLE,
   CONVERSATION_CLUB,
   estFilDeLaVille,
   estRefusDuFilDeLaVille,
+  peutEcrireDansLeFil,
   placeholderDuFil,
+  routeDeLaLigne,
   signatureDuMessage,
   sousTitreDuFil,
+  texteDeLaLigne,
   titreDuFil,
   voixDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
@@ -81,6 +85,10 @@ export function EcussonDuFil({
 }) {
   const type = chat?.type || routeChatType;
   if (type === CANAL_DIRIGEANTS) return <IconeDuCanal taille={taille} />;
+  // R17-CANAUX — « Toute la ville » : l'écusson de la Ville, des deux côtés.
+  if (type === CANAL_VILLE && chat) {
+    return <EcussonVille nom={String(chat.collectivite?.name || '')} taille={taille} />;
+  }
   if (type !== CONVERSATION_CLUB || !chat) return null;
   return espaceVille
     ? <ClubLogoMark club={chat.collectiviteClub} isNeutral size={taille} />
@@ -183,7 +191,23 @@ export function VideDuFilDeLaVille({ chat, clubsCount = 0, espaceVille = false }
   const ville = formatCollectiviteOfferedBy(String(chat?.collectivite?.name || ''));
   let titre = '';
   let texte = '';
-  if (chat.type === CANAL_DIRIGEANTS && espaceVille) {
+  if (chat.type === CANAL_VILLE) {
+    // R17-CANAUX — à quoi sert « Toute la ville », et qui le lit (un nombre, jamais des noms).
+    titre = titreDuFil(t, { chat, espaceVille });
+    texte = espaceVille
+      ? t(
+        'collectiviteCanaux.ville.videMairie',
+        // eslint-disable-next-line max-len
+        'Vos actualités pour tous les membres y arrivent toutes seules, et vous pouvez y écrire. Les membres de vos {{nombre}} clubs le lisent ; personne ne voit qui le lit.',
+        { nombre: clubsCount },
+      )
+      : t(
+        'collectiviteCanaux.ville.videMembre',
+        // eslint-disable-next-line max-len
+        'Les actualités de {{ville}} arrivent ici. Seule la Ville écrit ; personne ne voit qui le lit.',
+        { ville, ...SANS_ECHAPPEMENT },
+      );
+  } else if (chat.type === CANAL_DIRIGEANTS && espaceVille) {
     titre = t(
       'collectiviteCanaux.vide.mairieTitre',
       'Les dirigeants des {{nombre}} clubs et vous',
@@ -230,10 +254,17 @@ export function VideDuFilDeLaVille({ chat, clubsCount = 0, espaceVille = false }
  * vide ou nul, et la conversation reste exactement ce qu'elle était.
  * @param {{ chatData: any, chatId: string, espaceVille?: boolean, messagesError?: unknown,
  *   navigation: any, routeChatType?: string | null }} params
- * @returns {{ clubsCount: number, estCanal: boolean, estFil: boolean,
- *   estLigneSysteme: (message: any) => boolean, estQuitte: boolean, membres: any,
+ * R17-CANAUX (19/10) : pour « Toute la ville », `peutEcrire` (la Ville seule), `texteLectureSeule`
+ * (« Seule la Ville écrit ici »), `afficheMembres` faux (personne ne voit qui le lit) et
+ * `ligneDActualite` (une actualité posée par la Ville mène à elle).
+ * @returns {{ afficheMembres: boolean, clubsCount: number, estCanal: boolean,
+ *   estCanalVille: boolean, estFil: boolean,
+ *   estLigneSysteme: (message: any) => boolean, estQuitte: boolean,
+ *   ligneDActualite: (message: any) => ({ libelle: string, ouvrir: () => void,
+ *     texte: string, voir: string } | null), membres: any,
  *   nomDeLExpediteur: (message: any) => string | null, ouvrirMembres: () => void,
- *   placeholder: string | null, sousTitre: string, titre: string,
+ *   peutEcrire: boolean, placeholder: string | null, sousTitre: string,
+ *   texteLectureSeule: string | null, titre: string,
  *   voix: { senderSignature?: { voix: 'ville' } } }} Le fil, vu par la conversation.
  */
 export const useFilDeLaVille = ({
@@ -246,12 +277,29 @@ export const useFilDeLaVille = ({
   const clubsCount = Number(membres.data?.clubsCount) || 0;
   return useMemo(() => {
     const contexte = { chat: chatData, clubsCount, espaceVille };
+    const estCanalVille = (chatData?.type || routeChatType) === CANAL_VILLE;
     return {
+      afficheMembres: estFil && !estCanalVille,
       clubsCount,
       estCanal: (chatData?.type || routeChatType) !== CONVERSATION_CLUB,
+      estCanalVille,
       estFil,
       estLigneSysteme: (/** @type {any} */ message) => estFil && !message?.sender,
       estQuitte,
+      ligneDActualite: (/** @type {any} */ message) => {
+        const route = estFil ? routeDeLaLigne({ espaceVille, message }) : null;
+        if (!route) return null;
+        const titreDeLActualite = String(message?.systemNotice?.actualite?.title || '');
+        return {
+          libelle: t('collectiviteCanaux.ville.voirActualite', 'Voir l’actualité « {{titre}} »', {
+            ...SANS_ECHAPPEMENT,
+            titre: titreDeLActualite,
+          }),
+          ouvrir: () => navigation.navigate(route.name, route.params),
+          texte: texteDeLaLigne(t, message),
+          voir: t('collectiviteCanaux.ville.ouvrirActualite', 'Voir l’actualité'),
+        };
+      },
       membres: membres.data || null,
       nomDeLExpediteur: (/** @type {any} */ message) => (
         estFil ? signatureDuMessage(t, message) : null
@@ -260,8 +308,12 @@ export const useFilDeLaVille = ({
         chatId,
         ...(espaceVille ? { espace: 'ville' } : {}),
       }),
+      peutEcrire: estFil && peutEcrireDansLeFil({ ...contexte, membres: membres.data }),
       placeholder: placeholderDuFil(t, contexte),
       sousTitre: sousTitreDuFil(t, contexte),
+      texteLectureSeule: estCanalVille
+        ? t('collectiviteCanaux.ville.seuleLaVille', 'Seule la Ville écrit ici')
+        : null,
       titre: titreDuFil(t, contexte),
       voix: voixDuFil(contexte),
     };

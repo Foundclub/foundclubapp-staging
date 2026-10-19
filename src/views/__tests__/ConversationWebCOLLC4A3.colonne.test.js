@@ -31,6 +31,24 @@ const mockRetry = jest.fn();
 let mockMessagesDuFil = [];
 /** @type {any} */
 let mockFils = [];
+// R17-CANAUX — le fil ouvert et sa réponse « qui est dans ce canal » (par défaut : le canal des
+// dirigeants, comme avant le lot).
+const CANAL_OUVERT = {
+  collectivite: { documentId: 'ville-de-recette', name: 'Ville de Montrivage' },
+  documentId: 'canal-1',
+  participants: [],
+  type: 'collectivite_dirigeants',
+};
+const MEMBRES_DU_CANAL = {
+  chat: { documentId: 'canal-1', type: 'collectivite_dirigeants' },
+  clubsCount: 3,
+  collectivite: { documentId: 'ville-de-recette', name: 'Ville de Montrivage' },
+  groupes: [],
+};
+/** @type {any} */
+let mockChatOuvert = CANAL_OUVERT;
+/** @type {any} */
+let mockMembresDuFil = MEMBRES_DU_CANAL;
 
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -98,12 +116,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
   useGetChatById: () => ({
-    data: {
-      collectivite: { documentId: 'ville-de-recette', name: 'Ville de Montrivage' },
-      documentId: 'canal-1',
-      participants: [],
-      type: 'collectivite_dirigeants',
-    },
+    data: mockChatOuvert,
     error: null,
     isLoading: false,
     refetch: jest.fn(),
@@ -122,14 +135,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
 }));
 
 jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
-  useMembresDuFil: () => ({
-    data: {
-      chat: { documentId: 'canal-1', type: 'collectivite_dirigeants' },
-      clubsCount: 3,
-      collectivite: { documentId: 'ville-de-recette', name: 'Ville de Montrivage' },
-      groupes: [],
-    },
-  }),
+  useMembresDuFil: () => ({ data: mockMembresDuFil }),
   useMesCanauxDeLaVille: () => ({
     data: [{
       canal: { documentId: 'canal-1' },
@@ -298,6 +304,8 @@ beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
   mockFils = FILS;
+  mockChatOuvert = CANAL_OUVERT;
+  mockMembresDuFil = MEMBRES_DU_CANAL;
   mockMessagesDuFil = [];
   mockSendMessage.mockClear();
   mockRetry.mockClear();
@@ -541,5 +549,90 @@ describe('FINITIONS16 20 — le canal des dirigeants, sur le site', () => {
     const { arbre } = await monter();
     const texte = texteDe(arbre.root);
     expect(texte).not.toMatch(/Socket actif|Mode HTTP|Parite web|sockets partages|hooks, services/);
+  });
+});
+
+// 🏛️ R17-CANAUX (19/10/2026, REC17-004, point 5) — « TOUTE LA VILLE » SUR LE SITE : en tête de la
+// colonne de la Ville ; pour un membre, « Seule la Ville écrit ici » à la place de la saisie et
+// pas de colonne « Dans ce canal » (personne ne voit qui le lit) ; l'actualité posée mène à elle.
+describe('R17-CANAUX — « Toute la ville » sur le site', () => {
+  const TOUTE = {
+    collectivite: VILLE,
+    documentId: 'toute-1',
+    messages: [{
+      createdAt: '2026-09-01T08:00:00.000Z',
+      message: 'Nouvelle actualité de la Ville : « Dojo fermé »',
+      sender: null,
+    }],
+    participants: [],
+    type: 'collectivite_ville',
+  };
+  const LIGNE_ACTU = {
+    createdAt: '2026-10-19T08:00:00.000Z',
+    documentId: 'm-actu',
+    message: 'Nouvelle actualité de la Ville : « Dojo fermé »',
+    sender: null,
+    systemNotice: {
+      actualite: { documentId: 'actu-1', title: 'Dojo fermé' },
+      collectivite: { documentId: 'ville-de-recette' },
+      kind: 'collectivite_actualite',
+      version: 1,
+    },
+  };
+
+  test('en tête de la colonne de la Ville, avec l écusson de la Ville', async () => {
+    // eslint-disable-next-line global-require
+    const { EcussonVille } = require('@/views/collectivite/components/BlocDeLaVille');
+    mockFils = [...FILS, TOUTE];
+    const { arbre, navigation } = await monter();
+    const texte = texteDe(parTestID(arbre, 'colonne-fils-de-la-ville')[0]);
+    expect(texte.indexOf('Toute la ville')).toBeGreaterThan(-1);
+    expect(texte.indexOf('Toute la ville')).toBeLessThan(texte.indexOf('Dirigeants des clubs'));
+    const ligne = lien(arbre, 'colonne-toute-1');
+    expect(ligne.findAllByType(EcussonVille)).toHaveLength(1);
+    await act(async () => { ligne.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('Conversation', {
+      chatId: 'toute-1', chatType: 'collectivite_ville', espace: 'ville', title: 'Toute la ville',
+    });
+  });
+
+  test('un membre : « Seule la Ville écrit ici », ni saisie ni « Dans ce canal »', async () => {
+    mockChatOuvert = { ...TOUTE, messages: undefined };
+    mockMembresDuFil = {
+      ...MEMBRES_DU_CANAL,
+      chat: { documentId: 'toute-1', type: 'collectivite_ville' },
+      peutEcrire: false,
+    };
+    mockMessagesDuFil = [LIGNE_ACTU];
+    const { arbre, navigation } = await monter({});
+    const parDataTestId = (/** @type {string} */ id) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === id,
+    );
+    const [pied] = parDataTestId('MSG1W-lecture-seule');
+    expect(pied).toBeTruthy();
+    expect(texteDe(pied)).toContain('Seule la Ville écrit ici');
+    expect(texteDe(arbre.toJSON())).not.toContain('Dans ce canal');
+    // L actualité : une ligne qui mène à elle.
+    const [ligne] = parDataTestId('R17CANAUX-actualite-m-actu');
+    expect(ligne).toBeTruthy();
+    expect(ligne.props['aria-label']).toBe('Voir l’actualité « Dojo fermé »');
+    await act(async () => { ligne.props.onClick(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectiviteActualitesCanal', {
+      actualiteId: 'actu-1', collectiviteId: 'ville-de-recette',
+    });
+  });
+
+  test('la Ville, depuis son espace : la saisie', async () => {
+    mockChatOuvert = { ...TOUTE, messages: undefined };
+    mockMembresDuFil = {
+      ...MEMBRES_DU_CANAL,
+      chat: { documentId: 'toute-1', type: 'collectivite_ville' },
+      peutEcrire: true,
+    };
+    const { arbre } = await monter({ chatType: 'collectivite_ville', espace: 'ville' });
+    const pieds = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'MSG1W-lecture-seule',
+    );
+    expect(pieds).toHaveLength(0);
   });
 });

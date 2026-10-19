@@ -13,7 +13,9 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
-import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  CANAL_VILLE, filsDeLaMessagerie, titreDuFil,
+} from '@/domains/collectivite/collectiviteCanaux';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -648,6 +650,9 @@ function Messaging({ navigation, route }) {
         },
       });
     }
+    // R17-CANAUX — « Toute la ville » : ni épingler ni archiver (le serveur ne rend à personne
+    // qui l'a fait : ce serait la liste de ses lecteurs).
+    if (chat?.type === CANAL_VILLE) return entrees;
     entrees.push({
       cle: 'epingler',
       icone: 'thumbtack',
@@ -743,10 +748,13 @@ function Messaging({ navigation, route }) {
       meId: userData?.documentId,
     });
 
+    // R17-CANAUX — « Toute la ville » : ni glisser pour épingler, ni glisser pour archiver.
+    const avecGestes = chat?.type !== CANAL_VILLE;
+
     return (
       <Swipeable
-        renderLeftActions={(p, d) => renderLeftActions(p, d, chat)}
-        renderRightActions={(p, d) => renderRightActions(p, d, chat)}
+        renderLeftActions={avecGestes ? (p, d) => renderLeftActions(p, d, chat) : undefined}
+        renderRightActions={avecGestes ? (p, d) => renderRightActions(p, d, chat) : undefined}
       >
         <TouchableOpacity
           delayLongPress={450}
@@ -881,7 +889,7 @@ function Messaging({ navigation, route }) {
               </View>
             ) : null}
           </View>
-          {renderWebChatActions(chat)}
+          {avecGestes ? renderWebChatActions(chat) : null}
         </TouchableOpacity>
       </Swipeable>
     );
