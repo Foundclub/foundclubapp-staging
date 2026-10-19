@@ -184,10 +184,10 @@ export const chercherCommune = async (texte) => {
   const ecrit = ` ${sansAccents(propre)} `;
   const mots = propre.split(/[\s,]+/).filter(Boolean);
   const essais = [...new Set([
-    codePostal,
+    ...(codePostal ? [codePostal] : []),
     propre,
     ...[3, 2, 1].flatMap((n) => [mots.slice(-n).join(' '), mots.slice(0, n).join(' ')]),
-  ].filter((essai) => essai && essai.length >= 3))];
+  ].filter((essai) => essai.length >= 3))];
   const retenue = (/** @type {Place} */ commune) => {
     const { city, label, postcode } = commune?.properties || {};
     if (codePostal && postcode === codePostal) return true;

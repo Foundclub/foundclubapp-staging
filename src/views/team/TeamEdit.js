@@ -729,8 +729,12 @@ function TeamEdit({ navigation, route }) {
                     onChange(newAddress);
                   }}
                   // R17-ADRESSE (19/10) : la carte part de la ville de l'équipe, à défaut.
+                  // `cityName` est le vrai champ du club (le type `Club` ne le déclare pas).
                   villeConnue={
-                    teamData?.city || teamData?.club?.cityName || clubData?.cityName || ''
+                    teamData?.city
+                    || /** @type {any} */ (teamData?.club)?.cityName
+                    || /** @type {any} */ (clubData)?.cityName
+                    || ''
                   }
                 />
               )}
