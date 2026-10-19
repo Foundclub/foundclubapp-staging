@@ -4,7 +4,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, RefreshControl, ScrollView, Text, View,
+  Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -128,7 +128,9 @@ const filtrerLHeure = (carte, heure) => {
  */
 function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const { t } = useTranslation();
-  const { Alignments, Colors, Fonts } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Images,
+  } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const surOrdinateur = useIsDesktop();
   const aujourdhui = jourDeParis();
@@ -767,6 +769,26 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {/* RESA-L6B-1 (19/10) — le raccourci « Mes réservations » (E-P10, planche EP10 état 5 :
+            « raccourci aussi dans E-P01 » ; sa place n'est pas dessinée : en tête du panneau). */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            { alignSelf: 'flex-start', gap: 8, minHeight: 44 },
+          ]}
+          testID="reserver-recherche-mes-reservations"
+        >
+          <Image
+            source={Images.calendar}
+            style={{ height: 16, tintColor: Colors.primary200, width: 16 }}
+          />
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
+          </Text>
+        </TouchableOpacity>
         <Input
           accessibilityLabel={t('reserverTerrain.recherche.champ', 'Complexe, ville ou sport')}
           autoCorrect={false}

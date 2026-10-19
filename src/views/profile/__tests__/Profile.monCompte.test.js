@@ -139,6 +139,9 @@ jest.mock('@/components/templates/ScreenContainer', () => mockPassePlat());
 jest.mock('@/services/auth/authService', () => ({ deleteAccount: jest.fn() }));
 // PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants : doublure commune.
 jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+// RESA-L6B-1 — le nombre de « Mes réservations » (rangée cachée par COMPLEXES_JOUEUR) lit le
+// serveur des complexes : doublé ici comme les autres services de « Mon compte ».
+jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.

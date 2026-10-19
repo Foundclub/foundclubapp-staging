@@ -104,6 +104,9 @@ jest.mock('@/theme/themeContext', () => {
 
 // COLLECTIVITES 1c — Profil lit `/collectivites/mine` (la porte « Ma collectivite ») :
 // doublure, comme tout service que l ecran importe (le client HTTP ne se charge pas ici).
+// RESA-L6B-1 — le nombre de « Mes réservations » (rangée cachée par COMPLEXES_JOUEUR) lit le
+// serveur des complexes : doublé ici comme les autres services de « Mon compte ».
+jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
   useCollectiviteRequests: () => ({ data: [] }),
