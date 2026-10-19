@@ -170,10 +170,10 @@ function FacilityReportDetails() {
             }}
           >
             <Text style={[Fonts.p3Bold, { color: couleur }]} testID="signalement-statut">
-              {t(
+              {String(t(
                 /** @type {string} */ (`facilityReports.${statuts}.${report.status}`),
                 report.status,
-              )}
+              ))}
             </Text>
           </View>
           <Text style={[Fonts.p3, Fonts.neutral200]}>{reportDayLabel(report.createdAt)}</Text>

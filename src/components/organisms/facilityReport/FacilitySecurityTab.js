@@ -131,7 +131,10 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
         testID={`securite-etat-${state.code}`}
       >
         <Text style={[Fonts.h5Bold, { color: couleurEtat }]}>
-          {t(/** @type {string} */ (`facilityReports.ville.etat.${state.code}`), state.code)}
+          {String(t(
+            /** @type {string} */ (`facilityReports.ville.etat.${state.code}`),
+            state.code,
+          ))}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral100]}>{phraseEtat}</Text>
         {state.code === 'fermee' && onOpenClosures ? (

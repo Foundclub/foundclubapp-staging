@@ -106,10 +106,10 @@ function MyFacilityReports() {
                 }}
               >
                 <Text style={[Fonts.p3Bold, { color: couleur }]}>
-                  {t(
+                  {String(t(
                     /** @type {string} */ (`facilityReports.statutsAuteur.${report.status}`),
                     report.status,
-                  )}
+                  ))}
                 </Text>
               </View>
             </View>
