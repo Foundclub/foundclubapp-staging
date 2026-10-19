@@ -1129,3 +1129,102 @@ describe('ABOPARCLUB — la compo se juge au club de l evenement', () => {
     expect(hasText(root, TITRE_RAPPEL)).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🤝 AMIC-INVITE (19/10, APRÈS 149) — LE MATCH AMICAL VU PAR L'ÉQUIPE INVITÉE.
+//
+// 🎬 Banc natif des 15-16/10 : Valbrune U13 est INVITÉE chez Montrivage. L'offre de
+// Valbrune est attribuée et relue, et pourtant l'encadrant de Valbrune bute sur le mur
+// « La convocation est incluse dans l'offre Équipe » : la page choisit bien SON équipe
+// (`compositionTeamId`), mais juge l'offre — et transmet le club — de l'HÔTE.
+// ⚖️ Contrat : chacun est jugé sur l'offre du club de l'équipe qu'il compose. Le serveur
+// le fait déjà (`resolveCompositionSubscriptionDecision`, admin event.ts : il relit le
+// club de l'équipe envoyée). Aucun élargissement : l'offre de l'hôte n'ouvre rien à
+// l'invité, et l'inverse non plus.
+// ROUGE avant : le bandeau montrait le mur à l'invité couvert, et la rangée
+// « Convocation » partait avec le club de l'hôte.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('AMIC-INVITE — l encadrant de l equipe INVITEE est juge sur l offre de SON club', () => {
+  const CLUB_INVITE = 'club-valbrune';
+  const EQUIPE_INVITEE = 'team-valbrune-u13';
+
+  // Le match de l'hôte (`CLUB_ID`), avec Valbrune U13 invitée. `user-1` encadre l'équipe
+  // nommée par `encadre` — c'est ce qui décide de « l'équipe du lecteur ».
+  const matchAmical = (/** @type {'hote' | 'invite'} */ encadre) => buildMatch({
+    invitedTeams: [{
+      club: { documentId: CLUB_INVITE, name: 'US Valbrune' },
+      documentId: EQUIPE_INVITEE,
+      name: 'Valbrune U13',
+      trainers: encadre === 'invite' ? [{ documentId: 'user-1' }] : [],
+    }],
+    team: {
+      club: { documentId: CLUB_ID, name: 'Montrivage Olympique' },
+      documentId: TEAM_ID,
+      name: 'U13',
+      trainers: encadre === 'hote' ? [{ documentId: 'user-1' }] : [],
+    },
+  });
+
+  // Le niveau d'offre du compte, club par club (`getSubscriptionAccessLevelForClub`).
+  const couvert = (/** @type {string} */ clubCouvert) => asOrganiser({
+    getSubscriptionAccessLevelForClub: (/** @type {string} */ club) => (
+      club === clubCouvert ? 'TEAM' : 'FREE'),
+    subscriptionAccessLevel: 'FREE',
+  });
+
+  test('🔴 invité AVEC l offre de son club : pas de mur, le bandeau propose de convoquer', () => {
+    const root = mountScreen({ auth: couvert(CLUB_INVITE), event: matchAmical('invite') });
+
+    expect(hasText(root, TITRE_OFFRE)).toBe(false);
+    expect(hasText(root, TITRE_RAPPEL)).toBe(true);
+  });
+
+  test('🔴 et le bandeau l emmene a la selection de SON equipe, avec le club de son equipe', () => {
+    const root = mountScreen({ auth: couvert(CLUB_INVITE), event: matchAmical('invite') });
+
+    act(() => {
+      actionDuBandeau(root).props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'MatchCallUpSelection',
+      expect.objectContaining({ clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE }),
+    );
+  });
+
+  // La rangee « Convocation » du menu appelle la MEME fonction que le bandeau
+  // (`handleManageComposition` → `openCompositionBoard`) : le temoin ci-dessus la couvre.
+
+  test('🔒 invité SANS offre : le mur reste, meme si le club HOTE est couvert', () => {
+    const root = mountScreen({ auth: couvert(CLUB_ID), event: matchAmical('invite') });
+
+    expect(hasText(root, TITRE_OFFRE)).toBe(true);
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
+  });
+
+  test('🔒 invité sans aucune offre : le mur reste', () => {
+    const root = mountScreen({ auth: couvert('aucun-club'), event: matchAmical('invite') });
+
+    expect(hasText(root, TITRE_OFFRE)).toBe(true);
+  });
+
+  test('🔒 hôte AVEC offre : inchangé, le bandeau convoque avec le club de l hôte', () => {
+    const root = mountScreen({ auth: couvert(CLUB_ID), event: matchAmical('hote') });
+
+    expect(hasText(root, TITRE_RAPPEL)).toBe(true);
+    act(() => {
+      actionDuBandeau(root).props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'MatchCallUpSelection',
+      expect.objectContaining({ clubId: CLUB_ID, teamId: TEAM_ID }),
+    );
+  });
+
+  test('🔒 hôte SANS offre : le mur reste, meme si le club INVITE est couvert', () => {
+    const root = mountScreen({ auth: couvert(CLUB_INVITE), event: matchAmical('hote') });
+
+    expect(hasText(root, TITRE_OFFRE)).toBe(true);
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
+  });
+});

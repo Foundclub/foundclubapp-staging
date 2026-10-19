@@ -43,6 +43,28 @@ export const resolveViewerFromInvitedTeam = ({ compositionTeamId = null, event }
 };
 
 /**
+ * 🤝 AMIC-INVITE (19/10, APRÈS 149) — LE CLUB DE L'ÉQUIPE QU'ON COMPOSE.
+ *
+ * Un match amical a une équipe HÔTE (`event.team`) et des équipes INVITÉES, chacune de son
+ * club. Les portes de la composition transmettent `teamId` (l'équipe du lecteur) ET
+ * `clubId`, sur lequel la sélection des convoqués juge l'offre et lit les renforts.
+ * 🧨 `clubId` partait du club de l'HÔTE : l'encadrant invité, offre attribuée, butait sur
+ * le mur — et l'offre de l'hôte lui ouvrait le bandeau. ⚖️ Le club voyage avec l'équipe,
+ * comme au serveur (`resolveCompositionSubscriptionDecision` relit le club de l'équipe).
+ * @param {{ event: any, teamId?: string | null }} params - L'événement et l'équipe composée.
+ * @returns {string} Le club de cette équipe. Vide pour une invitée sans club connu : la garde
+ *   retombe alors sur le club affiché, jamais sur celui de l'hôte.
+ */
+export const resolveCompositionClubId = ({ event, teamId = null }) => {
+  const hostClubId = event?.team?.club?.documentId || event?.club?.documentId || '';
+  if (!teamId || teamId === event?.team?.documentId) return hostClubId;
+  const invitedTeam = (event?.invitedTeams || [])
+    .find((/** @type {any} */ team) => team?.documentId === teamId);
+  if (!invitedTeam) return hostClubId;
+  return invitedTeam?.club?.documentId || '';
+};
+
+/**
  * ST-MATCH (écrans 1 et 7) — « Karim n'a pas encore saisi le score », « Le bilan de Karim ».
  * @param {any} team - L'équipe du match.
  * @returns {string | null} Le prénom du premier entraîneur, ou rien.

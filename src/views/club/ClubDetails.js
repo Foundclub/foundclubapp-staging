@@ -1103,11 +1103,15 @@ function ClubDetails({ navigation, route }) {
               // facultatif, il est vide (ou partage) chez plusieurs partenaires, qui
               // partaient tous ensemble. Un ancien partenaire sans id : sa place.
               const sansId = sponsor.id === undefined || sponsor.id === null;
+              const restants = (club?.sponsor || []).filter((s, index) => (
+                sansId ? index !== sponsorIndex : s.id !== sponsor.id
+              ));
               const newClub = {
                 ...club,
-                sponsor: (club?.sponsor || []).filter((s, index) => (
-                  sansId ? index !== sponsorIndex : s.id !== sponsor.id
-                )),
+                // SPONSRV (14/10) : retirer le DERNIER s'annonce — le serveur garde la liste
+                // quand la mise a jour ne parle pas des partenaires (clubService, updateClub).
+                clearSponsors: restants.length === 0,
+                sponsor: restants,
               };
               updateClubMutation.mutate(newClub);
             }
