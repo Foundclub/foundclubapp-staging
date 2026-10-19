@@ -6,6 +6,7 @@ import {
   FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -37,13 +38,13 @@ const ROLES_FILTRABLES = [
   },
   {
     get label() {
-      return i18next.t('adminUserList.roles.coach', 'Entraineur');
+      return i18next.t('adminUserList.roles.coach', 'Coach / Prof');
     },
     type: 'entraineur',
   },
   {
     get label() {
-      return i18next.t('adminUserList.roles.player', 'Joueur');
+      return i18next.t('adminUserList.roles.player', 'Pratiquant / Joueur');
     },
     type: 'joueur',
   },
@@ -134,6 +135,9 @@ function AdminUserList() {
 
   const renderItem = useCallback(({ item }) => {
     const { role } = item;
+    // R17-ROLES — « Coach / Prof » plutot que le nom technique « Entraineur » ;
+    // « SuperAdmin » reste.
+    const libelleRole = role ? libelleDuRole(role.name, t, role.name) : '';
     const { club } = item;
     const nomComplet = [item.firstname, item.lastname].filter(Boolean).join(' ').trim()
       || t('adminUserList.unnamed', 'Personne sans nom');
@@ -182,14 +186,14 @@ function AdminUserList() {
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginTop[4], Spaces.gap[8]]}>
               {role && (
               <View
-                accessibilityLabel={`Role ${role.name}`}
+                accessibilityLabel={`Role ${libelleRole}`}
                 style={[
                   Spaces.paddingHorizontal[8],
                   Spaces.paddingVertical[4],
                   { backgroundColor: getRoleBadgeColor(role.type), borderRadius: 4 },
                 ]}
               >
-                <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>{role.name}</Text>
+                <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>{libelleRole}</Text>
               </View>
               )}
               {/* LA DATE D INSCRIPTION. Sans elle, l ordre de la liste est

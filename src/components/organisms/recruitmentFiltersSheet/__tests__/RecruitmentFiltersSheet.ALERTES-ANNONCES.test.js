@@ -212,7 +212,8 @@ describe('ALERTES-ANNONCES — l étoile de la feuille de filtres du recrutement
     await ouvrirRangee(tree, 'Sport');
     await appuyerSur(tree, 'Football');
     await ouvrirRangee(tree, 'Profil');
-    await appuyerSur(tree, 'Coachs');
+    // R17-ROLES : « Coachs / Profs », espaces insécables de la pastille (texteInsecable).
+    await appuyerSur(tree, 'Coachs / Profs'.replace(/ /g, String.fromCharCode(160)));
 
     await toucherLEtoile(tree);
 

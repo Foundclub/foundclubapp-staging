@@ -110,7 +110,11 @@ const monter = (props, creneaux = []) => {
     // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     arbre = renderer.create(<PersonalPlanningContainer {...props} />);
   });
-  return mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1][0];
+  // R17-VUE (19/10) : le crochet de la vue a l arrivee appelle aussi `useQuery` (sa lecture
+  // bornee, coupee ici) ; on garde la DERNIERE demande du planning perso, reconnue a sa cle.
+  return [...mockUseQuery.mock.calls].reverse()
+    .map((/** @type {any[]} */ appel) => appel[0])
+    .find((/** @type {any} */ options) => options.queryKey[1] === 'personal');
 };
 
 afterEach(() => {

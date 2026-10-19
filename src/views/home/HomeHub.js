@@ -1507,7 +1507,7 @@ function HomeHubContent({ auth, navigation, route }) {
   // barre du bas, ces deux raccourcis doublaient donc une destination existante.
 
   const roleLabel = useMemo(() => {
-    if (isCoach) return t('homeHub.roles.coach', 'Entraîneur');
+    if (isCoach) return t('homeHub.roles.coach', 'Coach / Prof');
     if (isPresident) return t('homeHub.roles.president', 'Dirigeant');
     // D72 — le super admin lisait « JOUEUR » sous le titre : il n'avait aucun
     // libelle de role. Le pack demande « ACCUEIL — SUPER ADMIN » (capture 04).
@@ -1516,7 +1516,7 @@ function HomeHubContent({ auth, navigation, route }) {
     // durait depuis le 03/09 : faute de clef `homeHub.roles.parent`, un parent
     // lisait « JOUEUR » sous le titre de son propre accueil.
     if (isParent) return t('homeHub.roles.parent', 'Parent');
-    return t('homeHub.roles.player', 'Joueur');
+    return t('homeHub.roles.player', 'Pratiquant / Joueur');
   }, [isCoach, isParent, isPresident, isSuperAdmin, t]);
 
   // D72 — le rayon de tete change de nom avec le role : « Gerer mon club » pour

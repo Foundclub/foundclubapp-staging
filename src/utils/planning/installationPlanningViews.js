@@ -13,6 +13,8 @@ import { getItem, setItem } from '@/platform/storage';
  * n apporte rien sur un grand ecran »). Par defaut : JOUR sur telephone (D6 A : la seule vue ou
  * une heure libre est assez grande pour etre touchee), SEMAINE sur le site. La vue choisie est
  * RETENUE (sur cet appareil). Telephone tourne : la semaine, quelle que soit la vue retenue.
+ * 🗓️ R17-VUE (19/10) : a l arrivee sur aujourd hui, la regle de la vue d arrivee (`vueInitiale`)
+ * passe AVANT la vue retenue, qui ne sert que si la regle garde la vue par defaut.
  */
 
 export const VUES = /** @type {const} */ ({

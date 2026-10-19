@@ -44,6 +44,19 @@ describe('trierLesFils — la regle de Messaging.js', () => {
     ]);
   });
 
+  // R17-CANAUX (19/10, REC17-004) — « Toute la ville » s'affiche EN TÊTE de la liste : après mes
+  // épingles (mon choix), avant le canal du club, quel que soit son dernier message.
+  test('R17-CANAUX — « Toute la ville » en tête, après mes épingles', () => {
+    const fils = [
+      fil('prive-recent', 'whisper', '2026-10-19T10:00:00Z'),
+      fil('club', 'club', '2026-10-18T10:00:00Z'),
+      fil('toute-la-ville', 'collectivite_ville', '2026-09-01T10:00:00Z'),
+      fil('prive-epingle', 'whisper', '2026-09-02T10:00:00Z', { pinnedBy: [{ documentId: MOI }] }),
+    ];
+    expect(trierLesFils(fils, MOI).map(({ documentId }) => documentId))
+      .toEqual(['prive-epingle', 'toute-la-ville', 'club', 'prive-recent']);
+  });
+
   test('IPH09 — renommer, lire ou rejoindre ne fait pas remonter un vieux message', () => {
     const recent = fil('prive', 'whisper', '2026-10-09T10:00:00Z');
     const ancien = fil('groupe-renomme', 'group', '2026-10-09T12:00:00Z', {

@@ -148,16 +148,16 @@ const campaignTypeLabel = {
 };
 const roleDisplayLabel = {
   get coach() {
-    return i18next.t('clubLicenses.roles.coach', 'Entraîneur·e');
+    return i18next.t('clubLicenses.roles.coach', 'Coach / Prof');
   },
   get dirigeant() {
     return i18next.t('clubLicenses.roles.manager', 'Dirigeant');
   },
   get entraineur() {
-    return i18next.t('clubLicenses.roles.coach', 'Entraîneur·e');
+    return i18next.t('clubLicenses.roles.coach', 'Coach / Prof');
   },
   get joueur() {
-    return i18next.t('clubLicenses.roles.player', 'Joueur');
+    return i18next.t('clubLicenses.roles.player', 'Pratiquant / Joueur');
   },
   get president() {
     return i18next.t('clubLicenses.roles.manager', 'Dirigeant');

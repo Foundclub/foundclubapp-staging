@@ -282,7 +282,8 @@ describe('RecruitmentFiltersSheet — ce qu elle renvoie a la recherche', () => 
     const { onApply, tree } = await rendre();
 
     await ouvrirRangee(tree, 'Profil');
-    await appuyerSur(tree, 'Coachs');
+    // R17-ROLES : la pastille « Coachs / Profs » a des espaces insécables (texteInsecable).
+    await appuyerSur(tree, 'Coachs / Profs'.replace(/ /g, String.fromCharCode(160)));
     await appuyerSur(tree, 'Voir les résultats');
 
     const [filtres, profil] = onApply.mock.calls[0];
@@ -424,7 +425,9 @@ describe('RECRUTER-TUNNEL H4 — Android 16 ne coupe plus le dernier mot', () =>
     const { tree } = await rendre();
     await ouvrirRangee(tree, 'Profil');
 
-    expect(libelles(tree)).toContain(`Joueur·se·s${ESPACE_INSECABLE}et${ESPACE_INSECABLE}coachs`);
+    // R17-ROLES : « Pratiquant·e·s / Joueur·se·s et coachs / profs », chaque espace insécable.
+    const tous = 'Pratiquant·e·s / Joueur·se·s et coachs / profs'.replace(/ /g, ESPACE_INSECABLE);
+    expect(libelles(tree)).toContain(tous);
   });
 
   it('la recherche recoit le VRAI nom du sport', async () => {
