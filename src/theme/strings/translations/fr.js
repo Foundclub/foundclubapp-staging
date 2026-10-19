@@ -5948,9 +5948,9 @@ export default {
       avecCreneaux: '{{count}} avec tes créneaux de la Ville',
     },
     creneau: {
-      ligne: '{{team}} · chaque {{day}} {{hours}}',
+      ligne: '{{team}} · {{rythme}} {{hours}}',
       // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
-      lignePeriode: '{{team}} · chaque {{day}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -6043,7 +6043,8 @@ export default {
       saison: 'Saison {{debut}}-{{fin}}',
       surtitre: 'Installations de la Ville',
       vide: 'Aucun créneau attribué',
-      videTexte: 'Un créneau attribué revient chaque semaine de la saison : le club y pose ses entraînements sans rien vous demander.',
+      videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
+        + 'choisies : le club y pose ses entraînements sans rien vous demander.',
     },
     erreurs: {
       club: 'Ce club n’est pas rattaché à la Ville.',
@@ -6181,12 +6182,13 @@ export default {
       nonTrancheeDatePassee: 'Non tranchée, date passée',
       origineAttente: 'Demande en attente de décision',
       origineClub: 'Séance du club',
-      origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
+      origineCreneau: 'Créneau attribué : {{rythme}}, du {{debut}} au {{fin}}',
       origineDemande: 'Demande acceptée',
-      origineDemandeSerie: 'Demande acceptée (chaque semaine)',
+      origineDemandeSerie: 'Demande acceptée ({{rythme}})',
       // FINITIONS15 point 3 : une séance posée dans le créneau, à SES heures.
       // eslint-disable-next-line max-len
-      origineSeanceDansCreneau: 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}',
+      origineSeanceDansCreneau: 'Séance du club dans son créneau : {{rythme}}, du {{debut}} au '
+        + '{{fin}}',
       origineTitre: 'Origine de la place',
       placesLibres_one: '{{count}} place libre au plus chargé',
       placesLibres_other: '{{count}} places libres au plus chargé',
@@ -6205,6 +6207,9 @@ export default {
       aucuneDate: 'Aucune date cochée.',
       aucuneFermee: 'Aucune ne tombe dans une fermeture.',
       aucuneSeance: 'Aucune séance à venir dans cette période.',
+      bandeCompte_one: '{{count}} créneau',
+      bandeCompte_other: '{{count}} créneaux',
+      bandeTitre: 'Dates choisies, hors semaine type',
       calendrier: {
         choisi: '{{etat}}, choisi',
         complet: '{{date}}, complet de {{heures}}',
@@ -6217,6 +6222,7 @@ export default {
       },
       chaqueDeLaPeriode: 'chaque {{jour}} de la période',
       chaqueDeLaSaison: 'chaque {{jour}} de la saison',
+      chaqueJourCourt: 'chaque {{jour}}',
       dates: 'Des dates choisies',
       datesChoisies_one: '{{count}} date choisie',
       datesChoisies_other: '{{count}} dates choisies',
@@ -6229,11 +6235,16 @@ export default {
       fermees_other: '{{count}} tombent dans « {{fermeture}} » ({{dates}}) : le club y verra '
         + '« fermé », comme aujourd’hui.',
       finDeSaison: 'Fin de saison',
+      groupeDates: 'Dates choisies',
       joursDifferents: 'Des jours différents',
       joursDifferentsDetail: 'Vous les choisirez dans un calendrier',
       jusqua: 'Jusqu’à',
       jusquau: 'Jusqu’au',
       ordre: '« Au » doit venir après « Du ».',
+      pastilleChaque: 'chaque semaine',
+      pastilleDates_one: '{{count}} date',
+      pastilleDates_other: '{{count}} dates',
+      pastilleDeux: '1 sem. sur 2',
       periode: 'Une période',
       periodeDetail: 'Chaque {{jour}}, du … au …',
       phraseCompacte: '{{quand}} ({{seances}}). Le club est prévenu.',

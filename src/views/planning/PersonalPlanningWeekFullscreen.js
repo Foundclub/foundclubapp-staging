@@ -58,6 +58,7 @@ import {
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -785,9 +786,11 @@ function PlanningWeekFullscreen() {
     const brut = bloc?.raw || {};
     if (brut.origin === 'slot') {
       if (brut.slot?.source === 'request') {
+        // R17-QUAND-1 : la forme de la série acceptée (« 1 sem. sur 2 », « 4 dates »).
         return t(
           'collectiviteCreneaux.planning.origineDemandeSerie',
-          'Demande acceptée (chaque semaine)',
+          'Demande acceptée ({{rythme}})',
+          { rythme: formeEnMots(t, brut.slot, { court: true }), ...SANS_ECHAPPEMENT },
         );
       }
       // FINITIONS15 point 3 (T14) : une SÉANCE du club posée dans le créneau en prend la place avec
@@ -800,8 +803,8 @@ function PlanningWeekFullscreen() {
           ? 'collectiviteCreneaux.planning.origineSeanceDansCreneau'
           : 'collectiviteCreneaux.planning.origineCreneau',
         seanceDansLeCreneau
-          ? 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}'
-          : 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
+          ? 'Séance du club dans son créneau : {{rythme}}, du {{debut}} au {{fin}}'
+          : 'Créneau attribué : {{rythme}}, du {{debut}} au {{fin}}',
         {
           debut: brut.slot?.validFrom
             ? format(parseISO(brut.slot.validFrom), 'd MMM', { locale: localeDesDates() })
@@ -813,6 +816,8 @@ function PlanningWeekFullscreen() {
             })
             : '',
           jour: weekdayName(brut.slot?.weekday).toLocaleLowerCase(),
+          // R17-QUAND-1 : « chaque mardi », « un mercredi sur deux », ou ses dates.
+          rythme: formeEnMots(t, brut.slot),
           ...SANS_ECHAPPEMENT,
         },
       );

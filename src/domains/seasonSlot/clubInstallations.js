@@ -8,6 +8,7 @@ import {
   toMinutes,
   weekdayName,
 } from './seasonSlotDisplay';
+import { formeEnMots } from './seasonSlotWhen';
 
 /**
  * COLL-C2C (02/10) — « Tes installations », côté CLUB, en 3 groupes (planche
@@ -51,13 +52,18 @@ export const groupClubInstallations = (facilities) => {
 
 /**
  * Les morceaux d une ligne « U15 · chaque mardi 17:30 – 19:00 ».
+ * R17-QUAND-1 (point 6) — `rythme` dit la forme : « chaque mardi », « un mercredi sur deux », des
+ * dates choisies (`formeEnMots`, avec la traduction `t`).
  * @param {any} slot - Un créneau du club (vue du contrat §4.1).
- * @returns {{ day: string, hours: string, period: string, team: string | null }} Le jour en minuscules, la plage,
+ * @param {((cle: string, ...autres: any[]) => string) | null} [t] - La traduction.
+ * @returns {{ day: string, hours: string, period: string, rythme: string, team: string | null }} Le
+ *   jour en minuscules, la plage, la forme,
  *   l équipe (null : « tout le club »).
  */
-export const clubSlotParts = (slot) => ({
+export const clubSlotParts = (slot, t = null) => ({
   day: weekdayName(slot?.weekday).toLocaleLowerCase(),
   hours: timeRange(slot?.startTime, slot?.endTime),
+  rythme: t ? formeEnMots(t, slot) : `chaque ${weekdayName(slot?.weekday).toLocaleLowerCase()}`,
   // 🎨 COLL-FIX2 (03/10), planche 42 (tournée T10) : un créneau RÉPARTI (« Tout le club » du
   // 1 sept. au 6 oct., puis « U15 » du 7 oct. au 30 juin) se lisait en deux lignes identiques,
   // sans période. La période s'écrit quand le créneau ne couvre pas toute la saison

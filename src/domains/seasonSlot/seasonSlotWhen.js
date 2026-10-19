@@ -1,4 +1,6 @@
-import { slotOccurrences, slotShape, toMinutes } from './seasonSlotDisplay';
+import {
+  formatDay, slotOccurrences, slotShape, toMinutes, weekdayName,
+} from './seasonSlotDisplay';
 
 /**
  * 🗓️ R17-QUAND-1, point 4 (REC17-007, planches P10-quand-tel / P11-quand-v2-tel validées par
@@ -172,6 +174,46 @@ export const quandDuCreneau = (creneau, saison) => {
   }
   const touteLaSaison = Boolean(saison) && du === saison?.validFrom && au === saison?.validUntil;
   return { ...base, forme: touteLaSaison ? 'saison' : 'periode' };
+};
+
+/**
+ * R17-QUAND-1, point 6 — LA FORME EN MOTS, là où un créneau se lit (semaine type, listes, fiche
+ * d'un club, « Tes créneaux de la Ville », planning). Courte : « chaque semaine »,
+ * « 1 sem. sur 2 », « 3 dates ». Longue : « chaque mardi », « un mercredi sur deux »,
+ * « sam. 7 nov. · mar. 17 nov. ».
+ * @param {(cle: string, ...autres: any[]) => string} t - La traduction.
+ * @param {any} creneau - Le créneau (serveur).
+ * @param {{ court?: boolean }} [options] - Courte : pour une pastille.
+ * @returns {string} La forme.
+ */
+export const formeEnMots = (t, creneau, { court = false } = {}) => {
+  const forme = slotShape(creneau);
+  if (forme.dates) {
+    const count = forme.dates.length;
+    if (court) {
+      return t('collectiviteCreneaux.quand.pastilleDates', {
+        count, defaultValue_one: '{{count}} date', defaultValue_other: '{{count}} dates',
+      });
+    }
+    const lus = forme.dates.slice(0, 4).map((jour) => formatDay(jour, { withYear: false }));
+    return count > 4
+      ? t('collectiviteCreneaux.quand.etAutres', '{{dates}} et {{count}} autres', {
+        count: count - 4, dates: lus.join(' · '), interpolation: { escapeValue: false },
+      })
+      : lus.join(' · ');
+  }
+  const jour = weekdayName(forme.weekday).toLocaleLowerCase();
+  const valeurs = {
+    interpolation: { escapeValue: false }, jour, jourMajuscule: weekdayName(forme.weekday),
+  };
+  if (forme.everyWeeks > 1) {
+    return court
+      ? t('collectiviteCreneaux.quand.pastilleDeux', '1 sem. sur 2')
+      : t('collectiviteCreneaux.quand.unSurDeuxCourt', 'un {{jour}} sur deux', valeurs);
+  }
+  return court
+    ? t('collectiviteCreneaux.quand.pastilleChaque', 'chaque semaine')
+    : t('collectiviteCreneaux.quand.chaqueJourCourt', 'chaque {{jour}}', valeurs);
 };
 
 /**

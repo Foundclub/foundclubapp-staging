@@ -1244,19 +1244,20 @@ function FacilityList() {
         {kind === 'avecCreneaux' ? (
           <View style={{ gap: 2 }}>
             {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {
-              const morceaux = clubSlotParts(creneau);
+              // R17-QUAND-1 (planche P11-quand-ou-ca-vit, 3) : la forme (« un mercredi sur deux »).
+              const morceaux = clubSlotParts(creneau, t);
               // COLL-FIX2 (T10) : la période, quand le créneau ne couvre pas toute la saison.
               const ligne = t(
                 morceaux.period
                   ? 'clubInstallations.creneau.lignePeriode'
                   : 'clubInstallations.creneau.ligne',
                 morceaux.period
-                  ? '{{team}} · chaque {{day}} {{hours}} · {{periode}}'
-                  : '{{team}} · chaque {{day}} {{hours}}',
+                  ? '{{team}} · {{rythme}} {{hours}} · {{periode}}'
+                  : '{{team}} · {{rythme}} {{hours}}',
                 {
-                  day: morceaux.day,
                   hours: morceaux.hours,
                   periode: morceaux.period,
+                  rythme: morceaux.rythme,
                   team: morceaux.team
                     || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
                   ...SANS_ECHAPPEMENT,
