@@ -11003,6 +11003,7 @@ export default {
       ouvrirFiche: 'Ouvrir le signalement {{title}}',
       photoAlt: 'Photo jointe par l’auteur',
       photoVue: 'Photo vue par la Ville et l’auteur seulement.',
+      plusDActions: 'Plus d’actions : résolu, sans suite',
       prendre: 'Prendre en charge',
       previentAuteur: 'L’auteur est prévenu. Le signalement passe dans l’historique.',
       proposerResolu: 'La fermeture liée est finie : ce signalement est-il résolu ?',

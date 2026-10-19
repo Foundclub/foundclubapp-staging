@@ -58,6 +58,7 @@ jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
 }));
 jest.mock('@/utils/imageUrl', () => ({ getImageUrl: (/** @type {string} */ url) => `https://cdn.test${url}` }));
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) { return children; });
+jest.mock('@/navigation/useBottomDockLayout', () => () => ({ dockClearance: 0 }));
 jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonMock({ children }) { return children; });
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   const reactActuel = jest.requireActual('react');
@@ -129,15 +130,52 @@ beforeEach(() => {
 });
 
 describe('R17SS1 — la fiche d un signalement', () => {
-  it('Q2 A : la Ville lit « un joueur · AS Montrivage », la photo, et ses 4 gestes', () => {
+  it('Q2 A : la Ville lit « un joueur · AS Montrivage », la photo, et ses 4 gestes', async () => {
     const arbre = monter();
     const tout = textes(arbre).join(' | ');
     expect(tout).toContain('Sécurité, danger · un joueur · AS Montrivage');
     expect(tout).toContain('Photo vue par la Ville et l’auteur seulement.');
     expect(tout).toContain('Nouveau');
-    ['signalement-photo', 'signalement-prendre', 'signalement-fermer', 'signalement-resolu', 'signalement-sans-suite'].forEach((id) => {
+    ['signalement-photo', 'signalement-prendre', 'signalement-fermer', 'signalement-plus'].forEach((id) => {
       expect(parId(arbre, id).length).toBeGreaterThan(0);
     });
+    await presser(arbre, 'signalement-plus');
+    ['signalement-resolu', 'signalement-sans-suite'].forEach((id) => {
+      expect(parId(arbre, id).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('P10-securite-tel 2 : au téléphone, les gestes sont dans le PIED FIXE ; « Résolu… » et « Sans suite… » derrière « + »', async () => {
+    const arbre = monter();
+    // Le pied est HORS du défilement : il reste en bas pendant qu on lit le signalement.
+    const [defilement] = parId(arbre, 'signalement-fiche');
+    const [pied] = parId(arbre, 'signalement-pied');
+    expect(pied).toBeDefined();
+    expect(defilement.findAll((/** @type {any} */ n) => n.props.testID === 'signalement-pied')).toHaveLength(0);
+    expect(parId(arbre, 'signalement-gestes')).toHaveLength(0);
+    expect(pied.findAll((/** @type {any} */ n) => n.props.title === 'Prendre en charge').length).toBeGreaterThan(0);
+    expect(pied.findAll((/** @type {any} */ n) => n.props.title === 'Fermer l’installation…').length).toBeGreaterThan(0);
+    // « + » : replié, rien d autre ; déplié, « Résolu… » et « Sans suite… ».
+    const [plus] = parId(arbre, 'signalement-plus');
+    expect(plus.props.accessibilityLabel).toBe('Plus d’actions : résolu, sans suite');
+    expect(plus.props.accessibilityState).toEqual({ expanded: false });
+    expect(parId(arbre, 'signalement-resolu')).toHaveLength(0);
+    expect(parId(arbre, 'signalement-sans-suite')).toHaveLength(0);
+    await presser(arbre, 'signalement-plus');
+    expect(parId(arbre, 'signalement-plus')[0].props.accessibilityState).toEqual({ expanded: true });
+    expect(parId(arbre, 'signalement-plus-menu').length).toBeGreaterThan(0);
+    // Un geste choisi referme le menu et ouvre la feuille du mot.
+    await presser(arbre, 'signalement-resolu');
+    expect(parId(arbre, 'signalement-plus-menu')).toHaveLength(0);
+    expect(parId(arbre, 'feuille-resolu').length).toBeGreaterThan(0);
+  });
+
+  it('un signalement clos : ni pied ni « + »', () => {
+    mockFiche.data.data = { ...SIGNALEMENT, cityNote: 'Joint changé.', status: 'resolu' };
+    const arbre = monter();
+    expect(parId(arbre, 'signalement-pied')).toHaveLength(0);
+    expect(parId(arbre, 'signalement-plus')).toHaveLength(0);
+    expect(textes(arbre)).toContain('Ce signalement est clos.');
   });
 
   it('Q2 A : un encadrant est nommé', () => {
@@ -168,6 +206,7 @@ describe('R17SS1 — la fiche d un signalement', () => {
 
   it('Q3 A : « Sans suite » exige un mot ; « Résolu » part avec le sien', async () => {
     const arbre = monter();
+    await presser(arbre, 'signalement-plus');
     await presser(arbre, 'signalement-sans-suite');
     const [valider] = parId(arbre, 'feuille-sans-suite');
     expect(valider.props.disabled).toBe(true);
@@ -179,6 +218,7 @@ describe('R17SS1 — la fiche d un signalement', () => {
 
     mockStatut.mutateAsync.mockClear();
     const autre = monter();
+    await presser(autre, 'signalement-plus');
     await presser(autre, 'signalement-resolu');
     expect(parId(autre, 'feuille-resolu')[0].props.disabled).toBe(false);
     await presser(autre, 'feuille-resolu');
