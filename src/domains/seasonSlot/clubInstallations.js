@@ -3,7 +3,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   finDuCreneau,
   formatPeriod,
-  isoWeekdayOf,
+  slotOccursOn,
   timeRange,
   toMinutes,
   weekdayName,
@@ -91,9 +91,9 @@ export const creneauDeLaSeance = (slots, { start = null, teamId = null } = {}) =
   return slots.find((slot) => {
     const de = toMinutes(slot?.startTime);
     const a = toMinutes(slot?.endTime);
-    return Number(slot?.weekday) === isoWeekdayOf(debut)
-      && (!slot?.validFrom || slot.validFrom <= jour)
-      && (!slot?.validUntil || jour <= slot.validUntil)
+    // R17-QUAND-1 — la règle partagée : sa forme (chaque semaine, 1 sur 2, dates choisies) et
+    // sa période.
+    return slotOccursOn(slot, jour)
       && (!slot?.team?.documentId || slot.team.documentId === teamId)
       && de !== null && a !== null && de <= minutes && minutes < a;
   }) || null;
