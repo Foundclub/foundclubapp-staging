@@ -120,6 +120,7 @@ import {
   hasPublishedConvocation,
   listMissingResponders,
   listPresentWithoutConvocation,
+  resolveCompositionClubId,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchTagSegments,
@@ -362,6 +363,12 @@ function EventDetails({ navigation, route }) {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId) || event?.team || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
+  // 🤝 AMIC-INVITE — le club de l'équipe composée, celui que les portes transmettent
+  // (le téléphone fait le même calcul, `matchPageModel.js`).
+  const compositionClubId = useMemo(
+    () => resolveCompositionClubId({ event, teamId: compositionTeamId }),
+    [compositionTeamId, event],
+  );
   const isReservation = normalizeTypeName(event?.type?.name).includes('reservation');
   const isTournamentEvent = normalizeTypeName(event?.type?.name).includes('tournoi');
   // D48 : le board decide d'apres cette etiquette s'il propose les commandes de
@@ -1016,7 +1023,7 @@ function EventDetails({ navigation, route }) {
         canEdit: Boolean(options.canEdit),
         // COMPO-WEB — le club et la categorie voyagent comme sur le telephone
         // (renforts du club a l'ecran 1, format du terrain a l'ecran 4).
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         compositionIntent: options.compositionIntent || null,
         editorMode: 'event',
         editorSource: options.editorSource || null,
@@ -1074,12 +1081,12 @@ function EventDetails({ navigation, route }) {
       readOnly: false,
     });
   }, [
+    compositionClubId,
     compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
@@ -1141,7 +1148,7 @@ function EventDetails({ navigation, route }) {
       navigation.navigate(RouteNames.MatchCompositionBoard, {
         ...publishedBoardTarget,
         canEdit: true,
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         eventId,
         eventLabel: compositionEventLabel,
         eventTypeLabel: event?.type?.name || null,
@@ -1153,7 +1160,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
     navigation.navigate(RouteNames.MatchConvocationPublished, {
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       sport: compositionSport,
@@ -1161,12 +1168,12 @@ function EventDetails({ navigation, route }) {
       teamName: compositionEditorTeam?.name || null,
     });
   }, [
+    compositionClubId,
     compositionEditorTeam?.name,
     compositionEligiblePlayers,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,
@@ -1178,7 +1185,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.MatchCallUpSelection, {
       ...publishedBoardTarget,
       canEdit: true,
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       eventName: compositionEventLabel,
@@ -1188,10 +1195,10 @@ function EventDetails({ navigation, route }) {
       teamId: compositionTeamId,
     });
   }, [
+    compositionClubId,
     compositionEligiblePlayers,
     compositionEventLabel,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,

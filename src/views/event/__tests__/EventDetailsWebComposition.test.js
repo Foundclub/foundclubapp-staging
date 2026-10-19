@@ -616,3 +616,100 @@ describe('AC08 — le site mene le convoque a SON ecran', () => {
     expect(lastRoute()).toBe('TacticalBoardV2');
   });
 });
+
+// ==========================================================================
+// 🤝 AMIC-INVITE (19/10, APRÈS 149) — LE SITE, CÔTÉ ÉQUIPE INVITÉE.
+//
+// Le jumeau du site a les quatre mêmes portes que le téléphone, et la même
+// erreur : `clubId` partait du club de l'HÔTE alors que `teamId` est celui de
+// l'équipe du lecteur. La sélection des convoqués juge l'offre sur ce club ⇒
+// l'encadrant invité, offre attribuée, butait sur le mur. Réparer le téléphone
+// seul laisserait ici un appelant frère cassé (6e fois dans ce fichier).
+// ROUGE avant : les quatre portes portaient le club de l'hôte.
+// ==========================================================================
+describe('AMIC-INVITE — sur le site, les portes de la compo : le club de l equipe composee', () => {
+  const CLUB_INVITE = 'club-valbrune';
+  const EQUIPE_INVITEE = 'team-valbrune-u13';
+  const COACH_INVITE = 'coach-valbrune';
+
+  const matchAmical = () => buildEvent({
+    invitedTeams: [{
+      club: { documentId: CLUB_INVITE, name: 'US Valbrune' },
+      documentId: EQUIPE_INVITEE,
+      name: 'Valbrune U13',
+      players: [{ documentId: JOUEUR }],
+      trainers: [{ documentId: COACH_INVITE }],
+    }],
+  });
+
+  const authCoachInvite = () => ({
+    canEditClub: () => false,
+    canEditEvent: () => true,
+    canManageEvent: () => true,
+    freeUsageSummary: null,
+    subscriptionAccessLevel: 'TEAM',
+    userData: { documentId: COACH_INVITE, role: { name: 'Entraineur' } },
+  });
+
+  const convocationDeLInvitee = (/** @type {any[]} */ placements) => {
+    const charge = convocationAvecJoueurPlace();
+    charge.branches[0].published.teams[0].placements = placements;
+    charge.branches[0].team = { documentId: EQUIPE_INVITEE, name: 'Valbrune U13' };
+    return charge;
+  };
+
+  test('🔴 « Gerer la composition » part avec le club de l equipe invitee', () => {
+    const root = mountScreen({ auth: authCoachInvite(), event: matchAmical() });
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastCallUpParams()).toEqual(expect.objectContaining({
+      clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE,
+    }));
+  });
+
+  test('🔴 le terrain publie et « Modifier la composition » aussi', () => {
+    const root = mountScreen({
+      auth: authCoachInvite(),
+      convocation: convocationDeLInvitee([{ playerId: JOUEUR, positionX: 50, positionY: 90 }]),
+      event: matchAmical(),
+    });
+
+    click(root, 'Voir la convocation et les réponses');
+    expect(lastRoute()).toBe('MatchCompositionBoard');
+    expect(mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1][1]).toEqual(
+      expect.objectContaining({ clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE }),
+    );
+
+    click(root, 'Modifier la composition');
+    expect(lastRoute()).toBe('MatchCallUpSelection');
+    expect(lastCallUpParams()).toEqual(expect.objectContaining({
+      clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE,
+    }));
+  });
+
+  test('🔴 l ecran des reponses (publiee sans placement) aussi', () => {
+    const root = mountScreen({
+      auth: authCoachInvite(),
+      convocation: convocationDeLInvitee([]),
+      event: matchAmical(),
+    });
+
+    click(root, 'Voir la convocation et les réponses');
+
+    expect(lastRoute()).toBe('MatchConvocationPublished');
+    expect(mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1][1]).toEqual(
+      expect.objectContaining({ clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE }),
+    );
+  });
+
+  test('🔒 l hôte garde le club de l hôte (inchangé)', () => {
+    const root = mountScreen({ event: matchAmical() });
+
+    click(root, "Gérer la composition d'équipes");
+
+    expect(lastCallUpParams()).toEqual(expect.objectContaining({
+      clubId: CLUB_ID, teamId: TEAM_ID,
+    }));
+  });
+});
