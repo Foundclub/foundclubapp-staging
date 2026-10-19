@@ -10,6 +10,8 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import FacilityReportPanel from '@/components/organisms/facilityReport/FacilityReportPanel';
+
 import FacilityReportDetails from '../FacilityReportDetails';
 
 jest.setTimeout(30000);
@@ -56,7 +58,7 @@ jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
 }));
 jest.mock('@/utils/imageUrl', () => ({ getImageUrl: (/** @type {string} */ url) => `https://cdn.test${url}` }));
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) { return children; });
-jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonMock({ children }) { return children; });
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   const reactActuel = jest.requireActual('react');
   const { View } = jest.requireActual('react-native');
@@ -222,5 +224,45 @@ describe('R17SS1 — la fiche d un signalement', () => {
       data: undefined, error: { response: { status: 404 } }, isError: true, isLoading: false,
     };
     expect(textes(monter()).join(' | ')).toContain('Ce signalement est introuvable.');
+  });
+});
+
+describe('R17SS1 — P10-securite-ordi B : le signalement en PANNEAU, à droite de l onglet', () => {
+  const monterLePanneau = (/** @type {() => void} */ onClose) => {
+    /** @type {any} */
+    let arbre;
+    act(() => { arbre = renderer.create(<FacilityReportPanel enPanneau onClose={onClose} reportId="sig-1" />); });
+    return arbre;
+  };
+
+  it('son titre, la croix qui le ferme, « Catégorie » et « Envoyé par » en rangées, le jour ET l heure', async () => {
+    mockFiche.data.data = { ...SIGNALEMENT, author: { name: 'Lucas Morel', role: 'entraineur' } };
+    const onClose = jest.fn();
+    const arbre = monterLePanneau(onClose);
+    const tout = textes(arbre);
+    expect(parId(arbre, 'signalement-panneau').length).toBeGreaterThan(0);
+    expect(tout).toContain('Signalement');
+    expect(parId(arbre, 'signalement-rangees').length).toBeGreaterThan(0);
+    expect(parId(arbre, 'signalement-qui')).toHaveLength(0);
+    expect(tout).toEqual(expect.arrayContaining(['Catégorie', 'Sécurité, danger', 'Envoyé par', 'Lucas Morel, entraîneur · AS Montrivage']));
+    // L heure suit le fuseau de la machine (10:42 a Paris, 08:42 en UTC) : on fixe les minutes.
+    expect(tout.join(' | ')).toMatch(/dim\. 18 oct\., \d{2}:42/);
+    await presser(arbre, 'signalement-panneau-fermer');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('les quatre gestes de la planche B, en ligne, et « Fermer l installation… » pré-rempli', async () => {
+    const arbre = monterLePanneau(jest.fn());
+    ['signalement-prendre', 'signalement-fermer', 'signalement-resolu', 'signalement-sans-suite'].forEach((id) => {
+      expect(parId(arbre, id).length).toBeGreaterThan(0);
+    });
+    await presser(arbre, 'signalement-fermer');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteFermeture', expect.objectContaining({ mode: 'fermer', reportId: 'sig-1' }));
+  });
+
+  it('le chargement : le squelette, pas la roue', () => {
+    mockFiche = { data: undefined, isError: false, isLoading: true };
+    const arbre = monterLePanneau(jest.fn());
+    expect(parId(arbre, 'signalement-chargement').length).toBeGreaterThan(0);
   });
 });

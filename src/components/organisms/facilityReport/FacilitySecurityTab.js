@@ -28,14 +28,26 @@ import { useFacilityReports } from '@/services/facilityReport/facilityReportQuer
  * securite d abord ; puis l HISTORIQUE (signalements traites, fermetures). Le carnet des controles
  * (Q6 B) est le lot R17-CONTROLES : il n est pas ici.
  * La Ville est vouvoyee. Aucun nom de membre : le serveur ne rend que celui d un encadrant (Q2 A).
- * @param {{ facilityId: string | null, onOpenClosures?: () => void }} props
+ * Un signalement s ouvre par `onOpenReport` quand l ecran le donne (sur ordinateur, le PANNEAU de
+ * droite, planche B) ; sinon en page (le telephone).
+ * @param {{ facilityId: string | null, onOpenClosures?: () => void,
+ *   onOpenReport?: (reportId: string) => void, selectedReportId?: string | null }} props
  * @returns {import('react').ReactElement} L onglet.
  */
-function FacilitySecurityTab({ facilityId, onOpenClosures }) {
+function FacilitySecurityTab({
+  facilityId, onOpenClosures, onOpenReport, selectedReportId = null,
+}) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const suivi = useFacilityReports(facilityId);
+  const ouvrir = (/** @type {string} */ reportId) => {
+    if (onOpenReport) {
+      onOpenReport(reportId);
+      return;
+    }
+    navigation.navigate(RouteNames.FacilityReportDetails, { espace: 'ville', reportId });
+  };
 
   if (suivi.isLoading) return <Loader />;
   if (suivi.isError || !suivi.data) {
@@ -179,17 +191,20 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
                 title: report.title,
               })}
               accessibilityRole="button"
+              accessibilityState={{ selected: report.documentId === selectedReportId }}
               key={report.documentId}
-              onPress={() => navigation.navigate(RouteNames.FacilityReportDetails, {
-                espace: 'ville',
-                reportId: report.documentId,
-              })}
+              onPress={() => ouvrir(report.documentId)}
               style={{
                 backgroundColor: withAlpha(Colors.neutral00, 0.04),
                 borderColor:
                   report.status === 'envoye'
                     ? withAlpha(Colors.warning500, 0.5)
                     : withAlpha(Colors.neutral00, 0.1),
+                // Planche B : le signalement ouvert dans le panneau se lit dans la liste.
+                ...(report.documentId === selectedReportId ? {
+                  backgroundColor: withAlpha(Colors.primary500, 0.12),
+                  borderColor: Colors.primary500,
+                } : {}),
                 borderRadius: 14,
                 borderWidth: 1,
                 gap: 4,
@@ -273,10 +288,7 @@ function FacilitySecurityTab({ facilityId, onOpenClosures }) {
                 accessibilityRole={signalement ? 'button' : 'text'}
                 disabled={!signalement}
                 key={`${kind}-${item.documentId}`}
-                onPress={() => navigation.navigate(RouteNames.FacilityReportDetails, {
-                  espace: 'ville',
-                  reportId: item.documentId,
-                })}
+                onPress={() => ouvrir(item.documentId)}
                 style={{ flexDirection: 'row', gap: 10, minHeight: 44 }}
                 testID={`securite-jalon-${kind}-${item.documentId}`}
               >

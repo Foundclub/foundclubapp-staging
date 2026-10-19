@@ -23,6 +23,23 @@ export const reportDayLabel = (iso) => {
 };
 
 /**
+ * « sam. 18 oct., 10:42 » (P10-securite-ordi B, P10-securite-tel 2) : le jour et l heure de
+ * l envoi.
+ * @param {string | null | undefined} iso - Un instant ISO.
+ * @returns {string} Le jour et l heure, ou une chaine vide.
+ */
+export const reportMomentLabel = (iso) => {
+  if (!iso) return '';
+  try {
+    return format(parseISO(String(iso)), 'EEE d MMM, HH:mm', {
+      locale: localeDesFormats() === 'en-GB' ? enGB : fr,
+    });
+  } catch {
+    return '';
+  }
+};
+
+/**
  * R17-SIGNALER-1 (19/10, REC17-011) — ce que les ecrans lisent d un signalement d installation.
  * Regles pures : aucune lecture reseau. Le serveur reste le seul juge (droits, photo, statuts).
  */

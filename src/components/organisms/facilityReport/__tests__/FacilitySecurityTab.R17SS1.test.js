@@ -56,10 +56,14 @@ const TRAITE = {
   author: { name: null, role: 'parent' }, category: 'proprete', cityNote: 'Joint changé.', closedAt: '2026-10-14T10:00:00Z', club: { name: 'AS Montrivage' }, createdAt: '2026-10-06T10:00:00Z', description: 'Fuite de la douche.', documentId: 'sig-0', status: 'resolu', title: 'Fuite de la douche',
 };
 
-const monter = () => {
+const monter = (/** @type {{ onOpenReport?: any, selectedReportId?: string }} */ { onOpenReport, selectedReportId } = {}) => {
   /** @type {any} */
   let arbre;
-  act(() => { arbre = renderer.create(<FacilitySecurityTab facilityId="gym-tilleuls" onOpenClosures={jest.fn()} />); });
+  act(() => {
+    arbre = renderer.create(
+      <FacilitySecurityTab facilityId="gym-tilleuls" onOpenClosures={jest.fn()} onOpenReport={onOpenReport} selectedReportId={selectedReportId} />,
+    );
+  });
   return arbre;
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
@@ -102,6 +106,32 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     const [ligne] = parId(arbre, 'securite-signalement-sig-1');
     await act(async () => { ligne.props.onPress(); });
     expect(mockNavigation.navigate).toHaveBeenCalledWith('FacilityReportDetails', { espace: 'ville', reportId: 'sig-1' });
+  });
+
+  it('P10-securite-ordi B : sur ordinateur, l ecran donne onOpenReport — le signalement s ouvre dans le PANNEAU, pas en page', async () => {
+    mockSuivi = {
+      data: {
+        data: [...OUVERTS, TRAITE],
+        meta: {
+          closures: [],
+          state: {
+            closure: null, code: 'a_surveiller', securityOpenCount: 1, securitySince: '2026-10-18T10:00:00Z',
+          },
+        },
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const onOpenReport = jest.fn();
+    const arbre = monter({ onOpenReport, selectedReportId: 'sig-2' });
+    await act(async () => { parId(arbre, 'securite-signalement-sig-1')[0].props.onPress(); });
+    expect(onOpenReport).toHaveBeenCalledWith('sig-1');
+    await act(async () => { parId(arbre, 'securite-jalon-report-sig-0')[0].props.onPress(); });
+    expect(onOpenReport).toHaveBeenLastCalledWith('sig-0');
+    expect(mockNavigation.navigate).not.toHaveBeenCalled();
+    // Le signalement ouvert dans le panneau se lit dans la liste.
+    expect(parId(arbre, 'securite-signalement-sig-2')[0].props.accessibilityState).toEqual({ selected: true });
+    expect(parId(arbre, 'securite-signalement-sig-1')[0].props.accessibilityState).toEqual({ selected: false });
   });
 
   it('Q5 A : « Fermée » pendant une fermeture, et le bouton « Fermetures »', () => {

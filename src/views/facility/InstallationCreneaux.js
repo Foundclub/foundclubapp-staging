@@ -36,6 +36,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
+import FacilityReportPanel from '@/components/organisms/facilityReport/FacilityReportPanel';
 import FacilitySecurityTab from '@/components/organisms/facilityReport/FacilitySecurityTab';
 import SeasonSlotForm, {
   HAUTEUR_DE_LA_FEUILLE,
@@ -268,6 +269,8 @@ function InstallationCreneaux() {
       ouvrirLePlanning();
       return;
     }
+    // R17-SIGNALER-1 (P10-securite-ordi B) : le panneau d un signalement appartient a son onglet.
+    setPanneau((/** @type {any} */ avant) => (avant?.type === 'signalement' ? null : avant));
     setOnglet(valeur);
   };
 
@@ -538,6 +541,17 @@ function InstallationCreneaux() {
         slot={panneau.creneau}
       />
     );
+  } else if (panneau?.type === 'signalement' && onglet === ONGLETS.securite) {
+    // R17-SIGNALER-1 (P10-securite-ordi B) : sur ordinateur, le signalement s ouvre ICI, a droite
+    // de l onglet « Sécurité et suivi » ; au telephone, l onglet ouvre la page (pas de panneau).
+    contenuDuPanneau = (
+      <FacilityReportPanel
+        enPanneau
+        key={`signalement-${panneau.reportId}`}
+        onClose={fermer}
+        reportId={panneau.reportId}
+      />
+    );
   } else if (panneau?.type === 'gerer') {
     contenuDuPanneau = (
       <SeasonSlotManage
@@ -561,6 +575,11 @@ function InstallationCreneaux() {
     </View>
   ) : null;
 
+  // R17-SIGNALER-1 : cinq onglets a largeur egale tiennent dans la colonne d un ordinateur, plus
+  // quand un panneau en prend 420 a droite (banc du 19/10 a 1 360 px : « Sécurité et … »). La
+  // rangee garde alors la largeur de chaque nom et defile s il le faut, comme au telephone.
+  const rangeeQuiDefile = canManage && (!isDesktop || Boolean(panneauRendu));
+
   const corps = (
     <View style={{ gap: 16 }}>
       <View style={{ gap: 2 }}>
@@ -583,9 +602,9 @@ function InstallationCreneaux() {
           R17-SIGNALER-1 (P10-securite-tel, écran 1) : la Ville a un 5ᵉ onglet ; cinq ne
           tiennent pas sur 412 px, la rangée DÉFILE au téléphone et chaque nom reste entier. */}
       <SegmentedControl
-        centerContent={!(canManage && !isDesktop)}
-        fitLabels={!(canManage && !isDesktop)}
-        fullLabels={canManage && !isDesktop}
+        centerContent={!rangeeQuiDefile}
+        fitLabels={!rangeeQuiDefile}
+        fullLabels={rangeeQuiDefile}
         onChange={choisirOnglet}
         options={[
           { label: t('collectiviteCreneaux.creneaux.onglet', 'Créneaux'), value: ONGLETS.creneaux },
@@ -609,7 +628,11 @@ function InstallationCreneaux() {
       {onglet === ONGLETS.securite && canManage ? (
         <FacilitySecurityTab
           facilityId={facilityId}
-          onOpenClosures={() => setOnglet(ONGLETS.fermetures)}
+          onOpenClosures={() => choisirOnglet(ONGLETS.fermetures)}
+          onOpenReport={isDesktop
+            ? (/** @type {string} */ reportId) => setPanneau({ reportId, type: 'signalement' })
+            : undefined}
+          selectedReportId={panneau?.type === 'signalement' ? panneau.reportId : null}
         />
       ) : null}
 
