@@ -199,7 +199,7 @@ beforeEach(() => {
 });
 
 describe('R17-ADRESSE — « Modifier le club » : le point suit l adresse', () => {
-  it('d1 l adresse passe par la saisie des lieux publics (carte permise, ville du club)', async () => {
+  it('d1 l adresse passe par la saisie des lieux publics (carte, ville du club)', async () => {
     await monter();
 
     expect(mockChamp.length).toBeGreaterThan(0);
@@ -227,7 +227,8 @@ describe('R17-ADRESSE — « Modifier le club » : le point suit l adresse', () 
       lng: 5.4371,
       postcode: '13009',
     });
-    expect(envoi.addressDetails).toBe(JSON.stringify({ address: 'Stade de Luminy (13009 Marseille)' }));
+    expect(envoi.addressDetails)
+      .toBe(JSON.stringify({ address: 'Stade de Luminy (13009 Marseille)' }));
   });
 
   it('d3 enregistrer SANS toucher l adresse n envoie aucune adresse (le point reste)', async () => {
@@ -238,10 +239,12 @@ describe('R17-ADRESSE — « Modifier le club » : le point suit l adresse', () 
     const envoi = mockMutate.mock.calls[0][0];
     expect(envoi).not.toHaveProperty('addressDetails');
     expect(envoi).not.toHaveProperty('address');
-    expect(envoi).toMatchObject({ documentId: 'club-1', name: 'Stade Marseillais Université Club' });
+    expect(envoi).toMatchObject({
+      documentId: 'club-1', name: 'Stade Marseillais Université Club',
+    });
   });
 
-  it('d4 un club au texte seul (point déjà perdu) : le champ reçoit l adresse SANS point', async () => {
+  it('d4 un club au texte seul (point déjà perdu) : le champ la reçoit SANS point', async () => {
     await monter({ ...CLUB, address: { label: '12 Rue Saint-Ferréol 13001 Marseille' } });
 
     expect(dernierChamp().address).toEqual(expect.objectContaining({
