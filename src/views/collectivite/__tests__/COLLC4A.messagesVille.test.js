@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import CanauxDeLaVille from '../components/CanauxDeLaVille';
@@ -88,12 +87,6 @@ const SUBVENTIONS = {
   title: 'Subventions 2027',
 };
 
-const aplatirTexte = (/** @type {any} */ enfants) => {
-  if (Array.isArray(enfants)) return enfants.map(aplatirTexte).join('');
-  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
-  if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
-  return String(enfants);
-};
 const monter = async (/** @type {any} */ element) => {
   /** @type {any} */
   let arbre;
@@ -101,16 +94,6 @@ const monter = async (/** @type {any} */ element) => {
     arbre = renderer.create(element);
   });
   return arbre;
-};
-const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
-  .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
-const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
-  const noeud = arbre.root.findAll(
-    (/** @type {any} */ n) => n.props?.testID === testID && typeof n.type !== 'string',
-  )[0];
-  await act(async () => {
-    noeud.props.onPress();
-  });
 };
 const navigation = { navigate: mockNavigate };
 
@@ -145,15 +128,15 @@ describe('COLL-C4A — planche 4 : l onglet « Messages » de la Ville', () => {
   });
 });
 
-describe('COLL-C4A — planche 4 : le canal épinglé dans la messagerie du membre', () => {
-  it('pour chaque Ville de ses clubs : « Actualités de la Ville » et la dernière', async () => {
+describe('COLL-C4A — planche 4 : la messagerie du membre', () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRIT. Côté membre, le
+  // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
+  // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
+  // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
+  it('R17-CANAUX : plus de bloc épinglé « Actualités de la Ville » au-dessus', async () => {
     const arbre = await monter(<CanauxDeLaVille navigation={navigation} />);
-    const lus = textes(arbre);
-    expect(lus).toEqual(expect.arrayContaining(['Ville de Montrivage', 'Actualités de la Ville']));
-    expect(lus.some((texte) => texte.endsWith('· Subventions 2027'))).toBe(true);
-    await appuyer(arbre, 'canal-actualites-ville-de-recette');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualitesCanal', { collectiviteId: 'ville-de-recette' });
+    expect(arbre.toJSON()).toBeNull();
+    expect(mockMesCanaux).toHaveBeenCalled();
   });
 
   it('un club rattaché à aucune Ville : rien', async () => {

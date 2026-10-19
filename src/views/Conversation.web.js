@@ -84,7 +84,9 @@ import {
   rangerLeFil,
 } from '@/views/conversationWeb/filDuSite';
 // MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
-import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  estMineurConnu, filsDeLaMessagerie, titreDuFil,
+} from '@/domains/collectivite/collectiviteCanaux';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -828,10 +830,12 @@ function ColonneDesConversations({
     return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
   }, [listeDesFils, meId, mesBlocages]);
   const monClubId = userData?.club?.documentId || null;
+  // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
+  const mineur = estMineurConnu(userData);
   const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
   const archivees = filsDeLaMessagerie(
     filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
-    { monClubId },
+    { mineur, monClubId },
   );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
   const enModeArchivees = afficheArchivees && archivees.length > 0;
@@ -891,7 +895,7 @@ function ColonneDesConversations({
     meId,
   }) || t('common.chat', 'Conversation');
   const fils = filtrerLesFils(
-    enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { monClubId }),
+    enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { mineur, monClubId }),
     { nomDuFil, portee, recherche },
   );
   let listeVide = t('messaging.noData', 'Aucune conversation trouvée.');
@@ -1071,13 +1075,10 @@ function ColonneDesConversations({
       </div>
       <nav ref={listeRef} style={{ overflowY: 'auto' }}>
         <style>{ARCHIVEES_STYLE}</style>
-        {/* SMF — les canaux de la Ville, en tete comme sur la page de la messagerie : le canal
-            des dirigeants n est dans aucune ligne (filsDeLaMessagerie l ecarte). */}
-        {enModeArchivees || recherche.trim() ? null : (
-          <div style={{ padding: '12px 14px 0' }}>
-            <CanauxDeLaVille chats={actifs} navigation={navigation} />
-          </div>
-        )}
+        {/* R17-CANAUX (19/10) — plus de canaux de la Ville épinglés au-dessus : le canal des
+            dirigeants et « Toute la ville » sont des lignes (filsDeLaMessagerie). Ne reste que
+            la demande « mes canaux », sans rien à l écran. */}
+        <CanauxDeLaVille />
         {archivees.length > 0 ? (
           <button
             data-testid="ARCH-colonne-archivees"
@@ -5073,6 +5074,7 @@ function Conversation({ navigation, route }) {
                 {!isMessagesLoading && filDeLaVille.estQuitte ? (
                   <FilDeLaVilleQuitte
                     estCanal={filDeLaVille.estCanal}
+                    estCanalVille={filDeLaVille.estCanalVille}
                     onRetour={() => navigation.navigate(RouteNames.Chat)}
                   />
                 ) : null}

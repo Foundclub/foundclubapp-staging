@@ -265,7 +265,12 @@ const contenu = (arbre) => arbre.root.findAllByProps({ testID: 'iph09-contenu-de
 const parId = (racine, id) => racine.findAllByProps({ testID: id })[0];
 
 describe('IPH09 — la Ville defile avec les conversations', () => {
-  test('Ville, deux canaux et archives sont dans le contenu de la liste avec 100 fils', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRITS. Côté membre, le
+  // bloc épinglé de la Ville (« Dirigeants des clubs », « Actualités de la Ville ») au-dessus des
+  // conversations doublait la ligne « Toute la ville » : il est parti. La liste défile seule ; le
+  // canal des dirigeants est une ligne qu'on épingle et qu'on archive, comme dans l'espace de la
+  // Ville.
+  test('R17-CANAUX : plus de bloc de la Ville ; archives et 100 fils dans la liste', async () => {
     const fils = Array.from({ length: 100 }, (_, i) => ({
       ...CHATS[0], documentId: `fil-${i}`, groupName: `Fil ${i}`,
     }));
@@ -280,45 +285,81 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     });
     const arbre = await monter();
     const liste = contenu(arbre);
-    expect(parId(liste, 'canaux-de-la-ville-membre')).toBeDefined();
-    expect(parId(liste, 'canal-dirigeants-demouville-test')).toBeDefined();
-    expect(parId(liste, 'canal-actualites-demouville-test')).toBeDefined();
+    expect(parId(liste, 'canaux-de-la-ville-membre')).toBeUndefined();
+    expect(parId(liste, 'canal-dirigeants-demouville-test')).toBeUndefined();
+    expect(parId(liste, 'canal-actualites-demouville-test')).toBeUndefined();
     expect(parId(liste, 'liste-archivees')).toBeDefined();
     expect(dernieresProps().data).toHaveLength(100);
     expect(dernieresProps().contentContainerStyle.paddingBottom).toBe(100);
     expect(dernieresProps().stickyHeaderIndices).toBeUndefined();
     expect(dernieresProps().keyboardShouldPersistTaps).toBe('handled');
-    const canal = parId(liste, 'canal-dirigeants-demouville-test');
-    expect(canal.findAllByType(Text).every((n) => n.props.numberOfLines === undefined)).toBe(true);
     const ligne = parId(liste, 'liste-fil-fil-0');
     expect(StyleSheet.flatten(ligne.props.style).height).toBeUndefined();
     expect(StyleSheet.flatten(ligne.props.style).minHeight).toBe(72);
-    act(() => parId(liste, 'canal-dirigeants-demouville-test').props.onPress());
-    expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({
-      chatId: 'ville-canal', chatType: 'collectivite_dirigeants',
-    }));
-    act(() => parId(liste, 'canal-actualites-demouville-test').props.onPress());
-    expect(mockNavigate).toHaveBeenLastCalledWith(expect.any(String), {
-      collectiviteId: 'demouville-test',
-    });
   });
 
-  test('les canaux restent defilants quand recherche/filtre ne laisse aucun fil', async () => {
+  test('R17-CANAUX : côté club, « Dirigeants des clubs » est une ligne', async () => {
+    mockPin.mockClear();
+    mockArchive.mockClear();
+    const canal = { ...FILS_DE_LA_VILLE[0], updatedAt: '2026-10-18T10:00:00.000Z' };
+    mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, canal] }] } });
+    const arbre = await monter();
+    const liste = contenu(arbre);
+    const ligne = parId(liste, 'liste-fil-canal-demouville');
+    expect(ligne).toBeDefined();
+    expect(ligne.findAllByType(Text).map((n) => n.props.children))
+      .toContain('Dirigeants des clubs');
+    act(() => ligne.props.onPress());
+    expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({
+      chatId: 'canal-demouville', chatType: 'collectivite_dirigeants',
+    }));
+    const glissable = liste.findAll((n) => typeof n.props.renderLeftActions === 'function'
+      && n.findAll((m) => m.props?.testID === 'liste-fil-canal-demouville').length > 0)[0];
+    await act(async () => { glissable.props.renderLeftActions(0, 0).props.onPress(); });
+    expect(mockPin).toHaveBeenCalledWith('canal-demouville');
+    await act(async () => { await glissable.props.renderRightActions(0, 0).props.onPress(); });
+    expect(mockArchive).toHaveBeenCalledWith('canal-demouville');
+  });
+
+  // Décision d'Adel « B » (19/10, relayée par le chef) : « Toute la ville » aux MAJEURS. Le serveur
+  // ne l'envoie pas à un mineur ; si une liste en garde un (cache d'avant), l'app ne le montre pas.
+  test('R17-CANAUX : un mineur ne voit pas « Toute la ville » dans sa liste', async () => {
+    const toute = {
+      collectivite: mockVille,
+      documentId: 'toute-demouville',
+      messages: [],
+      participants: [],
+      type: 'collectivite_ville',
+      updatedAt: '2026-10-18T10:00:00.000Z',
+    };
+    mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, toute] }] } });
+    const avant = mockAuth.userData.birthdate;
+    mockAuth.userData.birthdate = '2014-06-01';
+    try {
+      await monter();
+      expect(dernieresProps().data.map((/** @type {any} */ c) => c.documentId)).toEqual(['chat-1']);
+    } finally {
+      mockAuth.userData.birthdate = avant;
+    }
+    await monter();
+    expect(dernieresProps().data[0].documentId).toBe('toute-demouville');
+  });
+
+  test('R17-CANAUX : recherche ou filtre sans résultat, rien d’épinglé ne reste', async () => {
     mockChatsQuery = etatListe();
     const arbre = await monter();
     act(() => arbre.root.findByType(TextInput).props.onChangeText('introuvable'));
     expect(dernieresProps().data).toEqual([]);
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeDefined();
+    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeUndefined();
     act(() => arbre.root.findByType(TextInput).props.onChangeText(''));
     act(() => arbre.root.findByType(SegmentedControl).props.onChange('league'));
     expect(dernieresProps().data).toEqual([]);
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeDefined();
   });
 
-  test('les canaux restent dans la liste en erreur, Reessayer relit sans mutation', async () => {
+  test('en erreur, Reessayer relit sans mutation', async () => {
     mockChatsQuery = etatListe({ error: new Error('erreur fabriquee') });
     const arbre = await monter();
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeDefined();
+    expect(parId(contenu(arbre), 'canaux-de-la-ville-membre')).toBeUndefined();
     expect(dernieresProps().onEndReached).toBeUndefined();
     const retry = parId(contenu(arbre), 'messaging-retry');
     await act(async () => { await retry.props.onPress(); });
@@ -411,7 +452,8 @@ describe('COL-007 — le haut de « Messages » defile avec la liste', () => {
   );
   const ordre = (racine, noeud) => racine.findAll(() => true).indexOf(noeud);
 
-  test('titre, puces et recherche DANS la liste, avant la Ville et « Archivees »', async () => {
+  // R17-CANAUX : le bloc de la Ville est parti (correction 2) ; « Archivées » reste le repère.
+  test('titre, puces et recherche DANS la liste, avant « Archivees »', async () => {
     const archive = { ...CHATS[0], archivedBy: [{ documentId: 'moi' }], documentId: 'archive' };
     mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, archive] }] } });
     const arbre = await monter();
@@ -427,7 +469,6 @@ describe('COL-007 — le haut de « Messages » defile avec la liste', () => {
     const rangRecherche = ordre(liste, liste.findByType(TextInput));
     expect(rangTitre).toBeLessThan(rangPuces);
     expect(rangPuces).toBeLessThan(rangRecherche);
-    expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'canaux-de-la-ville-membre')));
     expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'liste-archivees')));
   });
 

@@ -4879,6 +4879,7 @@ export default {
       retour: 'Back to messages',
       texteCanal: 'Your club is no longer attached to this city, so you are no longer in its managers’ channel. Your past messages stay there.',
       textePrivee: 'Your club is no longer attached to this city: this private conversation is closed to you. Your past messages stay there.',
+      texteVille: 'This channel is for adult members of the clubs attached to the city.',
       titreCanal: 'You are no longer in this channel',
       titrePrivee: 'You are no longer in this conversation',
     },

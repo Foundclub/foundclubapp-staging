@@ -130,12 +130,31 @@ export function BoutonMembresDuFil({ estCanal = true, onPress }) {
  * « Tu ne fais plus partie de ce canal » (écran 6) : le club n'est plus rattaché à la Ville.
  * L'ancien dirigeant ne voit plus le canal ; s'il l'ouvre par une vieille notification, il lit
  * pourquoi. Ses anciens messages restent pour les autres.
- * @param {{ estCanal?: boolean, onRetour: () => void }} props
+ * R17-CANAUX : « Toute la ville » (`estCanalVille`) dit SA raison — il est réservé aux membres
+ * majeurs des clubs rattachés (décision d'Adel « B ») — et ne parle pas des dirigeants.
+ * @param {{ estCanal?: boolean, estCanalVille?: boolean, onRetour: () => void }} props
  * @returns {import('react').ReactElement} L'écran.
  */
-export function FilDeLaVilleQuitte({ estCanal = true, onRetour }) {
+export function FilDeLaVilleQuitte({ estCanal = true, estCanalVille = false, onRetour }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
+  let texte = t(
+    'collectiviteCanaux.quitte.textePrivee',
+    // eslint-disable-next-line max-len
+    'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+  );
+  if (estCanalVille) {
+    texte = t(
+      'collectiviteCanaux.quitte.texteVille',
+      'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
+    );
+  } else if (estCanal) {
+    texte = t(
+      'collectiviteCanaux.quitte.texteCanal',
+      // eslint-disable-next-line max-len
+      'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
+    );
+  }
   return (
     <View
       style={{
@@ -155,19 +174,7 @@ export function FilDeLaVilleQuitte({ estCanal = true, onRetour }) {
             'Tu ne fais plus partie de cette conversation',
           )}
       </Text>
-      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>
-        {estCanal
-          ? t(
-            'collectiviteCanaux.quitte.texteCanal',
-            // eslint-disable-next-line max-len
-            'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
-          )
-          : t(
-            'collectiviteCanaux.quitte.textePrivee',
-            // eslint-disable-next-line max-len
-            'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
-          )}
-      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>{texte}</Text>
       <Button
         onPress={onRetour}
         testID="fil-de-la-ville-retour"

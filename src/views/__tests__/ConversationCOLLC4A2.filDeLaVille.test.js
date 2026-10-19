@@ -598,6 +598,20 @@ describe('R17-CANAUX — « Toute la ville » dans la conversation', () => {
     });
   });
 
+  // Décision d'Adel « B » (19/10) : réservé aux majeurs. Un mineur (ou un club détaché) qui
+  // l'ouvre par un vieux lien lit pourquoi, sans « canal des dirigeants » faux.
+  it('refusé par le serveur : « Tu ne fais plus partie de ce canal » et la bonne raison', () => {
+    mockChatData = undefined;
+    mockMessagesPage = { data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } };
+    mockMessagesError = REFUS;
+    const { arbre } = monter({ chatType: 'collectivite_ville' });
+    expect(textes(arbre)).toContain('Tu ne fais plus partie de ce canal');
+    expect(textes(arbre)).toContain(
+      'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
+    );
+    expect(textes(arbre).join(' ')).not.toContain('dirigeants');
+  });
+
   it('une ligne « a rejoint le canal » reste une ligne simple, sans lien', () => {
     mockChatData = CANAL;
     mockMessagesPage = PAGE;

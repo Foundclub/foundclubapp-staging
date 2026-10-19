@@ -14,7 +14,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
-  CANAL_VILLE, filsDeLaMessagerie, titreDuFil,
+  CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
@@ -220,11 +220,14 @@ function Messaging({ navigation, route }) {
     [filsTries, userData?.documentId],
   );
   const [afficheArchivees, setAfficheArchivees] = useState(false);
+  // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
+  const mineur = estMineurConnu(userData);
   const nombreArchivees = useMemo(() => filsDeLaMessagerie(filsArchives, {
     collectiviteId: villeId,
     espaceVille,
+    mineur,
     monClubId: userData?.club?.documentId || null,
-  }).length, [espaceVille, filsArchives, userData?.club?.documentId, villeId]);
+  }).length, [espaceVille, filsArchives, mineur, userData?.club?.documentId, villeId]);
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
   const enModeArchivees = afficheArchivees && nombreArchivees > 0;
   useEffect(() => {
@@ -327,6 +330,7 @@ function Messaging({ navigation, route }) {
     const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
       collectiviteId: villeId,
       espaceVille,
+      mineur,
       monClubId: userData?.club?.documentId || null,
     });
     // SMF — portee puis recherche : regle partagee avec la colonne du site (filtrerLesFils).

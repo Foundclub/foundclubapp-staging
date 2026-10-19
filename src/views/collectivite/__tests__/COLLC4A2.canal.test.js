@@ -162,7 +162,11 @@ describe('COLL-C4A2 — planche 1 : le canal des dirigeants dans la messagerie',
     expect(arbre.toJSON()).toBeNull();
   });
 
-  it('le dirigeant : canal épinglé au-dessus des actualités, dernier message signé', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRIT. Côté membre, le
+  // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
+  // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
+  // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
+  it('R17-CANAUX : le dirigeant, plus de carte « Dirigeants des clubs » épinglée', async () => {
     mockCanaux = { data: [LIGNE_DU_CANAL] };
     const chats = [{
       documentId: 'canal-1',
@@ -175,33 +179,14 @@ describe('COLL-C4A2 — planche 1 : le canal des dirigeants dans la messagerie',
       unreadCount: 1,
     }];
     const arbre = await monter(<CanauxDeLaVille chats={chats} navigation={navigation} />);
-    const lus = textes(arbre);
-    expect(lus).toEqual(expect.arrayContaining([
-      'Dirigeants des clubs',
-      'Ville de Montrivage : Merci. Faites chacun votre demande.',
-      '1',
-      'Actualités de la Ville',
-    ]));
-    expect(lus.indexOf('Dirigeants des clubs')).toBeLessThan(lus.indexOf('Actualités de la Ville'));
-    await appuyer(arbre, 'canal-dirigeants-ville-de-recette');
-    expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
-      chatId: 'canal-1',
-      chatType: 'collectivite_dirigeants',
-      title: 'Dirigeants des clubs',
-    });
+    expect(arbre.toJSON()).toBeNull();
+    expect(trouver(arbre, 'canal-dirigeants-ville-de-recette')).toHaveLength(0);
   });
 
-  it('le dirigeant, canal encore vide : « Ville de Montrivage et 3 clubs »', async () => {
-    mockCanaux = { data: [LIGNE_DU_CANAL] };
-    const arbre = await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />);
-    expect(textes(arbre)).toContain('Ville de Montrivage et 3 clubs');
-  });
-
-  it('un entraîneur : les actualités de sa Ville, pas le canal des dirigeants', async () => {
+  it('R17-CANAUX : un entraîneur, ni carte d’actualités ni canal épinglé', async () => {
     mockCanaux = { data: [] };
     const arbre = await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />);
-    expect(textes(arbre)).not.toContain('Dirigeants des clubs');
-    expect(textes(arbre)).toContain('Actualités de la Ville');
+    expect(arbre.toJSON()).toBeNull();
   });
 });
 

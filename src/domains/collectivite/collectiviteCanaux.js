@@ -1,3 +1,4 @@
+import { computeAge } from '@/domains/playerCard/cardModel';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -10,8 +11,8 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  * Deux types de fil, dont le SERVEUR calcule les membres (admin
  * `api/chat/services/collectivite-channels.ts`) :
  *   · `collectivite_dirigeants` (D72) — le canal des dirigeants : la Ville et les dirigeants de
- *     ses clubs rattachés. Tous se répondent. Côté club, épinglé en tête de la messagerie ; dans
- *     l'espace de la Ville, une ligne de la liste comme les autres (R17-CANAUX, 19/10) ;
+ *     ses clubs rattachés. Tous se répondent. Une ligne de la liste comme les autres, côté
+ *     Ville comme côté club (R17-CANAUX, 19/10 : plus de carte épinglée) ;
  *   · `collectivite_club` (D73) — la conversation PRIVÉE entre la Ville et les dirigeants d'UN
  *     club. Côté Ville, elle se range dans « Conversations » ; côté club, elle porte le nom de la
  *     Ville.
@@ -224,20 +225,33 @@ export const voixDuFil = ({ chat, espaceVille = false }) => (
 );
 
 /**
+ * R17-CANAUX — un mineur CONNU (moins de 18 ans, date de naissance renseignée).
+ * @param {any} user - Le compte.
+ * @returns {boolean} Vrai s'il a moins de 18 ans.
+ */
+export const estMineurConnu = (user) => {
+  const age = computeAge(user?.birthdate);
+  return age !== null && age < 18;
+};
+
+/**
  * La liste des conversations, une fois les fils de la Ville rangés :
- *   · dans l'espace de la Ville, SES fils seulement : son canal des dirigeants (R17-CANAUX,
- *     19/10 : une ligne ordinaire qu'on épingle et archive, plus une carte au-dessus) et ses
- *     conversations privées avec ses clubs ;
- *   · côté club, le canal des dirigeants n'y figure pas (il est épinglé en tête) ;
+ *   · dans l'espace de la Ville, SES fils seulement : son canal des dirigeants, « Toute la
+ *     ville » et ses conversations privées avec ses clubs ;
+ *   · côté club, le canal des dirigeants et « Toute la ville » sont des lignes comme les autres
+ *     (R17-CANAUX, 19/10, correction 2 du chef : plus de bloc épinglé au-dessus de la liste) ;
+ *     « Toute la ville » jamais pour un mineur connu (décision d'Adel « B » : le serveur ne le
+ *     lui envoie pas ; l'app ne montre pas non plus une liste d'avant gardée en cache) ;
  *   · côté club, la conversation privée de SON club seulement (un compte mixte ne voit pas, côté
  *     club, les conversations de la Ville avec les autres clubs).
  * @param {any[]} chats - Les fils, dans l'ordre de la liste.
- * @param {{ collectiviteId?: string | null, espaceVille?: boolean,
- *   monClubId?: string | null }} params - La Ville de l'espace, et le club du compte.
+ * @param {{ collectiviteId?: string | null, espaceVille?: boolean, mineur?: boolean,
+ *   monClubId?: string | null }} params - La Ville de l'espace, le compte mineur ou non, et
+ *   le club du compte.
  * @returns {any[]} Les fils à afficher, dans le même ordre.
  */
 export const filsDeLaMessagerie = (chats, {
-  collectiviteId = null, espaceVille = false, monClubId = null,
+  collectiviteId = null, espaceVille = false, mineur = false, monClubId = null,
 }) => {
   const liste = Array.isArray(chats) ? chats : [];
   if (espaceVille) {
@@ -245,7 +259,7 @@ export const filsDeLaMessagerie = (chats, {
       && (!collectiviteId || chat?.collectivite?.documentId === collectiviteId));
   }
   return liste.filter((chat) => {
-    if (chat?.type === CANAL_DIRIGEANTS) return false;
+    if (chat?.type === CANAL_VILLE) return !mineur;
     if (chat?.type === CONVERSATION_CLUB) {
       return Boolean(monClubId) && chat?.collectiviteClub?.documentId === monClubId;
     }

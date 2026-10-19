@@ -7208,6 +7208,7 @@ function Conversation({ navigation, route }) {
         {filDeLaVille.estQuitte ? (
           <FilDeLaVilleQuitte
             estCanal={filDeLaVille.estCanal}
+            estCanalVille={filDeLaVille.estCanalVille}
             onRetour={() => navigation.goBack()}
           />
         ) : null}

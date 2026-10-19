@@ -100,9 +100,10 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
     const ids = (/** @type {any[]} */ liste) => liste.map((c) => c.documentId);
     expect(ids(filsDeLaMessagerie(tous, { collectiviteId: 'ville-1', espaceVille: true })))
       .toEqual(['canal-1', 'privee-1', 'privee-2']);
-    // Côté club : le canal sort de la liste, et seule la conversation privée de SON club reste.
+    // Côté club : seule la conversation privée de SON club reste. R17-CANAUX (correction 2 du
+    // chef, 19/10) — RÉÉCRIT : le canal des dirigeants y est une LIGNE (plus une carte épinglée).
     expect(ids(filsDeLaMessagerie(tous, { espaceVille: false, monClubId: 'club-fc' })))
-      .toEqual(['privee-1', 'club-chat']);
+      .toEqual(['canal-1', 'privee-1', 'club-chat', 'canal-2']);
   });
 
   // 🏛️ R17-CANAUX (19/10, REC17-004, point 5) — « TOUTE LA VILLE » (`collectivite_ville`) : une
@@ -147,6 +148,10 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
         .toEqual(['privee-1', 'ville-canal']);
       expect(ids(filsDeLaMessagerie(tous, { espaceVille: false, monClubId: 'club-x' })))
         .toEqual(['ville-canal', 'ville-canal-2']);
+      // Décision d'Adel « B » (19/10) : réservé aux majeurs ; un mineur ne le voit pas.
+      const mineur = { espaceVille: false, mineur: true, monClubId: 'club-x' };
+      expect(ids(filsDeLaMessagerie(tous, mineur)))
+        .toEqual([]);
     });
 
     it('une actualité posée mène à elle (le membre : son canal ; la Ville : sa liste)', () => {

@@ -150,7 +150,13 @@ afterEach(() => {
 });
 
 describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
-  it('elle affiche l’heure du dernier message, et la suit quand un message arrive', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRIT. Côté membre, le
+  // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
+  // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
+  // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
+  // L heure du dernier message est celle de la LIGNE de la liste (Messaging.js,
+  // formatChatTimestamp).
+  it('R17-CANAUX : plus de ligne épinglée, même quand un message arrive', async () => {
     const premier = {
       createdAt: aujourdhuiA(9, 30),
       message: 'Merci. Faites chacun votre demande.',
@@ -160,11 +166,7 @@ describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
     const arbre = await monter(
       <CanauxDeLaVille chats={listeAvec(premier)} navigation={navigation} />,
     );
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Dirigeants des clubs',
-      '09:30',
-      'Ville de Montrivage : Merci. Faites chacun votre demande.',
-    ]));
+    expect(arbre.toJSON()).toBeNull();
 
     // Un message arrive (la socket a réécrit la liste) : la ligne suit, sans recharger.
     const suivant = {
@@ -176,11 +178,7 @@ describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
     await act(async () => {
       arbre.update(<CanauxDeLaVille chats={listeAvec(suivant, 2)} navigation={navigation} />);
     });
-    const lus = textes(arbre);
-    expect(lus).toEqual(expect.arrayContaining([
-      '21:05', 'Karim Benali : Pour le 8, nos U15 peuvent passer à 19:00.', '2',
-    ]));
-    expect(lus).not.toContain('09:30');
+    expect(arbre.toJSON()).toBeNull();
   });
 
   it('canal encore vide : pas d’heure inventée', async () => {
@@ -190,16 +188,19 @@ describe('COLL-C4A3 — planche 47 : la ligne épinglée du dirigeant', () => {
 });
 
 describe('COLL-C4A3 — planche 47 : « Ton club »', () => {
-  it('le dirigeant : la Ville, puis « Ton club » au-dessus des conversations du club', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRIT. Côté membre, le
+  // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
+  // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
+  // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
+  it('R17-CANAUX : le dirigeant, plus de titre « Ton club » (rien à séparer)', async () => {
     const lus = textes(await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />));
-    expect(lus).toContain('Ton club');
-    expect(lus.indexOf('Actualités de la Ville')).toBeLessThan(lus.indexOf('Ton club'));
+    expect(lus).not.toContain('Ton club');
   });
 
-  it('un entraîneur (sans canal des dirigeants) : « Ton club » aussi', async () => {
+  it('R17-CANAUX : un entraîneur non plus', async () => {
     mockCanaux = { data: [] };
     expect(textes(await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />)))
-      .toContain('Ton club');
+      .not.toContain('Ton club');
   });
 
   it('un membre d’un club rattaché à aucune Ville : rien, pas même « Ton club »', async () => {

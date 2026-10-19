@@ -5239,6 +5239,8 @@ export default {
       texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
       // eslint-disable-next-line max-len
       textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      // R17-CANAUX (décision d'Adel « B », 19/10) : « Toute la ville » est réservé aux majeurs.
+      texteVille: 'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
       titreCanal: 'Tu ne fais plus partie de ce canal',
       titrePrivee: 'Tu ne fais plus partie de cette conversation',
     },
