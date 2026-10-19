@@ -2051,6 +2051,9 @@ export default {
       },
       // R17-ADRESSE (19/10) — nothing suggested: the invitation shows by itself.
       invitation: 'Your place is not listed: place it on the map',
+      // Under the field, list closed: the typed text is recalled.
+      invitationTexte: '"{{texte}}" is not listed: place it on the map',
+      invitationTexteVous: '"{{texte}}" is not listed: place it on the map',
       invitationVous: 'Your place is not listed: place it on the map',
       lien: 'Address not found? Place it on the map',
       nom: 'Place name',

@@ -152,6 +152,12 @@ jest.mock('@/components/atoms/checkable/Checkable', () => {
 
 const INVITATION = 'Ton lieu n’est pas répertorié : place-le sur la carte';
 const INVITATION_VOUS = 'Votre lieu n’est pas répertorié : placez-le sur la carte';
+// Sous le champ (liste refermée), la phrase RAPPELLE le texte tapé (chef, 19/10 ~18:55) : à côté
+// d'une adresse déjà enregistrée, « Ton lieu » seul laissait croire que c'était elle.
+const SOUS_LE_CHAMP = '« Gymnase Toto Aix-en-Provence » n’est pas répertorié : place-le sur'
+  + ' la carte';
+const SOUS_LE_CHAMP_VOUS = '« Gymnase Toto Aix-en-Provence » n’est pas répertorié : placez-le sur'
+  + ' la carte';
 const OUVRIR = 'Placer sur la carte';
 const ANCIEN_LIEN = 'Adresse introuvable ? Placez-la sur la carte';
 const SANS_POINT = 'Cette adresse n’est pas sur la carte : on ne la trouve pas en cherchant'
@@ -283,11 +289,21 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       await appuyerSurLeTexte(arbre, SELECTIONNER);
 
       expect(feuilleOuverte(arbre)).toBe(false);
-      expect(texteVisible(arbre)).toContain(INVITATION);
+      expect(texteVisible(arbre)).toContain(SOUS_LE_CHAMP);
       expect(estUnBouton(arbre, OUVRIR)).toBe(true);
 
       await ouvrirLeChamp(arbre);
       expect(arbre.root.findByProps({ testID: RECHERCHE }).props.value).toBe(TAPE);
+      // Dans la liste, le texte est déjà dans la saisie : la phrase courte suffit.
+      expect(texteVisible(arbre)).toContain(INVITATION);
+    });
+
+    it('a2 bis sous le champ, la Ville est vouvoyée elle aussi', async () => {
+      const arbre = monter({ permettreLieuSurCarte: true, setAddress: jest.fn(), vouvoyer: true });
+      await ouvrirEtTaper(arbre, TAPE);
+      await appuyerSurLeTexte(arbre, SELECTIONNER);
+
+      expect(texteVisible(arbre)).toContain(SOUS_LE_CHAMP_VOUS);
     });
 
     it('a3 la Ville est vouvoyée', async () => {

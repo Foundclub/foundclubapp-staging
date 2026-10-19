@@ -2233,6 +2233,9 @@ export default {
       },
       // R17-ADRESSE (19/10) — rien de proposé : l'invitation, d'elle-même (la Ville vouvoyée).
       invitation: 'Ton lieu n’est pas répertorié : place-le sur la carte',
+      // Sous le champ, liste refermée : le texte tapé rappelé.
+      invitationTexte: '« {{texte}} » n’est pas répertorié : place-le sur la carte',
+      invitationTexteVous: '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
       invitationVous: 'Votre lieu n’est pas répertorié : placez-le sur la carte',
       lien: 'Adresse introuvable ? Placez-la sur la carte',
       nom: 'Nom du lieu',

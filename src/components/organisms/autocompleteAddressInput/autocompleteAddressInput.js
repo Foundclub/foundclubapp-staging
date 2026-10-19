@@ -306,7 +306,22 @@ function AutocompleteAddressInput({
   let sousLeChamp = null;
   if (permettreLieuSurCarte && !listeOuverte && !carte) {
     if (aucuneProposition) {
-      sousLeChamp = { ouvrir: () => ouvrirCarte(texteTape, null), texte: invitation };
+      // Liste refermée, le texte tapé n'est plus sous les yeux : la phrase le rappelle (à côté
+      // d'une adresse déjà enregistrée, « Ton lieu » seul laissait croire que c'était elle).
+      sousLeChamp = {
+        ouvrir: () => ouvrirCarte(texteTape, null),
+        texte: vouvoyer
+          ? t(
+            'autocompleteAddressInput.lieu.invitationTexteVous',
+            '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
+            { texte: texteTape },
+          )
+          : t(
+            'autocompleteAddressInput.lieu.invitationTexte',
+            '« {{texte}} » n’est pas répertorié : place-le sur la carte',
+            { texte: texteTape },
+          ),
+      };
     } else if (libelleEnregistre && !hasValidLocationCoordinates(selectedAddress)) {
       sousLeChamp = {
         ouvrir: () => ouvrirCarte(libelleEnregistre, null),
