@@ -2881,6 +2881,7 @@ export default {
     compactHeader: {
       kicker: 'Gestion du club',
     },
+    emptyFacilitiesAndSports: 'Ce club n’a encore renseigné ni ses installations ni ses sports.',
     facilities: {
       nameFallback: 'Installation',
     },
@@ -4913,7 +4914,7 @@ export default {
         titre: 'Fermer une installation',
       },
       inviteClub: {
-        dit: 'Un club de la commune absent de FoundClub.',
+        dit: 'Le trouver sur FoundClub, ou l’inviter.',
         titre: 'Inviter un club',
       },
       publishNews: {
@@ -5810,27 +5811,21 @@ export default {
     ajouter: {
       acceptRequest: 'Accepter sa demande',
       attached: 'Déjà rattaché à la Ville',
-      communeHint: 'Sans texte : les clubs de votre commune.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club',
+      backToSearch: 'Chercher un club déjà sur FoundClub',
+      belongs: 'Ce club fait partie de ma collectivité',
       elsewhere: 'Rattaché à une autre collectivité',
-      // eslint-disable-next-line max-len
-      empty: 'Aucun club trouvé. Il n’est peut-être pas encore sur FoundClub : invitez-le par le lien.',
-      hasLeader: 'Un dirigeant est sur FoundClub',
-      // eslint-disable-next-line max-len
-      intro: 'Cherchez le club par son nom. Ses dirigeants reçoivent votre demande et l’acceptent ou la refusent : accepté, il est rattaché à la Ville.',
+      introSearch: 'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
       inviteByLink: 'Inviter par le lien',
       loading: 'Recherche…',
       // eslint-disable-next-line max-len
       noLeader: 'Aucun dirigeant sur FoundClub : personne ne pourrait accepter. Invitez-le par le lien.',
-      outside: 'Hors de la commune',
+      notOnFoundClub: 'Le club n’est pas sur FoundClub ?',
       refused: 'Le club a refusé votre demande',
       requested: 'Ce club demande déjà à vous rejoindre',
       resend: 'Renvoyer la demande',
-      searchLabel: 'Nom du club',
-      searchPlaceholder: 'Le nom du club',
-      send: 'Envoyer la demande',
       sent: 'Demande envoyée',
-      tab: 'Déjà sur FoundClub',
-      title: 'Ajouter un club déjà sur FoundClub',
+      title: 'Ajouter un club',
     },
     club: {
       accept: 'Accepter',
@@ -5915,6 +5910,7 @@ export default {
       attached: 'Rattaché',
       attachedElsewhere: 'Ce club a été rattaché à une autre collectivité entre-temps.',
       attachedLine: 'Il apparaît dans vos clubs.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club.',
       outside: 'Il n’est pas dans la commune.',
       pending: 'En attente',
       pendingProposal: 'Envoyée au club : ses dirigeants acceptent ou refusent.',

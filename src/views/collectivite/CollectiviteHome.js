@@ -698,7 +698,7 @@ function CollectiviteHome() {
         return {
           dit: t(
             'collectiviteAccueil.actions.inviteClub.dit',
-            'Un club de la commune absent de FoundClub.',
+            'Le trouver sur FoundClub, ou l’inviter.',
           ),
           titre: t('collectiviteAccueil.actions.inviteClub.titre', 'Inviter un club'),
         };

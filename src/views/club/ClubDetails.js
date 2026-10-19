@@ -24,7 +24,11 @@ import {
   collectiviteInitial,
   formatOpeningHours,
 } from '@/domains/collectivite/collectiviteDisplay';
-import { valeurDeMaCollectivite } from '@/domains/collectivite/collectiviteRattachement';
+import {
+  estSansRoleSportif,
+  estUneVilleSeule,
+  valeurDeMaCollectivite,
+} from '@/domains/collectivite/collectiviteRattachement';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -52,6 +56,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
+import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
 import MaCollectivite from '@/views/collectivite/components/MaCollectivite';
 import RattachementDuClub from '@/views/collectivite/components/RattachementDuClub';
@@ -88,6 +93,7 @@ import { createClubRequest, getPendingClubCreationRequests } from '@/services/cl
 import {
   useClubCollectiviteRequests,
   useMaCollectivite,
+  useMesVillesGerees,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
@@ -294,6 +300,8 @@ function ClubDetails({ navigation, route }) {
     userData,
   } = useAuth();
   const routeClubId = route?.params?.clubId;
+  // R17-INVITER (19/10) : la Ville qui ouvre la fiche depuis « Ajouter un club ».
+  const routeCollectiviteId = route?.params?.collectiviteId || null;
   // ANNUAIRE-E1 (29/09) — posé par l'annuaire du site seulement : la fiche est montée dans la page
   // publique /annuaire/clubs/<id>/<slug>/. Absent, le téléphone ne change pas.
   const annuaire = route?.params?.annuaire === true;
@@ -1865,6 +1873,12 @@ function ClubDetails({ navigation, route }) {
       .find((enfant) => enfant.documentId === vise && !enfant.reason) || null;
   }, [enfantsDeLaFeuille, route?.params?.childDocumentId]);
 
+  // R17-INVITER (19/10) — un compte « Ville seule » (aucun rôle sportif, une Ville gérée) n'a
+  // aucune porte d'affiliation sur une fiche club (matrice). La lecture ne part que sans rôle.
+  const villesGerees = useMesVillesGerees({
+    enabled: Boolean(userData?.documentId) && estSansRoleSportif(userData?.role),
+  });
+  const compteVilleSeule = estUneVilleSeule(userData?.role, villesGerees.data);
   const {
     showChildInterestAction,
     showClubArrivalInterestAction,
@@ -1898,6 +1912,7 @@ function ClubDetails({ navigation, route }) {
     isParentClubAdmin,
     isPlayerRole,
     isUserAlreadyAttachedToViewedClub,
+    isVilleOnlyAccount: compteVilleSeule,
     minorChildrenCount,
     ownerCount: owners.length,
   }), [
@@ -1913,6 +1928,7 @@ function ClubDetails({ navigation, route }) {
     canPlayerSignalMissingTeam,
     canUseClubPartneringFlow,
     clubTeamIds.length,
+    compteVilleSeule,
     hasParentMultisportClub,
     isAuthenticated,
     isClubStaffRole,
@@ -1949,6 +1965,14 @@ function ClubDetails({ navigation, route }) {
     .filter(Boolean)
     .join(' · ');
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
+  // R17-INVITER (19/10, 2ᵉ passe de design) — la page publique d'un club qui n'a renseigné ni
+  // installation ni sport disait deux fois « Aucune donnée disponible » : UN état vide, sous le
+  // titre « Installations » (l'ordre de la fiche ne bouge pas), et plus de section « Sports ».
+  // Une seule des deux vide : rien ne change.
+  const ficheSansInstallationNiSport = !canEdit
+    && !facilitiesLoading
+    && facilities.length === 0
+    && !club?.activites?.length;
   // VILLE-INVITER-CLUB, VOIE 3 (« collectivité A », 07/10) — la rangée « Ma collectivité » du hub :
   // le nom de la Ville, sa demande, ou « Rechercher » (domaine pur). Lues pour le seul dirigeant.
   const maCollectivite = useMaCollectivite(clubId, { enabled: canEdit });
@@ -3214,6 +3238,20 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
+          {/* R17-INVITER (19/10, REC17-009) — la Ville qui ouvre la fiche depuis « Ajouter un
+              club » : « Ce club fait partie de ma collectivité ». Rien pour les autres comptes (le
+              bouton ne s'affiche qu'au gestionnaire de CETTE Ville, garde serveur). */}
+          {routeCollectiviteId && club?.documentId ? (
+            <AjouterUnClub
+              club={club}
+              collectiviteId={routeCollectiviteId}
+              onInviterParLien={() => navigation.navigate(RouteNames.CollectiviteInviteClub, {
+                collectiviteId: routeCollectiviteId,
+                onglet: 'lien',
+              })}
+            />
+          ) : null}
+
           {/* D50 : la bascule de perimetre pilote le CONTENU des sections. Sur le
               hub il n'y a pas de section a piloter : elle suit ses sections dans
               les sous-pages. */}
@@ -3393,7 +3431,12 @@ function ClubDetails({ navigation, route }) {
 
                   {!facilitiesLoading && facilities.length === 0 ? (
                     <Text style={[Fonts.p2, Fonts.primary100]}>
-                      {t('common.messages.noData', 'Aucune donnée disponible')}
+                      {ficheSansInstallationNiSport
+                        ? t(
+                          'clubDetails.emptyFacilitiesAndSports',
+                          'Ce club n’a encore renseigné ni ses installations ni ses sports.',
+                        )
+                        : t('common.messages.noData', 'Aucune donnée disponible')}
                     </Text>
                   ) : null}
 
@@ -3573,7 +3616,7 @@ function ClubDetails({ navigation, route }) {
               ) : null}
 
               {/* Activities */}
-              {showsClubSection('sports') ? (
+              {showsClubSection('sports') && !ficheSansInstallationNiSport ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                     <Text

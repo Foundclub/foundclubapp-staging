@@ -2,7 +2,6 @@ import { splitAdminInvitations } from '@/domains/collectivite/collectiviteConsol
 /* eslint-disable max-len -- les phrases de l'écran sont citées en entier */
 import {
   etatDeDemandeVille,
-  gesteDeRecherche,
   ligneDeDemandeDuClub,
   villeSujet,
 } from '@/domains/collectivite/collectiviteRattachement';
@@ -11,7 +10,7 @@ import {
 // « club A » (le club accepte : rattaché tout de suite) et « lien A » (la Ville juge les
 // demandes venues de son lien). Ce que ce témoin exige (ROUGE avant le lot : le module
 // n'existait pas) :
-//   R1 — la ligne d'un club, dans la recherche de la Ville, propose LE bon geste ;
+//   R1 — (retiré le 19/10, R17-INVITER : voir R17INVIT.gesteDeLaVille.test.js) ;
 //   R2 — la Ville lit l'état de chaque demande, dans les deux sens, au « vous » ;
 //   R3 — le club lit l'état de SES demandes, au « tu » ;
 //   R4 — la console range une demande refusée par la Ville avec les demandes traitées.
@@ -20,20 +19,8 @@ const t = (/** @type {string} */ _cle, /** @type {any} */ defaut, /** @type {any
   String(defaut).replace(/\{\{(\w+)\}\}/g, (_m, nom) => String(valeurs?.[nom] ?? ''))
 );
 
-describe('VINV · R1 — le geste de chaque ligne de la recherche', () => {
-  it.each([
-    [{ attached: true, hasLeader: true }, 'rattache'],
-    [{ attachedElsewhere: true, hasLeader: true }, 'ailleurs'],
-    [{ hasLeader: true, request: { state: 'pending' } }, 'aRepondre'],
-    [{ hasLeader: true, proposal: { state: 'pending' } }, 'envoyee'],
-    [{ hasLeader: true, proposal: { state: 'refused' } }, 'refusee'],
-    [{ hasLeader: false }, 'sansDirigeant'],
-    [{ hasLeader: true }, 'envoyer'],
-    [{ hasLeader: true, request: { state: 'refused' } }, 'envoyer'],
-  ])('%j ⇒ %s', (club, attendu) => {
-    expect(gesteDeRecherche(club)).toBe(attendu);
-  });
-});
+// R1 (le geste de chaque ligne de la recherche dédiée « Déjà sur FoundClub ») : la recherche a
+// disparu avec R17-INVITER (19/10) ; le geste de la carte se lit dans R17INVIT.gesteDeLaVille.test.js.
 
 describe('VINV · R2 — la Ville lit ses demandes', () => {
   it('sa demande au club, en attente : « En attente », ses dirigeants répondent', () => {
