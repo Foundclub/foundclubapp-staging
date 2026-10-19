@@ -6393,9 +6393,9 @@ export default {
       jusquAu: 'Jusqu’au',
       laVille: 'Ville',
       libreCeJour: 'Libre ce {{jour}} :',
-      ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
+      ligneSerie: '{{rythme}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
       // FINITIONS13-COLL (04/10) — les dates refusées d'une série (tournée T13, C2_1e).
-      ligneSerieDates: 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
+      ligneSerieDates: '{{rythme}}, {{debut}} – {{fin}} · {{nombre}} dates',
       // eslint-disable-next-line max-len
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
@@ -6540,14 +6540,14 @@ export default {
     },
     phrase: {
       // eslint-disable-next-line max-len
-      serie: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
+      serie: '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
       // eslint-disable-next-line max-len
-      serieSansFin: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+      serieSansFin: '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
       // eslint-disable-next-line max-len
       unique: '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
     },
     phraseCourte: {
-      serie: '{{club}} demande chaque {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      serie: '{{club}} demande {{rythme}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
       unique: '{{club}} demande le {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
     },
     place: {

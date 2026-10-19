@@ -5862,9 +5862,9 @@ export default {
       jusquAu: 'Until',
       laVille: 'Town',
       libreCeJour: 'Free this {{jour}}:',
-      ligneSerie: 'Every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}}',
+      ligneSerie: '{{rythme}}, {{debut}} – {{fin}}, until {{jusquAu}}',
       // FINITIONS13-COLL (04/10) — the refused dates of a series (round T13, C2_1e).
-      ligneSerieDates: 'Every {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
+      ligneSerieDates: '{{rythme}}, {{debut}} – {{fin}} · {{nombre}} dates',
       momentSerie: '{{equipe}} · every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'A note for the town hall (optional)',
@@ -5999,12 +5999,12 @@ export default {
       votreClub: 'Request from your club',
     },
     phrase: {
-      serie: '{{club}} asks for every {{jourSemaine}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}, until {{jusquAu}}.',
-      serieSansFin: '{{club}} asks for every {{jourSemaine}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}.',
+      serie: '{{club}} asks for {{rythme}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}, until {{jusquAu}}.',
+      serieSansFin: '{{club}} asks for {{rythme}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}.',
       unique: '{{club}} asks for {{jour}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}.',
     },
     phraseCourte: {
-      serie: '{{club}} asks for every {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      serie: '{{club}} asks for {{rythme}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
       unique: '{{club}} asks for {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
     },
     place: {
