@@ -16,8 +16,9 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  *     club. Côté Ville, elle se range dans « Conversations » ; côté club, elle porte le nom de la
  *     Ville.
  *
- *   · `collectivite_ville` (R17-CANAUX, 19/10, REC17-004) — « Toute la ville » : les lecteurs des
- *     actualités de la Ville le lisent (une ligne en tête de leur liste), seule la Ville y
+ *   · `collectivite_ville` (R17-CANAUX, 19/10, REC17-004) — « Toute la ville » : les lecteurs
+ *     MAJEURS des actualités de la Ville (décision d'Adel « B » du 19/10, le serveur en décide) le
+ *     lisent (une ligne en tête de leur liste), seule la Ville y
  *     écrit, et personne n'y voit qui le lit (un NOMBRE de clubs). Ses actualités « membres »
  *     y arrivent seules, en lignes de la Ville qui mènent à l'actualité.
  *
