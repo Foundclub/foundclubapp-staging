@@ -58,6 +58,10 @@ function AvatarDuFil({
     case 'collectivite_dirigeants':
       contenu = <IconeDuCanal taille={ecusson} />;
       break;
+    // R17-CANAUX (19/10) — « Toute la ville » porte l'écusson de la Ville.
+    case 'collectivite_ville':
+      contenu = <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />;
+      break;
     case 'friendly_match': {
       // AC05 constat 3 — le camp d'en face, en initiales ; sans adversaire sûr, le repli neutre.
       const opponent = resolveFriendlyMatchOpponent({ chat, myTeams });

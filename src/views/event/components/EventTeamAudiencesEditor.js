@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -577,7 +578,7 @@ function EventTeamAudiencesEditor({
                           />
                           <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{getUserDisplayName(member)}</Text>
-                            <Text style={[Fonts.p3, Fonts.neutral200]}>{member?.role?.name || t('eventTeamAudiencesEditor.member', 'Membre')}</Text>
+                            <Text style={[Fonts.p3, Fonts.neutral200]}>{libelleDuRole(member?.role?.name, t, t('eventTeamAudiencesEditor.member', 'Membre'))}</Text>
                           </View>
                         </TouchableOpacity>
                       );

@@ -683,7 +683,7 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
     // Et le drapeau de panne n'a pas ete leve en douce. On vide la liste par un
     // FILTRE (le serveur n'est pour rien la-dedans) : l'ecran doit dire « aucune
     // annonce », jamais « serveur injoignable ».
-    await appuyerSur(tree, 'Entraineurs');
+    await appuyerSur(tree, 'Coachs / Profs');
     expect(texteVisible(tree)).toContain('Aucune annonce disponible pour le moment.');
     expect(texteVisible(tree)).not.toContain(PANNE);
 
@@ -722,7 +722,7 @@ describe('RecrutementListContent — le bouton de filtres ouvre la feuille', () 
     const tree = await rendrePour(DIRIGEANT, { initialTab: 'opportunites' });
     expect(texteVisible(tree)).toContain('Filtres 0');
 
-    await appuyerSur(tree, 'Entraineurs');
+    await appuyerSur(tree, 'Coachs / Profs');
 
     expect(texteVisible(tree)).toContain('Filtres 1');
   });

@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createLieu, getPlacesFromCoordinates, searchPlaces } from './placesService';
 
+// R17-ADRESSE (19/10) — la commune que nomme le texte tapé (départ de « Placer le lieu sur la
+// carte ») : la carte ne parle qu'à ce module, comme pour poser le lieu.
+export { chercherCommune } from './placesService';
+
 /**
  * Get places query.
  * @param {object} param - The parameters.

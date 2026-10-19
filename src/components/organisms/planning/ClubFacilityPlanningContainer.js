@@ -1,6 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -12,6 +14,8 @@ import useTheme from '@/theme/themeContext';
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFullscreenButton';
+import PlanningCalendarView from '@/components/organisms/planningCalendarView';
+import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -32,8 +36,7 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
-import PlanningCalendarView from '../planningCalendarView';
-import PlanningWeekTimelineView from '../planningWeekTimelineView';
+import useVueInitiale from '@/hooks/useVueInitiale';
 
 const getFacilityId = (facility) => facility?.documentId || facility?.id || null;
 
@@ -102,7 +105,12 @@ function ClubFacilityPlanningContainer({
     [currentDate, viewMode],
   );
 
-  const { data: eventsData, isLoading: isLoadingEvents } = useQuery({
+  const {
+    data: eventsData,
+    isError: isEventsError,
+    isLoading: isLoadingEvents,
+    isPlaceholderData: isEventsPlaceholder,
+  } = useQuery({
     enabled: !!clubId,
     placeholderData: keepPreviousPageData,
     queryFn: () => getClubPlanning(clubId, {
@@ -114,7 +122,12 @@ function ClubFacilityPlanningContainer({
     staleTime: 30_000,
   });
 
-  const { data: sharedPlanningData, isLoading: isLoadingSharedPlanning } = useQuery({
+  const {
+    data: sharedPlanningData,
+    isError: isSharedError,
+    isLoading: isLoadingSharedPlanning,
+    isPlaceholderData: isSharedPlaceholder,
+  } = useQuery({
     enabled: Boolean(clubId && resolvedCmId && canAccessSharedPlanning && planningScope === 'shared'),
     placeholderData: keepPreviousPageData,
     queryFn: () => getClubSharedPlanning(resolvedCmId, clubId, {
@@ -142,6 +155,49 @@ function ClubFacilityPlanningContainer({
     () => normalizePlanningItems(eventsData?.data || []),
     [eventsData?.data],
   );
+
+  // 🗓️ R17-VUE (19/10, REC17-010) — a l arrivee, la semaine vide mais un evenement plus tard ⇒
+  // le mois de ce prochain evenement (UNE lecture bornee, la meme source que la page) ; un choix
+  // fait a la main l emporte.
+  const isSharedScope = planningScope === 'shared';
+  const appliquerLaVue = useCallback((/** @type {{ date: Date, vue: string }} */ decision) => {
+    if (decision.vue === 'week') return;
+    setViewMode(decision.vue);
+    setCurrentDate(decision.date);
+  }, []);
+  const lectureDeLaSuite = useMemo(() => (isSharedScope
+    ? {
+      queryFn: (/** @type {{ from: string, to: string }} */ plage) => getClubSharedPlanning(
+        resolvedCmId,
+        clubId,
+        { ...plage, installationId: selectedFacilityId || undefined },
+      ),
+      queryKey: ['club-shared-planning', clubId, resolvedCmId, selectedFacilityId],
+    }
+    : {
+      queryFn: (/** @type {{ from: string, to: string }} */ plage) => getClubPlanning(
+        clubId,
+        { ...plage, facilityId: selectedFacilityId || undefined },
+      ),
+      queryKey: ['club-planning', clubId, selectedFacilityId],
+    }), [clubId, isSharedScope, resolvedCmId, selectedFacilityId]);
+  const lectureDeBase = isSharedScope ? sharedPlanningData : eventsData;
+  const lectureProvisoire = isSharedScope ? isSharedPlaceholder : isEventsPlaceholder;
+  const { enDecision, garderLeChoix } = useVueInitiale({
+    actif: Boolean(clubId) && !(isSharedScope ? isSharedError : isEventsError),
+    appliquer: appliquerLaVue,
+    evenements: lectureDeBase && !lectureProvisoire ? (lectureDeBase.data || []) : undefined,
+    lectureDeLaSuite,
+    vueDeBase: 'week',
+  });
+  const choisirLaVue = useCallback((/** @type {string} */ vue) => {
+    garderLeChoix();
+    setViewMode(vue);
+  }, [garderLeChoix]);
+  const choisirLaDate = useCallback((/** @type {Date} */ date) => {
+    garderLeChoix();
+    setCurrentDate(date);
+  }, [garderLeChoix]);
 
   const displayedEvents = planningScope === 'shared' ? sharedEvents : filteredClubEvents;
   const displayedFacilities = planningScope === 'shared' ? sharedFacilities : clubFacilities;
@@ -198,9 +254,9 @@ function ClubFacilityPlanningContainer({
     }
   }, [displayedFacilities, isLoadingFacilities, selectedFacilityId]);
 
-  const isLoadingPlanning = planningScope === 'shared'
+  const isLoadingPlanning = enDecision || (planningScope === 'shared'
     ? (isLoadingFacilities || isLoadingSharedPlanning)
-    : isLoadingEvents;
+    : isLoadingEvents);
   const viewOptions = useMemo(() => ([
     { label: t('planning.mode.weekShort', 'Semaine'), value: 'week' },
     { label: t('planning.mode.threeDaysShort', '3 jours'), value: '3days' },
@@ -294,7 +350,7 @@ function ClubFacilityPlanningContainer({
           <View style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
-              onChange={setViewMode}
+              onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
             />
@@ -467,7 +523,7 @@ function ClubFacilityPlanningContainer({
             <PlanningCalendarView
               currentDate={currentDate}
               events={displayedEvents}
-              onDateSelect={setCurrentDate}
+              onDateSelect={choisirLaDate}
               onEventPress={handleEventPress}
             />
           ) : (
@@ -475,7 +531,7 @@ function ClubFacilityPlanningContainer({
               currentDate={currentDate}
               events={displayedEvents}
               mode={viewMode}
-              onDateChange={setCurrentDate}
+              onDateChange={choisirLaDate}
               onEventPress={handleEventPress}
               scrollEnabled
             />

@@ -321,7 +321,7 @@ function CollectiviteHome() {
     if (demande?.requesterFunction === 'manager') {
       fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
     } else if (demande?.requesterFunction === 'trainer') {
-      fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+      fonction = t('collectiviteDemandes.fonction.trainer', 'coach / prof');
     }
     const auteur = personne ? [personne, fonction].filter(Boolean).join(', ') : '';
     const conflit = summarizeConflict(demande?.conflict);
@@ -698,7 +698,7 @@ function CollectiviteHome() {
         return {
           dit: t(
             'collectiviteAccueil.actions.inviteClub.dit',
-            'Un club de la commune absent de FoundClub.',
+            'Le trouver sur FoundClub, ou l’inviter.',
           ),
           titre: t('collectiviteAccueil.actions.inviteClub.titre', 'Inviter un club'),
         };

@@ -232,11 +232,11 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test('caracterisation — choisir « Joueur·se » puis « Continuer » envoie CE role et passe au nom', async () => {
+test('caracterisation — choisir « Pratiquant·e / Joueur·se » puis « Continuer » envoie CE role et passe au nom', async () => {
   /** @type {any} */ (updateMe).mockResolvedValue({});
   const arbre = await monter();
 
-  await appuyer(rangee(arbre, 'Joueur·se'));
+  await appuyer(rangee(arbre, 'Pratiquant·e / Joueur·se'));
   await appuyer(bouton(arbre, CONTINUER));
 
   expect(updateMe).toHaveBeenCalledTimes(1);
@@ -255,9 +255,9 @@ test('FINITIONS5-8 · compte neuf, rien de coché : « Continuer » est INACTIF 
 test('FINITIONS5-8 · décocher son choix rend « Continuer » inactif à nouveau', async () => {
   const arbre = await monter();
 
-  await appuyer(rangee(arbre, 'Joueur·se'));
+  await appuyer(rangee(arbre, 'Pratiquant·e / Joueur·se'));
   expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
-  await appuyer(rangee(arbre, 'Joueur·se'));
+  await appuyer(rangee(arbre, 'Pratiquant·e / Joueur·se'));
   expect(bouton(arbre, CONTINUER).props.disabled).toBe(true);
 });
 
@@ -268,7 +268,7 @@ test('FINITIONS5-8 · un refus du serveur se dit UNE fois, en français', async 
   /** @type {any} */ (updateMe).mockRejectedValue(refus);
   const arbre = await monter();
 
-  await appuyer(rangee(arbre, 'Entraîneur·e'));
+  await appuyer(rangee(arbre, 'Coach / Prof'));
   await appuyer(bouton(arbre, CONTINUER));
 
   const alertes = /** @type {any} */ (Alert.alert).mock.calls;

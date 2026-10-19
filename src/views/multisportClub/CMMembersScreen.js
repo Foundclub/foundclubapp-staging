@@ -132,8 +132,8 @@ function CMMembersScreen({ navigation, route }) {
   const tabs = [
     { label: t('cmMembersScreen.tabs.all', 'Tous'), value: 'all' },
     { label: t('cmMembersScreen.tabs.clubManagers', 'Dirigeants'), value: 'presidents' },
-    { label: t('cmMembersScreen.tabs.coaches', 'Entraîneur·e·s'), value: 'coaches' },
-    { label: t('cmMembersScreen.tabs.players', 'Joueurs'), value: 'players' },
+    { label: t('cmMembersScreen.tabs.coaches', 'Coachs / Profs'), value: 'coaches' },
+    { label: t('cmMembersScreen.tabs.players', 'Pratiquants / Joueurs'), value: 'players' },
   ];
 
   const allSections = membersData?.data?.sections || [];
