@@ -23,6 +23,10 @@ let mockAnglaisDisponible = true;
 
 // PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
 // trois services) : doublure commune, « aucun enfant ».
+// R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useMyFacilityReports: () => ({ data: null }),
+}));
 jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 
 jest.mock('@/theme/strings/langue', () => ({

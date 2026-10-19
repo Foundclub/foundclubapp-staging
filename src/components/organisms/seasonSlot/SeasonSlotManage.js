@@ -10,6 +10,9 @@ import {
   formatDay,
   formatPeriod,
   seasonSlotErrorMessage,
+  slotOccurrences,
+  slotOccursOn,
+  slotShape,
   slotWho,
   timeRange,
   unSeulPointFinal,
@@ -65,7 +68,9 @@ function SeasonSlotManage({
   const detail = useSeasonSlot(slot?.documentId);
   const retirer = useWithdrawSeasonSlot();
   // Depuis le planning, « Retirer le creneau » ouvre directement la confirmation.
-  const [etape, setEtape] = useState(/** @type {'detail' | 'retirer'} */ (etapeInitiale));
+  const [etape, setEtape] = useState(
+    /** @type {'detail' | 'retirer' | 'retirerDate'} */ (etapeInitiale),
+  );
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // COLL-C2B-BIS — la date d effet du retrait, saisie « JJ/MM/AAAA ».
   const [aPartirDu, setAPartirDu] = useState(format(new Date(), 'dd/MM/yyyy'));
@@ -81,6 +86,36 @@ function SeasonSlotManage({
   const jour = weekdayName(slot?.weekday);
   const heures = timeRange(slot?.startTime, slot?.endTime);
   const qui = slotWho(slot);
+  // 🗓️ R17-QUAND-1, point 5 (Q1 A, planche P10-quand-tel état 7) — la FORME : « un mercredi sur
+  // deux », des dates choisies ; une série se modifie ou se retire à partir d'une date (le geste
+  // d'avant) ; « Retirer le mer. 21 oct. seulement » retire UNE date (`skipDate`).
+  const forme = slotShape(slot);
+  const enSerie = forme.recurrence === 'dates' || forme.everyWeeks > 1;
+  const aujourdhui = format(new Date(), 'yyyy-MM-dd');
+  const [prochaine] = slotOccurrences(slot, { from: aujourdhui });
+  const [dateARetirer, setDateARetirer] = useState(
+    prochaine ? format(parseISO(prochaine), 'dd/MM/yyyy') : '',
+  );
+  const dateChoisie = parse(dateARetirer, 'dd/MM/yyyy', new Date());
+  const jourARetirer = isValid(dateChoisie) ? format(dateChoisie, 'yyyy-MM-dd') : null;
+  const dateRetirable = Boolean(jourARetirer && jourARetirer >= aujourdhui
+    && slotOccursOn(slot, /** @type {string} */ (jourARetirer)));
+  let rythme = t('collectiviteCreneaux.gerer.chaque', 'Chaque {{jour}}, {{heures}}', {
+    heures, jour: jour.toLocaleLowerCase(), ...SANS_ECHAPPEMENT,
+  });
+  if (forme.recurrence === 'dates') {
+    rythme = t('collectiviteCreneaux.gerer.datesHeures', {
+      count: forme.dates?.length || 0,
+      defaultValue_one: '{{count}} date, {{heures}}',
+      defaultValue_other: '{{count}} dates, {{heures}}',
+      heures,
+      ...SANS_ECHAPPEMENT,
+    });
+  } else if (forme.everyWeeks > 1) {
+    rythme = t('collectiviteCreneaux.gerer.unSurDeux', 'Un {{jour}} sur deux, {{heures}}', {
+      heures, jour: jour.toLocaleLowerCase(), ...SANS_ECHAPPEMENT,
+    });
+  }
   const nombreDEntrainements = detail.data?.data?.sessionsCount;
 
   const rangee = (/** @type {string} */ libelle, /** @type {string} */ valeur) => (
@@ -91,6 +126,69 @@ function SeasonSlotManage({
       </Text>
     </View>
   );
+
+  if (etape === 'retirerDate') {
+    const confirmerLaDate = async () => {
+      if (!dateRetirable) return;
+      setErreur(null);
+      try {
+        await retirer.mutateAsync({ data: { skipDate: jourARetirer }, slotId: slot.documentId });
+        onWithdrawn?.();
+        onClose();
+      } catch (refus) {
+        setErreur(seasonSlotErrorMessage(t, refus) || getErrorMessage(/** @type {any} */ (refus)));
+      }
+    };
+    return (
+      <View style={{ gap: 12 }}>
+        <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('collectiviteCreneaux.gerer.retirerDateTitre', 'Retirer une seule date ?')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'collectiviteCreneaux.gerer.retirerDatePerd',
+            '{{qui}} n’aura pas de séance le {{date}} ; les autres dates restent. Le club est '
+              + 'prévenu.',
+            {
+              date: jourARetirer ? formatDay(jourARetirer, { withYear: false }) : '…',
+              qui,
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
+        </Text>
+        <DatePickerInput
+          label={t('collectiviteCreneaux.gerer.quelleDate', 'Quelle date ?')}
+          maximumDate={finDuCreneau}
+          minimumDate={new Date()}
+          onChange={(/** @type {string} */ valeur) => {
+            setDateARetirer(valeur);
+            setErreur(null);
+          }}
+          value={dateARetirer}
+        />
+        {jourARetirer && !dateRetirable ? (
+          <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+            {t('collectiviteCreneaux.gerer.pasCeJour', 'Ce créneau n’a pas lieu ce jour-là.')}
+          </Text>
+        ) : null}
+        {erreur ? (
+          <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
+        ) : null}
+        <Button
+          disabled={!dateRetirable}
+          isLoading={retirer.isPending}
+          onPress={confirmerLaDate}
+          title={t('collectiviteCreneaux.gerer.retirerCetteDate', 'Retirer cette date')}
+          variant="Danger"
+        />
+        <Button
+          onPress={() => setEtape('detail')}
+          title={t('common.cancel', 'Annuler')}
+          variant="Ghost"
+        />
+      </View>
+    );
+  }
 
   if (etape === 'retirer') {
     const confirmer = async () => {
@@ -109,21 +207,32 @@ function SeasonSlotManage({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {t('collectiviteCreneaux.gerer.retirerTitre', 'Retirer le créneau du {{jour}} ?', {
-            jour: jour.toLocaleLowerCase(),
-            ...SANS_ECHAPPEMENT,
-          })}
+          {enSerie
+            ? t(
+              'collectiviteCreneaux.gerer.retirerSerieTitre',
+              'Retirer la série à partir d’une date ?',
+            )
+            : t('collectiviteCreneaux.gerer.retirerTitre', 'Retirer le créneau du {{jour}} ?', {
+              jour: jour.toLocaleLowerCase(),
+              ...SANS_ECHAPPEMENT,
+            })}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {unSeulPointFinal(t(
-            'collectiviteCreneaux.gerer.retirerPerd',
-            '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
+            // R17-QUAND-1 — une série se dit par son rythme (« un mercredi sur deux, 17:30 »).
+            enSerie
+              ? 'collectiviteCreneaux.gerer.retirerSeriePerd'
+              : 'collectiviteCreneaux.gerer.retirerPerd',
+            enSerie
+              ? '{{qui}} perd {{rythme}}, {{installation}}, à partir du {{date}}.'
+              : '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
             {
               date: formatDay(retraitLisible ? dateDuRetrait : new Date(), { withYear: false }),
               heures,
               installation: installationName || slot?.facility?.name || '',
               jour: jour.toLocaleLowerCase(),
               qui,
+              rythme: rythme.charAt(0).toLocaleLowerCase() + rythme.slice(1),
               ...SANS_ECHAPPEMENT,
             },
           ))}
@@ -200,14 +309,7 @@ function SeasonSlotManage({
       <View style={{ gap: 4 }}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{qui}</Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {[
-            t('collectiviteCreneaux.gerer.chaque', 'Chaque {{jour}}, {{heures}}', {
-              heures,
-              jour: jour.toLocaleLowerCase(),
-              ...SANS_ECHAPPEMENT,
-            }),
-            installationName || slot?.facility?.name,
-          ].filter(Boolean).join(' · ')}
+          {[rythme, installationName || slot?.facility?.name].filter(Boolean).join(' · ')}
         </Text>
       </View>
       <View style={{ gap: 8 }}>
@@ -215,6 +317,14 @@ function SeasonSlotManage({
           t('collectiviteCreneaux.gerer.periode', 'Période'),
           formatPeriod(slot?.validFrom, dernierJour),
         )}
+        {forme.dates ? rangee(
+          t('collectiviteCreneaux.gerer.dates', 'Dates'),
+          forme.dates.map((date) => formatDay(date, { withYear: false })).join(' · '),
+        ) : null}
+        {prochaine ? rangee(
+          t('collectiviteCreneaux.gerer.prochaineSeance', 'Prochaine séance'),
+          formatDay(prochaine, { withYear: false }),
+        ) : null}
         {slot?.attributedAt ? rangee(
           t('collectiviteCreneaux.gerer.attribueLe', 'Attribué le'),
           formatDay(String(slot.attributedAt).slice(0, 10)),
@@ -238,14 +348,38 @@ function SeasonSlotManage({
           <>
             <Button
               onPress={() => onModify(slot)}
-              title={t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
+              title={enSerie
+                ? t('collectiviteCreneaux.gerer.modifierSerie', 'Modifier la série')
+                : t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
               variant="Secondary"
             />
+            {prochaine ? (
+              <Button
+                onPress={() => setEtape('retirerDate')}
+                title={t(
+                  'collectiviteCreneaux.gerer.retirerUneDate',
+                  'Retirer le {{date}} seulement',
+                  { date: formatDay(prochaine, { withYear: false }), ...SANS_ECHAPPEMENT },
+                )}
+                variant="Secondary"
+              />
+            ) : null}
             <Button
               onPress={() => setEtape('retirer')}
-              title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
+              title={enSerie
+                ? t('collectiviteCreneaux.gerer.retirerSerie', 'Retirer la série')
+                : t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
               variant="Danger"
             />
+            {enSerie ? (
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'collectiviteCreneaux.gerer.noteSerie',
+                  '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
+                    + 'passées restent. Le club est prévenu.',
+                )}
+              </Text>
+            ) : null}
           </>
         ) : null}
         <Button onPress={onClose} title={t('common.close', 'Fermer')} variant="Ghost" />

@@ -36,6 +36,10 @@ let mockFacilityContext;
 /** @type {any} */
 let mockUserData;
 
+// R17-SIGNALER-1 : la carte et l accueil lisent le resume des signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useCollectiviteFacilityReportsSummary: () => ({ data: null }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
   useNavigation: () => mockNavigation,

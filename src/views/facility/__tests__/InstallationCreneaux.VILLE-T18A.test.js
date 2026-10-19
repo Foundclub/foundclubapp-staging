@@ -107,6 +107,12 @@ jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: j
 jest.mock('@/services/facilityClosure/facilityClosureService', () => ({
   listFacilityClosures: jest.fn(() => Promise.resolve({ data: [], meta: {} })),
 }));
+// R17-SIGNALER-1 (19/10) : la pastille de l onglet « Sécurité et suivi » se lit dans le cache ; le
+// service double compte les lectures (il ne doit y en avoir AUCUNE de plus).
+jest.mock('@/services/facilityReport/facilityReportService', () => ({
+  getCollectiviteFacilityReportsSummary: jest.fn(() => Promise.resolve({ data: [], meta: {} })),
+  listFacilityReports: jest.fn(() => Promise.resolve({ data: [], meta: {} })),
+}));
 
 /** @type {any} */
 let mockClubs;
@@ -423,10 +429,15 @@ describe('VILLE-T18A point 4 — la fiche : les 4 onglets tiennent dans la large
   it('Créneaux · Planning · Fermetures · Infos, à largeur égale, libellés rétrécis (jamais coupés)', async () => {
     await rendre();
     const onglets = mockOnglets.at(-1);
+    // R17-SIGNALER-1 (19/10, planche P10-securite-tel écran 1, validée par Adel « ok go ») : la Ville
+    // a un 5ᵉ onglet, « Sécurité et suivi ». Cinq ne tiennent pas sur 412 px : au téléphone, la
+    // rangée DÉFILE et chaque nom reste entier. Sans la Ville (canManage faux), 4 onglets à largeur
+    // égale, comme avant.
     expect(onglets.options.map((/** @type {any} */ option) => option.label))
-      .toEqual(['Créneaux', 'Planning', 'Fermetures', 'Infos']);
-    expect(onglets.centerContent).toBe(true);
-    expect(onglets.fitLabels).toBe(true);
+      .toEqual(['Créneaux', 'Planning', 'Fermetures', 'Infos', 'Sécurité et suivi']);
+    expect(onglets.centerContent).toBe(false);
+    expect(onglets.fitLabels).toBe(false);
+    expect(onglets.fullLabels).toBe(true);
   });
 });
 
@@ -437,3 +448,42 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// R17-SIGNALER-1 (19/10/2026, planche P10-securite-ordi A validée par Adel) — la PASTILLE de
+// l onglet « Sécurité et suivi » : le compte DÉJÀ en cache (le résumé de la Ville, lu par la liste
+// des installations d où l on arrive), SANS lecture de plus (consigne du chef d orchestre).
+describe('R17-SIGNALER-1 — la pastille de l onglet « Sécurité et suivi », sans lecture de plus', () => {
+  const rapports = jest.requireMock('@/services/facilityReport/facilityReportService');
+
+  it('le résumé de la Ville en cache : l onglet porte 2, le lecteur d écran l entend, rien n est relu', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
+    client.setQueryData(['facility-reports', 'collectivite', 'ville-montrivage'], {
+      data: [{ facilityDocumentId: 'gym-tilleuls', openCount: 2 }],
+    });
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <InstallationCreneaux />
+        </QueryClientProvider>,
+      );
+    });
+    await attendre();
+    montes.push({ arbre, client });
+    const securite = mockOnglets.at(-1).options.find((/** @type {any} */ option) => option.value === 'securite');
+    expect(securite.badge).toBe(2);
+    expect(securite.accessibilityLabel).toBe('Sécurité et suivi, 2 signalements ouverts');
+    expect(rapports.listFacilityReports).not.toHaveBeenCalled();
+    expect(rapports.getCollectiviteFacilityReportsSummary).not.toHaveBeenCalled();
+  });
+
+  it('rien en cache (on arrive par l adresse) : pas de pastille, et toujours aucune lecture', async () => {
+    await rendre();
+    const securite = mockOnglets.at(-1).options.find((/** @type {any} */ option) => option.value === 'securite');
+    expect(securite.badge).toBeNull();
+    expect(securite.accessibilityLabel).toBeUndefined();
+    expect(rapports.listFacilityReports).not.toHaveBeenCalled();
+    expect(rapports.getCollectiviteFacilityReportsSummary).not.toHaveBeenCalled();
+  });
+});

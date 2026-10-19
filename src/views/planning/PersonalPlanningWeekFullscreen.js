@@ -58,6 +58,7 @@ import {
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -843,9 +844,11 @@ function PlanningWeekFullscreen() {
     const brut = bloc?.raw || {};
     if (brut.origin === 'slot') {
       if (brut.slot?.source === 'request') {
+        // R17-QUAND-1 : la forme de la série acceptée (« 1 sem. sur 2 », « 4 dates »).
         return t(
           'collectiviteCreneaux.planning.origineDemandeSerie',
-          'Demande acceptée (chaque semaine)',
+          'Demande acceptée ({{rythme}})',
+          { rythme: formeEnMots(t, brut.slot, { court: true }), ...SANS_ECHAPPEMENT },
         );
       }
       // FINITIONS15 point 3 (T14) : une SÉANCE du club posée dans le créneau en prend la place avec
@@ -858,8 +861,8 @@ function PlanningWeekFullscreen() {
           ? 'collectiviteCreneaux.planning.origineSeanceDansCreneau'
           : 'collectiviteCreneaux.planning.origineCreneau',
         seanceDansLeCreneau
-          ? 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}'
-          : 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
+          ? 'Séance du club dans son créneau : {{rythme}}, du {{debut}} au {{fin}}'
+          : 'Créneau attribué : {{rythme}}, du {{debut}} au {{fin}}',
         {
           debut: brut.slot?.validFrom
             ? format(parseISO(brut.slot.validFrom), 'd MMM', { locale: localeDesDates() })
@@ -871,6 +874,8 @@ function PlanningWeekFullscreen() {
             })
             : '',
           jour: weekdayName(brut.slot?.weekday).toLocaleLowerCase(),
+          // R17-QUAND-1 : « chaque mardi », « un mercredi sur deux », ou ses dates.
+          rythme: formeEnMots(t, brut.slot),
           ...SANS_ECHAPPEMENT,
         },
       );
@@ -975,6 +980,17 @@ function PlanningWeekFullscreen() {
   );
   const peutDemander = !peutAttribuer && gestionConnue && Boolean(clubDuLecteur)
     && (Array.isArray(villesDuClub.data) ? villesDuClub.data : [])
+      .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
+  // R17-SIGNALER-1 (19/10, P10-signaler-tel 1 a) — « Un problème sur place ? Signale-le » : tout
+  // membre d'un club qui utilise l'installation de la Ville (joueur, parent compris, Q1 A), pas la
+  // Ville. Même
+  // lecture que « Demander un créneau » (même clé : aucune requête de plus pour un encadrant) ; le
+  // serveur rejuge à l'envoi.
+  const villesPourSignaler = useClubCollectiviteFacilities(
+    isFacilitySource && gestionConnue && !managingCollectiviteId ? clubDuLecteur : null,
+  );
+  const peutSignaler = Boolean(clubDuLecteur)
+    && (Array.isArray(villesPourSignaler.data) ? villesPourSignaler.data : [])
       .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
   // COLL-C3B-BIS (planche 43) : sur ordinateur, la demande s'ouvre en PANNEAU, à droite.
   const demandeEnPanneau = useIsDesktop();
@@ -2086,6 +2102,45 @@ function PlanningWeekFullscreen() {
             {/* complet (ce que devient un depassement). */}
             {phraseDuDirigeant ? (
               <Text style={[Fonts.p4, Fonts.neutral200]}>{facilitySummaryMessage}</Text>
+            ) : null}
+            {/* R17-SIGNALER-1 — sous la barre, le lien pour signaler (P10-signaler-tel 1 a). */}
+            {peutSignaler ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => /** @type {any} */ (navigation).navigate(
+                  RouteNames.FacilityReportNew,
+                  {
+                    facilityId,
+                    ...(contextDetailLabel ? { facilityName: contextDetailLabel } : {}),
+                  },
+                )}
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.paddingHorizontal[12],
+                  {
+                    backgroundColor: withAlpha(Colors.primary500, 0.08),
+                    borderColor: withAlpha(Colors.primary500, 0.45),
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    gap: 10,
+                    minHeight: 48,
+                  },
+                ]}
+                testID="planning-signaler"
+              >
+                <Image
+                  source={Images.flag}
+                  style={{ height: 18, tintColor: Colors.primary500, width: 18 }}
+                />
+                <Text style={[Fonts.p2Bold, Fonts.primary200, { flex: 1 }]}>
+                  {t('facilityReports.membre.entreePlanning', 'Un problème sur place ? Signale-le')}
+                </Text>
+                <Image
+                  source={Images.arrowRight}
+                  style={{ height: 12, tintColor: Colors.primary200, width: 12 }}
+                />
+              </TouchableOpacity>
             ) : null}
             {/* COLL-C3B (02/10) — « Demander un creneau » (P8v2) : le club demande a la Ville. */}
             {peutDemander ? (

@@ -9,15 +9,19 @@ import {
   fromMinutes,
   fullRangesOfSlots,
   SEASON_SLOT_WEEKDAYS,
+  slotShape,
   slotWho,
   timeRange,
   weekdayName,
   weekGridLanes,
   weekGridRows,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
+
+import Hachures from '@/components/atoms/hachures/Hachures';
 
 // Une minute = un point : 60 px par heure (la planche en dessine 56).
 const PAR_MINUTE = 1;
@@ -217,6 +221,9 @@ function SeasonSlotWeekGrid({
   ) => {
     const { creneau } = place;
     const heures = timeRange(fromMinutes(place.debut), fromMinutes(place.fin));
+    // 🗓️ R17-QUAND-1, point 6 (planche P10-quand-ordi, état A) — un créneau qui ne revient pas
+    // chaque semaine est HACHURÉ et dit sa forme (« 1 sem. sur 2 ») ; « chaque semaine » : plein.
+    const pasChaqueSemaine = slotShape(creneau).everyWeeks > 1;
     const largeurVoie = largeurJour > 0 ? largeurJour / place.voies : Infinity;
     let contenu = 'rien';
     if (largeurVoie >= VOIE_NOM_ENTIER) contenu = 'entier';
@@ -230,7 +237,9 @@ function SeasonSlotWeekGrid({
           '{{qui}}, {{jour}} {{heures}}',
           {
             heures,
-            jour: weekdayName(creneau.weekday).toLocaleLowerCase(),
+            jour: pasChaqueSemaine
+              ? formeEnMots(t, creneau)
+              : weekdayName(creneau.weekday).toLocaleLowerCase(),
             qui: slotWho(creneau),
             ...SANS_ECHAPPEMENT,
           },
@@ -263,6 +272,12 @@ function SeasonSlotWeekGrid({
             overflow: 'hidden',
           }}
         >
+          {pasChaqueSemaine ? (
+            <Hachures
+              color={creneau.displayColor || Colors.primary500}
+              testID={`hachures-${creneau.documentId}`}
+            />
+          ) : null}
           <View
             style={[
               contenu === 'entier' ? Spaces.paddingHorizontal[8] : Spaces.paddingHorizontal[4],
@@ -295,6 +310,20 @@ function SeasonSlotWeekGrid({
             ) : null}
             {contenu === 'entier' && place.fin - place.debut >= 75 ? (
               <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{heures}</Text>
+            ) : null}
+            {pasChaqueSemaine && contenu !== 'rien' && !serre ? (
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p4Bold, Fonts.neutral00, {
+                  alignSelf: 'flex-start',
+                  backgroundColor: withAlpha(Colors.neutral00, 0.14),
+                  borderRadius: 6,
+                  marginTop: 2,
+                  paddingHorizontal: 6,
+                }]}
+              >
+                {formeEnMots(t, creneau, { court: true })}
+              </Text>
             ) : null}
           </View>
         </View>
