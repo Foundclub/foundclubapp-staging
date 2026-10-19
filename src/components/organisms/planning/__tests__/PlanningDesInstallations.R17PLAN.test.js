@@ -1,0 +1,383 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Text, TouchableOpacity } from 'react-native';
+import renderer, { act } from 'react-test-renderer';
+
+import { getFacilityPlanning } from '@/services/facility/facilityService';
+
+import PlanningDesInstallations from '../PlanningDesInstallations';
+
+// 🏟️ R17-PLANNING (20/10/2026, REC17-005 lot 1) — « Planning de toutes les installations », sous
+// les cartes de la Ville (planches P10-planning-ordi et P10-planning-tel, validées le 19/10).
+// Ordinateur : semaine en grille (une rangée par installation), jour en colonnes (une par
+// installation), mois. Téléphone : jour rangé par installation, semaine en liste jour par jour,
+// mois. États vide, chargement, erreur. Toucher un bloc ouvre le planning de son installation à ce
+// jour ; toucher le nom d'une installation ouvre sa fiche. API simulée, vrais libellés de fr.js.
+
+const i18nextTemoin = require('i18next');
+
+const frTemoin = require('@/theme/strings/translations/fr');
+
+(i18nextTemoin.default || i18nextTemoin).init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: frTemoin.default } },
+});
+
+/** @type {any} */
+let mockNavigation;
+/** @type {boolean} */
+let mockOrdinateur = false;
+/** @type {any[]} */
+const mockCalendriers = [];
+/** @type {any[]} */
+const mockGrilles = [];
+
+jest.setTimeout(30000);
+// Mercredi 21 octobre 2026, midi (semaine du 19 au 25).
+jest.mock('@/utils/planning/planningSlots', () => ({
+  ...jest.requireActual('@/utils/planning/planningSlots'),
+  getPlanningDefaultDate: () => new Date(2026, 9, 21, 12, 0, 0),
+}));
+jest.mock('@react-navigation/native', () => ({ useNavigation: () => mockNavigation }));
+jest.mock('@/responsive', () => ({ useIsDesktop: () => mockOrdinateur }));
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
+  }),
+}));
+jest.mock('@/theme/themeContext', () => {
+  const genererCouleurs = jest.requireActual('@/theme/colors').default;
+  const genererPolices = jest.requireActual('@/theme/fonts').default;
+  const espaces = jest.requireActual('@/theme/spaces').default;
+  const couleurs = genererCouleurs();
+  return {
+    __esModule: true,
+    default: () => ({ Colors: couleurs, Fonts: genererPolices(couleurs), Spaces: espaces }),
+  };
+});
+jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteClubs: () => ({ data: [] }),
+}));
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/components/atoms/button/Button', () => {
+  const reactActuel = jest.requireActual('react');
+  const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
+  return function ButtonMock(/** @type {any} */ props) {
+    return reactActuel.createElement(
+      PressableRN,
+      { onPress: props.onPress },
+      reactActuel.createElement(TexteRN, null, props.title),
+    );
+  };
+});
+jest.mock('@/components/organisms/planningCalendarView', () => function CalendrierDouble(
+  /** @type {any} */ props,
+) {
+  mockCalendriers.push(props);
+  return null;
+});
+jest.mock('@/components/organisms/planningWeekTimelineView', () => function GrilleDouble(
+  /** @type {any} */ props,
+) {
+  mockGrilles.push(props);
+  return null;
+});
+
+const INSTALLATIONS = [
+  {
+    documentId: 'gym', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: '#27D6A3',
+  },
+  {
+    documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: '#9D4DFF',
+  },
+  {
+    documentId: 'stade', maxSlots: 2, name: 'Stade municipal', planningColor: '#FFA115',
+  },
+];
+const AS = { documentId: 'club-as', name: 'AS Montrivage' };
+const FC = { documentId: 'club-fc', name: 'Montrivage FC' };
+
+/**
+ * Un créneau d'un club (octobre : Paris = UTC+2).
+ * @param {any} club - Le club.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @param {number} heure - L'heure de début, à Paris.
+ * @param {string} equipe - L'équipe.
+ * @returns {any} Le bloc, tel que le serveur le rend.
+ */
+const bloc = (club, jour, heure, equipe) => ({
+  club,
+  documentId: null,
+  endAt: `${jour}T${String(heure - 1).padStart(2, '0')}:30:00.000Z`,
+  endTime: `${heure + 1}:30:00.000`,
+  hasExplicitTime: true,
+  kind: 'slot',
+  origin: 'slot',
+  pending: false,
+  startAt: `${jour}T${String(heure - 2).padStart(2, '0')}:00:00.000Z`,
+  startTime: `${heure}:00:00.000`,
+  team: { name: equipe },
+  title: `${club.name} · ${equipe}`,
+});
+
+const SEMAINE = {
+  dojo: [],
+  gym: [bloc(FC, '2026-10-19', 18, 'Senior B'), bloc(AS, '2026-10-20', 17, 'U15')],
+  stade: [bloc(AS, '2026-10-21', 14, 'U11'), bloc(FC, '2026-10-20', 18, 'U17')],
+};
+
+/**
+ * Le serveur simulé : ce que rend chaque installation, selon le début de la période demandée.
+ * @param {Record<string, Record<string, any[]>>} parPlage - Par jour de début, puis installation.
+ */
+const servir = (parPlage) => {
+  /** @type {any} */ (getFacilityPlanning).mockImplementation(async (
+    /** @type {string} */ id,
+    /** @type {any} */ plage,
+  ) => ({ data: parPlage[plage.from]?.[id] || [], meta: {} }));
+};
+
+/** @type {Array<{ arbre: any, client: QueryClient }>} */
+const montes = [];
+const attendre = async () => {
+  await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 20); }); });
+};
+const ouvrirFiche = jest.fn();
+const rendre = async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { gcTime: 0, retry: false } } });
+  /** @type {any} */
+  let arbre;
+  await act(async () => {
+    arbre = renderer.create(
+      <QueryClientProvider client={client}>
+        <PlanningDesInstallations
+          collectiviteId="ville-montrivage"
+          installations={INSTALLATIONS}
+          onOuvrirInstallation={ouvrirFiche}
+        />
+      </QueryClientProvider>,
+    );
+  });
+  await attendre();
+  await attendre();
+  await attendre();
+  montes.push({ arbre, client });
+  return arbre;
+};
+const aplatir = (/** @type {any} */ enfants) => {
+  if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
+  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
+  if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
+  return String(enfants).replace(/\u00a0/g, ' ');
+};
+const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+  .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
+const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
+  .findAll((/** @type {any} */ noeud) => noeud.props?.testID === id
+    && typeof noeud.props?.onPress === 'function');
+const choisir = async (/** @type {any} */ arbre, /** @type {string} */ vue) => {
+  await act(async () => { parTestID(arbre, `toutes-vue-${vue}`)[0].props.onPress(); });
+  await attendre();
+  await attendre();
+};
+const parTexte = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ noeud) => noeud.findAllByType(Text)
+    .some((/** @type {any} */ texte) => aplatir(texte.props.children).trim() === libelle));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockCalendriers.length = 0;
+  mockGrilles.length = 0;
+  mockOrdinateur = false;
+  mockNavigation = { navigate: jest.fn() };
+  servir({ '2026-10-01': SEMAINE, '2026-10-19': SEMAINE });
+});
+
+afterEach(() => {
+  act(() => {
+    montes.splice(0).forEach(({ arbre, client }) => {
+      arbre.unmount();
+      client.clear();
+    });
+  });
+});
+
+describe('R17-PLANNING — téléphone', () => {
+  test('1 — Jour (arrivée, aujourd hui plein) : par installation, toutes, même vides', async () => {
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Planning de toutes les installations');
+    expect(lus).toContain('Mercredi 21 octobre');
+    const ordre = ['Gymnase des Tilleuls', 'Dojo municipal', 'Stade municipal']
+      .map((nom) => lus.indexOf(nom));
+    expect(ordre.every((rang) => rang >= 0)).toBe(true);
+    expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
+    expect(lus).toContain('AS Montrivage · U11');
+    expect(lus.filter((texte) => texte === 'Rien ce jour')).toHaveLength(2);
+    expect(lus.filter((texte) => texte === 'Ouvrir')).toHaveLength(3);
+  });
+
+  test('2 — Semaine : la liste jour par jour, chaque ligne dit son installation', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    const lus = textes(arbre);
+    expect(lus).toContain('Lundi 19');
+    expect(lus).toContain('Mardi 20');
+    expect(lus).toContain('Mercredi 21 · aujourd’hui');
+    expect(lus.indexOf('Lundi 19')).toBeLessThan(lus.indexOf('Mardi 20'));
+    const mardi = lus.slice(lus.indexOf('Mardi 20'), lus.indexOf('Mercredi 21 · aujourd’hui'));
+    expect(mardi).toEqual(expect.arrayContaining([
+      'AS Montrivage · U15', 'Gymnase des Tilleuls', 'Montrivage FC · U17', 'Stade municipal',
+    ]));
+    expect(lus).toContain('19 – 25 oct.');
+  });
+
+  test('3 — Mois : couleur de l INSTALLATION ; toucher un jour garde le mois', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    const calendrier = mockCalendriers.at(-1);
+    expect(calendrier.events.filter((/** @type {any} */ b) => b.installation.documentId === 'stade')
+      .every((/** @type {any} */ b) => b.displayColor === '#FFA115')).toBe(true);
+    await act(async () => { calendrier.onDateSelect(new Date(2026, 9, 20, 12)); });
+    await attendre();
+    expect(textes(arbre)).toContain('Octobre 2026');
+  });
+
+  test('4 — toucher un bloc ouvre le planning de SON installation, à CE jour', async () => {
+    const arbre = await rendre();
+    const ligne = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-ligne'
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { ligne.props.onPress(); });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith(
+      'PlanningWeekFullscreen',
+      expect.objectContaining({
+        contextDetailLabel: 'Stade municipal',
+        espace: 'ville',
+        facilityId: 'stade',
+        sourceType: 'facility',
+      }),
+    );
+    const { date } = mockNavigation.navigate.mock.calls[0][1];
+    expect(new Date(date).getDate()).toBe(21);
+  });
+
+  test('5 — « Ouvrir » ouvre la fiche de l installation', async () => {
+    const arbre = await rendre();
+    await act(async () => { parTexte(arbre, 'Ouvrir').props.onPress(); });
+    expect(ouvrirFiche).toHaveBeenCalledWith(INSTALLATIONS[0]);
+  });
+});
+
+describe('R17-PLANNING — ordinateur', () => {
+  beforeEach(() => { mockOrdinateur = true; });
+
+  test('6 — Semaine : une rangée par installation, une colonne par jour, sa capacité', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    const lus = textes(arbre);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-grille'))
+      .not.toHaveLength(0);
+    ['gym', 'dojo', 'stade'].forEach((id) => {
+      expect(arbre.root.findAll((/** @type {any} */ n) => (
+        n.props?.testID === `toutes-rangee-${id}`)))
+        .not.toHaveLength(0);
+    });
+    expect(lus).toContain('2 équipes à la fois');
+    expect(lus).toContain('1 équipe à la fois');
+    expect(lus).toContain('Séances des clubs, semaine du 19 octobre.');
+    // La légende : une couleur par club.
+    expect(lus).toEqual(expect.arrayContaining(['AS Montrivage', 'Montrivage FC']));
+  });
+
+  test('7 — Jour : une colonne par installation (les `lanes`)', async () => {
+    await rendre();
+    const grille = mockGrilles.at(-1);
+    expect(grille.mode).toBe('day');
+    expect(grille.lanes.map((/** @type {any} */ l) => l.label))
+      .toEqual(['Gymnase des Tilleuls', 'Dojo municipal', 'Stade municipal']);
+    const auStade = grille.events.find((/** @type {any} */ b) => b.title === 'AS Montrivage · U11');
+    expect(grille.laneOf(auStade)).toBe(2);
+  });
+
+  test('8 — Mois : un clic sur un jour ouvre la vue Jour à cette date', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    await act(async () => { mockCalendriers.at(-1).onDateSelect(new Date(2026, 9, 20, 12)); });
+    await attendre();
+    expect(textes(arbre)).toContain('Mardi 20 octobre');
+    expect(mockGrilles.at(-1).mode).toBe('day');
+  });
+});
+
+describe('R17-PLANNING — états', () => {
+  test('9 — chargement : le squelette, puis le planning', async () => {
+    /**
+     * Livre la lecture en attente.
+     * @type {(valeur: any) => void}
+     */
+    let livrer = () => {};
+    /** @type {any} */ (getFacilityPlanning).mockImplementation(() => new Promise((resolve) => {
+      livrer = resolve;
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: 0, retry: false } } });
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <PlanningDesInstallations
+            collectiviteId="ville-montrivage"
+            installations={INSTALLATIONS}
+            onOuvrirInstallation={ouvrirFiche}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    montes.push({ arbre, client });
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-chargement'))
+      .not.toHaveLength(0);
+    livrer({ data: [] });
+  });
+
+  test('10 — erreur : on le dit, on propose de réessayer ; la relance relit', async () => {
+    /** @type {any} */ (getFacilityPlanning).mockImplementation(async () => {
+      throw new Error('500');
+    });
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Le planning n’a pas pu être chargé.');
+    expect(lus).toContain(
+      'Vérifiez la connexion. Les installations restent accessibles au-dessus.',
+    );
+    const appels = /** @type {any} */ (getFacilityPlanning).mock.calls.length;
+    await act(async () => { parTexte(arbre, 'Réessayer').props.onPress(); });
+    await attendre();
+    expect(/** @type {any} */ (getFacilityPlanning).mock.calls.length).toBeGreaterThan(appels);
+  });
+
+  test('11 — semaine vide, rien après : la phrase et « Voir la semaine suivante »', async () => {
+    servir({});
+    const arbre = await rendre();
+    expect(textes(arbre)).toContain('Rien ce mercredi');
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Aucune séance du 19 oct. au 25 oct.');
+    await act(async () => { parTexte(arbre, 'Voir la semaine suivante').props.onPress(); });
+    await attendre();
+    expect(textes(arbre)).toContain('26 oct. – 1 nov.');
+  });
+
+  test('12 — R17-VUE à l arrivée : aujourd hui vide, samedi plein ⇒ la SEMAINE', async () => {
+    servir({ '2026-10-19': { dojo: [bloc(AS, '2026-10-24', 10, 'U9')], gym: [], stade: [] } });
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('19 – 25 oct.');
+    expect(lus).toContain('Samedi 24');
+    expect(lus).toContain('Dojo municipal');
+  });
+});
