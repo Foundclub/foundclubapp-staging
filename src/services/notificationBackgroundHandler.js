@@ -10,11 +10,14 @@ import { normalizeNotificationPayload } from '@/utils/notifications/notification
 import {
   displayChatReplyActionableNotification,
   displayEventRsvpActionableNotification,
+  displayResaVeilleActionableNotification,
   ensureNotificationActionSetup,
   handleChatReplyActionPress,
   handleEventRsvpActionPress,
+  handleResaVeilleActionPress,
   isChatReplyActionablePayload,
   isEventRsvpActionablePayload,
+  isResaVeilleActionablePayload,
   storePendingOpenNotification,
 } from './notificationActions/rsvpActions';
 
@@ -87,6 +90,16 @@ export const registerBackgroundHandler = () => {
           data: normalizedData,
           title: resolvePushTitle(remoteMessage, normalizedData),
         });
+      } else if (
+        // RESA-L6B-1 — N-20 et ses deux boutons (COMPLEXES_JOUEUR allumé seulement).
+        Platform.OS === 'android'
+        && isResaVeilleActionablePayload(normalizedData)
+      ) {
+        await displayResaVeilleActionableNotification({
+          body: resolvePushBody(remoteMessage, normalizedData),
+          data: normalizedData,
+          title: resolvePushTitle(remoteMessage, normalizedData),
+        });
       }
     } catch (error) {
       notificationsBgLogger.warn('Failed to process FCM background message', error);
@@ -103,6 +116,18 @@ export const registerBackgroundHandler = () => {
           pressActionId: detail?.pressAction?.id,
         });
         if (chatReplyResult?.handled) {
+          if (detail.notification?.id) {
+            await notifee.cancelNotification(detail.notification.id);
+          }
+          return;
+        }
+
+        // RESA-L6B-1 — « Je confirme » / « J'annule » de N-20, application fermée.
+        const veilleResult = await handleResaVeilleActionPress({
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (veilleResult?.handled) {
           if (detail.notification?.id) {
             await notifee.cancelNotification(detail.notification.id);
           }

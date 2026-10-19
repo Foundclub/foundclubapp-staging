@@ -17708,6 +17708,22 @@ export default {
       body: 'Your attendance has been recorded.',
       title: 'Attendance confirmed',
     },
+    resaVeille: {
+      annule: {
+        body: 'The slot has been released.',
+        title: 'Booking cancelled',
+      },
+      annuler: 'I’ll cancel',
+      confirme: {
+        body: 'Thanks, it’s confirmed.',
+        title: 'Booking confirmed',
+      },
+      confirmer: 'I confirm',
+      echec: {
+        body: 'Tap here to answer in the app.',
+        title: 'Answer not sent',
+      },
+    },
   },
   scoreFlow: {
     countdown: {

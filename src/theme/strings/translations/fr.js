@@ -18310,6 +18310,22 @@ export default {
       body: 'Ta présence est enregistrée.',
       title: 'Présence confirmée',
     },
+    resaVeille: {
+      annule: {
+        body: 'Le créneau est libéré.',
+        title: 'Réservation annulée',
+      },
+      annuler: 'J’annule',
+      confirme: {
+        body: 'Merci, c’est confirmé.',
+        title: 'Réservation confirmée',
+      },
+      confirmer: 'Je confirme',
+      echec: {
+        body: 'Touche ici pour répondre dans l’app.',
+        title: 'Réponse non envoyée',
+      },
+    },
   },
   scoreFlow: {
     countdown: {

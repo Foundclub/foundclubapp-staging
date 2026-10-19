@@ -1,5 +1,7 @@
 import { ajouterJours, jourDeParis } from '@/domains/complexe/reserverTerrain';
 
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
+
 /**
  * LE JOUEUR ET SES RÉSERVATIONS — RESA-L6B-1 (19/10/2026), chantier Réservation : la confirmation
  * la veille (E-P14) et « Mes réservations » (E-P10). Plan
@@ -8,6 +10,14 @@ import { ajouterJours, jourDeParis } from '@/domains/complexe/reserverTerrain';
  * la question attend une réponse.
  * Témoin : `reservationsDuJoueur.test.js`.
  */
+
+/**
+ * L'interrupteur `COMPLEXES_JOUEUR`, lu À L'APPEL (une liaison vivante : les témoins le
+ * basculent ; même motif que `notificationsDuComplexe.js`). Les boutons de N-20 (`rsvpActions.js`)
+ * le lisent ici.
+ * @returns {boolean} Vrai si le côté joueur des complexes est allumé.
+ */
+export const joueurDesComplexesAllume = () => Boolean(COMPLEXES_JOUEUR);
 
 /**
  * @typedef {{ canAnswerDayBefore?: boolean, cancellableUntil?: string | null,
