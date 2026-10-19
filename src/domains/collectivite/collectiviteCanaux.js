@@ -8,8 +8,8 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  * Deux types de fil, dont le SERVEUR calcule les membres (admin
  * `api/chat/services/collectivite-channels.ts`) :
  *   · `collectivite_dirigeants` (D72) — le canal des dirigeants : la Ville et les dirigeants de
- *     ses clubs rattachés. Tous se répondent. Épinglé en tête de la messagerie (il ne figure
- *     donc pas dans la liste des conversations) ;
+ *     ses clubs rattachés. Tous se répondent. Côté club, épinglé en tête de la messagerie ; dans
+ *     l'espace de la Ville, une ligne de la liste comme les autres (R17-CANAUX, 19/10) ;
  *   · `collectivite_club` (D73) — la conversation PRIVÉE entre la Ville et les dirigeants d'UN
  *     club. Côté Ville, elle se range dans « Conversations » ; côté club, elle porte le nom de la
  *     Ville.
@@ -147,8 +147,10 @@ export const voixDuFil = ({ chat, espaceVille = false }) => (
 
 /**
  * La liste des conversations, une fois les fils de la Ville rangés :
- *   · le canal des dirigeants n'y figure jamais (il est épinglé en tête) ;
- *   · dans l'espace de la Ville, seules SES conversations privées avec ses clubs ;
+ *   · dans l'espace de la Ville, SES fils seulement : son canal des dirigeants (R17-CANAUX,
+ *     19/10 : une ligne ordinaire qu'on épingle et archive, plus une carte au-dessus) et ses
+ *     conversations privées avec ses clubs ;
+ *   · côté club, le canal des dirigeants n'y figure pas (il est épinglé en tête) ;
  *   · côté club, la conversation privée de SON club seulement (un compte mixte ne voit pas, côté
  *     club, les conversations de la Ville avec les autres clubs).
  * @param {any[]} chats - Les fils, dans l'ordre de la liste.
@@ -161,7 +163,7 @@ export const filsDeLaMessagerie = (chats, {
 }) => {
   const liste = Array.isArray(chats) ? chats : [];
   if (espaceVille) {
-    return liste.filter((chat) => chat?.type === CONVERSATION_CLUB
+    return liste.filter((chat) => estFilDeLaVille(chat)
       && (!collectiviteId || chat?.collectivite?.documentId === collectiviteId));
   }
   return liste.filter((chat) => {

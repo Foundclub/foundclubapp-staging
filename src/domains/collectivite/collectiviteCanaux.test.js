@@ -75,7 +75,10 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
     expect(voixDuFil({ chat: { type: 'team' }, espaceVille: true })).toEqual({});
   });
 
-  it('la liste : canal épinglé ailleurs ; l’espace de la Ville, SES conversations privées', () => {
+  // R17-CANAUX (19/10, REC17-004, Adel : « le canal des dirigeants doit être comme les autres ») —
+  // RÉÉCRIT : dans l'espace de la Ville, le canal des dirigeants n'est plus une carte épinglée au
+  // dessus de la liste, c'est une ligne de conversation ordinaire (on l'épingle, on l'archive).
+  it('la liste : l’espace de la Ville, SES conversations ET son canal des dirigeants', () => {
     const filClub = { club: { documentId: 'club-x' }, documentId: 'club-chat', type: 'club' };
     const autreClub = {
       ...PRIVEE, collectiviteClub: { documentId: 'club-b', name: 'Basket' }, documentId: 'privee-2',
@@ -86,10 +89,13 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
       collectiviteClub: { documentId: 'club-c', name: 'FC Voisin' },
       documentId: 'privee-3',
     };
-    const tous = [CANAL, PRIVEE, autreClub, autreVille, filClub];
+    const canalAutreVille = {
+      ...CANAL, collectivite: { documentId: 'ville-2' }, documentId: 'canal-2',
+    };
+    const tous = [CANAL, PRIVEE, autreClub, autreVille, filClub, canalAutreVille];
     const ids = (/** @type {any[]} */ liste) => liste.map((c) => c.documentId);
     expect(ids(filsDeLaMessagerie(tous, { collectiviteId: 'ville-1', espaceVille: true })))
-      .toEqual(['privee-1', 'privee-2']);
+      .toEqual(['canal-1', 'privee-1', 'privee-2']);
     // Côté club : le canal sort de la liste, et seule la conversation privée de SON club reste.
     expect(ids(filsDeLaMessagerie(tous, { espaceVille: false, monClubId: 'club-fc' })))
       .toEqual(['privee-1', 'club-chat']);

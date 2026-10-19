@@ -9,18 +9,16 @@ import {
 import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
 import {
   CANAL_DIRIGEANTS,
-  CONVERSATION_CLUB,
   filsDeLaMessagerie,
   signatureDuMessage,
+  titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
 import { formatChatTimestamp } from '@/domains/messaging/messagingUseCases';
-import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
@@ -29,10 +27,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useMesActualitesDeLaVille } from '@/services/collectivite/collectiviteActualiteQueries';
 import { useMesCanauxDeLaVille } from '@/services/collectivite/collectiviteCanauxQueries';
-import {
-  useCollectiviteClubs,
-  useMyCollectivites,
-} from '@/services/collectivite/collectiviteQueries';
+import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
 
 /**
  * Une ligne de canal (planche P3v2-messages-tel : « .canal ») : un écusson, un titre, une ligne
@@ -111,83 +106,19 @@ function LigneDeCanal({
 }
 
 /**
- * Le canal des actualités, côté MAIRIE (planche P3v2-messages-tel, écran 1) : « Actualités de
- * la Ville de … », lu par les membres de ses clubs, et « Publier une actualité ».
- * @param {{ collectiviteId: string, navigation: any }} props
- * @returns {import('react').ReactElement | null} La section.
+ * 🏛️ R17-CANAUX (19/10/2026, REC17-004) — CÔTÉ MAIRIE, RIEN AU-DESSUS DES CONVERSATIONS. Adel :
+ * « la messagerie ne doit être que sous forme de message ; le canal des dirigeants doit être comme
+ * les autres ; pour publier une actualité on a déjà d'autres endroits ». Les deux cartes
+ * (« Actualités de la Ville de … », « Dirigeants des clubs ») et « Publier une actualité » sont
+ * parties : les canaux de la Ville sont des LIGNES de la liste (`filsDeLaMessagerie`), et la
+ * publication reste à ses quatre autres places (R17CANAUX.publierAilleurs.test.js).
+ * Ce qui reste, et c'est tout : la demande « mes canaux », qui CRÉE les canaux de la Ville au
+ * serveur à la première ouverture (collectivite-channels.ts, `mine`).
+ * @returns {null} Rien à l'écran.
  */
-function CanauxDeLaMairie({ collectiviteId, navigation }) {
-  const { t } = useTranslation();
-  const { Fonts } = useTheme();
-  const mine = useMyCollectivites();
-  const clubs = useCollectiviteClubs(collectiviteId);
-  const canaux = useMesCanauxDeLaVille();
-  const collectivite = findManagedCollectivite(mine.data, collectiviteId);
-  if (!collectivite) return null;
-  const nombre = Array.isArray(clubs.data) ? clubs.data.length : 0;
-  // COLL-C4A2 — le canal des dirigeants de CETTE Ville (créé par le serveur à la première demande).
-  const canal = (Array.isArray(canaux.data) ? canaux.data : [])
-    .find((/** @type {any} */ ligne) => ligne?.collectivite?.documentId === collectiviteId)?.canal;
-  return (
-    <View style={{ gap: 12 }} testID="canaux-de-la-ville-mairie">
-      <LigneDeCanal
-        nomVille={String(collectivite.name || '')}
-        onPress={() => navigation.navigate(RouteNames.CollectiviteActualites, { collectiviteId })}
-        precision={nombre === 1
-          ? t(
-            'collectiviteActualites.canaux.mairieLuUn',
-            'Lu par les membres d’1 club · eux ne répondent pas',
-          )
-          : t(
-            'collectiviteActualites.canaux.mairieLu',
-            'Lu par les membres de {{nombre}} clubs · eux ne répondent pas',
-            { nombre },
-          )}
-        testID="canal-actualites-mairie"
-        titre={t('collectiviteActualites.canaux.mairieTitre', 'Actualités de {{ville}}', {
-          ville: formatCollectiviteOfferedBy(String(collectivite.name || '')),
-          ...SANS_ECHAPPEMENT,
-        })}
-      />
-      {canal?.documentId ? (
-        <LigneDeCanal
-          ecusson={<IconeDuCanal taille={40} />}
-          nomVille={String(collectivite.name || '')}
-          onPress={() => navigation.navigate(RouteNames.Conversation, {
-            chatId: canal.documentId,
-            chatType: CANAL_DIRIGEANTS,
-            espace: 'ville',
-            title: t('collectiviteCanaux.titre', 'Dirigeants des clubs'),
-          })}
-          precision={nombre === 1
-            ? t(
-              'collectiviteCanaux.mairieLigneUn',
-              'Vous et les dirigeants d’1 club · échanges de créneaux',
-            )
-            : t(
-              'collectiviteCanaux.mairieLigne',
-              'Vous et les dirigeants des {{nombre}} clubs · échanges de créneaux',
-              { nombre },
-            )}
-          testID="canal-dirigeants-mairie"
-          titre={t('collectiviteCanaux.titre', 'Dirigeants des clubs')}
-        />
-      ) : null}
-      <Button
-        icon="send"
-        onPress={() => navigation.navigate(
-          RouteNames.CollectiviteActualiteForm,
-          { collectiviteId },
-        )}
-        testID="canaux-publier"
-        title={t('collectiviteActualites.publier', 'Publier une actualité')}
-        variant="Primary"
-      />
-      <Text accessibilityRole="header" style={[Fonts.p3Bold, Fonts.neutral300, { marginTop: 8 }]}>
-        {t('collectiviteActualites.canaux.conversations', 'Conversations')}
-      </Text>
-    </View>
-  );
+function CanauxDeLaMairie() {
+  useMesCanauxDeLaVille();
+  return null;
 }
 
 /**
@@ -359,10 +290,13 @@ function LigneDeColonne({
 
 /**
  * 🖥️ COLL-C4A3 (planche 47, P3c-canal-ordi) — LA COLONNE DE GAUCHE de « Messages » de la Ville,
- * SUR LE SITE, quand un fil de la Ville est ouvert : les canaux de la Ville (les actualités, le
- * canal des dirigeants), puis SES conversations privées avec ses clubs. Le fil ouvert est marqué ;
- * chaque ligne y mène depuis l'espace de la Ville (la voix de la Ville). La liste des fils vient
- * de l'écran (la même requête que la messagerie) : la colonne suit ses mises à jour en temps réel.
+ * SUR LE SITE, quand un fil de la Ville est ouvert : SES fils, chacun une ligne. Le fil ouvert est
+ * marqué ; chaque ligne y mène depuis l'espace de la Ville (la voix de la Ville). La liste des fils
+ * vient de l'écran (la même requête que la messagerie) : la colonne suit ses mises à jour en temps
+ * réel.
+ * R17-CANAUX (19/10, REC17-004) : le groupe « Canaux de la Ville » (Actualités de la Ville,
+ * Dirigeants des clubs) qui précédait les conversations est parti — « que des conversations »,
+ * Adel ; le canal des dirigeants est une ligne de « Conversations », comme sur le téléphone.
  * @param {{ chatId: string, chats?: any[], collectiviteId: string, navigation: any }} props
  * @returns {import('react').ReactElement | null} La colonne, ou rien pour une Ville inconnue.
  */
@@ -372,13 +306,9 @@ export function ColonneDesFilsDeLaVille({
   const { t } = useTranslation();
   const { Fonts } = useTheme();
   const mine = useMyCollectivites();
-  const canaux = useMesCanauxDeLaVille();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
   if (!collectivite) return null;
   const liste = Array.isArray(chats) ? chats : [];
-  const canal = (Array.isArray(canaux.data) ? canaux.data : [])
-    .find((/** @type {any} */ ligne) => ligne?.collectivite?.documentId === collectiviteId)?.canal;
-  const filDuCanal = liste.find((/** @type {any} */ fil) => fil?.documentId === canal?.documentId);
   const conversations = filsDeLaMessagerie(liste, { collectiviteId, espaceVille: true });
   // « Vous : … » quand la Ville a écrit, sinon « Prénom Nom : … » (P3c-canal-ordi).
   const apercu = (/** @type {any} */ fil, /** @type {string} */ repli) => {
@@ -414,7 +344,6 @@ export function ColonneDesFilsDeLaVille({
       {libelle}
     </Text>
   );
-  const titreDuCanal = t('collectiviteCanaux.titre', 'Dirigeants des clubs');
   return (
     <View
       accessibilityLabel={t('collectiviteCanaux.colonne.titre', 'Canaux et conversations')}
@@ -422,24 +351,6 @@ export function ColonneDesFilsDeLaVille({
       style={{ gap: 2 }}
       testID="colonne-fils-de-la-ville"
     >
-      {groupe(t('collectiviteCanaux.colonne.canaux', 'Canaux de la Ville'))}
-      <LigneDeColonne
-        ecusson={<EcussonVille nom={String(collectivite.name || '')} taille={32} />}
-        onPress={() => navigation.navigate(RouteNames.CollectiviteActualites, { collectiviteId })}
-        precision={t('collectiviteCanaux.colonne.lectureSeule', 'Lecture seule pour les clubs')}
-        testID="colonne-actualites"
-        titre={t('collectiviteActualites.canaux.membreTitre', 'Actualités de la Ville')}
-      />
-      {canal?.documentId ? (
-        <LigneDeColonne
-          actif={canal.documentId === chatId}
-          ecusson={<IconeDuCanal taille={32} />}
-          onPress={() => ouvrir(canal.documentId, CANAL_DIRIGEANTS, titreDuCanal)}
-          precision={apercu(filDuCanal, '')}
-          testID="colonne-canal-dirigeants"
-          titre={titreDuCanal}
-        />
-      ) : null}
       {groupe(t('collectiviteActualites.canaux.conversations', 'Conversations'))}
       {conversations.length === 0 ? (
         <Text style={[Fonts.p4, Fonts.neutral200, { marginHorizontal: 10, marginTop: 4 }]}>
@@ -449,16 +360,18 @@ export function ColonneDesFilsDeLaVille({
           )}
         </Text>
       ) : conversations.map((/** @type {any} */ fil) => {
-        const nomDuClub = String(fil?.collectiviteClub?.name || '');
+        const titre = titreDuFil(t, { chat: fil, espaceVille: true });
         return (
           <LigneDeColonne
             actif={fil.documentId === chatId}
-            ecusson={<ClubLogoMark club={fil.collectiviteClub} isNeutral size={32} />}
+            ecusson={fil.type === CANAL_DIRIGEANTS
+              ? <IconeDuCanal taille={32} />
+              : <ClubLogoMark club={fil.collectiviteClub} isNeutral size={32} />}
             key={fil.documentId}
-            onPress={() => ouvrir(fil.documentId, CONVERSATION_CLUB, nomDuClub)}
+            onPress={() => ouvrir(fil.documentId, fil.type, titre)}
             precision={apercu(fil, '')}
             testID={`colonne-${fil.documentId}`}
-            titre={nomDuClub}
+            titre={titre}
           />
         );
       })}
@@ -470,14 +383,17 @@ export function ColonneDesFilsDeLaVille({
  * 📰 LES CANAUX DE LA VILLE EN TÊTE DE LA MESSAGERIE — COLL-C4A (02/10/2026), planches
  * P3v2-messages-tel (écran 1, la mairie) et P3c-canal-tel (écrans 3 et 7, le club).
  *
- * Dans l'espace de la Ville (onglet « Messages », \`espaceVille\`), la mairie lit son canal des
- * actualités et publie. Dans la messagerie du club, chaque membre d'un club rattaché trouve,
+ * Dans l'espace de la Ville (onglet « Messages », \`espaceVille\`), la mairie lisait son canal des
+ * actualités et publiait (jusqu'à R17-CANAUX). Dans la messagerie du club, chaque membre d'un club
+ * rattaché trouve,
  * épinglé en tête, le canal des actualités de sa Ville (lecture seule). Un compte mixte voit
  * l'un ou l'autre selon l'espace d'où il vient : il parle au nom de la Ville depuis l'espace de
  * la Ville, au nom de son club depuis la messagerie du club.
- * COLL-C4A2 : s'y ajoute le canal des dirigeants (D72) — pour la mairie, sous ses actualités ;
- * pour un dirigeant, au-dessus des actualités de sa Ville. `chats` (la liste de la messagerie)
- * donne au dirigeant le dernier message du canal et ses non-lus.
+ * COLL-C4A2 : s'y ajoute le canal des dirigeants (D72) — pour un dirigeant, au-dessus des
+ * actualités de sa Ville. `chats` (la liste de la messagerie) donne au dirigeant le dernier
+ * message du canal et ses non-lus.
+ * R17-CANAUX (19/10) : côté mairie, plus rien ici (voir `CanauxDeLaMairie`) — ses canaux sont des
+ * lignes de la liste.
  * @param {{ chats?: any[], collectiviteId?: string | null, espaceVille?: boolean,
  *   navigation: any }} props
  * @returns {import('react').ReactElement | null} La section, ou rien.
@@ -485,9 +401,7 @@ export function ColonneDesFilsDeLaVille({
 function CanauxDeLaVille({
   chats = [], collectiviteId = null, espaceVille = false, navigation,
 }) {
-  if (espaceVille && collectiviteId) {
-    return <CanauxDeLaMairie collectiviteId={collectiviteId} navigation={navigation} />;
-  }
+  if (espaceVille && collectiviteId) return <CanauxDeLaMairie />;
   if (espaceVille) return null;
   return <CanauxDuMembre chats={chats} navigation={navigation} />;
 }

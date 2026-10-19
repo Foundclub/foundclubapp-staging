@@ -10,9 +10,10 @@ import { creerQueryClientDeTest } from '../../testSupport/queryClientDeTest';
 //
 // Ce que ce témoin exige, sur le fichier du SITE (`Conversation.web.js`) — ROUGE avant le lot :
 //   1. sur ordinateur, depuis l'espace de la Ville, un fil de la Ville ouvert : à gauche
-//      « Canaux de la Ville » (Actualités de la Ville, Dirigeants des clubs — le fil ouvert est
-//      marqué), puis « Conversations » : SES conversations privées avec ses clubs, et rien
-//      d'autre (pas celles d'une autre Ville, pas les fils d'équipe) ;
+//      « Conversations » : son canal des dirigeants et SES conversations privées avec ses clubs
+//      (le fil ouvert est marqué), et rien d'autre (pas celles d'une autre Ville, pas les fils
+//      d'équipe). R17-CANAUX (19/10) : le groupe « Canaux de la Ville » (Actualités, Dirigeants)
+//      qui les précédait est parti ;
 //   2. une ligne de la colonne ouvre son fil AU NOM DE LA VILLE (`espace: 'ville'`) ;
 //   3. l'en-tête du fil porte la tuile du canal ;
 //   4. ni sur un écran étroit, ni pour un dirigeant (hors espace de la Ville) : pas de colonne.
@@ -310,35 +311,39 @@ afterEach(() => {
 });
 
 describe('COLL-C4A3 — planche 47 sur le site : la colonne de gauche de la Ville', () => {
-  test('les canaux de la Ville, puis SES conversations privées, le fil ouvert marqué', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRITS. Adel : « la messagerie ne doit être que sous
+  // forme de message ; le canal des dirigeants doit être comme les autres ». Avant : un groupe
+  // « Canaux de la Ville » (Actualités de la Ville, Dirigeants des clubs) AU-DESSUS des
+  // conversations. Après : rien que « Conversations », dont « Dirigeants des clubs » est une ligne.
+  test('R17-CANAUX : que des conversations, « Dirigeants des clubs » en est une', async () => {
     const { arbre } = await monter();
     const [colonne] = parTestID(arbre, 'colonne-fils-de-la-ville');
     expect(colonne).toBeTruthy();
     const texte = texteDe(colonne);
     [
-      'Canaux de la Ville',
-      'Actualités de la Ville',
-      'Lecture seule pour les clubs',
+      'Conversations',
       'Dirigeants des clubs',
       'Vous : Merci. Faites chacun votre demande.',
-      'Conversations',
       'Montrivage FC',
       'Vous : Pourriez-vous compléter l’adresse ?',
       'Montrivage Basket',
       'Karim Benali : Bien reçu, on s’en occupe.',
     ].forEach((attendu) => expect(texte).toContain(attendu));
-    expect(texte.indexOf('Dirigeants des clubs')).toBeLessThan(texte.indexOf('Conversations'));
+    ['Canaux de la Ville', 'Actualités de la Ville', 'Lecture seule pour les clubs']
+      .forEach((parti) => expect(texte).not.toContain(parti));
+    expect(texte.indexOf('Conversations')).toBeLessThan(texte.indexOf('Dirigeants des clubs'));
     // Ni la conversation d'une AUTRE Ville, ni un fil d'équipe.
     expect(texte).not.toContain('Beaulieu Sport');
     expect(texte).not.toContain('U15');
     // Le fil ouvert est marqué, et lui seul.
-    expect(lien(arbre, 'colonne-canal-dirigeants').props.accessibilityState)
+    expect(lien(arbre, 'colonne-canal-1').props.accessibilityState)
       .toEqual({ selected: true });
     expect(lien(arbre, 'colonne-privee-fc').props.accessibilityState)
       .toEqual({ selected: false });
+    expect(parTestID(arbre, 'colonne-actualites')).toHaveLength(0);
   });
 
-  test('une ligne ouvre son fil AU NOM DE LA VILLE ; les actualités, leur liste', async () => {
+  test('R17-CANAUX : chaque ligne, canal compris, ouvre son fil AU NOM DE LA VILLE', async () => {
     const { arbre, navigation } = await monter();
     await act(async () => { lien(arbre, 'colonne-privee-fc').props.onPress(); });
     expect(navigation.navigate).toHaveBeenCalledWith('Conversation', {
@@ -347,13 +352,21 @@ describe('COLL-C4A3 — planche 47 sur le site : la colonne de gauche de la Vill
       espace: 'ville',
       title: 'Montrivage FC',
     });
-    await act(async () => { lien(arbre, 'colonne-actualites').props.onPress(); });
-    expect(navigation.navigate)
-      .toHaveBeenCalledWith('CollectiviteActualites', { collectiviteId: 'ville-de-recette' });
+    await act(async () => { lien(arbre, 'colonne-canal-1').props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('Conversation', {
+      chatId: 'canal-1',
+      chatType: 'collectivite_dirigeants',
+      espace: 'ville',
+      title: 'Dirigeants des clubs',
+    });
   });
 
   test('aucune conversation : la phrase de la maquette', async () => {
-    mockFils = FILS.filter((fil) => fil.type !== 'collectivite_club');
+    // R17-CANAUX : le canal des dirigeants est désormais une conversation de la liste ; pour
+    // une liste vide, il part aussi.
+    mockFils = FILS.filter((fil) => (
+      !['collectivite_club', 'collectivite_dirigeants'].includes(fil.type)
+    ));
     const { arbre } = await monter();
     expect(texteDe(parTestID(arbre, 'colonne-fils-de-la-ville')[0]))
       .toContain('Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.');

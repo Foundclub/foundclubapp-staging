@@ -10,9 +10,9 @@ import CanauxDeLaVille from '../components/CanauxDeLaVille';
 // membre (design HY521H1 page 3, « P3v2-messages-tel » écran 1 ; « P3c-canal-tel » écrans 3 et 7).
 //
 // Ce que ce témoin fige (ROUGE avant le lot : aucun canal de la Ville dans la messagerie) :
-//   - dans l'espace de la Ville : « Actualités de la Ville de … », lu par les membres de n clubs
-//     (« eux ne répondent pas »), qui mène à « Actualités de la Ville » ; « Publier une
-//     actualité » ; puis « Conversations » ;
+//   - dans l'espace de la Ville : RIEN au-dessus des conversations depuis R17-CANAUX (19/10) —
+//     les cartes « Actualités de la Ville de … », « Dirigeants des clubs » et le bouton « Publier
+//     une actualité » ont quitté « Messages » ;
 //   - dans la messagerie d'un membre (dirigeant, entraîneur, joueur, parent) : épinglé en tête,
 //     pour chaque Ville de ses clubs, « Actualités de la Ville » et la dernière, vers le canal ;
 //   - sans Ville : rien ; l'onglet « Messages » de la Ville dit qu'il vient de son espace.
@@ -67,8 +67,10 @@ jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
 }));
 // COLL-C4A2 (02/10) : la section porte aussi le canal des dirigeants (son propre témoin :
 // COLLC4A2.canal.test.js). Ici, aucun canal : ce témoin reste celui des actualités.
+// R17-CANAUX (19/10) : l'appel est COMPTÉ — c'est lui qui crée les canaux de la Ville au serveur.
+const mockMesCanaux = jest.fn(() => ({ data: [] }));
 jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
-  useMesCanauxDeLaVille: () => ({ data: [] }),
+  useMesCanauxDeLaVille: () => mockMesCanaux(),
 }));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({
@@ -116,25 +118,22 @@ beforeEach(() => {
   mockMine = { data: { actualites: [SUBVENTIONS], collectivites: [VILLE] } };
   mockMesCollectivites = { data: [VILLE] };
   mockNavigate.mockReset();
+  mockMesCanaux.mockClear();
 });
 
 describe('COLL-C4A — planche 4 : l onglet « Messages » de la Ville', () => {
-  it('« Actualités de la Ville de … », lu par 3 clubs, vers ses actualités', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRIT. Adel : « la messagerie ne doit être que sous
+  // forme de message ». Avant : deux cartes (« Actualités de la Ville de … », « Dirigeants des
+  // clubs ») et un gros bouton « Publier une actualité » AU-DESSUS des conversations. Après : rien
+  // au-dessus — « Dirigeants des clubs » et « Toute la ville » sont des lignes de la liste, et
+  // « Publier une actualité » reste à ses 4 autres places (R17CANAUX.publierAilleurs.test.js).
+  it('R17-CANAUX : ni carte ni « Publier » au-dessus des conversations', async () => {
     const arbre = await monter(
       <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
     );
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Actualités de la Ville de Montrivage',
-      'Lu par les membres de 3 clubs · eux ne répondent pas',
-      'Publier une actualité',
-      'Conversations',
-    ]));
-    await appuyer(arbre, 'canal-actualites-mairie');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualites', { collectiviteId: 'ville-de-recette' });
-    await appuyer(arbre, 'canaux-publier');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualiteForm', { collectiviteId: 'ville-de-recette' });
+    expect(arbre.toJSON()).toBeNull();
+    // Les canaux de la Ville se créent au serveur à la première demande : elle part toujours.
+    expect(mockMesCanaux).toHaveBeenCalled();
   });
 
   it('un compte qui ne gère plus cette Ville : rien', async () => {

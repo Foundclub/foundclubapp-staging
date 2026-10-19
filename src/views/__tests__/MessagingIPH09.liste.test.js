@@ -86,14 +86,17 @@ jest.mock('@/domains/auth/useAuth', () => ({
   default: () => mockAuth,
 }));
 
+// R17-CANAUX — épingler et archiver sont COMPTÉS (le canal des dirigeants de la Ville).
+const mockPin = jest.fn(() => Promise.resolve());
+const mockArchive = jest.fn(() => Promise.resolve());
 jest.mock('@/domains/messaging/useMessaging', () => ({
   __esModule: true,
   default: () => ({
-    archiveChatAsync: jest.fn(() => Promise.resolve()),
+    archiveChatAsync: mockArchive,
     getConversationName: (/** @type {any} */ input) => input?.chatGroupName || 'Conversation',
     getUnreadStatus: () => false,
     joinChat: mockJoinChat,
-    pinChatAsync: jest.fn(() => Promise.resolve()),
+    pinChatAsync: mockPin,
     unpinChatAsync: jest.fn(() => Promise.resolve()),
   }),
 }));
@@ -181,6 +184,36 @@ const CHATS = [
     type: 'group',
     unreadCount: 0,
     updatedAt: '2026-09-15T10:00:00.000Z',
+  },
+];
+
+// R17-CANAUX — les fils de l'espace de la Ville : son canal des dirigeants, une conversation
+// privée avec un club, et le canal d'une AUTRE Ville (qu'elle ne voit pas).
+const FILS_DE_LA_VILLE = [
+  {
+    collectivite: mockVille,
+    documentId: 'canal-demouville',
+    messages: [],
+    participants: [],
+    type: 'collectivite_dirigeants',
+    updatedAt: '2026-10-18T10:00:00.000Z',
+  },
+  {
+    collectivite: mockVille,
+    collectiviteClub: { documentId: 'club-fc', name: 'Demouville FC' },
+    documentId: 'privee-demouville',
+    messages: [],
+    participants: [],
+    type: 'collectivite_club',
+    updatedAt: '2026-10-17T10:00:00.000Z',
+  },
+  {
+    collectivite: { documentId: 'autre-ville', name: 'Autre Ville' },
+    documentId: 'canal-ailleurs',
+    messages: [],
+    participants: [],
+    type: 'collectivite_dirigeants',
+    updatedAt: '2026-10-16T10:00:00.000Z',
   },
 ];
 
@@ -292,13 +325,35 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     expect(mockChatsQuery.refetch).toHaveBeenCalledTimes(1);
   });
 
-  test('espace mairie : ses canaux et Publier defilent et gardent leur navigation', async () => {
-    mockChatsQuery = etatListe();
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRIT. Avant : l'espace de la mairie montrait ses deux
+  // cartes et « Publier une actualité » au-dessus des conversations. Adel : « la messagerie ne
+  // doit être que sous forme de message ; le canal des dirigeants doit être comme les autres ».
+  // Après : rien au-dessus ; « Dirigeants des clubs » est une ligne qu'on épingle et archive.
+  test('R17-CANAUX : espace mairie, que des conversations, le canal en est une', async () => {
+    mockPin.mockClear();
+    mockArchive.mockClear();
+    mockChatsQuery = etatListe({ data: { pages: [{ data: FILS_DE_LA_VILLE }] } });
     const arbre = await monter({ collectiviteId: 'demouville-test', espace: 'ville' });
-    expect(parId(contenu(arbre), 'canaux-de-la-ville-mairie')).toBeDefined();
-    expect(contenu(arbre).findAll((n) => n.props.title === 'Publier une actualité')).toHaveLength(1);
-    act(() => parId(contenu(arbre), 'canal-dirigeants-mairie').props.onPress());
-    expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({ espace: 'ville' }));
+    const liste = contenu(arbre);
+    expect(parId(liste, 'canaux-de-la-ville-mairie')).toBeUndefined();
+    expect(arbre.root.findAll((n) => n.props.title === 'Publier une actualité')).toHaveLength(0);
+    // Le canal des dirigeants de CETTE Ville est une ligne ; celui d'une autre Ville, non.
+    const ligne = parId(liste, 'liste-fil-canal-demouville');
+    expect(ligne).toBeDefined();
+    expect(parId(liste, 'liste-fil-canal-ailleurs')).toBeUndefined();
+    expect(dernieresProps().data.map((/** @type {any} */ c) => c.documentId))
+      .toEqual(['canal-demouville', 'privee-demouville']);
+    act(() => ligne.props.onPress());
+    expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({
+      chatId: 'canal-demouville', chatType: 'collectivite_dirigeants', espace: 'ville',
+    }));
+    // Comme les autres lignes : glisser pour épingler, glisser pour archiver.
+    const glissable = liste.findAll((n) => typeof n.props.renderLeftActions === 'function'
+      && n.findAll((m) => m.props?.testID === 'liste-fil-canal-demouville').length > 0)[0];
+    await act(async () => { glissable.props.renderLeftActions(0, 0).props.onPress(); });
+    expect(mockPin).toHaveBeenCalledWith('canal-demouville');
+    await act(async () => { await glissable.props.renderRightActions(0, 0).props.onPress(); });
+    expect(mockArchive).toHaveBeenCalledWith('canal-demouville');
   });
 });
 
@@ -342,15 +397,17 @@ describe('COL-007 — le haut de « Messages » defile avec la liste', () => {
     });
   });
 
+  // R17-CANAUX (19/10) — RÉÉCRIT : le repère d'ordre était la carte de la mairie, partie ; c'est
+  // désormais la première ligne, le canal des dirigeants.
   test('espace de la Ville : titre et recherche defilent, toujours sans puces', async () => {
-    mockChatsQuery = etatListe();
+    mockChatsQuery = etatListe({ data: { pages: [{ data: FILS_DE_LA_VILLE }] } });
     const arbre = await monter({ collectiviteId: 'demouville-test', espace: 'ville' });
     const liste = contenu(arbre);
     expect(titre(liste)).toHaveLength(1);
     expect(liste.findAllByType(TextInput)).toHaveLength(1);
     expect(arbre.root.findAllByType(SegmentedControl)).toHaveLength(0);
     expect(ordre(liste, liste.findByType(TextInput)))
-      .toBeLessThan(ordre(liste, parId(liste, 'canaux-de-la-ville-mairie')));
+      .toBeLessThan(ordre(liste, parId(liste, 'liste-fil-canal-demouville')));
   });
 
   test('la frappe ne remonte pas le champ : en-tete passe en ELEMENT, meme instance', async () => {

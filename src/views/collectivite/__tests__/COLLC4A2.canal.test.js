@@ -142,33 +142,24 @@ beforeEach(() => {
 });
 
 describe('COLL-C4A2 — planche 1 : le canal des dirigeants dans la messagerie', () => {
-  it('la mairie : « Dirigeants des clubs » sous ses actualités, au nom de la Ville', async () => {
-    const arbre = await monter(
-      <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
-    );
-    const lus = textes(arbre);
-    expect(lus).toEqual(expect.arrayContaining([
-      'Dirigeants des clubs',
-      'Vous et les dirigeants des 3 clubs · échanges de créneaux',
-    ]));
-    expect(lus.indexOf('Actualités de la Ville de Montrivage'))
-      .toBeLessThan(lus.indexOf('Dirigeants des clubs'));
-    await appuyer(arbre, 'canal-dirigeants-mairie');
-    expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
-      chatId: 'canal-1',
-      chatType: 'collectivite_dirigeants',
-      espace: 'ville',
-      title: 'Dirigeants des clubs',
-    });
-  });
-
-  it('la mairie, avant que le serveur ait rendu son canal : ses actualités seules', async () => {
-    mockCanaux = { data: undefined, isLoading: true };
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRITS. Adel : « le canal des dirigeants doit être
+  // comme les autres ». La carte « Dirigeants des clubs » de la mairie, sous ses actualités, a
+  // quitté le haut de « Messages » : le canal est une LIGNE de la liste, qu'on épingle et
+  // qu'on archive (MessagingIPH09.liste.test.js, « R17-CANAUX »).
+  it('R17-CANAUX : la mairie, plus de carte « Dirigeants des clubs » au-dessus', async () => {
     const arbre = await monter(
       <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
     );
     expect(trouver(arbre, 'canal-dirigeants-mairie')).toHaveLength(0);
-    expect(textes(arbre)).toContain('Actualités de la Ville de Montrivage');
+    expect(arbre.toJSON()).toBeNull();
+  });
+
+  it('R17-CANAUX : la mairie, avant que le serveur rende son canal : rien non plus', async () => {
+    mockCanaux = { data: undefined, isLoading: true };
+    const arbre = await monter(
+      <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
+    );
+    expect(arbre.toJSON()).toBeNull();
   });
 
   it('le dirigeant : canal épinglé au-dessus des actualités, dernier message signé', async () => {

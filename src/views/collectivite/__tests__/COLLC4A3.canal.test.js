@@ -209,13 +209,15 @@ describe('COLL-C4A3 — planche 47 : « Ton club »', () => {
     expect(arbre.toJSON()).toBeNull();
   });
 
-  it('la mairie (espace de la Ville) : « Conversations », jamais « Ton club »', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRIT : le titre « Conversations » séparait les cartes
+  // de la mairie de ses conversations. Les cartes parties (« que des conversations », Adel), le
+  // titre n'a plus rien à séparer : la liste commence sous la recherche.
+  it('R17-CANAUX : la mairie, ni « Conversations » ni « Ton club »', async () => {
     mockCanaux = { data: [{ ...LIGNE_DU_CANAL, fonctions: ['gestionnaire'] }] };
-    const lus = textes(await monter(
+    const arbre = await monter(
       <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
-    ));
-    expect(lus).toContain('Conversations');
-    expect(lus).not.toContain('Ton club');
+    );
+    expect(arbre.toJSON()).toBeNull();
   });
 });
 

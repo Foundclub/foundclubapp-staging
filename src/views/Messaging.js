@@ -88,8 +88,9 @@ function Messaging({ navigation, route }) {
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
   const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
-  // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que ses
-  // conversations privées avec ses clubs ; ailleurs, le canal des dirigeants est épinglé en tête.
+  // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que SES
+  // fils : depuis R17-CANAUX (19/10), son canal des dirigeants y est une ligne comme les autres,
+  // avec ses conversations privées ; ailleurs, le canal des dirigeants est épinglé en tête.
   const espaceVille = route?.params?.espace === 'ville';
   const villeId = route?.params?.collectiviteId || null;
   const [chatScopeFilter, setChatScopeFilter] = useState(
