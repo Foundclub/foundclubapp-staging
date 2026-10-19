@@ -446,7 +446,8 @@ describe('SegmentedControl — la pastille d un onglet (R17SS1)', () => {
     expect(aplatirTexte(pastille.props.children)).toBe('2');
     const [, securite] = arbre.root.findAllByType(TouchableOpacity);
     expect(securite.props.accessibilityLabel).toBe('Sécurité et suivi, 2 signalements ouverts');
-    expect(StyleSheet.flatten(pastille.props.style).backgroundColor).toBe('#d02544');
+    const couleurs = jest.requireActual('@/theme/colors').default();
+    expect(StyleSheet.flatten(pastille.props.style).backgroundColor).toBe(couleurs.error700);
   });
 
   it('0, null ou rien : aucune pastille ; au-dela de 99 : « 99+ »', () => {
