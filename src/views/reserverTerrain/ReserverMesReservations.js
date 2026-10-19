@@ -267,9 +267,12 @@ function ReserverMesReservations() {
   );
 
   return (
+    // `boundedHeight` : sur le SITE, la liste défile DANS l'écran (sans lui, l'écran prend la
+    // hauteur de tout son contenu) ; sur ordinateur, la liste et le volet défilent chacun à part.
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
+      boundedHeight
       contentContainerStyle={[Alignments.fill]}
     >
       {surOrdinateur ? (

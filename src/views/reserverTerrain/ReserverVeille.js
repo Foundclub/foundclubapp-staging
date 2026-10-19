@@ -136,9 +136,12 @@ function ReserverVeille() {
    * @returns {import('react').ReactElement} La page.
    */
   const page = (contenu, pied = null) => (
+    // `boundedHeight` : sur le SITE, l'écran prend la hauteur de la fenêtre, pas celle de son
+    // contenu ; le pied reste en bas, au-dessus de la barre flottante (`dockClearance`).
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
+      boundedHeight
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
