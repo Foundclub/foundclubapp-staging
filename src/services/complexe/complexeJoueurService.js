@@ -122,3 +122,32 @@ export const lireMaReservation = async (reservationId) => corps(
 export const annulerMaReservation = async (reservationId) => corps(
   client.post(`/reservations-terrain/${enc(reservationId)}/annuler`, {}),
 );
+
+/**
+ * RESA-L6B-1 — E-P10 « Mes réservations » : SES réservations d'une période (50 au plus ; à venir
+ * dans l'ordre du calendrier, passées et refusées des plus récentes aux plus anciennes).
+ * @param {'a-venir' | 'passees' | 'refusees'} periode - L'onglet.
+ * @returns {Promise<any>} `{ data: [réservation vue par son réserveur] }`.
+ */
+export const lireMesReservations = async (periode) => corps(
+  client.get('/reservations-terrain/mine', { params: { periode } }),
+);
+
+/**
+ * RESA-L6B-1 — E-P14 : la réponse à la question de la veille (N-20). « confirme » : le complexe lit
+ * « Confirmée la veille » ; « annule » : le créneau est libéré, même après le délai (AT-07, marquée
+ * « hors délai »). Refus 409 COMPLEXE_RESERVATION_STATE si aucune question n'est posée, si elle est
+ * déjà annulée ou si elle a commencé.
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {'confirme' | 'annule'} reponse - La réponse.
+ * @param {{ jeton?: string | null }} [options] - `jeton` : celui du compte que vise la notification
+ *   (bouton d'une notification, sur un téléphone qui porte plusieurs comptes).
+ * @returns {Promise<any>} `{ data: réservation vue par son réserveur }`.
+ */
+export const repondreALaVeille = async (reservationId, reponse, { jeton = null } = {}) => corps(
+  client.post(
+    `/reservations-terrain/${enc(reservationId)}/veille`,
+    { data: { reponse } },
+    jeton ? { headers: { Authorization: `Bearer ${jeton}` } } : undefined,
+  ),
+);

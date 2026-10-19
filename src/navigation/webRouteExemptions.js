@@ -225,6 +225,10 @@ const MOBILE_ONLY_SCREENS = {
     'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
   [RouteNames.ReserverResultat]:
     'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
+  // --- RESA-L6B-1 (19/10/2026) ---
+  // La confirmation la veille (E-P14) : même interrupteur, même lot site L7.
+  [RouteNames.ReserverVeille]:
+    'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
 };
 
 /**

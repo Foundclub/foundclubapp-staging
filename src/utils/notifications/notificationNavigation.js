@@ -655,10 +655,18 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
   // `reservationId` vers « Ma réservation » (E-P07), qui porte l'en-tête d'échec d'une réservation
   // refusée ou annulée. Interrupteur COMPLEXES_JOUEUR éteint : l'écran n'est pas déclaré, on ne
   // navigue pas. Témoin : views/reserverTerrain/__tests__/EP07.notification.test.js.
+  // RESA-L6B-1 (19/10/2026) — N-20, la question de la veille (`change: 'veille'`) : E-P14
+  // « Demain, tu joues ? » (témoin EP14.notification.test.js).
   if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
     const reservationId = toSafeString(payload.reservationId).trim();
     if (!COMPLEXES_JOUEUR || !reservationId) return null;
     const change = toSafeString(payload.change).trim();
+    if (change === 'veille') {
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: { reservationId },
+        route: RouteNames.ReserverVeille,
+      });
+    }
     const fermeture = toSafeString(payload.closureLabel).trim();
     return adaptDestinationForCurrentPlatform(payload, {
       params: {

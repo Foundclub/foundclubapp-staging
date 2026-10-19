@@ -1504,6 +1504,15 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L6B-1 (19/10/2026) — E-P14, « Demain, tu joues ? » : la question de la veille
+            (notification N-20 et cloche). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverVeille').default}
+            name={RouteNames.ReserverVeille}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
