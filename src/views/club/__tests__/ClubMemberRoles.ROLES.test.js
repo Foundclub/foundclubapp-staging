@@ -243,7 +243,7 @@ describe('RÔLES — écran 1 : la liste des membres du club', () => {
     });
   });
 
-  it('la case dit ce qu\'elle est : « Pratiquant / Joueur de U15 », cochée quand le membre y joue', () => {
+  it('la case « Pratiquant / Joueur de U15 » est cochée quand le membre y joue', () => {
     const arbre = monter();
     ouvrir(arbre, 'p1-doc');
     const caseU15 = parTestId(arbre, 'member-role-p1-doc-player-team-u15');

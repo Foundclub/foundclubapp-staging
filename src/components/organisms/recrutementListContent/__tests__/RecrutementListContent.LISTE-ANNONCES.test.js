@@ -412,7 +412,7 @@ describe('A11 — le nombre d annonces est le TOTAL du serveur', () => {
     expect(texte).not.toContain('20 annonces');
   });
 
-  it('le public choisi (« Pratiquants / Joueurs ») part au SERVEUR : le total reste le sien', async () => {
+  it('le public choisi (« Pratiquants / Joueurs ») part au SERVEUR, total compris', async () => {
     mockGetRecruitmentAds.mockResolvedValue(pageRest(DIX_PREMIERES, { pageCount: 4, total: 38 }));
     mockSearchRecruitment.mockResolvedValue(
       pageRecherche(DIX_PREMIERES.slice(0, 3), { total: 3 }),

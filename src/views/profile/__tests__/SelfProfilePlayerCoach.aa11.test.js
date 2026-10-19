@@ -637,7 +637,7 @@ describe('AA11 · temoin 4 — le profil montre TOUS les clubs', () => {
 });
 
 describe('AA11 · le cas limite — un role DIFFERENT dans chaque club', () => {
-  it('dit « Pratiquant / Joueur » la ou il joue et « Coach / Prof » la ou il entraine', async () => {
+  it('dit « Pratiquant / Joueur » ou il joue, « Coach / Prof » ou il entraine', async () => {
     const arbre = await rendre(joueurDansLesClubs([MARSEILLE, GAILLON], {
       myTeams: [{ club: MARSEILLE, documentId: 'team-9', name: 'Seniors A' }],
       trainedTeams: [{ club: GAILLON, documentId: 'team-2', name: 'U15' }],
