@@ -139,9 +139,11 @@ const mergeClubCollections = (...collections) => {
 /**
  * Club list element to inject on home page or a dedicated one.
  * @param {{
+ *  actionDeCarte?: (club: any) => import('react').ReactNode;
  *  annuaire?: boolean;
  *  childDocumentId?: string;
  *  enableMapMode?: boolean;
+ *  paramsDeFiche?: Record<string, unknown>;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
  * }} [props]
@@ -151,12 +153,18 @@ const mergeClubCollections = (...collections) => {
  *   `childDocumentId` (PAR-L4, recette PAR-009) : l'enfant venu de SA fiche (« Chercher un club
  *   pour Anissa ») ; la carte l'emmene jusqu'a la fiche club, qui coche cet enfant dans
  *   « Demander une place ». Son identifiant seul : le prenom se relit la-bas, dans MA liste.
+ *   `actionDeCarte` / `paramsDeFiche` (R17-INVITER, 19/10, posés par la seule Ville dans
+ *   « Ajouter un club ») : l'action rendue sous la carte de chaque club (« Ce club fait partie
+ *   de ma collectivité »), les paramètres ajoutés à l'ouverture de sa fiche (la Ville), et pas
+ *   de « Créer un club » quand la liste est vide. Absents, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
+  actionDeCarte = undefined,
   annuaire = false,
   childDocumentId = undefined,
   enableMapMode = false,
+  paramsDeFiche = undefined,
   refreshSignal = 0,
   screenActive = true,
 }) {
@@ -652,12 +660,16 @@ function ClubListContent({
   const handleClubSelection = useCallback((/** @type {string | undefined} */ documentId) => {
     if (documentId) {
       navigateToStackScreenOrScreen(navigation, {
-        params: { clubId: documentId, ...(childDocumentId ? { childDocumentId } : {}) },
+        params: {
+          clubId: documentId,
+          ...(childDocumentId ? { childDocumentId } : {}),
+          ...(paramsDeFiche || {}),
+        },
         screen: RouteNames.Club,
         stack: RouteNames.ClubStack,
       });
     }
-  }, [childDocumentId, navigation]);
+  }, [childDocumentId, navigation, paramsDeFiche]);
 
   // D69 — le bouton ouvre desormais la FEUILLE du pack (capture 05) au lieu de
   // pousser l'ecran plein `ClubFilters`. L'ecran reste enregistre : le
@@ -769,7 +781,7 @@ function ClubListContent({
     const searchMeta = Reflect.get(item || {}, '__search');
     const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
 
-    return (
+    const carte = (
       <ClubCard
         href={annuaire ? cheminFicheAnnuaire(item) : null}
         item={item}
@@ -786,7 +798,17 @@ function ClubListContent({
           : ''}
       />
     );
-  }, [annuaire, handleClubSelection, handleMultisportSelection, idsVisibles, t]);
+    // R17-INVITER : un club multisport n'est pas un club qu'une Ville rattache.
+    if (!actionDeCarte || isMultisport) return carte;
+    return (
+      <View style={Spaces.gap[8]}>
+        {carte}
+        {actionDeCarte(item)}
+      </View>
+    );
+  }, [
+    actionDeCarte, annuaire, handleClubSelection, handleMultisportSelection, idsVisibles, Spaces, t,
+  ]);
 
   const renderEmptyList = useCallback(() => {
     if (showLoadingPlaceholder) {
@@ -813,14 +835,15 @@ function ClubListContent({
       );
     }
 
+    // R17-INVITER : la Ville ne crée pas de club (son lien « Le club n'est pas sur FoundClub ? »).
     return (
       <EmptyState
-        actionLabel={t('clubList.actions.createClub')}
-        onAction={handleCreateClub}
+        actionLabel={actionDeCarte ? undefined : t('clubList.actions.createClub')}
+        onAction={actionDeCarte ? undefined : handleCreateClub}
         title={t('clubList.noData')}
       />
     );
-  }, [handleCreateClub, requiresViewportZoom, showLoadingPlaceholder, t]);
+  }, [actionDeCarte, handleCreateClub, requiresViewportZoom, showLoadingPlaceholder, t]);
 
   // ANNUAIRE-E1 — sur l'annuaire du site, les cartes sont posées à plat et défilent AVEC la page.
   // Une liste qui ne défile pas elle-même ne sait plus quand elle arrive au bout : sans borne, elle

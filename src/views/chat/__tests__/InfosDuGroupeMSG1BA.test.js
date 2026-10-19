@@ -115,7 +115,7 @@ describe('InfosDuGroupe — §3.1 le role de chaque membre', () => {
   test('IR1 — sous chaque nom, le role lu pour ce membre ; sans role connu, « Membre »', () => {
     const { arbre } = rendre({ roles: { karim: 'Entraîneur', moi: 'Dirigeant' } });
     const vu = textes(arbre);
-    expect(vu).toContain('Karim Benali | Entraîneur');
+    expect(vu).toContain('Karim Benali | Coach / Prof');
     expect(vu).toContain('Vous | Dirigeant');
     expect(vu).toContain('Lea Morel | Membre');
   });
@@ -128,14 +128,14 @@ describe('InfosDuGroupe — §3.1 le role de chaque membre', () => {
     act(() => {
       parId(arbre, 'infos-du-groupe-membre-karim').props.onPress();
     });
-    expect(textes(arbre)).toContain('Karim Benali | Entraîneur');
+    expect(textes(arbre)).toContain('Karim Benali | Coach / Prof');
     act(() => {
       parId(arbre, 'infos-du-groupe-fiche-voile').props.onPress();
     });
     act(() => {
       parId(arbre, 'infos-du-groupe-membre-lea').props.onPress();
     });
-    expect(textes(arbre)).toContain('Lea Morel | Admin · Joueur');
+    expect(textes(arbre)).toContain('Lea Morel | Admin · Pratiquant / Joueur');
   });
 });
 

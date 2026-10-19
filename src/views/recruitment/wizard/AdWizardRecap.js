@@ -256,7 +256,7 @@ function AdWizardRecap({ navigation }) {
   ) : t('adWizardRecap.adType.season', 'Annonce saisonnière');
   const resolvedAdTypeLabel = isCoachAd ? t(
     'adWizardRecap.adType.coach',
-    'Annonce entraîneur',
+    'Annonce coach / prof',
   ) : playerAdTypeLabel;
   const needsSectionTitle = isCoachAd ? t(
     'adWizardRecap.needs.titleCoach',

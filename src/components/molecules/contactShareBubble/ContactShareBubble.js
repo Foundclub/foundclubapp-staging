@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -41,7 +42,11 @@ function ContactShareBubble({
     'contactShareBubble.member',
     'Membre',
   );
-  const roleLabel = typeof composition?.roleLabel === 'string' ? composition.roleLabel : '';
+  // R17-ROLES — le message garde le nom du serveur (« Entraineur ») ; la carte lit la table
+  // commune.
+  const roleLabel = typeof composition?.roleLabel === 'string'
+    ? libelleDuRole(composition.roleLabel, t, composition.roleLabel)
+    : '';
 
   const handlePress = () => {
     if (!userDocumentId || typeof onPressContact !== 'function') return;

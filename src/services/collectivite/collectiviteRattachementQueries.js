@@ -7,6 +7,7 @@ import {
   getClubCollectiviteRequests,
   getCollectiviteClubRequests,
   getMaCollectivite,
+  getMesCollectivites,
   notifyMairie,
   proposeCollectiviteClub,
   remindCollectiviteProposal,
@@ -139,6 +140,21 @@ export const useClubCollectiviteRequests = (clubId, { enabled = true } = {}) => 
   // carte ne s'affiche pas, inutile d'insister.
   retry: false,
   staleTime: 60_000,
+});
+
+/**
+ * R17-INVITER (19/10) — les collectivités que le compte gère, pour la fiche du club (qui ne charge
+ * pas `collectiviteQueries.js`). MÊME clé et MÊME forme (un tableau) que `useMyCollectivites` :
+ * les deux lectures partagent leur cache.
+ * @param {{ enabled?: boolean }} [options] - `enabled` : un compte sans rôle sportif.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useMesVillesGerees = ({ enabled = true } = {}) => useQuery({
+  enabled,
+  queryFn: async () => unwrapRows(await getMesCollectivites()),
+  // = MY_COLLECTIVITES_QUERY_KEY de collectiviteQueries.js (non importé : il charge le client).
+  queryKey: ['collectivites', 'mine'],
+  staleTime: 5 * 60 * 1000,
 });
 
 // ─── VOIE 3 (« collectivité A », 07/10) : « Ma collectivité » ────────────────────────────────

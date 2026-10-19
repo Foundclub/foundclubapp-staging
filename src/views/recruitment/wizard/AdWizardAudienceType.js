@@ -91,7 +91,8 @@ function AdWizardAudienceType({ navigation, route }) {
       stepIndex={1}
       subtitle={t(
         'adWizardAudienceType.subtitle',
-        'Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur.',
+        // eslint-disable-next-line max-len
+        'Choisis si tu publies une annonce pour recruter des pratiquants / joueurs ou un coach / prof.',
       )}
       title={t('adWizardAudienceType.title', "Type d'annonce")}
     >
@@ -111,7 +112,7 @@ function AdWizardAudienceType({ navigation, route }) {
           )}
           isSelected={state.audienceType === 'player'}
           onPress={() => handleSelect('player')}
-          title={t('adWizardAudienceType.players.title', 'Je recrute des joueurs')}
+          title={t('adWizardAudienceType.players.title', 'Je recrute des pratiquants / joueurs')}
         />
 
         <AudienceCard
@@ -121,7 +122,7 @@ function AdWizardAudienceType({ navigation, route }) {
           )}
           isSelected={state.audienceType === 'coach'}
           onPress={() => handleSelect('coach')}
-          title={t('adWizardAudienceType.coach.title', 'Je recrute un entraîneur')}
+          title={t('adWizardAudienceType.coach.title', 'Je recrute un coach / prof')}
         />
 
         <View style={[Spaces.paddingHorizontal[4], Spaces.marginTop[12]]}>

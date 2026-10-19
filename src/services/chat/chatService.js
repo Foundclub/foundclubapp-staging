@@ -46,6 +46,7 @@ const chatSchema = Joi.object({
   // silencieux, mais la liste entiere perdait sa validation au passage.
   // COLL-C4A2 (02/10) : le canal des dirigeants (D72) et la conversation privée Ville ↔ club
   // (D73). Sans eux, une liste qui en contient un tombait dans le repli non valide de getChats().
+  // R17-CANAUX (19/10) : « Toute la ville » (collectivite_ville), pour la même raison.
   type: Joi.string()
     .valid(
       'whisper',
@@ -57,6 +58,7 @@ const chatSchema = Joi.object({
       'group',
       'collectivite_dirigeants',
       'collectivite_club',
+      'collectivite_ville',
     )
     .required(),
   updatedAt: Joi.date().required(),

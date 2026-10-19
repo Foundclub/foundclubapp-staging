@@ -57,7 +57,7 @@ function TeamWizardTrainers({ navigation }) {
         roleLabel: member.role?.name === USER_ROLES.president ? i18next.t(
           'teamWizardTrainers.roles.president',
           'Dirigeant·e',
-        ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach'),
+        ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach / Prof'),
       })) || [];
 
     if (userData
@@ -74,7 +74,7 @@ function TeamWizardTrainers({ navigation }) {
           roleLabel: userData.role?.name === USER_ROLES.president ? i18next.t(
             'teamWizardTrainers.roles.president',
             'Dirigeant·e',
-          ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach'),
+          ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach / Prof'),
         });
       }
     }
@@ -118,7 +118,7 @@ function TeamWizardTrainers({ navigation }) {
         stepCount={8}
         stepIndex={7}
         subtitle={t('teamWizard.steps.trainers.subtitle', 'Sélectionne au moins un·e entraîneur·e pour encadrer cette équipe.')}
-        title={t('teamWizard.steps.trainers.title', 'Entraîneur·e·s')}
+        title={t('teamWizard.steps.trainers.title', 'Coachs / Profs')}
       >
         <View>
           {isLoading ? (

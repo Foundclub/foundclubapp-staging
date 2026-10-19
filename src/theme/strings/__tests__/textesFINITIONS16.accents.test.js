@@ -18,7 +18,8 @@ const TEXTES = {
     'Ouvre l’entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.',
   'eventDetails.youCanAlreadyCreateThe':
     'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.',
-  'recruitmentAdCard.coachAudience': 'ENTRAÎNEUR',
+  // R17-ROLES (REC17-006, 19/10) : « COACH / PROF » (avant : « ENTRAÎNEUR »).
+  'recruitmentAdCard.coachAudience': 'COACH / PROF',
 };
 
 afterAll(async () => {
