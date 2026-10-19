@@ -135,7 +135,7 @@ describe('InfosDuGroupe — §3.1 le role de chaque membre', () => {
     act(() => {
       parId(arbre, 'infos-du-groupe-membre-lea').props.onPress();
     });
-    expect(textes(arbre)).toContain('Lea Morel | Admin · Joueur');
+    expect(textes(arbre)).toContain('Lea Morel | Admin · Pratiquant / Joueur');
   });
 });
 
