@@ -206,7 +206,8 @@ describe('COLL-C2B-BIS — planche 23 : la période d un créneau se modifie', (
     const arbre = await monter({ slot: A_VENIR });
     act(() => { champ('Au').onChange(saisie(10)); });
     await tours();
-    expect(textes(arbre)).toContain('La fin de la période doit suivre son début.');
+    // R17-QUAND-1 (planche P10-quand-tel, état 8, validée le 19/10) : les mots de la planche.
+    expect(textes(arbre)).toContain('« Au » doit venir après « Du ».');
     await act(async () => { await presser(arbre, 'Enregistrer'); });
     expect(modifySeasonSlot).not.toHaveBeenCalled();
   });

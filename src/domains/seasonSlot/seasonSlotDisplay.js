@@ -281,6 +281,24 @@ export const formatDay = (jour, { withYear = true } = {}) => {
 };
 
 /**
+ * R17-QUAND-1 — « 21 oct. » (le jour et le mois, sans le jour de la semaine).
+ * @param {string | null | undefined} jour - AAAA-MM-JJ.
+ * @returns {string} La date, ou vide.
+ */
+export const formatDayMonth = (jour) => (
+  jour ? format(parseISO(String(jour).slice(0, 10)), 'd MMM', { locale: dateLocale() }) : ''
+);
+
+/**
+ * R17-QUAND-1 — « Novembre 2026 ».
+ * @param {string} jour - AAAA-MM-JJ (un jour du mois).
+ * @returns {string} Le mois et l'année, avec sa capitale.
+ */
+export const formatMonthYear = (jour) => capitalize(
+  format(parseISO(String(jour).slice(0, 10)), 'MMMM yyyy', { locale: dateLocale() }),
+);
+
+/**
  * « 1 sept. 2026 – 30 juin 2027 ».
  * @param {string | null | undefined} debut - AAAA-MM-JJ.
  * @param {string | null | undefined} fin - AAAA-MM-JJ.

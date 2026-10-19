@@ -192,14 +192,15 @@ const choisirHeure = async (/** @type {string} */ label, /** @type {string} */ v
 };
 
 describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', () => {
-  test('1. une fenêtre plein écran, le gabarit des tunnels (en-tête focus) : « Pour quel club ? », étape 1/5, la croix seule', async () => {
+  // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6 étapes).
+  test('1. une fenêtre plein écran, le gabarit des tunnels (en-tête focus) : « Pour quel club ? », étape 1/6, la croix seule', async () => {
     const onCancel = jest.fn();
     const arbre = await monter({ onCancel });
     expect(fenetre(arbre).presentationStyle).toBe('fullScreen');
     expect(fenetre(arbre).statusBarTranslucent).toBe(true);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({
       headerVariant: 'focus',
-      stepCount: 5,
+      stepCount: 6,
       stepIndex: 1,
       subtitle: 'T18 Salle essai · 2 équipes à la fois',
       title: 'Pour quel club ?',
@@ -223,25 +224,31 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(lus(arbre)).toContain('Le club répartit lui-même ses équipes.');
     await choisir(arbre, 'U13');
     await avancer(arbre);
-    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Montrivage Basket · U13 · chaque semaine de la saison', title: 'Quel jour ?' }));
+    // R17-QUAND-1 (19/10) : « chaque semaine de la saison » mentait ; la forme se choisit à « Quand ? ».
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Montrivage Basket · U13', title: 'Quel jour ?' }));
     await choisir(arbre, 'Mercredi');
     await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Chaque mercredi · T18 Salle essai', title: 'À quelle heure ?' }));
     await choisirHeure('Début', '17:30');
     await choisirHeure('Fin', '19:00');
     await avancer(arbre);
+    // R17-QUAND-1 (planche P10-quand-tel, 5/6) : « Quand ? », déjà répondue (toute la saison).
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({
+      stepCount: 6, stepIndex: 5, subtitle: 'Mercredi 17:30 – 19:00 · T18 Salle essai', title: 'Quand ?',
+    }));
+    await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({
       nextLabel: 'Attribuer le créneau',
-      stepIndex: 5,
+      stepIndex: 6,
       subtitle: 'Relisez, puis attribuez. Le club est prévenu.',
       title: 'Récapitulatif',
     }));
     expect(lus(arbre)).toEqual(expect.arrayContaining([
       'Montrivage Basket · U13',
-      'Chaque mercredi · 17:30 – 19:00',
-      'Toute la saison · 1 sept. – 30 juin',
+      'Mercredi · 17:30 – 19:00',
       'Montrivage Basket sera prévenu, et verra ce créneau dans son planning.',
     ]));
+    expect(lus(arbre).some((texte) => /^Toute la saison · .+ → \d+ juin$/.test(texte))).toBe(true);
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
@@ -291,6 +298,9 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await avancer(arbre);
     expect(tunnel(arbre).nextLabel).toBe('Suivant');
     await avancer(arbre);
+    // R17-QUAND-1 : l'étape « Quand ? » (toute la saison) avant le récapitulatif.
+    expect(tunnel(arbre).title).toBe('Quand ?');
+    await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({
       nextLabel: 'Attribuer quand même', showSkip: true, skipLabel: 'Changer l’heure',
     }));
@@ -298,6 +308,7 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(tunnel(arbre).title).toBe('À quelle heure ?');
     await choisirHeure('Début', '20:00');
     await choisirHeure('Fin', '21:30');
+    await avancer(arbre);
     await avancer(arbre);
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', expect.objectContaining({ confirmOverCapacity: true, startTime: '20:00' }));
@@ -318,7 +329,7 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
   test('7. fiche d’un club : « Dans quelle installation ? » (son type, sa place), étape 1/5', async () => {
     const arbre = await monter({ clubs: [{ documentId: 'basket', name: 'Montrivage Basket' }], facilities: INSTALLATIONS, fixedClubId: 'basket' });
     expect(tunnel(arbre)).toEqual(expect.objectContaining({
-      stepCount: 5, stepIndex: 1, subtitle: 'Pour Montrivage Basket', title: 'Dans quelle installation ?',
+      stepCount: 6, stepIndex: 1, subtitle: 'Pour Montrivage Basket', title: 'Dans quelle installation ?',
     }));
     expect(lus(arbre)).toContain('Dojo');
     expect(lus(arbre)).toContain('1 équipe à la fois');
@@ -336,10 +347,17 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await avancer(arbre);
     await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({ nextLabel: 'Attribuer le créneau', stepIndex: 3, title: 'Récapitulatif' }));
-    expect(lus(arbre)).toEqual(expect.arrayContaining(['Chaque mercredi · 18:00 – 19:30', 'Toute la saison · 1 sept. – 30 juin']));
+    expect(lus(arbre)).toContain('Mercredi · 18:00 – 19:30');
+    expect(lus(arbre).some((texte) => /^Toute la saison · .+ → \d+ juin$/.test(texte))).toBe(true);
     expect(lus(arbre)).not.toContain('Chaque mercredi de la saison (1 sept. – 30 juin). Le club est prévenu.');
+    // R17-QUAND-1 : la ligne « Quand » (figée avant) se touche et ouvre l'étape, sans en ajouter d'autre.
+    await appeler(() => ligneDuRecap(arbre, 'quand').props.onPress());
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ stepCount: 4, stepIndex: 3, title: 'Quand ?' }));
+    await avancer(arbre);
+    expect(tunnel(arbre).title).toBe('Récapitulatif');
     await appeler(() => ligneDuRecap(arbre, 'heures').props.onPress());
-    expect(tunnel(arbre)).toEqual(expect.objectContaining({ stepCount: 5, stepIndex: 3, title: 'Quel jour ?' }));
+    // « Quand ? » déjà rouvert : il reste dans le parcours (Club, Équipe, Jour, Heure, Quand, Récap).
+    expect([tunnel(arbre).stepCount, tunnel(arbre).stepIndex, tunnel(arbre).title]).toEqual([6, 3, 'Quel jour ?']);
     expect(choix(arbre, 'Mercredi').props.accessibilityState).toEqual({ checked: true });
   });
 
@@ -350,9 +368,11 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await avancer(arbre);
     await avancer(arbre);
     await avancer(arbre);
+    await avancer(arbre);
     expect(tunnel(arbre).title).toBe('Récapitulatif');
     expect(ligneDuRecap(arbre, 'installation').props.onPress).toBeUndefined();
-    expect(ligneDuRecap(arbre, 'periode').props.onPress).toBeUndefined();
+    // R17-QUAND-1 : la ligne « Quand » se touche (« Période » était figée).
+    expect(typeof ligneDuRecap(arbre, 'quand').props.onPress).toBe('function');
     await appeler(() => ligneDuRecap(arbre, 'club').props.onPress());
     expect(tunnel(arbre).title).toBe('Pour quel club ?');
     expect(choix(arbre, 'Montrivage Basket').props.accessibilityState).toEqual({ checked: true });
@@ -377,13 +397,14 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Chaque mardi · T18 Salle essai', title: 'À quelle heure ?' }));
     await choisirHeure('Fin', '20:00');
     await avancer(arbre);
-    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Chaque mardi · 17:30 – 20:00', title: 'Quelle période ?' }));
+    // R17-QUAND-1 (planche P10-quand-ordi, D) : « Période » devient « Quand ? ».
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Mardi 17:30 – 20:00 · T18 Salle essai', title: 'Quand ?' }));
     await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({
       nextLabel: 'Enregistrer', subtitle: 'Relisez, puis enregistrez. Le club est prévenu.', title: 'Récapitulatif',
     }));
     expect(ligneDuRecap(arbre, 'club').props.onPress).toBeUndefined();
-    expect(typeof ligneDuRecap(arbre, 'periode').props.onPress).toBe('function');
+    expect(typeof ligneDuRecap(arbre, 'quand').props.onPress).toBe('function');
     expect(lus(arbre)).toContain('Montrivage Basket sera prévenu du changement.');
     await appeler(() => tunnel(arbre).onNext());
     expect(modifySeasonSlot).toHaveBeenCalledWith('slot-1', expect.objectContaining({ endTime: '20:00', startTime: '17:30', weekday: 2 }));
