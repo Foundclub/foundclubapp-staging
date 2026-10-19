@@ -69,11 +69,7 @@ import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePo
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
-import {
-  lignesAAfficher,
-  lignesDeLaCarte,
-  peutAvoirDesEnfants,
-} from '@/views/profile/parent/mesEnfantsEnBref';
+import { peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
@@ -185,9 +181,6 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
  *  subtitleLines?: number;
- *  lignes?: Array<{
- *    cle: string, texte: string, accessibilityLabel?: string, onPress?: () => void,
- *  }>;
  *  tutorial?: any;
  * }} HomeCard
  */
@@ -264,7 +257,6 @@ function HomeSection({
               icon={card.icon}
               illustration={card.illustration || illustrationsParFamille[card.icon]}
               illustrationPlacement={card.illustrationPlacement}
-              lignes={card.lignes}
               locked={card.locked}
               onPress={card.onPress}
               premiumScope={card.premiumScope}
@@ -482,8 +474,10 @@ function HomeHubContent({ auth, navigation, route }) {
   // P0 — `getUserRoleKey` rend deja 'parent' (authUseCases.js:37) : le trou
   // n'etait pas la, il etait ici, ou personne ne lisait cette valeur.
   const isParent = roleKey === 'parent';
-  // PAR-L7 (13/10, design parent E01) — mes enfants en bref : les lectures de « Mes enfants »,
-  // avec ses cles (l'ecran s'ouvrira deja rempli). Sur le role du COMPTE : les quatre roles du
+  // PAR-L7 (13/10) — mes enfants en bref : les lectures de « Mes enfants », avec ses cles
+  // (l'ecran s'ouvrira deja rempli). REC17-001 : l'accueil n'en lit plus que DEUX choses, a-t-il
+  // des enfants (la carte d'un sportif, le mode parent) et leurs prenoms (le bandeau E25) ; la
+  // carte « Mes enfants » ne les nomme plus. Sur le role du COMPTE : les quatre roles du
   // club peuvent avoir des enfants ; le super admin et un compte neuf, non (rien ne part).
   const mesEnfants = useMesEnfantsEnBref({
     actif: Boolean(userData?.documentId) && peutAvoirDesEnfants(getUserRoleKey(roleName)),
@@ -2460,15 +2454,13 @@ function HomeHubContent({ auth, navigation, route }) {
     // du parent n avait AUCUN chemin vers « Mes enfants ». Il fallait passer par le menu
     // du profil — pour quelqu un dont c est la SEULE raison d etre dans l app.
     //
-    // PAR-L7 (13/10, design parent E01, decision D1 A d'Adel du 12/10) — elle DIT ses
-    // enfants : « Anissa · U11 Filles », « Martin · Demande en attente », 3 au plus puis
-    // « + 2 autres » (`useMesEnfantsEnBref`, les lectures de « Mes enfants » et leurs
-    // cles). Tant qu'elles n'ont pas repondu, ou si elles echouent, la phrase d'avant :
-    // la carte ne bloque jamais l'accueil, et l'ecran qu'elle ouvre sait dire s'il est vide.
+    // REC17-001 (decision d'Adel du 17/10, recette iPhone) — UNE SEULE ENTREE. La carte ne
+    // nomme plus les enfants : ni prenom, ni statut, ni fleche par enfant (les lignes de PAR-L7
+    // E01 sont retirees). Elle ouvre « Mes enfants », et c'est LA qu'on choisit l'enfant ; la
+    // meme carte avec 0, 1 ou 3 enfants. 🧪 `accueilMesEnfantsUneEntree.test.js` monte l'accueil.
     // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
     // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
     // (meme raison que « Mes reponses », posee par D57).
-    const lignesDesEnfants = lignesAAfficher(t, mesEnfants);
     // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
     // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
     const carteMesEnfants = /** @type {any} */ ({
@@ -2477,24 +2469,14 @@ function HomeHubContent({ auth, navigation, route }) {
       icon: 'users',
       key: 'search-my-children',
       layout: 'full',
-      // PAR-L7 E01 (14/10) — « une ligne d'enfant → sa fiche » : chaque ligne s'ouvre sur SA
-      // destination dans « Mon compte » ; un appui ailleurs sur la carte ouvre « Mes enfants ».
-      lignes: mesEnfants.total > 0
-        ? lignesDeLaCarte(t, mesEnfants, (destination) => (
-          navigation.navigate(RouteNames.ProfileStack, destination)
-        ))
-        : undefined,
       onPress: () => navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.MyChildren,
       }),
-      subtitle: mesEnfants.total > 0
-        ? lignesDesEnfants.join('\n')
-        : t(
-          'homeHub.cards.search.myChildren.subtitle',
-          'Declare-les, corrige leur fiche, cherche-leur un club.',
-        ),
-      // Une ligne par enfant nomme (et « + 2 autres ») : rien n'est coupe par « … ».
-      subtitleLines: Math.max(2, lignesDesEnfants.length),
+      subtitle: t(
+        'homeHub.cards.search.myChildren.subtitle',
+        'Declare-les, corrige leur fiche, cherche-leur un club.',
+      ),
+      subtitleLines: 2,
       title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
     });
 

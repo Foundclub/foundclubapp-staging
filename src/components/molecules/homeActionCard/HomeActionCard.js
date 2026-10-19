@@ -82,13 +82,9 @@ const FALLBACK_GLOW_RINGS = [
  *   pressable, l'appui ouvrant la feuille de vente (L10-C, stratégie paywall §2.3).
  *   Ne jamais l'utiliser sans `premiumScope` : griser en silence est interdit.
  * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
- * @param {number} [props.subtitleLines] - PAR-L7 : plus de 2 sur la carte « Mes enfants »
- *   de l'accueil (une ligne par enfant nommé).
- * @param {Array<{ cle: string, texte: string, accessibilityLabel?: string,
- *   onPress?: () => void }>} [props.lignes] - PAR-L7 (design parent E01 : « une ligne d'enfant
- *   → sa fiche ») : à la place du sous-titre, des lignes dont CHACUNE s'ouvre (≥ 44 px, nommée
- *   pour le lecteur d'écran) ; une ligne sans `onPress` reste du texte. Un appui ailleurs sur la
- *   carte garde `onPress`. Facultative : omise, la carte est exactement celle d'avant.
+ * @param {number} [props.subtitleLines] - Lignes du sous-titre (2 par défaut). REC17-001
+ *   (17/10) : une carte est UNE seule zone touchable ; les lignes par enfant de la carte
+ *   « Mes enfants » (PAR-L7 E01) sont retirées, elle ouvre « Mes enfants ».
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
  */
@@ -102,7 +98,6 @@ function HomeActionCard({
   icon = 'search',
   illustration,
   illustrationPlacement,
-  lignes,
   locked = false,
   onPress,
   premiumScope,
@@ -159,16 +154,12 @@ function HomeActionCard({
   if (typeof badgeCount === 'number' && badgeCount > 0) {
     badgeLabel = badgeCount > 9 ? '9+' : String(badgeCount);
   }
-  // PAR-L7 (E01) — des lignes qui s'ouvrent chacune : la carte ne se lit plus d'un bloc (le
-  // lecteur d'écran doit atteindre chaque ligne) ; son titre devient le bouton de la carte.
-  const aDesLignes = Array.isArray(lignes) && lignes.length > 0;
 
   return (
     <Pressable
       accessibilityHint={subtitle}
       accessibilityLabel={title}
       accessibilityRole="button"
-      accessible={aDesLignes ? false : undefined}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => ([
@@ -336,48 +327,21 @@ function HomeActionCard({
             </View>
           ) : null}
           <Text
-            accessibilityRole={aDesLignes ? 'button' : undefined}
             numberOfLines={2}
-            onPress={aDesLignes ? onPress : undefined}
             style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}
           >
             {title}
           </Text>
-          {aDesLignes ? lignes.map((ligne) => (ligne.onPress ? (
-            <Pressable
-              accessibilityLabel={ligne.accessibilityLabel || ligne.texte}
-              accessibilityRole="button"
-              key={ligne.cle}
-              onPress={ligne.onPress}
-              style={{
-                alignItems: 'center',
-                flexDirection: 'row',
-                gap: 8,
-                minHeight: 44,
-              }}
-              testID={`home-card-line-${ligne.cle}`}
-            >
-              <Text style={[Fonts.small, Fonts.neutral200, { flex: 1 }]}>{ligne.texte}</Text>
-              <Image
-                source={Images.arrowRight}
-                style={{ height: 10, width: 10 }}
-                tintColor={resolvedAccentColor}
-              />
-            </Pressable>
-          ) : (
-            <Text key={ligne.cle} style={[Fonts.small, Fonts.neutral200]}>{ligne.texte}</Text>
-          ))) : (
-            <Text
-              numberOfLines={subtitleLines}
-              style={[
-                Fonts.small,
-                Fonts.neutral200,
-                subtitleLines === 2 && { minHeight: 32 },
-              ]}
-            >
-              {subtitle}
-            </Text>
-          )}
+          <Text
+            numberOfLines={subtitleLines}
+            style={[
+              Fonts.small,
+              Fonts.neutral200,
+              subtitleLines === 2 && { minHeight: 32 },
+            ]}
+          >
+            {subtitle}
+          </Text>
         </View>
       </View>
     </Pressable>
