@@ -28,6 +28,10 @@ import { RouteNames } from '@/navigation/routeNames';
 /** @type {any} */
 let mockAuth = null;
 
+// R17-SIGNALER-1 (staging 20/10) : « Mes signalements » lit ses signalements (doublure).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useMyFacilityReports: () => ({ data: null }),
+}));
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
 
 jest.mock('@tanstack/react-query', () => {
