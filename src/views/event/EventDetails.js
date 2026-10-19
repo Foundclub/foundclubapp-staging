@@ -201,6 +201,7 @@ import {
   hasPublishedConvocation,
   listMissingResponders,
   listPresentWithoutConvocation,
+  resolveCompositionClubId,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchTagSegments,
@@ -3694,6 +3695,13 @@ function EventDetails({ navigation, route }) {
       || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
 
+  // 🤝 AMIC-INVITE — le club de l'équipe composée : celui que les quatre portes de la
+  // composition transmettent, et celui sur lequel le bandeau juge l'offre.
+  const compositionClubId = useMemo(
+    () => resolveCompositionClubId({ event, teamId: compositionTeamId }),
+    [compositionTeamId, event],
+  );
+
   // 🏷️ N3 (D1/D2/D3/D8) — CE QUE LA PASTILLE DE TYPE AJOUTE POUR UN MATCH.
   //
   // N1 a centralise le libelle dans `buildTypeTagLabel` en prevoyant ce lot :
@@ -4387,9 +4395,11 @@ function EventDetails({ navigation, route }) {
   // Repli sur le club affiche pour les doublures de `useAuth` d'avant ce lot.
   // FINITIONS3 (29/09) — la garde vit desormais dans `subscriptionDecision.js` :
   // la selection des convoques (portes « Modifier ») la reutilise.
+  // 🤝 AMIC-INVITE (19/10) — « le club de l'evenement » est celui de l'EQUIPE COMPOSEE :
+  // l'invite d'un match amical est juge sur l'offre de son club, l'hote sur la sienne.
   const canManageComposition = canManageCompositionForClub(
     { getSubscriptionAccessLevelForClub, subscriptionAccessLevel },
-    eventClubId,
+    compositionClubId,
   );
 
   // 🚪 Le rappel ne parait QUE la ou il y a quelque chose a preparer, et il se
@@ -4581,7 +4591,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(compositionRoute, {
       // @ts-ignore: FIXME: Baseline TS regression
       canEdit: Boolean(options.canEdit),
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       // @ts-ignore: FIXME: Baseline TS regression
       compositionIntent: options.compositionIntent || null,
       // @ts-ignore: FIXME: Baseline TS regression
@@ -4622,13 +4632,13 @@ function EventDetails({ navigation, route }) {
       teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
     });
   }, [
+    compositionClubId,
     compositionEditorPlayers,
     compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionSport,
     compositionTeamId,
     compositionEventLabel,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
@@ -4679,7 +4689,7 @@ function EventDetails({ navigation, route }) {
       navigation.navigate(RouteNames.MatchCompositionBoard, {
         ...publishedBoardTarget,
         canEdit: Boolean(canEdit),
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         eventId,
         eventLabel: compositionEventLabel,
         eventTypeLabel: event?.type?.name || null,
@@ -4704,7 +4714,7 @@ function EventDetails({ navigation, route }) {
     }
 
     navigation.navigate(RouteNames.MatchConvocationPublished, {
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       players: compositionEditorPlayers,
@@ -4714,13 +4724,13 @@ function EventDetails({ navigation, route }) {
     });
   }, [
     canEdit,
+    compositionClubId,
     compositionEditorPlayers,
     compositionEditorTeam?.name,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
     convocationBranches,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     getCompositionSourceLabel,
@@ -4753,7 +4763,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.MatchCallUpSelection, {
       ...publishedBoardTarget,
       canEdit: true,
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       eventName: compositionEventLabel,
@@ -4765,10 +4775,10 @@ function EventDetails({ navigation, route }) {
       teamId: compositionTeamId,
     });
   }, [
+    compositionClubId,
     compositionEditorPlayers,
     compositionEventLabel,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,

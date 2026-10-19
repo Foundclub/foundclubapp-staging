@@ -45,6 +45,7 @@ const ACTION_VARIANTS = {
  * @property {string} icon - Clef d'image du theme.
  * @property {string} key
  * @property {string} label
+ * @property {string} [notice] - MARQUE-MAIRIE : « En attente de la mairie », sous le libelle.
  * @property {() => void} [onPress]
  * @property {string} [tone] - Couleur du glyphe. Defaut : le `tone` du bandeau.
  * @property {string} [value] - Valeur affichee a droite.
@@ -68,6 +69,8 @@ const ACTION_VARIANTS = {
  * @param {HomeHeadBannerConfirmation} [props.confirmation] - A05, sous les boutons.
  * @param {string} props.label - Etiquette au-dessus du cadre (ex. « Aujourd'hui »).
  * @param {HomeHeadBannerLine[]} [props.lines] - Variante « liste ».
+ * @param {string} [props.notice] - Variante « evenement » : MARQUE-MAIRIE, l echeance attend une
+ *   decision (« En attente de la mairie »), sous le sous-titre.
  * @param {string} [props.subtitle] - Variante « evenement ».
  * @param {{ key: string, label: string, tone?: string, value: string }[]} [props.tiles]
  *   Variante « evenement » : tuiles chiffrees cote a cote (entraineur).
@@ -82,6 +85,7 @@ function HomeHeadBanner({
   confirmation,
   label,
   lines = EMPTY_LIST,
+  notice,
   subtitle,
   tiles = EMPTY_LIST,
   title,
@@ -173,16 +177,46 @@ function HomeHeadBanner({
                 />
               ) : null}
             </View>
-            <Text
-              style={[
-                Fonts.small,
-                {
-                  color: Colors.neutral100, flex: 1, fontSize: 12.5, fontWeight: '700',
-                },
-              ]}
-            >
-              {line.label}
-            </Text>
+            {line.notice ? (
+              // MARQUE-MAIRIE (14/10) — le prochain evenement attend : la phrase sous son libelle,
+              // au ton orange de la grille du planning (COLL-R-A4).
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    Fonts.small,
+                    { color: Colors.neutral100, fontSize: 12.5, fontWeight: '700' },
+                  ]}
+                >
+                  {line.label}
+                </Text>
+                <Text
+                  style={[
+                    Fonts.small,
+                    {
+                      alignSelf: 'stretch',
+                      color: Colors.warning400,
+                      fontSize: 11,
+                      fontWeight: '700',
+                      marginTop: 2,
+                    },
+                  ]}
+                  testID="bandeau-seance-en-attente"
+                >
+                  {line.notice}
+                </Text>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  Fonts.small,
+                  {
+                    color: Colors.neutral100, flex: 1, fontSize: 12.5, fontWeight: '700',
+                  },
+                ]}
+              >
+                {line.label}
+              </Text>
+            )}
             {line.value ? (
               <Text
                 style={[
@@ -218,6 +252,26 @@ function HomeHeadBanner({
                   ]}
                 >
                   {subtitle}
+                </Text>
+              ) : null}
+              {notice ? (
+                // MARQUE-MAIRIE (14/10) — l echeance attend une decision (« En attente de la
+                // mairie »), au ton orange de la grille du planning. 📐 Piege Android 16 (gras
+                // de plusieurs mots) : la ligne s ETIRE sur toute la colonne.
+                <Text
+                  style={[
+                    Fonts.small,
+                    {
+                      alignSelf: 'stretch',
+                      color: Colors.warning400,
+                      fontSize: 11.5,
+                      fontWeight: '700',
+                      marginTop: 4,
+                    },
+                  ]}
+                  testID="bandeau-seance-en-attente"
+                >
+                  {notice}
                 </Text>
               ) : null}
             </View>
