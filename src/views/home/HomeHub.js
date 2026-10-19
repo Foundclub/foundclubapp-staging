@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   formatBannerShortTime,
   formatBannerTitle,
@@ -1641,6 +1642,10 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const headBanner = useMemo(() => {
     const descriptors = selectBannerLines(homeCounters, roleKey, collectivitesATraiter);
+    // MARQUE-MAIRIE (14/10, COL-003, « D3- B » puis « 3- ok go » d Adel) — le prochain
+    // evenement attend une decision : le bandeau le dit (« En attente de la mairie »). Le serveur
+    // pose `pendingDecider` ; un serveur d avant ne le pose pas, et rien ne change.
+    const attente = pendingDeciderLabel(homeCounters.prochainEvenement?.pendingDecider, t);
     /**
      * @param {string} screen
      * @returns {() => void}
@@ -1727,6 +1732,7 @@ function HomeHubContent({ auth, navigation, route }) {
         prochainEvenement: {
           icon: 'calendar',
           label: homeCounters.prochainEvenement?.label,
+          notice: attente || undefined,
           onPress: () => handleOpenEvent(homeCounters.prochainEvenement?.id),
           value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt, maintenant),
         },
@@ -1754,6 +1760,7 @@ function HomeHubContent({ auth, navigation, route }) {
           onPress: () => handleOpenEvent(seance.id),
         }],
         label: t('homeHub.banner.coach.label', 'Ma prochaine séance'),
+        notice: pendingDeciderLabel(seance.pendingDecider, t) || undefined,
         subtitle: seance.opponent,
         tiles: [
           {
@@ -1787,6 +1794,7 @@ function HomeHubContent({ auth, navigation, route }) {
           onPress: () => handleOpenEvent(evenement.id),
         }],
         label: t('homeHub.banner.player.label', 'Ma semaine'),
+        notice: attente || undefined,
         subtitle: evenement.label,
         title: formatBannerTitle(evenement.startsAt),
         variant: 'event',
@@ -1840,6 +1848,7 @@ function HomeHubContent({ auth, navigation, route }) {
         label: t('homeHub.banner.player.answerSent'),
       } : undefined,
       label: t('homeHub.banner.player.label', 'Ma semaine'),
+      notice: attente || undefined,
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
       // ⛔ AUCUN LIBELLE NEUF : ce sont les trois phrases que la fiche de

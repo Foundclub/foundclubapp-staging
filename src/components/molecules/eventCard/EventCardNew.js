@@ -19,6 +19,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { estDuClubOrganisateur } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import { withAlpha } from '@/theme/colors';
@@ -26,6 +27,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
@@ -456,6 +458,9 @@ function EventCardNew({
   } = useTheme();
   const { t } = useTranslation();
   const { canManageEvent, userData } = useAuth();
+  // MARQUE-MAIRIE (14/10, COL-003, « D3- B ») — la seance attend une decision : qui decide,
+  // pose par le serveur ; un creneau de planning normalise (liste omnisport) le porte sous `raw`.
+  const attente = pendingDeciderLabel(item?.pendingDecider ?? item?.raw?.pendingDecider, t);
   const { haveIAlreadyJoined } = useEvent();
 
   const participationState = getCurrentUserEventParticipationState({
@@ -1033,6 +1038,27 @@ function EventCardNew({
           </View>
         ) : null}
 
+        {/* MARQUE-MAIRIE (14/10, COL-003, « D3- B » puis « 3- ok go » d Adel) — la seance
+            qui attend la mairie le dit (« En attente de la mairie »), avec les mots de la fiche
+            et de la grille, au ton orange de la grille ; en pointilles : une attente, pas une
+            fermeture. Une phrase, sans geste : la carte s ouvre comme avant. */}
+        {attente && !isShareMode ? (
+          <View
+            accessibilityRole="text"
+            style={[
+              styles.attente,
+              {
+                backgroundColor: withAlpha(Colors.warning500, 0.12),
+                borderColor: withAlpha(Colors.warning500, 0.45),
+              },
+            ]}
+            testID="carte-seance-en-attente"
+          >
+            <SvgIcon color={Colors.warning500} height={15} name="clock-two-thirty" width={15} />
+            <Text style={[Fonts.p3Bold, { color: Colors.warning400, flex: 1 }]}>{attente}</Text>
+          </View>
+        ) : null}
+
         {/* CTA - Interactive (Captures touches) */}
         {/* PARENT-PLANNING (06/10) — l evenement de l enfant se LIT, il ne se repond pas. */}
         {!isShareMode && !readOnly ? (
@@ -1060,6 +1086,18 @@ function EventCardNew({
 }
 
 const styles = StyleSheet.create({
+  // MARQUE-MAIRIE : la forme de la marque « fermé » (`FacilityClosureCardTag`), en pointilles.
+  attente: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   backgroundImage: {
     borderRadius: 20,
   },

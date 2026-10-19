@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   closureBandLabel,
   closureHoursLabel,
@@ -320,6 +321,9 @@ function PlanningCalendarView({
     const facilityName = item?.facility?.name || null;
     const isPendingParticipation = isPlanningPendingParticipation(item);
     const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
+    // MARQUE-MAIRIE (14/10, COL-003, « D3- B ») — la seance attend une decision : les mots de la
+    // grille (COLL-R-A4), au meme ton ; un serveur d avant ne pose rien.
+    const attente = pendingDeciderLabel(item?.raw?.pendingDecider ?? item?.pendingDecider, t);
     const timeLabel = getPlanningTimeLabel(item) || t('planning.labels.noTime', 'Sans horaire');
 
     return (
@@ -358,6 +362,25 @@ function PlanningCalendarView({
           </View>
         ) : null}
 
+        {attente ? (
+          <View
+            style={[
+              styles.pendingStatusPill,
+              {
+                backgroundColor: hexToRgba(pendingAccentColor, 0.16),
+                borderColor: hexToRgba(pendingAccentColor, 0.4),
+              },
+            ]}
+          >
+            <Text
+              style={[Fonts.p4Bold, { color: Colors.warning400 || pendingAccentColor }]}
+              testID="seance-en-attente"
+            >
+              {attente}
+            </Text>
+          </View>
+        ) : null}
+
         {typeLabel ? (
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
             {typeLabel}
@@ -383,6 +406,7 @@ function PlanningCalendarView({
     Colors.neutral300,
     Colors.gold500,
     Colors.primary500,
+    Colors.warning400,
     Colors.warning500,
     Fonts.neutral00,
     Fonts.p1Bold,
