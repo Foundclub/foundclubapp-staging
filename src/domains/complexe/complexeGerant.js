@@ -90,9 +90,18 @@ export const ficheComplete = (fiche) => {
 };
 
 /**
+ * RESA-INSCRIPTION (19/10/2026) — la version des « règles d'utilisation des complexes » que la case
+ * fait accepter : celles validées le 14/10 (`docs/RESERVATION_REGLES_COMPLEXES_2026-10-14.md`).
+ * Champ neuf du lot serveur RESA-L2C ; le serveur actuel l'ignore sans erreur (sa liste blanche,
+ * mesuré sur `readComplexePayload` et `selfOnboard` : banc `RESAINSCR-20261019/serveur`).
+ * Une nouvelle version des règles = une nouvelle date ici.
+ */
+export const VERSION_DES_REGLES = '2026-10-14';
+
+/**
  * Le corps de « Créer mon complexe » (`POST /complexes/self-onboard`) : la liste blanche du
  * serveur (`readComplexePayload`) et rien d'autre. Le serveur pose lui-même le gestionnaire, le
- * statut, la pastille et le slug.
+ * statut, la pastille et le slug. `rulesVersion` accompagne la case cochée, jamais sans elle.
  * @param {{ accepte: boolean, adresse: any, annulation: number, ageMinimum: number, nom: string,
  *   siret?: string, sports: string[], telephone: string }} fiche - Le tunnel rempli.
  * @param {{ forcer?: boolean }} [options] - « Non, continuer » après un doublon possible.
@@ -113,6 +122,7 @@ export const payloadDeCreation = (fiche, { forcer = false } = {}) => {
     sports: fiche.sports,
     ...(adresse.city ? { city: adresse.city } : {}),
     ...(forcer ? { forceCreate: true } : {}),
+    ...(fiche.accepte === true ? { rulesVersion: VERSION_DES_REGLES } : {}),
     ...(siret ? { siret } : {}),
   };
 };

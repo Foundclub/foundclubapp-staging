@@ -38,6 +38,14 @@ describe('RESA-L5A1 — les routes du complexe', () => {
     expect(corps).toEqual({ data: { documentId: 'cx-1' } });
   });
 
+  // RESA-INSCRIPTION (19/10/2026) — la version des règles acceptée part DANS le corps, telle
+  // quelle (champ neuf du lot serveur RESA-L2C ; le serveur actuel l'ignore sans erreur, mesuré
+  // sur sa liste blanche : banc .local/bancs/RESAINSCR-20261019/serveur).
+  it('« Créer mon complexe » : rulesVersion part tel quel dans { data }', async () => {
+    await creerMonComplexe({ acceptRules: true, name: 'Le Five', rulesVersion: '2026-10-14' });
+    expect(mockClient.post.mock.calls[0][1].data.rulesVersion).toBe('2026-10-14');
+  });
+
   it('« Mes complexes » : GET /complexes/mine', async () => {
     await lireMesComplexes();
     expect(mockClient.get).toHaveBeenCalledWith('/complexes/mine');

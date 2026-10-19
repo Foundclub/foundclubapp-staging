@@ -5,6 +5,7 @@ import {
   messageDeRefus,
   payloadDeCreation,
   telephoneAPreRemplir,
+  VERSION_DES_REGLES,
 } from './complexeGerant';
 
 // RESA-L5A1 (13/10/2026) — E-G01 « Devenir gérant » : ce que l'écran envoie, ce qu'il pré-remplit,
@@ -89,9 +90,29 @@ describe('RESA-L5A1 E-G01 — ce que « Créer mon complexe » envoie', () => {
       minAge: 16,
       name: 'Le Five de Montrivage',
       phoneNumber: '+33639981234',
+      rulesVersion: '2026-10-14',
       siret: '12345678900012',
       sports: ['a-five', 'a-padel'],
     });
+  });
+
+  // RESA-INSCRIPTION (19/10/2026) — LA VERSION DES RÈGLES ACCEPTÉE : celles validées le 14/10
+  // (docs/RESERVATION_REGLES_COMPLEXES_2026-10-14.md). Champ neuf du lot serveur RESA-L2C ; le
+  // serveur actuel l'ignore sans erreur (liste blanche, banc RESAINSCR-20261019/serveur).
+  it('rulesVersion « 2026-10-14 » part avec la case cochée, jamais sans elle', () => {
+    expect(VERSION_DES_REGLES).toBe('2026-10-14');
+    const fiche = {
+      adresse: ADRESSE,
+      ageMinimum: 18,
+      annulation: 24,
+      nom: 'Le Five',
+      sports: [],
+      telephone: '+33639981234',
+    };
+    expect(payloadDeCreation({ ...fiche, accepte: true }).rulesVersion).toBe('2026-10-14');
+    const sansCase = payloadDeCreation({ ...fiche, accepte: false });
+    expect(sansCase.acceptRules).toBe(false);
+    expect(sansCase).not.toHaveProperty('rulesVersion');
   });
 
   it('« Non, continuer » : forceCreate ; sans SIRET ni ville, rien n’est inventé', () => {

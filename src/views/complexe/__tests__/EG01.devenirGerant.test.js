@@ -277,6 +277,8 @@ describe('RESA-L5A1 E-G01 — étapes 2 et 3, puis « Créer mon complexe »', (
       minAge: 16,
       name: 'Le Five de Montrivage',
       phoneNumber: '+33639981234',
+      // RESA-INSCRIPTION (19/10) : la version des règles acceptée (case cochée).
+      rulesVersion: '2026-10-14',
       sports: ['a-five'],
     });
     // État 5 : un compte, deux modes.

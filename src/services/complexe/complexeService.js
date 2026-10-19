@@ -52,7 +52,7 @@ const enc = (/** @type {unknown} */ valeur) => encodeURIComponent(String(valeur 
  * `{ data: { duplicate: true, suggestions } }` (« C'est le tien ? », rien n'est créé) : renvoyer
  * avec `forceCreate: true` pour créer quand même.
  * @param {Record<string, any>} donnees - `{ acceptRules, name, address, phoneNumber, sports,
- *   minAge, cancellationDelayHours, siret?, forceCreate? }`.
+ *   minAge, cancellationDelayHours, siret?, forceCreate?, rulesVersion? }`.
  * @returns {Promise<any>} Le corps `{ data }`.
  */
 export const creerMonComplexe = async (donnees) => corps(
