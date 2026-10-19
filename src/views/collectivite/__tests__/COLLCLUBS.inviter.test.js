@@ -30,7 +30,9 @@ const mockShare = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
-  useRoute: () => ({ params: { collectiviteId: 'ville-de-recette' } }),
+  // R17-INVITER (19/10) : sans `onglet`, l'écran s'ouvre sur la recherche habituelle ; le lien et
+  // « Par FoundClub » s'ouvrent par « Le club n'est pas sur FoundClub ? » (`onglet: 'lien'`).
+  useRoute: () => ({ params: { collectiviteId: 'ville-de-recette', onglet: 'lien' } }),
 }));
 
 jest.mock('react-i18next', () => {
@@ -111,6 +113,10 @@ jest.mock(
   () => function ScreenContainerMock({ children }) { return children; },
 );
 jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+jest.mock(
+  '@/components/organisms/clubListContent/ClubListContent',
+  () => function ClubListContentMock() { return null; },
+);
 jest.mock(
   '@/components/molecules/segmentedControl/SegmentedControl',
   () => function SegmentedControlMock() { return null; },

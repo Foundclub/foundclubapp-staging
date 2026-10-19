@@ -1,5 +1,5 @@
 import { useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
 
@@ -70,9 +71,12 @@ const copier = async (texte) => {
  *     enregistree pour l equipe FoundClub ; ⛔ l application n envoie aucun e-mail (ecrire a un
  *     tiers est un geste a part, a decider par Adel).
  * Ce qui se passe ensuite (inscrit, rattache) se lit dans « Clubs rattaches », sous la liste.
- * VILLE-INVITER-CLUB (07/10/2026) : un 3e onglet, en tete, « Deja sur FoundClub » — la Ville
- * cherche un club deja inscrit et lui envoie sa demande (components/AjouterUnClub). Il s'ouvre
- * par « Ajouter un club » (param `onglet: 'recherche'`) ; sans ce param, l'ecran garde le lien.
+ * VILLE-INVITER-CLUB (07/10/2026) : un 3e onglet, en tete, « Deja sur FoundClub ».
+ * R17-INVITER (19/10/2026, REC17-009) : plus d'onglets. L'ecran s'ouvre sur la recherche de club
+ * HABITUELLE de l'app (ClubListContent, memes filtres, meme rendu) ; sous chaque carte, « Ce club
+ * fait partie de ma collectivite » (components/AjouterUnClub) ; la fiche d'un club s'ouvre avec la
+ * Ville, qui y trouve le meme bouton. Le lien et « Par FoundClub » sont derriere un lien discret
+ * « Le club n'est pas sur FoundClub ? » ; `onglet: 'lien'` / `'foundclub'` les ouvrent toujours.
  * « lien A » d'Adel : le club qui arrive par le lien DEMANDE ; la Ville accepte ou refuse.
  * « vous » : la mairie.
  * @returns {import('react').ReactElement} L ecran.
@@ -95,7 +99,7 @@ function CollectiviteInviteClub() {
   const inviter = useInviteClubByFoundClub();
 
   const [onglet, setOnglet] = useState(/** @type {'recherche' | 'lien' | 'foundclub'} */ (
-    ['foundclub', 'recherche'].includes(String(routeParams?.onglet)) ? routeParams?.onglet : 'lien'
+    ['foundclub', 'lien'].includes(String(routeParams?.onglet)) ? routeParams?.onglet : 'recherche'
   ));
   const [confirmerLeChangement, setConfirmerLeChangement] = useState(false);
   const [retour, setRetour] = useState('');
@@ -166,6 +170,17 @@ function CollectiviteInviteClub() {
       },
     });
   };
+
+  // R17-INVITER : l'action de chaque carte de la recherche habituelle, et la Ville passée à la
+  // fiche du club (son bouton y est aussi). Stables : la liste ne redessine pas ses cartes.
+  const actionDeCarte = useCallback((/** @type {any} */ club) => (
+    <AjouterUnClub
+      club={club}
+      collectiviteId={collectiviteId}
+      onInviterParLien={() => setOnglet('lien')}
+    />
+  ), [collectiviteId]);
+  const paramsDeFiche = useMemo(() => ({ collectiviteId }), [collectiviteId]);
 
   const boiteDuLien = {
     backgroundColor: withAlpha(Colors.primary500, 0.08),
@@ -329,6 +344,67 @@ function CollectiviteInviteClub() {
     </View>
   );
 
+  const enTete = (/** @type {string} */ titre) => (
+    <View style={{ gap: 4 }}>
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+        {(collectivite?.name || t('collectivite.home.kicker', 'Ma collectivité')).toUpperCase()}
+      </Text>
+      <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>{titre}</Text>
+    </View>
+  );
+  const lienDiscret = (
+    /** @type {string} */ testID,
+    /** @type {string} */ libelle,
+    /** @type {() => void} */ onPress,
+  ) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+      testID={testID}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.primary200]}>{libelle}</Text>
+    </TouchableOpacity>
+  );
+
+  if (onglet === 'recherche') {
+    const zoneDeRecherche = {
+      gap: 12, maxWidth: 720, paddingTop: 12, width: /** @type {'100%'} */ ('100%'),
+    };
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="screen"
+        contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      >
+        <View style={[Alignments.fill, zoneDeRecherche]}>
+          {enTete(t(
+            'collectiviteRattachement.ajouter.title',
+            'Ajouter un club déjà sur FoundClub',
+          ))}
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t(
+              'collectiviteRattachement.ajouter.introSearch',
+              // eslint-disable-next-line max-len
+              'Cherchez le club comme dans la recherche de FoundClub. « Ce club fait partie de ma collectivité » lui envoie votre demande : accepté, il est rattaché à la Ville.',
+            )}
+          </Text>
+          <View style={Alignments.fill}>
+            <ClubListContent actionDeCarte={actionDeCarte} paramsDeFiche={paramsDeFiche} />
+          </View>
+          {lienDiscret(
+            'inviter-absent',
+            t(
+              'collectiviteRattachement.ajouter.notOnFoundClub',
+              'Le club n’est pas sur FoundClub ?',
+            ),
+            () => setOnglet('lien'),
+          )}
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -342,25 +418,12 @@ function CollectiviteInviteClub() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        <View style={{ gap: 4 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-            {(collectivite?.name || t('collectivite.home.kicker', 'Ma collectivité')).toUpperCase()}
-          </Text>
-          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-            {onglet === 'recherche'
-              ? t('collectiviteRattachement.ajouter.title', 'Ajouter un club déjà sur FoundClub')
-              : t('collectiviteClubs.invite.title', 'Inviter un club absent de FoundClub')}
-          </Text>
-        </View>
+        {enTete(t('collectiviteClubs.invite.title', 'Inviter un club absent de FoundClub'))}
         <SegmentedControl
           onChange={(/** @type {string} */ valeur) => setOnglet(
-            ['foundclub', 'recherche'].includes(valeur) ? /** @type {any} */ (valeur) : 'lien',
+            valeur === 'foundclub' ? 'foundclub' : 'lien',
           )}
           options={[
-            {
-              label: t('collectiviteRattachement.ajouter.tab', 'Déjà sur FoundClub'),
-              value: 'recherche',
-            },
             { label: t('collectiviteClubs.invite.byLink', 'Par un lien'), value: 'lien' },
             {
               label: t('collectiviteClubs.invite.byFoundClub', 'Par FoundClub'),
@@ -369,14 +432,12 @@ function CollectiviteInviteClub() {
           ]}
           value={onglet}
         />
-        {onglet === 'recherche' ? (
-          <AjouterUnClub
-            collectiviteId={collectiviteId}
-            onInviterParLien={() => setOnglet('lien')}
-          />
-        ) : null}
-        {onglet === 'lien' ? renderLien() : null}
-        {onglet === 'foundclub' ? renderFoundClub() : null}
+        {onglet === 'lien' ? renderLien() : renderFoundClub()}
+        {lienDiscret(
+          'inviter-retour-recherche',
+          t('collectiviteRattachement.ajouter.backToSearch', 'Chercher un club déjà sur FoundClub'),
+          () => setOnglet('recherche'),
+        )}
       </ScrollView>
     </ScreenContainer>
   );

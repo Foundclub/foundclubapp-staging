@@ -11,10 +11,8 @@ import CollectiviteInviteClub from '../CollectiviteInviteClub';
 // accepte ou refuse les demandes venues de son lien).
 //
 // Ce que ce témoin fige (ROUGE avant le lot : la Ville ne pouvait inviter qu'un club ABSENT) :
-//   E1 — « Ajouter un club » ouvre la recherche « Déjà sur FoundClub », la commune d'abord ;
-//   E2 — un club qui a un dirigeant : « Envoyer la demande » part vers CE club ;
-//   E3 — un club sans dirigeant : on le dit, et « Inviter par le lien » ouvre le lien de la Ville ;
-//   E4 — chaque autre état a son mot ; le club qui a déjà demandé : « Accepter sa demande » ;
+//   E1 — « Ajouter un club » ouvre l'écran de recherche (R17-INVITER, 19/10 : la recherche
+//        HABITUELLE et son bouton ; E2 à E4 y ont déménagé : R17INVIT.inviterUnClub.test.js) ;
 //   E5 — « Demandes de rattachement » : Accepter / Refuser (avec confirmation) celles venues du
 //        lien, Relancer / Annuler celles que la Ville a envoyées ; « Invitations » ne garde que
 //        les invitations « Par FoundClub ».
@@ -26,13 +24,10 @@ jest.setTimeout(30000);
 /** @type {any} */
 let mockRoute;
 /** @type {any} */
-let mockRecherche;
-/** @type {any} */
 let mockDemandes;
 /** @type {any} */
 let mockInvitations;
 const mockNavigate = jest.fn();
-const mockRechercheAppels = jest.fn();
 const mockProposer = {
   error: null, isPending: false, mutate: jest.fn(), variables: null,
 };
@@ -107,13 +102,16 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
   useAnswerCollectiviteAttachRequest: () => mockRepondre,
   useCancelCollectiviteProposal: () => mockAnnuler,
   useCollectiviteClubRequests: () => mockDemandes,
-  useCollectiviteClubSearch: (/** @type {any} */ collectiviteId, /** @type {any} */ q) => {
-    mockRechercheAppels(collectiviteId, q);
-    return mockRecherche;
-  },
   useProposeCollectiviteClub: () => mockProposer,
   useRemindCollectiviteProposal: () => mockRelancer,
 }));
+
+// R17-INVITER (19/10) : l'écran monte la recherche HABITUELLE ; son témoin est
+// R17INVIT.inviterUnClub.test.js.
+jest.mock(
+  '@/components/organisms/clubListContent/ClubListContent',
+  () => function ClubListContentMock() { return null; },
+);
 
 // FINITIONS-VILLE (08/10) : « Refuser » ouvre la fenêtre des créneaux, qui lit ces deux crochets.
 jest.mock('@/services/facility/facilityQueries', () => ({
@@ -176,56 +174,15 @@ const dans = (/** @type {any} */ arbre, /** @type {string} */ testID) => racine(
   (/** @type {any} */ n) => n.props?.testID === testID,
 )[0];
 
-const ligne = (/** @type {Record<string, unknown>} */ champs) => ({
-  attached: false,
-  attachedElsewhere: false,
-  cityName: 'Montrivage',
-  hasLeader: true,
-  inCommune: true,
-  logo: null,
-  postcode: '13000',
-  proposal: null,
-  request: null,
-  ...champs,
-});
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockRoute = { params: { collectiviteId: 'ville-de-recette', onglet: 'recherche' } };
-  mockRecherche = {
-    data: [
-      ligne({ documentId: 'judo-e', name: 'Judo Club E' }),
-      ligne({ documentId: 'tennis-f', hasLeader: false, name: 'Tennis Club F' }),
-      ligne({ attached: true, documentId: 'as-a', name: 'AS Montrivage' }),
-      ligne({ attachedElsewhere: true, documentId: 'voisin-c', name: 'FC Voisin' }),
-      ligne({ documentId: 'basket-g', name: 'Basket G', proposal: { documentId: 'p9', state: 'pending' } }),
-      ligne({ documentId: 'hand-h', name: 'Hand H', proposal: { documentId: 'p8', state: 'refused' } }),
-      ligne({
-        documentId: 'stripe-d', inCommune: false, name: 'Recette Stripe FC', request: { documentId: 'r1', state: 'pending' },
-      }),
-    ],
-    error: null,
-    isLoading: false,
-    refetch: jest.fn(),
-  };
   mockDemandes = { data: [], error: null, isLoading: false };
   mockInvitations = { data: [] };
 });
 
 describe('VINV · côté mairie — chercher un club déjà sur FoundClub et lui envoyer la demande', () => {
-  it('E1 « Ajouter un club » ouvre la recherche ; sans texte, la commune d’abord', async () => {
-    const arbre = await monter(CollectiviteInviteClub);
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Ajouter un club déjà sur FoundClub',
-      'Sans texte : les clubs de votre commune.',
-    ]));
-    expect(mockRechercheAppels).toHaveBeenCalledWith('ville-de-recette', '');
-    const onglets = arbre.root.findAll(
-      (/** @type {any} */ n) => Array.isArray(n.props?.options) && typeof n.props?.onChange === 'function',
-    )[0];
-    expect(onglets.props.value).toBe('recherche');
-    expect(onglets.props.options.map((/** @type {any} */ o) => o.value)).toEqual(['recherche', 'lien', 'foundclub']);
-
+  it('E1 « Ajouter un club » ouvre l’écran de recherche de la Ville', async () => {
     mockRoute = { params: { collectiviteId: 'ville-de-recette' } };
     const avant = await monter(CollectiviteClubs);
     await act(async () => { boutons(avant, 'Ajouter un club')[0].props.onPress(); });
@@ -234,56 +191,15 @@ describe('VINV · côté mairie — chercher un club déjà sur FoundClub et lui
       onglet: 'recherche',
     });
   });
-
-  it('E2 un club qui a un dirigeant : « Envoyer la demande » part vers CE club', async () => {
-    const arbre = await monter(CollectiviteInviteClub);
-    const carte = dans(arbre, 'ajouter-club-judo-e');
-    expect(textes(carte)).toEqual(expect.arrayContaining(['Judo Club E', 'Un dirigeant est sur FoundClub']));
-    const envoyer = boutons(carte, 'Envoyer la demande');
-    expect(envoyer).toHaveLength(1);
-    await act(async () => { envoyer[0].props.onPress(); });
-    expect(mockProposer.mutate).toHaveBeenCalledWith(
-      { clubId: 'judo-e', collectiviteId: 'ville-de-recette' },
-      expect.any(Object),
-    );
-    expect(boutons(arbre, 'Envoyer la demande')).toHaveLength(1);
-  });
-
-  it('E3 un club sans dirigeant : personne ne pourrait accepter ; « Inviter par le lien » ouvre le lien de la Ville', async () => {
-    const arbre = await monter(CollectiviteInviteClub);
-    const carte = dans(arbre, 'ajouter-club-tennis-f');
-    expect(textes(carte)).toContain('Aucun dirigeant sur FoundClub : personne ne pourrait accepter. Invitez-le par le lien.');
-    expect(boutons(carte, 'Envoyer la demande')).toHaveLength(0);
-    await act(async () => { boutons(carte, 'Inviter par le lien')[0].props.onPress(); });
-    expect(textes(arbre)).toContain('https://foundclub.example.invalid/invitation-ville/CodeDeLaVille0123456789ab');
-  });
-
-  it('E4 rattaché, ailleurs, envoyée, refusée ; le club qui a déjà demandé : « Accepter sa demande »', async () => {
-    const arbre = await monter(CollectiviteInviteClub);
-    expect(textes(dans(arbre, 'ajouter-club-as-a'))).toContain('Déjà rattaché à la Ville');
-    expect(textes(dans(arbre, 'ajouter-club-voisin-c'))).toContain('Rattaché à une autre collectivité');
-    expect(textes(dans(arbre, 'ajouter-club-basket-g'))).toContain('Demande envoyée');
-    const refuse = dans(arbre, 'ajouter-club-hand-h');
-    expect(textes(refuse)).toContain('Le club a refusé votre demande');
-    // « refus B » (Adel, 07/10 ~18h05) : la Ville peut renvoyer sa demande.
-    await act(async () => { boutons(refuse, 'Renvoyer la demande')[0].props.onPress(); });
-    expect(mockProposer.mutate).toHaveBeenCalledWith(
-      { clubId: 'hand-h', collectiviteId: 'ville-de-recette' },
-      expect.any(Object),
-    );
-    const stripe = dans(arbre, 'ajouter-club-stripe-d');
-    expect(textes(stripe)).toEqual(expect.arrayContaining(['Ce club demande déjà à vous rejoindre', 'Hors de la commune']));
-    await act(async () => { boutons(stripe, 'Accepter sa demande')[0].props.onPress(); });
-    expect(mockRepondre.mutate).toHaveBeenCalledWith(
-      { accept: true, collectiviteId: 'ville-de-recette', invitationId: 'r1' },
-      expect.any(Object),
-    );
-  });
+  // E2 à E4 (la recherche dédiée « Déjà sur FoundClub », ses gestes par ligne) : remplacés le
+  // 19/10 par la recherche habituelle et son bouton (R17-INVITER), témoin
+  // R17INVIT.inviterUnClub.test.js (I3 à I6).
 });
 
 describe('VINV · côté mairie — T18 : le lien de la Ville, ses deux phrases', () => {
   it('E6 le texte partagé commence par sa majuscule ; l’écran dit que la Ville accepte (« lien A »)', async () => {
-    mockRoute = { params: { collectiviteId: 'ville-de-recette' } };
+    // R17-INVITER (19/10) : le lien s'ouvre par « Le club n'est pas sur FoundClub ? » (onglet=lien).
+    mockRoute = { params: { collectiviteId: 'ville-de-recette', onglet: 'lien' } };
     const arbre = await monter(CollectiviteInviteClub);
     const lus = textes(arbre);
     expect(lus).toContain('Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de la Ville de Montrivage : il inscrit son club et demande à vous rejoindre ; vous acceptez sa demande dans vos clubs.');
