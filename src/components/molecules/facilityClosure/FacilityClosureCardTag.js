@@ -119,10 +119,13 @@ function Etiquette({
       onOpen?.();
       return;
     }
-    if (Platform.OS === 'web') navigation?.navigate?.(RouteNames.EventEdit, { eventId });
-    else {
+    // COLL-R-DEPLACER (14/10, COL-013) : « Déplacer la séance » (la modification en mode
+    // « deplacer » ; un serveur d'avant y retrouve la modification de la séance).
+    if (Platform.OS === 'web') {
+      navigation?.navigate?.(RouteNames.EventEdit, { eventId, mode: 'deplacer' });
+    } else {
       navigation?.navigate?.(RouteNames.EventStack, {
-        params: { eventId }, screen: RouteNames.EventEdit,
+        params: { eventId, mode: 'deplacer' }, screen: RouteNames.EventEdit,
       });
     }
   };
@@ -130,7 +133,7 @@ function Etiquette({
     <TouchableOpacity
       accessibilityHint={t(
         'collectiviteFermetures.etiquette.deplacerAide',
-        'Ouvre la modification de la séance.',
+        'Ouvre « Déplacer la séance ».',
       )}
       accessibilityLabel={libelle}
       accessibilityRole="button"

@@ -104,6 +104,12 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
   default: () => ({ startWhisperChat: mockStartWhisperChat }),
 }));
 
+// PARENT-FINITIONS 4 — le bandeau d'arrivée passe par le bandeau COMMUN de l'app (app et site).
+const mockShowBanner = jest.fn();
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: mockShowBanner }),
+}));
+
 // L9b — la liste des coachs de l'équipe visée (E16), lue par la requête d'équipe existante.
 const mockUseGetTeam = jest.fn();
 jest.mock('@/services/team/teamQueries', () => ({
@@ -561,5 +567,135 @@ describe('PAR-L9b — ③ « Ouvrir une conversation » : moi, ou un coach chois
     expect(respondClubInterestRequest).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(alerte).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 👪 PARENT-FINITIONS 4 (14/10, design E16, planche 7) — EN ARRIVANT DANS LE FIL, UN BANDEAU
+// DIT AVEC QUI : « Conversation ouverte avec Maryline et Karim. » ; si le fil existait déjà,
+// « Ta conversation avec Maryline est rouverte. ». Avant : on arrivait dans le fil sans un mot.
+// ⛔ Aucun prénom dans les paramètres de la route (sur le site, ils vont dans l'adresse) : le
+// bandeau est celui de l'app, posé APRÈS l'arrivée.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseGetTeam.mockReturnValue({ data: EQUIPE_U11F, isError: false, isLoading: false });
+    mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    respondClubInterestRequest.mockResolvedValue({ data: {} });
+  });
+
+  afterEach(async () => {
+    if (arbreMonte) {
+      await act(async () => { arbreMonte.unmount(); });
+      arbreMonte = null;
+    }
+    mockClientDeTest.clear();
+  });
+
+  const MOI = 'Moi — je discute directement avec Maryline.';
+  const UN_COACH = 'Un·e coach de U11 Filles — je choisis qui.';
+
+  /**
+   * Ouvre la feuille, choisit « Moi » ou un coach, et confirme.
+   * @param {string | null} coach Le libellé du coach, ou null pour « Moi ».
+   * @returns {Promise<void>}
+   */
+  const ouvrirLeFil = async (coach) => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+    await appuyerSurLaCarte(tree, 'chat');
+    if (coach) {
+      await act(async () => { bouton(tree, UN_COACH).props.onPress(); });
+      await act(async () => { bouton(tree, coach).props.onPress(); });
+    } else {
+      await act(async () => { bouton(tree, MOI).props.onPress(); });
+    }
+    await act(async () => { await bouton(tree, 'Ouvrir la conversation').props.onPress(); });
+  };
+
+  test('« Moi », fil NEUF : « Conversation ouverte avec Maryline. », après l arrivée', async () => {
+    mockStartWhisperChat.mockResolvedValue({
+      documentId: 'fil-maryline', openingOutcome: 'created',
+    });
+
+    await ouvrirLeFil(null);
+
+    expect(navigation.navigate)
+      .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'fil-maryline' });
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner.mock.calls[0][0])
+      .toMatchObject({ title: 'Conversation ouverte avec Maryline.' });
+    expect(mockShowBanner.mock.invocationCallOrder[0])
+      .toBeGreaterThan(navigation.navigate.mock.invocationCallOrder[0]);
+  });
+
+  test('coach choisi, fil NEUF : « Conversation ouverte avec Maryline et Karim. »', async () => {
+    mockStartWhisperChat.mockResolvedValue({
+      documentId: 'fil-a-trois', openingOutcome: 'created',
+    });
+
+    await ouvrirLeFil('Karim B. · coach U11 Filles');
+
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner.mock.calls[0][0])
+      .toMatchObject({ title: 'Conversation ouverte avec Maryline et Karim.' });
+  });
+
+  test('le fil EXISTAIT : « Ta conversation avec Maryline est rouverte. »', async () => {
+    mockStartWhisperChat.mockResolvedValue({
+      documentId: 'fil-maryline', openingOutcome: 'reused',
+    });
+
+    await ouvrirLeFil(null);
+
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner.mock.calls[0][0])
+      .toMatchObject({ title: 'Ta conversation avec Maryline est rouverte.' });
+  });
+
+  test.each([
+    ['existant depuis 30 s', -30000, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['existant sans date', null, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['existant daté demain', 86400000, 'reused', 'Ta conversation avec Maryline est rouverte.'],
+    ['créé avec horloge décalée', -86400000, 'created', 'Conversation ouverte avec Maryline.'],
+    ['ancien serveur, date ancienne', -86400000, undefined, 'Conversation avec Maryline.'],
+    ['ancien serveur, sans date', null, undefined, 'Conversation avec Maryline.'],
+    ['indicateur inconnu', -86400000, 'other', 'Conversation avec Maryline.'],
+  ])('%s : le résultat du geste décide du verbe', async (_cas, decalage, openingOutcome, title) => {
+    mockStartWhisperChat.mockResolvedValue({
+      ...(decalage === null ? {} : { createdAt: new Date(Date.now() + decalage).toISOString() }),
+      documentId: 'fil-maryline',
+      openingOutcome,
+    });
+
+    await ouvrirLeFil(null);
+
+    expect(mockShowBanner).toHaveBeenCalledTimes(1);
+    expect(mockShowBanner.mock.calls[0][0]).toMatchObject({ title });
+    expect(navigation.navigate)
+      .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'fil-maryline' });
+  });
+
+  test('un refus serveur ne lie pas la demande et ne montre aucun bandeau', async () => {
+    mockStartWhisperChat.mockRejectedValue(new Error('Contact refusé'));
+
+    await ouvrirLeFil(null);
+
+    expect(respondClubInterestRequest).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockShowBanner).not.toHaveBeenCalled();
+  });
+
+  test('si le lien à la demande échoue, on n arrive nulle part : aucun bandeau', async () => {
+    mockStartWhisperChat.mockResolvedValue({
+      createdAt: new Date().toISOString(), documentId: 'fil-maryline',
+    });
+    respondClubInterestRequest.mockRejectedValue(new Error('boom'));
+
+    await ouvrirLeFil(null);
+
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockShowBanner).not.toHaveBeenCalled();
   });
 });

@@ -2518,6 +2518,29 @@ export default {
       title: 'Demande envoyée',
     },
   },
+  childEventResponse: {
+    absent: 'Absent',
+    absentFor: 'Absent pour {{firstname}}',
+    alreadyMember: 'Déjà membre de cette équipe : utilise la réponse au nom de cet enfant.',
+    blocked: {
+      CHILD_NOT_TARGETED: "Cet enfant n'est pas convoqué à cet événement.",
+      CHILD_RESPONSE_UNSUPPORTED: "Ce type d'événement ne permet pas cette réponse pour un enfant déclaré.",
+      EVENT_INACTIVE: 'Cet événement est annulé ou inactif.',
+      EVENT_PAST: 'Cet événement a déjà commencé ; la réponse doit être donnée avant son début.',
+      EVENT_RSVP_DISABLED: "L'organisateur a désactivé les réponses présent / absent.",
+    },
+    organizerLine: '{{firstname}} · {{team}} · {{answer}}',
+    organizerTitle: 'Réponses des enfants de l’équipe',
+    present: 'Présent',
+    presentFor: 'Présent pour {{firstname}}',
+    readError: 'Impossible de lire les réponses des enfants. Réessaie.',
+    responseOnly: 'Ces réponses annoncent une participation ; elles ne constituent pas un pointage de présence.',
+    retry: 'Réessayer',
+    sendError: "La réponse n'a pas pu être confirmée. Réessaie ; la réponse enregistrée est affichée après vérification.",
+    state: { absent: 'Réponse enregistrée : absent', none: 'Pas encore de réponse', present: 'Réponse enregistrée : présent' },
+    title: 'Réponse pour {{firstname}}',
+    unavailable: 'Cet enfant ne peut pas répondre à cet événement pour le moment.',
+  },
   club: {
     fields: {
       address: {
@@ -2819,6 +2842,7 @@ export default {
       error: "Impossible d'envoyer ton intérêt pour le moment.",
       // eslint-disable-next-line max-len
       forbidden: "Ton compte n'a pas encore l'autorisation d'envoyer un intérêt. Réessaie dans quelques instants.",
+      forYouHint: 'Pour toi : une prise de contact avec le club.',
       noTeams: "Aucune équipe n'est disponible dans ce club pour le moment.",
       // eslint-disable-next-line max-len
       pickerDescription: 'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt sans créer de demande d’adhésion.',
@@ -5393,6 +5417,20 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    couleur: {
+      autoCourt: 'automatique',
+      automatique: 'Automatique',
+      avertissement: '{{couleur}} est déjà utilisée par {{clubs}}. '
+        + 'Voulez-vous quand même donner cette couleur à ce club ?',
+      changer: 'Changer',
+      chargement: 'Chargement des couleurs des clubs…',
+      confirmer: 'Utiliser quand même',
+      enregistrement: 'Enregistrement…',
+      fermer: 'Fermer',
+      prise: 'Déjà utilisée par {{clubs}}',
+      retour: 'Choisir une autre couleur',
+      titre: 'Sa couleur dans vos plannings',
+    },
     // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
     carte: {
       ecrire: 'Écrire aux dirigeants de {{club}}',
@@ -6143,6 +6181,32 @@ export default {
       tonClub: '{{club}}, ton club',
       trancher: 'Trancher',
     },
+    // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — « Attribuer un créneau » en plein
+    // écran (planche P4v4-attribuer) : la question de chaque étape, ce que son sous-titre relit,
+    // les lignes du récapitulatif.
+    tunnel: {
+      // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
+      attribue: 'Créneau attribué',
+      chaqueJour: 'Chaque {{jour}} · {{suite}}',
+      chaqueSemaine: '{{qui}} · chaque semaine de la saison',
+      club: 'Pour quel club ?',
+      equipe: 'Pour quelle équipe ?',
+      equipeFacultative: '{{club}} · facultatif',
+      estPrevenu: '{{club}} est prévenu.',
+      horaires: 'À quelle heure ?',
+      installation: 'Dans quelle installation ?',
+      jour: 'Quel jour ?',
+      libresDuJour: 'Libre ce {{jour}} : {{heures}}.',
+      modifie: 'Créneau modifié',
+      modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
+      periode: 'Quelle période ?',
+      pourLeClub: 'Pour {{club}}',
+      recapClub: 'Club · équipe',
+      recapHeures: 'Jour et heures',
+      relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',
+      relisezEnregistrez: 'Relisez, puis enregistrez. Le club est prévenu.',
+      toutLeClubDit: 'Le club répartit lui-même ses équipes.',
+    },
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
@@ -6496,7 +6560,7 @@ export default {
       bloque: 'Bloqué par la Ville à cette heure',
       bloqueDeplacer: 'Bloqué par la Ville · à déplacer',
       deplacer: 'Installation fermée · à déplacer',
-      deplacerAide: 'Ouvre la modification de la séance.',
+      deplacerAide: 'Ouvre « Déplacer la séance ».',
       deplacerFeminin: '{{lieu}} fermée · à déplacer',
       deplacerMasculin: '{{lieu}} fermé · à déplacer',
       fermeHeure: 'Installation fermée à cette heure',
@@ -6621,6 +6685,115 @@ export default {
       joueurs: 'Les joueurs ne sont prévenus que si le club déplace ou annule.',
       // CRFERM (13/10, « D8 B ») — le bandeau d’un joueur ou d’un parent, sans geste.
       membre: 'Ton club peut déplacer ou annuler la séance : tu seras prévenu·e.',
+    },
+  },
+  // COLL-R-DEPLACER (14/10/2026, COL-013, décision d’Adel « D9 = b ») — « Déplacer la séance »
+  // touchée par une fermeture : le tunnel en 4 étapes (planches P5v4-deplacer), la proposition
+  // de la Ville et ce que le planning en dit. Au club « tu », à la Ville « vous ».
+  deplacerSeance: {
+    detail: {
+      creneauPlein: 'Le créneau de ton club est déjà pris',
+      dansTonCreneau: 'Dans ton créneau du {{jour}}',
+      horsCreneaux: 'Hors des créneaux de ton club',
+      pleine: 'Plus de place à cette heure',
+    },
+    erreurs: {
+      droits: 'Seuls le club de la séance et la Ville peuvent la déplacer.',
+      fenetre: 'Choisis un moment à venir, la fin après le début.',
+      fenetreVille: 'Choisissez un moment à venir, la fin après le début.',
+      fermee: 'La Ville a fermé cette installation à ce moment-là.',
+      generique: 'Ça n’a pas marché. Vérifie la connexion, puis réessaie.',
+      generiqueVille: 'Ça n’a pas marché. Vérifiez la connexion, puis réessayez.',
+      pasTouchee: 'Aucune fermeture ne touche plus cette séance.',
+      placePrise: 'Cette place n’est plus libre. Choisis-en une autre.',
+      placePriseVille: 'Cette place n’est plus libre. Choisissez-en une autre.',
+      propositionClose: 'Cette proposition n’attend plus de réponse.',
+      titre: 'La séance n’a pas bougé',
+      titreVille: 'Rien n’a été envoyé',
+      tropTard: 'La séance a déjà commencé.',
+    },
+    etat: {
+      complet: 'Complet',
+      ferme: 'Fermé',
+      libre: 'Libre',
+      villeDecidera: 'La Ville décidera',
+    },
+    fait: {
+      demandeEnvoyee: 'Demande envoyée à la Ville',
+      deplacee: 'Séance déplacée {{lieu}}',
+      joueursPrevenus: 'Les joueurs de {{equipe}} sont prévenus.',
+      joueursPrevenusSansEquipe: 'Les joueurs sont prévenus.',
+      leClubRepond: '{{club}} l’accepte d’un appui, ou choisit une autre place.',
+      propositionEnvoyee: 'Proposition envoyée',
+    },
+    heure: {
+      debut: 'Début',
+      fin: 'Fin',
+      finApres: 'La fin vient après le début.',
+      titre: 'À quelle heure ?',
+      verdict: '{{jour}} {{heures}} : {{etat}}',
+    },
+    jour: {
+      autreDate: 'Une autre date',
+      prevu: 'Le jour prévu',
+      titre: 'Quel jour ?',
+    },
+    ou: {
+      aucuneLibre: 'Aucune installation libre {{jour}} à {{heure}}',
+      aucuneLibreAide: 'Garde un lieu et choisis un autre jour.',
+      aucuneLibreAideVille: 'Gardez un lieu et choisissez un autre jour.',
+      autreJour: 'Choisir un autre jour',
+      // eslint-disable-next-line max-len
+      erreur: 'Les places libres n’ont pas pu être lues. Vérifie la connexion, puis réessaie. Ta séance n’a pas bougé.',
+      // eslint-disable-next-line max-len
+      erreurVille: 'Les places libres n’ont pas pu être lues. Vérifiez la connexion, puis réessayez. La séance n’a pas bougé.',
+      fermeCeJour: '{{lieu}} est fermé ce jour-là{{motif}}.',
+      fermeCeJourFeminin: '{{lieu}} est fermée ce jour-là{{motif}}.',
+      fermeCeJourSansNom: 'L’installation est fermée ce jour-là{{motif}}.',
+      impossibles: 'Pas possible à cette heure',
+      libres: 'Libres à cette heure',
+      titre: 'Où la déplacer ?',
+    },
+    planning: {
+      nAPasLieu: 'n’a pas lieu',
+      propositionEnvoyee: 'proposition envoyée',
+    },
+    proposition: {
+      accepter: 'Accepter',
+      aide: 'Accepter déplace la séance et prévient tes joueurs.',
+      autrePlace: 'Choisir une autre place',
+      de: 'Proposition de {{ville}}',
+      deLaVille: 'Proposition de la Ville',
+      joueursPrevenus: 'Tes joueurs sont prévenus.',
+    },
+    recap: {
+      apres: 'Après',
+      // eslint-disable-next-line max-len
+      attenteVille: 'D’ici sa réponse, la séance reste « à déplacer » ; tu es prévenu dès qu’elle répond.',
+      avant: 'Avant',
+      deplacer: 'Déplacer la séance',
+      envoyerDemande: 'Envoyer la demande',
+      envoyerProposition: 'Envoyer la proposition',
+      placeLibre: 'Place libre',
+      placeLibreCreneau: 'Place libre, dans ton créneau',
+      placeProposee: 'Place proposée',
+      relisDeplace: 'Relis, puis déplace. Tes joueurs sont prévenus.',
+      relisEnvoie: 'Relis, puis envoie. La Ville répond.',
+      relisezProposez: 'Relisez, puis proposez. Le club répond.',
+      seance: 'Séance',
+      serie: 'Cette séance fait partie d’une série. Seule celle du {{jour}} est déplacée.',
+      seuleCetteSeance: 'Seule cette séance bouge.',
+      titre: 'Récapitulatif',
+      // eslint-disable-next-line max-len
+      villeRecoit: '{{club}} reçoit votre proposition. Il l’accepte d’un appui, ou choisit une autre place. D’ici là, la séance reste « à déplacer ».',
+    },
+    titre: 'Déplacer la séance',
+    ville: {
+      aDeplacerParLeClub: 'À déplacer par le club. Vous pouvez lui proposer une place.',
+      proposer: 'Proposer une autre place',
+      propositionEnvoyee: 'Proposition envoyée : {{lieu}} · {{jour}} · {{heures}}',
+      touchee: 'Touchée par la fermeture {{jours}}',
+      toucheeSansJours: 'Touchée par une fermeture de la Ville',
     },
   },
   // COLL-C5 (03/10/2026) — les chiffres de la Ville : la page « Chiffres et export » (planche 30),
@@ -16002,6 +16175,8 @@ export default {
       club: 'CLUB',
       nationality: 'NATIONALITÉ',
       position: 'POSTE',
+      // PAR-L13 — la carte d'un enfant déclaré porte son équipe.
+      team: 'ÉQUIPE',
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
@@ -16361,9 +16536,46 @@ export default {
       exit: 'Revenir en mode {{staff}}',
       title: 'Mode joueur',
     },
+    // PAR-L12 (13/10, design parent §2 bis / E25 / E27, décision D6 A d'Adel du 12/10) — le
+    // MODE PARENT : un dirigeant qui joue et a des enfants a deux portes ; un joueur qui a des
+    // enfants bascule d'un geste ; un compte Parent passe en Joueur par la feuille.
+    choice: {
+      parent: 'Mode parent',
+      player: 'Mode joueur',
+    },
     offer: {
       description: 'Tu joues aussi dans une équipe.',
       enter: "Voir l'app en joueur",
+    },
+    parent: {
+      and: 'et',
+      back: 'Revenir en mode parent',
+      description: 'Tu vois l’app comme un parent. Tes droits de {{staff}} sont intacts.',
+      enter: 'Basculer en mode parent',
+      title: 'Mode parent',
+      waiting_one: '{{prenoms}} t’attend dans le mode parent.',
+      waiting_other: '{{prenoms}} t’attendent dans le mode parent.',
+      waitingAll: 'Tes enfants t’attendent dans le mode parent.',
+    },
+    parentAccount: {
+      offer: 'Tu pratiques aussi un sport ?',
+    },
+    player: {
+      description: 'Tu vois l’app comme un joueur.',
+      enter: 'Basculer en mode joueur',
+    },
+    sheet: {
+      confirm: 'Oui, je pratique aussi',
+      done: 'Ton compte est passé en Joueur. Tu es en mode parent.',
+      error: 'Ton compte n’a pas pu changer. Réessaie.',
+      joinTeam: 'Tu peux rejoindre une équipe et participer à des événements.',
+      keepChildren: 'Tu gardes tes enfants, leurs fiches et leurs demandes.',
+      keepNamed_one: 'Tu gardes {{prenoms}}, sa fiche et ses demandes.',
+      keepNamed_other: 'Tu gardes {{prenoms}}, leurs fiches et leurs demandes.',
+      later: 'Pas maintenant',
+      subtitle: 'Ton compte passe de Parent à Joueur.',
+      switch: 'En haut de l’accueil, tu passes de « Joueur » à « Parent » d’un geste.',
+      title: 'Tu pratiques aussi un sport ?',
     },
     staff: {
       coach: 'entraîneur',
@@ -16679,6 +16891,8 @@ export default {
       account: 'Compte',
       administration: 'Administration',
       contact: 'Coordonnées',
+      // PAR-L7 (13/10, design parent E02) — la section de « Mon compte » d'un PARENT.
+      familyProfile: 'Ma famille et mon profil',
       followUp: 'Suivi',
       profileActivity: 'Profil & activité',
       visibility: 'Visibilité',
@@ -17595,6 +17809,8 @@ export default {
     // ⚠️ `{{name}}` est remplacé À LA MAIN par l'écran : le repli passé en
     // second argument de `t` n'est pas interpolé par i18next.
     celebration: {
+      // PARENT-FINITIONS 5 (14/10) — la place d'un enfant acceptée : il entre dans l'équipe.
+      childInterest: '{{firstname}} rejoint {{team}}.',
       close: 'Super',
       club: '{{name}} rejoint le club.',
       event: 'La participation est validée.',
@@ -17608,6 +17824,9 @@ export default {
       unknown: 'La demande est acceptée.',
     },
     childInterest: {
+      // PARENT-FINITIONS 6 (14/10) — la demande a été retirée par le parent avant la décision.
+      goneMessage: 'Le parent a retiré cette demande.',
+      goneTitle: 'Demande retirée',
       parent: 'Parent : {{name}}',
       refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
       refuseTitle: 'Refuser la demande ?',
@@ -17656,6 +17875,11 @@ export default {
       summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
     },
     interest: {
+      // PARENT-FINITIONS 4 (14/10, E16) — le bandeau en arrivant dans le fil ouvert.
+      conversationNamesJoin: ' et ',
+      conversationOpened: 'Conversation ouverte avec {{names}}.',
+      conversationReady: 'Conversation avec {{names}}.',
+      conversationReopened: 'Ta conversation avec {{names}} est rouverte.',
       // PAR-L9b (13/10, E17) — à qui part le message, les deux familles de réponses, le mot libre.
       noteLabel: 'Ajouter un mot (facultatif)',
       recipient: '{{firstname}} recevra ce message.',
@@ -23718,6 +23942,74 @@ export default {
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
     },
+    // PAR-L8 (13/10, design parent E19, planche 8) — annuler une demande de place en attente,
+    // depuis la fiche de l'enfant : la feuille de confirmation, puis l'issue dite dans un bandeau.
+    cancelRequest: {
+      accepted: 'Le club a déjà répondu.',
+      acceptedHint: '{{firstname}} est dans {{team}}. Rien n’a été annulé.',
+      answered: 'Le club a déjà répondu à cette demande.',
+      answeredHint: 'Il n’y a plus rien à annuler.',
+      confirm: 'Annuler la demande',
+      confirmMessage: 'Les responsables de {{team}} ne la verront plus.'
+        + ' {{firstname}} pourra faire une nouvelle demande.',
+      confirmTitle: 'Annuler la demande pour {{firstname}} ?',
+      done: 'Demande annulée.',
+      doneHint: '{{firstname}} peut faire une nouvelle demande.',
+      failed: 'La demande n’a pas pu être annulée.',
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      keep: 'Garder la demande',
+      link: 'Annuler la demande',
+      linkLabel: 'Annuler la demande pour {{team}}',
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: 'L’annulation n’est pas encore disponible.',
+      unavailableHint: 'La demande est toujours en attente. Réessaie plus tard.',
+    },
+    // PAR-L13 (13/10, design parent E28-E30) — la carte de collection d'un enfant de moins de
+    // 13 ans, « pareille que les autres » (Adel, 12/10, registre des mineurs lignes 22-23) :
+    // photo, ville et nationalité oui, code QR non, « ce qui part » avant tout partage.
+    card: {
+      addPhoto: 'Ajouter sa photo',
+      // Le bloc « Sa carte » de sa fiche (prototype, planche 3).
+      blockCaption: 'Carte de collection',
+      blockOpen: 'Voir',
+      blockTitle: 'Sa carte',
+      changePhoto: 'Changer sa photo',
+      cityLabel: 'Ville (facultatif)',
+      cityPlaceholder: 'Ex. Marseille',
+      edit: 'Modifier sa carte',
+      eyebrow: 'Nouveau',
+      hint: 'C’est pour sa carte qu’on te demande ça. Tu peux le faire plus tard.',
+      nationalityLabel: 'Nationalité (facultatif)',
+      nationalityPlaceholder: 'Ex. Française',
+      noLink: 'Ni code ni lien : la carte ne mène à aucune page.',
+      numberLabel: 'Numéro de maillot',
+      numberPlaceholder: 'Ex. 7',
+      photoError: 'La photo n’a pas pu être enregistrée. Réessaie.',
+      positionLabel: 'Poste',
+      removePhoto: 'Retirer sa photo',
+      save: 'Enregistrer sa carte',
+      savedDescription: 'La carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
+      saveError: 'La carte n’a pas pu être enregistrée. Réessaie.',
+      share: 'Partager la carte de {{firstname}}',
+      sharedGallery: 'La carte est enregistrée dans tes photos (album FoundClub).'
+        + ' Choisis maintenant où la publier.',
+      shareElided: 'Partager la carte d’{{firstname}}',
+      shareOpenWith: 'Ouvrir la carte avec…',
+      // E30 — AVANT tout partage : ce qui part, et ce qui ne part jamais.
+      sheet: {
+        confirm: 'Partager l’image',
+        never: 'Un code ou un lien vers sa fiche.',
+        neverTitle: 'Ce qui n’apparaît jamais',
+        shown: 'Sa photo si tu en as mis une, son prénom et son nom, son âge, son équipe,'
+          + ' son numéro, son poste, sa ville et sa nationalité.',
+        shownTitle: 'Ce qui apparaît',
+        subtitle: 'Tu envoies une image, sans lien vers elle.',
+        title: 'Partager la carte de {{firstname}} ?',
+        titleElided: 'Partager la carte d’{{firstname}} ?',
+      },
+      title: 'La carte de {{firstname}}',
+      titleElided: 'La carte d’{{firstname}}',
+    },
     confirmDelete: {
       cancel: 'Annuler',
       confirm: 'Supprimer',
@@ -23873,6 +24165,137 @@ export default {
       sentOn: 'Envoyée le {{date}}',
       sportTitle: 'Infos sportives',
       teamTitle: 'Son équipe',
+    },
+    // PAR-L7 (13/10, design parent E01 / E03) — mes enfants EN BREF : la carte de l'accueil
+    // et le bloc de « Mon profil » nomment 3 enfants au plus, puis « + 2 autres ».
+    summary: {
+      more_one: '+ {{count}} autre',
+      more_other: '+ {{count}} autres',
+      seeAll: 'Voir tout',
+    },
+  },
+  // 👪 PAR-L11b (13/10, D4 B) — « Inscrire mes enfants » sur un evenement public
+  // (EventChildRegistration.js).
+  childEventRegistration: {
+    actions: {
+      addChild: 'Ajouter un enfant',
+      back: 'Retour',
+      cancel: 'Annuler',
+      close: 'Fermer',
+      continue: 'Continuer ({{count}})',
+      register: 'Inscrire mes enfants',
+      send_one: 'Envoyer 1 inscription',
+      send_other: 'Envoyer {{count}} inscriptions',
+    },
+    blocked: {
+      cancelled: 'Cet événement est annulé.',
+      externalQuotaFull: 'Plus de place pour les participants extérieurs.',
+      friendly: 'Ce match amical oppose des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      full: 'Plus de place.',
+      invitedTeamsOnly: 'Réservé aux équipes invitées.',
+      past: 'Cet événement est passé.',
+      reservationClosed: 'Cette réservation ne cherche pas de joueurs.',
+      stageDay: 'On inscrit un enfant au stage entier, depuis la page du stage.',
+      teamsOnly: 'Cet événement inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      tournament: 'Ce tournoi inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+    },
+    // 👪 PAR-L11c (14/10) — « Annuler l'inscription » : feuille, puis issue en bandeau
+    // (ChildRegistrationCancel.js). Même motif que myChildren.cancelRequest (PAR-L8).
+    cancel: {
+      confirm: "Annuler l'inscription",
+      confirmMessage: "L'organisateur de « {{event}} » ne la verra plus. "
+        + 'Tu pourras inscrire {{firstname}} de nouveau.',
+      confirmTitle: "Annuler l'inscription pour {{firstname}} ?",
+      done: 'Inscription annulée.',
+      doneHint: 'Tu peux inscrire {{firstname}} de nouveau.',
+      failed: "L'inscription n'a pas pu être annulée.",
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      gone: "Cette inscription n'existe plus.",
+      goneHint: "Il n'y a plus rien à annuler.",
+      keep: "Garder l'inscription",
+      link: "Annuler l'inscription",
+      linkLabel: "Annuler l'inscription pour {{firstname}}",
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: "L'annulation n'est pas encore disponible.",
+      unavailableHint: "L'inscription est toujours là. Réessaie plus tard.",
+    },
+    // 👪 PAR-L11c (14/10) — fiche de l'enfant, bloc « Ses événements » (DeclaredChildPage).
+    childPage: {
+      accepted: 'Inscription confirmée',
+      declined: 'Refusée',
+      error: 'Impossible de charger ses événements.',
+      on: 'Le {{date}}',
+      open: "Voir l'événement",
+      pending: 'En attente',
+      reason: 'Motif : {{reason}}',
+      title: 'Ses événements',
+    },
+    errors: {
+      alreadyDecided: 'Cette demande a déjà été traitée.',
+      generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",
+    },
+    organizer: {
+      accept: 'Accepter',
+      accepted: 'Inscription acceptée',
+      childLine: '{{firstname}}, {{age}} ans',
+      errorTitle: 'Action impossible',
+      loadError: 'Impossible de charger les inscriptions des enfants.',
+      parentLine: 'Parent : {{name}}',
+      refuse: 'Refuser',
+      // 👪 PAR-L11c (14/10) — la feuille du refus, avec son motif facultatif.
+      refuseSheet: {
+        confirm: "Refuser l'inscription",
+        hint: 'Le parent verra ce motif.',
+        label: 'Motif (facultatif)',
+        placeholder: 'Ex. : groupe complet',
+        title: "Refuser l'inscription pour {{firstname}} ?",
+      },
+      retry: 'Réessayer',
+      title: 'Enfants inscrits par leurs parents',
+    },
+    reasons: {
+      alreadyPending: "Demande déjà envoyée, en attente de l'organisateur.",
+      alreadyRegistered: 'Inscription déjà acceptée.',
+      tooOld: "À partir de 13 ans, {{firstname}} s'inscrit depuis son propre compte.",
+    },
+    recap: {
+      immediate: 'Inscription immédiate : une place par enfant.',
+      request: "L'organisateur valide chaque inscription.",
+      title: 'Récapitulatif',
+    },
+    result: {
+      accepted: '{{firstname}} — inscription confirmée',
+      pending: "{{firstname}} — demande envoyée, en attente de l'organisateur",
+      refused: {
+        ALREADY_PENDING: '{{firstname}} — demande déjà en attente',
+        ALREADY_REGISTERED: '{{firstname}} — inscription déjà acceptée',
+        CHILD_ALREADY_MEMBER: '{{firstname}} — son équipe est déjà conviée à cet événement',
+        CHILD_TOO_OLD: '{{firstname}} — à partir de 13 ans, '
+          + "l'inscription se fait depuis son propre compte",
+        default: '{{firstname}} — inscription impossible',
+        EXTERNAL_QUOTA_FULL: '{{firstname}} — plus de place pour les extérieurs',
+        FULL: '{{firstname}} — plus de place',
+      },
+      title: 'Résultat',
+    },
+    sheet: {
+      childLine: '{{firstname}} · {{age}} ans',
+      defaultType: 'Événement',
+      noChild: "Tu n'as pas encore déclaré d'enfant. "
+        + 'Ajoute-le depuis « Mes enfants », puis reviens ici.',
+      reminder: '{{type}} · {{date}}',
+      // PAR-L11c (14/10) — la catégorie est montrée, rien n'est bloqué (design planche 9).
+      reminderWithCategory: '{{type}} · {{category}} · {{date}}',
+      title: 'Qui inscris-tu ?',
+    },
+    status: {
+      accepted: '{{firstname}} — inscription confirmée',
+      declined: '{{firstname}} — demande refusée',
+      declinedWithReason: '{{firstname}} — demande refusée : {{reason}}',
+      pending: "{{firstname}} — en attente de l'organisateur",
     },
   },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.

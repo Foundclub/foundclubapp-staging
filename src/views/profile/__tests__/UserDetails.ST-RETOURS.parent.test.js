@@ -33,6 +33,10 @@ const mockNavigate = jest.fn();
 const mockPush = jest.fn();
 const mockRelire = jest.fn();
 
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
   useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),

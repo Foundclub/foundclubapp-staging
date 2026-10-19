@@ -410,7 +410,9 @@ describe.each([
   );
 });
 
-// ─── Les 51 assistants : ce gabarit en racine, aucun évitement à eux ─────────
+// ─── Les 52 assistants : ce gabarit en racine, aucun évitement à eux ─────────
+// COLL-R-DEPLACER (14/10, COL-013) : 51 → 52, « Déplacer la séance »
+// (src/views/event/deplacer/DeplacerLaSeance.js) rend le gabarit en racine, sans évitement.
 
 const ASSISTANTS_NOMMES = [
   'src/views/event/wizard/EventWizardDescription.js',
@@ -488,8 +490,8 @@ const assistants = () => {
 describe('ANDROIDBAR-6 — les assistants rendent le gabarit en racine, sans évitement à eux', () => {
   const fichiers = assistants();
 
-  it('51 assistants, dont un d événement, un d équipe et un de club', () => {
-    expect(fichiers).toHaveLength(51);
+  it('52 assistants, dont un d événement, un d équipe et un de club', () => {
+    expect(fichiers).toHaveLength(52);
     expect(fichiers).toEqual(expect.arrayContaining(ASSISTANTS_NOMMES));
   });
 

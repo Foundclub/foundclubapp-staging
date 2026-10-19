@@ -36,6 +36,7 @@ import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedI
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { CODE_DEMANDE_DISPARUE } from '@/views/profile/parent/annulationDeLaDemande';
 import InterestConversationSheet from '@/views/requests/InterestConversationSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -71,6 +72,9 @@ import {
   rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
+
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useClubScope } from '@/context/ClubScopeContext';
 
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
@@ -131,6 +135,61 @@ const getSourceErrorDescription = (sourceError, t) => {
 };
 
 /**
+ * 👶 PARENT-FINITIONS 6 (14/10) — LA PLACE D'UN ENFANT N'EXISTE PLUS : son parent l'a retiree
+ * (PAR-L8) pendant que l'encadrement la regardait. Le serveur le dit par un 404 : avec le code
+ * `CLUB_INTEREST_REQUEST_GONE` quand l'annulation gagne la course (relue sous le verrou de
+ * l'enfant), sans code quand elle etait faite avant la lecture (`respond`, premiere lecture).
+ * @param {any} erreur L'erreur rendue par l'appel.
+ * @returns {boolean} Vrai si la demande a disparu.
+ */
+const laDemandeADisparu = (erreur) => (
+  getServerErrorCode(erreur) === CODE_DEMANDE_DISPARUE || getErrorStatus(erreur) === 404
+);
+
+/**
+ * 👪 PARENT-FINITIONS 4 (14/10, design E16, planche 7) — LA PHRASE DU BANDEAU D'ARRIVEE DANS
+ * LE FIL : « Conversation ouverte avec Maryline et Karim. » ; si le fil existait deja, « Ta
+ * conversation avec Maryline est rouverte. ». Avant, on arrivait dans le fil sans un mot.
+ * ⛔ Pas un parametre de la route : sur le site, ils vont dans l'adresse, et un prenom n'a rien
+ * a y faire. Le bandeau est celui de l'app (`showBanner`, app ET site), pose apres l'arrivee.
+ * Le résultat exact vient de la recherche locale ou de la réponse de création serveur.
+ * Un ancien serveur sans cet indicateur garde un texte neutre, sans déduire depuis une date.
+ * @param {{
+ *   chat: any,
+ *   coach: any,
+ *   item: any,
+ *   t: (key: string, options?: any) => string,
+ * }} entree Le fil rendu, le coach choisi (ou null), la demande, la traduction.
+ * @returns {string} La phrase.
+ */
+const phraseDArriveeDansLeFil = ({
+  chat, coach, item, t,
+}) => {
+  const noms = [
+    item?.meta?.requesterFirstname || item?.meta?.requesterName,
+    coach?.firstname,
+  ]
+    .map((prenom) => String(prenom || '').trim())
+    .filter(Boolean)
+    .join(t('requestsHub.interest.conversationNamesJoin', ' et '));
+  if (chat?.openingOutcome === 'reused') {
+    return t('requestsHub.interest.conversationReopened', {
+      defaultValue: 'Ta conversation avec {{names}} est rouverte.',
+      names: noms,
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  const created = chat?.openingOutcome === 'created';
+  return t(created
+    ? 'requestsHub.interest.conversationOpened'
+    : 'requestsHub.interest.conversationReady', {
+    defaultValue: created ? 'Conversation ouverte avec {{names}}.' : 'Conversation avec {{names}}.',
+    names: noms,
+    ...SANS_ECHAPPEMENT,
+  });
+};
+
+/**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
 function RequestsHub({ navigation, route }) {
@@ -151,6 +210,7 @@ function RequestsHub({ navigation, route }) {
   const clubScope = useClubScope() || {};
   const queryClient = useQueryClient();
   const { startWhisperChat } = useMessaging();
+  const { showBanner } = useAppFeedback();
 
   const [activeFilter, setActiveFilter] = useState(() => normalizeFilter(route?.params?.initialFilter));
   const [interestResponseItem, setInterestResponseItem] = useState(/** @type {any | null} */ (null));
@@ -540,6 +600,20 @@ function RequestsHub({ navigation, route }) {
         invalidateRequestsInBackground();
         emitGuidanceAction('requests.processed', { requestType: 'interest' });
       } catch (childDecisionError) {
+        // 👶 PARENT-FINITIONS 6 — avant : « Erreur » + « Club interest request not found », brut
+        // et en anglais, et la carte RESTAIT. La carte part, la liste se relit, la phrase dit
+        // ce qui s'est passe.
+        if (laDemandeADisparu(childDecisionError)) {
+          setSettledItemIds((current) => (
+            item?.id && !current.includes(item.id) ? [...current, item.id] : current
+          ));
+          invalidateRequestsInBackground();
+          Alert.alert(
+            t('requestsHub.childInterest.goneTitle', 'Demande retirée'),
+            t('requestsHub.childInterest.goneMessage', 'Le parent a retiré cette demande.'),
+          );
+          return;
+        }
         Alert.alert(
           t('common.error', 'Erreur'),
           /** @type {any} */ (childDecisionError)?.message
@@ -700,6 +774,12 @@ function RequestsHub({ navigation, route }) {
       invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', { requestType: 'interest' });
       navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
+      showBanner({
+        title: phraseDArriveeDansLeFil({
+          chat, coach, item, t,
+        }),
+        tone: 'success',
+      });
     } catch (conversationError) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(conversationError);
       if (subscriptionDecision) {
@@ -720,6 +800,7 @@ function RequestsHub({ navigation, route }) {
     invalidateRequestsInBackground,
     navigation,
     openSubscriptionPaywall,
+    showBanner,
     startWhisperChat,
     t,
   ]);

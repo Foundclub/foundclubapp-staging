@@ -212,9 +212,14 @@ const ouvrirLaFeuille = async () => {
   for (let i = 0; i < 80 && !arbre.root.findAll(
     (/** @type {any} */ n) => n.props?.testID === 'offre-foundclub-etat',
   ).length; i += 1) {
+    // Laisser passer la notification setTimeout(0) de React Query ; une boucle
+    // setImmediate peut finir ses 80 tours avant elle sous Windows.
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 0); }); });
   }
+  expect(arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === 'offre-foundclub-etat',
+  )).not.toHaveLength(0);
   const [offrir] = arbre.root.findAll(
     (/** @type {any} */ n) => n.props?.testID === 'bouton-Offrir l’abonnement'
       && typeof n.props?.onPress === 'function',

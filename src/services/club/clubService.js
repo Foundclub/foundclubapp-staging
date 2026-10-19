@@ -576,7 +576,8 @@ export const getClubById = async (id) => {
 
 /**
  * Update a club with form data
- * @param {Club} clubData - The club data to update
+ * @param {Club & { clearSponsors?: boolean }} clubData - The club data to update ;
+ *   `clearSponsors` : the caller removes the LAST sponsor (an empty list is then sent).
  * @returns {Promise<Club>} - The updated club data
  */
 export const updateClub = async (clubData) => {
@@ -585,8 +586,12 @@ export const updateClub = async (clubData) => {
     console.log('[DEBUG - FRONTEND] Input clubData:', JSON.stringify(clubData, null, 2));
 
     const formData = new FormData();
+    // SPONSRV (14/10) : `clearSponsors` est l'intention du geste « retirer le DERNIER
+    // partenaire », jamais un champ du club. Le serveur garde les partenaires quand la cle
+    // `sponsor` manque, et une liste vide ne s'ecrit pas en multipart : il faut la dire.
+    const { clearSponsors, ...clubDataWithoutIntent } = clubData;
     const clubDataCopy = {
-      ...clubData,
+      ...clubDataWithoutIntent,
       activites: Array.isArray(clubData.activites)
         ? clubData.activites.map(extractRelationDocumentId).filter(Boolean)
         : undefined,
@@ -632,6 +637,11 @@ export const updateClub = async (clubData) => {
 
     // Handle sponsor data
     if (clubDataCopy.sponsor && Array.isArray(clubDataCopy.sponsor)) {
+      if (clearSponsors && clubDataCopy.sponsor.length === 0) {
+        // `sponsor` present et VIDE = « plus aucun partenaire » (sous sponsor.manage).
+        // Sans l'intention, une liste vide (modifier les sports) ne parle pas d'eux.
+        formData.append('sponsor', '');
+      }
       // Process each sponsor separately
       for (let i = 0; i < clubDataCopy.sponsor.length; i += 1) {
         const sponsor = clubDataCopy.sponsor[i];

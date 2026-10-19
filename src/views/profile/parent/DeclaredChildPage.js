@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { canCancelRegistration } from '@/domains/participation/childRegistrationFlow';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -28,6 +29,16 @@ import { parentalPowerForAge } from '@/constants/parentalDeclaration';
 const jourEtMois = (iso) => {
   const date = new Date(String(iso || ''));
   return Number.isNaN(date.getTime()) ? '' : format(date, 'dd/MM');
+};
+
+/**
+ * 👪 PAR-L11c — l état d une inscription à un événement : sa pastille et son ton.
+ * @type {Record<string, { cle: string, ton: 'attente' | 'ok' | 'refus' }>}
+ */
+const ETATS_D_INSCRIPTION = {
+  accepted: { cle: 'childEventRegistration.childPage.accepted', ton: 'ok' },
+  declined: { cle: 'childEventRegistration.childPage.declined', ton: 'refus' },
+  pending: { cle: 'childEventRegistration.childPage.pending', ton: 'attente' },
 };
 
 /**
@@ -106,19 +117,23 @@ function LigneDInfo({
 /**
  * Un lien texte de la fiche (44 px de haut au moins).
  * @param {object} props - Les propriétés.
+ * @param {string} [props.accessibilityLabel] - Ce que dit le lecteur d écran, s il faut plus.
  * @param {boolean} [props.danger] - En rouge.
+ * @param {boolean} [props.disabled] - Éteint (un envoi est en cours).
  * @param {string} props.libelle - Ce qu il fait.
  * @param {() => void} props.onPress - Le geste.
  * @param {string} props.testID - L étiquette de test.
  * @returns {import('react').ReactElement} - Le lien.
  */
 function Lien({
-  danger = false, libelle, onPress, testID,
+  accessibilityLabel = undefined, danger = false, disabled = false, libelle, onPress, testID,
 }) {
   const { Alignments, Colors, Fonts } = useTheme();
   return (
     <TouchableOpacity
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      disabled={disabled}
       onPress={onPress}
       style={[Alignments.justifyCenter, { minHeight: 44 }]}
       testID={testID}
@@ -138,8 +153,13 @@ function Lien({
  *      (remarque d Adel du 13/10 : « on voit bien que les enfants sont dans aucun club »), et
  *      « Acceptée le 11/10 » quand la demande acceptee est lue. Sans equipe seulement :
  *      « Chercher un club pour Anissa » ;
- *   3. « Ses demandes » en attente (masque s il n y en a pas) — sans « Annuler la demande » :
- *      la route serveur n existe pas encore (lot L8) ;
+ *   3. « Ses demandes » en attente (masque s il n y en a pas) ; sous chacune, « Annuler la
+ *      demande » en rouge (PAR-L8, E19) quand l ecran qui monte la fiche sait annuler ;
+ *   3 ter. PAR-L11c (14/10, PAR-012, design §3 E21) — « Ses événements » : ses inscriptions
+ *      (en attente, confirmée, refusée avec son motif), « Voir l'événement », « Annuler
+ *      l'inscription » (à venir, pas refusée). Masqué s il n y en a pas ;
+ *   3 bis. PAR-L13 (13/10, E29, prototype planche 3) — « Sa carte » (moins de 13 ans) : son
+ *      numéro et son poste, « Carte de collection », « Voir » ouvre sa carte ;
  *   4. « Infos sportives » (maillot, poste), « Compléter » / « Modifier » ;
  *   5. « Stats et retours de match » (moins de 13 ans) ;
  *   6. « Modifier sa fiche », « Supprimer la fiche ».
@@ -149,24 +169,45 @@ function Lien({
  * Le premier temoin de ce fichier (ST-RETOURS2, planche 22 etat 6) est
  * `__tests__/DeclaredChildPage.caracterisation.test.js`.
  * @param {object} props - Les proprietes.
+ * @param {string} [props.annulationEnCours] - La demande en cours d annulation (lien eteint).
  * @param {any[]} [props.demandes] - SES demandes (`demandesDe`), la plus recente d abord.
  * @param {boolean} [props.demandesEnErreur] - La lecture des demandes a echoue.
  * @param {any} props.enfant - La fiche (`GET` des enfants declares).
+ * @param {any[]} [props.evenements] - PAR-L11c : SES inscriptions a des evenements.
+ * @param {boolean} [props.evenementsEnErreur] - PAR-L11c : leur lecture a echoue.
+ * @param {string} [props.inscriptionEnAnnulation] - PAR-L11c : la ligne en cours d annulation.
+ * @param {number} [props.maintenant] - L instant (temoins) ; sinon l heure du telephone.
+ * @param {(demande: any) => void} [props.onCancelRequest] - « Annuler la demande » (PAR-L8).
+ * @param {(inscription: any) => void} [props.onCancelRegistration] - PAR-L11c « Annuler
+ * l'inscription ».
  * @param {(enfant: any) => void} [props.onDelete] - « Supprimer la fiche ».
  * @param {(enfant: any) => void} [props.onEdit] - « Modifier sa fiche » / « Compléter ».
  * @param {(enfant: any) => void} [props.onGiveAccount] - F20 « Donner un compte à Lina ».
+ * @param {(enfant: any) => void} [props.onOpenCard] - PAR-L13 « Voir » sa carte de collection.
+ * @param {(inscription: any) => void} [props.onOpenEvent] - PAR-L11c « Voir l'événement ».
  * @param {() => void} [props.onRetryDemandes] - Relire les demandes.
+ * @param {() => void} [props.onRetryEvenements] - PAR-L11c : relire ses inscriptions.
  * @param {(enfant: any) => void} props.onSearchClub - « Chercher un club pour Lea ».
  * @returns {import('react').ReactElement} - La page.
  */
 function DeclaredChildPage({
+  annulationEnCours = '',
   demandes = [],
   demandesEnErreur = false,
   enfant,
+  evenements = [],
+  evenementsEnErreur = false,
+  inscriptionEnAnnulation = '',
+  maintenant = undefined,
+  onCancelRegistration = undefined,
+  onCancelRequest = undefined,
   onDelete = undefined,
   onEdit = undefined,
   onGiveAccount = undefined,
+  onOpenCard = undefined,
+  onOpenEvent = undefined,
   onRetryDemandes = undefined,
+  onRetryEvenements = undefined,
   onSearchClub,
 }) {
   const { t } = useTranslation();
@@ -190,6 +231,9 @@ function DeclaredChildPage({
   const dateDAcceptation = jourEtMois(acceptee?.respondedAt);
   // 3. Ses demandes.
   const attente = moinsDe13Ans ? enAttente(demandes) : [];
+  // 3 ter. Ses événements (PAR-L11c).
+  const inscriptions = Array.isArray(evenements) ? evenements : [];
+  const instant = typeof maintenant === 'number' ? maintenant : Date.now();
   // 4. Infos sportives.
   const maillot = enfant?.number === null || enfant?.number === undefined
     ? ''
@@ -307,8 +351,108 @@ function DeclaredChildPage({
                   })}
                 </Text>
               ) : null}
+              {onCancelRequest ? (
+                <Lien
+                  accessibilityLabel={t('myChildren.cancelRequest.linkLabel', {
+                    team: demande?.team?.name || clubDeLaDemande(demande), ...SANS_ECHAPPEMENT,
+                  })}
+                  danger
+                  disabled={annulationEnCours === demande?.documentId}
+                  libelle={t('myChildren.cancelRequest.link')}
+                  onPress={() => onCancelRequest(demande)}
+                  testID={`declared-child-cancel-${demande?.documentId}`}
+                />
+              ) : null}
             </View>
           ))}
+        </Carte>
+      ) : null}
+
+      {inscriptions.length > 0 || (moinsDe13Ans && evenementsEnErreur) ? (
+        <Carte testID="declared-child-events" titre={t('childEventRegistration.childPage.title')}>
+          {evenementsEnErreur ? (
+            <View style={{ gap: 4 }}>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t('childEventRegistration.childPage.error')}
+              </Text>
+              {onRetryEvenements ? (
+                <Lien
+                  libelle={t('errorWrapper.retry', 'Réessayer')}
+                  onPress={onRetryEvenements}
+                  testID="declared-child-events-retry"
+                />
+              ) : null}
+            </View>
+          ) : null}
+          {inscriptions.map((inscription) => {
+            const id = String(inscription?.documentId || '');
+            const etat = ETATS_D_INSCRIPTION[inscription?.status] || ETATS_D_INSCRIPTION.pending;
+            const date = jourEtMois(inscription?.event?.date);
+            const motif = inscription?.status === 'declined'
+              ? String(inscription?.reason || '').trim()
+              : '';
+            return (
+              <View key={id} style={{ gap: 4 }} testID={`declared-child-event-${id}`}>
+                <PastilleDEtat texte={t(etat.cle)} ton={etat.ton} />
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                  {String(inscription?.event?.name || '').trim()
+                    || t('childEventRegistration.sheet.defaultType')}
+                </Text>
+                {date ? (
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('childEventRegistration.childPage.on', { date, ...SANS_ECHAPPEMENT })}
+                  </Text>
+                ) : null}
+                {motif ? (
+                  <Text style={[Fonts.p3, Fonts.neutral100]}>
+                    {t('childEventRegistration.childPage.reason', {
+                      reason: motif, ...SANS_ECHAPPEMENT,
+                    })}
+                  </Text>
+                ) : null}
+                <View style={[Alignments.row, { columnGap: 16, flexWrap: 'wrap' }]}>
+                  {onOpenEvent && inscription?.event?.documentId ? (
+                    <Lien
+                      libelle={t('childEventRegistration.childPage.open')}
+                      onPress={() => onOpenEvent(inscription)}
+                      testID={`declared-child-event-open-${id}`}
+                    />
+                  ) : null}
+                  {onCancelRegistration && canCancelRegistration(inscription, instant) ? (
+                    <Lien
+                      accessibilityLabel={t('childEventRegistration.cancel.linkLabel', avecPrenom)}
+                      danger
+                      disabled={inscriptionEnAnnulation === id}
+                      libelle={t('childEventRegistration.cancel.link')}
+                      onPress={() => onCancelRegistration(inscription)}
+                      testID={`declared-child-event-cancel-${id}`}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            );
+          })}
+        </Carte>
+      ) : null}
+
+      {moinsDe13Ans && onOpenCard ? (
+        <Carte
+          action={(
+            <Lien
+              libelle={t('myChildren.card.blockOpen')}
+              onPress={() => onOpenCard(enfant)}
+              testID="declared-child-card-open"
+            />
+          )}
+          testID="declared-child-card"
+          titre={t('myChildren.card.blockTitle')}
+        >
+          {maillot || poste ? (
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {[maillot, poste].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          <Text style={[Fonts.p3, Fonts.neutral200]}>{t('myChildren.card.blockCaption')}</Text>
         </Carte>
       ) : null}
 

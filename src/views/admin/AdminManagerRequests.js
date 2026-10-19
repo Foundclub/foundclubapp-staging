@@ -33,6 +33,8 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
+
 /** @typedef {{ kind: 'accept' | 'refuse', request: any }} Decision */
 
 const LARGEUR_COLONNES = 1024;
@@ -75,6 +77,10 @@ function AdminManagerRequests() {
   const [onglet, setOnglet] = useState(/** @type {'pending' | 'decided'} */ ('pending'));
   const [ouverteId, setOuverteId] = useState(/** @type {string | null} */ (null));
   const [decision, setDecision] = useState(/** @type {Decision | null} */ (null));
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0, {
+    android: false,
+    iPhone: Boolean(decision),
+  });
   const [motif, setMotif] = useState('');
   const [nomOfficiel, setNomOfficiel] = useState('');
   const [codeInsee, setCodeInsee] = useState('');
@@ -549,19 +555,23 @@ function AdminManagerRequests() {
             Alignments.alignCenter,
             Spaces.padding[24],
             { backgroundColor: withAlpha(Colors.neutral900, 0.7) },
+            retraitDuClavier > 0 ? { paddingBottom: 24 + retraitDuClavier } : null,
           ]}
         >
-          <View
+          <ScrollView
             accessibilityViewIsModal
+            contentContainerStyle={[Spaces.gap[16], { padding: 20 }]}
+            keyboardShouldPersistTaps="handled"
             style={[
               ApplicationStyle.backgroundColor.primary700,
               ApplicationStyle.borderRadius16,
               ApplicationStyle.borderWidth1,
-              Spaces.gap[16],
               {
                 borderColor: withAlpha(Colors.primary500, 0.4),
+                flexGrow: 0,
+                flexShrink: 1,
+                maxHeight: '100%',
                 maxWidth: 560,
-                padding: 20,
                 width: '100%',
               },
             ]}
@@ -730,7 +740,7 @@ function AdminManagerRequests() {
                 variant="Secondary"
               />
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     );

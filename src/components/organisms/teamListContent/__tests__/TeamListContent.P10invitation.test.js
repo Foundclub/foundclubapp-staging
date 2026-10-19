@@ -26,6 +26,13 @@ import renderer, { act } from 'react-test-renderer';
 
 import TeamListContent from '../TeamListContent';
 
+jest.mock('@/domains/team/useParentTeams', () => ({
+  __esModule: true,
+  default: () => ({
+    childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+  }),
+}));
+
 jest.setTimeout(30000);
 
 const mockUseAuth = jest.fn();

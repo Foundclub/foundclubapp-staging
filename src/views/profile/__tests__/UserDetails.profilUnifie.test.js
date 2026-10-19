@@ -33,6 +33,10 @@ const mockUpdateMe = jest.fn();
 // `.env` — absent de TOUT worktree. Sans cette doublure, la suite ENTIERE
 // echoue AU CHARGEMENT, sans executer un seul test (« Test Suites: 1 failed,
 // Tests: 0 »).
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
   useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),
@@ -540,6 +544,13 @@ describe('D31 ① — la feuille d`edition doit pouvoir remonter au-dessus du cl
 });
 
 describe('D31 ② — le nom du champ n`est plus ecrit deux fois', () => {
+  it('Email conserve son clavier et demande le champ de feuille', async () => {
+    const arbre = await rendre(dirigeant);
+    await appuyerSur(arbre, 'Email');
+    expect(mockChampsSheet[0].useBottomSheetInput).toBe(true);
+    expect(mockChampsSheet[0].keyboardType).toBe('email-address');
+  });
+
   it('le champ texte ne reprend plus le libelle deja porte par le titre', async () => {
     const arbre = await rendre(dirigeant);
 
@@ -834,5 +845,33 @@ describe('D06 · le garde-fou : le profil d\'AUTRUI ne change pas', () => {
 
     expect(texteVisible(arbre)).not.toContain('Ajouter');
     expect(mockChampsSheet).toHaveLength(0);
+  });
+});
+
+// PAR-L7 (13/10, design parent E03) — un DIRIGEANT qui a des enfants les retrouve aussi sur son
+// profil, sous sa carte d'identite ; sans enfant, rien ne change.
+describe('PAR-L7 — un dirigeant qui a des enfants les retrouve sur « Mon profil »', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+
+  afterEach(() => useMesEnfantsEnBref.regler());
+
+  it('avec un enfant : « Mes enfants », avant « Voir mon profil comme les autres »', async () => {
+    useMesEnfantsEnBref.regler({
+      lignes: [{
+        cible: { id: 'f-a', type: 'fiche' }, cle: 'a', etat: 'U9', prenom: 'Anissa',
+      }],
+      reste: 0,
+      total: 1,
+    });
+    const texte = texteVisible(await rendre(dirigeant));
+
+    expect(texte).toContain('Anissa · U9');
+    expect(texte.indexOf('Mes enfants'))
+      .toBeLessThan(texte.indexOf('Voir mon profil comme les autres'));
+  });
+
+  it('sans enfant : aucun bloc', async () => {
+    expect(texteVisible(await rendre(dirigeant))).not.toContain('Mes enfants');
   });
 });

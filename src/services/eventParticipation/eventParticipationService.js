@@ -27,12 +27,16 @@ export const eventParticipationSchema = Joi.object({
 
 /**
  * Create a new event participation request
- * @param {{user: string, event: string, reason?: string}} eventParticipationData
+ * @param {{user: string, event: string, reason?: string,
+ * acceptRiskDeclaration?: boolean}} eventParticipationData
  * @returns {Promise<EventParticipation>} - The created request
  */
 export const createEventParticipation = async (eventParticipationData) => {
+  // Le consentement est un parametre du geste, pas un attribut du modele Strapi.
+  const { acceptRiskDeclaration, ...data } = eventParticipationData;
   const response = await client.post('/event-participations', {
-    data: eventParticipationData,
+    ...(acceptRiskDeclaration === undefined ? {} : { acceptRiskDeclaration }),
+    data,
   });
   celebrate('event_participation_request_sent', {
     eventId: eventParticipationData?.event,

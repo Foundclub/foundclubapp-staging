@@ -85,7 +85,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
         accountRoleKey="coach"
         canUsePlayerMode
         compteId="u-1"
-        isPlayerMode={false}
+        displayMode={null}
         onChange={onChange}
       />,
     );
@@ -100,7 +100,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
         accountRoleKey="player"
         canUsePlayerMode={false}
         compteId="u-1"
-        isPlayerMode={false}
+        displayMode={null}
         onChange={jest.fn()}
       />,
     );
@@ -122,7 +122,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
         accountRoleKey="coach"
         canUsePlayerMode
         compteId="u-1"
-        isPlayerMode={false}
+        displayMode={null}
         onChange={onChange}
       />,
     );
@@ -132,7 +132,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
       'Mode complexe',
     ]);
     await appuyer(arbre, 'Mode joueur');
-    expect(onChange).toHaveBeenCalledWith(true);
+    expect(onChange).toHaveBeenCalledWith('player');
     await appuyer(arbre, 'Mode complexe');
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeEspace, { complexeId: 'cx-five' });
   });
@@ -144,12 +144,31 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
         accountRoleKey="coach"
         canUsePlayerMode
         compteId="u-1"
-        isPlayerMode
+        displayMode="player"
         onChange={jest.fn()}
       />,
     );
     expect(parRepere(arbre, 'player-mode-active')).not.toBeNull();
     expect(textes(arbre)).toContain('Revenir en mode entraîneur');
+  });
+
+  it('en mode parent (PAR-L12), le dirigeant garde son retour « Revenir en mode dirigeant »', async () => {
+    mockMes = { data: [COMPLEXE_FIVE], isLoading: false };
+    const onChange = jest.fn();
+    const arbre = await monter(
+      <BasculeComplexe
+        accountRoleKey="president"
+        canUseParentMode
+        canUsePlayerMode={false}
+        compteId="u-1"
+        displayMode="parent"
+        onChange={onChange}
+        prenoms={['Anissa']}
+      />,
+    );
+    expect(parRepere(arbre, 'parent-mode-active')).not.toBeNull();
+    await appuyer(arbre, 'Revenir en mode dirigeant');
+    expect(onChange).toHaveBeenCalledWith(null);
   });
 
   it('un dirigeant sans équipe : « Tu gères … » et « Mode complexe »', async () => {
@@ -159,7 +178,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
         accountRoleKey="president"
         canUsePlayerMode={false}
         compteId="u-1"
-        isPlayerMode={false}
+        displayMode={null}
         onChange={jest.fn()}
       />,
     );

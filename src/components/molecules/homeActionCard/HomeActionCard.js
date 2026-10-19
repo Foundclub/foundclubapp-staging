@@ -82,7 +82,9 @@ const FALLBACK_GLOW_RINGS = [
  *   pressable, l'appui ouvrant la feuille de vente (L10-C, stratégie paywall §2.3).
  *   Ne jamais l'utiliser sans `premiumScope` : griser en silence est interdit.
  * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
- * @param {1 | 2} [props.subtitleLines]
+ * @param {number} [props.subtitleLines] - Lignes du sous-titre (2 par défaut). REC17-001
+ *   (17/10) : une carte est UNE seule zone touchable ; les lignes par enfant de la carte
+ *   « Mes enfants » (PAR-L7 E01) sont retirées, elle ouvre « Mes enfants ».
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
  */
@@ -324,7 +326,12 @@ function HomeActionCard({
               <PremiumBadge scope={premiumScope} />
             </View>
           ) : null}
-          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}>{title}</Text>
+          <Text
+            numberOfLines={2}
+            style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}
+          >
+            {title}
+          </Text>
           <Text
             numberOfLines={subtitleLines}
             style={[

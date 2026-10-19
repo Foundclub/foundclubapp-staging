@@ -23,6 +23,7 @@ import {
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
 import { getProfileTeamIds, isMyTeam } from '@/domains/team/teamMembership';
+import useParentTeams from '@/domains/team/useParentTeams';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -128,7 +129,7 @@ function TeamListContent({
   } = useTheme();
 
   const {
-    canManageTeam, freeUsageSummary, subscriptionAccessLevel, userData,
+    canManageTeam, freeUsageSummary, isParentMode, subscriptionAccessLevel, userData,
   } = /** @type {any} */ (useAuth());
   const [{ teamFilters }] = useAppContext();
   const navigation = useNavigation();
@@ -167,12 +168,23 @@ function TeamListContent({
   // les lit deja pour `isMyTeam` — on demande donc exactement celles-la.
   // 🧊 La chaine est FIGEE avant la liste : `getProfileTeamIds` rend un tableau
   // neuf a chaque appel, qui relancerait la requete a chaque rendu.
-  const myProfileTeamIdsKey = getProfileTeamIds(userData).join(',');
+  const isParentTeamList = showOnlyMyTeams && !isLeagueMode && (
+    isParentMode === true || getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'parent'
+  );
+  const parentTeams = useParentTeams({ enabled: isParentTeamList });
+  const { refetch: refetchParentTeams } = parentTeams;
+  const myProfileTeamIdsKey = (isParentTeamList
+    ? parentTeams.teamIds : getProfileTeamIds(userData)).join(',');
   const myProfileTeamIds = useMemo(
     () => (myProfileTeamIdsKey ? myProfileTeamIdsKey.split(',') : []),
     [myProfileTeamIdsKey],
   );
   const scopeToMyTeams = showOnlyMyTeams && !isLeagueMode;
+  const isVisibleTeam = useCallback(
+    (/** @type {Team} */ team) => (isParentTeamList
+      ? myProfileTeamIds.includes(team?.documentId) : isMyTeam(team, userData)),
+    [isParentTeamList, myProfileTeamIds, userData],
+  );
 
   const classicTeamQueryParams = useMemo(() => ({
     activities: teamFilters?.activities || undefined,
@@ -292,19 +304,20 @@ function TeamListContent({
       return teams;
     }
 
-    return teams.filter((team) => isMyTeam(team, userData));
-  }, [isLeagueMode, showOnlyMyTeams, teams, userData]);
+    return teams.filter(isVisibleTeam);
+  }, [isLeagueMode, isVisibleTeam, showOnlyMyTeams, teams]);
 
   const isLoadingTeams = isLeagueMode
     ? isLoadingLeague
-    : isLoadingClassic;
+    : isLoadingClassic || (isParentTeamList && parentTeams.isLoading);
   const refetchTeams = useCallback(() => {
     if (isLeagueMode) {
       return refetchLeague();
     }
+    if (isParentTeamList) return Promise.all([refetchParentTeams(), refetchClassic()]);
     return refetchClassic();
-  }, [isLeagueMode, refetchClassic, refetchLeague]);
-  const error = isLeagueMode ? leagueError : classicError;
+  }, [isLeagueMode, isParentTeamList, refetchParentTeams, refetchClassic, refetchLeague]);
+  const error = isLeagueMode ? leagueError : classicError || (isParentTeamList && parentTeams.error);
 
   const {
     invitedTeams,
@@ -356,7 +369,7 @@ function TeamListContent({
     const my = /** @type {Team[]} */ ([]);
     const other = /** @type {Team[]} */ ([]);
 
-    const teamRequests = userData.teamMembershipRequests || [];
+    const teamRequests = isParentTeamList ? [] : userData.teamMembershipRequests || [];
     const enAttente = teamRequests
       .filter((/** @type {{ state?: string; team?: Team }} */ r) => r.state === 'pending' && r.team);
     // P10 — LE SENS DE LA LIGNE. `direction` vaut 'invite' quand le staff
@@ -372,7 +385,7 @@ function TeamListContent({
     const pending = enAttente.filter((/** @type {any} */ r) => !estInvitation(r)).map(versCarte);
     const invitations = enAttente.filter((/** @type {any} */ r) => estInvitation(r)).map(versCarte);
 
-    const clubRequests = userData.clubMembershipRequests || [];
+    const clubRequests = isParentTeamList ? [] : userData.clubMembershipRequests || [];
     const pendingClubs = clubRequests
       .filter((/** @type {{ state?: string; club?: any }} */ r) => r.state === 'pending' && r.club)
       .map((/** @type {{ club?: any; type?: string }} */ r) => ({
@@ -390,7 +403,7 @@ function TeamListContent({
       }));
 
     scopedClassicTeams.forEach((/** @type {Team} */ team) => {
-      const isTeamMine = isMyTeam(team, userData);
+      const isTeamMine = isVisibleTeam(team);
       const isPending = [...pending, ...invitations]
         .some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
 
@@ -410,7 +423,7 @@ function TeamListContent({
       otherTeams: sortTeamsForDisplay(other),
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
-  }, [invitedLeagueData, isLeagueMode, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
+  }, [invitedLeagueData, isLeagueMode, isParentTeamList, isVisibleTeam, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
 
   const handleEndReached = useCallback(() => {
     // U03 — dans ce mode, « Autres equipes » est structurellement VIDE (le tri
@@ -679,13 +692,13 @@ function TeamListContent({
           label: stateLabel,
           tone: isPending ? 'warning500' : 'gold500',
         };
-      } else if (isSelfTrainer) {
+      } else if (!isParentTeamList && isSelfTrainer) {
         badge = {
           color: Colors.primary500,
           label: t('teamList.badges.coach', 'COACH'),
           tone: 'primary500',
         };
-      } else if (isSelfPlayer) {
+      } else if (!isParentTeamList && isSelfPlayer) {
         badge = {
           color: Colors.primary500,
           label: t('teamList.badges.player', 'JOUEUR·SE'),
@@ -811,6 +824,11 @@ function TeamListContent({
                   style={[Fonts.p4, Fonts.neutral300]}
                   text={item.club.name}
                 />
+              ) : null}
+              {isParentTeamList && parentTeams.childrenByTeam[item.documentId]?.length > 0 ? (
+                <Text style={[Fonts.p4, Fonts.neutral200]}>
+                  {parentTeams.childrenByTeam[item.documentId].join(', ')}
+                </Text>
               ) : null}
             </View>
             {badge ? (
@@ -1056,6 +1074,8 @@ function TeamListContent({
     handleTeamSelect,
     isCompactScreen,
     isLeagueMode,
+    isParentTeamList,
+    parentTeams.childrenByTeam,
     t,
     userData?.documentId,
   ]);

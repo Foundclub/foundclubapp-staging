@@ -145,7 +145,9 @@ test('CRFERM-5/1 joueur : « Gymnase fermé ce jour-là », une phrase sans gest
   expect(racine.findAllByType(EventAnswerButtons)).toHaveLength(1);
 });
 
-test('CRFERM-5/2 qui peut modifier : « Gymnase fermé · à déplacer », un bouton qui ouvre la modification', () => {
+// COLL-R-DEPLACER (14/10, COL-013) : le bouton ouvre désormais « Déplacer la séance » (EventEdit en
+// mode « deplacer » ; un serveur d'avant y retrouve la modification).
+test('CRFERM-5/2 qui peut modifier : « Gymnase fermé · à déplacer », un bouton qui ouvre « Déplacer la séance »', () => {
   mockPeutModifier = true;
   const racine = rendre({ ...SEANCE, facilityClosure: FERMETURE });
   expect(textes(racine)).toContain('Gymnase fermé · à déplacer');
@@ -153,7 +155,9 @@ test('CRFERM-5/2 qui peut modifier : « Gymnase fermé · à déplacer », un bo
   expect(bouton.props.accessibilityRole).toBe('button');
   expect(bouton.props.accessibilityLabel).toBe('Gymnase fermé · à déplacer');
   act(() => { bouton.props.onPress(); });
-  expect(mockNavigate).toHaveBeenCalledWith('EventStack', { params: { eventId: 'e1' }, screen: 'EventEdit' });
+  expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+    params: { eventId: 'e1', mode: 'deplacer' }, screen: 'EventEdit',
+  });
 });
 
 test('CRFERM-5/3 un stage ne se modifie pas par cet écran : le bouton ouvre la fiche', () => {

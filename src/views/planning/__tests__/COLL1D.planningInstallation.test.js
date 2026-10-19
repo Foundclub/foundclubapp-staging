@@ -332,3 +332,11 @@ describe('COLL1D — planning d une installation : couleur par club, texte du me
     expect(lu).toContain('demande en attente');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

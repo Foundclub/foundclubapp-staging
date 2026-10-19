@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
@@ -33,12 +33,14 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SeasonSlotForm, {
-  HAUTEUR_DE_LA_FEUILLE,
+  ChargementDesChoix,
+  LectureEnErreur,
+  TunnelEnAttente,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CouleurClubPlanning from '@/views/collectivite/components/CouleurClubPlanning';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -95,31 +97,31 @@ function BlocDeFiche({
  * COLL-C2B (02/10) — « Attribuer un creneau a ce club » : le formulaire d attribution, le club
  * DEJA choisi ; l installation se choisit parmi celles de la Ville. Une Ville sans installation
  * le dit, plutot qu un formulaire qui ne mene nulle part.
+ * 📐 COLL-R-A7 (13/10, COL-005) : `pleinEcran` (le telephone) — le tunnel plein ecran ; ce qui
+ * l empeche (chargement, erreur, Ville sans installation) se dit dans la meme fenetre.
  * @param {{
- *   club: { documentId: string, name: string },
+ *   club: { documentId: string, logoUrl?: string | null, name: string },
  *   collectiviteId: string | null,
  *   onCancel: () => void,
  *   onDone: () => void,
+ *   pleinEcran?: boolean,
  * }} props
  * @returns {import('react').ReactElement} Le formulaire, ou ce qui l empeche.
  */
 function AttribuerAuClub({
-  club, collectiviteId, onCancel, onDone,
+  club, collectiviteId, onCancel, onDone, pleinEcran = false,
 }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
   const installations = useCollectiviteInstallations(collectiviteId);
-  if (installations.isLoading) return <Loader />;
-  if (installations.error) {
-    return (
-      <Text style={[Fonts.p2, Fonts.neutral200]}>
-        {getErrorMessage(/** @type {any} */ (installations.error))}
-      </Text>
-    );
-  }
   const liste = Array.isArray(installations.data) ? installations.data : [];
-  if (liste.length === 0) {
-    return (
+  let empechement = null;
+  if (installations.isLoading) {
+    empechement = <ChargementDesChoix />;
+  } else if (installations.error) {
+    empechement = <LectureEnErreur erreur={installations.error} onRetry={installations.refetch} />;
+  } else if (liste.length === 0) {
+    empechement = (
       <Text style={[Fonts.p2, Fonts.neutral200]}>
         {t(
           'collectiviteCreneaux.fiche.aucuneInstallation',
@@ -128,6 +130,20 @@ function AttribuerAuClub({
       </Text>
     );
   }
+  if (empechement && pleinEcran) {
+    return (
+      <TunnelEnAttente
+        onClose={onCancel}
+        sousTitre={t('collectiviteCreneaux.tunnel.pourLeClub', 'Pour {{club}}', {
+          club: club.name, ...SANS_ECHAPPEMENT,
+        })}
+        titre={t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?')}
+      >
+        {empechement}
+      </TunnelEnAttente>
+    );
+  }
+  if (empechement) return empechement;
   return (
     <SeasonSlotForm
       clubs={[club]}
@@ -136,6 +152,7 @@ function AttribuerAuClub({
       guided
       onCancel={onCancel}
       onDone={onDone}
+      pleinEcran={pleinEcran}
     />
   );
 }
@@ -210,7 +227,9 @@ function CollectiviteClubDetails() {
   };
   // Le geste est au gestionnaire : la collectivite doit etre l une des SIENNES.
   const peutAttribuer = Boolean(collectivite && club?.documentId);
-  const panneauAttribuer = attribuer && peutAttribuer ? (
+  // 📐 COLL-R-A7 (COL-005) : au telephone, le plein ecran du tunnel ; le site en grand ecran garde
+  // son panneau dans la page.
+  const panneauAttribuer = attribuer && peutAttribuer && isDesktop ? (
     <View style={{ gap: 12 }}>
       <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
         {t(
@@ -226,6 +245,23 @@ function CollectiviteClubDetails() {
         onDone={apresAttribution}
       />
     </View>
+  ) : null;
+  // Comme l'installation (IPH09 FC-001) : l'en-tete de navigation se tait sous le plein ecran (sa
+  // hauteur ne se reporte pas dans le gabarit des tunnels), et revient a la fermeture.
+  const tunnelOuvert = attribuer && peutAttribuer && !isDesktop;
+  useLayoutEffect(() => {
+    if (!tunnelOuvert) return undefined;
+    /** @type {any} */ (navigation).setOptions?.({ headerShown: false });
+    return () => /** @type {any} */ (navigation).setOptions?.({ headerShown: true });
+  }, [navigation, tunnelOuvert]);
+  const tunnelAttribuer = tunnelOuvert ? (
+    <AttribuerAuClub
+      club={{ documentId: club.documentId, logoUrl: club.logo?.url || null, name: club.name }}
+      collectiviteId={collectiviteId}
+      onCancel={fermerAttribuer}
+      onDone={apresAttribution}
+      pleinEcran
+    />
   ) : null;
 
   const nonRenseigne = t('collectiviteClubs.detail.notProvided', 'non renseigné');
@@ -798,6 +834,9 @@ function CollectiviteClubDetails() {
           {renderQuiJoindre()}
           {renderCoordonnees()}
           {renderNombres()}
+          {peutAttribuer ? (
+            <CouleurClubPlanning club={club} collectiviteId={String(collectiviteId)} />
+          ) : null}
           {renderOffre()}
         </View>
         <View style={{ flex: 1, gap: 14, minWidth: 0 }}>
@@ -813,6 +852,9 @@ function CollectiviteClubDetails() {
       <View style={{ gap: 14 }}>
         {renderQuiJoindre()}
         {renderNombres()}
+        {peutAttribuer ? (
+          <CouleurClubPlanning club={club} collectiviteId={String(collectiviteId)} />
+        ) : null}
         {renderCreneaux()}
         {renderDemandes()}
         {renderCoordonnees()}
@@ -873,18 +915,7 @@ function CollectiviteClubDetails() {
         ) : null}
         {contenu}
       </ScrollView>
-      {isDesktop ? null : (
-        <BottomModal
-          close={fermerAttribuer}
-          isVisible={Boolean(panneauAttribuer)}
-          // SAIS (T20 lot 1) : « Annuler » finissait coupé au bas de la feuille « Attribuer ».
-          maxContentHeightRatio={HAUTEUR_DE_LA_FEUILLE}
-        >
-          <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
-            {panneauAttribuer}
-          </View>
-        </BottomModal>
-      )}
+      {tunnelAttribuer}
     </ScreenContainer>
   );
 }

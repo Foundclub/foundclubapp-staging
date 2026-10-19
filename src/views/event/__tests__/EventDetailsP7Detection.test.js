@@ -24,6 +24,7 @@ import {
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
+const mockCreateParticipation = jest.fn(() => Promise.resolve());
 const mockEventQuery = { data: /** @type {any} */ (null) };
 // Les deux mutations que la fiche candidat doit REUTILISER (jamais un second
 // chemin d'ecriture) : on les garde stables pour pouvoir les observer.
@@ -59,6 +60,13 @@ const mockParticipationsPages = { pages: /** @type {any} */ (null) };
 // 🧨 R9 — MEME PIEGE QUE DANS LES 19 SUITES VOISINES (`@/services/client`
 // jette au chargement sans `.env`), mais ici la doublure est PILOTABLE : c est
 // cette suite qui prouve les etats du bouton « Inviter ».
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: (/** @type {any} */ invitation) => mockInviterDansLEquipe(invitation),
   resolveTeamInvitationAvailability: (
@@ -241,7 +249,7 @@ jest.mock('../hooks/useEventMutations', () => {
       bookFullMutation: idleMutation(),
       cancelEventMutation: idleMutation(),
       coachArrivalMutation: idleMutation(),
-      createEventParticipationMutation: idleMutation(),
+      createEventParticipationMutation: { isPending: false, mutateAsync: mockCreateParticipation },
       declineParticipationMutation: { isPending: false, mutate: mockRefuserParticipation },
       deleteParticipationMutation: idleMutation(),
       joinReservationMutation: idleMutation(),
@@ -539,6 +547,7 @@ const monter = (/** @type {any} */ {
   // `mockClear` n'efface QUE les appels, pas les `mockResolvedValueOnce` poses
   // juste avant le montage.
   mockAccepterParticipation.mockClear();
+  mockCreateParticipation.mockClear();
   mockRefuserParticipation.mockClear();
   mockLireLesCandidatures.mockClear();
   mockInviterDansLEquipe.mockClear();
@@ -1120,6 +1129,17 @@ describe('R9 - POSTULER SANS VISER UN POSTE PRECIS', () => {
     // comme tout chemin generique — mais elle n annonce AUCUN poste.
     expect(capteurModaleParticipation.props.isVisible).toBe(true);
     expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+
+  test.each([true, false])('PARTREG — la confirmation sans poste transmet le consentement %s', async (accepted) => {
+    const root = ouvrirLeSelecteur();
+    appuyerSur(root, 'Participer sans poste');
+    await act(async () => {
+      await capteurModaleParticipation.props.onConfirm({ acceptRiskDeclaration: accepted });
+    });
+    expect(mockCreateParticipation).toHaveBeenCalledWith(expect.objectContaining({
+      acceptRiskDeclaration: accepted,
+    }));
   });
 
   test('R9 · temoin 20 — choisir un VRAI poste continue de l annoncer', () => {

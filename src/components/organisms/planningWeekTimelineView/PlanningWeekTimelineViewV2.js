@@ -26,6 +26,7 @@ import {
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { images as Images } from '@/theme/images';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -246,22 +247,10 @@ function PlanningWeekTimelineView({
   const couleurDAttente = Colors.warning400 || pendingAccentColor;
   // COLL-R-APP-CREATION (13/10, COL-003, decision d Adel « D3- B ») — une seance EN ATTENTE dit
   // qui decide (`raw.pendingDecider`, pose par le serveur), avec les mots de sa fiche.
-  const libelleDAttente = (/** @type {any} */ event) => {
-    const decideur = String(event?.raw?.pendingDecider || '');
-    if (decideur === 'mairie') {
-      return t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie');
-    }
-    if (decideur === 'dirigeant') {
-      return t('collectiviteDemandes.club.enAttenteDuDirigeant', 'En attente de ton dirigeant');
-    }
-    if (decideur === 'proprietaire') {
-      return t(
-        'collectiviteDemandes.club.enAttenteDuProprietaire',
-        'En attente du gestionnaire de l’installation',
-      );
-    }
-    return null;
-  };
+  // MARQUE-MAIRIE (14/10) : les mots viennent de LA regle partagee (`pendingDeciderLabel`).
+  const libelleDAttente = (/** @type {any} */ event) => (
+    pendingDeciderLabel(event?.raw?.pendingDecider, t)
+  );
   const currentDate = propDate || internalDate;
   const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
@@ -835,6 +824,15 @@ function PlanningWeekTimelineView({
     }
     // COLL-C4B — une seance que la fermeture touche GARDE sa place (D16), cernee d orange.
     const aDeplacer = Boolean(event?.raw?.closure);
+    // COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a la seance touchee, dit a sa place : la
+    // Ville a propose une place (« proposition envoyee », planche P5v4-deplacer-ville-tel ecran
+    // 6 b) ; un creneau de SAISON sans seance posee « n a pas lieu » ; sinon « a deplacer ».
+    let motDeFermeture = t('collectiviteFermetures.planning.aDeplacer', 'à déplacer');
+    if (event?.raw?.relocationProposal?.status === 'pending') {
+      motDeFermeture = t('deplacerSeance.planning.propositionEnvoyee', 'proposition envoyée');
+    } else if (event?.raw?.kind === 'slot' && event?.raw?.origin === 'slot') {
+      motDeFermeture = t('deplacerSeance.planning.nAPasLieu', 'n’a pas lieu');
+    }
     const color = event.color || Colors.primary500;
     const isPendingParticipation = isPlanningPendingParticipation(event);
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
@@ -1038,7 +1036,7 @@ function PlanningWeekTimelineView({
             {/* l equipe : en troisieme, le bloc le coupait (`overflow: hidden` ; T11, C25_3). */}
             {aDeplacer ? (
               <Text style={{ color: pendingAccentColor }} testID="a-deplacer">
-                {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
+                {` · ${motDeFermeture}`}
               </Text>
             ) : null}
             {nonTranchee ? (
@@ -1086,7 +1084,7 @@ function PlanningWeekTimelineView({
             ]}
             testID="a-deplacer"
           >
-            {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+            {motDeFermeture}
           </Text>
         ) : null}
         {montreTertiaire ? (

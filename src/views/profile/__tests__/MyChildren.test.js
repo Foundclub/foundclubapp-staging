@@ -87,19 +87,42 @@ jest.mock('react-i18next', () => {
 let mockDemandes = [];
 /** @type {any[]} */
 const mockLecturesDesDemandes = [];
+// PAR-L8 (13/10) — « Annuler la demande » : la mutation, doublee ; le temoin rejoue ses issues.
+const mockAnnulerLaDemande = jest.fn();
 jest.mock('@/services/clubInterestRequest/clubInterestRequestQueries', () => ({
+  useCancelClubInterestRequest: () => ({ isPending: false, mutate: mockAnnulerLaDemande }),
   useGetMyClubInterestRequests: (/** @type {any} */ params, /** @type {any} */ options) => {
     mockLecturesDesDemandes.push({ options, params });
     return { data: { data: mockDemandes } };
   },
 }));
 
+// 👪 PAR-L11c (14/10) — « Ses evenements » : les inscriptions de MES enfants (toutes),
+// et leur annulation. La lecture et la mutation sont doublees ; le temoin rejoue les issues.
+/** @type {any} */
+let mockInscriptions = [];
+/** @type {any} */
+let mockErreurInscriptions;
+const mockRelireInscriptions = jest.fn();
+const mockAnnulerInscription = jest.fn();
+jest.mock('@/services/eventChildRegistration/eventChildRegistrationQueries', () => ({
+  useAllMyChildRegistrations: () => ({
+    data: mockInscriptions,
+    error: mockErreurInscriptions,
+    refetch: mockRelireInscriptions,
+  }),
+  useCancelChildRegistration: () => ({ isPending: false, mutate: mockAnnulerInscription }),
+}));
+
+// PAR-L8 — la fiche se RELIT apres une annulation (le club a pu accepter entre-temps).
+const mockRelireEnfants = jest.fn();
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useDeleteDeclaredChild: () => ({ isPending: false, mutate: mockSupprimer }),
   useGetMyDeclaredChildren: () => ({
     data: mockEnfants,
     error: undefined,
     isLoading: mockIsLoading,
+    refetch: mockRelireEnfants,
   }),
 }));
 
@@ -248,6 +271,8 @@ beforeEach(() => {
   mockIsLoading = false;
   mockDemandes = [];
   mockLecturesDesDemandes.length = 0;
+  mockInscriptions = [];
+  mockErreurInscriptions = undefined;
   // L'annonce vit en mémoire (module) : chaque témoin part sans elle.
   effacerLAnnonce();
 });
@@ -349,11 +374,15 @@ test('P2/7 ⑦ « chercher un club » emmène la recherche AVEC l\'enfant visé'
   // COMPLÈTE — un nom nu ne descend jamais chez un voisin (défaut du 08/09).
   // RETOUR-ONGLET (30/09) : et avec `pop`, sinon React Navigation 7 EMPILE un second
   // onglet d'accueil au lieu de revenir au premier (A22 de l'audit V1).
+  // 🔒 PARENT-FINITIONS 1 (14/10) — l'enfant voyage par son identifiant SEUL : sur le site, les
+  // paramètres de la route passent dans l'adresse (`…/search/clubs?childFirstname=Léa`), et le
+  // prénom d'un mineur finissait dans les journaux et l'historique. La recherche ne lit que
+  // `childDocumentId` (PAR-L4).
   expect(mockNavigate).toHaveBeenCalledWith(
     'HomeTab',
     {
       params: {
-        params: { childDocumentId: 'enfant-1', childFirstname: 'Léa' },
+        params: { childDocumentId: 'enfant-1' },
         pop: true,
         screen: 'SearchClubs',
       },
@@ -861,7 +890,7 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
       'HomeTab',
       {
         params: {
-          params: { childDocumentId: 'lea', childFirstname: 'Lea' },
+          params: { childDocumentId: 'lea' },
           pop: true,
           screen: 'SearchClubs',
         },
@@ -1380,7 +1409,7 @@ describe('PAR-L5L6 E08 — le bandeau après une création', () => {
       'HomeTab',
       {
         params: {
-          params: { childDocumentId: 'anissa', childFirstname: 'Anissa' },
+          params: { childDocumentId: 'anissa' },
           pop: true,
           screen: 'SearchClubs',
         },
@@ -1434,5 +1463,368 @@ describe('PAR-L5L6 E04 — le chargement', () => {
 
     expect(hote(arbre, 'my-children-loading')).toBeUndefined();
     expect(hote(arbre, 'my-children-list')).toBeTruthy();
+  });
+});
+
+// ===========================================================================
+// PAR-L8 (13/10, design parent E19, planche 8) — ANNULER UNE DEMANDE EN ATTENTE, depuis la fiche
+// de l'enfant. La confirmation est une FEUILLE (sur le site, `Alert` devient `window.confirm` :
+// deux choix, aucune mise en forme) ; puis un bandeau dit ce qui s'est passé — y compris quand le
+// club a répondu entre-temps (décision d'Adel : l'acceptation gagne), et quand le serveur ne sait
+// pas encore annuler (l'app doit marcher contre le serveur d'avant).
+// ===========================================================================
+
+describe('PAR-L8 E19 — annuler une demande depuis la fiche', () => {
+  const FOUNDCLUB = { documentId: 'club-fc', name: 'FoundClub' };
+  const DEMANDE = {
+    club: FOUNDCLUB,
+    createdAt: '2026-10-11T09:00:00.000Z',
+    declaredChild: { documentId: 'enfant-1', firstname: 'Léa' },
+    documentId: 'dem-1',
+    status: 'pending',
+    team: { club: FOUNDCLUB, documentId: 'u11', name: 'U11 Garçons' },
+  };
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant()];
+    mockDemandes = [DEMANDE];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  /**
+   * Monte la fiche de Léa (la route « Mes enfants » avec `childDocumentId`).
+   * @returns {Promise<any>} L'arbre rendu.
+   */
+  const rendreLaFiche = async () => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params: { childDocumentId: 'enfant-1' } }} />);
+    });
+    return arbre;
+  };
+
+  /**
+   * Le bouton (atome `Button`, qui ne transmet pas `testID`) qui porte ce titre.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} titre - Son libellé.
+   * @returns {any} Le bouton, ou undefined.
+   */
+  const bouton = (arbre, titre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.title === titre && typeof n.props?.onPress === 'function'
+  ))[0];
+
+  /**
+   * « Annuler la demande » sur la fiche, puis la confirmation dans la feuille.
+   * @param {any} arbre - L'arbre rendu.
+   * @returns {Promise<any[]>} Les arguments de l'envoi : l'identifiant et les rappels.
+   */
+  const confirmer = async (arbre) => {
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+    await act(async () => { bouton(arbre, 'Annuler la demande').props.onPress(); });
+    return mockAnnulerLaDemande.mock.calls[mockAnnulerLaDemande.mock.calls.length - 1];
+  };
+
+  test('🔴 « Annuler la demande » ouvre une FEUILLE qui nomme l enfant et l équipe', async () => {
+    const arbre = await rendreLaFiche();
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('Annuler la demande pour Léa ?');
+    expect(texte).toContain(
+      'Les responsables de U11 Garçons ne la verront plus. Léa pourra faire une nouvelle demande.',
+    );
+    expect(bouton(arbre, 'Annuler la demande').props.variant).toBe('Danger');
+    expect(bouton(arbre, 'Garder la demande').props.variant).toBe('Ghost');
+    expect(mockAnnulerLaDemande).not.toHaveBeenCalled();
+  });
+
+  test('« Garder la demande » referme la feuille, et rien ne part', async () => {
+    const arbre = await rendreLaFiche();
+    await act(async () => { porteDe(arbre, 'declared-child-cancel-dem-1').props.onPress(); });
+
+    await act(async () => { bouton(arbre, 'Garder la demande').props.onPress(); });
+
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+    expect(mockAnnulerLaDemande).not.toHaveBeenCalled();
+  });
+
+  test('🔴 confirmer : CETTE demande part, puis « Demande annulée. »', async () => {
+    const arbre = await rendreLaFiche();
+    const [id, rappels] = await confirmer(arbre);
+
+    expect(id).toBe('dem-1');
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+    await act(async () => { rappels.onSuccess(); });
+    expect(texteVisible(arbre))
+      .toContain('Demande annulée. | Léa peut faire une nouvelle demande.');
+    expect(mockRelireEnfants).toHaveBeenCalled();
+  });
+
+  test('🔴 COURSE — acceptée entre-temps : on le dit, rien n est annulé', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({
+        details: { accepted: true, code: 'CLUB_INTEREST_REQUEST_ALREADY_RESPONDED' },
+        message: 'Club interest request already responded',
+        status: 400,
+      });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'Le club a déjà répondu. | Léa est dans U11 Garçons. Rien n’a été annulé.',
+    );
+    expect(texteVisible(arbre)).not.toContain('Demande annulée.');
+    expect(mockRelireEnfants).toHaveBeenCalled();
+  });
+
+  test('🔴 refusée ou disparue : « Le club a déjà répondu à cette demande »', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({ details: { code: 'CLUB_INTEREST_REQUEST_GONE' }, status: 404 });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'Le club a déjà répondu à cette demande. | Il n’y a plus rien à annuler.',
+    );
+  });
+
+  test('🔴 serveur d AVANT (sans la route) : un message clair, pas de plantage', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => {
+      rappels.onError({
+        details: {}, message: 'Not Found', name: 'NotFoundError', status: 404,
+      });
+    });
+
+    expect(texteVisible(arbre)).toContain(
+      'L’annulation n’est pas encore disponible. | '
+      + 'La demande est toujours en attente. Réessaie plus tard.',
+    );
+    expect(porteDe(arbre, 'cancel-request-retry')).toBeUndefined();
+  });
+
+  test('🔴 pas de réseau : on le dit, et « Réessayer » renvoie la MÊME demande', async () => {
+    const arbre = await rendreLaFiche();
+    const [, rappels] = await confirmer(arbre);
+
+    await act(async () => { rappels.onError('Network Error'); });
+
+    expect(texteVisible(arbre)).toContain(
+      'La demande n’a pas pu être annulée. | Vérifie ta connexion, puis réessaie. | Réessayer',
+    );
+    await act(async () => { porteDe(arbre, 'cancel-request-retry').props.onPress(); });
+    expect(mockAnnulerLaDemande).toHaveBeenCalledTimes(2);
+    expect(mockAnnulerLaDemande.mock.calls[1][0]).toBe('dem-1');
+  });
+});
+
+// ===========================================================================
+// PAR-L13 (13/10, design parent E28 et E29) — LA CARTE DE L ENFANT, UNE VUE DE « MES ENFANTS ».
+// Comme sa fiche (ST-RETOURS2), sa carte est une VUE de la route : `carte` = « nouvelle »
+// (juste après sa déclaration) ou « voir » (depuis sa fiche). Aucune route neuve : le site la
+// sert déjà (`/profile/children?childDocumentId=…&carte=…`).
+// ===========================================================================
+
+/** @type {any[]} */
+const mockCartesOuvertes = [];
+jest.mock('@/views/profile/parent/ChildCardPage', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => {
+      mockCartesOuvertes.push(props);
+      const vue = props.nouvelle ? 'nouvelle' : 'voir';
+      return <TexteRN>{`CARTE:${props.enfant?.firstname}:${vue}`}</TexteRN>;
+    },
+  };
+});
+
+describe('PAR-L13 — sa carte, vue de la route « Mes enfants »', () => {
+  const MARTIN = unEnfant({
+    age: 9, documentId: 'martin', firstname: 'Martin', lastname: 'Test',
+  });
+
+  /**
+   * Monte la route avec ces paramètres.
+   * @param {any} params - Les paramètres.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const monter = async (params) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params }} />);
+    });
+    return arbre;
+  };
+
+  beforeEach(() => {
+    mockCartesOuvertes.length = 0;
+    mockEnfants = [unEnfant(), MARTIN];
+    mockDemandes = [];
+  });
+
+  test('🔴 « Voir » sur sa fiche ouvre SA carte (une vue de la même route)', async () => {
+    const fiche = await monter({ childDocumentId: 'martin' });
+
+    await act(async () => { porteDe(fiche, 'declared-child-card-open').props.onPress(); });
+    expect(mockPush).toHaveBeenCalledWith('MyChildren', {
+      carte: 'voir', childDocumentId: 'martin',
+    });
+  });
+
+  test('🔴 `carte: nouvelle` monte la carte de CET enfant en mode « juste déclarée »', async () => {
+    const arbre = await monter({ carte: 'nouvelle', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:nouvelle');
+    expect(texteVisible(arbre)).not.toContain('Ses demandes');
+  });
+
+  test('`carte: voir` monte la carte complète ; « fini » revient en arrière', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'martin' });
+
+    expect(texteVisible(arbre)).toContain('CARTE:Martin:voir');
+    await act(async () => { mockCartesOuvertes[mockCartesOuvertes.length - 1].onFini(); });
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  test('une carte dont la fiche n existe plus le DIT', async () => {
+    const arbre = await monter({ carte: 'voir', childDocumentId: 'disparue' });
+
+    expect(texteVisible(arbre)).toContain('Cette fiche n’existe plus.');
+    expect(mockCartesOuvertes).toHaveLength(0);
+  });
+});
+
+// 👪 PAR-L11c (14/10) point 2 — « SES ÉVÉNEMENTS » SUR LA FICHE DE L ENFANT (PAR-012, design
+// parent §3 E21 : « bloc Ses événements, lecture serveur »). La lecture existe au serveur :
+// `GET /event-child-registrations/mine` SANS filtre rend toutes les lignes du parent ; la fiche
+// garde celles de SON enfant. Une ligne : son événement, sa date, son état ; le motif d un
+// refus ; « Annuler l'inscription » (point 1) ; « Voir l'événement ».
+// ⏳ Dates relatives a aujourd hui (garde-fou `temoins:horloge`).
+describe('PAR-L11c point 2 — « Ses événements » sur la fiche', () => {
+  const DANS_UNE_SEMAINE = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+  const inscription = (/** @type {string} */ id, /** @type {any} */ extra = {}) => ({
+    admission: 'request',
+    child: { documentId: 'enfant-1', firstname: 'Léa' },
+    documentId: id,
+    event: { date: DANS_UNE_SEMAINE, documentId: `evt-${id}`, name: `Détection ${id}` },
+    reason: null,
+    status: 'pending',
+    ...extra,
+  });
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant()];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  /**
+   * Monte la fiche de Léa (la route « Mes enfants » avec `childDocumentId`).
+   * @returns {Promise<any>} L'arbre rendu.
+   */
+  const rendreLaFiche = async () => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params: { childDocumentId: 'enfant-1' } }} />);
+    });
+    return arbre;
+  };
+
+  /**
+   * Le bouton (atome `Button`) qui porte ce titre.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} titre - Son libellé.
+   * @returns {any} Le bouton, ou undefined.
+   */
+  const bouton = (arbre, titre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.title === titre && typeof n.props?.onPress === 'function'
+  ))[0];
+
+  test('🔴 une ligne par événement : état, date, motif ; rien d un autre enfant', async () => {
+    mockInscriptions = [
+      inscription('r-1'),
+      inscription('r-2', { status: 'accepted' }),
+      inscription('r-3', { reason: 'Groupe complet', status: 'declined' }),
+      inscription('r-4', {
+        child: { documentId: 'enfant-2', firstname: 'Sami' },
+        event: { date: DANS_UNE_SEMAINE, documentId: 'evt-x', name: 'Stage de Sami' },
+      }),
+    ];
+    const arbre = await rendreLaFiche();
+    const texte = texteVisible(arbre);
+
+    expect(hote(arbre, 'declared-child-events')).toBeDefined();
+    expect(texte).toContain('Ses événements');
+    expect(texte).toContain('Détection r-1');
+    expect(texte).toContain('Détection r-2');
+    expect(texte).toContain('Détection r-3');
+    expect(texte).not.toContain('Stage de Sami');
+    expect(texte).toContain('En attente');
+    expect(texte).toContain('Inscription confirmée');
+    expect(texte).toContain('Refusée');
+    expect(texte).toContain('Motif : Groupe complet');
+    // La date, au jour près (« Le 21/10 »).
+    expect(texte).toMatch(/Le \d{2}\/\d{2}/);
+  });
+
+  test('aucune inscription : le bloc ne se montre pas', async () => {
+    const arbre = await rendreLaFiche();
+
+    expect(hote(arbre, 'declared-child-events')).toBeUndefined();
+    expect(texteVisible(arbre)).not.toContain('Ses événements');
+  });
+
+  test('lecture en échec : le bloc le dit, « Réessayer » relit', async () => {
+    mockErreurInscriptions = new Error('Network Error');
+    const arbre = await rendreLaFiche();
+
+    expect(texteVisible(arbre)).toContain('Impossible de charger ses événements.');
+    await act(async () => { porteDe(arbre, 'declared-child-events-retry').props.onPress(); });
+    expect(mockRelireInscriptions).toHaveBeenCalledTimes(1);
+  });
+
+  test('🔴 « Annuler l inscription » : feuille (Léa + l événement), puis bandeau', async () => {
+    mockInscriptions = [inscription('r-1'), inscription('r-3', { status: 'declined' })];
+    mockAnnulerInscription.mockImplementation((_ligne, { onSuccess }) => onSuccess());
+    const arbre = await rendreLaFiche();
+
+    expect(porteDe(arbre, 'declared-child-event-cancel-r-3')).toBeUndefined();
+    await act(async () => { porteDe(arbre, 'declared-child-event-cancel-r-1').props.onPress(); });
+    const texte = texteVisible(arbre);
+    expect(texte).toContain("Annuler l'inscription pour Léa ?");
+    expect(texte).toContain('« Détection r-1 »');
+
+    await act(async () => { bouton(arbre, "Annuler l'inscription").props.onPress(); });
+    expect(mockAnnulerInscription.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ documentId: 'r-1' }),
+    );
+    expect(texteVisible(arbre)).toContain('Inscription annulée.');
+  });
+
+  test('« Voir l événement » ouvre l événement', async () => {
+    mockInscriptions = [inscription('r-1')];
+    const arbre = await rendreLaFiche();
+
+    await act(async () => { porteDe(arbre, 'declared-child-event-open-r-1').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'evt-r-1' });
   });
 });

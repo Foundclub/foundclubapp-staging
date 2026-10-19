@@ -683,7 +683,11 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     // du club au demandeur, ou la conversation confiee a un coach (L9b). Sans fil : la reponse
     // « message type » s ouvre en detail (son texte entier), la demande recue dans « Demandes ».
     // Temoin : src/utils/notifications/__tests__/reponseInteretAtterrissage.test.js.
+    // 👪 PARENT-FINITIONS 7 (14/10, « annulation A ») — « Karim a retiré sa demande pour Lea » :
+    // la demande est EFFACEE, il n'y a ni fil ni fiche a ouvrir ⇒ la boite « Demandes », comme une
+    // demande recue (meme temoin).
     case 'clubInterestRequest':
+    case 'clubInterestRequestCancelled':
     case 'clubInterestResponse': {
       const interestChat = chatDestination(payload.chatId);
       if (interestChat) return adaptDestinationForCurrentPlatform(payload, interestChat);

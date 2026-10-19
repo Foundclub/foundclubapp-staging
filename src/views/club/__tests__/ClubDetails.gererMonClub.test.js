@@ -1598,4 +1598,25 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
 
     expect(noms(retirer(arbre, 'Garage Durand'))).toEqual(['Boulangerie Martin']);
   });
+
+  // SPONSRV (14/10) : le serveur GARDE desormais les partenaires quand la mise a jour ne
+  // parle pas d'eux (avant, une cle `sponsor` absente les effacait tous, sans le controle
+  // d'abonnement). Une liste vide ne s'ecrit pas en multipart : retirer le DERNIER doit
+  // donc s'annoncer (`clearSponsors`), sinon il ne part plus.
+  it('retirer le DERNIER partenaire l annonce au service (clearSponsors)', () => {
+    const arbre = monterAvec([partenaire('Boulangerie Martin', null, 11)]);
+
+    expect(retirer(arbre, 'Boulangerie Martin')).toEqual([]);
+    expect(/** @type {any} */ (updateClub).mock.calls[0][0].clearSponsors).toBe(true);
+  });
+
+  it('retirer UN partenaire parmi deux n annonce pas « tout retirer »', () => {
+    const arbre = monterAvec([
+      partenaire('Boulangerie Martin', null, 11),
+      partenaire('Garage Durand', null, 12),
+    ]);
+
+    expect(noms(retirer(arbre, 'Garage Durand'))).toEqual(['Boulangerie Martin']);
+    expect(/** @type {any} */ (updateClub).mock.calls[0][0].clearSponsors).toBeFalsy();
+  });
 });

@@ -430,3 +430,32 @@ test('CRFERM-4/9 rien de touché sans geste : la touche « Changer » n est jama
   });
   expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'fermeture-changer')).toHaveLength(0);
 });
+
+// 🎚️ CRFIN (14/10, COLL-R-FINITIONS-FERMETURES, point 3) — l écart à la planche P4v4 (téléphone,
+// état 3 bis ; ordinateur, état D) : « Toute la journée » allumé reste SOUS les dates ; éteint, il
+// MONTE AU-DESSUS, et chaque jour porte son heure à côté (Du : jour | heure ; Au : jour | heure).
+// ROUGE avant : il restait sous les dates dans les deux états.
+test('CRFIN-3/1 « Toute la journée » : sous les dates allumé, AU-DESSUS éteint (planche P4v4, état 3 bis)', async () => {
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
+  const arbre = await rendre();
+  // L ordre de l écran, de haut en bas : l interrupteur et les champs de jour et d heure.
+  const ordre = () => arbre.root
+    .findAll((/** @type {any} */ n) => n.type === Switch
+      || (typeof n.type === 'function' && /^(DatePickerInput|TimePickerInput)Mock$/.test(n.type.name)))
+    .map((/** @type {any} */ n) => (n.type === Switch ? n.props.accessibilityLabel : n.props.label));
+  expect(ordre()).toEqual(['Du', 'Au', 'Toute la journée']);
+  await act(async () => { arbre.root.findAllByType(Switch)[0].props.onValueChange(false); });
+  await attendre();
+  expect(ordre()).toEqual(['Toute la journée', 'Du', 'Heure de début', 'Au', 'Heure de fin']);
+  await act(async () => { arbre.root.findAllByType(Switch)[0].props.onValueChange(true); });
+  await attendre();
+  expect(ordre()).toEqual(['Du', 'Au', 'Toute la journée']);
+});
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

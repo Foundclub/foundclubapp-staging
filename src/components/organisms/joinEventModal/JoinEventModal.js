@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -49,12 +49,18 @@ function JoinEventModal({
     Fonts,
     Spaces,
   } = useTheme();
+  /** @type {import('react-native').ViewStyle[]} */
   const checkableWrapperStyle = [
     ApplicationStyle.borderWidth0,
     ApplicationStyle.backgroundColor.transparent,
     Spaces.padding[0],
     Alignments.rowReverse,
-    { flex: 0, width: '100%' },
+    {
+      ...(Platform.OS === 'web'
+        ? { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
+        : { flex: 0 }),
+      width: '100%',
+    },
   ];
 
   const handleClose = useCallback(() => {

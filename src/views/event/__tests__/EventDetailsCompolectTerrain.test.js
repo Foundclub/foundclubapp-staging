@@ -37,6 +37,13 @@ const mockConvocationQuery = { data: null };
 // — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
 // doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
 // service (piege documente, deja paye plusieurs fois).
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
@@ -706,5 +713,139 @@ describe('COMPOLECT · NON-REGRESSION — le JOUEUR CONVOQUE ne bouge pas', () =
     appuyer(root, 'matchConvocation.published.openCta');
 
     expect(mockNavigate).not.toHaveBeenCalledWith('PlayerConvocation', expect.anything());
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🤝 AMIC-INVITE (19/10, APRÈS 149) — LES PORTES DE LA CONVOCATION PUBLIÉE, CÔTÉ INVITÉ.
+//
+// Le plateau, l'écran des réponses et « Modifier » transmettent `clubId` à la sélection
+// des convoqués (`...params`), qui juge l'offre et liste les renforts sur CE club.
+// 🧨 Les trois partaient avec le club de l'HÔTE (`event.team.club`) alors que l'équipe
+// transmise est celle du lecteur : l'encadrant invité, offre attribuée, retombait sur
+// le mur dès « Modifier ». ⚖️ Le club voyage avec l'équipe : celui de l'équipe composée.
+// ROUGE avant : `clubId` valait le club de l'hôte sur les trois portes.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('AMIC-INVITE — convocation publiee : le club de l equipe composee', () => {
+  const CLUB_INVITE = 'club-valbrune';
+  const EQUIPE_INVITEE = 'team-valbrune-u13';
+  const COACH_INVITE = 'coach-valbrune';
+
+  const matchAmical = () => buildMatch({
+    invitedTeams: [{
+      club: { documentId: CLUB_INVITE, name: 'US Valbrune' },
+      documentId: EQUIPE_INVITEE,
+      name: 'Valbrune U13',
+      players: [{ documentId: JOUEUR }, { documentId: REMPLACANT }],
+      trainers: [{ documentId: COACH_INVITE }],
+    }],
+  });
+
+  const convocationDeLInvitee = (/** @type {any} */ pack) => ({
+    ...CONVOCATION,
+    branches: [{
+      ...CONVOCATION.branches[0],
+      published: pack,
+      team: { documentId: EQUIPE_INVITEE, name: 'Valbrune U13' },
+    }],
+  });
+
+  /**
+   * Appuie sur le bouton dont le libelle est EXACTEMENT celui-ci.
+   * @param {any} root - Racine du rendu.
+   * @param {string} libelle - Le libelle exact.
+   * @returns {void}
+   */
+  const appuyerSurExactement = (root, libelle) => {
+    const bouton = root
+      .findAllByProps({ accessibilityRole: 'button' })
+      .find((/** @type {any} */ node) => textOf(node) === libelle);
+    if (!bouton) {
+      throw new Error(`Aucun bouton « ${libelle} ». Vu : ${textesVisibles(root).join(' | ')}`);
+    }
+    act(() => {
+      bouton.props.onPress();
+    });
+  };
+
+  test('🔴 invité — le plateau (publiee, placee) part avec le club de SON equipe', () => {
+    const root = monter({
+      auth: authPour(COACH_INVITE, true),
+      convocation: convocationDeLInvitee(PACK),
+      event: matchAmical(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE,
+    }));
+  });
+
+  test('🔴 invité — les reponses (sans placement) partent avec le club de SON equipe', () => {
+    const root = monter({
+      auth: authPour(COACH_INVITE, true),
+      convocation: convocationDeLInvitee(PACK_SANS_PLACEMENT),
+      event: matchAmical(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchConvocationPublished');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE,
+    }));
+  });
+
+  test('🔴 invité — « Modifier » rouvre la selection avec le club de SON equipe', () => {
+    const root = monter({
+      auth: authPour(COACH_INVITE, true),
+      convocation: convocationDeLInvitee(PACK),
+      event: matchAmical(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyerSurExactement(root, 'Modifier');
+
+    expect(derniereRoute()).toBe('MatchCallUpSelection');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_INVITE, teamId: EQUIPE_INVITEE,
+    }));
+  });
+
+  test('🔒 hôte — les trois portes gardent le club de l hôte (inchangé)', () => {
+    const root = monter({ auth: authPour('coach-1', true), event: matchAmical() });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_ID, teamId: TEAM_ID,
+    }));
+
+    appuyerSurExactement(root, 'Modifier');
+    expect(derniereRoute()).toBe('MatchCallUpSelection');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_ID, teamId: TEAM_ID,
+    }));
+  });
+
+  test('🔒 hôte — l ecran des reponses garde le club de l hôte (inchangé)', () => {
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: convocationDe(PACK_SANS_PLACEMENT),
+      event: matchAmical(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchConvocationPublished');
+    expect(derniersParametres()).toEqual(expect.objectContaining({
+      clubId: CLUB_ID, teamId: TEAM_ID,
+    }));
   });
 });

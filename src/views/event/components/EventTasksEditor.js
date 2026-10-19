@@ -2,14 +2,15 @@ import i18next from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Platform,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import BottomModalTextInput from '@/components/atoms/bottomModalTextInput/BottomModalTextInput';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
@@ -238,11 +239,12 @@ function EventTasksEditor({
 
       {isOpen ? (
         <BottomModal
+          androidKeyboardBehavior="extend"
           close={closeModal}
           enableContentPanningGesture={false}
           enablePanDownToClose={false}
           isVisible
-          scrollable={false}
+          scrollable={Platform.OS === 'android'}
           snapPoints={['78%']}
           webPresentation="dialog"
         >
@@ -263,7 +265,7 @@ function EventTasksEditor({
             </View>
 
             {draft.type === 'other' ? (
-              <TextInput
+              <BottomModalTextInput
                 onChangeText={handleCustomLabelChange}
                 placeholder={t('eventTasksEditor.typeName', 'Nom du type')}
                 placeholderTextColor={Colors.neutral400}
@@ -281,7 +283,7 @@ function EventTasksEditor({
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t('eventTasksEditor.displayedTitle', 'Titre affiche')}
               </Text>
-              <TextInput
+              <BottomModalTextInput
                 onChangeText={handleTitleChange}
                 placeholder={t('eventTasksEditor.title', 'Titre')}
                 placeholderTextColor={Colors.neutral400}
@@ -303,7 +305,7 @@ function EventTasksEditor({
               </Text>
             </View>
 
-            <TextInput
+            <BottomModalTextInput
               multiline
               onChangeText={(description) => setDraft((current) => ({ ...current, description }))}
               placeholder="Description"

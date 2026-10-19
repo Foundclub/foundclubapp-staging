@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import {
   attributeSeasonSlot,
@@ -48,10 +50,26 @@ const mockNavigate = jest.fn();
 /** @type {any[]} */
 const mockInputProps = [];
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
+// Le gabarit des tunnels lit les marges de l'écran (encoche, barre du bas).
+jest.mock('react-native-safe-area-context', () => ({
+  ...jest.requireActual('react-native-safe-area-context'),
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 47,
+  }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
   useRoute: () => ({ params: { clubId: 'as-montrivage', collectiviteId: 'ville-de-recette' } }),
 }));
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -94,6 +112,8 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
+  useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
   // COLL-C5 (03/10) : « Utilisation » lit la saison (temoin COLL-C5.utilisation).
   useCollectiviteChiffres: () => ({ data: null, error: null, isLoading: false }),
   useCollectiviteClub: () => mockFiche,
@@ -348,12 +368,13 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     const arbre = await rendre();
     expect(parTexte(arbre, 'AS Montrivage')).toBeUndefined();
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
-    expect(textes(arbre)).toContain('Attribuer un créneau à AS Montrivage');
-    // Le club est fixe : une seule puce, la sienne ; l installation se choisit.
+    // COLL-R-A7 (COL-005) : le plein écran relit le club sous sa question.
+    expect(textes(arbre)).toContain('Pour AS Montrivage');
+    // Le club est fixe : COLL-R-A7 (COL-005), plus d etape « Club » ; l installation se choisit.
     await appuyer(parTexte(arbre, 'Gymnase des Tilleuls'));
     await appuyer(parTexte(arbre, 'Suivant'));
-    expect(parTexte(arbre, 'AS Montrivage')).toBeDefined();
-    await appuyer(parTexte(arbre, 'Suivant'));
+    expect(parTexte(arbre, 'AS Montrivage')).toBeUndefined();
+    expect(parTexte(arbre, 'Tout le club')).toBeDefined();
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
@@ -363,22 +384,31 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     const attendu = expect.objectContaining({ endTime: '19:00', startTime: '17:30', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', attendu);
     await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
       club: 'as-montrivage', endTime: '19:00', startTime: '17:30', team: 'team-u13', weekday: 3,
     });
     expect(mockFiche.refetch).toHaveBeenCalled();
-    expect(textes(arbre)).not.toContain('Attribuer un créneau à AS Montrivage');
+    expect(arbre.root.findAllByType(Modal)).toHaveLength(0);
   });
 
-  // SAIS (08/10, T20 lot 1, capture T07b) — « Annuler » finissait coupé au bas de la feuille :
-  // elle peut désormais prendre 85 % de l écran (0,7 par défaut). ROUGE avant le lot.
-  it('SAIS : la feuille « Attribuer » peut prendre 85 % de l écran', async () => {
+  // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — au téléphone, « Attribuer un créneau à
+  // ce club » ouvre le plein écran des tunnels : le club est fixé, on commence par l'installation
+  // (5 étapes). ROUGE avant : la feuille du bas (SAIS, 85 %), 7 étapes dont « Club ».
+  it('COL-005 : plein écran, « Dans quelle installation ? », 5 étapes, sans feuille', async () => {
     const arbre = await rendre();
     mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
-    expect(mockFeuilles.at(-1)?.maxContentHeightRatio).toBe(0.85);
+    expect(mockFeuilles).toHaveLength(0);
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
+      headerVariant: 'focus',
+      stepCount: 5,
+      subtitle: 'Pour AS Montrivage',
+      title: 'Dans quelle installation ?',
+    }));
+    expect(textes(arbre)).toContain('Dojo · 1 équipe à la fois');
   });
 
   it('4. une Ville sans installation : on le dit, aucun formulaire', async () => {
@@ -388,6 +418,29 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     expect(textes(arbre)).toContain(
       'La Ville n’a encore aucune installation : ajoutez-en une, puis attribuez-y un créneau.',
     );
+    expect(mockInputProps).toHaveLength(0);
+    // COLL-R-A7 : dit dans le même plein écran, que la croix referme.
+    const gabarit = arbre.root.findByType(Modal).findByType(WizardStepLayout);
+    await appuyer({ props: { onPress: gabarit.props.onClose } });
+    expect(arbre.root.findAllByType(Modal)).toHaveLength(0);
+  });
+
+  it('CRA7F : installations en lecture, squelette dans le plein écran', async () => {
+    mockInstallations = { isLoading: true };
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
+    expect(arbre.root.findAll((n) => n.props.testID === 'season-slot-chargement').length)
+      .toBeGreaterThan(0);
+    expect(arbre.root.findAllByType(Modal)).toHaveLength(1);
+  });
+
+  it('CRA7F : lecture des installations refusée, Réessayer relance cette lecture', async () => {
+    const refetch = jest.fn();
+    mockInstallations = { error: new Error('Network Error'), isLoading: false, refetch };
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
+    await appuyer(parTexte(arbre, 'Réessayer'));
+    expect(refetch).toHaveBeenCalledTimes(1);
     expect(mockInputProps).toHaveLength(0);
   });
 

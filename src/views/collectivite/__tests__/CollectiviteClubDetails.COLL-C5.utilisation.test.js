@@ -84,11 +84,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
   useCollectiviteInstallations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
   }),
+  useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock(
@@ -205,3 +207,11 @@ describe('COLL-C5 — planche 37 : « Utilisation » sur la fiche d’un club', 
     expect(lus).toContain('Les chiffres de la saison n’ont pas pu être lus.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

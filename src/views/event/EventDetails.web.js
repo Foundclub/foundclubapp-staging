@@ -35,6 +35,8 @@ import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -98,6 +100,9 @@ import {
   resolveCallMode,
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
+import EventChildRegistration, {
+  EventChildRegistrationsForOrganizer,
+} from './components/EventChildRegistration';
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
@@ -115,6 +120,7 @@ import {
   hasPublishedConvocation,
   listMissingResponders,
   listPresentWithoutConvocation,
+  resolveCompositionClubId,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchTagSegments,
@@ -196,6 +202,7 @@ function EventDetails({ navigation, route }) {
   } = useTheme();
   const {
     canManageEvent,
+    isParentMode,
     userData,
   } = useAuth();
   const {
@@ -221,6 +228,7 @@ function EventDetails({ navigation, route }) {
   });
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isTrainingSettingsVisible, setIsTrainingSettingsVisible] = useState(false);
   const [trainingOpenLimitDraft, setTrainingOpenLimitDraft] = useState('');
   const creationCelebrationShownRef = useRef(false);
@@ -355,6 +363,12 @@ function EventDetails({ navigation, route }) {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId) || event?.team || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
+  // 🤝 AMIC-INVITE — le club de l'équipe composée, celui que les portes transmettent
+  // (le téléphone fait le même calcul, `matchPageModel.js`).
+  const compositionClubId = useMemo(
+    () => resolveCompositionClubId({ event, teamId: compositionTeamId }),
+    [compositionTeamId, event],
+  );
   const isReservation = normalizeTypeName(event?.type?.name).includes('reservation');
   const isTournamentEvent = normalizeTypeName(event?.type?.name).includes('tournoi');
   // D48 : le board decide d'apres cette etiquette s'il propose les commandes de
@@ -489,10 +503,15 @@ function EventDetails({ navigation, route }) {
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
   // FINITIONS16 · POINT 1 (T15) — la regle du telephone : un compte connecte qui n est ni
   // joueur ni membre d une equipe conviee (Papa Test, role Parent) n a rien a repondre.
-  const rienARepondre = resolveParticipationOffer({
+  // 👪 PAR-L11b (13/10) — un parent ('children') n a rien a repondre POUR LUI non plus : il
+  // inscrit ses enfants, par le meme bloc que le telephone (EventChildRegistration).
+  const offreDeParticipation = resolveParticipationOffer({
     isConvenedMember,
+    isParentMode,
     user: isSignedIn ? userData : null,
-  }) === 'none';
+  });
+  const offreAuxEnfants = offreDeParticipation === 'children';
+  const rienARepondre = ['children', 'none'].includes(offreDeParticipation);
   const afficherParticiper = !canEdit
     && !rienARepondre
     && !peutPasserPresentApresCoup
@@ -800,6 +819,14 @@ function EventDetails({ navigation, route }) {
   const openOpponentEdit = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [eventId, navigation]);
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » et « Choisir une autre
+  // place » ouvrent « Déplacer la séance » (la modification en mode « deplacer » ; un serveur
+  // d'avant y retrouve la modification).
+  const ouvrirDeplacer = useCallback((/** @type {string | undefined} */ proposalId) => {
+    navigation.navigate(RouteNames.EventEdit, {
+      eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+    });
+  }, [eventId, navigation]);
   // CRFERM (13/10, COL-010) — « Annuler l entraînement » du bandeau de fermeture : CETTE séance,
   // jamais la série (règle « déplacer A »), après confirmation, comme l annulation du téléphone.
   const annulerSeanceFermee = useMutation({
@@ -996,7 +1023,7 @@ function EventDetails({ navigation, route }) {
         canEdit: Boolean(options.canEdit),
         // COMPO-WEB — le club et la categorie voyagent comme sur le telephone
         // (renforts du club a l'ecran 1, format du terrain a l'ecran 4).
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         compositionIntent: options.compositionIntent || null,
         editorMode: 'event',
         editorSource: options.editorSource || null,
@@ -1054,12 +1081,12 @@ function EventDetails({ navigation, route }) {
       readOnly: false,
     });
   }, [
+    compositionClubId,
     compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
@@ -1121,7 +1148,7 @@ function EventDetails({ navigation, route }) {
       navigation.navigate(RouteNames.MatchCompositionBoard, {
         ...publishedBoardTarget,
         canEdit: true,
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         eventId,
         eventLabel: compositionEventLabel,
         eventTypeLabel: event?.type?.name || null,
@@ -1133,7 +1160,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
     navigation.navigate(RouteNames.MatchConvocationPublished, {
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       sport: compositionSport,
@@ -1141,12 +1168,12 @@ function EventDetails({ navigation, route }) {
       teamName: compositionEditorTeam?.name || null,
     });
   }, [
+    compositionClubId,
     compositionEditorTeam?.name,
     compositionEligiblePlayers,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,
@@ -1158,7 +1185,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.MatchCallUpSelection, {
       ...publishedBoardTarget,
       canEdit: true,
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       eventName: compositionEventLabel,
@@ -1168,10 +1195,10 @@ function EventDetails({ navigation, route }) {
       teamId: compositionTeamId,
     });
   }, [
+    compositionClubId,
     compositionEligiblePlayers,
     compositionEventLabel,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,
@@ -1238,7 +1265,10 @@ function EventDetails({ navigation, route }) {
   }, [eventId, queryClient, refetch]);
 
   const createParticipationMutation = useMutation({
-    mutationFn: () => createEventParticipation({
+    mutationFn: (acceptance = {}) => createEventParticipation({
+      ...(isDetectionEvent
+        ? { acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true }
+        : {}),
       event: eventId,
       user: userData?.documentId || '',
     }),
@@ -1423,6 +1453,10 @@ function EventDetails({ navigation, route }) {
       });
       return;
     }
+    if (isDetectionEvent) {
+      setIsJoinModalVisible(true);
+      return;
+    }
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
@@ -1431,7 +1465,17 @@ function EventDetails({ navigation, route }) {
         'Impossible de rejoindre cet événement.',
       ));
     }
-  }, [createParticipationMutation, isSignedIn, navigation, t]);
+  }, [createParticipationMutation, isDetectionEvent, isSignedIn, navigation, t]);
+
+  const handleConfirmDetectionParticipation = useCallback(async (acceptance) => {
+    setActionError('');
+    try {
+      await createParticipationMutation.mutateAsync(acceptance);
+      setIsJoinModalVisible(false);
+    } catch (joinError) {
+      setActionError(joinError?.message || t('eventDetails.unableToJoinThisEvent'));
+    }
+  }, [createParticipationMutation, t]);
 
   const handleCancelParticipation = useCallback(async () => {
     if (!activeParticipationRequestId) return;
@@ -2280,6 +2324,9 @@ function EventDetails({ navigation, route }) {
                       </button>
                     </div>
                   ) : null}
+                  {offreAuxEnfants && !canEdit ? (
+                    <EventChildRegistration event={event} navigation={navigation} />
+                  ) : null}
                   {afficherParticiper ? (
                     <button
                       disabled={createParticipationMutation.isPending}
@@ -2454,12 +2501,21 @@ function EventDetails({ navigation, route }) {
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
                   deux gestes pour qui peut modifier la séance ; un joueur lit le bandeau seul. La
                   fiche du site n en disait rien (écart de parité). */}
+              {/* COLL-R-DEPLACER (14/10, « D9 = b », planche P5v4-deplacer-ordi état D) : la
+                  proposition de la Ville, au-dessus du bandeau, pour qui peut déplacer la
+                  séance. */}
+              {canEdit && event?.relocationProposal ? (
+                <RelocationProposalCard
+                  onChooseOther={() => ouvrirDeplacer(event.relocationProposal?.documentId)}
+                  proposal={event.relocationProposal}
+                />
+              ) : null}
               {event?.facilityClosure ? (
                 <FacilityClosureBanner
                   closure={event.facilityClosure}
                   facilityType={event?.facility?.type}
                   onCancel={canEdit ? annulerLaSeanceFermee : undefined}
-                  onMove={canEdit ? openOpponentEdit : undefined}
+                  onMove={canEdit ? () => ouvrirDeplacer() : undefined}
                   pourUnMembre={!canEdit}
                 />
               ) : null}
@@ -2914,6 +2970,10 @@ function EventDetails({ navigation, route }) {
                       ))}
                     </div>
                   )}
+                  {/* 👪 PAR-L11c (14/10) point 3 — les enfants inscrits par leurs parents,
+                      a accepter ou refuser : le MEME bloc que le telephone (EventDetails.js),
+                      qui ne s affiche que s il y a au moins une inscription. */}
+                  <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
                 </>
               ) : null}
             </section>
@@ -3468,6 +3528,15 @@ function EventDetails({ navigation, route }) {
           </div>
         ) : null}
       </div>
+      <JoinEventModal
+        clubName={event?.team?.club?.name || event?.club?.name || ''}
+        errorMessage={actionError}
+        eventId={eventId || ''}
+        isSubmitting={createParticipationMutation.isPending}
+        isVisible={isJoinModalVisible}
+        onClose={() => setIsJoinModalVisible(false)}
+        onConfirm={handleConfirmDetectionParticipation}
+      />
     </ScreenContainer>
   );
 }

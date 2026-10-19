@@ -198,13 +198,16 @@ export const resolveClientResponderDecision = (event, user) => {
  * - sans compte : la porte de connexion ;
  * - un joueur, ou un MEMBRE d une equipe conviee (COACH1 : l encadrant membre repond) : il
  *   repond, ou demande sa place ;
- * - tout autre compte connecte (parent, compte sans role sportif, encadrant ou dirigeant
- *   d ailleurs) : rien a repondre.
- * @param {{ isConvenedMember?: boolean, user?: any }} params
- * @returns {'login' | 'answer' | 'none'} Ce que la page lui offre.
+ * - un PARENT : rien a repondre POUR LUI, mais il inscrit SES ENFANTS (PAR-L11b, D4 B d Adel du
+ *   12/10 : « Inscrire mes enfants » sur tout evenement public, `childRegistrationFlow.js`) ;
+ * - tout autre compte connecte (compte sans role sportif, encadrant ou dirigeant d ailleurs) :
+ *   rien a repondre.
+ * @param {{ isConvenedMember?: boolean, isParentMode?: boolean, user?: any }} params
+ * @returns {'login' | 'answer' | 'children' | 'none'} Ce que la page lui offre.
  */
-export const resolveParticipationOffer = ({ isConvenedMember = false, user = null }) => {
+export const resolveParticipationOffer = ({ isConvenedMember = false, isParentMode = false, user = null }) => {
   if (!user) return 'login';
+  if (isParentMode || user?.role?.name === USER_ROLES.parent) return 'children';
   if (user?.role?.name === USER_ROLES.player || isConvenedMember) return 'answer';
   return 'none';
 };

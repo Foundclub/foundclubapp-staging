@@ -67,11 +67,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   // COLL-C5 (03/10) : « Utilisation » lit la saison (temoin COLL-C5.utilisation).
   useCollectiviteChiffres: () => ({ data: null, error: null, isLoading: false }),
   useCollectiviteClub: () => mockFiche,
+  useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
   useCollectiviteInstallations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
   }),
+  useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock(
@@ -293,3 +295,11 @@ describe('VILLE-T18C — la fiche d’un club dit comment se comptent ses demand
       .toBe('Une demande « chaque semaine » compte une fois par date.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

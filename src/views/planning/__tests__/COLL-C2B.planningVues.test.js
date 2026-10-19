@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -61,6 +61,8 @@ let mockAuth;
 /** @type {any} */
 let mockDimensions = PORTRAIT;
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockDimensions,
@@ -462,16 +464,24 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 17); });
     await attendre();
     const lus = textes(arbre);
-    expect(lus).toContain('Mercredi 17:00 – 18:30');
-    // IPH09 : la confirmation n'apparaît qu'après les cinq étapes de saisie.
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
-    expect(textes(arbre)).toContain('Étape 1/6');
+    // COLL-R-A7 (COL-005) : le moment de la case, au sous-titre du plein écran (et l'installation).
+    expect(lus).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^Mercredi 17:00 – 18:30( · .+)?$/),
+    ]));
+    // IPH09 : la confirmation n'apparaît qu'au récapitulatif. COLL-R-A7 (COL-005) : depuis une
+    // heure libre, Jour, Horaires et Période sont sautés (la case les apporte) : 3 étapes.
+    // COLL-R-A7 (COL-005, planche P4v4-attribuer « Planning 3/3 ») : au téléphone, le tunnel
+    // s'ouvre en PLEIN ÉCRAN et son bouton dit « Attribuer le créneau » (la période est au
+    // récapitulatif). ROUGE avant : une feuille du bas, « Attribuer pour la saison ».
+    expect(arbre.root.findByType(Modal).props.presentationStyle).toBe('fullScreen');
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeUndefined();
+    expect(textes(arbre)).toContain('Étape 1/3');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
     await act(async () => { club.props.onPress(); });
     await attendre();
-    for (let etape = 1; etape <= 5; etape += 1) {
-      expect(textes(arbre)).toContain(`Étape ${etape}/6`);
+    for (let etape = 1; etape <= 2; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/3`);
       expect(attributeSeasonSlot).not.toHaveBeenCalled();
       const suivant = parTexte(arbre, 'Suivant');
       expect(suivant).toBeDefined();
@@ -481,11 +491,11 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
       // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
       await attendre();
     }
-    expect(textes(arbre)).toContain('Étape 6/6');
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
+    expect(textes(arbre)).toContain('Étape 3/3');
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeDefined();
     const attendu = expect.objectContaining({ endTime: '18:30', startTime: '17:00', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-ville', attendu);
-    await act(async () => { parTexte(arbre, 'Attribuer pour la saison').props.onPress(); });
+    await act(async () => { parTexte(arbre, 'Attribuer le créneau').props.onPress(); });
     await attendre();
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-ville', {
@@ -502,7 +512,9 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     expect(textes(arbre)).toContain('Libre toute la journée');
     await act(async () => { libre.props.onPress(); });
     await attendre();
-    expect(textes(arbre)).toContain('Dimanche 08:00 – 09:30');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^Dimanche 08:00 – 09:30( · .+)?$/),
+    ]));
   });
 
   it('un creneau attribue ⇒ « Modifier le creneau », « Retirer le creneau » (D67)', async () => {
@@ -521,6 +533,24 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
       'Ses entraînements déjà posés sur ce créneau restent : le club les garde ou les '
         + 'annule lui-même.',
     );
+  });
+
+  // 📐 COLL-R-A7 (13/10, COL-005, « modifier : pareil ») — au téléphone, « Modifier le créneau »
+  // ouvre le même plein écran que « Attribuer », en 4 étapes (jour, heures, période,
+  // récapitulatif). ROUGE avant : la feuille du bas.
+  it('COL-005 : « Modifier le créneau » s’ouvre en plein écran, 4 étapes', async () => {
+    const arbre = await rendre();
+    const { events, onReadOnlyEventPress } = grille();
+    await act(async () => {
+      onReadOnlyEventPress(events
+        .find((/** @type {any} */ evenement) => evenement.club?.name === 'US Ville B'));
+    });
+    await attendre();
+    await act(async () => { parTexte(arbre, 'Modifier le créneau').props.onPress(); });
+    await attendre();
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Quel jour ?', 'Étape 1/4']));
   });
 
   it('une seance du club ou une demande : ni Modifier ni Retirer', async () => {
@@ -576,3 +606,11 @@ describe('COLL-C2B planche 5 — un membre consulte, sans plus', () => {
     expect(textes(arbre)).toContain('Libre toute la journée');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

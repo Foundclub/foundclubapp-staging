@@ -33,6 +33,12 @@ const frTemoin = require('@/theme/strings/translations/fr');
 /** @type {any[]} */
 const mockHeureProps = [];
 
+// COLL-R-A7 (COL-005) : le formulaire importe le gabarit des tunnels (son plein écran) ; le fond
+// d'écran de ce gabarit (dégradé natif) reste hors de ce banc, comme dans les témoins d'écran.
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) { return children; },
+);
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
@@ -170,3 +176,11 @@ describe('SAIS lot 1 — « Attribuer un créneau » : un jour présélectionné
     expect(jourChoisi(arbre)).toEqual([`jour-${autre}`]);
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -35,7 +35,23 @@ const mockNavigate = jest.fn();
 const mockUseAuth = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
+const mockJoinModal = { props: null };
 
+jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => ({
+  __esModule: true,
+  default: (props) => { mockJoinModal.props = props; return null; },
+}));
+
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services :
+// double ici par son NOM, pour verifier QUI le voit (FINITIONS16 1 / PAR-L11b, plus bas).
+jest.mock('@/views/event/components/EventChildRegistration', () => {
+  const { makeTextDouble } = jest.requireActual('@/testSupport/textDouble');
+  return {
+    __esModule: true,
+    default: makeTextDouble('DOUBLURE_InscrireMesEnfants'),
+    EventChildRegistrationsForOrganizer: makeTextDouble('DOUBLURE_EnfantsInscritsOrganisateur'),
+  };
+});
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
@@ -366,6 +382,26 @@ const click = async (/** @type {any} */ root, /** @type {string} */ label) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockJoinModal.props = null;
+});
+
+describe('PARTREG — consentement a une detection sur le site', () => {
+  const joueur = { canManageEvent: () => false, userData: { documentId: 'player-1', role: { name: 'Joueur' } } };
+  test('Participer ouvre la declaration sans envoyer une demande', async () => {
+    const root = mountScreen({ auth: joueur, event: buildEvent({ type: { name: 'Détection' } }) });
+    await click(root, 'Participer');
+    expect(createEventParticipation).not.toHaveBeenCalled();
+    expect(mockJoinModal.props.isVisible).toBe(true);
+  });
+  test('la confirmation transmet la declaration et ferme la feuille apres succes', async () => {
+    const root = mountScreen({ auth: joueur, event: buildEvent({ type: { name: 'Détection' } }) });
+    await click(root, 'Participer');
+    await act(async () => { await mockJoinModal.props.onConfirm({ acceptRiskDeclaration: true }); });
+    expect(createEventParticipation).toHaveBeenCalledWith({
+      acceptRiskDeclaration: true, event: 'event-1', user: 'player-1',
+    });
+    expect(mockJoinModal.props.isVisible).toBe(false);
+  });
 });
 
 afterEach(() => {
@@ -562,6 +598,16 @@ describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant'
     expect(buttonWithText(root, 'Se connecter')).toBeUndefined();
   });
 
+  // 👪 PAR-L11b (13/10, D4 B) — sur le site aussi, le parent inscrit SES ENFANTS (meme bloc
+  // que le telephone).
+  test('PAR-L11b — Papa Test voit « Inscrire mes enfants » ; le joueur, non', () => {
+    monterEn(PAPA);
+    expect(screenText()).toContain('DOUBLURE_InscrireMesEnfants');
+
+    monterEn(JOUEUR_DEHORS);
+    expect(screenText()).not.toContain('DOUBLURE_InscrireMesEnfants');
+  });
+
   test('🔒 un joueur hors de l equipe garde « Participer » (il demande sa place)', () => {
     const root = monterEn(JOUEUR_DEHORS);
 
@@ -589,5 +635,33 @@ describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant'
     mountAsVisitor();
 
     expect(screenText()).toContain('Rejoindre cet événement');
+  });
+});
+
+// 👪 PAR-L11c (14/10) point 3 — SUR LE SITE, L ORGANISATEUR VOIT AUSSI « Enfants inscrits par
+// leurs parents » (Accepter / Refuser) : le MEME composant que le telephone, sous « Demandes en
+// attente ». Avant, le site ne le montait pas : un organisateur sur ordinateur ne voyait aucune
+// des demandes d enfants (design parent planche 9, E21 « Organisateur »).
+describe('PAR-L11c point 3 — la liste de l organisateur sur le site', () => {
+  const PAPA = {
+    documentId: 'compte-papa', firstname: 'Papa', lastname: 'Test', role: { name: 'Parent' },
+  };
+
+  test('🔴 l organisateur la voit, pour CET evenement', () => {
+    const root = mountAsManager();
+
+    expect(screenText()).toContain('DOUBLURE_EnfantsInscritsOrganisateur');
+    const liste = root.findAll((/** @type {any} */ node) => (
+      typeof node.type === 'function' && node.props?.eventId === 'event-1'
+    ));
+    expect(liste.length).toBeGreaterThan(0);
+  });
+
+  test('🔒 un visiteur, un parent : non', () => {
+    mountAsVisitor();
+    expect(screenText()).not.toContain('DOUBLURE_EnfantsInscritsOrganisateur');
+
+    mountScreen({ auth: { canManageEvent: () => false, userData: PAPA }, event: buildEvent() });
+    expect(screenText()).not.toContain('DOUBLURE_EnfantsInscritsOrganisateur');
   });
 });

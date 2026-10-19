@@ -1094,3 +1094,11 @@ test('FINITIONS-VILLE : le titre s’écrit une fois, l’en-tête de navigation
   expect(textes(arbre).filter((texte) => texte === 'Demander un créneau')).toHaveLength(1);
   expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image,
   Platform,
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +15,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { BREAKPOINTS } from '@/responsive/breakpoints';
 
 /**
  * Grammaires d'en-tete disponibles.
@@ -150,6 +152,8 @@ function WizardStepLayout({
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const siteEtroit = Platform.OS === 'web' && width < BREAKPOINTS.desktop;
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   // Un nom de grammaire inconnu retombe sur l'existant : un tunnel ne peut pas
   // perdre son en-tete a cause d'une faute de frappe.
@@ -235,6 +239,7 @@ function WizardStepLayout({
       // (paddingBottom ci-dessous) : on renonce au plancher du conteneur pour ne
       // pas cumuler deux fois insets.bottom sous les boutons du wizard.
       bottomInsetMode="edge-to-edge"
+      boundedHeight={siteEtroit}
       // D53 — le vide sous le bouton principal, signale par Adel sur « TOUS les
       // ecrans » du tunnel : 28 pt s'ajoutaient au retrait systeme, soit 62 pt
       // de blanc sous le CTA sur un telephone a encoche. On garde 12 — le meme
@@ -248,6 +253,7 @@ function WizardStepLayout({
         { paddingBottom: insets.bottom + 12 },
       ]}
       contentWidth={/** @type {any} */ ('readable')}
+      fillHeight={siteEtroit}
       // 🤖 ANDROIDBAR-6 — l'évitement du clavier est celui du ScreenContainer (posé à
       // l'écran, il connaît sa vraie position). Celui du gabarit vivait DANS le contenu,
       // sous la barre d'état : son décalage 0 laissait « Suivant » 54 dp SOUS le clavier
@@ -382,7 +388,7 @@ function WizardStepLayout({
             <TouchableOpacity
               accessibilityRole="button"
               onPress={onSkip}
-              style={Spaces.paddingVertical[8]}
+              style={[Spaces.paddingVertical[8], { justifyContent: 'center', minHeight: 44 }]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral300, Fonts.textCenter]}>
                 {skipLabel || t('teamWizard.actions.skipStep', 'Passer cette étape')}

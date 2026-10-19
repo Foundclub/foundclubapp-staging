@@ -49,6 +49,21 @@ export const getCollectiviteClub = async (collectiviteId, clubId) => {
   return response.data;
 };
 
+/**
+ * Couleur de ce club dans les plannings de cette Ville ; null revient a l'automatique.
+ * @param {{
+ * collectiviteId: string, clubId: string, planningColor: string | null
+ * }} params - Le choix.
+ * @returns {Promise<any>} Le choix accepte par le serveur.
+ */
+export const setClubPlanningColor = async ({ clubId, collectiviteId, planningColor }) => {
+  const response = await client.put(
+    `/collectivites/${collectiviteId}/clubs/${clubId}/planning-color`,
+    { data: { planningColor } },
+  );
+  return response.data;
+};
+
 // ─── COLL-CLUBS (01/10/2026) : INVITER UN CLUB ABSENT ──────────────────────────────────
 //
 // Le lien de la Ville, la demande « Par FoundClub » (AUCUN e-mail n est envoye : une demande

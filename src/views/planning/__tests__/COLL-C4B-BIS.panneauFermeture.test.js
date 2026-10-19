@@ -622,3 +622,11 @@ describe('SVF 4b — fermer A aussi dans le panneau de droite', () => {
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteInstallation', expect.anything());
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

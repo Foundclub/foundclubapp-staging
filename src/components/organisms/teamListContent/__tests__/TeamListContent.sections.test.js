@@ -13,6 +13,13 @@ import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee
 
 import TeamListContent from '../TeamListContent';
 
+jest.mock('@/domains/team/useParentTeams', () => ({
+  __esModule: true,
+  default: () => ({
+    childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+  }),
+}));
+
 // FILET E6 — la liste d'equipes rend QUATRE sections (invitations, demandes en
 // attente, mes equipes, autres equipes) et n'avait aucun test hors de la carte
 // « Nouvelle equipe ». Ce fichier fige d'abord le comportement ACTUEL, puis

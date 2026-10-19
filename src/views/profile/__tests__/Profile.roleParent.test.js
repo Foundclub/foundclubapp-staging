@@ -19,6 +19,8 @@ import Profile from '../Profile';
 
 /** @type {any} */
 let mockUserData;
+/** PAR-L12 — le mode parent d'un compte sportif (choix d'affichage, `useAuth`). */
+let mockIsParentMode = false;
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
@@ -56,6 +58,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     canEditClub: () => false,
     canManageTeam: () => false,
     freeUsageSummary: null,
+    isParentMode: mockIsParentMode,
     logoutMutation: { mutate: jest.fn() },
     refetchUserData: jest.fn(),
     subscriptionAccessLevel: 'free',
@@ -102,6 +105,10 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 jest.mock('@/services/auth/authService', () => ({
   deleteAccount: jest.fn(),
 }));
+
+// PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants : doublure commune
+// (`parent/__mocks__/useMesEnfantsEnBref.js`), « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 
 jest.mock(
   '@/components/templates/ScreenContainer',
@@ -181,6 +188,25 @@ const libellesDuMenu = async (role) => {
     .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim());
 };
 
+/**
+ * Monte « Mon compte » et rend l'arbre (pour lire un `testID`).
+ * @param {{ name: string, type: string }} role Le role du compte connecte.
+ * @returns {Promise<any>} L'arbre rendu.
+ */
+const monterLeMenu = async (role) => {
+  mockUserData = {
+    club: null, documentId: 'user-doc-1', firstname: 'Nadia', multisportClubs: [], role,
+  };
+  /** @type {any} */
+  let arbre;
+  await act(async () => {
+    arbre = renderer.create(
+      <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+    );
+  });
+  return arbre;
+};
+
 const ROLE_PARENT = { name: 'Parent', type: 'parent' };
 const ROLE_JOUEUR = { name: 'Joueur', type: 'joueur' };
 
@@ -217,5 +243,86 @@ describe('Profile — le profil d un Parent (PARENT)', () => {
   it('un joueur, lui, ne se presente pas comme Parent', async () => {
     const libelles = await libellesDuMenu(ROLE_JOUEUR);
     expect(libelles).not.toContain('Parent');
+  });
+});
+
+// PAR-L7 (13/10, design parent E02, decision D1 A d'Adel du 12/10) — LA FAMILLE D'ABORD.
+describe('PAR-L7 — « Mon compte » d un Parent commence par ses enfants', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+  const ORDRE_DU_PARENT = [
+    'Mes enfants', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
+    'Ma carte de collection',
+  ];
+
+  afterEach(() => {
+    useMesEnfantsEnBref.regler();
+    useMesEnfantsEnBref.appels.length = 0;
+  });
+
+  it('sa section s appelle « Ma famille et mon profil », dans l ordre de la planche', async () => {
+    const libelles = await libellesDuMenu(ROLE_PARENT);
+
+    expect(libelles).toContain('Ma famille et mon profil');
+    expect(libelles).not.toContain('Profil & activité');
+    expect(libelles.filter((libelle) => ORDRE_DU_PARENT.includes(libelle)))
+      .toEqual(ORDRE_DU_PARENT);
+  });
+
+  it('« Mes enfants » dit combien il en a (2), sans la pastille rouge des alertes', async () => {
+    useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 2 });
+    const arbre = await monterLeMenu(ROLE_PARENT);
+    // Le nœud HÔTE de la pastille (la doublure composite porte aussi le testID).
+    const nombres = arbre.root.findAll((noeud) => typeof noeud.type === 'string'
+      && noeud.props.testID === 'myChildren-nombre');
+
+    expect(nombres).toHaveLength(1);
+    expect(nombres[0].findAllByType(Text)
+      .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children)).join('')).toBe('2');
+    expect(arbre.root.findAllByProps({ testID: 'myChildren-compteur' })).toHaveLength(0);
+    expect(useMesEnfantsEnBref.appels.at(-1)).toEqual({ actif: true });
+  });
+
+  it('aucun enfant lu : pas de nombre (jamais un « 0 »)', async () => {
+    const arbre = await monterLeMenu(ROLE_PARENT);
+
+    expect(arbre.root.findAllByProps({ testID: 'myChildren-nombre' })).toHaveLength(0);
+  });
+
+  it('un JOUEUR garde son menu : son titre, son ordre, et rien n est lu pour lui', async () => {
+    useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 2 });
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    expect(libelles).toContain('Profil & activité');
+    expect(libelles).not.toContain('Ma famille et mon profil');
+    expect(libelles.indexOf('Mes enfants')).toBeGreaterThan(libelles.indexOf('Voir mon profil'));
+    expect(useMesEnfantsEnBref.appels.every((options) => options.actif === false)).toBe(true);
+  });
+});
+
+// PAR-L12 (13/10, design parent §2 bis, décision D6 A d'Adel du 12/10) — en MODE PARENT, un
+// compte sportif lit « Mon compte » comme un parent : sa famille d'abord. Son rôle ne change pas.
+describe('PAR-L12 — un joueur en mode parent lit « Mon compte » comme un parent', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+
+  afterEach(() => {
+    mockIsParentMode = false;
+    useMesEnfantsEnBref.appels.length = 0;
+  });
+
+  it('« Ma famille et mon profil », « Mes enfants » en tête, et ses enfants comptés', async () => {
+    mockIsParentMode = true;
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    expect(libelles).toContain('Ma famille et mon profil');
+    expect(libelles.indexOf('Mes enfants')).toBeLessThan(libelles.indexOf('Voir mon profil'));
+    expect(useMesEnfantsEnBref.appels.at(-1)).toEqual({ actif: true });
+  });
+
+  it('hors mode parent, son menu de joueur ne bouge pas', async () => {
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    expect(libelles).toContain('Profil & activité');
   });
 });

@@ -117,9 +117,12 @@ const feuille = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbr
 
 const attendre = async (/** @type {() => boolean} */ condition) => {
   for (let i = 0; i < 80 && !condition(); i += 1) {
+    // React Query notifie par setTimeout(0) : setImmediate peut epuiser les
+    // 80 tours avant cette notification sur Windows, meme sans charge.
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 0); }); });
   }
+  expect(condition()).toBe(true);
 };
 
 const monter = async () => {

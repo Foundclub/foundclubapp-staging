@@ -34,6 +34,13 @@ const mockTeamCompositionQuery = { data: null };
 // — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
 // doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
 // service (piege documente, deja paye plusieurs fois).
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({

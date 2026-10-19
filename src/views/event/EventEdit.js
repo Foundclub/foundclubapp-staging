@@ -50,6 +50,7 @@ import safeJsonParse from '@/utils/safeJsonParse';
 import EventTasksEditor from './components/EventTasksEditor';
 import EventTeamAudiencesEditor from './components/EventTeamAudiencesEditor';
 import PresenceOptionsFields from './components/PresenceOptionsFields';
+import DeplacerLaSeance from './deplacer/DeplacerLaSeance';
 import { getEventDescriptionExample } from './wizard/eventWizardDetectionUtils';
 
 // R5 (b) — LES EQUIPES DU CLUB SONT RELUES AU PLUS UNE FOIS PAR MINUTE.
@@ -194,11 +195,15 @@ const decrireLesChampsFautifs = (errors, traduire) => {
  * la premiere image, avant meme que l'ecran ne se dessine.
  * @param {any} route - La route qui ouvre l'ecran.
  * @param {(cle: string) => string} t - La traduction de la pile.
+ * COLL-R-DEPLACER (14/10) : en mode « deplacer », « Déplacer la séance ».
  * @returns {string} - « Modifier l'evenement », ou « Creer un evenement ».
  */
-export const getEventEditHeaderTitle = (route, t) => (
-  route?.params?.eventId ? t('eventEdit.titleEdit') : t('eventEdit.title')
-);
+export const getEventEditHeaderTitle = (route, t) => {
+  if (route?.params?.eventId && route?.params?.mode === 'deplacer') {
+    return t('deplacerSeance.titre', 'Déplacer la séance');
+  }
+  return route?.params?.eventId ? t('eventEdit.titleEdit') : t('eventEdit.title');
+};
 
 const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
   if (!dateValue || !startTime || !endTime || typeof getDateFromDateInput !== 'function') {
@@ -323,7 +328,7 @@ const eventSchema = Joi.object({
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} EventEdit component
  */
-function EventEdit({ navigation, route }) {
+function EventEditForm({ navigation, route }) {
   const { eventId } = route?.params || {};
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -1721,6 +1726,37 @@ function EventEdit({ navigation, route }) {
       </View>
     </ScreenContainer>
   );
+}
+
+/**
+ * COLL-R-DEPLACER A8 (14/10, COL-013) — LE MODE « DÉPLACER » de cet écran (aucune route neuve) :
+ * `route.params.mode === 'deplacer'` ouvre le tunnel « Déplacer la séance » (`as: 'ville'` : la
+ * Ville propose une place). Un serveur d'AVANT ce lot ne connaît pas la route des places : la
+ * modification de la séance, comme avant, avec son en-tête (la pile le cache en mode déplacer).
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
+ * @returns {import('react').ReactElement} Le tunnel, ou le formulaire.
+ */
+function EventEdit({ navigation, route }) {
+  const { t } = useTranslation();
+  const {
+    as, eventId, mode, proposalId,
+  } = route?.params || {};
+  const [formulaire, setFormulaire] = useState(false);
+  if (mode === 'deplacer' && eventId && !formulaire) {
+    return (
+      <DeplacerLaSeance
+        eventId={eventId}
+        navigation={navigation}
+        onIndisponible={() => {
+          navigation?.setOptions?.({ headerShown: true, headerTitle: t('eventEdit.titleEdit') });
+          setFormulaire(true);
+        }}
+        proposalId={proposalId || undefined}
+        viewer={as === 'ville' ? 'ville' : 'club'}
+      />
+    );
+  }
+  return <EventEditForm navigation={navigation} route={route} />;
 }
 
 export default EventEdit;

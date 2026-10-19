@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   formatBannerShortTime,
   formatBannerTitle,
@@ -66,8 +67,11 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
+import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
+import { peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
+import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -181,7 +185,7 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  highlighted?: boolean;
  *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
- *  subtitleLines?: 1 | 2;
+ *  subtitleLines?: number;
  *  tutorial?: any;
  * }} HomeCard
  */
@@ -407,14 +411,16 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
+    canUseParentMode,
     canUsePlayerMode,
     clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
     governedPublishingBlockReason,
+    isParentMode,
     isPlayerMode,
     nonPartnerCoachPublishingAccess,
-    setPlayerMode,
+    setDisplayMode,
     subscriptionAccessLevel,
     userData,
   } = auth;
@@ -460,13 +466,36 @@ function HomeHubContent({ auth, navigation, route }) {
   // LOT RÔLES (2026-09-28) — en MODE JOUEUR, l'accueil est celui d'un joueur :
   // tout ce qui suit (section Gérer, bandeau, cartes) se déduit de `roleKey`.
   // `userData` n'est pas réécrit, et les droits ne bougent pas (useAuth).
-  const roleKey = isPlayerMode ? 'player' : getUserRoleKey(roleName);
+  // PAR-L12 (13/10, décision D6 A d'Adel) — et en MODE PARENT (un sportif qui a des enfants),
+  // l'accueil est celui d'un parent : « Mes enfants » en tête, les mêmes cases que le parent.
+  /** @type {'player' | 'parent' | null} */
+  let modeActif = null;
+  if (isPlayerMode) modeActif = 'player';
+  else if (isParentMode) modeActif = 'parent';
+  const roleKey = modeActif || getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const isSuperAdmin = roleKey === 'superAdmin';
   // P0 — `getUserRoleKey` rend deja 'parent' (authUseCases.js:37) : le trou
   // n'etait pas la, il etait ici, ou personne ne lisait cette valeur.
   const isParent = roleKey === 'parent';
+  // PAR-L7 (13/10) — mes enfants en bref : les lectures de « Mes enfants », avec ses cles
+  // (l'ecran s'ouvrira deja rempli). REC17-001 : l'accueil n'en lit plus que DEUX choses, a-t-il
+  // des enfants (la carte d'un sportif, le mode parent) et leurs prenoms (le bandeau E25) ; la
+  // carte « Mes enfants » ne les nomme plus. Sur le role du COMPTE : les quatre roles du
+  // club peuvent avoir des enfants ; le super admin et un compte neuf, non (rien ne part).
+  const mesEnfants = useMesEnfantsEnBref({
+    actif: Boolean(userData?.documentId) && peutAvoirDesEnfants(getUserRoleKey(roleName)),
+  });
+  // PAR-L12 (E25) — le bandeau nomme les enfants qui attendent dans le mode parent.
+  const prenomsDesEnfants = useMemo(
+    () => mesEnfants.lignes.map((ligne) => ligne.prenom),
+    [mesEnfants.lignes],
+  );
+  // PAR-L12 (E27) — « Tu pratiques aussi un sport ? » : le premier appui d'un compte Parent.
+  const [feuillePratiqueOuverte, setFeuillePratiqueOuverte] = useState(false);
+  const ouvrirLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(true), []);
+  const fermerLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(false), []);
   // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
   // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
   const canShowSubscriptionExperience = isCoach || isPresident;
@@ -1612,6 +1641,10 @@ function HomeHubContent({ auth, navigation, route }) {
 
   const headBanner = useMemo(() => {
     const descriptors = selectBannerLines(homeCounters, roleKey, collectivitesATraiter);
+    // MARQUE-MAIRIE (14/10, COL-003, « D3- B » puis « 3- ok go » d Adel) — le prochain
+    // evenement attend une decision : le bandeau le dit (« En attente de la mairie »). Le serveur
+    // pose `pendingDecider` ; un serveur d avant ne le pose pas, et rien ne change.
+    const attente = pendingDeciderLabel(homeCounters.prochainEvenement?.pendingDecider, t);
     /**
      * @param {string} screen
      * @returns {() => void}
@@ -1698,6 +1731,7 @@ function HomeHubContent({ auth, navigation, route }) {
         prochainEvenement: {
           icon: 'calendar',
           label: homeCounters.prochainEvenement?.label,
+          notice: attente || undefined,
           onPress: () => handleOpenEvent(homeCounters.prochainEvenement?.id),
           value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt, maintenant),
         },
@@ -1725,6 +1759,7 @@ function HomeHubContent({ auth, navigation, route }) {
           onPress: () => handleOpenEvent(seance.id),
         }],
         label: t('homeHub.banner.coach.label', 'Ma prochaine séance'),
+        notice: pendingDeciderLabel(seance.pendingDecider, t) || undefined,
         subtitle: seance.opponent,
         tiles: [
           {
@@ -1758,6 +1793,7 @@ function HomeHubContent({ auth, navigation, route }) {
           onPress: () => handleOpenEvent(evenement.id),
         }],
         label: t('homeHub.banner.player.label', 'Ma semaine'),
+        notice: attente || undefined,
         subtitle: evenement.label,
         title: formatBannerTitle(evenement.startsAt),
         variant: 'event',
@@ -1811,6 +1847,7 @@ function HomeHubContent({ auth, navigation, route }) {
         label: t('homeHub.banner.player.answerSent'),
       } : undefined,
       label: t('homeHub.banner.player.label', 'Ma semaine'),
+      notice: attente || undefined,
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
       // ⛔ AUCUN LIBELLE NEUF : ce sont les trois phrases que la fiche de
@@ -2417,37 +2454,38 @@ function HomeHubContent({ auth, navigation, route }) {
     // jusqu a la fiche du club (`MyChildren.js`, `chercherUnClub`).
     // 🧪 `accueilParRole.test.js` compte les cases qui ouvrent la recherche de
     // clubs : il en exige UNE.
-    if (isParent) {
-      // 👨‍👧 PARENT P2 (10/09) — LA PORTE QUI MANQUAIT.
-      //
-      // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUN chemin vers
-      // « Mes enfants ». Il fallait passer par le menu du profil — pour
-      // quelqu un dont c est la SEULE raison d etre dans l app. Le plan le
-      // demandait deja (A3) : « Mes enfants » sur l accueil du parent.
-      //
-      // ⛔ Elle ne lit PAS la liste des enfants : ce serait une requete de plus
-      // sur le premier ecran de l app, pour un libelle. C est une PORTE, et
-      // l ecran qu elle ouvre sait dire s il est vide.
-      // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
-      // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
-      // (meme raison que « Mes reponses », posee par D57).
-      const carteMesEnfants = {
-        accentColor: Colors.primary500,
-        emphasis: 'primary',
-        icon: 'users',
-        key: 'search-my-children',
-        layout: 'full',
-        onPress: () => navigation.navigate(RouteNames.ProfileStack, {
-          screen: RouteNames.MyChildren,
-        }),
-        subtitle: t(
-          'homeHub.cards.search.myChildren.subtitle',
-          'Declare-les, corrige leur fiche, cherche-leur un club.',
-        ),
-        subtitleLines: 2,
-        title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
-      };
+    // 👨‍👧 LA PORTE « MES ENFANTS »
+    // PARENT P2 (10/09) — LA PORTE QUI MANQUAIT. 🖥️ Trouve sur emulateur : l accueil
+    // du parent n avait AUCUN chemin vers « Mes enfants ». Il fallait passer par le menu
+    // du profil — pour quelqu un dont c est la SEULE raison d etre dans l app.
+    //
+    // REC17-001 (decision d'Adel du 17/10, recette iPhone) — UNE SEULE ENTREE. La carte ne
+    // nomme plus les enfants : ni prenom, ni statut, ni fleche par enfant (les lignes de PAR-L7
+    // E01 sont retirees). Elle ouvre « Mes enfants », et c'est LA qu'on choisit l'enfant ; la
+    // meme carte avec 0, 1 ou 3 enfants. 🧪 `accueilMesEnfantsUneEntree.test.js` monte l'accueil.
+    // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
+    // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
+    // (meme raison que « Mes reponses », posee par D57).
+    // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
+    // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
+    const carteMesEnfants = /** @type {any} */ ({
+      accentColor: Colors.primary500,
+      emphasis: 'primary',
+      icon: 'users',
+      key: 'search-my-children',
+      layout: 'full',
+      onPress: () => navigation.navigate(RouteNames.ProfileStack, {
+        screen: RouteNames.MyChildren,
+      }),
+      subtitle: t(
+        'homeHub.cards.search.myChildren.subtitle',
+        'Declare-les, corrige leur fiche, cherche-leur un club.',
+      ),
+      subtitleLines: 2,
+      title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+    });
 
+    if (isParent) {
       // ⚠️ Pour poser une 2e case en tete : UN SEUL `unshift(a, b)`. Deux
       // `unshift` successifs sortent dans l ordre INVERSE, et le temoin, qui lit
       // la source comme du texte, reste VERT (vu a l ecran le 10/09).
@@ -2455,6 +2493,11 @@ function HomeHubContent({ auth, navigation, route }) {
 
       return cards.filter(estVisiblePourLeParent).filter(estAfficheeSurLAccueil);
     }
+
+    // PAR-L7 — un Joueur, un Entraineur ou un Dirigeant qui a des enfants gagne la MEME
+    // porte, EN FIN de « Rechercher » : le role decide de l'INSISTANCE (le parent l'a en
+    // tete), jamais de la capacite (« avoir des enfants » est une capacite, GO Adel 07/09).
+    if (mesEnfants.total > 0) cards.push(carteMesEnfants);
 
     return cards.filter(estAfficheeSurLAccueil);
   }, [
@@ -2464,6 +2507,7 @@ function HomeHubContent({ auth, navigation, route }) {
     homeCounters,
     isParent,
     makeTutorial,
+    mesEnfants,
     navigation,
     scrollDownLabel,
     scrollToLeagueSection,
@@ -2580,25 +2624,43 @@ function HomeHubContent({ auth, navigation, route }) {
         {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
         <CollectivitePorteRow />
         {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
+            PAR-L12 (E25) — trois positions : rôle du compte, joueur, parent. Le mode parent ne
+            s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27.
             RESA-L5A1 (13/10) — un compte qui gère un complexe lit, au même endroit, la bascule
-            « mode complexe / mode joueur » (planche RB), qui reprend ce bandeau ; cachée par
-            l'interrupteur `COMPLEXES_GERANT`. */}
+            « mode complexe / mode joueur » (planche RB), qui reprend ce bandeau (mêmes
+            propriétés depuis PAR-L12, RESA-RAT-APP 19/10) ; cachée par l'interrupteur
+            `COMPLEXES_GERANT`. */}
         {COMPLEXES_GERANT ? (
           <BasculeComplexe
             accountRoleKey={getUserRoleKey(roleName)}
+            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
             canUsePlayerMode={canUsePlayerMode === true}
             compteId={userData?.documentId || null}
-            isPlayerMode={isPlayerMode === true}
-            onChange={setPlayerMode}
+            displayMode={modeActif}
+            onChange={setDisplayMode}
+            onPratiqueAussi={ouvrirLaFeuillePratique}
+            prenoms={prenomsDesEnfants}
           />
         ) : (
           <PlayerModeBanner
             accountRoleKey={getUserRoleKey(roleName)}
+            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
             canUsePlayerMode={canUsePlayerMode === true}
-            isPlayerMode={isPlayerMode === true}
-            onChange={setPlayerMode}
+            displayMode={modeActif}
+            onChange={setDisplayMode}
+            onPratiqueAussi={ouvrirLaFeuillePratique}
+            prenoms={prenomsDesEnfants}
           />
         )}
+        <FeuillePratiqueAussi
+          isVisible={feuillePratiqueOuverte}
+          onClose={fermerLaFeuillePratique}
+          onDone={() => {
+            setFeuillePratiqueOuverte(false);
+            showBanner({ title: t('playerMode.sheet.done'), tone: 'success' });
+          }}
+          prenoms={prenomsDesEnfants}
+        />
         {headBanner ? (
           <HomeHeadBanner
             actions={headBanner.actions}

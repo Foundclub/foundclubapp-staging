@@ -1103,11 +1103,15 @@ function ClubDetails({ navigation, route }) {
               // facultatif, il est vide (ou partage) chez plusieurs partenaires, qui
               // partaient tous ensemble. Un ancien partenaire sans id : sa place.
               const sansId = sponsor.id === undefined || sponsor.id === null;
+              const restants = (club?.sponsor || []).filter((s, index) => (
+                sansId ? index !== sponsorIndex : s.id !== sponsor.id
+              ));
               const newClub = {
                 ...club,
-                sponsor: (club?.sponsor || []).filter((s, index) => (
-                  sansId ? index !== sponsorIndex : s.id !== sponsor.id
-                )),
+                // SPONSRV (14/10) : retirer le DERNIER s'annonce — le serveur garde la liste
+                // quand la mise a jour ne parle pas des partenaires (clubService, updateClub).
+                clearSponsors: restants.length === 0,
+                sponsor: restants,
               };
               updateClubMutation.mutate(newClub);
             }
@@ -4790,6 +4794,21 @@ function ClubDetails({ navigation, route }) {
                 : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
               variant="Secondary"
             />
+          ) : null}
+
+          {/* 👪 PARENT-FINITIONS 2 (design parent E10) — deux portes cote a cote, celle de la
+              place (l'enfant) et celle-ci (l'adulte) : la ligne dit laquelle est pour le parent.
+              Sans la porte de la place, il n'y a rien a distinguer. */}
+          {showClubInterestAction && showChildInterestAction ? (
+            <Text
+              style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
+              testID="club-details-adult-interest-hint"
+            >
+              {t(
+                'clubDetails.clubInterest.forYouHint',
+                'Pour toi : une prise de contact avec le club.',
+              )}
+            </Text>
           ) : null}
 
           {/* S02 — LA SECONDE PORTE, toujours en dernier et en Secondary : elle

@@ -1,6 +1,8 @@
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import BottomModalTextInput from '@/components/atoms/bottomModalTextInput/BottomModalTextInput';
+
 import PollCreationModal from '../PollCreationModal';
 
 // MSG1A (§3.4) — E6 : LE TEMOIN CARACTERISANT DE « CREER UN SONDAGE », ECRIT AVANT LE RESTYLE.
@@ -18,6 +20,15 @@ jest.mock('react-i18next', () => ({
     },
   }),
 }));
+
+jest.mock('@/components/atoms/bottomModalTextInput/BottomModalTextInput', () => {
+  const React = jest.requireActual('react');
+  const { TextInput: NativeInput } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: React.forwardRef((props, ref) => React.createElement(NativeInput, { ...props, ref })),
+  };
+});
 
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
@@ -117,6 +128,24 @@ const ecrire = (champ, valeur) => act(() => {
 });
 
 describe('MSG1A — PollCreationModal (caracterisation)', () => {
+  test('question et cinq options : champ de feuille et mode Android herite', async () => {
+    const { arbre, onSubmit } = monter();
+    for (let index = 0; index < 3; index += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await toucherLeTexte(arbre, '+ Ajouter une option');
+    }
+    expect(arbre.root.findAllByType(BottomModalTextInput)).toHaveLength(6);
+    expect(mockFeuilles[mockFeuilles.length - 1].androidKeyboardInputMode).toBeUndefined();
+    expect(mockFeuilles[mockFeuilles.length - 1].androidKeyboardBehavior).toBe('extend');
+    ecrire(champs(arbre)[0], 'Quel jour ?');
+    champs(arbre).slice(1).forEach((champ, index) => ecrire(champ, `Jour ${index + 1}`));
+    await toucherLeTexte(arbre, 'Envoyer le sondage');
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      options: ['Jour 1', 'Jour 2', 'Jour 3', 'Jour 4', 'Jour 5'],
+      question: 'Quel jour ?',
+    }));
+  });
+
   test('S1 — question vide : refus, et rien n est envoye', async () => {
     const { arbre, onSubmit } = monter();
     await toucherLeTexte(arbre, 'Envoyer le sondage');

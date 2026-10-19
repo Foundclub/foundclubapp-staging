@@ -10,11 +10,17 @@ import {
 // telephone (`EventAnswerButtons`) et le site (`EventDetails.web.js`). ROUGE avant : la
 // fonction n existait pas, chaque ecran avait la sienne, et celle du site oubliait le role.
 describe('FINITIONS16 1 — resolveParticipationOffer', () => {
-  test('🔴 un parent connecte : rien a repondre', () => {
+  // 👪 PAR-L11b (13/10) — CE TEMOIN EVOLUE AVEC LA DECISION D4 B d Adel (12/10, « tous les
+  // evenements publics ») : un parent n a toujours RIEN a repondre pour lui-meme (ni
+  // « Participer », ni la porte de connexion, FINITIONS13) ; ce qu on lui offre desormais,
+  // c est d inscrire SES ENFANTS. La valeur passe donc de 'none' a 'children' ; les deux
+  // lecteurs (EventAnswerButtons, EventDetails.web.js) la traitent comme 'none' pour lui, et
+  // le bloc « Inscrire mes enfants » la lit (EventChildRegistration.js).
+  test('🔴 un parent connecte : rien a repondre pour lui, il inscrit ses enfants (D4 B)', () => {
     expect(resolveParticipationOffer({
       isConvenedMember: false,
       user: { documentId: 'compte-papa', role: { name: USER_ROLES.parent } },
-    })).toBe('none');
+    })).toBe('children');
   });
 
   test('🔴 un compte sans role sportif (Authenticated) : rien a repondre', () => {

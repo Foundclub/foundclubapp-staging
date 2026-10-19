@@ -173,6 +173,49 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
 };
 
 /**
+ * COLL-R-DEPLACER (14/10, COL-013) — « Déplacer la séance » : pour UNE séance, l'état de chaque
+ * installation candidate (libre, villeDecidera, complet, ferme), au jour et aux heures demandés
+ * (à défaut ceux de la séance). Avec `facility` : cette installation sur `days` jours. Le
+ * serveur est le seul juge. Ici, plutôt que dans un service neuf : la fiche et la modification
+ * doublent déjà ce module (un module de service de plus ferait échouer leurs témoins en copie de
+ * travail).
+ * @param {string} eventId - documentId de la séance.
+ * @param {{ as?: 'ville', date?: string, days?: number, end?: string, facility?: string,
+ *   start?: string }} [params] - `as: 'ville'` : la Ville lit ses installations.
+ * @returns {Promise<any>} `{ event, closure, viewer, window, facilities | days }`.
+ */
+export const getRelocationOptions = async (eventId, params = {}) => {
+  const response = await client.get(`/events/${eventId}/relocation-options`, { params });
+  return response.data?.data ?? null;
+};
+
+/**
+ * La Ville PROPOSE une place pour une séance touchée par SA fermeture (« D9 = b ») : elle n'écrit
+ * jamais la séance ; le club accepte d'un appui.
+ * @param {string} eventId - documentId de la séance.
+ * @param {{ date: string, end: string, facility: string, start: string }} data - La place proposée.
+ * @returns {Promise<any>} La proposition (`status: 'pending'`).
+ */
+export const proposeRelocation = async (eventId, data) => {
+  const response = await client.post(`/events/${eventId}/relocation-proposals`, { data });
+  return response.data?.data ?? null;
+};
+
+/**
+ * Le club répond à la proposition de la Ville : `accept` (la séance, elle seule, passe à la place
+ * proposée ; ses joueurs sont prévenus) ou `refuse`.
+ * @param {string} proposalId - documentId de la proposition.
+ * @param {'accept' | 'refuse'} decision - La réponse.
+ * @returns {Promise<any>} La proposition, avec son nouvel état.
+ */
+export const decideRelocation = async (proposalId, decision) => {
+  const response = await client.post(`/relocation-proposals/${proposalId}/decision`, {
+    data: { decision },
+  });
+  return response.data?.data ?? null;
+};
+
+/**
  * Create multiple events sequentially.
  * Useful for récurrent creation to collect partial failures.
  * @param {FCEventForm[]} payloads

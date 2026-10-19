@@ -34,6 +34,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
+import BlocMesEnfants from '@/views/profile/parent/BlocMesEnfants';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -533,6 +534,10 @@ function SelfProfileUnified({ navigation }) {
           padding: 16,
         }}
         >
+          {/* PROFIL-CRAYON (14/10) — `zIndex` OBLIGATOIRE : la rangee avatar + nom,
+              rendue APRES le crayon, est dessinee AU-DESSUS et le nom le recouvrait.
+              Le doigt touchait le nom, jamais le crayon (3 appuis, aucun ecran).
+              Le crayon reste le premier enfant : l'ordre de lecture ne bouge pas. */}
           <TouchableOpacity
             accessibilityLabel={t('profile.actions.editIdentity', 'Modifier mon nom et ma photo')}
             accessibilityRole="button"
@@ -549,6 +554,7 @@ function SelfProfileUnified({ navigation }) {
               right: 12,
               top: 12,
               width: 34,
+              zIndex: 1,
             }}
           >
             <Image
@@ -678,6 +684,10 @@ function SelfProfileUnified({ navigation }) {
             </View>
           ))}
         </View>
+
+        {/* PAR-L7 (13/10, design parent E03) — un sportif qui a des enfants les retrouve ici,
+            sous son identité ; sans enfant, rien (`BlocMesEnfants` ne rend rien). */}
+        <BlocMesEnfants navigation={navigation} />
 
         {/* D65 — « Voir mon profil comme les autres ». Le bouton existait pour
             le joueur et l'entraineur (`SelfProfilePlayerCoach.js:629`) ; le
@@ -870,6 +880,7 @@ function SelfProfileUnified({ navigation }) {
                 accessibilityLabel={editedField.label}
                 keyboardType={editedField.keyboardType}
                 onChangeText={setDraftValue}
+                useBottomSheetInput
                 value={String(draftValue ?? '')}
               />
             )}

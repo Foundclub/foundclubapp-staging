@@ -87,6 +87,9 @@ const { CARTES_ACCUEIL_MASQUEES } = require('@/config/fonctionsMasquees');
 
 const horsInterrupteurs = (/** @type {string} */ clef) => !CARTES_ACCUEIL_MASQUEES.includes(clef);
 
+/** PAR-L7 — le repere ou la carte « Mes enfants » est construite, dans `searchCards`. */
+const REPERE_MES_ENFANTS = '// 👨‍👧 LA PORTE « MES ENFANTS »';
+
 const MANAGE = corpsDuMemo('manageSectionCards');
 const SEARCH = corpsDuMemo('searchCards');
 const LEAGUE = corpsDuMemo('leagueCards');
@@ -102,11 +105,15 @@ const SECTIONS = {
   managePresident: clefsDeCartes(entre(MANAGE, 'if (isPresident) {', 'if (isCoach) {')),
   searchBase: clefsDeCartes(entre(SEARCH, null, 'if (hasManageSection) {')),
   searchHorsStaff: clefsDeCartes(entre(SEARCH, 'if (!hasManageSection) {', '// Matchs amicaux')),
-  // PARENT — la carte d'appel est ECRITE en dernier mais LUE en premier
-  // (`unshift`). Son repere borne aussi `searchQueue` : sans cela, les quatre
+  // PAR-L7 (13/10, design parent E01) — la carte « Mes enfants » est construite UNE fois,
+  // entre les amicaux et la garde du parent : le parent la pose EN TETE (`unshift`), un compte
+  // sportif qui a des enfants EN FIN (`push`). Son repere borne `searchQueue` : sans cela, les
   // accueils d'origine compteraient une case de plus qu'ils n'en affichent.
+  mesEnfants: clefsDeCartes(entre(SEARCH, REPERE_MES_ENFANTS, 'if (isParent) {')),
+  // PARENT — ce que la garde du parent ajoute elle-meme (aucune case depuis L7 : elle pose
+  // `carteMesEnfants`, deja comptee ci-dessus).
   searchParent: clefsDeCartes(entre(SEARCH, 'if (isParent) {', null)),
-  searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', 'if (isParent) {')),
+  searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', REPERE_MES_ENFANTS)),
   searchStaff: clefsDeCartes(entre(SEARCH, 'if (hasManageSection) {', 'if (!hasManageSection) {')),
   // PERF (2026-09-06) — la section « Entrainement » : TROIS cases (corrige le
   // 2026-09-08 : elle en portait deux a l ecriture, elle en porte trois depuis),
@@ -119,9 +126,11 @@ const SECTIONS = {
 /**
  * L'accueil d'un role, section par section, dans l'ordre de l'ecran.
  * @param {'president' | 'coach' | 'player' | 'parent' | 'superAdmin'} role
+ * @param {{ avecEnfants?: boolean }} [compte] - PAR-L7 : le compte a au moins un enfant
+ *   (une fiche ou un compte relie). Sans enfant, l'accueil d'un role ne change pas.
  * @returns {string[][]}
  */
-const accueilDe = (role) => {
+const accueilDe = (role, { avecEnfants = false } = {}) => {
   const estStaff = role === 'president' || role === 'coach';
   const estAdmin = role === 'superAdmin';
 
@@ -169,11 +178,19 @@ const accueilDe = (role) => {
     // lit le JSX, lui, et empechera ce mensonge de revenir.
     return [
       gerer,
-      [...SECTIONS.searchParent, ...rechercher].filter(horsMasque),
+      [...SECTIONS.mesEnfants, ...SECTIONS.searchParent, ...rechercher].filter(horsMasque),
       [],
       [],
       SECTIONS.training,
     ];
+  }
+
+  // PAR-L7 (13/10, design parent E01) — un Joueur, un Entraineur ou un Dirigeant qui a des
+  // enfants gagne la MEME porte, EN FIN de « Rechercher » : le role decide de l'INSISTANCE
+  // (le parent l'a en tete), jamais de la capacite. Le super admin n'en a pas (le serveur ne
+  // lui ouvre pas les fiches) : `useMesEnfantsEnBref` ne lit rien pour lui.
+  if (avecEnfants && !estAdmin) {
+    return [gerer, [...rechercher, ...SECTIONS.mesEnfants], league, abonnement, SECTIONS.training];
   }
 
   // ⚠️ Ce temoin fabrique l ordre LUI-MEME a partir des corps de memo : il ne lit
@@ -386,6 +403,60 @@ describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', 
     ['player', 'coach', 'president', 'superAdmin'].forEach((role) => {
       expect(toutesLesCartes(/** @type {any} */ (role))).toContain('search-amicaux');
     });
+  });
+});
+
+// PAR-L7 (13/10, design parent E01, decision D1 A d'Adel du 12/10) — « Mes enfants » d'abord.
+describe('PAR-L7 — « Mes enfants » : chez le parent, et chez un sportif parent', () => {
+  it.each(['player', 'coach', 'president'])(
+    '%s avec des enfants : « Mes enfants » EN FIN de « Rechercher », rien d autre ne bouge',
+    (role) => {
+      const sans = accueilDe(/** @type {any} */ (role));
+      const avec = accueilDe(/** @type {any} */ (role), { avecEnfants: true });
+
+      expect(avec[1]).toEqual([...sans[1], 'search-my-children']);
+      expect(avec.filter((_, i) => i !== 1)).toEqual(sans.filter((_, i) => i !== 1));
+    },
+  );
+
+  it('le parent l a EN TETE, qu il ait deja declare un enfant ou non (c est sa porte)', () => {
+    expect(accueilDe('parent')[1][0]).toBe('search-my-children');
+    expect(accueilDe('parent', { avecEnfants: true })[1][0]).toBe('search-my-children');
+  });
+
+  it('le super admin ne la voit jamais', () => {
+    expect(accueilDe('superAdmin', { avecEnfants: true }).flat())
+      .not.toContain('search-my-children');
+  });
+
+  it('la couture : UNE carte, en tete chez le parent, en fin chez un sportif', () => {
+    const apresLeParent = SEARCH.slice(SEARCH.indexOf('if (isParent) {'));
+    const finDuParent = apresLeParent.indexOf('return cards.filter(estVisiblePourLeParent)');
+    const poseEnFin = apresLeParent
+      .indexOf('if (mesEnfants.total > 0) cards.push(carteMesEnfants);');
+
+    expect(apresLeParent).toContain('cards.unshift(carteMesEnfants);');
+    expect(finDuParent).toBeGreaterThan(-1);
+    expect(poseEnFin).toBeGreaterThan(finDuParent);
+    expect(SEARCH.match(/key: 'search-my-children'/g)).toHaveLength(1);
+  });
+
+  // REC17-001 (decision d'Adel du 17/10, recette iPhone) — UNE SEULE ENTREE : la carte ne nomme
+  // plus les enfants (les lignes de PAR-L7 E01, « une ligne d'enfant → sa fiche », sont retirees),
+  // sa phrase est la meme avec ou sans enfant, et un appui ouvre « Mes enfants ». Le RENDU est
+  // verifie ecran monte, avec 0, 1 et 3 enfants, par `accueilMesEnfantsUneEntree.test.js`.
+  it('REC17-001 : la carte ne nomme aucun enfant, elle ouvre « Mes enfants »', () => {
+    const carte = entre(SEARCH, REPERE_MES_ENFANTS, 'if (isParent) {');
+
+    expect(carte).toContain("'homeHub.cards.search.myChildren.subtitle'");
+    expect(carte).toContain('screen: RouteNames.MyChildren,');
+    expect(carte).not.toMatch(/\blignes: |lignesAAfficher|lignesDeLaCarte|mesEnfants\./);
+    expect(SOURCE).not.toContain('lignes={card.lignes}');
+  });
+
+  it('les lectures ne partent que pour un role du club (ni super admin ni compte neuf)', () => {
+    expect(SOURCE).toContain('const mesEnfants = useMesEnfantsEnBref({');
+    expect(SOURCE).toMatch(/actif: [^\n]*peutAvoirDesEnfants\(getUserRoleKey\(roleName\)\)/);
   });
 });
 

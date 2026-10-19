@@ -55,6 +55,8 @@ const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),
@@ -404,7 +406,7 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // COLL-R-A7 (COL-005) : « Période » est sautée, écrite au récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
 
@@ -457,3 +459,11 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     expect(textes(arbre)).toContain('Ce créneau est déjà retiré.');
   });
 });
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

@@ -48,6 +48,7 @@ import {
   searchCollectivitesForSignup,
   searchCommunes,
   setAdminCollectiviteActive,
+  setClubPlanningColor,
 } from './collectiviteService';
 
 /**
@@ -260,6 +261,23 @@ export const useCollectiviteClub = (collectiviteId, clubId, options = {}) => use
   staleTime: 60_000,
   ...options,
 });
+
+/**
+ * Relire la liste, les fiches et les plannings apres le choix accepte par la Ville.
+ * @returns {any} La mutation react-query.
+ */
+export const useSetClubPlanningColor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: setClubPlanningColor,
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        collectiviteClubsQueryKey(variables.collectiviteId),
+        ['planning'], ['season-slots'],
+      ].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    },
+  });
+};
 
 // ─── COLL-C5 (03/10/2026) : LES CHIFFRES DE LA VILLE ────────────────────────────────────
 

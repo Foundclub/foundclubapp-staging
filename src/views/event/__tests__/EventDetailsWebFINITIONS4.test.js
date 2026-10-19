@@ -21,6 +21,16 @@ const mockConvocationQuery = { data: null };
 const mockAttendanceQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
 
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+// Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
+jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,

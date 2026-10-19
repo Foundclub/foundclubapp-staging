@@ -12,7 +12,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import BottomModalTextInput from '@/components/atoms/bottomModalTextInput/BottomModalTextInput';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import { GRAS_FAMILLE, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
@@ -186,7 +186,7 @@ const QuestionInputField = memo(({
           /140
         </Text>
       </View>
-      <TextInput
+      <BottomModalTextInput
         autoCapitalize="sentences"
         autoCorrect={false}
         cursorColor={cursorColor}
@@ -246,7 +246,7 @@ const OptionInputRow = memo(({
   return (
     <View style={Spaces.gap[4]}>
       <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-        <TextInput
+        <BottomModalTextInput
           autoCapitalize="none"
           autoCorrect={false}
           cursorColor={cursorColor}
@@ -571,7 +571,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
   return (
     <BottomModal
-      androidKeyboardInputMode="adjustResize"
+      androidKeyboardBehavior="extend"
       close={handleClose}
       closeOnBackdropPress={surLeSite}
       contentContainerStyle={modalContentContainerStyle}

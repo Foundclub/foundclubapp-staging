@@ -1498,7 +1498,7 @@ const useMessaging = (currentChatId) => {
   /**
    * Start a whisper chat
    * @param {string[]} participants - The participants to start the chat with
-   * @returns {Promise<Chat | undefined>} The created chat or existing chat
+   * @returns {Promise<(Chat & { openingOutcome: 'created' | 'reused' | 'unknown' }) | undefined>}
    */
   const startWhisperChat = async (participants) => {
     const currentUserId = normalizeChatId(userData?.documentId || '');
@@ -1569,7 +1569,7 @@ const useMessaging = (currentChatId) => {
               messagingLogger.warn('Failed to unarchive chat on open', safeError?.message || safeError);
             }
           }
-          return existingChat;
+          return { ...existingChat, openingOutcome: 'reused' };
         }
       }
     } catch (error) {

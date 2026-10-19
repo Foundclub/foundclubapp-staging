@@ -23,6 +23,13 @@ const mockEventQuery = { data: null };
 // — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
 // doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
 // service (piege documente, deja paye plusieurs fois).
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
@@ -488,12 +495,51 @@ describe('COLL-C4B · le bandeau de la seance touchee par une fermeture', () => 
     expect(contient(racine, 'Les joueurs ne sont prévenus que si le club déplace ou annule.')).toBe(true);
   });
 
-  test('« Changer l heure ou le lieu » ouvre la modification de la seance', () => {
+  // COLL-R-DEPLACER (14/10, COL-013) : le geste ouvre « Déplacer la séance » (EventEdit en mode
+  // « deplacer » ; un serveur d'avant y retrouve la modification).
+  test('« Changer l heure ou le lieu » ouvre « Déplacer la séance »', () => {
     const racine = monter({ auth: ORGANISATEUR(), event: touchee() });
     const bouton = boutonAvecTitre(racine, 'Changer l’heure ou le lieu');
     expect(bouton).toBeTruthy();
     act(() => { bouton.props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventStack', { params: { eventId: 'event-1' }, screen: 'EventEdit' });
+    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'event-1', mode: 'deplacer' }, screen: 'EventEdit',
+    });
+  });
+
+  // COLL-R-DEPLACER (« D9 = b », planche P5v4-deplacer-ville-tel écran 5 b) : la proposition de la
+  // Ville, AU-DESSUS du bandeau, pour qui peut déplacer la séance (le serveur ne la rend qu'à lui).
+  test('la proposition de la Ville : la carte au-dessus du bandeau ; « Choisir une autre place » ouvre le tunnel', () => {
+    const proposition = {
+      closure: null,
+      collectivite: { name: 'Ville de Demo' },
+      date: '2031-01-10',
+      documentId: 'prop-1',
+      endTime: '19:30',
+      facility: { documentId: 'stade-ville', name: 'Stade municipal' },
+      fromFacility: { documentId: 'gym-ville', name: 'Gymnase des Tilleuls' },
+      startTime: '18:00',
+      status: 'pending',
+    };
+    const racine = monter({ auth: ORGANISATEUR(), event: { ...touchee(), relocationProposal: proposition } });
+    const carte = parTestID(racine, 'proposition-de-la-ville');
+    expect(carte).toHaveLength(1);
+    const ordre = racine.findAll((/** @type {any} */ noeud) => (
+      ['bandeau-fermeture', 'proposition-de-la-ville'].includes(noeud.props?.testID)
+    )).map((/** @type {any} */ noeud) => noeud.props.testID);
+    expect(ordre.indexOf('proposition-de-la-ville')).toBeLessThan(ordre.indexOf('bandeau-fermeture'));
+    act(() => { boutonAvecTitre(racine, 'Choisir une autre place').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'event-1', mode: 'deplacer', proposalId: 'prop-1' }, screen: 'EventEdit',
+    });
+  });
+
+  test('un joueur ne voit pas la proposition (le serveur ne la lui rend pas ; l écran ne la montre pas non plus)', () => {
+    const racine = monter({
+      auth: authPour(JOUEUR, false),
+      event: { ...touchee(), relocationProposal: { documentId: 'prop-1', status: 'pending' } },
+    });
+    expect(parTestID(racine, 'proposition-de-la-ville')).toHaveLength(0);
   });
 
   test('« Annuler l entrainement » ouvre l annulation de la fiche (la confirmation d aujourd hui)', () => {

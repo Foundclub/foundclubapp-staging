@@ -18,6 +18,11 @@ import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  ChildRegistrationCancelBanner,
+  ChildRegistrationCancelSheet,
+  useChildRegistrationCancel,
+} from '@/views/event/components/ChildRegistrationCancel';
 import { feedbackCardStyle, NewPill } from '@/views/profile/coachFeedback/CoachFeedbackList';
 import {
   newFeedbackKeys,
@@ -28,12 +33,16 @@ import {
   effacerLAnnonce,
   useAnnonceDeLaFiche,
 } from '@/views/profile/parent/annonceDeLaFiche';
+import { situationDeLAnnulation } from '@/views/profile/parent/annulationDeLaDemande';
+import BandeauDAnnulation from '@/views/profile/parent/BandeauDAnnulation';
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
+import ChildCardPage from '@/views/profile/parent/ChildCardPage';
 import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
 import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
 import CommentCaMarche from '@/views/profile/parent/CommentCaMarche';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
+import FeuilleDAnnulation from '@/views/profile/parent/FeuilleDAnnulation';
 import MenuDeLEnfant from '@/views/profile/parent/MenuDeLEnfant';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 
@@ -43,6 +52,7 @@ import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { useGetUserById } from '@/services/auth/authQueries';
 import {
+  useCancelClubInterestRequest,
   useGetMyClubInterestRequests,
 } from '@/services/clubInterestRequest/clubInterestRequestQueries';
 import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
@@ -50,6 +60,9 @@ import {
   useDeleteDeclaredChild,
   useGetMyDeclaredChildren,
 } from '@/services/declaredChild/declaredChildQueries';
+import {
+  useAllMyChildRegistrations,
+} from '@/services/eventChildRegistration/eventChildRegistrationQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
   useCancelParentLink,
@@ -370,6 +383,19 @@ function MyChildren({ route } = {}) {
     [mesDemandes?.data],
   );
 
+  // 👪 PAR-L11c (14/10) — « Ses événements » : TOUTES les inscriptions de mes enfants à des
+  // événements (une lecture, seulement quand une fiche est ouverte) ; la fiche garde celles du
+  // sien. Leur annulation : la feuille et le bandeau de l'événement (ChildRegistrationCancel).
+  const {
+    data: mesInscriptions,
+    error: erreurInscriptions,
+    refetch: relireLesInscriptions,
+  } = useAllMyChildRegistrations({ enabled: Boolean(route?.params?.childDocumentId) });
+  const annulationDInscription = useChildRegistrationCancel();
+  const ouvrirLEvenement = useCallback((inscription) => {
+    navigation.navigate(RouteNames.EventDetails, { eventId: inscription?.event?.documentId });
+  }, [navigation]);
+
   const relierUnCompte = useCallback((enfant) => {
     // Ecran pas encore route sur le site (webRouteExemptions) : le site EXPLIQUE au lieu
     // d atterrir en silence sur l accueil.
@@ -389,6 +415,11 @@ function MyChildren({ route } = {}) {
     navigation.push(RouteNames.MyChildren, { childDocumentId: enfant?.documentId });
   }, [navigation]);
 
+  // PAR-L13 (E29) — SA CARTE : une vue de la même route (`carte`), comme sa fiche.
+  const ouvrirSaCarte = useCallback((enfant) => {
+    navigation.push(RouteNames.MyChildren, { carte: 'voir', childDocumentId: enfant?.documentId });
+  }, [navigation]);
+
   const ouvrirFormulaire = useCallback((enfant) => {
     navigation.navigate(RouteNames.ChildEdit, enfant
       ? { childDocumentId: enfant.documentId }
@@ -403,9 +434,12 @@ function MyChildren({ route } = {}) {
     // ecran : un nom nu remonterait vers les PARENTS, il ne descend jamais chez
     // un voisin. `allerDansLOnglet` ecrit ce chemin UNE fois (defaut du 08/09,
     // cinq navigations mortes de la meme facon).
+    // 🔒 PARENT-FINITIONS 1 (14/10) — l'identifiant SEUL : sur le site, les parametres de la
+    // route passent dans l'adresse (`buildWebPath`), et le PRENOM d'un mineur finissait dans
+    // `…/search/clubs?childFirstname=Anissa` (journaux, historique). La recherche et la fiche
+    // du club ne lisent que `childDocumentId` (PAR-L4) et retrouvent le prenom par la fiche.
     allerDansLOnglet(navigation, RouteNames.SearchClubs, {
       childDocumentId: enfant?.documentId,
-      childFirstname: enfant?.firstname,
     });
   }, [navigation]);
 
@@ -468,6 +502,31 @@ function MyChildren({ route } = {}) {
     );
   }, [annulerDemande, t]);
 
+  // PAR-L8 (13/10, design parent E19, planche 8) — « Annuler la demande », depuis SA fiche : la
+  // demande dont la feuille de confirmation est ouverte, puis l'issue, dite dans un bandeau.
+  // Le serveur relit la demande sous le verrou de l'enfant : si le club l'a acceptée entre-temps,
+  // rien n'est annulé et on le dit. La fiche se relit dans tous les cas (son équipe a pu changer).
+  const {
+    isPending: annulationEnvoyee,
+    mutate: annulerLaDemande,
+    variables: demandeEnvoyee,
+  } = useCancelClubInterestRequest();
+  const [demandeAAnnuler, setDemandeAAnnuler] = useState(/** @type {any} */ (null));
+  const [issueDeLAnnulation, setIssueDeLAnnulation] = useState(/** @type {any} */ (null));
+  const fermerLAnnulation = useCallback(() => setDemandeAAnnuler(null), []);
+  const envoyerLAnnulation = useCallback((demande) => {
+    setDemandeAAnnuler(null);
+    setIssueDeLAnnulation(null);
+    const conclure = (situation) => {
+      setIssueDeLAnnulation({ demande, situation });
+      relireLesEnfants?.();
+    };
+    annulerLaDemande(demande?.documentId, {
+      onError: (erreur) => conclure(situationDeLAnnulation(erreur)),
+      onSuccess: () => conclure('annulee'),
+    });
+  }, [annulerLaDemande, relireLesEnfants]);
+
   // E05 — le menu « … » d'un enfant : la fiche dont il est ouvert, ou rien.
   const [menuDe, setMenuDe] = useState(/** @type {any} */ (null));
   const fermerLeMenu = useCallback(() => setMenuDe(null), []);
@@ -490,6 +549,17 @@ function MyChildren({ route } = {}) {
   // le site la sert deja. Les donnees : la liste deja lue. Placee apres tous les hooks.
   if (ficheOuverte) {
     const enfantOuvert = enfants.find((enfant) => enfant?.documentId === ficheOuverte);
+    // PAR-L13 (13/10, E28 et E29) — SA CARTE DE COLLECTION, une autre vue de la route :
+    // « nouvelle » juste après sa déclaration (ChildEdit), « voir » depuis sa fiche.
+    if (route?.params?.carte && enfantOuvert) {
+      return (
+        <ChildCardPage
+          enfant={enfantOuvert}
+          nouvelle={route.params.carte === 'nouvelle'}
+          onFini={() => navigation.goBack()}
+        />
+      );
+    }
     return (
       <ScreenContainer
         bgImage="bg2"
@@ -497,20 +567,42 @@ function MyChildren({ route } = {}) {
         contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
+          <BandeauDAnnulation
+            enfant={enfantOuvert}
+            onRetry={() => envoyerLAnnulation(issueDeLAnnulation?.demande)}
+            resultat={issueDeLAnnulation}
+          />
+          <ChildRegistrationCancelBanner
+            onRetry={annulationDInscription.retry}
+            outcome={annulationDInscription.outcome}
+          />
           <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
             {enfantOuvert ? (
               <DeclaredChildPage
+                annulationEnCours={annulationEnvoyee ? demandeEnvoyee : ''}
                 demandes={demandesDe(enfantOuvert?.documentId, lignesDeDemandes)}
                 demandesEnErreur={Boolean(erreurDemandes)}
                 enfant={enfantOuvert}
+                evenements={(Array.isArray(mesInscriptions) ? mesInscriptions : []).filter(
+                  (inscription) => inscription?.child?.documentId === enfantOuvert?.documentId,
+                )}
+                evenementsEnErreur={Boolean(erreurInscriptions)}
+                inscriptionEnAnnulation={annulationDInscription.pendingId}
+                onCancelRegistration={annulationDInscription.ask}
+                onCancelRequest={setDemandeAAnnuler}
                 onDelete={supprimerDepuisLaFiche}
                 onEdit={ouvrirFormulaire}
                 onGiveAccount={relierUnCompte}
+                onOpenCard={ouvrirSaCarte}
+                onOpenEvent={ouvrirLEvenement}
                 onRetryDemandes={relireLesDemandes ? () => relireLesDemandes() : undefined}
+                onRetryEvenements={relireLesInscriptions
+                  ? () => relireLesInscriptions()
+                  : undefined}
                 onSearchClub={chercherUnClub}
               />
             ) : (
@@ -520,6 +612,19 @@ function MyChildren({ route } = {}) {
             )}
           </WithDataWrapper>
         </ScrollView>
+        <FeuilleDAnnulation
+          demande={demandeAAnnuler}
+          enfant={enfantOuvert}
+          onClose={fermerLAnnulation}
+          onConfirm={envoyerLAnnulation}
+        />
+        <ChildRegistrationCancelSheet
+          eventName={String(annulationDInscription.toCancel?.event?.name || '').trim()
+            || t('childEventRegistration.sheet.defaultType')}
+          onClose={annulationDInscription.close}
+          onConfirm={annulationDInscription.confirm}
+          registration={annulationDInscription.toCancel}
+        />
       </ScreenContainer>
     );
   }

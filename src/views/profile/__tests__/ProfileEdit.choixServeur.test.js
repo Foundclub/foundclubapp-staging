@@ -65,6 +65,10 @@ const getAuthTokens = () => ({ token: 'jeton-test' });
 // figure pas dans le `transformIgnorePatterns` du projet : le charger casse Jest
 // avant meme le rendu. Seul `ScrollView` est utilise ici, et celui de
 // react-native se comporte pareil pour un test — c'est un conteneur.
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('react-native-gesture-handler', () => ({
   ScrollView: jest.requireActual('react-native').ScrollView,
 }));

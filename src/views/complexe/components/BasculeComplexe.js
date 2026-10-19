@@ -22,20 +22,26 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
  * qui joue (`PlayerModeBanner`), au même endroit. La bascule change ce qu'on voit, jamais ce qu'on
  * a le droit de faire.
  *   · Sans complexe (ou pendant la lecture) : le bandeau du mode joueur, inchangé.
- *   · En mode joueur (dirigeant ou coach) : son retour, inchangé (« Revenir en mode entraîneur »).
+ *   · En mode joueur ou parent : son retour, inchangé (« Revenir en mode entraîneur »).
  *   · Un dirigeant ou un coach : « Tu joues aussi, et tu gères … » (état 3), ou « Tu gères … ».
  *   · Les autres comptes (un joueur) : « Mode joueur » et « Revenir en mode complexe » (état 2).
  * Monté seulement quand `COMPLEXES_GERANT` est allumé (`HomeHub.js`).
+ * RESA-RAT-APP (19/10/2026) : PAR-L12 a donné trois positions au bandeau (rôle du compte, joueur,
+ * parent) ; la bascule reçoit et transmet ses propriétés telles quelles.
  * @param {object} props - Les propriétés du bandeau du mode joueur, et le compte.
  * @param {string} props.accountRoleKey - Le rôle du COMPTE (`getUserRoleKey`).
+ * @param {boolean} props.canUseParentMode - PAR-L12 : le mode parent a un sens (des enfants).
  * @param {boolean} props.canUsePlayerMode - Le mode joueur a un sens pour ce compte.
  * @param {string | null} props.compteId - Le documentId du compte (le mode se garde par compte).
- * @param {boolean} props.isPlayerMode - Le mode joueur est actif.
- * @param {(enabled: boolean) => void} props.onChange - Entrer dans le mode joueur, ou en revenir.
+ * @param {'player' | 'parent' | null} props.displayMode - Le mode ACTIF (rien = le rôle du compte).
+ * @param {(mode: 'player' | 'parent' | null) => void} props.onChange - Le mode choisi.
+ * @param {() => void} props.onPratiqueAussi - PAR-L12 : la feuille « Tu pratiques aussi un sport ? ».
+ * @param {string[]} props.prenoms - PAR-L12 : les prénoms de ses enfants.
  * @returns {import('react').ReactElement} Le bandeau.
  */
 function BasculeComplexe({
-  accountRoleKey, canUsePlayerMode, compteId, isPlayerMode, onChange,
+  accountRoleKey, canUseParentMode, canUsePlayerMode, compteId, displayMode, onChange,
+  onPratiqueAussi, prenoms,
 }) {
   const { t } = useTranslation();
   const {
@@ -61,13 +67,16 @@ function BasculeComplexe({
   const boutonPlein = ApplicationStyle.backgroundColor.primary500;
   const boutonSombre = ApplicationStyle.backgroundColor.primary700;
 
-  if (!complexe || isPlayerMode) {
+  if (!complexe || displayMode) {
     return (
       <PlayerModeBanner
         accountRoleKey={accountRoleKey}
+        canUseParentMode={canUseParentMode}
         canUsePlayerMode={canUsePlayerMode}
-        isPlayerMode={isPlayerMode}
+        displayMode={displayMode}
         onChange={onChange}
+        onPratiqueAussi={onPratiqueAussi}
+        prenoms={prenoms}
       />
     );
   }
@@ -162,7 +171,7 @@ function BasculeComplexe({
         {canUsePlayerMode
           ? bouton(
             t('complexeGerant.bascule.modeJoueur', 'Mode joueur'),
-            () => onChange(true),
+            () => onChange('player'),
             false,
             'complexe-bascule-mode-joueur',
           )

@@ -46,6 +46,7 @@ import {
   closureTagLabel,
   closureTouchesBlock,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { hoursLabel, shortDay } from '@/domains/relocation/relocationDisplay';
 import {
   capitalize,
   finDuCreneau,
@@ -251,10 +252,20 @@ const getPlanningQuery = ({
 };
 
 /**
+ * @typedef {import('@react-navigation/native').NavigationProp<{
+ *   EventStack: import('@react-navigation/native').NavigatorScreenParams<{
+ *     EventDetails: { eventId: string },
+ *     EventEdit: { as?: string, eventId: string, mode?: string },
+ *   }>,
+ * }>} PlanningEventNavigation
+ */
+
+/**
  * Dedicated fullscreen week-planning screen.
  * @returns {import('react').ReactElement}
  */
 function PlanningWeekFullscreen() {
+  /** @type {PlanningEventNavigation} */
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -349,7 +360,7 @@ function PlanningWeekFullscreen() {
   // PLANNING-PORTRAIT (01/10) — ET celui qui GERE l'installation : un agent de mairie dont
   // le compte est « joueur » lisait le texte du membre. C'est le serveur qui dit qu'il la
   // gere (ses collectivites, puis leurs installations), jamais le role du compte.
-  const { userData } = /** @type {any} */ (useAuth()) || {};
+  const { canManageEvent, userData } = /** @type {any} */ (useAuth()) || {};
   // COL-009 : `gestionConnue` — la reponse est sure (lectures revenues sans erreur).
   const {
     collectiviteId: managingCollectiviteId,
@@ -1018,7 +1029,9 @@ function PlanningWeekFullscreen() {
   };
   const clubsPourAttribuer = (Array.isArray(attachedClubs.data) ? attachedClubs.data : [])
     .filter((club) => club?.documentId && club?.name)
-    .map((club) => ({ documentId: club.documentId, name: club.name }));
+    .map((club) => ({
+      documentId: club.documentId, logoUrl: club.logo?.url || null, name: club.name,
+    }));
 
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
@@ -1069,11 +1082,21 @@ function PlanningWeekFullscreen() {
   const handleEventPress = useCallback((event) => {
     if (!event?.documentId) return;
 
+    // COLL-R-DEPLACER (14/10, COL-013, planche P5v4-deplacer-tel écran 1) — le bloc « à
+    // déplacer » de son club ouvre « Déplacer la séance » pour qui peut la déplacer ; les autres
+    // lisent la fiche. Forme imbriquée sur les deux plateformes : cet écran vit sur la RACINE
+    // (allerDansLOnglet.test.js), et le site en fait la même adresse (/events/:id/edit).
+    if (event?.raw?.closure && canManageEvent?.(event.raw)) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: event.documentId, mode: 'deplacer' }, screen: RouteNames.EventEdit,
+      });
+      return;
+    }
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
     });
-  }, [navigation]);
+  }, [canManageEvent, navigation]);
 
   // Ne s'ouvre que sur le bloc d'un autre club, et seulement pour celui qui gere.
   // COLL-C4B (02/10) — la plage fermee ou bloquee s ouvre aussi, pour la mairie seule.
@@ -1393,7 +1416,48 @@ function PlanningWeekFullscreen() {
   ) : null;
 
   let panneauRendu = null;
-  if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » et
+  // « Modifier » (« pareil », 4 etapes) s'ouvrent en PLEIN ECRAN (la fenetre du formulaire) ; le
+  // site en grand ecran garde son panneau de droite. Une heure libre : « Bloquer pour la Ville »
+  // reste sous la main, au bas du tunnel.
+  let tunnelPleinEcran = null;
+  const bloquerLaCase = () => {
+    fermerPanneau();
+    ouvrirLaFermeture({
+      date: panneau.date,
+      endTime: panneau.initial?.endTime,
+      facilityName: contextDetailLabel,
+      mode: 'bloquer',
+      startTime: panneau.initial?.startTime,
+    });
+  };
+  if (['attribuer', 'modifier'].includes(panneau?.type) && !isDesktop) {
+    tunnelPleinEcran = (
+      <SeasonSlotForm
+        actionSecondaire={panneau.type === 'attribuer' && panneau.date && peutAttribuer ? {
+          libelle: t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville'),
+          onPress: bloquerLaCase,
+        } : null}
+        ajouterUnClub={() => {
+          fermerPanneau();
+          /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+            collectiviteId: managingCollectiviteId, onglet: 'recherche',
+          });
+        }}
+        clubs={clubsPourAttribuer}
+        compact={panneau.type === 'attribuer' && panneau.compact !== false}
+        facilityId={facilityId}
+        guided
+        initial={panneau.initial}
+        key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+        lectureDesClubs={attachedClubs}
+        onCancel={fermerPanneau}
+        onDone={fermerPanneau}
+        pleinEcran
+        slot={panneau.type === 'modifier' ? panneau.creneau : null}
+      />
+    );
+  } else if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
     const titre = panneau.type === 'modifier'
       ? t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')
       : panneau.titre || t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau');
@@ -1401,12 +1465,19 @@ function PlanningWeekFullscreen() {
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
         <SeasonSlotForm
+          ajouterUnClub={() => {
+            fermerPanneau();
+            /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+              collectiviteId: managingCollectiviteId, onglet: 'recherche',
+            });
+          }}
           clubs={clubsPourAttribuer}
           compact={panneau.type === 'attribuer' && panneau.compact !== false}
           facilityId={facilityId}
           guided
           initial={panneau.initial}
           key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+          lectureDesClubs={attachedClubs}
           onCancel={fermerPanneau}
           onDone={fermerPanneau}
           slot={panneau.type === 'modifier' ? panneau.creneau : null}
@@ -1414,16 +1485,7 @@ function PlanningWeekFullscreen() {
         {/* COLL-C4B (02/10) — une heure libre : « Bloquer pour la Ville », deja rempli (P5v2). */}
         {panneau.type === 'attribuer' && panneau.date && peutAttribuer ? (
           <Button
-            onPress={() => {
-              fermerPanneau();
-              ouvrirLaFermeture({
-                date: panneau.date,
-                endTime: panneau.initial?.endTime,
-                facilityName: contextDetailLabel,
-                mode: 'bloquer',
-                startTime: panneau.initial?.startTime,
-              });
-            }}
+            onPress={bloquerLaCase}
             title={t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville')}
             variant="Secondary"
           />
@@ -1485,6 +1547,36 @@ function PlanningWeekFullscreen() {
     });
   };
 
+  // COLL-R-DEPLACER (14/10) — la fermeture qui touche le bloc ouvert (la plage du serveur, ses
+  // jours), et la proposition de place de la Ville encore en attente.
+  const idDeLaFermeture = readOnlyBlock?.raw?.closure?.documentId || null;
+  const fermetureTouchee = idDeLaFermeture
+    ? fermeturesDuServeur.find(
+      (/** @type {any} */ une) => une?.documentId === idDeLaFermeture,
+    ) || null
+    : null;
+  let fermetureDuBloc = null;
+  if (readOnlyBlock?.raw?.closure && !fermetureTouchee) {
+    fermetureDuBloc = t(
+      'deplacerSeance.ville.toucheeSansJours',
+      'Touchée par une fermeture de la Ville',
+    );
+  } else if (fermetureTouchee) {
+    const jours = closureDaysLabel(t, fermetureTouchee, { long: true });
+    const unJour = !fermetureTouchee.endDate
+      || fermetureTouchee.endDate === fermetureTouchee.startDate;
+    fermetureDuBloc = t('deplacerSeance.ville.touchee', 'Touchée par la fermeture {{jours}}', {
+      ...SANS_ECHAPPEMENT,
+      jours: unJour
+        ? t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
+          ...SANS_ECHAPPEMENT, jour: jours,
+        })
+        : jours,
+    });
+  }
+  const propositionDuBloc = readOnlyBlock?.raw?.relocationProposal?.status === 'pending'
+    ? readOnlyBlock.raw.relocationProposal
+    : null;
   // La fiche d un bloc (SPEC §2 C, D15) : une feuille sur telephone, un panneau a droite sur
   // ordinateur (design P5-semaine-ordi : la semaine reste visible).
   const ficheDuBloc = (
@@ -1503,6 +1595,56 @@ function PlanningWeekFullscreen() {
             getPlanningTimeLabel(readOnlyBlock),
           ].filter(Boolean).join(' · ')}
         </Text>
+        {/* COLL-R-DEPLACER (14/10, « D9 = b », planche P5v4-deplacer-ville-tel, 1 b et 6 b) : */}
+        {/* la fiche dit ENFIN la fermeture qui touche la séance, et la Ville qui gère peut */}
+        {/* proposer une autre place (le serveur lui donne `eventId`) ; une proposition se lit. */}
+        {fermetureDuBloc ? (
+          <View
+            style={{
+              backgroundColor: withAlpha(Colors.warning500, 0.12),
+              borderColor: withAlpha(Colors.warning500, 0.45),
+              borderRadius: 12,
+              borderWidth: 1,
+              gap: 2,
+              padding: 12,
+            }}
+            testID="planning-fiche-fermeture"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{fermetureDuBloc}</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {propositionDuBloc
+                ? t(
+                  'deplacerSeance.ville.propositionEnvoyee',
+                  'Proposition envoyée : {{lieu}} · {{jour}} · {{heures}}',
+                  {
+                    ...SANS_ECHAPPEMENT,
+                    heures: hoursLabel(propositionDuBloc.startTime, propositionDuBloc.endTime),
+                    jour: shortDay(propositionDuBloc.date),
+                    lieu: propositionDuBloc.facility?.name || '',
+                  },
+                )
+                : t(
+                  'deplacerSeance.ville.aDeplacerParLeClub',
+                  'À déplacer par le club. Vous pouvez lui proposer une place.',
+                )}
+            </Text>
+          </View>
+        ) : null}
+        {peutAttribuer && readOnlyBlock.raw?.eventId && readOnlyBlock.raw?.closure ? (
+          <Button
+            onPress={() => {
+              const proposer = {
+                as: 'ville', eventId: readOnlyBlock.raw.eventId, mode: 'deplacer',
+              };
+              setReadOnlyBlock(null);
+              navigation.navigate(RouteNames.EventStack, {
+                params: proposer, screen: RouteNames.EventEdit,
+              });
+            }}
+            title={t('deplacerSeance.ville.proposer', 'Proposer une autre place')}
+            variant="Primary"
+          />
+        ) : null}
         {/* COLL-C2B (02/10) — design P5-jour, etat 2 : l ORIGINE de la place (contrat C2A §7). */}
         {/* COLL-C4A2 — « Ecrire aux dirigeants » (D73) : la mairie ecrit en prive au club qui */}
         {/* occupe ce bloc. G4 : la fenetre du bas est hors navigation, l ecran passe la sienne. */}
@@ -2076,6 +2218,7 @@ function PlanningWeekFullscreen() {
       >
         {ficheDeFermeture}
       </BottomModal>
+      {tunnelPleinEcran}
     </ScreenContainer>
   );
 }

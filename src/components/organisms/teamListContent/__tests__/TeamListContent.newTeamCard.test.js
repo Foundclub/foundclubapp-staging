@@ -7,6 +7,13 @@ import '@/theme/strings';
 
 import TeamListContent from '../TeamListContent';
 
+jest.mock('@/domains/team/useParentTeams', () => ({
+  __esModule: true,
+  default: () => ({
+    childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+  }),
+}));
+
 // Filet du lot L10-C (docs/STRATEGIE_PAYWALL_2026_08_01.md §2.3) : la carte
 // « Nouvelle équipe » est un POINT D'ENTREE. Quand l'app sait deja que le quota
 // gratuit est epuise, elle doit GRISER + ETIQUETER avant l'action, et l'appui

@@ -36,6 +36,12 @@ const frTemoin = require('@/theme/strings/translations/fr');
 /** @type {any[]} */
 const mockHeureProps = [];
 
+// COLL-R-A7 (COL-005) : le formulaire importe le gabarit des tunnels (son plein écran) ; le fond
+// d'écran de ce gabarit (dégradé natif) reste hors de ce banc, comme dans les témoins d'écran.
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) { return children; },
+);
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
@@ -173,14 +179,17 @@ const puce = async (arbre, libelle) => {
   await tours();
 };
 const suivant = (arbre) => presser(arbre, 'Suivant');
+const textesLus = (arbre) => arbre.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
 const versHeures = async (arbre) => { await suivant(arbre); await suivant(arbre); await suivant(arbre); };
-const versRecap = async (arbre) => { await suivant(arbre); await suivant(arbre); };
+// 📐 COLL-R-A7 (13/10, COL-005, D4 A) : « Période » n'a rien à choisir ⇒ sautée, écrite au
+// récapitulatif. Des horaires au récapitulatif : UN « Suivant » (il en fallait deux).
+const versRecap = async (arbre) => { await suivant(arbre); };
 
 describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
-  test('six étapes, valeurs conservées au retour, équipe facultative et confirmation unique', async () => {
+  test('cinq étapes (Période au récapitulatif), valeurs conservées au retour, équipe facultative et confirmation unique', async () => {
     const onDone = jest.fn();
     const arbre = await monter({ onDone });
-    expect(etape(arbre)).toBe('Étape 1/6');
+    expect(etape(arbre)).toBe('Étape 1/5');
     expect(champ(arbre, 'Début')).toBeUndefined();
     await suivant(arbre);
     await puce(arbre, 'U13');
@@ -194,11 +203,13 @@ describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
     await choisirHeure(arbre, 'Début', '17:30');
     await choisirHeure(arbre, 'Fin', '19:00');
     await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 5/5');
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
     await presser(arbre, 'Retour');
     expect(champ(arbre, 'Début').props.value).toBe('17:30');
     await versRecap(arbre);
-    expect(etape(arbre)).toBe('Étape 6/6');
+    expect(etape(arbre)).toBe('Étape 5/5');
+    expect(textesLus(arbre)).toContain('Toute la saison · 1 sept. – 30 juin');
     expect(champ(arbre, 'Début')).toBeUndefined();
     await presser(arbre, 'Attribuer le créneau');
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
@@ -223,12 +234,15 @@ describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
   test('premier retour ferme sans mutation ; le planning conserve ses heures préremplies', async () => {
     const onCancel = jest.fn();
     const arbre = await monter({ compact: true, initial: { endTime: '19:30', startTime: '18:00', weekday: 3 }, onCancel });
+    expect(etape(arbre)).toBe('Étape 1/3');
     await presser(arbre, 'Retour');
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
-    await versHeures(arbre);
+    // COLL-R-A7 : depuis une heure libre du planning, Jour et Horaires n'ont rien à choisir.
+    await suivant(arbre);
+    await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 3/3');
     expect(champ(arbre, 'Début')).toBeUndefined();
-    await versRecap(arbre);
     await presser(arbre, 'Attribuer pour la saison');
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       club: 'basket', endTime: '19:30', startTime: '18:00', weekday: 3,
@@ -252,7 +266,10 @@ describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
     expect(jourChoisi(arbre)).toEqual(['jour-2']);
     await suivant(arbre);
     await choisirHeure(arbre, 'Fin', '20:00');
-    await versRecap(arbre);
+    // « Modifier » garde ses 4 étapes : la période s'y CHOISIT (Du, Au, À partir du).
+    await suivant(arbre);
+    await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 4/4');
     await presser(arbre, 'Enregistrer');
     expect(modifySeasonSlot).toHaveBeenCalledWith('slot-1', expect.objectContaining({ endTime: '20:00', startTime: '17:30', weekday: 2 }));
     expect(modifySeasonSlot.mock.calls[0][1]).not.toHaveProperty('club');
@@ -285,7 +302,7 @@ test('IPH09 : changement de club efface l’équipe, choix de l’installation d
     clubs: [{ documentId: 'basket', name: 'Montrivage Basket' }, { documentId: 'football', name: 'Montrivage FC' }],
     facilities: [{ documentId: 'salle-t18', name: 'Salle' }, { documentId: 'terrain', name: 'Terrain' }],
   });
-  expect(etape(arbre)).toBe('Étape 1/7');
+  expect(etape(arbre)).toBe('Étape 1/6');
   expect(bouton(arbre, 'Suivant').props.disabled).toBe(true);
   await puce(arbre, 'Salle');
   await suivant(arbre);
@@ -352,7 +369,7 @@ describe('COLL-R-A6 — COL-018 : ouvert depuis une case, le jour et les heures 
 
   test('étape 1 (le club) puis étape 2 (l’équipe) : « Mercredi · 17:00 – 18:30 »', async () => {
     const arbre = await monter({ initial: DE_LA_CASE });
-    expect(etape(arbre)).toBe('Étape 1/6');
+    expect(etape(arbre)).toBe('Étape 1/5');
     expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
     await suivant(arbre);
     expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
@@ -363,3 +380,55 @@ describe('COLL-R-A6 — COL-018 : ouvert depuis une case, le jour et les heures 
     expect(lus(arbre).some((texte) => /· \d\d:\d\d – \d\d:\d\d$/.test(texte))).toBe(false);
   });
 });
+
+// 📐 COLL-R-A7 (13/10/2026, COL-005, décision d'Adel D4 A, planche P4v4-attribuer validée) —
+// une étape sans rien à choisir est sautée. ROUGES avant : la fiche d'un club passait par une
+// étape « Club » à une seule puce (7 étapes) ; depuis le planning, « Changer l'heure » menait à
+// une étape « Horaires » sans champ (le mode compact les cachait).
+describe('COLL-R-A7 — COL-005 : les étapes sans choix sont sautées', () => {
+  const INSTALLATIONS = [
+    { documentId: 'salle-t18', name: 'Salle' },
+    { documentId: 'terrain', name: 'Terrain' },
+    { documentId: 'dojo', name: 'Dojo' },
+  ];
+
+  test('fiche d’un club (3 installations) : 5 étapes, sans « Club » ; l’équipe suit l’installation', async () => {
+    const arbre = await monter({ facilities: INSTALLATIONS, fixedClubId: 'basket' });
+    expect(etape(arbre)).toBe('Étape 1/5');
+    await puce(arbre, 'Salle');
+    await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 2/5');
+    expect(arbre.root.findAll((n) => n.props.libelle === 'Tout le club')[0].props.actif).toBe(true);
+    expect(arbre.root.findAll((n) => n.props.libelle === 'Montrivage Basket')).toHaveLength(0);
+  });
+
+  test('fiche d’un club, Ville à une installation : 4 étapes', async () => {
+    const arbre = await monter({ facilities: [INSTALLATIONS[0]], fixedClubId: 'basket' });
+    expect(etape(arbre)).toBe('Étape 1/4');
+  });
+
+  test('planning, complet : « Changer l’heure » rouvre Jour et Horaires, les heures de la case gardées', async () => {
+    previewFacilitySeasonSlot.mockResolvedValue({
+      data: {
+        capacity: 1, needsConfirmation: true, occupants: [], teamsAfter: 2,
+      },
+    });
+    const arbre = await monter({ compact: true, initial: { endTime: '19:30', startTime: '18:00', weekday: 3 } });
+    await suivant(arbre);
+    await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 3/3');
+    await presser(arbre, 'Changer l’heure');
+    expect(etape(arbre)).toBe('Étape 4/5');
+    expect(champ(arbre, 'Début').props.value).toBe('18:00');
+    await presser(arbre, 'Retour');
+    expect(jourChoisi(arbre)).toEqual(['jour-3']);
+  });
+});
+
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonMock({ children }) { return children; },
+);
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));

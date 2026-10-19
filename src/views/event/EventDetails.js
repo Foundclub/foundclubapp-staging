@@ -56,6 +56,7 @@ import {
   resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
   resolveParticipationFlow,
+  resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import {
   canManageCompositionForClub,
@@ -77,6 +78,7 @@ import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -176,6 +178,9 @@ import {
   resolveAttendanceWindow,
   resolveCallMode,
 } from './attendance/attendanceCallModel';
+import EventChildRegistration, {
+  EventChildRegistrationsForOrganizer,
+} from './components/EventChildRegistration';
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
@@ -201,6 +206,7 @@ import {
   hasPublishedConvocation,
   listMissingResponders,
   listPresentWithoutConvocation,
+  resolveCompositionClubId,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchTagSegments,
@@ -849,6 +855,7 @@ function EventDetails({ navigation, route }) {
     canManageEvent,
     freeUsageSummary,
     getSubscriptionAccessLevelForClub,
+    isParentMode,
     subscriptionAccessLevel,
     userData,
   } = useAuth();
@@ -2711,6 +2718,23 @@ function EventDetails({ navigation, route }) {
     // jamais.
   }, [event, eventId, navigation, queryClient, t]);
 
+  // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » du bandeau, et « Choisir
+  // une autre place » de la proposition de la Ville, ouvrent « Déplacer la séance » (la
+  // modification en mode « deplacer » : aucune route neuve ; un serveur d'avant y retrouve la
+  // modification). Un stage ou un tournoi garde le refus de « Modifier » (`handleEditEvent`).
+  const handleMoveEvent = useCallback((/** @type {string | undefined} */ proposalId) => {
+    if (!getEventEditSupport(event).isSupported) {
+      handleEditEvent();
+      return;
+    }
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        eventId, mode: 'deplacer', ...(typeof proposalId === 'string' ? { proposalId } : {}),
+      },
+      screen: RouteNames.EventEdit,
+    });
+  }, [event, eventId, handleEditEvent, navigation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
     if (!teamDocumentId) return;
@@ -3008,7 +3032,9 @@ function EventDetails({ navigation, route }) {
     });
   }, [event?.documentId, mutations.respondToEventRsvpMutation]);
 
-  const handleConfirmParticipation = useCallback(async () => {
+  const handleConfirmParticipation = useCallback(async (
+    /** @type {{ acceptRiskDeclaration?: boolean }} */ acceptance = {},
+  ) => {
     if (!event?.documentId) return;
 
     if (!currentParticipationFlow?.canAct) {
@@ -3024,6 +3050,7 @@ function EventDetails({ navigation, route }) {
       } else {
         if (!userData?.documentId) return;
         await mutations.createEventParticipationMutation.mutateAsync({
+          acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true,
           event: event.documentId,
           user: userData.documentId,
         });
@@ -3672,6 +3699,13 @@ function EventDetails({ navigation, route }) {
       || event?.team
       || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
+
+  // 🤝 AMIC-INVITE — le club de l'équipe composée : celui que les quatre portes de la
+  // composition transmettent, et celui sur lequel le bandeau juge l'offre.
+  const compositionClubId = useMemo(
+    () => resolveCompositionClubId({ event, teamId: compositionTeamId }),
+    [compositionTeamId, event],
+  );
 
   // 🏷️ N3 (D1/D2/D3/D8) — CE QUE LA PASTILLE DE TYPE AJOUTE POUR UN MATCH.
   //
@@ -4366,9 +4400,11 @@ function EventDetails({ navigation, route }) {
   // Repli sur le club affiche pour les doublures de `useAuth` d'avant ce lot.
   // FINITIONS3 (29/09) — la garde vit desormais dans `subscriptionDecision.js` :
   // la selection des convoques (portes « Modifier ») la reutilise.
+  // 🤝 AMIC-INVITE (19/10) — « le club de l'evenement » est celui de l'EQUIPE COMPOSEE :
+  // l'invite d'un match amical est juge sur l'offre de son club, l'hote sur la sienne.
   const canManageComposition = canManageCompositionForClub(
     { getSubscriptionAccessLevelForClub, subscriptionAccessLevel },
-    eventClubId,
+    compositionClubId,
   );
 
   // 🚪 Le rappel ne parait QUE la ou il y a quelque chose a preparer, et il se
@@ -4560,7 +4596,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(compositionRoute, {
       // @ts-ignore: FIXME: Baseline TS regression
       canEdit: Boolean(options.canEdit),
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       // @ts-ignore: FIXME: Baseline TS regression
       compositionIntent: options.compositionIntent || null,
       // @ts-ignore: FIXME: Baseline TS regression
@@ -4601,13 +4637,13 @@ function EventDetails({ navigation, route }) {
       teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
     });
   }, [
+    compositionClubId,
     compositionEditorPlayers,
     compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionSport,
     compositionTeamId,
     compositionEventLabel,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
@@ -4658,7 +4694,7 @@ function EventDetails({ navigation, route }) {
       navigation.navigate(RouteNames.MatchCompositionBoard, {
         ...publishedBoardTarget,
         canEdit: Boolean(canEdit),
-        clubId: event?.team?.club?.documentId || null,
+        clubId: compositionClubId || null,
         eventId,
         eventLabel: compositionEventLabel,
         eventTypeLabel: event?.type?.name || null,
@@ -4683,7 +4719,7 @@ function EventDetails({ navigation, route }) {
     }
 
     navigation.navigate(RouteNames.MatchConvocationPublished, {
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       players: compositionEditorPlayers,
@@ -4693,13 +4729,13 @@ function EventDetails({ navigation, route }) {
     });
   }, [
     canEdit,
+    compositionClubId,
     compositionEditorPlayers,
     compositionEditorTeam?.name,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
     convocationBranches,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     getCompositionSourceLabel,
@@ -4732,7 +4768,7 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.MatchCallUpSelection, {
       ...publishedBoardTarget,
       canEdit: true,
-      clubId: event?.team?.club?.documentId || null,
+      clubId: compositionClubId || null,
       eventId,
       eventLabel: compositionEventLabel,
       eventName: compositionEventLabel,
@@ -4744,10 +4780,10 @@ function EventDetails({ navigation, route }) {
       teamId: compositionTeamId,
     });
   }, [
+    compositionClubId,
     compositionEditorPlayers,
     compositionEventLabel,
     compositionTeamId,
-    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     navigation,
@@ -7713,10 +7749,27 @@ function EventDetails({ navigation, route }) {
   };
 
   const renderActionButtons = () => {
+    // 👪 PAR-L11b (13/10, D4 B d Adel du 12/10) — UN PARENT NE REPOND PAS POUR LUI : IL
+    // INSCRIT SES ENFANTS. Sur tout evenement public (reservation et tournoi compris : la
+    // regle par type est dans le bloc), son pied d ecran est « Inscrire mes enfants », ou la
+    // phrase qui dit pourquoi pas.
+    const parentOffer = resolveParticipationOffer({
+      isConvenedMember: isConvenedTeamMember,
+      isParentMode,
+      user: userData,
+    });
+    if (parentOffer === 'children') {
+      return <EventChildRegistration event={event} navigation={navigation} nowMs={serverNowMs} />;
+    }
+
     // RESA-L6A (14/10/2026) — le type semé est « Réservation », avec l'accent : la règle partagée
     // l'enlève (avant, deux fois le même test sans accent : le module de l'organisateur n'était
     // jamais rendu ; référence réservation §8).
-    const isReservation = isBookingEventType(event?.type?.name);
+    // RESA-RAT-APP (19/10) — interrupteur COMPLEXES_JOUEUR éteint, l'ancien test reste : un
+    // événement « Réservation » garde le pied d'écran d'aujourd'hui (règle du rattrapage).
+    const isReservation = COMPLEXES_JOUEUR
+      ? isBookingEventType(event?.type?.name)
+      : event?.type?.name?.toLowerCase()?.includes('reservation');
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
@@ -8223,12 +8276,21 @@ function EventDetails({ navigation, route }) {
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
             {/* CRFERM (13/10, « D8 B ») : TOUS les membres lisent le bandeau ; un joueur, sans
                 les gestes ni le mot de la Ville (planche P8v4-fermee, état 3). */}
+            {/* COLL-R-DEPLACER (14/10, « D9 = b ») : la proposition de la Ville, AU-DESSUS du
+                bandeau (planche P5v4-deplacer-ville-tel écran 5 b) ; le serveur ne la rend qu'à qui
+                peut déplacer la séance. */}
+            {canEdit && event?.relocationProposal ? (
+              <RelocationProposalCard
+                onChooseOther={() => handleMoveEvent(event.relocationProposal?.documentId)}
+                proposal={event.relocationProposal}
+              />
+            ) : null}
             {event?.facilityClosure ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}
                 facilityType={event?.facility?.type}
                 onCancel={canEdit ? handleCancelEvent : undefined}
-                onMove={canEdit ? handleEditEvent : undefined}
+                onMove={canEdit ? () => handleMoveEvent() : undefined}
                 pourUnMembre={!canEdit}
               />
             ) : null}
@@ -8486,6 +8548,13 @@ function EventDetails({ navigation, route }) {
                   rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
                   teamParticipationSections={teamParticipationSections}
                 />
+              ) : null}
+
+              {/* 👪 PAR-L11b — chez l organisateur, les enfants inscrits par leurs parents
+                  (prenom, age, parent), a accepter ou refuser. Rien ne s affiche quand aucun
+                  enfant n est inscrit. */}
+              {showParticipantsTab && canApprovePendingRequests ? (
+                <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
               ) : null}
 
               {/* 👥 N2 — « Personnes » SUR UN TOURNOI. La liste des participations
