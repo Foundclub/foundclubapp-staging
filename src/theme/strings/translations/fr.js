@@ -7217,6 +7217,12 @@ export default {
       unTerrain: '1 terrain',
       vide: 'Tu n’as pas encore de terrain.',
     },
+    // RESA-INSCRIPTION (19/10/2026) — « Tu pratiques aussi un sport ? » pour un compte né « pour
+    // un complexe » (aucun rôle sportif) : la feuille PAR-L12, variante complexe.
+    joueurAussi: {
+      garde: 'Tu gardes ton complexe et tes droits de gestionnaire.',
+      sousTitre: 'Ton compte devient Joueur.',
+    },
     jours: {
       dimanche: 'dimanche',
       jeudi: 'jeudi',

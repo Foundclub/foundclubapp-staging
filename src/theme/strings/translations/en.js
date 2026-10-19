@@ -6760,6 +6760,12 @@ export default {
       unTerrain: '1 court',
       vide: 'You have no court yet.',
     },
+    // RESA-INSCRIPTION (19/10/2026) — "Do you also play a sport?" for an account created "for a
+    // venue" (no sports role): the PAR-L12 sheet, venue variant.
+    joueurAussi: {
+      garde: 'You keep your venue and your manager rights.',
+      sousTitre: 'Your account becomes a Player account.',
+    },
     jours: {
       dimanche: 'Sunday',
       jeudi: 'Thursday',
