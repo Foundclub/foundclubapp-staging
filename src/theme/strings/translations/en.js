@@ -17535,6 +17535,24 @@ export default {
       retirerQuestion: 'Withdraw your request for {{quand}}?',
       titre: 'My booking',
     },
+    mesReservations: {
+      demande: 'Request sent',
+      demandeAvant: 'Request sent · answer before {{jour}} at {{heure}}',
+      erreur: 'Could not load your bookings.',
+      onglets: {
+        aVenir: 'Upcoming',
+        passees: 'Past',
+        refusees: 'Declined and cancelled',
+      },
+      reserver: 'Book a pitch',
+      titre: 'My bookings',
+      tuAsReserve: 'You booked',
+      vide: {
+        aVenir: 'No upcoming bookings.',
+        passees: 'No past bookings.',
+        refusees: 'No declined or cancelled bookings.',
+      },
+    },
     mode: {
       automatique: 'Instant confirmation',
       manuel: 'On request',

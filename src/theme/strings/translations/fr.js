@@ -18131,6 +18131,24 @@ export default {
       retirerQuestion: 'Retirer ta demande du {{quand}} ?',
       titre: 'Ma réservation',
     },
+    mesReservations: {
+      demande: 'Demande envoyée',
+      demandeAvant: 'Demande envoyée · réponse avant le {{jour}} à {{heure}}',
+      erreur: 'Impossible de charger tes réservations.',
+      onglets: {
+        aVenir: 'À venir',
+        passees: 'Passées',
+        refusees: 'Refusées et annulées',
+      },
+      reserver: 'Réserver un terrain',
+      titre: 'Mes réservations',
+      tuAsReserve: 'Tu as réservé',
+      vide: {
+        aVenir: 'Aucune réservation à venir.',
+        passees: 'Aucune réservation passée.',
+        refusees: 'Aucune réservation refusée ou annulée.',
+      },
+    },
     mode: {
       automatique: 'Confirmation immédiate',
       manuel: 'Sur demande',

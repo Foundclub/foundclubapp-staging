@@ -1513,6 +1513,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L6B-1 — E-P10, « Mes réservations » (Mon compte, raccourci de E-P01). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverMesReservations').default}
+            name={RouteNames.ReserverMesReservations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>

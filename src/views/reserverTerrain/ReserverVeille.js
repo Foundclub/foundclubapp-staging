@@ -35,7 +35,8 @@ import {
 
 import { useIsDesktop } from '@/responsive';
 
-const COLONNE = 640;
+/** Planche OR3, gabarit B : la colonne centrée de 560 px. */
+const COLONNE = 560;
 // Le temps de lire « Merci, c'est confirmé. » avant la fiche (planche EP14, états 5 et 6).
 const AVANT_LA_FICHE_MS = 2000;
 
@@ -128,7 +129,8 @@ function ReserverVeille() {
   };
 
   /**
-   * La page : le contenu qui défile, puis le pied fixe (au-dessus de la barre flottante du site).
+   * La page : le contenu qui défile, puis le pied fixe (au-dessus de la barre flottante du site) ;
+   * sur ordinateur (OR3, gabarit B), le pied devient le dernier bloc de la colonne.
    * @param {import('react').ReactNode} contenu - Le contenu.
    * @param {import('react').ReactNode} [pied] - Les boutons du bas.
    * @returns {import('react').ReactElement} La page.
@@ -147,8 +149,9 @@ function ReserverVeille() {
         style={[Alignments.fill]}
       >
         {contenu}
+        {surOrdinateur && pied ? <View style={{ gap: 8 }}>{pied}</View> : null}
       </ScrollView>
-      {pied ? (
+      {pied && !surOrdinateur ? (
         <View
           style={{
             ...colonne,

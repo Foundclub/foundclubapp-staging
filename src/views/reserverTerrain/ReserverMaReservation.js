@@ -54,19 +54,26 @@ const COLONNE = 640;
  *   4. l'historique (la réservation, le petit mot).
  * Annulée ⇒ E-P13 « annulée par toi » à la place de cet écran.
  * Paramètres : `reservationId` ; `change` et `fermeture` (la notification qui l'a ouverte).
- * Ordinateur (OR3) : la colonne centrée (participants, à droite, viendront avec L6b).
+ * Ordinateur (OR3) : la colonne centrée (participants, à droite, viendront avec L6b) ; dans le
+ * volet de droite de « Mes réservations » (E-P10, gabarit A, RESA-L6B-1) : `dansUnVolet` et la
+ * réservation que la liste lui donne, sans fond d'écran à elle.
  * ⛔ Pas dans ce lot : participants et présences, « Inviter par lien », « Il me manque des
  * joueurs », « Discussion du groupe », « Écrire au complexe », fidélité, collecte (serveurs
  * L3 / L4, puis L6b). Caché par `COMPLEXES_JOUEUR`.
+ * @param {object} [props] - Les propriétés (aucune pour l'écran seul).
+ * @param {boolean} [props.dansUnVolet] - Dans le volet de E-P10 sur ordinateur.
+ * @param {string | null} [props.reservationId] - La réservation du volet.
  * @returns {import('react').ReactElement} L'écran.
  */
-function ReserverMaReservation() {
+function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {}) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ change?: string, fermeture?: string, reservationId?: string }} */
-  const params = /** @type {any} */ (route?.params) || {};
+  /** @type {{ change?: string, fermeture?: string, reservationId?: string | null }} */
+  const params = dansUnVolet
+    ? { reservationId }
+    : /** @type {any} */ (route?.params) || {};
   const surOrdinateur = useIsDesktop();
   const lecture = useMaReservation(params.reservationId);
   const annuler = useAnnulerMaReservation();
@@ -84,7 +91,15 @@ function ReserverMaReservation() {
     gap: 8,
     padding: 16,
   };
-  const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (
+  const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (dansUnVolet ? (
+    <ScrollView
+      contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+      style={[Alignments.fill]}
+    >
+      {contenu}
+    </ScrollView>
+  ) : (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
@@ -105,7 +120,7 @@ function ReserverMaReservation() {
         {contenu}
       </ScrollView>
     </ScreenContainer>
-  );
+  ));
 
   if (lecture?.isLoading && !reservation) {
     return enveloppe(
