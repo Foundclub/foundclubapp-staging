@@ -82,7 +82,9 @@ jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
   return function ButtonMock(/** @type {any} */ props) {
-    return reactActuel.createElement(PressableRN, { disabled: props.disabled, onPress: props.onPress, testID: props.testID }, reactActuel.createElement(TexteRN, null, props.title));
+    return reactActuel.createElement(PressableRN, {
+      accessibilityLabel: props.accessibilityLabel, disabled: props.disabled, onPress: props.onPress, testID: props.testID,
+    }, reactActuel.createElement(TexteRN, null, props.title));
   };
 });
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) { return children; });
@@ -233,7 +235,7 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
     ]));
     await avancer(arbre);
     expect(tunnel(arbre).title).toBe('Récapitulatif');
-    expect(lus(arbre)).toEqual(expect.arrayContaining(['Toute la saison · 21 oct. → 30 juin', '37 mercredis, dont 2 fermés (23 déc., 30 déc.)']));
+    expect(lus(arbre)).toEqual(expect.arrayContaining(['Toute la saison · 21 oct. – 30 juin', '37 mercredis, dont 2 fermés (23 déc., 30 déc.)']));
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       club: 'basket', endTime: '19:00', startTime: '17:30', weekday: 3,
@@ -247,7 +249,7 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
     expect(mockDateProps.filter((p) => p.label === 'À partir du').at(-1).value).toBe('21/10/2026');
     expect(lus(arbre)).toEqual(expect.arrayContaining(['19 mercredis', 'Fin\u00a0de\u00a0saison', 'Une\u00a0date', '21 oct.', '4 nov.', '18 nov.']));
     await avancer(arbre);
-    expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. → 30 juin');
+    expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       anchorDate: '2026-10-21', club: 'basket', endTime: '19:00', everyWeeks: 2, recurrence: 'weekly', startTime: '17:30', validFrom: '2026-10-21', validUntil: '2027-06-30', weekday: 3,
@@ -321,7 +323,7 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
     // Le mois de décembre, où tombe « Vacances de Noël » (aperçu : fermetures de la saison).
     for (let mois = 0; mois < 2; mois += 1) {
       // eslint-disable-next-line no-await-in-loop
-      await appeler(() => arbre.root.findAll((n) => n.type === TouchableOpacity && n.props.testID === 'dates-mois-suivant')[0].props.onPress());
+      await appeler(() => arbre.root.findAll((n) => n.type === TouchableOpacity && /calendrier\.suivant|Mois suivant/.test(String(n.props.accessibilityLabel)))[0].props.onPress());
     }
     const noel = jourDuCalendrier(arbre, '2026-12-23');
     expect(noel.props.accessibilityState).toEqual({ disabled: true, selected: false });
@@ -341,7 +343,7 @@ describe('R17Q1-4 — la ligne « Quand » du récapitulatif se touche', () => {
     expect([tunnel(arbre).title, tunnel(arbre).stepIndex, tunnel(arbre).stepCount]).toEqual(['Quand ?', 3, 4]);
     await choisir(arbre, 'Toutes les 2 semaines');
     await avancer(arbre);
-    expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. → 30 juin');
+    expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
   });
 });
 

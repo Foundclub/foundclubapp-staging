@@ -248,7 +248,7 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
       'Mercredi · 17:30 – 19:00',
       'Montrivage Basket sera prévenu, et verra ce créneau dans son planning.',
     ]));
-    expect(lus(arbre).some((texte) => /^Toute la saison · .+ → \d+ juin$/.test(texte))).toBe(true);
+    expect(lus(arbre).some((texte) => /^Toute la saison · .+ – \d+ juin$/.test(texte))).toBe(true);
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
@@ -348,7 +348,7 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await avancer(arbre);
     expect(tunnel(arbre)).toEqual(expect.objectContaining({ nextLabel: 'Attribuer le créneau', stepIndex: 3, title: 'Récapitulatif' }));
     expect(lus(arbre)).toContain('Mercredi · 18:00 – 19:30');
-    expect(lus(arbre).some((texte) => /^Toute la saison · .+ → \d+ juin$/.test(texte))).toBe(true);
+    expect(lus(arbre).some((texte) => /^Toute la saison · .+ – \d+ juin$/.test(texte))).toBe(true);
     expect(lus(arbre)).not.toContain('Chaque mercredi de la saison (1 sept. – 30 juin). Le club est prévenu.');
     // R17-QUAND-1 : la ligne « Quand » (figée avant) se touche et ouvre l'étape, sans en ajouter d'autre.
     await appeler(() => ligneDuRecap(arbre, 'quand').props.onPress());

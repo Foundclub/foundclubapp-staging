@@ -181,7 +181,7 @@ export const quandDuCreneau = (creneau, saison) => {
  * d'un club, « Tes créneaux de la Ville », planning). Courte : « chaque semaine »,
  * « 1 sem. sur 2 », « 3 dates ». Longue : « chaque mardi », « un mercredi sur deux »,
  * « sam. 7 nov. · mar. 17 nov. ».
- * @param {(cle: string, ...autres: any[]) => string} t - La traduction.
+ * @param {Function} t - La traduction.
  * @param {any} creneau - Le créneau (serveur).
  * @param {{ court?: boolean }} [options] - Courte : pour une pastille.
  * @returns {string} La forme.
@@ -202,9 +202,9 @@ export const formeEnMots = (t, creneau, { court = false } = {}) => {
       })
       : lus.join(' · ');
   }
-  const jour = weekdayName(forme.weekday).toLocaleLowerCase();
   const valeurs = {
-    interpolation: { escapeValue: false }, jour, jourMajuscule: weekdayName(forme.weekday),
+    interpolation: { escapeValue: false },
+    jour: forme.weekday ? weekdayName(forme.weekday, { inSentence: true }) : '',
   };
   if (forme.everyWeeks > 1) {
     return court

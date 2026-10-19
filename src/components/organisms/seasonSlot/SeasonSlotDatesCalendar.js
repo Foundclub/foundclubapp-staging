@@ -161,7 +161,6 @@ export default function SeasonSlotDatesCalendar({
           icon="arrowLeft"
           onPress={() => setMois(premierDuMois(mois, -1))}
           style={{ minHeight: 44, minWidth: 44 }}
-          testID="dates-mois-precedent"
           variant="Ghost"
         />
         <Text accessibilityLiveRegion="polite" style={[Fonts.h5Bold, Fonts.neutral00]}>
@@ -173,7 +172,6 @@ export default function SeasonSlotDatesCalendar({
           icon="arrowRight"
           onPress={() => setMois(premierDuMois(mois, 1))}
           style={{ minHeight: 44, minWidth: 44 }}
-          testID="dates-mois-suivant"
           variant="Ghost"
         />
       </View>

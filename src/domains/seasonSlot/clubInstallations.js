@@ -55,7 +55,7 @@ export const groupClubInstallations = (facilities) => {
  * R17-QUAND-1 (point 6) — `rythme` dit la forme : « chaque mardi », « un mercredi sur deux », des
  * dates choisies (`formeEnMots`, avec la traduction `t`).
  * @param {any} slot - Un créneau du club (vue du contrat §4.1).
- * @param {((cle: string, ...autres: any[]) => string) | null} [t] - La traduction.
+ * @param {Function | null} [t] - La traduction.
  * @returns {{ day: string, hours: string, period: string, rythme: string, team: string | null }} Le
  *   jour en minuscules, la plage, la forme,
  *   l équipe (null : « tout le club »).

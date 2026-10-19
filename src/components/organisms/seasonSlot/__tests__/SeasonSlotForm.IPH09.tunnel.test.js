@@ -211,8 +211,8 @@ describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
     expect(champ(arbre, 'Début').props.value).toBe('17:30');
     await versRecap(arbre);
     expect(etape(arbre)).toBe('Étape 6/6');
-    // « Toute la saison · <1re séance à venir> → <dernière, en juin> » (elles suivent le jour du test).
-    expect(textesLus(arbre).some((texte) => /^Toute la saison · .+ → \d+ juin$/.test(texte))).toBe(true);
+    // « Toute la saison · <1re séance à venir> – <dernière, en juin> » (elles suivent le jour du test).
+    expect(textesLus(arbre).some((texte) => /^Toute la saison · .+ – \d+ juin$/.test(texte))).toBe(true);
     expect(champ(arbre, 'Début')).toBeUndefined();
     await presser(arbre, 'Attribuer le créneau');
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);

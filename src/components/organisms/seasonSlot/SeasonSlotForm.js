@@ -864,8 +864,9 @@ function SeasonSlotForm({
   };
 
   // ─── R17-QUAND-1 : ce que la forme dit, en mots (planches P10-quand-tel, P11-quand-v2-tel) ───
-  const nomDuJour = jour && !joursDifferents ? weekdayName(Number(jour)).toLocaleLowerCase() : '';
-  const NomDuJour = jour && !joursDifferents ? weekdayName(Number(jour)) : '';
+  const nomDuJour = jour && !joursDifferents
+    ? weekdayName(Number(jour), { inSentence: true })
+    : '';
   const quandDuDepassement = (() => {
     if (formeChoisie === 'dates') {
       return t('collectiviteCreneaux.quand.aLeursDates', 'aux dates choisies');
@@ -904,7 +905,6 @@ function SeasonSlotForm({
       defaultValue_one: '{{count}} {{jour}}',
       defaultValue_other: '{{count}} {{jour}}s',
       jour: nomDuJour,
-      jourMajuscule: NomDuJour,
       ...SANS_ECHAPPEMENT,
     });
   // Les séances qui tombent dans une fermeture : « 2 tombent dans « Vacances de Noël » (23 et
@@ -946,14 +946,14 @@ function SeasonSlotForm({
     if (formeChoisie === 'deuxSemaines') {
       return t(
         'collectiviteCreneaux.quand.recapDeux',
-        'Toutes les 2 semaines · {{du}} → {{au}}',
+        'Toutes les 2 semaines · {{du}} – {{au}}',
         bornes,
       );
     }
     if (formeChoisie === 'periode') {
-      return t('collectiviteCreneaux.quand.recapPeriode', 'Une période · {{du}} → {{au}}', bornes);
+      return t('collectiviteCreneaux.quand.recapPeriode', 'Une période · {{du}} – {{au}}', bornes);
     }
-    return t('collectiviteCreneaux.quand.recapSaison', 'Toute la saison · {{du}} → {{au}}', bornes);
+    return t('collectiviteCreneaux.quand.recapSaison', 'Toute la saison · {{du}} – {{au}}', bornes);
   })();
   const detailDuQuand = (() => {
     if (formeChoisie === 'dates') return listeDeDates(seances);
@@ -1661,7 +1661,10 @@ function SeasonSlotForm({
               ),
               key: 'joursDifferents',
               libelle: t('collectiviteCreneaux.quand.joursDifferents', 'Des jours différents'),
-              libelleCourt: undefined,
+              libelleCourt: t(
+                'collectiviteCreneaux.quand.joursDifferents',
+                'Des jours différents',
+              ),
               onPress: () => {
                 setJoursDifferents(true);
                 toucherLaSaisie();

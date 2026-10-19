@@ -39,15 +39,18 @@ export const capitalize = (texte) => (
 
 /**
  * Le nom d un jour ISO dans la langue de l app (« Lundi », ou « Lun. » en court).
+ * R17-QUAND-1 : `inSentence` le rend tel qu il s ecrit DANS une phrase, dans chaque langue
+ * (« chaque mercredi », « every Wednesday ») : un seul jeton {{jour}} pour fr et en.
  * @param {number} isoDay - 1 a 7.
- * @param {{ short?: boolean }} [options] - Court : « Lun. ».
- * @returns {string} Le nom, avec sa capitale ; vide pour un jour hors bornes.
+ * @param {{ short?: boolean, inSentence?: boolean }} [options] - Court : « Lun. ».
+ * @returns {string} Le nom, avec sa capitale (sauf dans une phrase) ; vide hors bornes.
  */
-export const weekdayName = (isoDay, { short = false } = {}) => {
+export const weekdayName = (isoDay, { inSentence = false, short = false } = {}) => {
   const jour = Number(isoDay);
   if (!Number.isInteger(jour) || jour < 1 || jour > 7) return '';
   const date = new Date(2026, 0, LUNDI_DE_REFERENCE + jour);
-  return capitalize(format(date, short ? 'EEE' : 'EEEE', { locale: dateLocale() }));
+  const nom = format(date, short ? 'EEE' : 'EEEE', { locale: dateLocale() });
+  return inSentence ? nom : capitalize(nom);
 };
 
 /**
