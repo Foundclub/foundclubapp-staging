@@ -116,6 +116,7 @@ import {
   pageSuivante,
   plageDeLaVue,
   retenirVue,
+  vueParDefaut,
   VUES,
   vuesProposees,
 } from '@/utils/planning/installationPlanningViews';
@@ -128,6 +129,7 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
+import useVueInitiale from '@/hooks/useVueInitiale';
 import { useIsDesktop } from '@/responsive';
 
 const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
@@ -289,6 +291,9 @@ function PlanningWeekFullscreen() {
     ?.withChildren === true;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
+  // 🗓️ R17-VUE (19/10, REC17-010) — la vue a l arrivee ne se decide que pour un plein ecran
+  // ouvert sur AUJOURD HUI ; ouvert sur une autre date, il garde cette date et sa vue.
+  const [arriveeAujourdhui] = useState(() => isSameDay(currentDate, getPlanningDefaultDate()));
   // PLANNING-PORTRAIT (01/10, decision d'Adel « D6 A ») : l'ecran SUIT le telephone.
   // Tenu droit, une semaine ne laissait que ~50 pt par jour (mesure FINITIONS5) : on y
   // montre UN jour ; tourne, la semaine, comme avant.
@@ -299,17 +304,23 @@ function PlanningWeekFullscreen() {
   // defaut sur telephone, Semaine sur le site, la vue choisie RETENUE ; telephone tourne : la
   // semaine (D6 A). Les autres plannings gardent leur regle : le jour tenu droit, la semaine
   // tourne.
-  const [vueChoisie, setVueChoisie] = useState(() => lireVueRetenue(Platform.OS));
+  // R17-VUE : arrivee sur aujourd hui, la regle passe AVANT la vue retenue (lue apres la decision).
+  const [vueChoisie, setVueChoisie] = useState(() => (isFacilitySource && arriveeAujourdhui
+    ? vueParDefaut(Platform.OS)
+    : lireVueRetenue(Platform.OS)));
+  // R17-VUE : la vue decidee a l arrivee (semaine, mois) sur les plannings sans choix de vue
+  // (perso, club, omnisport) ; elle tombe quand le telephone tourne (la base redevient la sienne).
+  const [vueImposee, setVueImposee] = useState(/** @type {string | null} */ (null));
   /** @type {string} */
-  let vue = isLandscape ? VUES.semaine : VUES.jour;
+  let vueDeBase = isLandscape ? VUES.semaine : VUES.jour;
+  if (isFacilitySource) {
+    vueDeBase = isLandscape && Platform.OS !== 'web' ? VUES.semaine : vueParDefaut(Platform.OS);
+  }
+  /** @type {string} */
+  let vue = vueImposee || vueDeBase;
   if (isFacilitySource) {
     vue = isLandscape && Platform.OS !== 'web' ? VUES.semaine : vueChoisie;
   }
-  const choisirVue = useCallback((/** @type {string} */ nouvelle) => {
-    setVueChoisie(nouvelle);
-    retenirVue(nouvelle);
-  }, []);
-  const pageDays = vue === VUES.semaine ? 7 : 1;
 
   // L'orientation n'est plus FORCEE en paysage (V1803) : elle est LIBEREE, et l'app
   // revient en portrait en sortant. Le module natif savait deja le faire
@@ -328,7 +339,7 @@ function PlanningWeekFullscreen() {
   const planningRange = useMemo(
     () => (isFacilitySource
       ? plageDeLaVue(vue, currentDate)
-      : getPlanningRange(currentDate, 'week')),
+      : getPlanningRange(currentDate, vue === VUES.mois ? 'month' : 'week')),
     [currentDate, isFacilitySource, vue],
   );
   const planningQuery = useMemo(() => getPlanningQuery({
@@ -345,6 +356,7 @@ function PlanningWeekFullscreen() {
     error,
     isFetching,
     isLoading,
+    isPlaceholderData,
     refetch,
   } = useQuery({
     staleTime: PERSONAL_PLANNING_STALE_MS,
@@ -353,6 +365,52 @@ function PlanningWeekFullscreen() {
     ...(isFacilitySource ? { placeholderData: keepPreviousData } : {}),
     ...planningQuery,
   });
+
+  // 🗓️ R17-VUE (19/10, REC17-010) — jour vide ⇒ la semaine ; semaine vide mais un evenement plus
+  // tard ⇒ le mois de ce prochain evenement (UNE lecture bornee, la meme source) ; sinon la base.
+  // Installation : la vue retenue sur l appareil ne sert que si la regle garde la base (et la
+  // decision n est jamais retenue : seul un choix fait a la main l est).
+  const lectureDeLaSuite = useMemo(() => ({
+    queryFn: (/** @type {{ from: string, to: string }} */ plage) => getPlanningQuery({
+      clubId, cmId, facilityId, planningRange: plage, sectionId, sourceType, withChildren,
+    }).queryFn(),
+    queryKey: [
+      'planning', 'fullscreen', 'suite', sourceType, clubId, cmId, facilityId, sectionId,
+      withChildren,
+    ],
+  }), [clubId, cmId, facilityId, sectionId, sourceType, withChildren]);
+  const appliquerLaVue = useCallback((/** @type {{ date: Date, vue: string }} */ decision) => {
+    if (isFacilitySource) {
+      setVueChoisie(decision.vue === vueDeBase ? lireVueRetenue(Platform.OS) : decision.vue);
+    } else if (decision.vue !== vueDeBase) {
+      setVueImposee(decision.vue);
+    }
+    if (decision.vue !== vueDeBase) setCurrentDate(decision.date);
+  }, [isFacilitySource, vueDeBase]);
+  const { enDecision, garderLeChoix } = useVueInitiale({
+    actif: arriveeAujourdhui && planningQuery.enabled && !error,
+    appliquer: appliquerLaVue,
+    evenements: data && !isPlaceholderData ? (data.data || []) : undefined,
+    lectureDeLaSuite,
+    vueDeBase,
+  });
+  const choisirVue = useCallback((/** @type {string} */ nouvelle) => {
+    garderLeChoix();
+    if (!isFacilitySource) {
+      setVueImposee(nouvelle);
+      return;
+    }
+    setVueChoisie(nouvelle);
+    retenirVue(nouvelle);
+  }, [garderLeChoix, isFacilitySource]);
+  // Le telephone tourne : la vue imposee tombe, et un choix fait avant la decision l emporte.
+  const orientationVue = useRef(isLandscape);
+  useEffect(() => {
+    if (orientationVue.current === isLandscape) return;
+    orientationVue.current = isLandscape;
+    garderLeChoix();
+    setVueImposee(null);
+  }, [garderLeChoix, isLandscape]);
 
   // COLL1D — le texte de capacite parle a CELUI qui lit : les « depassements » et les
   // « demandes en attente » ne regardent que ceux qui posent des evenements (entraineur,
@@ -529,9 +587,11 @@ function PlanningWeekFullscreen() {
   // COLL-C2B (02/10) — design P5 : sur le planning d une installation, la barre dit « Mer. 4
   // mars » (ou « Aujourd hui, jeu. 1 oct. ») tenu droit, « 2 – 8 mars 2026 » tourne.
   const jourDeLaBarre = capitalize(format(currentDate, 'EEE d MMM', { locale: localeDesDates() }));
-  let pageLabel = isLandscape
+  let pageLabel = vue === VUES.semaine
     ? weekLabel
     : format(currentDate, 'EEEE d MMMM yyyy', { locale: fr });
+  // R17-VUE : le mois du prochain evenement (plannings perso, club, omnisport).
+  if (vue === VUES.mois) pageLabel = capitalize(format(currentDate, 'MMMM yyyy', { locale: fr }));
   if (isFacilitySource) {
     const locale = localeDesDates();
     if (vue === VUES.mois) {
@@ -586,11 +646,9 @@ function PlanningWeekFullscreen() {
     () => isSameWeek(currentDate, getPlanningDefaultDate(), { weekStartsOn: 1 }),
     [currentDate],
   );
-  // « Aujourd'hui » ramene a la page du jour : la semaine en paysage, le jour en portrait.
-  let isCurrentPage = isLandscape
-    ? isCurrentWeek
-    : isSameDay(currentDate, getPlanningDefaultDate());
-  if (isFacilitySource) isCurrentPage = pageDAujourdhui(vue, currentDate, getPlanningDefaultDate());
+  // « Aujourd'hui » ramene a la page du jour : la semaine en paysage, le jour en portrait (et,
+  // R17-VUE, la semaine ou le mois decides a l arrivee).
+  const isCurrentPage = pageDAujourdhui(vue, currentDate, getPlanningDefaultDate());
   // Le nom des fleches dit ce qu elles font (lecteur d ecran).
   /** @type {Record<string, string[]>} */
   const nomsDesFleches = {
@@ -1115,18 +1173,14 @@ function PlanningWeekFullscreen() {
   }, [managingCollectiviteId]);
   const handleCloseReadOnlyBlock = useCallback(() => setReadOnlyBlock(null), []);
 
-  // Les fleches de l'en-tete : un jour en portrait, une semaine en paysage.
+  // Les fleches de l'en-tete : un jour en portrait, une semaine en paysage (R17-VUE : un mois).
   const handlePrevPage = useCallback(() => {
-    setCurrentDate((previousDate) => (isFacilitySource
-      ? pageSuivante(vue, previousDate, -1)
-      : addDays(previousDate, -pageDays)));
-  }, [isFacilitySource, pageDays, vue]);
+    setCurrentDate((previousDate) => pageSuivante(vue, previousDate, -1));
+  }, [vue]);
 
   const handleNextPage = useCallback(() => {
-    setCurrentDate((previousDate) => (isFacilitySource
-      ? pageSuivante(vue, previousDate, 1)
-      : addDays(previousDate, pageDays)));
-  }, [isFacilitySource, pageDays, vue]);
+    setCurrentDate((previousDate) => pageSuivante(vue, previousDate, 1));
+  }, [vue]);
 
   const handleNextWeek = useCallback(() => {
     setCurrentDate((previousDate) => addDays(previousDate, 7));
@@ -1139,7 +1193,8 @@ function PlanningWeekFullscreen() {
   // mairie) se recree a chaque rendu ; la grille, elle, reste memorisee.
   const planningContent = (() => {
     // COLL-C2B (02/10) — l installation garde sa grille pendant la lecture (voile, plus bas).
-    if (isLoading || (isFetching && !isFacilitySource)) {
+    // R17-VUE : et la roue tant que la vue d arrivee n est pas decidee (pas d eclair du vide).
+    if (isLoading || (isFetching && !isFacilitySource) || enDecision) {
       return <Loader />;
     }
 
@@ -1185,7 +1240,8 @@ function PlanningWeekFullscreen() {
       );
     }
 
-    if (isFacilitySource && vue === VUES.mois) {
+    // R17-VUE : le mois sert aussi aux plannings perso, club et omnisport (decide a l arrivee).
+    if (vue === VUES.mois) {
       return (
         <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
           <PlanningCalendarView
