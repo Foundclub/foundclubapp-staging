@@ -321,7 +321,7 @@ function CollectiviteHome() {
     if (demande?.requesterFunction === 'manager') {
       fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
     } else if (demande?.requesterFunction === 'trainer') {
-      fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+      fonction = t('collectiviteDemandes.fonction.trainer', 'coach / prof');
     }
     const auteur = personne ? [personne, fonction].filter(Boolean).join(', ') : '';
     const conflit = summarizeConflict(demande?.conflict);

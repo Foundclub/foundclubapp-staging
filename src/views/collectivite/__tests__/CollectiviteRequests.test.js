@@ -327,7 +327,7 @@ describe('COLL-C3B — planche P6v2 : chaque demande est une phrase', () => {
       '2 places libres',
       'Personne n’y est : il reste 2 places.',
       'Accepter ne gêne personne.',
-      'Paul Veuillet, entraîneur',
+      'Paul Veuillet, coach / prof',
     ]));
     await appuyer(arbre, 'bouton-Accepter la série');
     expect(textes(arbre)).toContain('Accepter la série');

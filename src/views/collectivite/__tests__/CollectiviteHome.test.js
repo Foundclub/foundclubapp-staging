@@ -535,7 +535,7 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
 
   it('un entraîneur : « …, entraîneur » ; une fonction inconnue : le nom seul', async () => {
     mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: 'trainer' }]);
-    expect(textes(await monter())).toContain('Demandé par Karim Benali, entraîneur');
+    expect(textes(await monter())).toContain('Demandé par Karim Benali, coach / prof');
     mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: null }]);
     expect(textes(await monter())).toContain('Demandé par Karim Benali');
   });

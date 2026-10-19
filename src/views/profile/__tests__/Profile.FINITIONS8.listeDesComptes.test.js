@@ -260,7 +260,7 @@ const textes = (arbre) => arbre.root
   .map(texteDe);
 
 describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais', () => {
-  it('🚨 « Entraîneur » et « Administrateur », jamais « Entraineur » ni « SuperAdmin »', () => {
+  it('🚨 « Coach / Prof » et « Administrateur », jamais « Entraineur » ni « SuperAdmin »', () => {
     AUTH_PAR_ROLE.player.authSessions = [
       session('moi-player', 'Hugo', 'Joueur'),
       session('karim', 'Karim', 'Entraineur'),
@@ -272,7 +272,7 @@ describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais
     const lus = textes(arbre);
 
     expect(lus).toContain('Karim Test');
-    expect(lus).toContain('Entraîneur');
+    expect(lus).toContain('Coach / Prof');
     expect(lus).toContain('Administrateur');
     expect(lus).not.toContain('Entraineur');
     expect(lus).not.toContain('SuperAdmin');

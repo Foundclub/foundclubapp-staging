@@ -327,12 +327,12 @@ function TeamWizardRecap({ navigation }) {
     const roleName = member?.role?.name || (isSelf ? userData?.role?.name : '');
     const roleLabel = roleName === 'Dirigeant'
       ? t('teamWizardRecap.trainers.rolePresident', 'dirigeant·e')
-      : t('teamWizardRecap.trainers.roleCoach', 'coach');
+      : t('teamWizardRecap.trainers.roleCoach', 'coach / prof');
     let displayName = fullName;
     if (!displayName) {
       displayName = isSelf ? t('teamWizardRecap.trainers.self', 'Toi') : t(
         'teamWizardRecap.trainers.fallback',
-        'Entraîneur·e',
+        'Coach / Prof',
       );
     }
     return {

@@ -515,11 +515,11 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
     it('donne a chaque section le badge qui lui revient', async () => {
       const tree = await renderList();
 
-      expect(cardTexts(findCard(tree, 'U15 Masculins'))).toContain('JOUEUR·SE');
-      expect(cardTexts(findCard(tree, 'Seniors Filles'))).toContain('COACH');
+      expect(cardTexts(findCard(tree, 'U15 Masculins'))).toContain('PRATIQUANT·E / JOUEUR·SE');
+      expect(cardTexts(findCard(tree, 'Seniors Filles'))).toContain('COACH / PROF');
       // L'etat REMPLACE le role : une demande en attente ne montre pas « COACH ».
       expect(cardTexts(findCard(tree, 'U11 Mixte'))).toContain('EN ATTENTE');
-      expect(cardTexts(findCard(tree, 'U11 Mixte'))).not.toContain('COACH');
+      expect(cardTexts(findCard(tree, 'U11 Mixte'))).not.toContain('COACH / PROF');
     });
 
     it('donne le badge INVITATION aux invitations (mode LEAGUE)', async () => {
@@ -557,7 +557,7 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       expect(carte.findAllByProps({ testID: 'team-card-stats' }).length).toBeGreaterThan(0);
       const textes = cardTexts(carte);
       expect(textes).toContain('Membres');
-      expect(textes).toContain('Entraîneur·e·s');
+      expect(textes).toContain('Coachs / Profs');
       // 3 joueurs + 1 entraineur distincts, dont 1 entraineur.
       expect(textes).toContain('4');
       expect(textes).toContain('1');
@@ -775,7 +775,7 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       const carte = findCard(tree, '& DANSE ENCORPS');
 
       expect(carte.findAllByProps({ testID: 'team-card-stats' })).toHaveLength(0);
-      expect(cardTexts(carte)).not.toContain('Entraîneur·e·s');
+      expect(cardTexts(carte)).not.toContain('Coachs / Profs');
     });
 
     it('dit qu une adhesion a un club attend un dirigeant du club', async () => {

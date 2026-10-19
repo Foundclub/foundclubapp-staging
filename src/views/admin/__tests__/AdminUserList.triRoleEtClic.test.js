@@ -273,8 +273,9 @@ test('USERS/7 — la pastille « Entraineur » prend enfin sa couleur', () => {
   // s appelle « entraineur » en base. La pastille restait grise depuis toujours.
   const arbre = monter();
 
+  // R17-ROLES (REC17-006) : la pastille s annonce par son libelle, plus par le nom technique.
   const pastille = arbre.root.findAll(
-    (noeud) => noeud.props?.accessibilityLabel === 'Role Entraineur',
+    (noeud) => noeud.props?.accessibilityLabel === 'Role Coach / Prof',
     { deep: true },
   )[0];
   expect(pastille).toBeTruthy();
@@ -285,4 +286,24 @@ test('USERS/7 — la pastille « Entraineur » prend enfin sa couleur', () => {
     .filter(Boolean);
   expect(fond.length).toBeGreaterThan(0);
   expect(fond[0]).not.toMatch(/neutral/i);
+});
+
+test('USERS/8 — R17-ROLES : « Coach / Prof » ; un SuperAdmin reste « SuperAdmin »', () => {
+  // REC17-006 : le nom technique « Entraineur » ne s affiche plus ; la console garde les roles
+  // hors club tels quels (rien a traduire, et Adel doit reconnaitre un SuperAdmin).
+  mockEtatRequete.data = {
+    data: [PERSONNE, {
+      ...PERSONNE,
+      documentId: 'sa',
+      firstname: 'Adel',
+      id: 1,
+      role: { name: 'SuperAdmin', type: 'superadmin' },
+    }],
+  };
+  const arbre = monter();
+
+  const texte = texteDe(arbre);
+  expect(texte).toContain('Coach / Prof');
+  expect(texte).toContain('SuperAdmin');
+  expect(texte).not.toContain('Entraineur');
 });

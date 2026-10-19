@@ -474,7 +474,7 @@ function CollectiviteRequests() {
     // eslint-disable-next-line max-len
     if (demande?.requesterFunction === 'manager') fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
     // eslint-disable-next-line max-len
-    if (demande?.requesterFunction === 'trainer') fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+    if (demande?.requesterFunction === 'trainer') fonction = t('collectiviteDemandes.fonction.trainer', 'coach / prof');
     return [personne, fonction].filter(Boolean).join(', ');
   };
 

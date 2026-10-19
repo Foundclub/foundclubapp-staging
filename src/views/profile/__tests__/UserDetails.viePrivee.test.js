@@ -412,7 +412,7 @@ describe('D54 · temoin 2 — la page publique d\'un ENTRAINEUR ne porte AUCUN b
     const arbre = await rendre(dirigeantConnecte, { userId: 'coach-1' });
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Entraîneur');
+    expect(texte).toContain('Coach / Prof');
     expect(texte).toContain(`${ageAttendu} ans`);
     expect(texte).toContain('SECTION HISTORIQUE SPORTIF');
   });

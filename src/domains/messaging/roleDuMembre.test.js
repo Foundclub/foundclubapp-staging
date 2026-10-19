@@ -21,9 +21,24 @@ describe('roleDuMembre (§3.1)', () => {
     expect(libelleDuRole(undefined, t)).toBe('Membre');
   });
 
+  // R17-ROLES (REC17-006) : « Pratiquant / Joueur » et « Coach / Prof », pour parler a tout
+  // le monde.
   test('RM3 — `genre A` : un seul libelle par role, sans genre', () => {
     expect(libelleDuRole('Dirigeant', t)).toBe('Dirigeant');
-    expect(libelleDuRole('Entraîneur', t)).toBe('Entraîneur');
-    expect(libelleDuRole('Joueur', t)).toBe('Joueur');
+    expect(libelleDuRole('Entraîneur', t)).toBe('Coach / Prof');
+    expect(libelleDuRole('Joueur', t)).toBe('Pratiquant / Joueur');
+  });
+
+  // R17-ROLES : le nom technique du serveur (« Entraineur », sans accent) ne s'affiche plus brut.
+  test('RM4 — le nom technique du serveur passe par la meme table', () => {
+    expect(libelleDuRole('Entraineur', t)).toBe('Coach / Prof');
+    expect(libelleDuRole('entraineur', t)).toBe('Coach / Prof');
+  });
+
+  // R17-ROLES : la console garde « SuperAdmin » ; un ecran d'evenement garde son propre « Membre ».
+  test('RM5 — un role hors club rend le repli demande, s il y en a un', () => {
+    expect(libelleDuRole('SuperAdmin', t, 'SuperAdmin')).toBe('SuperAdmin');
+    expect(libelleDuRole('Entraineur', t, 'Entraineur')).toBe('Coach / Prof');
+    expect(libelleDuRole(undefined, t, '')).toBe('');
   });
 });

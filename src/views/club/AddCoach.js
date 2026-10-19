@@ -547,7 +547,7 @@ function AddCoach({ navigation, route }) {
                 clubName: resolvedClubName,
                 firstname: createdTrainer.firstname || t(
                   'addCoach.fallbacks.inviteFirstname',
-                  'Coach',
+                  'Coach / Prof',
                 ),
                 phoneNumber: createdTrainer.phoneNumber,
               });

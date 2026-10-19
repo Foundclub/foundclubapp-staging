@@ -132,14 +132,14 @@ const formatRoleLabel = (roleName) => {
   if (normalized.includes('entra') || normalized.includes('coach')) {
     return i18next.t(
       'userDetails.roleLabels.coach',
-      'Entraîneur',
+      'Coach / Prof',
     );
   }
   if (normalized.includes('super')) return 'SUPERADMIN';
   if (normalized.includes('authenticated') || normalized.includes('joueur')) {
     return i18next.t(
       'userDetails.roleLabels.player',
-      'JOUEUR',
+      'PRATIQUANT / JOUEUR',
     );
   }
   return String(roleName).toUpperCase();
