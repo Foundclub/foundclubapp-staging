@@ -2,10 +2,16 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Text, View } from 'react-native';
 
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 
 import { useGetPlaces } from '@/services/places/placesQueries';
+
+import { hasValidLocationCoordinates } from '@/utils/location';
 
 import LieuSurCarte from './LieuSurCarte';
 
@@ -116,6 +122,14 @@ const placeToOption = (place) => {
  *   « Adresse introuvable ? Placez-la sur la carte » (une épingle et un nom ; le lieu rejoint la
  *   base de lieux PUBLIQUE). Seulement pour un champ qui enregistre un lieu public — jamais une
  *   adresse personnelle ni une conversation (témoin lieuSurCarte.appelants.test.js).
+ *   R17-ADRESSE (REC17-008, 19/10) — sur ces mêmes champs : aucune proposition ⇒ « Ton lieu
+ *   n'est pas répertorié : place-le sur la carte » et un bouton, d'eux-mêmes (dans la liste,
+ *   puis sous le champ) ; le texte tapé survit à la fermeture de la liste jusqu'à ce que la carte
+ *   soit proposée, et devient le nom du lieu ; une adresse enregistrée SANS point le dit. Jamais
+ *   de texte libre : un lieu public sans point disparaît de la recherche par distance.
+ * @param {string} [props.villeConnue] - R17-ADRESSE : la ville de l'objet (club, Ville, équipe),
+ *   où la carte s'ouvre quand le texte tapé ne nomme aucune commune.
+ * @param {boolean} [props.vouvoyer] - R17-ADRESSE : l'invitation vouvoie (l'espace de la Ville).
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.wrapperStyle]
  * @param {object} [props.styles] - Optional compatibility style prop.
  * @returns {import('react').ReactElement}
@@ -135,17 +149,23 @@ function AutocompleteAddressInput({
   placeholder,
   setAddress,
   type,
+  villeConnue = '',
+  vouvoyer = false,
   wrapperStyle,
 }) {
   const DEBOUNCE_MS = 350;
   const safeMinChars = Number.isFinite(minChars) ? Math.max(1, minChars) : 3;
 
   const { t } = useTranslation();
+  const { Fonts, Spaces } = useTheme();
   const selectRef = useRef(null);
   const [addressSearch, setAddressSearch] = useState('');
+  const [listeOuverte, setListeOuverte] = useState(false);
   // ADRESSE-CARTE — la carte ouverte, et la 1re proposition au moment de l'ouvrir (son centre).
+  // R17-ADRESSE — et le texte qui l'a ouverte (nom proposé, commune de départ).
   const [carte, setCarte] = useState(
-    /** @type {{ premierResultat: { lat: number, lng: number } | null } | null} */ (null),
+    /** @type {{ premierResultat: { lat: number, lng: number } | null, texte: string } | null} */
+    (null),
   );
   const [debouncedAddressSearch, setDebouncedAddressSearch] = useState('');
   const [uncontrolledAddress, setUncontrolledAddress] = useState(
@@ -205,6 +225,8 @@ function AutocompleteAddressInput({
    */
   const handleSetValue = useCallback((selectedValue) => {
     const normalized = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
+    // R17-ADRESSE — une adresse choisie : le texte gardé a servi.
+    if (normalized) setAddressSearch('');
     if (setAddress) {
       setAddress(normalized);
     } else {
@@ -213,14 +235,53 @@ function AutocompleteAddressInput({
     onSelect?.(normalized);
   }, [onSelect, setAddress]);
 
+  const handleFocus = useCallback(() => {
+    setListeOuverte(true);
+    onFocus?.();
+  }, [onFocus]);
+
+  const handleBlur = useCallback(() => {
+    setListeOuverte(false);
+    onBlur?.();
+  }, [onBlur]);
+
+  // R17-ADRESSE — la carte proposée, le texte gardé a servi : il part dans la carte (le nom).
+  const ouvrirCarte = (
+    /** @type {string} */ texte,
+    /** @type {{ lat: number, lng: number } | null} */ premierResultat,
+  ) => {
+    setCarte({ premierResultat, texte });
+    setAddressSearch('');
+  };
+
   // ADRESSE-CARTE — le lien se montre une fois la recherche FAITE (frappe posée, réponse rendue),
   // qu'elle ait trouvé ou non : « introuvable » se juge aussi devant une liste qui ne contient pas
   // le lieu.
+  const texteTape = addressSearch?.trim() || '';
   const rechercheFaite = debouncedAddressSearch.length >= safeMinChars
-    && debouncedAddressSearch === (addressSearch?.trim() || '')
+    && debouncedAddressSearch === texteTape
     && !isLoading;
-  const lienCarte = permettreLieuSurCarte && rechercheFaite
-    ? {
+  // R17-ADRESSE — RIEN de proposé : l'invitation, d'elle-même (plus seulement un lien).
+  const aucuneProposition = permettreLieuSurCarte && rechercheFaite && options.length === 0;
+  const invitation = vouvoyer
+    ? t(
+      'autocompleteAddressInput.lieu.invitationVous',
+      'Votre lieu n’est pas répertorié : placez-le sur la carte',
+    )
+    : t(
+      'autocompleteAddressInput.lieu.invitation',
+      'Ton lieu n’est pas répertorié : place-le sur la carte',
+    );
+  const libelleOuvrir = t('autocompleteAddressInput.lieu.ouvrir', 'Placer sur la carte');
+  let lienCarte;
+  if (aucuneProposition) {
+    lienCarte = {
+      label: libelleOuvrir,
+      onPress: () => ouvrirCarte(texteTape, null),
+      texte: invitation,
+    };
+  } else if (permettreLieuSurCarte && rechercheFaite) {
+    lienCarte = {
       label: t(
         'autocompleteAddressInput.lieu.lien',
         'Adresse introuvable ? Placez-la sur la carte',
@@ -229,25 +290,47 @@ function AutocompleteAddressInput({
         const premier = placesOptions.find(
           (option) => Number.isFinite(option.lat) && Number.isFinite(option.lng),
         );
-        setCarte({
-          premierResultat: premier ? { lat: Number(premier.lat), lng: Number(premier.lng) } : null,
-        });
+        ouvrirCarte(
+          texteTape,
+          premier ? { lat: Number(premier.lat), lng: Number(premier.lng) } : null,
+        );
       },
+    };
+  }
+
+  // R17-ADRESSE — SOUS le champ, liste refermée : le texte tapé qui n'a rien trouvé, ou une
+  // adresse enregistrée sans point (elle ne se trouve pas en cherchant autour de soi).
+  const libelleEnregistre = selectedAddress?.label
+    || /** @type {any} */ (selectedAddress)?.description
+    || '';
+  let sousLeChamp = null;
+  if (permettreLieuSurCarte && !listeOuverte && !carte) {
+    if (aucuneProposition) {
+      sousLeChamp = { ouvrir: () => ouvrirCarte(texteTape, null), texte: invitation };
+    } else if (libelleEnregistre && !hasValidLocationCoordinates(selectedAddress)) {
+      sousLeChamp = {
+        ouvrir: () => ouvrirCarte(libelleEnregistre, null),
+        texte: t(
+          'autocompleteAddressInput.lieu.sansPoint',
+          'Cette adresse n’est pas sur la carte : on ne la trouve pas en cherchant autour de soi.',
+        ),
+      };
     }
-    : undefined;
+  }
 
   // Le champ garde sa forme d'origine (une constante, même indentation) : seul le lien s'y ajoute.
   const champ = (
     <AutocompleteSelect
       disabled={disabled}
       error={error}
+      garderLaRecherche={permettreLieuSurCarte}
       isLoading={isLoading}
       isSearchable
       label={label || ''}
       lienSousLesOptions={lienCarte}
       lightMode={lightMode}
-      onBlur={onBlur}
-      onFocus={onFocus}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
       options={options}
       placeholder={placeholder}
       ref={selectRef}
@@ -267,6 +350,12 @@ function AutocompleteAddressInput({
   return (
     <>
       {champ}
+      {sousLeChamp ? (
+        <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>{sousLeChamp.texte}</Text>
+          <Button onPress={sousLeChamp.ouvrir} title={libelleOuvrir} variant="Secondary" />
+        </View>
+      ) : null}
       <LieuSurCarte
         onFermer={() => setCarte(null)}
         onLieuPose={(place) => {
@@ -274,6 +363,8 @@ function AutocompleteAddressInput({
           handleSetValue(placeToOption(place));
         }}
         premierResultat={carte?.premierResultat || null}
+        texteTape={carte?.texte || ''}
+        villeConnue={villeConnue}
         visible={Boolean(carte)}
       />
     </>
