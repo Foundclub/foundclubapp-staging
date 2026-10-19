@@ -497,8 +497,8 @@ describe('PAR-L9b — ③ « Ouvrir une conversation » : moi, ou un coach chois
 
     expect(mockUseGetTeam)
       .toHaveBeenCalledWith('team-u11f', expect.objectContaining({ enabled: true }));
-    expect(bouton(tree, 'Karim B. · coach U11 Filles')).toBeDefined();
-    expect(bouton(tree, 'Sarah L. · coach U11 Filles')).toBeDefined();
+    expect(bouton(tree, 'Karim B. · coach / prof U11 Filles')).toBeDefined();
+    expect(bouton(tree, 'Sarah L. · coach / prof U11 Filles')).toBeDefined();
     expect(bouton(tree, OUVRIR).props.disabled).toBe(true);
   });
 
@@ -508,7 +508,7 @@ describe('PAR-L9b — ③ « Ouvrir une conversation » : moi, ou un coach chois
 
     await appuyerSurLaCarte(tree, 'chat');
     await act(async () => { bouton(tree, UN_COACH).props.onPress(); });
-    await act(async () => { bouton(tree, 'Karim B. · coach U11 Filles').props.onPress(); });
+    await act(async () => { bouton(tree, 'Karim B. · coach / prof U11 Filles').props.onPress(); });
     await act(async () => { await bouton(tree, OUVRIR).props.onPress(); });
 
     expect(mockStartWhisperChat).toHaveBeenCalledWith(['u-maryline', 'coach-karim']);
@@ -635,7 +635,7 @@ describe('PARENT-FINITIONS 4 — le bandeau d arrivée dans la conversation (E16
       documentId: 'fil-a-trois', openingOutcome: 'created',
     });
 
-    await ouvrirLeFil('Karim B. · coach U11 Filles');
+    await ouvrirLeFil('Karim B. · coach / prof U11 Filles');
 
     expect(mockShowBanner).toHaveBeenCalledTimes(1);
     expect(mockShowBanner.mock.calls[0][0])

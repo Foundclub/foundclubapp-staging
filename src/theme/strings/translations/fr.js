@@ -54,7 +54,7 @@ export default {
     fallbacks: {
       clubName: 'Club',
       coachName: 'coach',
-      inviteFirstname: 'Coach',
+      inviteFirstname: 'Coach / Prof',
       managerName: 'dirigeant',
     },
     fields: {
@@ -83,7 +83,7 @@ export default {
     },
     roles: {
       manager: 'Dirigeant·e',
-      trainer: 'Entraîneur·e',
+      trainer: 'Coach / Prof',
     },
     state: {
       loadError: {
@@ -1503,9 +1503,9 @@ export default {
     openProfile: 'Ouvrir la fiche de {{name}}',
     roles: {
       clubManager: 'Dirigeant',
-      coach: 'Entraîneur',
+      coach: 'Coach / Prof',
       none: 'Sans rôle',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
     },
     searchPlaceholder: 'Rechercher un utilisateur...',
     sortHint: 'Trier par date d inscription',
@@ -1528,7 +1528,7 @@ export default {
     coach: {
       // eslint-disable-next-line max-len
       description: 'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, préparateur physique ou autre besoin staff.',
-      title: 'Je recrute un entraîneur',
+      title: 'Je recrute un coach / prof',
     },
     // eslint-disable-next-line max-len
     footnote: 'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final de l’annonce.',
@@ -1536,10 +1536,11 @@ export default {
     players: {
       // eslint-disable-next-line max-len
       description: 'Publie une annonce par poste recherché, avec le volume de recrutement et les informations sportives de l’équipe.',
-      title: 'Je recrute des joueurs',
+      title: 'Je recrute des pratiquants / joueurs',
     },
     quotaLabel: 'Annonces',
-    subtitle: 'Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur.',
+    // eslint-disable-next-line max-len
+    subtitle: 'Choisis si tu publies une annonce pour recruter des pratiquants / joueurs ou un coach / prof.',
     title: "Type d'annonce",
   },
   adWizardCoachProfile: {
@@ -1724,7 +1725,7 @@ export default {
   },
   adWizardRecap: {
     adType: {
-      coach: 'Annonce entraîneur',
+      coach: 'Annonce coach / prof',
       detection: 'Annonce liée à une détection',
       season: 'Annonce saisonnière',
     },
@@ -2737,7 +2738,7 @@ export default {
       },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
-          + '\nTu as été désigné·e comme entraîneur·e dans le club {{clubName}}.'
+          + '\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.'
           + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
           + ' et commencer à gérer tes équipes et tes événements.',
         title: 'Bienvenue sur Found Club !',
@@ -2893,6 +2894,7 @@ export default {
     compactHeader: {
       kicker: 'Gestion du club',
     },
+    emptyFacilitiesAndSports: 'Ce club n’a encore renseigné ni ses installations ni ses sports.',
     facilities: {
       nameFallback: 'Installation',
     },
@@ -2903,8 +2905,8 @@ export default {
         + ' lui-même depuis son propre compte.',
     },
     hub: {
-      coach: 'entraîneur',
-      coachs: 'entraîneurs',
+      coach: 'coach / prof',
+      coachs: 'coachs / profs',
       groups: {
         manage: 'Gérer',
         membership: 'Adhésions',
@@ -2993,7 +2995,7 @@ export default {
     },
     titles: {
       activities: 'Sports',
-      coachs: 'Nos entraîneur·e·s',
+      coachs: 'Nos coachs / profs',
       members: 'Membres',
       owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
@@ -3352,7 +3354,7 @@ export default {
         label: 'Public',
         memberCount_one: '{{count}} membre',
         memberCount_other: '{{count}} membres',
-        players: 'Joueurs · {{teamCount}} équipe(s)',
+        players: 'Pratiquants / Joueurs · {{teamCount}} équipe(s)',
         selection: 'Sélection',
         wholeClub: 'Tout le club · {{suffix}}',
       },
@@ -3625,8 +3627,8 @@ export default {
     },
     targetRoles: {
       clubManagers: 'Dirigeants',
-      coaches: 'Entraîneurs',
-      players: 'Joueurs',
+      coaches: 'Coachs / Profs',
+      players: 'Pratiquants / Joueurs',
     },
     template: {
       add: 'Ajouter un modèle',
@@ -4359,9 +4361,9 @@ export default {
       onDueDate: 'Le jour de l échéance',
     },
     roles: {
-      coach: 'Entraîneur·e',
+      coach: 'Coach / Prof',
       manager: 'Dirigeant',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
       superAdmin: 'Super admin',
     },
     setup: {
@@ -4472,15 +4474,15 @@ export default {
       openMember: 'Gérer les rôles de {{name}}',
     },
     chips: {
-      coachOf: 'Entraîneur de {{team}}',
+      coachOf: 'Coach / Prof de {{team}}',
       manager: 'Co-dirigeant',
-      playerOf: 'Joueur de {{team}}',
+      playerOf: 'Pratiquant / Joueur de {{team}}',
     },
     confirm: {
       action: 'Confirmer',
       coachAdd: {
         // eslint-disable-next-line max-len
-        message: '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Entraîneur.',
+        message: '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Coach / Prof.',
         title: 'Nommer entraîneur ?',
       },
       coachRemove: {
@@ -4516,18 +4518,18 @@ export default {
       team: 'cette équipe',
     },
     // eslint-disable-next-line max-len
-    intro: "Touche un membre pour lui donner un rôle : joueur ou entraîneur d'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.",
+    intro: "Touche un membre pour lui donner un rôle : pratiquant / joueur ou coach / prof d'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.",
     roles: {
-      coachOf: 'Entraîneur · {{teams}}',
+      coachOf: 'Coach / Prof · {{teams}}',
       manager: 'Dirigeant',
       none: "Aucun rôle d'équipe",
-      playerOf: 'Joueur · {{teams}}',
+      playerOf: 'Pratiquant / Joueur · {{teams}}',
     },
     search: 'Rechercher un membre',
     sections: {
-      coach: 'Entraîneur de',
+      coach: 'Coach / Prof de',
       manager: 'Direction du club',
-      player: 'Joueur de',
+      player: 'Pratiquant / Joueur de',
     },
     self: '{{name}} (toi)',
     selfCard: {
@@ -4809,8 +4811,8 @@ export default {
     tabs: {
       all: 'Tous',
       clubManagers: 'Dirigeants',
-      coaches: 'Entraîneur·e·s',
-      players: 'Joueurs',
+      coaches: 'Coachs / Profs',
+      players: 'Pratiquants / Joueurs',
     },
   },
   cmTeamsScreen: {
@@ -4925,7 +4927,7 @@ export default {
         titre: 'Fermer une installation',
       },
       inviteClub: {
-        dit: 'Un club de la commune absent de FoundClub.',
+        dit: 'Le trouver sur FoundClub, ou l’inviter.',
         titre: 'Inviter un club',
       },
       publishNews: {
@@ -5252,6 +5254,8 @@ export default {
       texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
       // eslint-disable-next-line max-len
       textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      // R17-CANAUX (décision d'Adel « B », 19/10) : « Toute la ville » est réservé aux majeurs.
+      texteVille: 'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
       titreCanal: 'Tu ne fais plus partie de ce canal',
       titrePrivee: 'Tu ne fais plus partie de cette conversation',
     },
@@ -5279,6 +5283,22 @@ export default {
       mairieTitre: 'Les dirigeants des {{nombre}} clubs et vous',
       priveeClub: 'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
       priveeMairie: 'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+    },
+    // R17-CANAUX (19/10, REC17-004) : « Toute la ville », lu par les membres, écrit par la Ville.
+    ville: {
+      actualite: 'Nouvelle actualité de la Ville : « {{titre}} »',
+      ecrire: 'Écrire à toute la ville…',
+      ouvrirActualite: 'Voir l’actualité',
+      seuleLaVille: 'Seule la Ville écrit ici',
+      sousTitre: 'Lu par les membres des {{nombre}} clubs',
+      sousTitreUn: 'Lu par les membres d’1 club',
+      titre: 'Toute la ville',
+      titreMembre: 'Toute la ville · {{ville}}',
+      // eslint-disable-next-line max-len
+      videMairie: 'Vos actualités pour tous les membres y arrivent toutes seules, et vous pouvez y écrire. Les membres de vos {{nombre}} clubs le lisent ; personne ne voit qui le lit.',
+      // eslint-disable-next-line max-len
+      videMembre: 'Les actualités de {{ville}} arrivent ici. Seule la Ville écrit ; personne ne voit qui le lit.',
+      voirActualite: 'Voir l’actualité « {{titre}} »',
     },
   },
   collectiviteActualites: {
@@ -5822,27 +5842,21 @@ export default {
     ajouter: {
       acceptRequest: 'Accepter sa demande',
       attached: 'Déjà rattaché à la Ville',
-      communeHint: 'Sans texte : les clubs de votre commune.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club',
+      backToSearch: 'Chercher un club déjà sur FoundClub',
+      belongs: 'Ce club fait partie de ma collectivité',
       elsewhere: 'Rattaché à une autre collectivité',
-      // eslint-disable-next-line max-len
-      empty: 'Aucun club trouvé. Il n’est peut-être pas encore sur FoundClub : invitez-le par le lien.',
-      hasLeader: 'Un dirigeant est sur FoundClub',
-      // eslint-disable-next-line max-len
-      intro: 'Cherchez le club par son nom. Ses dirigeants reçoivent votre demande et l’acceptent ou la refusent : accepté, il est rattaché à la Ville.',
+      introSearch: 'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
       inviteByLink: 'Inviter par le lien',
       loading: 'Recherche…',
       // eslint-disable-next-line max-len
       noLeader: 'Aucun dirigeant sur FoundClub : personne ne pourrait accepter. Invitez-le par le lien.',
-      outside: 'Hors de la commune',
+      notOnFoundClub: 'Le club n’est pas sur FoundClub ?',
       refused: 'Le club a refusé votre demande',
       requested: 'Ce club demande déjà à vous rejoindre',
       resend: 'Renvoyer la demande',
-      searchLabel: 'Nom du club',
-      searchPlaceholder: 'Le nom du club',
-      send: 'Envoyer la demande',
       sent: 'Demande envoyée',
-      tab: 'Déjà sur FoundClub',
-      title: 'Ajouter un club déjà sur FoundClub',
+      title: 'Ajouter un club',
     },
     club: {
       accept: 'Accepter',
@@ -5927,6 +5941,7 @@ export default {
       attached: 'Rattaché',
       attachedElsewhere: 'Ce club a été rattaché à une autre collectivité entre-temps.',
       attachedLine: 'Il apparaît dans vos clubs.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club.',
       outside: 'Il n’est pas dans la commune.',
       pending: 'En attente',
       pendingProposal: 'Envoyée au club : ses dirigeants acceptent ou refusent.',
@@ -6392,7 +6407,7 @@ export default {
     },
     fonction: {
       manager: 'dirigeant',
-      trainer: 'entraîneur',
+      trainer: 'coach / prof',
     },
     hub: {
       reste: 'Il reste {{places}}.',
@@ -7663,8 +7678,8 @@ export default {
     },
     staffRole: {
       dirigeant: 'Dirigeant',
-      entraineur: 'Entraîneur',
-      joueur: 'Joueur',
+      entraineur: 'Coach / Prof',
+      joueur: 'Pratiquant / Joueur',
       parent: 'Parent',
     },
     typing: {
@@ -11861,11 +11876,11 @@ export default {
       title: 'Publication réservée aux clubs certifiés',
     },
     roles: {
-      coach: 'Entraîneur',
+      coach: 'Coach / Prof',
       // P0 — cette clef MANQUAIT, et c'est tout le defaut : `roleLabel` se
       // repliait sur « Joueur » pour les deux comptes Parent de production.
       parent: 'Parent',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
       president: 'Dirigeant',
       superAdmin: 'Super admin',
     },
@@ -15010,10 +15025,10 @@ export default {
     newGroup: 'Nouveau groupe',
     remove: 'Retirer {{name}}',
     sections: {
-      coaches: 'Entraîneurs',
+      coaches: 'Coachs / Profs',
       managers: 'Dirigeants',
       others: 'Autres',
-      players: 'Joueurs',
+      players: 'Pratiquants / Joueurs',
     },
     subtitle: {
       add: 'Choisis qui ajouter',
@@ -16449,9 +16464,9 @@ export default {
         label: 'Historique sportif',
       },
       types: {
-        coach: 'Entraîneur·e',
+        coach: 'Coach / Prof',
         parent: 'Parent',
-        player: 'Joueur·se',
+        player: 'Pratiquant·e / Joueur·se',
         president: 'Dirigeant·e',
       },
       weight: {
@@ -16480,10 +16495,10 @@ export default {
       // rangees, deux mots (Adel, 2026-08-28).
       pendingRequest: 'Demande en attente',
       roles: {
-        coach: 'Entraîneur',
+        coach: 'Coach / Prof',
         new: 'Membre',
         parent: 'Parent',
-        player: 'Joueur',
+        player: 'Pratiquant / Joueur',
         president: 'Dirigeant',
         superAdmin: 'Administrateur',
       },
@@ -16854,7 +16869,7 @@ export default {
   recruitmentAdCard: {
     applyHint: 'Postuler à cette annonce',
     categoryUnknown: 'Catégorie ?',
-    coachAudience: 'ENTRAÎNEUR',
+    coachAudience: 'COACH / PROF',
     coachRole: 'Rôle entraîneur',
     cta: {
       accepted: 'Je participe',
@@ -17152,10 +17167,10 @@ export default {
     allSports: 'Tous les sports',
     apply: 'Voir les résultats',
     audience: {
-      all: 'Joueur·se·s et coachs',
-      coach: 'Coachs',
+      all: 'Pratiquant·e·s / Joueur·se·s et coachs / profs',
+      coach: 'Coachs / Profs',
       label: 'Profil',
-      player: 'Joueur·se·s',
+      player: 'Pratiquant·e·s / Joueur·se·s',
     },
     category: 'Catégorie',
     city: 'Ville',
@@ -17220,8 +17235,8 @@ export default {
     },
     audience: {
       all: 'Toutes',
-      coach: 'Entraîneurs',
-      player: 'Joueurs',
+      coach: 'Coachs / Profs',
+      player: 'Pratiquants / Joueurs',
     },
     completeProfile: {
       fields: 'Sport, section, catégorie, niveau.',
@@ -17463,7 +17478,7 @@ export default {
     // PAR-L9b (13/10, E16, D3) — « Ouvrir une conversation » : moi, ou un·e coach que je
     // choisis. Aucun choix fait à la place du dirigeant.
     conversation: {
-      coachRow: '{{name}} · coach {{team}}',
+      coachRow: '{{name}} · coach / prof {{team}}',
       info: "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
       listError: 'La liste des coachs est indisponible : tu peux discuter toi-même.',
       listLoading: 'Chargement des coachs…',
@@ -21451,11 +21466,11 @@ export default {
       membersHiddenTitle: 'Membres masqués',
       nextEvents: 'Prochains événements',
       noTrainer: 'Aucun entraîneur pour le moment',
-      players_one: 'Joueur·se',
-      players_other: 'Joueur·se·s',
+      players_one: 'Pratiquant·e / Joueur·se',
+      players_other: 'Pratiquant·e·s / Joueur·se·s',
       playersHidden: 'Le club masque les joueurs de cette équipe pour les visiteurs externes.',
-      trainers_one: 'Entraîneur·e',
-      trainers_other: 'Entraîneur·e·s',
+      trainers_one: 'Coach / Prof',
+      trainers_other: 'Coachs / Profs',
       trainersHidden: 'Le club masque les entraîneurs de cette équipe pour les visiteurs externes.',
     },
     slots: {
@@ -21565,7 +21580,7 @@ export default {
         actions: {
           add: 'Ajouter un entraîneur',
         },
-        label: 'Entraîneur·e·s',
+        label: 'Coachs / Profs',
         placeholder: 'Sélectionner un·e entraîneur·e',
       },
     },
@@ -21668,10 +21683,10 @@ export default {
       explanation: "Cette équipe a été créée par un·e entraîneur·e de ton club. Elle n'apparaîtra pour les autres qu'une fois que tu l'auras validée.",
     },
     badges: {
-      coach: 'COACH',
+      coach: 'COACH / PROF',
       invitation: 'INVITATION',
       pending: 'EN ATTENTE',
-      player: 'JOUEUR·SE',
+      player: 'PRATIQUANT·E / JOUEUR·SE',
     },
     fields: {
       category: 'Catégorie',
@@ -21710,12 +21725,12 @@ export default {
     searchPlaceholder: 'Mes équipes',
     stats: {
       members: 'Membres',
-      trainers: 'Entraîneur·e·s',
+      trainers: 'Coachs / Profs',
     },
     title: 'Équipes de mon club',
     trainerGuide: {
       // eslint-disable-next-line max-len
-      body: '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.',
+      body: '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Coachs / Profs", ajoute-le puis valide.',
       nameFallback: 'Cet entraîneur',
       title: 'Assigner un entraîneur',
     },
@@ -21865,7 +21880,7 @@ export default {
     trainings: 'Entraînements',
   },
   profileStats: {
-    coachBadge: 'Entraîneur',
+    coachBadge: 'Coach / Prof',
     coachLine: 'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.',
     inYourTeam: 'Dans ton équipe · {{teams}}',
     // ST-VUES2 (02/10) — écran 17, chez l'entraîneur : la feuille du dernier match du joueur.
@@ -22055,7 +22070,7 @@ export default {
         selfHint: "Tu es déjà sélectionné·e — tu pourras en ajouter d'autres plus tard.",
         selfTag: 'Toi',
         subtitle: 'Sélectionne au moins un·e entraîneur·e pour encadrer cette équipe.',
-        title: 'Entraîneur·e·s',
+        title: 'Coachs / Profs',
       },
     },
   },
@@ -22117,8 +22132,8 @@ export default {
     paywallContext: 'Ta nouvelle équipe',
     retry: 'Réessayer',
     trainers: {
-      fallback: 'Entraîneur·e',
-      roleCoach: 'coach',
+      fallback: 'Coach / Prof',
+      roleCoach: 'coach / prof',
       rolePresident: 'dirigeant·e',
       self: 'Toi',
       selfWithRole: ' — toi, {{role}}',
@@ -22142,7 +22157,7 @@ export default {
     loading: 'Chargement des entraîneur·e·s du club…',
     retry: 'Réessayer',
     roles: {
-      coach: 'Coach',
+      coach: 'Coach / Prof',
       president: 'Dirigeant·e',
     },
   },
@@ -23997,8 +24012,8 @@ export default {
     },
     private: 'Privé',
     roleLabels: {
-      coach: 'Entraîneur',
-      player: 'JOUEUR',
+      coach: 'Coach / Prof',
+      player: 'PRATIQUANT / JOUEUR',
       president: 'DIRIGEANT',
       user: 'UTILISATEUR',
     },

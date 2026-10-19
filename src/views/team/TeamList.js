@@ -243,7 +243,7 @@ function TeamList({ navigation, route }) {
         <GlobalPromptModal
           body={t(
             'teamList.trainerGuide.body',
-            '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.', // eslint-disable-line max-len
+            '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Coachs / Profs", ajoute-le puis valide.', // eslint-disable-line max-len
             {
               name: assignmentTrainerName || t(
                 'teamList.trainerGuide.nameFallback',

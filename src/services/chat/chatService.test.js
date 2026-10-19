@@ -22,7 +22,9 @@ jest.mock('@/utils/logger/logger', () => ({
   })),
 }));
 
-const { createWhisperChat, getChatById, getChatMessages } = require('./chatService');
+const {
+  createWhisperChat, getChatById, getChatMessages, getChats,
+} = require('./chatService');
 
 describe('PARFIN exact — le résultat de création du fil traverse le service', () => {
   test.each([
@@ -149,6 +151,33 @@ describe('chatService', () => {
     expect(mockLoggerWarn).not.toHaveBeenCalled();
     expect(result.data).toHaveLength(2);
     expect(result.data[0].sender).toBeNull();
+  });
+
+  // R17-CANAUX (19/10, REC17-004) — le 3e fil de la Ville, « Toute la ville ». Sans lui dans la
+  // liste des types, UNE ligne fait tomber la page entière dans le repli non validé (le piège
+  // « une liste validée EN BLOC meurt pour UNE ligne ») ; son seul signe est l'avertissement.
+  test('getChats valide une page portant « Toute la ville » (collectivite_ville)', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        data: [{
+          collectivite: { documentId: 'ville-1', name: 'Ville de Demo' },
+          createdAt: '2026-10-19T09:00:00.000Z',
+          documentId: 'chat-ville',
+          messages: [],
+          participants: [],
+          type: 'collectivite_ville',
+          updatedAt: '2026-10-19T09:00:00.000Z',
+        }],
+        meta: {
+          pagination: {
+            page: 1, pageCount: 1, pageSize: 20, total: 1,
+          },
+        },
+      },
+    });
+    const result = await getChats(1, 20);
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
+    expect(result.data[0].type).toBe('collectivite_ville');
   });
 });
 

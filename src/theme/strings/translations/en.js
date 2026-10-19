@@ -57,7 +57,7 @@ export default {
     fallbacks: {
       clubName: 'Club',
       coachName: 'coach',
-      inviteFirstname: 'Coach',
+      inviteFirstname: 'Coach / Instructor',
       managerName: 'club manager',
     },
     fields: {
@@ -86,7 +86,7 @@ export default {
     },
     roles: {
       manager: 'Club manager',
-      trainer: 'Coach',
+      trainer: 'Coach / Instructor',
     },
     state: {
       loadError: {
@@ -1441,9 +1441,9 @@ export default {
     openProfile: "Open {{name}}'s profile",
     roles: {
       clubManager: 'Club manager',
-      coach: 'Coach',
+      coach: 'Coach / Instructor',
       none: 'No role',
-      player: 'Player',
+      player: 'Player / Participant',
     },
     searchPlaceholder: 'Search for a user...',
     sortHint: 'Sort by sign-up date',
@@ -1465,16 +1465,16 @@ export default {
   adWizardAudienceType: {
     coach: {
       description: 'Post an ad dedicated to a coaching role: head coach, assistant, fitness coach or any other staff need.',
-      title: "I'm recruiting a coach",
+      title: "I'm recruiting a coach / instructor",
     },
     footnote: 'The flow then automatically adapts the steps, the labels and how the ad is finally displayed.',
     next: 'Next',
     players: {
       description: "Post one ad per position wanted, with the number of recruits and the team's sports details.",
-      title: "I'm recruiting players",
+      title: "I'm recruiting players / participants",
     },
     quotaLabel: 'Ads',
-    subtitle: 'Choose whether you are posting an ad to recruit players or a coach.',
+    subtitle: 'Choose whether you are posting an ad to recruit players / participants or a coach / instructor.',
     title: 'Type of ad',
   },
   adWizardCoachProfile: {
@@ -1649,7 +1649,7 @@ export default {
   },
   adWizardRecap: {
     adType: {
-      coach: 'Coach ad',
+      coach: 'Coach / instructor ad',
       detection: 'Ad linked to a trial',
       season: 'Season ad',
     },
@@ -2512,7 +2512,7 @@ export default {
         title: "You're about to remove this coach.",
       },
       inviteTrainer: {
-        message: "Hi {{coachName}}!\nYou've been designated as coach at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events.",
+        message: "Hi {{coachName}}!\nYou've been designated as coach / instructor at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events.",
         title: 'Welcome to FoundClub!',
       },
       joinClub: {
@@ -2650,6 +2650,7 @@ export default {
     compactHeader: {
       kicker: 'Club management',
     },
+    emptyFacilitiesAndSports: 'This club has not listed its facilities or its sports yet.',
     facilities: {
       nameFallback: 'Facility',
     },
@@ -2657,8 +2658,8 @@ export default {
       teenAsksAlone: 'From age 13, your child makes their own request from their own account.',
     },
     hub: {
-      coach: 'coach',
-      coachs: 'coaches',
+      coach: 'coach / instructor',
+      coachs: 'coaches / instructors',
       groups: {
         manage: 'Manage',
         membership: 'Memberships',
@@ -2734,7 +2735,7 @@ export default {
     },
     titles: {
       activities: 'Sports',
-      coachs: 'Our coaches',
+      coachs: 'Our coaches / instructors',
       members: 'Members',
       owners: 'Our club managers',
       sponsors: 'Our partners',
@@ -3079,7 +3080,7 @@ export default {
         label: 'Audience',
         memberCount_one: '{{count}} member',
         memberCount_other: '{{count}} members',
-        players: 'Players · {{teamCount}} team(s)',
+        players: 'Players / Participants · {{teamCount}} team(s)',
         selection: 'Selection',
         wholeClub: 'Whole club · {{suffix}}',
       },
@@ -3323,8 +3324,8 @@ export default {
     },
     targetRoles: {
       clubManagers: 'Club managers',
-      coaches: 'Coaches',
-      players: 'Players',
+      coaches: 'Coaches / Instructors',
+      players: 'Players / Participants',
     },
     template: {
       add: 'Add a template',
@@ -4038,9 +4039,9 @@ export default {
       onDueDate: 'On the due date',
     },
     roles: {
-      coach: 'Coach',
+      coach: 'Coach / Instructor',
       manager: 'Club manager',
-      player: 'Player',
+      player: 'Player / Participant',
       superAdmin: 'Super admin',
     },
     setup: {
@@ -4146,14 +4147,14 @@ export default {
       openMember: 'Manage the roles of {{name}}',
     },
     chips: {
-      coachOf: 'Coach of {{team}}',
+      coachOf: 'Coach / Instructor of {{team}}',
       manager: 'Co-manager',
-      playerOf: 'Player of {{team}}',
+      playerOf: 'Player / Participant of {{team}}',
     },
     confirm: {
       action: 'Confirm',
       coachAdd: {
-        message: '{{name}} will become coach of {{team}}. Their account will take the Coach role.',
+        message: '{{name}} will become coach of {{team}}. Their account will take the Coach / Instructor role.',
         title: 'Appoint as coach?',
       },
       coachRemove: {
@@ -4186,18 +4187,18 @@ export default {
       member: 'This member',
       team: 'this team',
     },
-    intro: 'Tap a member to give them a role: player or coach of a team, or co-manager. A member can hold several.',
+    intro: 'Tap a member to give them a role: player / participant or coach / instructor of a team, or co-manager. A member can hold several.',
     roles: {
-      coachOf: 'Coach · {{teams}}',
+      coachOf: 'Coach / Instructor · {{teams}}',
       manager: 'Manager',
       none: 'No team role',
-      playerOf: 'Player · {{teams}}',
+      playerOf: 'Player / Participant · {{teams}}',
     },
     search: 'Search a member',
     sections: {
-      coach: 'Coach of',
+      coach: 'Coach / Instructor of',
       manager: 'Club management',
-      player: 'Player of',
+      player: 'Player / Participant of',
     },
     self: '{{name}} (you)',
     selfCard: {
@@ -4472,8 +4473,8 @@ export default {
     tabs: {
       all: 'All',
       clubManagers: 'Club managers',
-      coaches: 'Coaches',
-      players: 'Players',
+      coaches: 'Coaches / Instructors',
+      players: 'Players / Participants',
     },
   },
   cmTeamsScreen: {
@@ -4584,7 +4585,7 @@ export default {
         titre: 'Close a facility',
       },
       inviteClub: {
-        dit: 'A club of the town not yet on FoundClub.',
+        dit: 'Find it on FoundClub, or invite it.',
         titre: 'Invite a club',
       },
       publishNews: {
@@ -4890,6 +4891,7 @@ export default {
       retour: 'Back to messages',
       texteCanal: 'Your club is no longer attached to this city, so you are no longer in its managers’ channel. Your past messages stay there.',
       textePrivee: 'Your club is no longer attached to this city: this private conversation is closed to you. Your past messages stay there.',
+      texteVille: 'This channel is for adult members of the clubs attached to the city.',
       titreCanal: 'You are no longer in this channel',
       titrePrivee: 'You are no longer in this conversation',
     },
@@ -4914,6 +4916,19 @@ export default {
       mairieTitre: 'The managers of the {{nombre}} clubs and you',
       priveeClub: 'Private conversation: only the city and your club’s managers read it.',
       priveeMairie: 'Private conversation: only the managers of {{club}} read it.',
+    },
+    ville: {
+      actualite: 'New from the city: “{{titre}}”',
+      ecrire: 'Write to the whole city…',
+      ouvrirActualite: 'See the news',
+      seuleLaVille: 'Only the city writes here',
+      sousTitre: 'Read by the members of the {{nombre}} clubs',
+      sousTitreUn: 'Read by the members of 1 club',
+      titre: 'The whole city',
+      titreMembre: 'The whole city · {{ville}}',
+      videMairie: 'Your news for all members lands here on its own, and you can write here. The members of your {{nombre}} clubs read it; nobody sees who reads it.',
+      videMembre: 'News from {{ville}} lands here. Only the city writes; nobody sees who reads it.',
+      voirActualite: 'See the news “{{titre}}”',
     },
   },
   collectiviteActualites: {
@@ -5855,7 +5870,7 @@ export default {
     },
     fonction: {
       manager: 'manager',
-      trainer: 'coach',
+      trainer: 'coach / instructor',
     },
     hub: {
       reste: '{{places}} left.',
@@ -6366,24 +6381,20 @@ export default {
     ajouter: {
       acceptRequest: 'Accept its request',
       attached: 'Already attached to the town',
-      communeHint: 'With no text: the clubs of your town.',
+      awaitingLeader: "Request saved: it is waiting for the club's first manager",
+      backToSearch: 'Search for a club already on FoundClub',
+      belongs: 'This club is part of my local authority',
       elsewhere: 'Attached to another local authority',
-      empty: 'No club found. It may not be on FoundClub yet: invite it with the link.',
-      hasLeader: 'A manager is on FoundClub',
-      intro: 'Search for the club by name. Its managers receive your request and accept or decline it: once accepted, it is attached to the town.',
+      introSearch: 'Find the club, then « This club is part of my local authority ».',
       inviteByLink: 'Invite with the link',
       loading: 'Searching…',
       noLeader: 'No manager on FoundClub: nobody could accept. Invite it with the link.',
-      outside: 'Outside the town',
+      notOnFoundClub: 'The club is not on FoundClub?',
       refused: 'The club declined your request',
       requested: 'This club is already asking to join you',
       resend: 'Send the request again',
-      searchLabel: 'Club name',
-      searchPlaceholder: "The club's name",
-      send: 'Send the request',
       sent: 'Request sent',
-      tab: 'Already on FoundClub',
-      title: 'Add a club already on FoundClub',
+      title: 'Add a club',
     },
     club: {
       accept: 'Accept',
@@ -6460,6 +6471,7 @@ export default {
       attached: 'Attached',
       attachedElsewhere: 'This club was attached to another local authority in the meantime.',
       attachedLine: 'It appears in your clubs.',
+      awaitingLeader: "Request saved: it is waiting for the club's first manager.",
       outside: 'It is not in the town.',
       pending: 'Waiting',
       pendingProposal: 'Sent to the club: its managers accept or decline.',
@@ -7190,8 +7202,8 @@ export default {
     },
     staffRole: {
       dirigeant: 'Manager',
-      entraineur: 'Coach',
-      joueur: 'Player',
+      entraineur: 'Coach / Instructor',
+      joueur: 'Player / Participant',
       parent: 'Parent',
     },
     typing: {
@@ -11138,9 +11150,9 @@ export default {
       title: 'Publishing reserved for certified clubs',
     },
     roles: {
-      coach: 'Coach',
+      coach: 'Coach / Instructor',
       parent: 'Parent',
-      player: 'Player',
+      player: 'Player / Participant',
       president: 'Club manager',
       superAdmin: 'Super admin',
     },
@@ -14332,10 +14344,10 @@ export default {
     newGroup: 'New group',
     remove: 'Remove {{name}}',
     sections: {
-      coaches: 'Coaches',
+      coaches: 'Coaches / Instructors',
       managers: 'Managers',
       others: 'Others',
-      players: 'Players',
+      players: 'Players / Participants',
     },
     subtitle: {
       add: 'Choose who to add',
@@ -15844,9 +15856,9 @@ export default {
         label: 'Sports history',
       },
       types: {
-        coach: 'Coach',
+        coach: 'Coach / Instructor',
         parent: 'Parent',
-        player: 'Player',
+        player: 'Player / Participant',
         president: 'Club manager',
       },
       weight: {
@@ -15872,10 +15884,10 @@ export default {
     identity: {
       pendingRequest: 'Request pending',
       roles: {
-        coach: 'Coach',
+        coach: 'Coach / Instructor',
         new: 'Member',
         parent: 'Parent',
-        player: 'Player',
+        player: 'Player / Participant',
         president: 'Club manager',
         superAdmin: 'Administrator',
       },
@@ -16216,7 +16228,7 @@ export default {
   recruitmentAdCard: {
     applyHint: 'Apply to this ad',
     categoryUnknown: 'Category ?',
-    coachAudience: 'COACH',
+    coachAudience: 'COACH / INSTRUCTOR',
     coachRole: 'Coach role',
     cta: {
       accepted: "I'm in",
@@ -16508,10 +16520,10 @@ export default {
     allSports: 'All sports',
     apply: 'See results',
     audience: {
-      all: 'Players and coaches',
-      coach: 'Coaches',
+      all: 'Players / participants and coaches / instructors',
+      coach: 'Coaches / Instructors',
       label: 'Profile',
-      player: 'Players',
+      player: 'Players / Participants',
     },
     category: 'Category',
     city: 'City',
@@ -16574,8 +16586,8 @@ export default {
     },
     audience: {
       all: 'All',
-      coach: 'Coaches',
-      player: 'Players',
+      coach: 'Coaches / Instructors',
+      player: 'Players / Participants',
     },
     completeProfile: {
       fields: 'Sport, section, category, level.',
@@ -16802,7 +16814,7 @@ export default {
     clubClaimAssignedMessage: '{{name}} has been added as a club manager.',
     clubClaimAssignedTitle: 'Club manager added',
     conversation: {
-      coachRow: '{{name}} · coach {{team}}',
+      coachRow: '{{name}} · coach / instructor {{team}}',
       info: 'Opening a conversation does not mean joining the team.',
       listError: 'The list of coaches is unavailable: you can talk yourself.',
       listLoading: 'Loading coaches…',
@@ -20409,11 +20421,11 @@ export default {
       membersHiddenTitle: 'Members hidden',
       nextEvents: 'Upcoming events',
       noTrainer: 'No coach yet',
-      players_one: 'Player',
-      players_other: 'Players',
+      players_one: 'Player / Participant',
+      players_other: 'Players / Participants',
       playersHidden: "The club hides this team's players from external visitors.",
-      trainers_one: 'Coach',
-      trainers_other: 'Coaches',
+      trainers_one: 'Coach / Instructor',
+      trainers_other: 'Coaches / Instructors',
       trainersHidden: "The club hides this team's coaches from external visitors.",
     },
     slots: {
@@ -20521,7 +20533,7 @@ export default {
         actions: {
           add: 'Add a coach',
         },
-        label: 'Coaches',
+        label: 'Coaches / Instructors',
         placeholder: 'Select a coach',
       },
     },
@@ -20707,10 +20719,10 @@ export default {
       explanation: "This team was created by a coach at your club. It won't appear to others until you approve it.",
     },
     badges: {
-      coach: 'COACH',
+      coach: 'COACH / INSTRUCTOR',
       invitation: 'INVITATION',
       pending: 'PENDING',
-      player: 'PLAYER',
+      player: 'PLAYER / PARTICIPANT',
     },
     fields: {
       category: 'Category',
@@ -20748,11 +20760,11 @@ export default {
     searchPlaceholder: 'My teams',
     stats: {
       members: 'Members',
-      trainers: 'Coaches',
+      trainers: 'Coaches / Instructors',
     },
     title: "My club's teams",
     trainerGuide: {
-      body: '{{name}} is now in your club.\n\n1. Open a team.\n2. Tap "Edit".\n3. In the "Coaches" section, add them and confirm.',
+      body: '{{name}} is now in your club.\n\n1. Open a team.\n2. Tap "Edit".\n3. In the "Coaches / Instructors" section, add them and confirm.',
       nameFallback: 'This coach',
       title: 'Assign a coach',
     },
@@ -20969,7 +20981,7 @@ export default {
     trainings: 'Trainings',
   },
   profileStats: {
-    coachBadge: 'Coach',
+    coachBadge: 'Coach / Instructor',
     coachLine: 'Visible to you, their coach, for the {{teams}} team only.',
     inYourTeam: 'In your team · {{teams}}',
     // ST-VUES2 (02/10) — screen 17, for the coach: the sheet of the player's latest match.
@@ -21154,7 +21166,7 @@ export default {
         selfHint: "You're already selected — you can add others later.",
         selfTag: 'You',
         subtitle: 'Select at least one coach to lead this team.',
-        title: 'Coaches',
+        title: 'Coaches / Instructors',
       },
     },
   },
@@ -21213,8 +21225,8 @@ export default {
     paywallContext: 'Your new team',
     retry: 'Retry',
     trainers: {
-      fallback: 'Coach',
-      roleCoach: 'coach',
+      fallback: 'Coach / Instructor',
+      roleCoach: 'coach / instructor',
       rolePresident: 'manager',
       self: 'You',
       selfWithRole: ' — you, {{role}}',
@@ -21236,7 +21248,7 @@ export default {
     loading: "Loading the club's coaches…",
     retry: 'Retry',
     roles: {
-      coach: 'Coach',
+      coach: 'Coach / Instructor',
       president: 'Manager',
     },
   },
@@ -22500,8 +22512,8 @@ export default {
     },
     private: 'Private',
     roleLabels: {
-      coach: 'Coach',
-      player: 'PLAYER',
+      coach: 'Coach / Instructor',
+      player: 'PLAYER / PARTICIPANT',
       president: 'CLUB MANAGER',
       user: 'USER',
     },

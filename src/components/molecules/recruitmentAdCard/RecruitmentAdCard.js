@@ -192,7 +192,7 @@ function RecruitmentAdCard({
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
   const audienceTypeLabel = isCoachAd ? t(
     'recruitmentAdCard.coachAudience',
-    'ENTRAINEUR',
+    'COACH / PROF',
   ) : getRecruitAthleteNoun(sportName).toUpperCase();
 
   const handlePress = () => {

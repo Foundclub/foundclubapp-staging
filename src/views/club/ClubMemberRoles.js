@@ -129,13 +129,13 @@ function ClubMemberRoles({ route }) {
     const lines = [];
     if (member?.isManager) lines.push(t('clubMemberRoles.roles.manager', 'Dirigeant'));
     if (member?.trainerTeamIds?.length) {
-      lines.push(t('clubMemberRoles.roles.coachOf', 'Entraîneur · {{teams}}', {
+      lines.push(t('clubMemberRoles.roles.coachOf', 'Coach / Prof · {{teams}}', {
         teams: teamNames(member.trainerTeamIds),
         ...SANS_ECHAPPEMENT,
       }));
     }
     if (member?.playerTeamIds?.length) {
-      lines.push(t('clubMemberRoles.roles.playerOf', 'Joueur · {{teams}}', {
+      lines.push(t('clubMemberRoles.roles.playerOf', 'Pratiquant / Joueur · {{teams}}', {
         teams: teamNames(member.playerTeamIds),
         ...SANS_ECHAPPEMENT,
       }));
@@ -167,7 +167,7 @@ function ClubMemberRoles({ route }) {
         t('clubMemberRoles.confirm.coachAdd.title', 'Nommer entraîneur ?'),
         t(
           'clubMemberRoles.confirm.coachAdd.message',
-          '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Entraîneur.',
+          '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Coach / Prof.',
           values,
         ),
       ],
@@ -296,11 +296,11 @@ function ClubMemberRoles({ route }) {
         {teams.map((team) => renderChip({
           checked: hasMemberRole(member, role, team.documentId),
           label: role === 'player'
-            ? t('clubMemberRoles.chips.playerOf', 'Joueur de {{team}}', {
+            ? t('clubMemberRoles.chips.playerOf', 'Pratiquant / Joueur de {{team}}', {
               team: team.name,
               ...SANS_ECHAPPEMENT,
             })
-            : t('clubMemberRoles.chips.coachOf', 'Entraîneur de {{team}}', {
+            : t('clubMemberRoles.chips.coachOf', 'Coach / Prof de {{team}}', {
               team: team.name,
               ...SANS_ECHAPPEMENT,
             }),
@@ -331,10 +331,14 @@ function ClubMemberRoles({ route }) {
           </Text>
         ) : null}
         {teams.length
-          ? renderTeamRow(member, 'player', t('clubMemberRoles.sections.player', 'Joueur de'))
+          ? renderTeamRow(
+            member,
+            'player',
+            t('clubMemberRoles.sections.player', 'Pratiquant / Joueur de'),
+          )
           : null}
         {teams.length && canHoldStaffRoles
-          ? renderTeamRow(member, 'coach', t('clubMemberRoles.sections.coach', 'Entraîneur de'))
+          ? renderTeamRow(member, 'coach', t('clubMemberRoles.sections.coach', 'Coach / Prof de'))
           : null}
         {canHoldStaffRoles && !(member.isSelf && member.isManager) ? (
           <View style={[Spaces.gap[8]]}>
@@ -520,8 +524,8 @@ function ClubMemberRoles({ route }) {
               <Text style={[Fonts.p2, Fonts.neutral200]}>
                 {t(
                   'clubMemberRoles.intro',
-                  'Touche un membre pour lui donner un rôle : joueur ou entraîneur d\'une équipe, '
-                    + 'ou co-dirigeant. Un membre peut en cumuler plusieurs.',
+                  // eslint-disable-next-line max-len
+                  'Touche un membre pour lui donner un rôle : pratiquant / joueur ou coach / prof d\'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.',
                 )}
               </Text>
               <SearchBar
