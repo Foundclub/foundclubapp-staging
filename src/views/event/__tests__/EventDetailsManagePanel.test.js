@@ -801,11 +801,12 @@ describe('EventDetails — panneau organisateur : etats recenses', () => {
     }
   });
 
-  // RESA-RAT-APP (19/10/2026) — règle du rattrapage : interrupteur COMPLEXES_JOUEUR éteint, l'écran
-  // fusionné est celui de staging. Le test « réservation » de staging ignore « Réservation » (accent) :
-  // l'événement garde son pied d'écran ordinaire, ni module de l'organisateur ni bouton « Reserver ».
-  // Allumé, la règle partagée isBookingEventType le reconnaît (états 6 bis et ci-dessous).
-  test('etat 6 quater — COMPLEXES_JOUEUR éteint : « Réservation » garde le pied d écran de staging', () => {
+  // RESA-RAT-APP (19/10/2026) — règle du rattrapage : interrupteur COMPLEXES_JOUEUR éteint,
+  // l'écran fusionné est celui de staging. Le test « réservation » de staging ignore
+  // « Réservation » (accent) : l'événement garde son pied d'écran ordinaire, ni module de
+  // l'organisateur ni bouton « Reserver ». Allumé, la règle partagée isBookingEventType le
+  // reconnaît (états 6 bis et ci-dessous).
+  test('etat 6 quater — éteint : « Réservation » garde le pied d écran de staging', () => {
     // eslint-disable-next-line global-require
     const interrupteurs = require('@/config/fonctionsMasquees');
     interrupteurs.COMPLEXES_JOUEUR = false;

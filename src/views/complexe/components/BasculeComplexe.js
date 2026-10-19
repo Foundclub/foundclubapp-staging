@@ -35,7 +35,7 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
  * @param {string | null} props.compteId - Le documentId du compte (le mode se garde par compte).
  * @param {'player' | 'parent' | null} props.displayMode - Le mode ACTIF (rien = le rôle du compte).
  * @param {(mode: 'player' | 'parent' | null) => void} props.onChange - Le mode choisi.
- * @param {() => void} props.onPratiqueAussi - PAR-L12 : la feuille « Tu pratiques aussi un sport ? ».
+ * @param {() => void} props.onPratiqueAussi - PAR-L12 : ouvrir la feuille « pratiquer aussi ».
  * @param {string[]} props.prenoms - PAR-L12 : les prénoms de ses enfants.
  * @returns {import('react').ReactElement} Le bandeau.
  */

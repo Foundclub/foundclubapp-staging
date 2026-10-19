@@ -152,7 +152,7 @@ describe('RESA-L5A1 RB — la bascule en tête de l’accueil', () => {
     expect(textes(arbre)).toContain('Revenir en mode entraîneur');
   });
 
-  it('en mode parent (PAR-L12), le dirigeant garde son retour « Revenir en mode dirigeant »', async () => {
+  it('mode parent (PAR-L12) : le dirigeant garde « Revenir en mode dirigeant »', async () => {
     mockMes = { data: [COMPLEXE_FIVE], isLoading: false };
     const onChange = jest.fn();
     const arbre = await monter(
