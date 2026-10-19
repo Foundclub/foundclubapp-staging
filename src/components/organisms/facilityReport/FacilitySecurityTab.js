@@ -18,7 +18,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
-import Loader from '@/components/atoms/loader/Loader';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -58,7 +58,20 @@ function FacilitySecurityTab({
     navigation.navigate(RouteNames.FacilityReportDetails, { espace: 'ville', reportId });
   };
 
-  if (suivi.isLoading) return <Loader />;
+  if (suivi.isLoading) {
+    // Planche F (« comme les autres onglets ») : le squelette du projet, deux blocs de 56 et 80 —
+    // l etat, puis une carte — au lieu d une roue. Un bloc du squelette a un FOND : c est lui que
+    // le masque du chatoiement dessine (motif CollectiviteRequests, COLL-C3B-BIS).
+    const bloc = { backgroundColor: Colors.primary700, borderRadius: 8 };
+    return (
+      <View accessibilityState={{ busy: true }} testID="securite-chargement">
+        <SkeletonLoader isActive wrapperStyle={[{ gap: 12 }]}>
+          <View style={[bloc, { height: 56 }]} />
+          <View style={[bloc, { height: 80 }]} />
+        </SkeletonLoader>
+      </View>
+    );
+  }
   if (suivi.isError || !suivi.data) {
     return (
       <View style={{ gap: 12, padding: 16 }} testID="securite-erreur">

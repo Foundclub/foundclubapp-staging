@@ -95,12 +95,21 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
 
   if (fiche.isLoading) {
     return (
-      <View style={{ gap: 12, paddingTop: enPanneau ? 0 : 16 }} testID="signalement-chargement">
+      <View
+        accessibilityState={{ busy: true }}
+        style={{ gap: 12, paddingTop: enPanneau ? 0 : 16 }}
+        testID="signalement-chargement"
+      >
         {entete}
+        {/* Un bloc du squelette a un FOND : c est lui que le masque du chatoiement dessine. */}
         <SkeletonLoader isActive wrapperStyle={[{ gap: 12 }]}>
-          <View style={{ borderRadius: 16, height: 180 }} />
-          <View style={{ borderRadius: 8, height: 22, width: '70%' }} />
-          <View style={{ borderRadius: 8, height: 64 }} />
+          <View style={{ backgroundColor: Colors.primary700, borderRadius: 16, height: 180 }} />
+          <View
+            style={{
+              backgroundColor: Colors.primary700, borderRadius: 8, height: 22, width: '70%',
+            }}
+          />
+          <View style={{ backgroundColor: Colors.primary700, borderRadius: 8, height: 64 }} />
         </SkeletonLoader>
       </View>
     );

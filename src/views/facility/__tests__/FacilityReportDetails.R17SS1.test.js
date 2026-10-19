@@ -303,6 +303,11 @@ describe('R17SS1 — P10-securite-ordi B : le signalement en PANNEAU, à droite 
   it('le chargement : le squelette, pas la roue', () => {
     mockFiche = { data: undefined, isError: false, isLoading: true };
     const arbre = monterLePanneau(jest.fn());
-    expect(parId(arbre, 'signalement-chargement').length).toBeGreaterThan(0);
+    const [chargement] = parId(arbre, 'signalement-chargement');
+    expect(chargement.props.accessibilityState).toEqual({ busy: true });
+    // Un bloc du squelette a un FOND : c est lui que le masque du chatoiement dessine.
+    const blocs = chargement.findAll((/** @type {any} */ n) => n.type === 'View' && n.props.style?.height && n.props.style?.borderRadius);
+    expect(blocs.map((/** @type {any} */ n) => n.props.style.height)).toEqual([180, 22, 64]);
+    blocs.forEach((/** @type {any} */ n) => expect(n.props.style.backgroundColor).toBeTruthy());
   });
 });

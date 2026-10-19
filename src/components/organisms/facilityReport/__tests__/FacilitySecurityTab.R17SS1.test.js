@@ -42,7 +42,16 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({ useFacilityReports: () => mockSuivi }));
-jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+// P10-securite-ordi F : le chargement est le squelette du projet (sa vraie version charge un
+// module natif) ; la doublure garde ses blocs pour qu on les mesure. La roue ne doit plus servir.
+jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View } = jest.requireActual('react-native');
+  return function SkeletonMock(/** @type {any} */ { children }) {
+    return reactActuel.createElement(View, { testID: 'squelette' }, children);
+  };
+});
+jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { throw new Error('la roue ne sert plus : squelette'); });
 jest.mock('@/utils/imageUrl', () => ({ getImageUrl: (/** @type {string} */ url) => `https://cdn.test${url}` }));
 
 const OUVERTS = [
@@ -227,6 +236,19 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     const tout = textes(monter()).join(' | ');
     expect(tout).toContain('En service');
     expect(tout).toContain('Aucun signalement ouvert, aucune fermeture en cours.');
+  });
+
+  it('P10-securite-ordi F : pendant la lecture, le squelette — deux blocs de 56 et 80, avec un fond', () => {
+    mockSuivi = { data: undefined, isError: false, isLoading: true };
+    const arbre = monter();
+    const [chargement] = parId(arbre, 'securite-chargement');
+    expect(chargement.props.accessibilityState).toEqual({ busy: true });
+    const [squelette] = parId(arbre, 'squelette');
+    const blocs = squelette.findAll((/** @type {any} */ n) => n.type === 'View' && n.props.style)
+      .map((/** @type {any} */ n) => [].concat(n.props.style).reduce((tout, part) => ({ ...tout, ...part }), {}))
+      .filter((/** @type {any} */ style) => style.height);
+    expect(blocs.map((/** @type {any} */ style) => style.height)).toEqual([56, 80]);
+    blocs.forEach((/** @type {any} */ style) => expect(style.backgroundColor).toBeTruthy());
   });
 
   it('erreur : « Le suivi n’a pas pu être chargé. » et « Réessayer »', () => {
