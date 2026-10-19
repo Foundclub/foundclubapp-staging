@@ -3,7 +3,7 @@
 // P10-securite-ordi A, D, E, F et P10-securite-tel 1, validees le 19/10). Le vrai fr.js, le crochet
 // reseau double. Ce que le temoin fixe : l ETAT deduit par le serveur (Q5 A) dit en clair ; les
 // signalements ouverts, la securite d abord, sans nom de joueur ; l historique ; le vide ; l erreur.
-import { Text } from 'react-native';
+import { Image, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import FacilitySecurityTab from '../FacilitySecurityTab';
@@ -43,6 +43,7 @@ jest.mock('@/theme/themeContext', () => {
 });
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({ useFacilityReports: () => mockSuivi }));
 jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+jest.mock('@/utils/imageUrl', () => ({ getImageUrl: (/** @type {string} */ url) => `https://cdn.test${url}` }));
 
 const OUVERTS = [
   {
@@ -101,7 +102,7 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     expect(tout).toContain('dim. 18 oct. · Lucas Morel, entraîneur · AS Montrivage');
     expect(tout).toContain('ven. 16 oct. · un joueur · Montrivage FC');
     expect(tout).toContain('Fuite de la douche · résolu');
-    expect(tout).toContain('Signalé le mar. 6 oct. · clos le mer. 14 oct. : « Joint changé. »');
+    expect(tout).toContain('Signalé le mar. 6 oct. · résolu le mer. 14 oct. : « Joint changé. »');
     expect(tout).toContain('Fermé du lun. 5 oct. au ven. 9 oct.');
     const [ligne] = parId(arbre, 'securite-signalement-sig-1');
     await act(async () => { ligne.props.onPress(); });
@@ -132,6 +133,80 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     // Le signalement ouvert dans le panneau se lit dans la liste.
     expect(parId(arbre, 'securite-signalement-sig-2')[0].props.accessibilityState).toEqual({ selected: true });
     expect(parId(arbre, 'securite-signalement-sig-1')[0].props.accessibilityState).toEqual({ selected: false });
+  });
+
+  it('P10-securite-ordi A : 3 jalons, puis « Voir tout l historique » qui déplie le reste', async () => {
+    const traites = [1, 2, 3, 4].map((rang) => ({
+      ...TRAITE, closedAt: `2026-10-1${rang}T10:00:00Z`, createdAt: `2026-10-0${rang}T10:00:00Z`, documentId: `sig-h${rang}`, title: `Problème ${rang}`,
+    }));
+    mockSuivi = {
+      data: {
+        data: traites,
+        meta: {
+          closures: [{
+            documentId: 'f-1', endDate: '2026-10-09', kind: 'closure', reason: 'travaux', startDate: '2026-10-05', status: 'active',
+          }],
+          state: { closure: null, code: 'en_service', securityOpenCount: 0 },
+        },
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const arbre = monter();
+    const jalons = () => arbre.root.findAll((/** @type {any} */ n) => typeof n.props.testID === 'string' && n.props.testID.startsWith('securite-jalon-') && typeof n.type !== 'string');
+    const ids = () => [...new Set(jalons().map((/** @type {any} */ n) => n.props.testID))];
+    expect(ids()).toHaveLength(3);
+    const [lien] = parId(arbre, 'securite-historique-tout');
+    expect(textes(arbre)).toContain('Voir tout l’historique');
+    await act(async () => { lien.props.onPress(); });
+    expect(ids()).toHaveLength(5);
+    expect(parId(arbre, 'securite-historique-tout')).toHaveLength(0);
+  });
+
+  it('3 jalons ou moins : pas de lien (il n y a rien de plus à voir)', () => {
+    mockSuivi = {
+      data: { data: [TRAITE], meta: { closures: [], state: { closure: null, code: 'en_service', securityOpenCount: 0 } } },
+      isError: false,
+      isLoading: false,
+    };
+    expect(parId(monter(), 'securite-historique-tout')).toHaveLength(0);
+  });
+
+  it('P10-securite-ordi A : un « sans suite » se lit « classé le », un « résolu » « résolu le »', () => {
+    mockSuivi = {
+      data: {
+        data: [{
+          ...TRAITE, cityNote: 'Hors de notre ressort.', documentId: 'sig-ss', status: 'sans_suite', title: 'Tag sur le mur',
+        }],
+        meta: { closures: [], state: { closure: null, code: 'en_service', securityOpenCount: 0 } },
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const tout = textes(monter()).join(' | ');
+    expect(tout).toContain('Tag sur le mur · sans suite');
+    expect(tout).toContain('Signalé le mar. 6 oct. · classé le mer. 14 oct. : « Hors de notre ressort. »');
+  });
+
+  it('P10-securite-ordi A : chaque signalement ouvert a sa vignette — la photo jointe, sinon l icône', () => {
+    mockSuivi = {
+      data: {
+        data: [OUVERTS[0], { ...OUVERTS[1], photo: { formats: { thumbnail: { url: '/uploads/petit_panier.jpg' } }, url: '/uploads/panier.jpg' } }],
+        meta: {
+          closures: [],
+          state: {
+            closure: null, code: 'a_surveiller', securityOpenCount: 1, securitySince: '2026-10-18T10:00:00Z',
+          },
+        },
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const arbre = monter();
+    const [avecPhoto] = parId(arbre, 'securite-vignette-sig-1');
+    const [sansPhoto] = parId(arbre, 'securite-vignette-sig-2');
+    expect(avecPhoto.findByType(Image).props.source).toEqual({ uri: 'https://cdn.test/uploads/petit_panier.jpg' });
+    expect(sansPhoto.findByType(Image).props.source?.uri).toBeUndefined();
   });
 
   it('Q5 A : « Fermée » pendant une fermeture, et le bouton « Fermetures »', () => {

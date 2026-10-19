@@ -52,6 +52,7 @@ import {
   useCollectiviteInstallations,
 } from '@/services/collectivite/collectiviteQueries';
 import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
+import { useCachedFacilityOpenReportsCount } from '@/services/facilityReport/facilityReportQueries';
 import {
   useFacilitySeasonSlots,
   useRestoreSeasonSlot,
@@ -225,6 +226,12 @@ function InstallationCreneaux() {
   const canManage = meta.canManage === true;
   const retires = useFacilitySeasonSlots(facilityId, 'withdrawn', { enabled: canManage });
   const clubs = useCollectiviteClubs(canManage ? collectiviteId : null);
+  // R17-SIGNALER-1 (P10-securite-ordi A) : la pastille de l onglet, SANS lecture de plus (le
+  // compte deja en cache : la liste de l onglet, ou le resume lu par la liste des installations).
+  const signalementsOuverts = useCachedFacilityOpenReportsCount(
+    canManage ? facilityId : null,
+    collectiviteId,
+  );
   // COLL-C4B (02/10) — le bandeau de la fiche, tant que la fermeture dure ou approche (P3b).
   const fermeturesDeLInstallation = useFacilityClosures(facilityId);
   // FINITIONS13-COLL (04/10) : toutes les fermetures annoncées, la plus proche d'abord.
@@ -618,6 +625,13 @@ function InstallationCreneaux() {
           },
           { label: t('collectiviteCreneaux.creneaux.ongletInfos', 'Infos'), value: ONGLETS.infos },
           ...(canManage ? [{
+            accessibilityLabel: signalementsOuverts
+              ? t('facilityReports.ville.ongletAvecCompte', {
+                count: signalementsOuverts,
+                ...SANS_ECHAPPEMENT,
+              })
+              : undefined,
+            badge: signalementsOuverts,
             label: t('facilityReports.ville.onglet', 'Sécurité et suivi'),
             value: ONGLETS.securite,
           }] : []),

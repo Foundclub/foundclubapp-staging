@@ -1,6 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import {
   reportAuthorLabel,
@@ -21,6 +24,11 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useFacilityReports } from '@/services/facilityReport/facilityReportQueries';
 
+import { getImageUrl } from '@/utils/imageUrl';
+
+// Planche A : l historique se lit en 3 jalons, puis « Voir tout l historique ».
+const JALONS_VISIBLES = 3;
+
 /**
  * R17-SIGNALER-1 (19/10, REC17-011) — le 5ᵉ ONGLET de la fiche d une installation, cote Ville :
  * « Sécurité et suivi » (planches P10-securite-ordi A, D, E, F et P10-securite-tel 1, validees par
@@ -38,9 +46,10 @@ function FacilitySecurityTab({
   facilityId, onOpenClosures, onOpenReport, selectedReportId = null,
 }) {
   const { t } = useTranslation();
-  const { Colors, Fonts } = useTheme();
+  const { Colors, Fonts, Images } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const suivi = useFacilityReports(facilityId);
+  const [toutLHistorique, setToutLHistorique] = useState(false);
   const ouvrir = (/** @type {string} */ reportId) => {
     if (onOpenReport) {
       onOpenReport(reportId);
@@ -71,6 +80,7 @@ function FacilitySecurityTab({
   const state = meta.state || { code: 'en_service' };
   const { ouverts, traites } = splitReports(reports);
   const jalons = securityHistory(traites, meta.closures);
+  const jalonsVisibles = toutLHistorique ? jalons : jalons.slice(0, JALONS_VISIBLES);
 
   const tons = {
     a_surveiller: Colors.warning500,
@@ -207,34 +217,66 @@ function FacilitySecurityTab({
                 } : {}),
                 borderRadius: 14,
                 borderWidth: 1,
-                gap: 4,
+                flexDirection: 'row',
+                gap: 12,
                 minHeight: 44,
                 padding: 12,
               }}
               testID={`securite-signalement-${report.documentId}`}
             >
+              {/* Planche A : la vignette, 56 x 56 — la photo jointe, sinon l icone du statut. */}
               <View
                 style={{
                   alignItems: 'center',
-                  flexDirection: 'row',
-                  gap: 8,
-                  justifyContent: 'space-between',
+                  backgroundColor: withAlpha(Colors.primary500, 0.18),
+                  borderRadius: 10,
+                  height: 56,
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  width: 56,
                 }}
+                testID={`securite-vignette-${report.documentId}`}
               >
-                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                  {report.title}
-                </Text>
-                {pastille(report.status)}
+                {report.photo?.url ? (
+                  <Image
+                    accessibilityIgnoresInvertColors
+                    resizeMode="cover"
+                    source={{
+                      uri: getImageUrl(report.photo.formats?.thumbnail?.url || report.photo.url),
+                    }}
+                    style={{ height: 56, width: 56 }}
+                  />
+                ) : (
+                  <Image
+                    source={report.status === 'envoye' ? Images.stadium : Images.clock}
+                    style={{ height: 20, tintColor: Colors.primary200, width: 20 }}
+                  />
+                )}
               </View>
-              <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral100]}>
-                {`${t(
-                  `facilityReports.categoriesCourtes.${report.category}`,
-                  report.category,
-                )} · « ${report.description} »`}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {`${reportDayLabel(report.createdAt)} · ${reportAuthorLabel(t, report)}`}
-              </Text>
+              <View style={{ flex: 1, gap: 4 }}>
+                <View
+                  style={{
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    gap: 8,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                    {report.title}
+                  </Text>
+                  {pastille(report.status)}
+                </View>
+                <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral100]}>
+                  {`${t(
+                    `facilityReports.categoriesCourtes.${report.category}`,
+                    report.category,
+                  )} · « ${report.description} »`}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {`${reportDayLabel(report.createdAt)} · ${reportAuthorLabel(t, report)}`}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -245,7 +287,7 @@ function FacilitySecurityTab({
           <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
             {t('facilityReports.ville.historique', 'Historique')}
           </Text>
-          {jalons.map(({ item, kind }) => {
+          {jalonsVisibles.map(({ item, kind }) => {
             const signalement = kind === 'report';
             let couleur = Colors.warning500;
             if (signalement) {
@@ -275,13 +317,22 @@ function FacilitySecurityTab({
                 debut: reportDayLabel(item.createdAt),
                 fin: reportDayLabel(item.closedAt),
               };
-              detail = item.cityNote
-                ? t('facilityReports.ville.histoDatesMot', {
-                  ...SANS_ECHAPPEMENT,
-                  ...dates,
-                  note: item.cityNote,
-                })
-                : t('facilityReports.ville.histoDates', dates);
+              const resolu = item.status === 'resolu';
+              if (item.cityNote) {
+                detail = t(
+                  resolu
+                    ? 'facilityReports.ville.histoDatesMot'
+                    : 'facilityReports.ville.histoDatesSansSuiteMot',
+                  { ...SANS_ECHAPPEMENT, ...dates, note: item.cityNote },
+                );
+              } else {
+                detail = t(
+                  resolu
+                    ? 'facilityReports.ville.histoDates'
+                    : 'facilityReports.ville.histoDatesSansSuite',
+                  dates,
+                );
+              }
             }
             return (
               <TouchableOpacity
@@ -308,6 +359,28 @@ function FacilitySecurityTab({
               </TouchableOpacity>
             );
           })}
+          {jalons.length > JALONS_VISIBLES && !toutLHistorique ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setToutLHistorique(true)}
+              style={{
+                alignItems: 'center',
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                gap: 8,
+                minHeight: 44,
+              }}
+              testID="securite-historique-tout"
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('facilityReports.ville.voirToutHistorique', 'Voir tout l’historique')}
+              </Text>
+              <Image
+                source={Images.arrowRight}
+                style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
     </View>
