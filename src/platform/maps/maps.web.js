@@ -365,7 +365,7 @@ function SearchMapIframeRuntime({
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {{ top?: number; right?: number; bottom?: number; left?: number } | null} [props.overlayInsets]
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
  * @param {string} [props.selectedItemId]
  * @param {{ lat: number; lng: number } | null} [props.userLocation]
  * @param {any} [props.command]

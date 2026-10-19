@@ -40,3 +40,17 @@ describe('buildSearchMapRuntimeHtml', () => {
     expect(html).toContain('fc-provider-badge');
   });
 });
+
+// RESA-CARTE (20/10/2026) — l'épingle d'un complexe porte son nombre de créneaux libres
+// (`markerLabel`, planche EP01 état 2). La page Leaflet ne tourne que dans une WebView ou une
+// iframe : le témoin du site (web, tests/components/resa-carte.spec.ts) lit l'épingle dessinée ;
+// celui-ci garde, dans le texte de la page, les trois règles qui la font.
+describe('RESA-CARTE — le mot de l’épingle', () => {
+  it('passe avant le numéro d’ordre, échappé, et redessine l’épingle quand il change', () => {
+    const html = buildHtml();
+
+    expect(html).toContain('var markerLabel = itemLabel || (showSequenceLabel');
+    expect(html).toContain('String(entry.item.markerLabel).replace(/[&<>"\']/g');
+    expect(html).toContain("+ ':' + (item.markerLabel || '');");
+  });
+});

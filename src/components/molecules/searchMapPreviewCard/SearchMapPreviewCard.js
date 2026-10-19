@@ -35,7 +35,7 @@ const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 2);
  * @param {() => void} [props.onDismiss]
  * @param {(item: import('@/utils/searchMap').SearchMapItem) => void} props.onOpen
  * @param {() => void} [props.onShowList]
- * @param {'events' | 'clubs' | 'reservations'} props.scope
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} props.scope
  * @returns {import('react').ReactElement | null}
  */
 function SearchMapPreviewCard({

@@ -24,7 +24,7 @@ import { getSearchMapResultLabel } from '@/utils/searchMap';
  *  clusterCount?: number,
  *  fallbackActive?: boolean,
  * } | null} [props.renderStats]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
  * @param {number} [props.totalCount]
  * @param {boolean} [props.truncated]
  * @returns {import('react').ReactElement}
