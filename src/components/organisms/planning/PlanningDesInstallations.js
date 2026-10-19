@@ -400,9 +400,11 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           currentDate={date}
           events={blocsDuMois(blocs)}
           onDateSelect={(/** @type {Date} */ jour) => {
+            // Le calendrier dit aussi ses changements de MOIS (ses flèches) par ici : seul un jour
+            // du mois affiché, sur ordinateur, ouvre la vue Jour à cette date (planche, état 3).
+            const unJourDuMois = isSameMonth(jour, date);
             allerA(jour);
-            // Ordinateur : un clic sur un jour ouvre la vue Jour à cette date (planche, état 3).
-            if (isDesktop) setVue(VUES.jour);
+            if (isDesktop && unJourDuMois) setVue(VUES.jour);
           }}
           onEventPress={ouvrirBloc}
         />
@@ -500,7 +502,14 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     ]}
                   >
                     {`${format(jour, 'EEE', { locale })} `}
-                    <Text style={Fonts.p2Bold}>{format(jour, 'd', { locale })}</Text>
+                    <Text
+                      style={[
+                        Fonts.p2Bold,
+                        isSameDay(jour, aujourdhui) ? Fonts.primary200 : Fonts.neutral00,
+                      ]}
+                    >
+                      {format(jour, 'd', { locale })}
+                    </Text>
                   </Text>
                 </View>
               ))}
@@ -690,41 +699,44 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           justifyContent: 'space-between',
         }}
       >
-        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity
-            accessibilityLabel={flecheGauche}
-            accessibilityRole="button"
-            onPress={() => allerA(pageSuivante(vue, date, -1))}
-            style={boutonFleche}
-          >
-            <Text style={[Fonts.p1Bold, Fonts.primary200]}>‹</Text>
-          </TouchableOpacity>
-          <Text
-            style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter, { minWidth: 160 }]}
-            testID="toutes-periode"
-          >
-            {titreDeLaPage}
-          </Text>
-          <TouchableOpacity
-            accessibilityLabel={flecheDroite}
-            accessibilityRole="button"
-            onPress={() => allerA(pageSuivante(vue, date, 1))}
-            style={boutonFleche}
-          >
-            <Text style={[Fonts.p1Bold, Fonts.primary200]}>›</Text>
-          </TouchableOpacity>
-          {!pageDAujourdhui(vue, date, aujourdhui) ? (
+        {/* Au mois, le calendrier a son en-tête (mois, flèches, aujourd’hui) : rien à doubler. */}
+        {vue === VUES.mois ? <View /> : (
+          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
+              accessibilityLabel={flecheGauche}
               accessibilityRole="button"
-              onPress={() => allerA(getPlanningDefaultDate())}
-              style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
+              onPress={() => allerA(pageSuivante(vue, date, -1))}
+              style={boutonFleche}
             >
-              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
-              </Text>
+              <Text style={[Fonts.p1Bold, Fonts.primary200]}>‹</Text>
             </TouchableOpacity>
-          ) : null}
-        </View>
+            <Text
+              style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter, { minWidth: 160 }]}
+              testID="toutes-periode"
+            >
+              {titreDeLaPage}
+            </Text>
+            <TouchableOpacity
+              accessibilityLabel={flecheDroite}
+              accessibilityRole="button"
+              onPress={() => allerA(pageSuivante(vue, date, 1))}
+              style={boutonFleche}
+            >
+              <Text style={[Fonts.p1Bold, Fonts.primary200]}>›</Text>
+            </TouchableOpacity>
+            {!pageDAujourdhui(vue, date, aujourdhui) ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => allerA(getPlanningDefaultDate())}
+                style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                  {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
         <View
           accessibilityLabel={t('facilityList.toutesInstallations.vue', 'Vue du planning')}
           style={{ flexDirection: 'row', gap: 6, width: isDesktop ? 300 : '100%' }}

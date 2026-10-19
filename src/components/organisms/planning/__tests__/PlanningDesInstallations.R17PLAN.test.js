@@ -246,7 +246,9 @@ describe('R17-PLANNING — téléphone', () => {
       .every((/** @type {any} */ b) => b.displayColor === '#FFA115')).toBe(true);
     await act(async () => { calendrier.onDateSelect(new Date(2026, 9, 20, 12)); });
     await attendre();
-    expect(textes(arbre)).toContain('Octobre 2026');
+    // Au téléphone, toucher un jour garde le mois (sa liste s'affiche sous le calendrier).
+    expect(mockCalendriers.at(-1).currentDate.getMonth()).toBe(9);
+    expect(mockCalendriers.at(-1).currentDate.getDate()).toBe(20);
   });
 
   test('4 — toucher un bloc ouvre le planning de SON installation, à CE jour', async () => {
@@ -303,6 +305,18 @@ describe('R17-PLANNING — ordinateur', () => {
       .toEqual(['Gymnase des Tilleuls', 'Dojo municipal', 'Stade municipal']);
     const auStade = grille.events.find((/** @type {any} */ b) => b.title === 'AS Montrivage · U11');
     expect(grille.laneOf(auStade)).toBe(2);
+  });
+
+  test('8 bis ROUGE-AVANT — Mois : un autre MOIS reste au mois, sans double en-tête', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    // Le calendrier a son en-tête (mois, flèches, « Aujourd’hui ») : la section ne le double pas.
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-periode'))
+      .toHaveLength(0);
+    await act(async () => { mockCalendriers.at(-1).onDateSelect(new Date(2026, 10, 1, 12)); });
+    await attendre();
+    expect(mockCalendriers.at(-1).currentDate.getMonth()).toBe(10);
+    expect(textes(arbre)).not.toContain('Dimanche 1 novembre');
   });
 
   test('8 — Mois : un clic sur un jour ouvre la vue Jour à cette date', async () => {
