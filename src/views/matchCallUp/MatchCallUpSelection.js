@@ -35,6 +35,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { resolveCompositionClubId } from '@/views/event/matchPageModel';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -177,7 +178,9 @@ function MatchCallUpSelection() {
     enabled: Boolean(eventId),
   });
 
-  const clubId = clubIdParam || eventFromApi?.team?.club?.documentId || '';
+  // 🤝 AMIC-INVITE (19/10) — sans `clubId` recu (site recharge), le club de l'EQUIPE
+  // composee, pas celui de l'hote : l'invite d'un match amical est juge sur le sien.
+  const clubId = clubIdParam || resolveCompositionClubId({ event: eventFromApi, teamId });
 
   // ✂️ FINITIONS3 (29/09, recette tournee 5) — LE MUR D'AVANCE, A L'ENTREE.
   // Toutes les portes « Modifier » menent ici (fiche du match, plateau, ecran des
