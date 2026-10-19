@@ -168,7 +168,11 @@ describe('chatService', () => {
           type: 'collectivite_ville',
           updatedAt: '2026-10-19T09:00:00.000Z',
         }],
-        meta: { pagination: { page: 1, pageCount: 1, pageSize: 20, total: 1 } },
+        meta: {
+          pagination: {
+            page: 1, pageCount: 1, pageSize: 20, total: 1,
+          },
+        },
       },
     });
     const result = await getChats(1, 20);
