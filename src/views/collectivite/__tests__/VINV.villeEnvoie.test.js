@@ -119,6 +119,13 @@ jest.mock('@/services/facility/facilityQueries', () => ({
   useRefuseFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
+// R17-INVITER : l'écran réserve la place de la barre d'onglets du site (useBottomDockLayout tire
+// @react-navigation/stack, que jest ne transforme pas) : doublé, comme dans ClubListContent.
+jest.mock('@/navigation/useBottomDockLayout', () => ({
+  __esModule: true,
+  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+}));
+
 jest.mock('@/utils/shareLinks', () => ({
   buildPublicWebUrl: ({ path }) => `https://foundclub.example.invalid${path}`,
 }));
