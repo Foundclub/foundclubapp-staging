@@ -386,7 +386,7 @@ describe('FINITIONS14 — une carte d invitation n invente pas « 0 Membres »',
 
     expect(textes).toContain('LES INVITANTS');
     expect(textes).not.toContain('Membres');
-    expect(textes).not.toContain('Entraîneur·e·s');
+    expect(textes).not.toContain('Coachs / Profs');
   });
 
   test('🔒 effectif connu : la grille reste, avec les vrais nombres', async () => {
@@ -404,7 +404,7 @@ describe('FINITIONS14 — une carte d invitation n invente pas « 0 Membres »',
     ]);
 
     expect(textes).toContain('Membres');
-    expect(textes).toContain('Entraîneur·e·s');
+    expect(textes).toContain('Coachs / Profs');
   });
 });
 

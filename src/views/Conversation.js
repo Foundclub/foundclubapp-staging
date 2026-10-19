@@ -75,6 +75,7 @@ import {
   summarizeReactionPeople,
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
@@ -5833,7 +5834,7 @@ function Conversation({ navigation, route }) {
     // unique pour tout le monde (le serveur ne connait pas le genre).
     const libellesDesRoles = {
       dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
-      entraineur: t('conversation.staffRole.entraineur', 'Entraîneur'),
+      entraineur: t('conversation.staffRole.entraineur', 'Coach / Prof'),
     };
     const roleEnTete = nomEnTete
       ? libellesDesRoles[String(currentMessage.user?.staffRole || '')] || ''
@@ -7547,7 +7548,9 @@ function Conversation({ navigation, route }) {
                 >
                   <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{fullName}</Text>
                   {contact?.role ? (
-                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{contact.role}</Text>
+                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                      {libelleDuRole(contact.role, t, contact.role)}
+                    </Text>
                   ) : null}
                 </TouchableOpacity>
               );

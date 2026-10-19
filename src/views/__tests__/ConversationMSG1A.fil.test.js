@@ -848,7 +848,7 @@ describe('MSG1A — `genre A`, notices de groupe, `quitter maintenant`', () => {
     }
   });
 
-  test('SR1 — la clef du serveur devient « Entraîneur » a cote du nom ; sans clef, rien', () => {
+  test('SR1 — la clef du serveur devient « Coach / Prof » a cote du nom ; sans clef, rien', () => {
     mockMessagesPage = {
       data: [
         {
@@ -870,7 +870,7 @@ describe('MSG1A — `genre A`, notices de groupe, `quitter maintenant`', () => {
     const [lea, karim] = [...gifted.messages].sort((a, b) => b.createdAt - a.createdAt);
 
     const bulleKarim = rendreLaBulle(gifted, { currentMessage: karim, position: 'left' });
-    expect(bulleKarim.root.findByType(BulleDuFil).props.role).toBe('Entraîneur');
+    expect(bulleKarim.root.findByType(BulleDuFil).props.role).toBe('Coach / Prof');
     const bulleLea = rendreLaBulle(gifted, { currentMessage: lea, position: 'left' });
     expect(bulleLea.root.findByType(BulleDuFil).props.role).toBe('');
   });

@@ -460,7 +460,7 @@ describe('AddCoach — fusion D51 ecran 10 : le role se choisit a l ecran', () =
     const texte = texteDe(arbre.root);
 
     expect(texte).toContain('Dirigeant·e');
-    expect(texte).toContain('Entraîneur·e');
+    expect(texte).toContain('Coach / Prof');
   });
 
   it('entre par la porte « entraineur », on peut basculer sur DIRIGEANT', async () => {
@@ -478,7 +478,7 @@ describe('AddCoach — fusion D51 ecran 10 : le role se choisit a l ecran', () =
     const arbre = await monterEcran({ name: RouteNames.AddClubManager });
     await saisirTelephone('+33612345678');
 
-    await appuyerSur(arbre, 'Entraîneur·e');
+    await appuyerSur(arbre, 'Coach / Prof');
     await appuyerSur(arbre, LIBELLE_CTA);
 
     expect(createTrainer).toHaveBeenCalled();

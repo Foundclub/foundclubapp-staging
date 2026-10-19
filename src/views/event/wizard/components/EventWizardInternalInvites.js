@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -421,7 +422,7 @@ function EventWizardInternalInvites({ surfaceStyle }) {
                               {getUserDisplayName(member)}
                             </Text>
                             <Text style={[Fonts.p3, Fonts.neutral200]}>
-                              {member?.role?.name || 'Membre'}
+                              {libelleDuRole(member?.role?.name, t, 'Membre')}
                             </Text>
                           </View>
                         </TouchableOpacity>

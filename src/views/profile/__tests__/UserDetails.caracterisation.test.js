@@ -465,7 +465,7 @@ describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas ca
     const texte = texteVisible(arbre);
 
     // (La doublure de traduction de ce banc n interpole pas : « {{teams}} » reste tel quel.)
-    expect(texte).toContain('Entraîneur');
+    expect(texte).toContain('Coach / Prof');
     expect(texte).toContain('300');
     expect(texte).toContain('Minutes');
     expect(texte).not.toContain('Ces statistiques ne sont visibles que par la personne elle-même.');

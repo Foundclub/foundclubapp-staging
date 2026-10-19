@@ -226,8 +226,8 @@ describe('RÔLES — écran 1 : la liste des membres du club', () => {
     ]);
 
     expect(lus).toContain('Adel Dirigeant (toi)');
-    expect(lus).toContain('Dirigeant  ·  Entraîneur · Seniors');
-    expect(lus).toContain('Joueur · U15');
+    expect(lus).toContain('Dirigeant  ·  Coach / Prof · Seniors');
+    expect(lus).toContain('Pratiquant / Joueur · U15');
     expect(lus).toContain('Aucun rôle d\'équipe');
   });
 
@@ -243,14 +243,14 @@ describe('RÔLES — écran 1 : la liste des membres du club', () => {
     });
   });
 
-  it('la case dit ce qu\'elle est : « Joueur de U15 », cochée quand le membre y joue', () => {
+  it('la case dit ce qu\'elle est : « Pratiquant / Joueur de U15 », cochée quand le membre y joue', () => {
     const arbre = monter();
     ouvrir(arbre, 'p1-doc');
     const caseU15 = parTestId(arbre, 'member-role-p1-doc-player-team-u15');
     const caseSeniors = parTestId(arbre, 'member-role-p1-doc-player-team-seniors');
 
     expect(caseU15.props.accessibilityRole).toBe('checkbox');
-    expect(caseU15.props.accessibilityLabel).toBe('Joueur de U15');
+    expect(caseU15.props.accessibilityLabel).toBe('Pratiquant / Joueur de U15');
     expect(caseU15.props.accessibilityState.checked).toBe(true);
     expect(caseSeniors.props.accessibilityState.checked).toBe(false);
   });

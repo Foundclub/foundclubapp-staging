@@ -16,6 +16,7 @@ import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
@@ -3828,7 +3829,7 @@ function Conversation({ navigation, route }) {
       || rolesDuStaff?.[getEntityDocumentId(message?.sender)];
     const roleDuStaff = {
       dirigeant: i18next.t('conversation.staffRole.dirigeant', 'Dirigeant'),
-      entraineur: i18next.t('conversation.staffRole.entraineur', 'Entraîneur'),
+      entraineur: i18next.t('conversation.staffRole.entraineur', 'Coach / Prof'),
     }[String(cleDuRole || '')] || '';
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
@@ -5533,7 +5534,7 @@ function Conversation({ navigation, route }) {
                       {getDisplayName(contact)}
                     </span>
                     <span style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 12.5 }}>
-                      {contact?.role?.name || contact?.role?.type || ''}
+                      {libelleDuRole(contact?.role?.name || contact?.role?.type, t, '')}
                     </span>
                   </span>
                 </label>
