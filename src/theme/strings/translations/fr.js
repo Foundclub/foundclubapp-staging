@@ -7287,6 +7287,12 @@ export default {
       resumeMatin: 'Résumé du matin à 8 h',
       veille: 'Demander aux joueurs de confirmer la veille',
     },
+    // RESA-INSCRIPTION (19/10/2026) — le choix du statut d'un nouveau compte (planche EG01).
+    statut: {
+      intertitre: 'Pour un complexe',
+      libelle: 'Je gère un complexe',
+      precision: 'Foot à 5, padel, tennis…',
+    },
     terrain: {
       ajouterPhoto: 'Ajouter une photo',
       aucunCreneau: 'Aucun créneau ouvert',

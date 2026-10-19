@@ -22,9 +22,11 @@ jest.mock('@react-navigation/native', () => ({
 let mockCompte = /** @type {any} */ ({
   birthdate: '1990-05-01', documentId: 'u-1', phoneNumber: '+33639981234',
 });
+// RESA-INSCRIPTION (19/10) : le rôle du COMPTE ('new' = né « pour un complexe »).
+let mockRoleDuCompte = '';
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: mockCompte }),
+  default: () => ({ accountRoleKey: mockRoleDuCompte, userData: mockCompte }),
 }));
 
 jest.mock('@/services/activity/activityQueries', () => ({
@@ -186,6 +188,7 @@ const remplirEtape1 = async (arbre) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockValeurs.clear();
+  mockRoleDuCompte = '';
   mockCompte = { birthdate: '1990-05-01', documentId: 'u-1', phoneNumber: '+33639981234' };
   mockCreer.mockResolvedValue({ data: { documentId: 'cx-five', name: 'Le Five de Montrivage' } });
 });
@@ -363,5 +366,88 @@ describe('RESA-L5A1 E-G01 — « C’est le tien ? » et les refus', () => {
     const arbre = await jusquALEnvoi();
     expect(textes(arbre)).toContain('Pas de connexion : tes informations sont gardées.');
     expect(arbre.root.findAllByType(Text).length).toBeGreaterThan(0);
+  });
+});
+
+// RESA-INSCRIPTION (19/10/2026) — le même tunnel, ouvert depuis le CHOIX DU STATUT d'un compte
+// neuf (« Je gère un complexe », planche EG01 état 0) : ce compte n'a aucun rôle sportif (rôle
+// provisoire, `accountRoleKey` 'new'), ni équipes, ni réservations de joueur. La feuille « un
+// compte, deux modes » (état 5 : « Tu gardes tes équipes… », « Rester en mode joueur ») ne lui dit
+// rien de vrai : il arrive DIRECTEMENT sur l'accueil du gestionnaire en mode complexe, avec le
+// bandeau « … est en ligne. Ajoute ton premier terrain. » (état 8, plan E-G01 §4). Abandon : rien
+// n'est créé.
+describe('RESA-INSCRIPTION — un compte né « pour un complexe » (aucun rôle sportif)', () => {
+  beforeEach(() => {
+    mockRoleDuCompte = 'new';
+    // Un compte neuf : ni nom ni date de naissance (ils viennent APRÈS le choix du statut).
+    mockCompte = {
+      documentId: 'u-neuf', phoneNumber: '+33639981234', role: { type: 'authenticated' },
+    };
+  });
+
+  const jusquAuRecapitulatif = async () => {
+    const arbre = await monter();
+    await remplirEtape1(arbre);
+    // Sans date de naissance connue, son numéro n'est pas proposé (prudence, RG-TEL).
+    await act(async () => {
+      mockPoserTelephone('+33639981234');
+    });
+    await appuyer(arbre, 'suivant Continuer');
+    await appuyer(arbre, 'suivant Continuer');
+    await appuyer(arbre, 'J’accepte les règles d’utilisation des complexes');
+    return arbre;
+  };
+
+  it('succès : l’accueil du gérant en mode complexe, bandeau « en ligne »', async () => {
+    const arbre = await jusquAuRecapitulatif();
+    await appuyer(arbre, 'suivant Créer mon complexe');
+
+    expect(mockCreer).toHaveBeenCalledTimes(1);
+    expect(textes(arbre)).not.toContain('Ton compte a maintenant deux modes.');
+    expect(textes(arbre)).not.toContain('Rester en mode joueur');
+    expect(mockValeurs.get('user.complexe_mode.u-neuf')).toBe('on');
+    expect(mockReset).toHaveBeenCalledTimes(1);
+    expect(mockReset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{
+        name: RouteNames.ComplexeEspace,
+        params: { complexeId: 'cx-five', justeCree: true },
+      }],
+    });
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  it('un doublon garde sa question ; « Non, continuer » crée, puis l’accueil', async () => {
+    mockCreer.mockResolvedValueOnce({
+      data: { duplicate: true, suggestions: [{ distanceMeters: 300, name: 'Five Montrivage' }] },
+    });
+    const arbre = await jusquAuRecapitulatif();
+    await appuyer(arbre, 'suivant Créer mon complexe');
+    expect(mockReset).not.toHaveBeenCalled();
+    await appuyer(arbre, 'Non, continuer');
+    expect(mockCreer).toHaveBeenCalledTimes(2);
+    expect(mockReset).toHaveBeenCalledWith(expect.objectContaining({
+      routes: [expect.objectContaining({ name: RouteNames.ComplexeEspace })],
+    }));
+  });
+
+  it('abandon : « Retour » à l’étape 1 revient au choix du statut, rien n’est créé', async () => {
+    const arbre = await monter();
+    await remplirEtape1(arbre);
+    await appuyer(arbre, 'retour du tunnel');
+
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockCreer).not.toHaveBeenCalled();
+    expect(mockReset).not.toHaveBeenCalled();
+    expect(mockValeurs.size).toBe(0);
+  });
+
+  it('un refus garde le compte sur le récapitulatif, rien n’est ouvert', async () => {
+    mockCreer.mockRejectedValueOnce({ details: { code: 'COMPLEXE_ALREADY_MANAGED' }, status: 409 });
+    const arbre = await jusquAuRecapitulatif();
+    await appuyer(arbre, 'suivant Créer mon complexe');
+    expect(textes(arbre)).toContain('Tu gères déjà un complexe.');
+    expect(mockReset).not.toHaveBeenCalled();
+    expect(mockValeurs.size).toBe(0);
   });
 });

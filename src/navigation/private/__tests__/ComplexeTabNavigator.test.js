@@ -70,6 +70,36 @@ describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est all
   });
 });
 
+// RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » garde le rôle provisoire (aucun
+// rôle sportif) : son parcours d'inscription commence toujours par le choix du statut. Sans règle,
+// l'app le lui reposait à CHAQUE ouverture (et « Je gère un complexe » finissait en « Tu gères déjà
+// un complexe. »). Même règle que la Ville seule (COLL-ACCUEIL) : il arrive sur l'espace de son
+// complexe, et la lecture ne part que pour un compte sans rôle sportif, interrupteur allumé.
+describe('RESA-INSCRIPTION — un compte « complexe seul » arrive sur son complexe', () => {
+  const source = lire('PrivateNavigator.js');
+
+  it('ses complexes ne sont lus que pour un compte sans rôle sportif, interrupteur allumé', () => {
+    expect(source).toContain('useMesComplexes({ enabled: COMPLEXES_GERANT && sansRoleSportif })');
+    expect(source).toContain(
+      'const complexeSeul = COMPLEXES_GERANT && sansRoleSportif && complexesGeres.length > 0;',
+    );
+  });
+
+  it('la règle passe APRÈS la Ville seule et AVANT le parcours d’inscription', () => {
+    const ville = source.indexOf('if (villeSeule) {');
+    const complexe = source.indexOf('if (complexeSeul) return RouteNames.ComplexeEspace;');
+    const onboarding = source.indexOf('if (route) return route;');
+    expect(ville).toBeGreaterThan(-1);
+    expect(complexe).toBeGreaterThan(ville);
+    expect(onboarding).toBeGreaterThan(complexe);
+  });
+
+  it('la pile attend la lecture, comme pour la Ville (écran d’arrivée choisi UNE fois)', () => {
+    expect(source).toContain('if (userDataLoading || villeEnLecture || complexeEnLecture) {');
+    expect(source).toContain('&& !villeEnLecture && !complexeEnLecture');
+  });
+});
+
 describe('RESA-L5A2 RB état 4 — la notification du complexe, en mode joueur', () => {
   it('l’espace, une fois ouvert (par une notification aussi), repasse en mode complexe', () => {
     const source = lire('ComplexeTabNavigator.js');

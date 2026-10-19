@@ -6828,6 +6828,12 @@ export default {
       resumeMatin: 'Morning summary at 8 am',
       veille: 'Ask players to confirm the day before',
     },
+    // RESA-INSCRIPTION (19/10/2026) — the status choice of a new account (EG01 board, state 0).
+    statut: {
+      intertitre: 'For a venue',
+      libelle: 'I manage a venue',
+      precision: '5-a-side, padel, tennis…',
+    },
     terrain: {
       ajouterPhoto: 'Add a photo',
       aucunCreneau: 'No open slot',
