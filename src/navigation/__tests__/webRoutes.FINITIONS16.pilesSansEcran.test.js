@@ -13,6 +13,10 @@ import { buildWebPath, getWebRoutePattern, WEB_STACK_INITIAL_ROUTES } from '../w
 // Une pile sans ecran ouvre, sur le site, le MEME premier ecran que sur le telephone. ROUGE avant.
 
 const PILES = path.join(__dirname, '..', 'private', 'stacks');
+// RESA-L7-1 (20/10/2026) — un navigateur à onglets qui n'est pas dans `stacks/` : son fichier.
+const HORS_DES_PILES = {
+  [RouteNames.ComplexeEspace]: path.join(__dirname, '..', 'private', 'ComplexeTabNavigator.js'),
+};
 
 describe('FINITIONS16 13 — une pile sans ecran ouvre son premier ecran sur le site', () => {
   test('🔴 « Recruter » (AdWizardStack) ouvre le premier ecran de l assistant', () => {
@@ -29,7 +33,8 @@ describe('FINITIONS16 13 — une pile sans ecran ouvre son premier ecran sur le 
     const piles = Object.entries(WEB_STACK_INITIAL_ROUTES);
     expect(piles.length).toBeGreaterThan(0);
     piles.forEach(([pile, premierEcran]) => {
-      const source = fs.readFileSync(path.join(PILES, `${pile}.js`), 'utf8');
+      const fichier = HORS_DES_PILES[pile] || path.join(PILES, `${pile}.js`);
+      const source = fs.readFileSync(fichier, 'utf8');
       const lu = /initialRouteName=\{RouteNames\.([A-Za-z0-9]+)\}/.exec(source);
       expect([pile, lu && lu[1]]).toEqual([pile, premierEcran]);
     });
