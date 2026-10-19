@@ -39,7 +39,9 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// R17-ADRESSE (19/10) : la carte cherche aussi la commune du texte tapé ; ici, aucune.
 jest.mock('@/services/places/placesService', () => ({
+  chercherCommune: () => Promise.resolve(null),
   createLieu: (/** @type {any} */ lieu) => mockCreateLieu(lieu),
   getPlacesFromCoordinates: (/** @type {any} */ point) => mockReverse(point),
   searchPlaces: (/** @type {string} */ recherche, /** @type {string} */ type) => (
@@ -150,6 +152,11 @@ jest.mock('@/components/atoms/checkable/Checkable', () => {
 });
 
 const LIEN = 'Adresse introuvable ? Placez-la sur la carte';
+// R17-ADRESSE (19/10) : quand la liste ne propose RIEN, le lien cède la place à une invitation et
+// à ce bouton (autocompleteAddressInput.invitationCarte.test.js) ; le lien reste sous une liste
+// qui propose quelque chose.
+const OUVRIR = 'Placer sur la carte';
+const INVITATION = 'Ton lieu n’est pas répertorié : place-le sur la carte';
 const NOM = 'Ex. Stade de Luminy';
 const PLACER = 'Placer ici';
 
@@ -281,17 +288,19 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     jest.useRealTimers();
   });
 
-  it('① adresse introuvable ⇒ le lien sous la liste (champ d un lieu public)', async () => {
+  it('① adresse introuvable ⇒ l invitation et son bouton sous la liste (lieu public)', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(mockSearchPlaces).toHaveBeenCalledWith('stade de luminy', undefined);
-    expect(texteVisible(arbre)).toContain(LIEN);
+    expect(texteVisible(arbre)).toContain(INVITATION);
+    expect(texteVisible(arbre)).toContain(OUVRIR);
   });
 
   it('① bis sans le réglage : JAMAIS le lien (profil, filtres, conversation)', async () => {
     const { arbre } = monter();
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(texteVisible(arbre)).not.toContain(LIEN);
+    expect(texteVisible(arbre)).not.toContain(OUVRIR);
   });
 
   it('② la carte part de la 1re proposition tapée, sans rien demander', async () => {
@@ -311,7 +320,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     mockPositionSiAccordee.mockResolvedValue({ lat: 45.76, lng: 4.83 });
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, OUVRIR);
     await laisserTourner(2);
 
     expect(mockPositionSiAccordee).toHaveBeenCalledTimes(1);
@@ -322,7 +331,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
   it('② ter sinon la France, et « Placer ici » attend le zoom de la rue', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, OUVRIR);
     await laisserTourner(2);
 
     expect(derniereCarte().regionHint.zoom).toBeLessThan(10);

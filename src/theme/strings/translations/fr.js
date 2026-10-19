@@ -2245,12 +2245,21 @@ export default {
         plafond: 'Vous avez posé beaucoup de lieux : réessayez demain.',
         point: 'Ce point ne peut pas être enregistré. Déplacez la carte et réessayez.',
       },
+      // R17-ADRESSE (19/10) — rien de proposé : l'invitation, d'elle-même (la Ville vouvoyée).
+      invitation: 'Ton lieu n’est pas répertorié : place-le sur la carte',
+      // Sous le champ, liste refermée : le texte tapé rappelé.
+      invitationTexte: '« {{texte}} » n’est pas répertorié : place-le sur la carte',
+      invitationTexteVous: '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
+      invitationVous: 'Votre lieu n’est pas répertorié : placez-le sur la carte',
       lien: 'Adresse introuvable ? Placez-la sur la carte',
       nom: 'Nom du lieu',
       nomExemple: 'Ex. Stade de Luminy',
+      ouvrir: 'Placer sur la carte',
       placer: 'Placer ici',
       placerAide: 'Pose le lieu sous l’épingle, au centre de la carte.',
       presDe: 'Près de : {{adresse}}',
+      sansPoint:
+        'Cette adresse n’est pas sur la carte : on ne la trouve pas en cherchant autour de soi.',
       titre: 'Placer le lieu sur la carte',
       zoomer: 'Zoomez jusqu’à la rue pour placer le lieu précisément.',
     },

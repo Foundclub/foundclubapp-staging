@@ -15,6 +15,8 @@ import path from 'path';
 //
 // Carte des appelants (R2) mesurée le 07/10 : 30 usages dans 30 fichiers. Ce témoin lit le code
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
+// R17-ADRESSE (REC17-008, 19/10) : 31. « Modifier le club » (ClubEdit.js) quitte le texte libre
+// pour ce champ, et le rejoint côté « lieu public » (l'adresse d'un club se cherche par distance).
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -23,6 +25,7 @@ const LE_CHAMP = 'components/organisms/autocompleteAddressInput/';
 const LIEU_PUBLIC = [
   'components/organisms/facilitySelector/FacilitySelector.js',
   'views/admin/clubWizard/AdminClubWizardAddress.js',
+  'views/club/ClubEdit.js',
   'views/club/wizard/ClubWizardAddress.js',
   'views/facility/FacilityForm.js',
   'views/friendlyMatch/wizard/FriendlyMatchWizardLocation.js',
@@ -65,8 +68,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (30 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(30);
+  it('la carte des appelants tient toujours (31 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(31);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {
@@ -77,6 +80,17 @@ describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, o
 
   it.each(JAMAIS)('%s : adresse PERSONNELLE ou conversation, le lien n y est JAMAIS', (fichier) => {
     expect(fs.readFileSync(path.join(SRC, fichier), 'utf8')).not.toMatch(/permettreLieuSurCarte/);
+  });
+
+  // R17-ADRESSE (19/10) — la carte part de la ville de l'objet quand le texte tapé n'en nomme
+  // aucune (club, équipe), et l'invitation vouvoie la Ville. La Ville n'a pas de ville chargée
+  // dans son formulaire d'installation : elle part de la commune tapée, ou de la position.
+  it.each([
+    ['views/club/ClubEdit.js', /\bvilleConnue=/],
+    ['views/team/TeamEdit.js', /\bvilleConnue=/],
+    ['views/facility/FacilityForm.js', /\bvouvoyer=\{isCollectiviteMode\}/],
+  ])('%s : le champ reçoit ce qu on sait de l objet', (fichier, attendu) => {
+    usagesDe(fichier).forEach((usage) => expect(usage).toMatch(attendu));
   });
 
   it('aucun autre appelant ne l a (filtres, adversaire, écrans sans témoin)', () => {
