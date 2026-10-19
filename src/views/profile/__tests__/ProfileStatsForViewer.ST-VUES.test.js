@@ -65,7 +65,7 @@ describe('ST-VUES planche 17 — qui voit quoi', () => {
 
     expect(textes(arbre)).toEqual([
       'Dans ton équipe · U15',
-      'Entraîneur',
+      'Coach / Prof',
       '1',
       'Match',
       '1',

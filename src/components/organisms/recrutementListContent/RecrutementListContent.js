@@ -710,8 +710,11 @@ function RecrutementListContent({
   const renderAudienceTypeTabs = () => {
     const options = [
       { key: 'all', label: t('recrutementListContent.audience.all', 'Toutes') },
-      { key: 'player', label: t('recrutementListContent.audience.player', 'Joueurs') },
-      { key: 'coach', label: t('recrutementListContent.audience.coach', 'Entraineurs') },
+      {
+        key: 'player',
+        label: t('recrutementListContent.audience.player', 'Pratiquants / Joueurs'),
+      },
+      { key: 'coach', label: t('recrutementListContent.audience.coach', 'Coachs / Profs') },
     ];
 
     return (
@@ -1201,8 +1204,8 @@ function RecrutementListContent({
   );
 
   const PUBLICS = {
-    coach: t('recruitmentFiltersSheet.audience.coach', 'Coachs'),
-    player: t('recruitmentFiltersSheet.audience.player', 'Joueur·se·s'),
+    coach: t('recruitmentFiltersSheet.audience.coach', 'Coachs / Profs'),
+    player: t('recruitmentFiltersSheet.audience.player', 'Pratiquant·e·s / Joueur·se·s'),
   };
   // 🔔 SOUS les annonces (et sous l'etat vide : c'est la qu'on veut etre prevenu
   // de la prochaine), apres le chargement de la page suivante.

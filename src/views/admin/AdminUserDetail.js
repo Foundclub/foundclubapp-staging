@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -338,7 +339,7 @@ function AdminUserDetail() {
                 ]}
               >
                 <Text style={{ color: selectedRole === role.id ? 'white' : Colors.neutral300 }}>
-                  {role.name}
+                  {libelleDuRole(role.name, t, role.name)}
                 </Text>
               </TouchableOpacity>
             ))}

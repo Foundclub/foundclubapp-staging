@@ -91,6 +91,15 @@ jest.mock(
   },
 );
 
+// R17-ADRESSE (19/10) : l'adresse passe par le champ d'adresse partagé (il lit le réseau) ; ce
+// filet ne la regarde pas — ClubEdit.adresseSurLaCarte.test.js le fait.
+jest.mock(
+  '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput',
+  () => function AutocompleteAddressInputMock() {
+    return null;
+  },
+);
+
 jest.mock(
   '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
   () => function SubscriptionPaywallSheetMock() {

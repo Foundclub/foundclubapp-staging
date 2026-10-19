@@ -422,3 +422,43 @@ describe('SegmentedControl — COL-004 : le mode qui retrecit, sur iPhone', () =
     segments.forEach((style) => expect(style.paddingHorizontal).toBe(horizontalScale(16)));
   });
 });
+
+// R17-SIGNALER-1 (19/10/2026) — la PASTILLE d un onglet (planche P10-securite-ordi A :
+// « Sécurité et suivi 2 »). Facultative : sans `badge`, rien ne change pour les 15 ecrans.
+describe('SegmentedControl — la pastille d un onglet (R17SS1)', () => {
+  const ONGLETS = [
+    { label: 'Infos', value: 'infos' },
+    {
+      accessibilityLabel: 'Sécurité et suivi, 2 signalements ouverts',
+      badge: 2,
+      label: 'Sécurité et suivi',
+      value: 'securite',
+    },
+  ];
+  const pastilles = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ n) => typeof n.props.testID === 'string'
+      && n.props.testID.startsWith('segment-pastille-') && typeof n.type !== 'string');
+
+  it('au-dessus de 0 : la pastille a cote du nom ; le lecteur d ecran entend les deux', () => {
+    const arbre = monter({ options: ONGLETS, value: 'infos' });
+    const [pastille] = pastilles(arbre);
+    expect(pastille.props.testID).toBe('segment-pastille-securite');
+    expect(aplatirTexte(pastille.props.children)).toBe('2');
+    const [, securite] = arbre.root.findAllByType(TouchableOpacity);
+    expect(securite.props.accessibilityLabel).toBe('Sécurité et suivi, 2 signalements ouverts');
+    const couleurs = jest.requireActual('@/theme/colors').default();
+    expect(StyleSheet.flatten(pastille.props.style).backgroundColor).toBe(couleurs.error700);
+  });
+
+  it('0, null ou rien : aucune pastille ; au-dela de 99 : « 99+ »', () => {
+    const avec = (/** @type {number | null} */ badge) => pastilles(monter({
+      options: [{ ...ONGLETS[1], badge }],
+      value: 'securite',
+    }));
+    expect(avec(0)).toHaveLength(0);
+    expect(avec(null)).toHaveLength(0);
+    expect(pastilles(monter())).toHaveLength(0);
+    const [cent] = avec(120);
+    expect(aplatirTexte(cent.props.children)).toBe('99+');
+  });
+});

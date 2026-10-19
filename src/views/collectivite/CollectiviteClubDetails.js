@@ -24,7 +24,10 @@ import {
   formatCollectiviteDay,
   formatSlot,
 } from '@/domains/collectivite/collectiviteDisplay';
-import { timeRange, unSeulPointFinal, weekdayName } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  slotShape, timeRange, unSeulPointFinal, weekdayName,
+} from '@/domains/seasonSlot/seasonSlotDisplay';
+import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -399,7 +402,10 @@ function CollectiviteClubDetails() {
           testID={`fiche-club-creneau-${creneau?.documentId}`}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`${weekdayName(creneau?.weekday)} ${timeRange(creneau?.startTime, creneau?.endTime)}`}
+            {/* R17-QUAND-1 : des dates choisies, sans jour fixe : « 3 dates 17:30 – 19:00 ». */}
+            {`${slotShape(creneau).dates
+              ? formeEnMots(t, creneau, { court: true })
+              : weekdayName(creneau?.weekday)} ${timeRange(creneau?.startTime, creneau?.endTime)}`}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {[
@@ -407,6 +413,12 @@ function CollectiviteClubDetails() {
               creneau?.team?.name || t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
               creneau?.plateau?.name,
             ].filter(Boolean).join(' · ')}
+          </Text>
+          {/* R17-QUAND-1 (planche P11-quand-ou-ca-vit, 1) : chaque ligne dit sa forme. */}
+          <Text style={[Fonts.p3, Fonts.primary200]}>
+            {slotShape(creneau).everyWeeks > 1 || slotShape(creneau).dates
+              ? formeEnMots(t, creneau)
+              : formeEnMots(t, creneau, { court: true })}
           </Text>
         </TouchableOpacity>
       ));

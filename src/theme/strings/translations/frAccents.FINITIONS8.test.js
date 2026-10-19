@@ -51,7 +51,8 @@ const CORRIGEES = [
   ['requestMappers.teamInvite.invited', '{{team}} est invitée à cet événement.'],
   ['requestMappers.teamInvite.myTeamFallback', 'Ton équipe'],
   ['requestMappers.teamFallback', 'Équipe'],
-  ['profile.identity.roles.coach', 'Entraîneur'],
+  // R17-ROLES (REC17-006, 19/10) : le rôle se nomme « Coach / Prof » (avant : « Entraîneur »).
+  ['profile.identity.roles.coach', 'Coach / Prof'],
 ];
 
 // Les formes fautives relevees : aucune valeur ne doit plus les porter.

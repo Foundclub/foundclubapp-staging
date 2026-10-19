@@ -501,3 +501,129 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     expect(mockRetry.mock.calls[1][2] || {}).not.toHaveProperty('senderSignature');
   });
 });
+
+// 🏛️ R17-CANAUX (19/10/2026, REC17-004, point 5) — « TOUTE LA VILLE » DANS LA VRAIE CONVERSATION.
+// Adel : « un canal avec toute la ville (en lecture seule de base bien sûr) ». Un membre n'y a pas
+// de saisie, il lit « Seule la Ville écrit ici » ; la Ville (depuis son espace) écrit ; personne
+// n'y voit qui le lit (pas de bouton « Qui est dans ce canal ») ; l'actualité posée par la Ville
+// mène à l'actualité.
+describe('R17-CANAUX — « Toute la ville » dans la conversation', () => {
+  const TOUTE = {
+    collectivite: VILLE, documentId: 'chat-1', participants: [], type: 'collectivite_ville',
+  };
+  const LIGNE_ACTU = {
+    createdAt: '2026-10-19T08:00:00.000Z',
+    documentId: 'm-actu',
+    message: 'Nouvelle actualité de la Ville : « Dojo fermé »',
+    sender: null,
+    systemNotice: {
+      actualite: { documentId: 'actu-1', title: 'Dojo fermé' },
+      collectivite: { documentId: 'ville-1' },
+      kind: 'collectivite_actualite',
+      version: 1,
+    },
+    updatedAt: '2026-10-19T08:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockBoutons.length = 0;
+    mockChatData = TOUTE;
+    mockMessagesPage = {
+      data: [LIGNE_ACTU], meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+    };
+    mockMessagesError = undefined;
+    mockMembres = {
+      chat: { documentId: 'chat-1', type: 'collectivite_ville' },
+      clubsCount: 2,
+      groupes: [],
+      peutEcrire: false,
+    };
+    mockBlockedRows = [];
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) aDemonter.pop()();
+  });
+
+  const barre = (/** @type {any} */ props) => {
+    /** @type {any} */
+    let rendu;
+    act(() => { rendu = renderer.create(props.renderInputToolbar({})); });
+    aDemonter.push(() => act(() => { rendu.unmount(); }));
+    return rendu;
+  };
+
+  it('le membre : titre, NOMBRE, « Seule la Ville écrit ici », pas de liste', () => {
+    const { arbre, props } = monter({ chatType: 'collectivite_ville' });
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Toute la ville · Ville de Demo',
+      'Lu par les membres des 2 clubs',
+    ]));
+    expect(arbre.root.findAllByProps({ testID: 'fil-de-la-ville-membres' })).toHaveLength(0);
+    const lecture = barre(props);
+    expect(lecture.root.findAllByProps({ testID: 'conversation-lecture-seule' }).length)
+      .toBeGreaterThan(0);
+    expect(textes(lecture)).toContain('Seule la Ville écrit ici');
+  });
+
+  it('la Ville, depuis son espace : la saisie, au nom de la Ville', () => {
+    const { props } = monter({ chatType: 'collectivite_ville', espace: 'ville' });
+    expect(barre(props).root.findAllByProps({ testID: 'conversation-lecture-seule' }))
+      .toHaveLength(0);
+    act(() => { props.onSend([{ text: 'Bonne rentrée à tous' }]); });
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'chat-1',
+      'Bonne rentrée à tous',
+      expect.objectContaining({ senderSignature: { voix: 'ville' } }),
+    );
+  });
+
+  it('l’actualité posée par la Ville est une ligne qui mène à l’actualité', () => {
+    const { navigation, props } = monter({ chatType: 'collectivite_ville' });
+    const [ligne] = props.messages;
+    expect(ligne.system).toBe(true);
+    /** @type {any} */
+    let rendu;
+    act(() => { rendu = renderer.create(props.renderSystemMessage({ currentMessage: ligne })); });
+    aDemonter.push(() => act(() => { rendu.unmount(); }));
+    expect(JSON.stringify(rendu.toJSON()))
+      .toContain('Nouvelle actualité de la Ville : « Dojo fermé »');
+    const lien = rendu.root.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'link'
+      && typeof n.props.onPress === 'function')[0];
+    expect(lien.props.accessibilityLabel).toBe('Voir l’actualité « Dojo fermé »');
+    act(() => { lien.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectiviteActualitesCanal', {
+      actualiteId: 'actu-1', collectiviteId: 'ville-1',
+    });
+  });
+
+  // Décision d'Adel « B » (19/10) : réservé aux majeurs. Un mineur (ou un club détaché) qui
+  // l'ouvre par un vieux lien lit pourquoi, sans « canal des dirigeants » faux.
+  it('refusé par le serveur : « Tu ne fais plus partie de ce canal » et la bonne raison', () => {
+    mockChatData = undefined;
+    mockMessagesPage = { data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } };
+    mockMessagesError = REFUS;
+    const { arbre } = monter({ chatType: 'collectivite_ville' });
+    expect(textes(arbre)).toContain('Tu ne fais plus partie de ce canal');
+    expect(textes(arbre)).toContain(
+      'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
+    );
+    expect(textes(arbre).join(' ')).not.toContain('dirigeants');
+  });
+
+  it('une ligne « a rejoint le canal » reste une ligne simple, sans lien', () => {
+    mockChatData = CANAL;
+    mockMessagesPage = PAGE;
+    const { props } = monter({ espace: 'ville' });
+    const systeme = props.messages.find((/** @type {any} */ m) => m.documentId === 'm-systeme');
+    /** @type {any} */
+    let rendu;
+    act(() => { rendu = renderer.create(props.renderSystemMessage({ currentMessage: systeme })); });
+    aDemonter.push(() => act(() => { rendu.unmount(); }));
+    const liens = rendu.root.findAll(
+      (/** @type {any} */ n) => n.props?.accessibilityRole === 'link',
+    );
+    expect(liens).toHaveLength(0);
+  });
+});
