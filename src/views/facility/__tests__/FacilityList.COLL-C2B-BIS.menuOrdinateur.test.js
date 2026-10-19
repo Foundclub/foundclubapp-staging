@@ -12,6 +12,10 @@ import FacilityList from '../FacilityList';
 
 /** @type {any[]} */
 const mockFeuillesOuvertes = [];
+// R17-SIGNALER-1 : la carte et l accueil lisent le resume des signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useCollectiviteFacilityReportsSummary: () => ({ data: null }),
+}));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => true }));
 
 /** @type {any} */

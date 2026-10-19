@@ -45,6 +45,10 @@ const mockGoBack = jest.fn();
 // COLL-ACCUEIL-BIS (03/10) — la largeur de l'écran : 390 (téléphone) par défaut, 1280 pour la
 // planche « ordinateur » (l'accueil passe en colonnes à partir de 1024).
 let mockLargeur = 390;
+// R17-SIGNALER-1 : la carte et l accueil lisent le resume des signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useCollectiviteFacilityReportsSummary: () => ({ data: null }),
+}));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({

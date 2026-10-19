@@ -36,6 +36,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
+import FacilitySecurityTab from '@/components/organisms/facilityReport/FacilitySecurityTab';
 import SeasonSlotForm, {
   HAUTEUR_DE_LA_FEUILLE,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
@@ -68,9 +69,16 @@ const LIGNE_D_INFO = /** @type {const} */ ({
 });
 const LIGNE_DE_SAISON = /** @type {const} */ ({ gap: 8, justifyContent: 'space-between' });
 // COLL-C4B (02/10) : + « Fermetures » (design P4v3-fermer, ecran 6).
+// R17-SIGNALER-1 (19/10, REC17-011) : + « Sécurité et suivi », le 5ᵉ, pour la Ville seule.
 const ONGLETS = {
-  creneaux: 'creneaux', fermetures: 'fermetures', infos: 'infos', planning: 'planning',
+  creneaux: 'creneaux',
+  fermetures: 'fermetures',
+  infos: 'infos',
+  planning: 'planning',
+  securite: 'securite',
 };
+// La notification d un signalement et l accueil ouvrent directement ces onglets.
+const ONGLETS_D_ENTREE = [ONGLETS.fermetures, ONGLETS.securite];
 
 /**
  * Un jour civil « AAAA-MM-JJ » en « 1 sept. » (pour « du 1 sept. au 30 juin »).
@@ -199,7 +207,7 @@ function InstallationCreneaux() {
 
   // COLL-C4B : l accueil de la Ville (« Fermeture a venir ») ouvre l onglet « Fermetures ».
   const [onglet, setOnglet] = useState(
-    params.onglet === ONGLETS.fermetures ? ONGLETS.fermetures : ONGLETS.creneaux,
+    ONGLETS_D_ENTREE.includes(params.onglet) ? params.onglet : ONGLETS.creneaux,
   );
   // Ce qui est ouvert : « attribuer » (avec un jour pre-rempli), « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
@@ -571,10 +579,13 @@ function InstallationCreneaux() {
       />
 
       {/* VILLE-T18A (T18 G28a) — 4 onglets (P4v3-fermer-ordi) : en défilement, « Infos » sortait
-          de l écran (22 px visibles). Largeur égale, libellés d un mot rétrécis pour tenir. */}
+          de l écran (22 px visibles). Largeur égale, libellés d un mot rétrécis pour tenir.
+          R17-SIGNALER-1 (P10-securite-tel, écran 1) : la Ville a un 5ᵉ onglet ; cinq ne
+          tiennent pas sur 412 px, la rangée DÉFILE au téléphone et chaque nom reste entier. */}
       <SegmentedControl
-        centerContent
-        fitLabels
+        centerContent={!(canManage && !isDesktop)}
+        fitLabels={!(canManage && !isDesktop)}
+        fullLabels={canManage && !isDesktop}
         onChange={choisirOnglet}
         options={[
           { label: t('collectiviteCreneaux.creneaux.onglet', 'Créneaux'), value: ONGLETS.creneaux },
@@ -587,9 +598,20 @@ function InstallationCreneaux() {
             value: ONGLETS.fermetures,
           },
           { label: t('collectiviteCreneaux.creneaux.ongletInfos', 'Infos'), value: ONGLETS.infos },
+          ...(canManage ? [{
+            label: t('facilityReports.ville.onglet', 'Sécurité et suivi'),
+            value: ONGLETS.securite,
+          }] : []),
         ]}
         value={onglet}
       />
+
+      {onglet === ONGLETS.securite && canManage ? (
+        <FacilitySecurityTab
+          facilityId={facilityId}
+          onOpenClosures={() => setOnglet(ONGLETS.fermetures)}
+        />
+      ) : null}
 
       {onglet === ONGLETS.fermetures ? (
         <FacilityClosureList

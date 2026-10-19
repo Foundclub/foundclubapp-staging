@@ -67,6 +67,9 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
+import {
+  useCollectiviteFacilityReportsSummary,
+} from '@/services/facilityReport/facilityReportQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import { getItem, setItem } from '@/platform/storage';
@@ -154,6 +157,9 @@ function CollectiviteHome() {
   // COLL-C4B (02/10) — « Fermeture à venir » (P3v2-accueil, point d accroche de COLL-ACCUEIL) :
   // ce qui dure ou vient, toutes installations ; les deux premières.
   const fermetures = useCollectiviteClosures(collectiviteId);
+  // R17-SIGNALER-1 (19/10, planche P11-securite-ou-ca-vit 1) — « Ce qui vous attend » gagne les
+  // signalements à traiter (« Envoyé »). Seulement pour le gestionnaire de CETTE Ville.
+  const signalements = useCollectiviteFacilityReportsSummary(collectivite ? collectiviteId : null);
   // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
   // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
   const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
@@ -541,6 +547,45 @@ function CollectiviteHome() {
     </View>
   ) : null;
 
+  // R17-SIGNALER-1 — les signalements à traiter : le plus récent, et un appui l'ouvre.
+  const aTraiter = Array.isArray(signalements.data?.meta?.toHandle)
+    ? signalements.data.meta.toHandle
+    : [];
+  const nombreATraiter = Number(signalements.data?.meta?.toHandleCount) || aTraiter.length;
+  const blocDesSignalements = aTraiter.length ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => ouvrir(RouteNames.FacilityReportDetails, {
+        espace: 'ville',
+        reportId: aTraiter[0].documentId,
+      })}
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(Colors.warning500, 0.08),
+          borderColor: withAlpha(Colors.warning500, 0.45),
+          gap: 4,
+        },
+      ]}
+      testID="collectivite-home-signalements"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('facilityReports.ville.accueil', { count: nombreATraiter })}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t('facilityReports.ville.accueilDetail', {
+          category: t(
+            `facilityReports.categoriesCourtes.${aTraiter[0].category}`,
+            aTraiter[0].category,
+          ),
+          facility: aTraiter[0].facility?.name || '',
+          title: aTraiter[0].title,
+        })}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   const renderAttente = () => {
     if (pending.isLoading) {
       return (
@@ -586,11 +631,13 @@ function CollectiviteHome() {
         </View>
       );
     }
-    // COLL-C4B — aucune demande, mais une fermeture à venir : elle seule attend.
-    if (!enTete && blocDesFermetures) {
+    // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
+    // à traiter) : elle seule attend.
+    if (!enTete && (blocDesSignalements || blocDesFermetures)) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
+          {blocDesSignalements}
           {blocDesFermetures}
         </View>
       );
@@ -662,6 +709,7 @@ function CollectiviteHome() {
             () => ouvrir(RouteNames.CollectiviteRequests),
           )}
         </View>
+        {blocDesSignalements}
         {blocDesFermetures}
       </View>
     );
