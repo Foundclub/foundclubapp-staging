@@ -10,8 +10,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 
-import { useCreateLieu, useGetPlacesFromCoordinates } from '@/services/places/placesQueries';
-import { chercherCommune } from '@/services/places/placesService';
+import {
+  chercherCommune, useCreateLieu, useGetPlacesFromCoordinates,
+} from '@/services/places/placesQueries';
 
 import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
