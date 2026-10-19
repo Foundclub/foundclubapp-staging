@@ -772,7 +772,7 @@ function SeasonSlotForm({
     // Forme inchangée : rien ne part (le corps d'une modification reste celui d'avant le lot).
     const avant = quandDeDepart?.forme || 'saison';
     const memeRythme = (avant === formeChoisie)
-      || (['saison', 'periode'].includes(avant) && ['saison', 'periode'].includes(formeChoisie));
+      || (['periode', 'saison'].includes(avant) && ['periode', 'saison'].includes(formeChoisie));
     const memesDates = formeChoisie !== 'dates'
       || JSON.stringify([...datesChoisies].sort()) === JSON.stringify(quandDeDepart?.dates || []);
     const memePremiere = formeChoisie !== 'deuxSemaines' || quand.deuxDu === quandDeDepart?.deuxDu;
@@ -1505,7 +1505,8 @@ function SeasonSlotForm({
           l'heure ». Le panneau compact du planning garde sa ligne, plus bas. */}
       {parcoursGuide && !compact && depuisUneCase && etapeCourante !== 'recap' ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="season-slot-moment">
-          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+          {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
+          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
 
@@ -1711,7 +1712,7 @@ function SeasonSlotForm({
           changement d'heure). */}
       {visible('quand') && !repartition ? (
         <View style={{ gap: 12 }} testID="season-slot-quand">
-          {libelleDuChamp(t('collectiviteCreneaux.quand.titre', 'Quand ?'))}
+          {libelleDuChamp(titres.quand)}
           {joursDifferents ? (
             <Button
               icon="arrowLeft"
@@ -1993,7 +1994,8 @@ function SeasonSlotForm({
 
       {parcoursGuide && compact && (visible('jour') || visible('horaires')) ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+          {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
+          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
       {parcoursGuide && confirmationFinale && !tunnelPleinEcran ? (
