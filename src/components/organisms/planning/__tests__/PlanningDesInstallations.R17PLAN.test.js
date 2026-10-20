@@ -705,7 +705,7 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     await attendre();
   };
 
-  test('16 ROUGE-AVANT — ordinateur, Semaine : le bloc clair au stade, sans le blocage', async () => {
+  test('16 ROUGE-AVANT — ordinateur, Semaine : au stade, sans le blocage', async () => {
     mockOrdinateur = true;
     const arbre = await rendre();
     await choisir(arbre, 'week');
@@ -746,7 +746,7 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     expect(lus.join(' ')).not.toMatch(/Bloqué par la Ville/);
   });
 
-  test('19 ROUGE-AVANT — téléphone, Semaine : le jeudi 22 le dit, et son installation', async () => {
+  test('19 ROUGE-AVANT — téléphone, Semaine : le jeudi 22, et son installation', async () => {
     const arbre = await rendre();
     await choisir(arbre, 'week');
     const lus = textes(arbre);
