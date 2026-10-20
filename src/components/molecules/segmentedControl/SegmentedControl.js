@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useState,
 } from 'react';
@@ -38,20 +39,24 @@ const SHRINK_MIN_SCALE = 0.72;
  * SegmentedControl component.
  * @param {object} props
  * @param {Array<{label: string, value: string, badge?: number | null,
- *   accessibilityLabel?: string}>} props.options R17-SIGNALER-1 (19/10) : `badge`, une PASTILLE
- *   a cote du nom (planche P10-securite-ordi A : « Sécurité et suivi 2 ») ; rien sous 1. Son
- *   `accessibilityLabel` dit le nom ET le nombre au lecteur d ecran.
+ *   accessibilityLabel?: string, disabled?: boolean}>} props.options R17-SIGNALER-1 (19/10) :
+ *   `badge`, une PASTILLE a cote du nom (planche P10-securite-ordi A : « Sécurité et suivi 2 ») ;
+ *   rien sous 1. Son `accessibilityLabel` dit le nom ET le nombre au lecteur d ecran.
+ *   RESA-BASCULE (20/10) : `disabled`, en mode `radio` seulement, une position INERTE (grisee).
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.centerContent]
  * @param {boolean} [props.fitLabels] S5 : UNE ligne, le texte retrecit pour tenir.
  * @param {boolean} [props.fullLabels] Libelles systeme : jamais tronques.
  * @param {boolean} [props.wrapLabels] VT18E : les onglets passent a la ligne, rien n est coupe.
+ * @param {boolean} [props.grand] RESA-BASCULE : 44 px de haut (au lieu de 36), la zone d un pouce.
+ * @param {boolean} [props.radio] RESA-BASCULE : chaque segment est un « bouton radio » (coche,
+ *   selectionne, inerte) ; sur le site, Espace choisit comme Entree.
  * @returns {import('react').ReactElement}
  */
 function SegmentedControl({
-  centerContent = false, fitLabels = false, fullLabels = false, onChange, options, value,
-  wrapLabels = false,
+  centerContent = false, fitLabels = false, fullLabels = false, grand = false, onChange, options,
+  radio = false, value, wrapLabels = false,
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
@@ -62,8 +67,16 @@ function SegmentedControl({
   const scrollOffset = useSharedValue(0);
   const dragStartOffset = useSharedValue(0);
   const horizontalGap = isWeb ? 8 : horizontalScale(8.58);
-  const containerMinHeight = isWeb ? 44 : verticalScale(37.52);
-  const segmentMinHeight = isWeb ? 36 : verticalScale(32);
+  // 🧭 RESA-BASCULE (20/10/2026, planche RB-3) — DEUX AJOUTS, OPT-IN, pour la bascule « Ton mode » :
+  //   · `grand` : 44 px de haut (au lieu de 36), sans echelle, la zone minimale d un pouce ;
+  //   · `radio` : le role « bouton radio » (« Parent, bouton radio, selectionne »), une position
+  //     INERTE grisee pendant une bascule (`option.disabled`), et Espace sur le site.
+  // Sans eux, rien ne bouge : temoin `__tests__/SegmentedControl.RESABASCULE.test.js`.
+  const idDuGroupe = useId();
+  const hauteurDeLaRangee = isWeb ? 44 : verticalScale(37.52);
+  const hauteurDuSegment = isWeb ? 36 : verticalScale(32);
+  const containerMinHeight = grand ? 44 : hauteurDeLaRangee;
+  const segmentMinHeight = grand ? 44 : hauteurDuSegment;
   const segmentHorizontalPadding = isWeb ? 16 : horizontalScale(16);
   // COL-004 : en largeurs egales, le mode qui retrecit garde 6 de marge au lieu de 16.
   // « Fermetures » (4 onglets) y retrouve ~58 pt au lieu de ~40 : ~88 % de sa taille.
@@ -71,7 +84,8 @@ function SegmentedControl({
   const segmentVerticalPadding = isWeb ? 9 : verticalScale(8);
   const segmentTextSize = isWeb ? 13 : moderateScale(12.87);
   const segmentTextLineHeight = isWeb ? 18 : moderateScale(18);
-  const wrapperMinHeight = isWeb ? 52 : verticalScale(45);
+  const hauteurDeLEnveloppe = isWeb ? 52 : verticalScale(45);
+  const wrapperMinHeight = grand ? 44 : hauteurDeLEnveloppe;
   const segmentRadius = moderateScale(33.24);
   const selectedRadius = moderateScale(34.31);
   const maxScrollOffset = Math.max(0, contentWidth - containerWidth);
@@ -175,6 +189,10 @@ function SegmentedControl({
     segmentFitEqualWidth: {
       paddingHorizontal: segmentFitHorizontalPadding,
     },
+    // RESA-BASCULE : la position inerte de la planche RB-3 (`.pos.inerte`, opacite 0,5).
+    segmentInerte: {
+      opacity: 0.5,
+    },
     segmentSelected: {
       backgroundColor: Colors.primary500,
       borderColor: Colors.primary500,
@@ -253,19 +271,27 @@ function SegmentedControl({
     wrapperMinHeight,
   ]);
 
-  const segmentButtons = options.map((option) => {
+  const segmentButtons = options.map((option, rang) => {
     const isSelected = option.value === value;
+    const inerte = radio && option.disabled === true;
     return (
       <TouchableOpacity
         accessibilityLabel={option.accessibilityLabel}
+        accessibilityRole={radio ? 'radio' : undefined}
+        accessibilityState={radio
+          ? { checked: isSelected, disabled: inerte, selected: isSelected }
+          : undefined}
         activeOpacity={0.8}
+        disabled={radio ? inerte : undefined}
         key={option.value}
+        nativeID={radio && isWeb ? `${idDuGroupe}-${rang}` : undefined}
         onPress={() => onChange(option.value)}
         style={[
           styles.segment,
           useEqualWidthLayout && styles.segmentEqualWidth,
           useEqualWidthLayout && fitLabels && styles.segmentFitEqualWidth,
           isSelected && styles.segmentSelected,
+          inerte && styles.segmentInerte,
         ]}
       >
         {/* 🔠 S5 (vague S) — TROIS MODES, ET UN SEUL GAGNE A LA FOIS.
@@ -372,8 +398,21 @@ function SegmentedControl({
     );
   }
 
+  // RESA-BASCULE — sur le site, react-native-web ne fait choisir un « radio » qu a Entree : Espace
+  // remonte jusqu ici (il n arrete que les touches qu il traite), on le traduit en choix.
+  const choisirAuClavier = (/** @type {any} */ evenement) => {
+    if (evenement?.key !== ' ' && evenement?.key !== 'Spacebar') return;
+    const prefixe = `${idDuGroupe}-`;
+    const id = String(evenement?.target?.id || '');
+    if (!id.startsWith(prefixe)) return;
+    const option = options[Number(id.slice(prefixe.length))];
+    if (!option || option.disabled === true) return;
+    evenement.preventDefault?.();
+    onChange(option.value);
+  };
+
   return (
-    <View style={styles.wrapper}>
+    <View onKeyDown={radio && isWeb ? choisirAuClavier : undefined} style={styles.wrapper}>
       {content}
     </View>
   );
