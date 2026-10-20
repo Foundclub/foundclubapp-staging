@@ -165,6 +165,16 @@ jest.mock('@/domains/club/useClub', () => ({
   default: () => ({ getClubFiltersNumber: () => 0 }),
 }));
 
+// INVPAD (20/10) : la largeur de la fenetre decide des deux colonnes du site. Par defaut, celle
+// du telephone de jest (750 x 1334) : les autres temoins ne voient rien changer.
+const mockFenetre = {
+  fontScale: 2, height: 1334, scale: 2, width: 750,
+};
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => mockFenetre,
+}));
+
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
   default: () => ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
@@ -738,5 +748,78 @@ describe('R17-INVITER — l action de carte, que seule la Ville pose', () => {
 
     await monter({ actionDeCarte, paramsDeFiche: VILLE });
     expect(mockListe.props.ListEmptyComponent().props.onAction).toBeUndefined();
+  });
+});
+
+// INVPAD (20/10/2026) — Adel, « Ajouter un club » sur le site, grand ecran : une colonne etroite,
+// une seule carte et son bouton coupe. La Ville demande ses cartes sur DEUX colonnes ; la liste ne
+// les pose que sur le SITE, a partir de 1 024 px (la meme borne que l annuaire). Les autres ecrans
+// (recherche, accueil, hub) ne le demandent pas : rien ne change pour eux, ni sur le telephone.
+describe('INVPAD — deux colonnes sur le site ordinateur, pour qui les demande', () => {
+  const { Platform, StyleSheet } = jest.requireActual('react-native');
+  const osDOrigine = Platform.OS;
+  const CLUBS = [club('Olympique'), club('Racing'), club('Stade')];
+  const actionDeCarte = (/** @type {any} */ c) => {
+    const { Text: TexteRN } = jest.requireActual('react-native');
+    return <TexteRN testID={`action-${c.documentId}`}>{`action:${c.name}`}</TexteRN>;
+  };
+  // La case d une carte : l ancetre le plus proche qui porte une largeur.
+  const caseDe = (/** @type {string} */ testID) => {
+    let noeud = monte.root.findByProps({ testID }).parent;
+    const sansLargeur = (/** @type {any} */ n) => (
+      StyleSheet.flatten(n.props?.style || {})?.width === undefined
+    );
+    while (noeud && sansLargeur(noeud)) noeud = noeud.parent;
+    return noeud ? StyleSheet.flatten(noeud.props.style) : null;
+  };
+  const surLeSite = (/** @type {number} */ largeur) => {
+    Platform.OS = 'web';
+    mockFenetre.width = largeur;
+  };
+
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+    mockFenetre.width = 750;
+  });
+
+  test('✅ site, 1 360 px, demandées : deux colonnes, chaque carte sa moitié', async () => {
+    surLeSite(1360);
+    mockEtat.pagesListe = { pages: [{ data: CLUBS }] };
+    await monter({ actionDeCarte, surDeuxColonnes: true });
+
+    expect(mockListe.props.numColumns).toBe(2);
+    const gauche = { paddingLeft: 0, paddingRight: 6, width: '50%' };
+    expect(caseDe('carte-club-Olympique')).toEqual(gauche);
+    expect(caseDe('carte-club-Racing')).toEqual({ paddingLeft: 6, paddingRight: 0, width: '50%' });
+    // La 3e, seule sur sa rangee, garde la meme largeur que les autres ; l action est dans la case.
+    expect(caseDe('carte-club-Stade')).toEqual(gauche);
+    expect(caseDe('action-club-Racing')).toEqual(caseDe('carte-club-Racing'));
+  });
+
+  test('📌 site, 1 360 px, NON demandées (recherche, accueil, hub) : une colonne', async () => {
+    surLeSite(1360);
+    mockEtat.pagesListe = { pages: [{ data: CLUBS }] };
+    await monter({ actionDeCarte });
+
+    expect(mockListe.props.numColumns ?? 1).toBe(1);
+    expect(caseDe('carte-club-Olympique')).toBeNull();
+  });
+
+  test('📌 site, 390 px, demandées : une colonne', async () => {
+    surLeSite(390);
+    mockEtat.pagesListe = { pages: [{ data: CLUBS }] };
+    await monter({ actionDeCarte, surDeuxColonnes: true });
+
+    expect(mockListe.props.numColumns ?? 1).toBe(1);
+    expect(caseDe('carte-club-Olympique')).toBeNull();
+  });
+
+  test('📌 telephone (meme une tablette de 1 366 px), demandées : une colonne', async () => {
+    mockFenetre.width = 1366;
+    mockEtat.pagesListe = { pages: [{ data: CLUBS }] };
+    await monter({ actionDeCarte, surDeuxColonnes: true });
+
+    expect(mockListe.props.numColumns ?? 1).toBe(1);
+    expect(caseDe('carte-club-Olympique')).toBeNull();
   });
 });

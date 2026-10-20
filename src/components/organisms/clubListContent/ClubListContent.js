@@ -146,6 +146,7 @@ const mergeClubCollections = (...collections) => {
  *  paramsDeFiche?: Record<string, unknown>;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
+ *  surDeuxColonnes?: boolean;
  * }} [props]
  *   `annuaire` (ANNUAIRE-E1, posé par l'annuaire du site seulement) : la liste défile AVEC la page
  *   (cartes à plat, « Voir plus » au lieu du défilement sans fin) et chaque carte est un vrai lien
@@ -157,6 +158,9 @@ const mergeClubCollections = (...collections) => {
  *   « Ajouter un club ») : l'action rendue sous la carte de chaque club (« Ce club fait partie
  *   de ma collectivité »), les paramètres ajoutés à l'ouverture de sa fiche (la Ville), et pas
  *   de « Créer un club » quand la liste est vide. Absents, rien ne change.
+ *   `surDeuxColonnes` (INVPAD, 20/10, posé par la seule Ville dans « Ajouter un club ») : sur le
+ *   SITE, dès 1 024 px (la borne de l'annuaire), la liste qui défile range ses cartes sur deux
+ *   colonnes. Absent, ou sur le téléphone, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
@@ -167,6 +171,7 @@ function ClubListContent({
   paramsDeFiche = undefined,
   refreshSignal = 0,
   screenActive = true,
+  surDeuxColonnes = false,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -849,7 +854,26 @@ function ClubListContent({
   // Une liste qui ne défile pas elle-même ne sait plus quand elle arrive au bout : sans borne, elle
   // réclamait TOUTES ses pages (banc du 25/09 : 8 sur 8). La page suivante se demande donc au
   // bouton « Voir plus », comme la planche le dessine.
-  const deuxColonnes = annuaire && Platform.OS === 'web' && largeurEcran >= LARGEUR_DEUX_COLONNES;
+  const deuxColonnes = (annuaire || surDeuxColonnes)
+    && Platform.OS === 'web'
+    && largeurEcran >= LARGEUR_DEUX_COLONNES;
+  // INVPAD — la liste qui défile, sur deux colonnes : chaque carte (et son action) prend sa moitié,
+  // 12 px entre les deux comme entre les rangées ; une carte seule sur sa rangée garde sa moitié.
+  // Sur le site seulement : la FlashList y est la FlatList de react-native-web, qui pose les cases
+  // d'une rangée côte à côte (web/src/shims/flash-list.tsx).
+  const renderItemSurDeuxColonnes = useCallback((
+    /** @type {{ index: number, item: any }} */ cellule,
+  ) => (
+    <View
+      style={{
+        paddingLeft: cellule.index % 2 ? 6 : 0,
+        paddingRight: cellule.index % 2 ? 0 : 6,
+        width: '50%',
+      }}
+    >
+      {renderItem({ item: cellule.item })}
+    </View>
+  ), [renderItem]);
   const enTetePertinence = isSmartSearchEnabled ? (
     <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
       {t('clubListContent.sortedByRelevance', 'Trie par pertinence')}
@@ -999,9 +1023,12 @@ function ClubListContent({
             ]}
             data={displayedClubs}
             ItemSeparatorComponent={ClubsListSeparator}
+            // Changer le nombre de colonnes exige une liste neuve (FlatList du site).
+            key={deuxColonnes ? 'deux-colonnes' : 'une-colonne'}
             keyExtractor={cleDeCarte}
             ListEmptyComponent={renderEmptyList}
             ListHeaderComponent={enTetePertinence}
+            numColumns={deuxColonnes ? 2 : 1}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refreshHandler}
@@ -1010,7 +1037,7 @@ function ClubListContent({
             onViewableItemsChanged={rapportDeVisibilite}
             ref={listeRef}
             refreshing={isActiveQueryBusy && !activeIsFetchingNext}
-            renderItem={renderItem}
+            renderItem={deuxColonnes ? renderItemSurDeuxColonnes : renderItem}
             showsVerticalScrollIndicator={false}
             viewabilityConfig={reglageDeVisibilite}
           />
