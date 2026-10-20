@@ -1,7 +1,7 @@
 import {
   format, isValid, parse, parseISO,
 } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ImageBackground, Modal, Text, TouchableOpacity, View,
@@ -25,6 +25,9 @@ import {
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  nomDeVacances, periodesGardeesDuCreneau, vacancesDesSeances,
+} from '@/domains/seasonSlot/seasonSlotHolidays';
 import {
   corpsDuQuand,
   creneauDuQuand,
@@ -575,6 +578,13 @@ function SeasonSlotForm({
     /** @type {string[]} */ (quandDeDepart?.dates || []),
   );
   const formeChoisie = joursDifferents ? 'dates' : forme;
+  // 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi) — « Sauf vacances scolaires »
+  // (zone et dates : le serveur, calendrier officiel) ; les périodes gardées malgré tout
+  // (décochées : un stage pendant les vacances ; `null` = pas touchées) ; la liste des dates
+  // retirées, dépliée.
+  const [saufVacances, setSaufVacances] = useState(slot?.exceptHolidays === true);
+  const [vacancesGardees, setVacancesGardees] = useState(/** @type {string[] | null} */ (null));
+  const [vacancesDepliees, setVacancesDepliees] = useState(false);
   const quand = {
     dates: datesChoisies,
     deuxAu: deuxJusqua === 'date' ? versJourCivil(deuxAu) : null,
@@ -691,13 +701,42 @@ function SeasonSlotForm({
       startTime: debut,
       ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
       ...formeDeLApercu,
+      ...(saufVacances ? { exceptHolidays: '1' } : {}),
+      ...(saufVacances && vacancesGardees?.length
+        ? { keepHolidays: vacancesGardees.join(',') }
+        : {}),
     } : null;
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
+  // 🌴 R17-QUAND-2 — la zone et ses périodes (aperçu du serveur), gardées d'une lecture à l'autre :
+  // la case ne disparaît pas pendant qu'un nouvel aperçu se lit. `null` : zone inconnue, pas de
+  // case.
+  const vacancesLues = /** @type {any} */ (apercu.data)?.data?.holidays;
+  const vacancesConnues = useRef(/** @type {any} */ (null));
+  if (vacancesLues !== undefined) vacancesConnues.current = vacancesLues;
+  // Avant le 1er aperçu (calendrier libre sans date cochée) : la zone de la liste des créneaux.
+  const vacances = vacancesConnues.current ?? meta.holidays ?? null;
+  /** @type {import('@/domains/seasonSlot/seasonSlotHolidays').PeriodeDeVacances[]} */
+  const periodesDeVacances = Array.isArray(vacances?.periods) ? vacances.periods : [];
+  const gardees = vacancesGardees
+    ?? (modification ? periodesGardeesDuCreneau(slot, periodesDeVacances) : []);
+  const vacancesDeLaForme = vacancesDesSeances(seances, periodesDeVacances, gardees);
+  const avecVacances = Boolean(saufVacances && vacances);
+  // Les séances qui restent : sans celles des vacances quand la case est cochée.
+  const seancesVues = avecVacances
+    ? seances.filter((jourCivil) => !vacancesDeLaForme.retirees.includes(jourCivil))
+    : seances;
+  const basculerLaPeriode = (/** @type {string} */ cle) => {
+    setVacancesGardees((avant) => {
+      const base = avant ?? gardees;
+      return base.includes(cle) ? base.filter((autre) => autre !== cle) : [...base, cle].sort();
+    });
+    toucherLaSaisie();
+  };
   // R17-QUAND-1 — les fermetures de la saison, rendues par l'aperçu (serveur) : les séances
   // fermées.
   const fermeturesLues = /** @type {any} */ (apercu.data)?.data?.closures;
   const fermetures = Array.isArray(fermeturesLues) ? fermeturesLues : [];
-  const seancesFermees = fermeturesTouchees(seances, fermetures, debut, fin);
+  const seancesFermees = fermeturesTouchees(seancesVues, fermetures, debut, fin);
   const disponibilitesEnCours = !repartition && (lecture.isLoading
     || Boolean(parametresApercu && apercu.isFetching));
   const disponibilitesEnErreur = !repartition && (lecture.error
@@ -803,6 +842,16 @@ function SeasonSlotForm({
     }
     return { everyWeeks: 1, recurrence: 'weekly' };
   };
+  // 🌴 R17-QUAND-2 — « Modifier » : la case, si elle change ; les périodes gardées, si la Ville
+  // les a touchées (sinon le serveur garde celles du créneau).
+  const vacancesAEnvoyer = () => {
+    const avant = slot?.exceptHolidays === true;
+    /** @type {Record<string, unknown>} */
+    const champs = {};
+    if (saufVacances !== avant) champs.exceptHolidays = saufVacances;
+    if (saufVacances && vacancesGardees !== null) champs.keepHolidays = vacancesGardees;
+    return champs;
+  };
 
   const envoyer = async (/** @type {boolean} */ quandMeme = false) => {
     if (!pret || envoiEnCours) return;
@@ -825,6 +874,7 @@ function SeasonSlotForm({
               ...champPlateau,
               // R17-QUAND-1 — la forme part toujours (le serveur ne coupe que si elle change).
               ...formeAEnvoyer(),
+              ...vacancesAEnvoyer(),
               // COLL-C2B-BIS : seule une periode CHANGEE part (sinon la coupure d avant, intacte).
               ...(nouveauDebut && nouveauDebut !== debutActuel ? { validFrom: nouveauDebut } : {}),
               ...(nouvelleFin && nouvelleFin !== finActuelle ? { validUntil: nouvelleFin } : {}),
@@ -841,6 +891,9 @@ function SeasonSlotForm({
             ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
             // R17-QUAND-1 — la création envoie enfin la forme et sa période (« Quand ? »).
             ...corpsDuQuand(quand),
+            // R17-QUAND-2 — « Sauf vacances scolaires », et les périodes gardées.
+            ...(avecVacances ? { exceptHolidays: true } : {}),
+            ...(avecVacances && gardees.length ? { keepHolidays: gardees } : {}),
             ...(equipe ? { team: equipe } : {}),
             ...(plateau ? { plateau } : {}),
             ...confirmation,
@@ -910,12 +963,12 @@ function SeasonSlotForm({
   // « 37 mercredis » / « 3 dates choisies ».
   const titreDesSeances = formeChoisie === 'dates'
     ? t('collectiviteCreneaux.quand.datesChoisies', {
-      count: seances.length,
+      count: seancesVues.length,
       defaultValue_one: '{{count}} date choisie',
       defaultValue_other: '{{count}} dates choisies',
     })
     : t('collectiviteCreneaux.quand.seances', {
-      count: seances.length,
+      count: seancesVues.length,
       defaultValue_one: '{{count}} {{jour}}',
       defaultValue_other: '{{count}} {{jour}}s',
       jour: nomDuJour,
@@ -924,13 +977,13 @@ function SeasonSlotForm({
   // Les séances qui tombent dans une fermeture : « 2 tombent dans « Vacances de Noël » (23 et
   // 30 déc.) ».
   const texteDesFermetures = (() => {
-    if (!seances.length) return null;
+    if (!seancesVues.length) return null;
     if (!seancesFermees.length) {
       return t('collectiviteCreneaux.quand.aucuneFermee', 'Aucune ne tombe dans une fermeture.');
     }
     const noms = [...new Set(seancesFermees.map((ligne) => ligne.label).filter(Boolean))];
     const dates = seancesFermees.slice(0, 4).map((ligne) => formatDayMonth(ligne.date)).join(', ');
-    if (seancesFermees.length === seances.length) {
+    if (seancesFermees.length === seancesVues.length) {
       return t(
         'collectiviteCreneaux.quand.toutesFermees',
         'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez attribuer quand même : '
@@ -969,8 +1022,58 @@ function SeasonSlotForm({
     }
     return t('collectiviteCreneaux.quand.recapSaison', 'Toute la saison · {{du}} – {{au}}', bornes);
   })();
-  const detailDuQuand = (() => {
-    if (formeChoisie === 'dates') return listeDeDates(seances);
+  // 🌴 R17-QUAND-2 — « 8 retirés pendant les vacances : Toussaint, Noël, hiver, printemps. »
+  const texteDesVacances = (() => {
+    if (!avecVacances) return null;
+    const { retirees } = vacancesDeLaForme;
+    if (!retirees.length) {
+      return t(
+        'collectiviteCreneaux.quand.vacances.aucune',
+        'Aucune séance ne tombe pendant les vacances.',
+      );
+    }
+    const noms = vacancesDeLaForme.parPeriode
+      .filter((ligne) => !ligne.gardee)
+      .map((ligne) => nomDeVacances(ligne.periode.name))
+      .join(', ');
+    return formeChoisie === 'dates'
+      ? t('collectiviteCreneaux.quand.vacances.retireesDates', {
+        count: retirees.length,
+        defaultValue_one: '{{count}} date retirée pendant les vacances : {{noms}}.',
+        defaultValue_other: '{{count}} dates retirées pendant les vacances : {{noms}}.',
+        noms,
+        ...SANS_ECHAPPEMENT,
+      })
+      : t('collectiviteCreneaux.quand.vacances.retirees', {
+        count: retirees.length,
+        defaultValue_one: '{{count}} retiré pendant les vacances : {{noms}}.',
+        defaultValue_other: '{{count}} retirés pendant les vacances : {{noms}}.',
+        noms,
+        ...SANS_ECHAPPEMENT,
+      });
+  })();
+  // « Calendrier officiel 2026-2027 » : les années des périodes lues.
+  const anneesScolaires = [...new Set(periodesDeVacances.map((periode) => (
+    String(periode.key).split(':')[0]
+  )))].join(', ');
+  const zoneDesVacances = vacances?.academie
+    ? t('collectiviteCreneaux.quand.vacances.zone', '{{zone}} · académie de {{academie}}', {
+      academie: vacances.academie, zone: vacances.label, ...SANS_ECHAPPEMENT,
+    })
+    : (vacances?.label || '');
+  const origineDesVacances = vacances?.origin === 'console'
+    ? t(
+      'collectiviteCreneaux.quand.vacances.origineConsole',
+      'Zone choisie par FoundClub. Une erreur ? Écrivez à FoundClub : nous la corrigeons.',
+    )
+    : t(
+      'collectiviteCreneaux.quand.vacances.origineDeduite',
+      'Zone déduite de votre commune ({{departement}}). Une erreur ? Écrivez à FoundClub : nous la '
+        + 'corrigeons.',
+      { departement: vacances?.departementName || '', ...SANS_ECHAPPEMENT },
+    );
+  const detailSansVacances = (() => {
+    if (formeChoisie === 'dates') return listeDeDates(seancesVues);
     if (!seancesFermees.length) return titreDesSeances;
     return t('collectiviteCreneaux.quand.recapDontFermees', {
       count: seancesFermees.length,
@@ -981,6 +1084,13 @@ function SeasonSlotForm({
       ...SANS_ECHAPPEMENT,
     });
   })();
+  const detailDuQuand = avecVacances
+    ? t(
+      'collectiviteCreneaux.quand.vacances.recap',
+      '{{detail}}, sauf vacances scolaires ({{zone}})',
+      { detail: detailSansVacances, zone: vacances.label, ...SANS_ECHAPPEMENT },
+    )
+    : detailSansVacances;
 
   // ─── La carte « Place libre » (§4.2) ────────────────────────────────────────────────
   const carteDeLaPlace = (() => {
@@ -1136,6 +1246,21 @@ function SeasonSlotForm({
   const rangee = (/** @type {import('react').ReactNode} */ enfants) => (
     <View style={[Alignments.row, Alignments.wrap, { alignItems: 'flex-start', gap: 8 }]}>
       {enfants}
+    </View>
+  );
+  // 🌴 R17-QUAND-2 — le carré d'une case à cocher (« Sauf vacances scolaires », une période).
+  const coche = (/** @type {boolean} */ actif) => (
+    <View
+      style={[Alignments.center, {
+        backgroundColor: actif ? Colors.primary500 : 'transparent',
+        borderColor: actif ? Colors.primary500 : Colors.primary200,
+        borderRadius: 6,
+        borderWidth: 2,
+        height: 24,
+        width: 24,
+      }]}
+    >
+      {actif ? <SvgIcon color={Colors.primary900} height={14} name="check" width={14} /> : null}
     </View>
   );
   /**
@@ -1401,7 +1526,7 @@ function SeasonSlotForm({
   const seancesDeLaSaison = jour && !joursDifferents
     ? seancesDuQuand(creneauDuQuand({ ...quand, forme: 'saison' }), aujourdhui)
     : [];
-  const toutFerme = seances.length > 0 && seancesFermees.length === seances.length;
+  const toutFerme = seancesVues.length > 0 && seancesFermees.length === seancesVues.length;
   const choisirForme = (/** @type {string} */ nouvelle) => {
     setForme(nouvelle);
     // « Toutes les 2 semaines » s'ouvre sur le prochain jour choisi (il fixe la semaine « paire »).
@@ -1832,17 +1957,17 @@ function SeasonSlotForm({
                   value={deuxAu}
                 />
               ) : null}
-              {seances.length ? (
+              {seancesVues.length ? (
                 <View
                   accessibilityLabel={t(
                     'collectiviteCreneaux.quand.prochaines',
                     'Prochaines dates : {{dates}}',
-                    { dates: listeDeDates(seances, 6), ...SANS_ECHAPPEMENT },
+                    { dates: listeDeDates(seancesVues, 6), ...SANS_ECHAPPEMENT },
                   )}
                   style={[Alignments.row, Alignments.wrap, { gap: 6 }]}
                   testID="quand-prochaines-dates"
                 >
-                  {seances.slice(0, 6).map((jourCivil) => {
+                  {seancesVues.slice(0, 6).map((jourCivil) => {
                     const ferme = seancesFermees.some((ligne) => ligne.date === jourCivil);
                     return (
                       <Text
@@ -1864,7 +1989,7 @@ function SeasonSlotForm({
                       </Text>
                     );
                   })}
-                  {seances.length > 6 ? (
+                  {seancesVues.length > 6 ? (
                     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>…</Text>
                   ) : null}
                 </View>
@@ -1881,13 +2006,112 @@ function SeasonSlotForm({
                 fermeturesTouchees([jourCivil], fermetures, debut, fin)[0]?.label || null
               )}
               jusqua={finDeSaison}
+              legendeVacances={vacances ? t(
+                'collectiviteCreneaux.quand.calendrier.legendeVacances',
+                'Vacances ({{zone}})',
+                { zone: vacances.label, ...SANS_ECHAPPEMENT },
+              ) : null}
               onToggle={(/** @type {string} */ jourCivil) => {
                 setDatesChoisies((avant) => (avant.includes(jourCivil)
                   ? avant.filter((autre) => autre !== jourCivil)
                   : [...avant, jourCivil].sort()));
                 toucherLaSaisie();
               }}
+              vacancesDe={(/** @type {string} */ jourCivil) => (
+                periodesDeVacances.find((periode) => (
+                  periode.start <= jourCivil && jourCivil <= periode.end
+                ))?.name || null
+              )}
             />
+          ) : null}
+
+          {vacances ? (
+            <TouchableOpacity
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: saufVacances }}
+              onPress={() => {
+                setSaufVacances((avant) => !avant);
+                toucherLaSaisie();
+              }}
+              style={[Alignments.row, {
+                alignItems: 'flex-start',
+                backgroundColor: withAlpha(Colors.primary500, 0.08),
+                borderColor: Colors.primary500,
+                borderRadius: 12,
+                borderWidth: 1,
+                gap: 12,
+                minHeight: 48,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }]}
+              testID="quand-sauf-vacances"
+            >
+              {coche(saufVacances)}
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{zoneDesVacances}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {avecVacances && vacancesDepliees ? (
+            <View style={{ gap: 4 }} testID="quand-vacances-liste">
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t(
+                  'collectiviteCreneaux.quand.vacances.titreListe',
+                  'Vacances retirées · {{zone}}',
+                  { zone: vacances.label, ...SANS_ECHAPPEMENT },
+                )}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'collectiviteCreneaux.quand.vacances.calendrierOfficiel',
+                  'Calendrier officiel {{annees}}',
+                  { annees: anneesScolaires, ...SANS_ECHAPPEMENT },
+                )}
+              </Text>
+              {vacancesDeLaForme.parPeriode.map(({ gardee, jours, periode }) => (
+                <TouchableOpacity
+                  accessibilityLabel={t(
+                    'collectiviteCreneaux.quand.vacances.periode',
+                    '{{nom}} : retirer ces séances',
+                    { nom: periode.name, ...SANS_ECHAPPEMENT },
+                  )}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: !gardee }}
+                  key={periode.key}
+                  onPress={() => basculerLaPeriode(periode.key)}
+                  style={[Alignments.row, Alignments.alignCenter, {
+                    borderBottomColor: withAlpha(Colors.neutral00, 0.08),
+                    borderBottomWidth: 1,
+                    gap: 8,
+                    minHeight: 48,
+                    paddingVertical: 8,
+                  }]}
+                  testID={`vacances-${periode.key}`}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{periode.name}</Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {t(
+                        'collectiviteCreneaux.quand.vacances.ligne',
+                        '{{du}} – {{au}} · {{jours}}',
+                        {
+                          au: formatDayMonth(periode.end),
+                          du: formatDayMonth(periode.start),
+                          jours: listeDeDates(jours, 6),
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
+                    </Text>
+                  </View>
+                  {coche(!gardee)}
+                </TouchableOpacity>
+              ))}
+              <Text style={[Fonts.p3, Fonts.neutral300]}>{origineDesVacances}</Text>
+            </View>
           ) : null}
 
           {erreurDuQuand ? (
@@ -1910,10 +2134,23 @@ function SeasonSlotForm({
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titreDesSeances}</Text>
               {formeChoisie === 'dates' ? (
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{listeDeDates(seances)}</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{listeDeDates(seancesVues)}</Text>
               ) : null}
               {texteDesFermetures ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{texteDesFermetures}</Text>
+              ) : null}
+              {texteDesVacances ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{texteDesVacances}</Text>
+              ) : null}
+              {avecVacances && vacancesDeLaForme.parPeriode.length ? (
+                <Button
+                  onPress={() => setVacancesDepliees((avant) => !avant)}
+                  style={{ alignSelf: 'flex-start', minHeight: 44 }}
+                  title={vacancesDepliees
+                    ? t('collectiviteCreneaux.quand.vacances.masquer', 'Masquer les dates retirées')
+                    : t('collectiviteCreneaux.quand.vacances.voir', 'Voir les dates retirées')}
+                  variant="Ghost"
+                />
               ) : null}
             </View>
           ) : null}
