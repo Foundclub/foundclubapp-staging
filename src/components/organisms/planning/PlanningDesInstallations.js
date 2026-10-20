@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { keepPreviousData, useQueries } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import {
   addDays,
   format,
@@ -11,12 +11,17 @@ import { enGB, fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Image,
   Platform,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
+import {
+  closureBandLabel,
+  closureHoursLabel,
+} from '@/domains/facilityClosure/facilityClosureDisplay';
 import { capitalize } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -32,6 +37,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useCollectiviteClubs } from '@/services/collectivite/collectiviteQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
+import { listCollectiviteClosures } from '@/services/facilityClosure/facilityClosureService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
@@ -49,11 +55,13 @@ import {
 import {
   blocsDeLaVille,
   blocsDuMois,
+  fermeturesDuJour,
   grilleDeLaSemaine,
   journeeParInstallation,
   listeDeLaSemaine,
   prochainBloc,
 } from '@/utils/planning/planningToutesInstallations';
+import { plageDeLaSuite } from '@/utils/planning/vueInitiale';
 
 import useVueInitiale from '@/hooks/useVueInitiale';
 import { useIsDesktop } from '@/responsive';
@@ -105,12 +113,19 @@ const localeDesDates = () => (localeDesFormats() === 'en-GB' ? enGB : fr);
 function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInstallation }) {
   const navigation = /** @type {any} */ (useNavigation());
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    Colors, Fonts, Images, Spaces,
+  } = useTheme();
   const isDesktop = useIsDesktop();
   const locale = localeDesDates();
   const vueDeBase = vueParDefaut(Platform.OS);
   const [vue, setVue] = useState(vueDeBase);
   const [date, setDate] = useState(getPlanningDefaultDate);
+  // R17-PLANNING-2 (P10-planning-tel 2) : au téléphone, la semaine se réduit à une installation.
+  const [filtre, setFiltre] = useState(/** @type {string | null} */ (null));
+  const [filtreOuvert, setFiltreOuvert] = useState(false);
+  const installationFiltree = installations.find((/** @type {any} */ installation) => (
+    installation.documentId === filtre)) || null;
   const aujourdhui = getPlanningDefaultDate();
 
   const plage = plageDeLaVue(vue, date);
@@ -130,6 +145,17 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     installations,
     Array.isArray(clubs.data) ? clubs.data : null,
   );
+  // R17-PLANNING-2 (20/10) : UNE lecture des fermetures de la Ville, à partir du début de la
+  // période affichée (planche : « Fermé · désinfection » dans la case). Une panne n'en dit rien :
+  // le planning reste.
+  const fermeturesLues = useQuery({
+    enabled: Boolean(collectiviteId),
+    placeholderData: keepPreviousData,
+    queryFn: () => listCollectiviteClosures(String(collectiviteId), { from: plage.from }),
+    queryKey: ['facility-closures', 'collectivite', collectiviteId, plage.from],
+    staleTime: 15 * 1000,
+  });
+  const fermetures = Array.isArray(fermeturesLues.data?.data) ? fermeturesLues.data.data : [];
   const enErreur = lectures.some((lecture) => lecture.isError);
   const toutesRevenues = lectures.every((lecture) => lecture.data !== undefined);
   const provisoire = lectures.some((lecture) => lecture.isPlaceholderData);
@@ -159,6 +185,59 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     lectureDeLaSuite,
     vueDeBase,
   });
+  // 🏟️ R17-PLANNING-2 (20/10, P10-planning-tel 4) — au téléphone, un jour sans rien dit quand
+  // reprend l'activité : si rien n'est lu après lui dans la semaine, UNE lecture bornée de la
+  // suite (le lendemain de la semaine, 31 jours), seulement pour ce jour vide.
+  const journeeAffichee = journeeParInstallation(blocs, installations, date);
+  const journeeVide = journeeAffichee.every((ligne) => (
+    ligne.blocs.length === 0
+    && fermeturesDuJour(fermetures, ligne.installation, date).length === 0
+  ));
+  const plageApres = plageDeLaSuite(VUES.semaine, date);
+  const suiteLue = useQuery({
+    enabled: vue === VUES.jour && !isDesktop && toutesRevenues && !enErreur && journeeVide
+      && !prochainBloc(blocs, date),
+    queryFn: async () => Promise.all(installations.map((/** @type {any} */ installation) => (
+      getFacilityPlanning(installation.documentId, plageApres)))),
+    queryKey: [
+      'planning', 'toutes-installations', 'apres', collectiviteId, plageApres.from,
+      ...installations.map((/** @type {any} */ installation) => installation.documentId),
+    ],
+    staleTime: 60 * 1000,
+  });
+  const blocsApres = Array.isArray(suiteLue.data)
+    ? blocsDeLaVille(suiteLue.data, installations, Array.isArray(clubs.data) ? clubs.data : null)
+    : [];
+
+  // 🏟️ R17-PLANNING-2 (20/10, P10-planning-ordi 4) — une semaine vide dit combien la suivante en
+  // a. Ce sont les lectures MÊMES de la semaine suivante (même clef) : « Voir la semaine
+  // suivante » l'affiche ensuite sans relire. Seulement quand la semaine affichée est vide.
+  // Le filtre ne vaut qu'au téléphone (la grille de l'ordinateur montre toutes les rangées).
+  const garderAuFiltre = (/** @type {any} */ bloc) => isDesktop || !installationFiltree
+    || bloc.installation?.documentId === installationFiltree.documentId;
+  const semaineVide = vue === VUES.semaine && toutesRevenues && !provisoire && !enErreur
+    && !blocs.some(garderAuFiltre);
+  const plageSuivante = plageDeLaVue(VUES.semaine, addDays(date, 7));
+  const lecturesSuivantes = useQueries({
+    queries: installations.map((/** @type {any} */ installation) => ({
+      enabled: semaineVide,
+      queryFn: () => getFacilityPlanning(installation.documentId, plageSuivante),
+      queryKey: [
+        'planning', 'fullscreen', 'facility', installation.documentId, plageSuivante.from,
+        plageSuivante.to,
+      ],
+      staleTime: 60 * 1000,
+    })),
+  });
+  const seancesDeLaSuivante = semaineVide
+    && lecturesSuivantes.every((lecture) => lecture.data !== undefined)
+    ? blocsDeLaVille(
+      lecturesSuivantes.map((lecture) => /** @type {any} */ (lecture.data)),
+      installations,
+      null,
+    ).filter(garderAuFiltre).length
+    : 0;
+
   const choisirVue = (/** @type {string} */ nouvelle) => {
     garderLeChoix();
     setVue(nouvelle);
@@ -181,11 +260,17 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     });
   }, [navigation]);
 
+  const compterLesSeances = useCallback((/** @type {number} */ nombre) => (
+    t('facilityList.toutesInstallations.seancesDuJour', { count: nombre })), [t]);
+
   const debutDeSemaine = startOfWeek(date, { weekStartsOn: 1 });
   const finDeSemaine = addDays(debutDeSemaine, 6);
-  const formatDuDebut = isSameMonth(debutDeSemaine, finDeSemaine) ? 'd' : 'd MMM';
+  const memeMois = isSameMonth(debutDeSemaine, finDeSemaine);
+  const formatDuDebut = memeMois ? 'd' : 'd MMM';
+  // La planche écrit « 19 – 25 octobre » ; à cheval sur deux mois, « 26 oct. – 1 nov. » tient
+  // dans la barre du téléphone.
   const semaineCourte = `${format(debutDeSemaine, formatDuDebut, { locale })} – ${
-    format(finDeSemaine, 'd MMM', { locale })}`;
+    format(finDeSemaine, memeMois ? 'd MMMM' : 'd MMM', { locale })}`;
   let titreDeLaPage = capitalize(format(date, 'EEEE d MMMM', { locale }));
   if (vue === VUES.semaine) titreDeLaPage = semaineCourte;
   if (vue === VUES.mois) titreDeLaPage = capitalize(format(date, 'MMMM yyyy', { locale }));
@@ -231,6 +316,20 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   };
 
   /**
+   * Les heures d'un bloc, et « complet » quand l'installation n'a plus de place (le lecteur
+   * d'écran l'entend aussi).
+   * @param {any} bloc - Le bloc.
+   * @returns {string} « 18:00 – 19:30 » ou « 18:00 – 19:30 · complet ».
+   */
+  const heuresDuBloc = (bloc) => {
+    if (!bloc.complet) return getPlanningTimeLabel(bloc);
+    return t('facilityList.toutesInstallations.complet', '{{heures}} · complet', {
+      ...SANS_ECHAPPEMENT,
+      heures: getPlanningTimeLabel(bloc),
+    });
+  };
+
+  /**
    * Ce que dit un bloc au lecteur d'écran.
    * @param {any} bloc - Le bloc.
    * @returns {string} « Club · équipe, lundi 19, 18:00 – 19:30, Gymnase ».
@@ -240,7 +339,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     return t('facilityList.toutesInstallations.bloc', '{{titre}}, {{quand}}, {{installation}}', {
       ...SANS_ECHAPPEMENT,
       installation: bloc.installation?.name || '',
-      quand: [jour ? format(jour, 'EEEE d', { locale }) : '', getPlanningTimeLabel(bloc)]
+      quand: [jour ? format(jour, 'EEEE d', { locale }) : '', heuresDuBloc(bloc)]
         .filter(Boolean).join(', '),
       titre: bloc.title || '',
     });
@@ -268,11 +367,45 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       }}
       testID="toutes-bloc"
     >
-      <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
-        {getPlanningTimeLabel(bloc)}
+      {/* Une case de la grille est étroite : « complet » passe à la ligne plutôt qu'en « co… ». */}
+      <Text
+        numberOfLines={bloc.complet ? 2 : 1}
+        style={[Fonts.p4, bloc.complet ? Fonts.warning500 : Fonts.neutral200]}
+      >
+        {heuresDuBloc(bloc)}
       </Text>
       <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.neutral00]}>{bloc.title}</Text>
     </TouchableOpacity>
+  );
+
+  /**
+   * R17-PLANNING-2 — une fermeture dans une case (planche : « Fermé · désinfection »), et ses
+   * heures si elle ne prend pas toute la journée.
+   * @param {any} fermeture - La fermeture.
+   * @returns {import('react').ReactElement} La plage.
+   */
+  const plageFermee = (fermeture) => (
+    <View
+      key={`fermeture-${fermeture.documentId || fermeture.startDate}`}
+      style={{
+        backgroundColor: withAlpha(Colors.warning500, 0.12),
+        borderColor: withAlpha(Colors.warning500, 0.45),
+        borderRadius: 8,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        gap: 2,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+      }}
+      testID="toutes-fermeture"
+    >
+      <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.warning500]}>
+        {closureBandLabel(t, fermeture)}
+      </Text>
+      <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
+        {closureHoursLabel(t, fermeture)}
+      </Text>
+    </View>
   );
 
   /**
@@ -326,12 +459,26 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       });
     }
   });
+  /** @type {Array<{ couleur: string, nom: string }>} */
   const legende = vue === VUES.mois
     ? installations.map((/** @type {any} */ installation) => ({
       couleur: resolveFacilityPlanningColor(installation) || Colors.primary500,
       nom: installation.name,
     }))
     : [...clubsVus.values()];
+  // R17-PLANNING-2 : la légende dit la plage hachurée orange quand une fermeture est affichée.
+  const debutDeLaPeriode = vue === VUES.jour ? date : startOfWeek(date, { weekStartsOn: 1 });
+  const joursDeLaPeriode = vue === VUES.jour ? 1 : 7;
+  const fermetureAffichee = vue !== VUES.mois && installations.some((/** @type {any} */ i) => (
+    [...Array(joursDeLaPeriode).keys()].some((decalage) => (
+      fermeturesDuJour(fermetures, i, addDays(debutDeLaPeriode, decalage)).length > 0))
+  ));
+  if (fermetureAffichee) {
+    legende.push({
+      couleur: Colors.warning500,
+      nom: t('facilityList.toutesInstallations.legendeFermeture', 'Fermeture'),
+    });
+  }
 
   /**
    * Le corps de la section selon la vue et l'écran.
@@ -397,6 +544,9 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     if (vue === VUES.mois) {
       return (
         <PlanningCalendarView
+          // Sur ordinateur, chaque pastille porte son nombre de séances (planche, état 3) ; au
+          // téléphone, des points (P10-planning-tel 3).
+          compterLesSeances={isDesktop ? compterLesSeances : null}
           currentDate={date}
           events={blocsDuMois(blocs)}
           onDateSelect={(/** @type {Date} */ jour) => {
@@ -412,7 +562,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     }
 
     if (vue === VUES.semaine) {
-      const blocsDeLaSemaine = blocs.filter((/** @type {any} */ bloc) => {
+      const blocsVus = blocs.filter(garderAuFiltre);
+      const blocsDeLaSemaine = blocsVus.filter((/** @type {any} */ bloc) => {
         const jour = getPlanningItemDate(bloc);
         return Boolean(jour) && /** @type {Date} */ (jour) >= debutDeSemaine
           && /** @type {Date} */ (jour) < addDays(debutDeSemaine, 7);
@@ -434,6 +585,15 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
               },
             )}
           </Text>
+          {seancesDeLaSuivante > 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral00]} testID="toutes-suivante-compte">
+              {t(
+                'facilityList.toutesInstallations.suivanteEnA',
+                'La semaine suivante en a {{count}}.',
+                { count: seancesDeLaSuivante },
+              )}
+            </Text>
+          ) : null}
           <View style={{ alignSelf: 'flex-start' }}>
             <Button
               onPress={() => allerA(addDays(date, 7))}
@@ -450,7 +610,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         return (
           <View style={{ gap: 8 }}>
             {vide}
-            {listeDeLaSemaine(blocs, debutDeSemaine).map((ligne) => (
+            {listeDeLaSemaine(blocsVus, debutDeSemaine).map((ligne) => (
               <View key={ligne.jour.toISOString()} style={{ gap: 8 }}>
                 <Text style={[Fonts.p2Bold, Fonts.primary200, { marginTop: 8 }]}>
                   {isSameDay(ligne.jour, aujourdhui)
@@ -551,6 +711,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     key={jours[rang].toISOString()}
                     style={[caseDuJour, { borderLeftColor: trait }]}
                   >
+                    {fermeturesDuJour(fermetures, rangee.installation, jours[rang])
+                      .map(plageFermee)}
                     {blocsDuJour.map(caseDeLaGrille)}
                   </View>
                 ))}
@@ -562,7 +724,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     }
 
     // Jour.
-    const journee = journeeParInstallation(blocs, installations, date);
+    const journee = journeeAffichee;
     if (isDesktop) {
       return (
         <PlanningWeekTimelineView
@@ -587,9 +749,13 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         />
       );
     }
-    if (journee.every((ligne) => ligne.blocs.length === 0)) {
-      const suivant = prochainBloc(blocs, date);
+    if (journeeVide) {
+      const suivant = prochainBloc(blocs, date) || prochainBloc(blocsApres, date);
       const jourSuivant = suivant ? getPlanningItemDate(suivant) : null;
+      // Un autre mois se nomme (« mardi 3 novembre », vu d'un dimanche d'octobre).
+      const formatDuSuivant = jourSuivant && !isSameMonth(jourSuivant, date)
+        ? 'EEEE d MMMM'
+        : 'EEEE d';
       return (
         <View
           style={encadre}
@@ -610,7 +776,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                   {
                     ...SANS_ECHAPPEMENT,
                     installation: suivant.installation?.name || '',
-                    quand: `${format(jourSuivant, 'EEEE d', { locale })}, ${
+                    quand: `${format(jourSuivant, formatDuSuivant, { locale })}, ${
                       getPlanningTimeLabel(suivant).split(' – ')[0]}`,
                   },
                 )}
@@ -620,7 +786,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                   onPress={() => allerA(jourSuivant)}
                   title={t('facilityList.toutesInstallations.allerAu', 'Aller au {{jour}}', {
                     ...SANS_ECHAPPEMENT,
-                    jour: format(jourSuivant, 'EEEE d', { locale }),
+                    jour: format(jourSuivant, formatDuSuivant, { locale }),
                   })}
                   variant="Secondary"
                 />
@@ -657,9 +823,10 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                 </Text>
               </TouchableOpacity>
             </View>
+            {fermeturesDuJour(fermetures, ligne.installation, date).map(plageFermee)}
             {ligne.blocs.length
               ? ligne.blocs.map((/** @type {any} */ bloc) => ligneDeListe(bloc, false))
-              : (
+              : fermeturesDuJour(fermetures, ligne.installation, date).length === 0 && (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {t('facilityList.toutesInstallations.rienCeJourCourt', 'Rien ce jour')}
                 </Text>
@@ -671,6 +838,19 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   };
 
   const [flecheGauche, flecheDroite] = nomsDesFleches[vue];
+  // Au téléphone, « Aujourd'hui » passe sous la date : à côté des flèches (et du filtre), la
+  // rangée dépassait des 390 px et rognait la flèche de gauche (capture du 20/10).
+  const boutonAujourdhui = pageDAujourdhui(vue, date, aujourdhui) ? null : (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => allerA(getPlanningDefaultDate())}
+      style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
+    >
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+        {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
+      </Text>
+    </TouchableOpacity>
+  );
   return (
     <View style={[Spaces.marginTop[24], { gap: 12 }]} testID="planning-toutes-installations">
       <View style={{ gap: 2 }}>
@@ -701,7 +881,14 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       >
         {/* Au mois, le calendrier a son en-tête (mois, flèches, aujourd’hui) : rien à doubler. */}
         {vue === VUES.mois ? <View /> : (
-          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+          <View
+            style={{
+              alignItems: 'center',
+              alignSelf: isDesktop ? 'auto' : 'stretch',
+              flexDirection: 'row',
+              gap: 8,
+            }}
+          >
             <TouchableOpacity
               accessibilityLabel={flecheGauche}
               accessibilityRole="button"
@@ -710,12 +897,36 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             >
               <Text style={[Fonts.p1Bold, Fonts.primary200]}>‹</Text>
             </TouchableOpacity>
-            <Text
-              style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter, { minWidth: 160 }]}
-              testID="toutes-periode"
+            <View
+              style={isDesktop
+                ? { alignItems: 'center', minWidth: 160 }
+                : { alignItems: 'center', flex: 1, minWidth: 0 }}
             >
-              {titreDeLaPage}
-            </Text>
+              {/* R17-PLANNING-2 (P10-planning-tel 1) : au téléphone, la journée dit qu'elle
+                  couvre toutes les installations. */}
+              {!isDesktop && vue === VUES.semaine ? (
+                <Text style={[Fonts.p4, Fonts.primary200]} testID="toutes-contexte">
+                  {installationFiltree?.name
+                    || t('facilityList.toutesInstallations.toutes', 'Toutes les installations')}
+                </Text>
+              ) : null}
+              {!isDesktop && vue === VUES.jour ? (
+                <Text style={[Fonts.p4, Fonts.primary200]} testID="toutes-contexte">
+                  {t('facilityList.count.total', {
+                    count: installations.length,
+                    defaultValue_one: '{{count}} installation',
+                    defaultValue_other: '{{count}} installations',
+                  })}
+                </Text>
+              ) : null}
+              <Text
+                style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}
+                testID="toutes-periode"
+              >
+                {titreDeLaPage}
+              </Text>
+              {isDesktop ? null : boutonAujourdhui}
+            </View>
             <TouchableOpacity
               accessibilityLabel={flecheDroite}
               accessibilityRole="button"
@@ -724,15 +935,26 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             >
               <Text style={[Fonts.p1Bold, Fonts.primary200]}>›</Text>
             </TouchableOpacity>
-            {!pageDAujourdhui(vue, date, aujourdhui) ? (
+            {isDesktop ? boutonAujourdhui : null}
+            {!isDesktop && vue === VUES.semaine ? (
               <TouchableOpacity
+                accessibilityLabel={t(
+                  'facilityList.toutesInstallations.filtrer',
+                  'Filtrer par installation',
+                )}
                 accessibilityRole="button"
-                onPress={() => allerA(getPlanningDefaultDate())}
-                style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
+                accessibilityState={{ expanded: filtreOuvert }}
+                onPress={() => setFiltreOuvert((ouvert) => !ouvert)}
+                style={[
+                  boutonFleche,
+                  installationFiltree ? { borderColor: Colors.primary500 } : null,
+                ]}
+                testID="toutes-filtrer"
               >
-                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                  {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
-                </Text>
+                <Image
+                  source={Images.filter}
+                  style={{ height: 18, tintColor: Colors.primary200, width: 18 }}
+                />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -772,6 +994,42 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           })}
         </View>
       </View>
+      {!isDesktop && vue === VUES.semaine && filtreOuvert ? (
+        <View accessibilityRole="radiogroup" style={{ gap: 6 }} testID="toutes-choix-filtre">
+          {[null, ...installations].map((/** @type {any} */ installation) => {
+            const id = installation?.documentId || null;
+            const nom = installation?.name
+              || t('facilityList.toutesInstallations.toutes', 'Toutes les installations');
+            const coche = id === (installationFiltree?.documentId || null);
+            return (
+              <TouchableOpacity
+                accessibilityLabel={nom}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: coche }}
+                key={id || 'toutes'}
+                onPress={() => {
+                  setFiltre(id);
+                  setFiltreOuvert(false);
+                }}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: coche ? withAlpha(Colors.primary500, 0.18) : fond,
+                  borderColor: coche ? Colors.primary500 : trait,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  flexDirection: 'row',
+                  minHeight: 44,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <Text style={[Fonts.p2Bold, coche ? Fonts.primary200 : Fonts.neutral00]}>
+                  {nom}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
       {corps()}
       {!enErreur && toutesRevenues && !enDecision && legende.length ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }} testID="toutes-legende">

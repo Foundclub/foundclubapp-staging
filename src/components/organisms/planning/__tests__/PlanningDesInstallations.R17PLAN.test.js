@@ -58,10 +58,21 @@ jest.mock('@/theme/themeContext', () => {
   const couleurs = genererCouleurs();
   return {
     __esModule: true,
-    default: () => ({ Colors: couleurs, Fonts: genererPolices(couleurs), Spaces: espaces }),
+    default: () => ({
+      Colors: couleurs, Fonts: genererPolices(couleurs), Images: { filter: 1 }, Spaces: espaces,
+    }),
   };
 });
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
+/** @type {any[]} */
+let mockFermetures = [];
+const mockLectureDesFermetures = jest.fn();
+jest.mock('@/services/facilityClosure/facilityClosureService', () => ({
+  listCollectiviteClosures: (/** @type {any[]} */ ...args) => {
+    mockLectureDesFermetures(...args);
+    return Promise.resolve({ data: mockFermetures });
+  },
+}));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({ data: [] }),
 }));
@@ -201,6 +212,7 @@ beforeEach(() => {
   mockGrilles.length = 0;
   mockOrdinateur = false;
   mockNavigation = { navigate: jest.fn() };
+  mockFermetures = [];
   servir({ '2026-10-01': SEMAINE, '2026-10-19': SEMAINE });
 });
 
@@ -240,7 +252,7 @@ describe('R17-PLANNING — téléphone', () => {
     expect(mardi).toEqual(expect.arrayContaining([
       'AS Montrivage · U15', 'Gymnase des Tilleuls', 'Montrivage FC · U17', 'Stade municipal',
     ]));
-    expect(lus).toContain('19 – 25 oct.');
+    expect(lus).toContain('19 – 25 octobre'); // R17-PLANNING-2 : le mois en entier (planche, barre)
   });
 
   test('3 — Mois : couleur de l INSTALLATION ; toucher un jour garde le mois', async () => {
@@ -395,8 +407,250 @@ describe('R17-PLANNING — états', () => {
     servir({ '2026-10-19': { dojo: [bloc(AS, '2026-10-24', 10, 'U9')], gym: [], stade: [] } });
     const arbre = await rendre();
     const lus = textes(arbre);
-    expect(lus).toContain('19 – 25 oct.');
+    expect(lus).toContain('19 – 25 octobre');
     expect(lus).toContain('Samedi 24');
     expect(lus).toContain('Dojo municipal');
+  });
+});
+
+describe('R17-PLANNING-2 — fermetures et « complet » dans les cases (P10-planning-ordi 1)', () => {
+  beforeEach(() => {
+    mockOrdinateur = true;
+    mockFermetures = [{
+      documentId: 'f-dojo',
+      endDate: '2026-10-22',
+      facility: { documentId: 'dojo', name: 'Dojo municipal' },
+      kind: 'closure',
+      label: 'désinfection',
+      reason: 'other',
+      startDate: '2026-10-22',
+    }];
+    servir({
+      '2026-10-19': {
+        ...SEMAINE,
+        gym: [bloc(AS, '2026-10-22', 18, 'U15'), bloc(FC, '2026-10-22', 18, 'Senior B')],
+      },
+    });
+  });
+
+  test('13 ROUGE-AVANT — la fermeture dans SA case, « complet », la légende', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    // UNE lecture des fermetures de la Ville, à partir du début de la semaine affichée.
+    expect(mockLectureDesFermetures)
+      .toHaveBeenCalledWith('ville-montrivage', { from: '2026-10-19' });
+    const dojo = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'toutes-rangee-dojo'))[0];
+    const lusDojo = dojo.findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    expect(lusDojo).toContain('Fermé · désinfection');
+    const gym = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'toutes-rangee-gym'))[0];
+    const lusGym = gym.findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    expect(lusGym.filter((texte) => texte === '18:00 – 19:30 · complet')).toHaveLength(2);
+    expect(textes(arbre)).toContain('Fermeture');
+  });
+
+  test('14 ROUGE-AVANT — au téléphone, Jour : la fermeture sous son installation', async () => {
+    mockOrdinateur = false;
+    const arbre = await rendre();
+    await act(async () => {
+      parTestID(arbre, 'toutes-vue-day')[0].props.onPress();
+    });
+    await attendre();
+    // Aller au jeudi 22 (flèche « Jour suivant »).
+    const suivant = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { suivant.props.onPress(); });
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Jeudi 22 octobre');
+    expect(lus.indexOf('Fermé · désinfection')).toBeGreaterThan(lus.indexOf('Dojo municipal'));
+  });
+});
+
+describe('R17-PLANNING-2 — un jour sans rien, au-delà de la semaine (P10-planning-tel 4)', () => {
+  test('15 ROUGE-AVANT — dimanche vide : la séance de la semaine SUIVANTE, y aller', async () => {
+    servir({
+      '2026-10-19': SEMAINE,
+      '2026-10-26': { dojo: [], gym: [bloc(FC, '2026-10-26', 18, 'Senior B')], stade: [] },
+    });
+    const arbre = await rendre();
+    const suivant = () => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    // Du mercredi 21 au dimanche 25 : quatre fois « Jour suivant ».
+    await [22, 23, 24, 25].reduce(async (avant) => {
+      await avant;
+      await act(async () => { suivant().props.onPress(); });
+      await attendre();
+    }, Promise.resolve());
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Rien ce dimanche');
+    expect(lus).toContain('Prochaine séance : lundi 26, 18:00, Gymnase des Tilleuls.');
+    // La suite n'est lue que pour ce jour vide : du lundi 26, 31 jours.
+    const lectures = /** @type {any} */ (getFacilityPlanning).mock.calls
+      .map((/** @type {any[]} */ appel) => `${appel[1].from}>${appel[1].to}`);
+    expect(lectures).toContain('2026-10-26>2026-11-25');
+    await act(async () => { parTexte(arbre, 'Aller au lundi 26').props.onPress(); });
+    await attendre();
+    await attendre();
+    expect(textes(arbre)).toContain('Lundi 26 octobre');
+  });
+});
+
+describe('R17-PLANNING-2 — la prochaine séance dans un AUTRE mois dit son mois', () => {
+  test('15 bis ROUGE-AVANT — dimanche 25 octobre vide : « mardi 3 novembre »', async () => {
+    servir({
+      '2026-10-19': SEMAINE,
+      '2026-10-26': { dojo: [], gym: [bloc(FC, '2026-11-03', 18, 'Senior B')], stade: [] },
+    });
+    const arbre = await rendre();
+    const suivant = () => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    await [22, 23, 24, 25].reduce(async (avant) => {
+      await avant;
+      await act(async () => { suivant().props.onPress(); });
+      await attendre();
+    }, Promise.resolve());
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Rien ce dimanche');
+    expect(lus.find((texte) => texte.startsWith('Prochaine séance')))
+      .toMatch(/^Prochaine séance : mardi 3 novembre, /);
+    expect(parTexte(arbre, 'Aller au mardi 3 novembre')).toBeDefined();
+  });
+});
+
+describe('R17-PLANNING-2 — la ligne « 3 installations » (P10-planning-tel 1)', () => {
+  test('16 ROUGE-AVANT — téléphone, Jour : « 3 installations » au-dessus de la date', async () => {
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('3 installations');
+    expect(lus.indexOf('3 installations')).toBe(lus.indexOf('Mercredi 21 octobre') - 1);
+  });
+
+  test('17 PROTEGE — sur ordinateur, pas de ligne en plus', async () => {
+    mockOrdinateur = true;
+    await choisir(await rendre(), 'day');
+    expect(textes(montes.at(-1).arbre)).not.toContain('3 installations');
+  });
+});
+
+describe('R17-PLANNING-2 — le filtre au téléphone (P10-planning-tel 2)', () => {
+  test('18 ROUGE-AVANT — Semaine : « Toutes les installations », une, puis toutes', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Toutes les installations');
+    const lignes = () => arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ n) => n.props.testID === 'toutes-ligne');
+    expect(lignes()).toHaveLength(4);
+    const filtrer = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Filtrer par installation'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { filtrer.props.onPress(); });
+    const choix = (/** @type {string} */ nom) => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'radio' && n.props?.accessibilityLabel === nom
+      && typeof n.props?.onPress === 'function'))[0];
+    expect(choix('Toutes les installations').props.accessibilityState).toEqual({ checked: true });
+    await act(async () => { choix('Stade municipal').props.onPress(); });
+    await attendre();
+    expect(lignes()).toHaveLength(2);
+    expect(lignes().every((/** @type {any} */ n) => n.props.accessibilityLabel
+      .endsWith('Stade municipal'))).toBe(true);
+    expect(textes(arbre)).toContain('Stade municipal');
+    expect(textes(arbre)).not.toContain('Toutes les installations');
+    await act(async () => { filtrer.props.onPress(); });
+    await act(async () => { choix('Toutes les installations').props.onPress(); });
+    await attendre();
+    expect(lignes()).toHaveLength(4);
+  });
+});
+
+describe('R17-PLANNING-2 — la pastille avec son nombre, au mois (P10-planning-ordi 3)', () => {
+  test('19 ROUGE-AVANT — ordinateur : le mois compte les séances, pas le téléphone', async () => {
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    const { compterLesSeances } = mockCalendriers.at(-1);
+    expect(typeof compterLesSeances).toBe('function');
+    expect(compterLesSeances(1)).toBe('1 séance');
+    expect(compterLesSeances(3)).toBe('3 séances');
+    mockOrdinateur = false;
+    const auTelephone = await rendre();
+    await choisir(auTelephone, 'month');
+    expect(mockCalendriers.at(-1).compterLesSeances).toBeFalsy();
+  });
+});
+
+describe('R17-PLANNING-2 — semaine vide : combien la suivante en a (P10-planning-ordi 4)', () => {
+  /**
+   * Rien la semaine du 19 ; 3 séances la semaine du 26 (gymnase 2, stade 1), lues seulement pour
+   * CETTE semaine (la lecture de 31 jours de R17-VUE n'en rend rien : l'arrivée reste au Jour).
+   */
+  const servirLaSuivante = () => {
+    /** @type {any} */ (getFacilityPlanning).mockImplementation(async (
+      /** @type {string} */ id,
+      /** @type {any} */ plage,
+    ) => {
+      const suivante = {
+        dojo: [],
+        gym: [bloc(AS, '2026-10-27', 18, 'U15'), bloc(FC, '2026-10-28', 18, 'Senior B')],
+        stade: [bloc(AS, '2026-10-29', 14, 'U11')],
+      };
+      const laSuivante = plage.from === '2026-10-26' && plage.to === '2026-11-01';
+      return { data: laSuivante ? suivante[/** @type {'dojo'} */ (id)] : [], meta: {} };
+    });
+  };
+  const lecturesDeLaSuivante = () => /** @type {any} */ (getFacilityPlanning).mock.calls
+    .filter((/** @type {any[]} */ appel) => (
+      appel[1].from === '2026-10-26' && appel[1].to === '2026-11-01'));
+
+  test('20 ROUGE-AVANT — téléphone : « …en a 3. », puis elle s affiche sans relire', async () => {
+    servirLaSuivante();
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Aucune séance du 19 oct. au 25 oct.');
+    expect(textes(arbre)).toContain('La semaine suivante en a 3.');
+    expect(lecturesDeLaSuivante()).toHaveLength(3);
+    await act(async () => { parTexte(arbre, 'Voir la semaine suivante').props.onPress(); });
+    await attendre();
+    expect(textes(arbre)).toContain('26 oct. – 1 nov.');
+    expect(arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ n) => n.props.testID === 'toutes-ligne')).toHaveLength(3);
+    // Les mêmes lectures : aller à la semaine suivante ne relit rien.
+    expect(lecturesDeLaSuivante()).toHaveLength(3);
+  });
+
+  test('21 ROUGE-AVANT — ordinateur : la phrase, la grille ; filtre au dojo : rien', async () => {
+    servirLaSuivante();
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('La semaine suivante en a 3.');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-grille'))
+      .not.toHaveLength(0);
+    mockOrdinateur = false;
+    const auTelephone = await rendre();
+    await choisir(auTelephone, 'week');
+    const filtrer = auTelephone.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Filtrer par installation'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { filtrer.props.onPress(); });
+    const dojo = auTelephone.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'radio' && n.props?.accessibilityLabel === 'Dojo municipal'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { dojo.props.onPress(); });
+    await attendre();
+    expect(textes(auTelephone)).toContain('Aucune séance du 19 oct. au 25 oct.');
+    expect(textes(auTelephone).join('|')).not.toMatch(/semaine suivante en a/);
+  });
+
+  test('22 PROTEGE — une semaine pleine ne lit pas la suivante', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Mardi 20');
+    expect(lecturesDeLaSuivante()).toHaveLength(0);
   });
 });

@@ -1082,6 +1082,21 @@ export const buildSearchMapRuntimeHtml = ({
           }
           postDiagnostic('map_created');
 
+          // RESA-CARTE (20/10) — à chaque appui, le clavier de Leaflet donne le focus à la carte
+          // (container.focus()) et ne rétablit que le défilement de SA fenêtre : quand la carte
+          // dépassait de l'écran, la page HÔTE défilait (180 px mesurés) pendant l'appui, le
+          // relâchement tombait ailleurs et le toucher était perdu. Même focus, sans défilement ;
+          // le clavier de la carte reste actif.
+          var clavier = map.keyboard;
+          if (clavier && typeof clavier.enabled === 'function' && clavier.enabled()) {
+            clavier.disable();
+            clavier._onMouseDown = function () {
+              if (this._focused) return;
+              this._map._container.focus({ preventScroll: true });
+            };
+            clavier.enable();
+          }
+
           markerLayer = window.L.layerGroup().addTo(map);
 
           var tileLayer = window.L.tileLayer(TILE_URL, {

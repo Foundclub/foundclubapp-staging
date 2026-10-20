@@ -54,3 +54,17 @@ describe('RESA-CARTE — le mot de l’épingle', () => {
     expect(html).toContain("+ ':' + (item.markerLabel || '');");
   });
 });
+
+// RESA-CARTE (20/10/2026, branche intégrée) — à chaque appui, le clavier de Leaflet donne le
+// FOCUS à la carte (container.focus()) et ne rétablit que le défilement de l'iframe. Si la carte
+// dépasse du bas de l'écran, la page HÔTE défile pendant l'appui (180 px mesurés), le relâchement
+// tombe ailleurs, le toucher est perdu (témoin web resa-carte.spec.ts, 1 360 px). Même focus (le
+// clavier de la carte reste actif), mais SANS défilement.
+describe('RESA-CARTE — l’appui sur la carte ne fait pas défiler la page', () => {
+  it('le focus de l’appui est donné sans défilement', () => {
+    const html = buildHtml();
+
+    // Le clavier de Leaflet focalisait la carte à chaque appui, avec défilement.
+    expect(html).toContain('this._map._container.focus({ preventScroll: true })');
+  });
+});
