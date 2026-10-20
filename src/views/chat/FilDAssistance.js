@@ -26,7 +26,8 @@ import { useRepondantsAssistance } from '@/services/chat/assistanceQueries';
  * @param {{ chatData: any, chatId: string, espaceVille?: boolean, messagesPages?: any,
  *   routeChatType?: string | null }} params - Le fil et ses messages.
  * @returns {{ estAssistance: boolean, estDeMonCote: (message: any) => boolean,
- *   estEquipe: boolean, nomDeLExpediteur: (message: any) => string | null, placeholder: string,
+ *   estEquipe: boolean, nomDeLExpediteur: (message: any) => string | null,
+ *   placeholder: string | null,
  *   sousTitre: string, titre: string, videTexte: string, videTitre: string }} L'habillage.
  */
 export const useFilDAssistance = ({

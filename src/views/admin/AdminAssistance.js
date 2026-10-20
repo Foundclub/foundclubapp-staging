@@ -97,6 +97,11 @@ function AdminAssistance() {
     }));
   };
 
+  /**
+   * Une conversation de la boîte.
+   * @param {{ item: any }} ligne - La conversation rendue par le serveur.
+   * @returns {import('react').ReactElement} La ligne.
+   */
   const renderItem = ({ item }) => {
     const id = String(item?.documentId || '');
     const nom = nomDuTitulaire(item);
@@ -179,7 +184,7 @@ function AdminAssistance() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" title={t('assistance.console.titre', 'Assistance')}>
+    <ScreenContainer bgImage="bg2">
       <FlatList
         contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 16 }}
         data={conversations}
