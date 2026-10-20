@@ -26,6 +26,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import OffresFoundclubListe from '@/views/admin/components/OffresFoundclubListe';
 import useCollectivitesTile from '@/views/admin/components/useCollectivitesTile';
+import useComplexesTile from '@/views/admin/components/useComplexesTile';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -50,6 +51,8 @@ import { getPendingFeaturedRequests } from '@/services/event/eventService';
 import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -212,6 +215,8 @@ function AdminDashboard() {
   // COLL-CONSOLE (02/10) — la tuile « Collectivités » lit ses chiffres SEULE : elle n entre pas
   // dans l attente de l ecran (« … » dans la tuile), et son echec ecrit « — » (jamais 0).
   const collectivitesTuile = useCollectivitesTile();
+  // RESA-L5B-2 (20/10/2026) — E-S01 : la tuile « Complexes » (rien n'est lu interrupteur éteint).
+  const complexesTuile = useComplexesTile();
 
   const {
     data: claimsData,
@@ -1657,6 +1662,20 @@ function AdminDashboard() {
             title={t('adminDashboard.cards.collectivites', 'Collectivités')}
             value={collectivitesTuile.value}
           />
+          {COMPLEXES_GERANT ? (
+            <DashboardCard
+              accessibilityLabel={complexesTuile.accessibilityLabel}
+              busy={complexesTuile.busy}
+              color={complexesTuile.color}
+              detail={complexesTuile.detail}
+              detailColor={complexesTuile.detailColor}
+              meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
+              onPress={() => navigation.navigate(RouteNames.AdminComplexeList)}
+              testID="admin-tuile-complexes"
+              title={t('complexeConsole.titre', 'Complexes')}
+              value={complexesTuile.value}
+            />
+          ) : null}
         </View>
 
         <View

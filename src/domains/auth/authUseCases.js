@@ -1413,6 +1413,11 @@ export const NOTIFICATION_TYPES = {
   // admin/src/api/user-fcm-token/types/index.ts (PARENT_LINK_REQUEST).
   PARENT_LINK_REQUEST: 'parentLinkRequest',
   PARTICIPATION_REQUEST: 'participationRequest',
+  // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe, côté JOUEUR (N-14 à N-19 :
+  // acceptée, refusée, sans réponse, annulée, fermeture — `data.change`). Jumeau serveur :
+  // admin src/api/user-fcm-token/types/index.ts (COMPLEXE_RESERVATION_JOUEUR, RESA-L2A). Le toucher
+  // ouvre « Ma réservation » (notificationNavigation.js), interrupteur COMPLEXES_JOUEUR allumé.
+  COMPLEXE_RESERVATION_JOUEUR: 'complexeReservationJoueur',
   RESERVATION_COMPLETE: 'reservationComplete',
   RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
   RESERVATION_SOS_ALERT: 'reservationSosAlert',

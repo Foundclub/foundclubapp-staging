@@ -174,8 +174,16 @@ jest.mock('@/services/chat/chatService', () => ({
       }), 200);
     });
   },
-  getChats: jest.fn(() => Promise.resolve({
-    data: [], meta: { pagination: { page: 1, pageCount: 1 } },
+  // La liste des fils, avec l'aperçu (le dernier message) de chacun, telle que le
+  // serveur la tient À CET INSTANT.
+  getChats: jest.fn(() => new Promise((resolve) => {
+    setTimeout(() => resolve({
+      data: Object.entries(mockServeur.messages).map(([documentId, messages]) => ({
+        documentId,
+        messages: messages.slice(0, 1),
+      })),
+      meta: { pagination: { page: 1, pageCount: 1 } },
+    }), 200);
   })),
   getPollVoterProfiles: jest.fn(() => Promise.resolve({ data: [] })),
   markChatUnread: jest.fn(),
@@ -265,8 +273,12 @@ jest.mock('@/services/notificationActions/rsvpActions', () => ({
   ensureNotificationActionSetup: () => Promise.resolve(),
   handleChatReplyActionPress: jest.fn(),
   handleEventRsvpActionPress: jest.fn(),
+  // RESA-L6B-1 — les boutons de N-20.
+  displayResaVeilleActionableNotification: jest.fn(),
+  handleResaVeilleActionPress: jest.fn(async () => ({ handled: false })),
   isChatReplyActionablePayload: () => false,
   isEventRsvpActionablePayload: () => false,
+  isResaVeilleActionablePayload: () => false,
 }));
 
 jest.mock('@/utils/bootDiagnostics', () => ({
@@ -374,6 +386,8 @@ const unMessage = (chatId, texte, auteur = 'marc') => {
 
 /** @type {Record<string, { chatId: string, textes: string[] }>} */
 const vues = {};
+/** @type {Record<string, string>} */
+const apercus = {};
 /** @type {Array<{ cle: string, chatId: string }>} */
 let pileAffichee = [];
 // Le routeur de la pile, posé par l'appli montée.
@@ -390,12 +404,19 @@ const naviguer = (nom, params) => routeur.naviguer?.(nom, params) ?? false;
 
 /**
  * L'écran de la liste : `Messaging.js` appelle `useMessaging()` sans fil, et lit
- * la liste des fils (`useGetChats`).
+ * la liste des fils (`useGetChats`) ; l'aperçu de chaque fil est relevé dans `apercus`.
  * @returns {null} Rien à dessiner.
  */
 function Liste() {
   useMessaging();
-  useGetChats({ currentUserId: 'moi' });
+  const { data } = useGetChats({ currentUserId: 'moi' });
+  useEffect(() => {
+    (/** @type {any} */ (data)?.pages || [])
+      .flatMap((/** @type {any} */ page) => page?.data || [])
+      .forEach((/** @type {any} */ fil) => {
+        apercus[fil.documentId] = fil.messages?.[0]?.message || '';
+      });
+  });
   return null;
 }
 
@@ -589,6 +610,7 @@ beforeEach(() => {
   jest.setSystemTime(DEPART);
   compteurDeMessages = 0;
   mockServeur.lectures = [];
+  lireLaListe().mockClear();
   mockServeur.messages = {
     'chat-1': [unMessage('chat-1', 'Salut, ça va ?')],
     'chat-2': [unMessage('chat-2', 'Bonjour à tous')],
@@ -598,6 +620,7 @@ beforeEach(() => {
   banc().envois = [];
   pileAffichee = [];
   Object.keys(vues).forEach((cle) => { delete vues[cle]; });
+  Object.keys(apercus).forEach((cle) => { delete apercus[cle]; });
   ecouteursAppState = [];
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, ecouter) => {
     ecouteursAppState.push(/** @type {any} */ (ecouter));
@@ -785,5 +808,45 @@ describe('MSGNOTIF — ce que le rattrapage ne doit PAS casser', () => {
     await laisserPasser(1500);
 
     expect(lecturesDu('chat-1') - lecturesAvant).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('MSGNOTIF2 — la LISTE des conversations, seule à l\'écran, rattrape elle aussi', () => {
+  test('(j) liste seule, écrit pendant la veille : au retour, le bon aperçu', async () => {
+    await monterLAppli([]);
+    expect(apercus['chat-1']).toBe('Salut, ça va ?');
+
+    await passerEnArrierePlan();
+    await quelquUnEcrit('chat-1', 'Tu viens ce soir ?');
+    await revenirAuPremierPlan({ leFilRevient: true });
+    await laisserPasser(1500);
+
+    expect(apercus['chat-1']).toBe('Tu viens ce soir ?');
+  });
+
+  test('(k) démarrage : la 1re connexion ne relit PAS la liste (une seule lecture)', async () => {
+    // Le fil se branche APRÈS que la liste a fini de se lire (réseau lent au
+    // lancement) : sans cette attente, une relecture en trop se fondrait dans la
+    // première, encore en vol, et le témoin ne verrait rien.
+    banc().reseau = false;
+    await monterLAppli([]);
+    expect(lireLaListe().mock.calls).toHaveLength(1);
+
+    banc().reseau = true;
+    act(() => { banc().ouvrir(); });
+    await laisserPasser(1000);
+
+    expect(lireLaListe().mock.calls).toHaveLength(1);
+  });
+
+  test('(l) liste ET fil montés, reconnexion sans manque : liste lue UNE fois', async () => {
+    await monterLAppli([{ chatId: 'chat-1', cle: 'ouvert' }]);
+    const lecturesDeLaListe = lireLaListe().mock.calls.length;
+
+    await passerEnArrierePlan();
+    await revenirAuPremierPlan({ leFilRevient: true });
+    await laisserPasser(1500);
+
+    expect(lireLaListe().mock.calls.length - lecturesDeLaListe).toBe(1);
   });
 });

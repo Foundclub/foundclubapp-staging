@@ -179,6 +179,25 @@ const MOBILE_ONLY_SCREENS = {
   // .../installations, /messages) ; sur le site, le menu lateral de l AppShell les porte.
   [RouteNames.CollectiviteSpace]:
     'Tab navigator of the town space; on the website, the AppShell side menu carries its tabs',
+
+  // --- RESA-L5A1 (13/10/2026) ---
+  // Le gérant de complexe : écrans cachés par l interrupteur COMPLEXES_GERANT (serveur non
+  // livré). Leur adresse sur le site viendra avec le lot web du gérant (screenRegistry.tsx).
+  [RouteNames.ComplexeEspace]:
+    'RESA-L5A1 : tab navigator of the venue space (hidden by COMPLEXES_GERANT), not a screen',
+  // RESA-L7-1 (20/10/2026) : les 9 autres écrans du gérant (RESA-L5A1 / L5A2) et les 6 du joueur
+  // (RESA-L6A) ont leur adresse sur le site (webRoutes.js) ; sur ordinateur, le menu latéral de
+  // l AppShell porte les onglets de l espace du complexe. ComplexeDevenirGerant a la sienne
+  // (/onboarding/complexe, RESA-INSCRIPTION) — intégration du soutien, 20/10.
+  // --- RESA-L6B-1 (19/10/2026) ---
+  // La confirmation la veille (E-P14) et « Mes réservations » (E-P10) : même interrupteur, même
+  // lot site L7.
+  [RouteNames.ReserverMesReservations]:
+    'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
+  [RouteNames.ReserverVeille]:
+    'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
+  // RESA-L5B-2 (20/10/2026) : la fiche d'un client du complexe (RESA-L5B-1) a son adresse
+  // (/mon-complexe/clients/:joueurId) et sort de cette liste.
 };
 
 /**
@@ -193,6 +212,12 @@ const MOBILE_ONLY_SCREENS = {
  * aucun code existant se supprime, il ne s'exempte pas.
  */
 const UNREGISTERED_WEB_PATTERNS = {
+  // RESA-L6A (14/10/2026) — les écrans téléphone étaient morts (aucune porte) et sont retirés ; le
+  // site sert toujours BookingCalendar.web.js et MissingPlayersView.web.js à ces adresses.
+  [RouteNames.BookingCalendar]:
+    'RESA-L6A : website-only screen (BookingCalendar.web.js); the dead phone screen was removed',
+  [RouteNames.MissingPlayersView]:
+    'RESA-L6A : website-only screen (MissingPlayersView.web.js); the dead phone screen was removed',
   // ReservationEdit.web.js existe et est explicitement une variante web (adaptateur vers
   // EventEdit). Il n'a jamais ete branche dans une stack.
   [RouteNames.ReservationEdit]:

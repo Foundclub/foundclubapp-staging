@@ -121,8 +121,10 @@ const hexToRgba = (hex, alpha) => {
 
 /**
  *
- * @param root0
+ * @param {object} root0
  * @param root0.colors
+ * @param {((count: number) => string) | null} [root0.compterLesSeances] - R17-PLANNING-2 : avec
+ *   elle, chaque pastille porte son nombre de seances et le jour se lit « 7, 3 seances ».
  * @param root0.date
  * @param root0.eventsByDate
  * @param {any} [root0.fermetureDuJour] - COLL-C4B-BIS : la fermeture du jour, ou null.
@@ -134,6 +136,7 @@ const hexToRgba = (hex, alpha) => {
  */
 function PlanningCalendarDay({
   colors,
+  compterLesSeances = null,
   date,
   eventsByDate,
   fermetureDuJour = null,
@@ -156,15 +159,27 @@ function PlanningCalendarDay({
 
   const dayEvents = eventsByDate.get(dateString) || [];
   const hasPendingEvent = dayEvents.some((event) => isPlanningPendingParticipation(event));
-  const uniqueColors = [...new Set(
-    dayEvents
-      // COLL-C2B (02/10) : sur le planning d une installation, la couleur du CLUB (displayColor,
-      // COLL1D) passe avant celle, commune, de l installation — comme dans la grille.
-      .map((event) => event?.displayColor || resolveFacilityPlanningColor(event?.facility)
-        || colors.primary500)
-      .filter(Boolean),
-  )].slice(0, 3);
-  const extraCount = Math.max(0, dayEvents.length - 3);
+  // R17-PLANNING-2 (20/10) : le nombre de seances de chaque couleur (planche P10-planning-ordi 3,
+  // « une pastille par installation avec son nombre de seances »).
+  /** @type {Map<string, number>} */
+  const seancesParCouleur = new Map();
+  dayEvents.forEach((event) => {
+    // COLL-C2B (02/10) : sur le planning d une installation, la couleur du CLUB (displayColor,
+    // COLL1D) passe avant celle, commune, de l installation — comme dans la grille.
+    const couleur = event?.displayColor || resolveFacilityPlanningColor(event?.facility)
+      || colors.primary500;
+    if (couleur) seancesParCouleur.set(couleur, (seancesParCouleur.get(couleur) || 0) + 1);
+  });
+  const uniqueColors = [...seancesParCouleur.keys()].slice(0, 3);
+  // Avec les nombres, « +n » compte les seances des couleurs qui n ont pas de pastille.
+  const extraCount = compterLesSeances
+    ? dayEvents.length - uniqueColors.reduce((total, couleur) => (
+      total + (seancesParCouleur.get(couleur) || 0)), 0)
+    : Math.max(0, dayEvents.length - 3);
+  const libelleDuJour = [
+    libelleDeFermeture,
+    compterLesSeances && dayEvents.length ? compterLesSeances(dayEvents.length) : null,
+  ].filter(Boolean);
   const isSelected = dateString === selectedDate;
   const isCurrentDay = dateString === todayKey;
   const isDisabled = state === 'disabled';
@@ -186,7 +201,9 @@ function PlanningCalendarDay({
 
   return (
     <TouchableOpacity
-      accessibilityLabel={libelleDeFermeture ? `${date.day}, ${libelleDeFermeture}` : undefined}
+      accessibilityLabel={libelleDuJour.length
+        ? [date.day, ...libelleDuJour].join(', ')
+        : undefined}
       onPress={() => onPress(dateString)}
       style={styles.dayCellTouch}
     >
@@ -223,12 +240,22 @@ function PlanningCalendarDay({
         ) : null}
 
         <View style={styles.dayMarkersRow}>
-          {uniqueColors.map((color) => (
+          {uniqueColors.map((color) => (compterLesSeances ? (
+            <View
+              key={`${dateString}-${color}`}
+              style={[styles.dayPill, { backgroundColor: color }]}
+              testID={`pastille-${dateString}-${color}`}
+            >
+              <Text style={[fonts.p3Bold, styles.dayPillText, { color: colors.neutral900 }]}>
+                {seancesParCouleur.get(color)}
+              </Text>
+            </View>
+          ) : (
             <View
               key={`${dateString}-${color}`}
               style={[styles.dayMarker, { backgroundColor: color }]}
             />
-          ))}
+          )))}
           {extraCount > 0 ? (
             <Text
               style={[
@@ -253,6 +280,7 @@ function PlanningCalendarDay({
  * Monthly planning view with colored day markers and a daily event list.
  * @param {{
  *   closures?: Array<any>;
+ *   compterLesSeances?: ((count: number) => string) | null;
  *   currentDate?: Date;
  *   events?: Array<any>;
  *   onDateSelect?: (date: Date) => void;
@@ -262,6 +290,7 @@ function PlanningCalendarDay({
  */
 function PlanningCalendarView({
   closures = [],
+  compterLesSeances = null,
   currentDate: propDate,
   events = [],
   onDateSelect,
@@ -457,6 +486,7 @@ function PlanningCalendarView({
     return (
       <PlanningCalendarDay
         colors={Colors}
+        compterLesSeances={compterLesSeances}
         date={date}
         eventsByDate={eventsByDate}
         fermetureDuJour={fermetureDuJour}
@@ -468,7 +498,17 @@ function PlanningCalendarView({
         todayKey={todayKey}
       />
     );
-  }, [Colors, Fonts, eventsByDate, fermetureDe, handleDateChange, selectedDate, t, todayKey]);
+  }, [
+    Colors,
+    Fonts,
+    compterLesSeances,
+    eventsByDate,
+    fermetureDe,
+    handleDateChange,
+    selectedDate,
+    t,
+    todayKey,
+  ]);
   const fermetureDuJourChoisi = fermetureDe(selectedDate);
 
   return (
@@ -595,6 +635,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 3,
     minHeight: 10,
+  },
+  dayPill: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 14,
+    justifyContent: 'center',
+    marginHorizontal: 1.5,
+    minWidth: 14,
+    paddingHorizontal: 3,
+  },
+  dayPillText: {
+    fontSize: 9,
+    lineHeight: 11,
   },
   pendingDayBadge: {
     alignItems: 'center',

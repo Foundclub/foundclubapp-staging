@@ -1,28 +1,6 @@
-import Joi from 'joi';
-
 import client from '../client';
 
 /** @typedef {import('@/domains/event/types').FCEvent} Reservation */
-
-export const reservationSchema = Joi.object({
-  bookingStatus: Joi.string().allow('', null).optional(),
-  club: Joi.object().optional(),
-  currentPlayers: Joi.number().required(),
-  date: Joi.string().required(),
-  description: Joi.string().allow('', null),
-  documentId: Joi.string().required(),
-  endTime: Joi.string().optional(),
-  location: Joi.object().optional(),
-  locationDetails: Joi.string().allow('', null),
-  missingPlayers: Joi.number().required(),
-  organizer: Joi.object().optional(),
-  pricePerPerson: Joi.number().required(),
-  reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').required(),
-  startTime: Joi.string().optional(),
-  team: Joi.object().optional(),
-  totalPlayers: Joi.number().required(),
-  type: Joi.object().required(),
-}).required();
 
 /**
  * Get reservations with filters
@@ -211,31 +189,6 @@ export const getFeaturedReservations = async (limit = 10) => {
  */
 export const joinReservation = async (reservationId) => {
   const response = await client.post(`/events/${reservationId}/join-reservation`);
-  return response.data;
-};
-
-/**
- * Create a reservation
- * @param {{
- *   mode: 'FULL_GROUP' | 'RECRUITING';
- *   totalPlayers: number;
- *   currentPlayers: number;
- *   pricePerPerson: number;
- *   date: string;
- *   startTime?: string;
- *   endTime?: string;
- *   description?: string;
- *   location?: object;
- *   locationDetails?: string;
- *   club?: string;
- *   team?: string;
- * }} reservationData
- * @returns {Promise<{data: Reservation}>}
- */
-export const createReservation = async (reservationData) => {
-  const response = await client.post('/reservations', {
-    data: reservationData,
-  });
   return response.data;
 };
 

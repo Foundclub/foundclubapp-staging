@@ -166,3 +166,56 @@ test('« Pas maintenant » referme, sans rien envoyer', async () => {
   expect(updateMe).not.toHaveBeenCalled();
   expect(textes(arbre)).toContain('Tu gardes tes enfants, leurs fiches et leurs demandes.');
 });
+
+// RESA-INSCRIPTION (19/10/2026) — LA MÊME FEUILLE, POUR UN COMPTE NÉ « POUR UN COMPLEXE » : il n'a
+// aucun rôle sportif (rôle provisoire). « Voir l'app en joueur », sur l'accueil de son complexe,
+// l'ouvre au lieu d'un accueil de joueur sans rôle : il devient Joueur par la MÊME mise à jour, il
+// GARDE son complexe (relation `gestionnaires`, rien à voir avec le rôle), et il n'y a pas de mode
+// parent à poser. Le parcours d'inscription du joueur (nom, date de naissance) suit, à l'accueil.
+describe('RESA-INSCRIPTION — la variante « complexe » (compte sans rôle sportif)', () => {
+  const monterComplexe = () => {
+    const onClose = jest.fn();
+    const onDone = jest.fn();
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <FeuillePratiqueAussi isVisible onClose={onClose} onDone={onDone} pourLeComplexe />
+        </QueryClientProvider>,
+      );
+    });
+    arbres.push(arbre);
+    return { arbre, onClose, onDone };
+  };
+
+  test('elle dit ce qui change et ce qui reste : le complexe, pas d’enfants', () => {
+    const { arbre } = monterComplexe();
+    const lus = textes(arbre);
+
+    expect(lus).toEqual(expect.arrayContaining([
+      'Tu pratiques aussi un sport ?',
+      'Ton compte devient Joueur.',
+      'Tu gardes ton complexe et tes droits de gestionnaire.',
+      'Tu peux rejoindre une équipe et participer à des événements.',
+      'Le bouton en haut de l’accueil te fait passer du mode complexe au mode joueur, et retour.',
+      'Oui, je pratique aussi',
+      'Pas maintenant',
+    ]));
+    expect(lus).not.toContain('Ton compte passe de Parent à Joueur.');
+    expect(lus).not.toContain('Tu gardes tes enfants, leurs fiches et leurs demandes.');
+  });
+
+  test('« Oui » : le compte passe en Joueur, sans mode parent, puis est relu', async () => {
+    updateMe.mockResolvedValue({ data: {} });
+    const { arbre, onDone } = monterComplexe();
+
+    await appuyer(arbre, 'Oui, je pratique aussi');
+
+    expect(updateMe.mock.calls[0][0]).toEqual({ role: 'r-joueur' });
+    expect(mockAuth.setDisplayMode).not.toHaveBeenCalled();
+    expect(mockAuth.refetchUserData).toHaveBeenCalledTimes(1);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+});

@@ -124,8 +124,12 @@ jest.mock('@/services/notificationActions/rsvpActions', () => ({
   ensureNotificationActionSetup: () => Promise.resolve(),
   handleChatReplyActionPress: jest.fn(),
   handleEventRsvpActionPress: jest.fn(),
+  // RESA-L6B-1 — les boutons de N-20.
+  displayResaVeilleActionableNotification: jest.fn(),
+  handleResaVeilleActionPress: jest.fn(async () => ({ handled: false })),
   isChatReplyActionablePayload: () => false,
   isEventRsvpActionablePayload: () => false,
+  isResaVeilleActionablePayload: () => false,
 }));
 
 jest.mock('@/utils/bootDiagnostics', () => ({

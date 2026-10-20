@@ -66,6 +66,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
+import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
@@ -81,7 +82,11 @@ import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { markBootStep } from '@/utils/performance/bootPerformance';
 
-import { CARTES_ACCUEIL_MASQUEES, LEAGUE_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
+import {
+  CARTES_ACCUEIL_MASQUEES,
+  COMPLEXES_GERANT,
+  LEAGUE_SUR_ACCUEIL,
+} from '@/config/fonctionsMasquees';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -2620,16 +2625,33 @@ function HomeHubContent({ auth, navigation, route }) {
         <CollectivitePorteRow />
         {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
             PAR-L12 (E25) — trois positions : rôle du compte, joueur, parent. Le mode parent ne
-            s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27. */}
-        <PlayerModeBanner
-          accountRoleKey={getUserRoleKey(roleName)}
-          canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
-          canUsePlayerMode={canUsePlayerMode === true}
-          displayMode={modeActif}
-          onChange={setDisplayMode}
-          onPratiqueAussi={ouvrirLaFeuillePratique}
-          prenoms={prenomsDesEnfants}
-        />
+            s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27.
+            RESA-L5A1 (13/10) — un compte qui gère un complexe lit, au même endroit, la bascule
+            « mode complexe / mode joueur » (planche RB), qui reprend ce bandeau (mêmes
+            propriétés depuis PAR-L12, RESA-RAT-APP 19/10) ; cachée par l'interrupteur
+            `COMPLEXES_GERANT`. */}
+        {COMPLEXES_GERANT ? (
+          <BasculeComplexe
+            accountRoleKey={getUserRoleKey(roleName)}
+            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
+            canUsePlayerMode={canUsePlayerMode === true}
+            compteId={userData?.documentId || null}
+            displayMode={modeActif}
+            onChange={setDisplayMode}
+            onPratiqueAussi={ouvrirLaFeuillePratique}
+            prenoms={prenomsDesEnfants}
+          />
+        ) : (
+          <PlayerModeBanner
+            accountRoleKey={getUserRoleKey(roleName)}
+            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
+            canUsePlayerMode={canUsePlayerMode === true}
+            displayMode={modeActif}
+            onChange={setDisplayMode}
+            onPratiqueAussi={ouvrirLaFeuillePratique}
+            prenoms={prenomsDesEnfants}
+          />
+        )}
         <FeuillePratiqueAussi
           isVisible={feuillePratiqueOuverte}
           onClose={fermerLaFeuillePratique}

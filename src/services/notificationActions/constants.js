@@ -9,6 +9,12 @@ export const CHAT_REPLY_CATEGORY = 'CHAT_REPLY_CATEGORY';
 // notification d echec le RANGE et porte ce bouton, qui le renvoie tel quel.
 export const CHAT_REPLY_ACTION_RETRY = 'chat_reply_retry';
 export const CHAT_REPLY_RETRY_CATEGORY = 'CHAT_REPLY_RETRY_CATEGORY';
+// RESA-L6B-1 (19/10/2026) — les boutons de N-20 « Tu confirmes ta réservation de demain ? ».
+// Contrat FIGÉ avec le serveur (RESA-L2C pose la catégorie) : ne pas renommer sans lui.
+export const RESA_VEILLE_ACTION_CONTEXT = 'resa_veille';
+export const RESA_VEILLE_ACTION_CONFIRMER = 'resa_veille_confirmer';
+export const RESA_VEILLE_ACTION_ANNULER = 'resa_veille_annuler';
+export const RESA_VEILLE_CATEGORY = 'RESA_VEILLE_CATEGORY';
 
 export const NOTIFICATION_DEFAULT_CHANNEL_ID = 'default';
 export const NOTIFICATION_SILENT_CHANNEL_ID = 'silent-feedback';

@@ -46,11 +46,14 @@ import {
   consumePendingOpenNotification,
   displayChatReplyActionableNotification,
   displayEventRsvpActionableNotification,
+  displayResaVeilleActionableNotification,
   ensureNotificationActionSetup,
   handleChatReplyActionPress,
   handleEventRsvpActionPress,
+  handleResaVeilleActionPress,
   isChatReplyActionablePayload,
   isEventRsvpActionablePayload,
+  isResaVeilleActionablePayload,
 } from '@/services/notificationActions/rsvpActions';
 
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
@@ -232,6 +235,12 @@ const onDisplayNotification = async ({ body, data, title }) => {
 
     if (isChatReplyActionablePayload(normalizedData)) {
       await displayChatReplyActionableNotification({ body, data: normalizedData, title });
+      return;
+    }
+
+    // RESA-L6B-1 — N-20 : « J'annule » / « Je confirme » (COMPLEXES_JOUEUR allumé seulement).
+    if (isResaVeilleActionablePayload(normalizedData)) {
+      await displayResaVeilleActionableNotification({ body, data: normalizedData, title });
       return;
     }
 
@@ -963,6 +972,19 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           pressActionId: detail?.pressAction?.id,
         });
         if (chatReplyResult?.handled) {
+          invalidateNotificationQueries();
+          if (detail.notification?.id) {
+            await notifee.cancelNotification(detail.notification.id);
+          }
+          return;
+        }
+
+        // RESA-L6B-1 — « Je confirme » / « J'annule » de N-20.
+        const veilleResult = await handleResaVeilleActionPress({
+          notificationData: detail.notification?.data || {},
+          pressActionId: detail?.pressAction?.id,
+        });
+        if (veilleResult?.handled) {
           invalidateNotificationQueries();
           if (detail.notification?.id) {
             await notifee.cancelNotification(detail.notification.id);

@@ -52,18 +52,21 @@ const buildRenderBody = ({
 
 /**
  * Récupère le rendu en base64 (léger, pour l'aperçu <Image> en data URI).
+ * RESA-L5B-2 (20/10/2026) : `params.path` et `params.body` (facultatifs) visent une AUTRE route
+ * qui rend des octets — l'affiche d'un complexe, `POST /complexes/:id/affiche` (RESA-L4) ; sans
+ * eux, la requête d'avant (témoin `visualRender.L5B2.test.js`).
  */
 export const fetchRenderBase64 = async (params) => {
   const baseURL = getApiBaseUrl();
   const token = getAuthTokens()?.token;
   const res = await ReactNativeBlobUtil.fetch(
     'POST',
-    `${baseURL}${RENDER_PATH}`,
+    `${baseURL}${params.path || RENDER_PATH}`,
     {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    buildRenderBody(params),
+    params.body ? JSON.stringify(params.body) : buildRenderBody(params),
   );
   const { status } = res.info();
   if (status >= 400) {
