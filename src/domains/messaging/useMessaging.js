@@ -18,6 +18,7 @@ import {
   isAnonymousPollNamingNoOne,
   withMyAnonymousPollVotes,
 } from '@/domains/messaging/pollUseCases';
+import { rattraperLeFil } from '@/domains/messaging/rattrapageDuFil';
 import {
   indexReactionsByMessage,
   withMessageReactions,
@@ -836,6 +837,19 @@ const useMessaging = (currentChatId) => {
       markMessagingPerf('messaging_joined_messages_refetch_requested', {
         chatId: chatDocumentId,
       });
+      return;
+    }
+
+    // MSGNOTIF — entrer, ou RE-entrer après une coupure, dans la salle : ce qui
+    // s'y est dit pendant qu'on n'y était pas n'arrivera jamais par le fil. Avant,
+    // un cache présent suffisait à tout sauter : le message manquait jusqu'à ce
+    // qu'on tue l'app. Une lecture déjà en vol voit tout jusqu'à maintenant.
+    // ponytail: une page relue à CHAQUE entrée avec un cache, même si la socket n'a
+    // jamais coupé. Sortie : numéroter les connexions (socketManager) et ne rattraper
+    // que si la connexion a changé depuis la dernière lecture du fil.
+    if (alreadyHasMessages && !isMessagesFetchInFlight) {
+      rattraperLeFil(queryClient, chatDocumentId);
+      markMessagingPerf('messaging_joined_messages_caught_up', { chatId: chatDocumentId });
       return;
     }
 
