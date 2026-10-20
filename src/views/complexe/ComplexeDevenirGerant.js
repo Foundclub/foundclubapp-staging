@@ -67,7 +67,12 @@ function ComplexeDevenirGerant() {
     Alignments, ApplicationStyle, Colors, Fonts, Images,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
-  const { userData } = useAuth();
+  const { accountRoleKey, userData } = useAuth();
+  // RESA-INSCRIPTION (19/10/2026) — ouvert depuis le choix du statut d'un compte NEUF (« Je gère
+  // un complexe », planche EG01 état 0) : aucun rôle sportif, ni équipes ni réservations de joueur.
+  // La feuille « un compte, deux modes » ne lui dit rien de vrai : il arrive directement sur
+  // l'accueil du gestionnaire (état 8). Abandon (« Retour » à l'étape 1) : le choix du statut.
+  const sansRoleSportif = accountRoleKey === 'new';
   const activites = useGetActivities();
   const creer = useCreerMonComplexe();
 
@@ -122,6 +127,17 @@ function ComplexeDevenirGerant() {
   const siretChiffres = siret.replace(/\s+/g, '');
   const siretFaux = Boolean(siretChiffres) && !SIRET_RE.test(siretChiffres);
 
+  const ouvrirLEspace = (/** @type {any} */ complexe = cree) => {
+    ecrireModeComplexe(userData?.documentId, true);
+    navigation.reset({
+      index: 0,
+      routes: [{
+        name: RouteNames.ComplexeEspace,
+        params: { complexeId: complexe?.documentId, justeCree: true },
+      }],
+    });
+  };
+
   const envoyer = async (forcer = false) => {
     setRefus('');
     try {
@@ -131,7 +147,12 @@ function ComplexeDevenirGerant() {
         return;
       }
       setDoublon(null);
-      setCree(corps?.data || { name: nom });
+      const complexe = corps?.data || { name: nom };
+      if (sansRoleSportif) {
+        ouvrirLEspace(complexe);
+        return;
+      }
+      setCree(complexe);
     } catch (erreur) {
       setDoublon(null);
       setRefus(messageDeRefus(
@@ -151,16 +172,6 @@ function ComplexeDevenirGerant() {
     else navigation.goBack();
   };
 
-  const ouvrirLEspace = () => {
-    ecrireModeComplexe(userData?.documentId, true);
-    navigation.reset({
-      index: 0,
-      routes: [{
-        name: RouteNames.ComplexeEspace,
-        params: { complexeId: cree?.documentId, justeCree: true },
-      }],
-    });
-  };
   const resterJoueur = () => {
     setCree(null);
     navigation.goBack();
@@ -511,7 +522,7 @@ function ComplexeDevenirGerant() {
             </View>
           ))}
           <Button
-            onPress={ouvrirLEspace}
+            onPress={() => ouvrirLEspace()}
             title={t('complexeGerant.creation.ouvrirEspace', 'Ouvrir l’espace du complexe')}
             variant="Primary"
           />

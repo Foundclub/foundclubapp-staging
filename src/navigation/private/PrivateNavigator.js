@@ -44,6 +44,7 @@ import {
   useMyCollectivites,
   useMyManagerRequests,
 } from '@/services/collectivite/collectiviteQueries';
+import { useMesComplexes } from '@/services/complexe/complexeQueries';
 
 import PrivateTabNavigator from './PrivateTabNavigator';
 /* eslint-disable-next-line import/order */
@@ -87,6 +88,14 @@ function PrivateNavigator() {
   // Tant qu'on ne sait pas, on attend : la pile choisit son écran d'arrivée UNE fois.
   const villeEnLecture = sansRoleSportif
     && Boolean(villesGerees.isLoading || demandesGestionnaire.isLoading);
+  // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » (« Je gère un complexe » au
+  // choix du statut) garde le rôle provisoire : son parcours d'inscription commence toujours par
+  // ce choix. Même règle que la Ville seule : s'il gère un complexe, il arrive sur l'espace de son
+  // complexe. La lecture ne part que pour un compte sans rôle sportif, interrupteur allumé.
+  const mesComplexes = useMesComplexes({ enabled: COMPLEXES_GERANT && sansRoleSportif });
+  const complexesGeres = Array.isArray(mesComplexes.data) ? mesComplexes.data : [];
+  const complexeSeul = COMPLEXES_GERANT && sansRoleSportif && complexesGeres.length > 0;
+  const complexeEnLecture = COMPLEXES_GERANT && sansRoleSportif && Boolean(mesComplexes.isLoading);
   const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
   const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
 
@@ -125,6 +134,7 @@ function PrivateNavigator() {
         ? RouteNames.CollectiviteSpace
         : RouteNames.CollectiviteSignupStatus;
     }
+    if (complexeSeul) return RouteNames.ComplexeEspace;
     if (route) return route;
     // RESA-L5A1 (13/10/2026) — le mode complexe (planche RB, AT-01) : un choix d'affichage gardé
     // sur le téléphone ; l'app s'ouvre alors sur l'espace du complexe. Après l'onboarding.
@@ -133,7 +143,10 @@ function PrivateNavigator() {
     }
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
-  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId, userData?.documentId]);
+  }, [
+    onboardingViews, isGold, villeSeule, premiereVille?.documentId, complexeSeul,
+    userData?.documentId,
+  ]);
 
   const firstPendingOnboardingRoute = useMemo(() => {
     if (
@@ -233,8 +246,8 @@ function PrivateNavigator() {
   // compte : une fois l'accueil fait et la pile montée (pas pendant la lecture « Ville seule »),
   // son écran s'empile. Jamais avant le contrôle d'âge d'un compte neuf.
   useLiensEnAttente(
-    Boolean(userData?.documentId) && !userDataLoading && !userDataError && !villeEnLecture
-      && !firstPendingOnboardingRoute,
+    Boolean(userData?.documentId) && !userDataLoading && !userDataError
+      && !villeEnLecture && !complexeEnLecture && !firstPendingOnboardingRoute,
   );
 
   const canShowView = useCallback((/** @type {string} */ routeName) => {
@@ -242,7 +255,7 @@ function PrivateNavigator() {
     return !!view?.canShow;
   }, [onboardingViews]);
 
-  if (userDataLoading || villeEnLecture) {
+  if (userDataLoading || villeEnLecture || complexeEnLecture) {
     return (
       <View style={{
         alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center',
@@ -465,6 +478,33 @@ function PrivateNavigator() {
           options={{
             ...commonOptions,
             headerTitle: t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville'),
+          }}
+        />
+        {/* R17-SIGNALER-1 (19/10/2026, REC17-011) — signaler un probleme sur une installation
+            de la Ville (depuis son planning ou une seance), le signalement (la Ville le traite,
+            l auteur le suit), « Mes signalements » (Mon compte). Le serveur juge qui voit quoi. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityReportNew').default}
+          name={RouteNames.FacilityReportNew}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.membre.titre', 'Signaler un problème'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityReportDetails').default}
+          name={RouteNames.FacilityReportDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.ville.titreFiche', 'Signalement'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/MyFacilityReports').default}
+          name={RouteNames.MyFacilityReports}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.membre.mesTitre', 'Mes signalements'),
           }}
         />
         {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la

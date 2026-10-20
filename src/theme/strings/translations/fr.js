@@ -54,7 +54,7 @@ export default {
     fallbacks: {
       clubName: 'Club',
       coachName: 'coach',
-      inviteFirstname: 'Coach',
+      inviteFirstname: 'Coach / Prof',
       managerName: 'dirigeant',
     },
     fields: {
@@ -83,7 +83,7 @@ export default {
     },
     roles: {
       manager: 'Dirigeant·e',
-      trainer: 'Entraîneur·e',
+      trainer: 'Coach / Prof',
     },
     state: {
       loadError: {
@@ -1503,9 +1503,9 @@ export default {
     openProfile: 'Ouvrir la fiche de {{name}}',
     roles: {
       clubManager: 'Dirigeant',
-      coach: 'Entraîneur',
+      coach: 'Coach / Prof',
       none: 'Sans rôle',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
     },
     searchPlaceholder: 'Rechercher un utilisateur...',
     sortHint: 'Trier par date d inscription',
@@ -1528,7 +1528,7 @@ export default {
     coach: {
       // eslint-disable-next-line max-len
       description: 'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, préparateur physique ou autre besoin staff.',
-      title: 'Je recrute un entraîneur',
+      title: 'Je recrute un coach / prof',
     },
     // eslint-disable-next-line max-len
     footnote: 'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final de l’annonce.',
@@ -1536,10 +1536,11 @@ export default {
     players: {
       // eslint-disable-next-line max-len
       description: 'Publie une annonce par poste recherché, avec le volume de recrutement et les informations sportives de l’équipe.',
-      title: 'Je recrute des joueurs',
+      title: 'Je recrute des pratiquants / joueurs',
     },
     quotaLabel: 'Annonces',
-    subtitle: 'Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur.',
+    // eslint-disable-next-line max-len
+    subtitle: 'Choisis si tu publies une annonce pour recruter des pratiquants / joueurs ou un coach / prof.',
     title: "Type d'annonce",
   },
   adWizardCoachProfile: {
@@ -1724,7 +1725,7 @@ export default {
   },
   adWizardRecap: {
     adType: {
-      coach: 'Annonce entraîneur',
+      coach: 'Annonce coach / prof',
       detection: 'Annonce liée à une détection',
       season: 'Annonce saisonnière',
     },
@@ -2114,6 +2115,19 @@ export default {
     UNIQUE_WHISPER_CHAT_POLICY_ERROR: 'Violation de la politique concernant les discussions privées.',
     unknown: 'Une erreur inconnue est survenue.',
     USER_NOT_FOUND_POLICY_ERROR: 'Violation de la politique concernant les utilisateurs introuvables.',
+    // R17-SIGNALER-1 (19/10) — les refus du signalement d installation.
+    FACILITY_REPORT_INVALID_PAYLOAD: 'Le signalement est incomplet.',
+    FACILITY_REPORT_MANAGER_REQUIRED: 'Seule la Ville traite un signalement.',
+    FACILITY_REPORT_MEMBER_REQUIRED:
+      'Seuls les membres des clubs qui utilisent cette installation peuvent la signaler.',
+    FACILITY_REPORT_NOT_FOUND: 'Ce signalement est introuvable.',
+    FACILITY_REPORT_NOTE_REQUIRED: 'Un mot pour l’auteur est obligatoire.',
+    FACILITY_REPORT_PHOTO_AGE:
+      'La photo est réservée aux 15 ans et plus. Ton entraîneur pourra en ajouter une.',
+    FACILITY_REPORT_PHOTO_FORBIDDEN: 'La photo s’envoie avec le signalement.',
+    FACILITY_REPORT_PHOTO_INVALID:
+      'Cette photo ne peut pas être envoyée (une image de 15 Mo au plus).',
+    FACILITY_REPORT_STATUS_LOCKED: 'Ce signalement est déjà clos.',
   },
   app: {
     bootError: {
@@ -2231,12 +2245,21 @@ export default {
         plafond: 'Vous avez posé beaucoup de lieux : réessayez demain.',
         point: 'Ce point ne peut pas être enregistré. Déplacez la carte et réessayez.',
       },
+      // R17-ADRESSE (19/10) — rien de proposé : l'invitation, d'elle-même (la Ville vouvoyée).
+      invitation: 'Ton lieu n’est pas répertorié : place-le sur la carte',
+      // Sous le champ, liste refermée : le texte tapé rappelé.
+      invitationTexte: '« {{texte}} » n’est pas répertorié : place-le sur la carte',
+      invitationTexteVous: '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
+      invitationVous: 'Votre lieu n’est pas répertorié : placez-le sur la carte',
       lien: 'Adresse introuvable ? Placez-la sur la carte',
       nom: 'Nom du lieu',
       nomExemple: 'Ex. Stade de Luminy',
+      ouvrir: 'Placer sur la carte',
       placer: 'Placer ici',
       placerAide: 'Pose le lieu sous l’épingle, au centre de la carte.',
       presDe: 'Près de : {{adresse}}',
+      sansPoint:
+        'Cette adresse n’est pas sur la carte : on ne la trouve pas en cherchant autour de soi.',
       titre: 'Placer le lieu sur la carte',
       zoomer: 'Zoomez jusqu’à la rue pour placer le lieu précisément.',
     },
@@ -2724,7 +2747,7 @@ export default {
       },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
-          + '\nTu as été désigné·e comme entraîneur·e dans le club {{clubName}}.'
+          + '\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.'
           + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
           + ' et commencer à gérer tes équipes et tes événements.',
         title: 'Bienvenue sur Found Club !',
@@ -2880,6 +2903,7 @@ export default {
     compactHeader: {
       kicker: 'Gestion du club',
     },
+    emptyFacilitiesAndSports: 'Ce club n’a encore renseigné ni ses installations ni ses sports.',
     facilities: {
       nameFallback: 'Installation',
     },
@@ -2890,8 +2914,8 @@ export default {
         + ' lui-même depuis son propre compte.',
     },
     hub: {
-      coach: 'entraîneur',
-      coachs: 'entraîneurs',
+      coach: 'coach / prof',
+      coachs: 'coachs / profs',
       groups: {
         manage: 'Gérer',
         membership: 'Adhésions',
@@ -2980,7 +3004,7 @@ export default {
     },
     titles: {
       activities: 'Sports',
-      coachs: 'Nos entraîneur·e·s',
+      coachs: 'Nos coachs / profs',
       members: 'Membres',
       owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
@@ -3339,7 +3363,7 @@ export default {
         label: 'Public',
         memberCount_one: '{{count}} membre',
         memberCount_other: '{{count}} membres',
-        players: 'Joueurs · {{teamCount}} équipe(s)',
+        players: 'Pratiquants / Joueurs · {{teamCount}} équipe(s)',
         selection: 'Sélection',
         wholeClub: 'Tout le club · {{suffix}}',
       },
@@ -3612,8 +3636,8 @@ export default {
     },
     targetRoles: {
       clubManagers: 'Dirigeants',
-      coaches: 'Entraîneurs',
-      players: 'Joueurs',
+      coaches: 'Coachs / Profs',
+      players: 'Pratiquants / Joueurs',
     },
     template: {
       add: 'Ajouter un modèle',
@@ -4346,9 +4370,9 @@ export default {
       onDueDate: 'Le jour de l échéance',
     },
     roles: {
-      coach: 'Entraîneur·e',
+      coach: 'Coach / Prof',
       manager: 'Dirigeant',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
       superAdmin: 'Super admin',
     },
     setup: {
@@ -4459,15 +4483,15 @@ export default {
       openMember: 'Gérer les rôles de {{name}}',
     },
     chips: {
-      coachOf: 'Entraîneur de {{team}}',
+      coachOf: 'Coach / Prof de {{team}}',
       manager: 'Co-dirigeant',
-      playerOf: 'Joueur de {{team}}',
+      playerOf: 'Pratiquant / Joueur de {{team}}',
     },
     confirm: {
       action: 'Confirmer',
       coachAdd: {
         // eslint-disable-next-line max-len
-        message: '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Entraîneur.',
+        message: '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Coach / Prof.',
         title: 'Nommer entraîneur ?',
       },
       coachRemove: {
@@ -4503,18 +4527,18 @@ export default {
       team: 'cette équipe',
     },
     // eslint-disable-next-line max-len
-    intro: "Touche un membre pour lui donner un rôle : joueur ou entraîneur d'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.",
+    intro: "Touche un membre pour lui donner un rôle : pratiquant / joueur ou coach / prof d'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.",
     roles: {
-      coachOf: 'Entraîneur · {{teams}}',
+      coachOf: 'Coach / Prof · {{teams}}',
       manager: 'Dirigeant',
       none: "Aucun rôle d'équipe",
-      playerOf: 'Joueur · {{teams}}',
+      playerOf: 'Pratiquant / Joueur · {{teams}}',
     },
     search: 'Rechercher un membre',
     sections: {
-      coach: 'Entraîneur de',
+      coach: 'Coach / Prof de',
       manager: 'Direction du club',
-      player: 'Joueur de',
+      player: 'Pratiquant / Joueur de',
     },
     self: '{{name}} (toi)',
     selfCard: {
@@ -4796,8 +4820,8 @@ export default {
     tabs: {
       all: 'Tous',
       clubManagers: 'Dirigeants',
-      coaches: 'Entraîneur·e·s',
-      players: 'Joueurs',
+      coaches: 'Coachs / Profs',
+      players: 'Pratiquants / Joueurs',
     },
   },
   cmTeamsScreen: {
@@ -4912,7 +4936,7 @@ export default {
         titre: 'Fermer une installation',
       },
       inviteClub: {
-        dit: 'Un club de la commune absent de FoundClub.',
+        dit: 'Le trouver sur FoundClub, ou l’inviter.',
         titre: 'Inviter un club',
       },
       publishNews: {
@@ -5239,6 +5263,8 @@ export default {
       texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
       // eslint-disable-next-line max-len
       textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      // R17-CANAUX (décision d'Adel « B », 19/10) : « Toute la ville » est réservé aux majeurs.
+      texteVille: 'Ce canal est réservé aux membres majeurs des clubs rattachés à la Ville.',
       titreCanal: 'Tu ne fais plus partie de ce canal',
       titrePrivee: 'Tu ne fais plus partie de cette conversation',
     },
@@ -5266,6 +5292,22 @@ export default {
       mairieTitre: 'Les dirigeants des {{nombre}} clubs et vous',
       priveeClub: 'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
       priveeMairie: 'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+    },
+    // R17-CANAUX (19/10, REC17-004) : « Toute la ville », lu par les membres, écrit par la Ville.
+    ville: {
+      actualite: 'Nouvelle actualité de la Ville : « {{titre}} »',
+      ecrire: 'Écrire à toute la ville…',
+      ouvrirActualite: 'Voir l’actualité',
+      seuleLaVille: 'Seule la Ville écrit ici',
+      sousTitre: 'Lu par les membres des {{nombre}} clubs',
+      sousTitreUn: 'Lu par les membres d’1 club',
+      titre: 'Toute la ville',
+      titreMembre: 'Toute la ville · {{ville}}',
+      // eslint-disable-next-line max-len
+      videMairie: 'Vos actualités pour tous les membres y arrivent toutes seules, et vous pouvez y écrire. Les membres de vos {{nombre}} clubs le lisent ; personne ne voit qui le lit.',
+      // eslint-disable-next-line max-len
+      videMembre: 'Les actualités de {{ville}} arrivent ici. Seule la Ville écrit ; personne ne voit qui le lit.',
+      voirActualite: 'Voir l’actualité « {{titre}} »',
     },
   },
   collectiviteActualites: {
@@ -5809,27 +5851,21 @@ export default {
     ajouter: {
       acceptRequest: 'Accepter sa demande',
       attached: 'Déjà rattaché à la Ville',
-      communeHint: 'Sans texte : les clubs de votre commune.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club',
+      backToSearch: 'Chercher un club déjà sur FoundClub',
+      belongs: 'Ce club fait partie de ma collectivité',
       elsewhere: 'Rattaché à une autre collectivité',
-      // eslint-disable-next-line max-len
-      empty: 'Aucun club trouvé. Il n’est peut-être pas encore sur FoundClub : invitez-le par le lien.',
-      hasLeader: 'Un dirigeant est sur FoundClub',
-      // eslint-disable-next-line max-len
-      intro: 'Cherchez le club par son nom. Ses dirigeants reçoivent votre demande et l’acceptent ou la refusent : accepté, il est rattaché à la Ville.',
+      introSearch: 'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
       inviteByLink: 'Inviter par le lien',
       loading: 'Recherche…',
       // eslint-disable-next-line max-len
       noLeader: 'Aucun dirigeant sur FoundClub : personne ne pourrait accepter. Invitez-le par le lien.',
-      outside: 'Hors de la commune',
+      notOnFoundClub: 'Le club n’est pas sur FoundClub ?',
       refused: 'Le club a refusé votre demande',
       requested: 'Ce club demande déjà à vous rejoindre',
       resend: 'Renvoyer la demande',
-      searchLabel: 'Nom du club',
-      searchPlaceholder: 'Le nom du club',
-      send: 'Envoyer la demande',
       sent: 'Demande envoyée',
-      tab: 'Déjà sur FoundClub',
-      title: 'Ajouter un club déjà sur FoundClub',
+      title: 'Ajouter un club',
     },
     club: {
       accept: 'Accepter',
@@ -5914,6 +5950,7 @@ export default {
       attached: 'Rattaché',
       attachedElsewhere: 'Ce club a été rattaché à une autre collectivité entre-temps.',
       attachedLine: 'Il apparaît dans vos clubs.',
+      awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club.',
       outside: 'Il n’est pas dans la commune.',
       pending: 'En attente',
       pendingProposal: 'Envoyée au club : ses dirigeants acceptent ou refusent.',
@@ -5948,9 +5985,9 @@ export default {
       avecCreneaux: '{{count}} avec tes créneaux de la Ville',
     },
     creneau: {
-      ligne: '{{team}} · chaque {{day}} {{hours}}',
+      ligne: '{{team}} · {{rythme}} {{hours}}',
       // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
-      lignePeriode: '{{team}} · chaque {{day}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -5990,13 +6027,12 @@ export default {
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
       aucuneLibre: 'Aucune heure libre ce {{jour}}.',
       changerHeure: 'Changer l’heure',
-      chaqueSemaine: 'Chaque {{jour}} de la saison ({{periode}}). Le club est prévenu.',
       club: 'Club',
       complet: '{{moment}} : complet',
       debut: 'Début',
       dejaLa: 'Déjà là : {{qui}}.',
-      depassement_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, chaque {{jour}} de la saison.',
-      depassement_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, chaque {{jour}} de la saison.',
+      depassement_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, {{quand}}.',
+      depassement_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, {{quand}}.',
       enregistrer: 'Enregistrer',
       enregistrerQuandMeme: 'Enregistrer quand même',
       ensuite: '{{qui}} arrive à {{heure}}.',
@@ -6009,7 +6045,6 @@ export default {
       jour: 'Jour',
       libre: '{{moment}} : place libre',
       libreCe: 'Libre ce {{jour}} :',
-      periode: 'Période',
       personne: 'Personne n’y est.',
       places: 'Places prises : {{prises}} sur {{capacite}}',
       plateau: 'Plateau',
@@ -6019,8 +6054,6 @@ export default {
       prevenu: '{{club}} sera prévenu, et verra ce créneau dans son planning.',
       prevenuChangement: '{{club}} sera prévenu du changement.',
       quandMeme: 'Attribuer quand même',
-      saison: 'Toute la saison',
-      toutLaSaison: 'Toute la saison · {{periode}}',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
       voirLibres: 'Voir les heures libres du {{jour}}',
@@ -6047,7 +6080,8 @@ export default {
       saison: 'Saison {{debut}}-{{fin}}',
       surtitre: 'Installations de la Ville',
       vide: 'Aucun créneau attribué',
-      videTexte: 'Un créneau attribué revient chaque semaine de la saison : le club y pose ses entraînements sans rien vous demander.',
+      videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
+        + 'choisies : le club y pose ses entraînements sans rien vous demander.',
     },
     erreurs: {
       club: 'Ce club n’est pas rattaché à la Ville.',
@@ -6097,18 +6131,36 @@ export default {
       chaque: 'Chaque {{jour}}, {{heures}}',
       clubPrevenu: 'Le club est prévenu.',
       d67: 'Ses entraînements déjà posés sur ce créneau restent : le club les garde ou les annule lui-même.',
+      dates: 'Dates',
+      datesHeures_one: '{{count}} date, {{heures}}',
+      datesHeures_other: '{{count}} dates, {{heures}}',
       demandeAcceptee: 'Demande acceptée',
-      entrainementsPoses: 'Entraînements posés',
       entrainements_one: '{{count}} cette saison',
       entrainements_other: '{{count}} cette saison',
+      entrainementsPoses: 'Entraînements posés',
       modifier: 'Modifier le créneau',
+      modifierSerie: 'Modifier la série',
+      noteSerie: '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
+        + 'passées restent. Le club est prévenu.',
       origine: 'Origine',
+      pasCeJour: 'Ce créneau n’a pas lieu ce jour-là.',
       periode: 'Période',
       plateau: 'Plateau',
+      prochaineSeance: 'Prochaine séance',
+      quelleDate: 'Quelle date ?',
       retablirPlusTard: 'Une erreur ? Vous pourrez rétablir le créneau depuis la liste.',
       retirer: 'Retirer le créneau',
+      retirerCetteDate: 'Retirer cette date',
+      retirerDatePerd: '{{qui}} n’aura pas de séance le {{date}} ; les autres dates restent. Le '
+        + 'club est prévenu.',
+      retirerDateTitre: 'Retirer une seule date ?',
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
+      retirerSerie: 'Retirer la série',
+      retirerSeriePerd: '{{qui}} perd {{rythme}}, {{installation}}, à partir du {{date}}.',
+      retirerSerieTitre: 'Retirer la série à partir d’une date ?',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
+      retirerUneDate: 'Retirer le {{date}} seulement',
+      unSurDeux: 'Un {{jour}} sur deux, {{heures}}',
     },
     // COLL-C2B-BIS (03/10) — planche 23, ordinateur : la semaine type à l'échelle des heures.
     grille: {
@@ -6144,7 +6196,6 @@ export default {
       au: 'Au',
       depuis: 'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
       du: 'Du',
-      ordre: 'La fin de la période doit suivre son début.',
     },
     planning: {
       aujourdhui: 'Aujourd’hui, {{jour}}',
@@ -6168,12 +6219,13 @@ export default {
       nonTrancheeDatePassee: 'Non tranchée, date passée',
       origineAttente: 'Demande en attente de décision',
       origineClub: 'Séance du club',
-      origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
+      origineCreneau: 'Créneau attribué : {{rythme}}, du {{debut}} au {{fin}}',
       origineDemande: 'Demande acceptée',
-      origineDemandeSerie: 'Demande acceptée (chaque semaine)',
+      origineDemandeSerie: 'Demande acceptée ({{rythme}})',
       // FINITIONS15 point 3 : une séance posée dans le créneau, à SES heures.
       // eslint-disable-next-line max-len
-      origineSeanceDansCreneau: 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}',
+      origineSeanceDansCreneau: 'Séance du club dans son créneau : {{rythme}}, du {{debut}} au '
+        + '{{fin}}',
       origineTitre: 'Origine de la place',
       placesLibres_one: '{{count}} place libre au plus chargé',
       placesLibres_other: '{{count}} places libres au plus chargé',
@@ -6184,11 +6236,82 @@ export default {
     // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — « Attribuer un créneau » en plein
     // écran (planche P4v4-attribuer) : la question de chaque étape, ce que son sous-titre relit,
     // les lignes du récapitulatif.
+    // R17-QUAND-1 (19/10) — l’étape « Quand ? » : planches P10-quand, P11-quand-v2 validées par Adel.
+    quand: {
+      aLeursDates: 'aux dates choisies',
+      aPartirDu: 'À partir du',
+      apresSaison: 'La saison finit le {{date}} : choisissez une date avant.',
+      aucuneDate: 'Aucune date cochée.',
+      aucuneFermee: 'Aucune ne tombe dans une fermeture.',
+      aucuneSeance: 'Aucune séance à venir dans cette période.',
+      bandeCompte_one: '{{count}} créneau',
+      bandeCompte_other: '{{count}} créneaux',
+      bandeTitre: 'Dates choisies, hors semaine type',
+      calendrier: {
+        choisi: '{{etat}}, choisi',
+        complet: '{{date}}, complet de {{heures}}',
+        ferme: '{{date}}, fermé ({{fermeture}})',
+        legendeChoisi: 'Choisi',
+        legendeFerme: 'Complet ou fermé',
+        libre: '{{date}}, libre',
+        precedent: 'Mois précédent',
+        suivant: 'Mois suivant',
+      },
+      chaqueDeLaPeriode: 'chaque {{jour}} de la période',
+      chaqueDeLaSaison: 'chaque {{jour}} de la saison',
+      chaqueJourCourt: 'chaque {{jour}}',
+      dates: 'Des dates choisies',
+      datesChoisies_one: '{{count}} date choisie',
+      datesChoisies_other: '{{count}} dates choisies',
+      datesDetail: 'Les jours que vous cochez',
+      deuxSemaines: 'Toutes les 2 semaines',
+      deuxSemainesDetail: 'Un {{jour}} sur deux',
+      etAutres: '{{dates}} et {{count}} autres',
+      fermees_one: 'Le {{dates}} tombe dans « {{fermeture}} » : le club y verra « fermé », '
+        + 'comme aujourd’hui.',
+      fermees_other: '{{count}} tombent dans « {{fermeture}} » ({{dates}}) : le club y verra '
+        + '« fermé », comme aujourd’hui.',
+      finDeSaison: 'Fin de saison',
+      groupeDates: 'Dates choisies',
+      joursDifferents: 'Des jours différents',
+      joursDifferentsDetail: 'Vous les choisirez dans un calendrier',
+      jusqua: 'Jusqu’à',
+      jusquau: 'Jusqu’au',
+      ordre: '« Au » doit venir après « Du ».',
+      pastilleChaque: 'chaque semaine',
+      pastilleDates_one: '{{count}} date',
+      pastilleDates_other: '{{count}} dates',
+      pastilleDeux: '1 sem. sur 2',
+      periode: 'Une période',
+      periodeDetail: 'Chaque {{jour}}, du … au …',
+      phraseCompacte: '{{quand}} ({{seances}}). Le club est prévenu.',
+      premiereDate: 'Première date',
+      prochaines: 'Prochaines dates : {{dates}}',
+      recap: 'Quand',
+      recapDeux: 'Toutes les 2 semaines · {{du}} – {{au}}',
+      recapDontFermees_one: '{{seances}}, dont 1 fermé ({{dates}})',
+      recapDontFermees_other: '{{seances}}, dont {{count}} fermés ({{dates}})',
+      recapHeures: 'Heures',
+      recapPeriode: 'Une période · {{du}} – {{au}}',
+      recapSaison: 'Toute la saison · {{du}} – {{au}}',
+      rythmeDates: 'Dates choisies · {{suite}}',
+      rythmeDeux: 'Un {{jour}} sur deux · {{suite}}',
+      saison: 'Toute la saison',
+      saisonDetail: 'Chaque {{jour}}, du {{du}} au {{au}}',
+      seances_one: '{{count}} {{jour}}',
+      seances_other: '{{count}} {{jour}}s',
+      titre: 'Quand ?',
+      titreDates: 'Quelles dates ?',
+      toutesFermees: 'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez attribuer quand '
+        + 'même : le club verra ses séances « fermé ».',
+      uneDate: 'Une date',
+      unJourFixe: 'Un jour fixe chaque semaine',
+      unSurDeuxCourt: 'un {{jour}} sur deux',
+    },
     tunnel: {
       // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
       attribue: 'Créneau attribué',
       chaqueJour: 'Chaque {{jour}} · {{suite}}',
-      chaqueSemaine: '{{qui}} · chaque semaine de la saison',
       club: 'Pour quel club ?',
       equipe: 'Pour quelle équipe ?',
       equipeFacultative: '{{club}} · facultatif',
@@ -6199,7 +6322,6 @@ export default {
       libresDuJour: 'Libre ce {{jour}} : {{heures}}.',
       modifie: 'Créneau modifié',
       modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
-      periode: 'Quelle période ?',
       pourLeClub: 'Pour {{club}}',
       recapClub: 'Club · équipe',
       recapHeures: 'Jour et heures',
@@ -6284,9 +6406,9 @@ export default {
       jusquAu: 'Jusqu’au',
       laVille: 'Ville',
       libreCeJour: 'Libre ce {{jour}} :',
-      ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
+      ligneSerie: '{{rythme}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
       // FINITIONS13-COLL (04/10) — les dates refusées d'une série (tournée T13, C2_1e).
-      ligneSerieDates: 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
+      ligneSerieDates: '{{rythme}}, {{debut}} – {{fin}} · {{nombre}} dates',
       // eslint-disable-next-line max-len
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
@@ -6379,7 +6501,7 @@ export default {
     },
     fonction: {
       manager: 'dirigeant',
-      trainer: 'entraîneur',
+      trainer: 'coach / prof',
     },
     hub: {
       reste: 'Il reste {{places}}.',
@@ -6431,14 +6553,14 @@ export default {
     },
     phrase: {
       // eslint-disable-next-line max-len
-      serie: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
+      serie: '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
       // eslint-disable-next-line max-len
-      serieSansFin: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+      serieSansFin: '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
       // eslint-disable-next-line max-len
       unique: '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
     },
     phraseCourte: {
-      serie: '{{club}} demande chaque {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      serie: '{{club}} demande {{rythme}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
       unique: '{{club}} demande le {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
     },
     place: {
@@ -7193,6 +7315,12 @@ export default {
       unTerrain: '1 terrain',
       vide: 'Tu n’as pas encore de terrain.',
     },
+    // RESA-INSCRIPTION (19/10/2026) — « Tu pratiques aussi un sport ? » pour un compte né « pour
+    // un complexe » (aucun rôle sportif) : la feuille PAR-L12, variante complexe.
+    joueurAussi: {
+      garde: 'Tu gardes ton complexe et tes droits de gestionnaire.',
+      sousTitre: 'Ton compte devient Joueur.',
+    },
     jours: {
       dimanche: 'dimanche',
       jeudi: 'jeudi',
@@ -7262,6 +7390,12 @@ export default {
       quiPeutReserver: 'Qui peut réserver',
       resumeMatin: 'Résumé du matin à 8 h',
       veille: 'Demander aux joueurs de confirmer la veille',
+    },
+    // RESA-INSCRIPTION (19/10/2026) — le choix du statut d'un nouveau compte (planche EG01).
+    statut: {
+      intertitre: 'Pour un complexe',
+      libelle: 'Je gère un complexe',
+      precision: 'Foot à 5, padel, tennis…',
     },
     terrain: {
       ajouterPhoto: 'Ajouter une photo',
@@ -8189,8 +8323,8 @@ export default {
     },
     staffRole: {
       dirigeant: 'Dirigeant',
-      entraineur: 'Entraîneur',
-      joueur: 'Joueur',
+      entraineur: 'Coach / Prof',
+      joueur: 'Pratiquant / Joueur',
       parent: 'Parent',
     },
     typing: {
@@ -11368,6 +11502,166 @@ export default {
     },
     sharedOwnerHint: 'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
   },
+  // R17-SIGNALER-1 (19/10, REC17-011) — signaler un probleme sur une installation de la
+  // Ville, et son traitement par la Ville. La Ville est vouvoyee (`ville`), les membres
+  // tutoyes (`membre`).
+  facilityReports: {
+    auteurAnonyme: '{{role}} · {{club}}',
+    auteurNomme: '{{name}}, {{role}} · {{club}}',
+    categories: {
+      acces: 'Accès, serrure',
+      autre: 'Autre',
+      eclairage: 'Éclairage, chauffage',
+      equipement: 'Équipement abîmé',
+      proprete: 'Propreté',
+      securite: 'Sécurité, danger',
+    },
+    categoriesCourtes: {
+      acces: 'Accès',
+      autre: 'Autre',
+      eclairage: 'Éclairage',
+      equipement: 'Équipement',
+      proprete: 'Propreté',
+      securite: 'Sécurité',
+    },
+    etapes: 'Envoyé · Pris en charge · Résolu',
+    membre: {
+      ajouterPhoto: 'Ajouter une photo (facultatif)',
+      autreChose: 'Signaler autre chose',
+      ceQueVoitLaVille: 'La Ville verra ton rôle et ton club, pas ton nom.',
+      compteur_one: '{{count}} en cours',
+      compteur_other: '{{count}} en cours',
+      consignePhoto:
+        'Photographie le problème, jamais une personne. Pas de photo dans les vestiaires.',
+      dejaLigne: '« {{title}} » · {{category}} · {{status}}',
+      dejaTitre: 'Déjà signalé à la Ville',
+      different: 'Ton problème est différent ?',
+      disNous: 'Dis-nous en plus',
+      disNousPlaceholder: 'Ce que tu as vu, et où exactement.',
+      entreePlanning: 'Un problème sur place ? Signale-le',
+      entreeSeance: 'Signaler un problème ici',
+      envoyeA: 'Envoyé à {{ville}}',
+      envoyeALaVille: 'Envoyé à la Ville',
+      envoyer: 'Envoyer à la Ville',
+      erreurChargement: 'Tes signalements n’ont pas pu être chargés.',
+      erreurs: {
+        categorie: 'Choisis le type de problème.',
+        envoi: 'Le signalement n’est pas parti.',
+        envoiTexte: 'Ton texte est gardé. Vérifie la connexion.',
+        pasMembre:
+          'Seuls les membres des clubs qui utilisent cette installation peuvent la signaler.',
+        photoLourde: 'La photo dépasse 15 Mo. Choisis-en une autre, ou envoie sans photo.',
+        texte: 'Décris le problème.',
+      },
+      installation: 'Installation',
+      laVille: 'La Ville',
+      merciTexte: '{{ville}} a reçu ton signalement. Tu seras prévenu·e quand elle le traite.',
+      merciTitre: 'Merci, c’est envoyé',
+      mesLigne: '{{facility}} · {{date}}',
+      mesTitre: 'Mes signalements',
+      mesVide: 'Tu n’as encore rien signalé.',
+      motDeLaVille: '« {{note}} » — {{ville}}',
+      photoChoisie: 'Photo jointe',
+      photoVueVille: 'La photo n’est vue que par la Ville.',
+      quelProbleme: 'Quel problème ?',
+      retirerPhoto: 'Retirer la photo',
+      retour: 'Revenir',
+      sansPhoto: 'Décris bien le problème. Ton entraîneur pourra ajouter une photo s’il le faut.',
+      titre: 'Signaler un problème',
+      voirMes: 'Voir mes signalements',
+    },
+    roles: {
+      dirigeant: 'dirigeant',
+      entraineur: 'entraîneur',
+      joueur: 'un joueur',
+      membre: 'un membre',
+      parent: 'un parent',
+    },
+    statuts: {
+      envoye: 'Nouveau',
+      pris_en_charge: 'Pris en charge',
+      resolu: 'Résolu',
+      sans_suite: 'Sans suite',
+    },
+    statutsAuteur: {
+      envoye: 'Envoyé',
+      pris_en_charge: 'Pris en charge',
+      resolu: 'Résolu',
+      sans_suite: 'Sans suite',
+    },
+    ville: {
+      accueil_one: '{{count}} signalement à traiter',
+      accueil_other: '{{count}} signalements à traiter',
+      accueilDetail: '{{title}} · {{category}} · {{facility}}',
+      annuler: 'Annuler',
+      carte_one: '{{count}} signalement ouvert',
+      carte_other: '{{count}} signalements ouverts',
+      carteSecurite_one: '{{count}} signalement ouvert · sécurité',
+      carteSecurite_other: '{{count}} signalements ouverts · sécurité',
+      categorie: 'Catégorie',
+      clos: 'Ce signalement est clos.',
+      depuisSignalement: 'Depuis un signalement',
+      envoyePar: 'Envoyé par',
+      erreur: 'Le suivi n’a pas pu être chargé.',
+      etat: {
+        a_surveiller: 'À surveiller',
+        en_service: 'En service',
+        fermee: 'Fermée',
+      },
+      etatASurveiller_one:
+        '{{count}} signalement « sécurité » est ouvert depuis le {{date}} ; l’installation reste '
+        + 'ouverte.',
+      etatASurveiller_other:
+        '{{count}} signalements « sécurité » sont ouverts depuis le {{date}} ; l’installation '
+        + 'reste ouverte.',
+      etatEnService: 'Aucun signalement ouvert, aucune fermeture en cours.',
+      etatFermee: 'Du {{debut}} au {{fin}}',
+      etatFermeeMotif: 'Du {{debut}} au {{fin}} · {{motif}}',
+      fermer: 'Fermer l’installation…',
+      fermerPanneau: 'Fermer le signalement',
+      feuilleResolu: 'Marquer résolu',
+      feuilleSansSuite: 'Classer sans suite',
+      histoCourtMot: '{{periode}} · « {{note}} »',
+      histoDates: 'Signalé le {{debut}} · résolu le {{fin}}',
+      histoDatesMot: 'Signalé le {{debut}} · résolu le {{fin}} : « {{note}} »',
+      histoDatesSansSuite: 'Signalé le {{debut}} · classé le {{fin}}',
+      histoDatesSansSuiteMot: 'Signalé le {{debut}} · classé le {{fin}} : « {{note}} »',
+      histoFermeture: 'Fermé du {{debut}} au {{fin}}',
+      histoFermetureJour: 'Fermé le {{jour}}',
+      histoFermetureMotif: 'Fermeture · {{motif}}',
+      histoPeriode: '{{debut}} – {{fin}}',
+      histoResolu: '{{title}} · résolu',
+      historique: 'Historique',
+      histoRouverte: 'Fermeture · rouverte',
+      histoSansSuite: '{{title}} · sans suite',
+      liee: 'Lié à la fermeture du {{debut}} au {{fin}}',
+      motObligatoire: 'Un mot pour l’auteur (obligatoire)',
+      motPlaceholder: 'Ce qui a été fait, ou pourquoi rien ne sera fait.',
+      motPourAuteur: 'Un mot pour l’auteur',
+      onglet: 'Sécurité et suivi',
+      ongletAvecCompte_one: 'Sécurité et suivi, {{count}} signalement ouvert',
+      ongletAvecCompte_other: 'Sécurité et suivi, {{count}} signalements ouverts',
+      ouverts: 'Signalements ouverts : {{count}}',
+      ouvertsSous: 'Reçus des membres des clubs qui utilisent l’installation',
+      ouvrirFiche: 'Ouvrir le signalement {{title}}',
+      photoAlt: 'Photo jointe par l’auteur',
+      photoVue: 'Photo vue par la Ville et l’auteur seulement.',
+      plusDActions: 'Plus d’actions : résolu, sans suite',
+      prendre: 'Prendre en charge',
+      previentAuteur: 'L’auteur est prévenu. Le signalement passe dans l’historique.',
+      proposerResolu: 'La fermeture liée est finie : ce signalement est-il résolu ?',
+      reessayer: 'Réessayer',
+      resoudre: 'Résolu…',
+      sansSuite: 'Sans suite…',
+      titreFiche: 'Signalement',
+      videTexte:
+        'Les membres des clubs qui utilisent l’installation peuvent signaler un problème depuis '
+        + 'son planning ou depuis une séance. Vous êtes prévenus à chaque signalement.',
+      videTitre: 'Aucun signalement',
+      voirFermetures: 'Fermetures',
+      voirToutHistorique: 'Voir tout l’historique',
+    },
+  },
   facilityService: {
     sections: {
       club: 'Installations du club',
@@ -12238,11 +12532,11 @@ export default {
       title: 'Publication réservée aux clubs certifiés',
     },
     roles: {
-      coach: 'Entraîneur',
+      coach: 'Coach / Prof',
       // P0 — cette clef MANQUAIT, et c'est tout le defaut : `roleLabel` se
       // repliait sur « Joueur » pour les deux comptes Parent de production.
       parent: 'Parent',
-      player: 'Joueur',
+      player: 'Pratiquant / Joueur',
       president: 'Dirigeant',
       superAdmin: 'Super admin',
     },
@@ -15387,10 +15681,10 @@ export default {
     newGroup: 'Nouveau groupe',
     remove: 'Retirer {{name}}',
     sections: {
-      coaches: 'Entraîneurs',
+      coaches: 'Coachs / Profs',
       managers: 'Dirigeants',
       others: 'Autres',
-      players: 'Joueurs',
+      players: 'Pratiquants / Joueurs',
     },
     subtitle: {
       add: 'Choisis qui ajouter',
@@ -16826,9 +17120,9 @@ export default {
         label: 'Historique sportif',
       },
       types: {
-        coach: 'Entraîneur·e',
+        coach: 'Coach / Prof',
         parent: 'Parent',
-        player: 'Joueur·se',
+        player: 'Pratiquant·e / Joueur·se',
         president: 'Dirigeant·e',
       },
       weight: {
@@ -16857,10 +17151,10 @@ export default {
       // rangees, deux mots (Adel, 2026-08-28).
       pendingRequest: 'Demande en attente',
       roles: {
-        coach: 'Entraîneur',
+        coach: 'Coach / Prof',
         new: 'Membre',
         parent: 'Parent',
-        player: 'Joueur',
+        player: 'Pratiquant / Joueur',
         president: 'Dirigeant',
         superAdmin: 'Administrateur',
       },
@@ -17231,7 +17525,7 @@ export default {
   recruitmentAdCard: {
     applyHint: 'Postuler à cette annonce',
     categoryUnknown: 'Catégorie ?',
-    coachAudience: 'ENTRAÎNEUR',
+    coachAudience: 'COACH / PROF',
     coachRole: 'Rôle entraîneur',
     cta: {
       accepted: 'Je participe',
@@ -17529,10 +17823,10 @@ export default {
     allSports: 'Tous les sports',
     apply: 'Voir les résultats',
     audience: {
-      all: 'Joueur·se·s et coachs',
-      coach: 'Coachs',
+      all: 'Pratiquant·e·s / Joueur·se·s et coachs / profs',
+      coach: 'Coachs / Profs',
       label: 'Profil',
-      player: 'Joueur·se·s',
+      player: 'Pratiquant·e·s / Joueur·se·s',
     },
     category: 'Catégorie',
     city: 'Ville',
@@ -17597,8 +17891,8 @@ export default {
     },
     audience: {
       all: 'Toutes',
-      coach: 'Entraîneurs',
-      player: 'Joueurs',
+      coach: 'Coachs / Profs',
+      player: 'Pratiquants / Joueurs',
     },
     completeProfile: {
       fields: 'Sport, section, catégorie, niveau.',
@@ -17840,7 +18134,7 @@ export default {
     // PAR-L9b (13/10, E16, D3) — « Ouvrir une conversation » : moi, ou un·e coach que je
     // choisis. Aucun choix fait à la place du dirigeant.
     conversation: {
-      coachRow: '{{name}} · coach {{team}}',
+      coachRow: '{{name}} · coach / prof {{team}}',
       info: "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
       listError: 'La liste des coachs est indisponible : tu peux discuter toi-même.',
       listLoading: 'Chargement des coachs…',
@@ -22087,11 +22381,11 @@ export default {
       membersHiddenTitle: 'Membres masqués',
       nextEvents: 'Prochains événements',
       noTrainer: 'Aucun entraîneur pour le moment',
-      players_one: 'Joueur·se',
-      players_other: 'Joueur·se·s',
+      players_one: 'Pratiquant·e / Joueur·se',
+      players_other: 'Pratiquant·e·s / Joueur·se·s',
       playersHidden: 'Le club masque les joueurs de cette équipe pour les visiteurs externes.',
-      trainers_one: 'Entraîneur·e',
-      trainers_other: 'Entraîneur·e·s',
+      trainers_one: 'Coach / Prof',
+      trainers_other: 'Coachs / Profs',
       trainersHidden: 'Le club masque les entraîneurs de cette équipe pour les visiteurs externes.',
     },
     slots: {
@@ -22201,7 +22495,7 @@ export default {
         actions: {
           add: 'Ajouter un entraîneur',
         },
-        label: 'Entraîneur·e·s',
+        label: 'Coachs / Profs',
         placeholder: 'Sélectionner un·e entraîneur·e',
       },
     },
@@ -22304,10 +22598,10 @@ export default {
       explanation: "Cette équipe a été créée par un·e entraîneur·e de ton club. Elle n'apparaîtra pour les autres qu'une fois que tu l'auras validée.",
     },
     badges: {
-      coach: 'COACH',
+      coach: 'COACH / PROF',
       invitation: 'INVITATION',
       pending: 'EN ATTENTE',
-      player: 'JOUEUR·SE',
+      player: 'PRATIQUANT·E / JOUEUR·SE',
     },
     fields: {
       category: 'Catégorie',
@@ -22346,12 +22640,12 @@ export default {
     searchPlaceholder: 'Mes équipes',
     stats: {
       members: 'Membres',
-      trainers: 'Entraîneur·e·s',
+      trainers: 'Coachs / Profs',
     },
     title: 'Équipes de mon club',
     trainerGuide: {
       // eslint-disable-next-line max-len
-      body: '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.',
+      body: '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Coachs / Profs", ajoute-le puis valide.',
       nameFallback: 'Cet entraîneur',
       title: 'Assigner un entraîneur',
     },
@@ -22501,7 +22795,7 @@ export default {
     trainings: 'Entraînements',
   },
   profileStats: {
-    coachBadge: 'Entraîneur',
+    coachBadge: 'Coach / Prof',
     coachLine: 'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.',
     inYourTeam: 'Dans ton équipe · {{teams}}',
     // ST-VUES2 (02/10) — écran 17, chez l'entraîneur : la feuille du dernier match du joueur.
@@ -22691,7 +22985,7 @@ export default {
         selfHint: "Tu es déjà sélectionné·e — tu pourras en ajouter d'autres plus tard.",
         selfTag: 'Toi',
         subtitle: 'Sélectionne au moins un·e entraîneur·e pour encadrer cette équipe.',
-        title: 'Entraîneur·e·s',
+        title: 'Coachs / Profs',
       },
     },
   },
@@ -22753,8 +23047,8 @@ export default {
     paywallContext: 'Ta nouvelle équipe',
     retry: 'Réessayer',
     trainers: {
-      fallback: 'Entraîneur·e',
-      roleCoach: 'coach',
+      fallback: 'Coach / Prof',
+      roleCoach: 'coach / prof',
       rolePresident: 'dirigeant·e',
       self: 'Toi',
       selfWithRole: ' — toi, {{role}}',
@@ -22778,7 +23072,7 @@ export default {
     loading: 'Chargement des entraîneur·e·s du club…',
     retry: 'Réessayer',
     roles: {
-      coach: 'Coach',
+      coach: 'Coach / Prof',
       president: 'Dirigeant·e',
     },
   },
@@ -24633,8 +24927,8 @@ export default {
     },
     private: 'Privé',
     roleLabels: {
-      coach: 'Entraîneur',
-      player: 'JOUEUR',
+      coach: 'Coach / Prof',
+      player: 'PRATIQUANT / JOUEUR',
       president: 'DIRIGEANT',
       user: 'UTILISATEUR',
     },

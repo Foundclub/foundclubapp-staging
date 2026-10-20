@@ -1,5 +1,5 @@
 import { getManagedMultisportIds, getUserRoleKey } from '@/domains/auth/authUseCases';
-import { estFilDeLaVille } from '@/domains/collectivite/collectiviteCanaux';
+import { estFilDeLaVille, peutEcrireDansLeFil } from '@/domains/collectivite/collectiviteCanaux';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 
 /**
@@ -23,7 +23,8 @@ const canWriteInChat = ({ chat, hasClubAccess, user }) => {
   const isManagerRole = getUserRoleKey(user?.role?.type || user?.role?.name) === 'president';
 
   // COLL-C4A2 — un fil de la Ville : ses membres (calcules par le serveur) ecrivent tous.
-  if (estFilDeLaVille(chat)) return true;
+  // R17-CANAUX — sauf « Toute la ville » : la Ville seule (l ecran le sait : useFilDeLaVille).
+  if (estFilDeLaVille(chat)) return peutEcrireDansLeFil({ chat });
 
   // Tete-a-tete, groupe, equipe, match League ou amical : tous les participants ecrivent.
   if (

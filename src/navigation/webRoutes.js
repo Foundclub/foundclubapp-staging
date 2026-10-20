@@ -89,6 +89,10 @@ const WEB_ROUTE_PATTERNS = {
   // la demande. Hors de /collectivite/:collectiviteId : « demande » y serait lu comme un id.
   [RouteNames.CollectiviteSignup]: '/onboarding/collectivite',
   [RouteNames.CollectiviteSignupStatus]: '/collectivite-demande',
+  // RESA-INSCRIPTION (19/10/2026) — « Je gère un complexe » au choix du statut : le tunnel du
+  // gérant (E-G01), à côté de l'inscription de la mairie. Le site ne le déclare qu'interrupteur
+  // COMPLEXES_GERANT allumé (screenRegistry.tsx) ; les autres écrans du gérant : lot RESA-L7-1.
+  [RouteNames.ComplexeDevenirGerant]: '/onboarding/complexe',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',
@@ -301,6 +305,11 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-C4B (02/10/2026) — fermer, bloquer, modifier (l installation, le mode, la fermeture et le
   // jour d un blocage voyagent en parametres).
   [RouteNames.CollectiviteFermeture]: '/collectivite/:collectiviteId/fermeture',
+  // R17-SIGNALER-1 (19/10/2026) — signaler (l installation et la seance voyagent en parametres), un
+  // signalement, et les miens.
+  [RouteNames.FacilityReportNew]: '/signaler-un-probleme',
+  [RouteNames.FacilityReportDetails]: '/signalements/:reportId',
+  [RouteNames.MyFacilityReports]: '/mes-signalements',
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export.
   [RouteNames.CollectiviteChiffres]: '/collectivite/:collectiviteId/chiffres',
 };

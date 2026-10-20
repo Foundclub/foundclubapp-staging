@@ -42,6 +42,7 @@ import {
   useFacilityClosures,
   useModifyFacilityClosure,
 } from '@/services/facilityClosure/facilityClosureQueries';
+import { useCloseFacilityFromReport } from '@/services/facilityReport/facilityReportQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
@@ -99,6 +100,9 @@ const versSaisie = (jour) => {
  * Parametres : `facilityId` (ou un choix parmi les installations de `collectiviteId`), `mode`
  * (`fermer` | `bloquer`), `closureId` (Modifier : relue au serveur, une adresse du site ne porte
  * pas d objet), et pour un blocage venu du planning : `date`, `startTime`, `endTime`.
+ * R17-SIGNALER-1 (19/10, Q4 A) — venue d un SIGNALEMENT : `reportId`, et le formulaire pre-rempli
+ * (`date` = aujourd hui, `motif`, `message`) ; il part alors par le signalement, qui le fait juger
+ * par le circuit des fermetures puis le lie (planche P11-q4-exemple-tel, ecran 3).
  *
  * 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») — SUR ORDINATEUR, le formulaire vit dans le
  * PANNEAU DE DROITE du planning de l installation (« le panneau a droite, la semaine a gauche ») :
@@ -115,7 +119,9 @@ function CollectiviteFermeture() {
   );
   const navigation = /** @type {any} */ (useNavigation());
   const isDesktop = useIsDesktop();
-  const versLePlanning = isDesktop && Boolean(params.facilityId);
+  // R17-SIGNALER-1 : venu d un signalement, le formulaire reste une page (il revient au
+  // signalement).
+  const versLePlanning = isDesktop && Boolean(params.facilityId) && !params.reportId;
   const ouvrirLePanneau = useCallback((
     /** @type {string} */ facilityId,
     /** @type {string | null | undefined} */ facilityName,
@@ -277,8 +283,8 @@ function FormulaireDeFermeture({
     fin: versSaisie(existante?.endDate || params.date),
     heureDebut: String(existante?.startTime || params.startTime || '').slice(0, 5),
     heureFin: String(existante?.endTime || params.endTime || '').slice(0, 5),
-    mot: existante?.message || '',
-    motif: existante?.reason || (bloquer ? null : 'travaux'),
+    mot: existante?.message || params.message || '',
+    motif: existante?.reason || params.motif || (bloquer ? null : 'travaux'),
     nom: existante?.label || '',
   }));
   const [facilityId, setFacilityId] = useState(depart.facilityId);
@@ -364,6 +370,8 @@ function FormulaireDeFermeture({
   useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
 
   const fermer = useCloseFacility();
+  const fermerDepuisSignalement = useCloseFacilityFromReport();
+  const depuisSignalement = Boolean(params.reportId) && !modification && !bloquer;
   const modifier = useModifyFacilityClosure();
   const enCours = fermer.isPending || modifier.isPending;
   // SAIS : un blocage d avant n a qu un nom (aucun motif) ; il se modifie tel quel.
@@ -474,6 +482,20 @@ function FormulaireDeFermeture({
       }
     }
     try {
+      if (depuisSignalement) {
+        await fermerDepuisSignalement.mutateAsync({
+          data: { ...data, kind: 'closure', publishActualite: publier },
+          reportId: params.reportId,
+        });
+        setConfirmer(false);
+        sortieLibre.current = true;
+        // Retour au signalement : il est « Pris en charge », lie a la fermeture.
+        const versLeSignalement = { reportId: params.reportId };
+        if (navigation.replace) {
+          navigation.replace(RouteNames.FacilityReportDetails, versLeSignalement);
+        } else navigation.navigate?.(RouteNames.FacilityReportDetails, versLeSignalement);
+        return;
+      }
       if (modification) {
         await modifier.mutateAsync({ closureId: existante.documentId, data });
       } else {
@@ -1238,6 +1260,11 @@ function FormulaireDeFermeture({
             ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
             : titre}
         </Text>
+        {depuisSignalement ? (
+          <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="fermeture-depuis-signalement">
+            {t('facilityReports.ville.depuisSignalement', 'Depuis un signalement')}
+          </Text>
+        ) : null}
         {premierEcran ? etapeDuChoix : corps}
       </ScrollView>
       {premierEcran ? null : <View style={{ paddingBottom: 8, paddingTop: 12 }}>{pied}</View>}

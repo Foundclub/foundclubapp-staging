@@ -69,6 +69,12 @@ jest.mock('@/store/appContext', () => ({
 
 jest.mock('@/components/molecules/notificationBadge/NotificationBadge', () => () => null);
 jest.mock('@/components/molecules/profileButton/ProfileButton', () => () => null);
+// RESA-INSCRIPTION (19/10) : la feuille « Tu pratiques aussi un sport ? », doublée par son contrat.
+let mockFeuille = /** @type {any} */ (null);
+jest.mock('@/views/home/FeuillePratiqueAussi', () => function FausseFeuille(/** @type {any} */ p) {
+  mockFeuille = p;
+  return null;
+});
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;
@@ -275,6 +281,59 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     await appuyer(arbre, 'Revenir en mode entraîneur');
     expect(mockSetPlayerMode).toHaveBeenCalledWith(false);
     expect(mockReset).toHaveBeenCalledTimes(1);
+  });
+
+  // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » n'a AUCUN rôle sportif : un
+  // accueil de joueur lui offrirait des gestes que son rôle provisoire n'a pas, sans âge connu.
+  // « Voir l'app en joueur » ouvre d'abord « Tu pratiques aussi un sport ? » (PAR-L12, variante
+  // complexe) ; « Oui » le fait Joueur, puis l'accueil, où son parcours d'inscription reprend.
+  describe('RESA-INSCRIPTION — compte sans rôle sportif : « Voir l’app en joueur »', () => {
+    beforeEach(() => {
+      mockRole = 'new';
+      mockFeuille = null;
+    });
+
+    it('ouvre « Tu pratiques aussi un sport ? » (complexe), sans quitter le complexe', async () => {
+      const arbre = await monter();
+      expect(mockFeuille?.isVisible).toBe(false);
+      await appuyer(arbre, 'Voir l\'app en joueur');
+
+      expect(mockFeuille.isVisible).toBe(true);
+      expect(mockFeuille.pourLeComplexe).toBe(true);
+      expect(mockValeurs.get('user.complexe_mode.u-1')).toBe('on');
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+
+    it('« Oui » (devenu Joueur) : le mode complexe s’éteint, l’accueil revient', async () => {
+      const arbre = await monter();
+      await appuyer(arbre, 'Voir l\'app en joueur');
+      await act(async () => {
+        mockFeuille.onDone();
+      });
+
+      expect(mockValeurs.has('user.complexe_mode.u-1')).toBe(false);
+      expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+    });
+
+    it('« Pas maintenant » : la feuille se ferme, il reste sur son complexe', async () => {
+      const arbre = await monter();
+      await appuyer(arbre, 'Voir l\'app en joueur');
+      await act(async () => {
+        mockFeuille.onClose();
+      });
+
+      expect(mockFeuille.isVisible).toBe(false);
+      expect(mockValeurs.get('user.complexe_mode.u-1')).toBe('on');
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+
+    it('un joueur, lui, revient directement (inchangé) : la feuille reste fermée', async () => {
+      mockRole = 'player';
+      const arbre = await monter();
+      await appuyer(arbre, 'Voir l\'app en joueur');
+      expect(mockFeuille?.isVisible ?? false).toBe(false);
+      expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+    });
   });
 
   it('les écrans de ce lot s’ouvrent ; les autres disent « Bientôt »', async () => {

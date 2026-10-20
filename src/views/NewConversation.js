@@ -331,9 +331,12 @@ function NewConversation({ navigation, route }) {
       },
       {
         data: sectionsObj.Entraineur,
-        title: i18next.t('newConversation.sections.coaches', 'Entraîneurs'),
+        title: i18next.t('newConversation.sections.coaches', 'Coachs / Profs'),
       },
-      { data: sectionsObj.Joueur, title: i18next.t('newConversation.sections.players', 'Joueurs') },
+      {
+        data: sectionsObj.Joueur,
+        title: i18next.t('newConversation.sections.players', 'Pratiquants / Joueurs'),
+      },
       { data: sectionsObj.Autre, title: i18next.t('newConversation.sections.others', 'Autres') },
     ].filter((s) => s.data.length > 0);
 

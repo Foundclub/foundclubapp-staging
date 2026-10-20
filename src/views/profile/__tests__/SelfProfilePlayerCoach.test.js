@@ -497,7 +497,7 @@ describe('D39 · temoin 1 bis — un compte ENTRAINEUR ne voit aucun bloc de jou
     const arbre = await rendre(entraineur);
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Entraîneur');
+    expect(texte).toContain('Coach / Prof');
     expect(texte).toContain('Sport de préférence');
     expect(texte).toContain('Nationalité');
     expect(texte).toContain('Équipes entraînées');

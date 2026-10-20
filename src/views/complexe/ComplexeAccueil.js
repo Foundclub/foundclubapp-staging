@@ -41,6 +41,7 @@ import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FriseDuJour from '@/views/complexe/components/FriseDuJour';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
+import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -140,6 +141,17 @@ function ComplexeAccueil() {
     const pile = navigation.getParent?.() || navigation;
     pile.reset({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
   };
+  // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » n'a aucun rôle sportif : un
+  // accueil de joueur lui offrirait des gestes que son rôle provisoire n'a pas, sans âge connu.
+  // « Voir l'app en joueur » ouvre d'abord « Tu pratiques aussi un sport ? » (PAR-L12, variante
+  // complexe) ; « Oui » le fait Joueur, puis l'accueil, où son parcours d'inscription reprend (nom,
+  // date de naissance) ; « Pas maintenant » le laisse sur son complexe.
+  const sansRoleSportif = accountRoleKey === 'new';
+  const [feuilleJoueur, setFeuilleJoueur] = useState(false);
+  const voirLAppEnJoueur = () => {
+    if (sansRoleSportif) setFeuilleJoueur(true);
+    else revenirEnModeJoueur();
+  };
   const ecrireAFoundClub = () => {
     Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
   };
@@ -196,7 +208,7 @@ function ComplexeAccueil() {
       <TouchableOpacity
         accessibilityLabel={libelleBascule}
         accessibilityRole="button"
-        onPress={revenirEnModeJoueur}
+        onPress={voirLAppEnJoueur}
         style={[
           Alignments.alignCenter,
           ApplicationStyle.borderRadius12,
@@ -649,6 +661,15 @@ function ComplexeAccueil() {
         {avecTerrains ? alerteHier : null}
         {gerer}
       </ScrollView>
+      <FeuillePratiqueAussi
+        isVisible={feuilleJoueur}
+        onClose={() => setFeuilleJoueur(false)}
+        onDone={() => {
+          setFeuilleJoueur(false);
+          revenirEnModeJoueur();
+        }}
+        pourLeComplexe
+      />
     </ScreenContainer>
   );
 }

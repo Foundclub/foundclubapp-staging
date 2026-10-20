@@ -290,11 +290,15 @@ export const resolveClubDetailsActionMatrix = ({
   isParentClubAdmin = false,
   isPlayerRole = false,
   isUserAlreadyAttachedToViewedClub = false,
+  // R17-INVITER (19/10) — un compte « Ville seule » (isVilleOnlyAccount : aucun rôle sportif, il
+  // gère une collectivité) ouvre une fiche club pour la rattacher : il ne la dirige pas, n'y joue
+  // pas, ne l'attend pas. Aucune porte d'affiliation pour lui (« Je dirige ce club » compris).
+  isVilleOnlyAccount = false,
   minorChildrenCount = 0,
   ownerCount = 0,
 }) => {
   const showLeaveClubAction = Boolean(isAuthenticated && canLeaveClub);
-  const canShowAffiliationAction = isAuthenticated && !showLeaveClubAction;
+  const canShowAffiliationAction = isAuthenticated && !showLeaveClubAction && !isVilleOnlyAccount;
 
   const showPublicClaimLogin = !isAuthenticated;
   // D98 — la fiche club est la principale porte d'entree du produit (~28 500 pages

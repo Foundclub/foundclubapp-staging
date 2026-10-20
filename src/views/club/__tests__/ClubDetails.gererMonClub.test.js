@@ -734,7 +734,7 @@ describe('ClubDetails — D50 : « Mon club » est un hub, plus une page-fleuve'
     expect(pressableAvecTexte(arbre, 'Sports, 1')).toBeDefined();
     expect(pressableAvecTexte(arbre, 'Partenaires, 2')).toBeDefined();
     expect(pressableAvecTexte(arbre, 'Équipes, 2')).toBeDefined();
-    expect(pressableAvecTexte(arbre, 'Staff, 0 dirigeant · 0 entraîneur')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Staff, 0 dirigeant · 0 coach / prof')).toBeDefined();
   });
 
   it('suit le club quand il change : les compteurs ne sont pas ecrits en dur', () => {
@@ -755,7 +755,7 @@ describe('ClubDetails — D50 : « Mon club » est un hub, plus une page-fleuve'
     expect(pressableAvecTexte(arbre, 'Sports, 0')).toBeDefined();
     expect(pressableAvecTexte(arbre, 'Partenaires, 0')).toBeDefined();
     expect(pressableAvecTexte(arbre, 'Équipes, 1')).toBeDefined();
-    expect(pressableAvecTexte(arbre, 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Staff, 1 dirigeant · 2 coachs / profs')).toBeDefined();
   });
 
   it('chaque rangee ouvre SA sous-page, EMPILEE pour que le retour ramene au hub', () => {
@@ -769,7 +769,7 @@ describe('ClubDetails — D50 : « Mon club » est un hub, plus une page-fleuve'
     ouvrir('Sports, 1');
     ouvrir('Partenaires, 2');
     ouvrir('Équipes, 2');
-    ouvrir('Staff, 0 dirigeant · 0 entraîneur');
+    ouvrir('Staff, 0 dirigeant · 0 coach / prof');
 
     expect(/** @type {any} */ (mockNavigation.push).mock.calls.map(
       (/** @type {any} */ appel) => appel[1].section,
@@ -1035,7 +1035,7 @@ describe('ClubDetails — ROLES2 — « Staff » compte ceux qui entraînent vra
       teams: CLUB.teams.map((equipe) => ({ ...equipe, trainers: [{ documentId: 'u-1' }] })),
     };
 
-    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 1 entraîneur')).toBeDefined();
+    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 1 coach / prof')).toBeDefined();
   });
 
   it('un Entraîneur qui entraîne compte une fois ; un compte supprimé jamais', () => {
@@ -1059,7 +1059,7 @@ describe('ClubDetails — ROLES2 — « Staff » compte ceux qui entraînent vra
       ],
     };
 
-    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 2 coachs / profs')).toBeDefined();
   });
 });
 

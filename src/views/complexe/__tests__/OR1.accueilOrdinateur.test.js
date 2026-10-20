@@ -41,6 +41,9 @@ jest.mock('@/store/appContext', () => ({
 }));
 jest.mock('@/components/molecules/notificationBadge/NotificationBadge', () => () => null);
 jest.mock('@/components/molecules/profileButton/ProfileButton', () => () => null);
+// RESA-INSCRIPTION (19/10) : la feuille « Tu pratiques aussi un sport ? » (sa fenêtre du bas,
+// @gorhom/bottom-sheet, ne se charge pas sous jest) ; ce témoin ne l'ouvre pas.
+jest.mock('@/views/home/FeuillePratiqueAussi', () => () => null);
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;
