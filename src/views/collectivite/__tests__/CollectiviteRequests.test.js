@@ -69,9 +69,13 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        const valeur = String(cle || '')
+        const lire = (/** @type {string} */ chemin) => String(chemin || '')
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        // R17-QUAND-1 bis : les pluriels de i18next (« _one » / « _other ») selon count.
+        const compte = (typeof repli === 'object' && repli ? repli : options)?.count;
+        const pluriel = compte === 1 ? 'one' : 'other';
+        const valeur = lire(cle) ?? (compte === undefined ? undefined : lire(`${cle}_${pluriel}`));
         let texte = cle;
         if (typeof valeur === 'string') texte = valeur;
         else if (typeof repli === 'string') texte = repli;
@@ -327,7 +331,7 @@ describe('COLL-C3B — planche P6v2 : chaque demande est une phrase', () => {
       '2 places libres',
       'Personne n’y est : il reste 2 places.',
       'Accepter ne gêne personne.',
-      'Paul Veuillet, entraîneur',
+      'Paul Veuillet, coach / prof',
     ]));
     await appuyer(arbre, 'bouton-Accepter la série');
     expect(textes(arbre)).toContain('Accepter la série');
@@ -880,5 +884,49 @@ describe('VILLE-T18C point 4 — trancher une série : la fenêtre dit ce qui s�
       'Refus des 30 dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
     );
     await act(async () => { repondre({ data: { data: { documentId: 'rq-serie' } } }); });
+  });
+});
+
+// R17-QUAND-1 bis (19/10, tri du chef : A) — UNE SÉRIE QUI NE REVIENT PAS CHAQUE SEMAINE SE DIT
+// TELLE QUELLE. Le serveur envoie sa forme en nombres (`series.everyWeeks`,
+// `series.datesCount`) ; l'app l'écrit dans la langue de l'écran. Avant : « demande chaque
+// mercredi » et « Chaque semaine ».
+describe('R17-QUAND-1 bis — la carte d’une série dit son rythme', () => {
+  const UN_SUR_DEUX = { ...SERIE, series: { ...SERIE.series, datesCount: null, everyWeeks: 2 } };
+  const TROIS_DATES = { ...SERIE, series: { ...SERIE.series, datesCount: 3, everyWeeks: 1 } };
+
+  it('« un mercredi sur deux » : la phrase et la pastille « 1 sem. sur 2 »', async () => {
+    mockEnAttente = [UN_SUR_DEUX];
+    // eslint-disable-next-line max-len
+    const phrase = `Montrivage Basket demande un mercredi sur deux, de ${heure(SERIE.requestedStart)} à ${heure(SERIE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 30 juin.`;
+    const lus = textes(await monter((l) => l.includes(phrase)));
+    expect(lus).toEqual(expect.arrayContaining([phrase, '1 sem. sur 2']));
+    expect(lus).not.toContain('Chaque semaine');
+  });
+
+  it('sur ordinateur, la phrase courte de la file dit aussi « un mercredi sur deux »', async () => {
+    mockDimensions = ORDINATEUR;
+    mockEnAttente = [UN_SUR_DEUX];
+    // eslint-disable-next-line max-len
+    const courte = `Montrivage Basket demande un mercredi sur deux, ${heure(SERIE.requestedStart)} – ${heure(SERIE.requestedEnd)}, au Gymnase de la Recette (Seniors Basket).`;
+    expect(textes(await monter((l) => l.includes(courte)))).toContain(courte);
+  });
+
+  it('des jours différents : « demande 3 dates », pastille « 3 dates »', async () => {
+    mockEnAttente = [TROIS_DATES];
+    // eslint-disable-next-line max-len
+    const phrase = `Montrivage Basket demande 3 dates, de ${heure(SERIE.requestedStart)} à ${heure(SERIE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 30 juin.`;
+    const lus = textes(await monter((l) => l.includes(phrase)));
+    expect(lus).toEqual(expect.arrayContaining([phrase, '3 dates']));
+    expect(lus.join(' | ')).not.toMatch(/chaque mercredi/i);
+  });
+
+  // eslint-disable-next-line max-len
+  it('sans forme (serveur d’avant) : la phrase d’avant, « chaque mercredi » et « Chaque semaine »', async () => {
+    mockEnAttente = [SERIE];
+    // eslint-disable-next-line max-len
+    const phrase = `Montrivage Basket demande chaque mercredi, de ${heure(SERIE.requestedStart)} à ${heure(SERIE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 30 juin.`;
+    const lus = textes(await monter((l) => l.includes(phrase)));
+    expect(lus).toEqual(expect.arrayContaining([phrase, 'Chaque semaine']));
   });
 });

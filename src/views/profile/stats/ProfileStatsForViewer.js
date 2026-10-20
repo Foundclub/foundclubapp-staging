@@ -182,7 +182,7 @@ function ProfileStatsForViewer({
             }}
           >
             <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
-              {t('profileStats.coachBadge', 'Entraîneur')}
+              {t('profileStats.coachBadge', 'Coach / Prof')}
             </Text>
           </View>
         ) : null}

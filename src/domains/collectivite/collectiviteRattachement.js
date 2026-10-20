@@ -18,8 +18,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /** @typedef {(cle: string, defaut?: any, valeurs?: Record<string, unknown>) => string} Traduire */
 /**
- * @typedef {'rattache'|'ailleurs'|'aRepondre'|'envoyee'|'refusee'|'sansDirigeant'|'envoyer'}
- *   GesteDeRecherche
+ * @typedef {'rattache'|'ailleurs'|'aRepondre'|'envoyee'|'attendDirigeant'|'refusee'
+ *   |'sansDirigeant'|'envoyer'} GesteDeLaVille
  */
 
 /**
@@ -33,23 +33,35 @@ export const villeSujet = (nom) => {
 };
 
 /**
- * Le geste que propose la ligne d'un club dans la recherche de la Ville.
+ * R17-INVITER (19/10/2026, REC17-009) — le geste que la carte d'un club propose à la Ville, dans
+ * la recherche HABITUELLE (qui ne rend que des clubs) : son état se lit dans les demandes de la
+ * Ville, et dans le refus du serveur quand elle vient d'appuyer (les 409 existants, en mots).
  * - `rattache` : déjà dans ses clubs ; `ailleurs` : rattaché à une autre collectivité ;
  * - `aRepondre` : le club a DÉJÀ demandé par le lien : la Ville accepte sa demande ;
- * - `envoyee` / `refusee` : la demande de la Ville attend, ou a été refusée (elle ne se
- *   renvoie pas) ;
- * - `sansDirigeant` : personne ne pourrait accepter : l'inviter par le lien ;
- * - `envoyer` : « Envoyer la demande ».
- * @param {any} club - Une ligne de `GET /collectivites/:id/club-search`.
- * @returns {GesteDeRecherche} Le geste.
+ * - `envoyee` : la demande de la Ville attend la réponse de ses dirigeants ;
+ * - `attendDirigeant` : elle attend le PREMIER dirigeant du club (personne ne le dirige encore) ;
+ * - `refusee` : le club a refusé (« refus B » : la Ville peut la renvoyer) ;
+ * - `sansDirigeant` : le serveur d'avant R17-INVITER refuse un club sans dirigeant : le lien ;
+ * - `envoyer` : « Ce club fait partie de ma collectivité ».
+ * @param {any} demandes - `GET /collectivites/:id/club-requests` (les deux sens).
+ * @param {string} clubId - documentId du club de la carte.
+ * @param {string} [codeDeRefus] - Le code du refus du serveur au dernier appui, s'il y en a un.
+ * @returns {GesteDeLaVille} Le geste.
  */
-export const gesteDeRecherche = (club) => {
-  if (club?.attached) return 'rattache';
-  if (club?.attachedElsewhere) return 'ailleurs';
-  if (club?.request?.state === 'pending') return 'aRepondre';
-  if (club?.proposal?.state === 'pending') return 'envoyee';
-  if (club?.proposal?.state === 'refused') return 'refusee';
-  if (!club?.hasLeader) return 'sansDirigeant';
+export const gesteDeLaVille = (demandes, clubId, codeDeRefus = '') => {
+  if (codeDeRefus === 'COLLECTIVITE_CLUB_ALREADY_ATTACHED') return 'ailleurs';
+  if (codeDeRefus === 'COLLECTIVITE_CLUB_WITHOUT_LEADER') return 'sansDirigeant';
+  const lignes = (Array.isArray(demandes) ? demandes : [])
+    .filter((demande) => demande?.club?.documentId === clubId);
+  const proposition = lignes.find((demande) => demande?.kind === 'proposal');
+  const demandeDuClub = lignes.find((demande) => demande?.kind === 'attach_request');
+  if (lignes.some((demande) => demande?.state === 'attached')) return 'rattache';
+  if (lignes.some((demande) => demande?.attachedElsewhere === true)) return 'ailleurs';
+  if (demandeDuClub?.state === 'pending') return 'aRepondre';
+  if (proposition?.state === 'pending') {
+    return proposition.awaitingLeader === true ? 'attendDirigeant' : 'envoyee';
+  }
+  if (proposition?.state === 'refused') return 'refusee';
   return 'envoyer';
 };
 
@@ -131,10 +143,16 @@ export const etatDeDemandeVille = (t, demande) => {
   }
   if (!venueDuClub) {
     return {
-      ligne: t(
-        'collectiviteRattachement.ville.pendingProposal',
-        'Envoyée au club : ses dirigeants acceptent ou refusent.',
-      ),
+      // R17-INVITER (19/10) : personne ne dirige encore le club ; le premier qui arrive la reçoit.
+      ligne: demande?.awaitingLeader === true
+        ? t(
+          'collectiviteRattachement.ville.awaitingLeader',
+          'Demande enregistrée : elle attend le premier dirigeant du club.',
+        )
+        : t(
+          'collectiviteRattachement.ville.pendingProposal',
+          'Envoyée au club : ses dirigeants acceptent ou refusent.',
+        ),
       pastille: t('collectiviteRattachement.ville.pending', 'En attente'),
       ton: 'neutre',
     };
@@ -238,3 +256,28 @@ export const demandeCouranteDuClub = (demandes) => {
  * en un appui dans la fenêtre « Refuser la demande » (celle des créneaux), chacun par sa clé.
  */
 export const MOTIFS_DE_REFUS_RATTACHEMENT = Object.freeze(['horsCommune', 'inconnu', 'doublon']);
+
+/**
+ * R17-INVITER (19/10/2026) — un compte sans rôle sportif : rôle « Authenticated », ou aucun.
+ * ponytail: lu ici sans `getUserRoleKey` (authUseCases est doublé par les 15 témoins de la fiche
+ * du club, qui lit cette règle) : un nom de rôle INCONNU n'est pas « sans rôle sportif » ici, alors
+ * que getUserRoleKey le range en `new` ; voie de sortie : sortir getUserRoleKey dans un module pur.
+ * @param {any} role - `userData.role`.
+ * @returns {boolean} Vrai sans rôle sportif.
+ */
+export const estSansRoleSportif = (role) => (
+  ['', 'authenticated'].includes(String(role?.type || role?.name || '').trim().toLowerCase())
+);
+
+/**
+ * R17-INVITER — un compte « Ville seule » vu d'un écran partagé (la fiche du club) : sans rôle
+ * sportif, et au moins une collectivité gérée — la règle d'isVilleOnlyAccount
+ * (collectiviteAccueil), sans la demande de gestion en cours. Un compte mixte (dirigeant qui gère
+ * aussi une Ville) n'en est pas un.
+ * @param {any} role - `userData.role`.
+ * @param {unknown} villesGerees - `GET /collectivites/mine`.
+ * @returns {boolean} Vrai pour un compte Ville seule.
+ */
+export const estUneVilleSeule = (role, villesGerees) => (
+  estSansRoleSportif(role) && Array.isArray(villesGerees) && villesGerees.length > 0
+);

@@ -695,13 +695,13 @@ function TeamListContent({
       } else if (!isParentTeamList && isSelfTrainer) {
         badge = {
           color: Colors.primary500,
-          label: t('teamList.badges.coach', 'COACH'),
+          label: t('teamList.badges.coach', 'COACH / PROF'),
           tone: 'primary500',
         };
       } else if (!isParentTeamList && isSelfPlayer) {
         badge = {
           color: Colors.primary500,
-          label: t('teamList.badges.player', 'JOUEUR·SE'),
+          label: t('teamList.badges.player', 'PRATIQUANT·E / JOUEUR·SE'),
           tone: 'primary500',
         };
       }
@@ -908,7 +908,7 @@ function TeamListContent({
               >
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{trainerCount}</Text>
                 <Text style={[Fonts.p4, Fonts.neutral300]}>
-                  {t('teamList.stats.trainers', 'Entraîneur·e·s')}
+                  {t('teamList.stats.trainers', 'Coachs / Profs')}
                 </Text>
               </View>
             </View>

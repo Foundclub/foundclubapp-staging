@@ -1037,13 +1037,13 @@ const licenseTargetRolePills = [
   {
     key: USER_ROLES.coach,
     get label() {
-      return i18next.t('clubLicenseCampaignSettings.targetRoles.coaches', 'Entraîneurs');
+      return i18next.t('clubLicenseCampaignSettings.targetRoles.coaches', 'Coachs / Profs');
     },
   },
   {
     key: USER_ROLES.player,
     get label() {
-      return i18next.t('clubLicenseCampaignSettings.targetRoles.players', 'Joueurs');
+      return i18next.t('clubLicenseCampaignSettings.targetRoles.players', 'Pratiquants / Joueurs');
     },
   },
 ];
@@ -3365,7 +3365,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if (selectedTargetRole === USER_ROLES.player) {
       return t(
         'clubLicenseCampaignSettings.review.audience.players',
-        'Joueurs · {{teamCount}} équipe(s)',
+        'Pratiquants / Joueurs · {{teamCount}} équipe(s)',
         { teamCount: targetConfig.teamIds.length, ...SANS_ECHAPPEMENT },
       );
     }

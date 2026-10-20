@@ -51,8 +51,11 @@ jest.mock('@/services/admin/adminQueries', () => ({
   }),
 }));
 
+/** @type {any[]} */
+let mockRoles = [];
+
 jest.mock('@/services/auth/authQueries', () => ({
-  useGetRoles: () => ({ data: { roles: [] }, isLoading: false }),
+  useGetRoles: () => ({ data: { roles: mockRoles }, isLoading: false }),
 }));
 
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -165,6 +168,7 @@ const texteDe = (arbre) => {
 };
 
 beforeEach(() => {
+  mockRoles = [];
   mockSuppressions = [];
   mockMisesAJour = [];
   mockUtilisateur = {
@@ -218,4 +222,19 @@ test('FICHE/3 — tant que la personne n est pas chargee, aucune suppression n e
   const arbre = monter();
 
   expect(texteDe(arbre)).not.toContain('Supprimer le compte');
+});
+
+test('FICHE/4 — R17-ROLES : les boutons de role disent « Coach / Prof »', () => {
+  // REC17-006 : le nom technique du serveur ne s affiche plus ; un role hors club garde son nom.
+  mockRoles = [
+    { id: 3, name: 'Joueur', type: 'joueur' },
+    { id: 4, name: 'Entraineur', type: 'entraineur' },
+    { id: 9, name: 'SuperAdmin', type: 'superadmin' },
+  ];
+  const texte = texteDe(monter());
+
+  expect(texte).toContain('Pratiquant / Joueur');
+  expect(texte).toContain('Coach / Prof');
+  expect(texte).toContain('SuperAdmin');
+  expect(texte).not.toContain('Entraineur');
 });

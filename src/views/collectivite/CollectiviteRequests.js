@@ -23,6 +23,8 @@ import {
   lieuAvecPreposition,
   momentDeLaDemande,
   occupantsParHoraire,
+  pastilleDuRythme,
+  rythmeDeLaSerie,
 } from '@/domains/collectivite/collectiviteDemandes';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
 import { unSeulPointFinal } from '@/domains/seasonSlot/seasonSlotDisplay';
@@ -131,6 +133,8 @@ function CollectiviteRequests() {
       jourSemaine: moment?.jourSemaine || '',
       jusquAu: moment?.jusquAu || '',
       lieu: lieuAvecPreposition(demande?.facility?.name, t),
+      // R17-QUAND-1 bis — « chaque mercredi », « un mercredi sur deux », « 3 dates ».
+      rythme: rythmeDeLaSerie(t, demande, moment?.jourSemaine || ''),
       ...SANS_ECHAPPEMENT,
     };
     // 🗓️ VILLE-T18C (07/10, tournée T18 G51) — une carte REFUSÉE d'une seule date d'une série
@@ -140,7 +144,7 @@ function CollectiviteRequests() {
     if (courte) {
       return hebdo
         // eslint-disable-next-line max-len
-        ? t('collectiviteDemandes.phraseCourte.serie', '{{club}} demande chaque {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).', valeurs)
+        ? t('collectiviteDemandes.phraseCourte.serie', '{{club}} demande {{rythme}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).', valeurs)
         // eslint-disable-next-line max-len
         : t('collectiviteDemandes.phraseCourte.unique', '{{club}} demande le {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).', valeurs);
     }
@@ -148,13 +152,13 @@ function CollectiviteRequests() {
       return t(
         'collectiviteDemandes.phrase.serie',
         // eslint-disable-next-line max-len
-        '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
+        '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
         valeurs,
       );
     }
     if (hebdo) {
       // eslint-disable-next-line max-len
-      return t('collectiviteDemandes.phrase.serieSansFin', '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.', valeurs);
+      return t('collectiviteDemandes.phrase.serieSansFin', '{{club}} demande {{rythme}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.', valeurs);
     }
     // eslint-disable-next-line max-len
     return t('collectiviteDemandes.phrase.unique', '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.', valeurs);
@@ -263,8 +267,9 @@ function CollectiviteRequests() {
     const place = demande?.status === 'pending' ? pastilleDePlace(demande) : null;
     // VILLE-T18C (07/10) — une carte refusée d'une série : ses dates, pas « Chaque semaine ».
     const refusees = datesRefuseesDUneSerie(demande);
+    // R17-QUAND-1 bis — « 1 sem. sur 2 », « 3 dates » : la pastille dit le rythme de la série.
     let frequence = estDemandeHebdo(demande)
-      ? t('collectiviteDemandes.pastille.chaqueSemaine', 'Chaque semaine')
+      ? pastilleDuRythme(t, demande)
       : t('collectiviteDemandes.pastille.uneFois', 'Une fois');
     if (refusees === 1) {
       frequence = t('collectiviteDemandes.pastille.uneDateDeLaSerie', 'Une date de la série');
@@ -474,7 +479,7 @@ function CollectiviteRequests() {
     // eslint-disable-next-line max-len
     if (demande?.requesterFunction === 'manager') fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
     // eslint-disable-next-line max-len
-    if (demande?.requesterFunction === 'trainer') fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+    if (demande?.requesterFunction === 'trainer') fonction = t('collectiviteDemandes.fonction.trainer', 'coach / prof');
     return [personne, fonction].filter(Boolean).join(', ');
   };
 

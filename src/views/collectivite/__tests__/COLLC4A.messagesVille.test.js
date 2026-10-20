@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import CanauxDeLaVille from '../components/CanauxDeLaVille';
@@ -10,9 +9,9 @@ import CanauxDeLaVille from '../components/CanauxDeLaVille';
 // membre (design HY521H1 page 3, « P3v2-messages-tel » écran 1 ; « P3c-canal-tel » écrans 3 et 7).
 //
 // Ce que ce témoin fige (ROUGE avant le lot : aucun canal de la Ville dans la messagerie) :
-//   - dans l'espace de la Ville : « Actualités de la Ville de … », lu par les membres de n clubs
-//     (« eux ne répondent pas »), qui mène à « Actualités de la Ville » ; « Publier une
-//     actualité » ; puis « Conversations » ;
+//   - dans l'espace de la Ville : RIEN au-dessus des conversations depuis R17-CANAUX (19/10) —
+//     les cartes « Actualités de la Ville de … », « Dirigeants des clubs » et le bouton « Publier
+//     une actualité » ont quitté « Messages » ;
 //   - dans la messagerie d'un membre (dirigeant, entraîneur, joueur, parent) : épinglé en tête,
 //     pour chaque Ville de ses clubs, « Actualités de la Ville » et la dernière, vers le canal ;
 //   - sans Ville : rien ; l'onglet « Messages » de la Ville dit qu'il vient de son espace.
@@ -67,8 +66,10 @@ jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
 }));
 // COLL-C4A2 (02/10) : la section porte aussi le canal des dirigeants (son propre témoin :
 // COLLC4A2.canal.test.js). Ici, aucun canal : ce témoin reste celui des actualités.
+// R17-CANAUX (19/10) : l'appel est COMPTÉ — c'est lui qui crée les canaux de la Ville au serveur.
+const mockMesCanaux = jest.fn(() => ({ data: [] }));
 jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
-  useMesCanauxDeLaVille: () => ({ data: [] }),
+  useMesCanauxDeLaVille: () => mockMesCanaux(),
 }));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({
@@ -86,12 +87,6 @@ const SUBVENTIONS = {
   title: 'Subventions 2027',
 };
 
-const aplatirTexte = (/** @type {any} */ enfants) => {
-  if (Array.isArray(enfants)) return enfants.map(aplatirTexte).join('');
-  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
-  if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
-  return String(enfants);
-};
 const monter = async (/** @type {any} */ element) => {
   /** @type {any} */
   let arbre;
@@ -100,41 +95,28 @@ const monter = async (/** @type {any} */ element) => {
   });
   return arbre;
 };
-const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
-  .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
-const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
-  const noeud = arbre.root.findAll(
-    (/** @type {any} */ n) => n.props?.testID === testID && typeof n.type !== 'string',
-  )[0];
-  await act(async () => {
-    noeud.props.onPress();
-  });
-};
 const navigation = { navigate: mockNavigate };
 
 beforeEach(() => {
   mockMine = { data: { actualites: [SUBVENTIONS], collectivites: [VILLE] } };
   mockMesCollectivites = { data: [VILLE] };
   mockNavigate.mockReset();
+  mockMesCanaux.mockClear();
 });
 
 describe('COLL-C4A — planche 4 : l onglet « Messages » de la Ville', () => {
-  it('« Actualités de la Ville de … », lu par 3 clubs, vers ses actualités', async () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004) — RÉÉCRIT. Adel : « la messagerie ne doit être que sous
+  // forme de message ». Avant : deux cartes (« Actualités de la Ville de … », « Dirigeants des
+  // clubs ») et un gros bouton « Publier une actualité » AU-DESSUS des conversations. Après : rien
+  // au-dessus — « Dirigeants des clubs » et « Toute la ville » sont des lignes de la liste, et
+  // « Publier une actualité » reste à ses 4 autres places (R17CANAUX.publierAilleurs.test.js).
+  it('R17-CANAUX : ni carte ni « Publier » au-dessus des conversations', async () => {
     const arbre = await monter(
       <CanauxDeLaVille collectiviteId="ville-de-recette" espaceVille navigation={navigation} />,
     );
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Actualités de la Ville de Montrivage',
-      'Lu par les membres de 3 clubs · eux ne répondent pas',
-      'Publier une actualité',
-      'Conversations',
-    ]));
-    await appuyer(arbre, 'canal-actualites-mairie');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualites', { collectiviteId: 'ville-de-recette' });
-    await appuyer(arbre, 'canaux-publier');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualiteForm', { collectiviteId: 'ville-de-recette' });
+    expect(arbre.toJSON()).toBeNull();
+    // Les canaux de la Ville se créent au serveur à la première demande : elle part toujours.
+    expect(mockMesCanaux).toHaveBeenCalled();
   });
 
   it('un compte qui ne gère plus cette Ville : rien', async () => {
@@ -146,20 +128,71 @@ describe('COLL-C4A — planche 4 : l onglet « Messages » de la Ville', () => {
   });
 });
 
-describe('COLL-C4A — planche 4 : le canal épinglé dans la messagerie du membre', () => {
-  it('pour chaque Ville de ses clubs : « Actualités de la Ville » et la dernière', async () => {
+describe('COLL-C4A — planche 4 : la messagerie du membre', () => {
+  // 🏛️ R17-CANAUX (19/10, REC17-004, correction 2 du chef, §1 ter) — RÉÉCRIT. Côté membre, le
+  // bloc épinglé (« Dirigeants des clubs », « Actualités de la Ville », « Ton club ») doublait la
+  // ligne « Toute la ville » : il est parti. Les canaux sont des LIGNES de la liste
+  // (MessagingIPH09.liste.test.js) ; la demande « mes canaux » part toujours (création au serveur).
+  // ⏳ GARDE (19/10, décision « C » du chef) : le site part de staging AVANT le serveur CANAUX.
+  // Tant que la liste ne porte pas la ligne « Toute la ville » d'une Ville, la carte « Actualités
+  // de la Ville » de cette Ville reste (celle d'avant, sans le canal des dirigeants ni « Ton
+  // club ») ; la ligne arrivée, la carte part — jamais les deux. Sortie : avec le garde.
+  const TOUTE = { collectivite: VILLE, documentId: 'toute-la-ville', type: 'collectivite_ville' };
+  const lesTextes = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.children === 'string',
+  ).map((/** @type {any} */ n) => n.props.children);
+  // La carte la plus haute seulement (le composant et ses couches portent le même testID).
+  const carte = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === `canal-actualites-${id}`
+      && typeof n.props?.onPress === 'function'
+      && n.parent?.props?.testID !== `canal-actualites-${id}`,
+  );
+
+  it('GARDE, serveur d’avant : sans « Toute la ville », la carte reste', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(1);
+    expect(lesTextes(arbre)).toEqual(expect.arrayContaining([
+      'Ville de Montrivage', 'Actualités de la Ville',
+    ]));
+    // Ni le canal des dirigeants (une LIGNE de la liste), ni « Ton club » : la carte seule.
+    expect(lesTextes(arbre)).not.toContain('Dirigeants des clubs');
+    expect(lesTextes(arbre)).not.toContain('Ton club');
+    act(() => carte(arbre, 'ville-de-recette')[0].props.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteActualitesCanal', {
+      collectiviteId: 'ville-de-recette',
+    });
+    expect(mockMesCanaux).toHaveBeenCalled();
+  });
+
+  it('GARDE, serveur CANAUX : la ligne « Toute la ville » est là ⇒ plus de carte', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} navigation={navigation} />);
+    expect(arbre.toJSON()).toBeNull();
+    expect(mockMesCanaux).toHaveBeenCalled();
+  });
+
+  it('GARDE, Ville par Ville : seule la Ville sans sa ligne garde sa carte', async () => {
+    const AUTRE = { documentId: 'autre-ville', name: 'Ville de Bellerive' };
+    mockMine = { data: { actualites: [SUBVENTIONS], collectivites: [VILLE, AUTRE] } };
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(0);
+    expect(carte(arbre, 'autre-ville')).toHaveLength(1);
+  });
+
+  it('GARDE, un mineur : jamais la ligne (« B »), la carte suit sa règle d’avant', async () => {
+    const arbre = await monter(<CanauxDeLaVille chats={[TOUTE]} mineur navigation={navigation} />);
+    expect(carte(arbre, 'ville-de-recette')).toHaveLength(1);
+  });
+
+  it('GARDE : liste pas encore lue, rien (la carte ne clignote pas)', async () => {
     const arbre = await monter(<CanauxDeLaVille navigation={navigation} />);
-    const lus = textes(arbre);
-    expect(lus).toEqual(expect.arrayContaining(['Ville de Montrivage', 'Actualités de la Ville']));
-    expect(lus.some((texte) => texte.endsWith('· Subventions 2027'))).toBe(true);
-    await appuyer(arbre, 'canal-actualites-ville-de-recette');
-    expect(mockNavigate)
-      .toHaveBeenCalledWith('CollectiviteActualitesCanal', { collectiviteId: 'ville-de-recette' });
+    expect(arbre.toJSON()).toBeNull();
+    expect(mockMesCanaux).toHaveBeenCalled();
   });
 
   it('un club rattaché à aucune Ville : rien', async () => {
     mockMine = { data: { actualites: [], collectivites: [] } };
-    expect((await monter(<CanauxDeLaVille navigation={navigation} />)).toJSON()).toBeNull();
+    expect((await monter(<CanauxDeLaVille chats={[]} navigation={navigation} />)).toJSON())
+      .toBeNull();
   });
 
   it('l onglet Messages de la Ville conserve sa portee et son espace', () => {

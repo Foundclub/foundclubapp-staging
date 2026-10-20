@@ -5,6 +5,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import {
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -45,6 +46,8 @@ import {
   getPlanningRange,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
+
+import useVueInitiale from '@/hooks/useVueInitiale';
 
 /** @typedef {{ documentId?: string; name?: string; planningColor?: string }} NamedEntity */
 
@@ -139,6 +142,38 @@ function CMPlanningContent({
     [planningData?.data],
   );
 
+  // 🗓️ R17-VUE (19/10, REC17-010) — a l arrivee, la semaine vide mais un evenement plus tard ⇒
+  // le mois de ce prochain evenement (UNE lecture bornee, la meme source que la page) ; un choix
+  // fait a la main l emporte.
+  const appliquerLaVue = useCallback((/** @type {{ date: Date, vue: string }} */ decision) => {
+    if (decision.vue === 'week') return;
+    setViewMode(decision.vue);
+    setCurrentDate(decision.date);
+  }, []);
+  const lectureDeLaSuite = useMemo(() => ({
+    queryFn: (/** @type {{ from: string, to: string }} */ plage) => getCMPlanning(cmId, {
+      ...plage,
+      installationId: selectedFacilityId || undefined,
+      sectionId: selectedSectionId || undefined,
+    }),
+    queryKey: ['cm-planning', cmId, selectedSectionId, selectedFacilityId],
+  }), [cmId, selectedFacilityId, selectedSectionId]);
+  const { enDecision, garderLeChoix } = useVueInitiale({
+    actif: Boolean(cmId) && !error,
+    appliquer: appliquerLaVue,
+    evenements: planningData ? (planningData.data || []) : undefined,
+    lectureDeLaSuite,
+    vueDeBase: 'week',
+  });
+  const choisirLaVue = useCallback((/** @type {string} */ vue) => {
+    garderLeChoix();
+    setViewMode(vue);
+  }, [garderLeChoix]);
+  const choisirLaDate = useCallback((/** @type {Date} */ date) => {
+    garderLeChoix();
+    setCurrentDate(date);
+  }, [garderLeChoix]);
+
   const sortedListEvents = useMemo(() => {
     const compareDate = startOfDay(listStartDate);
 
@@ -218,7 +253,7 @@ function CMPlanningContent({
     <PlanningCalendarView
       currentDate={currentDate}
       events={events}
-      onDateSelect={setCurrentDate}
+      onDateSelect={choisirLaDate}
       onEventPress={handleEventPress}
     />
   ) : (
@@ -227,7 +262,7 @@ function CMPlanningContent({
       events={events}
       expandToContent
       mode={viewMode}
-      onDateChange={setCurrentDate}
+      onDateChange={choisirLaDate}
       onEventPress={handleEventPress}
       onSummaryPress={handleSummaryPress}
       scrollEnabled={false}
@@ -302,7 +337,7 @@ function CMPlanningContent({
           <View style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
-              onChange={setViewMode}
+              onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
             />
@@ -361,7 +396,7 @@ function CMPlanningContent({
 
       <WithDataWrapper
         error={error}
-        isLoading={isLoading}
+        isLoading={isLoading || enDecision}
         wrapperStyle={[pagePaddingStyle, Spaces.gap[24]]}
       >
         <View style={[Spaces.gap[24]]}>
