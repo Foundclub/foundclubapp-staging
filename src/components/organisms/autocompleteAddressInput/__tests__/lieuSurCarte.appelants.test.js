@@ -30,6 +30,9 @@ const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 const LE_CHAMP = 'components/organisms/autocompleteAddressInput/';
 
 const LIEU_PUBLIC = [
+  // R17-EVT-1-BIS (e) (20/10) : 35 — l'événement de la Ville « Ailleurs dans la commune » (place,
+  // parc, salle des fêtes) : un lieu PUBLIC, avec le lien.
+  'components/organisms/evenementVille/EvenementVilleForm.js',
   'components/organisms/facilitySelector/FacilitySelector.js',
   'views/admin/clubWizard/AdminClubWizardAddress.js',
   'views/club/ClubEdit.js',
@@ -77,8 +80,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (34 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(34);
+  it('la carte des appelants tient toujours (35 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(35);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {

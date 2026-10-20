@@ -51,8 +51,25 @@ export const etapesDuTunnel = ({ ailleurs = false, depuisUneCase = false } = {})
  *   - Ce que la case du planning sait déjà (jour AAAA-MM-JJ, heures HH:MM).
  * @returns {any} L'état.
  */
+/**
+ * R17-EVT-1-BIS (e) : le point d'une adresse choisie (`{ lat, lng }`), ou null.
+ * @param {any} lieu - Une option de la saisie d'adresse, ou la vue du serveur.
+ * @returns {{ lat: number, lng: number } | null} Le point.
+ */
+const pointDe = (lieu) => {
+  // ⛔ Number(null) vaut 0 : sans ce garde, un lieu sans point serait au large du Golfe de Guinée.
+  const nombre = (/** @type {any} */ valeur) => (
+    valeur === null || valeur === undefined || valeur === '' ? Number.NaN : Number(valeur)
+  );
+  const lat = nombre(lieu?.lat);
+  const lng = nombre(lieu?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+};
+
 export const etatInitial = (initial = {}) => ({
   adresse: '',
+  // R17-EVT-1-BIS (e) : l'adresse « ailleurs » choisie dans la saisie partagée, ou null.
+  adresseLieu: null,
   // R17-EVT-1-BIS (f) : l'affiche (`{ id, url }`, id null pour celle déjà en place) ; le corps ne
   // la porte que si elle a changé (`afficheModifiee`).
   affiche: null,
@@ -80,6 +97,9 @@ export const etatInitial = (initial = {}) => ({
 export const etatDepuisLaVue = (vue) => ({
   ...etatInitial(),
   adresse: vue?.address || '',
+  adresseLieu: pointDe(vue?.addressLocation)
+    ? { label: vue?.address || '', ...pointDe(vue?.addressLocation) }
+    : null,
   affiche: vue?.poster?.url ? { id: null, url: vue.poster.url } : null,
   ailleurs: !vue?.facility?.documentId,
   audience: vue?.audience || 'dirigeants',
@@ -141,6 +161,8 @@ export const versCorpsDeLApi = (etat) => {
   return {
     data: {
       address: etat?.ailleurs ? String(etat?.adresse || '').trim() : null,
+      // R17-EVT-1-BIS (e) : « ailleurs », son point sur la carte (null s'il n'est que du texte).
+      ...(etat?.ailleurs ? { addressLocation: pointDe(etat?.adresseLieu) } : {}),
       audience,
       description: description || null,
       endDate: etat?.plusieursJours && etat?.dateFin ? etat.dateFin : null,

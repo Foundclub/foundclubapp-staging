@@ -27,6 +27,8 @@ import {
 
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
+import { openExternalMap } from '@/platform/maps/externalMap';
+
 /**
  * 🏛️ R17-EVT-1 (20/10/2026, REC17-005) — LA FICHE D'UN ÉVÉNEMENT DE LA VILLE.
  * Planches : P10-evenement-ordi (état 8 : « son panneau » ; état 9 : « Annuler l'événement »),
@@ -104,6 +106,15 @@ function EvenementDeLaVille() {
       facilityId: evenement.facility.documentId,
       sourceType: 'facility',
       ...(deLaVille ? { espace: 'ville' } : {}),
+    })
+    : null;
+  // R17-EVT-1-BIS (e) : « ailleurs », placé sur la carte : le lieu s'ouvre dans l'appli de cartes
+  // (comme le lieu d'une séance).
+  const ouvrirLaCarte = !ouvrirLePlanning && evenement.addressLocation
+    ? () => openExternalMap({
+      label: evenement.address || '',
+      latitude: evenement.addressLocation.lat,
+      longitude: evenement.addressLocation.lng,
     })
     : null;
 
@@ -216,7 +227,7 @@ function EvenementDeLaVille() {
           {ligne({ icone: 'calendar', testID: 'evenement-quand', texte: quand })}
           {ligne({
             icone: 'stadium',
-            onPress: ouvrirLePlanning,
+            onPress: ouvrirLePlanning || ouvrirLaCarte,
             testID: 'evenement-lieu',
             texte: lieu,
           })}
