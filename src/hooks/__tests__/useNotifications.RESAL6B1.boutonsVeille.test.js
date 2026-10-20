@@ -62,6 +62,15 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
+// MSGNOTIF (staging 20/10) — useNotifications relit le fil (rattrapageDuFil → chatService → client
+// HTTP) : le client est doublé, comme dans le banc FINITIONS7.
+jest.mock('@/services/client', () => ({
+  __esModule: true,
+  default: {
+    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+  },
+}));
+
 jest.mock('@/services/auth/authService', () => ({
   addDeviceToken: jest.fn(async () => ({ data: { documentId: 'inst-1' } })),
   addDeviceTokenForSession: (...args) => mockAddDeviceTokenForSession(...args),
