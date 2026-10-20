@@ -34,13 +34,18 @@ const partLaPlusBasse = (creneaux) => {
  * les sports, les prochains créneaux VRAIMENT libres en puces (RC-P01 : le serveur ne rend que
  * ceux-là), « dès 6 € par joueur », et « Téléphone seulement » si tous ses terrains le sont.
  * ⛔ Ni « Favori » ni les partenaires qui défilent : lots L4 (serveur) puis L6b.
+ * RESA-CARTE (20/10) : `choisie`, la carte du complexe dont l'épingle est touchée (liseré cyan
+ * plein, planches EP01 état 2 et OR2).
  * @param {object} props - Les propriétés.
  * @param {any} props.carte - Une carte de `GET /public-complexes`.
+ * @param {boolean} [props.choisie] - Son épingle est la choisie.
  * @param {(creneau: any) => void} props.onCreneau - Toucher un créneau (E-P03).
  * @param {() => void} props.onOuvrir - Toucher la carte (E-P02).
  * @returns {import('react').ReactElement} La carte.
  */
-function CarteComplexeRecherche({ carte, onCreneau, onOuvrir }) {
+function CarteComplexeRecherche({
+  carte, choisie = false, onCreneau, onOuvrir,
+}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images,
@@ -62,7 +67,7 @@ function CarteComplexeRecherche({ carte, onCreneau, onOuvrir }) {
         ApplicationStyle.borderRadius24,
         {
           backgroundColor: withAlpha(Colors.primary800, 0.6),
-          borderColor: withAlpha(Colors.primary500, 0.24),
+          borderColor: choisie ? Colors.primary500 : withAlpha(Colors.primary500, 0.24),
           borderWidth: 1,
           gap: 12,
           padding: 16,

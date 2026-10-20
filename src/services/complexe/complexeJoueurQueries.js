@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation, useQueries, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 
 import {
   annulerMaReservation,
@@ -61,6 +63,34 @@ export const useComplexePublic = (slug) => useQuery({
   queryFn: async () => donnees(await lireComplexePublic(String(slug))),
   queryKey: [...LECTURE_PUBLIQUE_CLEF, 'page', slug],
   staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P01, vue Carte (RESA-CARTE, 20/10/2026) — les pages publiques des complexes proposés, pour
+ * leur POSITION : la recherche (`GET /public-complexes`, liste fermée) ne la rend pas. Même clef
+ * et même lecture que `useComplexePublic` : la page d'un complexe déjà ouvert (E-P02) n'est pas
+ * relue, et celle lue ici sert à E-P02.
+ * ponytail: une lecture par complexe placé (30 au plus, `RESULTS_MAX` de la recherche du serveur),
+ * et seulement en vue Carte (`enabled`). Voie de sortie : la position dans la carte de la
+ * recherche (serveur) ; `epinglesDesComplexes` la lit alors d'office, et l'écran ne demande plus
+ * de page pour ce complexe.
+ * @param {string[]} slugs - Les complexes à placer.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {{ enCours: boolean, pages: Record<string, any> }} Les pages lues, par slug.
+ */
+export const usePagesDesComplexes = (slugs, { enabled = true } = {}) => useQueries({
+  combine: (resultats) => ({
+    enCours: resultats.some((resultat) => resultat.isLoading),
+    pages: Object.fromEntries(resultats.flatMap((resultat, rang) => (
+      resultat.data ? [[slugs[rang], resultat.data]] : []
+    ))),
+  }),
+  queries: slugs.map((slug) => ({
+    enabled: enabled && Boolean(slug),
+    queryFn: async () => donnees(await lireComplexePublic(String(slug))),
+    queryKey: [...LECTURE_PUBLIQUE_CLEF, 'page', slug],
+    staleTime: DEMI_MINUTE,
+  })),
 });
 
 /**

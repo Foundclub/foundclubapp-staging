@@ -444,6 +444,57 @@ export const filtresDeRecherche = (choix) => {
 };
 
 /**
+ * Un nombre lu dans une donnée du serveur ; vide, absent ou illisible : NaN (jamais 0, que
+ * `Number(null)` rendrait).
+ * @param {unknown} valeur - La valeur.
+ * @returns {number} Le nombre, ou NaN.
+ */
+const nombreLu = (valeur) => (
+  valeur === null || valeur === undefined || valeur === '' ? Number.NaN : Number(valeur)
+);
+
+/**
+ * E-P01, vue Carte (RESA-CARTE, planche EP01 état 2) — UNE ÉPINGLE PAR COMPLEXE proposé, au format
+ * des cartes de recherche (`SearchMapItem`, utils/searchMap.js), avec sur l'épingle le nombre de
+ * ses créneaux libres, ou « Tél. » si tous ses terrains se réservent par téléphone (A-G24).
+ * La position : celle de la carte si la recherche la rend un jour (`carte.address`), sinon celle
+ * de sa page publique (`pages[slug].address`, `GET /public-complexes/:slug`). Sans position
+ * lisible, pas d'épingle (la carte dit combien de complexes n'ont pas pu être placés).
+ * @param {any[] | null | undefined} cartes - Les cartes de `GET /public-complexes`.
+ * @param {Record<string, any>} pages - Les pages publiques déjà lues, par slug.
+ * @param {string} telephone - Le mot de l'épingle « téléphone seulement » (« Tél. »).
+ * @returns {import('@/utils/searchMap').SearchMapItem[]} Les épingles, dans l'ordre des cartes.
+ */
+export const epinglesDesComplexes = (cartes, pages, telephone) => (
+  Array.isArray(cartes) ? cartes : []
+).flatMap((carte) => {
+  const adresse = carte?.address || pages?.[carte?.slug]?.address;
+  const lat = nombreLu(adresse?.lat);
+  const lng = nombreLu(adresse?.lng);
+  if (!carte?.slug || !Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+  const creneaux = Array.isArray(carte?.slots) ? carte.slots : [];
+  const libres = Number.isFinite(nombreLu(carte?.freeSlotsCount))
+    ? Number(carte.freeSlotsCount)
+    : creneaux.length;
+  return [{
+    badge: '',
+    dateLabel: '',
+    distanceLabel: texteKilometres(carte?.distanceKm),
+    id: String(carte.slug),
+    imageUrl: String(carte?.logo || ''),
+    lat,
+    lng,
+    markerLabel: carte?.phoneOnly ? telephone : String(libres),
+    priceLabel: '',
+    raw: carte,
+    subtitle: String(carte?.city || ''),
+    timeLabel: '',
+    title: String(carte?.name || ''),
+    type: /** @type {'complexes'} */ ('complexes'),
+  }];
+});
+
+/**
  * Le corps de « Réserver » (E-P04) : la liste blanche du serveur (`readBookingPayload` : terrain,
  * jour, heure de début, nombre de joueurs, petit mot, case du numéro), et rien d'autre (RG-SECU).
  * AT-04 : la case du numéro n'existe pas pour un mineur — et quand bien même, rien ne part.
