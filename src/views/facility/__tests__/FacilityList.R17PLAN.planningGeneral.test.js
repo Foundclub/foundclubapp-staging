@@ -243,3 +243,9 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// R17-SIGNALER-1 (récolte 20/10 d) : la carte et l accueil lisent le résumé des signalements
+// (doublure, pas de réseau), comme dans les témoins voisins.
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useCollectiviteFacilityReportsSummary: () => ({ data: null }),
+}));
