@@ -467,3 +467,33 @@ describe('R17-PLANNING-2 — fermetures et « complet » dans les cases (P10-pla
     expect(lus.indexOf('Fermé · désinfection')).toBeGreaterThan(lus.indexOf('Dojo municipal'));
   });
 });
+
+describe('R17-PLANNING-2 — un jour sans rien, au-delà de la semaine (P10-planning-tel 4)', () => {
+  test('15 ROUGE-AVANT — dimanche vide : la séance de la semaine SUIVANTE, y aller', async () => {
+    servir({
+      '2026-10-19': SEMAINE,
+      '2026-10-26': { dojo: [], gym: [bloc(FC, '2026-10-26', 18, 'Senior B')], stade: [] },
+    });
+    const arbre = await rendre();
+    const suivant = () => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    // Du mercredi 21 au dimanche 25 : quatre fois « Jour suivant ».
+    await [22, 23, 24, 25].reduce(async (avant) => {
+      await avant;
+      await act(async () => { suivant().props.onPress(); });
+      await attendre();
+    }, Promise.resolve());
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Rien ce dimanche');
+    expect(lus).toContain('Prochaine séance : lundi 26, 18:00, Gymnase des Tilleuls.');
+    // La suite n'est lue que pour ce jour vide : du lundi 26, 31 jours.
+    const lectures = /** @type {any} */ (getFacilityPlanning).mock.calls
+      .map((/** @type {any[]} */ appel) => `${appel[1].from}>${appel[1].to}`);
+    expect(lectures).toContain('2026-10-26>2026-11-25');
+    await act(async () => { parTexte(arbre, 'Aller au lundi 26').props.onPress(); });
+    await attendre();
+    await attendre();
+    expect(textes(arbre)).toContain('Lundi 26 octobre');
+  });
+});

@@ -60,6 +60,7 @@ import {
   listeDeLaSemaine,
   prochainBloc,
 } from '@/utils/planning/planningToutesInstallations';
+import { plageDeLaSuite } from '@/utils/planning/vueInitiale';
 
 import useVueInitiale from '@/hooks/useVueInitiale';
 import { useIsDesktop } from '@/responsive';
@@ -176,6 +177,30 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     lectureDeLaSuite,
     vueDeBase,
   });
+  // 🏟️ R17-PLANNING-2 (20/10, P10-planning-tel 4) — au téléphone, un jour sans rien dit quand
+  // reprend l'activité : si rien n'est lu après lui dans la semaine, UNE lecture bornée de la
+  // suite (le lendemain de la semaine, 31 jours), seulement pour ce jour vide.
+  const journeeAffichee = journeeParInstallation(blocs, installations, date);
+  const journeeVide = journeeAffichee.every((ligne) => (
+    ligne.blocs.length === 0
+    && fermeturesDuJour(fermetures, ligne.installation, date).length === 0
+  ));
+  const plageApres = plageDeLaSuite(VUES.semaine, date);
+  const suiteLue = useQuery({
+    enabled: vue === VUES.jour && !isDesktop && toutesRevenues && !enErreur && journeeVide
+      && !prochainBloc(blocs, date),
+    queryFn: async () => Promise.all(installations.map((/** @type {any} */ installation) => (
+      getFacilityPlanning(installation.documentId, plageApres)))),
+    queryKey: [
+      'planning', 'toutes-installations', 'apres', collectiviteId, plageApres.from,
+      ...installations.map((/** @type {any} */ installation) => installation.documentId),
+    ],
+    staleTime: 60 * 1000,
+  });
+  const blocsApres = Array.isArray(suiteLue.data)
+    ? blocsDeLaVille(suiteLue.data, installations, Array.isArray(clubs.data) ? clubs.data : null)
+    : [];
+
   const choisirVue = (/** @type {string} */ nouvelle) => {
     garderLeChoix();
     setVue(nouvelle);
@@ -633,7 +658,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     }
 
     // Jour.
-    const journee = journeeParInstallation(blocs, installations, date);
+    const journee = journeeAffichee;
     if (isDesktop) {
       return (
         <PlanningWeekTimelineView
@@ -658,11 +683,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         />
       );
     }
-    if (journee.every((ligne) => (
-      ligne.blocs.length === 0
-      && fermeturesDuJour(fermetures, ligne.installation, date).length === 0
-    ))) {
-      const suivant = prochainBloc(blocs, date);
+    if (journeeVide) {
+      const suivant = prochainBloc(blocs, date) || prochainBloc(blocsApres, date);
       const jourSuivant = suivant ? getPlanningItemDate(suivant) : null;
       return (
         <View
