@@ -501,7 +501,7 @@ describe('R17-PLANNING-2 — un jour sans rien, au-delà de la semaine (P10-plan
 });
 
 describe('R17-PLANNING-2 — la prochaine séance dans un AUTRE mois dit son mois', () => {
-  test('15 bis ROUGE-AVANT — dimanche 25 octobre vide, rien avant le 3 : « mardi 3 novembre »', async () => {
+  test('15 bis ROUGE-AVANT — dimanche 25 octobre vide : « mardi 3 novembre »', async () => {
     servir({
       '2026-10-19': SEMAINE,
       '2026-10-26': { dojo: [], gym: [bloc(FC, '2026-11-03', 18, 'Senior B')], stade: [] },
