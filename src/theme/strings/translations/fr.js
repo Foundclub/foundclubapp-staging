@@ -6082,6 +6082,8 @@ export default {
       retires: 'Créneaux retirés',
       saison: 'Saison {{debut}}-{{fin}}',
       surtitre: 'Installations de la Ville',
+      // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A).
+      vacances: 'vacances : {{zone}}',
       vide: 'Aucun créneau attribué',
       videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
         + 'choisies : le club y pose ses entraînements sans rien vous demander.',
@@ -6318,12 +6320,14 @@ export default {
         aucune: 'Aucune séance ne tombe pendant les vacances.',
         calendrierOfficiel: 'Calendrier officiel {{annees}}',
         case: 'Sauf vacances scolaires',
+        forme: '{{forme}}, sauf vacances',
         ligne: '{{du}} – {{au}} · {{jours}}',
         masquer: 'Masquer les dates retirées',
         origineConsole: 'Zone choisie par FoundClub. Une erreur ? Écrivez à FoundClub : nous la '
           + 'corrigeons.',
         origineDeduite: 'Zone déduite de votre commune ({{departement}}). Une erreur ? '
           + 'Écrivez à FoundClub : nous la corrigeons.',
+        pastille: 'sauf vacances',
         periode: '{{nom}} : retirer ces séances',
         recap: '{{detail}}, sauf vacances scolaires ({{zone}})',
         retirees_one: '{{count}} retiré pendant les vacances : {{noms}}.',
