@@ -47,6 +47,8 @@ const mockPeriodes = [];
 let mockListes = {};
 let mockTerrains = /** @type {any} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  // RESA-L5B-2 : les nouveaux favoris de la semaine (E-G17) ; aucun ici.
+  useChiffresDuComplexe: () => ({ data: undefined, isLoading: false }),
   useMesComplexes: () => mockMes,
   usePlanning: (/** @type {any} */ _id, /** @type {any} */ periode) => {
     mockPeriodes.push(periode);
@@ -196,7 +198,7 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
       'réservations aujourd’hui',
       'd’occupation cette semaine',
       'demandes en attente',
-      'nouveaux favoris (7 jours)',
+      'nouveaux favoris cette semaine',
       'Prochaines réservations',
       'Aucune réservation à venir. Fais connaître ta page.',
       'Gérer',

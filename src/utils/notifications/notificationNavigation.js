@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import { destinationDuGerant, TYPE_DU_GERANT } from '@/domains/complexe/notificationsDuComplexe';
+import { destinationDuGerant, estTypeDuGerant } from '@/domains/complexe/notificationsDuComplexe';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { RouteNames } from '@/navigation/routeNames';
@@ -680,7 +680,8 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
 
   // RESA-L5A2 (14/10/2026) — le gerant de complexe (contrat L2A : aucun ctaRoute ; l'app aiguille
   // par type, data.change et reservationId). Eteint avec COMPLEXES_GERANT : aucune destination.
-  if (type === TYPE_DU_GERANT) {
+  // RESA-L5B-2 (20/10/2026) : le statut du complexe (N-11, complexeStatut) aussi, vers l accueil.
+  if (estTypeDuGerant(type)) {
     return adaptDestinationForCurrentPlatform(payload, destinationDuGerant(payload));
   }
 
