@@ -18705,6 +18705,9 @@ export default {
     title: 'Comment souhaites-te participer ?',
   },
   reserverTerrain: {
+    annonce: {
+      titre: 'Il me manque des joueurs',
+    },
     collecte: {
       dateLimite: 'Date limite',
       echeance: '{{jour}}, {{heure}}',
@@ -18854,8 +18857,15 @@ export default {
       vendredi: 'Ven.',
     },
     lien: {
+      copie: 'Lien copié',
+      copier: 'Copier le lien',
+      desactiver: 'Désactiver le lien',
+      echec: 'Le lien n’a pas pu être créé.',
+      explication: 'Ceux qui ont le lien voient la partie ; pour répondre, il leur faut un compte.',
       message: '{{partie}}, {{complexe}}. Réponds ici : {{url}}',
+      partager: 'Partager',
       quand: '{{jour}} à {{heure}}',
+      titre: 'Inviter par lien',
     },
     maReservation: {
       agenda: 'Ajouter à l’agenda',
@@ -19021,12 +19031,21 @@ export default {
     },
     resultat: {
       // eslint-disable-next-line max-len
+      auNomDe: 'au nom de {{nom}}',
+      collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
+      collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
+        + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
       demandeEcheance: '{{complexe}} te répond avant le {{date}} à {{heure}}. Le créneau t’est gardé jusque-là.',
       demandeEnvoyee: 'Demande envoyée',
       demandeSansEcheance: '{{complexe}} te répond bientôt. Le créneau t’est gardé jusque-là.',
+      equipePrevenue_one: 'Le joueur de {{equipe}} est prévenu.',
+      equipePrevenue_other: 'Les {{count}} joueurs de {{equipe}} sont prévenus.',
+      jauge: '{{presents}} sur {{quorum}} · date limite {{echeance}}',
       reserve: 'C’est réservé !',
+      reservePourEquipe: 'C’est réservé pour {{equipe}} !',
       resume: '{{jour}} · {{creneau}} · {{terrain}}',
       retourAccueil: 'Retour à l’accueil',
+      voirMaCollecte: 'Voir ma collecte',
       voirMaDemande: 'Voir ma demande',
       voirMaReservation: 'Voir ma réservation',
     },

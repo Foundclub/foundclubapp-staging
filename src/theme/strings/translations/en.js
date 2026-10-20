@@ -18090,6 +18090,9 @@ export default {
     title: 'How would you like to take part?',
   },
   reserverTerrain: {
+    annonce: {
+      titre: 'I need more players',
+    },
     collecte: {
       dateLimite: 'Deadline',
       echeance: '{{jour}}, {{heure}}',
@@ -18237,8 +18240,15 @@ export default {
       vendredi: 'Fri.',
     },
     lien: {
+      copie: 'Link copied',
+      copier: 'Copy link',
+      desactiver: 'Turn off the link',
+      echec: 'The link couldn\'t be created.',
+      explication: 'Anyone with the link can see the game; to reply, they need an account.',
       message: '{{partie}}, {{complexe}}. Reply here: {{url}}',
+      partager: 'Share',
       quand: '{{jour}} at {{heure}}',
+      titre: 'Invite by link',
     },
     maReservation: {
       agenda: 'Add to calendar',
@@ -18399,12 +18409,21 @@ export default {
       paiement: 'Payment on site',
     },
     resultat: {
+      auNomDe: 'in the name of {{nom}}',
+      collecteLancee: 'Player call started: {{presents}}/{{quorum}}',
+      collecteTexte: 'Nothing is booked until {{quorum}} players have said yes. The slot stays '
+        + 'free: someone may take it before you.',
       demandeEcheance: '{{complexe}} will answer you before {{date}} at {{heure}}. The slot is held for you until then.',
       demandeEnvoyee: 'Request sent',
       demandeSansEcheance: '{{complexe}} will answer you soon. The slot is held for you until then.',
+      equipePrevenue_one: 'The {{equipe}} player has been notified.',
+      equipePrevenue_other: 'The {{count}} {{equipe}} players have been notified.',
+      jauge: '{{presents}} of {{quorum}} · deadline {{echeance}}',
       reserve: 'It’s booked!',
+      reservePourEquipe: 'Booked for {{equipe}}!',
       resume: '{{jour}} · {{creneau}} · {{terrain}}',
       retourAccueil: 'Back to home',
+      voirMaCollecte: 'See my player call',
       voirMaDemande: 'See my request',
       voirMaReservation: 'See my booking',
     },
