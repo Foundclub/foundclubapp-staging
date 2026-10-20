@@ -70,7 +70,7 @@ const DUREE_DE_L_AVIS = 2500;
  * @param {() => void} [props.onImageLoad] L'image s'est chargee.
  * @param {string} props.uri L'adresse de l'image.
  * @param {boolean} props.visible L'apercu est ouvert.
- * @returns {JSX.Element} La fenetre.
+ * @returns {import('react').ReactElement} La fenetre.
  */
 function ApercuDImage({
   onClose, onImageError, onImageLoad, uri, visible,
