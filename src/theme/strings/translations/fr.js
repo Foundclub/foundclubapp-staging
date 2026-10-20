@@ -6703,6 +6703,13 @@ export default {
       adresseExemple: 'Place de la mairie',
       ailleurs: 'Ailleurs dans la commune',
       ailleursAide: 'Place, parc, salle des fêtes…',
+      fermeeAvertissement:
+        '{{installation}} : fermeture ce jour-là. Vous pouvez quand même y tenir l’événement.',
+      occupationComplet: 'Complet sur ces heures',
+      occupationFermee: 'Fermeture ce jour-là',
+      occupationLibre: 'Libre sur ces heures',
+      occupationPlusieurs: '{{nombre}} séances sur ces heures',
+      occupationUne: '1 séance sur ces heures',
       titre: 'Où ?',
       titrePanneau: 'Où',
     },

@@ -44,8 +44,17 @@ jest.mock('@/theme/themeContext', () => {
     }),
   };
 });
+// R17-EVT-1-BIS (d) : l'occupation des installations aux heures choisies (lue par le crochet).
+/** @type {any} */
+let mockOccupations = {};
+/** @type {any[]} */
+const mockOccupationDemandes = [];
 jest.mock('@/services/collectivite/collectiviteEvenementQueries', () => ({
   useApercuEvenement: () => mockApercu,
+  useOccupationDesLieux: (/** @type {any[]} */ ...args) => {
+    mockOccupationDemandes.push(args);
+    return mockOccupations;
+  },
 }));
 jest.mock('@/components/organisms/seasonSlot/SeasonSlotForm', () => {
   const reactActuel = jest.requireActual('react');
@@ -580,5 +589,45 @@ describe('R17-EVT-1-BIS — « Ailleurs », placé sur la carte', () => {
         facilityId: null,
       }),
     });
+  });
+});
+
+// 🏛️ R17-EVT-1-BIS (d) (20/10) — « Où ? » : chaque installation dit son occupation aux jours et
+// heures choisis ; choisir une installation FERMÉE ce jour-là affiche un avertissement (la Ville
+// décide de ses murs : rien n'est refusé). ROUGE avant.
+describe('R17-EVT-1-BIS — « Où ? », l’occupation et la fermeture', () => {
+  it('🔴 le panneau : chaque installation dit son occupation ; fermée : avertie', async () => {
+    mockOccupations = {
+      gym: {
+        complet: false,
+        fermeture: { documentId: 'f-1', kind: 'closure', reason: 'travaux' },
+        seances: 0,
+      },
+      stade: { complet: false, fermeture: null, seances: 2 },
+    };
+    mockOccupationDemandes.length = 0;
+    const arbre = await monter({
+      initial: {
+        date: '2026-10-24', endTime: '12:00', facilityId: 'stade', startTime: '10:00',
+      },
+      presentation: 'panneau',
+    });
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Fermeture ce jour-là',
+      '2 séances sur ces heures',
+    ]));
+    expect(mockOccupationDemandes.at(-1)).toEqual([
+      'ville-montrivage',
+      INSTALLATIONS,
+      expect.objectContaining({
+        date: '2026-10-24', heureDebut: '10:00', heureFin: '12:00',
+      }),
+    ]);
+    expect(lus.join(' ')).not.toMatch(/Vous pouvez quand même/);
+    await touche(arbre, 'evenement-lieu-gym');
+    expect(textes(arbre)).toContain(
+      'Gymnase des Tilleuls : fermeture ce jour-là. Vous pouvez quand même y tenir l’événement.',
+    );
   });
 });

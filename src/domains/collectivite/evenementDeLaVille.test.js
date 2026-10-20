@@ -6,6 +6,8 @@ import {
   etiquetteDuPlanning,
   fermeturesSansLesEvenements,
   lieuLabel,
+  occupationDesLieux,
+  occupationLabel,
   quandLabel,
   quiLeVoitLabel,
   seancesToucheesTitre,
@@ -274,5 +276,128 @@ describe('R17-EVT-1 — sur le planning d’une installation', () => {
       null,
     ]);
     expect(fermeturesSansLesEvenements(fermetures, [])).toHaveLength(3);
+  });
+});
+
+// 🏛️ R17-EVT-1-BIS (d) (20/10/2026, tri du chef) — « OÙ ? » DIT L'OCCUPATION DE CHAQUE
+// INSTALLATION aux jours et heures choisis (lus sur son planning, comme le planning de toutes les
+// installations) : libre, N séances, « complet » quand sa capacité est atteinte à un moment de la
+// plage (une demande en attente ne compte pas), « fermée » quand une FERMETURE (pas un blocage)
+// touche un des jours. ROUGE avant (rien de tout cela).
+describe('R17-EVT-1-BIS — « Où ? » : l’occupation de chaque installation', () => {
+  /**
+   * Un bloc du planning d'une installation, tel que le serveur le rend (heure de Paris, UTC+2).
+   * @param {string} jour - AAAA-MM-JJ.
+   * @param {string} debut - HH:mm.
+   * @param {string} fin - HH:mm.
+   * @param {any} [extra] - Le reste.
+   * @returns {any} Le bloc.
+   */
+  const seance = (jour, debut, fin, extra = {}) => {
+    const utc = (/** @type {string} */ heure) => (
+      `${String(Number(heure.slice(0, 2)) - 2).padStart(2, '0')}${heure.slice(2)}`
+    );
+    return {
+      endAt: `${jour}T${utc(fin)}:00.000Z`,
+      endTime: `${fin}:00.000`,
+      hasExplicitTime: true,
+      kind: 'slot',
+      pending: false,
+      startAt: `${jour}T${utc(debut)}:00.000Z`,
+      startTime: `${debut}:00.000`,
+      ...extra,
+    };
+  };
+  const INSTALLATIONS = [
+    { documentId: 'gym', maxSlots: 1, name: 'Gymnase des Tilleuls' },
+    { documentId: 'stade', maxSlots: 2, name: 'Stade municipal' },
+    { documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal' },
+  ];
+
+  it('🔴 aux heures choisies : libre, N séances, complet ; pas une demande en attente', () => {
+    const occupations = occupationDesLieux({
+      fenetre: {
+        date: '2026-10-24', dateFin: '', heureDebut: '10:00', heureFin: '12:00',
+      },
+      fermetures: [],
+      installations: INSTALLATIONS,
+      lectures: [
+        { data: [seance('2026-10-24', '10:30', '11:30')] },
+        {
+          data: [
+            seance('2026-10-24', '09:00', '10:30'),
+            seance('2026-10-24', '14:00', '15:00'),
+            seance('2026-10-24', '11:00', '12:00', { pending: true }),
+          ],
+        },
+        { data: [] },
+      ],
+    });
+    expect(occupations.gym).toEqual({ complet: true, fermeture: null, seances: 1 });
+    expect(occupations.stade).toEqual({ complet: false, fermeture: null, seances: 1 });
+    expect(occupations.dojo).toEqual({ complet: false, fermeture: null, seances: 0 });
+  });
+
+  it('🔴 « complet » : la capacité atteinte EN MÊME TEMPS, pas l’une après l’autre', () => {
+    const occupations = occupationDesLieux({
+      fenetre: {
+        date: '2026-10-24', dateFin: '', heureDebut: '10:00', heureFin: '14:00',
+      },
+      fermetures: [],
+      installations: [INSTALLATIONS[1]],
+      lectures: [{
+        data: [
+          seance('2026-10-24', '10:00', '11:00'),
+          seance('2026-10-24', '12:00', '13:00'),
+        ],
+      }],
+    });
+    expect(occupations.stade).toEqual({ complet: false, fermeture: null, seances: 2 });
+  });
+
+  it('🔴 fermée un des jours (une fermeture, jamais un blocage) ; chaque jour compte', () => {
+    const fermeture = {
+      documentId: 'f-1',
+      endDate: '2026-10-25',
+      facility: { documentId: 'gym' },
+      kind: 'closure',
+      reason: 'travaux',
+      startDate: '2026-10-25',
+    };
+    const blocage = {
+      documentId: 'b-1',
+      endDate: '2026-10-24',
+      facility: { documentId: 'stade' },
+      kind: 'block',
+      startDate: '2026-10-24',
+    };
+    const occupations = occupationDesLieux({
+      fenetre: {
+        date: '2026-10-24', dateFin: '2026-10-25', heureDebut: '10:00', heureFin: '12:00',
+      },
+      fermetures: [fermeture, blocage],
+      installations: INSTALLATIONS,
+      lectures: [
+        { data: [] },
+        { data: [seance('2026-10-25', '10:00', '11:00')] },
+        { data: [] },
+      ],
+    });
+    expect(occupations.gym.fermeture).toEqual(fermeture);
+    expect(occupations.stade).toEqual({ complet: false, fermeture: null, seances: 1 });
+  });
+
+  it('🔴 les phrases', () => {
+    expect(occupationLabel(t, { complet: false, fermeture: null, seances: 0 }))
+      .toBe('Libre sur ces heures');
+    expect(occupationLabel(t, { complet: false, fermeture: null, seances: 1 }))
+      .toBe('1 séance sur ces heures');
+    expect(occupationLabel(t, { complet: false, fermeture: null, seances: 3 }))
+      .toBe('3 séances sur ces heures');
+    expect(occupationLabel(t, { complet: true, fermeture: null, seances: 2 }))
+      .toBe('Complet sur ces heures');
+    expect(occupationLabel(t, { complet: false, fermeture: { kind: 'closure' }, seances: 0 }))
+      .toBe('Fermeture ce jour-là');
+    expect(occupationLabel(t, undefined)).toBe('');
   });
 });

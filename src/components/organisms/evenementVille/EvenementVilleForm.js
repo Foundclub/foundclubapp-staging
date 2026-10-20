@@ -12,6 +12,7 @@ import {
   EVENEMENT_TYPES,
   lieuLabel,
   NOM_MAX,
+  occupationLabel,
   quandLabel,
   quiLeVoitLabel,
   verifierEvenement,
@@ -32,7 +33,10 @@ import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouche
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
 import { uploadActualiteFile } from '@/services/collectivite/collectiviteActualiteService';
-import { useApercuEvenement } from '@/services/collectivite/collectiviteEvenementQueries';
+import {
+  useApercuEvenement,
+  useOccupationDesLieux,
+} from '@/services/collectivite/collectiviteEvenementQueries';
 
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -109,6 +113,13 @@ function EvenementDeLaVilleForm({
     takesPlace: !etat.ailleurs && etat.takesPlace && !erreurs.heures,
   });
   const touchees = apercu.data && !etat.ailleurs && etat.takesPlace ? apercu.data : null;
+  // R17-EVT-1-BIS (d) : « Où ? » dit l'occupation de chaque installation aux jours et heures.
+  const occupations = useOccupationDesLieux(collectiviteId, installations, {
+    date: etat.date,
+    dateFin: etat.plusieursJours ? etat.dateFin : '',
+    heureDebut: etat.heureDebut,
+    heureFin: etat.heureFin,
+  });
 
   const quand = quandLabel(t, {
     endDate: etat.plusieursJours ? etat.dateFin : null,
@@ -345,6 +356,9 @@ function EvenementDeLaVilleForm({
     />
   ) : null;
 
+  const fermetureChoisie = !etat.ailleurs && etat.facilityId
+    ? occupations[etat.facilityId]?.fermeture
+    : null;
   const lignesOu = (
     <View
       accessibilityLabel={t('collectiviteEvenement.ou.titre', 'Où ?')}
@@ -353,6 +367,7 @@ function EvenementDeLaVilleForm({
     >
       {installations.map((item) => ligneRadio({
         actif: !etat.ailleurs && etat.facilityId === item.documentId,
+        aide: occupationLabel(t, occupations[item.documentId]) || undefined,
         onPress: () => changer({ ailleurs: false, facilityId: item.documentId }),
         testID: `evenement-lieu-${item.documentId}`,
         titre: String(item.name || ''),
@@ -364,6 +379,31 @@ function EvenementDeLaVilleForm({
         testID: 'evenement-lieu-ailleurs',
         titre: t('collectiviteEvenement.ou.ailleurs', 'Ailleurs dans la commune'),
       })}
+      {fermetureChoisie ? (
+        <View
+          accessibilityRole="alert"
+          style={{
+            backgroundColor: withAlpha(Colors.warning500, 0.12),
+            borderColor: withAlpha(Colors.warning500, 0.5),
+            borderRadius: 12,
+            borderWidth: 1,
+            padding: 12,
+          }}
+          testID="evenement-lieu-ferme"
+        >
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {t(
+              'collectiviteEvenement.ou.fermeeAvertissement',
+              '{{installation}} : fermeture ce jour-là. '
+                + 'Vous pouvez quand même y tenir l’événement.',
+              {
+                installation: installation?.name || '',
+                interpolation: { escapeValue: false },
+              },
+            )}
+          </Text>
+        </View>
+      ) : null}
       {champAdresse}
       {!etat.ailleurs && erreurDe('lieu') ? (
         <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.error300 }]}>

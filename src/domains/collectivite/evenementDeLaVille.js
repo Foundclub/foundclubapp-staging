@@ -1,7 +1,12 @@
-import { format, isValid, parseISO } from 'date-fns';
+import {
+  addDays, format, isValid, parseISO,
+} from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
+import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+
+import { getPlanningItemWindow, normalizePlanningItems } from '@/utils/planning/planningSlots';
 
 /**
  * 🏛️ R17-EVT-1 (20/10/2026, REC17-005) — L ÉVÉNEMENT DE LA VILLE, en règles pures (sans réseau).
@@ -357,4 +362,100 @@ export const fermeturesSansLesEvenements = (fermetures, evenements) => {
   return (Array.isArray(fermetures) ? fermetures : []).filter(
     (fermeture) => !fermeture?.documentId || !lies.has(fermeture.documentId),
   );
+};
+
+/**
+ * Le plus grand nombre de séances EN MÊME TEMPS dans une plage (chacune rognée à la plage).
+ * @param {Array<{ startAt: Date, endAt: Date }>} fenetres - Les séances qui touchent la plage.
+ * @returns {number} Le pic.
+ */
+const picSimultane = (fenetres) => fenetres.reduce((pic, fenetre) => Math.max(
+  pic,
+  fenetres.filter((autre) => autre.startAt <= fenetre.startAt && fenetre.startAt < autre.endAt)
+    .length,
+), 0);
+
+/**
+ * 🏟️ R17-EVT-1-BIS (d) (20/10/2026, tri du chef) — « OÙ ? » : l'occupation de chaque
+ * installation aux jours et heures choisis, lue sur son planning (comme le planning de toutes les
+ * installations) : combien de séances touchent la plage, « complet » quand sa capacité
+ * (`maxSlots`) est atteinte EN MÊME TEMPS un des jours (une demande en attente ne compte pas),
+ * et la FERMETURE (jamais un blocage) qui touche un des jours. Une installation dont le planning
+ * n'est pas lu n'a pas de nombre (`seances: null`) : on ne dit pas « libre » sans le savoir.
+ * @param {{ fenetre: { date: string, dateFin?: string, heureDebut: string, heureFin: string },
+ *   fermetures?: any[] | null, installations: any[], lectures: Array<any> }} entree
+ *   - `lectures` : les réponses de `GET /facilities/:id/planning`, dans l'ordre des installations.
+ * @returns {Record<string, { complet: boolean, fermeture: any, seances: number | null }>} Par
+ *   installation (documentId).
+ */
+export const occupationDesLieux = ({
+  fenetre, fermetures, installations, lectures,
+}) => {
+  const premier = parseISO(String(fenetre?.date || ''));
+  if (!isValid(premier)) return {};
+  const dernier = fenetre?.dateFin && fenetre.dateFin > fenetre.date
+    ? parseISO(fenetre.dateFin)
+    : premier;
+  const jours = [];
+  for (let jour = premier; jour <= dernier && jours.length < 31; jour = addDays(jour, 1)) {
+    jours.push(format(jour, 'yyyy-MM-dd'));
+  }
+  const fermeturesDeLaVille = (Array.isArray(fermetures) ? fermetures : [])
+    .filter((fermeture) => fermeture?.kind !== 'block');
+  const lieux = Array.isArray(installations) ? installations : [];
+  return Object.fromEntries(lieux.map((lieu, rang) => {
+    const fermeture = fermeturesDeLaVille.find((une) => (
+      une?.facility?.documentId === lieu?.documentId
+      && jours.some((jour) => closureCoversDay(une, jour)))) || null;
+    const lecture = lectures?.[rang];
+    if (!lecture) return [lieu?.documentId, { complet: false, fermeture, seances: null }];
+    const fenetresDesSeances = normalizePlanningItems(lecture?.data || [])
+      .filter((bloc) => bloc?.raw?.pending !== true && !bloc?.raw?.evenementDeLaVille)
+      .map((bloc) => getPlanningItemWindow(bloc))
+      .filter(Boolean);
+    const capacite = Math.max(1, Number(lieu?.maxSlots || 1));
+    let seances = 0;
+    let complet = false;
+    jours.forEach((jour) => {
+      const debut = new Date(`${jour}T${fenetre.heureDebut}:00`);
+      const fin = new Date(`${jour}T${fenetre.heureFin}:00`);
+      const touchees = fenetresDesSeances
+        .filter((une) => une.startAt < fin && debut < une.endAt)
+        .map((une) => ({
+          endAt: une.endAt < fin ? une.endAt : fin,
+          startAt: une.startAt > debut ? une.startAt : debut,
+        }));
+      seances += touchees.length;
+      if (picSimultane(touchees) >= capacite) complet = true;
+    });
+    return [lieu?.documentId, { complet, fermeture, seances }];
+  }));
+};
+
+/**
+ * La phrase de « Où ? » sous une installation : sa fermeture d'abord, puis « complet », puis le
+ * nombre de séances (rien si son planning n'est pas lu).
+ * @param {any} t - i18next.
+ * @param {{ complet?: boolean, fermeture?: any, seances?: number | null } | undefined} occupation
+ *   - L'occupation (`occupationDesLieux`).
+ * @returns {string} La phrase, ou ''.
+ */
+export const occupationLabel = (t, occupation) => {
+  if (!occupation) return '';
+  if (occupation.fermeture) {
+    return t('collectiviteEvenement.ou.occupationFermee', 'Fermeture ce jour-là');
+  }
+  if (occupation.seances === null || occupation.seances === undefined) return '';
+  if (occupation.complet) {
+    return t('collectiviteEvenement.ou.occupationComplet', 'Complet sur ces heures');
+  }
+  if (occupation.seances === 0) {
+    return t('collectiviteEvenement.ou.occupationLibre', 'Libre sur ces heures');
+  }
+  if (occupation.seances === 1) {
+    return t('collectiviteEvenement.ou.occupationUne', '1 séance sur ces heures');
+  }
+  return t('collectiviteEvenement.ou.occupationPlusieurs', '{{nombre}} séances sur ces heures', {
+    nombre: occupation.seances,
+  });
 };
