@@ -77,6 +77,19 @@ jest.mock('@/components/templates/ScreenContainer', () => (
     return children;
   }
 ));
+// RESA-BASCULE (20/10/2026) : la bascule « Ton mode » (planche RB-3) charge le contrôle à onglets
+// et ses gestes (doublures partagées), et lit les enfants du compte (aucun ici, sauf mention).
+/* eslint-disable global-require */
+jest.mock('react-native-reanimated', () => require('@/testSupport/animationDouble').reanimated());
+jest.mock('react-native-gesture-handler', () => (
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+/* eslint-enable global-require */
+const mockEnfants = { lignes: [], reste: 0, total: 0 };
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref', () => ({
+  __esModule: true,
+  default: () => mockEnfants,
+}));
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));

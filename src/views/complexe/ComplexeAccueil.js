@@ -1,9 +1,12 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AccessibilityInfo,
+  findNodeHandle,
   Image,
   Linking,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -27,6 +30,7 @@ import {
 } from '@/domains/complexe/complexeReservation';
 import { creneauxDuJour } from '@/domains/complexe/complexeTerrain';
 import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
+import { dansLeMenuDuSite } from '@/domains/complexe/tonMode';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -41,6 +45,8 @@ import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FriseDuJour from '@/views/complexe/components/FriseDuJour';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
+import TonMode from '@/views/complexe/components/TonMode';
+import useTonMode from '@/views/complexe/components/useTonMode';
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -111,7 +117,16 @@ function ComplexeAccueil() {
   const [instant] = useState(() => new Date());
   const { date, minutes } = jourEtHeure(instant);
   const encadre = ROLES_QUI_ENCADRENT.includes(String(accountRoleKey || ''));
-  const surOrdinateur = useWindowDimensions().width >= LARGEUR_ORDINATEUR;
+  const { width: largeurFenetre } = useWindowDimensions();
+  const surOrdinateur = largeurFenetre >= LARGEUR_ORDINATEUR;
+  // RESA-BASCULE (20/10/2026, planche RB-3) — « Ton mode » : les modes du compte, Complexe allumé.
+  const tonMode = useTonMode({
+    complexeId: params?.complexeId || null,
+    compte: userData,
+    dansLeComplexe: true,
+    roleDuCompte: String(accountRoleKey || ''),
+  });
+  const nomDuComplexeRef = useRef(/** @type {any} */ (null));
   // RESA-L5A2 (14/10/2026) — la semaine (et hier, un lundi) au planning, les listes du serveur.
   const lundi = joursDeLaSemaine(date)[0];
   const hier = enJours(date, -1);
@@ -172,6 +187,7 @@ function ComplexeAccueil() {
         <Text
           accessibilityRole="header"
           numberOfLines={2}
+          ref={nomDuComplexeRef}
           style={[
             surOrdinateur ? Fonts.h2Black : Fonts.p1Black,
             Fonts.neutral00,
@@ -220,6 +236,47 @@ function ComplexeAccueil() {
       </TouchableOpacity>
     </View>
   );
+
+  // RESA-BASCULE (20/10/2026, planche RB-3 validée par Adel) — UNE bascule, aucun mode perdu : un
+  // compte à deux modes ou plus lit « Ton mode » à la place de « Tu joues aussi ? » (1a, 3c), à la
+  // même place. Joueur, Parent, Dirigeant, Coach ramènent à l'accueil de l'app dans ce mode ; le
+  // téléphone oublie le complexe. Arrivé par la bascule : l'annonce, puis le curseur sur le nom du
+  // complexe (5b). Sur le site, à partir de 1 024 px, elle est en bas du menu (O1) : l'accueil ne
+  // la répète pas. Un compte à un seul mode (né « pour un complexe ») garde la carte d'avant.
+  const quitterLeComplexe = (
+    /** @type {import('@/domains/complexe/tonMode').Position} */ position,
+  ) => {
+    tonMode.choisirHorsDuComplexe(position);
+    const pile = navigation.getParent?.() || navigation;
+    pile.reset({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+  };
+  const poserLeCurseurSurLeNom = () => {
+    if (Platform.OS === 'web') return;
+    // Après l'annonce « Mode complexe. Tu gères … » : un changement de curseur l'interromprait.
+    setTimeout(() => {
+      const noeud = findNodeHandle(nomDuComplexeRef.current);
+      if (noeud) AccessibilityInfo.setAccessibilityFocus(noeud);
+    }, 1200);
+  };
+  const dansLeMenu = dansLeMenuDuSite({
+    dansLeComplexe: true,
+    largeur: largeurFenetre,
+    plateforme: Platform.OS,
+    roleDuCompte: tonMode.roleDuCompte,
+  });
+  let laBascule = bascule;
+  if (tonMode.positions.length >= 2) {
+    laBascule = dansLeMenu ? null : (
+      <TonMode
+        actif={tonMode.actif}
+        nomDuComplexe={String(complexe?.name || '')}
+        onArrivee={poserLeCurseurSurLeNom}
+        onChoisir={quitterLeComplexe}
+        positions={tonMode.positions}
+        prenoms={tonMode.prenoms}
+      />
+    );
+  }
 
   const titreSection = (/** @type {string} */ libelle) => (
     <Text
@@ -654,7 +711,7 @@ function ComplexeAccueil() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        {bascule}
+        {laBascule}
         {bandeau ? (
           <BandeauComplexe
             action={bandeau.action}
