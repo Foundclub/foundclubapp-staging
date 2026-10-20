@@ -160,6 +160,10 @@ const SOUS_LE_CHAMP_VOUS = '« Gymnase Toto Aix-en-Provence » n’est pas répe
   + ' la carte';
 const OUVRIR = 'Placer sur la carte';
 const ANCIEN_LIEN = 'Adresse introuvable ? Placez-la sur la carte';
+// ADRESSE-EN-PREMIER (20/10) : DANS la liste, la porte vers la carte est sa 1re ligne, « Ajouter
+// « <texte tapé> » » (autocompleteAddressInput.ajouterEnTete.test.js) ; l'invitation en est l'aide.
+// Le bouton OUVRIR ne vit plus que SOUS le champ, liste refermée.
+const PORTE = (/** @type {string} */ texte) => `Ajouter « ${texte} »`;
 const SANS_POINT = 'Cette adresse n’est pas sur la carte : on ne la trouve pas en cherchant'
   + ' autour de soi.';
 const NOM = 'Ex. Stade de Luminy';
@@ -279,7 +283,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       await ouvrirEtTaper(arbre, TAPE);
 
       expect(texteVisible(arbre)).toContain(INVITATION);
-      expect(estUnBouton(arbre, OUVRIR)).toBe(true);
+      expect(estUnBouton(arbre, PORTE(TAPE))).toBe(true);
       expect(texteVisible(arbre)).not.toContain(ANCIEN_LIEN);
     });
 
@@ -314,7 +318,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       expect(texteVisible(arbre)).not.toContain(INVITATION);
     });
 
-    it('a4 des suggestions ⇒ pas d invitation, le lien d avant sous la liste', async () => {
+    it('a4 des suggestions ⇒ pas d invitation ; porte en tête, plus de lien en bas', async () => {
       mockSearchPlaces.mockResolvedValue([{
         geometry: { coordinates: [5.4352, 43.2321] },
         properties: { city: 'Marseille', label: 'Route de Luminy 13009 Marseille' },
@@ -322,7 +326,8 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       const arbre = monter({ permettreLieuSurCarte: true });
       await ouvrirEtTaper(arbre, 'luminy');
 
-      expect(texteVisible(arbre)).toContain(ANCIEN_LIEN);
+      expect(estUnBouton(arbre, PORTE('luminy'))).toBe(true);
+      expect(texteVisible(arbre)).not.toContain(ANCIEN_LIEN);
       expect(texteVisible(arbre)).not.toContain(INVITATION);
     });
 
@@ -345,7 +350,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       ));
       const arbre = monter({ permettreLieuSurCarte: true, villeConnue: 'Vitrolles' });
       await ouvrirEtTaper(arbre, TAPE);
-      await appuyerSurLeTexte(arbre, OUVRIR);
+      await appuyerSurLeTexte(arbre, PORTE(TAPE));
       await laisserTourner(2);
 
       expect(carteOuverte(arbre)).toBe(true);
@@ -361,7 +366,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       ));
       const arbre = monter({ permettreLieuSurCarte: true, villeConnue: 'Vitrolles' });
       await ouvrirEtTaper(arbre, 'Gymnase Toto');
-      await appuyerSurLeTexte(arbre, OUVRIR);
+      await appuyerSurLeTexte(arbre, PORTE('Gymnase Toto'));
       await laisserTourner(2);
 
       expect(mockChercherCommune.mock.calls.map((appel) => appel[0]))
@@ -374,7 +379,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
       mockPositionSiAccordee.mockResolvedValue({ lat: 45.76, lng: 4.83 });
       const arbre = monter({ permettreLieuSurCarte: true });
       await ouvrirEtTaper(arbre, 'Gymnase Toto');
-      await appuyerSurLeTexte(arbre, OUVRIR);
+      await appuyerSurLeTexte(arbre, PORTE('Gymnase Toto'));
       await laisserTourner(2);
 
       expect(mockPositionSiAccordee).toHaveBeenCalledTimes(1);
@@ -384,7 +389,7 @@ describe('R17-ADRESSE — l adresse absente des suggestions : « place-le sur la
     it('b4 la carte proposée, le texte gardé a servi : refermée, plus d invitation', async () => {
       const arbre = monter({ permettreLieuSurCarte: true, setAddress: jest.fn() });
       await ouvrirEtTaper(arbre, TAPE);
-      await appuyerSurLeTexte(arbre, OUVRIR);
+      await appuyerSurLeTexte(arbre, PORTE(TAPE));
       await appuyerSurLeTexte(arbre, 'Annuler');
 
       expect(carteOuverte(arbre)).toBe(false);

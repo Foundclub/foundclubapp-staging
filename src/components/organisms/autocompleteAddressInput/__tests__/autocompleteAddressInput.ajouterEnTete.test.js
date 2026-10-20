@@ -11,12 +11,12 @@ import AutocompleteAddressInput from '../autocompleteAddressInput';
 // Avant : sur un champ de lieu PUBLIC, la porte vers la carte était SOUS les propositions
 // (« Adresse introuvable ? Placez-la sur la carte », capture d'Adel : sous 5 rues, après
 // défilement), ou, sans proposition, une phrase et un bouton en bas de la liste.
-// Maintenant : dès que le texte est tapé, la PREMIÈRE ligne de la liste est « Ajouter « <texte> » »,
-// qui ouvre la carte pré-placée, le texte comme nom (le comportement de R17-ADRESSE). Une seule
-// porte : le lien du bas et le bouton de la liste disparaissent.
+// Maintenant : dès que le texte est tapé, la PREMIÈRE ligne de la liste est
+// « Ajouter « <texte> » », qui ouvre la carte pré-placée, le texte comme nom (le comportement de
+// R17-ADRESSE). Une seule porte : le lien du bas et le bouton de la liste disparaissent.
 //
-// Même banc que autocompleteAddressInput.invitationCarte.test.js : le VRAI champ et la vraie liste ;
-// seuls la feuille native, le réseau, la carte et la position sont doublés.
+// Même banc que autocompleteAddressInput.invitationCarte.test.js : le VRAI champ et la vraie
+// liste ; seuls la feuille native, le réseau, la carte et la position sont doublés.
 
 const mockSearchPlaces = jest.fn();
 const mockChercherCommune = jest.fn();
@@ -374,8 +374,8 @@ describe('ADRESSE-EN-PREMIER — « Ajouter « <texte tapé> » » en TÊTE de l
   });
 
   it('e7 un texte long : tronqué à l écran, entier pour le lecteur et la carte', async () => {
-    const long = 'Complexe sportif municipal du quartier des Jardins de la Torse, entrée'
-      + ' côté parking';
+    // 76 caractères : au-delà de 60 l'écran tronque ; jusqu'à 80, le nom du lieu est entier.
+    const long = 'Complexe sportif municipal du quartier des Jardins de la Torse, côté parking';
     const arbre = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, long);
 

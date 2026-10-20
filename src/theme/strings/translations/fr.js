@@ -2231,9 +2231,13 @@ export default {
     },
   },
   autocompleteAddressInput: {
-    // ADRESSE-CARTE (07/10) — « Adresse introuvable ? Placez-la sur la carte » (champ d'adresse).
+    // ADRESSE-CARTE (07/10) — placer sur la carte un lieu introuvable (champ d'adresse).
     lieu: {
       aide: 'Déplacez la carte pour mettre l’épingle sur le lieu, puis donnez-lui un nom.',
+      // ADRESSE-EN-PREMIER (20/10) — la 1re ligne de la liste, le texte tapé (la Ville vouvoyée).
+      ajouter: 'Ajouter « {{texte}} »',
+      ajouterAide: 'Place-le sur la carte',
+      ajouterAideVous: 'Placez-le sur la carte',
       annuler: 'Annuler',
       erreurs: {
         connexion: 'Connectez-vous pour poser un lieu.',
@@ -2251,7 +2255,6 @@ export default {
       invitationTexte: '« {{texte}} » n’est pas répertorié : place-le sur la carte',
       invitationTexteVous: '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
       invitationVous: 'Votre lieu n’est pas répertorié : placez-le sur la carte',
-      lien: 'Adresse introuvable ? Placez-la sur la carte',
       nom: 'Nom du lieu',
       nomExemple: 'Ex. Stade de Luminy',
       ouvrir: 'Placer sur la carte',
