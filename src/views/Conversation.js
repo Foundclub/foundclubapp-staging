@@ -17,7 +17,6 @@ import {
   ImageBackground,
   Keyboard,
   Linking,
-  Modal,
   PermissionsAndroid,
   Platform,
   ScrollView,
@@ -100,6 +99,7 @@ import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import ApercuDImage from '@/components/molecules/apercuDImage/ApercuDImage';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
@@ -7308,74 +7308,38 @@ function Conversation({ navigation, route }) {
           />
         ) : null}
 
-        <Modal
-          animationType="fade"
-          onRequestClose={() => {
+        {/* MSGIMG — l'image ouverte en grand : croix toujours visible (cf. ApercuDImage). */}
+        <ApercuDImage
+          onClose={() => {
             setIsImagePreviewVisible(false);
             setPreviewImageUrl('');
             setDidTryImageHttpsFallback(false);
           }}
-          transparent={false}
-          visible={isImagePreviewVisible}
-        >
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: '#000',
-            flex: 1,
-            justifyContent: 'center',
+          onImageError={(event) => {
+            const canRetryWithHttps = /^http:\/\//i.test(previewImageUrl)
+              && !didTryImageHttpsFallback;
+            if (canRetryWithHttps) {
+              const httpsUrl = previewImageUrl.replace(/^http:\/\//i, 'https://');
+              setDidTryImageHttpsFallback(true);
+              setPreviewImageUrl(httpsUrl);
+              logAttachmentDebug('imagePreviewModal retry with https', {
+                previousUrl: previewImageUrl,
+                retryUrl: httpsUrl,
+              });
+              return;
+            }
+            logAttachmentDebug('imagePreviewModal load error', {
+              didTryImageHttpsFallback,
+              error: event?.nativeEvent?.error || 'unknown',
+              previewImageUrl,
+            });
           }}
-          >
-            <TouchableOpacity
-              onPress={() => {
-                setIsImagePreviewVisible(false);
-                setPreviewImageUrl('');
-                setDidTryImageHttpsFallback(false);
-              }}
-              style={{
-                left: 20,
-                padding: 12,
-                position: 'absolute',
-                top: top + 8,
-                zIndex: 2,
-              }}
-            >
-              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>X</Text>
-            </TouchableOpacity>
-
-            {previewImageUrl ? (
-              <Image
-                onError={(event) => {
-                  const canRetryWithHttps = /^http:\/\//i.test(previewImageUrl)
-                    && !didTryImageHttpsFallback;
-                  if (canRetryWithHttps) {
-                    const httpsUrl = previewImageUrl.replace(/^http:\/\//i, 'https://');
-                    setDidTryImageHttpsFallback(true);
-                    setPreviewImageUrl(httpsUrl);
-                    logAttachmentDebug('imagePreviewModal retry with https', {
-                      previousUrl: previewImageUrl,
-                      retryUrl: httpsUrl,
-                    });
-                    return;
-                  }
-                  logAttachmentDebug('imagePreviewModal load error', {
-                    didTryImageHttpsFallback,
-                    error: event?.nativeEvent?.error || 'unknown',
-                    previewImageUrl,
-                  });
-                }}
-                onLoad={() => {
-                  logAttachmentDebug('imagePreviewModal load success', { previewImageUrl });
-                }}
-                resizeMode="contain"
-                source={{ uri: previewImageUrl }}
-                style={{
-                  height: '90%',
-                  width: '100%',
-                }}
-              />
-            ) : null}
-          </View>
-        </Modal>
+          onImageLoad={() => {
+            logAttachmentDebug('imagePreviewModal load success', { previewImageUrl });
+          }}
+          uri={previewImageUrl}
+          visible={isImagePreviewVisible}
+        />
 
         {/* ⋮ MSG1A (§3.16) — le petit menu du pack. Memes entrees qu'avant (« Annuler le
             match », le groupe, « Signaler », « Bloquer » en tete-a-tete), sans « Fermer ». */}

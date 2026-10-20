@@ -399,3 +399,134 @@ describe('MSGIMG — CAR : ce que l apercu d une photo faisait avant le lot', ()
     expect(imagesPleinEcran(ecran)).toHaveLength(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MSGIMG-1 — LA CROIX TOUJOURS VISIBLE. Avant le lot : un « X » blanc, sans fond, posé
+// directement sur l'image. Sur une photo blanche, il disparaissait.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Le bouton de l'apercu qui porte ce libelle (lecteur d'ecran).
+ * @param {any} ecran L'arbre de l'ecran.
+ * @param {string} libelle Le libelle.
+ * @returns {any[]} Les boutons trouves.
+ */
+const boutonsNommes = (ecran, libelle) => ecran.root.findAll((/** @type {any} */ noeud) => (
+  typeof noeud.type !== 'string'
+  && noeud.props?.accessibilityLabel === libelle
+  && noeud.props?.accessibilityRole === 'button'
+  && typeof noeud.props?.onPress === 'function'
+));
+
+/**
+ * Le style aplati d'un noeud.
+ * @param {any} noeud Le noeud.
+ * @returns {Record<string, any>} Le style.
+ */
+const styleDe = (noeud) => {
+  // eslint-disable-next-line global-require
+  const { StyleSheet } = require('react-native');
+  const style = typeof noeud.props.style === 'function'
+    ? noeud.props.style({ pressed: false })
+    : noeud.props.style;
+  return StyleSheet.flatten(style) || {};
+};
+
+/**
+ * Une couleur CSS (#rrggbb ou rgba()) en composantes.
+ * @param {string} couleur La couleur.
+ * @returns {{ r: number, g: number, b: number, a: number }} Ses composantes.
+ */
+const composantes = (couleur) => {
+  const texte = String(couleur || '').trim();
+  const hexa = texte.match(/^#([0-9a-f]{6})$/i);
+  if (hexa) {
+    const octet = (/** @type {number} */ debut) => parseInt(hexa[1].slice(debut, debut + 2), 16);
+    return {
+      a: 1, b: octet(4), g: octet(2), r: octet(0),
+    };
+  }
+  const rgba = texte.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+  if (!rgba) throw new Error(`couleur illisible : ${texte}`);
+  return {
+    a: rgba[4] === undefined ? 1 : Number(rgba[4]),
+    b: Number(rgba[3]),
+    g: Number(rgba[2]),
+    r: Number(rgba[1]),
+  };
+};
+
+/**
+ * Le contraste (WCAG) entre une croix et son rond translucide, pose sur une image unie.
+ * @param {string} croix La couleur de la croix.
+ * @param {string} rond La couleur (translucide) du rond.
+ * @param {number} image La valeur de gris de l'image dessous (255 blanc, 0 noir).
+ * @returns {number} Le rapport de contraste.
+ */
+const contrasteSurImage = (croix, rond, image) => {
+  const c = composantes(croix);
+  const f = composantes(rond);
+  const fond = ['r', 'g', 'b'].map((k) => (/** @type {any} */ (f)[k] * f.a) + (image * (1 - f.a)));
+  const luminance = (/** @type {number[]} */ rvb) => {
+    const [r, g, b] = rvb.map((v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+  };
+  const l1 = luminance([c.r, c.g, c.b]);
+  const l2 = luminance(fond);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+};
+
+describe('MSGIMG-1 — la croix se voit sur n importe quelle image', () => {
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = TETE_A_TETE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('MSGIMG-1a — un bouton « Fermer l’image » pour le lecteur d ecran, qui referme', () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    const croix = boutonsNommes(ecran, 'Fermer l’image');
+    expect(croix).toHaveLength(1);
+
+    act(() => {
+      croix[0].props.onPress();
+    });
+    expect(imagesPleinEcran(ecran)).toHaveLength(0);
+  });
+
+  test('MSGIMG-1b — un ROND sombre translucide, 44 px au moins, sous la barre d etat', () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    const style = styleDe(boutonsNommes(ecran, 'Fermer l’image')[0]);
+    expect(style.width).toBeGreaterThanOrEqual(44);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+    expect(style.borderRadius).toBeGreaterThanOrEqual(style.width / 2);
+    // La barre d'etat du telephone de la doublure mesure 47 px : la croix passe dessous.
+    expect(style.top).toBeGreaterThanOrEqual(47);
+    expect(style.backgroundColor).toEqual(expect.stringMatching(/^rgba\(/));
+  });
+
+  test('MSGIMG-1c — la croix contraste (≥ 4,5:1) sur une image BLANCHE comme sur une NOIRE', () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    const bouton = boutonsNommes(ecran, 'Fermer l’image')[0];
+    const { backgroundColor } = styleDe(bouton);
+    const glyphe = bouton.findAll((/** @type {any} */ noeud) => noeud.props?.name === 'xmark')[0];
+    expect(glyphe).toBeTruthy();
+
+    expect(contrasteSurImage(glyphe.props.color, backgroundColor, 255)).toBeGreaterThanOrEqual(4.5);
+    expect(contrasteSurImage(glyphe.props.color, backgroundColor, 0)).toBeGreaterThanOrEqual(4.5);
+  });
+});
