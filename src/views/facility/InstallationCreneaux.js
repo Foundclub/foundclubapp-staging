@@ -292,7 +292,11 @@ function InstallationCreneaux() {
     creneau.plateau?.name || null,
     // 🗓️ R17-QUAND-1 (planche P11-quand-ou-ca-vit, 2) — la forme quand ce n'est pas « chaque
     // semaine » : « un mercredi sur deux », ou les dates choisies (alors sans « du … au … »).
-    slotShape(creneau).everyWeeks > 1 || slotShape(creneau).dates ? formeEnMots(t, creneau) : null,
+    // R17-QUAND-2 (planche P11-quand-ou-ca-vit, 2) : et « sauf vacances ».
+    slotShape(creneau).everyWeeks > 1 || slotShape(creneau).dates
+      || slotShape(creneau).exceptHolidays
+      ? formeEnMots(t, creneau)
+      : null,
     // FINITIONS12-COLL (03/10) — la fin écrite : le dernier jour où il a lieu (T11, C23).
     !slotShape(creneau).dates && meta.season && (creneau.validFrom !== meta.season.validFrom
       || finDuCreneau(creneau) !== meta.season.validUntil)
@@ -638,6 +642,14 @@ function InstallationCreneaux() {
                   ...SANS_ECHAPPEMENT,
                 })}
               </Text>
+              {/* 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A) : « vacances : Zone B ». */}
+              {meta.holidays?.label ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]} testID="installation-zone-vacances">
+                  {t('collectiviteCreneaux.creneaux.vacances', 'vacances : {{zone}}', {
+                    zone: meta.holidays.label, ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+              ) : null}
             </View>
           ) : null}
           {/* COLL-C2B-BIS : sur ordinateur aussi (la grille ne montre pas les heures repliees). */}

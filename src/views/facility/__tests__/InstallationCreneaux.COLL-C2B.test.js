@@ -700,3 +700,23 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-ordi A et P11-quand-ou-ca-vit 2, validées le
+// 19/10) — l'onglet « Créneaux » dit la zone de vacances de la saison, et la forme « sauf
+// vacances » d'un créneau. ROUGE avant : ni l'une ni l'autre.
+describe('R17Q2 — « Créneaux » : la zone de vacances et « sauf vacances »', () => {
+  it('« vacances : Zone B » sous la saison ; un créneau « sauf vacances » le dit', async () => {
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [{ ...CRENEAUX[0], exceptHolidays: true, holidayDates: ['2026-10-20'] }],
+      meta: META({ holidays: { label: 'Zone B', periods: [], zone: 'B' } }),
+    });
+    const lus = textes(await rendre());
+    expect(lus).toEqual(expect.arrayContaining(['Saison 2026-2027', 'vacances : Zone B']));
+    expect(lus.some((texte) => /chaque [a-z]+, sauf vacances/.test(texte))).toBe(true);
+  });
+
+  it('sans zone connue : rien de plus sous la saison', async () => {
+    const lus = textes(await rendre());
+    expect(lus.some((texte) => /^vacances : /.test(texte))).toBe(false);
+  });
+});
