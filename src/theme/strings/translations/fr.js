@@ -18706,7 +18706,16 @@ export default {
   },
   reserverTerrain: {
     collecte: {
+      dateLimite: 'Date limite',
       echeance: '{{jour}}, {{heure}}',
+      option: 'Réserver seulement quand assez de joueurs ont répondu présent',
+      optionAide: 'Le créneau n’est réservé qu’une fois le nombre atteint.',
+      regle: 'Au plus tard {{heures}} h avant le créneau : la règle du complexe.',
+      requis: 'Nombre requis (toi compris)',
+      requisMoins: 'Un joueur requis de moins',
+      requisPlus: 'Un joueur requis de plus',
+      resteLibre: 'En attendant, le créneau reste libre : quelqu’un peut le réserver avant toi.',
+      tropProche: 'Trop près du créneau pour attendre les réponses : réserve directement.',
     },
     complexe: {
       adresse: 'Adresse',
@@ -18905,6 +18914,19 @@ export default {
       octobre: 'octobre',
       septembre: 'septembre',
     },
+    pourQui: {
+      ageSeulementToi: 'Tu encadres {{equipe}} : l’âge minimum du complexe ({{age}} ans) ne vaut '
+        + 'que pour toi.',
+      ageSeulementToiSansChiffre: 'Tu encadres {{equipe}} : l’âge minimum du complexe ne vaut que '
+        + 'pour toi.',
+      aide: 'La réservation est à ton nom ; les joueurs ajoutés répondent présent ou absent, '
+        + 'comme à une convocation.',
+      ajoutes_one: 'Le joueur de l’équipe est ajouté.',
+      ajoutes_other: 'Les {{count}} joueurs de l’équipe sont ajoutés.',
+      equipe: 'Pour mon équipe',
+      moi: 'Pour moi',
+      titre: 'Pour qui ?',
+    },
     prix: {
       aReglerSurPlace: 'à régler sur place',
       des: 'dès {{prix}}',
@@ -18917,6 +18939,7 @@ export default {
       combien: 'Combien de joueurs ?',
       envoyerLaDemande: 'Envoyer la demande',
       honneur: 'Tu t’engages sur l’honneur à venir.',
+      lancerLaCollecte: 'Lancer la collecte',
       modifier: 'Modifier',
       moins: 'Un joueur de moins',
       paiement: 'Le paiement se fait sur place.',

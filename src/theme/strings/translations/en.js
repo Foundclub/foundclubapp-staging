@@ -18091,7 +18091,16 @@ export default {
   },
   reserverTerrain: {
     collecte: {
+      dateLimite: 'Deadline',
       echeance: '{{jour}}, {{heure}}',
+      option: 'Only book once enough players have said yes',
+      optionAide: 'The slot is only booked once the number is reached.',
+      regle: 'At the latest {{heures}} h before the slot: the venue\'s rule.',
+      requis: 'Players needed (including you)',
+      requisMoins: 'One fewer player needed',
+      requisPlus: 'One more player needed',
+      resteLibre: 'Meanwhile, the slot stays free: someone may book it before you.',
+      tropProche: 'Too close to the slot to wait for answers: book directly.',
     },
     complexe: {
       adresse: 'Address',
@@ -18288,6 +18297,18 @@ export default {
       octobre: 'October',
       septembre: 'September',
     },
+    pourQui: {
+      ageSeulementToi: 'You coach {{equipe}}: the venue\'s minimum age ({{age}}) only applies to '
+        + 'you.',
+      ageSeulementToiSansChiffre: 'You coach {{equipe}}: the venue\'s minimum age only applies to '
+        + 'you.',
+      aide: 'The booking is in your name; added players answer yes or no, as for a call-up.',
+      ajoutes_one: 'The team\'s player is added.',
+      ajoutes_other: 'The team\'s {{count}} players are added.',
+      equipe: 'For my team',
+      moi: 'For me',
+      titre: 'Who is it for?',
+    },
     prix: {
       aReglerSurPlace: 'paid on site',
       des: 'from {{prix}}',
@@ -18300,6 +18321,7 @@ export default {
       combien: 'How many players?',
       envoyerLaDemande: 'Send the request',
       honneur: 'You commit on your honour to come.',
+      lancerLaCollecte: 'Start gathering players',
       modifier: 'Change',
       moins: 'One player less',
       paiement: 'Payment is made on site.',
