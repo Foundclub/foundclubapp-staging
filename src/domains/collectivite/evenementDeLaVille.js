@@ -53,6 +53,10 @@ export const etapesDuTunnel = ({ ailleurs = false, depuisUneCase = false } = {})
  */
 export const etatInitial = (initial = {}) => ({
   adresse: '',
+  // R17-EVT-1-BIS (f) : l'affiche (`{ id, url }`, id null pour celle déjà en place) ; le corps ne
+  // la porte que si elle a changé (`afficheModifiee`).
+  affiche: null,
+  afficheModifiee: false,
   ailleurs: false,
   audience: 'dirigeants',
   date: initial?.date || '',
@@ -76,6 +80,7 @@ export const etatInitial = (initial = {}) => ({
 export const etatDepuisLaVue = (vue) => ({
   ...etatInitial(),
   adresse: vue?.address || '',
+  affiche: vue?.poster?.url ? { id: null, url: vue.poster.url } : null,
   ailleurs: !vue?.facility?.documentId,
   audience: vue?.audience || 'dirigeants',
   date: vue?.startDate || '',
@@ -143,6 +148,9 @@ export const versCorpsDeLApi = (etat) => {
       facilityId: etat?.ailleurs ? null : etat?.facilityId || null,
       kind: etat?.kind || 'manifestation',
       name: String(etat?.name || '').trim(),
+      // R17-EVT-1-BIS (f) : l'affiche, seulement si elle a changé (ajoutée : son id ; retirée :
+      // null) ; sinon le serveur garde celle en place.
+      ...(etat?.afficheModifiee ? { poster: etat?.affiche?.id ?? null } : {}),
       startDate: etat?.date,
       startTime: etat?.heureDebut,
       takesPlace: etat?.ailleurs ? false : Boolean(etat?.takesPlace),

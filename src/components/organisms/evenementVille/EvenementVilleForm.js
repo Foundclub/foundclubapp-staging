@@ -2,7 +2,7 @@ import { format, isValid, parse } from 'date-fns';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Switch, Text, TouchableOpacity, View,
+  Image, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -29,7 +29,15 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
+import { uploadActualiteFile } from '@/services/collectivite/collectiviteActualiteService';
 import { useApercuEvenement } from '@/services/collectivite/collectiviteEvenementQueries';
+
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+
+import MediaPlatform from '@/platform/media';
+
+// R17-EVT-1-BIS (f) : comme les photos de la page d'un complexe (ComplexeMaPage).
+const AFFICHE_OCTETS_MAX = 10 * 1024 * 1024;
 
 /**
  * 🏛️ R17-EVT-1 (20/10/2026, REC17-005) — « AJOUTER UN ÉVÉNEMENT DE LA VILLE ».
@@ -73,6 +81,7 @@ function EvenementDeLaVilleForm({
     /** @type {{ enCours: boolean, panne: any }} */ ({ enCours: false, panne: null }),
   );
   const [avecDescription, setAvecDescription] = useState(Boolean(etat.description));
+  const [afficheEnvoi, setAfficheEnvoi] = useState({ enCours: false, refus: '' });
   const changer = (/** @type {Record<string, any>} */ champs) => setEtat(
     (/** @type {Record<string, any>} */ avant) => ({ ...avant, ...champs }),
   );
@@ -497,6 +506,77 @@ function EvenementDeLaVilleForm({
     </TouchableOpacity>
   );
 
+  // R17-EVT-1-BIS (f) (20/10) : l'affiche (facultative), choisie puis envoyée comme les pièces
+  // des actualités de la Ville ; 10 Mo au plus.
+  const choisirAffiche = async () => {
+    const choisie = await MediaPlatform.pickImage();
+    if (!choisie || choisie?.didCancel) return;
+    const fichier = choisie?.assets?.[0] || choisie;
+    if (Number(fichier?.fileSize ?? fichier?.size ?? 0) > AFFICHE_OCTETS_MAX) {
+      setAfficheEnvoi({
+        enCours: false,
+        refus: t('collectiviteEvenement.affiche.tropLourde', 'Cette image dépasse 10 Mo.'),
+      });
+      return;
+    }
+    setAfficheEnvoi({ enCours: true, refus: '' });
+    try {
+      const envoyee = await uploadActualiteFile(choisie);
+      if (envoyee?.id) {
+        changer({ affiche: { id: envoyee.id, url: envoyee.url || null }, afficheModifiee: true });
+      }
+      setAfficheEnvoi({ enCours: false, refus: '' });
+    } catch {
+      setAfficheEnvoi({
+        enCours: false,
+        refus: t('collectiviteEvenement.affiche.echec', 'L’affiche n’est pas partie. Réessayez.'),
+      });
+    }
+  };
+
+  const champAffiche = (
+    <View style={{ gap: 8 }}>
+      {etat.affiche?.url ? (
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+          <Image
+            accessibilityIgnoresInvertColors
+            source={{ uri: resolveMediaUrl(etat.affiche.url) }}
+            style={{ borderRadius: 8, height: 72, width: 54 }}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => changer({ affiche: null, afficheModifiee: true })}
+            style={{ justifyContent: 'center', minHeight: 44 }}
+            testID="evenement-retirer-affiche"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {t('collectiviteEvenement.affiche.retirer', 'Retirer l’affiche')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          accessibilityRole="button"
+          disabled={afficheEnvoi.enCours}
+          onPress={choisirAffiche}
+          style={{ justifyContent: 'center', minHeight: 44 }}
+          testID="evenement-ajouter-affiche"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {afficheEnvoi.enCours
+              ? t('collectiviteEvenement.affiche.envoi', 'Envoi de l’affiche…')
+              : t('collectiviteEvenement.affiche.ajouter', '+ Ajouter une affiche')}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {afficheEnvoi.refus ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.error300 }]}>
+          {afficheEnvoi.refus}
+        </Text>
+      ) : null}
+    </View>
+  );
+
   const encadrePanne = envoi.panne ? (
     <View
       accessibilityRole="alert"
@@ -582,6 +662,8 @@ function EvenementDeLaVilleForm({
             {lignesQui}
           </View>
           {champDescription}
+          {champAffiche}
+          {champAffiche}
           {encadrePanne}
         </ScrollView>
         <View style={[Alignments.row, { gap: 12 }]}>

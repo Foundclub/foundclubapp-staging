@@ -115,6 +115,31 @@ describe('R17-EVT-1 — l’événement de la Ville, en règles pures', () => {
     ).toBeNull();
   });
 
+  // R17-EVT-1-BIS (f) (20/10, tri du chef) : l'affiche (facultative). Le corps ne porte `poster`
+  // que si elle a CHANGÉ (ajoutée : son id ; retirée : null) ; sinon il ne la touche pas (le
+  // serveur garde celle qui est en place). ROUGE avant (aucune affiche).
+  it('🔴 l’affiche : envoyée si elle change ; « Modifier » garde celle en place', () => {
+    expect(etatInitial()).toMatchObject({ affiche: null, afficheModifiee: false });
+    expect('poster' in versCorpsDeLApi(FETE).data).toBe(false);
+    expect(versCorpsDeLApi({
+      ...FETE, affiche: { id: 12, url: '/uploads/a.jpg' }, afficheModifiee: true,
+    }).data.poster).toBe(12);
+    const retiree = versCorpsDeLApi({ ...FETE, affiche: null, afficheModifiee: true });
+    expect(retiree.data.poster).toBeNull();
+    const enPlace = etatDepuisLaVue({
+      name: 'Fête du sport',
+      poster: {
+        formats: null, height: 1200, url: '/uploads/fete.jpg', width: 800,
+      },
+      startDate: '2026-10-24',
+    });
+    expect(enPlace).toMatchObject({
+      affiche: { id: null, url: '/uploads/fete.jpg' },
+      afficheModifiee: false,
+    });
+    expect('poster' in versCorpsDeLApi(enPlace).data).toBe(false);
+  });
+
   it('« Modifier » repart de la vue de la Ville', () => {
     const etat = etatDepuisLaVue({
       address: null,

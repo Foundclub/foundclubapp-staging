@@ -100,6 +100,17 @@ jest.mock(
     return null;
   },
 );
+// R17-EVT-1-BIS (f) : le choix d'une image et son envoi (comme les pièces des actualités).
+/** @type {any} */
+let mockImageChoisie = null;
+const mockTeleverser = jest.fn();
+jest.mock('@/platform/media', () => ({
+  __esModule: true,
+  default: { pickImage: async () => mockImageChoisie },
+}));
+jest.mock('@/services/collectivite/collectiviteActualiteService', () => ({
+  uploadActualiteFile: (/** @type {any} */ fichier) => mockTeleverser(fichier),
+}));
 jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => {
   const reactActuel = jest.requireActual('react');
   const {
@@ -450,5 +461,69 @@ describe('R17-EVT-1 — le panneau (ordinateur)', () => {
     });
     expect(textes(arbre)).toEqual(expect.arrayContaining(['Modifier l’événement', 'Enregistrer']));
     expect(dernierInput('evenement-nom').value).toBe('Tournoi');
+  });
+});
+
+// 🏛️ R17-EVT-1-BIS (f) (20/10/2026, tri du chef) — L'AFFICHE (facultative), dans « Quel
+// événement ? » et dans le panneau : « + Ajouter une affiche » choisit une image, l'envoie (comme
+// les pièces des actualités de la Ville) et la joint au corps (`poster`) ; « Retirer l'affiche »
+// l'enlève. Plus de 10 Mo : un refus, rien n'est envoyé. ROUGE avant (aucun bouton).
+describe('R17-EVT-1-BIS — l’affiche', () => {
+  const CASE = {
+    date: '2026-10-24', endTime: '17:00', facilityId: 'stade', startTime: '10:00',
+  };
+  beforeEach(() => {
+    mockTeleverser.mockReset();
+    mockImageChoisie = { assets: [{ fileSize: 1000, uri: 'file://affiche.jpg' }] };
+  });
+
+  it('🔴 « + Ajouter une affiche » : choisie, envoyée, puis jointe au corps (poster)', async () => {
+    mockTeleverser.mockResolvedValue({ id: 12, url: '/uploads/affiche.jpg' });
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ initial: CASE, onPublier, presentation: 'panneau' });
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Fête du sport');
+    });
+    await touche(arbre, 'evenement-ajouter-affiche');
+    expect(mockTeleverser).toHaveBeenCalledWith(mockImageChoisie);
+    expect(textes(arbre)).toContain('Retirer l’affiche');
+    await touche(arbre, 'bouton:Publier l’événement');
+    expect(onPublier).toHaveBeenCalledWith({
+      data: expect.objectContaining({ name: 'Fête du sport', poster: 12 }),
+    });
+  });
+
+  it('🔴 plus de 10 Mo : un refus, rien n’est envoyé', async () => {
+    mockImageChoisie = { assets: [{ fileSize: 11 * 1024 * 1024, uri: 'file://lourde.jpg' }] };
+    const arbre = await monter({ initial: CASE, presentation: 'panneau' });
+    await touche(arbre, 'evenement-ajouter-affiche');
+    expect(mockTeleverser).not.toHaveBeenCalled();
+    expect(textes(arbre)).toContain('Cette image dépasse 10 Mo.');
+  });
+
+  it('🔴 « Modifier » : l’affiche en place se garde ; « Retirer » envoie poster: null', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({
+      evenement: {
+        audience: 'dirigeants',
+        documentId: 'evt-1',
+        endTime: '17:00',
+        facility: { documentId: 'stade', name: 'Stade municipal' },
+        kind: 'tournoi',
+        name: 'Tournoi',
+        poster: { url: '/uploads/tournoi.jpg' },
+        startDate: '2026-10-24',
+        startTime: '10:00',
+        takesPlace: false,
+        visibility: 'actualite',
+      },
+      onPublier,
+      presentation: 'panneau',
+    });
+    expect(textes(arbre)).toContain('Retirer l’affiche');
+    await touche(arbre, 'evenement-retirer-affiche');
+    expect(textes(arbre)).toContain('+ Ajouter une affiche');
+    await touche(arbre, 'bouton:Enregistrer');
+    expect(onPublier).toHaveBeenCalledWith({ data: expect.objectContaining({ poster: null }) });
   });
 });

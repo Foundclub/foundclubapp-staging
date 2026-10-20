@@ -326,6 +326,24 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
     expect(mockApercuDemandes.every((demande) => demande.id === null)).toBe(true);
   });
 
+  // R17-EVT-1-BIS (f) : l'affiche, en tête de la fiche, pour tous ceux qui la lisent. ROUGE avant.
+  it('🔴 l’affiche en tête de la fiche (son adresse servie par le serveur)', async () => {
+    mockFiche = {
+      data: { ...VUE_DU_MEMBRE, poster: { height: 1200, url: '/uploads/fete.jpg', width: 800 } },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    const affiche = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'evenement-affiche');
+    expect(affiche.length).toBeGreaterThan(0);
+    expect(String(affiche[0].props.source?.uri)).toMatch(/\/uploads\/fete\.jpg$/);
+    expect(affiche[0].props.accessibilityLabel).toBe('Affiche de « Fête du sport »');
+    mockFiche = { data: VUE_DU_MEMBRE, isLoading: false };
+    const sans = await monter(<EvenementDeLaVille />);
+    expect(sans.root.findAll((/** @type {any} */ n) => n.props?.testID === 'evenement-affiche'))
+      .toHaveLength(0);
+  });
+
   it('annulé : « Annulé », plus aucun geste ; introuvable : une phrase', async () => {
     mockFiche = { data: { ...VUE_DE_LA_VILLE, status: 'cancelled' }, isLoading: false };
     const annule = await monter(<EvenementDeLaVille />);
