@@ -70,9 +70,11 @@ const jetonDEnvoi = (message) => String(message?.clientMessageId || '').trim();
  */
 export const fusionnerLaDernierePage = (donnees, pageServeur) => {
   if (!Array.isArray(donnees?.pages) || donnees.pages.length === 0) return donnees;
+  /** @type {any[]} */
   const recus = (Array.isArray(pageServeur?.data) ? pageServeur.data : []).filter(idDuMessage);
   if (recus.length === 0) return donnees;
 
+  /** @type {any[]} */
   const enCache = donnees.pages.flatMap(
     (/** @type {any} */ page) => (Array.isArray(page?.data) ? page.data : []),
   );
