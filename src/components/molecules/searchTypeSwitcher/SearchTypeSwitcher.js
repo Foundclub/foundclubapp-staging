@@ -14,6 +14,8 @@ import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
+
 /**
  * @typedef {'events' | 'clubs' | 'reservations' | 'recruitment' | 'amicaux'} SearchType
  */
@@ -21,7 +23,9 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 // Le marche qui n'est pas ouvert. Il reste dans le dock — le retirer casserait
 // la case « Reservations » de l'Accueil, qui navigue encore vers ce marche —
 // mais l'appui n'active plus la categorie : il explique.
-const UNAVAILABLE_TYPE = 'reservations';
+// RESA-L6A (14/10/2026) — l'interrupteur `COMPLEXES_JOUEUR` allumé, la reservation
+// d'un terrain ouvre (E-P01) : plus aucun marche ferme.
+const UNAVAILABLE_TYPE = COMPLEXES_JOUEUR ? null : 'reservations';
 
 // Cible tactile et hauteur de pastille : 46 pt, hors rampe Spaces (44 puis 52,
 // rien entre les deux). Ecrit ici en clair, une seule fois.

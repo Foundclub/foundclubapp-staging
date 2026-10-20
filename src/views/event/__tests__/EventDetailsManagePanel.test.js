@@ -108,6 +108,13 @@ jest.mock('react-native-blob-util', () => ({
   default: { config: jest.fn(), fs: { dirs: {} } },
 }));
 
+// RESA-L6A (14/10/2026) — l'interrupteur des gestes de l'organisateur d'une réservation : allumé
+// ici (états 6, 6 bis, D4), éteint le temps de l'état 6 ter (la doublure est un objet modifiable).
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  __esModule: true,
+  COMPLEXES_JOUEUR: true,
+}));
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),
@@ -759,6 +766,67 @@ describe('EventDetails — panneau organisateur : etats recenses', () => {
     });
 
     expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
+  });
+
+  // RESA-L6A (14/10/2026) — LE BOUTON ORGANISATEUR (référence réservation §8) : le type semé
+  // s'appelle « Réservation », AVEC l'accent (admin src/data/event-types.json:21). Le test
+  // « includes('reservation') » de EventDetails.js ne le trouvait jamais : le module des actions de
+  // l'organisateur n'était jamais rendu. Le témoin d'au-dessus, écrit sans accent, le cachait.
+  test('etat 6 bis — reservation au nom semé « Réservation » (accent) : module rendu', () => {
+    const root = mountScreen({
+      auth: { canManageEvent: () => true },
+      event: buildEvent({ type: { name: 'Réservation' } }),
+    });
+
+    expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
+  });
+
+  // RESA-L6A (14/10/2026) — décision du chef de soutien (14/10 ~11h50, option B) : Privatiser,
+  // Chercher / Ouvrir aux joueurs et SOS répondent 403 depuis SECU-RESA (référence §8) ; ils ne
+  // se rendent qu'interrupteur COMPLEXES_JOUEUR allumé (allumé : états 6 et 6 bis), tant qu'un
+  // lot serveur ne les rouvre pas. « Réserver » (joinReservation, resté ouvert) ne bouge pas.
+  test('etat 6 ter — COMPLEXES_JOUEUR éteint : gestes de l organisateur absents', () => {
+    // eslint-disable-next-line global-require
+    const interrupteurs = require('@/config/fonctionsMasquees');
+    interrupteurs.COMPLEXES_JOUEUR = false;
+    try {
+      const root = mountScreen({
+        auth: { canManageEvent: () => true },
+        event: buildEvent({ type: { name: 'Réservation' } }),
+      });
+
+      expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(false);
+    } finally {
+      interrupteurs.COMPLEXES_JOUEUR = true;
+    }
+  });
+
+  // RESA-RAT-APP (19/10/2026) — règle du rattrapage : interrupteur COMPLEXES_JOUEUR éteint,
+  // l'écran fusionné est celui de staging. Le test « réservation » de staging ignore
+  // « Réservation » (accent) : l'événement garde son pied d'écran ordinaire, ni module de
+  // l'organisateur ni bouton « Reserver ». Allumé, la règle partagée isBookingEventType le
+  // reconnaît (états 6 bis et ci-dessous).
+  test('etat 6 quater — éteint : « Réservation » garde le pied d écran de staging', () => {
+    // eslint-disable-next-line global-require
+    const interrupteurs = require('@/config/fonctionsMasquees');
+    interrupteurs.COMPLEXES_JOUEUR = false;
+    try {
+      const root = mountScreen({
+        auth: { canManageEvent: () => true },
+        event: buildEvent({ type: { name: 'Réservation' } }),
+      });
+
+      expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(false);
+      expect(hasText(root, 'Reserver')).toBe(false);
+    } finally {
+      interrupteurs.COMPLEXES_JOUEUR = true;
+    }
+    act(() => mounted.unmount());
+    const allume = mountScreen({
+      auth: { canManageEvent: () => true },
+      event: buildEvent({ type: { name: 'Réservation' } }),
+    });
+    expect(hasText(allume, 'Reserver')).toBe(true);
   });
 
   test('etat 7 — tournoi : le panneau tournoi prend la main et propose ses actions', () => {

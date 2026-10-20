@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 
+import { iconeDuGerant } from '@/domains/complexe/notificationsDuComplexe';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
@@ -139,6 +140,11 @@ const iconeDUneDemande = (data) => {
  */
 export const getNotificationIcon = (type, data = null) => {
   if (type === NOTIFICATION_TYPES.OVERBOOKING_REQUEST) return iconeDUneDemande(data);
+  // RESA-L5B-1 (20/10/2026) — le gérant de complexe (planche EG19) ; null hors de lui.
+  const duGerant = iconeDuGerant(type, data);
+  if (duGerant) return duGerant;
+  // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe, côté joueur.
+  if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) return 'stadium';
   if (TEAM_ICON_TYPES.has(type)) return 'users';
   if (CLUB_ICON_TYPES.has(type)) return 'shield';
   if (EVENT_ICON_TYPES.has(type)) return 'calendar';
@@ -158,6 +164,15 @@ export const getNotificationIcon = (type, data = null) => {
  * @returns {'succes' | 'refus' | null} Le ton, ou null.
  */
 export const getNotificationTone = (type, data = null) => {
+  // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe : acceptée en vert ; refusée,
+  // sans réponse, annulée ou fermeture en rouge.
+  if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
+    if (data?.change === 'acceptee') return 'succes';
+    if (['annulee', 'fermeture', 'refusee', 'sans-reponse'].includes(String(data?.change))) {
+      return 'refus';
+    }
+    return null;
+  }
   if (type !== NOTIFICATION_TYPES.OVERBOOKING_REQUEST || data?.audience === 'occupant') return null;
   if (data?.decision === 'approved') return 'succes';
   if (data?.decision === 'refused') return 'refus';

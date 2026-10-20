@@ -421,4 +421,52 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
+  // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation, toile BLG79NHv2) : son
+  // espace (accueil E-G02, en onglets), « Devenir gérant » (E-G01), ses terrains (E-G07, E-G08),
+  // leurs créneaux (E-G09) et ses réglages (E-G16). Cachés par l'interrupteur `COMPLEXES_GERANT`
+  // (src/config/fonctionsMasquees.js).
+  ComplexeAccueil: 'ComplexeAccueil',
+  ComplexeCreneaux: 'ComplexeCreneaux',
+  ComplexeDevenirGerant: 'ComplexeDevenirGerant',
+  ComplexeEspace: 'ComplexeEspace',
+  ComplexeInstallations: 'ComplexeInstallations',
+  ComplexeReglages: 'ComplexeReglages',
+  ComplexeTerrain: 'ComplexeTerrain',
+  // RESA-L5A2 (14/10/2026) — la suite du gérant, sur le serveur RESA-L2A : les demandes (E-G06) et
+  // le planning (E-G03) en onglets de son espace, ses réservations (E-G04), la fiche d'une
+  // réservation (E-G05) et les fermetures (E-G10). Cachés par `COMPLEXES_GERANT`.
+  // RESA-L5B-1 (20/10/2026) — la fiche d'un client (E-G15 : non honorées, bannir / débannir).
+  ComplexeClient: 'ComplexeClient',
+  ComplexeDemandes: 'ComplexeDemandes',
+  ComplexeFermetures: 'ComplexeFermetures',
+  ComplexePlanning: 'ComplexePlanning',
+  ComplexeReservation: 'ComplexeReservation',
+  ComplexeReservations: 'ComplexeReservations',
+  // RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) : le canal
+  // (E-G12), la liste des clients (E-G15), la fidélité (E-G14). Cachés par `COMPLEXES_GERANT`.
+  // E-S01 : la console des complexes du SuperAdmin (sa liste, sa fiche sur téléphone).
+  AdminComplexeDetail: 'AdminComplexeDetail',
+  AdminComplexeList: 'AdminComplexeList',
+  ComplexeAffiches: 'ComplexeAffiches',
+  ComplexeCanal: 'ComplexeCanal',
+  ComplexeClients: 'ComplexeClients',
+  ComplexeFidelite: 'ComplexeFidelite',
+  ComplexeMaPage: 'ComplexeMaPage',
+  ComplexeStatistiques: 'ComplexeStatistiques',
+  // RESA-L6A (14/10/2026) — le joueur (chantier Réservation, toile BLG79NHv2) : la page du complexe
+  // (E-P02), choisir un créneau (E-P03), le récapitulatif (E-P04), le résultat (E-P05), ma
+  // réservation (E-P07) et les messages d'échec (E-P13). La recherche (E-P01) n'est pas un écran :
+  // c'est le panneau « Réservations » de la recherche. Cachés par l'interrupteur `COMPLEXES_JOUEUR`
+  // (src/config/fonctionsMasquees.js).
+  ReserverComplexe: 'ReserverComplexe',
+  ReserverCreneau: 'ReserverCreneau',
+  ReserverEchec: 'ReserverEchec',
+  ReserverMaReservation: 'ReserverMaReservation',
+  ReserverRecapitulatif: 'ReserverRecapitulatif',
+  ReserverResultat: 'ReserverResultat',
+  // RESA-L6B-1 (19/10/2026) — la confirmation la veille (E-P14), ouverte par la notification N-20
+  // (`complexeReservationJoueur`, `change: 'veille'`) et la cloche ; « Mes réservations » (E-P10),
+  // ouverte par « Mon compte » et le raccourci de E-P01. Cachées par `COMPLEXES_JOUEUR`.
+  ReserverMesReservations: 'ReserverMesReservations',
+  ReserverVeille: 'ReserverVeille',
 });

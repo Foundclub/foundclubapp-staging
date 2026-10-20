@@ -235,7 +235,10 @@ const resolveMapItemId = (item, scope, coordinates) => (
 );
 
 /**
- * @typedef {'events' | 'clubs' | 'reservations'} SearchMapScope
+ * RESA-CARTE (20/10) : `complexes` = les complexes de réservation de la recherche de terrains
+ * (E-P01, vue Carte) ; ses épingles sont faites par `epinglesDesComplexes`
+ * (domains/complexe/reserverTerrain.js), pas par `toSearchMapItem`.
+ * @typedef {'events' | 'clubs' | 'reservations' | 'complexes'} SearchMapScope
  */
 
 /**
@@ -253,7 +256,10 @@ const resolveMapItemId = (item, scope, coordinates) => (
  *  distanceLabel: string;
  *  priceLabel: string;
  *  timeLabel: string;
+ *  markerLabel?: string;
  * }} SearchMapItem
+ * `markerLabel` (RESA-CARTE) : le mot posé sur l'épingle (le nombre de créneaux libres d'un
+ * complexe) ; absent, l'épingle garde son numéro d'ordre (9 repères au plus) ou son point.
  */
 
 /**
@@ -372,6 +378,8 @@ export const getSearchMapEmptyMessage = (scope) => {
   switch (scope) {
     case 'clubs':
       return i18next.t('searchMap.empty.clubs', 'Aucun club géolocalisable pour le moment.');
+    case 'complexes':
+      return i18next.t('searchMap.empty.complexes', 'Aucun complexe à placer sur la carte.');
     case 'reservations':
       return i18next.t(
         'searchMap.empty.reservations',
@@ -400,6 +408,14 @@ export const getSearchMapNoCoordinatesMessage = (scope, totalCount = 0) => {
           defaultValue_other: "{{count}} clubs trouvés, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
         })
         : i18next.t('searchMap.empty.clubs', 'Aucun club géolocalisable pour le moment.');
+    case 'complexes':
+      return safeCount > 0
+        ? i18next.t('searchMap.noCoordinates.complexes', {
+          count: safeCount,
+          defaultValue_one: "{{count}} complexe trouvé, mais il n'a pas de position exploitable sur la carte.", // eslint-disable-line max-len
+          defaultValue_other: "{{count}} complexes trouvés, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+        })
+        : i18next.t('searchMap.empty.complexes', 'Aucun complexe à placer sur la carte.');
     case 'reservations':
       return safeCount > 0
         ? i18next.t('searchMap.noCoordinates.reservations', {
@@ -437,6 +453,10 @@ export const getSearchMapResultLabel = (scope, count = 2) => {
         'searchMap.resultLabel.clubs',
         'clubs',
       ) : i18next.t('searchMap.resultLabel.club', 'club');
+    case 'complexes':
+      return isPlural
+        ? i18next.t('searchMap.resultLabel.complexes', 'complexes')
+        : i18next.t('searchMap.resultLabel.complexe', 'complexe');
     case 'reservations':
       return isPlural
         ? i18next.t('searchMap.resultLabel.reservations', 'réservations')

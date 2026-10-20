@@ -79,6 +79,10 @@ jest.mock(
   '@/components/organisms/recrutementListContent/RecrutementListContent',
   () => mockPanneauEnregistreur('recruitment'),
 );
+// RESA-L6A (14/10/2026) : la recherche de terrains est importée en tête (le site n'a pas
+// `require`) ; elle n'est rendue qu'interrupteur COMPLEXES_JOUEUR allumé (éteint ici : « Bientôt
+// disponible », état 6). Doublée pour ne pas charger sa feuille du bas (@gorhom).
+jest.mock('@/views/reserverTerrain/RechercheDeTerrains', () => () => null);
 
 jest.mock('../components/SearchScreenShell', () => {
   const { View } = jest.requireActual('react-native');

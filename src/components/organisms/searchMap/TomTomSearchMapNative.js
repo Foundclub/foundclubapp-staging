@@ -248,7 +248,10 @@ const resolveMeasuredOverlayInsets = (
  *  longitudeDelta?: number;
  * } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
+ * @param {boolean} [props.showPreviewCard] RESA-CARTE (20/10) : faux, aucun aperçu en bas de la
+ *   carte — l'écran montre lui-même le repère choisi (la recherche de terrains, E-P01). Vrai par
+ *   défaut : l'annuaire ne change pas.
  * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
  * @param {boolean} [props.truncated]
@@ -272,6 +275,7 @@ function TomTomSearchMapNative({
   scope = 'events',
   selectedItemId,
   selectionFocusBehavior = 'camera',
+  showPreviewCard = true,
   topMargin = 12,
   totalCount = 0,
   truncated = false,
@@ -1044,7 +1048,7 @@ function TomTomSearchMapNative({
         </View>
       ) : null}
 
-      {isMapReady ? (
+      {isMapReady && showPreviewCard ? (
         <SearchMapPreviewCard
           bottomOffset={previewBottomOffset}
           item={selectedItem}

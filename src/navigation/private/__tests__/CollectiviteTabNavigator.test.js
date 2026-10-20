@@ -98,8 +98,9 @@ describe('COLL-ACCUEIL — planche 2 : où arrive un compte « Ville seule »', 
     expect(racine)
       .toContain("const sansRoleSportif = Boolean(userData?.documentId) && roleKey === 'new';");
     expect(racine).toContain('useMyCollectivites({ enabled: sansRoleSportif })');
-    // La pile choisit son écran d'arrivée une seule fois : elle attend la réponse.
-    expect(racine).toContain('if (userDataLoading || villeEnLecture) {');
+    // La pile choisit son écran d'arrivée une seule fois : elle attend la réponse. RESA-INSCRIPTION
+    // (19/10) : la même garde attend la lecture « complexe seul » (ComplexeTabNavigator.test.js).
+    expect(racine).toContain('if (userDataLoading || villeEnLecture || complexeEnLecture) {');
   });
 
   it('sur le site, la barre est le menu latéral : exemption justifiée', () => {

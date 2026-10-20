@@ -12,6 +12,9 @@ let sharedSocket = null;
 let sharedToken = null;
 /** @type {Set<(isConnected: boolean) => void>} */
 const connectionSubscribers = new Set();
+// MSGNOTIF2 — combien de fois CETTE socket a été (r)établie : au-delà de 1, une
+// connexion est une RE-connexion, et ce qui s'est dit pendant la coupure est à relire.
+let connexionsEtablies = 0;
 
 const getSocketUrl = () => getSocketBaseUrl();
 
@@ -58,6 +61,7 @@ const removeInternalListeners = (socket) => {
 const attachInternalListeners = (socket) => {
   socket.on('connect', () => {
     socketLogger.debug('Connected');
+    connexionsEtablies += 1;
     notifyConnectionSubscribers(true);
   });
 
@@ -83,6 +87,12 @@ const attachInternalListeners = (socket) => {
  * @returns {import('socket.io-client').Socket | null}
  */
 export const getSharedSocket = () => sharedSocket;
+
+/**
+ * Le nombre de connexions établies par la socket partagée en cours.
+ * @returns {number} 1 au premier branchement, plus à chaque retour du fil.
+ */
+export const compterConnexionsEtablies = () => connexionsEtablies;
 
 /**
  * @param {(isConnected: boolean) => void} subscriber
@@ -137,6 +147,8 @@ export const connectSharedSocket = (token) => {
       : ['websocket'],
   });
   sharedToken = token;
+  // Une socket neuve (lancement, autre compte) : sa première connexion n'est pas un retour.
+  connexionsEtablies = 0;
   attachInternalListeners(sharedSocket);
   return sharedSocket;
 };

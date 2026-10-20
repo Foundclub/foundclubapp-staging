@@ -40,7 +40,11 @@ import {
   getUserKey,
   uniqueUsers,
 } from '@/domains/event/eventParticipantSections';
-import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import {
+  getEventEditSupport,
+  isBookingEventType,
+  resolveTrainingOpenConfig,
+} from '@/domains/event/eventUseCases';
 import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
@@ -121,6 +125,7 @@ import {
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SharePlatform from '@/platform/share';
@@ -7758,20 +7763,31 @@ function EventDetails({ navigation, route }) {
       return <EventChildRegistration event={event} navigation={navigation} nowMs={serverNowMs} />;
     }
 
-    const isReservation = event?.type?.name?.toLowerCase()?.includes('reservation')
-      || event?.type?.name?.toLowerCase()?.includes('reservation');
+    // RESA-L6A (14/10/2026) — le type semé est « Réservation », avec l'accent : la règle partagée
+    // l'enlève (avant, deux fois le même test sans accent : le module de l'organisateur n'était
+    // jamais rendu ; référence réservation §8).
+    // RESA-RAT-APP (19/10) — interrupteur COMPLEXES_JOUEUR éteint, l'ancien test reste : un
+    // événement « Réservation » garde le pied d'écran d'aujourd'hui (règle du rattrapage).
+    const isReservation = COMPLEXES_JOUEUR
+      ? isBookingEventType(event?.type?.name)
+      : event?.type?.name?.toLowerCase()?.includes('reservation');
 
     if (isReservation) {
       const userDocumentId = userData?.documentId;
       const hasAlreadyJoined = event?.participations?.some((/** @type {any} */ participation) => participation?.documentId === userDocumentId);
       return (
         <View>
-          <EventReservationActions
-            event={event}
-            hasAlreadyJoined={hasAlreadyJoined}
-            mutations={mutations}
-            userData={userData}
-          />
+          {/* Privatiser, Chercher / Ouvrir aux joueurs, SOS : 403 depuis SECU-RESA (§8).
+              Rendus seulement interrupteur COMPLEXES_JOUEUR allumé, tant qu'un lot serveur
+              ne les rouvre pas (chef de soutien, 14/10). Témoin : EventDetailsManagePanel. */}
+          {COMPLEXES_JOUEUR ? (
+            <EventReservationActions
+              event={event}
+              hasAlreadyJoined={hasAlreadyJoined}
+              mutations={mutations}
+              userData={userData}
+            />
+          ) : null}
           {hasAlreadyJoined && (
             <Button disabled title={t('eventDetails.iMIn', 'Je participe !')} variant="Primary" />
           )}

@@ -51,6 +51,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -1456,6 +1457,15 @@ function FacilityList() {
       key={isDesktop ? 'grille' : 'liste'}
       keyExtractor={getFacilityKey}
       ListEmptyComponent={etatVide}
+      // 🏟️ R17-PLANNING (20/10, REC17-005) : sous les cartes, inchangées, le planning de toutes
+      // les installations de la Ville (planches P10-planning-ordi / -tel).
+      ListFooterComponent={facilities.length ? (
+        <PlanningDesInstallations
+          collectiviteId={collectiviteId}
+          installations={facilities}
+          onOuvrirInstallation={ouvrirInstallation}
+        />
+      ) : null}
       numColumns={isDesktop ? COLONNES_ORDINATEUR : 1}
       refreshControl={(
         <RefreshControl

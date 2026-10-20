@@ -111,6 +111,9 @@ jest.mock('@/services/auth/authService', () => ({
 
 // La lecture de la porte : `/collectivites/mine`, telle que le hook la rend.
 // COLL-ACCUEIL (01/10) : la pastille de la rangee lit les demandes en attente.
+// RESA-L6B-1 — le nombre de « Mes réservations » (rangée cachée par COMPLEXES_JOUEUR) lit le
+// serveur des complexes : doublé ici comme les autres services de « Mon compte ».
+jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteRequests: () => ({ data: mockRequetes }),
   useMyCollectivites: () => ({ data: mockCollectivites, isLoading: false }),

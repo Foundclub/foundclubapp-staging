@@ -1,0 +1,652 @@
+/**
+ * LE COMPLEXE DE RÉSERVATION, CÔTÉ GÉRANT — RESA-L5A1 (13/10/2026), chantier Réservation.
+ *
+ * Les routes du serveur après RESA-L1A + RESA-L1B (contrat : dépôt méthode
+ * `docs/RESERVATION_CONTRAT_API_L1.md` ; source qui fait foi : admin `origin/feat/RESAL1B-admin`,
+ * `src/api/complexe/routes/*.ts`). Le serveur est le seul juge : la relation `gestionnaires`
+ * garde chaque route du gérant, une LISTE BLANCHE choisit les champs écrits. L'app n'envoie que
+ * ce que l'écran demande, et lit le code du refus dans `error.details.code`.
+ *
+ * ⚠️ NON LIVRÉ (ni recette ni production, 13/10) : tout ce qui appelle ce module est caché par
+ * l'interrupteur `COMPLEXES_GERANT` (`src/config/fonctionsMasquees.js`).
+ *
+ * ⚠️ Le client HTTP est chargé À L'APPEL, comme collectiviteRattachementService : « Mon compte »
+ * et l'accueil importent les composants du gérant sans doubler le client, qui exige l'adresse du
+ * serveur dès son chargement (mémoire piege-env-absent-worktree-import-service). Par `require` et
+ * non par `import()` : jest n'exécute pas un import dynamique (mémoire
+ * piege-jest-import-dynamique), et ce service a son témoin.
+ *
+ * RESA-L6A (14/10) : ces DEUX chargements à l'appel (le client, et le service des fermetures qui
+ * importe le client) RESTENT, mesurés : les importer en tête fait échouer au CHARGEMENT 10
+ * suites de témoins dans toute copie de travail sans `.env` (9 de `views/profile` + le témoin des
+ * fermetures : « API_URL is missing », runtimeUrls.native.js:50) ; un `import()` dynamique, jest
+ * ne l'exécute pas (« dynamic import callback was invoked without --experimental-vm-modules »,
+ * 15 témoins du service rouges).
+ * RESA-L7-1 (20/10) : ils passent par `./complexeChargeurs` — l'app et jest prennent
+ * `complexeChargeurs.js` (`require` à l'appel), le site prend `complexeChargeurs.web.js` (imports
+ * en tête : son serveur de dev n'a pas `require`). Plus aucun `require` dans ce fichier (témoin
+ * `views/reserverTerrain/__tests__/site.sansRequire.test.js`).
+ *
+ * Témoin : `__tests__/complexeService.test.js`.
+ */
+import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
+import { client, fermetures } from './complexeChargeurs';
+
+/**
+ * Le corps d'une réponse.
+ * @param {Promise<any>} reponse - La réponse axios.
+ * @returns {Promise<any>} Son corps.
+ */
+const corps = async (reponse) => (await reponse).data;
+
+const enc = (/** @type {unknown} */ valeur) => encodeURIComponent(String(valeur || ''));
+
+/**
+ * « Devenir gestionnaire » (E-G01) : crée SON complexe. 201 `{ data: complexe }` ; ou 200
+ * `{ data: { duplicate: true, suggestions } }` (« C'est le tien ? », rien n'est créé) : renvoyer
+ * avec `forceCreate: true` pour créer quand même.
+ * @param {Record<string, any>} donnees - `{ acceptRules, name, address, phoneNumber, sports,
+ *   minAge, cancellationDelayHours, siret?, forceCreate?, rulesVersion? }`.
+ * @returns {Promise<any>} Le corps `{ data }`.
+ */
+export const creerMonComplexe = async (donnees) => corps(
+  client().post('/complexes/self-onboard', { data: donnees }),
+);
+
+/**
+ * MES complexes (AT-01) : non vide ⇒ la bascule « mode complexe / mode joueur ».
+ * @returns {Promise<any>} `{ data: [{ documentId, name, slug, status, verified, city, logo }] }`.
+ */
+export const lireMesComplexes = async () => corps(client().get('/complexes/mine'));
+
+/**
+ * SON complexe, vu par son gestionnaire (E-G11, E-G16) : tout, règles comprises.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: complexe }`.
+ */
+export const lireComplexeGere = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/manage`),
+);
+
+/**
+ * Modifier SON complexe (E-G16) : un champ absent reste inchangé.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Record<string, any>} donnees - Les champs modifiés.
+ * @returns {Promise<any>} `{ data: complexe }`.
+ */
+export const modifierComplexeGere = async (complexeId, donnees) => corps(
+  client().put(`/complexes/${enc(complexeId)}/manage`, { data: donnees }),
+);
+
+/**
+ * RESA-L5B-1, partie B (serveur RESA-L2C) — l'APERÇU d'un changement de réglages (E-G16) :
+ * `dryRun` à la racine, RIEN n'est écrit ; pour un âge minimum relevé, le serveur compte les
+ * réservations à venir dont le réserveur est plus jeune (`reservationsPlusJeunes`).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Record<string, any>} donnees - Les réglages essayés (`{ minAge }`).
+ * @returns {Promise<any>} `{ data: { dryRun: true, minAge, reservationsPlusJeunes } }`.
+ */
+export const apercuReglages = async (complexeId, donnees) => corps(
+  client().put(`/complexes/${enc(complexeId)}/manage`, { data: donnees, dryRun: true }),
+);
+
+/**
+ * « Mes installations » (E-G07) : les terrains de SON complexe, avec le résumé de leurs créneaux.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: [terrain] }`.
+ */
+export const lireTerrains = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/terrains`),
+);
+
+/**
+ * « Nouveau terrain » (E-G08).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Record<string, any>} donnees - `{ name, sport, setting, capacity, bookingMode, … }`.
+ * @returns {Promise<any>} `{ data: terrain }`.
+ */
+export const creerTerrain = async (complexeId, donnees) => corps(
+  client().post(`/complexes/${enc(complexeId)}/terrains`, { data: donnees }),
+);
+
+/**
+ * Modifier SON terrain (E-G08) : un champ absent reste inchangé.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} terrainId - documentId du terrain.
+ * @param {Record<string, any>} donnees - Les champs modifiés.
+ * @returns {Promise<any>} `{ data: terrain }`.
+ */
+export const modifierTerrain = async (complexeId, terrainId, donnees) => corps(
+  client().put(`/complexes/${enc(complexeId)}/terrains/${enc(terrainId)}`, { data: donnees }),
+);
+
+/**
+ * Le modèle de créneaux et de tarifs d'un terrain (E-G09, RA4), jugé EN ENTIER par le serveur.
+ * `apercu` : jugé et résumé SANS être écrit (`dryRun`). ⚠️ Le serveur lit `dryRun` dans le CORPS
+ * (`terrain.ts`, `setCreneaux` : `payload.dryRun === true`), pas dans l'adresse comme l'écrit le
+ * contrat.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} terrainId - documentId du terrain.
+ * @param {{ extraSlots: any[], period: any, ranges: any[], rates: any[] }} plan - Le modèle.
+ * @param {{ apercu?: boolean }} [options] - Aperçu seulement.
+ * @returns {Promise<any>} `{ data: terrain }`, ou `{ data: { creneaux, dryRun, slotPlan } }`.
+ */
+export const enregistrerCreneaux = async (
+  complexeId,
+  terrainId,
+  plan,
+  { apercu = false } = {},
+) => corps(
+  client().put(
+    `/complexes/${enc(complexeId)}/terrains/${enc(terrainId)}/creneaux`,
+    apercu ? { data: plan, dryRun: true } : { data: plan },
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5A2 (14/10/2026) — les routes ajoutées par RESA-L2A (contrat, partie « Ajouté après
+// RESA-L2A » ; admin `origin/feat/RESAL2A-admin`, `routes/reservation-custom.ts`). NON LIVRÉES :
+// cachées, comme le reste, par `COMPLEXES_GERANT`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Les paramètres non vides, seulement : une adresse sans `terrain=` ni `statut=` vides.
+ * @param {Record<string, unknown>} params - Les paramètres.
+ * @returns {Record<string, unknown>} Les paramètres remplis.
+ */
+const remplis = (params) => Object.fromEntries(
+  Object.entries(params)
+    .filter(([, valeur]) => valeur !== undefined && valeur !== null && valeur !== ''),
+);
+
+/**
+ * Les réservations de SON complexe (E-G04, E-G06), par pages de 20.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ page?: number, source?: string, statut?: string, terrain?: string,
+ *   vue: 'a-venir' | 'aujourdhui' | 'demandes' | 'passees' | 'traitees' }} filtres - La vue.
+ * @returns {Promise<any>} `{ data: { items, pagination: { page, pageSize, total } } }`.
+ */
+export const lireReservationsDuComplexe = async (complexeId, filtres) => corps(
+  client().get(`/complexes/${enc(complexeId)}/reservations`, { params: remplis(filtres) }),
+);
+
+/**
+ * La fiche d'une réservation (E-G05) : le nom, le téléphone SEULEMENT s'il est accordé.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const lireReservationGeree = async (complexeId, reservationId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}`),
+);
+
+/**
+ * Le planning de SES terrains (E-G03, la frise de E-G02) : 31 jours au plus.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ from: string, terrain?: string, to: string }} periode - Les jours, un terrain.
+ * @returns {Promise<any>} `{ data: { from, to, terrains: [{ days: [{ date, slots }] }] } }`.
+ */
+export const lirePlanning = async (complexeId, periode) => corps(
+  client().get(`/complexes/${enc(complexeId)}/planning`, { params: remplis(periode) }),
+);
+
+/**
+ * Accepter, ou refuser avec un motif (obligatoire), une demande (E-G06, E-G05).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la demande.
+ * @param {{ decision: 'accepter' | 'refuser', reason?: string }} decision - La décision.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const deciderDemande = async (complexeId, reservationId, decision) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/decision`,
+    { data: decision },
+  ),
+);
+
+/**
+ * Annuler une réservation (motif obligatoire pour une réservation de l'app, N-18), ou supprimer
+ * une note « extérieur » (sans motif).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {string | null} motif - Le motif, ou null.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const annulerReservationGeree = async (complexeId, reservationId, motif) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/annuler`,
+    { data: motif ? { reason: motif } : {} },
+  ),
+);
+
+/**
+ * « Réservé à l'extérieur » (E-G03, A-G17) : un créneau du modèle, un nom libre.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ date: string, externalName: string, from: string, terrain: string }} note - Le créneau.
+ * @returns {Promise<any>} `{ data: reservation }` (201).
+ */
+export const noterExterieur = async (complexeId, note) => corps(
+  client().post(`/complexes/${enc(complexeId)}/reservations`, { data: note }),
+);
+
+/**
+ * « Modifier le nom » d'une note « extérieur » (E-G05).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la note.
+ * @param {string} nom - Le nom libre.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const modifierExterieur = async (complexeId, reservationId, nom) => corps(
+  client().put(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}`,
+    { data: { externalName: nom } },
+  ),
+);
+
+/**
+ * « Retirer » SON terrain (E-G07, E-G08) : `apercu` compte ses réservations à venir sans rien
+ * écrire (`dryRun` DANS LE CORPS, `terrain.ts` `retirerTerrain`) ; sinon le terrain sort et ses
+ * réservations à venir sont annulées et prévenues (N-18).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} terrainId - documentId du terrain.
+ * @param {{ apercu?: boolean }} [options] - L'aperçu seulement.
+ * @returns {Promise<any>} `{ data: { dryRun, reservationsTouchees } }` ou
+ *   `{ data: { reservationsAnnulees, retired } }`.
+ */
+export const retirerTerrain = async (complexeId, terrainId, { apercu = false } = {}) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/terrains/${enc(terrainId)}/retirer`,
+    apercu ? { dryRun: true } : {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5B-1 (20/10/2026) — les routes ajoutées par RESA-L2B (admin `origin/feat/RESA-admin`,
+// `routes/protection-custom.ts`). NON LIVRÉES : cachées, comme le reste, par `COMPLEXES_GERANT`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * « Non honorée » (E-G04, E-G05, RG-NONHONOREE) : une réservation de l'app, confirmée, dont le
+ * créneau a commencé il y a 7 jours au plus ; le réserveur est prévenu (N-17) et, au x-ième, banni
+ * automatiquement ici (N-12 au gérant). Le serveur ne lit pas le corps.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }` (la fiche du gérant).
+ */
+export const marquerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree`,
+    {},
+  ),
+);
+
+/**
+ * « Annuler le marquage », dans les 7 jours (le même délai que le marquage) ; personne n'est
+ * prévenu, et le bannissement automatique que CE marquage avait déclenché part avec lui.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const annulerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree/annuler`,
+    {},
+  ),
+);
+
+/**
+ * La fiche d'un CLIENT (E-G15) : un joueur qui a réservé ici (sinon 404
+ * COMPLEXE_CLIENT_NOT_FOUND) — ses non honorées, ses annulations hors délai, ses réservations à
+ * venir, son bannissement (raison PRIVÉE, lue par le gérant seul). Jamais un numéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, firstname, lastname, noShows, lateCancellations,
+ *   upcoming, ban } }`.
+ */
+export const lireClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}`),
+);
+
+/**
+ * « Bannir » (E-G15, RG-BAN) : chez CE complexe seulement ; le joueur n'est PAS prévenu.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ cancelUpcoming?: boolean, joueur: string, reason: string, until?: string }} ban - La
+ *   liste blanche du serveur (`until` : le dernier jour banni, AAAA-MM-JJ).
+ * @returns {Promise<any>} `{ data: client }` (201).
+ */
+export const bannir = async (complexeId, ban) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis`, { data: ban }),
+);
+
+/**
+ * « Débannir » : le bannissement est levé (sa ligne reste) ; le compteur des non honorées repart.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: client }`.
+ */
+export const debannir = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis/${enc(joueurId)}/lever`, {}),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4, contrat
+// `docs/RESERVATION_CONTRAT_API_L1.md`, section « Ajouté après RESA-L3 et RESA-L4 »).
+// ---------------------------------------------------------------------------------------------
+/**
+ * Les CLIENTS de SON complexe (E-G15) : Tous · Habitués (3 parties jouées ici ou plus) · Bannis,
+ * cherchés par nom, par pages de 20. Jamais un numéro ; la photo d'un mineur n'est pas rendue.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, le nom, la
+ *   page.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, firstname, lastname, avatar, parties,
+ *   noShows, lateCancellations, reservations, derniereReservation, habitue, banni,
+ *   fidelite{count, threshold} | null }], compteurs{ tous, habitues, bannis },
+ *   pagination{ page, pageSize, total } } }`.
+ */
+export const lireClients = async (complexeId, filtres) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients`, { params: remplis(filtres) }),
+);
+
+/**
+ * L'HISTORIQUE d'un client ICI (E-G15, la fiche) : ses parties jouées et ses 50 dernières
+ * réservations, la plus récente d'abord ; jamais venu ici : 404 COMPLEXE_CLIENT_NOT_FOUND.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, parties, reservations[{ documentId, startsAt,
+ *   endsAt, terrain{documentId, name}, status, noShow, lateCancellation, cancelledBy }] } }`.
+ */
+export const lireHistoriqueClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}/historique`),
+);
+
+/**
+ * Les PARTENAIRES de SON complexe (E-G11, A-G25 ; gratuits en V1), dans l'ordre de la page.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, title, link, logo{ id, url } | null }]
+ *   } }`.
+ */
+export const lirePartenaires = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/partenaires`),
+);
+
+/**
+ * « Enregistrer » les partenaires : la liste ENTIÈRE (12 au plus ; « tout retirer » = une liste
+ * vide) ; un partenaire connu garde son documentId, un absent est retiré.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Array<Record<string, any>>} partenaires - `[{ documentId?, title, link?, logo? }]`.
+ * @returns {Promise<any>} `{ data: { items } }`.
+ */
+export const enregistrerPartenaires = async (complexeId, partenaires) => corps(
+  client().put(`/complexes/${enc(complexeId)}/partenaires`, { data: partenaires }),
+);
+
+/**
+ * La FIDÉLITÉ de SON complexe (E-G14) : le programme (ou null : jamais réglé), les récompenses à
+ * valider (x atteint), « Bientôt » (x − 2 ou plus près), les 10 dernières validées. Les compteurs
+ * sont calculés par le serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { programme{ active, counts, reward, threshold } | null,
+ *   aValider[{ count, joueur, reachedAt, threshold }], bientot[…], dernieresValidees[{ joueur,
+ *   parMoi, reward, threshold, validatedAt, validePar }] } }`.
+ */
+export const lireFidelite = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/fidelite`),
+);
+
+/**
+ * « Enregistrer » le programme (E-G14) : la liste blanche `{ active, threshold, reward, counts }`.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ active: boolean, counts: string, reward: string, threshold: number }} programme - Le
+ *   programme.
+ * @returns {Promise<any>} `{ data: { participantsComptes, programme } }`.
+ */
+export const reglerFidelite = async (complexeId, programme) => corps(
+  client().put(`/complexes/${enc(complexeId)}/fidelite`, { data: programme }),
+);
+
+/**
+ * « Valider la partie offerte » d'un joueur arrivé à x (E-G14) : son compteur repart de zéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { count: 0, joueur, threshold, validatedAt } }`.
+ */
+export const validerRecompense = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/fidelite/${enc(joueurId)}/valider`, {}),
+);
+
+/**
+ * Les STATISTIQUES V1 de SON complexe (E-G17) pour une période : l'occupation (le complexe et
+ * chaque terrain, sur les créneaux de son modèle), les réservations, les favoris, la fidélité, les
+ * 5 clients qui ont le plus joué (nom court, jamais un numéro).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<any>} `{ data: { periode, from, to, occupation{ taux, terrains[] },
+ *   reservations, favoris{ total, nouveaux }, fidelite, clientsFideles[] } }`.
+ */
+export const lireChiffres = async (complexeId, periode) => corps(
+  client().get(`/complexes/${enc(complexeId)}/chiffres`, { params: { periode } }),
+);
+
+/**
+ * « Exporter (CSV) » (E-G17) : une ligne par réservation de la période, le texte du serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<string>} Le CSV.
+ */
+export const lireExportChiffres = async (complexeId, periode) => {
+  const reponse = await client().get(`/complexes/${enc(complexeId)}/chiffres/export`, {
+    params: { periode },
+    responseType: 'text',
+    transformResponse: [(/** @type {any} */ brut) => brut],
+  });
+  return String(reponse?.data ?? '');
+};
+
+/**
+ * Le CANAL de SON complexe (E-G12) : ouvert s'il ne l'est pas ; un groupe de la messagerie où seuls
+ * les gérants écrivent (la conversation habituelle, `chatId`). Ses membres, gérants exceptés : le
+ * nom (prénom + initiale), comment ils sont entrés, depuis quand ; jamais un numéro. Complexe qui
+ * n'est pas actif : 409 COMPLEXE_CANAL_INACTIF.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { chatId, liste[{ depuis, documentId, nom, via }], membres } }`.
+ */
+export const lireCanal = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/canal`),
+);
+
+/**
+ * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
+ * par le gérant (la même que celle du réserveur ; RESA-L3).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat } }` (le documentId de la conversation).
+ */
+export const ecrireAuReserveur = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/conversation`,
+    {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
+// Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
+// des fermetures est chargé À L'APPEL (`./complexeChargeurs`, même raison que le client).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Lance un geste par terrain, l'un après l'autre : ce qui est fait reste fait. Tout échoue ⇒ le
+ * premier refus est levé (l'écran le dit) ; une partie échoue ⇒ les échecs sont rendus.
+ * @param {string[]} ids - Les identifiants.
+ * @param {(id: string) => Promise<any>} geste - Le geste.
+ * @returns {Promise<{ echecs: Array<{ erreur: any, id: string }>, reponses: any[] }>} Le bilan.
+ */
+const unParUn = async (ids, geste) => {
+  /** @type {any[]} */
+  const reponses = [];
+  /** @type {Array<{ erreur: any, id: string }>} */
+  const echecs = [];
+  // Un par un, exprès : une fermeture annule des réservations, l'ordre est celui de l'écran.
+  // eslint-disable-next-line no-restricted-syntax
+  for (const id of ids) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      reponses.push(await geste(id));
+    } catch (erreur) {
+      echecs.push({ erreur, id });
+    }
+  }
+  if (!reponses.length && echecs.length) throw echecs[0].erreur;
+  return { echecs, reponses };
+};
+
+/**
+ * Les fermetures à venir (actives) de ces terrains, chacune avec son terrain.
+ * @param {string[]} terrainIds - Les terrains.
+ * @returns {Promise<any[]>} Les fermetures (`terrainId` ajouté).
+ */
+export const lireFermetures = async (terrainIds) => {
+  const listes = await Promise.all(terrainIds.map(async (terrainId) => {
+    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'active' });
+    return (Array.isArray(reponse?.data) ? reponse.data : [])
+      .map((/** @type {any} */ fermeture) => ({ ...fermeture, terrainId }));
+  }));
+  return listes.flat();
+};
+
+/**
+ * L'aperçu d'une fermeture sur ces terrains (E-G10) : les réservations touchées, réunies.
+ * @param {string[]} terrainIds - Les terrains.
+ * @param {{ endDate: string, startDate: string }} dates - Les jours.
+ * @returns {Promise<{ count: number, items: any[] }>} Les réservations touchées.
+ */
+export const lireApercuFermeture = async (terrainIds, { endDate, startDate }) => {
+  const apercus = await Promise.all(terrainIds.map(async (terrainId) => {
+    const reponse = await fermetures().previewFacilityClosure(terrainId, {
+      endDate, kind: 'closure', startDate,
+    });
+    const touchees = reponse?.meta?.reservations;
+    return {
+      count: Number(touchees?.count) || 0,
+      items: (Array.isArray(touchees?.items) ? touchees.items : [])
+        .map((/** @type {any} */ item) => ({ ...item, terrainId })),
+    };
+  }));
+  return {
+    count: apercus.reduce((somme, apercu) => somme + apercu.count, 0),
+    items: apercus.flatMap((apercu) => apercu.items),
+  };
+};
+
+/**
+ * Fermer des jours (E-G10) : UNE fermeture PAR terrain. Sans actualité (la case « Publier aussi une
+ * actualité » est celle de la Ville).
+ * @param {string[]} terrainIds - Les terrains.
+ * @param {{ endDate: string, label?: string | null, message?: string | null, reason: string,
+ *   startDate: string }} fermeture - Les jours, le motif, le mot aux joueurs.
+ * @returns {Promise<{ annulees: number, echecs: Array<{ erreur: any, id: string }>,
+ *   faits: number }>} Le bilan.
+ */
+export const fermerTerrains = async (terrainIds, fermeture) => {
+  const { echecs, reponses } = await unParUn(terrainIds, (terrainId) => fermetures().closeFacility(
+    terrainId,
+    { ...fermeture, kind: 'closure', publishActualite: false },
+  ));
+  return {
+    annulees: reponses.reduce(
+      (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),
+      0,
+    ),
+    echecs,
+    faits: reponses.length,
+  };
+};
+
+/**
+ * « Rouvrir » des fermetures, ou « Débloquer » un créneau : un état, jamais une suppression.
+ * @param {string[]} fermetureIds - Les fermetures.
+ * @returns {Promise<{ echecs: Array<{ erreur: any, id: string }>, faits: number }>} Le bilan.
+ */
+export const rouvrirFermetures = async (fermetureIds) => {
+  const { echecs, reponses } = await unParUn(
+    fermetureIds,
+    (fermetureId) => fermetures().reopenFacilityClosure(fermetureId),
+  );
+  return { echecs, faits: reponses.length };
+};
+
+/**
+ * « Bloquer ce créneau » (E-G03) : une plage d'UN jour, motif facultatif pour un complexe.
+ * @param {string} terrainId - Le terrain.
+ * @param {{ date: string, from: string, motif?: string, to: string }} blocage - La plage.
+ * @returns {Promise<any>} `{ data: fermeture }` (avec `reservations.gardees`).
+ */
+export const bloquerCreneau = async (terrainId, {
+  date, from, motif, to,
+}) => fermetures().closeFacility(terrainId, {
+  endDate: date,
+  endTime: to,
+  kind: 'block',
+  startDate: date,
+  startTime: from,
+  ...(motif ? { label: motif } : {}),
+});
+
+/**
+ * Téléverse UNE photo (`POST /upload`, le chemin des actualités de la Ville) ; le serveur du
+ * complexe vérifie ensuite qu'elle n'est liée à rien d'autre (COMPLEXE_FILE_NOT_ALLOWED).
+ * @param {any} brut - Ce que rend le sélecteur d'image.
+ * @returns {Promise<{ id: number, url?: string } | null>} Le fichier, ou null.
+ */
+export const televerserPhoto = async (brut) => uploadActualiteFile(brut);
+
+/**
+ * E-S01 — LA CONSOLE DES COMPLEXES (SuperAdmin, serveur RESA-L4, policy is-superadmin) : « À
+ * traiter » (un signalement ouvert, ou créé depuis 7 jours ; jamais un retiré), « Tous »,
+ * « Suspendus » ; recherche par nom ou ville ; pages de 20.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, la
+ *   recherche.
+ * @returns {Promise<any>} `{ data: { compteurs{ aTraiter, suspendus, tous }, items[],
+ *   pagination } }`.
+ */
+export const listerLaConsole = async ({ onglet, page = 1, recherche = '' }) => corps(
+  client().get('/superadmin/complexes', { params: remplis({ onglet, page, recherche }) }),
+);
+
+/**
+ * La fiche d'un complexe dans la console (E-S01) : identité, gérants, terrains, réservations,
+ * signalements, journal.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { complexe, gerants[], journal[], reservations{ aVenir, total },
+ *   signalements[], terrains[] } }`.
+ */
+export const lireDansLaConsole = async (complexeId) => corps(
+  client().get(`/superadmin/complexes/${enc(complexeId)}`),
+);
+
+/**
+ * Un geste de la console (E-S01) : « Suspendre » et « Retirer » (motif de 3 à 300 caractères),
+ * « Réactiver », « Marquer vérifié » (ou le retirer), « Signalement traité ».
+ * @param {{ complexeId: string, geste: 'reactiver' | 'retirer' | 'suspendre' | 'traiter'
+ *   | 'verifier', motif?: string, signalementId?: string, verified?: boolean }} demande - Le geste.
+ * @returns {Promise<any>} `{ data: { documentId, status | verified, reservationsAnnulees? } }`.
+ */
+export const gesteDeLaConsole = async ({
+  complexeId, geste, motif, signalementId, verified,
+}) => {
+  const racine = `/superadmin/complexes/${enc(complexeId)}`;
+  switch (geste) {
+    case 'reactiver':
+      return corps(client().post(`${racine}/retablir`, {}));
+    case 'retirer':
+      return corps(client().post(`${racine}/retirer`, { data: { motif } }));
+    case 'suspendre':
+      return corps(client().post(`${racine}/suspendre`, { data: { motif } }));
+    case 'traiter':
+      return corps(client().post(`${racine}/signalements/${enc(signalementId)}/traiter`, {}));
+    case 'verifier':
+      return corps(client().post(`${racine}/verifier`, { data: { verified: Boolean(verified) } }));
+    default:
+      throw new Error(`Geste inconnu : ${String(geste)}`);
+  }
+};
