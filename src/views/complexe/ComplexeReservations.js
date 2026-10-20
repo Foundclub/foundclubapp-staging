@@ -428,65 +428,63 @@ function ComplexeReservations() {
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DeuxVolets actif={surOrdinateur} droite={volet}>
-        <ScrollView
-          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
-          refreshControl={(
-            <RefreshControl
-              colors={[Colors.primary500]}
-              onRefresh={() => lecture.refetch?.()}
-              refreshing={Boolean(lecture.isRefetching)}
-              tintColor={Colors.primary500}
-            />
-        )}
-          showsVerticalScrollIndicator={false}
-          style={[Alignments.fill]}
-        >
-          <Text
-            accessibilityRole="header"
-            style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+        <View style={[Alignments.fill, { gap: 8 }]}>
+          <ScrollView
+            contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
+            refreshControl={(
+              <RefreshControl
+                colors={[Colors.primary500]}
+                onRefresh={() => lecture.refetch?.()}
+                refreshing={Boolean(lecture.isRefetching)}
+                tintColor={Colors.primary500}
+              />
+          )}
+            showsVerticalScrollIndicator={false}
+            style={[Alignments.fill]}
           >
-            {t('complexeReservations.liste.titre', 'Réservations').toUpperCase()}
-          </Text>
-          <SegmentedControl
-            onChange={(valeur) => setVue(/** @type {VueDesReservations} */ (valeur))}
-            options={[
-              {
-                label: avecNombre(
-                  t('complexeReservations.liste.aujourdhui', 'Aujourd’hui'),
-                  aujourdhui.data,
-                ),
-                value: 'aujourdhui',
-              },
-              {
-                label: avecNombre(t('complexeReservations.liste.aVenir', 'À venir'), aVenir.data),
-                value: 'a-venir',
-              },
-              { label: t('complexeReservations.liste.passees', 'Passées'), value: 'passees' },
-            ]}
-            value={vue}
-          />
-          {puces}
-          {corps}
-        </ScrollView>
-      </DeuxVolets>
-      {bulle ? (
-        <View
-          pointerEvents="box-none"
-          style={{
-            bottom: 16, left: 16, position: 'absolute', right: 16,
-          }}
-          testID="reservations-bulle"
-        >
-          <BandeauComplexe
-            action={bulle.reservationId
-              ? t('complexeReservations.feuille.annuler', 'Annuler')
-              : undefined}
-            onAction={bulle.reservationId ? annulerLeMarquage : undefined}
-            texte={bulle.texte}
-            ton={bulle.ton}
-          />
+            <Text
+              accessibilityRole="header"
+              style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+            >
+              {t('complexeReservations.liste.titre', 'Réservations').toUpperCase()}
+            </Text>
+            <SegmentedControl
+              onChange={(valeur) => setVue(/** @type {VueDesReservations} */ (valeur))}
+              options={[
+                {
+                  label: avecNombre(
+                    t('complexeReservations.liste.aujourdhui', 'Aujourd’hui'),
+                    aujourdhui.data,
+                  ),
+                  value: 'aujourdhui',
+                },
+                {
+                  label: avecNombre(t('complexeReservations.liste.aVenir', 'À venir'), aVenir.data),
+                  value: 'a-venir',
+                },
+                { label: t('complexeReservations.liste.passees', 'Passées'), value: 'passees' },
+              ]}
+              value={vue}
+            />
+            {puces}
+            {corps}
+          </ScrollView>
+          {/* RESA-L5B-1 — « Marquée non honorée » et son « Annuler » : un pied SOUS la liste, dans
+          le volet gauche (jamais par-dessus une carte ni sur la fiche à droite). */}
+          {bulle ? (
+            <View testID="reservations-bulle">
+              <BandeauComplexe
+                action={bulle.reservationId
+                  ? t('complexeReservations.feuille.annuler', 'Annuler')
+                  : undefined}
+                onAction={bulle.reservationId ? annulerLeMarquage : undefined}
+                texte={bulle.texte}
+                ton={bulle.ton}
+              />
+            </View>
+          ) : null}
         </View>
-      ) : null}
+      </DeuxVolets>
       <FeuilleNonHonoree
         enCours={Boolean(marquer.isPending)}
         erreur={erreurMarquage}

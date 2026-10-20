@@ -126,6 +126,13 @@ function ComplexeClient() {
     '{{nom}} ne peut plus réserver chez toi.',
     avecNom,
   );
+  // Le champ porte son libellé pour le lecteur d'écran (sur le site, le libellé d'`Input` est un
+  // texte à côté du champ, pas son nom).
+  const libelleRaison = t(
+    'complexeClients.bannir.raison',
+    'Raison (privée, jamais montrée à {{prenom}})',
+    avecNom,
+  );
   const fermer = () => setFeuille('');
   const erreurDeLaFeuille = erreurFeuille ? (
     <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{erreurFeuille}</Text>
@@ -406,7 +413,10 @@ function ComplexeClient() {
       contentContainerStyle={[Spaces.paddingTop[12], Spaces.paddingBottom[16], Alignments.fill]}
     >
       <ScrollView
-        contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+        // Sur ordinateur, une colonne de 720 px au plus, centrée (comme E-G09).
+        contentContainerStyle={{
+          alignSelf: 'center', gap: 16, maxWidth: 720, paddingBottom: 24, width: '100%',
+        }}
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
@@ -427,11 +437,8 @@ function ComplexeClient() {
             </Text>
           </View>
           <Input
-            label={t(
-              'complexeClients.bannir.raison',
-              'Raison (privée, jamais montrée à {{prenom}})',
-              avecNom,
-            )}
+            accessibilityLabel={libelleRaison}
+            label={libelleRaison}
             maxLength={BAN_RAISON_MAX}
             multiline
             onChangeText={setRaison}

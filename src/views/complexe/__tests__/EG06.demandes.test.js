@@ -314,6 +314,22 @@ describe('RESA-L5B-1 B1 E-G06 — Traitées : la date et le motif (serveur RESA-
       'Acceptée le 14/10', 'Refusée : terrain indisponible', 'Sans réponse',
     ]));
   });
+
+  it('le nom en gras reste blanc sur le fond sombre (le gras de l’app est noir)', async () => {
+    const { StyleSheet, Text } = jest.requireActual('react-native');
+    const blanc = jest.requireActual('@/theme/colors').default().neutral00;
+    const couleurDe = (/** @type {any} */ arbre, /** @type {string} */ texte) => StyleSheet.flatten(
+      arbre.root.findAllByType(Text).find((/** @type {any} */ n) => n.props.children === texte)
+        ?.props.style,
+    )?.color;
+    let arbre = await monter();
+    expect(couleurDe(arbre, 'Julien M.')).toBe(blanc);
+    expect(couleurDe(arbre, 'Terrain 2')).toBe(blanc);
+    mockTraitees = pages([demande({ documentId: 'r-5', label: 'Karim B.', status: 'confirmee' })]);
+    arbre = await monter();
+    await appuyer(arbre, 'Traitées');
+    expect(couleurDe(arbre, 'Karim B.')).toBe(blanc);
+  });
 });
 
 describe('RESA-L5A2 E-G06 — les états vides, le chargement, l’erreur', () => {
