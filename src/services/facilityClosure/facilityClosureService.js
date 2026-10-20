@@ -70,9 +70,12 @@ export const reopenFacilityClosure = async (closureId) => {
 /**
  * « Fermeture a venir » de l accueil de la Ville : toutes ses installations.
  * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {{ from?: string }} [options] - R17-PLANNING-2 : les fermetures qui finissent a partir
+ *   de ce jour (AAAA-MM-JJ ; le serveur prend aujourd hui sans lui).
  * @returns {Promise<any>} `{ data: fermetures }`.
  */
-export const listCollectiviteClosures = async (collectiviteId) => {
-  const response = await client.get(`/collectivites/${collectiviteId}/closures`);
+export const listCollectiviteClosures = async (collectiviteId, { from } = {}) => {
+  const url = `/collectivites/${collectiviteId}/closures`;
+  const response = from ? await client.get(url, { params: { from } }) : await client.get(url);
   return response.data;
 };
