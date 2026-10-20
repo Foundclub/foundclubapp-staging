@@ -7458,6 +7458,9 @@ export default {
     imagePreview: {
       cancel: 'Annuler',
       close: 'Fermer l’image',
+      downloaded: 'Image téléchargée',
+      downloadHint: 'Télécharger l’image',
+      openedInTab: 'L’image s’ouvre dans un nouvel onglet : enregistre-la depuis là.',
       openSettings: 'Ouvrir les réglages',
       permissionBody: 'Autorise FoundClub à ajouter des photos, dans les réglages du téléphone.',
       permissionTitle: 'Accès aux photos refusé',
@@ -7466,6 +7469,7 @@ export default {
       saveFailed: 'L’image n’a pas pu être enregistrée. Réessaie.',
       saveHint: 'Enregistrer l’image dans ta galerie',
       saving: 'Enregistrement…',
+      title: 'Image en grand',
     },
     league: {
       cancelBody: 'Cette action annulera le match et supprimera la conversation.',

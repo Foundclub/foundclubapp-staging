@@ -6982,6 +6982,9 @@ export default {
     imagePreview: {
       cancel: 'Cancel',
       close: 'Close image',
+      downloaded: 'Image downloaded',
+      downloadHint: 'Download the image',
+      openedInTab: 'The image opens in a new tab: save it from there.',
       openSettings: 'Open settings',
       permissionBody: 'Allow FoundClub to add photos, in your phone settings.',
       permissionTitle: 'Photo access denied',
@@ -6990,6 +6993,7 @@ export default {
       saveFailed: 'The image could not be saved. Try again.',
       saveHint: 'Save the image to your gallery',
       saving: 'Saving…',
+      title: 'Full-size image',
     },
     league: {
       cancelBody: 'This will cancel the match and delete the conversation.',
