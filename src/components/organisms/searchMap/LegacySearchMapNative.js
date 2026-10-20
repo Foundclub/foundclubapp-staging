@@ -135,8 +135,11 @@ const resolveOverlayInsets = (
  *  longitudeDelta?: number;
  * } | null} [props.focusedViewport]
  * @param {'manual' | 'debounced-auto'} [props.refreshStrategy]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
  * @param {string} [props.selectedItemId]
+ * @param {boolean} [props.showPreviewCard] RESA-CARTE (20/10) : faux, aucun aperçu en bas de la
+ *   carte — l'écran montre lui-même le repère choisi (la recherche de terrains, E-P01). Vrai par
+ *   défaut : l'annuaire ne change pas.
  * @param {number} [props.height]
  * @param {number} [props.previewBottomOffset]
  * @param {number} [props.topMargin]
@@ -162,6 +165,7 @@ function LegacySearchMapNative({
   regionHint = null,
   scope = 'events',
   selectedItemId,
+  showPreviewCard = true,
   topMargin = 12,
   totalCount = 0,
   truncated = false,
@@ -770,7 +774,7 @@ function LegacySearchMapNative({
         </View>
       ) : null}
 
-      {isMapReady ? (
+      {isMapReady && showPreviewCard ? (
         <SearchMapPreviewCard
           bottomOffset={previewBottomOffset}
           item={selectedItem}

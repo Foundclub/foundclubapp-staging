@@ -3,9 +3,12 @@ import i18next from 'i18next';
 import { MMKV } from 'react-native-mmkv';
 
 import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
+import { joueurDesComplexesAllume } from '@/domains/complexe/reservationsDuJoueur';
 
 import client from '@/services/client';
+import { repondreALaVeille } from '@/services/complexe/complexeJoueurService';
 
+import { createLogger } from '@/utils/logger/logger';
 import {
   normalizeNotificationPayload,
 } from '@/utils/notifications/notificationNavigation';
@@ -24,7 +27,14 @@ import {
   NOTIFICATION_DEFAULT_CHANNEL_ID,
   NOTIFICATION_PENDING_OPEN_KEY,
   NOTIFICATION_SILENT_CHANNEL_ID,
+  RESA_VEILLE_ACTION_ANNULER,
+  RESA_VEILLE_ACTION_CONFIRMER,
+  RESA_VEILLE_ACTION_CONTEXT,
+  RESA_VEILLE_CATEGORY,
 } from './constants';
+
+// RESA-L6B-1 — le journal des boutons de N-20 (le journal du projet, pas `console`).
+const resaVeilleLogger = createLogger('notifications-resa-veille');
 
 /** @type {MMKV | null} */
 let storageInstance = null;
@@ -105,6 +115,24 @@ export const isChatReplyActionablePayload = (rawData) => {
 };
 
 /**
+ * RESA-L6B-1 — N-20, la question de la veille (`complexeReservationJoueur`, `change: 'veille'`)
+ * porte « J'annule » / « Je confirme ». Interrupteur `COMPLEXES_JOUEUR` éteint : jamais (comme
+ * staging). Le serveur décide QUI la reçoit (le réserveur, RESA-L2B) : aucun contrôle de rôle ici.
+ * Témoin : `__tests__/resaVeilleActions.test.js`.
+ * @param {unknown} rawData
+ * @returns {boolean}
+ */
+export const isResaVeilleActionablePayload = (rawData) => {
+  if (!joueurDesComplexesAllume()) return false;
+  const data = normalizeNotificationPayload(rawData || {});
+  const hasContext = data.actionContext === RESA_VEILLE_ACTION_CONTEXT;
+  return data.type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR
+    && toSafeString(data.change).trim() === 'veille'
+    && Boolean(toSafeString(data.reservationId).trim())
+    && (hasContext || !data.actionContext);
+};
+
+/**
  * @param {string | undefined} pressActionId
  * @returns {'present' | 'absent' | null}
  */
@@ -177,6 +205,22 @@ const getEventRsvpAndroidActions = () => ([
   {
     pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
     title: i18next.t('rsvpActions.actions.absent', 'Absent'),
+  },
+]);
+
+/**
+ * RESA-L6B-1 — les deux boutons de N-20, dans l'ordre de la planche EP14 (« J'annule » puis
+ * « Je confirme »). UNE source pour Android et pour la catégorie iOS (leçon REPNOTIF).
+ * @returns {Array<{ pressAction: { id: string }, title: string }>} Les deux actions.
+ */
+const getResaVeilleAndroidActions = () => ([
+  {
+    pressAction: { id: RESA_VEILLE_ACTION_ANNULER },
+    title: i18next.t('rsvpActions.resaVeille.annuler', 'J’annule'),
+  },
+  {
+    pressAction: { id: RESA_VEILLE_ACTION_CONFIRMER },
+    title: i18next.t('rsvpActions.resaVeille.confirmer', 'Je confirme'),
   },
 ]);
 
@@ -360,6 +404,15 @@ export const ensureNotificationActionSetup = async () => {
       ],
       id: CHAT_REPLY_RETRY_CATEGORY,
     },
+    // RESA-L6B-1 — N-20 : la catégorie n'existe que l'interrupteur allumé (éteint : la liste
+    // reste celle de staging).
+    ...(joueurDesComplexesAllume() ? [{
+      actions: getResaVeilleAndroidActions().map(({ pressAction, title }) => ({
+        id: pressAction.id,
+        title,
+      })),
+      id: RESA_VEILLE_CATEGORY,
+    }] : []),
   ]);
 };
 
@@ -403,6 +456,94 @@ export const displayChatReplyActionableNotification = async ({
     iosCategoryId: CHAT_REPLY_CATEGORY,
     title,
   });
+};
+
+/**
+ * RESA-L6B-1 — N-20 au premier plan, ou en message de fond sur Android : la notification avec ses
+ * deux boutons.
+ * @param {{ title?: string, body?: string, data?: Record<string, any> }} payload
+ * @returns {Promise<void>}
+ */
+export const displayResaVeilleActionableNotification = async ({
+  body,
+  data,
+  title,
+}) => {
+  const normalizedData = normalizeNotificationPayload(data || {});
+  await ensureNotificationActionSetup();
+  await displayLocalNotification({
+    androidActions: getResaVeilleAndroidActions(),
+    body,
+    channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
+    data: normalizedData,
+    iosCategoryId: RESA_VEILLE_CATEGORY,
+    title,
+  });
+};
+
+/**
+ * RESA-L6B-1 — « Je confirme » / « J'annule » sans ouvrir l'app (E-P14) : la réponse part au nom
+ * du compte que vise la notification (`POST /reservations-terrain/:id/veille`). Réussi : un mot
+ * discret. Raté (réseau, réservation annulée entre-temps, créneau commencé) : JAMAIS de silence —
+ * une notification visible, qui garde la charge : la toucher ouvre E-P14, qui dit où en est la
+ * réservation.
+ * @param {{ notificationData?: Record<string, any>, pressActionId?: string }} payload
+ * @returns {Promise<{ handled: boolean, success?: boolean }>}
+ */
+export const handleResaVeilleActionPress = async ({
+  notificationData,
+  pressActionId,
+}) => {
+  const normalizedData = normalizeNotificationPayload(notificationData || {});
+  if (!isResaVeilleActionablePayload(normalizedData)) {
+    return { handled: false };
+  }
+  /** @type {Record<string, 'confirme' | 'annule'>} */
+  const reponses = {
+    [RESA_VEILLE_ACTION_ANNULER]: 'annule',
+    [RESA_VEILLE_ACTION_CONFIRMER]: 'confirme',
+  };
+  const reponse = reponses[toSafeString(pressActionId)];
+  if (!reponse) {
+    return { handled: false };
+  }
+  const reservationId = toSafeString(normalizedData.reservationId).trim();
+
+  try {
+    const activationResult = await activateSessionForNotificationPayload(normalizedData);
+    await repondreALaVeille(reservationId, reponse, {
+      jeton: activationResult?.session?.token || null,
+    });
+    const feedback = reponse === 'confirme'
+      ? {
+        body: i18next.t('rsvpActions.resaVeille.confirme.body', 'Merci, c’est confirmé.'),
+        title: i18next.t('rsvpActions.resaVeille.confirme.title', 'Réservation confirmée'),
+      }
+      : {
+        body: i18next.t('rsvpActions.resaVeille.annule.body', 'Le créneau est libéré.'),
+        title: i18next.t('rsvpActions.resaVeille.annule.title', 'Réservation annulée'),
+      };
+    await displayLocalNotification({
+      body: feedback.body,
+      channelId: NOTIFICATION_SILENT_CHANNEL_ID,
+      title: feedback.title,
+    });
+    return { handled: true, success: true };
+  } catch (error) {
+    resaVeilleLogger.warn('[RESA_VEILLE_ACTION] Failed to answer the day-before question:', error);
+    resaVeilleLogger.warn(
+      `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'}`
+        + ` action=${pressActionId || 'unknown'} reservationId=${reservationId || 'unknown'}`,
+    );
+    await displayLocalNotification({
+      body: i18next.t('rsvpActions.resaVeille.echec.body', 'Touche ici pour répondre dans l’app.'),
+      // ⛔ PAS le canal silencieux : une réponse qui n'est pas partie doit se VOIR.
+      channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
+      data: normalizedData,
+      title: i18next.t('rsvpActions.resaVeille.echec.title', 'Réponse non envoyée'),
+    });
+    return { handled: true, success: false };
+  }
 };
 
 /**

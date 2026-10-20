@@ -27,15 +27,21 @@ import { updateMe } from '@/services/auth/authService';
  * MODE PARENT : la bascule de l'accueil apparaît sur la position « Parent ».
  * Un échec ne change rien et le dit. Les questions de profil joueur (sport, niveau) ne sont PAS
  * reposées : elles restent dans « Modifier mon profil ».
+ *
+ * RESA-INSCRIPTION (19/10/2026) — `pourLeComplexe` : la même feuille pour un compte né « pour un
+ * complexe » (aucun rôle sportif), ouverte par « Voir l'app en joueur » de l'accueil du complexe.
+ * Même mise à jour du rôle ; il GARDE son complexe (relation `gestionnaires`, indépendante du
+ * rôle) ; pas de mode parent à poser. Son parcours d'inscription de joueur reprend à l'accueil.
  * @param {object} props - Les propriétés.
  * @param {boolean} props.isVisible - La feuille est ouverte.
  * @param {() => void} props.onClose - « Pas maintenant », ou la fermeture.
  * @param {() => void} props.onDone - Le compte est passé en Joueur.
- * @param {string[]} props.prenoms - Les prénoms de ses enfants (« Anissa et Martin »).
+ * @param {boolean} [props.pourLeComplexe] - La variante du compte né « pour un complexe ».
+ * @param {string[]} [props.prenoms] - Les prénoms de ses enfants (« Anissa et Martin »).
  * @returns {import('react').ReactElement} - La feuille.
  */
 function FeuillePratiqueAussi({
-  isVisible, onClose, onDone, prenoms,
+  isVisible, onClose, onDone, pourLeComplexe = false, prenoms = [],
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
@@ -51,7 +57,7 @@ function FeuillePratiqueAussi({
     onSuccess: async () => {
       // Il reste en mode parent : écrit AVANT de relire le profil, sinon l'accueil joueur
       // passerait un instant à l'écran.
-      setDisplayMode('parent');
+      if (!pourLeComplexe) setDisplayMode('parent');
       try {
         await refetchUserData?.();
       } catch {
@@ -80,11 +86,17 @@ function FeuillePratiqueAussi({
       ...SANS_ECHAPPEMENT,
     })
     : t('playerMode.sheet.keepChildren');
-  const lignes = [
-    gardes,
-    t('playerMode.sheet.joinTeam'),
-    t('playerMode.sheet.switch'),
-  ];
+  const lignes = pourLeComplexe
+    ? [
+      t('complexeGerant.joueurAussi.garde'),
+      t('playerMode.sheet.joinTeam'),
+      t('complexeGerant.creation.bouton'),
+    ]
+    : [
+      gardes,
+      t('playerMode.sheet.joinTeam'),
+      t('playerMode.sheet.switch'),
+    ];
 
   return (
     <BottomModal
@@ -109,7 +121,9 @@ function FeuillePratiqueAussi({
     >
       <View style={{ gap: 12 }} testID="feuille-pratique-aussi">
         <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('playerMode.sheet.title')}</Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>{t('playerMode.sheet.subtitle')}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(pourLeComplexe ? 'complexeGerant.joueurAussi.sousTitre' : 'playerMode.sheet.subtitle')}
+        </Text>
         {lignes.map((ligne) => (
           <View key={ligne} style={[Alignments.row, { gap: 10 }]}>
             <Icone color={Colors.primary500} height={16} name="check" width={16} />

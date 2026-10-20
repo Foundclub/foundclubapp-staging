@@ -86,12 +86,16 @@ function SearchMapIframeRuntime({
   userLocation = null,
 }) {
   const iframeRef = useRef(/** @type {HTMLIFrameElement | null} */ (null));
-  const [frameLoaded, setFrameLoaded] = useState(false);
+  // RESA-CARTE (20/10) — « chargée » se lit PAR CARTE (`mapId`) : une page `srcdoc` peut se
+  // charger avant les effets du montage, et une remise à faux dans un effet l'oubliait pour
+  // toujours (plus aucun état envoyé). Une carte neuve (`mapId` neuf) repart « pas chargée ».
+  const [cadreCharge, setCadreCharge] = useState('');
   const [mapRenderKey, setMapRenderKey] = useState(0);
   const [mapStatus, setMapStatus] = useState(
     tileUrl ? /** @type {'loading' | 'ready' | 'error'} */ ('loading') : 'error',
   );
   const mapId = useMemo(() => `search-map-web-${mapRenderKey}`, [mapRenderKey]);
+  const frameLoaded = cadreCharge === mapId;
   const loadingCopy = useMemo(() => getSearchMapLoadingCopy(), []);
   const { t } = useTranslation();
   const runtimeState = useMemo(() => ({
@@ -115,22 +119,31 @@ function SearchMapIframeRuntime({
     selectedItemId,
     userLocation,
   ]);
+  // RESA-CARTE (20/10) — la page Leaflet se construit UNE fois par carte, sur son état de départ ;
+  // chaque état suivant lui arrive par message (SYNC_STATE, effet plus bas). Reconstruite à chaque
+  // état, son `srcDoc` changeait et l'iframe se RECHARGEAIT : la carte clignotait, et une épingle
+  // touchée pendant un rechargement était perdue (mesuré au navigateur le 20/10 : 5 rechargements,
+  // toucher sans effet). Témoin : __tests__/maps.web.iframe.test.js.
+  const [etatDeDepart] = useState(runtimeState);
   const html = useMemo(() => buildSearchMapRuntimeHtml({
-    initialState: runtimeState,
+    initialState: etatDeDepart,
     mapId,
     markerColor,
     tileAttribution,
     tileProbeUrl,
     tileUrl: tileUrl || LEGACY_TILE_PROVIDER.url,
-  }), [mapId, markerColor, runtimeState, tileAttribution, tileProbeUrl, tileUrl]);
+  }), [etatDeDepart, mapId, markerColor, tileAttribution, tileProbeUrl, tileUrl]);
 
   useEffect(() => {
-    setFrameLoaded(false);
     setMapStatus(tileUrl ? 'loading' : 'error');
   }, [mapRenderKey, tileUrl]);
 
+  // RESA-CARTE (20/10) — l'état part dès que la page est chargée, AVEC OU SANS clé TomTom : sans
+  // clé (le site n'en a pas), la page dessine les tuiles OpenStreetMap (`LEGACY_TILE_PROVIDER`,
+  // plus haut). Conditionné à `tileUrl`, l'état ne partait JAMAIS sur le site ; seule la page
+  // reconstruite à chaque état le masquait.
   useEffect(() => {
-    if (!frameLoaded || !iframeRef.current?.contentWindow || !tileUrl) {
+    if (!frameLoaded || !iframeRef.current?.contentWindow) {
       return;
     }
 
@@ -138,7 +151,7 @@ function SearchMapIframeRuntime({
       buildSearchMapHostMessage(mapId, runtimeState),
       '*',
     );
-  }, [frameLoaded, mapId, runtimeState, tileUrl]);
+  }, [frameLoaded, mapId, runtimeState]);
 
   useEffect(() => {
     if (mapStatus !== 'loading' || !tileUrl) {
@@ -223,7 +236,7 @@ function SearchMapIframeRuntime({
     >
       <iframe
         key={mapId}
-        onLoad={() => setFrameLoaded(true)}
+        onLoad={() => setCadreCharge(mapId)}
         ref={iframeRef}
         sandbox="allow-scripts allow-same-origin"
         srcDoc={html}
@@ -365,7 +378,7 @@ function SearchMapIframeRuntime({
  * @param {(itemId: string) => void} [props.onSelectItem]
  * @param {{ top?: number; right?: number; bottom?: number; left?: number } | null} [props.overlayInsets]
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
  * @param {string} [props.selectedItemId]
  * @param {{ lat: number; lng: number } | null} [props.userLocation]
  * @param {any} [props.command]

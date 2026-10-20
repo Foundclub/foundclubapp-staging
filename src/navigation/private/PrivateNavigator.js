@@ -9,6 +9,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
+import { lireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
@@ -43,12 +44,17 @@ import {
   useMyCollectivites,
   useMyManagerRequests,
 } from '@/services/collectivite/collectiviteQueries';
+import { useMesComplexes } from '@/services/complexe/complexeQueries';
 
 import PrivateTabNavigator from './PrivateTabNavigator';
 /* eslint-disable-next-line import/order */
 import { useAppMode } from '@/context/AppModeContext';
 
 const Stack = createStackNavigator();
+
+// RESA-L5A1 (13/10/2026) — l'interrupteur du gérant de complexe. Lu par `require` : un `import`
+// ici ferait se contredire les deux règles d'ordre des imports (import/order et perfectionist).
+const { COMPLEXES_GERANT, COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
 
 /**
  *
@@ -82,6 +88,14 @@ function PrivateNavigator() {
   // Tant qu'on ne sait pas, on attend : la pile choisit son écran d'arrivée UNE fois.
   const villeEnLecture = sansRoleSportif
     && Boolean(villesGerees.isLoading || demandesGestionnaire.isLoading);
+  // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » (« Je gère un complexe » au
+  // choix du statut) garde le rôle provisoire : son parcours d'inscription commence toujours par
+  // ce choix. Même règle que la Ville seule : s'il gère un complexe, il arrive sur l'espace de son
+  // complexe. La lecture ne part que pour un compte sans rôle sportif, interrupteur allumé.
+  const mesComplexes = useMesComplexes({ enabled: COMPLEXES_GERANT && sansRoleSportif });
+  const complexesGeres = Array.isArray(mesComplexes.data) ? mesComplexes.data : [];
+  const complexeSeul = COMPLEXES_GERANT && sansRoleSportif && complexesGeres.length > 0;
+  const complexeEnLecture = COMPLEXES_GERANT && sansRoleSportif && Boolean(mesComplexes.isLoading);
   const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
   const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
 
@@ -120,10 +134,19 @@ function PrivateNavigator() {
         ? RouteNames.CollectiviteSpace
         : RouteNames.CollectiviteSignupStatus;
     }
+    if (complexeSeul) return RouteNames.ComplexeEspace;
     if (route) return route;
+    // RESA-L5A1 (13/10/2026) — le mode complexe (planche RB, AT-01) : un choix d'affichage gardé
+    // sur le téléphone ; l'app s'ouvre alors sur l'espace du complexe. Après l'onboarding.
+    if (COMPLEXES_GERANT && lireModeComplexe(userData?.documentId)) {
+      return RouteNames.ComplexeEspace;
+    }
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
-  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId]);
+  }, [
+    onboardingViews, isGold, villeSeule, premiereVille?.documentId, complexeSeul,
+    userData?.documentId,
+  ]);
 
   const firstPendingOnboardingRoute = useMemo(() => {
     if (
@@ -132,6 +155,7 @@ function PrivateNavigator() {
       || initialRouteName === RouteNames.LeagueHomeTab
       || initialRouteName === RouteNames.CollectiviteSpace
       || initialRouteName === RouteNames.CollectiviteSignupStatus
+      || initialRouteName === RouteNames.ComplexeEspace
     ) {
       return null;
     }
@@ -222,8 +246,8 @@ function PrivateNavigator() {
   // compte : une fois l'accueil fait et la pile montée (pas pendant la lecture « Ville seule »),
   // son écran s'empile. Jamais avant le contrôle d'âge d'un compte neuf.
   useLiensEnAttente(
-    Boolean(userData?.documentId) && !userDataLoading && !userDataError && !villeEnLecture
-      && !firstPendingOnboardingRoute,
+    Boolean(userData?.documentId) && !userDataLoading && !userDataError
+      && !villeEnLecture && !complexeEnLecture && !firstPendingOnboardingRoute,
   );
 
   const canShowView = useCallback((/** @type {string} */ routeName) => {
@@ -231,7 +255,7 @@ function PrivateNavigator() {
     return !!view?.canShow;
   }, [onboardingViews]);
 
-  if (userDataLoading || villeEnLecture) {
+  if (userDataLoading || villeEnLecture || complexeEnLecture) {
     return (
       <View style={{
         alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center',
@@ -392,22 +416,9 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
-        <Stack.Screen
-          getComponent={() => require('@/views/reservation/MissingPlayersView').default}
-          name={RouteNames.MissingPlayersView}
-          options={{
-            ...commonOptions,
-            headerTitle: t('privateNavigator.headers.missingPlayers', 'Joueurs recherchés'),
-          }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/booking/BookingCalendar').default}
-          name={RouteNames.BookingCalendar}
-          options={{
-            ...commonOptions,
-            headerTitle: t('privateNavigator.headers.bookSlot', 'Réserver un créneau'),
-          }}
-        />
+        {/* RESA-L6A (14/10/2026) — BookingCalendar et MissingPlayersView ne sont plus déclarés
+            sur le téléphone : aucun bouton, lien ni notification n'y menait (code mort, retiré).
+            Le site garde leurs jumeaux .web.js (web/src/routes/screenRegistry.tsx). */}
         <Stack.Screen
           getComponent={() => require('@/views/multisportClub/MultisportClubDetails').default}
           name={RouteNames.MultisportClubDetails}
@@ -1408,6 +1419,156 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
+        {/* RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans ne
+            sont DÉCLARÉS que si l'interrupteur `COMPLEXES_GERANT` est allumé (éteint : aucune
+            porte, aucun lien ne les atteint).
+            E-G01 « Devenir gérant » : le tunnel pose son propre en-tête. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeDevenirGerant').default}
+            name={RouteNames.ComplexeDevenirGerant}
+            options={{ headerShown: false }}
+          />
+        ) : null}
+        {/* E-G02 — l'espace du complexe : l'accueil du gérant et la messagerie, en onglets. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('./ComplexeTabNavigator').default}
+            name={RouteNames.ComplexeEspace}
+            options={{ headerShown: false }}
+          />
+        ) : null}
+        {/* E-G07 — « Mes installations ». */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeInstallations').default}
+            name={RouteNames.ComplexeInstallations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-G08 — la fiche d'un terrain (créer, modifier). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeTerrain').default}
+            name={RouteNames.ComplexeTerrain}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-G09 — créneaux et tarifs d'un terrain. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeCreneaux').default}
+            name={RouteNames.ComplexeCreneaux}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-G16 — les réglages du complexe. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReglages').default}
+            name={RouteNames.ComplexeReglages}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5A2 (14/10/2026) — E-G04 « Réservations » et E-G05, la fiche. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReservations').default}
+            name={RouteNames.ComplexeReservations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReservation').default}
+            name={RouteNames.ComplexeReservation}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-1 (20/10/2026) — E-G15, la fiche d'un client (bannir / débannir). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeClient').default}
+            name={RouteNames.ComplexeClient}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeFermetures').default}
+            name={RouteNames.ComplexeFermetures}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6A (14/10/2026) — le joueur (chantier Réservation) : ses écrans ne sont DÉCLARÉS
+            que si l'interrupteur `COMPLEXES_JOUEUR` est allumé (éteint : aucune porte, aucun lien
+            ne les atteint). La recherche (E-P01) est le panneau « Réservations » de SearchHub.
+            E-P02 — la page du complexe. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverComplexe').default}
+            name={RouteNames.ReserverComplexe}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P03 — choisir un créneau. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverCreneau').default}
+            name={RouteNames.ReserverCreneau}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P04 — le récapitulatif. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverRecapitulatif').default}
+            name={RouteNames.ReserverRecapitulatif}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P05 — le résultat : pas d'en-tête de retour (il ne ramène pas au récapitulatif). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverResultat').default}
+            name={RouteNames.ReserverResultat}
+            options={{ headerShown: false }}
+          />
+        ) : null}
+        {/* E-P13 — les messages d'échec. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverEchec').default}
+            name={RouteNames.ReserverEchec}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P07 — la fiche de ma réservation (aussi ouverte par complexeReservationJoueur). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverMaReservation').default}
+            name={RouteNames.ReserverMaReservation}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6B-1 (19/10/2026) — E-P14, « Demain, tu joues ? » : la question de la veille
+            (notification N-20 et cloche). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverVeille').default}
+            name={RouteNames.ReserverVeille}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6B-1 — E-P10, « Mes réservations » (Mon compte, raccourci de E-P01). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverMesReservations').default}
+            name={RouteNames.ReserverMesReservations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>

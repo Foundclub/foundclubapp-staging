@@ -49,6 +49,10 @@ jest.mock('@/services/notificationActions/rsvpActions', () => ({
   isChatReplyActionablePayload: (data) => String(data?.type || '').includes('Message')
     || String(data?.type || '') === 'newWhisper',
   isEventRsvpActionablePayload: (data) => String(data?.type || '') === 'eventReminder',
+  // RESA-L6B-1 — les boutons de N-20 (témoin à part : notificationBackgroundHandler.RESAL6B1).
+  displayResaVeilleActionableNotification: jest.fn(async () => undefined),
+  handleResaVeilleActionPress: jest.fn(async () => ({ handled: false })),
+  isResaVeilleActionablePayload: () => false,
   storePendingOpenNotification: jest.fn(),
 }));
 

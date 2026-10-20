@@ -120,51 +120,7 @@ try {
 
 ---
 
-##### `createReservation(reservationData)`
-
-Crée une nouvelle réservation.
-
-**Paramètres:**
-```typescript
-{
-  mode: 'FULL_GROUP' | 'RECRUITING';
-  totalPlayers: number;
-  currentPlayers: number;
-  pricePerPerson: number;
-  date: string;           // Format: ISO 8601
-  startTime?: string;     // Format: HH:mm
-  endTime?: string;       // Format: HH:mm
-  description?: string;
-  location?: object;      // Objet location picker
-  locationDetails?: string;
-  club?: string;          // Document ID du club
-  team?: string;          // Document ID de l'équipe
-}
-```
-
-**Retour:**
-```typescript
-Promise<{
-  data: Reservation;
-}>
-```
-
-**Exemple:**
-```javascript
-import { createReservation } from '@/services/reservation/reservationService';
-
-const newReservation = await createReservation({
-  mode: 'RECRUITING',
-  totalPlayers: 10,
-  currentPlayers: 5,
-  pricePerPerson: 15.00,
-  date: '2025-12-01T18:00:00.000Z',
-  startTime: '18:00',
-  endTime: '20:00',
-  description: 'Match de football amical',
-  team: 'team-abc-123'
-});
-```
+> RESA-L6A (14/10/2026) : `createReservation` et `reservationSchema` sont retirés (aucun appelant).
 
 ---
 
@@ -336,7 +292,6 @@ interface Reservation {
 - `getReservations()`: Retourne structure vide en cas d'erreur
 - `getFeaturedReservations()`: Retourne structure vide en cas d'erreur
 - `joinReservation()`: Throw l'erreur (à gérer par le composant)
-- `createReservation()`: Throw l'erreur (à gérer par le composant)
 
 **Hooks (`reservationQueries.js`):**
 - Les erreurs sont exposées via la propriété `error`
@@ -423,7 +378,7 @@ function ReservationScreen() {
       {/* Liste complète */}
       <FlatList
         data={reservations}
-        renderItem={({ item }) => <ReservationCard item={item} />}
+        renderItem={({ item }) => <MaCarte item={item} />} {/* ReservationCard retiré (RESA-L6A) */}
         onEndReached={() => hasNextPage && fetchNextPage()}
         refreshing={isLoading}
       />

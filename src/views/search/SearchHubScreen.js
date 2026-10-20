@@ -25,11 +25,19 @@ import ClubListContent from '@/components/organisms/clubListContent/ClubListCont
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
+import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
+import SearchScreenShell from '@/views/search/components/SearchScreenShell';
+import {
+  coerceSearchHubType,
+  consumeSearchHubGuidanceSignal,
+} from '@/views/search/searchRouteHelpers';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
-import SearchScreenShell from './components/SearchScreenShell';
-import { coerceSearchHubType, consumeSearchHubGuidanceSignal } from './searchRouteHelpers';
+// RESA-L6A (14/10/2026) — par `import`, jamais par `require` : le serveur de dev du site
+// (web) sert ce fichier tel quel au navigateur, où `require` n'existe pas. Les imports voisins
+// passent par `@/views/…` pour que les deux règles d'ordre des imports s'accordent.
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'events',
@@ -218,6 +226,18 @@ function SearchHubScreen({ navigation, route }) {
     }
 
     if (type === 'reservations') {
+      // RESA-L6A (14/10/2026) — l'interrupteur `COMPLEXES_JOUEUR` allumé, l'onglet
+      // cherche les terrains libres des complexes (E-P01). Importé en tête (jamais par
+      // `require` : le site compile ce fichier, le navigateur n'a pas `require`) ; éteint, il
+      // n'est jamais rendu, donc ne demande ni la position ni le serveur des complexes.
+      if (COMPLEXES_JOUEUR) {
+        return (
+          <RechercheDeTerrains
+            refreshSignal={refreshSignals.reservations}
+            screenActive={activeType === 'reservations'}
+          />
+        );
+      }
       // C30 (décision D5) : l'onglet reste, mais la réservation n'est pas encore
       // ouverte -> écran « Bientôt disponible » au lieu de la liste.
       return (
