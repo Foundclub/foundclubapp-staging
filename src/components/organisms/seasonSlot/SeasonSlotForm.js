@@ -753,6 +753,19 @@ function SeasonSlotForm({
     setVoirLibres(false);
     toucherLaSaisie();
   };
+  // ⏰ A7-UX (20/10) — LA FIN SE PROPOSE TOUTE SEULE : le Début choisi pose la Fin à + 1 h 30 (la
+  // durée de « Voir les heures libres ») ; un créneau déjà lisible garde sa durée (la Fin suit) ;
+  // une Fin déjà après le Début, sans durée connue, reste. Rien au-delà de 23:55 (elle se choisit).
+  const changerLeDebut = (/** @type {string} */ valeur) => {
+    const nouveau = String(valeur || '').trim();
+    setDebut(nouveau);
+    toucherLaSaisie();
+    const depart = isTime(nouveau) ? Number(toMinutes(nouveau)) : null;
+    if (depart === null) return;
+    if (!ordreJuste && finLisible && Number(toMinutes(fin)) > depart) return;
+    const proposee = depart + (ordreJuste ? Number(toMinutes(fin)) - Number(toMinutes(debut)) : 90);
+    if (proposee <= (23 * 60) + 55) setFin(fromMinutes(proposee));
+  };
   // « Changer l heure » : les heures sont a choisir de nouveau, les heures libres sous les yeux.
   // En mode compact (planning), les heures viennent de la case : rien a vider.
   // COLL-R-A7 : depuis le planning, l etape « Horaires » etait sautee ; elle se rouvre ici.
@@ -1683,16 +1696,14 @@ function SeasonSlotForm({
           <View style={{ flex: 1 }}>
             <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-              onChange={(/** @type {string} */ valeur) => {
-                setDebut(String(valeur || '').trim());
-                toucherLaSaisie();
-              }}
+              onChange={changerLeDebut}
               placeholder="17:30"
               value={debut}
             />
           </View>
           <View style={{ flex: 1 }}>
             <TimePickerInput
+              apres={debutLisible ? debut : null}
               label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
               onChange={(/** @type {string} */ valeur) => {
                 setFin(String(valeur || '').trim());
