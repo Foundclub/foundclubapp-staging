@@ -58,6 +58,7 @@ import {
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { vacancesDeLaPage } from '@/domains/seasonSlot/seasonSlotHolidays';
 import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -935,6 +936,14 @@ function PlanningWeekFullscreen() {
       { ...brouillon, enSaisie: true },
     ]
     : fermeturesDuServeur;
+  // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) — LES VACANCES SCOLAIRES de la zone que la page
+  // montre (`meta.holidays`, serveur) : un bandeau violet, jamais confondu avec une fermeture, pour
+  // tous les lecteurs. En vue Jour, le seul jour affiché ; sinon la période lue.
+  const jourAffiche = format(currentDate, 'yyyy-MM-dd');
+  const vacancesDeLaZone = isFacilitySource ? data?.meta?.holidays : null;
+  const vacancesAffichees = vue === VUES.jour
+    ? vacancesDeLaPage(vacancesDeLaZone, jourAffiche, jourAffiche)
+    : vacancesDeLaPage(vacancesDeLaZone, planningRange.from, planningRange.to);
   const bandesDeFermeture = isFacilitySource
     ? normalizePlanningItems(closureBandsForRange(
       fermeturesDessinees,
@@ -2077,6 +2086,29 @@ function PlanningWeekFullscreen() {
               testID="planning-bandeau-fermeture"
               withDays
             />
+            {vacancesAffichees.map((periode) => (
+              <View
+                key={periode.key}
+                style={[Alignments.row, Alignments.alignCenter, {
+                  backgroundColor: withAlpha(Colors.violet500, 0.22),
+                  borderColor: Colors.violet200,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  gap: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                }]}
+                testID={`planning-vacances-${periode.key}`}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.violet200, flexShrink: 1 }]}>
+                  {t('personalPlanningWeekFullscreen.vacances', '{{vacances}} · {{zone}}', {
+                    vacances: periode.description || periode.name,
+                    zone: vacancesDeLaZone?.label || '',
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+              </View>
+            ))}
             {ligneDeCapacite ? (
               <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
                 <RondsDePlaces
