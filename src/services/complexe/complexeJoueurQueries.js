@@ -266,6 +266,30 @@ export const useGroupeDeLaReservation = (reservationId, { enabled = true } = {})
 });
 
 /**
+ * E-P10, onglet « En collecte » — les groupes de plusieurs réservations (la jauge et la date limite
+ * de chaque collecte : la liste du serveur ne les porte pas). Même clef que
+ * `useGroupeDeLaReservation` : la fiche (E-P07) les retrouve sans relire.
+ * ponytail: une lecture par collecte de l'onglet (une poignée) ; voie de sortie : `collecte` dans
+ * les lignes de `GET /reservations-terrain/mine` (serveur).
+ * @param {string[]} reservationIds - Les documentId.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {{ groupes: Record<string, any> }} Les groupes lus, par réservation.
+ */
+export const useGroupesDeReservations = (reservationIds, { enabled = true } = {}) => useQueries({
+  combine: (resultats) => ({
+    groupes: Object.fromEntries(resultats.flatMap((resultat, rang) => (
+      resultat.data ? [[reservationIds[rang], resultat.data]] : []
+    ))),
+  }),
+  queries: reservationIds.map((reservationId) => ({
+    enabled: enabled && Boolean(reservationId),
+    queryFn: async () => donnees(await lireLeGroupe(String(reservationId))),
+    queryKey: clefDuGroupe(reservationId),
+    staleTime: DEMI_MINUTE,
+  })),
+});
+
+/**
  * Un geste qui rend le GROUPE (répondre, rejoindre) : le groupe se pose, les réservations, les
  * annonces et la page du lien se relisent.
  * @param {(variables: any) => Promise<any>} geste - Le geste.

@@ -74,6 +74,40 @@ export const estDemain = (date, maintenant = new Date()) => (
 export const PERIODES_DE_MES_RESERVATIONS = Object.freeze(['a-venir', 'passees', 'refusees']);
 
 /**
+ * RESA-L6B-2 (20/10/2026, serveur RESA-L3) — les onglets de E-P10, dans l'ordre de la planche :
+ * « En collecte » s'ajoute ; il se lit dans la période « à venir » du serveur (qui y range les
+ * collectes), « À venir » gardant les confirmées et les demandes.
+ * @type {ReadonlyArray<'a-venir' | 'en-collecte' | 'passees' | 'refusees'>}
+ */
+export const ONGLETS_DE_MES_RESERVATIONS = Object.freeze([
+  'a-venir', 'en-collecte', 'passees', 'refusees',
+]);
+
+/**
+ * La période du serveur (`GET /reservations-terrain/mine?periode=`) que lit un onglet.
+ * @param {string} onglet - L'onglet.
+ * @returns {'a-venir' | 'passees' | 'refusees'} La période.
+ */
+export const periodeDeLOnglet = (onglet) => (
+  /** @type {'a-venir' | 'passees' | 'refusees'} */ (onglet === 'en-collecte' ? 'a-venir' : onglet)
+);
+
+/**
+ * Les réservations d'un onglet : « En collecte » ne garde que les collectes, « À venir » tout le
+ * reste ; les autres onglets, tout ce que le serveur rend.
+ * @template {{ status?: string | null }} R
+ * @param {string} onglet - L'onglet.
+ * @param {R[] | null | undefined} reservations - Celles de la période.
+ * @returns {R[]} Celles de l'onglet.
+ */
+export const reservationsDeLOnglet = (onglet, reservations) => {
+  const toutes = Array.isArray(reservations) ? reservations : [];
+  if (onglet === 'en-collecte') return toutes.filter((r) => r?.status === 'en_collecte');
+  if (onglet === 'a-venir') return toutes.filter((r) => r?.status !== 'en_collecte');
+  return toutes;
+};
+
+/**
  * E-P10 : la liste groupée par jour, dans l'ordre où le serveur la rend.
  * @template {{ date?: string }} R
  * @param {R[] | null | undefined} reservations - Les réservations.

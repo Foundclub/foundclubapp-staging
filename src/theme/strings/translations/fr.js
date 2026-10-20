@@ -18960,8 +18960,11 @@ export default {
       demande: 'Demande envoyée',
       demandeAvant: 'Demande envoyée · réponse avant le {{jour}} à {{heure}}',
       erreur: 'Impossible de charger tes réservations.',
+      invitePar: 'Invité par {{reserveur}}',
+      maFidelite: 'Ma fidélité',
       onglets: {
         aVenir: 'À venir',
+        enCollecte: 'En collecte',
         passees: 'Passées',
         refusees: 'Refusées et annulées',
       },
@@ -18970,6 +18973,7 @@ export default {
       tuAsReserve: 'Tu as réservé',
       vide: {
         aVenir: 'Aucune réservation à venir.',
+        enCollecte: 'Aucune collecte en cours.',
         passees: 'Aucune réservation passée.',
         refusees: 'Aucune réservation refusée ou annulée.',
       },

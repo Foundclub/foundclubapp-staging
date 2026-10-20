@@ -18342,8 +18342,11 @@ export default {
       demande: 'Request sent',
       demandeAvant: 'Request sent · answer before {{jour}} at {{heure}}',
       erreur: 'Could not load your bookings.',
+      invitePar: 'Invited by {{reserveur}}',
+      maFidelite: 'My loyalty',
       onglets: {
         aVenir: 'Upcoming',
+        enCollecte: 'Gathering players',
         passees: 'Past',
         refusees: 'Declined and cancelled',
       },
@@ -18352,6 +18355,7 @@ export default {
       tuAsReserve: 'You booked',
       vide: {
         aVenir: 'No upcoming bookings.',
+        enCollecte: 'No player call in progress.',
         passees: 'No past bookings.',
         refusees: 'No declined or cancelled bookings.',
       },
