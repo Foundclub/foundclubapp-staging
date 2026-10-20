@@ -417,10 +417,10 @@ function ComplexeMaPage() {
               'Pour l’affichage ; les créneaux se règlent par terrain.',
             )}
           </Text>
-          {saisie.horaires.map((/** @type {any} */ ligne, rang) => {
+          {saisie.horaires.map((/** @type {any} */ ligne, /** @type {number} */ rang) => {
             const jour = nomDuJour(ligne.day);
             const changerLigne = (/** @type {Record<string, any>} */ morceau) => changer({
-              horaires: saisie.horaires.map((/** @type {any} */ autre, i) => (
+              horaires: saisie.horaires.map((/** @type {any} */ autre, /** @type {number} */ i) => (
                 i === rang ? { ...autre, ...morceau } : autre)),
             });
             const heure = (/** @type {'from' | 'to'} */ cle, /** @type {string} */ etiquette) => (

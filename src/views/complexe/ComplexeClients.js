@@ -58,6 +58,7 @@ function ComplexeClients() {
     borderRadius: 16,
     borderWidth: 1,
   };
+  /** @type {Record<string, string>} */
   const libelles = {
     bannis: t('complexeClients.liste.bannis', 'Bannis'),
     habitues: t('complexeClients.liste.habitues', 'Habitués'),
@@ -241,7 +242,7 @@ function ComplexeClients() {
         <SegmentedControl
           onChange={(valeur) => setOnglet(/** @type {OngletDesClients} */ (valeur))}
           options={ONGLETS_CLIENTS.map((cle) => ({
-            label: libelles[/** @type {OngletDesClients} */ (cle)],
+            label: libelles[cle],
             value: cle,
           }))}
           value={onglet}

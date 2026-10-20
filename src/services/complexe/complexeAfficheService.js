@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 
 import { corpsDeLAffiche } from '@/domains/complexe/afficheDuComplexe';
 
+// Résolution par suffixe de plateforme (`.native.js` / `.web.js`), comme l'export des
+// statistiques : le contrôle de types ne voit pas leurs exports à ce chemin exact.
+// @ts-ignore -- cf. ci-dessus
 import { downloadAndShareRender, fetchRenderBase64 } from '@/platform/visualRender';
 
 /**
