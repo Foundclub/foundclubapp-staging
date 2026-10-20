@@ -142,6 +142,12 @@ function PersonalPlanningContainer({
   const events = withViewerChildrenTitles(normalizePlanningItems(eventsData?.data || []), t);
 
   const handleEventPress = (event) => {
+    // R17-EVT-1-BIS (b) (20/10) : vue Mois, l événement de la Ville (sans documentId) ouvre SA
+    // fiche, comme son bloc dans la grille.
+    if (event?.raw?.evenementDeLaVille) {
+      ouvrirLEvenementDeLaVille(event.raw.evenementDeLaVille);
+      return;
+    }
     if (!event?.documentId) return;
 
     navigation.navigate(RouteNames.EventStack, {
