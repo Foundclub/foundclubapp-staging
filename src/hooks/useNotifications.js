@@ -28,6 +28,7 @@ import {
   activateSessionByDocumentId,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { rattraperLeFil } from '@/domains/messaging/rattrapageDuFil';
 import {
   invalidateAfterAction,
   resolveNotificationRefreshAction,
@@ -837,10 +838,22 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (handled) {
       markHandled();
       invalidateNotificationQueries(notificationData.type);
+      // MSGNOTIF — le message de cette notification est sur le serveur, pas
+      // forcément dans le cache : écrit pendant que l'app dormait, il n'est jamais
+      // passé par la socket. On le relit tout de suite, sans attendre qu'elle revienne.
+      if (destination.route === RouteNames.Conversation) {
+        rattraperLeFil(queryClient, destination.params?.chatId);
+      }
     }
     notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
     return handled;
-  }, [activeSessionDocumentId, invalidateNotificationQueries, maybePromptAddToCalendar, navigate]);
+  }, [
+    activeSessionDocumentId,
+    invalidateNotificationQueries,
+    maybePromptAddToCalendar,
+    navigate,
+    queryClient,
+  ]);
 
   const smartForegroundTypes = useRef(new Set([
     NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER,
