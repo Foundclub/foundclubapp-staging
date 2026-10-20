@@ -399,3 +399,21 @@ describe('RESA-L5A2 E-G06 — les états vides, le chargement, l’erreur', () =
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : une demande EXPIRÉE (« Cette demande a expiré. », 409 d'état) proposait
+// « Refuser avec un mot », qui échouait à son tour (409) : la demande restait coincée, aucun geste ne passait. Le
+// refus du serveur se dit sur la carte, la liste se relit, et aucun geste voué à l'échec n'est proposé. Le cas
+// « créneau pris » (témoin juste au-dessus) garde « Refuser avec un mot ».
+describe('RESA-FIN-APP (5) E-G06 — une demande expirée ne propose plus de geste voué à l’échec', () => {
+  it('« Cette demande a expiré. » : le message, la liste relue, ni « Accepter » ni « Refuser »', async () => {
+    mockDecider.mockRejectedValueOnce({
+      details: { code: 'COMPLEXE_RESERVATION_STATE' }, message: 'Cette demande a expiré.', status: 409,
+    });
+    const arbre = await monter();
+    await appuyerDans(arbre, 'demande-accepter-r-1');
+    expect(lisibles(arbre)).toContain('Cette demande a expiré.');
+    expect(mockAttente.refetch).toHaveBeenCalled();
+    expect(parRepere(arbre, 'demande-accepter-r-1')).toBeNull();
+    expect(parRepere(arbre, 'demande-refuser-r-1')).toBeNull();
+  });
+});
