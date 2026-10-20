@@ -7157,6 +7157,10 @@ export default {
       exceptions: 'Exceptions',
       fermeture: 'Fermeture',
       finAvantDebut: 'La fin doit être après le début.',
+      // eslint-disable-next-line max-len
+      horsHoraires_one: '{{count}} réservation tombe hors de tes nouveaux horaires. Elle est gardée.',
+      // eslint-disable-next-line max-len
+      horsHoraires_other: '{{count}} réservations tombent hors de tes nouveaux horaires. Elles sont gardées.',
       joursManquants: 'Choisis au moins un jour.',
       lesHeures: 'Les heures',
       lesJours: 'Les jours',
@@ -7303,6 +7307,10 @@ export default {
       nonHonoreesCompte: '{{nombre}} réservations non honorées',
       notifications: 'Notifications',
       plus: 'Plus : {{reglage}}',
+      // eslint-disable-next-line max-len
+      plusJeunes_one: '{{count}} réservation à venir compte des joueurs de moins de {{age}} ans. Elle est gardée.',
+      // eslint-disable-next-line max-len
+      plusJeunes_other: '{{count}} réservations à venir comptent des joueurs de moins de {{age}} ans. Elles sont gardées.',
       quiPeutReserver: 'Qui peut réserver',
       resumeMatin: 'Résumé du matin à 8 h',
       veille: 'Demander aux joueurs de confirmer la veille',
@@ -7370,7 +7378,9 @@ export default {
       erreur: 'Les demandes n’ont pas pu être lues.',
       erreurDecision: 'La demande n’a pas pu être tranchée.',
       etatAcceptee: 'Acceptée',
+      etatAccepteeLe: 'Acceptée le {{le}}',
       etatRefusee: 'Refusée',
+      etatRefuseeMotif: 'Refusée : {{motif}}',
       expireHeures: 'Expire dans {{nombre}} h',
       expireJours_one: 'Expire dans {{count}} jour',
       expireJours_other: 'Expire dans {{count}} jours',
@@ -7400,6 +7410,8 @@ export default {
       erreurFermer: 'La fermeture n’a pas pu être posée.',
       erreurRouvrir: 'La fermeture n’a pas pu être rouverte.',
       etDautres: 'et d’autres…',
+      // eslint-disable-next-line max-len
+      exterieurAppeler: 'Une réservation « extérieur » n’a personne à prévenir dans l’app : appelle le client.',
       ferie: 'Jour férié',
       ferme: 'Fermé : {{jours}}.',
       fermeEtPrevenu_one: 'Fermé : {{jours}}. {{count}} joueur prévenu.',
@@ -7479,6 +7491,7 @@ export default {
       annuleePar: 'Annulée par {{nom}} le {{le}}',
       annuleeParHorsDelai: 'Annulée par {{nom}} le {{le}} — hors délai',
       annuleeParToi: 'Annulée par toi le {{le}}',
+      confirmeeLaVeille: 'Confirmée la veille à {{heure}}',
       leJoueur: 'le joueur',
       nonHonoree: 'Marquée non honorée par toi le {{le}}',
       notee: 'Notée par toi le {{le}}',

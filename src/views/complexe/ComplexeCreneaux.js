@@ -96,9 +96,11 @@ const planVide = () => ({
  *   · « Les prix de la semaine », la « Période », les créneaux ponctuels (« Exceptions »).
  * Chaque geste est JUGÉ par le serveur avant d'entrer dans le modèle (`dryRun` : « Ce tarif
  * chevauche… », « 640 créneaux ouverts ») ; « Ouvrir ces créneaux » / « Enregistrer » l'écrit.
- * RESA-L5A2 (14/10/2026) : « Fermer des jours » (E-G10) et « Voir le planning » (E-G03) ;
- * l'avertissement « réservations hors des nouveaux horaires » n'est PAS servi par le serveur
- * RESA-L2A (l'aperçu des créneaux ne compte pas les réservations) : absent.
+ * RESA-L5A2 (14/10/2026) : « Fermer des jours » (E-G10) et « Voir le planning » (E-G03).
+ * RESA-L5B-1, partie B (serveur RESA-L2C, planche EG09 état 4) : l'aperçu compte les réservations
+ * à venir qui tombent HORS du nouveau modèle (`reservationsHorsHoraires`) ; l'écran le dit avant
+ * d'enregistrer, « 3 réservations tombent hors de tes nouveaux horaires. Elles sont gardées. »
+ * (rien n'est annulé).
  * Paramètres de route : `complexeId`, `terrainId`, `terrainAjoute` (E-G08 vient de le créer).
  * Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -129,6 +131,8 @@ function ComplexeCreneaux() {
   const [refusPlan, setRefusPlan] = useState('');
   const [refus, setRefus] = useState('');
   const [enregistre, setEnregistre] = useState(/** @type {any} */ (null));
+  // RESA-L5B-1, partie B — les réservations à venir hors du modèle jugé (RESA-L2C), 0 sinon.
+  const [horsHoraires, setHorsHoraires] = useState(0);
   const [plage, setPlage] = useState({
     a: '23:00', autre: false, de: '17:00', duree: 60, jours: /** @type {number[]} */ ([]),
   });
@@ -179,6 +183,7 @@ function ComplexeCreneaux() {
       const corps = await apercu.mutateAsync({ complexeId, plan: candidat, terrainId });
       setPlan(corps?.data?.slotPlan || candidat);
       setResume(corps?.data?.creneaux || null);
+      setHorsHoraires(Number(corps?.data?.reservationsHorsHoraires) || 0);
       return true;
     } catch (erreur) {
       direLeRefus(messageDeRefus(
@@ -280,6 +285,7 @@ function ComplexeCreneaux() {
       setResume(creneaux);
       setEnregistre(creneaux || {});
       setNeuf(false);
+      setHorsHoraires(0);
     } catch (erreur) {
       setRefus(messageDeRefus(
         t,
@@ -921,6 +927,25 @@ function ComplexeCreneaux() {
           <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{refusPlan}</Text>
         ) : null}
         {sommaire ? <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{sommaire}</Text> : null}
+        {horsHoraires > 0 ? (
+          <BandeauComplexe
+            testID="complexe-creneaux-hors-horaires"
+            texte={t(
+              'complexeGerant.creneaux.horsHoraires',
+              '{{count}} réservations tombent hors de tes nouveaux horaires. Elles sont gardées.',
+              {
+                count: horsHoraires,
+                defaultValue_one:
+                  '{{count}} réservation tombe hors de tes nouveaux horaires. Elle est gardée.',
+                defaultValue_other:
+                  // eslint-disable-next-line max-len
+                  '{{count}} réservations tombent hors de tes nouveaux horaires. Elles sont gardées.',
+                ...SANS_ECHAPPEMENT,
+              },
+            )}
+            ton="attention"
+          />
+        ) : null}
         {enregistre ? (
           <BandeauComplexe
             texte={typeof enregistre.openSlots === 'number' && enregistre.openSlots > 0

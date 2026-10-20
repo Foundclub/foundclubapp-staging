@@ -318,6 +318,65 @@ const quand = (iso) => {
 };
 
 /**
+ * RESA-L5B-1, partie B — « 18 h 12 », l'heure de PARIS d'un instant.
+ * @param {unknown} iso - L'instant.
+ * @returns {string} L'heure, ou ''.
+ */
+const heureDeParis = (iso) => {
+  if (!iso) return '';
+  const instant = new Date(String(iso));
+  if (Number.isNaN(instant.getTime())) return '';
+  const parts = getZonedDateParts(instant);
+  const heure = String(parts.hour % 24).padStart(2, '0');
+  return texteHeure(`${heure}:${String(parts.minute).padStart(2, '0')}`);
+};
+
+/**
+ * RESA-L5B-1, partie B — « 14/10 », le jour de PARIS d'un instant.
+ * @param {unknown} iso - L'instant.
+ * @returns {string} Le jour, ou ''.
+ */
+const jourDeParis = (iso) => {
+  if (!iso) return '';
+  const instant = new Date(String(iso));
+  if (Number.isNaN(instant.getTime())) return '';
+  const parts = getZonedDateParts(instant);
+  return `${String(parts.day).padStart(2, '0')}/${String(parts.month).padStart(2, '0')}`;
+};
+
+/**
+ * RESA-L5B-1, partie B (B1) — l'état d'une demande TRAITÉE (E-G06, plan :601 ; serveur RESA-L2C :
+ * `decidedAt` et `reason` dans `vue=traitees`) : « Acceptée le 14/10 », « Refusée : terrain
+ * indisponible » ; '' pour les autres (« Sans réponse », une annulation : le libellé de l'état).
+ * @param {Traduire} t - Traduction.
+ * @param {{ decidedAt?: string | null, reason?: string | null, status?: string }} demande - Une
+ *   ligne de la vue « traitees ».
+ * @returns {string} Le libellé, ou ''.
+ */
+export const libelleDemandeTraitee = (t, demande) => {
+  switch (demande?.status) {
+    case STATUTS.confirmee: {
+      const le = jourDeParis(demande.decidedAt);
+      return le
+        ? t('complexeReservations.demandes.etatAccepteeLe', 'Acceptée le {{le}}', {
+          le, ...SANS_ECHAPPEMENT,
+        })
+        : t('complexeReservations.demandes.etatAcceptee', 'Acceptée');
+    }
+    case STATUTS.refusee: {
+      const motif = String(demande.reason || '').trim();
+      return motif
+        ? t('complexeReservations.demandes.etatRefuseeMotif', 'Refusée : {{motif}}', {
+          motif, ...SANS_ECHAPPEMENT,
+        })
+        : t('complexeReservations.demandes.etatRefusee', 'Refusée');
+    }
+    default:
+      return '';
+  }
+};
+
+/**
  * L'historique de la fiche (E-G05) : des faits datés ; « par toi » pour le complexe, le nom court
  * pour le réserveur (jamais plus, `managerLabel` du serveur).
  * RESA-L5B-1 (20/10/2026) : « Marquée non honorée par toi » (`non-honoree`, RESA-L2B) et
@@ -356,6 +415,13 @@ export const historiqueLisible = (t, etapes, { reserveur }) => (Array.isArray(et
             nom: reserveur || t('complexeReservations.historique.leJoueur', 'le joueur'),
             ...SANS_ECHAPPEMENT,
           },
+        );
+      // RESA-L5B-1, partie B (B5) — « Je confirme » la veille (RG-VEILLE, plan :546).
+      case 'confirmee-la-veille':
+        return t(
+          'complexeReservations.historique.confirmeeLaVeille',
+          'Confirmée la veille à {{heure}}',
+          { heure: heureDeParis(etape.at), ...SANS_ECHAPPEMENT },
         );
       case 'non-honoree':
         return t(

@@ -85,6 +85,18 @@ export const modifierComplexeGere = async (complexeId, donnees) => corps(
 );
 
 /**
+ * RESA-L5B-1, partie B (serveur RESA-L2C) — l'APERÇU d'un changement de réglages (E-G16) :
+ * `dryRun` à la racine, RIEN n'est écrit ; pour un âge minimum relevé, le serveur compte les
+ * réservations à venir dont le réserveur est plus jeune (`reservationsPlusJeunes`).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Record<string, any>} donnees - Les réglages essayés (`{ minAge }`).
+ * @returns {Promise<any>} `{ data: { dryRun: true, minAge, reservationsPlusJeunes } }`.
+ */
+export const apercuReglages = async (complexeId, donnees) => corps(
+  client().put(`/complexes/${enc(complexeId)}/manage`, { data: donnees, dryRun: true }),
+);
+
+/**
  * « Mes installations » (E-G07) : les terrains de SON complexe, avec le résumé de leurs créneaux.
  * @param {string} complexeId - documentId du complexe.
  * @returns {Promise<any>} `{ data: [terrain] }`.

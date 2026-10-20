@@ -57,6 +57,15 @@ describe('RESA-L5B-1 E-G19 — l’aiguillage, interrupteur allumé', () => {
     });
   });
 
+  it('B6 — N-06 « Hier » (cloche, sans réservation) : E-G04, onglet « Passées »', () => {
+    expect(resolveNotificationDestination(NOTIF({ change: 'hier', reservationId: undefined })))
+      .toEqual({
+        params: { complexeId: 'cx-five', vue: 'passees' },
+        route: RouteNames.ComplexeReservations,
+      });
+    expect(getNotificationIcon(GERANT, { change: 'hier' })).toBe('flag');
+  });
+
   it('l’icône de chaque ligne (planche EG19)', () => {
     const icone = (/** @type {string} */ change) => getNotificationIcon(GERANT, { change });
     expect({

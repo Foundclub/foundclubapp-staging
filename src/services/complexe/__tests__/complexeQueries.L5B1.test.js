@@ -13,6 +13,7 @@ import * as requetes from '../complexeQueries';
 const mockService = {
   annulerNonHonoree: jest.fn(async () => ({ data: { documentId: 'r-1' } })),
   annulerReservationGeree: jest.fn(async () => ({ data: { documentId: 'r-1' } })),
+  apercuReglages: jest.fn(async () => ({ data: { dryRun: true, reservationsPlusJeunes: 2 } })),
   bannir: jest.fn(async () => ({ data: { documentId: 'u-julien' } })),
   debannir: jest.fn(async () => ({ data: { documentId: 'u-julien' } })),
   lireClient: jest.fn(async () => ({ data: { documentId: 'u-julien', noShows: 1 } })),
@@ -23,6 +24,7 @@ jest.mock('../complexeService', () => ({
   annulerReservationGeree: (/** @type {any[]} */ ...args) => (
     mockService.annulerReservationGeree(...args)
   ),
+  apercuReglages: (/** @type {any[]} */ ...args) => mockService.apercuReglages(...args),
   bannir: (/** @type {any[]} */ ...args) => mockService.bannir(...args),
   debannir: (/** @type {any[]} */ ...args) => mockService.debannir(...args),
   lireClient: (/** @type {any[]} */ ...args) => mockService.lireClient(...args),
@@ -112,6 +114,19 @@ describe('RESA-L5B-1 — les gestes « non honorée » suivent le même chemin',
     });
     expect(mockService.lireClient).toHaveBeenCalledWith('cx-five', 'u-julien');
     expect(valeur().data).toEqual({ documentId: 'u-julien', noShows: 1 });
+  });
+
+  it('B4 — l’aperçu de l’âge : lu seulement quand l’écran le demande', async () => {
+    const { useApercuAgeMinimum } = /** @type {any} */ (requetes);
+    expect(typeof useApercuAgeMinimum).toBe('function');
+    await monter(() => useApercuAgeMinimum('cx-five', 18, { enabled: false }));
+    expect(mockService.apercuReglages).not.toHaveBeenCalled();
+    const { valeur } = await monter(() => useApercuAgeMinimum('cx-five', 18, { enabled: true }));
+    await act(async () => {
+      await new Promise((fin) => { setTimeout(fin, 0); });
+    });
+    expect(mockService.apercuReglages).toHaveBeenCalledWith('cx-five', { minAge: 18 });
+    expect(valeur().data).toEqual({ dryRun: true, reservationsPlusJeunes: 2 });
   });
 
   it('annuler le marquage, puis relire', async () => {

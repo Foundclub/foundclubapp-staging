@@ -13,7 +13,9 @@ import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
  *   · le bannissement automatique (N-12, « bannissement-auto ») ⇒ la fiche du CLIENT (E-G15), par
  *     sa réservation (la notification ne porte pas le joueur : l'écran le lit dans la fiche) ;
  *   · le résumé du matin (N-05, « resume-matin ») ⇒ l'accueil (E-G02) ;
- *   · l'icône de chaque ligne (planche EG19), dans le jeu d'icônes de l'app (`SvgIcon`).
+ *   · l'icône de chaque ligne (planche EG19), dans le jeu d'icônes de l'app (`SvgIcon`) ;
+ *   · partie B (serveur RESA-L2C) : N-06 « Hier » (« hier », cloche seulement, sans réservation)
+ *     ⇒ les réservations, onglet « Passées » (E-G04), où l'on marque les non honorées.
  * Elles arrivent aussi en mode joueur, avec la pastille « Mode complexe » ; l'espace du complexe,
  * une fois ouvert, repasse le téléphone en mode complexe (`ComplexeTabNavigator`).
  * Tout est éteint avec `COMPLEXES_GERANT` (aucune destination, aucune pastille).
@@ -41,6 +43,7 @@ const ICONES_DU_GERANT = Object.freeze({
   'bannissement-auto': 'shield',
   demande: 'calendar-days',
   'expire-bientot': 'clock-two-thirty',
+  hier: 'flag',
   nouvelle: 'calendar',
   'resume-matin': 'stadium',
 });
@@ -80,6 +83,10 @@ export const destinationDuGerant = (charge) => {
       params: { params: { complexeId }, screen: RouteNames.ComplexeDemandes },
       route: RouteNames.ComplexeEspace,
     };
+  }
+  // RESA-L5B-1, partie B — N-06 « Hier » : l'onglet « Passées » des réservations.
+  if (change === 'hier') {
+    return { params: { complexeId, vue: 'passees' }, route: RouteNames.ComplexeReservations };
   }
   // RESA-L5B-1 — N-05 (et toute notification sans réservation, N-11) : l'accueil.
   if (!reservationId || change === 'resume-matin') {

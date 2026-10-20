@@ -33,7 +33,15 @@ const REGLES = {
 let mockComplexe = /** @type {any} */ ({});
 const mockModifier = jest.fn();
 const mockRelire = jest.fn();
+// RESA-L5B-1, partie B (B4) — l'aperçu d'un âge minimum relevé (`PUT …/manage`, `dryRun`).
+let mockApercuAge = /** @type {any} */ ({ data: undefined });
+/** @type {any[]} */
+const mockApercusAge = [];
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  useApercuAgeMinimum: (/** @type {any[]} */ ...args) => {
+    mockApercusAge.push(args);
+    return mockApercuAge;
+  },
   useComplexeGere: () => mockComplexe,
   useModifierComplexe: () => ({ isPending: false, mutateAsync: mockModifier }),
 }));
@@ -172,6 +180,33 @@ describe('RESA-L5A1 E-G16 — les réglages (état 1, RA6 état 1)', () => {
     }
     expect(parRepere(arbre, 'complexe-reglages-valeur-collectDeadlineHours')?.props.children)
       .toBe('2 h avant le créneau');
+  });
+});
+
+describe('RESA-L5B-1 B4 E-G16 — relever l’âge minimum (serveur RESA-L2C)', () => {
+  beforeEach(() => {
+    mockApercusAge.length = 0;
+    mockApercuAge = { data: undefined };
+  });
+
+  it('relevé : l’aperçu est lu pour le nouvel âge, et « Elles sont gardées. »', async () => {
+    mockComplexe.data.rules.minAge = 16;
+    mockApercuAge = { data: { dryRun: true, minAge: 18, reservationsPlusJeunes: 2 } };
+    const arbre = await monter();
+    await appuyer(arbre, '18 ans');
+    expect(mockApercusAge[mockApercusAge.length - 1]).toEqual(['cx-five', 18, { enabled: true }]);
+    expect(lisibles(arbre)).toContain(
+      '2 réservations à venir comptent des joueurs de moins de 18 ans. Elles sont gardées.',
+    );
+  });
+
+  it('abaissé ou inchangé : aucun aperçu, aucune phrase', async () => {
+    mockApercuAge = { data: { dryRun: true, minAge: 16, reservationsPlusJeunes: 0 } };
+    const arbre = await monter();
+    expect(mockApercusAge.every(([, , options]) => options.enabled === false)).toBe(true);
+    await appuyer(arbre, '16 ans');
+    expect(mockApercusAge.every(([, , options]) => options.enabled === false)).toBe(true);
+    expect(lisibles(arbre).some((texte) => texte.includes('comptent des joueurs'))).toBe(false);
   });
 });
 

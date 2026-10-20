@@ -22,7 +22,11 @@ import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 
-import { useComplexeGere, useModifierComplexe } from '@/services/complexe/complexeQueries';
+import {
+  useApercuAgeMinimum,
+  useComplexeGere,
+  useModifierComplexe,
+} from '@/services/complexe/complexeQueries';
 
 const MOT_MAX = 500;
 
@@ -36,8 +40,10 @@ const MOT_MAX = 500;
  *     bannissement automatique (Q1, « Jamais » = 0) ; « Notifications » : résumé du matin,
  *     confirmation la veille.
  * Les bornes sont celles du serveur (`RULE_SPECS`) : une valeur hors bornes est impossible. Un
- * réglage ne vaut que pour les réservations faites après. L'avertissement « 2 réservations à venir
- * comptent des joueurs plus jeunes » attend le lot L2A (les réservations).
+ * réglage ne vaut que pour les réservations faites après.
+ * RESA-L5B-1, partie B (serveur RESA-L2C, planche EG16 état 4) : un âge minimum RELEVÉ fait lire
+ * l'aperçu du serveur (`PUT …/manage` en `dryRun`, rien n'est écrit) ; s'il y en a, « 2
+ * réservations à venir comptent des joueurs de moins de 18 ans. Elles sont gardées. »
  * Paramètre de route : `complexeId`. Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -54,6 +60,15 @@ function ComplexeReglages() {
   const [mot, setMot] = useState('');
   const [enregistre, setEnregistre] = useState(false);
   const [refus, setRefus] = useState('');
+  // RESA-L5B-1, partie B — l'âge enregistré, et l'aperçu SEULEMENT quand on le relève.
+  const ageEnregistre = Number(complexe.data?.rules?.minAge ?? REGLES_DU_SERVEUR.defauts.minAge);
+  const ageChoisi = Number(regles?.minAge ?? ageEnregistre);
+  const apercuAge = useApercuAgeMinimum(complexeId, ageChoisi, {
+    enabled: Boolean(regles) && ageChoisi > ageEnregistre,
+  });
+  const plusJeunes = ageChoisi > ageEnregistre
+    ? Number(apercuAge.data?.reservationsPlusJeunes) || 0
+    : 0;
 
   // Les réglages se lisent UNE fois (jamais par-dessus une saisie en cours).
   useEffect(() => {
@@ -285,6 +300,26 @@ function ComplexeReglages() {
                 // eslint-disable-next-line max-len
                 'Un joueur plus jeune ne peut ni réserver, ni rejoindre une partie, ni recevoir tes annonces. Un joueur qui a cet âge peut t’écrire dans sa réservation.',
               ))}
+              {plusJeunes > 0 ? (
+                <BandeauComplexe
+                  testID="complexe-reglages-plus-jeunes"
+                  texte={t(
+                    'complexeGerant.reglages.plusJeunes',
+                    // eslint-disable-next-line max-len
+                    '{{count}} réservations à venir comptent des joueurs de moins de {{age}} ans. Elles sont gardées.',
+                    {
+                      age: ageChoisi,
+                      count: plusJeunes,
+                      // eslint-disable-next-line max-len
+                      defaultValue_one: '{{count}} réservation à venir compte des joueurs de moins de {{age}} ans. Elle est gardée.',
+                      // eslint-disable-next-line max-len
+                      defaultValue_other: '{{count}} réservations à venir comptent des joueurs de moins de {{age}} ans. Elles sont gardées.',
+                      ...SANS_ECHAPPEMENT,
+                    },
+                  )}
+                  ton="attention"
+                />
+              ) : null}
             </View>
           ),
         )}

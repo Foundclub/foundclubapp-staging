@@ -303,6 +303,49 @@ describe('RESA-L5A1 E-G09 — tarifs et créneaux ponctuels (RA4 états 3 et 4)'
   });
 });
 
+describe('RESA-L5B-1 B3 E-G09 — un horaire réduit avec des réservations (RESA-L2C)', () => {
+  /**
+   * Fait juger un tarif par l'aperçu du serveur (un geste qui passe par `dryRun`).
+   * @param {any} arbre - L'arbre.
+   * @returns {Promise<void>} Fini.
+   */
+  const jugerUnTarif = async (arbre) => {
+    await appuyer(arbre, 'Ajouter un tarif');
+    await toucher(arbre, 'complexe-creneaux-tarif-jour-1');
+    await appuyer(arbre, 'De … à …');
+    await ecrire(arbre, 'De', '18:00');
+    await ecrire(arbre, 'À', '22:00');
+    await ecrire(arbre, 'Prix', '80');
+    await appuyer(arbre, 'Ajouter le tarif');
+  };
+
+  it('« 3 réservations tombent hors de tes nouveaux horaires. Elles sont gardées. »', async () => {
+    mockTerrains.data[0].slotPlan = PLAN_OUVERT;
+    mockApercu.mockResolvedValueOnce({
+      data: {
+        creneaux: {
+          openSlots: 600, ranges: [], slotsPerWeek: 40, status: 'ouvert',
+        },
+        dryRun: true,
+        reservationsHorsHoraires: 3,
+      },
+    });
+    const arbre = await monter();
+    await jugerUnTarif(arbre);
+    expect(lisibles(arbre)).toContain(
+      '3 réservations tombent hors de tes nouveaux horaires. Elles sont gardées.',
+    );
+  });
+
+  it('aucune réservation dehors : rien', async () => {
+    mockTerrains.data[0].slotPlan = PLAN_OUVERT;
+    const arbre = await monter();
+    await jugerUnTarif(arbre);
+    expect(lisibles(arbre).some((texte) => texte.includes('hors de tes nouveaux horaires')))
+      .toBe(false);
+  });
+});
+
 describe('RESA-L5A2 E-G09 — vers les fermetures et le planning', () => {
   it('« Fermer des jours » (E-G10) et « Voir le planning » (E-G03), pour ce terrain', async () => {
     const arbre = await monter();

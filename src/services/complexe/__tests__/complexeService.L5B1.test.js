@@ -48,6 +48,19 @@ describe('RESA-L5B-1 — « non honorée » (E-G04, E-G05)', () => {
   });
 });
 
+describe('RESA-L5B-1 B4 — l’aperçu d’un âge minimum relevé (E-G16, serveur RESA-L2C)', () => {
+  it('PUT …/manage avec `dryRun` à la racine : rien n’est écrit côté serveur', async () => {
+    mockClient.put = jest.fn().mockResolvedValue({
+      data: { data: { dryRun: true, minAge: 18, reservationsPlusJeunes: 2 } },
+    });
+    const reponse = await geste('apercuReglages')('cx-five', { minAge: 18 });
+    expect(mockClient.put).toHaveBeenCalledWith('/complexes/cx-five/manage', {
+      data: { minAge: 18 }, dryRun: true,
+    });
+    expect(reponse).toEqual({ data: { dryRun: true, minAge: 18, reservationsPlusJeunes: 2 } });
+  });
+});
+
 describe('RESA-L5B-1 — la fiche d’un client, bannir, débannir (E-G15)', () => {
   it('la fiche : GET …/clients/:joueurId', async () => {
     const reponse = await geste('lireClient')('cx-five', 'u-julien');

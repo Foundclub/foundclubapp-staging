@@ -7,6 +7,7 @@ import { complexeChoisi } from '@/domains/complexe/complexeGerant';
 import {
   annulerNonHonoree,
   annulerReservationGeree,
+  apercuReglages,
   bannir,
   bloquerCreneau,
   creerMonComplexe,
@@ -395,6 +396,23 @@ export const useClientDuComplexe = (complexeId, joueurId) => useQuery({
   enabled: Boolean(complexeId && joueurId),
   queryFn: async () => (await lireClient(String(complexeId), String(joueurId)))?.data ?? null,
   queryKey: ['complexe', complexeId, 'client', joueurId],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * RESA-L5B-1, partie B (serveur RESA-L2C) — l'aperçu d'un âge minimum RELEVÉ (E-G16) : combien de
+ * réservations à venir comptent des joueurs plus jeunes. Rien n'est écrit ; lu seulement quand
+ * l'écran le demande (`enabled`).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {number} minAge - L'âge essayé.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ dryRun, minAge,
+ *   reservationsPlusJeunes }`.
+ */
+export const useApercuAgeMinimum = (complexeId, minAge, { enabled = true } = {}) => useQuery({
+  enabled: enabled && Boolean(complexeId),
+  queryFn: async () => (await apercuReglages(String(complexeId), { minAge }))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'apercu-age', minAge],
   staleTime: DEMI_MINUTE,
 });
 
