@@ -3886,9 +3886,13 @@ function Conversation({ navigation, route }) {
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
       || Boolean(filDeLaVille.estDeMonCote?.(message))
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
-    const maVoix = isMine && filDeLaVille.estFil
+    let maVoix = isMine && filDeLaVille.estFil
       ? String(message?.senderSignature?.nom || '').trim()
       : '';
+    // MSG-SUPPORT — en console, NOS réponses disent qui de l'équipe les a écrites.
+    if (isMine && filDeLaVille.estAssistance) {
+      maVoix = String(filDeLaVille.nomDeLExpediteur(message) || '');
+    }
     // Le nom et l avatar ne servent qu a plusieurs : un tete-a-tete n en porte pas (SPECS §1).
     const estAPlusieurs = chatData?.type !== 'whisper';
     const montrerNom = (!isMine && estAPlusieurs && premier) || Boolean(maVoix && premier);

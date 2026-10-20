@@ -457,12 +457,26 @@ describe('MSG-SUPPORT — la conversation d\'assistance sur le téléphone', () 
     await laisserSePoser();
     expect(textes(arbre)).toContain('Lina Moreau');
     expect(textes(arbre)).not.toContain('L’équipe FoundClub te répond ici');
-    const messages = parId(mockGiftedRenders[mockGiftedRenders.length - 1]);
+    const dernier = mockGiftedRenders[mockGiftedRenders.length - 1];
+    const messages = parId(dernier);
     expect(mockRepondants).toHaveBeenCalledWith('chat-1');
     expect(cote(messages['m-reponse'])).toBe('sophie');
     expect(messages['m-reponse'].user.name).toBe('Assistance FoundClub · Sophie A.');
     expect(cote(messages['m-demande'])).toBe('lina');
     expect(messages['m-demande'].user.name).toBe('Lina Moreau');
+    // À droite, la bulle de l'équipe DIT qui l'a écrite (la console voit qui a répondu).
+    /** @type {any} */
+    let bulle;
+    act(() => {
+      bulle = renderer.create(dernier.renderBubble({
+        currentMessage: messages['m-reponse'],
+        nextMessage: {},
+        position: 'right',
+        previousMessage: {},
+      }));
+    });
+    expect(textes(bulle).join(' ')).toContain('Assistance FoundClub · Sophie A.');
+    act(() => { bulle.unmount(); });
   });
 
   it('titulaire, conversation encore vide : elle invite à écrire et dit qui lit', () => {

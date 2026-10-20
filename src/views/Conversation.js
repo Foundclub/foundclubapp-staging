@@ -4178,6 +4178,8 @@ function Conversation({ navigation, route }) {
         readBy: msg.readBy,
         replyTo: msg.replyTo,
         senderDocumentId: senderEntityId,
+        // MSG-SUPPORT — une réponse de l'équipe vue de la console : à droite, mais nommée.
+        ...(filDeLaVille.estDeMonCote?.(msg) ? { signeParLEquipe: true } : {}),
         // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : ligne centrée, sans bulle.
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
@@ -4199,7 +4201,7 @@ function Conversation({ navigation, route }) {
           )
           : msg.message,
         user: {
-          // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite.
+          // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite, signées.
           _id: filDeLaVille.estDeMonCote?.(msg)
             ? String(userData?.documentId || '')
             : senderEntityId,
@@ -5837,7 +5839,8 @@ function Conversation({ navigation, route }) {
       precedent: previousMessage,
       suivant: nextMessage,
     });
-    const nomEnTete = isLeft && estPremierDuGroupe && !estUnTeteATete(chatData?.type)
+    const nomEnTete = (isLeft || currentMessage.signeParLEquipe) && estPremierDuGroupe
+      && !estUnTeteATete(chatData?.type)
       ? String(currentMessage.user?.name || '').trim()
       : '';
     // 🏷️ MSG1A (§3.1, `genre A`) — « Karim · Entraîneur » : la clef du serveur, un libelle
