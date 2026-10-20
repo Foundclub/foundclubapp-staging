@@ -5154,7 +5154,13 @@ function Conversation({ navigation, route }) {
                 ) : null}
                 {filVideHorsVille ? (
                   <div style={{ color: mutedTextColor }}>
-                    {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                    {/* RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre. */}
+                    {canalVuDUnMembre
+                      ? i18next.t(
+                        'conversation.canalDuComplexe.vide',
+                        'Le complexe n’a encore rien publié.',
+                      )
+                      : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
                   </div>
                 ) : null}
                 <style>{REACTION_HOVER_STYLE}</style>

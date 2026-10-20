@@ -717,4 +717,20 @@ describe('RESA-L6B-2 — E-P12, le canal d’un complexe sur le site', () => {
     mockFil = { ...canal, groupAdmins: [MOI, BRUNO] };
     expect(saisies((await monter()).arbre)).toHaveLength(1);
   });
+
+  test('vide, vu d’un membre : « Le complexe n’a encore rien publié. »', async () => {
+    mockMessagesDuFil = [];
+    mockFil = {
+      documentId: CHAT_ID,
+      groupAdmins: [BRUNO],
+      groupName: 'Le Five de Montrivage',
+      name: 'Le Five de Montrivage',
+      participants: [MOI, BRUNO],
+      participantsCount: 214,
+      type: 'group',
+    };
+    const { arbre } = await monter();
+    expect(texteDe(arbre.root)).toContain('Le complexe n’a encore rien publié.');
+    expect(texteDe(arbre.root)).not.toContain('Aucun message pour le moment.');
+  });
 });
