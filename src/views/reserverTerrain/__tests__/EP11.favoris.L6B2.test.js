@@ -13,6 +13,10 @@ import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
 // aussi le canal » ; un complexe parti : « n'est plus disponible », « Retirer » ; vide : ce que le
 // favori apporte, « Réserver un terrain » ; chargement, erreur.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),

@@ -25,6 +25,10 @@ import {
 //   · un participant : « Réservée par Julien M. », « Tu viens ? » Présent / Absent, la discussion ;
 //     ni annuler, ni inviter, ni annonce.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 let mockParams = /** @type {any} */ ({});

@@ -15,6 +15,10 @@ import { annonceDeReservation, groupe } from '@/testSupport/temoinReserver';
 // « Annonce publiée. », « Partager » (le lien de la réservation), « Fermer l'annonce ». Ouverte
 // aussi par N-28 (témoin plus bas).
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 let mockParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({

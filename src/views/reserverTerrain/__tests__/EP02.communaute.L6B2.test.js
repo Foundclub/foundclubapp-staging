@@ -21,6 +21,10 @@ import { complexePublic, terrainPublic } from '@/testSupport/temoinReserver';
 //     favori… » ;
 //   · « Nos partenaires » (Infos) : une rangée par partenaire, son site s'il en a un.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 let mockParams = /** @type {any} */ ({ slug: 'le-five-de-montrivage' });
 jest.mock('@react-navigation/native', () => ({
@@ -29,6 +33,8 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 let mockRelation = /** @type {any} */ ({});
+const mockLireLaRelation = jest.fn().mockImplementation(() => mockRelation);
+let mockUtilisateur = /** @type {any} */ (null);
 let mockPartenaires = /** @type {any} */ ({});
 const mockAjouter = jest.fn();
 const mockRetirer = jest.fn();
@@ -39,7 +45,7 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
   useCreneauxDuJour: () => ({ data: { slots: [] } }),
-  useMaRelationAuComplexe: () => mockRelation,
+  useMaRelationAuComplexe: (/** @type {any[]} */ ...args) => mockLireLaRelation(...args),
   usePartenairesPublics: () => mockPartenaires,
   useRetirerDesFavoris: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useSignalerUnComplexe: () => ({ isPending: false, mutateAsync: mockSignaler }),
@@ -49,7 +55,7 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
 }));
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: { birthdate: '1990-05-02', documentId: 'u-1' } }),
+  default: () => ({ userData: mockUtilisateur }),
 }));
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));
 jest.mock('@/views/search/searchRouteHelpers', () => ({ navigateToSearchHub: jest.fn() }));
@@ -125,6 +131,7 @@ const versLesInfos = async (arbre) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockParams = { slug: 'le-five-de-montrivage' };
+  mockUtilisateur = { birthdate: '1990-05-02', documentId: 'u-1' };
   mockRelation = {
     data: {
       canal: { chatId: null, membre: false, membres: 214 },
@@ -260,4 +267,14 @@ it('l’aperçu du gérant : ni cœur, ni « … », ni fidélité', async () =>
   expect(parRepere(arbre, 'complexe-plus')).toBeNull();
   expect(complexePublic().name).toBe('Le Five de Montrivage');
   expect(terrainPublic().name).toBe('Terrain 1');
+});
+
+// La page publique du site (RESA-L7-1) monte cet écran SANS compte : rien de ce qui me concerne
+// (favori, fidélité, canal, signalement) n'est montré ni demandé au serveur.
+it('sans compte (la page publique du site) : ni cœur, ni « … », rien de lu sur moi', async () => {
+  mockUtilisateur = null;
+  const arbre = await monter();
+  expect(parRepere(arbre, 'complexe-favori')).toBeNull();
+  expect(parRepere(arbre, 'complexe-plus')).toBeNull();
+  expect(mockLireLaRelation).toHaveBeenCalledWith('le-five-de-montrivage', { enabled: false });
 });

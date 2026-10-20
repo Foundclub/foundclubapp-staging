@@ -21,6 +21,10 @@ import { groupe, maReservation, reservationDeParticipant } from '@/testSupport/t
 //   · une partie où l'on est invité : « Invité par Julien M. » ;
 //   · « MA FIDÉLITÉ » : une carte par complexe (n/x, ce qui reste ; ou la récompense) ⇒ E-P02.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),

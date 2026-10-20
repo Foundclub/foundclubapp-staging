@@ -17,6 +17,10 @@ import { maReservation } from '@/testSupport/temoinReserver';
 //   · pour une équipe : « C'est réservé pour U15 Valbrune ! », « au nom de … » et « Les 11 joueurs
 //     de U15 Valbrune sont prévenus. » (N-27).
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 const mockPopToTop = jest.fn();
 let mockParams = /** @type {any} */ ({});

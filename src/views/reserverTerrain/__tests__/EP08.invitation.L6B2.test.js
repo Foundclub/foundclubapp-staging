@@ -17,6 +17,10 @@ import { groupe } from '@/testSupport/temoinReserver';
 // prévenu d'un absent) ; refus nommés (âge, banni, complète) ; lien éteint, partie finie.
 // La page du SITE (`/r/<code>`, sans compte) est le lot RESA-L7-2.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 let mockParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({

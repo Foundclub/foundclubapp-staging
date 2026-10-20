@@ -19,6 +19,10 @@ import { complexePublic, maReservation, recapitulatif } from '@/testSupport/temo
 //     « le créneau reste libre » (A-P08), et « Lancer la collecte ».
 // Le serveur juge tout (RG-SECU) : l'app n'envoie que `team`, `quorum`, `collectDeadline` en plus.
 
+// Un écran entier monté : sous charge (suite complète, PC occupé), le premier cas paie le
+// chargement des modules et dépassait les 5 s par défaut (motif de COLL-CONSOLE, 02/10).
+jest.setTimeout(30000);
+
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 const mockGoBack = jest.fn();

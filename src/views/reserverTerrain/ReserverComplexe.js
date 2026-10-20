@@ -112,8 +112,10 @@ function ReserverComplexe() {
     route?.params
   );
   const slug = params?.slug;
-  const communaute = !params?.apercu;
   const { userData } = useAuth();
+  // Favori, fidélité, canal, « Signaler » : ni pour l'aperçu du gérant, ni sans compte (la page
+  // publique du site monte cet écran pour tout le monde, RESA-L7-1).
+  const communaute = !params?.apercu && Boolean(userData);
   const surOrdinateur = useIsDesktop();
   const complexeLu = useComplexePublic(slug);
   const terrainsLus = useTerrainsPublics(slug);
