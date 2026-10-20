@@ -21,6 +21,13 @@ import { carteDeRecherche } from '@/testSupport/temoinReserver';
 // erreur, hors connexion. Le serveur ne rend que des créneaux VRAIMENT libres (RC-P01).
 
 const mockNavigate = jest.fn();
+// Intégration RESA (soutien, 20/10) : RESA-CARTE a mis la barre d'onglets flottante dans E-P01 ;
+// useBottomDockLayout tire @react-navigation/stack, que jest ne transforme pas : doublé comme dans EP01.carte.
+jest.mock('@/navigation/useBottomDockLayout', () => ({
+  __esModule: true,
+  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
