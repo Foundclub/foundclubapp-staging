@@ -856,6 +856,9 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
     case 'annuleeParLeComplexe':
       return {
         ...base,
+        // RESA-L6B-2 (planche EP13 variante 5) : « Écrire au complexe » (la conversation de la
+        // réservation : seulement là où elle est connue, l'en-tête de E-P07).
+        actions: ['ecrire'],
         texte: texteMotif,
         titre: t(
           'reserverTerrain.echec.annuleeParLeComplexe',
@@ -1069,6 +1072,8 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
       const max = Number(details.max) > 0 ? Number(details.max) : null;
       return {
         ...base,
+        // RESA-L6B-2 (planche EP13 variante 11) : « Voir mes réservations » (E-P10).
+        actions: ['mesReservations'],
         icone: 'calendrier',
         titre: max
           ? t('reserverTerrain.echec.plafond', {
@@ -1095,7 +1100,8 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
     case 'refusee':
       return {
         ...base,
-        actions: ['autresCreneaux'],
+        // RESA-L6B-2 (planche EP13 variante 3) : « Écrire au complexe » en second.
+        actions: ['autresCreneaux', 'ecrire'],
         texte: texteMotif,
         titre: t('reserverTerrain.echec.refusee', '{{complexe}} a refusé ta demande', {
           complexe,

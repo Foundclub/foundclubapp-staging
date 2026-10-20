@@ -334,6 +334,17 @@ it('collecte arrêtée, créneau pris (N-23) : le texte A-P08 au « tu »', asyn
   ]));
 });
 
+it('refusée (E-P13 n° 3) : « Écrire au complexe » de l’en-tête ouvre la conversation', async () => {
+  mockLecture = {
+    data: maReservation({ canCancel: false, reason: 'tournoi.', status: 'refusee' }),
+  };
+  mockGroupe = { data: groupe({ status: 'refusee' }) };
+  const arbre = await monter();
+  expect(lisibles(arbre)).toContain('Le Five de Montrivage a refusé ta demande');
+  await toucher(pressable(arbre, 'Écrire au complexe'));
+  expect(mockFil).toHaveBeenCalledWith({ fil: 'complexe', reservationId: 'r-1' });
+});
+
 it('le témoin de la doublure : le complexe public porte son adresse', () => {
   expect(complexePublic().address.label).toBe('12 allée des Sports, Montrivage');
 });

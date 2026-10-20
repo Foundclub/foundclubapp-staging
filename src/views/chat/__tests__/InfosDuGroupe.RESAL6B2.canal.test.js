@@ -5,11 +5,11 @@ import InfosDuGroupe from '../InfosDuGroupe';
 
 // RESA-L6B-2 (20/10/2026) — E-P12, LES INFOS DU CANAL D'UN COMPLEXE, CÔTÉ JOUEUR (planche EP12
 // états 2 et 3 ; plan E-P12 ; serveur RESA-L4) : un membre voit le NOMBRE de membres (« Canal du
-// complexe · 214 membres »), JAMAIS la liste (les membres ne se voient pas entre eux ; le serveur ne joint
-// qu'eux-mêmes et les gérants, l'app masque ce qu'il reste) ; « Quitter le canal », et sa
-// confirmation : « … Tu ne recevras plus ses nouvelles. Tu y reviendras en le remettant en
-// favori. » (Q5). Le gérant, administrateur du canal, garde la liste (sa page E-G12 la montre).
-// Montage du témoin InfosDuGroupe.test.js (MSG1A §3.16).
+// complexe · 214 membres »), JAMAIS la liste (les membres ne se voient pas entre eux ; le serveur
+// ne joint qu'eux-mêmes et les gérants, l'app masque ce qu'il reste) ; « Quitter le canal », et sa
+// confirmation : « … Tu ne recevras plus ses nouvelles. Tu y reviendras en le remettant en favori.
+// » (Q5). Le gérant, administrateur du canal, garde la liste (sa page E-G12 la montre). Montage du
+// témoin InfosDuGroupe.test.js (MSG1A §3.16).
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

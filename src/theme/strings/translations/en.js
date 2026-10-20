@@ -18256,6 +18256,7 @@ export default {
       sansReponseTexte: '{{complexe}} did not answer before the slot: nothing is booked.',
       terrainParti: 'This pitch is no longer offered.',
       tropTard: 'Too late to book here: call the venue.',
+      voirMesReservations: 'See my bookings',
     },
     etat: {
       annulee: 'Cancelled',

@@ -18875,6 +18875,7 @@ export default {
       sansReponseTexte: '{{complexe}} n’a pas répondu avant le créneau : rien n’est réservé.',
       terrainParti: 'Ce terrain n’est plus proposé.',
       tropTard: 'Trop tard pour réserver ici : appelle le complexe.',
+      voirMesReservations: 'Voir mes réservations',
     },
     etat: {
       annulee: 'Annulée',

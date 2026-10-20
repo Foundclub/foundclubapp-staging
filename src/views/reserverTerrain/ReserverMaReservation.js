@@ -36,6 +36,7 @@ import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
 import FeuilleAnnonce from '@/views/reserverTerrain/components/FeuilleAnnonce';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
+import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -359,23 +360,34 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     </View>
   );
 
-  const enTeteDEchec = varianteDEnTete ? (
+  const contenuDEnTete = varianteDEnTete ? contenuDEchec(t, varianteDEnTete, {
+    collecte,
+    complexe: nomDuComplexe,
+    debut: reservation.startsAt,
+    fermeture: params.fermeture,
+    motif: reservation.reason,
+    reserveur: reservation.bookerLabel,
+    telephone,
+  }) : null;
+  const enTeteDEchec = contenuDEnTete ? (
     <View style={carte}>
       <BlocDEchec
-        contenu={contenuDEchec(t, varianteDEnTete, {
-          collecte,
-          complexe: nomDuComplexe,
-          debut: reservation.startsAt,
-          fermeture: params.fermeture,
-          motif: reservation.reason,
-          reserveur: reservation.bookerLabel,
-          telephone,
-        })}
+        // RESA-L6B-2 : « Écrire au complexe » est le geste du RÉSERVEUR (AT-04).
+        contenu={{
+          ...contenuDEnTete,
+          actions: contenuDEnTete.actions.filter((action) => !participant || action !== 'ecrire'),
+        }}
         onAction={(action) => {
           if (action === 'appeler') appeler(telephone);
-          else versLeCalendrier();
+          else if (action === 'ecrire') ouvrirLeFil('complexe');
+          else if (action === 'ailleurs' || action === 'reserverUnTerrain') {
+            navigateToSearchHub(navigation, 'reservations');
+          } else versLeCalendrier();
         }}
       />
+      {refusDuFil ? (
+        <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{refusDuFil}</Text>
+      ) : null}
     </View>
   ) : null;
 
