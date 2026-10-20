@@ -22,6 +22,7 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import useTheme from '@/theme/themeContext';
 
+import EvenementsVilleRecherche from '@/components/organisms/evenementVille/RechercheVille';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 
 import SearchScreenShell from './components/SearchScreenShell';
@@ -321,6 +322,8 @@ function SearchEventsScreen({ navigation, route }) {
         navigation={navigation}
         onTutorialLayout={handleTutorialLayout}
       >
+        {/* R17-EVT-1 (20/10) — les événements PUBLICS de la Ville (niveau 3), au-dessus. */}
+        <EvenementsVilleRecherche />
         <EventListContent
           additionalFilters={eventFiltersProps}
           enableMapMode
