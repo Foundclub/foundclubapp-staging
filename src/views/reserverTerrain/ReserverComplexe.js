@@ -7,24 +7,41 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { libelleSport } from '@/domains/complexe/complexeTerrain';
+import { apercuDeLaFidelite } from '@/domains/complexe/partieDuJoueur';
 import {
-  horairesLisibles, jourDeParis, numeroLisible, texteAnnulation, varianteDEchec,
+  contenuDEchec,
+  horairesLisibles,
+  jourDeParis,
+  numeroLisible,
+  texteAnnulation,
+  varianteDEchec,
 } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BadgeComplexe from '@/views/complexe/components/BadgeComplexe';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 import CarteTerrainJoueur from '@/views/reserverTerrain/components/CarteTerrainJoueur';
+import FeuilleRetirerFavori from '@/views/reserverTerrain/components/FeuilleRetirerFavori';
+import FeuilleSignaler from '@/views/reserverTerrain/components/FeuilleSignaler';
 import FeuilleTelephone from '@/views/reserverTerrain/components/FeuilleTelephone';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useComplexePublic, useTerrainsPublics } from '@/services/complexe/complexeJoueurQueries';
+import {
+  useAjouterAuxFavoris,
+  useComplexePublic,
+  useMaRelationAuComplexe,
+  usePartenairesPublics,
+  useRetirerDesFavoris,
+  useTerrainsPublics,
+} from '@/services/complexe/complexeJoueurQueries';
 
 import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
 import { openExternalMap } from '@/platform/maps/externalMap';
@@ -68,9 +85,20 @@ const siteComplet = (url) => {
  *   · « Infos » : description, photos, horaires d'accueil, adresse et itinéraire, téléphone DU
  *     complexe et « Appeler » (RG-TEL), site web.
  * Sur ordinateur (OR2) : les infos à gauche, la colonne « Réserver » à droite, sans segments.
- * Paramètres : `slug` ; `apercu` (le gérant regarde sa page : bandeau « Aperçu »).
- * ⛔ Pas dans ce lot : le favori (cœur), le canal, la fidélité, les partenaires, « Signaler » et le
- * bandeau d'arrivée par l'affiche (serveur L4, puis L6b). Caché par `COMPLEXES_JOUEUR`.
+ * Paramètres : `slug` ; `apercu` (le gérant regarde sa page : bandeau « Aperçu ») ; `depuis`.
+ * RESA-L6B-2 (20/10/2026, serveur RESA-L4 ; planches EP02 états 1 à 4 et 10, RA2) — la communauté :
+ *   · le cœur (AT-15 A) : « Ajouter aux favoris » (on entre dans le canal, A-G08 : « Ajouté à tes
+ *     favoris. Tu reçois maintenant les nouvelles du complexe. ») / « Dans tes favoris » ⇒ la
+ *     feuille du retrait (le canal gardé, Q5 ; la case « Quitter aussi le canal », AT-11 A) ;
+ *   · le bandeau d'arrivée par l'affiche (`depuis: 'affiche'`, A-G12) : « Ajoute … à tes
+ *     favoris » ;
+ *   · « … » ⇒ « Signaler ce complexe » (motif ; N-09) ;
+ *   · « Ta fidélité ici 8/10 » et ce qui reste, ou la récompense (RC-G10) ;
+ *   · « Canal du complexe · 214 membres » ⇒ le canal (E-P12), sinon « Mets le complexe en favori
+ *     pour recevoir ses nouvelles. » ;
+ *   · « Nos partenaires » (Infos, A-G25, planche RA2) : une rangée par partenaire, son site.
+ * L'aperçu du gérant ne montre rien de tout cela (rien ne le concerne). « Dernier message hier »
+ * (le canal) : le serveur ne le rend pas. Caché par `COMPLEXES_JOUEUR`.
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverComplexe() {
@@ -80,14 +108,25 @@ function ReserverComplexe() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {{ apercu?: boolean, slug?: string } | undefined} */ (route?.params);
+  const params = /** @type {{ apercu?: boolean, depuis?: string, slug?: string } | undefined} */ (
+    route?.params
+  );
   const slug = params?.slug;
+  const communaute = !params?.apercu;
   const { userData } = useAuth();
   const surOrdinateur = useIsDesktop();
   const complexeLu = useComplexePublic(slug);
   const terrainsLus = useTerrainsPublics(slug);
   const [segment, setSegment] = useState('reserver');
   const [feuille, setFeuille] = useState(/** @type {FeuilleOuverte | null} */ (null));
+  const relation = useMaRelationAuComplexe(slug, { enabled: communaute })?.data || null;
+  const partenairesLus = usePartenairesPublics(slug);
+  const ajouter = useAjouterAuxFavoris();
+  const retirer = useRetirerDesFavoris();
+  const [annonceFavori, setAnnonceFavori] = useState(/** @type {string | null} */ (null));
+  const [retrait, setRetrait] = useState(false);
+  const [refusFavori, setRefusFavori] = useState(/** @type {string | null} */ (null));
+  const [signaler, setSignaler] = useState(false);
 
   const aujourdhui = jourDeParis();
   const complexe = complexeLu?.data;
@@ -95,6 +134,34 @@ function ReserverComplexe() {
   const ageMinimum = Number(complexe?.rules?.minAge) || 18;
   const naissance = /** @type {any} */ (userData)?.birthdate;
   const sousLAge = !naissance || isBirthdateUnderAge(naissance, ageMinimum);
+
+  // RESA-L6B-2 — le cœur : favori ⇒ canal (A-G08) ; un plus jeune que l'âge du complexe garde son
+  // favori sans le canal (le serveur le dit par `canal.raison`) : alors seulement « Ajouté ».
+  const estFavori = Boolean(relation?.favori);
+  const mettreEnFavori = async (/** @type {'affiche' | 'bouton'} */ origin) => {
+    setRefusFavori(null);
+    try {
+      const reponse = await ajouter.mutateAsync({ origin, slug });
+      setAnnonceFavori(reponse?.canal && !reponse.canal.raison
+        ? t(
+          'reserverTerrain.complexe.ajouteAuxFavorisCanal',
+          'Ajouté à tes favoris. Tu reçois maintenant les nouvelles du complexe.',
+        )
+        : t('reserverTerrain.complexe.ajouteAuxFavoris', 'Ajouté à tes favoris.'));
+    } catch (erreur) {
+      setRefusFavori(contenuDEchec(t, varianteDEchec(erreur), { erreur }).titre);
+    }
+  };
+  const retirerDesFavoris = async (/** @type {boolean} */ quitterCanal) => {
+    setRefusFavori(null);
+    try {
+      await retirer.mutateAsync({ quitterCanal, slug });
+      setRetrait(false);
+      setAnnonceFavori(null);
+    } catch (erreur) {
+      setRefusFavori(contenuDEchec(t, varianteDEchec(erreur), { erreur }).titre);
+    }
+  };
 
   const versLeCalendrier = (/** @type {any} */ terrain, /** @type {any} */ creneau = null) => {
     navigation.navigate(RouteNames.ReserverCreneau, {
@@ -267,6 +334,253 @@ function ReserverComplexe() {
         </View>
       ) : null}
       {sports ? <Text style={[Fonts.p3, Fonts.neutral200]}>{sports}</Text> : null}
+      {communaute ? (
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8, marginTop: 4 }]}>
+          <TouchableOpacity
+            accessibilityLabel={estFavori
+              ? t('reserverTerrain.complexe.dansTesFavoris', 'Dans tes favoris')
+              : t('reserverTerrain.complexe.ajouterAuxFavoris', 'Ajouter aux favoris')}
+            accessibilityRole="button"
+            accessibilityState={{ busy: Boolean(ajouter?.isPending), selected: estFavori }}
+            disabled={Boolean(ajouter?.isPending)}
+            onPress={() => (estFavori ? setRetrait(true) : mettreEnFavori('bouton'))}
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              {
+                backgroundColor: estFavori ? withAlpha(Colors.primary500, 0.16) : 'transparent',
+                borderColor: withAlpha(Colors.primary500, 0.6),
+                borderRadius: 999,
+                borderWidth: 1,
+                gap: 8,
+                minHeight: 44,
+                paddingHorizontal: 16,
+              },
+            ]}
+            testID="complexe-favori"
+          >
+            <SvgIcon
+              color={Colors.primary500}
+              height={18}
+              name={estFavori ? 'heart-filled' : 'heart'}
+              width={18}
+            />
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {estFavori
+                ? t('reserverTerrain.complexe.dansTesFavoris', 'Dans tes favoris')
+                : t('reserverTerrain.complexe.ajouterAuxFavoris', 'Ajouter aux favoris')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel={t('reserverTerrain.complexe.plusDActions', 'Plus d’actions')}
+            accessibilityRole="button"
+            onPress={() => setSignaler(true)}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                borderColor: withAlpha(Colors.primary500, 0.6),
+                borderRadius: 22,
+                borderWidth: 1,
+                height: 44,
+                width: 44,
+              },
+            ]}
+            testID="complexe-plus"
+          >
+            <SvgIcon color={Colors.primary500} height={18} name="dots-horizontal" width={18} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {annonceFavori ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[Fonts.p3Bold, Fonts.success500, Fonts.textCenter]}
+        >
+          {annonceFavori}
+        </Text>
+      ) : null}
+      {refusFavori && !retrait ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3Bold, Fonts.error300, Fonts.textCenter]}>
+          {refusFavori}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
+  // RESA-L6B-2 — le bandeau d'arrivée par l'affiche (A-G12) : seulement s'il n'est pas déjà favori.
+  const bandeauAffiche = communaute && complexe && params?.depuis === 'affiche' && !estFavori
+    && !annonceFavori ? (
+      <View
+        style={{
+          backgroundColor: withAlpha(Colors.primary500, 0.12),
+          borderColor: withAlpha(Colors.primary500, 0.5),
+          borderRadius: 16,
+          borderWidth: 1,
+          gap: 10,
+          padding: 14,
+        }}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
+          <SvgIcon color={Colors.primary500} height={20} name="heart" width={20} />
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {t('reserverTerrain.complexe.ajouteADesFavoris', 'Ajoute {{nom}} à tes favoris', {
+              nom: String(complexe.name || ''),
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => mettreEnFavori('affiche')}
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.primary500,
+            borderRadius: 12,
+            justifyContent: 'center',
+            minHeight: 44,
+          }}
+          testID="complexe-bandeau-affiche"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary900]}>
+            {t('reserverTerrain.complexe.ajouterAuxFavoris', 'Ajouter aux favoris')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    ) : null;
+
+  // RESA-L6B-2 — « Ta fidélité ici » (RC-G10) : un programme actif chez ce complexe.
+  const fidelite = communaute ? apercuDeLaFidelite(t, relation?.fidelite) : null;
+  const blocFidelite = fidelite ? (
+    <View style={carteDeBloc} testID="complexe-fidelite">
+      <View style={[Alignments.row, Alignments.alignCenter, { justifyContent: 'space-between' }]}>
+        <Text style={titreDeBloc}>
+          {t('reserverTerrain.complexe.taFidelite', 'Ta fidélité ici')}
+        </Text>
+        {!fidelite.disponible ? (
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {`${fidelite.compte}/${fidelite.seuil}`}
+          </Text>
+        ) : null}
+      </View>
+      {!fidelite.disponible ? (
+        <View
+          style={{
+            backgroundColor: withAlpha(Colors.primary500, 0.18),
+            borderRadius: 4,
+            height: 6,
+            overflow: 'hidden',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: Colors.primary500,
+              height: 6,
+              width: `${Math.round((fidelite.compte / Math.max(1, fidelite.seuil)) * 100)}%`,
+            }}
+          />
+        </View>
+      ) : null}
+      <Text style={[Fonts.p2, fidelite.disponible ? Fonts.success500 : Fonts.neutral100]}>
+        {fidelite.texte}
+      </Text>
+    </View>
+  ) : null;
+
+  // RESA-L6B-2 — le canal (A-G07, A-G08) : membre ⇒ « Canal du complexe » et le NOMBRE de membres
+  // (jamais la liste, E-P12) ; sinon, ce que le favori apporte.
+  const canal = relation?.canal || null;
+  let blocCanal = null;
+  if (communaute && complexe && canal?.membre && canal?.chatId) {
+    blocCanal = (
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => navigation.navigate(RouteNames.Conversation, { chatId: canal.chatId })}
+        style={[carteDeBloc, { gap: 4, minHeight: 52 }]}
+        testID="complexe-canal"
+      >
+        <Text style={titreDeBloc}>{t('reserverTerrain.favoris.canal', 'Canal du complexe')}</Text>
+        {Number(canal.membres) > 0 ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('reserverTerrain.complexe.membres', {
+              count: Number(canal.membres),
+              defaultValue_one: '{{count}} membre',
+              defaultValue_other: '{{count}} membres',
+            })}
+          </Text>
+        ) : null}
+      </TouchableOpacity>
+    );
+  } else if (communaute && complexe && relation) {
+    blocCanal = (
+      <View style={[carteDeBloc, { alignItems: 'center', flexDirection: 'row', gap: 10 }]}>
+        <SvgIcon color={Colors.primary500} height={18} name="heart" width={18} />
+        <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+          {t(
+            'reserverTerrain.complexe.canalNonMembre',
+            'Mets le complexe en favori pour recevoir ses nouvelles.',
+          )}
+        </Text>
+      </View>
+    );
+  }
+
+  // RESA-L6B-2 — « Nos partenaires » (A-G25, planche RA2 : repris de la fiche club).
+  const partenaires = Array.isArray(partenairesLus?.data) ? partenairesLus.data : [];
+  const blocPartenaires = partenaires.length ? (
+    <View style={carteDeBloc} testID="complexe-partenaires">
+      <Text style={titreDeBloc}>
+        {t('reserverTerrain.complexe.partenaires', 'Nos partenaires')}
+      </Text>
+      {partenaires.map((partenaire) => {
+        const lien = String(partenaire?.link || '').trim();
+        const nom = String(partenaire?.title || '');
+        const rangee = (
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}>
+            {partenaire?.logo ? (
+              <Image
+                accessibilityIgnoresInvertColors
+                source={{ uri: String(partenaire.logo) }}
+                style={{ borderRadius: 19, height: 38, width: 38 }}
+              />
+            ) : (
+              <View
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  {
+                    backgroundColor: withAlpha(Colors.primary500, 0.2),
+                    borderRadius: 19,
+                    height: 38,
+                    width: 38,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                  {nom.split(/\s+/).filter(Boolean).slice(0, 2)
+                    .map((mot) => mot.charAt(0).toLocaleUpperCase())
+                    .join('')}
+                </Text>
+              </View>
+            )}
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{nom}</Text>
+          </View>
+        );
+        return lien ? (
+          <TouchableOpacity
+            accessibilityLabel={nom}
+            accessibilityRole="link"
+            key={`${nom}-${lien}`}
+            onPress={() => {
+              Linking.openURL(siteComplet(lien)).catch(() => {});
+            }}
+          >
+            {rangee}
+          </TouchableOpacity>
+        ) : (
+          <View key={nom}>{rangee}</View>
+        );
+      })}
     </View>
   ) : null;
 
@@ -462,7 +776,10 @@ function ReserverComplexe() {
         <View style={{ flex: 1, gap: 16, minWidth: 0 }}>
           {identite}
           {infos}
+          {blocPartenaires}
+          {blocFidelite}
           {regles}
+          {blocCanal}
         </View>
         <View style={{ gap: 12, width: COLONNE_RESERVER }}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
@@ -487,9 +804,16 @@ function ReserverComplexe() {
         {segment === 'reserver' ? (
           <>
             {listeDesTerrains}
+            {blocFidelite}
             {regles}
           </>
-        ) : infos}
+        ) : (
+          <>
+            {infos}
+            {blocPartenaires}
+          </>
+        )}
+        {blocCanal}
       </View>
     );
   }
@@ -524,8 +848,29 @@ function ReserverComplexe() {
         style={[Alignments.fill]}
       >
         {bandeauApercu}
+        {bandeauAffiche}
         {page}
       </ScrollView>
+      {communaute && slug ? (
+        <FeuilleSignaler
+          onFermer={() => setSignaler(false)}
+          slug={String(slug)}
+          visible={signaler}
+        />
+      ) : null}
+      {communaute ? (
+        <FeuilleRetirerFavori
+          enCours={Boolean(retirer?.isPending)}
+          explication={t(
+            'reserverTerrain.complexe.resterasDansLeCanal',
+            'Tu resteras dans le canal (tu peux le quitter depuis le canal).',
+          )}
+          onFermer={() => setRetrait(false)}
+          onRetirer={retirerDesFavoris}
+          refus={retrait ? refusFavori : null}
+          visible={retrait}
+        />
+      ) : null}
       <FeuilleTelephone
         creneau={feuille?.creneau || null}
         onFermer={() => setFeuille(null)}

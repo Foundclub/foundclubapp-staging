@@ -13,8 +13,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import FeuilleRetirerFavori from '@/views/reserverTerrain/components/FeuilleRetirerFavori';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -73,7 +73,6 @@ function ReserverFavoris() {
     .map((favori) => String(favori?.complexe?.slug || '')));
   const retirer = useRetirerDesFavoris();
   const [aRetirer, setARetirer] = useState(/** @type {any} */ (null));
-  const [quitterCanal, setQuitterCanal] = useState(false);
   const [refus, setRefus] = useState(/** @type {string | null} */ (null));
 
   const carte = {
@@ -93,7 +92,6 @@ function ReserverFavoris() {
     try {
       await retirer.mutateAsync({ quitterCanal: quitter, slug: complexe.slug });
       setARetirer(null);
-      setQuitterCanal(false);
     } catch (erreur) {
       setRefus(contenuDEchec(t, varianteDEchec(erreur), { erreur }).titre);
     }
@@ -235,7 +233,6 @@ function ReserverFavoris() {
                   accessibilityRole="button"
                   onPress={() => {
                     setRefus(null);
-                    setQuitterCanal(false);
                     setARetirer(complexe);
                   }}
                   style={[
@@ -313,75 +310,14 @@ function ReserverFavoris() {
         ) : null}
         {corps}
       </ScrollView>
-      <BottomModal
-        close={() => setARetirer(null)}
-        isVisible={Boolean(aRetirer)}
-        webPresentation="dialog"
-      >
-        <View style={{ gap: 12 }}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('reserverTerrain.favoris.retirerQuestion', 'Retirer des favoris ?')}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t('reserverTerrain.favoris.resterasDansLeCanal', 'Tu resteras dans le canal.')}
-          </Text>
-          <TouchableOpacity
-            accessibilityLabel={t('reserverTerrain.favoris.quitterCanal', 'Quitter aussi le canal')}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: quitterCanal }}
-            onPress={() => setQuitterCanal((avant) => !avant)}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}
-            testID="favori-quitter-canal"
-          >
-            <View
-              style={[
-                Alignments.alignCenter,
-                Alignments.justifyCenter,
-                {
-                  backgroundColor: quitterCanal ? Colors.primary500 : 'transparent',
-                  borderColor: quitterCanal ? Colors.primary500 : Colors.primary200,
-                  borderRadius: 6,
-                  borderWidth: 2,
-                  height: 24,
-                  width: 24,
-                },
-              ]}
-            >
-              {quitterCanal ? (
-                <SvgIcon color={Colors.primary900} height={16} name="check" width={16} />
-              ) : null}
-            </View>
-            <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-              {t('reserverTerrain.favoris.quitterCanal', 'Quitter aussi le canal')}
-            </Text>
-          </TouchableOpacity>
-          {refus && aRetirer ? (
-            <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{refus}</Text>
-          ) : null}
-          <TouchableOpacity
-            accessibilityRole="button"
-            disabled={Boolean(retirer?.isPending)}
-            onPress={() => confirmerLeRetrait(aRetirer, quitterCanal)}
-            style={{
-              alignItems: 'center',
-              backgroundColor: Colors.error500,
-              borderRadius: 12,
-              justifyContent: 'center',
-              minHeight: 48,
-            }}
-            testID="favori-retirer-confirme"
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('reserverTerrain.favoris.retirer', 'Retirer')}
-            </Text>
-          </TouchableOpacity>
-          <Button
-            onPress={() => setARetirer(null)}
-            title={t('reserverTerrain.maReservation.garder', 'Garder')}
-            variant="Ghost"
-          />
-        </View>
-      </BottomModal>
+      <FeuilleRetirerFavori
+        enCours={Boolean(retirer?.isPending)}
+        explication={t('reserverTerrain.favoris.resterasDansLeCanal', 'Tu resteras dans le canal.')}
+        onFermer={() => setARetirer(null)}
+        onRetirer={(quitter) => confirmerLeRetrait(aRetirer, quitter)}
+        refus={aRetirer ? refus : null}
+        visible={Boolean(aRetirer)}
+      />
     </ScreenContainer>
   );
 }
