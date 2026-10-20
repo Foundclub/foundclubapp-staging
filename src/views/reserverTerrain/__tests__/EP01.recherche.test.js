@@ -65,6 +65,13 @@ jest.mock('@/platform/maps/searchMapGeolocation', () => ({
 }));
 
 let mockVilleChoisie = /** @type {any} */ (null);
+// RESA-FIN-APP : le stockage local du téléphone (la ville retenue), doublé par une table.
+const mockStockage = new Map();
+jest.mock('@/platform/storage', () => ({
+  getItem: (/** @type {string} */ cle) => mockStockage.get(cle),
+  removeItem: (/** @type {string} */ cle) => mockStockage.delete(cle),
+  setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => mockStockage.set(cle, valeur),
+}));
 jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressInput', () => (
   function FausseVille(/** @type {any} */ { placeholder, setAddress }) {
     const { Text: Texte, TouchableOpacity: Touche } = jest.requireActual('react-native');
@@ -153,6 +160,7 @@ beforeEach(() => {
   mockAppels.length = 0;
   mockVilles = [];
   mockVilleChoisie = null;
+  mockStockage.clear();
   mockPositionAccordee = { lat: 48.83, lng: 1.48 };
   mockPositionDemandee = null;
   mockRecherche = {
@@ -414,5 +422,36 @@ describe('RESA-FIN-APP (3) E-P01 — une heure partagée par plusieurs terrains 
     expect(lisibles(arbre).filter((texte) => texte === '17 h')).toEqual([]);
     const puce = textes(arbre).find((texte) => texte.includes('Padel A') && texte.includes('17'));
     expect(puce).not.toMatch(/ /);
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : la ville choisie n'était pas gardée d'une visite à l'autre
+// (« Réserver ailleurs » rouvrait la feuille de position 30 min après). Elle est retenue sur le téléphone ; la
+// position, si on l'autorise ensuite, la remplace.
+describe('RESA-FIN-APP (4) E-P01 — la ville choisie est gardée', () => {
+  beforeEach(() => {
+    mockPositionAccordee = null;
+  });
+
+  it('choisir une ville la retient ; la visite suivante cherche autour d’elle, sans redemander', async () => {
+    const premiere = await monter();
+    await appuyer(premiere, 'Choisir une ville');
+    mockVilleChoisie = {
+      city: 'Valbrune', label: 'Valbrune', lat: 48.7, lng: 1.3,
+    };
+    await appuyer(premiere, 'Tape une ville');
+    expect(derniersFiltres()).toEqual({
+      date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
+    });
+    act(() => {
+      premiere.unmount();
+    });
+    mockAppels.length = 0;
+    const seconde = await monter();
+    expect(lisibles(seconde)).not.toContain('Des terrains autour de toi');
+    expect(lisibles(seconde)).toContain('Valbrune');
+    expect(derniersFiltres()).toEqual({
+      date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
+    });
   });
 });
