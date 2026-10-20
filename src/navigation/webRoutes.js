@@ -308,6 +308,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MyFacilityReports]: '/mes-signalements',
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export.
   [RouteNames.CollectiviteChiffres]: '/collectivite/:collectiviteId/chiffres',
+  // R17-EVT-1 (20/10/2026) — ajouter ou modifier un événement de la Ville ; sa fiche.
+  [RouteNames.CollectiviteEvenement]: '/collectivite/:collectiviteId/evenement/:evenementId?',
+  [RouteNames.EvenementDeLaVille]: '/evenements-de-la-ville/:evenementId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

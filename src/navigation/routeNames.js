@@ -421,4 +421,9 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
+  // R17-EVT-1 (20/10/2026, REC17-005) — « Ajouter un événement de la Ville » (et « Modifier »),
+  // et la fiche d un événement de la Ville (la Ville, un club, un membre : le serveur juge ce
+  // qu il montre).
+  CollectiviteEvenement: 'CollectiviteEvenement',
+  EvenementDeLaVille: 'EvenementDeLaVille',
 });

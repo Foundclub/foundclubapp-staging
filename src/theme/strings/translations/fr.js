@@ -4919,6 +4919,11 @@ export default {
   },
   collectiviteAccueil: {
     actions: {
+      // R17-EVT-1 (20/10) — la 7e action de l'accueil de la Ville.
+      addEvent: {
+        dit: 'Fête du sport, tournoi, réunion.',
+        titre: 'Ajouter un événement',
+      },
       addInstallation: {
         dit: 'Gymnase, terrain, salle.',
         titre: 'Ajouter une installation',
@@ -6604,6 +6609,137 @@ export default {
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
+  // R17-EVT-1 (20/10/2026, REC17-005) — l'événement de la Ville : le tunnel, le panneau, la fiche.
+  collectiviteEvenement: {
+    annulation: {
+      deplacees: 'Une séance déjà déplacée par son club ne revient pas toute seule.',
+      garder: 'Garder l’événement',
+      libere: 'Ceux qui avaient été prévenus le sont de l’annulation. '
+        + '{{installation}} redevient libre : {{quand}}.',
+      prevenus: 'Ceux qui avaient été prévenus le sont de l’annulation.',
+      titre: 'Annuler « {{nom}} » ?',
+    },
+    annulerSaisie: 'Annuler',
+    description: {
+      ajouter: '+ Ajouter une description',
+      exemple: 'Stands des clubs, initiations, remise des trophées à 16:00.',
+      label: 'Description',
+    },
+    enregistrer: 'Enregistrer',
+    fermerLePanneau: 'Fermer le panneau',
+    fiche: {
+      annule: 'Annulé',
+      annuler: 'Annuler l’événement',
+      etiquette: 'Événement de la Ville',
+      introuvable: 'Cet événement n’existe plus, ou il ne vous est pas montré.',
+      modifier: 'Modifier',
+      titre: 'Événement de la Ville',
+      voirActualite: 'Voir l’actualité',
+    },
+    horsVille: 'Cet espace est réservé à la Ville.',
+    lieu: {
+      aCote: '{{installation}} · à côté',
+      toute: '{{installation}} · toute l’installation',
+    },
+    ou: {
+      adresse: 'Adresse ou lieu',
+      adresseExemple: 'Place de la mairie',
+      ailleurs: 'Ailleurs dans la commune',
+      ailleursAide: 'Place, parc, salle des fêtes…',
+      titre: 'Où ?',
+      titrePanneau: 'Où',
+    },
+    panne: {
+      connexion: 'La connexion a été perdue. Ce que vous avez saisi est gardé.',
+      reessayer: 'Réessayer',
+      titre: 'L’événement n’a pas été publié.',
+    },
+    place: {
+      aucune: 'Aucune',
+      aucuneAide: 'À côté : abords, parking, salle voisine.',
+      titre: 'Quelle place prend-il ?',
+      toute: 'Toute l’installation',
+      touteAide: 'Aucun club n’y est pendant l’événement.',
+    },
+    planning: {
+      aCote: 'Ville · à côté',
+      aria: 'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+      toute: 'Ville · toute l’installation',
+    },
+    publier: 'Publier l’événement',
+    quand: {
+      a: 'À',
+      choisir: 'Choisir',
+      de: 'De',
+      jusquau: 'Jusqu’au',
+      le: 'Le',
+      memesHeures: 'Les mêmes heures chaque jour.',
+      plusieursJours: 'Sur plusieurs jours',
+      plusieursJoursPhrase: 'du {{debut}} au {{fin}} · {{heures}}',
+      titre: 'Quand ?',
+      unJour: '{{jour}} · {{heures}}',
+    },
+    qui: {
+      actualite: 'Les clubs et une actualité',
+      actualiteAide: 'En plus : une actualité de la Ville, avec la date et le lieu.',
+      actualiteVa: 'L’actualité va à',
+      clubs: 'Les clubs',
+      clubsAide: 'Sur les plannings des installations. Pas d’actualité.',
+      dirigeants: 'Les dirigeants',
+      membres: 'Tous les membres',
+      public: 'Tout le monde',
+      publicAide: 'En plus : dans « Mon planning » des membres des clubs, '
+        + 'et dans la recherche d’événements (une fiche publique).',
+      recapClubs: 'Les clubs',
+      recapDirigeants: 'Les clubs + actualité aux dirigeants',
+      recapMembres: 'Les clubs + actualité à tous les membres',
+      recapPublic: 'Tout le monde',
+      regle: 'Le club dont une séance est touchée est prévenu dans tous les cas.',
+      titre: 'Qui le voit ?',
+    },
+    quoi: {
+      nom: 'Son nom',
+      nomAide: 'Les clubs le liront tel quel sur leurs plannings.',
+      nomExemple: 'Fête du sport',
+      nomPanneau: 'Nom de l’événement',
+      titre: 'Quel événement ?',
+      type: 'Type',
+    },
+    recap: {
+      evenement: 'Événement',
+      modifier: 'Modifier',
+      ou: 'Où · place prise',
+      qui: 'Qui le voit',
+      sousTitre: 'Relisez, puis publiez.',
+      titre: 'Récapitulatif',
+    },
+    recherche: {
+      titre: 'Événements de la Ville',
+      voir: 'Voir la fiche ›',
+    },
+    refus: {
+      date: 'Choisissez le jour.',
+      finApresDebut: 'La fin doit venir après le début.',
+      heures: 'Choisissez l’heure de début et l’heure de fin.',
+      lieu: 'Dites où a lieu l’événement : une installation, ou une adresse.',
+      nom: 'Donnez un nom à l’événement.',
+    },
+    titre: 'Ajouter un événement de la Ville',
+    titreModifier: 'Modifier l’événement',
+    touchees: {
+      explication: 'Son club la verra « Bloqué par la Ville · à déplacer » et pourra la déplacer.',
+      ligne: '{{qui}}, {{jour}} {{heures}}',
+      plusieurs: '{{nombre}} séances touchées',
+      une: '1 séance touchée',
+    },
+    types: {
+      autre: 'Autre',
+      manifestation: 'Manifestation',
+      portes_ouvertes: 'Portes ouvertes',
+      reunion: 'Réunion',
+      tournoi: 'Tournoi',
+    },
+  },
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Fermeture à venir',
