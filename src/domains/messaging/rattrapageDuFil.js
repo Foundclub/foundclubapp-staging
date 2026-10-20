@@ -25,6 +25,29 @@ const rattrapageLogger = createLogger('messaging-rattrapage');
 
 /** Un rattrapage en vol par fil : la liste ET la conversation reçoivent le même `joined`. */
 const rattrapagesEnCours = new Map();
+/**
+ * Le rattrapage de la liste en vol (tous les crochets montés le demandent).
+ * @type {Promise<void> | null}
+ */
+let rattrapageDeLaListe = null;
+
+/**
+ * MSGNOTIF2 — relit la liste des fils (aperçus, non-lus, que le serveur seul sait
+ * compter) : après une coupure, ou quand un fil rattrapé montre qu'il manquait un
+ * message. Toutes les requêtes `['chats']` sont relues, à l'écran ou en veille (la
+ * pastille s'affiche hors de la liste) ; une seule relecture en vol à la fois.
+ * @param {import('@tanstack/react-query').QueryClient} queryClient Le cache de l'app.
+ * @returns {Promise<void>} Quand la liste est relue.
+ */
+export const rattraperLaListe = (queryClient) => {
+  if (!queryClient) return Promise.resolve();
+  if (rattrapageDeLaListe) return rattrapageDeLaListe;
+  rattrapageDeLaListe = queryClient
+    .refetchQueries({ queryKey: ['chats'], type: 'all' }, { cancelRefetch: false })
+    .catch(() => {})
+    .finally(() => { rattrapageDeLaListe = null; });
+  return rattrapageDeLaListe;
+};
 
 /**
  * L'identifiant serveur d'un message.
@@ -144,9 +167,7 @@ export const rattraperLeFil = (queryClient, chatId) => {
       // Ce qui manquait au fil manque aussi à la liste : son aperçu (« dernier
       // message ») et les non-lus, que le serveur seul sait compter. Une relecture,
       // et seulement quand quelque chose manquait vraiment.
-      if (aManque) {
-        queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' }, { cancelRefetch: false });
-      }
+      if (aManque) rattraperLaListe(queryClient);
       return true;
     }, (error) => {
       rattrapageLogger.warn('Rattrapage du fil impossible', {
