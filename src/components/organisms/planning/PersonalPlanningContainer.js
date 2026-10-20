@@ -154,7 +154,9 @@ function PersonalPlanningContainer({
   // ouvre sa fiche (le serveur l a verse, sans `documentId` de seance).
   const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
     if (evenement?.documentId) {
-      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+      /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
+        evenementId: evenement.documentId,
+      });
     }
   };
 

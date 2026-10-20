@@ -91,6 +91,11 @@ function EvenementDeLaVille() {
     })
     : null;
 
+  /**
+   * Une ligne de la fiche : icône et texte, touchable si elle mène quelque part.
+   * @param {{ icone: string, onPress?: () => void, testID: string, texte: string }} props
+   * @returns {import('react').ReactElement}
+   */
   const ligne = ({
     icone, onPress, testID, texte,
   }) => {
@@ -197,21 +202,18 @@ function EvenementDeLaVille() {
                 collectiviteId,
                 evenementId: evenement.documentId,
               })}
-              testID="evenement-modifier"
               title={t('collectiviteEvenement.fiche.modifier', 'Modifier')}
               variant="Secondary"
             />
             {evenement.actualite?.documentId ? (
               <Button
                 onPress={voirLActualite}
-                testID="evenement-voir-actualite"
                 title={t('collectiviteEvenement.fiche.voirActualite', 'Voir l’actualité')}
                 variant="Ghost"
               />
             ) : null}
             <Button
               onPress={() => setConfirmer(true)}
-              testID="evenement-annuler"
               title={t('collectiviteEvenement.fiche.annuler', 'Annuler l’événement')}
               variant="Danger"
             />
@@ -255,14 +257,12 @@ function EvenementDeLaVille() {
           <View style={{ gap: 12 }}>
             <Button
               onPress={() => setConfirmer(false)}
-              testID="evenement-garder"
               title={t('collectiviteEvenement.annulation.garder', 'Garder l’événement')}
               variant="Secondary"
             />
             <Button
               isLoading={annuler.isPending}
               onPress={confirmerLAnnulation}
-              testID="evenement-confirmer-annulation"
               title={t('collectiviteEvenement.fiche.annuler', 'Annuler l’événement')}
               variant="DangerFilled"
             />

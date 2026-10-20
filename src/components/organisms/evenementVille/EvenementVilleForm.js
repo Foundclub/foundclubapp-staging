@@ -75,7 +75,7 @@ function EvenementDeLaVilleForm({
   );
   const [avecDescription, setAvecDescription] = useState(Boolean(etat.description));
   const changer = (/** @type {Record<string, any>} */ champs) => setEtat(
-    (avant) => ({ ...avant, ...champs }),
+    (/** @type {Record<string, any>} */ avant) => ({ ...avant, ...champs }),
   );
 
   const depuisUneCase = Boolean(
@@ -131,6 +131,12 @@ function EvenementDeLaVilleForm({
     <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{texte}</Text>
   );
 
+  /**
+   * Une ligne à cocher (un seul choix par question).
+   * @param {{ actif: boolean, aide?: string, onPress: () => void, pastille?: string,
+   *   testID: string, titre: string }} props
+   * @returns {import('react').ReactElement}
+   */
   const ligneRadio = ({
     actif, aide, onPress, pastille, testID, titre,
   }) => (
@@ -367,7 +373,7 @@ function EvenementDeLaVilleForm({
       </Text>
       {(Array.isArray(touchees.sessions) ? touchees.sessions : [])
         .slice(0, 5)
-        .map((seance) => {
+        .map((/** @type {any} */ seance) => {
           const cle = [seance?.club?.documentId, seance?.team?.name, seance?.date]
             .concat(seance?.startTime).join('-');
           return (
@@ -545,7 +551,6 @@ function EvenementDeLaVilleForm({
         <Button
           onPress={publier}
           size="small"
-          testID="evenement-reessayer"
           title={t('collectiviteEvenement.panne.reessayer', 'Réessayer')}
           variant="Secondary"
         />
@@ -609,7 +614,6 @@ function EvenementDeLaVilleForm({
           <Button
             onPress={onClose}
             style={{ flex: 1 }}
-            testID="evenement-annuler-saisie"
             title={t('collectiviteEvenement.annulerSaisie', 'Annuler')}
             variant="Secondary"
           />
@@ -618,7 +622,6 @@ function EvenementDeLaVilleForm({
             isLoading={envoi.enCours}
             onPress={publier}
             style={{ flex: 1 }}
-            testID="evenement-publier"
             title={libellePublier}
             variant="Primary"
           />
@@ -630,6 +633,7 @@ function EvenementDeLaVilleForm({
   // ---------------------------------------------------------------------------------------------
   // Le TUNNEL (téléphone) : une question par étape, le récapitulatif, « Publier l'événement ».
   // ---------------------------------------------------------------------------------------------
+  /** @type {Record<string, string>} */
   const titres = {
     ou: t('collectiviteEvenement.ou.titre', 'Où ?'),
     place: t('collectiviteEvenement.place.titre', 'Quelle place prend-il ?'),
@@ -638,6 +642,7 @@ function EvenementDeLaVilleForm({
     quoi: t('collectiviteEvenement.quoi.titre', 'Quel événement ?'),
     recap: t('collectiviteEvenement.recap.titre', 'Récapitulatif'),
   };
+  /** @type {Record<string, string>} */
   const sousTitres = {
     ou: [etat.name, quand].filter(Boolean).join(' · '),
     place: [installationNom, quand].filter(Boolean).join(' · '),
@@ -647,6 +652,7 @@ function EvenementDeLaVilleForm({
     recap: t('collectiviteEvenement.recap.sousTitre', 'Relisez, puis publiez.'),
   };
   // Une étape ne s'ouvre pas tant que la sienne a un refus : il se dit sous le champ.
+  /** @type {Record<string, string[]>} */
   const refusDeLEtape = {
     ou: ['lieu'],
     place: [],
@@ -670,7 +676,7 @@ function EvenementDeLaVilleForm({
     /** @type {string} */ cle,
     /** @type {string} */ libelle,
     /** @type {string} */ valeur,
-    cible,
+    /** @type {string} */ cible,
   ) => (
     <TouchableOpacity
       accessibilityHint={t('collectiviteEvenement.recap.modifier', 'Modifier')}
@@ -719,6 +725,7 @@ function EvenementDeLaVilleForm({
       {encadrePanne}
     </View>
   );
+  /** @type {Record<string, import('react').ReactNode>} */
   const corps = {
     ou: lignesOu,
     place: lignesPlace,

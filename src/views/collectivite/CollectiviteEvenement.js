@@ -74,7 +74,7 @@ function CollectiviteEvenement() {
       </ScreenContainer>
     );
   }
-  const formulaire = (presentation) => (
+  const formulaire = (/** @type {'tunnel' | 'panneau'} */ presentation) => (
     <EvenementDeLaVilleForm
       collectiviteId={String(collectiviteId || '')}
       collectiviteNom={String(collectivite?.name || '')}

@@ -108,7 +108,12 @@ jest.mock('@/components/atoms/button/Button', () => {
   return function ButtonMock(/** @type {any} */ props) {
     return reactActuel.createElement(
       PressableRN,
-      { disabled: props.disabled, onPress: props.onPress, testID: props.testID },
+      {
+        disabled: props.disabled,
+        onPress: props.onPress,
+        // Le vrai bouton ne pose aucun testID : on le vise par son libellé.
+        testID: props.testID ?? `bouton:${props.title}`,
+      },
       reactActuel.createElement(TexteRN, null, props.title),
     );
   };
@@ -155,7 +160,10 @@ const boutons = (/** @type {any} */ arbre) => arbre.root
   .map((/** @type {any} */ n) => n.props.testID)
   .filter(Boolean);
 const touche = (/** @type {any} */ arbre, /** @type {string} */ id) => {
-  const noeud = arbre.root.findAllByType(TouchableOpacity).find((n) => n.props.testID === id);
+  // Le dernier : une fenêtre ouverte se dessine après l’écran (deux « Annuler l’événement »).
+  const noeud = arbre.root.findAllByType(TouchableOpacity)
+    .filter((n) => n.props.testID === id)
+    .at(-1);
   if (!noeud) throw new Error(`pas de ${id}`);
   return act(async () => {
     await noeud.props.onPress();
@@ -198,12 +206,12 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
         'Annuler l’événement',
       ]),
     );
-    await touche(arbre, 'evenement-modifier');
+    await touche(arbre, 'bouton:Modifier');
     expect(mockNavigation.navigate).toHaveBeenLastCalledWith('CollectiviteEvenement', {
       collectiviteId: 'ville-montrivage',
       evenementId: 'evt-1',
     });
-    await touche(arbre, 'evenement-voir-actualite');
+    await touche(arbre, 'bouton:Voir l’actualité');
     expect(mockNavigation.navigate).toHaveBeenLastCalledWith('CollectiviteActualites', {
       collectiviteId: 'ville-montrivage',
     });
@@ -212,7 +220,7 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
   it('« Annuler l’événement » : la fenêtre, « Garder », puis le geste', async () => {
     mockFiche = { data: VUE_DE_LA_VILLE, isLoading: false };
     const arbre = await monter(<EvenementDeLaVille />);
-    await touche(arbre, 'evenement-annuler');
+    await touche(arbre, 'bouton:Annuler l’événement');
     let lus = textes(arbre);
     expect(lus).toContain('Annuler « Fête du sport » ?');
     expect(lus).toContain(
@@ -220,10 +228,10 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
         + 'Stade municipal redevient libre : sam. 24 oct. · 10:00 – 17:00.',
     );
     expect(lus).toContain('Une séance déjà déplacée par son club ne revient pas toute seule.');
-    await touche(arbre, 'evenement-garder');
+    await touche(arbre, 'bouton:Garder l’événement');
     expect(mockAnnuler).not.toHaveBeenCalled();
-    await touche(arbre, 'evenement-annuler');
-    await touche(arbre, 'evenement-confirmer-annulation');
+    await touche(arbre, 'bouton:Annuler l’événement');
+    await touche(arbre, 'bouton:Annuler l’événement');
     expect(mockAnnuler).toHaveBeenCalledWith('evt-1');
     lus = textes(arbre);
     expect(lus).not.toContain('Annuler « Fête du sport » ?');
