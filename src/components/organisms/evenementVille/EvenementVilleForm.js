@@ -26,6 +26,8 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import AutocompleteAddressInput
+  from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
@@ -52,14 +54,18 @@ const AFFICHE_OCTETS_MAX = 10 * 1024 * 1024;
  *   - `panneau` (ordinateur) : tous les champs dans un panneau, « Annuler » / « Publier ».
  * Le vous de la Ville partout. Les refus (planche, état 10) se disent sous le champ ; un envoi
  * perdu garde la saisie et propose « Réessayer ».
- * @param {{ collectiviteId: string, collectiviteNom?: string, evenement?: any, initial?: any,
- *   installations?: any[], onClose: () => void, onPublier: (corps: any) => Promise<any>,
- *   presentation?: 'tunnel' | 'panneau' }} props
+ * R17-EVT-1-BIS (e) : « Ailleurs » se saisit dans la saisie d'adresse partagée (R17-ADRESSE) :
+ * suggestions, ou « Adresse introuvable ? » et un point posé sur la carte, qui part de la commune
+ * de la Ville (`collectiviteVille`).
+ * @param {{ collectiviteId: string, collectiviteNom?: string, collectiviteVille?: string,
+ *   evenement?: any, initial?: any, installations?: any[], onClose: () => void,
+ *   onPublier: (corps: any) => Promise<any>, presentation?: 'tunnel' | 'panneau' }} props
  * @returns {import('react').ReactElement} Le formulaire.
  */
 function EvenementDeLaVilleForm({
   collectiviteId,
   collectiviteNom = '',
+  collectiviteVille = '',
   evenement = null,
   initial = null,
   installations = [],
@@ -324,14 +330,18 @@ function EvenementDeLaVilleForm({
   );
 
   const champAdresse = etat.ailleurs ? (
-    <Input
+    <AutocompleteAddressInput
+      address={etat.adresseLieu || (etat.adresse ? { label: etat.adresse } : undefined)}
       error={erreurDe('lieu')}
       label={t('collectiviteEvenement.ou.adresse', 'Adresse ou lieu')}
-      maxLength={200}
-      onChangeText={(/** @type {string} */ valeur) => changer({ adresse: valeur })}
+      permettreLieuSurCarte
       placeholder={t('collectiviteEvenement.ou.adresseExemple', 'Place de la mairie')}
-      testID="evenement-adresse"
-      value={etat.adresse}
+      setAddress={(/** @type {any} */ option) => changer({
+        adresse: String(option?.label || '').slice(0, 200),
+        adresseLieu: option?.label ? option : null,
+      })}
+      villeConnue={collectiviteVille}
+      vouvoyer
     />
   ) : null;
 

@@ -100,6 +100,21 @@ jest.mock(
     return null;
   },
 );
+// R17-EVT-1-BIS (e) : la saisie d'adresse partagée (R17-ADRESSE), doublée : elle garde ses props
+// et dit son refus comme le champ texte.
+/** @type {any[]} */
+const mockAdresseProps = [];
+jest.mock(
+  '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput',
+  () => {
+    const reactActuel = jest.requireActual('react');
+    const { Text: TexteRN } = jest.requireActual('react-native');
+    return function AutocompleteAddressInputMock(/** @type {any} */ props) {
+      mockAdresseProps.push(props);
+      return props.error ? reactActuel.createElement(TexteRN, null, props.error) : null;
+    };
+  },
+);
 // R17-EVT-1-BIS (f) : le choix d'une image et son envoi (comme les pièces des actualités).
 /** @type {any} */
 let mockImageChoisie = null;
@@ -191,6 +206,7 @@ const monter = async (/** @type {any} */ {
       <EvenementDeLaVilleForm
         collectiviteId="ville-montrivage"
         collectiviteNom="Ville de Montrivage"
+        collectiviteVille="Montrivage"
         evenement={evenement}
         initial={initial}
         installations={INSTALLATIONS}
@@ -311,8 +327,13 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
     expect(textes(arbre)).toContain(
       'Dites où a lieu l’événement : une installation, ou une adresse.',
     );
+    // R17-EVT-1-BIS (e) : la saisie partagée, avec « Adresse introuvable ? » et la carte.
+    const champ = mockAdresseProps.at(-1);
+    expect(champ).toEqual(expect.objectContaining({
+      permettreLieuSurCarte: true, villeConnue: 'Montrivage', vouvoyer: true,
+    }));
     await act(async () => {
-      dernierInput('evenement-adresse').onChangeText('Parc des sports');
+      champ.setAddress({ label: 'Parc des sports', lat: 45.75, lng: 4.83 });
     });
     await touche(arbre, 'tunnel-suivant');
     expect(titre(arbre)).toBe('Qui le voit ?');
@@ -473,6 +494,7 @@ describe('R17-EVT-1-BIS — l’affiche', () => {
     date: '2026-10-24', endTime: '17:00', facilityId: 'stade', startTime: '10:00',
   };
   beforeEach(() => {
+    mockAdresseProps.length = 0;
     mockTeleverser.mockReset();
     mockImageChoisie = { assets: [{ fileSize: 1000, uri: 'file://affiche.jpg' }] };
   });
@@ -525,5 +547,38 @@ describe('R17-EVT-1-BIS — l’affiche', () => {
     expect(textes(arbre)).toContain('+ Ajouter une affiche');
     await touche(arbre, 'bouton:Enregistrer');
     expect(onPublier).toHaveBeenCalledWith({ data: expect.objectContaining({ poster: null }) });
+  });
+});
+
+// 🏛️ R17-EVT-1-BIS (e) (20/10) — « Ailleurs dans la commune » placé sur la carte : le corps porte
+// l'adresse choisie ET son point. ROUGE avant (champ texte, aucun point).
+describe('R17-EVT-1-BIS — « Ailleurs », placé sur la carte', () => {
+  it('🔴 le panneau : l’adresse choisie et son point partent au serveur', async () => {
+    mockAdresseProps.length = 0;
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({
+      initial: {
+        date: '2026-10-24', endTime: '17:00', facilityId: 'stade', startTime: '10:00',
+      },
+      onPublier,
+      presentation: 'panneau',
+    });
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Cross');
+    });
+    await touche(arbre, 'evenement-lieu-ailleurs');
+    await act(async () => {
+      mockAdresseProps.at(-1).setAddress({
+        city: 'Montrivage', label: 'Parc des sports', lat: 45.75, lng: 4.83, postcode: '69000',
+      });
+    });
+    await touche(arbre, 'bouton:Publier l’événement');
+    expect(onPublier).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        address: 'Parc des sports',
+        addressLocation: { lat: 45.75, lng: 4.83 },
+        facilityId: null,
+      }),
+    });
   });
 });

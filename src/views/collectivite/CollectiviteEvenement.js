@@ -78,6 +78,7 @@ function CollectiviteEvenement() {
     <EvenementDeLaVilleForm
       collectiviteId={String(collectiviteId || '')}
       collectiviteNom={String(collectivite?.name || '')}
+      collectiviteVille={String(collectivite?.address?.city || '')}
       evenement={evenementId ? existant.data : null}
       initial={{
         date: parametres?.date,

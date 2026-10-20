@@ -140,6 +140,35 @@ describe('R17-EVT-1 — l’événement de la Ville, en règles pures', () => {
     expect('poster' in versCorpsDeLApi(enPlace).data).toBe(false);
   });
 
+  // R17-EVT-1-BIS (e) (20/10) : « Ailleurs » se place sur la carte (saisie R17-ADRESSE) ; le corps
+  // porte son point (`addressLocation` { lat, lng }), null s'il n'est que du texte ; jamais
+  // avec une installation. « Modifier » repart du point en place. ROUGE avant.
+  it('🔴 « Ailleurs » : l’adresse et son point ; une installation, aucun point', () => {
+    const place = versCorpsDeLApi({
+      ...FETE,
+      adresse: 'Parc des sports',
+      adresseLieu: { label: 'Parc des sports', lat: 45.75, lng: 4.83 },
+      ailleurs: true,
+    }).data;
+    expect(place).toMatchObject({
+      address: 'Parc des sports', addressLocation: { lat: 45.75, lng: 4.83 },
+    });
+    const texte = versCorpsDeLApi({ ...FETE, adresse: 'Salle des fêtes', ailleurs: true }).data;
+    expect(texte.addressLocation).toBeNull();
+    expect('addressLocation' in versCorpsDeLApi(FETE).data).toBe(false);
+    expect(etatDepuisLaVue({
+      address: 'Parc des sports',
+      addressLocation: { lat: 45.75, lng: 4.83 },
+      facility: null,
+      name: 'Cross',
+      startDate: '2026-10-24',
+    })).toMatchObject({
+      adresse: 'Parc des sports',
+      adresseLieu: { label: 'Parc des sports', lat: 45.75, lng: 4.83 },
+      ailleurs: true,
+    });
+  });
+
   it('« Modifier » repart de la vue de la Ville', () => {
     const etat = etatDepuisLaVue({
       address: null,

@@ -40,6 +40,11 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => mockOrdinateur }));
+// R17-EVT-1-BIS (e) : ouvrir un lieu dans l'appli de cartes (l'aide partagée).
+const mockOuvrirLaCarte = jest.fn(async () => true);
+jest.mock('@/platform/maps/externalMap', () => ({
+  openExternalMap: (/** @type {any} */ lieu) => mockOuvrirLaCarte(lieu),
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
@@ -82,7 +87,9 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     isLoading: false,
   }),
   useMyCollectivites: () => ({
-    data: [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }],
+    data: [{
+      address: { city: 'Montrivage' }, documentId: 'ville-montrivage', name: 'Ville de Montrivage',
+    }],
     isLoading: false,
   }),
 }));
@@ -344,6 +351,27 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
       .toHaveLength(0);
   });
 
+  // R17-EVT-1-BIS (e) : « Ailleurs », placé sur la carte : le lieu de la fiche s'ouvre dans l'appli
+  // de cartes (comme le lieu d'une séance). Sans point : du texte. ROUGE avant.
+  it('🔴 « ailleurs », placé : le lieu s’ouvre dans l’appli de cartes', async () => {
+    mockOuvrirLaCarte.mockClear();
+    mockFiche = {
+      data: {
+        ...VUE_DU_MEMBRE,
+        address: 'Parc des sports',
+        addressLocation: { lat: 45.75, lng: 4.83 },
+        facility: null,
+        takesPlace: false,
+      },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    await touche(arbre, 'evenement-lieu');
+    expect(mockOuvrirLaCarte).toHaveBeenCalledWith({
+      label: 'Parc des sports', latitude: 45.75, longitude: 4.83,
+    });
+  });
+
   it('annulé : « Annulé », plus aucun geste ; introuvable : une phrase', async () => {
     mockFiche = { data: { ...VUE_DE_LA_VILLE, status: 'cancelled' }, isLoading: false };
     const annule = await monter(<EvenementDeLaVille />);
@@ -362,6 +390,8 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
     await monter(<CollectiviteEvenement />);
     expect(mockFormulaireProps.presentation).toBe('tunnel');
     expect(mockFormulaireProps.collectiviteNom).toBe('Ville de Montrivage');
+    // R17-EVT-1-BIS (e) : la commune de la Ville, d où part la carte de « Ailleurs ».
+    expect(mockFormulaireProps.collectiviteVille).toBe('Montrivage');
     await act(async () => {
       await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
     });
