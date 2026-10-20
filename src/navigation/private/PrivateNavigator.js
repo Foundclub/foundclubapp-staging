@@ -1617,6 +1617,15 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L6B-2 (20/10/2026) — E-P08, la page d'invitation par lien DANS l'app
+            (foundclub://r/<code>, appNavigator.js) : répondre avec son compte. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverInvitation').default}
+            name={RouteNames.ReserverInvitation}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
