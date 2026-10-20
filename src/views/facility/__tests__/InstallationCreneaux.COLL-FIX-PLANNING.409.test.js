@@ -57,6 +57,9 @@ const mockDateProps = [];
 
 // COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
 jest.setTimeout(30000);
+// R17-CONTROLES (20/10) : l onglet « Sécurité et suivi » porte « Noter un contrôle », qui charge le
+// selecteur de documents (module natif, absent des temoins) : doublure.
+jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),

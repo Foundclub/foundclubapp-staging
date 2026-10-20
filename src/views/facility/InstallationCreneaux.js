@@ -35,6 +35,8 @@ import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import FacilityCheckForm from '@/components/organisms/facilityCheck/FacilityCheckForm';
+import FacilityCheckPanel from '@/components/organisms/facilityCheck/FacilityCheckPanel';
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
 import FacilityReportPanel from '@/components/organisms/facilityReport/FacilityReportPanel';
 import FacilitySecurityTab from '@/components/organisms/facilityReport/FacilitySecurityTab';
@@ -81,6 +83,8 @@ const ONGLETS = {
 };
 // La notification d un signalement et l accueil ouvrent directement ces onglets.
 const ONGLETS_D_ENTREE = [ONGLETS.fermetures, ONGLETS.securite];
+// Les panneaux de l onglet « Sécurité et suivi » : ils se ferment quand on en sort.
+const PANNEAUX_DE_LA_SECURITE = ['signalement', 'controle', 'noterControle'];
 
 /**
  * Un jour civil « AAAA-MM-JJ » en « 1 sept. » (pour « du 1 sept. au 30 juin »).
@@ -277,7 +281,10 @@ function InstallationCreneaux() {
       return;
     }
     // R17-SIGNALER-1 (P10-securite-ordi B) : le panneau d un signalement appartient a son onglet.
-    setPanneau((/** @type {any} */ avant) => (avant?.type === 'signalement' ? null : avant));
+    // R17-CONTROLES : un controle (ou son formulaire) aussi.
+    setPanneau((/** @type {any} */ avant) => (
+      PANNEAUX_DE_LA_SECURITE.includes(avant?.type) ? null : avant
+    ));
     setOnglet(valeur);
   };
 
@@ -510,7 +517,10 @@ function InstallationCreneaux() {
   // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » s'ouvre
   // en PLEIN ECRAN (la fenetre du formulaire), plus dans la feuille ; « Modifier » aussi
   // (« pareil », 4 etapes). Le site en grand ecran garde son panneau de droite.
-  const enPleinEcran = !isDesktop && ['attribuer', 'modifier'].includes(panneau?.type);
+  // R17-CONTROLES (planche Q6 ecrans 1 et 4) : un controle et « Noter un contrôle » aussi, au
+  // telephone, dans la fenetre plein ecran du gabarit des tunnels.
+  const enPleinEcran = !isDesktop
+    && ['attribuer', 'controle', 'modifier', 'noterControle'].includes(panneau?.type);
   let titreDuPanneau = null;
   let contenuDuPanneau = null;
   if (panneau?.type === 'attribuer') {
@@ -546,6 +556,34 @@ function InstallationCreneaux() {
         onDone={fermer}
         pleinEcran={enPleinEcran}
         slot={panneau.creneau}
+      />
+    );
+  } else if (panneau?.type === 'controle' && onglet === ONGLETS.securite) {
+    // R17-CONTROLES (planche Q6 ecran 4) : un controle, et « Noter le contrôle fait ».
+    contenuDuPanneau = (
+      <FacilityCheckPanel
+        facilityId={facilityId}
+        key={`controle-${panneau.series}`}
+        onClose={fermer}
+        onRenew={(/** @type {string} */ series) => setPanneau({ series, type: 'noterControle' })}
+        pleinEcran={enPleinEcran}
+        series={panneau.series}
+      />
+    );
+  } else if (panneau?.type === 'noterControle' && onglet === ONGLETS.securite) {
+    // R17-CONTROLES (planche Q6 ecran 1) : « Noter un contrôle » ; refait, on revient au controle.
+    const retour = () => (panneau.series
+      ? setPanneau({ series: panneau.series, type: 'controle' })
+      : fermer());
+    contenuDuPanneau = (
+      <FacilityCheckForm
+        facilityId={facilityId}
+        facilityName={nom}
+        key={`noter-${panneau.series || 'neuf'}`}
+        onCancel={retour}
+        onDone={retour}
+        pleinEcran={enPleinEcran}
+        series={panneau.series || null}
       />
     );
   } else if (panneau?.type === 'signalement' && onglet === ONGLETS.securite) {
@@ -642,6 +680,8 @@ function InstallationCreneaux() {
       {onglet === ONGLETS.securite && canManage ? (
         <FacilitySecurityTab
           facilityId={facilityId}
+          onAddCheck={() => setPanneau({ series: null, type: 'noterControle' })}
+          onOpenCheck={(/** @type {string} */ series) => setPanneau({ series, type: 'controle' })}
           onOpenClosures={() => choisirOnglet(ONGLETS.fermetures)}
           onOpenReport={isDesktop
             ? (/** @type {string} */ reportId) => setPanneau({ reportId, type: 'signalement' })
