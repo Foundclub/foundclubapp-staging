@@ -7126,6 +7126,40 @@ export default {
     prestigeDivision: 'Division 1 prestige.',
     seasonLabel: '| Saison:',
   },
+  // RESA-L5B-2 (20/10/2026) — les affiches du complexe (E-G13, planche RA7, serveur RESA-L4).
+  complexeAffiches: {
+    a4: 'Imprimer en A4',
+    apercu: 'Aperçu de l’affiche',
+    erreur: 'L’affiche n’a pas pu être créée.',
+    fidelite: {
+      creer: 'Crée ton programme de fidélité pour le mettre en avant sur tes affiches',
+      dit: '{{encart}} · réglée dans « Fidélité »',
+      encart: 'Au bout de {{seuil}} réservations, {{recompense}}',
+      titre: 'Ta fidélité sur l’affiche',
+    },
+    partager: 'Partager l’affiche',
+    pause: 'Ton complexe est suspendu : ses affiches sont en pause.',
+    promotion: {
+      mention: 'La promotion s’applique sur place. L’app ne l’encaisse pas.',
+      prix: 'Prix de la place',
+      reinitialiser: 'Réinitialiser',
+      texte: 'Le texte',
+    },
+    sousTitre: 'Fais-la voir : chaque scan ouvre ta page.',
+    story: 'Story 9:16',
+    style: {
+      ecusson: 'Écusson',
+      famille: 'Famille',
+    },
+    texte: {
+      neutre: 'Neutre',
+      neutreDit: 'Scannez et ajoutez le complexe à vos favoris.',
+      promotion: 'Promotion',
+      promotionDit: 'Une place de réservation à un prix que tu fixes.',
+      titre: 'Le texte',
+    },
+    titre: 'Ton affiche complexe est prête',
+  },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
   complexeCanal: {
     ecrire: 'Écrire aux membres',

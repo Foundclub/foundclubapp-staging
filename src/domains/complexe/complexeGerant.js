@@ -214,7 +214,8 @@ export const CASES_GERER = Object.freeze([
   { cle: 'reservations', icone: 'clock', route: RouteNames.ComplexeReservations },
   // RESA-L5B-2 (20/10/2026) : le canal du complexe (E-G12, serveur RESA-L4).
   { cle: 'canal', icone: 'envelope', route: RouteNames.ComplexeCanal },
-  { cle: 'affiches', icone: 'share2', route: null },
+  // RESA-L5B-2 (20/10/2026) : les affiches du complexe (E-G13, serveur RESA-L4).
+  { cle: 'affiches', icone: 'share2', route: RouteNames.ComplexeAffiches },
   // RESA-L5B-2 (20/10/2026) : la fidélité (E-G14, serveur RESA-L4).
   { cle: 'fidelite', icone: 'trophy', route: RouteNames.ComplexeFidelite },
   // RESA-L5B-2 (20/10/2026) : la liste des clients (E-G15, serveur RESA-L4).

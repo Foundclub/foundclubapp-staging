@@ -6668,6 +6668,40 @@ export default {
     prestigeDivision: 'Prestige Division 1.',
     seasonLabel: '| Season:',
   },
+  // RESA-L5B-2 (20/10/2026) — the venue's posters (E-G13, board RA7, RESA-L4 server).
+  complexeAffiches: {
+    a4: 'Print in A4',
+    apercu: 'Poster preview',
+    erreur: 'The poster could not be created.',
+    fidelite: {
+      creer: 'Create your loyalty programme to show it on your posters',
+      dit: '{{encart}} · set in "Loyalty"',
+      encart: 'After {{seuil}} bookings, {{recompense}}',
+      titre: 'Your loyalty on the poster',
+    },
+    partager: 'Share the poster',
+    pause: 'Your venue is suspended: its posters are paused.',
+    promotion: {
+      mention: 'The promotion applies on site. The app does not collect it.',
+      prix: 'Price of the slot',
+      reinitialiser: 'Reset',
+      texte: 'The text',
+    },
+    sousTitre: 'Show it around: every scan opens your page.',
+    story: 'Story 9:16',
+    style: {
+      ecusson: 'Crest',
+      famille: 'Family',
+    },
+    texte: {
+      neutre: 'Neutral',
+      neutreDit: 'Scan and add the venue to your favourites.',
+      promotion: 'Promotion',
+      promotionDit: 'A booking slot at a price you set.',
+      titre: 'The text',
+    },
+    titre: 'Your venue poster is ready',
+  },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
   complexeCanal: {
     ecrire: 'Write to members',
