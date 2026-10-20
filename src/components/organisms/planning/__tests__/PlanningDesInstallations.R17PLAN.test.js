@@ -497,3 +497,18 @@ describe('R17-PLANNING-2 — un jour sans rien, au-delà de la semaine (P10-plan
     expect(textes(arbre)).toContain('Lundi 26 octobre');
   });
 });
+
+describe('R17-PLANNING-2 — la ligne « 3 installations » (P10-planning-tel 1)', () => {
+  test('16 ROUGE-AVANT — téléphone, Jour : « 3 installations » au-dessus de la date', async () => {
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('3 installations');
+    expect(lus.indexOf('3 installations')).toBe(lus.indexOf('Mercredi 21 octobre') - 1);
+  });
+
+  test('17 PROTEGE — sur ordinateur, pas de ligne en plus', async () => {
+    mockOrdinateur = true;
+    await choisir(await rendre(), 'day');
+    expect(textes(montes.at(-1).arbre)).not.toContain('3 installations');
+  });
+});

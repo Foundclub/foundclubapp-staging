@@ -807,12 +807,25 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             >
               <Text style={[Fonts.p1Bold, Fonts.primary200]}>‹</Text>
             </TouchableOpacity>
-            <Text
-              style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter, { minWidth: 160 }]}
-              testID="toutes-periode"
-            >
-              {titreDeLaPage}
-            </Text>
+            <View style={{ alignItems: 'center', minWidth: 160 }}>
+              {/* R17-PLANNING-2 (P10-planning-tel 1) : au téléphone, la journée dit qu'elle
+                  couvre toutes les installations. */}
+              {!isDesktop && vue === VUES.jour ? (
+                <Text style={[Fonts.p4, Fonts.primary200]} testID="toutes-contexte">
+                  {t('facilityList.count.total', {
+                    count: installations.length,
+                    defaultValue_one: '{{count}} installation',
+                    defaultValue_other: '{{count}} installations',
+                  })}
+                </Text>
+              ) : null}
+              <Text
+                style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}
+                testID="toutes-periode"
+              >
+                {titreDeLaPage}
+              </Text>
+            </View>
             <TouchableOpacity
               accessibilityLabel={flecheDroite}
               accessibilityRole="button"
