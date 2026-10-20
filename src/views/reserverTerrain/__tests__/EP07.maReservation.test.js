@@ -289,3 +289,18 @@ describe('E-P07 — les autres états', () => {
     expect(mockRelire).toHaveBeenCalled();
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : après avoir RETIRÉ une demande (« Annuler la demande » ⇒ « Oui,
+// retirer »), l'écran disait « Ta réservation est annulée » — il n'y avait pas de réservation, seulement une
+// demande. L'écran d'après le dit : « Ta demande est retirée ».
+describe('RESA-FIN-APP (2) E-P07 — retirer une demande n’annonce pas une réservation annulée', () => {
+  it('en attente ⇒ « Oui, retirer » ⇒ la variante « demande retirée »', async () => {
+    mockLecture = lue({ expiresAt: '2026-10-16T14:00:00.000Z', status: 'en_attente' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Annuler la demande');
+    await appuyer(arbre, 'Oui, retirer');
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverEchec, expect.objectContaining({
+      variante: 'demandeRetiree',
+    }));
+  });
+});
