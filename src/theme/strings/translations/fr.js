@@ -19151,11 +19151,11 @@ export default {
       paiement: 'Paiement sur place',
     },
     resultat: {
-      // eslint-disable-next-line max-len
       auNomDe: 'au nom de {{nom}}',
       collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
       collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
         + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
+      // eslint-disable-next-line max-len
       demandeEcheance: '{{complexe}} te répond avant le {{date}} à {{heure}}. Le créneau t’est gardé jusque-là.',
       demandeEnvoyee: 'Demande envoyée',
       demandeSansEcheance: '{{complexe}} te répond bientôt. Le créneau t’est gardé jusque-là.',
