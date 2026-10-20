@@ -17,6 +17,10 @@ import path from 'path';
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
 // R17-ADRESSE (REC17-008, 19/10) : 31. « Modifier le club » (ClubEdit.js) quitte le texte libre
 // pour ce champ, et le rejoint côté « lieu public » (l'adresse d'un club se cherche par distance).
+// ADRESSE-EN-PREMIER (20/10) : liste INCHANGÉE (31 sur cette base du site, sans la réservation). Le lien
+// devient la 1re ligne de la liste, « Ajouter « <texte tapé> » », toujours par ce seul réglage. Mesuré
+// appelant par appelant : aucun autre n'accepte de texte libre ; une ligne « Utiliser « <texte> » » n'y
+// aurait rien à reprendre : elle n'est pas posée.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -62,6 +66,18 @@ const appelants = (dossier = SRC) => entreesDe(dossier).flatMap((entree) => {
   return /<AutocompleteAddressInput\b/.test(source) ? [path.relative(SRC, complet).replace(/\\/g, '/')] : [];
 });
 
+/**
+ * Tous les fichiers de production de `src`.
+ * @param {string} dossier - Le dossier à parcourir.
+ * @returns {string[]} Les chemins relatifs à `src`.
+ */
+const fichiersDe = (dossier = SRC) => entreesDe(dossier).flatMap((entree) => {
+  const complet = path.join(dossier, entree.name);
+  if (entree.isDirectory()) return entree.name === '__tests__' ? [] : fichiersDe(complet);
+  if (!/\.(js|jsx|ts|tsx)$/.test(entree.name) || /\.test\./.test(entree.name)) return [];
+  return [path.relative(SRC, complet).replace(/\\/g, '/')];
+});
+
 const usagesDe = (/** @type {string} */ fichier) => {
   const source = fs.readFileSync(path.join(SRC, fichier), 'utf8');
   return [...source.matchAll(/<AutocompleteAddressInput\b([\s\S]*?)\/>/g)].map((m) => m[1]);
@@ -91,6 +107,14 @@ describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, o
     ['views/facility/FacilityForm.js', /\bvouvoyer=\{isCollectiviteMode\}/],
   ])('%s : le champ reçoit ce qu on sait de l objet', (fichier, attendu) => {
     usagesDe(fichier).forEach((usage) => expect(usage).toMatch(attendu));
+  });
+
+  // ADRESSE-EN-PREMIER — la ligne de tête ne s'obtient QUE par le champ d'adresse et son réglage :
+  // aucun écran ne la passe lui-même à la liste déroulante (ni l'ancien lien).
+  it('la ligne « Ajouter » ne se pose que par le champ d adresse', () => {
+    const porteurs = fichiersDe().filter((f) => /\b(actionEnTete|lienSousLesOptions)=/
+      .test(fs.readFileSync(path.join(SRC, f), 'utf8')));
+    expect(porteurs).toEqual([`${LE_CHAMP}autocompleteAddressInput.js`]);
   });
 
   it('aucun autre appelant ne l a (filtres, adversaire, écrans sans témoin)', () => {
