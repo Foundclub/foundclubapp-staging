@@ -300,7 +300,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   };
   const chercherDesJoueurs = () => {
     if (groupe?.annonce?.documentId) {
-      navigation.navigate(RouteNames.ReserverAnnonce, { annonceId: groupe.annonce.documentId });
+      // Le réserveur ouvre SON annonce : « Partager », « Fermer l'annonce » (`reservationId`).
+      navigation.navigate(RouteNames.ReserverAnnonce, {
+        annonceId: groupe.annonce.documentId,
+        reservationId: reservation.documentId,
+      });
       return;
     }
     setFeuille('annonce');
@@ -817,6 +821,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
                 navigation.navigate(RouteNames.ReserverAnnonce, {
                   annonceId: annonce.documentId,
                   publiee: true,
+                  reservationId: reservation.documentId,
                 });
               }
             }}

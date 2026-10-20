@@ -187,7 +187,9 @@ describe('E-P07 — le réserveur (blocs 2 et 4)', () => {
     mockGroupe = { data: groupe({ annonce: { documentId: 'a-1', status: 'ouverte' } }) };
     const arbre = await monter();
     await toucher(pressable(arbre, 'Il me manque des joueurs'));
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverAnnonce, { annonceId: 'a-1' });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverAnnonce, {
+      annonceId: 'a-1', reservationId: 'r-1',
+    });
   });
 
   it('complète : pas d’« Il me manque des joueurs »', async () => {
