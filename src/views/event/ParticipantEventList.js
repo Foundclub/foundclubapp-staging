@@ -43,6 +43,7 @@ import { createEventParticipation } from '@/services/eventParticipation/eventPar
 import { joinReservation } from '@/services/reservation/reservationService';
 
 import { createLogger } from '@/utils/logger/logger';
+import { getPlanningItemDate } from '@/utils/planning/planningSlots';
 
 import { useEventAnswerMutations } from './hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
@@ -196,6 +197,12 @@ function ParticipantEventList({ navigation }) {
   });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
+  // 🗓️ R17-VUE (19/10, REC17-010) — les jours de cette liste (triee par date, des aujourd hui)
+  // disent au calendrier du haut ou s ouvrir quand ses 3 jours sont vides ; null tant qu elle lit.
+  const datesAVenir = useMemo(() => {
+    if (!shouldLoadEventFeed || isEventsLoading) return null;
+    return isEventsError ? [] : events.map(getPlanningItemDate);
+  }, [events, isEventsError, isEventsLoading, shouldLoadEventFeed]);
   // Les enfants que le serveur a trouves (meme sans evenement a venir) : le vide les nomme.
   const viewerChildrenNames = formatViewerChildrenNames(
     /** @type {any} */ (eventsData?.pages?.[0]?.meta)?.viewerChildren,
@@ -777,6 +784,7 @@ function ParticipantEventList({ navigation }) {
   const listHeaderComponent = useMemo(() => {
     const planningContent = (
       <PersonalPlanningContainer
+        datesAVenir={datesAVenir}
         onDataResolved={handlePlanningDataResolved}
         onSummaryPress={handleSummaryPress}
         withChildren={hasViewerChildren}
@@ -869,6 +877,7 @@ function ParticipantEventList({ navigation }) {
     Spaces.gap,
     Spaces.marginBottom,
     Spaces.marginTop,
+    datesAVenir,
     featuredEvents,
     handleDateConfirm,
     handlePlanningDataResolved,

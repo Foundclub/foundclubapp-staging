@@ -109,9 +109,18 @@ function RecruitmentFiltersSheet({
   const TOUS = t('recruitmentFiltersSheet.allMasculine', 'Tous');
   /** Les 3 valeurs du filtre « Profil », dans les mots du pack. */
   const AUDIENCE_OPTIONS = [
-    { label: t('recruitmentFiltersSheet.audience.all', 'Joueur·se·s et coachs'), value: 'all' },
-    { label: t('recruitmentFiltersSheet.audience.player', 'Joueur·se·s'), value: 'player' },
-    { label: t('recruitmentFiltersSheet.audience.coach', 'Coachs'), value: 'coach' },
+    {
+      label: t(
+        'recruitmentFiltersSheet.audience.all',
+        'Pratiquant·e·s / Joueur·se·s et coachs / profs',
+      ),
+      value: 'all',
+    },
+    {
+      label: t('recruitmentFiltersSheet.audience.player', 'Pratiquant·e·s / Joueur·se·s'),
+      value: 'player',
+    },
+    { label: t('recruitmentFiltersSheet.audience.coach', 'Coachs / Profs'), value: 'coach' },
   ];
 
   const { data: activities } = useGetActivities();
@@ -243,8 +252,10 @@ function RecruitmentFiltersSheet({
         ]}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>{intitule}</Text>
+        {/* R17-ROLES — deux lignes : « Pratiquant·e·s / Joueur·se·s et coachs / profs » ne
+            tient pas sur une a 390 px, et une valeur coupee ne se lit plus. */}
         <Text
-          numberOfLines={1}
+          numberOfLines={2}
           style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}
         >
           {valeur}

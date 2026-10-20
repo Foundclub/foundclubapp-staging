@@ -683,3 +683,60 @@ describe('PAR-L4 — la carte ouvre la fiche club avec l enfant vise', () => {
     });
   });
 });
+
+// 🏛️ R17-INVITER (19/10, REC17-009) — la Ville cherche un club dans la recherche HABITUELLE et,
+// sur la carte, « Ce club fait partie de ma collectivité ». La liste ne connaît pas la Ville :
+// elle rend l'action que l'écran de la Ville lui donne (`actionDeCarte`), sous la carte de chaque
+// club, et ouvre la fiche avec les paramètres qu'il lui donne (`paramsDeFiche`). Sans eux, rien
+// ne change.
+describe('R17-INVITER — l action de carte, que seule la Ville pose', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  const { navigateToStackScreenOrScreen } = jest.requireMock('@/navigation/navigationAvailability');
+  const OLYMPIQUE = club('Olympique');
+  const RACING = club('Racing');
+  const VILLE = { collectiviteId: 'ville-de-recette' };
+  const actionDeCarte = (/** @type {any} */ c) => (
+    <TexteRN testID={`action-${c.documentId}`}>{`action:${c.name}`}</TexteRN>
+  );
+  const appuyerSurRacing = async () => {
+    const carte = monte.root.findByProps({ testID: 'carte-club-Racing' });
+    await act(async () => { carte.props.onPress(); });
+  };
+  const actionDe = (/** @type {string} */ id) => monte.root.findByProps({ testID: `action-${id}` });
+
+  test('📌 sans action (joueur, dirigeant) : rien sous les cartes, fiche du seul club', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [OLYMPIQUE, RACING] }] };
+    await monter();
+
+    expect(texteRendu()).not.toContain('action:');
+    await appuyerSurRacing();
+    expect(navigateToStackScreenOrScreen).toHaveBeenLastCalledWith(expect.anything(), {
+      params: { clubId: 'club-Racing' },
+      screen: 'Club',
+      stack: 'ClubStack',
+    });
+  });
+
+  test('✅ la Ville : CHAQUE club a SON action sous sa carte ; la fiche avec la Ville', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [OLYMPIQUE, RACING] }] };
+    await monter({ actionDeCarte, paramsDeFiche: VILLE });
+
+    expect(actionDe('club-Olympique').props.children).toBe('action:Olympique');
+    expect(actionDe('club-Racing').props.children).toBe('action:Racing');
+    await appuyerSurRacing();
+    expect(navigateToStackScreenOrScreen).toHaveBeenLastCalledWith(expect.anything(), {
+      params: { clubId: 'club-Racing', ...VILLE },
+      screen: 'Club',
+      stack: 'ClubStack',
+    });
+  });
+
+  test('✅ la Ville ne crée pas de club : la liste vide sans « Créer un club »', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [] }] };
+    await monter();
+    expect(mockListe.props.ListEmptyComponent().props.onAction).toEqual(expect.any(Function));
+
+    await monter({ actionDeCarte, paramsDeFiche: VILLE });
+    expect(mockListe.props.ListEmptyComponent().props.onAction).toBeUndefined();
+  });
+});

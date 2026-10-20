@@ -184,6 +184,8 @@ jest.setTimeout(30000);
 let arbre = null;
 
 const JOUR = 24 * 60 * 60 * 1000;
+// R17-VUE : l heure de Paris peut decaler le jour lu (fuseau du poste) ; on compare a 2 jours pres.
+const DEUX_JOURS = 2 * JOUR;
 const dans = (/** @type {number} */ jours) => new Date(Date.now() + (jours * JOUR)).toISOString();
 
 /**
@@ -358,6 +360,21 @@ describe('PARENT-PLANNING / 3 — le planning d un parent', () => {
   test('3-16 PROTEGE — un compte sans enfant : le calendrier ne demande rien de plus', async () => {
     await monter(requete([]));
     expect(mockCalendriers[mockCalendriers.length - 1].withChildren).toBeFalsy();
+  });
+
+  // 🗓️ R17-VUE (19/10, REC17-010) — la liste, deja triee par date, dit au calendrier du haut
+  // ou s ouvrir quand ses 3 jours sont vides (aucune lecture de plus) ; null tant qu elle lit.
+  test('R17-VUE ROUGE-AVANT — la liste donne au calendrier les jours a venir', async () => {
+    const date = dans(9);
+    await monter(requete([{ date, documentId: 'e9', name: 'Match U15' }]));
+    const { datesAVenir } = mockCalendriers[mockCalendriers.length - 1];
+    expect(datesAVenir).toHaveLength(1);
+    expect(Math.abs(datesAVenir[0].getTime() - new Date(date).getTime())).toBeLessThan(DEUX_JOURS);
+  });
+
+  test('R17-VUE ROUGE-AVANT — liste encore en lecture : le calendrier attend (null)', async () => {
+    await monter({ ...requete([]), data: undefined, isLoading: true });
+    expect(mockCalendriers[mockCalendriers.length - 1].datesAVenir).toBeNull();
   });
 
   test('3-8 PROTEGE — sans enfant, le message du vide ne change pas', async () => {

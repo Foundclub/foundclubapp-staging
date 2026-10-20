@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import {
-  memo, useEffect, useMemo, useRef, useState,
+  memo, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,18 +30,24 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
+import useVueInitiale from '@/hooks/useVueInitiale';
+
 const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
 
 /**
  * Personal planning content.
  * @param {{
+ *   datesAVenir?: Array<Date | null> | null,
  *   onDataResolved?: () => void, onSummaryPress?: () => void, withChildren?: boolean,
  * }} props - PARENT-PLANNING (06/10, « calendrier B ») : `withChildren` (un compte qui A des
  *   enfants, dit par la liste du planning) demande AUSSI leurs creneaux a venir ; sans elle,
- *   rien ne change.
+ *   rien ne change. R17-VUE (19/10) : `datesAVenir`, les jours des evenements de la liste du
+ *   dessous (null tant qu elle n est pas lue) ; ils disent ou s ouvrir quand 3 jours sont vides.
  * @returns {import('react').ReactElement}
  */
-function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildren = false }) {
+function PersonalPlanningContainer({
+  datesAVenir, onDataResolved, onSummaryPress, withChildren = false,
+}) {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const {
@@ -59,7 +65,9 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
     () => getPlanningRange(currentDate, viewMode),
     [currentDate, viewMode],
   );
-  const { data: eventsData, isError, isLoading } = useQuery({
+  const {
+    data: eventsData, isError, isLoading, isPlaceholderData,
+  } = useQuery({
     placeholderData: keepPreviousPageData,
     queryFn: () => getMyPlanning(
       withChildren ? { ...planningRange, withChildren: true } : planningRange,
@@ -83,6 +91,32 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
     onDataResolved?.();
   }, [eventsData, isError, onDataResolved, hasEmittedReadyRef]);
 
+  // 🗓️ R17-VUE (19/10, REC17-010) — a l arrivee, « 3 jours » vides ⇒ la semaine s il y a quelque
+  // chose dedans, sinon le mois du prochain evenement (lu dans la liste du dessous, deja demandee
+  // par l ecran : aucune lecture de plus). Un choix fait a la main l emporte. Sans liste (prop
+  // absente), rien ne change.
+  const appliquerLaVue = useCallback((/** @type {{ date: Date, vue: string }} */ decision) => {
+    if (decision.vue === '3days') return;
+    setViewMode(decision.vue);
+    setCurrentDate(decision.date);
+  }, []);
+  const { enDecision, garderLeChoix } = useVueInitiale({
+    actif: !isError && datesAVenir !== undefined,
+    appliquer: appliquerLaVue,
+    datesDeLaListe: datesAVenir || undefined,
+    evenements: eventsData && !isPlaceholderData ? (eventsData.data || []) : undefined,
+    listeConnue: datesAVenir !== null,
+    vueDeBase: '3days',
+  });
+  const choisirLaVue = useCallback((/** @type {string} */ vue) => {
+    garderLeChoix();
+    setViewMode(vue);
+  }, [garderLeChoix]);
+  const choisirLaDate = useCallback((/** @type {Date} */ date) => {
+    garderLeChoix();
+    setCurrentDate(date);
+  }, [garderLeChoix]);
+
   const viewOptions = useMemo(() => ([
     { label: 'Semaine', value: 'week' },
     { label: '3 Jours', value: '3days' },
@@ -101,7 +135,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
     return t('planning.mode.threeDaysDescription', 'Vue condensée sur 3 jours');
   }, [t, viewMode]);
 
-  if (isLoading && !eventsData) {
+  if ((isLoading && !eventsData) || enDecision) {
     return <Loader />;
   }
 
@@ -129,7 +163,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
     <PlanningCalendarView
       currentDate={currentDate}
       events={events}
-      onDateSelect={setCurrentDate}
+      onDateSelect={choisirLaDate}
       onEventPress={handleEventPress}
     />
   ) : (
@@ -138,7 +172,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
       events={events}
       expandToContent={isWebPlanning}
       mode={viewMode}
-      onDateChange={setCurrentDate}
+      onDateChange={choisirLaDate}
       onEventPress={handleEventPress}
       onSummaryPress={onSummaryPress}
       scrollEnabled={!isWebPlanning}
@@ -152,7 +186,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildre
           <View style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
-              onChange={setViewMode}
+              onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
             />

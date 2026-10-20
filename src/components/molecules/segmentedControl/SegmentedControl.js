@@ -37,7 +37,10 @@ const SHRINK_MIN_SCALE = 0.72;
 /**
  * SegmentedControl component.
  * @param {object} props
- * @param {Array<{label: string, value: string}>} props.options
+ * @param {Array<{label: string, value: string, badge?: number | null,
+ *   accessibilityLabel?: string}>} props.options R17-SIGNALER-1 (19/10) : `badge`, une PASTILLE
+ *   a cote du nom (planche P10-securite-ordi A : « Sécurité et suivi 2 ») ; rien sous 1. Son
+ *   `accessibilityLabel` dit le nom ET le nombre au lecteur d ecran.
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.centerContent]
@@ -214,6 +217,24 @@ function SegmentedControl({
       minHeight: wrapperMinHeight,
       width: '100%',
     },
+    // R17-SIGNALER-1 — la pastille de la planche (compteur-sm) : 18 de haut, fond error700.
+    pastille: {
+      alignItems: 'center',
+      backgroundColor: Colors.error700,
+      borderRadius: 10,
+      height: 18,
+      justifyContent: 'center',
+      marginLeft: 6,
+      minWidth: 18,
+      paddingHorizontal: 4,
+    },
+    pastilleTexte: {
+      ...Fonts.p3Bold,
+      color: Colors.neutral00,
+      fontSize: 10,
+      includeFontPadding: !isWeb ? false : undefined,
+      lineHeight: 14,
+    },
   }), [
     Colors,
     Fonts.p3,
@@ -236,6 +257,7 @@ function SegmentedControl({
     const isSelected = option.value === value;
     return (
       <TouchableOpacity
+        accessibilityLabel={option.accessibilityLabel}
         activeOpacity={0.8}
         key={option.value}
         onPress={() => onChange(option.value)}
@@ -279,6 +301,11 @@ function SegmentedControl({
         >
           {option.label}
         </Text>
+        {option.badge && option.badge > 0 ? (
+          <View style={styles.pastille} testID={`segment-pastille-${option.value}`}>
+            <Text style={styles.pastilleTexte}>{option.badge > 99 ? '99+' : option.badge}</Text>
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   });

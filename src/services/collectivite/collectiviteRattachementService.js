@@ -107,6 +107,13 @@ export const getClubCollectiviteRequests = async (clubId) => corps(
   (await client()).get(`/clubs/${enc(clubId)}/collectivite-requests`),
 );
 
+/**
+ * R17-INVITER (19/10) — les collectivités que le compte gère (`GET /collectivites/mine`), lues
+ * par la fiche du club sans y charger le client HTTP (même lecture que collectiviteService).
+ * @returns {Promise<any>} `{ data: [...] }`.
+ */
+export const getMesCollectivites = async () => corps((await client()).get('/collectivites/mine'));
+
 // ─── VOIE 3 (« collectivité A », 07/10) : « Ma collectivité », dans « Gérer mon club » ─────────
 
 /**

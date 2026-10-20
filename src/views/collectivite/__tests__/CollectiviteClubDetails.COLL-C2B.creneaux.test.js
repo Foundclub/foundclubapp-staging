@@ -384,6 +384,8 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     const attendu = expect.objectContaining({ endTime: '19:00', startTime: '17:30', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', attendu);
     await appuyer(parTexte(arbre, 'Suivant'));
+    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
       club: 'as-montrivage', endTime: '19:00', startTime: '17:30', team: 'team-u13', weekday: 3,
@@ -395,7 +397,8 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
   // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — au téléphone, « Attribuer un créneau à
   // ce club » ouvre le plein écran des tunnels : le club est fixé, on commence par l'installation
   // (5 étapes). ROUGE avant : la feuille du bas (SAIS, 85 %), 7 étapes dont « Club ».
-  it('COL-005 : plein écran, « Dans quelle installation ? », 5 étapes, sans feuille', async () => {
+  // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6).
+  it('COL-005 : plein écran, « Dans quelle installation ? », 6 étapes, sans feuille', async () => {
     const arbre = await rendre();
     mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
@@ -404,7 +407,7 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     expect(fenetre.props.presentationStyle).toBe('fullScreen');
     expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
       headerVariant: 'focus',
-      stepCount: 5,
+      stepCount: 6,
       subtitle: 'Pour AS Montrivage',
       title: 'Dans quelle installation ?',
     }));

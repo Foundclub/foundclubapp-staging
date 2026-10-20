@@ -75,6 +75,7 @@ import {
   summarizeReactionPeople,
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
@@ -4178,6 +4179,10 @@ function Conversation({ navigation, route }) {
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
         ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
+        // 🏛️ R17-CANAUX — une actualité posée par la Ville : sa phrase traduite et son lien.
+        ...(filDeLaVille.ligneDActualite(msg)
+          ? { lienActualite: filDeLaVille.ligneDActualite(msg) }
+          : {}),
         // 🔔 MSG1BA (§3.17) — la notice recrite pour moi : « Vous avez renomme… », « … vous a
         // ajoute » ; une sorte inconnue garde la phrase du serveur.
         text: msg?.systemNotice != null
@@ -5833,7 +5838,7 @@ function Conversation({ navigation, route }) {
     // unique pour tout le monde (le serveur ne connait pas le genre).
     const libellesDesRoles = {
       dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
-      entraineur: t('conversation.staffRole.entraineur', 'Entraîneur'),
+      entraineur: t('conversation.staffRole.entraineur', 'Coach / Prof'),
     };
     const roleEnTete = nomEnTete
       ? libellesDesRoles[String(currentMessage.user?.staffRole || '')] || ''
@@ -6307,8 +6312,39 @@ function Conversation({ navigation, route }) {
   // 🔕 MSG1A (§3.1, §3.17) — une ligne sans auteur (« … a rejoint le canal ») : notice
   // DISCRETE, centree, comme demande (11,5, texte a 62 %, pastille de la barre a 55 %).
   const renderNoticeSysteme = (/** @type {any} */ props) => {
-    const texte = String(props?.currentMessage?.text || '').trim();
+    const lien = props?.currentMessage?.lienActualite;
+    const texte = String(lien?.texte || props?.currentMessage?.text || '').trim();
     if (!texte) return null;
+    // 🏛️ R17-CANAUX — l'actualité posée par la Ville : toute la ligne mène à l'actualité
+    // (zone d'appui de 44 au moins, lien pour le lecteur d'écran).
+    if (lien) {
+      return (
+        <TouchableOpacity
+          accessibilityLabel={lien.libelle}
+          accessibilityRole="link"
+          onPress={lien.ouvrir}
+          style={[stylesDuFil.noticeConteneur, { justifyContent: 'center', minHeight: 44 }]}
+          testID="notice-actualite"
+        >
+          <Text
+            style={[
+              NOTICE,
+              stylesDuFil.notice,
+              {
+                backgroundColor: withAlpha(Colors.chatBar, 0.55),
+                color: withAlpha(Colors.neutral00, 0.82),
+              },
+            ]}
+          >
+            {texte}
+            {' '}
+            <Text style={{ color: Colors.primary200, textDecorationLine: 'underline' }}>
+              {t('collectiviteCanaux.ville.ouvrirActualite', 'Voir l’actualité')}
+            </Text>
+          </Text>
+        </TouchableOpacity>
+      );
+    }
     return (
       <View style={stylesDuFil.noticeConteneur} testID="notice-systeme">
         <Text
@@ -6437,7 +6473,8 @@ function Conversation({ navigation, route }) {
     const isManagerRole = roleKey === 'president';
 
     // COLL-C4A2 — un fil de la Ville : ses membres (calculés par le serveur) écrivent tous.
-    if (filDeLaVille.estFil) return true;
+    // R17-CANAUX — sauf « Toute la ville » : la Ville seule (useFilDeLaVille).
+    if (filDeLaVille.estFil) return filDeLaVille.peutEcrire;
 
     // Whisper, Team, League Match and Friendly Match chats: all participants write.
     // D92 — `friendly_match` manquait ici alors que son jumeau `league_match` y
@@ -6477,7 +6514,10 @@ function Conversation({ navigation, route }) {
     }
 
     return false;
-  }, [chatData, envoiReserve, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
+  }, [
+    chatData, envoiReserve, filDeLaVille.estFil, filDeLaVille.peutEcrire, hasClubAccess,
+    isLeagueConversation, userData,
+  ]);
 
   peutEcrireRef.current = canWrite;
 
@@ -6752,9 +6792,9 @@ function Conversation({ navigation, route }) {
               { color: withAlpha(Colors.neutral00, 0.72) },
             ]}
           >
-            {envoiReserve
+            {filDeLaVille.texteLectureSeule || (envoiReserve
               ? t('conversation.adminsOnlySend', 'Seuls les admins peuvent envoyer des messages.')
-              : t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
+              : t('conversation.readOnly', 'Canal d\'annonce (lecture seule)'))}
           </Text>
         </View>
       );
@@ -7132,11 +7172,14 @@ function Conversation({ navigation, route }) {
 
         {/* COLL-C4A2 — un fil de la Ville : « Qui est dans ce canal » remplace le menu ⋮ (la
             liste se calcule, elle ne se tient pas à la main). */}
+        {/* R17-CANAUX — « Toute la ville » : ni liste des membres, ni menu ⋮. */}
         {filDeLaVille.estFil ? (
-          <BoutonMembresDuFil
-            estCanal={filDeLaVille.estCanal}
-            onPress={filDeLaVille.ouvrirMembres}
-          />
+          filDeLaVille.afficheMembres && (
+            <BoutonMembresDuFil
+              estCanal={filDeLaVille.estCanal}
+              onPress={filDeLaVille.ouvrirMembres}
+            />
+          )
         ) : (
           <TouchableOpacity
             accessibilityLabel={t('conversation.actions.menu', 'Options de la conversation')}
@@ -7166,6 +7209,7 @@ function Conversation({ navigation, route }) {
         {filDeLaVille.estQuitte ? (
           <FilDeLaVilleQuitte
             estCanal={filDeLaVille.estCanal}
+            estCanalVille={filDeLaVille.estCanalVille}
             onRetour={() => navigation.goBack()}
           />
         ) : null}
@@ -7547,7 +7591,9 @@ function Conversation({ navigation, route }) {
                 >
                   <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{fullName}</Text>
                   {contact?.role ? (
-                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{contact.role}</Text>
+                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                      {libelleDuRole(contact.role, t, contact.role)}
+                    </Text>
                   ) : null}
                 </TouchableOpacity>
               );

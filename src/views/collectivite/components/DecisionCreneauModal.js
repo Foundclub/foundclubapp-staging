@@ -200,7 +200,7 @@ function DecisionCreneauModal({
     fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
   }
   if (demande?.requesterFunction === 'trainer') {
-    fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+    fonction = t('collectiviteDemandes.fonction.trainer', 'coach / prof');
   }
   const demandeur = refusDeRattachement
     ? '' : [prevenus.personne, fonction].filter(Boolean).join(', ');

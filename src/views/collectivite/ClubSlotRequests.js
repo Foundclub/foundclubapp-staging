@@ -16,7 +16,9 @@ import {
   datesRefuseesDUneSerie,
   estDemandeHebdo,
   momentDeLaDemande,
+  rythmeDeLaSerie,
 } from '@/domains/collectivite/collectiviteDemandes';
+import { capitalize } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -109,18 +111,18 @@ function ClubSlotRequests() {
     // (celle des dates maintenues, tournée T13 C2_1e) : sa date, ou « chaque jeudi … · 3 dates ».
     // VILLE-T18C (07/10) : la règle vit dans le domaine, partagée avec « Demandes de la Ville ».
     const refusees = datesRefuseesDUneSerie(demande);
+    // R17-QUAND-1 bis — « Un jeudi sur deux », « 3 dates », « Chaque jeudi ».
+    const rythme = capitalize(rythmeDeLaSerie(t, demande, moment.jourSemaine));
     if (refusees > 1) {
       // eslint-disable-next-line max-len
-      return t('collectiviteDemandes.club.ligneSerieDates', 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates', {
-        // eslint-disable-next-line max-len
-        debut: moment.debut, fin: moment.fin, jour: moment.jourSemaine, nombre: refusees, ...SANS_ECHAPPEMENT,
+      return t('collectiviteDemandes.club.ligneSerieDates', '{{rythme}}, {{debut}} – {{fin}} · {{nombre}} dates', {
+        debut: moment.debut, fin: moment.fin, nombre: refusees, rythme, ...SANS_ECHAPPEMENT,
       });
     }
     if (estDemandeHebdo(demande) && demande?.series && !refusees) {
       // eslint-disable-next-line max-len
-      return t('collectiviteDemandes.club.ligneSerie', 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}', {
-        // eslint-disable-next-line max-len
-        debut: moment.debut, fin: moment.fin, jour: moment.jourSemaine, jusquAu: moment.jusquAu, ...SANS_ECHAPPEMENT,
+      return t('collectiviteDemandes.club.ligneSerie', '{{rythme}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}', {
+        debut: moment.debut, fin: moment.fin, jusquAu: moment.jusquAu, rythme, ...SANS_ECHAPPEMENT,
       });
     }
     const jour = format(new Date(demande.requestedStart), 'EEE d MMM', { locale: fr });

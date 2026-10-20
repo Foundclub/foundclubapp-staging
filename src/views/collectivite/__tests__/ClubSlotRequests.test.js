@@ -43,9 +43,13 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        const valeur = String(cle || '')
+        const lire = (/** @type {string} */ chemin) => String(chemin || '')
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        // R17-QUAND-1 bis : les pluriels de i18next (« _one » / « _other ») selon count.
+        const compte = (typeof repli === 'object' && repli ? repli : options)?.count;
+        const pluriel = compte === 1 ? 'one' : 'other';
+        const valeur = lire(cle) ?? (compte === undefined ? undefined : lire(`${cle}_${pluriel}`));
         let texte = cle;
         if (typeof valeur === 'string') texte = valeur;
         else if (typeof repli === 'string') texte = repli;
@@ -357,5 +361,46 @@ describe('COLL-S-DEMANDE-PERIMEE — une demande expirée se dit', () => {
       eventId: 'ev-expire',
       type: 'overbookingRequest',
     })).toEqual({ params: { clubId: 'club-A', requestId: 'rq-7' }, route: 'ClubSlotRequests' });
+  });
+});
+
+// R17-QUAND-1 bis (19/10, tri du chef : A) — « Tes demandes à la Ville » : une série 1 sur 2 (même
+// acceptée : le serveur porte sa forme sur une carte tranchée) ne se lit plus « Chaque jeudi ».
+describe('R17-QUAND-1 bis — la ligne d’une série dit son rythme', () => {
+  // eslint-disable-next-line max-len
+  it('« Un jeudi sur deux, … jusqu’au 30 juin » ; refusée : « Un jeudi sur deux, … · 3 dates »', async () => {
+    const UN_SUR_DEUX = ligne({
+      documentId: 'rq-8',
+      isRecurring: true,
+      series: { datesCount: null, everyWeeks: 2, until: '2031-06-30' },
+      seriesCount: 15,
+    });
+    const REFUSEE_UN_SUR_DEUX = ligne({
+      documentId: 'rq-9',
+      isRecurring: true,
+      series: { datesCount: null, everyWeeks: 2, until: '2030-10-31' },
+      seriesCount: 3,
+      status: 'refused',
+    });
+    mockLignes = [UN_SUR_DEUX, REFUSEE_UN_SUR_DEUX];
+    const lus = textes(await monter((l) => l.includes('Refusée')));
+    // eslint-disable-next-line max-len
+    expect(lus).toContain(`Un jeudi sur deux, ${heure(UN_SUR_DEUX.requestedStart)} – ${heure(UN_SUR_DEUX.requestedEnd)}, jusqu’au 30 juin · c’était complet à l’envoi`);
+    // eslint-disable-next-line max-len
+    expect(lus).toContain(`Un jeudi sur deux, ${heure(REFUSEE_UN_SUR_DEUX.requestedStart)} – ${heure(REFUSEE_UN_SUR_DEUX.requestedEnd)} · 3 dates · l’entraînement est annulé`);
+    expect(lus.join(' | ')).not.toMatch(/Chaque jeudi/);
+  });
+
+  it('des jours différents : « 3 dates, … jusqu’au … »', async () => {
+    const DATES = ligne({
+      documentId: 'rq-10',
+      isRecurring: true,
+      series: { datesCount: 3, everyWeeks: 1, until: '2030-10-24' },
+      seriesCount: 3,
+    });
+    mockLignes = [DATES];
+    const lus = textes(await monter((l) => l.some((t) => t.startsWith('3 dates'))));
+    // eslint-disable-next-line max-len
+    expect(lus).toContain(`3 dates, ${heure(DATES.requestedStart)} – ${heure(DATES.requestedEnd)}, jusqu’au 24 octobre · c’était complet à l’envoi`);
   });
 });

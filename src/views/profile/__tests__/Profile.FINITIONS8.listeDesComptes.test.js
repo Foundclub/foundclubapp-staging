@@ -13,6 +13,10 @@ let mockAuth = null;
 
 // PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
 // trois services) : doublure commune, « aucun enfant ».
+// R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
+  useMyFacilityReports: () => ({ data: null }),
+}));
 jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
@@ -260,7 +264,7 @@ const textes = (arbre) => arbre.root
   .map(texteDe);
 
 describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais', () => {
-  it('🚨 « Entraîneur » et « Administrateur », jamais « Entraineur » ni « SuperAdmin »', () => {
+  it('🚨 « Coach / Prof » et « Administrateur », jamais « Entraineur » ni « SuperAdmin »', () => {
     AUTH_PAR_ROLE.player.authSessions = [
       session('moi-player', 'Hugo', 'Joueur'),
       session('karim', 'Karim', 'Entraineur'),
@@ -272,7 +276,7 @@ describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais
     const lus = textes(arbre);
 
     expect(lus).toContain('Karim Test');
-    expect(lus).toContain('Entraîneur');
+    expect(lus).toContain('Coach / Prof');
     expect(lus).toContain('Administrateur');
     expect(lus).not.toContain('Entraineur');
     expect(lus).not.toContain('SuperAdmin');

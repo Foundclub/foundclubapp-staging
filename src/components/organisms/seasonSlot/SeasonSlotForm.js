@@ -9,20 +9,30 @@ import {
 
 import {
   formatDay,
-  formatPeriod,
+  formatDayMonth,
   freeRanges,
   fromMinutes,
+  fullRanges,
   fullRangesOfSlots,
   isoWeekdayOf,
   isTime,
   overCapacityPreviewOf,
   SEASON_SLOT_WEEKDAYS,
   seasonSlotErrorMessage,
+  slotOccursOn,
   slotWho,
   timeRange,
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  corpsDuQuand,
+  creneauDuQuand,
+  fermeturesTouchees,
+  quandDuCreneau,
+  saisonDuJour,
+  seancesDuQuand,
+} from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -35,6 +45,7 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
+import SeasonSlotDatesCalendar from '@/components/organisms/seasonSlot/SeasonSlotDatesCalendar';
 
 import {
   useAttributeSeasonSlot,
@@ -188,6 +199,7 @@ function LigneDeChoix({
  * @param {{
  *   cle: string,
  *   derniere?: boolean,
+ *   detail?: string | null,
  *   libelleModifier: string,
  *   onPress?: () => void,
  *   testID: string,
@@ -196,7 +208,7 @@ function LigneDeChoix({
  * @returns {import('react').ReactElement} La ligne.
  */
 function LigneDuRecap({
-  cle, derniere = false, libelleModifier, onPress, testID, valeur,
+  cle, derniere = false, detail = null, libelleModifier, onPress, testID, valeur,
 }) {
   const { Alignments, Colors, Fonts } = useTheme();
   const contenu = (
@@ -204,6 +216,7 @@ function LigneDuRecap({
       <View style={{ flex: 1 }}>
         <Text style={[Fonts.p3, Fonts.primary200]}>{cle}</Text>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{valeur}</Text>
+        {detail ? <Text style={[Fonts.p3, Fonts.neutral200]}>{detail}</Text> : null}
       </View>
       {onPress ? <SvgIcon color={Colors.neutral200} height={16} name="edit" width={16} /> : null}
     </>
@@ -457,13 +470,22 @@ function SeasonSlotForm({
   // choisit (COLL-C2B-BIS).
   const [heuresRouvertes, setHeuresRouvertes] = useState(false);
   const heuresFigees = compact && !heuresRouvertes;
-  const etapesDu = (/** @type {boolean} */ rouvertes) => (modification
-    ? ['jour', 'horaires', 'periode', 'recap']
+  // 🗓️ R17-QUAND-1, point 4 (planche P10-quand-tel, état 0) — l'étape « Quand ? » vient APRÈS le
+  // jour et l'heure (5 → 6 étapes) ; « Modifier » : « Période » devient « Quand ? ». Depuis une
+  // case du planning (compact), pas d'étape de plus : la ligne « Quand » du récapitulatif la
+  // rouvre.
+  const [quandRouvert, setQuandRouvert] = useState(false);
+  const etapesDu = (
+    /** @type {boolean} */ rouvertes,
+    /** @type {boolean} */ quandOuvert = quandRouvert,
+  ) => (modification
+    ? ['jour', 'horaires', 'quand', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
       ...(fixedClubId ? [] : ['club']),
       'equipe',
       ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
+      ...(compact && !quandOuvert ? [] : ['quand']),
       'recap',
     ]);
   const etapes = etapesDu(heuresRouvertes);
@@ -476,6 +498,11 @@ function SeasonSlotForm({
   const allerA = (/** @type {string} */ nom) => {
     if (etapes.includes(nom)) {
       setEtape(etapes.indexOf(nom));
+      return;
+    }
+    if (nom === 'quand') {
+      setQuandRouvert(true);
+      setEtape(etapesDu(heuresRouvertes, true).indexOf(nom));
       return;
     }
     setHeuresRouvertes(true);
@@ -527,10 +554,98 @@ function SeasonSlotForm({
   const dejaCommence = Boolean(debutActuel) && String(debutActuel) < aujourdhui;
   const [periodeDu, setPeriodeDu] = useState(versSaisie(debutActuel));
   const [periodeAu, setPeriodeAu] = useState(versSaisie(finActuelle));
-  const nouveauDebut = dejaCommence ? debutActuel : versJourCivil(periodeDu);
-  const nouvelleFin = versJourCivil(periodeAu);
-  const periodeJuste = !avecPeriode
+  // 🗓️ R17-QUAND-1, point 4 — LA FORME (« Quand ? ») : toute la saison par défaut (un appui
+  // sur « Suivant » suffit) ; un créneau qu'on modifie rouvre la sienne. « Des jours
+  // différents » (Q4 B) ouvre directement le calendrier libre.
+  const saisonLue = meta.season || saisonDuJour(debutActuel || aujourdhui);
+  const [quandDeDepart] = useState(() => (
+    modification ? quandDuCreneau(slot, saisonDuJour(debutActuel)) : null
+  ));
+  const [forme, setForme] = useState(quandDeDepart?.forme || 'saison');
+  const [joursDifferents, setJoursDifferents] = useState(quandDeDepart?.forme === 'dates');
+  const [deuxDu, setDeuxDu] = useState(versSaisie(quandDeDepart?.deuxDu));
+  const [deuxJusqua, setDeuxJusqua] = useState(
+    quandDeDepart?.deuxAu && quandDeDepart.deuxAu !== saisonDuJour(debutActuel)?.validUntil
+      ? 'date'
+      : 'fin',
+  );
+  const [deuxAu, setDeuxAu] = useState(versSaisie(quandDeDepart?.deuxAu));
+  const [datesChoisies, setDatesChoisies] = useState(
+    /** @type {string[]} */ (quandDeDepart?.dates || []),
+  );
+  const formeChoisie = joursDifferents ? 'dates' : forme;
+  const quand = {
+    dates: datesChoisies,
+    deuxAu: deuxJusqua === 'date' ? versJourCivil(deuxAu) : null,
+    deuxDu: versJourCivil(deuxDu),
+    forme: formeChoisie,
+    jour: joursDifferents ? null : jour,
+    periodeAu: versJourCivil(periodeAu),
+    periodeDu: dejaCommence ? debutActuel : versJourCivil(periodeDu),
+    saison: saisonLue,
+  };
+  // « Modifier » : la période de la forme (COLL-C2B-BIS : un début neuf seulement avant que le
+  // créneau commence, rien dans le passé). Des dates choisies donnent la leur (serveur).
+  const bornesDeLaForme = (() => {
+    const debutDeSaison = saisonLue && saisonLue.validFrom > aujourdhui
+      ? saisonLue.validFrom
+      : aujourdhui;
+    if (formeChoisie === 'saison') {
+      return {
+        debut: dejaCommence ? debutActuel : debutDeSaison, fin: saisonLue?.validUntil || null,
+      };
+    }
+    if (formeChoisie === 'deuxSemaines') {
+      return {
+        debut: dejaCommence ? debutActuel : quand.deuxDu,
+        fin: quand.deuxAu || saisonLue?.validUntil || null,
+      };
+    }
+    if (formeChoisie === 'dates') return { debut: null, fin: null };
+    return { debut: quand.periodeDu, fin: quand.periodeAu };
+  })();
+  const nouveauDebut = bornesDeLaForme.debut;
+  const nouvelleFin = bornesDeLaForme.fin;
+  const periodeJuste = !avecPeriode || formeChoisie === 'dates'
     || Boolean(nouveauDebut && nouvelleFin && nouvelleFin >= nouveauDebut);
+
+  // Ce que la forme donne : les séances à venir (celles qui tombent dans une fermeture de la
+  // Ville se lisent dans l'aperçu, plus bas).
+  const seances = jour || joursDifferents ? seancesDuQuand(creneauDuQuand(quand), aujourdhui) : [];
+  const finDeSaison = saisonLue?.validUntil || null;
+  const erreurDuQuand = (() => {
+    /** @type {Array<string | null>} */
+    let bornes = [null, null];
+    if (formeChoisie === 'periode') bornes = [quand.periodeDu, quand.periodeAu];
+    if (formeChoisie === 'deuxSemaines') bornes = [quand.deuxDu, quand.deuxAu];
+    const [du, au] = bornes;
+    if (du && au && au < du) {
+      return t('collectiviteCreneaux.quand.ordre', '« Au » doit venir après « Du ».');
+    }
+    if (finDeSaison && au && au > finDeSaison) {
+      return t(
+        'collectiviteCreneaux.quand.apresSaison',
+        'La saison finit le {{date}} : choisissez une date avant.',
+        { date: formatDayMonth(finDeSaison), ...SANS_ECHAPPEMENT },
+      );
+    }
+    if (formeChoisie === 'dates' && !datesChoisies.length) {
+      return t('collectiviteCreneaux.quand.aucuneDate', 'Aucune date cochée.');
+    }
+    // « Toute la saison » : la saison du serveur fait foi (il la prend par défaut), rien à bloquer.
+    const lisible = formeChoisie === 'dates'
+      || (formeChoisie === 'periode' && Boolean(du && au))
+      || (formeChoisie === 'deuxSemaines' && Boolean(du));
+    if (lisible && (jour || joursDifferents) && !seances.length) {
+      return t(
+        'collectiviteCreneaux.quand.aucuneSeance',
+        'Aucune séance à venir dans cette période.',
+      );
+    }
+    return null;
+  })();
+  const quandJuste = repartition
+    || (!erreurDuQuand && (formeChoisie === 'saison' || seances.length > 0));
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // VILLE-T18A — « Voir les heures libres du <jour> » : la liste est ouverte.
@@ -553,18 +668,35 @@ function SeasonSlotForm({
     apercuDu = nouveauDebut < aujourdhui ? aujourdhui : nouveauDebut;
   }
   const apercuAu = apercuDu ? nouvelleFin : null;
-  const parametresApercu = useMemo(() => (facilityId && jour && ordreJuste && !repartition ? {
-    endTime: fin,
-    excludeSlot: slot?.documentId || undefined,
-    plateau: plateau || undefined,
-    startTime: debut,
-    weekday: jour,
-    ...(apercuDu ? { validFrom: apercuDu, validUntil: apercuAu } : {}),
-  } : null), [
-    apercuAu, apercuDu, debut, facilityId, fin, jour, ordreJuste, plateau, repartition,
-    slot?.documentId,
-  ]);
+  // R17-QUAND-1 — l'aperçu lit la forme : des dates choisies (« a,b »), « 1 sur 2 » et sa 1re date,
+  // une période. Une forme encore fausse (erreur affichée) se juge sur la saison.
+  const formeDeLApercu = (() => {
+    if (formeChoisie === 'dates') {
+      return datesChoisies.length
+        ? { dates: [...datesChoisies].sort().join(','), recurrence: 'dates' }
+        : null;
+    }
+    if (erreurDuQuand) return {};
+    const corps = corpsDuQuand(quand);
+    if (apercuDu) return { ...corps, validFrom: apercuDu, validUntil: apercuAu };
+    return modification ? {} : corps;
+  })();
+  // La clé de lecture se calcule sur le contenu (react-query) : un objet neuf ne relit rien.
+  const parametresApercu = facilityId && (jour || formeChoisie === 'dates') && ordreJuste
+    && !repartition && formeDeLApercu ? {
+      endTime: fin,
+      excludeSlot: slot?.documentId || undefined,
+      plateau: plateau || undefined,
+      startTime: debut,
+      ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
+      ...formeDeLApercu,
+    } : null;
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
+  // R17-QUAND-1 — les fermetures de la saison, rendues par l'aperçu (serveur) : les séances
+  // fermées.
+  const fermeturesLues = /** @type {any} */ (apercu.data)?.data?.closures;
+  const fermetures = Array.isArray(fermeturesLues) ? fermeturesLues : [];
+  const seancesFermees = fermeturesTouchees(seances, fermetures, debut, fin);
   const disponibilitesEnCours = !repartition && (lecture.isLoading
     || Boolean(parametresApercu && apercu.isFetching));
   const disponibilitesEnErreur = !repartition && (lecture.error
@@ -590,11 +722,12 @@ function SeasonSlotForm({
   const nomDuClub = slot?.club?.name
     || clubs.find((ligne) => ligne.documentId === club)?.name
     || '';
-  const pret = Boolean(facilityId && club && jour && ordreJuste)
+  const pret = Boolean(facilityId && club && (jour || joursDifferents) && ordreJuste)
     && !disponibilitesEnCours
     && !disponibilitesEnErreur
     && (!modification || Boolean(aPartirDu))
-    && periodeJuste;
+    && periodeJuste
+    && quandJuste;
 
   let erreurHeures = null;
   if ((debut && !debutLisible) || (fin && !finLisible)) {
@@ -633,6 +766,30 @@ function SeasonSlotForm({
     toucherLaSaisie();
   };
 
+  // R17-QUAND-1 — « Modifier » : la forme choisie (ses bornes partent à côté, seulement si elles
+  // changent). Des dates choisies : la liste ; le serveur en tire la fin.
+  const formeAEnvoyer = () => {
+    // Forme inchangée : rien ne part (le corps d'une modification reste celui d'avant le lot).
+    const avant = quandDeDepart?.forme || 'saison';
+    const memeRythme = (avant === formeChoisie)
+      || (['periode', 'saison'].includes(avant) && ['periode', 'saison'].includes(formeChoisie));
+    const memesDates = formeChoisie !== 'dates'
+      || JSON.stringify([...datesChoisies].sort()) === JSON.stringify(quandDeDepart?.dates || []);
+    const memePremiere = formeChoisie !== 'deuxSemaines' || quand.deuxDu === quandDeDepart?.deuxDu;
+    if (memeRythme && memesDates && memePremiere) return {};
+    if (formeChoisie === 'dates') return { dates: [...datesChoisies].sort(), recurrence: 'dates' };
+    if (formeChoisie === 'deuxSemaines') {
+      // Déjà « 1 sur 2 », 1re date inchangée : aucun ancrage ne part, le serveur garde la parité.
+      const inchange = quandDeDepart?.forme === 'deuxSemaines'
+        && quand.deuxDu === quandDeDepart.deuxDu;
+      const { anchorDate } = corpsDuQuand({ ...quand, deuxDu: quand.deuxDu || nouveauDebut });
+      return {
+        ...(anchorDate && !inchange ? { anchorDate } : {}), everyWeeks: 2, recurrence: 'weekly',
+      };
+    }
+    return { everyWeeks: 1, recurrence: 'weekly' };
+  };
+
   const envoyer = async (/** @type {boolean} */ quandMeme = false) => {
     if (!pret || envoiEnCours) return;
     setErreur(null);
@@ -650,8 +807,10 @@ function SeasonSlotForm({
               effectiveFrom: format(date, 'yyyy-MM-dd'),
               endTime: fin,
               startTime: debut,
-              weekday: jour,
+              ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
               ...champPlateau,
+              // R17-QUAND-1 — la forme part toujours (le serveur ne coupe que si elle change).
+              ...formeAEnvoyer(),
               // COLL-C2B-BIS : seule une periode CHANGEE part (sinon la coupure d avant, intacte).
               ...(nouveauDebut && nouveauDebut !== debutActuel ? { validFrom: nouveauDebut } : {}),
               ...(nouvelleFin && nouvelleFin !== finActuelle ? { validUntil: nouvelleFin } : {}),
@@ -665,7 +824,9 @@ function SeasonSlotForm({
             club,
             endTime: fin,
             startTime: debut,
-            weekday: jour,
+            ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
+            // R17-QUAND-1 — la création envoie enfin la forme et sa période (« Quand ? »).
+            ...corpsDuQuand(quand),
             ...(equipe ? { team: equipe } : {}),
             ...(plateau ? { plateau } : {}),
             ...confirmation,
@@ -702,10 +863,117 @@ function SeasonSlotForm({
     }
   };
 
+  // ─── R17-QUAND-1 : ce que la forme dit, en mots (planches P10-quand-tel, P11-quand-v2-tel) ───
+  const nomDuJour = jour && !joursDifferents
+    ? weekdayName(Number(jour), { inSentence: true })
+    : '';
+  const quandDuDepassement = (() => {
+    if (formeChoisie === 'dates') {
+      return t('collectiviteCreneaux.quand.aLeursDates', 'aux dates choisies');
+    }
+    if (formeChoisie === 'deuxSemaines') {
+      return t('collectiviteCreneaux.quand.unSurDeuxCourt', 'un {{jour}} sur deux', {
+        jour: nomDuJour, ...SANS_ECHAPPEMENT,
+      });
+    }
+    if (formeChoisie === 'periode') {
+      return t('collectiviteCreneaux.quand.chaqueDeLaPeriode', 'chaque {{jour}} de la période', {
+        jour: nomDuJour, ...SANS_ECHAPPEMENT,
+      });
+    }
+    return t('collectiviteCreneaux.quand.chaqueDeLaSaison', 'chaque {{jour}} de la saison', {
+      jour: nomDuJour, ...SANS_ECHAPPEMENT,
+    });
+  })();
+  const listeDeDates = (/** @type {string[]} */ jours, /** @type {number} */ max = 4) => {
+    const lus = jours.slice(0, max).map((jourCivil) => formatDay(jourCivil, { withYear: false }));
+    return jours.length > max
+      ? t('collectiviteCreneaux.quand.etAutres', '{{dates}} et {{count}} autres', {
+        count: jours.length - max, dates: lus.join(' · '), ...SANS_ECHAPPEMENT,
+      })
+      : lus.join(' · ');
+  };
+  // « 37 mercredis » / « 3 dates choisies ».
+  const titreDesSeances = formeChoisie === 'dates'
+    ? t('collectiviteCreneaux.quand.datesChoisies', {
+      count: seances.length,
+      defaultValue_one: '{{count}} date choisie',
+      defaultValue_other: '{{count}} dates choisies',
+    })
+    : t('collectiviteCreneaux.quand.seances', {
+      count: seances.length,
+      defaultValue_one: '{{count}} {{jour}}',
+      defaultValue_other: '{{count}} {{jour}}s',
+      jour: nomDuJour,
+      ...SANS_ECHAPPEMENT,
+    });
+  // Les séances qui tombent dans une fermeture : « 2 tombent dans « Vacances de Noël » (23 et
+  // 30 déc.) ».
+  const texteDesFermetures = (() => {
+    if (!seances.length) return null;
+    if (!seancesFermees.length) {
+      return t('collectiviteCreneaux.quand.aucuneFermee', 'Aucune ne tombe dans une fermeture.');
+    }
+    const noms = [...new Set(seancesFermees.map((ligne) => ligne.label).filter(Boolean))];
+    const dates = seancesFermees.slice(0, 4).map((ligne) => formatDayMonth(ligne.date)).join(', ');
+    if (seancesFermees.length === seances.length) {
+      return t(
+        'collectiviteCreneaux.quand.toutesFermees',
+        'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez attribuer quand même : '
+          + 'le club verra ses séances « fermé ».',
+        { fermeture: noms.join(', '), ...SANS_ECHAPPEMENT },
+      );
+    }
+    return t('collectiviteCreneaux.quand.fermees', {
+      count: seancesFermees.length,
+      dates,
+      defaultValue_one: 'Le {{dates}} tombe dans « {{fermeture}} » : le club y verra « fermé », '
+        + 'comme aujourd’hui.',
+      defaultValue_other: '{{count}} tombent dans « {{fermeture}} » ({{dates}}) : le club y verra '
+        + '« fermé », comme aujourd’hui.',
+      fermeture: noms.join(', '),
+      ...SANS_ECHAPPEMENT,
+    });
+  })();
+  // La ligne « Quand » du récapitulatif : la forme et ses bornes, puis le compte.
+  const libelleDuQuand = (() => {
+    const premiere = seances[0] || null;
+    const derniere = seances[seances.length - 1] || null;
+    const bornes = {
+      au: formatDayMonth(derniere), du: formatDayMonth(premiere), ...SANS_ECHAPPEMENT,
+    };
+    if (formeChoisie === 'dates') return titreDesSeances;
+    if (formeChoisie === 'deuxSemaines') {
+      return t(
+        'collectiviteCreneaux.quand.recapDeux',
+        'Toutes les 2 semaines · {{du}} – {{au}}',
+        bornes,
+      );
+    }
+    if (formeChoisie === 'periode') {
+      return t('collectiviteCreneaux.quand.recapPeriode', 'Une période · {{du}} – {{au}}', bornes);
+    }
+    return t('collectiviteCreneaux.quand.recapSaison', 'Toute la saison · {{du}} – {{au}}', bornes);
+  })();
+  const detailDuQuand = (() => {
+    if (formeChoisie === 'dates') return listeDeDates(seances);
+    if (!seancesFermees.length) return titreDesSeances;
+    return t('collectiviteCreneaux.quand.recapDontFermees', {
+      count: seancesFermees.length,
+      dates: seancesFermees.slice(0, 4).map((ligne) => formatDayMonth(ligne.date)).join(', '),
+      defaultValue_one: '{{seances}}, dont 1 fermé ({{dates}})',
+      defaultValue_other: '{{seances}}, dont {{count}} fermés ({{dates}})',
+      seances: titreDesSeances,
+      ...SANS_ECHAPPEMENT,
+    });
+  })();
+
   // ─── La carte « Place libre » (§4.2) ────────────────────────────────────────────────
   const carteDeLaPlace = (() => {
     if (!parametresApercu || !place) return null;
-    const moment = `${weekdayName(Number(jour))} ${timeRange(debut, fin)}`;
+    const moment = formeChoisie === 'dates'
+      ? timeRange(debut, fin)
+      : `${weekdayName(Number(jour))} ${timeRange(debut, fin)}`;
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
     const surPlateau = place.plateau && typeof place.plateau === 'object' ? place.plateau : null;
     let titre;
@@ -751,11 +1019,10 @@ function SeasonSlotForm({
       ? t('collectiviteCreneaux.attribuer.depassement', {
         capacite: Number(place.capacity || capacite),
         count: Number(place.teamsAfter),
-        defaultValue_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, chaque '
-          + '{{jour}} de la saison.',
-        defaultValue_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, chaque '
-          + '{{jour}} de la saison.',
-        jour: weekdayName(Number(jour)).toLocaleLowerCase(),
+        defaultValue_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, {{quand}}.',
+        defaultValue_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, {{quand}}.',
+        // R17-QUAND-1 — « chaque mercredi de la saison » n'est vrai que pour toute la saison.
+        quand: quandDuDepassement,
         ...SANS_ECHAPPEMENT,
       })
       : null;
@@ -898,14 +1165,6 @@ function SeasonSlotForm({
     );
   })));
 
-  const saison = meta.season || null;
-  const periode = saison
-    ? t('collectiviteCreneaux.attribuer.toutLaSaison', 'Toute la saison · {{periode}}', {
-      periode: formatPeriod(saison.validFrom, saison.validUntil, { withYear: false }),
-      ...SANS_ECHAPPEMENT,
-    })
-    : t('collectiviteCreneaux.attribuer.saison', 'Toute la saison');
-
   const nomEquipe = equipe
     ? equipes.data?.find((/** @type {any} */ ligne) => ligne.documentId === equipe)?.name
     : t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club');
@@ -926,11 +1185,15 @@ function SeasonSlotForm({
       return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
     }
     if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
-    if (etapeCourante === 'jour') return !jour || lecture.isLoading || Boolean(lecture.error);
+    if (etapeCourante === 'jour') {
+      return (!jour && !joursDifferents) || lecture.isLoading || Boolean(lecture.error);
+    }
     if (etapeCourante === 'horaires') {
       return !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur);
     }
     const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
+    // R17-QUAND-1 — « Suivant » reste grisé tant que la forme n'a pas au moins une date.
+    if (etapeCourante === 'quand' && !quandJuste) return true;
     return !periodeJuste || (modification && !dateEffetValide);
   })();
   const avancer = () => setEtape(Math.min(etape + 1, etapes.length - 1));
@@ -943,7 +1206,8 @@ function SeasonSlotForm({
     if (besoinDeConfirmer) {
       return t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même');
     }
-    if (compact && !tunnelPleinEcran) {
+    // R17-QUAND-1 — « pour la saison » seulement quand c'est vrai.
+    if (compact && !tunnelPleinEcran && formeChoisie === 'saison') {
       return t('collectiviteCreneaux.attribuer.pourLaSaison', 'Attribuer pour la saison');
     }
     return t('collectiviteCreneaux.attribuer.valider', 'Attribuer le créneau');
@@ -957,6 +1221,24 @@ function SeasonSlotForm({
     'Chaque {{jour}} · {{suite}}',
     { jour: leJour, suite, ...SANS_ECHAPPEMENT },
   );
+  // R17-QUAND-1 — le rythme dit la forme choisie : « chaque mercredi » n'est plus toujours vrai.
+  const rythme = (/** @type {string} */ suite) => {
+    if (formeChoisie === 'dates') {
+      return t('collectiviteCreneaux.quand.rythmeDates', 'Dates choisies · {{suite}}', {
+        suite, ...SANS_ECHAPPEMENT,
+      });
+    }
+    if (formeChoisie === 'deuxSemaines') {
+      return t('collectiviteCreneaux.quand.rythmeDeux', 'Un {{jour}} sur deux · {{suite}}', {
+        jour: leJour, suite, ...SANS_ECHAPPEMENT,
+      });
+    }
+    return chaqueJour(suite);
+  };
+  // « Mercredi 17:30 – 19:00 » ; des jours différents : les heures seules.
+  const momentDuCreneau = joursDifferents
+    ? lesHeures
+    : `${weekdayName(Number(jour))} ${lesHeures}`;
   const quiEtEquipe = modification
     ? slotWho(slot)
     : [nomDuClub, nomEquipe].filter(Boolean).join(' · ');
@@ -967,7 +1249,9 @@ function SeasonSlotForm({
     horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
     installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
     jour: t('collectiviteCreneaux.tunnel.jour', 'Quel jour ?'),
-    periode: t('collectiviteCreneaux.tunnel.periode', 'Quelle période ?'),
+    quand: joursDifferents
+      ? t('collectiviteCreneaux.quand.titreDates', 'Quelles dates ?')
+      : t('collectiviteCreneaux.quand.titre', 'Quand ?'),
     recap: t('eventWizard.steps.recap.title', 'Récapitulatif'),
   };
   /** @type {Record<string, string>} */
@@ -979,16 +1263,15 @@ function SeasonSlotForm({
     equipe: t('collectiviteCreneaux.tunnel.equipeFacultative', '{{club}} · facultatif', {
       club: nomDuClub, ...SANS_ECHAPPEMENT,
     }),
-    horaires: chaqueJour(installation?.name || ''),
+    horaires: rythme(installation?.name || ''),
     installation: t('collectiviteCreneaux.tunnel.pourLeClub', 'Pour {{club}}', {
       club: nomDuClub, ...SANS_ECHAPPEMENT,
     }),
+    // R17-QUAND-1 — « chaque semaine de la saison » mentait : la forme se choisit plus loin.
     jour: modification
       ? [slotWho(slot), installation?.name].filter(Boolean).join(' · ')
-      : t('collectiviteCreneaux.tunnel.chaqueSemaine', '{{qui}} · chaque semaine de la saison', {
-        qui: quiEtEquipe, ...SANS_ECHAPPEMENT,
-      }),
-    periode: chaqueJour(lesHeures),
+      : quiEtEquipe,
+    quand: [momentDuCreneau, installation?.name].filter(Boolean).join(' · '),
     recap: modification
       ? t(
         'collectiviteCreneaux.tunnel.relisezEnregistrez',
@@ -1016,21 +1299,26 @@ function SeasonSlotForm({
       valeur: installation?.name || '',
     },
     {
-      cle: t('collectiviteCreneaux.tunnel.recapHeures', 'Jour et heures'),
+      cle: joursDifferents
+        ? t('collectiviteCreneaux.quand.recapHeures', 'Heures')
+        : t('collectiviteCreneaux.tunnel.recapHeures', 'Jour et heures'),
       id: 'heures',
       onPress: () => allerA('jour'),
-      valeur: chaqueJour(lesHeures),
+      valeur: joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`,
     },
+    // R17-QUAND-1 — la ligne « Quand » dit la forme, ses bornes et ses séances ; elle se touche,
+    // même depuis une case du planning (elle était figée : « Toute la saison »).
     {
-      cle: t('collectiviteCreneaux.attribuer.periode', 'Période'),
-      id: 'periode',
-      onPress: modification ? () => allerA('periode') : undefined,
-      valeur: avecPeriode ? formatPeriod(nouveauDebut, nouvelleFin) : periode,
+      cle: t('collectiviteCreneaux.quand.recap', 'Quand'),
+      detail: detailDuQuand,
+      id: 'quand',
+      onPress: () => allerA('quand'),
+      valeur: libelleDuQuand,
     },
     ...(modification ? [{
       cle: t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du'),
       id: 'effet',
-      onPress: () => allerA('periode'),
+      onPress: () => allerA('quand'),
       valeur: aPartirDu,
     }] : []),
     ...(plateau && plateaux.length ? [{
@@ -1055,6 +1343,7 @@ function SeasonSlotForm({
         <LigneDuRecap
           cle={ligne.cle}
           derniere={rang === lignesDuRecap.length - 1}
+          detail={/** @type {any} */ (ligne).detail}
           key={ligne.id}
           libelleModifier={t(
             'collectiviteCreneaux.tunnel.modifierLaLigne',
@@ -1071,6 +1360,7 @@ function SeasonSlotForm({
 
   // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
   const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+    && !joursDifferents
     && !lecture.isLoading && !lecture.error
     && !heuresFigees && !repartition ? (
       <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -1088,6 +1378,79 @@ function SeasonSlotForm({
           })}
       </Text>
     ) : null;
+
+  // R17-QUAND-1 — les quatre formes de « Quand ? », avec ce que chacune donne.
+  const seancesDeLaSaison = jour && !joursDifferents
+    ? seancesDuQuand(creneauDuQuand({ ...quand, forme: 'saison' }), aujourdhui)
+    : [];
+  const toutFerme = seances.length > 0 && seancesFermees.length === seances.length;
+  const choisirForme = (/** @type {string} */ nouvelle) => {
+    setForme(nouvelle);
+    // « Toutes les 2 semaines » s'ouvre sur le prochain jour choisi (il fixe la semaine « paire »).
+    if (nouvelle === 'deuxSemaines' && !deuxDu && seancesDeLaSaison[0]) {
+      setDeuxDu(versSaisie(seancesDeLaSaison[0]));
+    }
+    toucherLaSaisie();
+  };
+  const formesProposees = [
+    {
+      actif: formeChoisie === 'saison',
+      detail: t('collectiviteCreneaux.quand.saisonDetail', 'Chaque {{jour}}, du {{du}} au {{au}}', {
+        au: formatDayMonth(finDeSaison),
+        du: formatDayMonth(seancesDeLaSaison[0]),
+        jour: nomDuJour,
+        ...SANS_ECHAPPEMENT,
+      }),
+      key: 'quand-saison',
+      libelle: t('collectiviteCreneaux.quand.saison', 'Toute la saison'),
+      onPress: () => choisirForme('saison'),
+      testID: 'quand-saison',
+    },
+    {
+      actif: formeChoisie === 'periode',
+      detail: t('collectiviteCreneaux.quand.periodeDetail', 'Chaque {{jour}}, du … au …', {
+        jour: nomDuJour, ...SANS_ECHAPPEMENT,
+      }),
+      key: 'quand-periode',
+      libelle: t('collectiviteCreneaux.quand.periode', 'Une période'),
+      onPress: () => choisirForme('periode'),
+      testID: 'quand-periode',
+    },
+    {
+      actif: formeChoisie === 'deuxSemaines',
+      detail: t('collectiviteCreneaux.quand.deuxSemainesDetail', 'Un {{jour}} sur deux', {
+        jour: nomDuJour, ...SANS_ECHAPPEMENT,
+      }),
+      key: 'quand-deux',
+      libelle: t('collectiviteCreneaux.quand.deuxSemaines', 'Toutes les 2 semaines'),
+      onPress: () => choisirForme('deuxSemaines'),
+      testID: 'quand-deux',
+    },
+    {
+      actif: formeChoisie === 'dates',
+      detail: t('collectiviteCreneaux.quand.datesDetail', 'Les jours que vous cochez'),
+      key: 'quand-dates',
+      libelle: t('collectiviteCreneaux.quand.dates', 'Des dates choisies'),
+      onPress: () => choisirForme('dates'),
+      testID: 'quand-dates',
+    },
+  ];
+  // Un jour du calendrier où l'installation est déjà pleine aux heures choisies :
+  // « 18:00 – 19:30 ».
+  const completLe = (/** @type {string} */ jourCivil) => {
+    const de = toMinutes(debut);
+    const a = toMinutes(fin);
+    if (de === null || a === null) return null;
+    const presents = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
+      .filter((/** @type {any} */ creneau) => creneau?.documentId !== slot?.documentId
+        && slotOccursOn(creneau, jourCivil))
+      .map((/** @type {any} */ creneau) => ({
+        end: toMinutes(creneau?.endTime) ?? 0,
+        start: toMinutes(creneau?.startTime) ?? 0,
+      }));
+    const plage = fullRanges(presents, capacite).find((ligne) => ligne.start < a && de < ligne.end);
+    return plage ? timeRange(fromMinutes(plage.start), fromMinutes(plage.end)) : null;
+  };
 
   const corps = (
     <View style={{ gap: 16 }}>
@@ -1142,7 +1505,8 @@ function SeasonSlotForm({
           l'heure ». Le panneau compact du planning garde sa ligne, plus bas. */}
       {parcoursGuide && !compact && depuisUneCase && etapeCourante !== 'recap' ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="season-slot-moment">
-          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+          {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
+          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
 
@@ -1265,7 +1629,7 @@ function SeasonSlotForm({
               const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
               const pleines = fullRangesOfSlots(ceJour, capacite);
               return {
-                actif: numero === jour,
+                actif: numero === jour && !joursDifferents,
                 avertissement: pleines.length > 0,
                 detail: pleines.length
                   ? t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
@@ -1280,11 +1644,33 @@ function SeasonSlotForm({
                 libelleCourt: weekdayName(numero, { short: true }),
                 onPress: () => {
                   setJour(numero);
+                  setJoursDifferents(false);
                   toucherLaSaisie();
                 },
                 testID: `jour-${numero}`,
               };
-            }));
+            }).concat(repartition ? [] : [{
+              // 🗓️ R17-QUAND-1 (Q4 B, planche P11-quand-v2-tel 3/6) — des dates sur des jours
+              // différents : « Quand ? » s'ouvrira sur le calendrier libre ; les heures vaudront
+              // pour toutes.
+              actif: joursDifferents,
+              avertissement: false,
+              detail: t(
+                'collectiviteCreneaux.quand.joursDifferentsDetail',
+                'Vous les choisirez dans un calendrier',
+              ),
+              key: 'joursDifferents',
+              libelle: t('collectiviteCreneaux.quand.joursDifferents', 'Des jours différents'),
+              libelleCourt: t(
+                'collectiviteCreneaux.quand.joursDifferents',
+                'Des jours différents',
+              ),
+              onPress: () => {
+                setJoursDifferents(true);
+                toucherLaSaisie();
+              },
+              testID: 'jour-dates',
+            }]));
           })()}
         </View>
       )}
@@ -1322,49 +1708,197 @@ function SeasonSlotForm({
         <Text style={[Fonts.p3, Fonts.error500]}>{erreurHeures}</Text>
       ) : null}
 
-      {visible('periode') && avecPeriode ? (
-        <View style={{ gap: 8 }}>
-          {libelleDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
-          {dejaCommence ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'collectiviteCreneaux.periode.depuis',
-                'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
-                { date: formatDay(debutActuel), ...SANS_ECHAPPEMENT },
+      {/* 🗓️ R17-QUAND-1, point 4 — L'ÉTAPE « QUAND ? » (planches P10-quand-tel, P10-quand-ordi,
+          P11-quand-v2-tel, validées par Adel le 19/10) : quatre formes, chacune dit ses séances
+          et celles qui tombent dans une fermeture. « Modifier » : elle remplace « Période » ;
+          « À partir du » reste (changer la forme coupe la série à cette date, comme un
+          changement d'heure). */}
+      {visible('quand') && !repartition ? (
+        <View style={{ gap: 12 }} testID="season-slot-quand">
+          {libelleDuChamp(titres.quand)}
+          {joursDifferents ? (
+            <Button
+              icon="arrowLeft"
+              iconPosition="before"
+              onPress={() => allerA('jour')}
+              style={{ alignSelf: 'flex-start', minHeight: 44 }}
+              title={t('collectiviteCreneaux.quand.unJourFixe', 'Un jour fixe chaque semaine')}
+              variant="Ghost"
+            />
+          ) : listeDeChoix(formesProposees)}
+
+          {formeChoisie === 'periode' ? (
+            <View style={{ gap: 8 }}>
+              {dejaCommence ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'collectiviteCreneaux.periode.depuis',
+                    'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+                    { date: formatDay(debutActuel), ...SANS_ECHAPPEMENT },
+                  )}
+                </Text>
+              ) : (
+                <DatePickerInput
+                  label={t('collectiviteCreneaux.periode.du', 'Du')}
+                  minimumDate={new Date()}
+                  onChange={(/** @type {string} */ valeur) => {
+                    setPeriodeDu(valeur);
+                    toucherLaSaisie();
+                  }}
+                  value={periodeDu}
+                />
               )}
-            </Text>
-          ) : (
-            <DatePickerInput
-              label={t('collectiviteCreneaux.periode.du', 'Du')}
-              minimumDate={new Date()}
-              onChange={(/** @type {string} */ valeur) => {
-                setPeriodeDu(valeur);
+              <DatePickerInput
+                label={t('collectiviteCreneaux.periode.au', 'Au')}
+                minimumDate={new Date()}
+                onChange={(/** @type {string} */ valeur) => {
+                  setPeriodeAu(valeur);
+                  toucherLaSaisie();
+                }}
+                value={periodeAu}
+              />
+            </View>
+          ) : null}
+
+          {formeChoisie === 'deuxSemaines' ? (
+            <View style={{ gap: 8 }}>
+              {modification && dejaCommence ? null : (
+                <DatePickerInput
+                  label={modification
+                    ? t('collectiviteCreneaux.quand.premiereDate', 'Première date')
+                    : t('collectiviteCreneaux.quand.aPartirDu', 'À partir du')}
+                  minimumDate={new Date()}
+                  onChange={(/** @type {string} */ valeur) => {
+                    setDeuxDu(valeur);
+                    toucherLaSaisie();
+                  }}
+                  value={deuxDu}
+                />
+              )}
+              {titreDuChamp(t('collectiviteCreneaux.quand.jusqua', 'Jusqu’à'))}
+              {rangee([
+                <PuceDeChoix
+                  actif={deuxJusqua === 'fin'}
+                  key="deux-fin"
+                  libelle={t('collectiviteCreneaux.quand.finDeSaison', 'Fin de saison')}
+                  onPress={() => {
+                    setDeuxJusqua('fin');
+                    toucherLaSaisie();
+                  }}
+                  testID="quand-jusqua-fin"
+                />,
+                <PuceDeChoix
+                  actif={deuxJusqua === 'date'}
+                  key="deux-date"
+                  libelle={t('collectiviteCreneaux.quand.uneDate', 'Une date')}
+                  onPress={() => {
+                    setDeuxJusqua('date');
+                    toucherLaSaisie();
+                  }}
+                  testID="quand-jusqua-date"
+                />,
+              ])}
+              {deuxJusqua === 'date' ? (
+                <DatePickerInput
+                  label={t('collectiviteCreneaux.quand.jusquau', 'Jusqu’au')}
+                  minimumDate={new Date()}
+                  onChange={(/** @type {string} */ valeur) => {
+                    setDeuxAu(valeur);
+                    toucherLaSaisie();
+                  }}
+                  value={deuxAu}
+                />
+              ) : null}
+              {seances.length ? (
+                <View
+                  accessibilityLabel={t(
+                    'collectiviteCreneaux.quand.prochaines',
+                    'Prochaines dates : {{dates}}',
+                    { dates: listeDeDates(seances, 6), ...SANS_ECHAPPEMENT },
+                  )}
+                  style={[Alignments.row, Alignments.wrap, { gap: 6 }]}
+                  testID="quand-prochaines-dates"
+                >
+                  {seances.slice(0, 6).map((jourCivil) => {
+                    const ferme = seancesFermees.some((ligne) => ligne.date === jourCivil);
+                    return (
+                      <Text
+                        key={jourCivil}
+                        style={[Fonts.p3Bold, {
+                          borderColor: ferme
+                            ? Colors.warning500
+                            : withAlpha(Colors.primary500, 0.45),
+                          borderRadius: 100,
+                          borderStyle: ferme ? 'dashed' : 'solid',
+                          borderWidth: 1,
+                          color: ferme ? Colors.warning400 : Colors.neutral00,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          textDecorationLine: ferme ? 'line-through' : 'none',
+                        }]}
+                      >
+                        {formatDayMonth(jourCivil)}
+                      </Text>
+                    );
+                  })}
+                  {seances.length > 6 ? (
+                    <Text style={[Fonts.p3Bold, Fonts.neutral200]}>…</Text>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
+          {formeChoisie === 'dates' ? (
+            <SeasonSlotDatesCalendar
+              completDe={completLe}
+              dates={datesChoisies}
+              depuis={aujourdhui}
+              fermeDe={(/** @type {string} */ jourCivil) => (
+                fermeturesTouchees([jourCivil], fermetures, debut, fin)[0]?.label || null
+              )}
+              jusqua={finDeSaison}
+              onToggle={(/** @type {string} */ jourCivil) => {
+                setDatesChoisies((avant) => (avant.includes(jourCivil)
+                  ? avant.filter((autre) => autre !== jourCivil)
+                  : [...avant, jourCivil].sort()));
                 toucherLaSaisie();
               }}
-              value={periodeDu}
             />
-          )}
-          <DatePickerInput
-            label={t('collectiviteCreneaux.periode.au', 'Au')}
-            minimumDate={new Date()}
-            onChange={(/** @type {string} */ valeur) => {
-              setPeriodeAu(valeur);
-              toucherLaSaisie();
-            }}
-            value={periodeAu}
-          />
-          {periodeJuste ? null : (
-            <Text style={[Fonts.p3, Fonts.error500]}>
-              {t(
-                'collectiviteCreneaux.periode.ordre',
-                'La fin de la période doit suivre son début.',
-              )}
+          ) : null}
+
+          {erreurDuQuand ? (
+            <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+              {erreurDuQuand}
             </Text>
-          )}
+          ) : null}
+          {seances.length ? (
+            <View
+              accessibilityLiveRegion="polite"
+              style={{
+                backgroundColor: withAlpha(toutFerme ? Colors.warning500 : Colors.success500, 0.1),
+                borderColor: withAlpha(toutFerme ? Colors.warning500 : Colors.success500, 0.4),
+                borderRadius: 16,
+                borderWidth: 1,
+                gap: 4,
+                padding: 12,
+              }}
+              testID="season-slot-seances"
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titreDesSeances}</Text>
+              {formeChoisie === 'dates' ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{listeDeDates(seances)}</Text>
+              ) : null}
+              {texteDesFermetures ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{texteDesFermetures}</Text>
+              ) : null}
+            </View>
+          ) : null}
+
         </View>
       ) : null}
-
-      {visible('periode') && modification ? (
+      {/* « À partir du » : la date d'effet d'une modification, répartition comprise (COLL-C2C). */}
+      {visible('quand') && modification ? (
         <DatePickerInput
           label={t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')}
           minimumDate={new Date()}
@@ -1395,13 +1929,6 @@ function SeasonSlotForm({
       ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 
-      {!visible('periode') || modification || (compact && !parcoursGuide) ? null : (
-        <View style={{ gap: 8 }}>
-          {titreDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
-          <Text style={[Fonts.p2, Fonts.neutral00]}>{periode}</Text>
-        </View>
-      )}
-
       {/* D66 : le champ « Plateau » n existe que si l installation a des plateaux nommes. */}
       {visible('horaires') && plateaux.length && !repartition ? (
         <View style={{ gap: 8 }}>
@@ -1431,18 +1958,13 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {confirmationFinale && compact && jour && !tunnelPleinEcran ? (
+      {/* R17-QUAND-1 — « Chaque mercredi de la saison » n'est plus toujours vrai : la forme. */}
+      {confirmationFinale && compact && (jour || joursDifferents) && !tunnelPleinEcran ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
-            'collectiviteCreneaux.attribuer.chaqueSemaine',
-            'Chaque {{jour}} de la saison ({{periode}}). Le club est prévenu.',
-            {
-              jour: weekdayName(jour).toLocaleLowerCase(),
-              periode: saison
-                ? formatPeriod(saison.validFrom, saison.validUntil, { withYear: false })
-                : '',
-              ...SANS_ECHAPPEMENT,
-            },
+            'collectiviteCreneaux.quand.phraseCompacte',
+            '{{quand}} ({{seances}}). Le club est prévenu.',
+            { quand: libelleDuQuand, seances: titreDesSeances, ...SANS_ECHAPPEMENT },
           )}
         </Text>
       ) : null}
@@ -1475,7 +1997,8 @@ function SeasonSlotForm({
 
       {parcoursGuide && compact && (visible('jour') || visible('horaires')) ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+          {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
+          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
       {parcoursGuide && confirmationFinale && !tunnelPleinEcran ? (
@@ -1486,11 +2009,12 @@ function SeasonSlotForm({
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{quiEtEquipe}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>{installation?.name}</Text>
           <Text style={[Fonts.p2, Fonts.neutral00]}>
-            {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+            {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
           </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {avecPeriode ? formatPeriod(nouveauDebut, nouvelleFin) : periode}
+          <Text style={[Fonts.p2, Fonts.neutral200]} testID="season-slot-recap-quand">
+            {libelleDuQuand}
           </Text>
+          {detailDuQuand ? <Text style={[Fonts.p3, Fonts.neutral200]}>{detailDuQuand}</Text> : null}
           {modification ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {`${t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')} ${aPartirDu}`}
