@@ -456,8 +456,8 @@ function ComplexeAccueil() {
       )}
     </View>
   );
-  // L'alerte « Hier » (RC-G01) : « Vérifier » ouvre les réservations passées. Marquer une
-  // réservation « non honorée » vient avec le lot L5b (serveur RESA-L2B).
+  // L'alerte « Hier » (RC-G01) : « Vérifier » ouvre les réservations passées, où chaque carte
+  // marquable porte « Non honorée » (RESA-L5B-1, serveur RESA-L2B).
   const alerteHier = chiffresDeLaSemaine.hier ? (
     <BandeauComplexe
       action={t('complexeReservations.accueil.verifier', 'Vérifier')}
