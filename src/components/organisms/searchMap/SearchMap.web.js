@@ -81,7 +81,10 @@ const resolveMeasuredOverlayInsets = (
  * @param {number} [props.previewBottomOffset]
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @param {string} [props.selectedItemId]
- * @param {'events' | 'clubs' | 'reservations'} [props.scope]
+ * @param {'events' | 'clubs' | 'reservations' | 'complexes'} [props.scope]
+ * @param {boolean} [props.showPreviewCard] RESA-CARTE (20/10) : faux, aucun aperçu en bas de la
+ *   carte — l'écran montre lui-même le repère choisi (la recherche de terrains, E-P01). Vrai par
+ *   défaut : l'annuaire ne change pas.
  * @param {number} [props.topMargin]
  * @param {number} [props.totalCount]
  * @param {boolean} [props.truncated]
@@ -105,6 +108,7 @@ function SearchMap({
   scope = 'events',
   selectedItemId,
   selectionFocusBehavior = 'camera',
+  showPreviewCard = true,
   topMargin = 12,
   totalCount = 0,
   truncated = false,
@@ -397,17 +401,19 @@ function SearchMap({
         </View>
       ) : null}
 
-      <View pointerEvents="box-none" style={[Alignments.fill, Spaces.gap[12]]}>
-        <SearchMapPreviewCard
-          bottomOffset={previewBottomOffset}
-          item={selectedItem}
-          onDismiss={handleClearSelection}
-          onHeightChange={setPreviewCardHeight}
-          onOpen={(item) => onOpenItem?.(item)}
-          onShowList={() => onShowList?.()}
-          scope={scope}
-        />
-      </View>
+      {showPreviewCard ? (
+        <View pointerEvents="box-none" style={[Alignments.fill, Spaces.gap[12]]}>
+          <SearchMapPreviewCard
+            bottomOffset={previewBottomOffset}
+            item={selectedItem}
+            onDismiss={handleClearSelection}
+            onHeightChange={setPreviewCardHeight}
+            onOpen={(item) => onOpenItem?.(item)}
+            onShowList={() => onShowList?.()}
+            scope={scope}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -14,6 +14,13 @@ import { carteDeRecherche } from '@/testSupport/temoinReserver';
 // complexe (logo, nom, pastille, distance, sports, prochains créneaux libres) ; vide, chargement,
 // erreur, hors connexion. Le serveur ne rend que des créneaux VRAIMENT libres (RC-P01).
 
+// La place de la barre d'onglets flottante : useBottomDockLayout tire @react-navigation/stack, que
+// jest ne transforme pas ; doublé, comme dans les témoins de ClubListContent.
+jest.mock('@/navigation/useBottomDockLayout', () => ({
+  __esModule: true,
+  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+}));
+
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),

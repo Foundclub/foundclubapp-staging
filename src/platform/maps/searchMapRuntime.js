@@ -405,14 +405,25 @@ export const buildSearchMapRuntimeHtml = ({
             : (isEventMarker ? 34 : 36);
           var haloSize = markerSize + (isEventMarker ? 18 : 18);
           var borderSize = isSelected ? 3 : 2;
-          var markerLabel = showSequenceLabel && entry && Number.isFinite(entry.order)
-            ? String(entry.order)
+          // RESA-CARTE (20/10) : le mot de l'épingle (le nombre de créneaux libres d'un complexe)
+          // passe avant le numéro d'ordre ; il est échappé, il vient des données.
+          var itemLabel = entry && entry.item && entry.item.markerLabel
+            ? String(entry.item.markerLabel).replace(/[&<>"']/g, function (caractere) {
+              return '&#' + caractere.charCodeAt(0) + ';';
+            })
             : '';
+          var markerLabel = itemLabel || (showSequenceLabel && entry && Number.isFinite(entry.order)
+            ? String(entry.order)
+            : '');
           var backgroundColor = isSelected ? '#ffffff' : MARKER_COLOR;
           var borderColor = isSelected ? MARKER_COLOR : 'rgba(255,255,255,0.86)';
+          // Le halo doré est celui des clubs ; une épingle de complexe garde le cyan (EP01).
+          var isComplexeMarker = entry && entry.item && entry.item.type === 'complexes';
           var haloColor = isSelected
             ? 'rgba(1, 179, 244, 0.36)'
-            : (isEventMarker ? 'rgba(1, 179, 244, 0.24)' : 'rgba(255, 215, 0, 0.32)');
+            : ((isEventMarker || isComplexeMarker)
+              ? 'rgba(1, 179, 244, 0.24)'
+              : 'rgba(255, 215, 0, 0.32)');
           var shadow = isSelected
             ? '0 16px 30px rgba(0,0,0,0.34)'
             : '0 12px 24px rgba(0,0,0,0.28)';
@@ -420,7 +431,7 @@ export const buildSearchMapRuntimeHtml = ({
             ? '<span style="' +
                 'color:' + (isSelected ? '#061822' : (isEventMarker ? '#ffffff' : '#061822')) + ';' +
                 'font-family:FoundClubMontserrat, Montserrat-Bold, \\"Segoe UI\\", sans-serif;' +
-                'font-size:13px;' +
+                'font-size:' + (markerLabel.length > 3 ? 11 : 13) + 'px;' +
                 'font-weight:700;' +
                 'line-height:1;' +
               '">' + markerLabel + '</span>'
@@ -509,7 +520,9 @@ export const buildSearchMapRuntimeHtml = ({
 
         var buildItemsSignature = function (items) {
           return items.map(function (item) {
-            return item.id + ':' + item.lat.toFixed(5) + ':' + item.lng.toFixed(5);
+            // RESA-CARTE : un mot d'épingle qui change (un filtre) redessine l'épingle.
+            return item.id + ':' + item.lat.toFixed(5) + ':' + item.lng.toFixed(5)
+              + ':' + (item.markerLabel || '');
           }).join('|');
         };
 

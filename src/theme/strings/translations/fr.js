@@ -18470,6 +18470,8 @@ export default {
       autoriser: 'Autoriser ma position',
       autourDeLaVille: 'Chercher autour de {{ville}}',
       autourDeMoi: 'Autour de moi',
+      carte: 'Carte',
+      carteVide: 'Aucun terrain libre ici. Élargis la distance.',
       champ: 'Complexe, ville ou sport',
       changerDeVille: '{{ville}} : changer de ville',
       choisirUneVille: 'Choisir une ville',
@@ -18481,6 +18483,7 @@ export default {
       distance: 'Distance',
       effacer: 'Effacer',
       elargir: 'Élargir à {{nombre}} km',
+      epingleTelephone: 'Tél.',
       erreur: 'Impossible de charger les terrains.',
       erreurTexte: 'Vérifie ta connexion et réessaie.',
       exterieur: 'Extérieur',
@@ -18493,6 +18496,7 @@ export default {
       interieur: 'Intérieur',
       jour: 'Jour',
       km: '{{nombre}} km',
+      liste: 'Liste',
       matin: 'Avant 12 h',
       ouvrirLesReglages: 'Ouvrir les réglages',
       plusDeCreneaux: '{{nombre}} créneaux de plus',
@@ -18816,12 +18820,17 @@ export default {
     },
     empty: {
       clubs: 'Aucun club géolocalisable pour le moment.',
+      complexes: 'Aucun complexe à placer sur la carte.',
       events: 'Aucun événement géolocalisable pour le moment.',
       reservations: 'Aucune réservation géolocalisable pour le moment.',
     },
     noCoordinates: {
       clubs_one: "{{count}} club trouvé, mais aucun n'a de position exploitable sur la carte.",
       clubs_other: "{{count}} clubs trouvés, mais aucun n'a de position exploitable sur la carte.",
+      // eslint-disable-next-line max-len
+      complexes_one: "{{count}} complexe trouvé, mais il n'a pas de position exploitable sur la carte.",
+      // eslint-disable-next-line max-len
+      complexes_other: "{{count}} complexes trouvés, mais aucun n'a de position exploitable sur la carte.",
       // eslint-disable-next-line max-len
       events_one: "{{count}} événement trouvé, mais aucun n'a de position exploitable sur la carte.",
       // eslint-disable-next-line max-len
@@ -18838,6 +18847,8 @@ export default {
     resultLabel: {
       club: 'club',
       clubs: 'clubs',
+      complexe: 'complexe',
+      complexes: 'complexes',
       event: 'événement',
       events: 'événements',
       reservation: 'réservation',

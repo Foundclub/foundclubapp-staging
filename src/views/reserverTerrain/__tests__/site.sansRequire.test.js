@@ -34,6 +34,8 @@ const FICHIERS = [
   'views/complexe/components/PastilleMode.js',
   'views/event/EventDetails.js',
   'views/search/SearchHubScreen.js',
+  // RESA-CARTE (20/10) : l'adresse du site /search/reservations monte la recherche de terrains.
+  'views/search/SearchReservationsScreen.js',
 ];
 
 const vues = (dossier) => fs.readdirSync(dossier, { withFileTypes: true }).flatMap((entree) => {

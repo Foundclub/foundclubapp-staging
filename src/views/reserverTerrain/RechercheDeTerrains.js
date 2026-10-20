@@ -30,9 +30,11 @@ import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import CarteComplexeRecherche from '@/views/reserverTerrain/components/CarteComplexeRecherche';
+import CarteDesComplexes from '@/views/reserverTerrain/components/CarteDesComplexes';
 import PuceChoix from '@/views/reserverTerrain/components/PuceChoix';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useRechercheDeTerrains } from '@/services/complexe/complexeJoueurQueries';
@@ -55,6 +57,10 @@ const DISTANCE_PAR_DEFAUT = 10;
 const DISTANCE_MAX = 50;
 const VILLES_MAX = 3;
 const SPORTS_MAX = 3;
+// RESA-CARTE : la carte du téléphone prend la place libre sous l'en-tête, jamais moins ; celle
+// de l'ordinateur, à droite de la liste, a une hauteur fixe (planche OR2).
+const HAUTEUR_CARTE_MIN = 320;
+const HAUTEUR_CARTE_ORDINATEUR = 600;
 
 /**
  * Un nom comparable : sans accents, minuscules.
@@ -118,8 +124,18 @@ const filtrerLHeure = (carte, heure) => {
  *   · Un seul champ « Complexe, ville ou sport » : le NOM part au serveur, qui tolère les fautes
  *     (dès 2 lettres, 300 ms) ; les villes et les sports qui ressemblent au texte se proposent.
  *   · Les filtres (sport, jour, heure, distance, intérieur / extérieur) ; une carte par complexe.
- * ⛔ Pas dans ce lot : « Parties à compléter » et « Mes complexes favoris » (L3 / L4 puis L6b), la
- * vue Carte (planche EP01 état 2).
+ * ⛔ Pas dans ce lot : « Parties à compléter » et « Mes complexes favoris » (L3 / L4 puis L6b).
+ * RESA-CARTE (20/10/2026) — la vue Carte (plan E-P01 points 4 et 6, planches EP01 état 2 et OR2) :
+ *   · téléphone : la bascule « Liste » / « Carte » ; en Carte, la carte prend la place sous
+ *     l'en-tête (hors du défilement : la glisser ne fait pas défiler l'écran), et la carte du
+ *     complexe dont l'épingle est touchée se pose EN BAS de la carte (« l'aperçu en bas », plan
+ *     E-P01 point 6 ; posée dessous, elle sortait de l'écran à 390 px), l'épingle restant visible
+ *     au-dessus d'elle ;
+ *   · ordinateur : la liste à gauche, la carte à droite, pas de bascule ; toucher une épingle met
+ *     sa carte en tête de liste ;
+ *   · les filtres, la position et la ville valent pour les deux vues ; chargement, erreur, choix
+ *     d'une ville : les mêmes blocs ; aucune proposition : « Aucun terrain libre ici. Élargis la
+ *     distance. »
  * @param {object} props - Les propriétés.
  * @param {number} [props.refreshSignal] - Un nouveau nombre relance la lecture (retour au
  *   premier plan).
@@ -133,6 +149,9 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const surOrdinateur = useIsDesktop();
+  // RESA-CARTE : la barre d'onglets flottante (téléphone et site) couvre le bas de l'écran ; la
+  // liste et la carte s'arrêtent au-dessus d'elle, comme les autres panneaux de la recherche.
+  const { sceneBottomInset } = useBottomDockLayout();
   const aujourdhui = jourDeParis();
 
   const [texte, setTexte] = useState('');
@@ -148,6 +167,10 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const [etatPosition, setEtatPosition] = useState('lecture');
   const [feuillePosition, setFeuillePosition] = useState(false);
   const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
+  const [vue, setVue] = useState(/** @type {'liste' | 'carte'} */ ('liste'));
+  const [epingleChoisie, setEpingleChoisie] = useState(/** @type {string | null} */ (null));
+  const [hauteurCarte, setHauteurCarte] = useState(HAUTEUR_CARTE_MIN);
+  const [hauteurChoisie, setHauteurChoisie] = useState(0);
   const dernierSignal = useRef(refreshSignal);
 
   useEffect(() => {
@@ -235,6 +258,10 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
     .map((/** @type {any} */ carte) => filtrerLHeure(carte, heure))
     .filter((/** @type {any} */ carte) => texteValide || carte.slots.length > 0);
   const dateLue = recherche?.data?.date || jour || aujourdhui;
+  const carteChoisie = cartes.find((/** @type {any} */ carte) => (
+    carte.slug === epingleChoisie
+  )) || null;
+  const enCarte = !surOrdinateur && vue === 'carte';
   const distanceSuivante = [20, DISTANCE_MAX].find((km) => km > distanceKm) || null;
 
   const ouvrirLeComplexe = (/** @type {any} */ carte) => navigation.navigate(
@@ -555,6 +582,24 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
     </View>
   );
 
+  // RESA-CARTE — sur ordinateur, les deux vues sont côte à côte : la bascule disparaît (OR2).
+  const bascule = surOrdinateur ? null : (
+    <View style={[Alignments.row, { gap: 8 }]}>
+      <PuceChoix
+        choisie={vue === 'liste'}
+        libelle={t('reserverTerrain.recherche.liste', 'Liste')}
+        onPress={() => setVue('liste')}
+        testID="reserver-recherche-vue-liste"
+      />
+      <PuceChoix
+        choisie={vue === 'carte'}
+        libelle={t('reserverTerrain.recherche.carte', 'Carte')}
+        onPress={() => setVue('carte')}
+        testID="reserver-recherche-vue-carte"
+      />
+    </View>
+  );
+
   // -------------------------------------------------------------------------------------------
   // Le corps : choisir un lieu, chargement, erreur, vide, la liste
   // -------------------------------------------------------------------------------------------
@@ -667,6 +712,13 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         variant="Secondary"
       />
     ) : null;
+    let titreDuVide = t('reserverTerrain.recherche.vide', 'Aucun terrain libre avec ces filtres.');
+    if (enCarte) {
+      titreDuVide = t(
+        'reserverTerrain.recherche.carteVide',
+        'Aucun terrain libre ici. Élargis la distance.',
+      );
+    }
     corps = texteValide ? (
       <View style={carteDeBloc}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -689,9 +741,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
       </View>
     ) : (
       <View style={carteDeBloc}>
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-          {t('reserverTerrain.recherche.vide', 'Aucun terrain libre avec ces filtres.')}
-        </Text>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{titreDuVide}</Text>
         {elargir}
         <Button
           onPress={() => setJour(ajouterJours(jour || aujourdhui, 1))}
@@ -700,24 +750,51 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         />
       </View>
     );
-  } else {
+  } else if (surOrdinateur) {
+    // OR2 : la liste à gauche (la carte de l'épingle touchée en tête), la carte à droite.
+    const enTete = carteChoisie
+      ? [carteChoisie, ...cartes.filter((/** @type {any} */ carte) => carte !== carteChoisie)]
+      : cartes;
     corps = (
-      <View style={[surOrdinateur ? [Alignments.row, Alignments.wrap] : null, { gap: 12 }]}>
-        {cartes.map((/** @type {any} */ carte) => (
-          <View
-            key={carte.slug}
-            style={surOrdinateur ? { flexBasis: 420, flexGrow: 1, maxWidth: 560 } : null}
-          >
+      <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
+        <View style={{ flex: 1, gap: 12, minWidth: 0 }}>
+          {enTete.map((/** @type {any} */ carte) => (
             <CarteComplexeRecherche
               carte={carte}
+              choisie={carte === carteChoisie}
+              key={carte.slug}
               onCreneau={(creneau) => ouvrirLeCreneau(carte, creneau)}
               onOuvrir={() => ouvrirLeComplexe(carte)}
             />
-          </View>
+          ))}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <CarteDesComplexes
+            cartes={cartes}
+            choisie={epingleChoisie}
+            hauteur={HAUTEUR_CARTE_ORDINATEUR}
+            onChoisir={setEpingleChoisie}
+            onOuvrir={ouvrirLeComplexe}
+          />
+        </View>
+      </View>
+    );
+  } else if (!enCarte) {
+    corps = (
+      <View style={{ gap: 12 }}>
+        {cartes.map((/** @type {any} */ carte) => (
+          <CarteComplexeRecherche
+            carte={carte}
+            key={carte.slug}
+            onCreneau={(creneau) => ouvrirLeCreneau(carte, creneau)}
+            onOuvrir={() => ouvrirLeComplexe(carte)}
+          />
         ))}
       </View>
     );
   }
+  // Téléphone, vue Carte, des complexes proposés : la carte se pose HORS du défilement (plus bas).
+  const carteEnPlace = enCarte && !corps;
 
   let horsConnexion = null;
   if (variante === 'reseau' && recherche?.data) {
@@ -753,7 +830,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? 1160 : undefined,
-          paddingBottom: 32,
+          paddingBottom: carteEnPlace ? 12 : Math.max(32, sceneBottomInset),
           paddingTop: 12,
           width: '100%',
         }}
@@ -767,7 +844,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
           />
         )}
         showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
+        style={carteEnPlace ? { flexGrow: 0 } : [Alignments.fill]}
       >
         {/* RESA-L6B-1 (19/10) — le raccourci « Mes réservations » (E-P10, planche EP10 état 5 :
             « raccourci aussi dans E-P01 » ; sa place n'est pas dessinée : en tête du panneau). */}
@@ -800,9 +877,49 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         />
         {propositions}
         {puces}
+        {bascule}
         {horsConnexion}
         {corps}
       </ScrollView>
+      {carteEnPlace ? (
+        <View style={{ flex: 1, paddingBottom: Math.max(12, sceneBottomInset) }}>
+          <View
+            onLayout={(evenement) => setHauteurCarte(Math.max(
+              HAUTEUR_CARTE_MIN,
+              Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
+            ))}
+            style={{ flex: 1, minHeight: HAUTEUR_CARTE_MIN }}
+          >
+            <CarteDesComplexes
+              cartes={cartes}
+              choisie={epingleChoisie}
+              hauteur={hauteurCarte}
+              margeBasse={carteChoisie ? hauteurChoisie + 24 : 0}
+              onChoisir={setEpingleChoisie}
+              onOuvrir={ouvrirLeComplexe}
+            />
+            {carteChoisie ? (
+              <View
+                onLayout={(evenement) => setHauteurChoisie(
+                  Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
+                )}
+                style={{
+                  bottom: 12, left: 12, position: 'absolute', right: 12,
+                }}
+                testID="reserver-recherche-carte-choisie"
+              >
+                <CarteComplexeRecherche
+                  carte={carteChoisie}
+                  choisie
+                  compacte
+                  onCreneau={(creneau) => ouvrirLeCreneau(carteChoisie, creneau)}
+                  onOuvrir={() => ouvrirLeComplexe(carteChoisie)}
+                />
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
