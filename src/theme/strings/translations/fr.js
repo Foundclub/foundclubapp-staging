@@ -7455,6 +7455,9 @@ export default {
       openGroupHint: 'Ouvre les infos du groupe',
       you: 'Vous',
     },
+    imagePreview: {
+      close: 'Fermer l’image',
+    },
     league: {
       cancelBody: 'Cette action annulera le match et supprimera la conversation.',
       cancelError: "Impossible d'annuler le match.",

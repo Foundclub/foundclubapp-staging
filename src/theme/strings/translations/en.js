@@ -6979,6 +6979,9 @@ export default {
       openGroupHint: 'Opens the group info',
       you: 'You',
     },
+    imagePreview: {
+      close: 'Close image',
+    },
     league: {
       cancelBody: 'This will cancel the match and delete the conversation.',
       cancelError: 'Unable to cancel the match.',
