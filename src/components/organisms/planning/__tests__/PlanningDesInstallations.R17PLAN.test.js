@@ -58,7 +58,9 @@ jest.mock('@/theme/themeContext', () => {
   const couleurs = genererCouleurs();
   return {
     __esModule: true,
-    default: () => ({ Colors: couleurs, Fonts: genererPolices(couleurs), Spaces: espaces }),
+    default: () => ({
+      Colors: couleurs, Fonts: genererPolices(couleurs), Images: { filter: 1 }, Spaces: espaces,
+    }),
   };
 });
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
@@ -510,5 +512,35 @@ describe('R17-PLANNING-2 — la ligne « 3 installations » (P10-planning-tel 1)
     mockOrdinateur = true;
     await choisir(await rendre(), 'day');
     expect(textes(montes.at(-1).arbre)).not.toContain('3 installations');
+  });
+});
+
+describe('R17-PLANNING-2 — le filtre au téléphone (P10-planning-tel 2)', () => {
+  test('18 ROUGE-AVANT — Semaine : « Toutes les installations », une, puis toutes', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Toutes les installations');
+    const lignes = () => arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ n) => n.props.testID === 'toutes-ligne');
+    expect(lignes()).toHaveLength(4);
+    const filtrer = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Filtrer par installation'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { filtrer.props.onPress(); });
+    const choix = (/** @type {string} */ nom) => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'radio' && n.props?.accessibilityLabel === nom
+      && typeof n.props?.onPress === 'function'))[0];
+    expect(choix('Toutes les installations').props.accessibilityState).toEqual({ checked: true });
+    await act(async () => { choix('Stade municipal').props.onPress(); });
+    await attendre();
+    expect(lignes()).toHaveLength(2);
+    expect(lignes().every((/** @type {any} */ n) => n.props.accessibilityLabel
+      .endsWith('Stade municipal'))).toBe(true);
+    expect(textes(arbre)).toContain('Stade municipal');
+    expect(textes(arbre)).not.toContain('Toutes les installations');
+    await act(async () => { filtrer.props.onPress(); });
+    await act(async () => { choix('Toutes les installations').props.onPress(); });
+    await attendre();
+    expect(lignes()).toHaveLength(4);
   });
 });

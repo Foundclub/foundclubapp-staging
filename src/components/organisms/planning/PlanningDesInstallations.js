@@ -11,6 +11,7 @@ import { enGB, fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Image,
   Platform,
   Text,
   TouchableOpacity,
@@ -112,12 +113,19 @@ const localeDesDates = () => (localeDesFormats() === 'en-GB' ? enGB : fr);
 function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInstallation }) {
   const navigation = /** @type {any} */ (useNavigation());
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    Colors, Fonts, Images, Spaces,
+  } = useTheme();
   const isDesktop = useIsDesktop();
   const locale = localeDesDates();
   const vueDeBase = vueParDefaut(Platform.OS);
   const [vue, setVue] = useState(vueDeBase);
   const [date, setDate] = useState(getPlanningDefaultDate);
+  // R17-PLANNING-2 (P10-planning-tel 2) : au téléphone, la semaine se réduit à une installation.
+  const [filtre, setFiltre] = useState(/** @type {string | null} */ (null));
+  const [filtreOuvert, setFiltreOuvert] = useState(false);
+  const installationFiltree = installations.find((/** @type {any} */ installation) => (
+    installation.documentId === filtre)) || null;
   const aujourdhui = getPlanningDefaultDate();
 
   const plage = plageDeLaVue(vue, date);
@@ -506,7 +514,12 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     }
 
     if (vue === VUES.semaine) {
-      const blocsDeLaSemaine = blocs.filter((/** @type {any} */ bloc) => {
+      // Le filtre ne vaut qu'au téléphone (la grille de l'ordinateur montre toutes les rangées).
+      const blocsVus = !isDesktop && installationFiltree
+        ? blocs.filter((/** @type {any} */ bloc) => (
+          bloc.installation?.documentId === installationFiltree.documentId))
+        : blocs;
+      const blocsDeLaSemaine = blocsVus.filter((/** @type {any} */ bloc) => {
         const jour = getPlanningItemDate(bloc);
         return Boolean(jour) && /** @type {Date} */ (jour) >= debutDeSemaine
           && /** @type {Date} */ (jour) < addDays(debutDeSemaine, 7);
@@ -544,7 +557,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         return (
           <View style={{ gap: 8 }}>
             {vide}
-            {listeDeLaSemaine(blocs, debutDeSemaine).map((ligne) => (
+            {listeDeLaSemaine(blocsVus, debutDeSemaine).map((ligne) => (
               <View key={ligne.jour.toISOString()} style={{ gap: 8 }}>
                 <Text style={[Fonts.p2Bold, Fonts.primary200, { marginTop: 8 }]}>
                   {isSameDay(ligne.jour, aujourdhui)
@@ -810,6 +823,12 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             <View style={{ alignItems: 'center', minWidth: 160 }}>
               {/* R17-PLANNING-2 (P10-planning-tel 1) : au téléphone, la journée dit qu'elle
                   couvre toutes les installations. */}
+              {!isDesktop && vue === VUES.semaine ? (
+                <Text style={[Fonts.p4, Fonts.primary200]} testID="toutes-contexte">
+                  {installationFiltree?.name
+                    || t('facilityList.toutesInstallations.toutes', 'Toutes les installations')}
+                </Text>
+              ) : null}
               {!isDesktop && vue === VUES.jour ? (
                 <Text style={[Fonts.p4, Fonts.primary200]} testID="toutes-contexte">
                   {t('facilityList.count.total', {
@@ -843,6 +862,27 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                 <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
                 </Text>
+              </TouchableOpacity>
+            ) : null}
+            {!isDesktop && vue === VUES.semaine ? (
+              <TouchableOpacity
+                accessibilityLabel={t(
+                  'facilityList.toutesInstallations.filtrer',
+                  'Filtrer par installation',
+                )}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: filtreOuvert }}
+                onPress={() => setFiltreOuvert((ouvert) => !ouvert)}
+                style={[
+                  boutonFleche,
+                  installationFiltree ? { borderColor: Colors.primary500 } : null,
+                ]}
+                testID="toutes-filtrer"
+              >
+                <Image
+                  source={Images.filter}
+                  style={{ height: 18, tintColor: Colors.primary200, width: 18 }}
+                />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -882,6 +922,42 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           })}
         </View>
       </View>
+      {!isDesktop && vue === VUES.semaine && filtreOuvert ? (
+        <View accessibilityRole="radiogroup" style={{ gap: 6 }} testID="toutes-choix-filtre">
+          {[null, ...installations].map((/** @type {any} */ installation) => {
+            const id = installation?.documentId || null;
+            const nom = installation?.name
+              || t('facilityList.toutesInstallations.toutes', 'Toutes les installations');
+            const coche = id === (installationFiltree?.documentId || null);
+            return (
+              <TouchableOpacity
+                accessibilityLabel={nom}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: coche }}
+                key={id || 'toutes'}
+                onPress={() => {
+                  setFiltre(id);
+                  setFiltreOuvert(false);
+                }}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: coche ? withAlpha(Colors.primary500, 0.18) : fond,
+                  borderColor: coche ? Colors.primary500 : trait,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  flexDirection: 'row',
+                  minHeight: 44,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <Text style={[Fonts.p2Bold, coche ? Fonts.primary200 : Fonts.neutral00]}>
+                  {nom}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
       {corps()}
       {!enErreur && toutesRevenues && !enDecision && legende.length ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }} testID="toutes-legende">
