@@ -211,3 +211,12 @@ describe('RESA-FIN-APP (1) E-S01 — les liens de la fiche dessinés en un seul 
     expect(dessins(arbre, 'Voir la page')).toEqual([enUnMot('Voir la page')]);
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 1 : la fiche chargée était annoncée « busy » (la vue du squelette réutilisée ;
+// Android ne remet pas l'état à zéro quand la propriété disparaît). La fiche chargée le dit : busy false.
+describe('RESA-FIN-APP (5) E-S01 — la fiche chargée n’est plus « occupée »', () => {
+  it('« console-fiche » : busy false, posé', async () => {
+    const arbre = await monter(<FicheComplexeConsole complexeId="cx-five" />);
+    expect(parRepere(arbre, 'console-fiche')?.props.accessibilityState).toEqual({ busy: false });
+  });
+});

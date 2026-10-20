@@ -210,3 +210,18 @@ describe('E-G15 — la liste des clients', () => {
     expect(mockLecture.refetch).toHaveBeenCalled();
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 (Android) : le bloc « Aucun client « … » » (et, sur la console, la
+// fiche chargée) était annoncé « occupé » par le lecteur d'écran. React réutilise la vue du squelette
+// (`accessibilityState: { busy: true }`) pour le bloc qui le remplace, et Android ne remet pas l'état à zéro
+// quand la propriété disparaît (BaseViewManager.setViewState). Le bloc qui remplace un squelette le DIT : busy false.
+describe('RESA-FIN-APP (5) E-G15 — le bloc qui remplace le squelette n’est plus « occupé »', () => {
+  it('recherche sans résultat : busy false, posé', async () => {
+    const arbre = await monter();
+    mockLecture = pages([]);
+    await act(async () => {
+      arbre.root.findAllByType(TextInput)[0].props.onChangeText('Dupont');
+    });
+    expect(parRepere(arbre, 'clients-recherche-vide')?.props.accessibilityState).toEqual({ busy: false });
+  });
+});
