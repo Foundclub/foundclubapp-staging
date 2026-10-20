@@ -4,6 +4,7 @@ import {
 import { enGB, fr } from 'date-fns/locale';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * R17-CONTROLES (20/10, REC17-011 lot 2, decision d Adel Q6 B) — ce que les ecrans lisent du CARNET
@@ -99,7 +100,10 @@ export const checkPill = (t, check, today) => {
   const jours = differenceInCalendarDays(jour(check.nextDue), jour(today));
   if (jours <= JOURS_DE_LA_DATE) {
     return {
-      label: t('facilityReports.controles.avantLe', { date: format(jour(check.nextDue), 'dd/MM') }),
+      label: t('facilityReports.controles.avantLe', {
+        ...SANS_ECHAPPEMENT,
+        date: format(jour(check.nextDue), 'dd/MM'),
+      }),
       tone: 'warning',
     };
   }
