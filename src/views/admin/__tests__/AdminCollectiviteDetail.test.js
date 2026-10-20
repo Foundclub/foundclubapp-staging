@@ -850,3 +850,66 @@ describe('VT18E — la fiche sur ordinateur (planche P2-fiche-ordi)', () => {
     expect(style(hote(arbre, 'collectivite-bandeau-etat')).flexDirection).not.toBe('row');
   });
 });
+
+// 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel « La zone » et P11-quand-v2-ordi C,
+// validées le 19/10) — LA FICHE DIT LA ZONE DE VACANCES SCOLAIRES, déduite du code INSEE, et
+// FoundClub la corrige d'un appui (route générique de la console). ROUGE avant : rien de cela.
+describe('R17Q2 — la zone de vacances dans la fiche de la console', () => {
+  const ZONE = {
+    deduced: { academie: 'Normandie', departementName: 'Calvados', zone: 'B' },
+    effective: { label: 'Zone B', origin: 'deduced', zone: 'B' },
+  };
+  const avecZone = (/** @type {any} */ champs = {}) => {
+    mockPost.mockImplementation(async (/** @type {string} */ route) => {
+      if (route === EXPLORATEUR) {
+        return {
+          data: {
+            data: [{
+              ...ligneServeur(), holidayZone: ZONE, schoolHolidayZone: null, ...champs,
+            }],
+            meta: {},
+          },
+        };
+      }
+      return repondrePost(route);
+    });
+  };
+
+  it('la zone déduite, d’où elle vient, et « Déduite » coché', async () => {
+    avecZone();
+    const arbre = await monter();
+    const carte = parTestID(arbre.root, 'admin-collectivite-vacances');
+    expect(textes(carte)).toEqual(expect.arrayContaining([
+      'Vacances scolaires',
+      'Zone B · déduite',
+      'Le code INSEE donne la zone B (académie de Normandie, Calvados).',
+    ]));
+    expect(parTestID(arbre.root, 'admin-collectivite-zone-deduite').props.accessibilityState)
+      .toEqual({ checked: true, disabled: false });
+  });
+
+  it('corriger : un appui sur « A » écrit la zone par la console', async () => {
+    avecZone();
+    mockPut.mockResolvedValue({ data: { data: {} } });
+    const arbre = await monter();
+    await act(async () => {
+      parTestID(arbre.root, 'admin-collectivite-zone-A').props.onPress();
+    });
+    expect(mockPut).toHaveBeenCalledWith(
+      '/superadmin/content/api%3A%3Acollectivite.collectivite/ville-montrivage',
+      { data: { schoolHolidayZone: 'A' }, reason: 'Zone de vacances scolaires' },
+    );
+  });
+
+  it('une zone corrigée se dit « corrigée par FoundClub »', async () => {
+    avecZone({
+      holidayZone: { ...ZONE, effective: { label: 'Zone A', origin: 'console', zone: 'A' } },
+      schoolHolidayZone: 'A',
+    });
+    const arbre = await monter();
+    expect(textes(parTestID(arbre.root, 'admin-collectivite-vacances')))
+      .toContain('Zone A · corrigée par FoundClub');
+    expect(parTestID(arbre.root, 'admin-collectivite-zone-A').props.accessibilityState.checked)
+      .toBe(true);
+  });
+});

@@ -5786,6 +5786,19 @@ export default {
       clubsCouverts_other: '{{count}} clubs couverts',
       indisponible: 'Nombre indisponible',
     },
+    // 🌴 R17-QUAND-2 (planches P11-quand-v2-tel « La zone », P11-quand-v2-ordi C).
+    vacances: {
+      aucune: 'Le code INSEE ne donne aucune zone : choisissez-la.',
+      codeInsee: 'Le code INSEE donne la zone {{zone}} (académie de {{academie}}, '
+        + '{{departement}}).',
+      corrigee: '{{zone}} · corrigée par FoundClub',
+      corse: 'Corse',
+      deduite: 'Déduite',
+      deduiteLigne: '{{zone}} · déduite',
+      inconnue: 'Zone inconnue',
+      outremer: 'Outre-mer',
+      titre: 'Vacances scolaires',
+    },
   },
   // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
   // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
