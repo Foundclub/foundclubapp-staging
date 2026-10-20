@@ -22,6 +22,8 @@ import path from 'path';
 // R17-ADRESSE (REC17-008, 19/10) : +1. « Modifier le club » (ClubEdit.js) quitte le texte libre
 // pour ce champ, et le rejoint côté « lieu public » (l'adresse d'un club se cherche par distance).
 // RESA-INSCRIPTION (19/10, et RESA-L6B-1, RESA-L7-1 et RESA-CARTE, RESA-L5B-1 : meme compte ; la vue Carte n en ajoute aucun) : fusion de staging dans la branche RESA ⇒ 30 + 2 (RESA) + 1 (R17) = 33.
+// RESA-L5B-2 (20/10) : 34 — « Mon complexe » (E-G11) modifie l'adresse du complexe, le même lieu
+// PUBLIC que « Devenir gérant » (E-G01) : avec le lien.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -33,6 +35,7 @@ const LIEU_PUBLIC = [
   'views/club/ClubEdit.js',
   'views/club/wizard/ClubWizardAddress.js',
   'views/complexe/ComplexeDevenirGerant.js',
+  'views/complexe/ComplexeMaPage.js',
   'views/facility/FacilityForm.js',
   'views/friendlyMatch/wizard/FriendlyMatchWizardLocation.js',
   'views/team/TeamEdit.js',
@@ -74,8 +77,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (33 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(33);
+  it('la carte des appelants tient toujours (34 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(34);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {

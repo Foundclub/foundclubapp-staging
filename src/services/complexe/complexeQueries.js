@@ -14,24 +14,37 @@ import {
   creerTerrain,
   debannir,
   deciderDemande,
+  ecrireAuReserveur,
   enregistrerCreneaux,
+  enregistrerPartenaires,
   fermerTerrains,
+  gesteDeLaConsole,
   lireApercuFermeture,
+  lireCanal,
+  lireChiffres,
   lireClient,
+  lireClients,
   lireComplexeGere,
+  lireDansLaConsole,
   lireFermetures,
+  lireFidelite,
+  lireHistoriqueClient,
   lireMesComplexes,
+  lirePartenaires,
   lirePlanning,
   lireReservationGeree,
   lireReservationsDuComplexe,
   lireTerrains,
+  listerLaConsole,
   marquerNonHonoree,
   modifierComplexeGere,
   modifierExterieur,
   modifierTerrain,
   noterExterieur,
+  reglerFidelite,
   retirerTerrain,
   rouvrirFermetures,
+  validerRecompense,
 } from './complexeService';
 
 /**
@@ -432,6 +445,152 @@ export const useDebannir = () => useGeste(
   ({ complexeId, joueurId }) => debannir(complexeId, joueurId),
 );
 
+// ── RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) ──────
+/**
+ * La page suivante d'une lecture par pages de 20 (`{ pagination: { page, pageSize, total } }`).
+ * @param {any} derniere - La dernière page lue.
+ * @returns {number | undefined} Son numéro, ou rien à la fin.
+ */
+const pageSuivante = (derniere) => {
+  const pagination = derniere?.pagination;
+  if (!pagination) return undefined;
+  return pagination.page * pagination.pageSize < pagination.total ? pagination.page + 1 : undefined;
+};
+
+/**
+ * Les CLIENTS de SON complexe (E-G15), par pages de 20 ; la fiche s'en sert aussi pour lire la
+ * fidélité d'un client (cherché par son nom).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {{ onglet: string, recherche?: string }} filtres - L'onglet et le nom cherché.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<any>} Les pages.
+ */
+export const useClientsDuComplexe = (complexeId, filtres, { enabled = true } = {}) => (
+  useInfiniteQuery({
+    enabled: enabled && Boolean(complexeId),
+    getNextPageParam: pageSuivante,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => (await lireClients(
+      String(complexeId),
+      { ...filtres, page: pageParam },
+    ))?.data ?? null,
+    queryKey: ['complexe', complexeId, 'clients', filtres],
+    staleTime: DEMI_MINUTE,
+  })
+);
+
+/**
+ * L'historique d'un client ICI (E-G15, la fiche).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {string | null | undefined} joueurId - documentId du joueur.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ parties, reservations }`.
+ */
+export const useHistoriqueClient = (complexeId, joueurId) => useQuery({
+  enabled: Boolean(complexeId && joueurId),
+  queryFn: async () => (
+    await lireHistoriqueClient(String(complexeId), String(joueurId))
+  )?.data ?? null,
+  queryKey: ['complexe', complexeId, 'client', joueurId, 'historique'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Les statistiques de SON complexe (E-G17) pour une période ; aussi les deux tuiles de l'accueil
+ * (occupation, nouveaux favoris de la semaine).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} Les chiffres.
+ */
+export const useChiffresDuComplexe = (complexeId, periode, { enabled = true } = {}) => useQuery({
+  enabled: enabled && Boolean(complexeId),
+  queryFn: async () => (await lireChiffres(String(complexeId), periode))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'chiffres', periode],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Le canal de SON complexe (E-G12) : sa conversation et ses membres.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ chatId, liste, membres }`.
+ */
+export const useCanalDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  meta: { preventToastError: true },
+  queryFn: async () => (await lireCanal(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'canal'],
+  retry: false,
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Les partenaires de SON complexe (E-G11).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les partenaires.
+ */
+export const usePartenairesDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  queryFn: async () => {
+    const lu = (await lirePartenaires(String(complexeId)))?.data;
+    return Array.isArray(lu?.items) ? lu.items : [];
+  },
+  queryKey: ['complexe', complexeId, 'partenaires'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Enregistrer » les partenaires (la liste entière) ; la page se relit ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, partenaires })`.
+ */
+export const useEnregistrerPartenaires = () => useGeste(
+  ({ complexeId, partenaires }) => enregistrerPartenaires(complexeId, partenaires),
+);
+
+/**
+ * La fidélité de SON complexe (E-G14) : le programme et les trois listes.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ programme, aValider, bientot,
+ *   dernieresValidees }`.
+ */
+export const useFideliteDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  queryFn: async () => (await lireFidelite(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'fidelite'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Enregistrer » le programme de fidélité (E-G14) ; la fidélité, les clients et l'accueil se
+ * relisent ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, programme })`.
+ */
+export const useReglerFidelite = () => useGeste(
+  ({ complexeId, programme }) => reglerFidelite(complexeId, programme),
+);
+
+/**
+ * « Valider la partie offerte » (E-G14).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, joueurId })`.
+ */
+export const useValiderRecompense = () => useGeste(
+  ({ complexeId, joueurId }) => validerRecompense(complexeId, joueurId),
+);
+
+/**
+ * « Écrire » au réserveur (E-G15) : ouvre la conversation de sa réservation ; rien à relire.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })` rend `{ data: { chat } }`.
+ */
+export const useEcrireAuReserveur = () => useMutation({
+  meta: { preventToastError: true },
+  mutationFn: (/** @type {any} */ { complexeId, reservationId }) => (
+    ecrireAuReserveur(complexeId, reservationId)
+  ),
+});
+
 /**
  * L'APERÇU du modèle (`dryRun`) : jugé et résumé par le serveur, rien n'est écrit, rien ne se
  * relit.
@@ -447,3 +606,57 @@ export const useApercuCreneaux = () => useMutation({
     { apercu: true },
   ),
 });
+
+/**
+ * E-S01 — la liste de la console des complexes (SuperAdmin) : un onglet, une recherche.
+ * @param {string} onglet - `a-traiter | tous | suspendus`.
+ * @param {string} recherche - Le nom ou la ville cherchés.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ compteurs, items,
+ *   pagination }`.
+ */
+export const useConsoleDesComplexes = (onglet, recherche, { enabled = true } = {}) => useQuery({
+  enabled,
+  meta: { preventToastError: true },
+  queryFn: async () => (await listerLaConsole({ onglet, recherche }))?.data ?? null,
+  queryKey: ['complexe', 'console', onglet, recherche],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-S01 — la liste de la console, par pages de 20 (« Voir plus ») ; la tuile du dashboard lit,
+ * elle, la première page seule (`useConsoleDesComplexes`).
+ * @param {string} onglet - `a-traiter | tous | suspendus`.
+ * @param {string} recherche - Le nom ou la ville cherchés.
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<any>} Les pages.
+ */
+export const usePagesDeLaConsole = (onglet, recherche) => useInfiniteQuery({
+  getNextPageParam: pageSuivante,
+  initialPageParam: 1,
+  meta: { preventToastError: true },
+  queryFn: async ({ pageParam }) => (
+    await listerLaConsole({ onglet, page: pageParam, recherche })
+  )?.data ?? null,
+  queryKey: ['complexe', 'console', 'pages', onglet, recherche],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-S01 — la fiche d'un complexe dans la console.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La fiche.
+ */
+export const useComplexeDeLaConsole = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  meta: { preventToastError: true },
+  queryFn: async () => (await lireDansLaConsole(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', 'console', 'fiche', complexeId],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-S01 — un geste de la console ; la liste et la fiche se relisent ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, geste, motif?, signalementId?, verified? })`.
+ */
+export const useGesteDeLaConsole = () => useGeste((demande) => gesteDeLaConsole(demande));

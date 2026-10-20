@@ -25,6 +25,7 @@ const mockAnnulerMarquage = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: mockAnnulerMarquage }),
   useAnnulerReservation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   // La lecture du gérant (`toManagedView`) range les règles sous `rules`.
   useComplexeGere: () => ({ data: { rules: { autoBanNoShows: mockSeuil } } }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: jest.fn() }),

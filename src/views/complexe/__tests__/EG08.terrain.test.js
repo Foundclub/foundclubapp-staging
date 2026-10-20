@@ -39,6 +39,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     isPending: false,
     mutateAsync: async () => ({ data: { dryRun: true, reservationsTouchees: 4 } }),
   }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => ({ data: { phoneNumber: '+33639981234' } }),
   useEnregistrerTerrain: () => ({ isPending: false, mutateAsync: mockEnregistrer }),
   useReservationsDuComplexe: () => mockDemandes,

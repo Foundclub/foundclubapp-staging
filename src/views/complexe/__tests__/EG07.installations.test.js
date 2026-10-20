@@ -29,6 +29,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     isPending: false,
     mutateAsync: async () => ({ data: { dryRun: true, reservationsTouchees: 4 } }),
   }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useRetirerTerrain: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useTerrains: () => mockTerrains,
 }));

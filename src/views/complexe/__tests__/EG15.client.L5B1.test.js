@@ -30,6 +30,12 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     mockLecturesClient.push(args);
     return mockClient;
   },
+  // RESA-L5B-2 (20/10/2026) — ce que la fiche lit en plus (RESA-L4) : vide ici, la fiche garde
+  // son allure de RESA-L5B-1 (témoin du complément : EG15.fiche.L5B2.test.js).
+  useClientsDuComplexe: () => ({ data: undefined, isLoading: false }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
+  useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useHistoriqueClient: () => ({ data: undefined, isLoading: false }),
   // La lecture du gérant (`toManagedView`) range les règles sous `rules`.
   useComplexeGere: () => ({ data: { rules: { autoBanNoShows: 3 } } }),
   useDebannir: () => ({ isPending: false, mutateAsync: mockDebannir }),

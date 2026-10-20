@@ -329,6 +329,146 @@ export const debannir = async (complexeId, joueurId) => corps(
 );
 
 // ---------------------------------------------------------------------------------------------
+// RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4, contrat
+// `docs/RESERVATION_CONTRAT_API_L1.md`, section « Ajouté après RESA-L3 et RESA-L4 »).
+// ---------------------------------------------------------------------------------------------
+/**
+ * Les CLIENTS de SON complexe (E-G15) : Tous · Habitués (3 parties jouées ici ou plus) · Bannis,
+ * cherchés par nom, par pages de 20. Jamais un numéro ; la photo d'un mineur n'est pas rendue.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, le nom, la
+ *   page.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, firstname, lastname, avatar, parties,
+ *   noShows, lateCancellations, reservations, derniereReservation, habitue, banni,
+ *   fidelite{count, threshold} | null }], compteurs{ tous, habitues, bannis },
+ *   pagination{ page, pageSize, total } } }`.
+ */
+export const lireClients = async (complexeId, filtres) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients`, { params: remplis(filtres) }),
+);
+
+/**
+ * L'HISTORIQUE d'un client ICI (E-G15, la fiche) : ses parties jouées et ses 50 dernières
+ * réservations, la plus récente d'abord ; jamais venu ici : 404 COMPLEXE_CLIENT_NOT_FOUND.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, parties, reservations[{ documentId, startsAt,
+ *   endsAt, terrain{documentId, name}, status, noShow, lateCancellation, cancelledBy }] } }`.
+ */
+export const lireHistoriqueClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}/historique`),
+);
+
+/**
+ * Les PARTENAIRES de SON complexe (E-G11, A-G25 ; gratuits en V1), dans l'ordre de la page.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, title, link, logo{ id, url } | null }]
+ *   } }`.
+ */
+export const lirePartenaires = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/partenaires`),
+);
+
+/**
+ * « Enregistrer » les partenaires : la liste ENTIÈRE (12 au plus ; « tout retirer » = une liste
+ * vide) ; un partenaire connu garde son documentId, un absent est retiré.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Array<Record<string, any>>} partenaires - `[{ documentId?, title, link?, logo? }]`.
+ * @returns {Promise<any>} `{ data: { items } }`.
+ */
+export const enregistrerPartenaires = async (complexeId, partenaires) => corps(
+  client().put(`/complexes/${enc(complexeId)}/partenaires`, { data: partenaires }),
+);
+
+/**
+ * La FIDÉLITÉ de SON complexe (E-G14) : le programme (ou null : jamais réglé), les récompenses à
+ * valider (x atteint), « Bientôt » (x − 2 ou plus près), les 10 dernières validées. Les compteurs
+ * sont calculés par le serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { programme{ active, counts, reward, threshold } | null,
+ *   aValider[{ count, joueur, reachedAt, threshold }], bientot[…], dernieresValidees[{ joueur,
+ *   parMoi, reward, threshold, validatedAt, validePar }] } }`.
+ */
+export const lireFidelite = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/fidelite`),
+);
+
+/**
+ * « Enregistrer » le programme (E-G14) : la liste blanche `{ active, threshold, reward, counts }`.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ active: boolean, counts: string, reward: string, threshold: number }} programme - Le
+ *   programme.
+ * @returns {Promise<any>} `{ data: { participantsComptes, programme } }`.
+ */
+export const reglerFidelite = async (complexeId, programme) => corps(
+  client().put(`/complexes/${enc(complexeId)}/fidelite`, { data: programme }),
+);
+
+/**
+ * « Valider la partie offerte » d'un joueur arrivé à x (E-G14) : son compteur repart de zéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { count: 0, joueur, threshold, validatedAt } }`.
+ */
+export const validerRecompense = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/fidelite/${enc(joueurId)}/valider`, {}),
+);
+
+/**
+ * Les STATISTIQUES V1 de SON complexe (E-G17) pour une période : l'occupation (le complexe et
+ * chaque terrain, sur les créneaux de son modèle), les réservations, les favoris, la fidélité, les
+ * 5 clients qui ont le plus joué (nom court, jamais un numéro).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<any>} `{ data: { periode, from, to, occupation{ taux, terrains[] },
+ *   reservations, favoris{ total, nouveaux }, fidelite, clientsFideles[] } }`.
+ */
+export const lireChiffres = async (complexeId, periode) => corps(
+  client().get(`/complexes/${enc(complexeId)}/chiffres`, { params: { periode } }),
+);
+
+/**
+ * « Exporter (CSV) » (E-G17) : une ligne par réservation de la période, le texte du serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<string>} Le CSV.
+ */
+export const lireExportChiffres = async (complexeId, periode) => {
+  const reponse = await client().get(`/complexes/${enc(complexeId)}/chiffres/export`, {
+    params: { periode },
+    responseType: 'text',
+    transformResponse: [(/** @type {any} */ brut) => brut],
+  });
+  return String(reponse?.data ?? '');
+};
+
+/**
+ * Le CANAL de SON complexe (E-G12) : ouvert s'il ne l'est pas ; un groupe de la messagerie où seuls
+ * les gérants écrivent (la conversation habituelle, `chatId`). Ses membres, gérants exceptés : le
+ * nom (prénom + initiale), comment ils sont entrés, depuis quand ; jamais un numéro. Complexe qui
+ * n'est pas actif : 409 COMPLEXE_CANAL_INACTIF.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { chatId, liste[{ depuis, documentId, nom, via }], membres } }`.
+ */
+export const lireCanal = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/canal`),
+);
+
+/**
+ * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
+ * par le gérant (la même que celle du réserveur ; RESA-L3).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat } }` (le documentId de la conversation).
+ */
+export const ecrireAuReserveur = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/conversation`,
+    {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
 // Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
 // des fermetures est chargé À L'APPEL (`./complexeChargeurs`, même raison que le client).
@@ -459,3 +599,54 @@ export const bloquerCreneau = async (terrainId, {
  * @returns {Promise<{ id: number, url?: string } | null>} Le fichier, ou null.
  */
 export const televerserPhoto = async (brut) => uploadActualiteFile(brut);
+
+/**
+ * E-S01 — LA CONSOLE DES COMPLEXES (SuperAdmin, serveur RESA-L4, policy is-superadmin) : « À
+ * traiter » (un signalement ouvert, ou créé depuis 7 jours ; jamais un retiré), « Tous »,
+ * « Suspendus » ; recherche par nom ou ville ; pages de 20.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, la
+ *   recherche.
+ * @returns {Promise<any>} `{ data: { compteurs{ aTraiter, suspendus, tous }, items[],
+ *   pagination } }`.
+ */
+export const listerLaConsole = async ({ onglet, page = 1, recherche = '' }) => corps(
+  client().get('/superadmin/complexes', { params: remplis({ onglet, page, recherche }) }),
+);
+
+/**
+ * La fiche d'un complexe dans la console (E-S01) : identité, gérants, terrains, réservations,
+ * signalements, journal.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { complexe, gerants[], journal[], reservations{ aVenir, total },
+ *   signalements[], terrains[] } }`.
+ */
+export const lireDansLaConsole = async (complexeId) => corps(
+  client().get(`/superadmin/complexes/${enc(complexeId)}`),
+);
+
+/**
+ * Un geste de la console (E-S01) : « Suspendre » et « Retirer » (motif de 3 à 300 caractères),
+ * « Réactiver », « Marquer vérifié » (ou le retirer), « Signalement traité ».
+ * @param {{ complexeId: string, geste: 'reactiver' | 'retirer' | 'suspendre' | 'traiter'
+ *   | 'verifier', motif?: string, signalementId?: string, verified?: boolean }} demande - Le geste.
+ * @returns {Promise<any>} `{ data: { documentId, status | verified, reservationsAnnulees? } }`.
+ */
+export const gesteDeLaConsole = async ({
+  complexeId, geste, motif, signalementId, verified,
+}) => {
+  const racine = `/superadmin/complexes/${enc(complexeId)}`;
+  switch (geste) {
+    case 'reactiver':
+      return corps(client().post(`${racine}/retablir`, {}));
+    case 'retirer':
+      return corps(client().post(`${racine}/retirer`, { data: { motif } }));
+    case 'suspendre':
+      return corps(client().post(`${racine}/suspendre`, { data: { motif } }));
+    case 'traiter':
+      return corps(client().post(`${racine}/signalements/${enc(signalementId)}/traiter`, {}));
+    case 'verifier':
+      return corps(client().post(`${racine}/verifier`, { data: { verified: Boolean(verified) } }));
+    default:
+      throw new Error(`Geste inconnu : ${String(geste)}`);
+  }
+};

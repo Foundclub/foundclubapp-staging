@@ -46,6 +46,7 @@ import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  useChiffresDuComplexe,
   useMesComplexes,
   usePlanning,
   useReservationsDuComplexe,
@@ -61,12 +62,6 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 // OR1 (« le gérant au comptoir ») : la largeur à partir de laquelle l'accueil prend sa mise en
 // page d'ordinateur, la même que l'accueil de la Ville (CollectiviteHome, LARGEUR_COLONNES).
 const LARGEUR_ORDINATEUR = 1024;
-
-/**
- * Les nouveaux favoris (7 jours) : 0, et c'est exact — les favoris n'existent pas encore (lot L4,
- * E-G17). RESA-L5A2 (14/10/2026) : les trois autres chiffres viennent du serveur RESA-L2A.
- */
-const FAVORIS_SANS_LE_LOT_L4 = 0;
 
 /**
  * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure du téléphone.
@@ -91,8 +86,9 @@ const jourEtHeure = (instant) => ({
  * d'Adel d'abord, A-G03).
  * Ce qui dépend des RÉSERVATIONS (lot L2A, pas encore servi) est dans son état vide dessiné : la
  * frise toute « libre », les chiffres à 0, aucune réservation à venir ; l'alerte « Hier : … » ne
- * s'affiche pas (il n'y a rien à vérifier). Les cases des écrans des lots suivants disent
- * « Bientôt » et ne mènent nulle part.
+ * s'affiche pas (il n'y a rien à vérifier). RESA-L5B-2 (20/10/2026) : chaque case ouvre son
+ * écran ; occupation et favoris (le nombre de la semaine, serveur RESA-L4) ouvrent les statistiques
+ * (E-G17), « Créer une affiche » (E-G13) sous « Aucune réservation à venir ».
  * Paramètres de route : `complexeId` (sinon le premier complexe du compte), `justeCree`.
  * Caché par `COMPLEXES_GERANT` (la route n'existe pas tant qu'il est éteint).
  * @returns {import('react').ReactElement} L'écran.
@@ -127,6 +123,8 @@ function ComplexeAccueil() {
   const duJour = useReservationsDuComplexe(complexeId, { vue: 'aujourdhui' });
   const aVenir = useReservationsDuComplexe(complexeId, { vue: 'a-venir' });
   const enAttente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
+  // RESA-L5B-2 (20/10/2026) — les nouveaux favoris de la semaine (serveur RESA-L4, E-G17).
+  const chiffresDuServeur = useChiffresDuComplexe(complexeId, 'semaine');
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -367,6 +365,7 @@ function ComplexeAccueil() {
       cle: 'occupation',
       jauge: chiffresDeLaSemaine.occupation,
       libelle: t('complexeGerant.accueil.occupation', 'd’occupation cette semaine'),
+      onPress: () => ouvrir(RouteNames.ComplexeStatistiques),
       valeur: `${chiffresDeLaSemaine.occupation} %`,
     },
     {
@@ -377,8 +376,9 @@ function ComplexeAccueil() {
     },
     {
       cle: 'favoris',
-      libelle: t('complexeGerant.accueil.favoris', 'nouveaux favoris (7 jours)'),
-      valeur: String(FAVORIS_SANS_LE_LOT_L4),
+      libelle: t('complexeGerant.accueil.favoris', 'nouveaux favoris cette semaine'),
+      onPress: () => ouvrir(RouteNames.ComplexeStatistiques),
+      valeur: String(chiffresDuServeur.data?.favoris?.nouveaux || 0),
     },
   ];
   const chiffres = (
@@ -457,13 +457,23 @@ function ComplexeAccueil() {
           </View>
         </TouchableOpacity>
       )) : (
-        <View style={[carte, Spaces.padding[16]]}>
+        <View style={[carte, Spaces.padding[16], { gap: 4 }]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'complexeGerant.accueil.aucuneAVenir',
               'Aucune réservation à venir. Fais connaître ta page.',
             )}
           </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => ouvrir(RouteNames.ComplexeAffiches)}
+            style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+            testID="complexe-accueil-creer-affiche"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('complexeGerant.accueil.creerAffiche', 'Créer une affiche')}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

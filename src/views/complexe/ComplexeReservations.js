@@ -37,6 +37,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useAnnulerNonHonoree,
+  useComplexeChoisi,
   useMarquerNonHonoree,
   useReservationsDuComplexe,
   useTerrains,
@@ -90,7 +91,8 @@ function ComplexeReservations() {
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   const params = /** @type {{ complexeId?: string, vue?: string } | undefined} */ (route?.params);
-  const complexeId = params?.complexeId || null;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   const [vue, setVue] = useState(/** @type {VueDesReservations} */ (
     VUES.find((candidate) => candidate === params?.vue) || 'aujourdhui'
   ));

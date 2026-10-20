@@ -7,6 +7,8 @@ import FicheReservation from '@/views/complexe/components/FicheReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useComplexeChoisi } from '@/services/complexe/complexeQueries';
+
 /**
  * E-G05 — LA FICHE D'UNE RÉSERVATION, sur téléphone — RESA-L5A2 (14/10/2026), planche EG05 : la
  * fiche (`FicheReservation`) en écran entier. Entrées : une carte de E-G04, de E-G06, la frise et
@@ -24,6 +26,8 @@ function ComplexeReservation() {
   const params = /** @type {{ complexeId?: string, reservationId?: string } | undefined} */ (
     route?.params
   );
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -31,13 +35,13 @@ function ComplexeReservation() {
       contentContainerStyle={[Spaces.paddingTop[12], Spaces.paddingBottom[16], Alignments.fill]}
     >
       <FicheReservation
-        complexeId={params?.complexeId || null}
+        complexeId={complexeId}
         onVoirClient={(joueurId) => navigation.navigate(RouteNames.ComplexeClient, {
-          complexeId: params?.complexeId, joueurId,
+          complexeId, joueurId,
         })}
         onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexeEspace, {
           params: {
-            complexeId: params?.complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,
+            complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,
           },
           screen: RouteNames.ComplexePlanning,
         })}

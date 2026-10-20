@@ -16,6 +16,9 @@ import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
  *   · l'icône de chaque ligne (planche EG19), dans le jeu d'icônes de l'app (`SvgIcon`) ;
  *   · partie B (serveur RESA-L2C) : N-06 « Hier » (« hier », cloche seulement, sans réservation)
  *     ⇒ les réservations, onglet « Passées » (E-G04), où l'on marque les non honorées.
+ * RESA-L5B-2 (20/10/2026, serveur RESA-L4) : N-11, le statut du complexe (`complexeStatut`,
+ * `data.change` = `suspendu | retabli | retire`, `motif`, sans réservation) ⇒ l'accueil (E-G02),
+ * où le bandeau dit l'état ; l'icône du bouclier.
  * Elles arrivent aussi en mode joueur, avec la pastille « Mode complexe » ; l'espace du complexe,
  * une fois ouvert, repasse le téléphone en mode complexe (`ComplexeTabNavigator`).
  * Tout est éteint avec `COMPLEXES_GERANT` (aucune destination, aucune pastille).
@@ -30,6 +33,38 @@ const interrupteur = () => Boolean(COMPLEXES_GERANT);
 
 /** Le type de notification du gérant (serveur RESA-L2A, `notification-templates.ts`). */
 export const TYPE_DU_GERANT = 'complexeReservationGerant';
+
+/** RESA-L5B-2 — N-11, le statut du complexe (serveur RESA-L4, `COMPLEXE_STATUT`). */
+export const TYPE_STATUT_DU_COMPLEXE = 'complexeStatut';
+
+/** RESA-L5B-2 — N-09, un joueur a signalé un complexe : aux SuperAdmin (`COMPLEXE_SIGNALE`). */
+export const TYPE_SIGNALEMENT_DU_COMPLEXE = 'complexeSignale';
+
+const TYPES_DU_GERANT = Object.freeze([TYPE_DU_GERANT, TYPE_STATUT_DU_COMPLEXE]);
+
+/**
+ * RESA-L5B-2 — N-09 : la fiche du complexe signalé dans la console du SuperAdmin (E-S01), ou la
+ * liste (« À traiter ») sans complexe. Éteint (`COMPLEXES_GERANT`) : null.
+ * @param {Record<string, any>} charge - `complexeId`, `signalementId`.
+ * @returns {{ params: Record<string, any>, route: string } | null} La destination, ou null.
+ */
+export const destinationDuSignalement = (charge) => {
+  if (!interrupteur()) return null;
+  const complexeId = String(charge?.complexeId || '');
+  return {
+    params: complexeId
+      ? { params: { complexeId }, screen: RouteNames.AdminComplexeDetail }
+      : { params: {}, screen: RouteNames.AdminComplexeList },
+    route: RouteNames.AdminStack,
+  };
+};
+
+/**
+ * Un type que l'app aiguille vers l'espace du complexe (sans regarder l'interrupteur) ?
+ * @param {unknown} type - Le type de la notification.
+ * @returns {boolean} Vrai pour les réservations du gérant et le statut du complexe.
+ */
+export const estTypeDuGerant = (type) => TYPES_DU_GERANT.includes(String(type));
 
 const VERS_LES_DEMANDES = Object.freeze(['demande', 'expire-bientot']);
 
@@ -53,7 +88,7 @@ const ICONES_DU_GERANT = Object.freeze({
  * @param {unknown} type - Le type de la notification.
  * @returns {boolean} Vrai pour une notification du gérant, interrupteur allumé.
  */
-export const estNotificationDuComplexe = (type) => interrupteur() && type === TYPE_DU_GERANT;
+export const estNotificationDuComplexe = (type) => interrupteur() && estTypeDuGerant(type);
 
 /**
  * RESA-L5B-1 — l'icône d'une notification du gérant (`SvgIcon`), ou null : interrupteur éteint
@@ -64,6 +99,7 @@ export const estNotificationDuComplexe = (type) => interrupteur() && type === TY
  */
 export const iconeDuGerant = (type, data) => {
   if (!estNotificationDuComplexe(type)) return null;
+  if (type === TYPE_STATUT_DU_COMPLEXE) return 'shield';
   return /** @type {Record<string, string>} */ (ICONES_DU_GERANT)[String(data?.change || '')]
     || 'stadium';
 };

@@ -217,6 +217,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-CONSOLE (02/10) — les demandes de rattachement et « Par FoundClub » (hors de
   // /admin/collectivites/:id, pour la meme raison que la file des gestionnaires).
   [RouteNames.AdminCollectiviteInvitations]: '/admin/rattachements-collectivites',
+  // RESA-L5B-2 (20/10/2026) — E-S01, la console des complexes (COMPLEXES_GERANT).
+  [RouteNames.AdminComplexeList]: '/admin/complexes',
+  [RouteNames.AdminComplexeDetail]: '/admin/complexes/:complexeId',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',
@@ -329,6 +332,20 @@ const WEB_ROUTE_PATTERNS = {
   // Le formulaire d un terrain (sans identifiant : l ajouter ; avec : le modifier).
   [RouteNames.ComplexeTerrain]: '/mon-complexe/terrain/:terrainId?',
   [RouteNames.ComplexeReglages]: '/mon-complexe/reglages',
+  // RESA-L5B-2 (20/10/2026) — la communauté du complexe (serveur RESA-L4) : la liste des clients
+  // (E-G15) et la fiche d'un client (RESA-L5B-1, jusque-là sans adresse).
+  [RouteNames.ComplexeClients]: '/mon-complexe/clients',
+  [RouteNames.ComplexeClient]: '/mon-complexe/clients/:joueurId',
+  // La fidélité (E-G14).
+  [RouteNames.ComplexeFidelite]: '/mon-complexe/fidelite',
+  // les statistiques du complexe (E-G17, serveur RESA-L4).
+  [RouteNames.ComplexeStatistiques]: '/mon-complexe/statistiques',
+  // « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4).
+  [RouteNames.ComplexeMaPage]: '/mon-complexe/ma-page',
+  // les affiches du complexe (E-G13, serveur RESA-L4).
+  [RouteNames.ComplexeAffiches]: '/mon-complexe/affiches',
+  // le canal du complexe (E-G12, serveur RESA-L4).
+  [RouteNames.ComplexeCanal]: '/mon-complexe/canal',
   // RESA-L7-1 — LE JOUEUR (RESA-L6A). La page du complexe EST sa page publique dans l annuaire,
   // par son slug (planche OR2 : « d abord une page du site » ; le cadre change selon qu on a un
   // compte, web/src/pages/seo/CadreAnnuaire.tsx). Les écrans qui demandent un compte sous

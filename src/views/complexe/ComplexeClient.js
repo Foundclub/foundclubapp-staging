@@ -1,4 +1,4 @@
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,11 +7,16 @@ import {
 
 import {
   BAN_RAISON_MAX,
+  clientDepuis,
   corpsDuBan,
   etatDuBan,
+  ligneHistorique,
   nomComplet,
+  prochaineReservation,
 } from '@/domains/complexe/clientDuComplexe';
-import { initialesDe, messageDeRefusResa, nomCourt } from '@/domains/complexe/complexeReservation';
+import {
+  initialesDe, lignesDesPages, messageDeRefusResa, nomCourt,
+} from '@/domains/complexe/complexeReservation';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -23,12 +28,19 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import PastillesReservation from '@/views/complexe/components/PastillesReservation';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useBannir,
   useClientDuComplexe,
+  useClientsDuComplexe,
+  useComplexeChoisi,
   useComplexeGere,
   useDebannir,
+  useEcrireAuReserveur,
+  useHistoriqueClient,
   useReservationGeree,
 } from '@/services/complexe/complexeQueries';
 
@@ -63,10 +75,12 @@ const nombre = (valeur) => (Number.isFinite(Number(valeur)) ? Number(valeur) : 0
  * Entrées : le nom du réserveur sur la fiche d'une réservation (E-G05, `joueurId`) ; la
  * notification du bannissement automatique (N-12), qui ne porte que la réservation
  * (`reservationId`) : le joueur est lu dans sa fiche.
- * Pas encore servi (dit dans le compte rendu du lot) : la LISTE des clients, ses onglets et sa
- * recherche, les parties jouées, la fidélité, l'historique de ses réservations, « Client depuis
- * le » (lot RESA-L4 / RESA-L5B-2) ; « Écrire » (la conversation de la réservation, lot L3) ;
- * le volet droit sur ordinateur (lot site L7).
+ * RESA-L5B-2 (20/10/2026, serveur RESA-L4) : « Client depuis le 02/09 » (sa plus ancienne
+ * réservation ICI, quand l'historique est entier), les parties jouées et la fidélité « 8/10 » (lue
+ * dans la LISTE des clients, cherchée par son nom : la fiche du serveur ne la porte pas) parmi les
+ * chiffres, l'« Historique » (ses 50 dernières réservations ICI ; toucher une ligne ouvre sa fiche,
+ * E-G05) et « Écrire » SEULEMENT s'il a une réservation à venir (AT-04 : la conversation de CETTE
+ * réservation, RESA-L3). La liste elle-même : `ComplexeClients`.
  * Paramètres de route : `complexeId` et `joueurId`, ou `reservationId`. Caché par
  * `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -76,9 +90,11 @@ function ComplexeClient() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   const params = /** @type {ParamsDuClient | undefined} */ (route?.params);
-  const complexeId = params?.complexeId || null;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   // N-12 ne porte que la réservation : le joueur est lu dans sa fiche (rien n'est lu sinon).
   const viaReservation = useReservationGeree(
     params?.joueurId ? null : complexeId,
@@ -90,6 +106,20 @@ function ComplexeClient() {
   const seuil = Number(useComplexeGere(complexeId).data?.rules?.autoBanNoShows);
   const bannir = useBannir();
   const debannir = useDebannir();
+  // RESA-L5B-2 — l'historique et les parties (RESA-L4) ; la fidélité, dans la liste cherchée par
+  // son nom (ponytail: une lecture de la liste pour UN client — plafond : la fiche du serveur ne
+  // porte pas la fidélité ; voie de sortie : `fidelite` dans `GET /clients/:joueurId`).
+  const historique = useHistoriqueClient(complexeId, joueurId);
+  const nomCherche = nomComplet(lecture.data);
+  const parSonNom = useClientsDuComplexe(
+    complexeId,
+    { onglet: 'tous', recherche: nomCherche },
+    { enabled: Boolean(nomCherche) },
+  );
+  const fidelite = lignesDesPages(parSonNom.data)
+    .find((/** @type {any} */ ligne) => ligne?.documentId === joueurId)?.fidelite || null;
+  const ecrire = useEcrireAuReserveur();
+  const [erreurEcrire, setErreurEcrire] = useState('');
 
   /** @typedef {'' | 'bannir' | 'debannir'} FeuilleDuClient */
   const [feuille, setFeuille] = useState(/** @type {FeuilleDuClient} */ (''));
@@ -181,7 +211,36 @@ function ComplexeClient() {
     );
   } else {
     const banni = Boolean(client.ban);
+    const reservationsIci = Array.isArray(historique.data?.reservations)
+      ? historique.data.reservations
+      : [];
+    const parties = historique.data ? nombre(historique.data.parties) : null;
+    const seuilFidelite = Number(fidelite?.threshold);
+    const depuis = clientDepuis(reservationsIci);
+    const aEcrire = prochaineReservation(reservationsIci);
+    const ecrireAuClient = async () => {
+      if (!aEcrire) return;
+      setErreurEcrire('');
+      try {
+        const reponse = await ecrire.mutateAsync({
+          complexeId, reservationId: aEcrire.documentId,
+        });
+        const chatId = reponse?.data?.chat;
+        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId });
+      } catch (erreur) {
+        setErreurEcrire(messageDeRefusResa(t, erreur, repli));
+      }
+    };
     const chiffres = [
+      ...(parties === null ? [] : [{
+        cle: 'parties',
+        libelle: t('complexeClients.chiffres.parties', 'parties jouées', {
+          count: parties,
+          defaultValue_one: 'partie jouée',
+          defaultValue_other: 'parties jouées',
+        }),
+        valeur: parties,
+      }]),
       {
         cle: 'non-honorees',
         libelle: t('complexeClients.chiffres.nonHonorees', 'non honorée', {
@@ -200,6 +259,11 @@ function ComplexeClient() {
         }),
         valeur: nombre(client.lateCancellations),
       },
+      ...(fidelite && Number.isInteger(seuilFidelite) && seuilFidelite > 0 ? [{
+        cle: 'fidelite',
+        libelle: t('complexeClients.chiffres.fidelite', 'fidélité'),
+        valeur: `${nombre(fidelite.count)}/${seuilFidelite}`,
+      }] : []),
       {
         cle: 'a-venir',
         libelle: t('complexeClients.chiffres.aVenir', 'réservation à venir', {
@@ -228,6 +292,13 @@ function ComplexeClient() {
             <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
               {nomComplet(client)}
             </Text>
+            {depuis ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('complexeClients.fiche.depuis', 'Client depuis le {{jour}}', {
+                  jour: depuis, ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+            ) : null}
             {banni ? (
               <View
                 style={[
@@ -253,7 +324,23 @@ function ComplexeClient() {
               </View>
             ) : null}
           </View>
+          {aEcrire ? (
+            <View testID="client-ecrire">
+              <Button
+                isLoading={Boolean(ecrire.isPending)}
+                onPress={ecrireAuClient}
+                size="sm"
+                title={t('complexeClients.fiche.ecrire', 'Écrire')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
         </View>
+        {erreurEcrire ? (
+          <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>
+            {erreurEcrire}
+          </Text>
+        ) : null}
         {message ? (
           <BandeauComplexe testID="client-message" texte={message.texte} ton={message.ton} />
         ) : null}
@@ -278,6 +365,32 @@ function ComplexeClient() {
             </View>
           ))}
         </View>
+        {reservationsIci.length ? (
+          <View style={{ gap: 8 }} testID="client-historique">
+            <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+              {t('complexeClients.fiche.historique', 'Historique').toUpperCase()}
+            </Text>
+            {reservationsIci.map((/** @type {any} */ reservation) => {
+              const ligne = ligneHistorique(reservation);
+              return (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  key={reservation.documentId}
+                  onPress={() => navigation.navigate(RouteNames.ComplexeReservation, {
+                    complexeId, reservationId: reservation.documentId,
+                  })}
+                  style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, {
+                    gap: 8, minHeight: 44,
+                  }]}
+                  testID={`client-historique-${reservation.documentId}`}
+                >
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.texte}</Text>
+                  <PastillesReservation statut={ligne.etat} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
         <View
           style={[
             carte,

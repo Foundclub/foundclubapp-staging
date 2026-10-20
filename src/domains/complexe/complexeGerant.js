@@ -207,16 +207,22 @@ export const messageDeRefus = (t, erreur, repli) => {
  * @type {ReadonlyArray<{ cle: string, icone: string, route: string | null }>}
  */
 export const CASES_GERER = Object.freeze([
-  { cle: 'complexe', icone: 'shield', route: null },
+  // RESA-L5B-2 (20/10/2026) : « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4).
+  { cle: 'complexe', icone: 'shield', route: RouteNames.ComplexeMaPage },
   { cle: 'installations', icone: 'stadium', route: RouteNames.ComplexeInstallations },
   { cle: 'demandes', icone: 'inboxArrowDown', route: RouteNames.ComplexeDemandes },
   { cle: 'planning', icone: 'calendar', route: RouteNames.ComplexePlanning },
   { cle: 'reservations', icone: 'clock', route: RouteNames.ComplexeReservations },
-  { cle: 'canal', icone: 'envelope', route: null },
-  { cle: 'affiches', icone: 'share2', route: null },
-  { cle: 'fidelite', icone: 'trophy', route: null },
-  { cle: 'clients', icone: 'users', route: null },
-  { cle: 'statistiques', icone: 'chart', route: null },
+  // RESA-L5B-2 (20/10/2026) : le canal du complexe (E-G12, serveur RESA-L4).
+  { cle: 'canal', icone: 'envelope', route: RouteNames.ComplexeCanal },
+  // RESA-L5B-2 (20/10/2026) : les affiches du complexe (E-G13, serveur RESA-L4).
+  { cle: 'affiches', icone: 'share2', route: RouteNames.ComplexeAffiches },
+  // RESA-L5B-2 (20/10/2026) : la fidélité (E-G14, serveur RESA-L4).
+  { cle: 'fidelite', icone: 'trophy', route: RouteNames.ComplexeFidelite },
+  // RESA-L5B-2 (20/10/2026) : la liste des clients (E-G15, serveur RESA-L4).
+  { cle: 'clients', icone: 'users', route: RouteNames.ComplexeClients },
+  // RESA-L5B-2 (20/10/2026) : les statistiques du complexe (E-G17, serveur RESA-L4).
+  { cle: 'statistiques', icone: 'chart', route: RouteNames.ComplexeStatistiques },
   { cle: 'reglages', icone: 'edit', route: RouteNames.ComplexeReglages },
 ]);
 

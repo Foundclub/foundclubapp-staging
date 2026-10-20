@@ -24,6 +24,7 @@ import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 
 import {
   useApercuAgeMinimum,
+  useComplexeChoisi,
   useComplexeGere,
   useModifierComplexe,
 } from '@/services/complexe/complexeQueries';
@@ -52,7 +53,8 @@ function ComplexeReglages() {
   const { Alignments, Colors, Fonts } = useTheme();
   const route = useRoute();
   const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
-  const complexeId = params?.complexeId || null;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   const complexe = useComplexeGere(complexeId);
   const modifier = useModifierComplexe();
 

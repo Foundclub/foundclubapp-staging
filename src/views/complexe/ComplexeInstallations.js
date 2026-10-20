@@ -19,7 +19,7 @@ import FeuilleRetrait from '@/views/complexe/components/FeuilleRetrait';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useTerrains } from '@/services/complexe/complexeQueries';
+import { useComplexeChoisi, useTerrains } from '@/services/complexe/complexeQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -42,7 +42,8 @@ function ComplexeInstallations() {
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
-  const complexeId = params?.complexeId;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   const terrainsLus = useTerrains(complexeId);
   const surOrdinateur = useIsDesktop();
   const [menu, setMenu] = useState(/** @type {any} */ (null));

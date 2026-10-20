@@ -11,6 +11,8 @@ import AdminCollectiviteDetail from '@/views/admin/AdminCollectiviteDetail';
 import AdminCollectiviteForm from '@/views/admin/AdminCollectiviteForm';
 import AdminCollectiviteInvitations from '@/views/admin/AdminCollectiviteInvitations';
 import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
+import AdminComplexeDetail from '@/views/admin/AdminComplexeDetail';
+import AdminComplexeList from '@/views/admin/AdminComplexeList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
@@ -49,6 +51,8 @@ import SuperAdminLicensesDashboard from '@/views/admin/SuperAdminLicensesDashboa
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
+
+import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
 
 const Stack = createStackNavigator();
 
@@ -307,6 +311,27 @@ function AdminStack() {
             headerTitle: t('collectiviteAccueil.console.entete', 'Gestionnaires'),
           }}
         />
+        {/* RESA-L5B-2 (20/10/2026) — E-S01, la console des complexes (COMPLEXES_GERANT). */}
+        {COMPLEXES_GERANT ? (
+          <>
+            <Stack.Screen
+              component={AdminComplexeList}
+              name={RouteNames.AdminComplexeList}
+              options={{
+                ...commonOptions,
+                headerTitle: t('complexeConsole.titre', 'Complexes'),
+              }}
+            />
+            <Stack.Screen
+              component={AdminComplexeDetail}
+              name={RouteNames.AdminComplexeDetail}
+              options={{
+                ...commonOptions,
+                headerTitle: t('complexeConsole.ficheTitre', 'Complexe'),
+              }}
+            />
+          </>
+        ) : null}
         {/* COLL-CONSOLE (02/10) — les demandes de rattachement et « Par FoundClub ». */}
         <Stack.Screen
           component={AdminCollectiviteInvitations}
