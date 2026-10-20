@@ -55,6 +55,28 @@ function AvatarDuFil({
         <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />
       );
       break;
+    // MSG-VILLE-NOUVELLE (20/10) — la conversation ouverte par la Ville : côté membre, l'écusson de
+    // la Ville ; côté Ville, le groupe (son nom) ou la personne d'en face.
+    case 'collectivite_conversation': {
+      const nomDuGroupe = String(chat?.groupName || '').trim();
+      const enFace = chat?.participants?.find((/** @type {any} */ p) => p?.documentId !== meId);
+      if (!espaceVille) {
+        contenu = <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />;
+      } else if (nomDuGroupe) {
+        contenu = <ClubLogoMark name={nomDuGroupe} size={ecusson} />;
+      } else {
+        contenu = (
+          <ProfileAvatar
+            enablePreview={false}
+            imageStyle={{ borderRadius: size }}
+            imageUrl={enFace?.avatar?.url}
+            name={[enFace?.firstname, enFace?.lastname].filter(Boolean).join(' ')}
+            size={size}
+          />
+        );
+      }
+      break;
+    }
     case 'collectivite_dirigeants':
       contenu = <IconeDuCanal taille={ecusson} />;
       break;

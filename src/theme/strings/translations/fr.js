@@ -2074,6 +2074,9 @@ export default {
     COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_CLUB_WITHOUT_LEADER: 'Ce club n’a aucun dirigeant sur FoundClub : invitez-le par le lien de la Ville.',
+    //   MSG-VILLE-NOUVELLE (20/10) — hors des clubs de la Ville, ou compte supprimé
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_CONTACT_NOT_ALLOWED: 'La Ville écrit seulement aux membres majeurs de ses clubs et à ses autres gérants.',
     COLLECTIVITE_DEMO_FORBIDDEN: 'La Ville de démonstration n’envoie aucune demande.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Vous ne gérez pas cette collectivité.',
@@ -5225,18 +5228,30 @@ export default {
       priveeClub: 'Écris à la Ville…',
       priveeMairie: 'Écrire à {{club}}…',
     },
+    // MSG-VILLE-NOUVELLE (20/10) — la conversation que la Ville ouvre avec qui elle veut.
+    libre: {
+      sousTitreMairie: 'Seules les personnes choisies la lisent',
+      sousTitreMembre: 'Conversation avec {{ville}}',
+      // eslint-disable-next-line max-len
+      videMairie: 'Conversation privée : seules les personnes que vous avez choisies la lisent. Vos messages partent au nom de la Ville.',
+      // eslint-disable-next-line max-len
+      videMembre: 'Conversation privée ouverte par {{ville}} : seules les personnes choisies la lisent.',
+    },
     mairieLigne: 'Vous et les dirigeants des {{nombre}} clubs · échanges de créneaux',
     mairieLigneUn: 'Vous et les dirigeants d’1 club · échanges de créneaux',
     membres: {
       aucunDirigeant: 'Aucun dirigeant sur l’app pour l’instant.',
       dirigeant: 'dirigeant',
       gestionnaire: 'gestionnaire',
+      membre: 'membre',
       moiToi: '{{nom}} (toi)',
       moiVous: '{{nom}} (vous)',
       ouvrirCanal: 'Qui est dans ce canal',
       ouvrirPrivee: 'Qui est dans cette conversation',
       // eslint-disable-next-line max-len
       regleCanal: 'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
+      // eslint-disable-next-line max-len
+      regleLibre: 'Seules les personnes choisies par la Ville lisent cette conversation. Jamais un mineur.',
       reglePrivee: 'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
       sousTitreCanal: 'Dirigeants des clubs · {{ville}}',
       sousTitrePrivee: '{{club}} · {{ville}}',
@@ -16124,6 +16139,27 @@ export default {
       rule: '1 personne = privé · 2 et plus = groupe',
       selected_one: '{{count}} sélectionné',
       selected_other: '{{count}} sélectionnés',
+    },
+    // MSG-VILLE-NOUVELLE (20/10) — « Nouvelle conversation » depuis l’espace de la Ville (vous).
+    ville: {
+      aide: 'Choisissez un club ci-dessus, ou cherchez un nom.',
+      auMoinsDeux: 'Ajoutez au moins 2 personnes pour créer un groupe.',
+      chercher: 'Chercher un nom dans les clubs de la Ville…',
+      dirigeant: 'Dirigeant',
+      dirigeants: 'Dirigeants',
+      entraineur: 'Coach',
+      entraineurs: 'Coachs',
+      gerants: 'Gérants',
+      gestionnaire: 'Gérant de la Ville',
+      gestionnaires: 'Gérants de la Ville',
+      joueur: 'Joueur',
+      joueurs: 'Joueurs',
+      laVille: 'la Ville',
+      nomDuGroupeAide: 'Sans nom, il s’appellera « {{name}} ». Il part au nom de la Ville.',
+      parent: 'Parent',
+      parents: 'Parents',
+      plus: 'Afficher plus',
+      sousTitre: 'Au nom de {{ville}} · 1 personne = privé · 2 et plus = groupe',
     },
   },
   nextMatchCard: {
