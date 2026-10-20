@@ -62,8 +62,8 @@ const marquerComplets = (blocs) => {
     const capacite = Math.max(1, Number(bloc.installation?.maxSlots || 1));
     const ensemble = blocs.filter((autre, autreRang) => {
       const autreFenetre = fenetres[autreRang];
-      return Boolean(autreFenetre?.startAt && autreFenetre?.endAt)
-        && autre.installation?.documentId === bloc.installation?.documentId
+      if (!autreFenetre?.startAt || !autreFenetre?.endAt) return false;
+      return autre.installation?.documentId === bloc.installation?.documentId
         && isSameDay(autreFenetre.startAt, fenetre.startAt)
         && autreFenetre.startAt < fenetre.endAt
         && fenetre.startAt < autreFenetre.endAt;

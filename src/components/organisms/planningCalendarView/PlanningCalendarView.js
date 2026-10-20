@@ -121,7 +121,7 @@ const hexToRgba = (hex, alpha) => {
 
 /**
  *
- * @param root0
+ * @param {object} root0
  * @param root0.colors
  * @param {((count: number) => string) | null} [root0.compterLesSeances] - R17-PLANNING-2 : avec
  *   elle, chaque pastille porte son nombre de seances et le jour se lit « 7, 3 seances ».
