@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeDemandes from '@/views/complexe/ComplexeDemandes';
@@ -268,6 +269,30 @@ describe('RESA-L5A2 E-G06 — En attente (état 1)', () => {
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeReservation, {
       complexeId: 'cx-five', reservationId: 'r-1',
     });
+  });
+});
+
+// RESA-L7-1 (20/10/2026) — vu sur le site (capture du banc, 390 et 1 360 px), vrai au téléphone :
+// les noms en gras d'une ligne (« Julien M. », « Terrain 2 ») prenaient le NOIR de `Fonts.p2Bold`
+// (theme/fonts.js) sur la carte sombre — illisibles. Ils reprennent le blanc de la phrase.
+describe('RESA-L7-1 E-G06 — les noms en gras restent lisibles sur la carte sombre', () => {
+  const couleursDe = (/** @type {any} */ arbre, /** @type {string} */ texte) => arbre.root
+    .findAll((/** @type {any} */ n) => n.type === 'Text' && n.props.children === texte)
+    .map((/** @type {any} */ n) => StyleSheet.flatten(n.props.style)?.color);
+
+  it('En attente : le nom et le terrain', async () => {
+    const arbre = await monter();
+    const couleurs = [...couleursDe(arbre, 'Julien M.'), ...couleursDe(arbre, 'Terrain 2')];
+    expect(couleurs.length).toBeGreaterThan(0);
+    couleurs.forEach((couleur) => expect(couleur).not.toBe('black'));
+  });
+
+  it('Traitées : le nom', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Traitées');
+    const couleurs = couleursDe(arbre, 'Karim B.');
+    expect(couleurs.length).toBeGreaterThan(0);
+    couleurs.forEach((couleur) => expect(couleur).not.toBe('black'));
   });
 });
 
