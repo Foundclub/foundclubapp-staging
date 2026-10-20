@@ -22644,6 +22644,27 @@ export default {
     },
     tapMarker: 'Tap a marker to see the details',
   },
+  // RESA-BASCULE (20/10/2026) — the « Your mode » switch of an account that manages a venue.
+  tonMode: {
+    annonce: 'Mode: {{mode}}. {{phrase}}',
+    ouverture: 'Opening your venue…',
+    ouvertureAnnonce: 'Opening your venue.',
+    passeEnJoueur: 'Your account is now a Player account.',
+    phrase: {
+      coach: 'You see the app as a coach.',
+      dirigeant: 'You see the app as a club manager.',
+      parent: 'You see the app as a parent.',
+    },
+    position: '{{rang}} of {{total}}',
+    positions: {
+      coach: 'Coach',
+      complexe: 'Venue',
+      dirigeant: 'Manager',
+      joueur: 'Player',
+      parent: 'Parent',
+    },
+    titre: 'Your mode',
+  },
   tourBanner: {
     collapse: 'Minimise the tour',
     compact: 'Tour {{step}}/{{total}}',

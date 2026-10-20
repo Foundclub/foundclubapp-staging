@@ -42,11 +42,12 @@ import useTheme from '@/theme/themeContext';
 
 /**
  * Qui attend dans le mode parent : « Anissa », « Anissa et Martin », sinon « Tes enfants ».
+ * RESA-BASCULE (20/10/2026) : exportée, la bascule « Ton mode » dit la même phrase.
  * @param {(cle: string, options?: any) => string} t - La traduction.
  * @param {string[]} prenoms - Les prénoms lus.
  * @returns {string} - La phrase.
  */
-const quiTAttend = (t, prenoms) => {
+export const quiTAttend = (t, prenoms) => {
   const noms = (Array.isArray(prenoms) ? prenoms : []).filter(Boolean);
   if (noms.length < 1 || noms.length > 2) {
     return t('playerMode.parent.waitingAll', 'Tes enfants t’attendent dans le mode parent.');
