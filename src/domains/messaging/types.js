@@ -58,6 +58,8 @@
  * @property {boolean} [pending] - Optimistic message marker
  * @property {ChatMessage | null} [replyTo] - Reply target
  * @property {User[]} [readBy] - Users who read the message
+ * @property {{ nom: string, voix: string }} [senderSignature] - La signature posée par le serveur
+ *   (MSG-SUPPORT : « Assistance FoundClub » ; COLL-C4A2 : la Ville, un club)
  * @property {{ _id?: string | number; name?: string; avatar?: string }} [user] - GiftedChat compatible user
  * @property {string} [text] - GiftedChat compatible text
  */
