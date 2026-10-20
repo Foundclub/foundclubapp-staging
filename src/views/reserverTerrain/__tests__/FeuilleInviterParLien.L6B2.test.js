@@ -15,14 +15,13 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
 }));
 const mockPartager = jest.fn();
+const mockCopier = jest.fn();
 jest.mock('@/platform/share', () => ({
   __esModule: true,
-  default: { share: (/** @type {any} */ contenu) => mockPartager(contenu) },
-}));
-const mockCopier = jest.fn();
-jest.mock('@react-native-clipboard/clipboard', () => ({
-  __esModule: true,
-  default: { setString: (/** @type {string} */ texte) => mockCopier(texte) },
+  default: {
+    copier: (/** @type {string} */ texte) => mockCopier(texte),
+    share: (/** @type {any} */ contenu) => mockPartager(contenu),
+  },
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {
@@ -84,6 +83,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockLien.mockResolvedValue({ actif: true, code: 'K7Q2M9', url: URL_DU_LIEN });
   mockPartager.mockResolvedValue(undefined);
+  mockCopier.mockResolvedValue(true);
 });
 
 it('à l’ouverture : le serveur rend le lien ; le message prêt à envoyer', async () => {

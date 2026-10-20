@@ -55,6 +55,22 @@ export const share = async (payload = {}) => {
   ));
 };
 
+/**
+ * RESA-L6B-2 (20/10/2026) — copie un texte dans le presse-papiers du navigateur.
+ * @param {string} texte - Le texte.
+ * @returns {Promise<boolean>} Vrai si la copie a eu lieu.
+ */
+export const copier = async (texte) => {
+  try {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return false;
+    await navigator.clipboard.writeText(String(texte ?? ''));
+    return true;
+  } catch (_erreur) {
+    return false;
+  }
+};
+
 export default {
+  copier,
   share,
 };

@@ -14,33 +14,6 @@ import { useLienDInvitation } from '@/services/complexe/complexeJoueurQueries';
 import SharePlatform from '@/platform/share';
 
 /**
- * Copie un texte : le presse-papiers du navigateur sur le site, le module natif sur le téléphone.
- * ponytail: troisième copie de ce geste (CollectiviteInviteClub.js, SuperAdminEntryList.js) ;
- * plafond : trois ; voie de sortie : un `copier` commun dans `src/platform/share`.
- * @param {string} texte - Le texte.
- * @returns {Promise<boolean>} Vrai si la copie a eu lieu.
- */
-const copier = async (texte) => {
-  try {
-    const presse = typeof navigator !== 'undefined' ? navigator?.clipboard : null;
-    if (typeof presse?.writeText === 'function') {
-      await presse.writeText(texte);
-      return true;
-    }
-    // eslint-disable-next-line global-require
-    const module = require('@react-native-clipboard/clipboard');
-    const clipboard = module?.default || module;
-    if (typeof clipboard?.setString === 'function') {
-      clipboard.setString(texte);
-      return true;
-    }
-  } catch (_erreur) {
-    return false;
-  }
-  return false;
-};
-
-/**
  * « INVITER PAR LIEN » — RESA-L6B-2 (20/10/2026), planches EP07 état 4 et EP05, plan E-P07
  * (RG-LIEN, A-P05, RC-P06). À l'ouverture, le serveur rend le lien de la réservation (code opaque,
  * `POST …/lien {actif: true}`) ; puis le message prêt à envoyer, « Copier le lien », « Partager »
@@ -89,7 +62,8 @@ function FeuilleInviterParLien({
     await SharePlatform.share({ message, url }).catch(() => undefined);
   };
   const copierLeLien = async () => {
-    if (url) setCopie(await copier(url));
+    // La copie commune (src/platform/share : module natif au téléphone, navigateur sur le site).
+    if (url) setCopie(await SharePlatform.copier(url));
   };
   const desactiver = async () => {
     try {
