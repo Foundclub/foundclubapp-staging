@@ -1,7 +1,7 @@
 /* eslint-disable max-len -- des titres de témoins entiers, lus d une traite */
 import { createElement } from 'react';
 import {
-  Platform, Text, TouchableOpacity, View,
+  Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -75,12 +75,15 @@ describe.each(['ios', 'android'])('SAIS lot 1 — le cadre du champ d heure (%s)
   });
 });
 
+// INVERSÉ PAR A7-UX (20/10) — motif : le site ne monte plus le `<input type="time">` du navigateur
+// (sa liste grise, minutes de 1 en 1, recouvrait « Suivant ») mais le champ de FoundClub, un
+// TextInput sous lequel s'ouvre la grille des heures. Le cadre reste, sur la boîte de ce champ.
 test('SAIS lot 1 — au site, la boîte du champ d heure a le même cadre', () => {
   Platform.OS = 'web';
   monter({ value: '18:00' });
   const boite = arbre.root.findAll(
     (/** @type {any} */ noeud) => noeud.type === View
-      && noeud.findAll((/** @type {any} */ n) => n.type === 'input', { deep: true }).length > 0,
+      && noeud.findAllByType(TextInput, { deep: false }).length > 0,
   ).pop();
   expect(styleAplati(boite.props.style).borderWidth).toBe(1);
 });

@@ -1,13 +1,16 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Modal, Platform, Text, TouchableOpacity, View,
+  Modal, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
+
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import GrilleDesHeures from '@/components/molecules/timePickerInput/GrilleDesHeures';
 
 /**
  * La roue native SE MESURE TOUTE SEULE : sa vue d'ombre porte une fonction de
@@ -29,6 +32,23 @@ const ROUE_NATIVE_STYLE = { alignSelf: 'center' };
 // Une heure « HH:mm » : la seule forme d'exemple qui puisse servir de départ à la roue.
 const HEURE_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// ⏰ A7-UX — une seule grille ouverte à la fois (Début et Fin côte à côte) : la dernière ouverte
+// referme la précédente.
+/** @type {(() => void) | null} */
+let fermerLaGrilleOuverte = null;
+
+/**
+ * A7-UX — ce qu'on tape, lu comme une heure : « 1730 », « 17:30 », « 17h30 », « 930 ».
+ * @param {string} texte - La saisie.
+ * @returns {string | null} « HH:mm », ou null tant que la saisie est incomplète ou fausse.
+ */
+const lireLaSaisie = (texte) => {
+  const chiffres = String(texte || '').replace(/\D/g, '');
+  if (chiffres.length < 3 || chiffres.length > 4) return null;
+  const lue = `${chiffres.slice(0, -2).padStart(2, '0')}:${chiffres.slice(-2)}`;
+  return HEURE_HHMM.test(lue) ? lue : null;
+};
+
 /**
  * TimePickerInput - A time input component with native iOS picker
  * @param {object} props
@@ -38,15 +58,26 @@ const HEURE_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.error] - Error message
  * @param {string} [props.testID] - Repère du champ (témoins)
+ * @param {string | null} [props.apres] - A7-UX : sur le site, rien ne se choisit jusqu'à cette
+ *   heure incluse (la Fin après le Début).
+ * @returns {import('react').ReactElement} Le champ, et sa roue ou sa grille.
  */
 function TimePickerInput({
-  error, label, onChange, placeholder = 'HH:mm', testID = undefined, value,
+  apres = null, error, label, onChange, placeholder = 'HH:mm', testID = undefined, value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
+  // A7-UX (site) — la grille ouverte sous le champ, ce qu'on tape (null : la valeur), le focus.
+  const [grilleOuverte, setGrilleOuverte] = useState(false);
+  const [saisie, setSaisie] = useState(/** @type {string | null} */ (null));
+  const [focus, setFocus] = useState(false);
+  const fermer = useRef(() => setGrilleOuverte(false)).current;
+  useEffect(() => () => {
+    if (fermerLaGrilleOuverte === fermer) fermerLaGrilleOuverte = null;
+  }, [fermer]);
   // SAIS (heure A) — iPhone : l'heure que montre la roue, écrite seulement par « OK ».
   const [brouillon, setBrouillon] = useState(/** @type {Date | null} */ (null));
 
@@ -106,9 +137,53 @@ function TimePickerInput({
     setBrouillon(null);
   };
 
-  // FINITIONS16 · POINT 6 — le champ du navigateur parle deja HH:mm : la valeur passe telle quelle.
-  const handleWebChange = (/** @type {{ currentTarget?: { value?: string } }} */ event) => {
-    onChange(event?.currentTarget?.value || '');
+  // ⏰ A7-UX (20/10) — sur le site, le choix de l'heure de FoundClub remplace la liste du site.
+  const ouvrirLaGrille = () => {
+    if (fermerLaGrilleOuverte && fermerLaGrilleOuverte !== fermer) fermerLaGrilleOuverte();
+    fermerLaGrilleOuverte = fermer;
+    setGrilleOuverte(true);
+  };
+  const fermerLaGrille = () => {
+    if (fermerLaGrilleOuverte === fermer) fermerLaGrilleOuverte = null;
+    setGrilleOuverte(false);
+  };
+  const choisir = (/** @type {string} */ heure) => {
+    setSaisie(null);
+    onChange(heure);
+    fermerLaGrille();
+  };
+  // Au clavier : l'heure s'écrit dès qu'elle est lisible ; vider le champ rend « ».
+  const taper = (/** @type {string} */ texte) => {
+    setSaisie(texte);
+    if (!String(texte || '').trim()) {
+      onChange('');
+      return;
+    }
+    const lue = lireLaSaisie(texte);
+    if (!lue) return;
+    // Lisible : le champ se remet en forme (« 1830 » devient « 18:30 »).
+    setSaisie(lue);
+    if (lue !== value) onChange(lue);
+  };
+  // Les flèches avancent ou reculent d'un quart d'heure ; Entrée referme la grille.
+  const toucheDuChamp = (/** @type {any} */ evenement) => {
+    const touche = evenement?.nativeEvent?.key;
+    if (touche === 'Enter') fermerLaGrille();
+    if (touche !== 'ArrowUp' && touche !== 'ArrowDown') return;
+    evenement.preventDefault?.();
+    const depart = getDateFromValue();
+    const pas = touche === 'ArrowUp' ? 15 : -15;
+    const visee = (depart.getHours() * 60) + depart.getMinutes() + pas;
+    const total = Math.min(Math.max(visee, 0), 1439);
+    setSaisie(null);
+    onChange(formatTime(new Date(2000, 0, 1, Math.floor(total / 60), total % 60)));
+  };
+  // Échap referme la grille ET s'arrête là : la fenêtre du tunnel l'écoute (keyup sur le document)
+  // et reculait d'une étape (mesuré au banc A7-UX, 4/6 → 3/6). Grille fermée, Échap passe.
+  const echapDuChamp = (/** @type {any} */ evenement) => {
+    if (evenement?.key !== 'Escape' || !grilleOuverte) return;
+    evenement.stopPropagation();
+    fermerLaGrille();
   };
 
   const displayValue = value || placeholder;
@@ -123,35 +198,63 @@ function TimePickerInput({
           {label}
         </Text>
       )}
-      {/* FINITIONS16 · POINT 6 (`heure oui`) — SUR LE SITE, LE CHAMP D'HEURE DU NAVIGATEUR. La
-          roue ne se montait que sur iOS et Android : sur le site, l'appui n'ouvrait rien (meme
-          defaut que DatePickerInput, point 3). Meme boite, meme valeur HH:mm ; la police vient
-          du site (`input { font: inherit }`, web/src/index.css). */}
+      {/* ⏰ A7-UX (20/10, constat d'Adel : « le défilement d'heure n'est pas UX/UI ») — SUR LE SITE,
+          le choix de l'heure de FoundClub, posé dans la page sous le champ : la liste grise du
+          navigateur (minutes de 1 en 1) recouvrait « Suivant ». Le champ se tape aussi (« 1730 »),
+          sans clavier virtuel au téléphone (la grille suffit). Avant : FINITIONS16 · POINT 6. */}
       {Platform.OS === 'web' ? (
-        <View style={[
-          ApplicationStyle.borderRadius12,
-          ApplicationStyle.backgroundColor.primary700,
-          Spaces.padding[16],
-          cadre,
-          error && { borderColor: Colors.error500, borderWidth: 1 },
-        ]}
-        >
-          <input
-            aria-label={label || placeholder}
-            onChange={handleWebChange}
-            style={{
-              background: 'transparent',
-              border: 0,
-              color: Colors.neutral00,
-              colorScheme: 'dark',
-              fontSize: 16,
-              outline: 'none',
-              padding: 0,
-              width: '100%',
-            }}
-            type="time"
-            value={value || ''}
-          />
+        <View onKeyUp={echapDuChamp} style={{ gap: 8 }}>
+          <View style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.primary700,
+            cadre,
+            (focus || grilleOuverte) && { borderColor: Colors.primary500 },
+            error && { borderColor: Colors.error500, borderWidth: 1 },
+            { justifyContent: 'center' },
+          ]}
+          >
+            <SvgIcon
+              color={Colors.primary200}
+              height={16}
+              name="clock-two-thirty"
+              style={{ left: 16, position: 'absolute' }}
+              width={16}
+            />
+            <TextInput
+              accessibilityLabel={label || placeholder}
+              accessibilityState={{ expanded: grilleOuverte }}
+              autoCapitalize="none"
+              autoComplete="off"
+              autoCorrect={false}
+              inputMode="none"
+              onBlur={() => {
+                setFocus(false);
+                setSaisie(null);
+              }}
+              onChangeText={taper}
+              onFocus={() => {
+                setFocus(true);
+                ouvrirLaGrille();
+              }}
+              onKeyPress={toucheDuChamp}
+              placeholder={placeholder}
+              placeholderTextColor={Colors.neutral300}
+              spellCheck={false}
+              style={[Fonts.p1, Fonts.neutral00, {
+                minHeight: 52, outlineStyle: 'none', paddingLeft: 44, paddingRight: 16,
+              }]}
+              testID={testID}
+              value={saisie ?? (value || '')}
+            />
+          </View>
+          {grilleOuverte ? (
+            <GrilleDesHeures
+              apres={apres}
+              onChoisir={choisir}
+              suggestion={HEURE_HHMM.test(String(placeholder || '')) ? placeholder : null}
+              valeur={value}
+            />
+          ) : null}
         </View>
       ) : (
         <TouchableOpacity
