@@ -335,6 +335,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ComplexeClient]: '/mon-complexe/clients/:joueurId',
   // La fidélité (E-G14).
   [RouteNames.ComplexeFidelite]: '/mon-complexe/fidelite',
+  // « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4).
+  [RouteNames.ComplexeMaPage]: '/mon-complexe/ma-page',
   // les affiches du complexe (E-G13, serveur RESA-L4).
   [RouteNames.ComplexeAffiches]: '/mon-complexe/affiches',
   // le canal du complexe (E-G12, serveur RESA-L4).

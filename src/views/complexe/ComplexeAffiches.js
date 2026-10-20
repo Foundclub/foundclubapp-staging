@@ -245,12 +245,14 @@ function ComplexeAffiches() {
         {texte === 'promotion' ? (
           <View style={[carte, Spaces.padding[12], { gap: 8 }]} testID="affiche-promotion">
             <Input
+              accessibilityLabel={t('complexeAffiches.promotion.prix', 'Prix de la place')}
               keyboardType="decimal-pad"
               label={t('complexeAffiches.promotion.prix', 'Prix de la place')}
               onChangeText={(valeur) => setPrix(String(valeur))}
               value={prix}
             />
             <Input
+              accessibilityLabel={t('complexeAffiches.promotion.texte', 'Le texte')}
               label={t('complexeAffiches.promotion.texte', 'Le texte')}
               maxLength={PROMO_TEXTE_MAX}
               multiline

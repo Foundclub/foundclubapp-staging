@@ -16,6 +16,7 @@ import {
   deciderDemande,
   ecrireAuReserveur,
   enregistrerCreneaux,
+  enregistrerPartenaires,
   fermerTerrains,
   lireApercuFermeture,
   lireCanal,
@@ -26,6 +27,7 @@ import {
   lireFidelite,
   lireHistoriqueClient,
   lireMesComplexes,
+  lirePartenaires,
   lirePlanning,
   lireReservationGeree,
   lireReservationsDuComplexe,
@@ -501,6 +503,30 @@ export const useCanalDuComplexe = (complexeId) => useQuery({
   retry: false,
   staleTime: DEMI_MINUTE,
 });
+
+/**
+ * Les partenaires de SON complexe (E-G11).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les partenaires.
+ */
+export const usePartenairesDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  queryFn: async () => {
+    const lu = (await lirePartenaires(String(complexeId)))?.data;
+    return Array.isArray(lu?.items) ? lu.items : [];
+  },
+  queryKey: ['complexe', complexeId, 'partenaires'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Enregistrer » les partenaires (la liste entière) ; la page se relit ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, partenaires })`.
+ */
+export const useEnregistrerPartenaires = () => useGeste(
+  ({ complexeId, partenaires }) => enregistrerPartenaires(complexeId, partenaires),
+);
 
 /**
  * La fidélité de SON complexe (E-G14) : le programme et les trois listes.

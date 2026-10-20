@@ -207,7 +207,8 @@ export const messageDeRefus = (t, erreur, repli) => {
  * @type {ReadonlyArray<{ cle: string, icone: string, route: string | null }>}
  */
 export const CASES_GERER = Object.freeze([
-  { cle: 'complexe', icone: 'shield', route: null },
+  // RESA-L5B-2 (20/10/2026) : « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4).
+  { cle: 'complexe', icone: 'shield', route: RouteNames.ComplexeMaPage },
   { cle: 'installations', icone: 'stadium', route: RouteNames.ComplexeInstallations },
   { cle: 'demandes', icone: 'inboxArrowDown', route: RouteNames.ComplexeDemandes },
   { cle: 'planning', icone: 'calendar', route: RouteNames.ComplexePlanning },

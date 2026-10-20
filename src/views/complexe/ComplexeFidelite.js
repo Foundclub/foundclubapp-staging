@@ -286,6 +286,7 @@ function ComplexeFidelite() {
       ) : null}
       <View style={{ gap: 4 }}>
         <Input
+          accessibilityLabel={t('complexeFidelite.programme.recompense', 'Récompense')}
           label={t('complexeFidelite.programme.recompense', 'Récompense')}
           maxLength={RECOMPENSE_MAX}
           onChangeText={(texte) => changer({ reward: String(texte).slice(0, RECOMPENSE_MAX) })}

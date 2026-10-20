@@ -360,6 +360,27 @@ export const lireHistoriqueClient = async (complexeId, joueurId) => corps(
 );
 
 /**
+ * Les PARTENAIRES de SON complexe (E-G11, A-G25 ; gratuits en V1), dans l'ordre de la page.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, title, link, logo{ id, url } | null }]
+ *   } }`.
+ */
+export const lirePartenaires = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/partenaires`),
+);
+
+/**
+ * « Enregistrer » les partenaires : la liste ENTIÈRE (12 au plus ; « tout retirer » = une liste
+ * vide) ; un partenaire connu garde son documentId, un absent est retiré.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Array<Record<string, any>>} partenaires - `[{ documentId?, title, link?, logo? }]`.
+ * @returns {Promise<any>} `{ data: { items } }`.
+ */
+export const enregistrerPartenaires = async (complexeId, partenaires) => corps(
+  client().put(`/complexes/${enc(complexeId)}/partenaires`, { data: partenaires }),
+);
+
+/**
  * La FIDÉLITÉ de SON complexe (E-G14) : le programme (ou null : jamais réglé), les récompenses à
  * valider (x atteint), « Bientôt » (x − 2 ou plus près), les 10 dernières validées. Les compteurs
  * sont calculés par le serveur.
