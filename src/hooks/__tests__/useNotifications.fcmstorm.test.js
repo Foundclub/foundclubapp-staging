@@ -31,6 +31,16 @@ let mockUserData = { documentId: 'user-doc-1', id: 1 };
 // Les sessions du telephone au montage (FCMSYNC) ; vide pour les temoins FCMSTORM.
 let mockSessions = [];
 
+// MSGNOTIF (20/10) — useNotifications relit le fil du message qu'on ouvre
+// (`rattrapageDuFil` → chatService → client HTTP) : le client est double, sinon
+// sa configuration d'URL fait tomber la suite des son chargement.
+jest.mock('@/services/client', () => ({
+  __esModule: true,
+  default: {
+    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+  },
+}));
+
 jest.mock('@/services/auth/authService', () => ({
   addDeviceToken: (...args) => mockAddDeviceToken(...args),
   addDeviceTokenForSession: (...args) => mockAddDeviceTokenForSession(...args),
