@@ -231,6 +231,9 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     });
   }, [navigation]);
 
+  const compterLesSeances = useCallback((/** @type {number} */ nombre) => (
+    t('facilityList.toutesInstallations.seancesDuJour', { count: nombre })), [t]);
+
   const debutDeSemaine = startOfWeek(date, { weekStartsOn: 1 });
   const finDeSemaine = addDays(debutDeSemaine, 6);
   const formatDuDebut = isSameMonth(debutDeSemaine, finDeSemaine) ? 'd' : 'd MMM';
@@ -499,6 +502,9 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     if (vue === VUES.mois) {
       return (
         <PlanningCalendarView
+          // Sur ordinateur, chaque pastille porte son nombre de séances (planche, état 3) ; au
+          // téléphone, des points (P10-planning-tel 3).
+          compterLesSeances={isDesktop ? compterLesSeances : null}
           currentDate={date}
           events={blocsDuMois(blocs)}
           onDateSelect={(/** @type {Date} */ jour) => {

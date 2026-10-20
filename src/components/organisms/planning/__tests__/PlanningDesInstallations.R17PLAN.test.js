@@ -544,3 +544,19 @@ describe('R17-PLANNING-2 — le filtre au téléphone (P10-planning-tel 2)', () 
     expect(lignes()).toHaveLength(4);
   });
 });
+
+describe('R17-PLANNING-2 — la pastille avec son nombre, au mois (P10-planning-ordi 3)', () => {
+  test('19 ROUGE-AVANT — ordinateur : le mois compte les séances, pas le téléphone', async () => {
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    const { compterLesSeances } = mockCalendriers.at(-1);
+    expect(typeof compterLesSeances).toBe('function');
+    expect(compterLesSeances(1)).toBe('1 séance');
+    expect(compterLesSeances(3)).toBe('3 séances');
+    mockOrdinateur = false;
+    const auTelephone = await rendre();
+    await choisir(auTelephone, 'month');
+    expect(mockCalendriers.at(-1).compterLesSeances).toBeFalsy();
+  });
+});

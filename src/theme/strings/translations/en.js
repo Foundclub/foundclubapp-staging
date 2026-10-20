@@ -10284,6 +10284,8 @@ export default {
       prochaine: 'Next session: {{quand}}, {{installation}}.',
       rienCeJour: 'Nothing on {{jour}}',
       rienCeJourCourt: 'Nothing this day',
+      seancesDuJour_one: '{{count}} session',
+      seancesDuJour_other: '{{count}} sessions',
       semaineSuivante: 'See next week',
       sousTitre: 'Club sessions, week of {{jour}}.',
       titre: 'Schedule of all facilities',

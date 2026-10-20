@@ -10966,6 +10966,8 @@ export default {
       prochaine: 'Prochaine séance : {{quand}}, {{installation}}.',
       rienCeJour: 'Rien ce {{jour}}',
       rienCeJourCourt: 'Rien ce jour',
+      seancesDuJour_one: '{{count}} séance',
+      seancesDuJour_other: '{{count}} séances',
       semaineSuivante: 'Voir la semaine suivante',
       sousTitre: 'Séances des clubs, semaine du {{jour}}.',
       titre: 'Planning de toutes les installations',
