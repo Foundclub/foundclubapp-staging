@@ -703,7 +703,11 @@ function FacilitySecurityTab({
   );
 
   return (
+    // La CLE monte une racine neuve apres le squelette : react-native-web n observe la largeur
+    // (onLayout) qu au MONTAGE d une vue ; sans elle, la racine du squelette etait reutilisee et
+    // le carnet restait sous l historique sur ordinateur (banc du site du 20/10, 1 360 px).
     <View
+      key="onglet-securite"
       onLayout={(evenement) => setLargeur(evenement.nativeEvent.layout.width)}
       testID="onglet-securite"
     >
