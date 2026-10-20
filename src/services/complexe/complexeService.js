@@ -288,6 +288,40 @@ export const annulerNonHonoree = async (complexeId, reservationId) => corps(
   ),
 );
 
+/**
+ * La fiche d'un CLIENT (E-G15) : un joueur qui a réservé ici (sinon 404
+ * COMPLEXE_CLIENT_NOT_FOUND) — ses non honorées, ses annulations hors délai, ses réservations à
+ * venir, son bannissement (raison PRIVÉE, lue par le gérant seul). Jamais un numéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, firstname, lastname, noShows, lateCancellations,
+ *   upcoming, ban } }`.
+ */
+export const lireClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}`),
+);
+
+/**
+ * « Bannir » (E-G15, RG-BAN) : chez CE complexe seulement ; le joueur n'est PAS prévenu.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ cancelUpcoming?: boolean, joueur: string, reason: string, until?: string }} ban - La
+ *   liste blanche du serveur (`until` : le dernier jour banni, AAAA-MM-JJ).
+ * @returns {Promise<any>} `{ data: client }` (201).
+ */
+export const bannir = async (complexeId, ban) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis`, { data: ban }),
+);
+
+/**
+ * « Débannir » : le bannissement est levé (sa ligne reste) ; le compteur des non honorées repart.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: client }`.
+ */
+export const debannir = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis/${enc(joueurId)}/lever`, {}),
+);
+
 // ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
 // Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service

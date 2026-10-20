@@ -784,6 +784,10 @@ export const MOTIFS_DE_REFUS = Object.freeze([
  */
 export const messageDeRefusResa = (t, erreur, repli) => {
   switch (getServerErrorCode(erreur)) {
+    // RESA-L5B-1 — E-G15 : un compte qui n'a jamais réservé ici (le serveur n'énumère pas les
+    // comptes).
+    case 'COMPLEXE_CLIENT_NOT_FOUND':
+      return t('complexeClients.fiche.jamaisVenu', 'Ce joueur n’a jamais réservé chez toi.');
     case 'COMPLEXE_RESERVATION_INVALID':
     case 'COMPLEXE_RESERVATION_STATE':
     case 'FACILITY_CLOSURE_INVALID_PAYLOAD':

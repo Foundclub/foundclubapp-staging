@@ -24,6 +24,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
@@ -59,16 +60,20 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  * honorée » (`canMarkNoShow`, avec sa confirmation, N-17) et « Annuler le marquage »
  * (`canUndoNoShow`, 7 jours) ; la pastille « Jouée » / « Non honorée » ; l'historique « Marquée
  * non honorée par toi » et « — hors délai » (AT-07).
+ * RESA-L5B-1 (morceau A2) : le nom du réserveur ouvre sa fiche client (E-G15, `onVoirClient`).
  * Pas encore servi (dit dans le compte rendu du lot) : « Participants · 8/10 » (lot L3) ;
  * « Écrire au réserveur » (conversation de la réservation, lot L3) ; « Récompense disponible » et
- * « Valider la partie offerte » (fidélité, lot L4) ; la fiche client E-G15 (lot L5b).
+ * « Valider la partie offerte » (fidélité, lot L4).
  * @param {object} props - Les propriétés.
  * @param {string | null} props.complexeId - Le complexe.
+ * @param {(joueurId: string) => void} [props.onVoirClient] - Le nom du réserveur ⇒ sa fiche.
  * @param {(fiche: any) => void} [props.onVoirPlanning] - « Voir dans le planning ».
  * @param {string} props.reservationId - La réservation.
  * @returns {import('react').ReactElement} La fiche.
  */
-function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationId }) {
+function FicheReservation({
+  complexeId, onVoirClient = undefined, onVoirPlanning = undefined, reservationId,
+}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -259,9 +264,27 @@ function FicheReservation({ complexeId, onVoirPlanning = undefined, reservationI
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{initialesDe(r.booker)}</Text>
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {[r.booker?.firstname, r.booker?.lastname].filter(Boolean).join(' ')}
-          </Text>
+          {onVoirClient && r.booker?.documentId ? (
+            <TouchableOpacity
+              accessibilityHint={t(
+                'complexeReservations.fiche.voirClientIndice',
+                'Ouvre sa fiche client',
+              )}
+              accessibilityRole="link"
+              onPress={() => onVoirClient(String(r.booker.documentId))}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 6, minHeight: 44 }]}
+              testID="fiche-voir-client"
+            >
+              <Text style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
+                {[r.booker?.firstname, r.booker?.lastname].filter(Boolean).join(' ')}
+              </Text>
+              <GlyphIcon color={Colors.primary200} name="chevronRight" size={14} />
+            </TouchableOpacity>
+          ) : (
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {[r.booker?.firstname, r.booker?.lastname].filter(Boolean).join(' ')}
+            </Text>
+          )}
           {chiffresDuReserveur ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>{chiffresDuReserveur}</Text>
           ) : null}

@@ -13,6 +13,9 @@ import * as requetes from '../complexeQueries';
 const mockService = {
   annulerNonHonoree: jest.fn(async () => ({ data: { documentId: 'r-1' } })),
   annulerReservationGeree: jest.fn(async () => ({ data: { documentId: 'r-1' } })),
+  bannir: jest.fn(async () => ({ data: { documentId: 'u-julien' } })),
+  debannir: jest.fn(async () => ({ data: { documentId: 'u-julien' } })),
+  lireClient: jest.fn(async () => ({ data: { documentId: 'u-julien', noShows: 1 } })),
   marquerNonHonoree: jest.fn(async () => ({ data: { documentId: 'r-1' } })),
 };
 jest.mock('../complexeService', () => ({
@@ -20,6 +23,9 @@ jest.mock('../complexeService', () => ({
   annulerReservationGeree: (/** @type {any[]} */ ...args) => (
     mockService.annulerReservationGeree(...args)
   ),
+  bannir: (/** @type {any[]} */ ...args) => mockService.bannir(...args),
+  debannir: (/** @type {any[]} */ ...args) => mockService.debannir(...args),
+  lireClient: (/** @type {any[]} */ ...args) => mockService.lireClient(...args),
   marquerNonHonoree: (/** @type {any[]} */ ...args) => mockService.marquerNonHonoree(...args),
 }));
 
@@ -75,6 +81,37 @@ describe('RESA-L5B-1 — les gestes « non honorée » suivent le même chemin',
     });
     expect(mockService.marquerNonHonoree).toHaveBeenCalledWith('cx-five', 'r-1');
     expect(relire).toHaveBeenCalledWith({ queryKey: ['complexe'] });
+  });
+
+  it('bannir et débannir, puis relire', async () => {
+    const { useBannir, useDebannir } = /** @type {any} */ (requetes);
+    expect([typeof useBannir, typeof useDebannir]).toEqual(['function', 'function']);
+    const ban = await monter(() => useBannir());
+    const relireBan = jest.spyOn(ban.client, 'invalidateQueries');
+    await act(async () => {
+      await ban.valeur()
+        .mutateAsync({ ban: { joueur: 'u-julien', reason: 'X' }, complexeId: 'cx-five' });
+    });
+    expect(mockService.bannir).toHaveBeenCalledWith('cx-five', { joueur: 'u-julien', reason: 'X' });
+    expect(relireBan).toHaveBeenCalledWith({ queryKey: ['complexe'] });
+    const leve = await monter(() => useDebannir());
+    await act(async () => {
+      await leve.valeur().mutateAsync({ complexeId: 'cx-five', joueurId: 'u-julien' });
+    });
+    expect(mockService.debannir).toHaveBeenCalledWith('cx-five', 'u-julien');
+  });
+
+  it('la fiche d’un client : lue quand le complexe et le joueur sont connus', async () => {
+    const { useClientDuComplexe } = /** @type {any} */ (requetes);
+    expect(typeof useClientDuComplexe).toBe('function');
+    await monter(() => useClientDuComplexe('cx-five', null));
+    expect(mockService.lireClient).not.toHaveBeenCalled();
+    const { valeur } = await monter(() => useClientDuComplexe('cx-five', 'u-julien'));
+    await act(async () => {
+      await new Promise((fin) => { setTimeout(fin, 0); });
+    });
+    expect(mockService.lireClient).toHaveBeenCalledWith('cx-five', 'u-julien');
+    expect(valeur().data).toEqual({ documentId: 'u-julien', noShows: 1 });
   });
 
   it('annuler le marquage, puis relire', async () => {

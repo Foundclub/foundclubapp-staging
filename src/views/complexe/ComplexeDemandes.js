@@ -347,6 +347,9 @@ function ComplexeDemandes() {
   const volet = ouverte ? (
     <FicheReservation
       complexeId={complexeId}
+      onVoirClient={(joueurId) => navigation.navigate(RouteNames.ComplexeClient, {
+        complexeId, joueurId,
+      })}
       onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexePlanning, {
         complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,
       })}

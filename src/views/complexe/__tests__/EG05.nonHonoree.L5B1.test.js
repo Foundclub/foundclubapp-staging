@@ -2,6 +2,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import ComplexeReservation from '@/views/complexe/ComplexeReservation';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 
 // RESA-L5B-1 (20/10/2026) — E-G05, « non honorée » côté fiche (planche EG05 états 6 et 7 ; plan
@@ -10,8 +12,9 @@ import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 // 0 non honorée sur 3 » (le seuil du complexe, `autoBanNoShows`), « Marquer non honorée » et sa
 // confirmation, « Annuler le marquage » dans les 7 jours, et les lignes d'historique.
 
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }),
+  useNavigation: () => ({ goBack: jest.fn(), navigate: mockNavigate }),
   useRoute: () => ({ params: { complexeId: 'cx-five', reservationId: 'r-1' } }),
 }));
 
@@ -210,6 +213,31 @@ describe('RESA-L5B-1 E-G05 — non honorée, moins de 7 jours (état 7)', () => 
     const arbre = await monter();
     expect(parRepere(arbre, 'fiche-annuler-marquage')).toBeNull();
     expect(parRepere(arbre, 'fiche-marquer-non-honoree')).toBeNull();
+  });
+});
+
+describe('RESA-L5B-1 E-G05 — le nom du réserveur ouvre sa fiche client (E-G15, morceau A2)', () => {
+  it('un lien sur le nom, vers la fiche client du complexe', async () => {
+    const arbre = await monter();
+    const lien = parRepere(arbre, 'fiche-voir-client');
+    expect(lien.props.accessibilityRole).toBe('link');
+    await act(async () => {
+      lien.props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ComplexeClient, {
+      complexeId: 'cx-five', joueurId: 'u-julien',
+    });
+  });
+
+  it('une note extérieure n’a pas de fiche client', async () => {
+    mockFiche = {
+      ...mockFiche,
+      data: fiche({
+        booker: null, externalName: 'M. Dupont', source: 'exterieur',
+      }),
+    };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'fiche-voir-client')).toBeNull();
   });
 });
 

@@ -7004,6 +7004,50 @@ export default {
     prestigeDivision: 'Division 1 prestige.',
     seasonLabel: '| Saison:',
   },
+  // RESA-L5B-1 (20/10/2026) — la fiche d'un client du complexe (E-G15 : non honorées, bannir /
+  // débannir). La raison d'un bannissement est PRIVÉE : seul le gérant la lit.
+  complexeClients: {
+    ban: {
+      aucun: 'Non banni',
+      automatique: 'Banni depuis le {{depuis}} · automatique : {{raison}}',
+      automatiqueAu_one: 'Bannissement automatique à la 1re non honorée.',
+      automatiqueAu_other: 'Bannissement automatique au bout de {{count}} non honorées.',
+      bannir: 'Bannir',
+      ceQuIlLit: '{{prenom}} lit seulement « Tu ne peux plus réserver dans ce complexe. »',
+      debannir: 'Débannir',
+      depuis: 'Banni depuis le {{depuis}} · raison privée : {{raison}}',
+      jusqua: 'Banni jusqu’au {{jusqua}} · raison privée : {{raison}}',
+      nePeutPlus: '{{nom}} ne peut plus réserver chez toi.',
+      peutANouveau: '{{nom}} peut à nouveau réserver.',
+      titre: 'Bannissement',
+    },
+    bannir: {
+      annulerAVenir_one: 'Annuler aussi sa réservation à venir',
+      annulerAVenir_other: 'Annuler aussi ses {{count}} réservations à venir',
+      dit: 'Il ne pourra plus réserver chez toi. Rien ne change ailleurs.',
+      jusqua: 'Jusqu’au (facultatif)',
+      raison: 'Raison (privée, jamais montrée à {{prenom}})',
+      sansFin: 'Sans date de fin',
+      titre: 'Bannir {{nom}}',
+    },
+    chiffres: {
+      aVenir_one: 'réservation à venir',
+      aVenir_other: 'réservations à venir',
+      horsDelai_one: 'annulation hors délai',
+      horsDelai_other: 'annulations hors délai',
+      nonHonorees_one: 'non honorée',
+      nonHonorees_other: 'non honorées',
+    },
+    debannir: {
+      dit: '{{nom}} pourra à nouveau réserver chez toi.',
+      titre: 'Débannir {{nom}} ?',
+    },
+    fiche: {
+      banni: 'Banni',
+      erreur: 'Impossible de charger la fiche du client.',
+      jamaisVenu: 'Ce joueur n’a jamais réservé chez toi.',
+    },
+  },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
   // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Au « tu », gérant compris.
   complexeGerant: {
@@ -7419,6 +7463,7 @@ export default {
       supprimerDit: 'Le créneau redevient libre.',
       supprimerQuestion: 'Supprimer la réservation de {{nom}} ?',
       titre: 'Réservation',
+      voirClientIndice: 'Ouvre sa fiche client',
       voirPlanning: 'Voir dans le planning',
     },
     filtres: {

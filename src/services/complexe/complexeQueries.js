@@ -7,13 +7,16 @@ import { complexeChoisi } from '@/domains/complexe/complexeGerant';
 import {
   annulerNonHonoree,
   annulerReservationGeree,
+  bannir,
   bloquerCreneau,
   creerMonComplexe,
   creerTerrain,
+  debannir,
   deciderDemande,
   enregistrerCreneaux,
   fermerTerrains,
   lireApercuFermeture,
+  lireClient,
   lireComplexeGere,
   lireFermetures,
   lireMesComplexes,
@@ -379,6 +382,36 @@ export const useMarquerNonHonoree = () => useGeste(
  */
 export const useAnnulerNonHonoree = () => useGeste(
   ({ complexeId, reservationId }) => annulerNonHonoree(complexeId, reservationId),
+);
+
+/**
+ * La fiche d'un client (E-G15) : rien n'est lu tant que le joueur n'est pas connu (depuis N-12,
+ * l'écran le lit d'abord dans la fiche de la réservation).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {string | null | undefined} joueurId - documentId du joueur.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} Le client.
+ */
+export const useClientDuComplexe = (complexeId, joueurId) => useQuery({
+  enabled: Boolean(complexeId && joueurId),
+  queryFn: async () => (await lireClient(String(complexeId), String(joueurId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'client', joueurId],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Bannir » (E-G15) : la fiche, la liste et l'accueil se relisent ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ ban, complexeId })`.
+ */
+export const useBannir = () => useGeste(({ ban, complexeId }) => bannir(complexeId, ban));
+
+/**
+ * « Débannir » (E-G15).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, joueurId })`.
+ */
+export const useDebannir = () => useGeste(
+  ({ complexeId, joueurId }) => debannir(complexeId, joueurId),
 );
 
 /**

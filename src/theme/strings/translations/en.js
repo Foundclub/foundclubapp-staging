@@ -6556,6 +6556,50 @@ export default {
     prestigeDivision: 'Prestige Division 1.',
     seasonLabel: '| Season:',
   },
+  // RESA-L5B-1 (20/10/2026) — a venue client's page (E-G15: no-shows, ban / unban). The reason for
+  // a ban is PRIVATE: only the manager reads it. Same keys as fr.js.
+  complexeClients: {
+    ban: {
+      aucun: 'Not banned',
+      automatique: 'Banned since {{depuis}} · automatic: {{raison}}',
+      automatiqueAu_one: 'Automatic ban at the 1st no-show.',
+      automatiqueAu_other: 'Automatic ban after {{count}} no-shows.',
+      bannir: 'Ban',
+      ceQuIlLit: '{{prenom}} only reads “You can no longer book at this venue.”',
+      debannir: 'Lift the ban',
+      depuis: 'Banned since {{depuis}} · private reason: {{raison}}',
+      jusqua: 'Banned until {{jusqua}} · private reason: {{raison}}',
+      nePeutPlus: '{{nom}} can no longer book with you.',
+      peutANouveau: '{{nom}} can book again.',
+      titre: 'Ban',
+    },
+    bannir: {
+      annulerAVenir_one: 'Also cancel their upcoming booking',
+      annulerAVenir_other: 'Also cancel their {{count}} upcoming bookings',
+      dit: 'They will no longer be able to book with you. Nothing changes elsewhere.',
+      jusqua: 'Until (optional)',
+      raison: 'Reason (private, never shown to {{prenom}})',
+      sansFin: 'No end date',
+      titre: 'Ban {{nom}}',
+    },
+    chiffres: {
+      aVenir_one: 'upcoming booking',
+      aVenir_other: 'upcoming bookings',
+      horsDelai_one: 'late cancellation',
+      horsDelai_other: 'late cancellations',
+      nonHonorees_one: 'no-show',
+      nonHonorees_other: 'no-shows',
+    },
+    debannir: {
+      dit: '{{nom}} will be able to book with you again.',
+      titre: 'Lift {{nom}}\'s ban?',
+    },
+    fiche: {
+      banni: 'Banned',
+      erreur: 'The client\'s page could not be loaded.',
+      jamaisVenu: 'This player has never booked with you.',
+    },
+  },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
   // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Same keys as fr.js.
   complexeGerant: {
@@ -6964,6 +7008,7 @@ export default {
       supprimerDit: 'The slot becomes free again.',
       supprimerQuestion: 'Delete {{nom}}\'s booking?',
       titre: 'Booking',
+      voirClientIndice: 'Opens their client page',
       voirPlanning: 'See in the schedule',
     },
     filtres: {
