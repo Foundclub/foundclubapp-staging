@@ -322,11 +322,12 @@ function SearchEventsScreen({ navigation, route }) {
         navigation={navigation}
         onTutorialLayout={handleTutorialLayout}
       >
-        {/* R17-EVT-1 (20/10) — les événements PUBLICS de la Ville (niveau 3), au-dessus. */}
-        <EvenementsVilleRecherche />
         <EventListContent
           additionalFilters={eventFiltersProps}
           enableMapMode
+          // R17-EVT-1 (20/10) — les événements PUBLICS de la Ville (niveau 3), en tête de liste
+          // (R17-EVT-1-BIS : elle défile avec elle et suit le mot tapé).
+          entete={<EvenementsVilleRecherche />}
           onTutorialLayout={handleTutorialLayout}
           showFilters
         />

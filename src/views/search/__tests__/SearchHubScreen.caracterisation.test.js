@@ -444,6 +444,8 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
       additionalFilters: FILTRES_EVENEMENTS_PAR_DEFAUT,
       annuaire: false,
       enableMapMode: true,
+      // R17-EVT-1-BIS (g) (20/10) : la bande « Événements de la Ville » en tête de liste.
+      entete: expect.anything(),
       refreshSignal: 0,
       screenActive: true,
       showFilters: true,
@@ -576,6 +578,27 @@ describe('RECHERCHE-UNIQUE — les reglages de l annuaire', () => {
 // ANNUAIRE-E1 (29/09) — `annuaire: true`, pose par l'annuaire du site seulement : la coquille
 // retire l'en-tete de l'app et la liste de clubs defile avec la page. Absent (le telephone), tout
 // est faux.
+// 🏛️ R17-EVT-1-BIS (g) (20/10) — sur le TELEPHONE, la route SearchEvents mene ici (SearchStack) :
+// la bande « Événements de la Ville » posee dans SearchEventsScreen n y paraissait JAMAIS. Elle va
+// en tete de la liste d evenements (`entete`), qui defile avec elle. Pas sur l annuaire du site
+// (visiteur sans compte : la lecture n est pas ouverte a Public). ROUGE avant (aucun `entete`).
+describe('R17-EVT-1-BIS — la bande des événements de la Ville en tête de la liste', () => {
+  test('🔴 l onglet événements reçoit la bande en en-tête', async () => {
+    await monter({ activeType: 'events' });
+
+    const RechercheVille = jest.requireActual(
+      '@/components/organisms/evenementVille/RechercheVille',
+    ).default;
+    expect(mockPanneaux.events.props.entete?.type).toBe(RechercheVille);
+  });
+
+  test('🔴 ... mais pas sur l annuaire du site', async () => {
+    await monter({ activeType: 'events', annuaire: true, types: ['clubs', 'events'] });
+
+    expect(mockPanneaux.events.props.entete ?? null).toBeNull();
+  });
+});
+
 describe('ANNUAIRE-E1 — le drapeau « annuaire » de la route', () => {
   test('✅ annuaire: true est transmis a la coquille ET a la liste de clubs', async () => {
     await monter({
