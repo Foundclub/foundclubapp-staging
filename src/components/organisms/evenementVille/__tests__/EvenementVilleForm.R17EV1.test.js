@@ -1,4 +1,6 @@
-import { Text, TouchableOpacity } from 'react-native';
+import {
+  ScrollView, StyleSheet, Text, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EvenementDeLaVilleForm from '../EvenementVilleForm';
@@ -645,5 +647,34 @@ describe('R17-EVT-1-BIS — l’affiche, une fois, partout', () => {
     await touche(tunnel, 'tunnel-suivant');
     expect(titre(tunnel)).toBe('Récapitulatif');
     expect(affiches(tunnel)).toHaveLength(1);
+  });
+});
+
+// 🏛️ R17-EVT-1-BIS (c) (20/10) — dans le panneau de droite du planning (380 px, qui défile déjà),
+// le formulaire se pose « étroit » : une colonne, aucun défilement à lui. ROUGE avant.
+describe('R17-EVT-1-BIS — le panneau étroit, à côté de la grille', () => {
+  it('🔴 étroit : pas de défilement propre, « Quand » sur une colonne', async () => {
+    const large = await monter({ presentation: 'panneau' });
+    expect(large.root.findAllByType(ScrollView).length).toBeGreaterThan(0);
+    /** @type {any} */
+    let etroit;
+    await act(async () => {
+      etroit = renderer.create(
+        <EvenementDeLaVilleForm
+          collectiviteId="ville-montrivage"
+          collectiviteNom="Ville de Montrivage"
+          etroit
+          installations={INSTALLATIONS}
+          onClose={jest.fn()}
+          onPublier={jest.fn()}
+          presentation="panneau"
+        />,
+      );
+    });
+    expect(etroit.root.findAllByType(ScrollView)).toHaveLength(0);
+    const enLigne = etroit.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && n.props?.testID === 'evenement-quand-colonnes');
+    expect(enLigne).toHaveLength(1);
+    expect(StyleSheet.flatten(enLigne[0].props.style).flexDirection).not.toBe('row');
   });
 });

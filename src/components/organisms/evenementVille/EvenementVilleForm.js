@@ -61,15 +61,19 @@ const AFFICHE_OCTETS_MAX = 10 * 1024 * 1024;
  * R17-EVT-1-BIS (e) : « Ailleurs » se saisit dans la saisie d'adresse partagée (R17-ADRESSE) :
  * suggestions, ou « Adresse introuvable ? » et un point posé sur la carte, qui part de la commune
  * de la Ville (`collectiviteVille`).
+ * R17-EVT-1-BIS (c) : `etroit` — posé dans le panneau de droite du planning (380 px, qui défile
+ * déjà) : une colonne, aucun défilement à lui.
  * @param {{ collectiviteId: string, collectiviteNom?: string, collectiviteVille?: string,
- *   evenement?: any, initial?: any, installations?: any[], onClose: () => void,
- *   onPublier: (corps: any) => Promise<any>, presentation?: 'tunnel' | 'panneau' }} props
+ *   etroit?: boolean, evenement?: any, initial?: any, installations?: any[],
+ *   onClose: () => void, onPublier: (corps: any) => Promise<any>,
+ *   presentation?: 'tunnel' | 'panneau' }} props
  * @returns {import('react').ReactElement} Le formulaire.
  */
 function EvenementDeLaVilleForm({
   collectiviteId,
   collectiviteNom = '',
   collectiviteVille = '',
+  etroit = false,
   evenement = null,
   initial = null,
   installations = [],
@@ -82,6 +86,8 @@ function EvenementDeLaVilleForm({
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const modification = Boolean(evenement?.documentId);
+  // R17-EVT-1-BIS (c) : deux colonnes dans le panneau large ; une dans le panneau étroit.
+  const enColonnes = presentation === 'panneau' && !etroit;
   const [etat, setEtat] = useState(() => (
     modification ? etatDepuisLaVue(evenement) : etatInitial(initial || {})
   ));
@@ -256,8 +262,11 @@ function EvenementDeLaVilleForm({
 
   const champsQuand = (
     <View style={{ gap: 12 }}>
-      <View style={[presentation === 'panneau' ? Alignments.row : null, { gap: 12 }]}>
-        <View style={{ flex: presentation === 'panneau' ? 1.4 : undefined }}>
+      <View
+        style={[enColonnes ? Alignments.row : null, { gap: 12 }]}
+        testID="evenement-quand-colonnes"
+      >
+        <View style={{ flex: enColonnes ? 1.4 : undefined }}>
           <DatePickerInput
             error={erreurDe('date')}
             label={t('collectiviteEvenement.quand.le', 'Le')}
@@ -269,7 +278,7 @@ function EvenementDeLaVilleForm({
           />
         </View>
         <View
-          style={[Alignments.row, { flex: presentation === 'panneau' ? 2 : undefined, gap: 12 }]}
+          style={[Alignments.row, { flex: enColonnes ? 2 : undefined, gap: 12 }]}
         >
           <View style={{ flex: 1 }}>
             <TimePickerInput
@@ -670,6 +679,31 @@ function EvenementDeLaVilleForm({
   // Le PANNEAU (ordinateur) : tous les champs, « Annuler » / « Publier l'événement ».
   // ---------------------------------------------------------------------------------------------
   if (presentation === 'panneau') {
+    // R17-EVT-1-BIS (c) : les champs une fois ; étroit, l'hôte (le panneau du planning) défile.
+    const corpsDuPanneau = (
+      <>
+        {champNom}
+        {champType}
+        {champsQuand}
+        <View style={{ gap: 8 }}>
+          {titreDeChamp(t('collectiviteEvenement.ou.titrePanneau', 'Où'))}
+          {lignesOu}
+        </View>
+        {etat.ailleurs ? null : (
+          <View style={{ gap: 8 }}>
+            {titreDeChamp(t('collectiviteEvenement.place.titre', 'Quelle place prend-il ?'))}
+            {lignesPlace}
+          </View>
+        )}
+        <View style={{ gap: 8 }}>
+          {titreDeChamp(t('collectiviteEvenement.qui.titre', 'Qui le voit ?'))}
+          {lignesQui}
+        </View>
+        {champDescription}
+        {champAffiche}
+        {encadrePanne}
+      </>
+    );
     return (
       <View style={{ flex: 1, gap: 12 }} testID="evenement-panneau">
         <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
@@ -693,28 +727,13 @@ function EvenementDeLaVilleForm({
             <SvgIcon color={Colors.neutral200} height={14} name="close" width={14} />
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 12 }} style={{ flex: 1 }}>
-          {champNom}
-          {champType}
-          {champsQuand}
-          <View style={{ gap: 8 }}>
-            {titreDeChamp(t('collectiviteEvenement.ou.titrePanneau', 'Où'))}
-            {lignesOu}
-          </View>
-          {etat.ailleurs ? null : (
-            <View style={{ gap: 8 }}>
-              {titreDeChamp(t('collectiviteEvenement.place.titre', 'Quelle place prend-il ?'))}
-              {lignesPlace}
-            </View>
-          )}
-          <View style={{ gap: 8 }}>
-            {titreDeChamp(t('collectiviteEvenement.qui.titre', 'Qui le voit ?'))}
-            {lignesQui}
-          </View>
-          {champDescription}
-          {champAffiche}
-          {encadrePanne}
-        </ScrollView>
+        {etroit ? (
+          <View style={{ gap: 16, paddingBottom: 12 }}>{corpsDuPanneau}</View>
+        ) : (
+          <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 12 }} style={{ flex: 1 }}>
+            {corpsDuPanneau}
+          </ScrollView>
+        )}
         <View style={[Alignments.row, { gap: 12 }]}>
           <Button
             onPress={onClose}
