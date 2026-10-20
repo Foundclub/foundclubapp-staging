@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  Suspense, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -76,6 +76,9 @@ import FacilityPlanningList from '@/components/organisms/planning/FacilityPlanni
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
+// R17-EVT-1-BIS (c) : le formulaire de l evenement de la Ville, charge a la demande.
+import EvenementDeLaVilleForm
+  from '@/components/organisms/evenementVille/EvenementVilleFormDiffere';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -85,10 +88,12 @@ import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirige
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGestesEvenementDeLaVille } from '@/services/collectivite/collectiviteEvenementQueries';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
   useManagingCollectivite,
+  useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import {
   getClubPlanning,
@@ -1174,6 +1179,13 @@ function PlanningWeekFullscreen() {
   const ongletsDInstallations = Array.isArray(installationsDeLaVille.data)
     ? installationsDeLaVille.data.filter((/** @type {any} */ ligne) => ligne?.documentId)
     : [];
+  // 🏛️ R17-EVT-1-BIS (c) (20/10, tri du chef) — « Ajouter un événement de la Ville » dans le
+  // panneau de droite, comme « Attribuer un créneau » (planche P10-evenement-ordi) : la Ville
+  // (son nom, sa commune), l'envoi ; publié, le panneau se ferme et la grille se relit.
+  const villesGerees = useMyCollectivites({ enabled: isFacilitySource && isDesktop });
+  const villeGeree = (Array.isArray(villesGerees.data) ? villesGerees.data : [])
+    .find((/** @type {any} */ ville) => ville?.documentId === managingCollectiviteId) || null;
+  const { publier: publierEvenement } = useGestesEvenementDeLaVille(managingCollectiviteId);
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -1533,6 +1545,17 @@ function PlanningWeekFullscreen() {
       startTime: panneau.initial?.startTime,
     });
   };
+  // R17-EVT-1-BIS (c) : une heure libre, l'événement de la Ville, déjà rempli (ce jour,
+  // ces heures).
+  const ajouterUnEvenement = () => setPanneau({
+    initial: {
+      date: panneau.date,
+      endTime: panneau.initial?.endTime,
+      facilityId,
+      startTime: panneau.initial?.startTime,
+    },
+    type: 'evenement',
+  });
   if (['attribuer', 'modifier'].includes(panneau?.type) && !isDesktop) {
     tunnelPleinEcran = (
       <SeasonSlotForm
@@ -1592,6 +1615,36 @@ function PlanningWeekFullscreen() {
             variant="Secondary"
           />
         ) : null}
+        {/* R17-EVT-1-BIS (c) — une heure libre : l'événement de la Ville, à côté de la grille. */}
+        {panneau.type === 'attribuer' && panneau.date && peutAttribuer ? (
+          <Button
+            onPress={ajouterUnEvenement}
+            title={t('collectiviteEvenement.titre', 'Ajouter un événement de la Ville')}
+            variant="Ghost"
+          />
+        ) : null}
+      </View>
+    );
+  } else if (panneau?.type === 'evenement' && isDesktop && peutAttribuer) {
+    panneauRendu = (
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+        <Suspense fallback={null}>
+          <EvenementDeLaVilleForm
+            collectiviteId={String(managingCollectiviteId)}
+            collectiviteNom={String(villeGeree?.name || '')}
+            collectiviteVille={String(villeGeree?.address?.city || '')}
+            etroit
+            initial={panneau.initial}
+            installations={ongletsDInstallations}
+            key={`evenement-${panneau.initial?.date || ''}-${panneau.initial?.startTime || ''}`}
+            onClose={fermerPanneau}
+            onPublier={async (/** @type {any} */ corps) => {
+              await publierEvenement.mutateAsync(corps?.data ?? corps);
+              fermerPanneau();
+            }}
+            presentation="panneau"
+          />
+        </Suspense>
       </View>
     );
   } else if (panneau?.type === 'demander') {

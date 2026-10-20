@@ -181,6 +181,27 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getCMPlanning: jest.fn(),
 }));
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
+// R17-EVT-1-BIS (c) : le formulaire de l'événement (doublé : il garde ses props) et son envoi.
+/** @type {any[]} */
+const mockFormulaireEvenement = [];
+jest.mock(
+  '@/components/organisms/evenementVille/EvenementVilleForm',
+  () => function FormulaireEvenementDouble(/** @type {any} */ props) {
+    mockFormulaireEvenement.push(props);
+    const { View: VueRN } = jest.requireActual('react-native');
+    return jest.requireActual('react').createElement(VueRN, { testID: 'formulaire-evenement' });
+  },
+);
+const mockPublierEvenement = jest.fn(async () => ({ data: { documentId: 'evt-neuf' } }));
+jest.mock('@/services/collectivite/collectiviteEvenementService', () => ({
+  annulerEvenement: jest.fn(),
+  getApercuEvenement: jest.fn(),
+  getEvenementDeLaVille: jest.fn(),
+  getEvenementsDeLaVille: jest.fn(),
+  getEvenementsPublicsDeLaVille: jest.fn(),
+  modifierEvenement: jest.fn(),
+  publierEvenement: (/** @type {any} */ corps) => mockPublierEvenement(corps),
+}));
 jest.mock('@/services/collectivite/collectiviteService', () => ({
   getCollectiviteClubs: jest.fn(),
   getCollectiviteInstallations: jest.fn(),
@@ -630,3 +651,38 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// 🏛️ R17-EVT-1-BIS (c) (20/10/2026, tri du chef) — « AJOUTER UN ÉVÉNEMENT DE LA VILLE » s'ouvre
+// À CÔTÉ de la grille, comme « Attribuer un créneau » (planche P10-evenement-ordi) : depuis une
+// heure libre, sans naviguer, déjà rempli (l'installation, le jour, les heures), étroit ; publié,
+// le panneau se ferme et la grille se relit. ROUGE avant (aucun bouton).
+describe('R17-EVT-1-BIS — l’événement de la Ville dans le panneau de droite', () => {
+  it('🔴 une heure libre : « Ajouter un événement de la Ville » ouvre le panneau, déjà rempli', async () => {
+    gereLaVille();
+    mockFormulaireEvenement.length = 0;
+    const arbre = await rendre();
+    await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 17); });
+    await attendre();
+    await act(async () => { parTexte(arbre, 'Ajouter un événement de la Ville').props.onPress(); });
+    await attendre();
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteEvenement', expect.anything());
+    const formulaire = mockFormulaireEvenement[mockFormulaireEvenement.length - 1];
+    expect(formulaire).toEqual(expect.objectContaining({
+      collectiviteId: 'ville-1',
+      collectiviteNom: 'Ville de Montrivage',
+      etroit: true,
+      initial: expect.objectContaining({
+        date: '2026-03-04', endTime: '18:30', facilityId: 'gym-ville', startTime: '17:00',
+      }),
+      presentation: 'panneau',
+    }));
+    expect(formulaire.installations.map((/** @type {any} */ i) => i.documentId)).toEqual(['gym-ville']);
+    await act(async () => { await formulaire.onPublier({ data: { name: 'Fête du sport' } }); });
+    await attendre();
+    expect(mockPublierEvenement).toHaveBeenCalledWith({
+      collectiviteId: 'ville-1', data: { name: 'Fête du sport' },
+    });
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'formulaire-evenement'))
+      .toHaveLength(0);
+  });
+});
