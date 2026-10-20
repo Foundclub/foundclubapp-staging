@@ -417,7 +417,9 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    // COLL-R-A7 (COL-005) : « Période » est sautée, écrite au récapitulatif.
+    // COLL-R-A7 (COL-005) : « Période » était sautée, écrite au récapitulatif.
+    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Suivant'));
   };
 
@@ -452,7 +454,8 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     expect(fenetre.props.presentationStyle).toBe('fullScreen');
     expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
       headerVariant: 'focus',
-      stepCount: 5,
+      // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6).
+      stepCount: 6,
       subtitle: 'Gymnase des Tilleuls · 2 équipes à la fois',
       title: 'Pour quel club ?',
     }));
@@ -615,6 +618,8 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     expect(textes(arbre)).toContain('Plateau');
     expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({

@@ -19,11 +19,13 @@ import {
   overCapacityPreviewOf,
   seasonSlotErrorMessage,
   seasonYears,
+  slotShape,
   slotWho,
   timeRange,
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -40,6 +42,7 @@ import FacilityCheckPanel from '@/components/organisms/facilityCheck/FacilityChe
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
 import FacilityReportPanel from '@/components/organisms/facilityReport/FacilityReportPanel';
 import FacilitySecurityTab from '@/components/organisms/facilityReport/FacilitySecurityTab';
+import SeasonSlotDatesBand from '@/components/organisms/seasonSlot/SeasonSlotDatesBand';
 import SeasonSlotForm, {
   HAUTEUR_DE_LA_FEUILLE,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
@@ -312,8 +315,11 @@ function InstallationCreneaux() {
   const libelleDuCreneau = (/** @type {any} */ creneau) => [
     timeRange(creneau.startTime, creneau.endTime),
     creneau.plateau?.name || null,
+    // 🗓️ R17-QUAND-1 (planche P11-quand-ou-ca-vit, 2) — la forme quand ce n'est pas « chaque
+    // semaine » : « un mercredi sur deux », ou les dates choisies (alors sans « du … au … »).
+    slotShape(creneau).everyWeeks > 1 || slotShape(creneau).dates ? formeEnMots(t, creneau) : null,
     // FINITIONS12-COLL (03/10) — la fin écrite : le dernier jour où il a lieu (T11, C23).
-    meta.season && (creneau.validFrom !== meta.season.validFrom
+    !slotShape(creneau).dates && meta.season && (creneau.validFrom !== meta.season.validFrom
       || finDuCreneau(creneau) !== meta.season.validUntil)
       ? t('collectiviteCreneaux.creneaux.du', 'du {{debut}} au {{fin}}', {
         debut: jourCourt(creneau.validFrom),
@@ -406,8 +412,8 @@ function InstallationCreneaux() {
             : undefined}
           description={t(
             'collectiviteCreneaux.creneaux.videTexte',
-            'Un créneau attribué revient chaque semaine de la saison : le club y pose ses '
-              + 'entraînements sans rien vous demander.',
+            'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
+              + 'choisies : le club y pose ses entraînements sans rien vous demander.',
           )}
           onAction={canManage ? () => attribuer() : undefined}
           title={t('collectiviteCreneaux.creneaux.vide', 'Aucun créneau attribué')}
@@ -445,10 +451,17 @@ function InstallationCreneaux() {
             onCreneau={(creneau) => setPanneau({ creneau, type: 'gerer' })}
             ouverture={toMinutes(installation.openingTime)}
           />
+          {/* R17-QUAND-1 (planche P11-quand-v2-ordi, A) : les dates choisies, sous la grille. */}
+          <SeasonSlotDatesBand
+            creneaux={creneauxColores}
+            onCreneau={(creneau) => setPanneau({ creneau, type: 'gerer' })}
+          />
           {blocLegende}
         </View>
       );
     }
+    // R17-QUAND-1 (planche P11-quand-ou-ca-vit, 2) : au téléphone, les dates choisies, en groupe.
+    const aDates = creneauxColores.filter((/** @type {any} */ creneau) => slotShape(creneau).dates);
     return (
       <View style={{ gap: 8 }}>
         {blocLegende}
@@ -463,6 +476,17 @@ function InstallationCreneaux() {
             {slots.map(carteDeCreneau)}
           </View>
         ))}
+        {aDates.length ? (
+          <View style={{ gap: 8 }} testID="creneaux-dates-choisies">
+            <Text
+              accessibilityRole="header"
+              style={[Fonts.p2Bold, Fonts.primary200, Spaces.marginTop[8]]}
+            >
+              {t('collectiviteCreneaux.quand.groupeDates', 'Dates choisies')}
+            </Text>
+            {aDates.map(carteDeCreneau)}
+          </View>
+        ) : null}
       </View>
     );
   })();
