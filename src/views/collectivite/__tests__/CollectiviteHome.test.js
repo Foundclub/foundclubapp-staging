@@ -52,6 +52,13 @@ let mockSignalements = { data: null };
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
   useCollectiviteFacilityReportsSummary: () => mockSignalements,
 }));
+// R17-CONTROLES (20/10) : « Ce qui vous attend » lit aussi les controles a refaire (doublure
+// reglable).
+/** @type {any} */
+let mockControles = { data: null };
+jest.mock('@/services/facilityCheck/facilityCheckQueries', () => ({
+  useCollectiviteFacilityChecksSummary: () => mockControles,
+}));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({
@@ -269,6 +276,7 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 
 beforeEach(() => {
   mockSignalements = { data: null };
+  mockControles = { data: null };
   mockLargeur = 390;
   mockRetenu.clear();
   mockNavigate.mockClear();
@@ -1204,5 +1212,62 @@ describe('R17-SIGNALER-1 — « Ce qui vous attend » : les signalements à trai
     mockSignalements = { data: null };
     arbre = await monter();
     expect(textes(arbre).filter((texte) => /signalement/.test(texte))).toEqual([]);
+  });
+});
+
+// R17-CONTROLES (20/10/2026, REC17-011 lot 2, decision d Adel Q6 B ; planche P11-securite-ou-ca-vit
+// porte 1, validée) — « Ce qui vous attend » porte la ligne des contrôles à refaire (dans les 30
+// jours, ou en retard) : le plus urgent en détail ; un appui ouvre l onglet « Sécurité et suivi »
+// de SON installation. Absente quand rien n est à refaire.
+describe('R17-CONTROLES — « Ce qui vous attend » : les contrôles à refaire', () => {
+  const BUTS = {
+    documentId: 'c-buts',
+    facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' },
+    label: 'Buts et paniers',
+    nextDue: '2027-03-12',
+    state: 'bientot',
+  };
+  const ECLAIRAGE = {
+    documentId: 'c-ecl',
+    facility: { documentId: 'dojo', name: 'Dojo municipal' },
+    label: 'Éclairage de secours',
+    nextDue: '2026-09-02',
+    state: 'en_retard',
+  };
+
+  it('un contrôle : « Contrôle à refaire avant le 12 mars », il ouvre l onglet', async () => {
+    mockControles = { data: { data: [BUTS], meta: { dueCount: 1 } } };
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toContain('Contrôle à refaire avant le 12 mars');
+    expect(lus).toContain('Buts et paniers · Gymnase des Tilleuls');
+    await appuyer(arbre, 'collectivite-home-controles');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'securite',
+    });
+  });
+
+  it('en retard : « Contrôle en retard depuis le 2 septembre »', async () => {
+    mockControles = { data: { data: [ECLAIRAGE], meta: { dueCount: 1 } } };
+    expect(textes(await monter())).toContain('Contrôle en retard depuis le 2 septembre');
+  });
+
+  it('plusieurs : « 2 contrôles à refaire », le plus urgent en détail', async () => {
+    mockControles = { data: { data: [ECLAIRAGE, BUTS], meta: { dueCount: 2 } } };
+    const lus = textes(await monter());
+    expect(lus).toContain('2 contrôles à refaire');
+    expect(lus).toContain('Éclairage de secours · Dojo municipal');
+  });
+
+  it('un contrôle seul : « Ce qui vous attend » ; rien à refaire : ligne ABSENTE', async () => {
+    mockRequetes = lu([]);
+    mockControles = { data: { data: [BUTS], meta: { dueCount: 1 } } };
+    expect(textes(await monter())).toContain('Ce qui vous attend');
+    mockControles = { data: { data: [], meta: { dueCount: 0 } } };
+    const arbre = await monter();
+    const lignes = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'collectivite-home-controles',
+    );
+    expect(lignes).toHaveLength(0);
   });
 });
