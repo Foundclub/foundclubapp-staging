@@ -850,3 +850,110 @@ describe('MSGNOTIF2 — la LISTE des conversations, seule à l\'écran, rattrape
     expect(lireLaListe().mock.calls.length - lecturesDeLaListe).toBe(1);
   });
 });
+
+// ==========================================================================
+// MSG-SUPPORT (20/10/2026), point 4 — LA CONVERSATION « ASSISTANCE FOUNDCLUB » PROFITE DU MÊME
+// RATTRAPAGE. Elle passe par les mêmes chemins que tout fil (useMessaging, useGetChatMessages,
+// notification → Conversation) : rien n'a été écrit pour elle côté temps réel, et ce bloc le
+// PROUVE avec ses vraies formes — la réponse de l'équipe arrive signée, l'expéditeur masqué par
+// le serveur (`assistance-foundclub`), et la notification du titulaire est un `newWhisper`
+// titré « Assistance FoundClub » ; celle d'un super-admin, un `newGroupMessage`.
+// Témoin de CARACTÉRISATION : vert dès la base (c'est le but), il rougira si un jour le fil
+// d'assistance quitte ces chemins.
+// ==========================================================================
+describe('MSG-SUPPORT — la conversation d\'assistance rattrape comme les autres', () => {
+  const ASSISTANCE = 'assistance-1';
+  const DEMANDE = 'Bonjour, je ne vois plus mon équipe';
+  /**
+   * L'équipe répond : la forme exacte que le serveur diffuse (expéditeur masqué, signature).
+   * @param {string} texte La réponse.
+   * @returns {Promise<any>} Le message.
+   */
+  const lAssistanceRepond = async (texte) => {
+    const message = {
+      ...unMessage(ASSISTANCE, texte),
+      sender: {
+        avatar: null,
+        documentId: 'assistance-foundclub',
+        firstname: 'Assistance',
+        lastname: 'FoundClub',
+      },
+      senderSignature: { nom: 'Assistance FoundClub', voix: 'assistance' },
+    };
+    mockServeur.messages[ASSISTANCE] = [message, ...(mockServeur.messages[ASSISTANCE] || [])];
+    if (banc().socket?.connected) {
+      act(() => { banc().socket.jouerEvenement('message-received', message); });
+    }
+    await laisserPasser(50);
+    return message;
+  };
+  /**
+   * Toucher une notification d'un type donné (titulaire : newWhisper ; équipe : newGroupMessage).
+   * @param {string} chatId Le fil.
+   * @param {string} type Le type de la notification.
+   * @returns {Promise<void>}
+   */
+  const toucher = async (chatId, type) => {
+    act(() => {
+      /** @type {any} */ (mockOuvrirUneNotification)({
+        data: { chatId, notificationId: `notif-${type}-${Date.now()}`, type },
+      });
+    });
+    await laisserPasser(1500);
+  };
+
+  beforeEach(() => {
+    mockServeur.messages[ASSISTANCE] = [unMessage(ASSISTANCE, DEMANDE, 'moi')];
+  });
+
+  test('(m) liste endormie, l’équipe répond : la notif ouvre l’assistance', async () => {
+    filDejaLuPlusTot(ASSISTANCE);
+    jest.setSystemTime(Date.now() + 60_000);
+    await monterLAppli([]);
+
+    await passerEnArrierePlan();
+    await lAssistanceRepond('On a remis ton équipe, tu peux vérifier ?');
+    await revenirAuPremierPlan({ leFilRevient: true });
+    await toucher(ASSISTANCE, 'newWhisper');
+
+    expect(ecranDuHaut()?.chatId).toBe(ASSISTANCE);
+    expect(ecranDuHaut()?.textes)
+      .toEqual(['On a remis ton équipe, tu peux vérifier ?', DEMANDE]);
+  });
+
+  test('(n) assistance ouverte, coupée, réponse dans la veille, sans notif', async () => {
+    await monterLAppli([{ chatId: ASSISTANCE, cle: 'ouvert' }]);
+
+    await passerEnArrierePlan();
+    await lAssistanceRepond('Réponse pendant la veille');
+    await revenirAuPremierPlan({ leFilRevient: true });
+    await laisserPasser(1500);
+
+    expect(ecranDuHaut()?.textes).toEqual(['Réponse pendant la veille', DEMANDE]);
+  });
+
+  test('(o) le direct reste du direct : réponse par le fil, AUCUNE lecture HTTP', async () => {
+    await monterLAppli([{ chatId: ASSISTANCE, cle: 'ouvert' }]);
+    const lecturesAvant = lecturesDu(ASSISTANCE);
+
+    await lAssistanceRepond('En direct');
+    await laisserPasser(1000);
+
+    expect(ecranDuHaut()?.textes).toEqual(['En direct', DEMANDE]);
+    expect(lecturesDu(ASSISTANCE)).toBe(lecturesAvant);
+  });
+
+  test('(p) côté équipe : la notif « newGroupMessage » ouvre la conversation', async () => {
+    filDejaLuPlusTot(ASSISTANCE);
+    jest.setSystemTime(Date.now() + 60_000);
+    await monterLAppli([]);
+
+    await passerEnArrierePlan();
+    await quelquUnEcrit(ASSISTANCE, 'Vous êtes là ?');
+    await revenirAuPremierPlan({ leFilRevient: true });
+    await toucher(ASSISTANCE, 'newGroupMessage');
+
+    expect(ecranDuHaut()?.chatId).toBe(ASSISTANCE);
+    expect(ecranDuHaut()?.textes).toEqual(['Vous êtes là ?', DEMANDE]);
+  });
+});
