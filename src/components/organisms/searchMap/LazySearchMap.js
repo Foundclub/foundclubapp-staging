@@ -8,7 +8,7 @@
  * Elle n'est donc chargée qu'ici, au premier rendu de la vue Carte — comme `renderPinMap`
  * (platform/maps/maps.native.js).
  * Le site lit `LazySearchMap.web.js` (un `require` n'y existe pas).
- * @param {object} props - Les propriétés de `SearchMap`.
+ * @param {Record<string, any>} props - Les propriétés de `SearchMap`.
  * @returns {import('react').ReactElement} La carte.
  */
 function LazySearchMap(props) {
