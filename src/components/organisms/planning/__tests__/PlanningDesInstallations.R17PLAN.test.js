@@ -500,6 +500,29 @@ describe('R17-PLANNING-2 — un jour sans rien, au-delà de la semaine (P10-plan
   });
 });
 
+describe('R17-PLANNING-2 — la prochaine séance dans un AUTRE mois dit son mois', () => {
+  test('15 bis ROUGE-AVANT — dimanche 25 octobre vide, rien avant le 3 : « mardi 3 novembre »', async () => {
+    servir({
+      '2026-10-19': SEMAINE,
+      '2026-10-26': { dojo: [], gym: [bloc(FC, '2026-11-03', 18, 'Senior B')], stade: [] },
+    });
+    const arbre = await rendre();
+    const suivant = () => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    await [22, 23, 24, 25].reduce(async (avant) => {
+      await avant;
+      await act(async () => { suivant().props.onPress(); });
+      await attendre();
+    }, Promise.resolve());
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Rien ce dimanche');
+    expect(lus.find((texte) => texte.startsWith('Prochaine séance')))
+      .toMatch(/^Prochaine séance : mardi 3 novembre, /);
+    expect(parTexte(arbre, 'Aller au mardi 3 novembre')).toBeDefined();
+  });
+});
+
 describe('R17-PLANNING-2 — la ligne « 3 installations » (P10-planning-tel 1)', () => {
   test('16 ROUGE-AVANT — téléphone, Jour : « 3 installations » au-dessus de la date', async () => {
     const arbre = await rendre();

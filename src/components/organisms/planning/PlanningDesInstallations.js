@@ -739,6 +739,10 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     if (journeeVide) {
       const suivant = prochainBloc(blocs, date) || prochainBloc(blocsApres, date);
       const jourSuivant = suivant ? getPlanningItemDate(suivant) : null;
+      // Un autre mois se nomme (« mardi 3 novembre », vu d'un dimanche d'octobre).
+      const formatDuSuivant = jourSuivant && !isSameMonth(jourSuivant, date)
+        ? 'EEEE d MMMM'
+        : 'EEEE d';
       return (
         <View
           style={encadre}
@@ -759,7 +763,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                   {
                     ...SANS_ECHAPPEMENT,
                     installation: suivant.installation?.name || '',
-                    quand: `${format(jourSuivant, 'EEEE d', { locale })}, ${
+                    quand: `${format(jourSuivant, formatDuSuivant, { locale })}, ${
                       getPlanningTimeLabel(suivant).split(' – ')[0]}`,
                   },
                 )}
@@ -769,7 +773,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                   onPress={() => allerA(jourSuivant)}
                   title={t('facilityList.toutesInstallations.allerAu', 'Aller au {{jour}}', {
                     ...SANS_ECHAPPEMENT,
-                    jour: format(jourSuivant, 'EEEE d', { locale }),
+                    jour: format(jourSuivant, formatDuSuivant, { locale }),
                   })}
                   variant="Secondary"
                 />
