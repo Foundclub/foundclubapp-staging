@@ -7921,7 +7921,16 @@ export default {
       you: 'You',
     },
     imagePreview: {
+      cancel: 'Cancel',
       close: 'Close image',
+      openSettings: 'Open settings',
+      permissionBody: 'Allow FoundClub to add photos, in your phone settings.',
+      permissionTitle: 'Photo access denied',
+      save: 'Save',
+      saved: 'Image saved to your gallery',
+      saveFailed: 'The image could not be saved. Try again.',
+      saveHint: 'Save the image to your gallery',
+      saving: 'Saving…',
     },
     league: {
       cancelBody: 'This will cancel the match and delete the conversation.',

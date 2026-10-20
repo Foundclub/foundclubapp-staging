@@ -1,6 +1,8 @@
-import { useEffect, useMemo } from 'react';
 import {
-  Image, Modal, Pressable, StyleSheet, useWindowDimensions,
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
+import {
+  Alert, Image, Linking, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -17,7 +19,17 @@ import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import {
+  NOM_DE_L_AUTEUR,
+  TEXTE_DU_MESSAGE,
+} from '@/components/molecules/bulleDuFil/typographieDuFil';
 
+// Jumeaux `.native.js` (Metro, Jest) et `.web.js` (Vite) : le controle de types ne voit
+// aucun fichier a ce chemin exact (meme note que `CollectiviteChiffres.js`).
+// @ts-ignore -- cf. ci-dessus
+import { ECHECS_D_ENREGISTREMENT, enregistrerLImage } from '@/platform/media/enregistrerLImage';
+
+// La regle du glisser, partagee avec le site.
 import { doitFermer, opaciteDuFond } from './gesteDeFermeture';
 
 /**
@@ -38,10 +50,17 @@ import { doitFermer, opaciteDuFond } from './gesteDeFermeture';
  * s'arme que vers le BAS (`activeOffsetY(12)`) et cede a un geste horizontal.
  * ⚠️ `GestureHandlerRootView` DANS la fenetre : sur Android, un `Modal` est une autre
  * racine native, et le geste n'y serait jamais recu sans elle.
+ *
+ * ✅ « ENREGISTRER » : meme habit que la croix, en haut a droite. L'image va dans la
+ * galerie (`enregistrerLImage`) ; un avis le dit en bas (« Image enregistrée… ») ; un
+ * refus d'acces ouvre une alerte qui mene aux reglages du telephone.
  */
 
 /** Opacite du rond derriere les boutons de l'apercu. */
 const OPACITE_DU_ROND = 0.65;
+
+/** Duree d'affichage de l'avis « Image enregistrée » (ms). */
+const DUREE_DE_L_AVIS = 2500;
 
 /**
  * L'apercu plein ecran d'une image de conversation.
@@ -57,14 +76,62 @@ function ApercuDImage({
   onClose, onImageError, onImageLoad, uri, visible,
 }) {
   const { Colors } = useTheme();
-  const { top } = useSafeAreaInsets();
+  const { bottom, top } = useSafeAreaInsets();
   const { height: hauteur } = useWindowDimensions();
   const glissement = useSharedValue(0);
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  const [avis, setAvis] = useState('');
+  const enCoursRef = useRef(false);
+  const minuterieRef = useRef(/** @type {any} */ (null));
 
-  // Chaque ouverture repart d'une image a sa place.
+  // Chaque ouverture repart d'une image a sa place, sans avis de la fois d'avant.
   useEffect(() => {
     if (visible) glissement.value = 0;
+    setAvis('');
   }, [glissement, uri, visible]);
+
+  useEffect(() => () => clearTimeout(minuterieRef.current), []);
+
+  const montrerAvis = useCallback((/** @type {string} */ texte) => {
+    clearTimeout(minuterieRef.current);
+    setAvis(texte);
+    minuterieRef.current = setTimeout(() => setAvis(''), DUREE_DE_L_AVIS);
+  }, []);
+
+  const enregistrer = useCallback(async () => {
+    if (enCoursRef.current || !uri) return;
+    enCoursRef.current = true;
+    setEnregistrementEnCours(true);
+    try {
+      await enregistrerLImage(uri);
+      montrerAvis(i18n.t('conversation.imagePreview.saved', 'Image enregistrée dans ta galerie'));
+    } catch (erreur) {
+      if (/** @type {any} */ (erreur)?.reason === ECHECS_D_ENREGISTREMENT.PERMISSION) {
+        Alert.alert(
+          i18n.t('conversation.imagePreview.permissionTitle', 'Accès aux photos refusé'),
+          i18n.t(
+            'conversation.imagePreview.permissionBody',
+            'Autorise FoundClub à ajouter des photos, dans les réglages du téléphone.',
+          ),
+          [
+            { style: 'cancel', text: i18n.t('conversation.imagePreview.cancel', 'Annuler') },
+            {
+              onPress: () => { Linking.openSettings().catch(() => {}); },
+              text: i18n.t('conversation.imagePreview.openSettings', 'Ouvrir les réglages'),
+            },
+          ],
+        );
+      } else {
+        montrerAvis(i18n.t(
+          'conversation.imagePreview.saveFailed',
+          'L’image n’a pas pu être enregistrée. Réessaie.',
+        ));
+      }
+    } finally {
+      enCoursRef.current = false;
+      setEnregistrementEnCours(false);
+    }
+  }, [montrerAvis, uri]);
 
   const geste = useMemo(() => Gesture.Pan()
     .activeOffsetY(12)
@@ -132,12 +199,51 @@ function ApercuDImage({
         >
           <GlyphIcon color={Colors.neutral00} name="xmark" size={22} />
         </Pressable>
+
+        <Pressable
+          accessibilityLabel={i18n.t(
+            'conversation.imagePreview.saveHint',
+            'Enregistrer l’image dans ta galerie',
+          )}
+          accessibilityRole="button"
+          accessibilityState={{ busy: enregistrementEnCours, disabled: enregistrementEnCours }}
+          disabled={enregistrementEnCours}
+          hitSlop={8}
+          onPress={enregistrer}
+          style={[styles.pilule, habillageDuRond, { top: top + 8 }]}
+          testID="MSGIMG-enregistrer"
+        >
+          <GlyphIcon color={Colors.neutral00} name="arrowDownToBracket" size={20} />
+          <Text style={[NOM_DE_L_AUTEUR, { color: Colors.neutral00 }]}>
+            {enregistrementEnCours
+              ? i18n.t('conversation.imagePreview.saving', 'Enregistrement…')
+              : i18n.t('conversation.imagePreview.save', 'Enregistrer')}
+          </Text>
+        </Pressable>
+
+        {avis ? (
+          <View
+            accessibilityLiveRegion="polite"
+            accessibilityRole="alert"
+            style={[styles.avis, habillageDuRond, { bottom: bottom + 24 }]}
+          >
+            <Text style={[TEXTE_DU_MESSAGE, { color: Colors.neutral00 }]}>{avis}</Text>
+          </View>
+        ) : null}
       </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  avis: {
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    maxWidth: '88%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    position: 'absolute',
+  },
   ecran: {
     alignItems: 'center',
     flex: 1,
@@ -146,6 +252,17 @@ const styles = StyleSheet.create({
   image: {
     height: '90%',
     width: '100%',
+  },
+  pilule: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    flexDirection: 'row',
+    gap: 8,
+    height: 44,
+    paddingHorizontal: 16,
+    position: 'absolute',
+    right: 16,
   },
   rond: {
     alignItems: 'center',

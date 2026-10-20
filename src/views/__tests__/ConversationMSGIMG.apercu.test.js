@@ -13,6 +13,15 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 let mockChatData;
+const mockEnregistrerLImage = jest.fn();
+
+// MSGIMG-3 — l'enregistrement dans la galerie : la doublure retient l'adresse demandee.
+// Les raisons d'echec sont lues dans le VRAI module, jamais recopiees.
+jest.mock('@/platform/media/enregistrerLImage', () => ({
+  ...jest.requireActual('@/platform/media/enregistrerLImage'),
+  __esModule: true,
+  enregistrerLImage: (/** @type {any[]} */ ...args) => mockEnregistrerLImage(...args),
+}));
 
 jest.mock('react-native-gesture-handler', () => (
   // eslint-disable-next-line global-require
@@ -646,5 +655,126 @@ describe('MSGIMG-2 — glisser l image vers le bas la referme', () => {
     });
 
     expect(imagesPleinEcran(ecran)).toHaveLength(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MSGIMG-3 — « ENREGISTRER » DANS LA GALERIE. Un bouton du meme habit que la croix ;
+// un retour visible (« Image enregistree ») ; un refus d'acces explique quoi faire.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ENREGISTRER = 'Enregistrer l’image dans ta galerie';
+
+/**
+ * Le texte visible de l'ecran, mis bout a bout.
+ * @param {any} ecran L'arbre de l'ecran.
+ * @returns {string} Les textes.
+ */
+const textesDe = (ecran) => {
+  // eslint-disable-next-line global-require
+  const { Text } = require('react-native');
+  return ecran.root.findAll((/** @type {any} */ noeud) => noeud.type === Text)
+    .map((/** @type {any} */ noeud) => [].concat(noeud.props.children).join(''))
+    .join(' | ');
+};
+
+describe('MSGIMG-3 — enregistrer l image dans la galerie', () => {
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = TETE_A_TETE;
+    mockEnregistrerLImage.mockReset();
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+    jest.restoreAllMocks();
+  });
+
+  test('MSGIMG-3a — « Enregistrer », meme habit que la croix, range CETTE image', async () => {
+    mockEnregistrerLImage.mockResolvedValue({ issue: 'enregistree' });
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    const boutons = boutonsNommes(ecran, ENREGISTRER);
+    expect(boutons).toHaveLength(1);
+    const style = styleDe(boutons[0]);
+    const croix = styleDe(boutonsNommes(ecran, 'Fermer l’image')[0]);
+    expect(style.backgroundColor).toBe(croix.backgroundColor);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+    expect(style.top).toBe(croix.top);
+    expect(textesDe(ecran)).toContain('Enregistrer');
+
+    await act(async () => {
+      boutons[0].props.onPress();
+    });
+
+    expect(mockEnregistrerLImage).toHaveBeenCalledTimes(1);
+    expect(mockEnregistrerLImage).toHaveBeenCalledWith(ADRESSE_DE_LA_PHOTO);
+    expect(textesDe(ecran)).toContain('Image enregistrée dans ta galerie');
+  });
+
+  test('MSGIMG-3b — acces refuse : une alerte explique et ouvre les reglages', async () => {
+    // eslint-disable-next-line global-require
+    const { Alert, Linking } = require('react-native');
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const reglages = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
+    mockEnregistrerLImage.mockRejectedValue(Object.assign(new Error('refus'), {
+      reason: 'permission_refusee',
+    }));
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    await act(async () => {
+      boutonsNommes(ecran, ENREGISTRER)[0].props.onPress();
+    });
+
+    expect(alerte).toHaveBeenCalledTimes(1);
+    const [titre, corps, boutons] = alerte.mock.calls[0];
+    expect(titre).toBe('Accès aux photos refusé');
+    expect(corps).toMatch(/réglages/);
+    const ouvrir = /** @type {any[]} */ (boutons).find((b) => b.text === 'Ouvrir les réglages');
+    expect(ouvrir).toBeTruthy();
+    ouvrir.onPress();
+    expect(reglages).toHaveBeenCalledTimes(1);
+  });
+
+  test('MSGIMG-3c — un autre echec se dit, et l apercu reste ouvert', async () => {
+    mockEnregistrerLImage.mockRejectedValue(Object.assign(new Error('reseau'), {
+      reason: 'http_error',
+    }));
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    await act(async () => {
+      boutonsNommes(ecran, ENREGISTRER)[0].props.onPress();
+    });
+
+    expect(textesDe(ecran)).toContain('L’image n’a pas pu être enregistrée. Réessaie.');
+    expect(imagesPleinEcran(ecran)).toHaveLength(1);
+  });
+
+  test('MSGIMG-3d — deux appuis pendant l enregistrement n enregistrent qu une fois', async () => {
+    /**
+     * Termine l'enregistrement en attente.
+     * @type {(v: any) => void}
+     */
+    let finir = () => {};
+    mockEnregistrerLImage.mockReturnValue(new Promise((resoudre) => { finir = resoudre; }));
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+
+    act(() => {
+      boutonsNommes(ecran, ENREGISTRER)[0].props.onPress();
+    });
+    act(() => {
+      boutonsNommes(ecran, ENREGISTRER)[0].props.onPress();
+    });
+    await act(async () => {
+      finir({ issue: 'enregistree' });
+    });
+
+    expect(mockEnregistrerLImage).toHaveBeenCalledTimes(1);
   });
 });
