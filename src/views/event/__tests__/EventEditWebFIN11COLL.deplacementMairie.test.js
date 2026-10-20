@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+
 import EventEdit from '../EventEdit.web';
 
 // 🧪 FINITIONS11-COLL (03/10/2026), point 7 — décision d'Adel « deplacer A », côté SITE : le formulaire
@@ -194,16 +196,26 @@ describe('FINITIONS11-COLL (7) — le site dit aussi « Si la mairie refuse, la 
 // site, `joi` est une doublure qui ne valide rien : la garde vit dans l'envoi. ROUGE avant le lot.
 describe('VILLE-T18B (a) — le site refuse aussi une fin qui n’est pas après le début', () => {
   const RAISON = "L'heure de fin doit être après l'heure de début.";
-  const champsHeure = () => arbre.root.findAll(
-    (/** @type {any} */ n) => n.type === 'input' && n.props.type === 'time',
-  );
+  // A7-UX (20/10) — le site ne monte plus d'<input type="time"> : le choix de l'heure partagé
+  // (TimePickerInput, même contrat « HH:mm »). La garde prouvée ici ne change pas.
+  const champsHeure = () => arbre.root.findAllByType(TimePickerInput);
   const deplacerLeDebut = async (/** @type {string} */ heure) => {
-    await act(async () => { champsHeure()[0].props.onChange({ target: { value: heure } }); });
+    await act(async () => { champsHeure()[0].props.onChange(heure); });
   };
   const envoyer = async () => {
     const [formulaire] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'form');
     await act(async () => { await formulaire.props.onSubmit({ preventDefault: () => {} }); });
   };
+
+  // ⏰ A7-UX (20/10, décision du chef d'orchestre) — le formulaire du site montait deux
+  // <input type="time"> (la liste grise du navigateur) : il monte le choix de l'heure partagé, et
+  // la Fin reçoit le Début (ses heures d'avant ne se choisissent pas). ROUGE avant : 0 et 2.
+  test('🔴 A7-UX : deux TimePickerInput, plus aucun <input type="time">, la Fin reçoit le Début', async () => {
+    await monter();
+    expect(champsHeure().map((n) => n.props.label)).toEqual(['Début', 'Fin']);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'input' && n.props.type === 'time')).toHaveLength(0);
+    expect(champsHeure()[1].props.apres).toBe('18:30');
+  });
 
   test('début déplacé à 21:00, fin restée à 20:00 : rien ne part, la raison est écrite', async () => {
     eventService.updateEvent.mockClear();

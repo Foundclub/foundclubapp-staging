@@ -19,6 +19,7 @@ import { eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EventTasksEditor from '@/views/event/components/EventTasksEditor';
 import EventTeamAudiencesEditor from '@/views/event/components/EventTeamAudiencesEditor';
@@ -693,19 +694,24 @@ function EventEditForm({ navigation, route }) {
                   <input onChange={(eventObject) => updateField('date', eventObject.target.value)} style={fieldStyle} type="date" value={formState.date} />
                 </label>
 
-                <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                      {t('eventEdit.start', 'Début')}
-                    </span>
-                    <input onChange={(eventObject) => updateField('startTime', eventObject.target.value)} style={fieldStyle} type="time" value={formState.startTime} />
-                  </label>
-                  <label style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                      {t('eventEdit.end', 'Fin')}
-                    </span>
-                    <input onChange={(eventObject) => updateField('endTime', eventObject.target.value)} style={fieldStyle} type="time" value={formState.endTime} />
-                  </label>
+                {/* ⏰ A7-UX (20/10, décision du chef d'orchestre) — le choix de l'heure du site
+                    (TimePickerInput : grille FoundClub sous le champ, saisie au clavier) au lieu de la
+                    liste grise du navigateur ; la Fin grise les heures d'avant le Début. */}
+                <div style={{
+                  alignItems: 'start', display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr',
+                }}
+                >
+                  <TimePickerInput
+                    label={t('eventEdit.start', 'Début')}
+                    onChange={(/** @type {string} */ valeur) => updateField('startTime', valeur)}
+                    value={formState.startTime}
+                  />
+                  <TimePickerInput
+                    apres={/^\d{2}:\d{2}$/.test(formState.startTime) ? formState.startTime : null}
+                    label={t('eventEdit.end', 'Fin')}
+                    onChange={(/** @type {string} */ valeur) => updateField('endTime', valeur)}
+                    value={formState.endTime}
+                  />
                 </div>
 
                 {event?.recurrenceGroupId ? (

@@ -22650,7 +22650,11 @@ export default {
     },
   },
   timePickerInput: {
+    // ⏰ A7-UX (20/10) — the website time picker: the hours grid, then the minutes.
+    autreHeure: 'Another hour',
+    autresHeures: 'Other hours',
     cancel: 'Cancel',
+    heure: '{{heure}}h',
   },
   tomTomSearchMapNative: {
     error: {
