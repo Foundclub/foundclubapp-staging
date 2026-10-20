@@ -19,6 +19,11 @@ import {
 } from 'react-native';
 
 import {
+  blocsDesEvenements,
+  etiquetteDuPlanning,
+  fermeturesSansLesEvenements,
+} from '@/domains/collectivite/evenementDeLaVille';
+import {
   closureBandLabel,
   closureHoursLabel,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -51,6 +56,7 @@ import {
   getPlanningDefaultDate,
   getPlanningItemDate,
   getPlanningTimeLabel,
+  normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 import {
   blocsDeLaVille,
@@ -155,7 +161,33 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     queryKey: ['facility-closures', 'collectivite', collectiviteId, plage.from],
     staleTime: 15 * 1000,
   });
-  const fermetures = Array.isArray(fermeturesLues.data?.data) ? fermeturesLues.data.data : [];
+  // 🏛️ R17-EVT-1-BIS (a) (20/10, tri du chef) — LES ÉVÉNEMENTS DE LA VILLE, lus avec le planning de
+  // chaque installation (`meta.evenementsDeLaVille`) : un bloc CLAIR par jour, À PART des séances
+  // (ni « complet », ni compte, ni vue d'arrivée) ; leur blocage lié ne se dessine pas en plus.
+  const evenementsLus = lectures.flatMap((lecture) => {
+    const lus = /** @type {any} */ (lecture.data)?.meta?.evenementsDeLaVille;
+    return Array.isArray(lus) ? lus : [];
+  });
+  const evenementsVille = installations.flatMap((/** @type {any} */ installation, rang) => {
+    const lus = /** @type {any} */ (lectures[rang]?.data)?.meta?.evenementsDeLaVille;
+    return normalizePlanningItems(blocsDesEvenements(Array.isArray(lus) ? lus : [], plage))
+      .map((/** @type {any} */ bloc) => ({ ...bloc, installation }));
+  });
+  /**
+   * Les événements de la Ville d'UNE installation, UN jour.
+   * @param {any} installation - L'installation.
+   * @param {Date} jour - Le jour.
+   * @returns {any[]} Ses blocs clairs ce jour-là.
+   */
+  const evenementsDuJour = (installation, jour) => evenementsVille.filter((bloc) => {
+    const quand = getPlanningItemDate(bloc);
+    return bloc.installation?.documentId === installation?.documentId
+      && Boolean(quand) && isSameDay(/** @type {Date} */ (quand), jour);
+  });
+  const fermetures = fermeturesSansLesEvenements(
+    Array.isArray(fermeturesLues.data?.data) ? fermeturesLues.data.data : [],
+    evenementsLus,
+  );
   const enErreur = lectures.some((lecture) => lecture.isError);
   const toutesRevenues = lectures.every((lecture) => lecture.data !== undefined);
   const provisoire = lectures.some((lecture) => lecture.isPlaceholderData);
@@ -192,6 +224,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   const journeeVide = journeeAffichee.every((ligne) => (
     ligne.blocs.length === 0
     && fermeturesDuJour(fermetures, ligne.installation, date).length === 0
+    && evenementsDuJour(ligne.installation, date).length === 0
   ));
   const plageApres = plageDeLaSuite(VUES.semaine, date);
   const suiteLue = useQuery({
@@ -247,7 +280,18 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     setDate(jour);
   };
 
+  // R17-EVT-1-BIS (a) : un événement de la Ville ouvre SA fiche.
+  const ouvrirEvenement = useCallback((/** @type {any} */ evenement) => {
+    if (evenement?.documentId) {
+      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+    }
+  }, [navigation]);
+
   const ouvrirBloc = useCallback((/** @type {any} */ bloc) => {
+    if (bloc?.raw?.evenementDeLaVille) {
+      ouvrirEvenement(bloc.raw.evenementDeLaVille);
+      return;
+    }
     const installation = bloc?.installation;
     if (!installation?.documentId) return;
     const jour = getPlanningItemDate(bloc);
@@ -258,7 +302,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       facilityId: installation.documentId,
       sourceType: 'facility',
     });
-  }, [navigation]);
+  }, [navigation, ouvrirEvenement]);
 
   const compterLesSeances = useCallback((/** @type {number} */ nombre) => (
     t('facilityList.toutesInstallations.seancesDuJour', { count: nombre })), [t]);
@@ -409,6 +453,72 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   );
 
   /**
+   * R17-EVT-1-BIS (a) — un événement de la Ville : le seul bloc CLAIR (plein s'il prend toute
+   * l'installation, en contour à côté), comme dans le planning d'une installation. Il dit sa place,
+   * son nom, et ses heures (avec son installation dans la liste de la semaine).
+   * @param {any} bloc - Le bloc de l'événement.
+   * @param {boolean} avecInstallation - Il dit son installation (liste de la semaine).
+   * @returns {import('react').ReactElement} Le bouton.
+   */
+  const caseEvenement = (bloc, avecInstallation = false) => {
+    const evenement = bloc.raw?.evenementDeLaVille || {};
+    const plein = Boolean(evenement.takesPlace);
+    const heures = `${evenement.startTime || ''} – ${evenement.endTime || ''}`;
+    const jour = getPlanningItemDate(bloc);
+    const cle = jour ? format(jour, 'yyyy-MM-dd') : '';
+    return (
+      <TouchableOpacity
+        accessibilityLabel={t(
+          'collectiviteEvenement.planning.aria',
+          'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+          {
+            ...SANS_ECHAPPEMENT,
+            heures,
+            nom: evenement.name,
+            place: etiquetteDuPlanning(t, evenement),
+          },
+        )}
+        accessibilityRole="button"
+        key={`ville-${evenement.documentId}-${cle}`}
+        onPress={() => ouvrirEvenement(evenement)}
+        style={{
+          backgroundColor: plein ? Colors.primary100 : withAlpha(Colors.primary100, 0.18),
+          borderColor: Colors.primary100,
+          borderRadius: 8,
+          borderWidth: plein ? 0 : 1.5,
+          gap: 2,
+          minHeight: 44,
+          paddingHorizontal: 6,
+          paddingVertical: 4,
+        }}
+        testID={`toutes-evenement-ville-${evenement.documentId}-${cle}`}
+      >
+        <Text
+          numberOfLines={1}
+          style={[Fonts.p4Bold, {
+            color: plein ? Colors.primary700 : Colors.primary100,
+            textTransform: 'uppercase',
+          }]}
+        >
+          {etiquetteDuPlanning(t, evenement)}
+        </Text>
+        <Text
+          numberOfLines={2}
+          style={[Fonts.p3Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
+        >
+          {evenement.name}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+        >
+          {avecInstallation ? `${bloc.installation?.name || ''} · ${heures}` : heures}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  /**
    * Une ligne de liste (téléphone) : l'heure à gauche, « club · équipe » et, si demandé, le nom
    * de l'installation.
    * @param {any} bloc - Le bloc.
@@ -548,7 +658,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           // téléphone, des points (P10-planning-tel 3).
           compterLesSeances={isDesktop ? compterLesSeances : null}
           currentDate={date}
-          events={blocsDuMois(blocs)}
+          // R17-EVT-1-BIS (a) : les événements de la Ville, leur repère clair.
+          events={[...blocsDuMois(blocs), ...evenementsVille]}
           onDateSelect={(/** @type {Date} */ jour) => {
             // Le calendrier dit aussi ses changements de MOIS (ses flèches) par ici : seul un jour
             // du mois affiché, sur ordinateur, ouvre la vue Jour à cette date (planche, état 3).
@@ -610,7 +721,17 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         return (
           <View style={{ gap: 8 }}>
             {vide}
-            {listeDeLaSemaine(blocsVus, debutDeSemaine).map((ligne) => (
+            {[0, 1, 2, 3, 4, 5, 6].map((decalage) => {
+              // R17-EVT-1-BIS (a) : les jours avec une séance OU un événement de la Ville.
+              const jour = addDays(debutDeSemaine, decalage);
+              const lue = listeDeLaSemaine(blocsVus, debutDeSemaine)
+                .find((une) => isSameDay(une.jour, jour));
+              const ville = evenementsVille.filter(garderAuFiltre).filter((bloc) => {
+                const quand = getPlanningItemDate(bloc);
+                return Boolean(quand) && isSameDay(/** @type {Date} */ (quand), jour);
+              });
+              return lue || ville.length ? { blocs: lue?.blocs || [], jour, ville } : null;
+            }).filter(Boolean).map((/** @type {any} */ ligne) => (
               <View key={ligne.jour.toISOString()} style={{ gap: 8 }}>
                 <Text style={[Fonts.p2Bold, Fonts.primary200, { marginTop: 8 }]}>
                   {isSameDay(ligne.jour, aujourdhui)
@@ -620,6 +741,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     })
                     : capitalize(format(ligne.jour, 'EEEE d', { locale }))}
                 </Text>
+                {ligne.ville.map((/** @type {any} */ bloc) => caseEvenement(bloc, true))}
                 {ligne.blocs.map((/** @type {any} */ bloc) => ligneDeListe(bloc, true))}
               </View>
             ))}
@@ -713,6 +835,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                   >
                     {fermeturesDuJour(fermetures, rangee.installation, jours[rang])
                       .map(plageFermee)}
+                    {evenementsDuJour(rangee.installation, jours[rang])
+                      .map((bloc) => caseEvenement(bloc))}
                     {blocsDuJour.map(caseDeLaGrille)}
                   </View>
                 ))}
@@ -730,7 +854,12 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         <PlanningWeekTimelineView
           cardDisplayProfile="clubFocused"
           currentDate={date}
-          events={journee.flatMap((ligne) => ligne.blocs)}
+          // R17-EVT-1-BIS (a) : les événements de la Ville du jour, dans la colonne de leur
+          // installation (bloc clair de la grille).
+          events={[
+            ...journee.flatMap((ligne) => ligne.blocs),
+            ...journee.flatMap((ligne) => evenementsDuJour(ligne.installation, date)),
+          ]}
           expandToContent
           laneOf={(/** @type {any} */ bloc) => Math.max(0, installations.findIndex(
             (/** @type {any} */ i) => i.documentId === bloc.installation?.documentId,
@@ -741,6 +870,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           }))}
           mode="day"
           onDateChange={allerA}
+          onEvenementVillePress={ouvrirEvenement}
           onEventPress={ouvrirBloc}
           onReadOnlyEventPress={ouvrirBloc}
           scrollEnabled={false}
@@ -824,9 +954,11 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
               </TouchableOpacity>
             </View>
             {fermeturesDuJour(fermetures, ligne.installation, date).map(plageFermee)}
+            {evenementsDuJour(ligne.installation, date).map((bloc) => caseEvenement(bloc))}
             {ligne.blocs.length
               ? ligne.blocs.map((/** @type {any} */ bloc) => ligneDeListe(bloc, false))
-              : fermeturesDuJour(fermetures, ligne.installation, date).length === 0 && (
+              : fermeturesDuJour(fermetures, ligne.installation, date).length === 0
+                && evenementsDuJour(ligne.installation, date).length === 0 && (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {t('facilityList.toutesInstallations.rienCeJourCourt', 'Rien ce jour')}
                 </Text>
