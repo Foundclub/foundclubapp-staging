@@ -17,11 +17,14 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
  * quand elle n'a pas eu lieu ; le mot est toujours écrit. Vert : confirmée, jouée ; orange : en
  * attente ; rouge : refusée, annulée ; cyan pâle en pointillé : sans réponse (« moins de gris ») ;
  * rouge plein, encre blanche, drapeau : non honorée (RESA-L6B-1, planche EP10 `pe-nonhonoree`).
+ * RESA-L6B-2 (serveur RESA-L3) : « En collecte · 6/10 » (cyan, personnes ; resa.css `pe-collecte`),
+ * « Non aboutie » (pâle, pointillée, `pe-pale`), « Annulée » (un participant ne sait pas qui).
  * @param {object} props - Les propriétés.
+ * @param {string | null} [props.compte] - « 6/10 » : les présents sur le nombre requis (collecte).
  * @param {string} props.etat - `etatAffiche` (domains/complexe/reserverTerrain.js).
  * @returns {import('react').ReactElement | null} La pastille, ou rien pour un état inconnu.
  */
-function PastilleEtat({ etat }) {
+function PastilleEtat({ compte = null, etat }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Images,
@@ -29,6 +32,11 @@ function PastilleEtat({ etat }) {
 
   /** @type {Record<string, Apparence>} */
   const etats = {
+    annulee: {
+      couleur: Colors.error500,
+      icone: 'croix',
+      mot: t('reserverTerrain.etat.annulee', 'Annulée'),
+    },
     annuleeParLeComplexe: {
       couleur: Colors.error500,
       icone: 'croix',
@@ -49,11 +57,25 @@ function PastilleEtat({ etat }) {
       icone: 'sablier',
       mot: t('reserverTerrain.etat.enAttente', 'En attente'),
     },
+    enCollecte: {
+      couleur: Colors.primary500,
+      encre: Colors.primary200,
+      icone: 'personnes',
+      mot: compte
+        ? t('reserverTerrain.etat.enCollecteCompte', 'En collecte · {{compte}}', { compte })
+        : t('reserverTerrain.etat.enCollecte', 'En collecte'),
+    },
     jouee: {
       couleur: Colors.success700,
       icone: 'coche',
       mot: t('reserverTerrain.etat.jouee', 'Jouée'),
       pleine: true,
+    },
+    nonAboutie: {
+      couleur: Colors.primary200,
+      icone: 'personnes',
+      mot: t('reserverTerrain.etat.nonAboutie', 'Non aboutie'),
+      pointillee: true,
     },
     nonHonoree: {
       couleur: Colors.error700,
@@ -77,12 +99,14 @@ function PastilleEtat({ etat }) {
   const choisi = etats[etat];
   if (!choisi) return null;
   const encre = choisi.encre || (choisi.pleine ? Colors.neutral900 : choisi.couleur);
-  const images = { coche: Images.check, croix: Images.close, drapeau: Images.flag };
+  const images = {
+    coche: Images.check, croix: Images.close, drapeau: Images.flag, personnes: Images.users,
+  };
   const icone = choisi.icone === 'sablier' ? (
     <GlyphIcon color={encre} name="hourglass" size={12} />
   ) : (
     <Image
-      source={images[/** @type {'coche' | 'croix' | 'drapeau'} */ (choisi.icone)]}
+      source={images[/** @type {'coche' | 'croix' | 'drapeau' | 'personnes'} */ (choisi.icone)]}
       style={[{ height: 12, width: 12 }, { tintColor: encre }]}
     />
   );

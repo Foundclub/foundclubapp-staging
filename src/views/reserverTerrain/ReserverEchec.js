@@ -60,6 +60,7 @@ function ReserverEchec() {
   const agir = (/** @type {string} */ action) => {
     switch (action) {
       case 'ailleurs':
+      case 'reserverUnTerrain':
         navigateToSearchHub(navigation, 'reservations');
         break;
       case 'appeler':
@@ -72,6 +73,7 @@ function ReserverEchec() {
         });
         break;
       case 'autresCreneaux':
+      case 'relancer':
         navigation.navigate(RouteNames.ReserverCreneau, {
           ...(params.date ? { date: params.date } : {}),
           slug: params.slug,
@@ -88,7 +90,7 @@ function ReserverEchec() {
   // Sans terrain connu, « Voir d'autres créneaux » et « un autre jour » mènent à la recherche.
   const sansTerrain = !(params.slug && params.terrainId);
   const versLaRecherche = (/** @type {string} */ action) => (
-    sansTerrain && (action === 'autresCreneaux' || action === 'autreJour')
+    sansTerrain && ['autreJour', 'autresCreneaux', 'relancer'].includes(action)
   );
   const actions = contenu.actions.map((action) => (versLaRecherche(action) ? 'ailleurs' : action));
 

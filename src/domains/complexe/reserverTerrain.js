@@ -498,21 +498,32 @@ export const epinglesDesComplexes = (cartes, pages, telephone) => (
  * Le corps de « Réserver » (E-P04) : la liste blanche du serveur (`readBookingPayload` : terrain,
  * jour, heure de début, nombre de joueurs, petit mot, case du numéro), et rien d'autre (RG-SECU).
  * AT-04 : la case du numéro n'existe pas pour un mineur — et quand bien même, rien ne part.
- * @param {{ date: string, from: string, joueurs?: number | null, mot?: string | null,
- *   partagerNumero?: boolean, peutPartagerNumero?: boolean, terrainId: string }} choix - Le
- *   récapitulatif rempli.
- * @returns {{ date: string, from: string, note: string | null, phoneShared: boolean,
- *   players?: number, terrain: string }} Le corps.
+ * @param {{ collecte?: { collectDeadline?: string | null, quorum?: number | null } | null,
+ *   date: string, equipe?: string | null, from: string, joueurs?: number | null,
+ *   mot?: string | null, partagerNumero?: boolean, peutPartagerNumero?: boolean,
+ *   terrainId: string }} choix - Le récapitulatif rempli.
+ * @returns {{ collectDeadline?: string, date: string, from: string, note: string | null,
+ *   phoneShared: boolean, players?: number, quorum?: number, team?: string,
+ *   terrain: string }} Le corps.
  */
 export const demandeDeReservation = (choix) => {
   const mot = String(choix?.mot || '').replace(/\s+/g, ' ').trim().slice(0, MOT_MAX);
   const joueurs = Number(choix?.joueurs);
+  // RESA-L6B-2 (serveur RESA-L3, `readGroupOptions`) : l'équipe (A-P04) ; la collecte (RG-QUORUM)
+  // part ENTIÈRE — le nombre requis ET la date limite — ou pas du tout.
+  const equipe = String(choix?.equipe || '').trim();
+  const quorum = Number(choix?.collecte?.quorum);
+  const echeance = String(choix?.collecte?.collectDeadline || '').trim();
+  const collecte = Number.isInteger(quorum) && quorum > 0 && echeance;
   return {
+    ...(collecte ? { collectDeadline: echeance } : {}),
     date: String(choix.date),
     from: String(choix.from),
     note: mot || null,
     phoneShared: choix?.peutPartagerNumero === true && choix?.partagerNumero === true,
     ...(Number.isInteger(joueurs) && joueurs > 0 ? { players: joueurs } : {}),
+    ...(collecte ? { quorum } : {}),
+    ...(equipe ? { team: equipe } : {}),
     terrain: String(choix.terrainId),
   };
 };
@@ -525,10 +536,15 @@ export const demandeDeReservation = (choix) => {
 const VARIANTE_DU_CODE = Object.freeze({
   COMPLEXE_NOT_FOUND: 'complexeParti',
   COMPLEXE_RESERVATION_AGE: 'age',
+  // RESA-L6B-2 (serveur RESA-L3) : rejoindre une partie, réserver pour son équipe, l'annonce.
+  COMPLEXE_RESERVATION_ANNONCE_DEJA: 'annonceDeja',
   COMPLEXE_RESERVATION_BANNED: 'banni',
   COMPLEXE_RESERVATION_BIRTHDATE_REQUIRED: 'dateDeNaissance',
   COMPLEXE_RESERVATION_CANCEL_TOO_LATE: 'delaiAnnulation',
+  COMPLEXE_RESERVATION_COMPLETE: 'complete',
+  COMPLEXE_RESERVATION_EQUIPE: 'equipe',
   COMPLEXE_RESERVATION_INVALID: 'invalide',
+  COMPLEXE_RESERVATION_LIEN_INVALIDE: 'lienInvalide',
   COMPLEXE_RESERVATION_NOT_FOUND: 'introuvable',
   COMPLEXE_RESERVATION_PLAFOND: 'plafond',
   COMPLEXE_RESERVATION_SLOT_CLOSED: 'ferme',
@@ -559,14 +575,30 @@ export const varianteDEchec = (erreur) => {
  * pour une réservation en cours (en attente, confirmée).
  * @param {{ cancelledBy?: string | null, status?: string | null } | null | undefined} reservation
  *   - La réservation vue par son réserveur.
- * @param {{ change?: string | null }} [contexte] - La notification qui l'a ouverte (`data.change`).
+ * @param {{ change?: string | null, echecDeCollecte?: string | null }} [contexte] - La
+ *   notification qui l'a ouverte (`data.change`) ; RESA-L6B-2 : pourquoi la collecte s'est arrêtée
+ *   (`collecte.failure` du groupe : `creneau_pris | delai`).
  * @returns {string | null} La variante.
  */
 export const varianteDeLaReservation = (reservation, contexte = {}) => {
   switch (reservation?.status) {
     case 'annulee':
       if (reservation?.cancelledBy === 'reserveur') return 'annuleeParToi';
-      return contexte?.change === 'fermeture' ? 'fermeture' : 'annuleeParLeComplexe';
+      if (contexte?.change === 'fermeture') return 'fermeture';
+      // RESA-L6B-2 — un PARTICIPANT ne lit pas qui a annulé (vue réduite) : la notification le dit
+      // (N-33 `annulee-par-reserveur`, N-18 `annulee`), sinon « Partie annulée » sans auteur.
+      if (reservation?.role === 'participant') {
+        if (contexte?.change === 'annulee-par-reserveur') return 'annuleeParLeReserveur';
+        return contexte?.change === 'annulee' ? 'annuleeParLeComplexe' : 'partieAnnulee';
+      }
+      return 'annuleeParLeComplexe';
+    // RESA-L6B-2 — la collecte arrêtée (serveur RESA-L3, `collecte.failure` du groupe ou N-23 /
+    // N-24) : créneau pris avant le quorum (le texte A-P08), sinon la date limite.
+    case 'non_aboutie':
+      return contexte?.echecDeCollecte === 'creneau_pris'
+        || contexte?.change === 'collecte-creneau-pris'
+        ? 'collectePrise'
+        : 'collecteDelai';
     case 'refusee':
       return 'refusee';
     case 'sans_reponse':
@@ -651,12 +683,14 @@ export const lienAgendaGoogle = (rendezVous) => {
  *   réserveur.
  * @param {Date} [maintenant] - L'instant de référence.
  * @returns {string} `enAttente | confirmee | jouee | nonHonoree | refusee | sansReponse |
- *   annuleeParToi | annuleeParLeComplexe`, ou ''.
+ *   annuleeParToi | annuleeParLeComplexe | annulee | enCollecte | nonAboutie`, ou ''.
  */
 export const etatAffiche = (reservation, maintenant = new Date()) => {
   switch (reservation?.status) {
     case 'annulee':
-      return reservation?.cancelledBy === 'reserveur' ? 'annuleeParToi' : 'annuleeParLeComplexe';
+      if (reservation?.cancelledBy === 'reserveur') return 'annuleeParToi';
+      // RESA-L6B-2 : la vue réduite d'un participant ne dit pas qui a annulé.
+      return reservation?.role === 'participant' ? 'annulee' : 'annuleeParLeComplexe';
     case 'confirmee': {
       if (reservation?.noShowAt) return 'nonHonoree';
       const fin = new Date(String(reservation?.endsAt || '')).getTime();
@@ -664,6 +698,11 @@ export const etatAffiche = (reservation, maintenant = new Date()) => {
     }
     case 'en_attente':
       return 'enAttente';
+    // RESA-L6B-2 (serveur RESA-L3) : la collecte, et la collecte arrêtée.
+    case 'en_collecte':
+      return 'enCollecte';
+    case 'non_aboutie':
+      return 'nonAboutie';
     case 'refusee':
       return 'refusee';
     case 'sans_reponse':
@@ -719,6 +758,40 @@ export const parametresDEchec = (source) => {
 };
 
 /**
+ * « lundi 18 h » : le jour de la semaine et l'heure de PARIS d'un instant (RESA-L6B-2 : la date
+ * limite d'une collecte, planche EP13 variante 2 ; le début d'une partie, variante 7).
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} instant - L'instant (ISO).
+ * @returns {string} Le texte, ou ''.
+ */
+export const jourEtHeure = (t, instant) => {
+  const lu = dateEtHeureDeParis(instant);
+  if (!lu) return '';
+  const jour = nomDuJour(t, midi(lu.date).getUTCDay());
+  return `${String(jour).toLocaleLowerCase()} ${texteHeure(lu.heure)}`;
+};
+
+/**
+ * L'âge minimum d'un complexe (R2) : « … les réservations à partir de 16 ans » pour réserver ;
+ * « … les joueurs à partir de 16 ans » pour rejoindre une partie (E-P08, RESA-L6B-2).
+ * @param {Traduire} t - Traduction.
+ * @param {number} age - L'âge minimum.
+ * @param {boolean} rejoindre - Vrai : on rejoint une partie.
+ * @returns {string} Le texte.
+ */
+const texteDeLAge = (t, age, rejoindre) => (rejoindre
+  ? t(
+    'reserverTerrain.echec.ageRejoindre',
+    'Ce complexe accepte les joueurs à partir de {{age}} ans.',
+    { age },
+  )
+  : t(
+    'reserverTerrain.echec.age',
+    'Ce complexe accepte les réservations à partir de {{age}} ans.',
+    { age },
+  ));
+
+/**
  * Le contenu d'une variante de E-P13 (même gabarit : pictogramme, titre, texte, boutons). Les
  * actions sont des clefs que l'écran traduit en boutons : `autresCreneaux` (E-P03), `ailleurs`
  * (E-P01), `autreJour` (E-P03), `appeler` (le numéro du complexe), `profil` (sa date de naissance),
@@ -727,7 +800,10 @@ export const parametresDEchec = (source) => {
  * @param {Traduire} t - Traduction.
  * @param {string} variante - La variante (`varianteDEchec`, `varianteDeLaReservation`).
  * @param {{ complexe?: string | null, erreur?: any, fermeture?: string | null,
- *   motif?: string | null, telephone?: string | null }} [contexte] - Ce que l'écran sait.
+ *   motif?: string | null, telephone?: string | null }} [contexte] - Ce que l'écran sait ;
+ *   RESA-L6B-2 : `rejoindre` (le refus vient d'une partie qu'on rejoint : lien, annonce,
+ *   présence), `collecte` (`{ collectDeadline, presents, quorum }`), `reserveur` (« Julien M. ») et
+ *   `debut` (ISO) d'une partie annulée par son réserveur.
  * @returns {{ actions: string[], icone: string, telephone: string | null, texte: string | null,
  *   titre: string, ton: 'cyan' | 'orange' | 'rouge' }} Le contenu.
  */
@@ -758,17 +834,23 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
         actions: ['ailleurs'],
         icone: 'personnes',
         titre: Number(details.minAge) > 0
-          ? t(
-            'reserverTerrain.echec.age',
-            'Ce complexe accepte les réservations à partir de {{age}} ans.',
-            {
-              age: Number(details.minAge),
-            },
-          )
+          ? texteDeLAge(t, Number(details.minAge), contexte?.rejoindre === true)
           : t(
             'reserverTerrain.echec.ageSansChiffre',
             'Ce complexe fixe un âge minimum pour réserver.',
           ),
+        ton: 'cyan',
+      };
+    // RESA-L6B-2 (serveur RESA-L3) — la partie à plusieurs : planche EP13 variantes 1, 2, 7 et les
+    // refus neufs (rejoindre une partie complète, un lien éteint, l'équipe, l'annonce).
+    case 'annonceDeja':
+      return {
+        ...base,
+        icone: 'personnes',
+        titre: t(
+          'reserverTerrain.echec.annonceDeja',
+          'Tu as déjà publié une annonce pour cette partie.',
+        ),
         ton: 'cyan',
       };
     case 'annuleeParLeComplexe':
@@ -780,6 +862,22 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
           'Réservation annulée par le complexe',
         ),
       };
+    case 'annuleeParLeReserveur': {
+      const quand = jourEtHeure(t, contexte?.debut);
+      const reserveur = String(contexte?.reserveur || '').trim();
+      return {
+        ...base,
+        actions: ['reserverUnTerrain'],
+        texte: reserveur && quand
+          ? t(
+            'reserverTerrain.echec.annuleeParLeReserveurTexte',
+            '{{reserveur}} a annulé la partie de {{quand}}.',
+            { quand, reserveur, ...SANS_ECHAPPEMENT },
+          )
+          : t('reserverTerrain.echec.partieAnnuleeTexte', 'Cette partie a été annulée.'),
+        titre: t('reserverTerrain.echec.partieAnnulee', 'Partie annulée'),
+      };
+    }
     case 'annuleeParToi':
       return {
         ...base,
@@ -797,7 +895,59 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
         actions: ['ailleurs'],
         icone: 'interdit',
         telephone: null,
-        titre: t('reserverTerrain.echec.banni', 'Tu ne peux plus réserver dans ce complexe.'),
+        // RESA-L6B-2, AT-05 : le banni ne REJOINT pas non plus une partie de ce complexe.
+        titre: contexte?.rejoindre
+          ? t(
+            'reserverTerrain.echec.banniRejoindre',
+            'Tu ne peux pas rejoindre une partie dans ce complexe.',
+          )
+          : t('reserverTerrain.echec.banni', 'Tu ne peux plus réserver dans ce complexe.'),
+      };
+    case 'collecteDelai': {
+      const presents = Number(contexte?.collecte?.presents);
+      const quorum = Number(contexte?.collecte?.quorum);
+      const echeance = jourEtHeure(t, contexte?.collecte?.collectDeadline);
+      return {
+        ...base,
+        actions: ['relancer'],
+        icone: 'personnes',
+        texte: quorum > 0 && Number.isFinite(presents) && echeance
+          ? t(
+            'reserverTerrain.echec.collecteDelaiTexte',
+            '{{presents}} joueurs sur {{quorum}} ont répondu présent avant {{echeance}} : rien '
+              + 'n’est réservé.',
+            {
+              echeance, presents, quorum, ...SANS_ECHAPPEMENT,
+            },
+          )
+          : t(
+            'reserverTerrain.echec.collecteDelaiSansChiffre',
+            'Le nombre de joueurs n’a pas été atteint à temps : rien n’est réservé.',
+          ),
+        titre: t('reserverTerrain.echec.collecteDelai', 'La collecte n’a pas abouti'),
+        ton: 'cyan',
+      };
+    }
+    case 'collectePrise':
+      return {
+        ...base,
+        actions: ['autresCreneaux', 'ailleurs'],
+        icone: 'personnes',
+        // AT-10 B : le texte A-P08 au « tu », mot pour mot (planche EP13 variante 1).
+        texte: t(
+          'reserverTerrain.echec.collectePriseTexte',
+          'Désolé, ta réservation n’a pas pu aboutir : quelqu’un a réservé le créneau avant que tu '
+            + 'réunisses assez de joueurs.',
+        ),
+        titre: t('reserverTerrain.echec.collectePrise', 'Réservation non aboutie'),
+        ton: 'cyan',
+      };
+    case 'complete':
+      return {
+        ...base,
+        icone: 'personnes',
+        titre: t('reserverTerrain.echec.complete', 'La partie est complète.'),
+        ton: 'cyan',
       };
     case 'complexeParti':
       return {
@@ -830,6 +980,15 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
           'Le délai est passé : appelle le complexe.',
         ),
         ton: 'orange',
+      };
+    case 'equipe':
+      return {
+        ...base,
+        icone: 'personnes',
+        titre: messageServeur || t(
+          'reserverTerrain.echec.equipe',
+          'Seul un encadrant majeur réserve pour son équipe.',
+        ),
       };
     case 'etat':
     case 'invalide':
@@ -875,6 +1034,21 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
       return {
         ...base,
         titre: t('reserverTerrain.echec.introuvable', 'Cette réservation n’existe plus.'),
+      };
+    case 'lienInvalide':
+      return {
+        ...base,
+        titre: t(
+          'reserverTerrain.echec.lienInvalide',
+          'Ce lien n’est plus valable. Demande-en un autre à la personne qui t’a invité.',
+        ),
+      };
+    case 'partieAnnulee':
+      return {
+        ...base,
+        actions: ['reserverUnTerrain'],
+        texte: t('reserverTerrain.echec.partieAnnuleeTexte', 'Cette partie a été annulée.'),
+        titre: t('reserverTerrain.echec.partieAnnulee', 'Partie annulée'),
       };
     case 'plafond': {
       const max = Number(details.max) > 0 ? Number(details.max) : null;

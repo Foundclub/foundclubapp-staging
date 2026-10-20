@@ -67,6 +67,9 @@ function BlocDEchec({ children = null, contenu, onAction }) {
     autresCreneaux: t('reserverTerrain.echec.autresCreneaux', 'Voir d’autres créneaux'),
     profil: t('reserverTerrain.echec.completerProfil', 'Compléter mon profil'),
     reessayer: t('reserverTerrain.recherche.reessayer', 'Réessayer'),
+    // RESA-L6B-2 : la collecte arrêtée à sa date limite, la partie annulée par son réserveur.
+    relancer: t('reserverTerrain.echec.relancer', 'Relancer sur un autre créneau'),
+    reserverUnTerrain: t('reserverTerrain.echec.reserverUnTerrain', 'Réserver un terrain'),
   };
 
   return (
