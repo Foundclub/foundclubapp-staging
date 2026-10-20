@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -668,7 +669,7 @@ const AutocompleteSelect = forwardRef(
                     Spaces.marginTop[8],
                     Spaces.padding[16],
                     Spaces.gap[12],
-                    { backgroundColor: 'rgba(1, 179, 244, 0.12)' },
+                    { backgroundColor: withAlpha(Colors.primary500, 0.12) },
                   ]}
                 >
                   <Image
