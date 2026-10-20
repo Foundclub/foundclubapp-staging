@@ -131,8 +131,13 @@ function SearchMapHud({
     },
   ];
 
+  // RESA-CARTE (20/10) — la rangée couvre toute la largeur de la carte sur la hauteur de la
+  // colonne de boutons : elle laisse passer les touchers vers la carte (une épingle sous la bande
+  // se touche) ; le résumé et les boutons gardent les leurs.
+  // Témoin : __tests__/SearchMapHud.touchers.test.js.
   return (
     <View
+      pointerEvents="box-none"
       style={[
         Alignments.row,
         Alignments.alignStart,

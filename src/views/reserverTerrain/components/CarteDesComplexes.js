@@ -18,12 +18,14 @@ import { usePagesDesComplexes } from '@/services/complexe/complexeJoueurQueries'
  * @param {any[]} props.cartes - Les cartes de la recherche, filtres appliqués.
  * @param {string | null} props.choisie - Le complexe choisi (slug), ou null.
  * @param {number} props.hauteur - La hauteur de la carte.
+ * @param {number} [props.margeBasse] - La place prise en bas par la carte du complexe posée
+ *   dessus (téléphone) : l'épingle choisie se cadre au-dessus.
  * @param {(slug: string | null) => void} props.onChoisir - Une épingle touchée.
  * @param {(carte: any) => void} props.onOuvrir - L'épingle choisie touchée encore (E-P02).
  * @returns {import('react').ReactElement} La carte.
  */
 function CarteDesComplexes({
-  cartes, choisie, hauteur, onChoisir, onOuvrir,
+  cartes, choisie, hauteur, margeBasse = 0, onChoisir, onOuvrir,
 }) {
   const { t } = useTranslation();
   const sansPosition = cartes
@@ -42,6 +44,7 @@ function CarteDesComplexes({
     .join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const items = useMemo(() => epingles, [signature]);
+  const marges = useMemo(() => (margeBasse ? { bottom: margeBasse } : null), [margeBasse]);
 
   return (
     <LazySearchMap
@@ -50,6 +53,7 @@ function CarteDesComplexes({
       items={items}
       onOpenItem={(/** @type {any} */ item) => onOuvrir(item.raw)}
       onSelectItem={(/** @type {string} */ slug) => onChoisir(slug || null)}
+      overlayInsets={marges}
       scope="complexes"
       selectedItemId={choisie || ''}
       showPreviewCard={false}

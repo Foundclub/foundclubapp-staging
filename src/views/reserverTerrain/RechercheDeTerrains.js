@@ -34,6 +34,7 @@ import CarteDesComplexes from '@/views/reserverTerrain/components/CarteDesComple
 import PuceChoix from '@/views/reserverTerrain/components/PuceChoix';
 
 import { RouteNames } from '@/navigation/routeNames';
+import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useRechercheDeTerrains } from '@/services/complexe/complexeJoueurQueries';
@@ -127,7 +128,9 @@ const filtrerLHeure = (carte, heure) => {
  * RESA-CARTE (20/10/2026) — la vue Carte (plan E-P01 points 4 et 6, planches EP01 état 2 et OR2) :
  *   · téléphone : la bascule « Liste » / « Carte » ; en Carte, la carte prend la place sous
  *     l'en-tête (hors du défilement : la glisser ne fait pas défiler l'écran), et la carte du
- *     complexe dont l'épingle est touchée se pose dessous ;
+ *     complexe dont l'épingle est touchée se pose EN BAS de la carte (« l'aperçu en bas », plan
+ *     E-P01 point 6 ; posée dessous, elle sortait de l'écran à 390 px), l'épingle restant visible
+ *     au-dessus d'elle ;
  *   · ordinateur : la liste à gauche, la carte à droite, pas de bascule ; toucher une épingle met
  *     sa carte en tête de liste ;
  *   · les filtres, la position et la ville valent pour les deux vues ; chargement, erreur, choix
@@ -144,6 +147,9 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const surOrdinateur = useIsDesktop();
+  // RESA-CARTE : la barre d'onglets flottante (téléphone et site) couvre le bas de l'écran ; la
+  // liste et la carte s'arrêtent au-dessus d'elle, comme les autres panneaux de la recherche.
+  const { sceneBottomInset } = useBottomDockLayout();
   const aujourdhui = jourDeParis();
 
   const [texte, setTexte] = useState('');
@@ -162,6 +168,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const [vue, setVue] = useState(/** @type {'liste' | 'carte'} */ ('liste'));
   const [epingleChoisie, setEpingleChoisie] = useState(/** @type {string | null} */ (null));
   const [hauteurCarte, setHauteurCarte] = useState(HAUTEUR_CARTE_MIN);
+  const [hauteurChoisie, setHauteurChoisie] = useState(0);
   const dernierSignal = useRef(refreshSignal);
 
   useEffect(() => {
@@ -821,7 +828,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? 1160 : undefined,
-          paddingBottom: 32,
+          paddingBottom: carteEnPlace ? 12 : Math.max(32, sceneBottomInset),
           paddingTop: 12,
           width: '100%',
         }}
@@ -853,7 +860,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         {corps}
       </ScrollView>
       {carteEnPlace ? (
-        <View style={{ flex: 1, gap: 12, paddingBottom: 12 }}>
+        <View style={{ flex: 1, paddingBottom: Math.max(12, sceneBottomInset) }}>
           <View
             onLayout={(evenement) => setHauteurCarte(Math.max(
               HAUTEUR_CARTE_MIN,
@@ -865,20 +872,30 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
               cartes={cartes}
               choisie={epingleChoisie}
               hauteur={hauteurCarte}
+              margeBasse={carteChoisie ? hauteurChoisie + 24 : 0}
               onChoisir={setEpingleChoisie}
               onOuvrir={ouvrirLeComplexe}
             />
+            {carteChoisie ? (
+              <View
+                onLayout={(evenement) => setHauteurChoisie(
+                  Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
+                )}
+                style={{
+                  bottom: 12, left: 12, position: 'absolute', right: 12,
+                }}
+                testID="reserver-recherche-carte-choisie"
+              >
+                <CarteComplexeRecherche
+                  carte={carteChoisie}
+                  choisie
+                  compacte
+                  onCreneau={(creneau) => ouvrirLeCreneau(carteChoisie, creneau)}
+                  onOuvrir={() => ouvrirLeComplexe(carteChoisie)}
+                />
+              </View>
+            ) : null}
           </View>
-          {carteChoisie ? (
-            <View testID="reserver-recherche-carte-choisie">
-              <CarteComplexeRecherche
-                carte={carteChoisie}
-                choisie
-                onCreneau={(creneau) => ouvrirLeCreneau(carteChoisie, creneau)}
-                onOuvrir={() => ouvrirLeComplexe(carteChoisie)}
-              />
-            </View>
-          ) : null}
         </View>
       ) : null}
     </View>

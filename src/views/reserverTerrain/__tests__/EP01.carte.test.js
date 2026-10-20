@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
@@ -22,6 +23,13 @@ import { carteDeRecherche, complexePublic } from '@/testSupport/temoinReserver';
 //   · les états : chargement, aucune proposition (« Aucun terrain libre ici. Élargis la
 //     distance. »), position refusée (la carte reste utilisable par ville), erreur.
 // La carte elle-même (Leaflet dans une WebView ou une iframe) est doublée : ses props sont lues.
+
+// La place de la barre d'onglets flottante : useBottomDockLayout tire @react-navigation/stack, que
+// jest ne transforme pas ; doublé, comme dans les témoins de ClubListContent.
+jest.mock('@/navigation/useBottomDockLayout', () => ({
+  __esModule: true,
+  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+}));
 
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
@@ -284,6 +292,14 @@ describe('RESA-CARTE — E-P01, la bascule Liste / Carte (téléphone)', () => {
     expect(choisie.findAll((/** @type {any} */ noeud) => (
       noeud.props?.testID === 'carte-complexe-le-five-de-montrivage'
     )).length).toBeGreaterThan(0);
+
+    // Compacte, comme la planche EP01 état 2 : « distance · sports » sur une ligne, sans la
+    // pastille « Complexe de réservation » ni le prix (la carte reste visible au-dessus).
+    const textesChoisie = choisie.findAllByType(Text).map((/** @type {any} */ noeud) => (
+      [].concat(noeud.props.children).join('').split(String.fromCharCode(160)).join(' ')
+    ));
+    expect(textesChoisie).toContain('2,4 km · Foot à 5 · Padel');
+    expect(textesChoisie.join('|')).not.toMatch(/Complexe de réservation|par joueur/);
 
     await toucher(pressable(arbre, 'Le Five de Montrivage : voir le complexe'));
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ReserverComplexe, {

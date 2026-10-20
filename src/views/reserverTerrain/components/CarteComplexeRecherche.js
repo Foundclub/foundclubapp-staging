@@ -35,16 +35,19 @@ const partLaPlusBasse = (creneaux) => {
  * ceux-là), « dès 6 € par joueur », et « Téléphone seulement » si tous ses terrains le sont.
  * ⛔ Ni « Favori » ni les partenaires qui défilent : lots L4 (serveur) puis L6b.
  * RESA-CARTE (20/10) : `choisie`, la carte du complexe dont l'épingle est touchée (liseré cyan
- * plein, planches EP01 état 2 et OR2).
+ * plein, planches EP01 état 2 et OR2) ; `compacte`, celle posée EN BAS de la carte du téléphone
+ * (planche EP01 état 2 : logo, nom, « 2,4 km · Foot à 5 · Padel », créneaux ; ni pastille ni
+ * prix ; fond plein, la carte ne transparaît pas).
  * @param {object} props - Les propriétés.
  * @param {any} props.carte - Une carte de `GET /public-complexes`.
  * @param {boolean} [props.choisie] - Son épingle est la choisie.
+ * @param {boolean} [props.compacte] - Posée sur la carte du téléphone.
  * @param {(creneau: any) => void} props.onCreneau - Toucher un créneau (E-P03).
  * @param {() => void} props.onOuvrir - Toucher la carte (E-P02).
  * @returns {import('react').ReactElement} La carte.
  */
 function CarteComplexeRecherche({
-  carte, choisie = false, onCreneau, onOuvrir,
+  carte, choisie = false, compacte = false, onCreneau, onOuvrir,
 }) {
   const { t } = useTranslation();
   const {
@@ -66,11 +69,11 @@ function CarteComplexeRecherche({
       style={[
         ApplicationStyle.borderRadius24,
         {
-          backgroundColor: withAlpha(Colors.primary800, 0.6),
+          backgroundColor: withAlpha(Colors.primary800, compacte ? 0.97 : 0.6),
           borderColor: choisie ? Colors.primary500 : withAlpha(Colors.primary500, 0.24),
           borderWidth: 1,
-          gap: 12,
-          padding: 16,
+          gap: compacte ? 8 : 12,
+          padding: compacte ? 12 : 16,
         },
       ]}
       testID={`carte-complexe-${carte?.slug}`}
@@ -88,15 +91,24 @@ function CarteComplexeRecherche({
         onPress={onOuvrir}
         style={[Alignments.row, { alignItems: 'flex-start', gap: 12 }]}
       >
-        <LogoComplexe logo={carte?.logo || null} nom={nom} taille={48} />
-        <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-          <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
-          <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}>
-            <BadgeComplexe />
-            {distance ? <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{distance}</Text> : null}
+        <LogoComplexe logo={carte?.logo || null} nom={nom} taille={compacte ? 40 : 48} />
+        {compacte ? (
+          <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{nom}</Text>
+            <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+              {[distance, sports].filter(Boolean).join(' · ')}
+            </Text>
           </View>
-          {sports ? <Text style={[Fonts.p3, Fonts.neutral200]}>{sports}</Text> : null}
-        </View>
+        ) : (
+          <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
+            <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
+            <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}>
+              <BadgeComplexe />
+              {distance ? <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{distance}</Text> : null}
+            </View>
+            {sports ? <Text style={[Fonts.p3, Fonts.neutral200]}>{sports}</Text> : null}
+          </View>
+        )}
       </TouchableOpacity>
       {montres.length ? (
         <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
@@ -131,9 +143,9 @@ function CarteComplexeRecherche({
           ) : null}
         </View>
       ) : null}
-      {part !== null || carte?.phoneOnly ? (
+      {(part !== null && !compacte) || carte?.phoneOnly ? (
         <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 12 }]}>
-          {part !== null ? (
+          {part !== null && !compacte ? (
             <View style={[Alignments.row, Alignments.alignCenter, { gap: 4 }]}>
               <Image
                 source={Images.euroCircle}
