@@ -20,6 +20,7 @@ import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -29,7 +30,7 @@ import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useConsoleDesComplexes } from '@/services/complexe/complexeQueries';
+import { usePagesDeLaConsole } from '@/services/complexe/complexeQueries';
 
 // La planche ES01 (état 1) : sur ordinateur, la liste et la fiche côte à côte (comme OR1).
 const LARGEUR_DEUX_VOLETS = 1024;
@@ -40,8 +41,10 @@ const LARGEUR_DEUX_VOLETS = 1024;
  * AdminCollectiviteList. « CONSOLE » « Complexes », la recherche (nom ou ville, au serveur), les
  * onglets « À traiter (n) » (un signalement ouvert, ou créé depuis 7 jours) · « Tous » ·
  * « Suspendus », puis une ligne par complexe : logo, nom, « Ville · créé le 13/10 », pastilles
- * « 2 signalements » / « Suspendu » / « Retiré » / « Nouveau ». Sur téléphone, une ligne ouvre la
- * fiche (AdminComplexeDetail) ; sur ordinateur, la fiche s'ouvre dans le volet de droite.
+ * « 2 signalements » / « Suspendu » / « Retiré » / « Nouveau », et « Voir plus » (pages de 20).
+ * Sur téléphone, une carte par complexe, qui ouvre la fiche (AdminComplexeDetail) ; sur
+ * ordinateur, le tableau de la planche (Complexe · Ville · Créé le · État) et la fiche dans le
+ * volet de droite.
  * États : chargement, erreur (« Réessayer »), « Rien à traiter. », « Aucun complexe pour
  * l'instant. ». Seul un SuperAdmin arrive ici (AdminStack) ; le serveur le revérifie.
  * Caché par `COMPLEXES_GERANT` (la route n'existe pas tant qu'il est éteint).
@@ -57,15 +60,18 @@ function AdminComplexeList() {
   const [onglet, setOnglet] = useState(/** @type {string} */ ('a-traiter'));
   const [recherche, setRecherche] = useState('');
   const [choisi, setChoisi] = useState(/** @type {string | null} */ (null));
-  const lecture = useConsoleDesComplexes(onglet, recherche.trim());
+  const lecture = usePagesDeLaConsole(onglet, recherche.trim());
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
     borderColor: withAlpha(Colors.primary500, 0.5),
     borderWidth: 1,
   };
-  const compteurs = lecture.data?.compteurs || {};
-  const lignes = Array.isArray(lecture.data?.items) ? lecture.data.items : [];
+  const pages = (Array.isArray(lecture.data?.pages) ? lecture.data.pages : []).filter(Boolean);
+  const compteurs = pages[0]?.compteurs || {};
+  const lignes = pages.flatMap((/** @type {any} */ page) => (
+    Array.isArray(page.items) ? page.items : []
+  ));
   const ouvrir = (/** @type {string} */ complexeId) => {
     if (deuxVolets) setChoisi(complexeId);
     else navigation.navigate(RouteNames.AdminComplexeDetail, { complexeId });
@@ -93,15 +99,61 @@ function AdminComplexeList() {
     return Colors.primary500;
   };
 
+  const lesPastilles = (/** @type {Array<{ cle: string, nombre?: number }>} */ pastilles) => (
+    pastilles.length ? (
+      <View style={[Alignments.row, Alignments.wrap, { gap: 6 }]}>
+        {pastilles.map((pastille) => (
+          <Text
+            key={pastille.cle}
+            style={[Fonts.p3Bold, Spaces.paddingHorizontal[8], {
+              backgroundColor: withAlpha(couleurPastille(pastille.cle), 0.16),
+              borderRadius: 999,
+              color: couleurPastille(pastille.cle),
+              paddingVertical: 2,
+            }]}
+          >
+            {libellePastille(pastille)}
+          </Text>
+        ))}
+      </View>
+    ) : null
+  );
+
+  // Sur téléphone, une carte (« Ville · créé le 13/10 » sous le nom) ; sur ordinateur, une rangée
+  // du tableau de la planche (Complexe · Ville · Créé le · État). Toute la ligne ouvre la fiche.
   const renderLigne = (/** @type {any} */ ligne) => {
     const pastilles = pastillesDuComplexe(ligne);
+    const jour = jourCourt(ligne.createdAt);
     const sousTitre = [
       ligne.city,
-      t('complexeConsole.creeLe', 'créé le {{date}}', {
-        date: jourCourt(ligne.createdAt), ...SANS_ECHAPPEMENT,
-      }),
+      t('complexeConsole.creeLe', 'créé le {{date}}', { date: jour, ...SANS_ECHAPPEMENT }),
     ].filter(Boolean).join(' · ');
     const actif = deuxVolets && choisi === ligne.documentId;
+    const nom = (
+      <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.name}</Text>
+    );
+    const rangee = (
+      <>
+        <View style={[Alignments.row, Alignments.alignCenter, { flex: 3, gap: 10 }]}>
+          <LogoComplexe logo={ligne.logo || null} nom={String(ligne.name || '')} taille={32} />
+          <View style={{ flex: 1 }}>{nom}</View>
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral100, { flex: 2 }]}>{String(ligne.city || '')}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>{jour}</Text>
+        <View style={{ flex: 3 }}>{lesPastilles(pastilles)}</View>
+      </>
+    );
+    const carteDuComplexe = (
+      <>
+        <LogoComplexe logo={ligne.logo || null} nom={String(ligne.name || '')} taille={40} />
+        <View style={{ flex: 1, gap: 4 }}>
+          {nom}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>{sousTitre}</Text>
+          {lesPastilles(pastilles)}
+        </View>
+        <SvgIcon color={Colors.neutral300} name="arrow-right" />
+      </>
+    );
     return (
       <TouchableOpacity
         accessibilityLabel={[ligne.name, sousTitre, ...pastilles.map(libellePastille)].join(', ')}
@@ -109,43 +161,34 @@ function AdminComplexeList() {
         accessibilityState={{ selected: actif }}
         key={ligne.documentId}
         onPress={() => ouvrir(ligne.documentId)}
-        style={[
+        style={deuxVolets ? [
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.padding[8],
+          {
+            backgroundColor: actif ? withAlpha(Colors.primary500, 0.14) : 'transparent',
+            borderRadius: 12,
+            borderTopColor: withAlpha(Colors.primary500, 0.25),
+            borderTopWidth: 1,
+            gap: 10,
+          },
+        ] : [
           ApplicationStyle.borderRadius16,
           Alignments.row,
           Alignments.alignCenter,
           Spaces.padding[12],
           carte,
-          actif ? { borderColor: Colors.primary500 } : null,
           { gap: 12 },
         ]}
         testID={`console-complexe-${ligne.documentId}`}
       >
-        <LogoComplexe logo={ligne.logo || null} nom={String(ligne.name || '')} taille={40} />
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.name}</Text>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>{sousTitre}</Text>
-          {pastilles.length ? (
-            <View style={[Alignments.row, Alignments.wrap, { gap: 6 }]}>
-              {pastilles.map((pastille) => (
-                <Text
-                  key={pastille.cle}
-                  style={[Fonts.p3Bold, Spaces.paddingHorizontal[8], {
-                    backgroundColor: withAlpha(couleurPastille(pastille.cle), 0.16),
-                    borderRadius: 999,
-                    color: couleurPastille(pastille.cle),
-                    paddingVertical: 2,
-                  }]}
-                >
-                  {libellePastille(pastille)}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-        </View>
-        <SvgIcon color={Colors.neutral300} name="arrow-right" />
+        {deuxVolets ? rangee : carteDuComplexe}
       </TouchableOpacity>
     );
   };
+  const enTeteColonne = (/** @type {string} */ texte, /** @type {number} */ flex) => (
+    <Text style={[Fonts.p3Bold, Fonts.neutral300, { flex }]}>{texte}</Text>
+  );
 
   const onglets = ONGLETS_CONSOLE.map((cle) => {
     let label = t('complexeConsole.onglets.tous', 'Tous');
@@ -181,7 +224,7 @@ function AdminComplexeList() {
         ))}
       </View>
     );
-  } else if (lecture.isError || !lecture.data) {
+  } else if (lecture.isError || !pages.length) {
     corps = (
       <BandeauComplexe
         action={t('complexeConsole.reessayer', 'Réessayer')}
@@ -201,7 +244,37 @@ function AdminComplexeList() {
       </View>
     );
   } else {
-    corps = <View style={{ gap: 10 }}>{lignes.map(renderLigne)}</View>;
+    const voirPlus = lecture.hasNextPage ? (
+      <View style={{ alignSelf: 'center' }} testID="console-voir-plus">
+        <Button
+          isLoading={Boolean(lecture.isFetchingNextPage)}
+          onPress={() => lecture.fetchNextPage?.()}
+          size="sm"
+          title={t('complexeReservations.voirPlus', 'Voir plus')}
+          variant="Secondary"
+        />
+      </View>
+    ) : null;
+    corps = deuxVolets ? (
+      <View
+        style={[ApplicationStyle.borderRadius16, Spaces.padding[8], carte, { gap: 2 }]}
+        testID="console-tableau"
+      >
+        <View style={[Alignments.row, Spaces.padding[8], { gap: 10 }]}>
+          {enTeteColonne(t('complexeConsole.colonnes.complexe', 'Complexe'), 3)}
+          {enTeteColonne(t('complexeConsole.colonnes.ville', 'Ville'), 2)}
+          {enTeteColonne(t('complexeConsole.colonnes.creeLe', 'Créé le'), 1)}
+          {enTeteColonne(t('complexeConsole.colonnes.etat', 'État'), 3)}
+        </View>
+        {lignes.map(renderLigne)}
+        {voirPlus}
+      </View>
+    ) : (
+      <View style={{ gap: 10 }}>
+        {lignes.map(renderLigne)}
+        {voirPlus}
+      </View>
+    );
   }
 
   const liste = (

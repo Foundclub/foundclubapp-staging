@@ -624,6 +624,24 @@ export const useConsoleDesComplexes = (onglet, recherche, { enabled = true } = {
 });
 
 /**
+ * E-S01 — la liste de la console, par pages de 20 (« Voir plus ») ; la tuile du dashboard lit,
+ * elle, la première page seule (`useConsoleDesComplexes`).
+ * @param {string} onglet - `a-traiter | tous | suspendus`.
+ * @param {string} recherche - Le nom ou la ville cherchés.
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<any>} Les pages.
+ */
+export const usePagesDeLaConsole = (onglet, recherche) => useInfiniteQuery({
+  getNextPageParam: pageSuivante,
+  initialPageParam: 1,
+  meta: { preventToastError: true },
+  queryFn: async ({ pageParam }) => (
+    await listerLaConsole({ onglet, page: pageParam, recherche })
+  )?.data ?? null,
+  queryKey: ['complexe', 'console', 'pages', onglet, recherche],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
  * E-S01 — la fiche d'un complexe dans la console.
  * @param {string | null | undefined} complexeId - documentId du complexe.
  * @returns {import('@tanstack/react-query').UseQueryResult<any>} La fiche.

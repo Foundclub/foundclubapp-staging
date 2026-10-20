@@ -38,6 +38,11 @@ let mockFiche = /** @type {any} */ ({});
 /** @type {any[]} */
 const mockFiches = [];
 const mockGeste = jest.fn();
+// La liste lit par pages (« Voir plus ») : la première est `mockListe`, les suivantes ici.
+/** @type {any[]} */
+const mockPagesSuivantes = [];
+let mockEncore = false;
+const mockPageSuivante = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useComplexeDeLaConsole: (/** @type {string} */ complexeId) => {
     mockFiches.push(complexeId);
@@ -48,6 +53,15 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     return mockListe;
   },
   useGesteDeLaConsole: () => ({ isPending: false, mutateAsync: mockGeste }),
+  usePagesDeLaConsole: (/** @type {string} */ onglet, /** @type {string} */ recherche) => {
+    mockListes.push([onglet, recherche]);
+    return {
+      ...mockListe,
+      data: mockListe.data ? { pages: [mockListe.data, ...mockPagesSuivantes] } : undefined,
+      fetchNextPage: mockPageSuivante,
+      hasNextPage: mockEncore,
+    };
+  },
 }));
 jest.mock('@/components/molecules/input/Input', () => {
   const { TextInput: Saisie } = jest.requireActual('react-native');
@@ -174,6 +188,8 @@ beforeEach(() => {
   mockLargeur = 390;
   mockListes.length = 0;
   mockFiches.length = 0;
+  mockPagesSuivantes.length = 0;
+  mockEncore = false;
   mockListe = { data: LISTE, isLoading: false, refetch: jest.fn() };
   mockFiche = { data: FICHE, isLoading: false, refetch: jest.fn() };
   mockGeste.mockResolvedValue({ data: {} });
@@ -213,10 +229,39 @@ describe('E-S01 — la liste des complexes', () => {
     mockLargeur = 1360;
     const arbre = await monter(<AdminComplexeList />);
     expect(lisibles(arbre)).toContain('Choisis un complexe dans la liste pour voir sa fiche.');
+    // Le tableau de la planche (état 1) : ses colonnes, une rangée par complexe.
+    expect(parRepere(arbre, 'console-tableau')).not.toBeNull();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Complexe', 'Ville', 'Créé le', 'État', 'Montrivage', '13/10', 'Valbrune', '12/10',
+    ]));
     await appuyer(arbre, 'Le Five de Montrivage');
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockFiches).toContain('cx-five');
     expect(parRepere(arbre, 'console-fiche')).not.toBeNull();
+  });
+
+  it('« Voir plus » lit la page suivante ; la dernière page n’en propose plus', async () => {
+    mockEncore = true;
+    let arbre = await monter(<AdminComplexeList />);
+    await appuyer(arbre, 'Voir plus');
+    expect(mockPageSuivante).toHaveBeenCalled();
+    mockEncore = false;
+    mockPagesSuivantes.push({
+      items: [{
+        city: 'Lunel',
+        createdAt: '2026-10-01T08:00:00.000Z',
+        documentId: 'cx-21',
+        logo: null,
+        name: 'Urban 21',
+        nouveau: false,
+        signalementsATraiter: 0,
+        status: 'actif',
+      }],
+      pagination: { page: 2, pageSize: 20, total: 21 },
+    });
+    arbre = await monter(<AdminComplexeList />);
+    expect(lisibles(arbre)).toContain('Urban 21');
+    expect(parRepere(arbre, 'console-voir-plus')).toBeNull();
   });
 });
 
