@@ -959,7 +959,9 @@ function PlanningWeekFullscreen() {
     : [];
   const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
     if (evenement?.documentId) {
-      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+      /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
+        evenementId: evenement.documentId,
+      });
     }
   };
   const attribuerA = useCallback((

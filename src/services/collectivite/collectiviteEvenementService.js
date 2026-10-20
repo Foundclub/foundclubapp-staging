@@ -7,7 +7,10 @@
 
 const client = async () => (await import('../client')).default;
 
-const lire = async (chemin, options) => (await (await client()).get(chemin, options)).data;
+const lire = async (
+  /** @type {string} */ chemin,
+  /** @type {Record<string, any>} */ options = {},
+) => (await (await client()).get(chemin, options)).data;
 
 /**
  * GET /collectivites/:id/evenements?from&to&status — ceux de la Ville.

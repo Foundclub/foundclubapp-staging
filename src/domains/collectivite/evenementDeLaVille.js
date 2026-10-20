@@ -91,7 +91,7 @@ export const etatDepuisLaVue = (vue) => ({
   visibility: NIVEAUX.includes(vue?.visibility) ? vue.visibility : 'clubs',
 });
 
-const minutes = (heure) => {
+const minutes = (/** @type {unknown} */ heure) => {
   const match = /^(\d{1,2}):(\d{2})$/.exec(String(heure || '').trim());
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 };
@@ -103,6 +103,7 @@ const minutes = (heure) => {
  * @returns {Record<string, string>} `{ champ: clé }` ; vide si tout va bien.
  */
 export const verifierEvenement = (etat) => {
+  /** @type {Record<string, string>} */
   const erreurs = {};
   if (!String(etat?.name || '').trim()) erreurs.name = 'collectiviteEvenement.refus.nom';
   if (!etat?.date) erreurs.date = 'collectiviteEvenement.refus.date';
@@ -150,7 +151,7 @@ export const versCorpsDeLApi = (etat) => {
   };
 };
 
-const jourCourt = (jour) => {
+const jourCourt = (/** @type {unknown} */ jour) => {
   const date = parseISO(String(jour || ''));
   return isValid(date) ? format(date, 'EEE d MMM', { locale: dateLocale() }) : '';
 };

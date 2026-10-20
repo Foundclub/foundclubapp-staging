@@ -68,7 +68,12 @@ jest.mock('@/components/atoms/button/Button', () => {
   return function ButtonMock(/** @type {any} */ props) {
     return reactActuel.createElement(
       PressableRN,
-      { disabled: props.disabled, onPress: props.onPress, testID: props.testID },
+      {
+        disabled: props.disabled,
+        onPress: props.onPress,
+        // Le vrai bouton ne pose aucun testID : on le vise par son libellé.
+        testID: props.testID ?? `bouton:${props.title}`,
+      },
       reactActuel.createElement(TexteRN, null, props.title),
     );
   };
@@ -143,7 +148,10 @@ const textes = (/** @type {any} */ arbre) => arbre.root
   .findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
 const touche = (/** @type {any} */ arbre, /** @type {string} */ id) => {
-  const noeud = arbre.root.findAllByType(TouchableOpacity).find((n) => n.props.testID === id);
+  // Le dernier : une fenêtre ouverte se dessine après l’écran (deux « Annuler l’événement »).
+  const noeud = arbre.root.findAllByType(TouchableOpacity)
+    .filter((n) => n.props.testID === id)
+    .at(-1);
   if (!noeud) throw new Error(`pas de ${id}`);
   return act(async () => {
     await noeud.props.onPress();
@@ -373,7 +381,7 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
     expect(lus).toContain('L’événement n’a pas été publié.');
     expect(lus).toContain('La connexion a été perdue. Ce que vous avez saisi est gardé.');
     expect(lus).toContain('Fête du sport · sam. 24 oct. · 10:00 – 17:00');
-    await touche(arbre, 'evenement-reessayer');
+    await touche(arbre, 'bouton:Réessayer');
     expect(onPublier).toHaveBeenCalledTimes(2);
     expect(textes(arbre)).not.toContain('L’événement n’a pas été publié.');
   });
@@ -414,10 +422,10 @@ describe('R17-EVT-1 — le panneau (ordinateur)', () => {
         'Publier l’événement',
       ]),
     );
-    await touche(arbre, 'evenement-publier');
+    await touche(arbre, 'bouton:Publier l’événement');
     expect(onPublier).not.toHaveBeenCalled();
     expect(textes(arbre)).toContain('Donnez un nom à l’événement.');
-    await touche(arbre, 'evenement-annuler-saisie');
+    await touche(arbre, 'bouton:Annuler');
     expect(onClose).toHaveBeenCalled();
     // « Ailleurs » : « Quelle place prend-il ? » disparaît.
     await touche(arbre, 'evenement-lieu-ailleurs');
