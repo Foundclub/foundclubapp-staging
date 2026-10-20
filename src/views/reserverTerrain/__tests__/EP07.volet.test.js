@@ -20,6 +20,10 @@ const mockLue = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useAnnulerMaReservation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useComplexePublic: () => ({ data: null }),
+  // RESA-L6B-2 : le groupe, la relation au complexe, les fils, le lien et l'annonce (aucun ici).
+  useGroupeDeLaReservation: () => ({ data: null }),
+  useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useMaRelationAuComplexe: () => ({ data: null }),
   useMaReservation: (/** @type {string} */ id) => {
     mockLue(id);
     return {
@@ -28,6 +32,9 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
       isLoading: false,
     };
   },
+  useOuvrirUnFil: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useRepondreALaPartie: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));

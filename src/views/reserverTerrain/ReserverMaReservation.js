@@ -7,6 +7,11 @@ import {
 
 import { formatEuros } from '@/domains/complexe/complexeTerrain';
 import {
+  apercuDeLaFidelite,
+  jourEtHeure,
+  peutChercherDesJoueurs,
+} from '@/domains/complexe/partieDuJoueur';
+import {
   contenuDEchec,
   etatAffiche,
   lienAgendaGoogle,
@@ -26,6 +31,10 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
+import BlocParticipants from '@/views/reserverTerrain/components/BlocParticipants';
+import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
+import FeuilleAnnonce from '@/views/reserverTerrain/components/FeuilleAnnonce';
+import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -33,13 +42,20 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useAnnulerMaReservation,
   useComplexePublic,
+  useGroupeDeLaReservation,
+  useMaRelationAuComplexe,
   useMaReservation,
+  useOuvrirUnFil,
+  useRepondreALaPartie,
 } from '@/services/complexe/complexeJoueurQueries';
 
 import { openExternalMap } from '@/platform/maps/externalMap';
 import { useIsDesktop } from '@/responsive';
 
 const COLONNE = 640;
+
+/** Les états où la partie se joue encore (on y répond, on y invite). */
+const PARTIE_EN_COURS = Object.freeze(['confirmee', 'enAttente', 'enCollecte']);
 
 /**
  * E-P07 — « LA FICHE DE MA RÉSERVATION » — RESA-L6A (14/10/2026), planches EP07 et OR3, plan E-P07.
@@ -54,12 +70,24 @@ const COLONNE = 640;
  *   4. l'historique (la réservation, le petit mot).
  * Annulée ⇒ E-P13 « annulée par toi » à la place de cet écran.
  * Paramètres : `reservationId` ; `change` et `fermeture` (la notification qui l'a ouverte).
- * Ordinateur (OR3) : la colonne centrée (participants, à droite, viendront avec L6b) ; dans le
- * volet de droite de « Mes réservations » (E-P10, gabarit A, RESA-L6B-1) : `dansUnVolet` et la
- * réservation que la liste lui donne, sans fond d'écran à elle.
- * ⛔ Pas dans ce lot : participants et présences, « Inviter par lien », « Il me manque des
- * joueurs », « Discussion du groupe », « Écrire au complexe », fidélité, collecte (serveurs
- * L3 / L4, puis L6b). Caché par `COMPLEXES_JOUEUR`.
+ * Ordinateur (OR3) : la colonne centrée ; dans le volet de droite de « Mes réservations » (E-P10,
+ * gabarit A, RESA-L6B-1) : `dansUnVolet` et la réservation que la liste lui donne, sans fond
+ * d'écran à elle.
+ * RESA-L6B-2 (20/10/2026, serveurs RESA-L3 / L4 ; planche EP07 états 1 à 4, plan E-P07 blocs 1
+ * à 5) — la réservation vit comme une partie (le groupe, `GET …/groupe`) :
+ *   · « Participants · 8/10 » (Tous · Présents · Absents · Sans réponse ; prénom + initiale) ;
+ *   · le réserveur : « Écrire au complexe » (la conversation de SA réservation, AT-04), « Inviter
+ *     par lien » (la feuille du lien, « Désactiver le lien »), « Il me manque des joueurs »
+ *     (s'il manque du monde et que le créneau est à venir ; l'annonce publiée s'ouvre, sinon sa
+ *     feuille de création — paramètre `ouvrir: 'annonce'` depuis E-P05), « Discussion du
+ *     groupe » (RG-FIL : la règle des mineurs du serveur ; son refus dit sa phrase) ;
+ *   · la fidélité du complexe (« Cette partie comptera pour ta fidélité : … ») ;
+ *   · la collecte : « En collecte · 7/10 », la jauge, la date limite, « Arrêter la collecte » ;
+ *     arrêtée par le serveur : l'en-tête d'E-P13 (créneau pris : le texte A-P08) ;
+ *   · un PARTICIPANT (vue réduite du serveur) : « Réservée par Julien M. » (« Pour U15 Valbrune »
+ *     d'une équipe), « Tu viens ? » Présent / Absent et l'engagement ; ni annuler, ni inviter, ni
+ *     annonce, ni conversation avec le complexe.
+ * Caché par `COMPLEXES_JOUEUR`.
  * @param {object} [props] - Les propriétés (aucune pour l'écran seul).
  * @param {boolean} [props.dansUnVolet] - Dans le volet de E-P10 sur ordinateur.
  * @param {string | null} [props.reservationId] - La réservation du volet.
@@ -70,7 +98,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ change?: string, fermeture?: string, reservationId?: string | null }} */
+  /**
+   * @type {{ change?: string, fermeture?: string, ouvrir?: string,
+   *   reservationId?: string | null }}
+   */
   const params = dansUnVolet
     ? { reservationId }
     : /** @type {any} */ (route?.params) || {};
@@ -79,9 +110,18 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const annuler = useAnnulerMaReservation();
   const reservation = lecture?.data || null;
   const complexePublic = useComplexePublic(reservation?.complexe?.slug)?.data;
+  const groupe = useGroupeDeLaReservation(params.reservationId)?.data || null;
+  const relation = useMaRelationAuComplexe(reservation?.complexe?.slug)?.data || null;
+  const ouvrirUnFil = useOuvrirUnFil();
+  const repondre = useRepondreALaPartie();
   const [confirmation, setConfirmation] = useState(false);
   const [refusTropTard, setRefusTropTard] = useState(/** @type {any} */ (null));
   const [bandeau, setBandeau] = useState(/** @type {string | null} */ (null));
+  const [feuille, setFeuille] = useState(/** @type {'annonce' | 'lien' | null} */ (
+    params.ouvrir === 'annonce' ? 'annonce' : null
+  ));
+  const [refusDuFil, setRefusDuFil] = useState(/** @type {string | null} */ (null));
+  const [refusDeReponse, setRefusDeReponse] = useState(/** @type {string | null} */ (null));
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary800, 0.6),
@@ -178,15 +218,30 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const slug = reservation?.complexe?.slug || null;
   const terrainId = reservation?.terrain?.documentId || null;
   const telephone = String(reservation?.complexe?.phoneNumber || '').trim();
+  // RESA-L6B-2 : un participant lit la vue réduite du serveur (`role: 'participant'`).
+  const participant = reservation?.role === 'participant' || groupe?.role === 'participant';
   const etat = etatAffiche(reservation);
-  const varianteDEnTete = varianteDeLaReservation(reservation, { change: params.change });
+  const collecte = groupe?.collecte || null;
+  const varianteDEnTete = varianteDeLaReservation(reservation, {
+    change: params.change,
+    echecDeCollecte: collecte?.failure,
+  });
   const demande = etat === 'enAttente';
+  const enCollecte = etat === 'enCollecte';
   const debut = momentLisible(reservation.startsAt);
   const jusquA = momentLisible(reservation.cancellableUntil);
   const echeance = momentLisible(reservation.expiresAt);
   const creation = momentLisible(reservation.createdAt);
   const commence = new Date(String(reservation.startsAt)).getTime() <= Date.now();
   const adresse = complexePublic?.address?.label ? String(complexePublic.address.label) : '';
+  const partieEnCours = !varianteDEnTete && PARTIE_EN_COURS.includes(etat) && !commence;
+  const autresPresents = Math.max(0, (Number(groupe?.counts?.presents) || 1) - 1);
+  const remplissage = collecte
+    ? Math.min(100, Math.round(
+      (Number(collecte.presents) / Math.max(1, Number(collecte.quorum))) * 100,
+    ))
+    : 0;
+  const ageMinimum = Number(complexePublic?.rules?.minAge) || null;
 
   const versLeCalendrier = () => navigation.navigate(RouteNames.ReserverCreneau, {
     slug,
@@ -209,7 +264,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           slug,
           telephone,
           terrain: reservation.terrain,
-          variante: 'annuleeParToi',
+          variante: enCollecte ? 'collecteArretee' : 'annuleeParToi',
         }),
       );
     } catch (erreur) {
@@ -222,6 +277,34 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       setBandeau(contenuDEchec(t, variante, { erreur }).titre);
     }
   };
+  // RESA-L6B-2 : la discussion du groupe (RG-FIL) ou la conversation avec le complexe (AT-04) ;
+  // le serveur ouvre le fil, la messagerie l'affiche ; un refus dit sa phrase.
+  const ouvrirLeFil = async (/** @type {'complexe' | 'discussion'} */ fil) => {
+    setRefusDuFil(null);
+    try {
+      const reponse = await ouvrirUnFil.mutateAsync({ fil, reservationId: reservation.documentId });
+      if (reponse?.chat) navigation.navigate(RouteNames.Conversation, { chatId: reponse.chat });
+    } catch (erreur) {
+      setRefusDuFil(String(erreur?.message || '').trim()
+        || contenuDEchec(t, varianteDEchec(erreur), { erreur }).titre);
+    }
+  };
+  const repondreALaPartie = async (/** @type {'absent' | 'present'} */ reponse) => {
+    setRefusDeReponse(null);
+    try {
+      await repondre.mutateAsync({ reponse, reservationId: reservation.documentId });
+    } catch (erreur) {
+      const variante = varianteDEchec(erreur);
+      setRefusDeReponse(contenuDEchec(t, variante, { erreur, rejoindre: true }).titre);
+    }
+  };
+  const chercherDesJoueurs = () => {
+    if (groupe?.annonce?.documentId) {
+      navigation.navigate(RouteNames.ReserverAnnonce, { annonceId: groupe.annonce.documentId });
+      return;
+    }
+    setFeuille('annonce');
+  };
 
   // -------------------------------------------------------------------------------------------
   // Les blocs
@@ -233,9 +316,42 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
         accessibilityRole="header"
         style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
       >
-        {t('reserverTerrain.maReservation.titre', 'Ma réservation').toUpperCase()}
+        {(participant
+          ? t('reserverTerrain.maReservation.titreParticipant', 'Réservation')
+          : t('reserverTerrain.maReservation.titre', 'Ma réservation')).toUpperCase()}
       </Text>
-      <PastilleEtat etat={etat} />
+      <PastilleEtat
+        compte={enCollecte && collecte ? `${collecte.presents}/${collecte.quorum}` : null}
+        etat={etat}
+      />
+      {enCollecte && collecte ? (
+        <View style={{ gap: 6 }}>
+          <View
+            style={{
+              backgroundColor: withAlpha(Colors.primary500, 0.18),
+              borderRadius: 4,
+              height: 8,
+              overflow: 'hidden',
+            }}
+            testID="ma-reservation-jauge"
+          >
+            <View
+              style={{
+                backgroundColor: Colors.primary500,
+                height: 8,
+                width: `${remplissage}%`,
+              }}
+            />
+          </View>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'reserverTerrain.maReservation.dateLimite',
+              'Date limite : {{echeance}} · le créneau reste libre jusque-là',
+              { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
+            )}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -243,9 +359,12 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     <View style={carte}>
       <BlocDEchec
         contenu={contenuDEchec(t, varianteDEnTete, {
+          collecte,
           complexe: nomDuComplexe,
+          debut: reservation.startsAt,
           fermeture: params.fermeture,
           motif: reservation.reason,
+          reserveur: reservation.bookerLabel,
           telephone,
         })}
         onAction={(action) => {
@@ -272,6 +391,21 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     lieu: adresse,
     titre: `${String(reservation?.terrain?.name || '')} · ${nomDuComplexe}`,
   });
+  const reserveePar = String(reservation?.bookerLabel || '').trim();
+  let ligneDuParticipant = '';
+  if (participant && reserveePar && groupe?.equipe?.name) {
+    ligneDuParticipant = t(
+      'reserverTerrain.maReservation.pourEquipe',
+      'Pour {{equipe}} · réservée par {{reserveur}}',
+      { equipe: String(groupe.equipe.name), reserveur: reserveePar, ...SANS_ECHAPPEMENT },
+    );
+  } else if (participant && reserveePar) {
+    ligneDuParticipant = t(
+      'reserverTerrain.maReservation.reserveePar',
+      'Réservée par {{reserveur}}',
+      { reserveur: reserveePar, ...SANS_ECHAPPEMENT },
+    );
+  }
 
   const quandOu = (
     <View style={carte}>
@@ -292,6 +426,9 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {[nomDuComplexe, reservation?.terrain?.name].filter(Boolean).join(' · ')}
         </Text>
       </TouchableOpacity>
+      {ligneDuParticipant ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>{ligneDuParticipant}</Text>
+      ) : null}
       {prix ? <Text style={[Fonts.p2, Fonts.neutral100]}>{prix}</Text> : null}
       {!varianteDEnTete ? (
         <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
@@ -319,13 +456,149 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               variant="Secondary"
             />
           ) : null}
+          {!participant ? (
+            <Button
+              icon="envelope"
+              isLoading={Boolean(ouvrirUnFil?.isPending)}
+              onPress={() => ouvrirLeFil('complexe')}
+              size="sm"
+              title={t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe')}
+              variant="Secondary"
+            />
+          ) : null}
         </View>
       ) : null}
     </View>
   );
 
+  // RESA-L6B-2 — « Tu viens ? » (planche EP07 état 3) : un participant d'une partie à venir.
+  const reponseActuelle = groupe?.myResponse || reservation?.myResponse || 'sans_reponse';
+  const boutonDeReponse = (/** @type {'absent' | 'present'} */ cle, /** @type {string} */ mot) => {
+    const choisi = reponseActuelle === cle;
+    return (
+      <TouchableOpacity
+        accessibilityLabel={mot}
+        accessibilityRole="button"
+        accessibilityState={{ busy: Boolean(repondre?.isPending), selected: choisi }}
+        disabled={Boolean(repondre?.isPending)}
+        onPress={() => repondreALaPartie(cle)}
+        style={{
+          alignItems: 'center',
+          backgroundColor: choisi ? Colors.primary500 : 'transparent',
+          borderColor: Colors.primary500,
+          borderRadius: 12,
+          borderWidth: 1,
+          flex: 1,
+          justifyContent: 'center',
+          minHeight: 48,
+        }}
+        testID={`ma-reservation-${cle}`}
+      >
+        <Text style={[Fonts.p2Bold, choisi ? Fonts.primary900 : Fonts.primary200]}>{mot}</Text>
+      </TouchableOpacity>
+    );
+  };
+  const tuViens = participant && partieEnCours ? (
+    <View style={{ ...carte, borderColor: Colors.primary500, borderLeftWidth: 4 }}>
+      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+        {t('reserverTerrain.maReservation.tuViens', 'Tu viens ?')}
+      </Text>
+      <View style={[Alignments.row, { gap: 8 }]}>
+        {boutonDeReponse('present', t('reserverTerrain.participants.present', 'Présent'))}
+        {boutonDeReponse('absent', t('reserverTerrain.participants.absent', 'Absent'))}
+      </View>
+      {refusDeReponse ? (
+        <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>
+          {refusDeReponse}
+        </Text>
+      ) : null}
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t(
+          'reserverTerrain.maReservation.honneurPresent',
+          'Tu t’engages sur l’honneur à venir si tu réponds présent.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
+  const actions = !varianteDEnTete && groupe ? (
+    <View style={{ gap: 8 }}>
+      {!participant && partieEnCours ? (
+        <CarteDAction
+          icone="share"
+          libelle={t('reserverTerrain.lien.titre', 'Inviter par lien')}
+          onPress={() => setFeuille('lien')}
+        />
+      ) : null}
+      {peutChercherDesJoueurs(groupe, reservation) ? (
+        <CarteDAction
+          icone="users"
+          libelle={t('reserverTerrain.annonce.titre', 'Il me manque des joueurs')}
+          onPress={chercherDesJoueurs}
+        />
+      ) : null}
+      <CarteDAction
+        icone="envelope"
+        libelle={t('reserverTerrain.maReservation.discussion', 'Discussion du groupe')}
+        occupee={Boolean(ouvrirUnFil?.isPending)}
+        onPress={() => ouvrirLeFil('discussion')}
+      />
+      {refusDuFil ? (
+        <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{refusDuFil}</Text>
+      ) : null}
+    </View>
+  ) : null;
+
+  // RESA-L6B-2 — la fidélité du complexe (RG-FIDELITE, planche EP07 bloc 5).
+  const fidelite = apercuDeLaFidelite(t, relation?.fidelite);
+  let texteDeFidelite = '';
+  if (fidelite?.disponible) texteDeFidelite = fidelite.texte;
+  else if (fidelite && partieEnCours) {
+    texteDeFidelite = t(
+      'reserverTerrain.fidelite.compteraPour',
+      'Cette partie comptera pour ta fidélité : {{reste}}',
+      {
+        reste: `${fidelite.texte.charAt(0).toLocaleLowerCase()}${fidelite.texte.slice(1)}`,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
+  }
+  const blocFidelite = texteDeFidelite ? (
+    <View
+      style={{
+        ...carte,
+        backgroundColor: withAlpha(Colors.primary500, 0.08),
+        borderColor: withAlpha(Colors.primary500, 0.45),
+      }}
+      testID="ma-reservation-fidelite"
+    >
+      <Text style={[Fonts.p2, Fonts.neutral00]}>{texteDeFidelite}</Text>
+    </View>
+  ) : null;
+
   let annulation = null;
-  if (!varianteDEnTete && demande && !commence) {
+  if (participant) {
+    annulation = null;
+  } else if (!varianteDEnTete && enCollecte && !commence) {
+    annulation = (
+      <View style={carte}>
+        <Button
+          onPress={() => setConfirmation(true)}
+          title={t('reserverTerrain.maReservation.arreterLaCollecte', 'Arrêter la collecte')}
+          variant="Danger"
+        />
+        {autresPresents > 0 ? (
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {t('reserverTerrain.maReservation.inscritsPrevenus', {
+              count: autresPresents,
+              defaultValue_one: 'L’inscrit sera prévenu.',
+              defaultValue_other: 'Les {{count}} inscrits seront prévenus.',
+            })}
+          </Text>
+        ) : null}
+      </View>
+    );
+  } else if (!varianteDEnTete && demande && !commence) {
     annulation = (
       <View style={carte}>
         {echeance ? (
@@ -433,6 +706,28 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       ...SANS_ECHAPPEMENT,
     })
     : '';
+  let questionDAnnulation = t(
+    'reserverTerrain.maReservation.annulerQuestion',
+    'Annuler ta réservation du {{quand}} ?',
+    { quand, ...SANS_ECHAPPEMENT },
+  );
+  if (enCollecte) {
+    questionDAnnulation = t(
+      'reserverTerrain.maReservation.arreterQuestion',
+      'Arrêter la collecte du {{quand}} ?',
+      { quand, ...SANS_ECHAPPEMENT },
+    );
+  } else if (demande) {
+    questionDAnnulation = t(
+      'reserverTerrain.maReservation.retirerQuestion',
+      'Retirer ta demande du {{quand}} ?',
+      { quand, ...SANS_ECHAPPEMENT },
+    );
+  }
+  let ouiDAnnulation = t('reserverTerrain.maReservation.ouiAnnuler', 'Oui, annuler');
+  if (enCollecte) ouiDAnnulation = t('reserverTerrain.maReservation.ouiArreter', 'Oui, arrêter');
+  else if (demande) ouiDAnnulation = t('reserverTerrain.maReservation.ouiRetirer', 'Oui, retirer');
+
   return (
     <>
       {enveloppe(
@@ -440,6 +735,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {enTete}
           {enTeteDEchec}
           {quandOu}
+          {tuViens}
+          {!varianteDEnTete ? <BlocParticipants groupe={groupe} /> : null}
+          {actions}
+          {blocFidelite}
           {bandeau ? (
             <View
               accessibilityRole="alert"
@@ -462,26 +761,8 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
         webPresentation="dialog"
       >
         <View style={{ gap: 12 }}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {demande
-              ? t(
-                'reserverTerrain.maReservation.retirerQuestion',
-                'Retirer ta demande du {{quand}} ?',
-                {
-                  quand,
-                  ...SANS_ECHAPPEMENT,
-                },
-              )
-              : t(
-                'reserverTerrain.maReservation.annulerQuestion',
-                'Annuler ta réservation du {{quand}} ?',
-                {
-                  quand,
-                  ...SANS_ECHAPPEMENT,
-                },
-              )}
-          </Text>
-          {!demande && jusquA ? (
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{questionDAnnulation}</Text>
+          {!demande && !enCollecte && jusquA ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
                 'reserverTerrain.maReservation.annulerTexte',
@@ -490,14 +771,19 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               )}
             </Text>
           ) : null}
+          {!demande && autresPresents > 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('reserverTerrain.maReservation.presentsPrevenus', {
+                count: autresPresents,
+                defaultValue_one: 'Le participant présent sera prévenu.',
+                defaultValue_other: 'Les {{count}} participants présents seront prévenus.',
+              })}
+            </Text>
+          ) : null}
           <Button
             isLoading={Boolean(annuler?.isPending)}
             onPress={confirmerLAnnulation}
-            title={
-              demande
-                ? t('reserverTerrain.maReservation.ouiRetirer', 'Oui, retirer')
-                : t('reserverTerrain.maReservation.ouiAnnuler', 'Oui, annuler')
-            }
+            title={ouiDAnnulation}
             variant="Danger"
           />
           <Button
@@ -507,6 +793,36 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           />
         </View>
       </BottomModal>
+      {feuille === 'lien' && !participant ? (
+        <FeuilleInviterParLien
+          close={() => setFeuille(null)}
+          partie={{
+            complexe: nomDuComplexe,
+            date: reservation.date,
+            from: reservation.from,
+            sport: reservation?.terrain?.sport?.name,
+          }}
+          reservationId={reservation.documentId}
+        />
+      ) : null}
+      {feuille === 'annonce' && groupe && peutChercherDesJoueurs(groupe, reservation)
+        && !groupe.annonce ? (
+          <FeuilleAnnonce
+            ageMinimum={ageMinimum}
+            close={() => setFeuille(null)}
+            groupe={groupe}
+            onPubliee={(annonce) => {
+              setFeuille(null);
+              if (annonce?.documentId) {
+                navigation.navigate(RouteNames.ReserverAnnonce, {
+                  annonceId: annonce.documentId,
+                  publiee: true,
+                });
+              }
+            }}
+            reservation={reservation}
+          />
+        ) : null}
     </>
   );
 }

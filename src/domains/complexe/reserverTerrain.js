@@ -903,6 +903,21 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
           )
           : t('reserverTerrain.echec.banni', 'Tu ne peux plus réserver dans ce complexe.'),
       };
+    // RESA-L6B-2 — « Arrêter la collecte » (E-P07) : rien n'était réservé ; seuls les présents
+    // sont prévenus (N-33 ; jamais « prévenu » pour un absent), pas le complexe (qui ne la voyait
+    // pas).
+    case 'collecteArretee':
+      return {
+        ...base,
+        actions: ['ailleurs'],
+        icone: 'personnes',
+        texte: t(
+          'reserverTerrain.echec.collecteArreteeTexte',
+          'Rien n’était réservé. Les joueurs qui avaient répondu présent sont prévenus.',
+        ),
+        titre: t('reserverTerrain.echec.collecteArretee', 'Collecte arrêtée'),
+        ton: 'cyan',
+      };
     case 'collecteDelai': {
       const presents = Number(contexte?.collecte?.presents);
       const quorum = Number(contexte?.collecte?.quorum);
