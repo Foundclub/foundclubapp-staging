@@ -26,6 +26,10 @@ const canWriteInChat = ({ chat, hasClubAccess, user }) => {
   // R17-CANAUX — sauf « Toute la ville » : la Ville seule (l ecran le sait : useFilDeLaVille).
   if (estFilDeLaVille(chat)) return peutEcrireDansLeFil({ chat });
 
+  // MSG-SUPPORT (20/10) — la conversation d'assistance : son titulaire et l'équipe FoundClub
+  // (le serveur ne laisse entrer personne d'autre).
+  if (chat.type === 'assistance') return true;
+
   // Tete-a-tete, groupe, equipe, match League ou amical : tous les participants ecrivent.
   if (
     chat.type === 'whisper'

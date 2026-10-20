@@ -25,6 +25,7 @@ import useTheme from '@/theme/themeContext';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import OffresFoundclubListe from '@/views/admin/components/OffresFoundclubListe';
+import useAssistanceTile from '@/views/admin/components/useAssistanceTile';
 import useCollectivitesTile from '@/views/admin/components/useCollectivitesTile';
 import useComplexesTile from '@/views/admin/components/useComplexesTile';
 
@@ -217,6 +218,8 @@ function AdminDashboard() {
   const collectivitesTuile = useCollectivitesTile();
   // RESA-L5B-2 (20/10/2026) — E-S01 : la tuile « Complexes » (rien n'est lu interrupteur éteint).
   const complexesTuile = useComplexesTile();
+  // MSG-SUPPORT (20/10) — l'entrée de la boîte commune de l'assistance.
+  const assistanceTuile = useAssistanceTile();
 
   const {
     data: claimsData,
@@ -1676,6 +1679,19 @@ function AdminDashboard() {
               value={complexesTuile.value}
             />
           ) : null}
+          {/* MSG-SUPPORT (20/10) — la boîte commune de l'assistance : non lus, en attente. */}
+          <DashboardCard
+            accessibilityLabel={assistanceTuile.accessibilityLabel}
+            busy={assistanceTuile.busy}
+            color={assistanceTuile.color}
+            detail={assistanceTuile.detail}
+            detailColor={assistanceTuile.detailColor}
+            meta={t('assistance.console.meta', 'Messages')}
+            onPress={() => navigation.navigate(RouteNames.AdminAssistance)}
+            testID="admin-tuile-assistance"
+            title={t('assistance.console.titre', 'Assistance')}
+            value={assistanceTuile.value}
+          />
         </View>
 
         <View

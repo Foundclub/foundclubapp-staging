@@ -459,6 +459,10 @@ const useMessaging = (currentChatId) => {
           readBy: message.readBy, // Handle readBy
           replyTo: message.replyTo, // Handle reply
           sender: message.sender,
+          // MSG-SUPPORT (20/10) — la signature posée par le serveur (« Assistance FoundClub »,
+          // la Ville, un club) : sans elle, un message reçu EN DIRECT perdait qui il représente
+          // jusqu'à la relecture suivante. Absente, la forme du message ne bouge pas.
+          ...(message.senderSignature ? { senderSignature: message.senderSignature } : {}),
         };
 
         // Safety check: if oldData is missing or malformed, initialize it

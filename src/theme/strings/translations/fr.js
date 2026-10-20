@@ -1431,6 +1431,7 @@ export default {
   },
   adminStack: {
     titles: {
+      assistance: 'Assistance',
       claimDetail: 'Détail Demande',
       claims: 'Revendications',
       clubDetail: 'Détail Club',
@@ -2222,6 +2223,49 @@ export default {
         description: "Impossible de retrouver le coach à assigner. Reviens à la demande puis relance l'assignation.",
         title: 'Coach introuvable',
       },
+    },
+  },
+  // MSG-SUPPORT (20/10/2026) — la conversation « Assistance FoundClub » (tout
+  // utilisateur) et sa boîte commune dans la console (super-admins).
+  assistance: {
+    console: {
+      boite: {
+        chargement: 'Nous récupérons les messages des utilisateurs.',
+        compteurs: 'Non lus : {{nonLus}} · En attente de réponse : {{enAttente}}',
+        enAttente: 'En attente de réponse',
+        erreur: 'La boîte de l’assistance ne se charge pas.',
+        nous: 'Assistance',
+        ouvrir: 'Ouvre la conversation pour répondre',
+        sousTitre: 'Boîte commune : chaque réponse part signée « Assistance FoundClub ».',
+        vide: 'Aucune conversation pour le moment.',
+      },
+      compteSupprime: 'Compte supprimé',
+      meta: 'Messages',
+      nonLus: 'Non lus : {{nombre}}',
+      placeholder: 'Répondre au nom d’Assistance FoundClub',
+      sousTitre: 'Boîte commune · ta réponse est signée Assistance FoundClub',
+      titre: 'Assistance',
+      tuileEnAttente_one: '{{count}} en attente de réponse',
+      tuileEnAttente_other: '{{count}} en attente de réponse',
+      tuileRien: 'Rien en attente',
+    },
+    ligne: {
+      erreur: 'L’assistance ne s’ouvre pas. Réessaie dans un instant.',
+      erreurVous: 'L’assistance ne s’ouvre pas. Réessayez dans un instant.',
+      indice: 'Ouvre ta conversation avec l’équipe FoundClub',
+      invitation: 'Une question ? Écris-nous.',
+      invitationVous: 'Une question ? Écrivez-nous.',
+    },
+    placeholder: 'Écris ton message à l’équipe',
+    placeholderVous: 'Écrivez votre message à l’équipe',
+    sousTitre: 'L’équipe FoundClub te répond ici',
+    sousTitreVous: 'L’équipe FoundClub vous répond ici',
+    titre: 'Assistance FoundClub',
+    vide: {
+      texte: 'Seule l’équipe FoundClub lit ici. Une notification t’annonce notre réponse.',
+      texteVous: 'Seule l’équipe FoundClub lit ici. Une notification vous annonce notre réponse.',
+      titre: 'Une question ? Écris-nous.',
+      titreVous: 'Une question ? Écrivez-nous.',
     },
   },
   authWeb: {
@@ -17682,6 +17726,9 @@ export default {
     // contact qui ne fait rien vaut un lien absent : on donne alors l'adresse
     // en toutes lettres pour qu'elle reste recopiable.
     contactSupport: {
+      ecrire: 'Écrire à l’assistance',
+      email: 'Envoyer un e-mail',
+      reessayer: 'Réessaie',
       unavailableBody: "Aucune application e-mail n'a pu s'ouvrir. Écris-nous à contact@foundclubpro.com.",
       unavailableTitle: "Impossible d'ouvrir l'e-mail",
     },

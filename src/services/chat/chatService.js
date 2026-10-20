@@ -47,6 +47,7 @@ const chatSchema = Joi.object({
   // COLL-C4A2 (02/10) : le canal des dirigeants (D72) et la conversation privée Ville ↔ club
   // (D73). Sans eux, une liste qui en contient un tombait dans le repli non valide de getChats().
   // R17-CANAUX (19/10) : « Toute la ville » (collectivite_ville), pour la même raison.
+  // MSG-SUPPORT (20/10) : la conversation « Assistance FoundClub » (assistance), idem.
   type: Joi.string()
     .valid(
       'whisper',
@@ -59,6 +60,7 @@ const chatSchema = Joi.object({
       'collectivite_dirigeants',
       'collectivite_club',
       'collectivite_ville',
+      'assistance',
     )
     .required(),
   updatedAt: Joi.date().required(),

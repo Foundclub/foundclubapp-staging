@@ -16,6 +16,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -58,6 +59,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
 // IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
+import LigneAssistance from '@/views/chat/LigneAssistance';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
@@ -209,15 +211,21 @@ function Messaging({ navigation, route }) {
       userData?.documentId,
     );
   }, [blockedUserIds, chatsData?.pages, userData]);
+  // 🛟 MSG-SUPPORT (20/10) — la conversation « Assistance FoundClub » quitte les lignes : elle est
+  // épinglée à part, en tête, pour tout le monde (LigneAssistance), même avant d'exister.
+  const { autres: filsSansAssistance, filDAssistance } = useMemo(
+    () => separerLeFilDAssistance(filsTries),
+    [filsTries],
+  );
   // 🗂️ ARCHIVEES (08/10, « archivées A ») — mes fils archives quittent la liste ; la ligne
   // « Archivées » (README §3.14, prototype `p1a-app.jsx`) les retrouve, et on les y desarchive.
   const allChats = useMemo(
-    () => filsTries.filter((chat) => !estArchivePourMoi(chat, userData?.documentId)),
-    [filsTries, userData?.documentId],
+    () => filsSansAssistance.filter((chat) => !estArchivePourMoi(chat, userData?.documentId)),
+    [filsSansAssistance, userData?.documentId],
   );
   const filsArchives = useMemo(
-    () => filsTries.filter((chat) => estArchivePourMoi(chat, userData?.documentId)),
-    [filsTries, userData?.documentId],
+    () => filsSansAssistance.filter((chat) => estArchivePourMoi(chat, userData?.documentId)),
+    [filsSansAssistance, userData?.documentId],
   );
   const [afficheArchivees, setAfficheArchivees] = useState(false);
   // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
@@ -1004,6 +1012,15 @@ function Messaging({ navigation, route }) {
                         navigation={navigation}
                       />
                       {renderLigneArchivees()}
+                      {enModeArchivees ? null : (
+                        <LigneAssistance
+                          espaceVille={espaceVille}
+                          fil={filDAssistance}
+                          meId={userData?.documentId}
+                          navigation={navigation}
+                          onFilCree={() => { refetch(); }}
+                        />
+                      )}
                     </>
                   )}
                   onEndReached={error ? undefined : handleEndReached}
