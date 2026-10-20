@@ -3,6 +3,7 @@ import { getAuthTokens } from '@/domains/auth/authUseCases';
 import {
   listSuperadminEntries,
   searchSuperadminRelations,
+  updateSuperadminEntry,
 } from '@/services/admin/superadminService';
 import client from '@/services/client';
 
@@ -256,13 +257,32 @@ export const getAdminCollectivites = async () => (
 export const getAdminCollectivite = async (collectiviteId) => {
   const response = await listSuperadminEntries(COLLECTIVITE_UID, {
     // COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Depuis le … » (planche 15).
-    fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt'],
+    // R17-QUAND-2 — + `schoolHolidayZone` : la zone de vacances corrigée par FoundClub (le serveur
+    // joint `holidayZone` : la zone déduite du code INSEE, et celle qui vaut).
+    fields: [
+      'documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt',
+      'schoolHolidayZone',
+    ],
     filters: { documentId: { $eq: String(collectiviteId || '').trim() } },
     pagination: { page: 1, pageSize: 1 },
     populate: ADMIN_COLLECTIVITE_DETAIL_POPULATE,
   });
   return Array.isArray(response?.data) ? response.data[0] || null : null;
 };
+
+/**
+ * 🌴 R17-QUAND-2 (planches P11-quand-v2-tel « La zone », P11-quand-v2-ordi C) — CORRIGER LA ZONE DE
+ * VACANCES d'une collectivité : A, B, C, Corse, Outre-mer, ou `null` (celle que le code INSEE
+ * déduit). La route générique de la console : aucun droit neuf.
+ * @param {{ collectiviteId: string, zone: string | null }} params - La cible et la zone.
+ * @returns {Promise<any>} La ligne écrite.
+ */
+export const setAdminCollectiviteHolidayZone = ({ collectiviteId, zone }) => updateSuperadminEntry(
+  COLLECTIVITE_UID,
+  String(collectiviteId || '').trim(),
+  { schoolHolidayZone: zone || null },
+  'Zone de vacances scolaires',
+);
 
 /**
  * Active ou coupe la collectivite : le serveur pose ou retire l offre Club de chacun de ses

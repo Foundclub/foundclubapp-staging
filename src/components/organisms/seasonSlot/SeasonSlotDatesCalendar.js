@@ -62,13 +62,23 @@ const casesDuMois = (premier) => {
  *   depuis: string,
  *   fermeDe?: (jour: string) => string | null,
  *   jusqua?: string | null,
+ *   legendeVacances?: string | null,
  *   onToggle: (jour: string) => void,
+ *   vacancesDe?: (jour: string) => string | null,
  * }} props - `completDe` : « 18:00 – 19:30 » si ce jour est complet ; `fermeDe` : le nom de la
- *   fermeture ; `depuis` / `jusqua` : les bornes (AAAA-MM-JJ).
+ *   fermeture ; `depuis` / `jusqua` : les bornes (AAAA-MM-JJ) ; `vacancesDe` (R17-QUAND-2) : le
+ *   nom des vacances scolaires de la zone ce jour-là, `legendeVacances` leur légende.
  * @returns {import('react').ReactElement} Le calendrier et sa légende.
  */
 export default function SeasonSlotDatesCalendar({
-  completDe = () => null, dates, depuis, fermeDe = () => null, jusqua = null, onToggle,
+  completDe = () => null,
+  dates,
+  depuis,
+  fermeDe = () => null,
+  jusqua = null,
+  legendeVacances = null,
+  onToggle,
+  vacancesDe = () => null,
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
@@ -81,6 +91,8 @@ export default function SeasonSlotDatesCalendar({
     const choisi = dates.includes(jour);
     const fermeture = fermeDe(jour);
     const complet = completDe(jour);
+    // 🌴 R17-QUAND-2 — en violet, jamais confondues avec une fermeture (planche P11-quand-v2-tel).
+    const vacances = vacancesDe(jour);
     const horsBornes = jour < depuis || Boolean(jusqua && jour > jusqua);
     const bloque = horsBornes || (Boolean(fermeture) && !choisi);
     const quand = formatDay(jour, { withYear: false });
@@ -94,6 +106,10 @@ export default function SeasonSlotDatesCalendar({
     } else if (complet) {
       etat = t('collectiviteCreneaux.quand.calendrier.complet', '{{date}}, complet de {{heures}}', {
         date: quand, heures: complet, ...SANS_ECHAPPEMENT,
+      });
+    } else if (vacances) {
+      etat = t('collectiviteCreneaux.quand.calendrier.vacances', '{{date}}, vacances ({{nom}})', {
+        date: quand, nom: vacances, ...SANS_ECHAPPEMENT,
       });
     }
     if (choisi) {
@@ -112,6 +128,9 @@ export default function SeasonSlotDatesCalendar({
       couleur = Colors.warning400;
     } else if (complet) {
       bord = withAlpha(Colors.warning500, 0.6);
+    } else if (vacances) {
+      fond = withAlpha(Colors.violet500, 0.22);
+      bord = withAlpha(Colors.violet200, 0.6);
     }
     return (
       <View key={jour} style={[Alignments.center, { height: 44, width: `${100 / 7}%` }]}>
@@ -210,6 +229,20 @@ export default function SeasonSlotDatesCalendar({
             {t('collectiviteCreneaux.quand.calendrier.legendeFerme', 'Complet ou fermé')}
           </Text>
         </View>
+        {legendeVacances ? (
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
+            <View style={{
+              backgroundColor: withAlpha(Colors.violet500, 0.5),
+              borderColor: Colors.violet200,
+              borderRadius: 4,
+              borderWidth: 1,
+              height: 12,
+              width: 12,
+            }}
+            />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{legendeVacances}</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );

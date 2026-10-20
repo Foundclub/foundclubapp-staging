@@ -180,7 +180,8 @@ export const quandDuCreneau = (creneau, saison) => {
  * R17-QUAND-1, point 6 — LA FORME EN MOTS, là où un créneau se lit (semaine type, listes, fiche
  * d'un club, « Tes créneaux de la Ville », planning). Courte : « chaque semaine »,
  * « 1 sem. sur 2 », « 3 dates ». Longue : « chaque mardi », « un mercredi sur deux »,
- * « sam. 7 nov. · mar. 17 nov. ».
+ * « sam. 7 nov. · mar. 17 nov. ». R17-QUAND-2 : un créneau « sauf vacances scolaires » le dit
+ * (« chaque mardi, sauf vacances »).
  * @param {Function} t - La traduction.
  * @param {any} creneau - Le créneau (serveur).
  * @param {{ court?: boolean }} [options] - Courte : pour une pastille.
@@ -188,6 +189,22 @@ export const quandDuCreneau = (creneau, saison) => {
  */
 export const formeEnMots = (t, creneau, { court = false } = {}) => {
   const forme = slotShape(creneau);
+  const base = formeSansVacances(t, forme, court);
+  return forme.exceptHolidays && !forme.dates
+    ? t('collectiviteCreneaux.quand.vacances.forme', '{{forme}}, sauf vacances', {
+      forme: base, interpolation: { escapeValue: false },
+    })
+    : base;
+};
+
+/**
+ * La forme en mots, sans les vacances.
+ * @param {Function} t - La traduction.
+ * @param {ReturnType<typeof slotShape>} forme - La forme (`slotShape`).
+ * @param {boolean} court - Courte : pour une pastille.
+ * @returns {string} La forme.
+ */
+const formeSansVacances = (t, forme, court) => {
   if (forme.dates) {
     const count = forme.dates.length;
     if (court) {

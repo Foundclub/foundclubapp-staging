@@ -5799,6 +5799,19 @@ export default {
       clubsCouverts_other: '{{count}} clubs couverts',
       indisponible: 'Nombre indisponible',
     },
+    // 🌴 R17-QUAND-2 (planches P11-quand-v2-tel « La zone », P11-quand-v2-ordi C).
+    vacances: {
+      aucune: 'Le code INSEE ne donne aucune zone : choisissez-la.',
+      codeInsee: 'Le code INSEE donne la zone {{zone}} (académie de {{academie}}, '
+        + '{{departement}}).',
+      corrigee: '{{zone}} · corrigée par FoundClub',
+      corse: 'Corse',
+      deduite: 'Déduite',
+      deduiteLigne: '{{zone}} · déduite',
+      inconnue: 'Zone inconnue',
+      outremer: 'Outre-mer',
+      titre: 'Vacances scolaires',
+    },
   },
   // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
   // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
@@ -6079,6 +6092,8 @@ export default {
       retires: 'Créneaux retirés',
       saison: 'Saison {{debut}}-{{fin}}',
       surtitre: 'Installations de la Ville',
+      // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A).
+      vacances: 'vacances : {{zone}}',
       vide: 'Aucun créneau attribué',
       videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
         + 'choisies : le club y pose ses entraînements sans rien vous demander.',
@@ -6253,9 +6268,12 @@ export default {
         ferme: '{{date}}, fermé ({{fermeture}})',
         legendeChoisi: 'Choisi',
         legendeFerme: 'Complet ou fermé',
+        // 🌴 R17-QUAND-2 : les vacances scolaires de la zone (planche P11-quand-v2-tel).
+        legendeVacances: 'Vacances ({{zone}})',
         libre: '{{date}}, libre',
         precedent: 'Mois précédent',
         suivant: 'Mois suivant',
+        vacances: '{{date}}, vacances ({{nom}})',
       },
       chaqueDeLaPeriode: 'chaque {{jour}} de la période',
       chaqueDeLaSaison: 'chaque {{jour}} de la saison',
@@ -6307,6 +6325,29 @@ export default {
       uneDate: 'Une date',
       unJourFixe: 'Un jour fixe chaque semaine',
       unSurDeuxCourt: 'un {{jour}} sur deux',
+      // 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi) : sauf vacances.
+      vacances: {
+        aucune: 'Aucune séance ne tombe pendant les vacances.',
+        calendrierOfficiel: 'Calendrier officiel {{annees}}',
+        case: 'Sauf vacances scolaires',
+        forme: '{{forme}}, sauf vacances',
+        ligne: '{{du}} – {{au}} · {{jours}}',
+        masquer: 'Masquer les dates retirées',
+        origineConsole: 'Zone choisie par FoundClub. Une erreur ? Écrivez à FoundClub : nous la '
+          + 'corrigeons.',
+        origineDeduite: 'Zone déduite de votre commune ({{departement}}). Une erreur ? '
+          + 'Écrivez à FoundClub : nous la corrigeons.',
+        pastille: 'sauf vacances',
+        periode: '{{nom}} : retirer ces séances',
+        recap: '{{detail}}, sauf vacances scolaires ({{zone}})',
+        retirees_one: '{{count}} retiré pendant les vacances : {{noms}}.',
+        retirees_other: '{{count}} retirés pendant les vacances : {{noms}}.',
+        retireesDates_one: '{{count}} date retirée pendant les vacances : {{noms}}.',
+        retireesDates_other: '{{count}} dates retirées pendant les vacances : {{noms}}.',
+        titreListe: 'Vacances retirées · {{zone}}',
+        voir: 'Voir les dates retirées',
+        zone: '{{zone}} · académie de {{academie}}',
+      },
     },
     tunnel: {
       // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
@@ -16828,6 +16869,8 @@ export default {
     today: 'Aujourd’hui',
     tryAgain: 'Réessayer',
     unableToLoadThePlanning: 'Impossible de charger le planning',
+    // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) : « Vacances de la Toussaint · Zone B ».
+    vacances: '{{vacances}} · {{zone}}',
     // eslint-disable-next-line max-len
     weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },
