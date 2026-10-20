@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { keepPreviousData, useQueries } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import {
   addDays,
   format,
@@ -17,6 +17,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  closureBandLabel,
+  closureHoursLabel,
+} from '@/domains/facilityClosure/facilityClosureDisplay';
 import { capitalize } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -32,6 +36,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useCollectiviteClubs } from '@/services/collectivite/collectiviteQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
+import { listCollectiviteClosures } from '@/services/facilityClosure/facilityClosureService';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
@@ -49,6 +54,7 @@ import {
 import {
   blocsDeLaVille,
   blocsDuMois,
+  fermeturesDuJour,
   grilleDeLaSemaine,
   journeeParInstallation,
   listeDeLaSemaine,
@@ -130,6 +136,17 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     installations,
     Array.isArray(clubs.data) ? clubs.data : null,
   );
+  // R17-PLANNING-2 (20/10) : UNE lecture des fermetures de la Ville, à partir du début de la
+  // période affichée (planche : « Fermé · désinfection » dans la case). Une panne n'en dit rien :
+  // le planning reste.
+  const fermeturesLues = useQuery({
+    enabled: Boolean(collectiviteId),
+    placeholderData: keepPreviousData,
+    queryFn: () => listCollectiviteClosures(String(collectiviteId), { from: plage.from }),
+    queryKey: ['facility-closures', 'collectivite', collectiviteId, plage.from],
+    staleTime: 15 * 1000,
+  });
+  const fermetures = Array.isArray(fermeturesLues.data?.data) ? fermeturesLues.data.data : [];
   const enErreur = lectures.some((lecture) => lecture.isError);
   const toutesRevenues = lectures.every((lecture) => lecture.data !== undefined);
   const provisoire = lectures.some((lecture) => lecture.isPlaceholderData);
@@ -268,11 +285,49 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       }}
       testID="toutes-bloc"
     >
-      <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
-        {getPlanningTimeLabel(bloc)}
+      <Text
+        numberOfLines={1}
+        style={[Fonts.p4, bloc.complet ? Fonts.warning500 : Fonts.neutral200]}
+      >
+        {bloc.complet
+          ? t('facilityList.toutesInstallations.complet', '{{heures}} · complet', {
+            ...SANS_ECHAPPEMENT,
+            heures: getPlanningTimeLabel(bloc),
+          })
+          : getPlanningTimeLabel(bloc)}
       </Text>
       <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.neutral00]}>{bloc.title}</Text>
     </TouchableOpacity>
+  );
+
+  /**
+   * R17-PLANNING-2 — une fermeture dans une case (planche : « Fermé · désinfection »), et ses
+   * heures si elle ne prend pas toute la journée.
+   * @param {any} fermeture - La fermeture.
+   * @returns {import('react').ReactElement} La plage.
+   */
+  const plageFermee = (fermeture) => (
+    <View
+      key={`fermeture-${fermeture.documentId || fermeture.startDate}`}
+      style={{
+        backgroundColor: withAlpha(Colors.warning500, 0.12),
+        borderColor: withAlpha(Colors.warning500, 0.45),
+        borderRadius: 8,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        gap: 2,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+      }}
+      testID="toutes-fermeture"
+    >
+      <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.warning500]}>
+        {closureBandLabel(t, fermeture)}
+      </Text>
+      <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
+        {closureHoursLabel(t, fermeture)}
+      </Text>
+    </View>
   );
 
   /**
@@ -326,12 +381,26 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       });
     }
   });
+  /** @type {Array<{ couleur: string, nom: string }>} */
   const legende = vue === VUES.mois
     ? installations.map((/** @type {any} */ installation) => ({
       couleur: resolveFacilityPlanningColor(installation) || Colors.primary500,
       nom: installation.name,
     }))
     : [...clubsVus.values()];
+  // R17-PLANNING-2 : la légende dit la plage hachurée orange quand une fermeture est affichée.
+  const debutDeLaPeriode = vue === VUES.jour ? date : startOfWeek(date, { weekStartsOn: 1 });
+  const joursDeLaPeriode = vue === VUES.jour ? 1 : 7;
+  const fermetureAffichee = vue !== VUES.mois && installations.some((/** @type {any} */ i) => (
+    [...Array(joursDeLaPeriode).keys()].some((decalage) => (
+      fermeturesDuJour(fermetures, i, addDays(debutDeLaPeriode, decalage)).length > 0))
+  ));
+  if (fermetureAffichee) {
+    legende.push({
+      couleur: Colors.warning500,
+      nom: t('facilityList.toutesInstallations.legendeFermeture', 'Fermeture'),
+    });
+  }
 
   /**
    * Le corps de la section selon la vue et l'écran.
@@ -551,6 +620,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     key={jours[rang].toISOString()}
                     style={[caseDuJour, { borderLeftColor: trait }]}
                   >
+                    {fermeturesDuJour(fermetures, rangee.installation, jours[rang])
+                      .map(plageFermee)}
                     {blocsDuJour.map(caseDeLaGrille)}
                   </View>
                 ))}
@@ -587,7 +658,10 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         />
       );
     }
-    if (journee.every((ligne) => ligne.blocs.length === 0)) {
+    if (journee.every((ligne) => (
+      ligne.blocs.length === 0
+      && fermeturesDuJour(fermetures, ligne.installation, date).length === 0
+    ))) {
       const suivant = prochainBloc(blocs, date);
       const jourSuivant = suivant ? getPlanningItemDate(suivant) : null;
       return (
@@ -657,9 +731,10 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                 </Text>
               </TouchableOpacity>
             </View>
+            {fermeturesDuJour(fermetures, ligne.installation, date).map(plageFermee)}
             {ligne.blocs.length
               ? ligne.blocs.map((/** @type {any} */ bloc) => ligneDeListe(bloc, false))
-              : (
+              : fermeturesDuJour(fermetures, ligne.installation, date).length === 0 && (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {t('facilityList.toutesInstallations.rienCeJourCourt', 'Rien ce jour')}
                 </Text>

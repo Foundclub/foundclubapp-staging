@@ -62,6 +62,15 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
+/** @type {any[]} */
+let mockFermetures = [];
+const mockLectureDesFermetures = jest.fn();
+jest.mock('@/services/facilityClosure/facilityClosureService', () => ({
+  listCollectiviteClosures: (/** @type {any[]} */ ...args) => {
+    mockLectureDesFermetures(...args);
+    return Promise.resolve({ data: mockFermetures });
+  },
+}));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({ data: [] }),
 }));
@@ -201,6 +210,7 @@ beforeEach(() => {
   mockGrilles.length = 0;
   mockOrdinateur = false;
   mockNavigation = { navigate: jest.fn() };
+  mockFermetures = [];
   servir({ '2026-10-01': SEMAINE, '2026-10-19': SEMAINE });
 });
 
@@ -398,5 +408,62 @@ describe('R17-PLANNING — états', () => {
     expect(lus).toContain('19 – 25 oct.');
     expect(lus).toContain('Samedi 24');
     expect(lus).toContain('Dojo municipal');
+  });
+});
+
+describe('R17-PLANNING-2 — fermetures et « complet » dans les cases (P10-planning-ordi 1)', () => {
+  beforeEach(() => {
+    mockOrdinateur = true;
+    mockFermetures = [{
+      documentId: 'f-dojo',
+      endDate: '2026-10-22',
+      facility: { documentId: 'dojo', name: 'Dojo municipal' },
+      kind: 'closure',
+      label: 'désinfection',
+      reason: 'other',
+      startDate: '2026-10-22',
+    }];
+    servir({
+      '2026-10-19': {
+        ...SEMAINE,
+        gym: [bloc(AS, '2026-10-22', 18, 'U15'), bloc(FC, '2026-10-22', 18, 'Senior B')],
+      },
+    });
+  });
+
+  test('13 ROUGE-AVANT — la fermeture dans SA case, « complet », la légende', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    // UNE lecture des fermetures de la Ville, à partir du début de la semaine affichée.
+    expect(mockLectureDesFermetures)
+      .toHaveBeenCalledWith('ville-montrivage', { from: '2026-10-19' });
+    const dojo = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'toutes-rangee-dojo'))[0];
+    const lusDojo = dojo.findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    expect(lusDojo).toContain('Fermé · désinfection');
+    const gym = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'toutes-rangee-gym'))[0];
+    const lusGym = gym.findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    expect(lusGym.filter((texte) => texte === '18:00 – 19:30 · complet')).toHaveLength(2);
+    expect(textes(arbre)).toContain('Fermeture');
+  });
+
+  test('14 ROUGE-AVANT — au téléphone, Jour : la fermeture sous son installation', async () => {
+    mockOrdinateur = false;
+    const arbre = await rendre();
+    await act(async () => {
+      parTestID(arbre, 'toutes-vue-day')[0].props.onPress();
+    });
+    await attendre();
+    // Aller au jeudi 22 (flèche « Jour suivant »).
+    const suivant = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { suivant.props.onPress(); });
+    await attendre();
+    const lus = textes(arbre);
+    expect(lus).toContain('Jeudi 22 octobre');
+    expect(lus.indexOf('Fermé · désinfection')).toBeGreaterThan(lus.indexOf('Dojo municipal'));
   });
 });
