@@ -304,3 +304,23 @@ describe('RESA-FIN-APP (2) E-P07 — retirer une demande n’annonce pas une ré
     }));
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : une réservation « Non honorée » n'avait dans son historique que
+// « Réservée le … ». Plan E-P07 §3.7 : « Réservée le 12/10 · Confirmée la veille · … ». Les deux moments sont
+// déjà dans la réponse du serveur (`dayBeforeConfirmedAt`, `noShowAt`). (« 1 sur 3 » : le compte n'y est pas.)
+describe('RESA-FIN-APP (4) E-P07 — l’historique dit « Confirmée la veille » et « Marquée non honorée »', () => {
+  it('les deux lignes, après « Réservée le … »', async () => {
+    mockLecture = lue({
+      dayBeforeConfirmedAt: '2026-10-15T16:12:00.000Z',
+      noShowAt: '2026-10-16T16:30:00.000Z',
+    });
+    const arbre = await monter();
+    const lus = lisibles(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Confirmée la veille, le 15/10 à 18 h 12',
+      'Marquée non honorée par le complexe le 16/10',
+    ]));
+    expect(lus.indexOf('Marquée non honorée par le complexe le 16/10'))
+      .toBeGreaterThan(lus.findIndex((texte) => texte.startsWith('Réservée le')));
+  });
+});
