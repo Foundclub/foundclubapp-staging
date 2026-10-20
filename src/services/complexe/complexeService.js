@@ -360,6 +360,40 @@ export const lireHistoriqueClient = async (complexeId, joueurId) => corps(
 );
 
 /**
+ * La FIDÉLITÉ de SON complexe (E-G14) : le programme (ou null : jamais réglé), les récompenses à
+ * valider (x atteint), « Bientôt » (x − 2 ou plus près), les 10 dernières validées. Les compteurs
+ * sont calculés par le serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { programme{ active, counts, reward, threshold } | null,
+ *   aValider[{ count, joueur, reachedAt, threshold }], bientot[…], dernieresValidees[{ joueur,
+ *   parMoi, reward, threshold, validatedAt, validePar }] } }`.
+ */
+export const lireFidelite = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/fidelite`),
+);
+
+/**
+ * « Enregistrer » le programme (E-G14) : la liste blanche `{ active, threshold, reward, counts }`.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ active: boolean, counts: string, reward: string, threshold: number }} programme - Le
+ *   programme.
+ * @returns {Promise<any>} `{ data: { participantsComptes, programme } }`.
+ */
+export const reglerFidelite = async (complexeId, programme) => corps(
+  client().put(`/complexes/${enc(complexeId)}/fidelite`, { data: programme }),
+);
+
+/**
+ * « Valider la partie offerte » d'un joueur arrivé à x (E-G14) : son compteur repart de zéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { count: 0, joueur, threshold, validatedAt } }`.
+ */
+export const validerRecompense = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/fidelite/${enc(joueurId)}/valider`, {}),
+);
+
+/**
  * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
  * par le gérant (la même que celle du réserveur ; RESA-L3).
  * @param {string} complexeId - documentId du complexe.

@@ -22,6 +22,7 @@ import {
   lireClients,
   lireComplexeGere,
   lireFermetures,
+  lireFidelite,
   lireHistoriqueClient,
   lireMesComplexes,
   lirePlanning,
@@ -33,8 +34,10 @@ import {
   modifierExterieur,
   modifierTerrain,
   noterExterieur,
+  reglerFidelite,
   retirerTerrain,
   rouvrirFermetures,
+  validerRecompense,
 } from './complexeService';
 
 /**
@@ -483,6 +486,38 @@ export const useHistoriqueClient = (complexeId, joueurId) => useQuery({
   queryKey: ['complexe', complexeId, 'client', joueurId, 'historique'],
   staleTime: DEMI_MINUTE,
 });
+
+/**
+ * La fidélité de SON complexe (E-G14) : le programme et les trois listes.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ programme, aValider, bientot,
+ *   dernieresValidees }`.
+ */
+export const useFideliteDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  queryFn: async () => (await lireFidelite(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'fidelite'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Enregistrer » le programme de fidélité (E-G14) ; la fidélité, les clients et l'accueil se
+ * relisent ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, programme })`.
+ */
+export const useReglerFidelite = () => useGeste(
+  ({ complexeId, programme }) => reglerFidelite(complexeId, programme),
+);
+
+/**
+ * « Valider la partie offerte » (E-G14).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, joueurId })`.
+ */
+export const useValiderRecompense = () => useGeste(
+  ({ complexeId, joueurId }) => validerRecompense(complexeId, joueurId),
+);
 
 /**
  * « Écrire » au réserveur (E-G15) : ouvre la conversation de sa réservation ; rien à relire.

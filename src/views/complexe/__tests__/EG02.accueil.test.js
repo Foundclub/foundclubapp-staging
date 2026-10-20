@@ -355,7 +355,7 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(complexe?.props.accessibilityState).toEqual({ disabled: true });
     // RESA-L5B-2 : « Clients » a son écran (E-G15) ; ce que les autres cases deviennent est
     // vérifié par `EG02.cases.L5B2.test.js`.
-    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(5);
+    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(4);
   });
 });
 

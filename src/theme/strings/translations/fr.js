@@ -7197,6 +7197,59 @@ export default {
       videHabitues: 'Pas encore d’habitué : un client le devient à sa 3e partie jouée chez toi.',
     },
   },
+  // RESA-L5B-2 (20/10/2026) — la fidélité du complexe (E-G14, serveur RESA-L4).
+  complexeFidelite: {
+    apercu: {
+      encore_one: 'Encore {{count}} réservation avant « {{recompense}} »',
+      encore_other: 'Encore {{count}} réservations avant « {{recompense}} »',
+      encoreSansRecompense_one: 'Encore {{count}} réservation avant ta récompense',
+      encoreSansRecompense_other: 'Encore {{count}} réservations avant ta récompense',
+      titre: 'Ce que voit le joueur',
+    },
+    erreur: 'Impossible de charger les clients.',
+    listes: {
+      aucunProche: 'Aucun client n’approche encore de sa récompense.',
+      aValider: 'Récompenses à valider',
+      bientot: 'Bientôt',
+      disponible: '{{compte}}/{{seuil}} · récompense disponible',
+      validee: '{{nom}} : validée.',
+      validees: 'Dernières validées',
+      valider: 'Valider',
+    },
+    programme: {
+      active: 'Fidélité active',
+      auBoutDe: 'Au bout de',
+      compteursGardes: 'Les compteurs déjà commencés sont gardés.',
+      coupee: 'Les compteurs sont gardés si tu la rallumes.',
+      enregistre: 'Programme enregistré.',
+      enregistrer: 'Enregistrer',
+      exemple: '1 partie offerte',
+      moins: 'Une réservation de moins',
+      participants: 'Le réserveur et les participants présents',
+      plus: 'Une réservation de plus',
+      quiCompte: 'Qui compte ?',
+      recompense: 'Récompense',
+      regle: 'Seules les réservations jouées comptent (pas les annulées ni les non honorées).',
+      reservations: 'réservations',
+      reserveur: 'Le réserveur seulement',
+      titre: 'Ton programme',
+    },
+    titre: 'Fidélité',
+    validees: {
+      parAutre: '{{nom}} · validée le {{jour}} par {{par}}',
+      parToi: '{{nom}} · validée le {{jour}} par toi',
+    },
+    valider: {
+      dit: 'Son compteur repart à 0.',
+      titre: 'Valider la partie offerte de {{nom}} ?',
+    },
+    vide: {
+      creer: 'Créer mon programme',
+      dit: 'Au bout de quelques réservations jouées chez toi, une partie offerte, une boisson : '
+        + 'tu choisis.',
+      titre: 'Récompense tes habitués.',
+    },
+  },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
   // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Au « tu », gérant compris.
   complexeGerant: {

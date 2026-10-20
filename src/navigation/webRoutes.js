@@ -333,6 +333,8 @@ const WEB_ROUTE_PATTERNS = {
   // (E-G15) et la fiche d'un client (RESA-L5B-1, jusque-là sans adresse).
   [RouteNames.ComplexeClients]: '/mon-complexe/clients',
   [RouteNames.ComplexeClient]: '/mon-complexe/clients/:joueurId',
+  // La fidélité (E-G14).
+  [RouteNames.ComplexeFidelite]: '/mon-complexe/fidelite',
   // RESA-L7-1 — LE JOUEUR (RESA-L6A). La page du complexe EST sa page publique dans l annuaire,
   // par son slug (planche OR2 : « d abord une page du site » ; le cadre change selon qu on a un
   // compte, web/src/pages/seo/CadreAnnuaire.tsx). Les écrans qui demandent un compte sous

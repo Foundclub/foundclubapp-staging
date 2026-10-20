@@ -6738,6 +6738,58 @@ export default {
       videHabitues: 'No regular yet: a client becomes one at their 3rd game played with you.',
     },
   },
+  // RESA-L5B-2 (20/10/2026) — the venue's loyalty programme (E-G14, RESA-L4 server).
+  complexeFidelite: {
+    apercu: {
+      encore_one: '{{count}} more booking before "{{recompense}}"',
+      encore_other: '{{count}} more bookings before "{{recompense}}"',
+      encoreSansRecompense_one: '{{count}} more booking before your reward',
+      encoreSansRecompense_other: '{{count}} more bookings before your reward',
+      titre: 'What the player sees',
+    },
+    erreur: 'Your clients could not be loaded.',
+    listes: {
+      aucunProche: 'No client is close to their reward yet.',
+      aValider: 'Rewards to validate',
+      bientot: 'Soon',
+      disponible: '{{compte}}/{{seuil}} · reward available',
+      validee: '{{nom}}: validated.',
+      validees: 'Last validated',
+      valider: 'Validate',
+    },
+    programme: {
+      active: 'Loyalty on',
+      auBoutDe: 'After',
+      compteursGardes: 'Counters already started are kept.',
+      coupee: 'Counters are kept if you turn it back on.',
+      enregistre: 'Programme saved.',
+      enregistrer: 'Save',
+      exemple: '1 free game',
+      moins: 'One booking less',
+      participants: 'The booker and the players who attended',
+      plus: 'One booking more',
+      quiCompte: 'Who counts?',
+      recompense: 'Reward',
+      regle: 'Only played bookings count (not cancelled ones nor no-shows).',
+      reservations: 'bookings',
+      reserveur: 'The booker only',
+      titre: 'Your programme',
+    },
+    titre: 'Loyalty',
+    validees: {
+      parAutre: '{{nom}} · validated on {{jour}} by {{par}}',
+      parToi: '{{nom}} · validated on {{jour}} by you',
+    },
+    valider: {
+      dit: 'Their counter goes back to 0.',
+      titre: 'Validate the free game of {{nom}}?',
+    },
+    vide: {
+      creer: 'Create my programme',
+      dit: 'After a few bookings played with you, a free game, a drink: you choose.',
+      titre: 'Reward your regulars.',
+    },
+  },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
   // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Same keys as fr.js.
   complexeGerant: {
