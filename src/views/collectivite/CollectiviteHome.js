@@ -719,6 +719,12 @@ function CollectiviteHome() {
   // ── 2. VOS ACTIONS ─────────────────────────────────────────────────────────────────────
   const texteAction = (/** @type {string} */ cle) => {
     switch (cle) {
+      // R17-EVT-1 (20/10) — la 7e action (planche P11-evenement-ou-ca-vit).
+      case 'addEvent':
+        return {
+          dit: t('collectiviteAccueil.actions.addEvent.dit', 'Fête du sport, tournoi, réunion.'),
+          titre: t('collectiviteAccueil.actions.addEvent.titre', 'Ajouter un événement'),
+        };
       case 'assignSlot':
         return {
           dit: t(
