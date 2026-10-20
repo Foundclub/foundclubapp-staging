@@ -31,6 +31,9 @@ export const images = {
   eventCardTraining: createAssetSource('../assets/background-card-event/card-entrainement.png'),
   filter: createAssetSource('../assets/icons/filter.png'),
   flag: createAssetSource('../assets/icons/flag.png'),
+  // RESA-L6B-2 (20/10/2026) — « Mes complexes favoris » (Mon compte) : le cœur de la toile
+  // (AT-15 A).
+  heart: createAssetSource('../assets/icons/heart.png'),
   home: createAssetSource('../assets/icons/home.png'),
   logo: createAssetSource('../assets/pictures/logo.png'),
   // MSG1A (§3.1) — le motif sportif en filigrane du fil (pack messagerie, tuile de 240).

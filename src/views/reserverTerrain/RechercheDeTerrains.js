@@ -25,6 +25,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput
@@ -864,6 +865,23 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
           />
           <Text style={[Fonts.p2Bold, Fonts.primary200]}>
             {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
+          </Text>
+        </TouchableOpacity>
+        {/* RESA-L6B-2 (20/10) — le raccourci « Mes complexes favoris » (E-P11, planche EP11 :
+            « Depuis le raccourci de la recherche »), à côté de « Mes réservations ». */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.navigate(RouteNames.ReserverFavoris)}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            { alignSelf: 'flex-start', gap: 8, minHeight: 44 },
+          ]}
+          testID="reserver-recherche-mes-favoris"
+        >
+          <SvgIcon color={Colors.primary200} height={16} name="heart" width={16} />
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {t('reserverTerrain.favoris.titre', 'Mes complexes favoris')}
           </Text>
         </TouchableOpacity>
         <Input

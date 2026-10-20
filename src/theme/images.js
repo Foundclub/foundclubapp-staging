@@ -34,6 +34,9 @@ export const images = {
   euroCircle: require('../assets/icons/euro-circle.png'),
   filter: require('../assets/icons/filter.png'),
   flag: require('../assets/icons/flag.png'),
+  // RESA-L6B-2 (20/10/2026) — « Mes complexes favoris » (Mon compte) : le cœur de la toile
+  // (AT-15 A).
+  heart: require('../assets/icons/heart.png'),
   home: require('../assets/icons/home.png'),
   // COLL-ACCUEIL (01/10) — l onglet « Demandes » de l espace de la Ville (ICONES, « Icone ok »).
   inboxArrowDown: require('../assets/icons/inbox-arrow-down.png'),

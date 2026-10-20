@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { texteEcheance } from '@/domains/complexe/partieDuJoueur';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
@@ -149,7 +150,7 @@ function BlocCollecte({
                 {t(
                   'reserverTerrain.collecte.regle',
                   'Au plus tard {{heures}} h avant le créneau : la règle du complexe.',
-                  { heures },
+                  { heures, ...SANS_ECHAPPEMENT },
                 )}
               </Text>
             ) : null}

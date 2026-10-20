@@ -201,6 +201,8 @@ const MOBILE_ONLY_SCREENS = {
   // publique à part (lot RESA-L7-2), lue sans compte.
   [RouteNames.ReserverAnnonce]:
     'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; its website URL comes with a later RESA web lot',
+  [RouteNames.ReserverFavoris]:
+    'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; its website URL comes with a later RESA web lot',
   [RouteNames.ReserverInvitation]:
     'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; the website invitation page is /r/:code (RESA-L7-2)',
   // RESA-L5B-2 (20/10/2026) : la fiche d'un client du complexe (RESA-L5B-1) a son adresse

@@ -453,6 +453,28 @@ export const useMaRelationAuComplexe = (slug, { enabled = true } = {}) => useQue
 });
 
 /**
+ * E-P11 — la relation à chacun de mes complexes favoris (le canal : membre, son fil). Même clef
+ * que `useMaRelationAuComplexe` : la page du complexe (E-P02) la retrouve sans relire.
+ * ponytail: une lecture par favori (une poignée) ; voie de sortie : `canal` dans les lignes de
+ * `GET /complexes-favoris/mine` (serveur).
+ * @param {string[]} slugs - Les adresses publiques.
+ * @returns {{ relations: Record<string, any> }} Les relations lues, par slug.
+ */
+export const useRelationsAuxComplexes = (slugs) => useQueries({
+  combine: (resultats) => ({
+    relations: Object.fromEntries(resultats.flatMap((resultat, rang) => (
+      resultat.data ? [[slugs[rang], resultat.data]] : []
+    ))),
+  }),
+  queries: slugs.map((slug) => ({
+    enabled: Boolean(slug),
+    queryFn: async () => donnees(await lireMaRelationAuComplexe(String(slug))),
+    queryKey: [...MA_COMMUNAUTE_CLEF, 'relation', slug],
+    staleTime: DEMI_MINUTE,
+  })),
+});
+
+/**
  * E-P10 « MA FIDÉLITÉ ».
  * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Une carte par complexe.
  */

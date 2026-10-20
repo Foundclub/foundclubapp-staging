@@ -1617,6 +1617,15 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L6B-2 (20/10/2026) — E-P11, « Mes complexes favoris » (Mon compte, raccourci de
+            E-P01). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverFavoris').default}
+            name={RouteNames.ReserverFavoris}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L6B-2 (20/10/2026) — E-P09 B, la page d'une annonce « Il me manque des joueurs »
             (E-P07 et la notification N-28). */}
         {COMPLEXES_JOUEUR ? (
