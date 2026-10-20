@@ -1,4 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation, useQueries, useQuery, useQueryClient,
+} from '@tanstack/react-query';
+
+import { occupationDesLieux } from '@/domains/collectivite/evenementDeLaVille';
 
 import {
   annulerEvenement,
@@ -152,4 +156,59 @@ export const useGestesEvenementDeLaVille = (collectiviteId) => {
       onSuccess: relire,
     }),
   };
+};
+
+const HEURE = /^\d{2}:\d{2}$/;
+
+/**
+ * 🏟️ R17-EVT-1-BIS (d) (20/10) — « Où ? » : l'occupation de chaque installation de la Ville aux
+ * jours et heures choisis. Une lecture du planning par installation (la MÊME clé que le planning
+ * plein écran et celui de toutes les installations : le cache sert les trois) et les fermetures
+ * de la Ville (la même clé que l'accueil de la Ville). Rien tant que le jour et les heures ne
+ * sont pas choisis. Les deux services sont chargés à la demande, comme le client de ce module :
+ * les témoins qui doublent ce module ne chargent pas le vrai client HTTP.
+ * @param {string|null|undefined} collectiviteId - La Ville.
+ * @param {any[]} installations - Ses installations.
+ * @param {{ date: string, dateFin?: string, heureDebut: string, heureFin: string }} fenetre
+ *   - Les jours et heures de l'événement.
+ * @returns {Record<string, any>} Par installation (`occupationDesLieux`), ou `{}`.
+ */
+export const useOccupationDesLieux = (collectiviteId, installations, fenetre) => {
+  const prete = Boolean(
+    collectiviteId
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(fenetre?.date || ''))
+      && HEURE.test(String(fenetre?.heureDebut || ''))
+      && HEURE.test(String(fenetre?.heureFin || ''))
+      && fenetre.heureDebut < fenetre.heureFin,
+  );
+  const plage = {
+    from: fenetre?.date,
+    to: fenetre?.dateFin && fenetre.dateFin > fenetre.date ? fenetre.dateFin : fenetre?.date,
+  };
+  const liste = Array.isArray(installations) ? installations : [];
+  const lectures = useQueries({
+    queries: liste.map((/** @type {any} */ installation) => ({
+      enabled: prete,
+      queryFn: async () => (await import('@/services/facility/facilityService'))
+        .getFacilityPlanning(installation.documentId, plage),
+      queryKey: [
+        'planning', 'fullscreen', 'facility', installation.documentId, plage.from, plage.to,
+      ],
+      staleTime: 60 * 1000,
+    })),
+  });
+  const fermetures = useQuery({
+    enabled: prete,
+    queryFn: async () => (await import('@/services/facilityClosure/facilityClosureService'))
+      .listCollectiviteClosures(String(collectiviteId)),
+    queryKey: ['facility-closures', 'collectivite', collectiviteId],
+    staleTime: 15 * 1000,
+  });
+  if (!prete) return {};
+  return occupationDesLieux({
+    fenetre,
+    fermetures: fermetures.data?.data,
+    installations: liste,
+    lectures: lectures.map((lecture) => lecture.data),
+  });
 };
