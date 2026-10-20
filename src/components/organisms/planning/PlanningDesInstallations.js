@@ -209,6 +209,35 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     ? blocsDeLaVille(suiteLue.data, installations, Array.isArray(clubs.data) ? clubs.data : null)
     : [];
 
+  // 🏟️ R17-PLANNING-2 (20/10, P10-planning-ordi 4) — une semaine vide dit combien la suivante en
+  // a. Ce sont les lectures MÊMES de la semaine suivante (même clef) : « Voir la semaine
+  // suivante » l'affiche ensuite sans relire. Seulement quand la semaine affichée est vide.
+  // Le filtre ne vaut qu'au téléphone (la grille de l'ordinateur montre toutes les rangées).
+  const garderAuFiltre = (/** @type {any} */ bloc) => isDesktop || !installationFiltree
+    || bloc.installation?.documentId === installationFiltree.documentId;
+  const semaineVide = vue === VUES.semaine && toutesRevenues && !provisoire && !enErreur
+    && !blocs.some(garderAuFiltre);
+  const plageSuivante = plageDeLaVue(VUES.semaine, addDays(date, 7));
+  const lecturesSuivantes = useQueries({
+    queries: installations.map((/** @type {any} */ installation) => ({
+      enabled: semaineVide,
+      queryFn: () => getFacilityPlanning(installation.documentId, plageSuivante),
+      queryKey: [
+        'planning', 'fullscreen', 'facility', installation.documentId, plageSuivante.from,
+        plageSuivante.to,
+      ],
+      staleTime: 60 * 1000,
+    })),
+  });
+  const seancesDeLaSuivante = semaineVide
+    && lecturesSuivantes.every((lecture) => lecture.data !== undefined)
+    ? blocsDeLaVille(
+      lecturesSuivantes.map((lecture) => /** @type {any} */ (lecture.data)),
+      installations,
+      null,
+    ).filter(garderAuFiltre).length
+    : 0;
+
   const choisirVue = (/** @type {string} */ nouvelle) => {
     garderLeChoix();
     setVue(nouvelle);
@@ -520,11 +549,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     }
 
     if (vue === VUES.semaine) {
-      // Le filtre ne vaut qu'au téléphone (la grille de l'ordinateur montre toutes les rangées).
-      const blocsVus = !isDesktop && installationFiltree
-        ? blocs.filter((/** @type {any} */ bloc) => (
-          bloc.installation?.documentId === installationFiltree.documentId))
-        : blocs;
+      const blocsVus = blocs.filter(garderAuFiltre);
       const blocsDeLaSemaine = blocsVus.filter((/** @type {any} */ bloc) => {
         const jour = getPlanningItemDate(bloc);
         return Boolean(jour) && /** @type {Date} */ (jour) >= debutDeSemaine
@@ -547,6 +572,15 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
               },
             )}
           </Text>
+          {seancesDeLaSuivante > 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral00]} testID="toutes-suivante-compte">
+              {t(
+                'facilityList.toutesInstallations.suivanteEnA',
+                'La semaine suivante en a {{count}}.',
+                { count: seancesDeLaSuivante },
+              )}
+            </Text>
+          ) : null}
           <View style={{ alignSelf: 'flex-start' }}>
             <Button
               onPress={() => allerA(addDays(date, 7))}

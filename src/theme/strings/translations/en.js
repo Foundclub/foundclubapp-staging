@@ -10288,6 +10288,8 @@ export default {
       seancesDuJour_other: '{{count}} sessions',
       semaineSuivante: 'See next week',
       sousTitre: 'Club sessions, week of {{jour}}.',
+      suivanteEnA_one: 'The following week has {{count}}.',
+      suivanteEnA_other: 'The following week has {{count}}.',
       titre: 'Schedule of all facilities',
       toutes: 'All facilities',
       videSemaine: 'No session from {{debut}} to {{fin}}.',

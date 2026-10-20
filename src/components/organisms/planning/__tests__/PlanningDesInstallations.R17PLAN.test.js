@@ -560,3 +560,74 @@ describe('R17-PLANNING-2 — la pastille avec son nombre, au mois (P10-planning-
     expect(mockCalendriers.at(-1).compterLesSeances).toBeFalsy();
   });
 });
+
+describe('R17-PLANNING-2 — semaine vide : combien la suivante en a (P10-planning-ordi 4)', () => {
+  /**
+   * Rien la semaine du 19 ; 3 séances la semaine du 26 (gymnase 2, stade 1), lues seulement pour
+   * CETTE semaine (la lecture de 31 jours de R17-VUE n'en rend rien : l'arrivée reste au Jour).
+   */
+  const servirLaSuivante = () => {
+    /** @type {any} */ (getFacilityPlanning).mockImplementation(async (
+      /** @type {string} */ id,
+      /** @type {any} */ plage,
+    ) => {
+      const suivante = {
+        dojo: [],
+        gym: [bloc(AS, '2026-10-27', 18, 'U15'), bloc(FC, '2026-10-28', 18, 'Senior B')],
+        stade: [bloc(AS, '2026-10-29', 14, 'U11')],
+      };
+      const laSuivante = plage.from === '2026-10-26' && plage.to === '2026-11-01';
+      return { data: laSuivante ? suivante[/** @type {'dojo'} */ (id)] : [], meta: {} };
+    });
+  };
+  const lecturesDeLaSuivante = () => /** @type {any} */ (getFacilityPlanning).mock.calls
+    .filter((/** @type {any[]} */ appel) => (
+      appel[1].from === '2026-10-26' && appel[1].to === '2026-11-01'));
+
+  test('20 ROUGE-AVANT — téléphone : « …en a 3. », puis elle s affiche sans relire', async () => {
+    servirLaSuivante();
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Aucune séance du 19 oct. au 25 oct.');
+    expect(textes(arbre)).toContain('La semaine suivante en a 3.');
+    expect(lecturesDeLaSuivante()).toHaveLength(3);
+    await act(async () => { parTexte(arbre, 'Voir la semaine suivante').props.onPress(); });
+    await attendre();
+    expect(textes(arbre)).toContain('26 oct. – 1 nov.');
+    expect(arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ n) => n.props.testID === 'toutes-ligne')).toHaveLength(3);
+    // Les mêmes lectures : aller à la semaine suivante ne relit rien.
+    expect(lecturesDeLaSuivante()).toHaveLength(3);
+  });
+
+  test('21 ROUGE-AVANT — ordinateur : la phrase, la grille ; filtre au dojo : rien', async () => {
+    servirLaSuivante();
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('La semaine suivante en a 3.');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'toutes-grille'))
+      .not.toHaveLength(0);
+    mockOrdinateur = false;
+    const auTelephone = await rendre();
+    await choisir(auTelephone, 'week');
+    const filtrer = auTelephone.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Filtrer par installation'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { filtrer.props.onPress(); });
+    const dojo = auTelephone.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'radio' && n.props?.accessibilityLabel === 'Dojo municipal'
+      && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { dojo.props.onPress(); });
+    await attendre();
+    expect(textes(auTelephone)).toContain('Aucune séance du 19 oct. au 25 oct.');
+    expect(textes(auTelephone).join('|')).not.toMatch(/semaine suivante en a/);
+  });
+
+  test('22 PROTEGE — une semaine pleine ne lit pas la suivante', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    expect(textes(arbre)).toContain('Mardi 20');
+    expect(lecturesDeLaSuivante()).toHaveLength(0);
+  });
+});

@@ -10970,6 +10970,8 @@ export default {
       seancesDuJour_other: '{{count}} séances',
       semaineSuivante: 'Voir la semaine suivante',
       sousTitre: 'Séances des clubs, semaine du {{jour}}.',
+      suivanteEnA_one: 'La semaine suivante en a {{count}}.',
+      suivanteEnA_other: 'La semaine suivante en a {{count}}.',
       titre: 'Planning de toutes les installations',
       toutes: 'Toutes les installations',
       videSemaine: 'Aucune séance du {{debut}} au {{fin}}.',
