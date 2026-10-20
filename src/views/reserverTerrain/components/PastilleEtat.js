@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Image, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
@@ -62,7 +63,11 @@ function PastilleEtat({ compte = null, etat }) {
       encre: Colors.primary200,
       icone: 'personnes',
       mot: compte
-        ? t('reserverTerrain.etat.enCollecteCompte', 'En collecte · {{compte}}', { compte })
+        // « 6/10 » : sans SANS_ECHAPPEMENT, i18next en fait « 6&#x2F;10 » (banc du site, 20/10).
+        ? t('reserverTerrain.etat.enCollecteCompte', 'En collecte · {{compte}}', {
+          compte,
+          ...SANS_ECHAPPEMENT,
+        })
         : t('reserverTerrain.etat.enCollecte', 'En collecte'),
     },
     jouee: {
