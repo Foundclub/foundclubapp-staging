@@ -36,6 +36,7 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
+import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityReportEntry';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
@@ -2519,6 +2520,9 @@ function EventDetails({ navigation, route }) {
                   pourUnMembre={!canEdit}
                 />
               ) : null}
+              {/* R17-SIGNALER-1 (19/10) — « Signaler un problème ici » (installation de la
+                  Ville). */}
+              <FacilityReportEntry event={event} navigation={navigation} />
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
                   le telephone : c est la seule chose a FAIRE maintenant, tout
                   le reste de la page est de la consultation. */}

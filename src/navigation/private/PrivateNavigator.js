@@ -469,6 +469,33 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville'),
           }}
         />
+        {/* R17-SIGNALER-1 (19/10/2026, REC17-011) — signaler un probleme sur une installation
+            de la Ville (depuis son planning ou une seance), le signalement (la Ville le traite,
+            l auteur le suit), « Mes signalements » (Mon compte). Le serveur juge qui voit quoi. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityReportNew').default}
+          name={RouteNames.FacilityReportNew}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.membre.titre', 'Signaler un problème'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityReportDetails').default}
+          name={RouteNames.FacilityReportDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.ville.titreFiche', 'Signalement'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/MyFacilityReports').default}
+          name={RouteNames.MyFacilityReports}
+          options={{
+            ...commonOptions,
+            headerTitle: t('facilityReports.membre.mesTitre', 'Mes signalements'),
+          }}
+        />
         {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la
             mairie (2 etapes, aucune question de sport) et l ecran « ou en est ma demande ».
             Montes SANS CONDITION : le choix du statut (UserRole) y mene, et un compte Ville

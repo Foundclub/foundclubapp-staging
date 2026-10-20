@@ -225,12 +225,27 @@ describe('MSGLIVE — les messages arrivent-ils vraiment en direct ?', () => {
     expect(relectures).toContainEqual(['chat-messages', 'chat-1']);
   });
 
-  it('5. ET IL NE COÛTE RIEN QUAND IL NE SERT PAS : cache plein, aucune relecture', () => {
+  it('5. ET IL COÛTE UNE PAGE, PAS PLUS : cache plein ⇒ UNE lecture de la page 1', async () => {
+    // MSGNOTIF (20/10) — ce témoin exigeait ZÉRO relecture cache plein, et c'était
+    // la cause du défaut vu par Adel (« il faut fermer l'app et la réouvrir ») :
+    // après une coupure (iPhone en veille), `joined` est le signal du retour dans
+    // la salle, et ce qui s'y était dit pendant la coupure manquait pour de bon.
+    // Le contrat reste borné : UNE lecture de la page la plus récente — jamais
+    // toutes les pages chargées — fusionnée sans rien effacer. Le chemin complet :
+    // `MSGNOTIF.messageApresNotification.test.js`.
+    mockGetChatMessages.mockResolvedValueOnce({
+      data: [unMessage('msg-ancien', 'Salut')],
+      meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+    });
     monterMessagerie(clientRequetes);
+    const avant = clientRequetes.getQueryData(CLEF_MESSAGES);
 
     emettreDuServeur('joined', { chatDocumentId: 'chat-1' });
+    await act(async () => { await Promise.resolve(); });
 
-    expect(mockGetChatMessages).not.toHaveBeenCalled();
+    expect(mockGetChatMessages).toHaveBeenCalledTimes(1);
+    expect(mockGetChatMessages).toHaveBeenCalledWith('chat-1', 1, undefined);
+    expect(clientRequetes.getQueryData(CLEF_MESSAGES)).toBe(avant);
   });
 
   it('6. UN MESSAGE EFFACÉ DISPARAÎT EN DIRECT LUI AUSSI', () => {
