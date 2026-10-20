@@ -2091,9 +2091,13 @@ export default {
     },
   },
   autocompleteAddressInput: {
-    // ADRESSE-CARTE (07/10) — "Address not found? Place it on the map" (shared address field).
+    // ADRESSE-CARTE (07/10) — put on the map a place that cannot be found (shared address field).
     lieu: {
       aide: 'Move the map to put the pin on the place, then give it a name.',
+      // ADRESSE-EN-PREMIER (20/10) — the first row of the list, the typed text.
+      ajouter: 'Add "{{texte}}"',
+      ajouterAide: 'Place it on the map',
+      ajouterAideVous: 'Place it on the map',
       annuler: 'Cancel',
       erreurs: {
         connexion: 'Sign in to add a place.',
@@ -2110,7 +2114,6 @@ export default {
       invitationTexte: '"{{texte}}" is not listed: place it on the map',
       invitationTexteVous: '"{{texte}}" is not listed: place it on the map',
       invitationVous: 'Your place is not listed: place it on the map',
-      lien: 'Address not found? Place it on the map',
       nom: 'Place name',
       nomExemple: 'E.g. Luminy Stadium',
       ouvrir: 'Place on the map',
