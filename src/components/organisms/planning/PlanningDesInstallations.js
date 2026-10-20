@@ -313,6 +313,20 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   };
 
   /**
+   * Les heures d'un bloc, et « complet » quand l'installation n'a plus de place (le lecteur
+   * d'écran l'entend aussi).
+   * @param {any} bloc - Le bloc.
+   * @returns {string} « 18:00 – 19:30 » ou « 18:00 – 19:30 · complet ».
+   */
+  const heuresDuBloc = (bloc) => {
+    if (!bloc.complet) return getPlanningTimeLabel(bloc);
+    return t('facilityList.toutesInstallations.complet', '{{heures}} · complet', {
+      ...SANS_ECHAPPEMENT,
+      heures: getPlanningTimeLabel(bloc),
+    });
+  };
+
+  /**
    * Ce que dit un bloc au lecteur d'écran.
    * @param {any} bloc - Le bloc.
    * @returns {string} « Club · équipe, lundi 19, 18:00 – 19:30, Gymnase ».
@@ -322,7 +336,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
     return t('facilityList.toutesInstallations.bloc', '{{titre}}, {{quand}}, {{installation}}', {
       ...SANS_ECHAPPEMENT,
       installation: bloc.installation?.name || '',
-      quand: [jour ? format(jour, 'EEEE d', { locale }) : '', getPlanningTimeLabel(bloc)]
+      quand: [jour ? format(jour, 'EEEE d', { locale }) : '', heuresDuBloc(bloc)]
         .filter(Boolean).join(', '),
       titre: bloc.title || '',
     });
@@ -350,16 +364,12 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       }}
       testID="toutes-bloc"
     >
+      {/* Une case de la grille est étroite : « complet » passe à la ligne plutôt qu'en « co… ». */}
       <Text
-        numberOfLines={1}
+        numberOfLines={bloc.complet ? 2 : 1}
         style={[Fonts.p4, bloc.complet ? Fonts.warning500 : Fonts.neutral200]}
       >
-        {bloc.complet
-          ? t('facilityList.toutesInstallations.complet', '{{heures}} · complet', {
-            ...SANS_ECHAPPEMENT,
-            heures: getPlanningTimeLabel(bloc),
-          })
-          : getPlanningTimeLabel(bloc)}
+        {heuresDuBloc(bloc)}
       </Text>
       <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.neutral00]}>{bloc.title}</Text>
     </TouchableOpacity>
@@ -825,6 +835,19 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   };
 
   const [flecheGauche, flecheDroite] = nomsDesFleches[vue];
+  // Au téléphone, « Aujourd'hui » passe sous la date : à côté des flèches (et du filtre), la
+  // rangée dépassait des 390 px et rognait la flèche de gauche (capture du 20/10).
+  const boutonAujourdhui = pageDAujourdhui(vue, date, aujourdhui) ? null : (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => allerA(getPlanningDefaultDate())}
+      style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
+    >
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+        {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
+      </Text>
+    </TouchableOpacity>
+  );
   return (
     <View style={[Spaces.marginTop[24], { gap: 12 }]} testID="planning-toutes-installations">
       <View style={{ gap: 2 }}>
@@ -855,7 +878,14 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
       >
         {/* Au mois, le calendrier a son en-tête (mois, flèches, aujourd’hui) : rien à doubler. */}
         {vue === VUES.mois ? <View /> : (
-          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+          <View
+            style={{
+              alignItems: 'center',
+              alignSelf: isDesktop ? 'auto' : 'stretch',
+              flexDirection: 'row',
+              gap: 8,
+            }}
+          >
             <TouchableOpacity
               accessibilityLabel={flecheGauche}
               accessibilityRole="button"
@@ -864,7 +894,11 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             >
               <Text style={[Fonts.p1Bold, Fonts.primary200]}>‹</Text>
             </TouchableOpacity>
-            <View style={{ alignItems: 'center', minWidth: 160 }}>
+            <View
+              style={isDesktop
+                ? { alignItems: 'center', minWidth: 160 }
+                : { alignItems: 'center', flex: 1, minWidth: 0 }}
+            >
               {/* R17-PLANNING-2 (P10-planning-tel 1) : au téléphone, la journée dit qu'elle
                   couvre toutes les installations. */}
               {!isDesktop && vue === VUES.semaine ? (
@@ -888,6 +922,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
               >
                 {titreDeLaPage}
               </Text>
+              {isDesktop ? null : boutonAujourdhui}
             </View>
             <TouchableOpacity
               accessibilityLabel={flecheDroite}
@@ -897,17 +932,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
             >
               <Text style={[Fonts.p1Bold, Fonts.primary200]}>›</Text>
             </TouchableOpacity>
-            {!pageDAujourdhui(vue, date, aujourdhui) ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => allerA(getPlanningDefaultDate())}
-                style={{ justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 }}
-              >
-                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                  {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+            {isDesktop ? boutonAujourdhui : null}
             {!isDesktop && vue === VUES.semaine ? (
               <TouchableOpacity
                 accessibilityLabel={t(
