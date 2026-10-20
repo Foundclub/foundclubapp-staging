@@ -1,6 +1,7 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 
+import AdminAssistance from '@/views/admin/AdminAssistance';
 import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
 import AdminClaimList from '@/views/admin/AdminClaimList';
 import AdminClubDetail from '@/views/admin/AdminClubDetail';
@@ -159,6 +160,15 @@ function AdminStack() {
           options={{
             ...commonOptions,
             headerTitle: t('adminStack.titles.reports', 'Signalements'),
+          }}
+        />
+        {/* MSG-SUPPORT (20/10) — la boîte commune de l'assistance. */}
+        <Stack.Screen
+          component={AdminAssistance}
+          name={RouteNames.AdminAssistance}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.assistance', 'Assistance'),
           }}
         />
 

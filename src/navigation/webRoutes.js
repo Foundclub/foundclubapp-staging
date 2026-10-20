@@ -184,6 +184,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminRevenue]: '/admin/revenue',
   [RouteNames.AdminEvents]: '/admin/events',
   [RouteNames.AdminReports]: '/admin/reports',
+  // MSG-SUPPORT (20/10) — la boîte commune de l'assistance.
+  [RouteNames.AdminAssistance]: '/admin/assistance',
   [RouteNames.AdminPopupCampaignList]: '/admin/popup-campaigns',
   [RouteNames.AdminPopupCampaignDetail]: '/admin/popup-campaigns/:campaignId',
   [RouteNames.AdminPopupCampaignForm]: '/admin/popup-campaigns/:campaignId?/edit',

@@ -25,6 +25,7 @@ import useTheme from '@/theme/themeContext';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import OffresFoundclubListe from '@/views/admin/components/OffresFoundclubListe';
+import useAssistanceTile from '@/views/admin/components/useAssistanceTile';
 import useCollectivitesTile from '@/views/admin/components/useCollectivitesTile';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -212,6 +213,8 @@ function AdminDashboard() {
   // COLL-CONSOLE (02/10) — la tuile « Collectivités » lit ses chiffres SEULE : elle n entre pas
   // dans l attente de l ecran (« … » dans la tuile), et son echec ecrit « — » (jamais 0).
   const collectivitesTuile = useCollectivitesTile();
+  // MSG-SUPPORT (20/10) — l'entrée de la boîte commune de l'assistance.
+  const assistanceTuile = useAssistanceTile();
 
   const {
     data: claimsData,
@@ -1656,6 +1659,19 @@ function AdminDashboard() {
             testID="admin-tuile-collectivites"
             title={t('adminDashboard.cards.collectivites', 'Collectivités')}
             value={collectivitesTuile.value}
+          />
+          {/* MSG-SUPPORT (20/10) — la boîte commune de l'assistance : non lus, en attente. */}
+          <DashboardCard
+            accessibilityLabel={assistanceTuile.accessibilityLabel}
+            busy={assistanceTuile.busy}
+            color={assistanceTuile.color}
+            detail={assistanceTuile.detail}
+            detailColor={assistanceTuile.detailColor}
+            meta={t('assistance.console.meta', 'Messages')}
+            onPress={() => navigation.navigate(RouteNames.AdminAssistance)}
+            testID="admin-tuile-assistance"
+            title={t('assistance.console.titre', 'Assistance')}
+            value={assistanceTuile.value}
           />
         </View>
 
