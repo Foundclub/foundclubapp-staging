@@ -692,4 +692,29 @@ describe('RESA-L6B-2 — E-P12, le canal d’un complexe sur le site', () => {
     expect(texteDe(arbre.root)).toContain('Quitter le canal « Le Five de Montrivage » ? Tu ne '
       + 'recevras plus ses nouvelles. Tu y reviendras en le remettant en favori.');
   });
+
+  // Seuls ses gérants (administrateurs du fil) y publient : le serveur ferme l'envoi aux membres
+  // (PERMISSIONS_DU_CANAL). Le téléphone le dit déjà ; le site offrait la saisie, puis un refus.
+  test('un membre : pas de saisie, la barre « lecture seule » ; le gérant y écrit', async () => {
+    const canal = {
+      documentId: CHAT_ID,
+      groupAdmins: [BRUNO],
+      groupName: 'Le Five de Montrivage',
+      name: 'Le Five de Montrivage',
+      participants: [MOI, BRUNO],
+      participantsCount: 214,
+      type: 'group',
+    };
+    const saisies = (/** @type {any} */ arbre) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === 'textarea',
+    );
+    mockFil = canal;
+    const { arbre } = await monter();
+    expect(saisies(arbre)).toHaveLength(0);
+    expect(texteDe(parTestId(arbre, 'MSG1W-lecture-seule')[0])).toContain(
+      "Canal d'annonce (lecture seule)",
+    );
+    mockFil = { ...canal, groupAdmins: [MOI, BRUNO] };
+    expect(saisies((await monter()).arbre)).toHaveLength(1);
+  });
 });

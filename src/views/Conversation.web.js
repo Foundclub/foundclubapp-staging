@@ -2155,11 +2155,20 @@ function Conversation({ navigation, route }) {
   // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
   // R17-CANAUX — « Toute la ville » : la Ville seule (useFilDeLaVille), depuis son espace ou quand
   // le serveur le dit ; un membre y lit « Seule la Ville écrit ici ».
+  // RESA-L6B-2 (20/10/2026) — E-P12 : dans le canal d'un complexe, seuls ses gérants
+  // (administrateurs du fil) publient ; le serveur ferme l'envoi aux membres, comme le téléphone.
+  const adminsDuFil = /** @type {any} */ (chatData)?.groupAdmins;
+  const canalSansMaVoix = estUnCanalDeComplexe(chatData) && !(
+    Array.isArray(adminsDuFil) ? adminsDuFil : []
+  ).some((/** @type {any} */ admin) => (
+    String(admin?.documentId || admin?.id || '') === String(userData?.documentId || '')
+  ));
   const peutEcrire = useMemo(
     () => (
-      canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) || filDeLaVille.peutEcrire
+      (canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) && !canalSansMaVoix)
+      || filDeLaVille.peutEcrire
     ),
-    [chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
+    [canalSansMaVoix, chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
   );
   // MSG1W §3.10 (« avertissement B », Adel 07/10) — un fil rattache a un club (fil de club, fil
   // d equipe) peut etre lu par son dirigeant : une notice EN TETE DU FIL le dit. Un tete-a-tete ou
