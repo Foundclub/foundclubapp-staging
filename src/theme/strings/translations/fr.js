@@ -11086,6 +11086,25 @@ export default {
       shared: 'Installations partagées',
     },
     sharedOwnerHint: 'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
+    // R17-PLANNING (20/10, REC17-005) : le planning de toutes les installations, sous les cartes.
+    toutesInstallations: {
+      allerAu: 'Aller au {{jour}}',
+      aujourdhui: '{{jour}} · aujourd’hui',
+      bloc: '{{titre}}, {{quand}}, {{installation}}',
+      erreurTexte: 'Vérifiez la connexion. Les installations restent accessibles au-dessus.',
+      erreurTitre: 'Le planning n’a pas pu être chargé.',
+      grille: 'Planning de toutes les installations, semaine du {{debut}} au {{fin}}',
+      ouvrir: 'Ouvrir',
+      ouvrirInstallation: 'Ouvrir {{installation}}',
+      prochaine: 'Prochaine séance : {{quand}}, {{installation}}.',
+      rienCeJour: 'Rien ce {{jour}}',
+      rienCeJourCourt: 'Rien ce jour',
+      semaineSuivante: 'Voir la semaine suivante',
+      sousTitre: 'Séances des clubs, semaine du {{jour}}.',
+      titre: 'Planning de toutes les installations',
+      videSemaine: 'Aucune séance du {{debut}} au {{fin}}.',
+      vue: 'Vue du planning',
+    },
   },
   // R17-SIGNALER-1 (19/10, REC17-011) — signaler un probleme sur une installation de la
   // Ville, et son traitement par la Ville. La Ville est vouvoyee (`ville`), les membres

@@ -18,7 +18,7 @@ import {
   isAnonymousPollNamingNoOne,
   withMyAnonymousPollVotes,
 } from '@/domains/messaging/pollUseCases';
-import { rattraperLeFil } from '@/domains/messaging/rattrapageDuFil';
+import { rattraperLaListe, rattraperLeFil } from '@/domains/messaging/rattrapageDuFil';
 import {
   indexReactionsByMessage,
   withMessageReactions,
@@ -48,6 +48,7 @@ import {
   updateGroupMeta,
   votePollMessage,
 } from '@/services/chat/chatService';
+import { compterConnexionsEtablies } from '@/services/socket/socketManager';
 
 import { createLogger } from '@/utils/logger/logger';
 import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
@@ -952,6 +953,19 @@ const useMessaging = (currentChatId) => {
       messagingLogger.warn('[attachment-debug] socket error received', errorPayload);
     }
   }, [currentChatId]);
+
+  // MSGNOTIF2 — le fil REVIENT (pas son premier branchement) : la liste des fils a pu
+  // manquer des messages pendant la coupure (aperçus, non-lus). Elle est relue une
+  // fois, même si plusieurs écrans montés voient le retour. Le fil ouvert, lui, se
+  // rattrape à son `joined`.
+  const etaitConnecteRef = useRef(isConnected);
+  useEffect(() => {
+    const etaitConnecte = etaitConnecteRef.current;
+    etaitConnecteRef.current = isConnected;
+    if (isConnected && !etaitConnecte && compterConnexionsEtablies() > 1) {
+      rattraperLaListe(queryClient);
+    }
+  }, [isConnected, queryClient]);
 
   // Subscribe to chat events when socket is available
   useEffect(() => {
