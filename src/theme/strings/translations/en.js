@@ -15143,6 +15143,7 @@ export default {
     today: 'Today',
     tryAgain: 'Try again',
     unableToLoadThePlanning: 'Unable to load the planning',
+    vacances: '{{vacances}} · {{zone}}',
     weekPlanningLoadError: 'This week’s planning couldn’t be retrieved. Try again or change week.',
   },
   planning: {

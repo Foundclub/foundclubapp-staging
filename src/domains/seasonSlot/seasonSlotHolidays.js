@@ -11,6 +11,7 @@ import { slotOccurrences } from './seasonSlotDisplay';
 
 /**
  * @typedef {object} PeriodeDeVacances
+ * @property {string} [description] - « Vacances de la Toussaint » (libellé officiel).
  * @property {string} key - « 2026-2027:toussaint ».
  * @property {string} name - « Toussaint ».
  * @property {string} start - Premier jour de vacances, AAAA-MM-JJ.
@@ -61,6 +62,19 @@ export const periodesGardeesDuCreneau = (creneau, periodes) => {
     })
     .map((periode) => periode.key);
 };
+
+/**
+ * Les périodes de vacances que la page du planning montre (planche P11-quand-ou-ca-vit, 5) : celles
+ * qui croisent [du, au].
+ * @param {any} vacances - `meta.holidays` du planning (serveur) : zone, nom, périodes.
+ * @param {string} du - Premier jour montré, AAAA-MM-JJ.
+ * @param {string} au - Dernier jour montré, AAAA-MM-JJ.
+ * @returns {PeriodeDeVacances[]} Les périodes, dans l'ordre.
+ */
+export const vacancesDeLaPage = (vacances, du, au) => (
+  (Array.isArray(vacances?.periods) ? vacances.periods : [])
+    .filter((/** @type {PeriodeDeVacances} */ periode) => periode.start <= au && periode.end >= du)
+);
 
 const SAISONS = new Set(['Automne', 'Été', 'Hiver', 'Printemps']);
 
