@@ -158,7 +158,6 @@ const monter = async (/** @type {any} */ props = {}) => {
   arbresMontes.push(arbre);
   return arbre;
 };
-const dernierApercu = () => /** @type {any} */ (previewFacilitySeasonSlot).mock.calls.at(-1)?.[1];
 
 beforeEach(() => {
   jest.clearAllMocks();
