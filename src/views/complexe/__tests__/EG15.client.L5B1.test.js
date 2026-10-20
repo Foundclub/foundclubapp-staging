@@ -30,7 +30,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     mockLecturesClient.push(args);
     return mockClient;
   },
-  useComplexeGere: () => ({ data: { autoBanNoShows: 3 } }),
+  // La lecture du gérant (`toManagedView`) range les règles sous `rules`.
+  useComplexeGere: () => ({ data: { rules: { autoBanNoShows: 3 } } }),
   useDebannir: () => ({ isPending: false, mutateAsync: mockDebannir }),
   useReservationGeree: (/** @type {any[]} */ ...args) => {
     mockLecturesReservation.push(args);

@@ -85,7 +85,8 @@ function FicheReservation({
   // RESA-L5B-1 — « non honorée », et le seuil du bannissement automatique (« 1 sur 3 »).
   const marquer = useMarquerNonHonoree();
   const annulerMarquage = useAnnulerNonHonoree();
-  const seuil = useComplexeGere(complexeId).data?.autoBanNoShows;
+  // Le seuil vit sous `rules` dans la lecture du gérant (`toManagedView`, RESA-L1A).
+  const seuil = useComplexeGere(complexeId).data?.rules?.autoBanNoShows;
   /** @typedef {'' | 'annuler' | 'nom' | 'nonHonoree' | 'refuser' | 'supprimer'} FeuilleDeLaFiche */
   const [feuille, setFeuille] = useState(/** @type {FeuilleDeLaFiche} */ (''));
   const [erreurFeuille, setErreurFeuille] = useState('');

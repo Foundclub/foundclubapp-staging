@@ -86,7 +86,8 @@ function ComplexeClient() {
   );
   const joueurId = params?.joueurId || viaReservation.data?.booker?.documentId || null;
   const lecture = useClientDuComplexe(complexeId, joueurId);
-  const seuil = Number(useComplexeGere(complexeId).data?.autoBanNoShows);
+  // Le seuil vit sous `rules` dans la lecture du gérant (`toManagedView`, RESA-L1A).
+  const seuil = Number(useComplexeGere(complexeId).data?.rules?.autoBanNoShows);
   const bannir = useBannir();
   const debannir = useDebannir();
 
