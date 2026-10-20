@@ -166,6 +166,9 @@ export const getConversationName = ({
   chatClub, chatGroupName, chatLeagueMatch, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
 }) => {
   switch (chatType) {
+    // MSG-SUPPORT (20/10) — la conversation avec l'équipe FoundClub (épinglée en tête de Messages).
+    case 'assistance':
+      return i18next.t('assistance.titre', 'Assistance FoundClub');
     case 'club':
       return chatClub?.name || '';
     // COLL-C4A2 (02/10) — le canal des dirigeants de la Ville (D72). La conversation privee

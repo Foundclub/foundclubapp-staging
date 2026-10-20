@@ -23,6 +23,13 @@ import Profile from '../Profile';
 /** @type {any} */
 let mockUserData;
 
+// MSG-SUPPORT (20/10) — « Écrire à l'assistance » ouvre MA conversation avec l'équipe
+// (le serveur la crée à la première ouverture) : doublure du service, pas de réseau.
+const mockOuvrirAssistance = jest.fn();
+jest.mock('@/services/chat/assistanceService', () => ({
+  ouvrirMaConversationAssistance: (/** @type {any[]} */ ...args) => mockOuvrirAssistance(...args),
+}));
+
 // PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
 // trois services) : doublure commune, « aucun enfant ».
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
@@ -288,13 +295,80 @@ describe('R24 — un moyen de nous joindre existe DANS l app (Apple 1.5)', () =>
     expect(libelles).toContain('Nous contacter');
   });
 
-  it('ouvre vraiment un e-mail vers contact@foundclubpro.com', async () => {
+  // MSG-SUPPORT (20/10/2026, décision d'Adel « 3 ») — « Nous contacter » propose LES DEUX :
+  // « Écrire à l'assistance » (la conversation dans l'app) ou « Envoyer un e-mail ». Le lien
+  // e-mail de R24 est intact, un appui plus loin : le contrat de ce témoin change, pas son but.
+  it('ouvre vraiment un e-mail vers contact@foundclubpro.com (« Envoyer un e-mail »)', async () => {
     const arbre = await monterProfil(ROLE_DIRIGEANT);
 
     await act(async () => {
       rangeePortant(arbre, 'Nous contacter').props.onPress();
     });
+    expect(Linking.openURL).not.toHaveBeenCalled();
+
+    await act(async () => {
+      rangeePortant(arbre, 'Envoyer un e-mail').props.onPress();
+    });
 
     expect(Linking.openURL).toHaveBeenCalledWith('mailto:contact@foundclubpro.com');
+  });
+});
+
+// MSG-SUPPORT (20/10/2026, décision d'Adel « 3 ») — « Nous contacter » propose LES DEUX : la
+// conversation « Assistance FoundClub » dans l'app, ou l'e-mail de R24 (avec son repli d'adresse).
+describe('MSG-SUPPORT — « Nous contacter » propose les deux voies', () => {
+  /**
+   * Les libellés visibles d'un arbre monté.
+   * @param {any} arbre
+   * @returns {string[]}
+   */
+  const libelles = (arbre) => arbre.root.findAllByType(Text)
+    .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim());
+
+  it('un appui déplie les deux choix ; un second les replie', async () => {
+    const arbre = await monterProfil(ROLE_JOUEUR);
+    expect(libelles(arbre)).not.toContain('Écrire à l’assistance');
+
+    await act(async () => { rangeePortant(arbre, 'Nous contacter').props.onPress(); });
+    const ouvert = libelles(arbre);
+    expect(ouvert).toContain('Écrire à l’assistance');
+    expect(ouvert).toContain('Envoyer un e-mail');
+    const rang = (/** @type {string} */ libelle) => ouvert.indexOf(libelle);
+    expect(rang('Écrire à l’assistance')).toBeGreaterThan(rang('Nous contacter'));
+
+    await act(async () => { rangeePortant(arbre, 'Nous contacter').props.onPress(); });
+    expect(libelles(arbre)).not.toContain('Écrire à l’assistance');
+  });
+
+  it('« Écrire à l’assistance » ouvre MA conversation avec l’équipe', async () => {
+    mockOuvrirAssistance.mockResolvedValueOnce({ documentId: 'fil-assistance-1' });
+    /** @type {any} */ (Linking.openURL).mockClear();
+    mockUserData = {
+      club: null,
+      documentId: 'user-doc-1',
+      firstname: 'Lina',
+      lastname: 'Moreau',
+      multisportClubs: [],
+      role: ROLE_JOUEUR,
+    };
+    const naviguer = jest.fn();
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <Profile
+          navigation={{ navigate: naviguer, setParams: jest.fn() }}
+          route={{ params: {} }}
+        />,
+      );
+    });
+    await act(async () => { rangeePortant(arbre, 'Nous contacter').props.onPress(); });
+    await act(async () => { rangeePortant(arbre, 'Écrire à l’assistance').props.onPress(); });
+
+    expect(mockOuvrirAssistance).toHaveBeenCalledTimes(1);
+    expect(naviguer).toHaveBeenCalledWith('Conversation', {
+      chatId: 'fil-assistance-1', chatType: 'assistance', title: 'Assistance FoundClub',
+    });
+    expect(Linking.openURL).not.toHaveBeenCalled();
   });
 });
