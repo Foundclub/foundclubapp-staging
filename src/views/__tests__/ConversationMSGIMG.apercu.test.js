@@ -713,6 +713,12 @@ describe('MSGIMG-3 — enregistrer l image dans la galerie', () => {
     expect(mockEnregistrerLImage).toHaveBeenCalledTimes(1);
     expect(mockEnregistrerLImage).toHaveBeenCalledWith(ADRESSE_DE_LA_PHOTO);
     expect(textesDe(ecran)).toContain('Image enregistrée dans ta galerie');
+    // L'avis touche le bas de la fenetre translucide : il reserve la barre d'Android
+    // (doublure : 34 px), cf. ANDROIDBAR2BIS.fenetresTranslucides.
+    const avis = ecran.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.type !== 'string' && noeud.props?.accessibilityRole === 'alert'
+    ))[0];
+    expect(styleDe(avis).bottom).toBeGreaterThanOrEqual(34);
   });
 
   test('MSGIMG-3b — acces refuse : une alerte explique et ouvre les reglages', async () => {

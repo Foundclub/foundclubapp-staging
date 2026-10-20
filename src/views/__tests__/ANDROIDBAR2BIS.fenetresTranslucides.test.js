@@ -26,6 +26,9 @@ import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
 //   GlobalPromptModal, EventDetails « en retard ».
 // Ce témoin garde l'acquis : une 14ᵉ fenêtre translucide le fait rougir tant qu'elle n'est pas
 // triée ici, et chaque feuille rendue rougit si sa marge basse redevient fixe.
+// 🖼️ MSGIMG (20/10) — 15ᵉ, triée : l'image d'une conversation ouverte en grand (ApercuDImage).
+// Seul l'avis « Image enregistrée » touche son bas, et il RÉSERVE la barre (`insets.bottom + 24`,
+// mesuré dans ConversationMSGIMG.apercu MSGIMG-3a) ; boutons en haut, image centrée.
 // 📐 COLL-R-A7 (13/10, COL-005) — 14ᵉ, triée : le tunnel « Attribuer un créneau » en plein écran
 // (`FenetrePleinEcran` de SeasonSlotForm). Son bas est celui du gabarit des tunnels
 // (WizardStepLayout, `insets.bottom + 12`, D53) : RÉSERVE la barre, mesuré ci-dessous.
@@ -320,7 +323,7 @@ const FEUILLES = [
 jest.setTimeout(60000);
 
 describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d’Android', () => {
-  test('R — il y a 14 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
+  test('R — il y a 15 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
     const racine = path.join(__dirname, '..', '..');
     /** @type {string[]} */
     const trouvees = [];
@@ -348,6 +351,7 @@ describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d�
     parcourir(racine);
     // Une fenêtre de plus : la trier (son bas touche-t-il la barre ?) puis l'ajouter ici.
     expect(trouvees.sort()).toEqual([
+      'components/molecules/apercuDImage/ApercuDImage.js ×1',
       'components/molecules/messageReactionOverlay/MessageReactionOverlay.js ×1',
       'components/organisms/autocompleteAddressInput/LieuSurCarte.js ×1',
       'components/organisms/feuilleDAdresse/FeuilleDAdresse.js ×1',

@@ -36,12 +36,18 @@ import { doitFermer, opaciteDuFond } from './gesteDeFermeture';
  * la barre d'onglets du telephone. Le calque (z-index 1 300) passe au-dessus d'elle (1 100).
  */
 
+/**
+ * Un evenement de doigt (ou de souris) sur l'image.
+ * @typedef {import('react').PointerEvent<HTMLDivElement>} Pointeur
+ */
+
 /** Opacite du rond derriere les boutons de l'apercu (la meme que le telephone). */
 const OPACITE_DU_ROND = 0.65;
 
 /** Duree d'affichage de l'avis (ms). */
 const DUREE_DE_L_AVIS = 3500;
 
+/** @type {import('react').CSSProperties} */
 const HABILLAGE_DU_ROND = {
   alignItems: 'center',
   background: withAlpha(colors.neutral900, OPACITE_DU_ROND),
@@ -128,17 +134,17 @@ function ApercuDImageDuSite({ onClose, uri }) {
 
   const hauteur = () => (typeof window === 'undefined' ? 0 : window.innerHeight);
 
-  const surAppui = (/** @type {PointerEvent} */ evenement) => {
+  const surAppui = (/** @type {Pointeur} */ evenement) => {
     if (evenement.pointerType === 'mouse') return;
     departRef.current = { id: evenement.pointerId, t: evenement.timeStamp, y: evenement.clientY };
     setEnGeste(true);
   };
-  const surDeplacement = (/** @type {PointerEvent} */ evenement) => {
+  const surDeplacement = (/** @type {Pointeur} */ evenement) => {
     const depart = departRef.current;
     if (!depart || evenement.pointerId !== depart.id) return;
     setGlissement(Math.max(0, evenement.clientY - depart.y));
   };
-  const surLacher = (/** @type {PointerEvent} */ evenement) => {
+  const surLacher = (/** @type {Pointeur} */ evenement) => {
     const depart = departRef.current;
     if (!depart || evenement.pointerId !== depart.id) return;
     departRef.current = null;
