@@ -758,8 +758,10 @@ function Profile({ navigation, route }) {
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
    *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
-   *   nombre?: number, a11y?: string }} params - `nombre` (PAR-L7) : un compte qui n'est pas
-   *   une alerte (« 2 » enfants), dit par une pastille cyan, jamais par la pastille rouge.
+   *   nombre?: number, a11y?: string, accessoire?: import('react').ReactNode }} params -
+   *   `nombre` (PAR-L7) : un compte qui n'est pas une alerte (« 2 » enfants), dit par une pastille
+   *   cyan, jamais par la pastille rouge. `accessoire` (RESA-L6B-1) : ce qui se lit lui-même (le
+   *   nombre de « Mes réservations »), posé à la place de cette pastille.
    */
   const renderAccountRow = ({
     a11y = undefined, accessoire = null, badge = 0, destructive = false, icon, isLast = false,
