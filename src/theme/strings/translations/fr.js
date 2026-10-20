@@ -2231,7 +2231,7 @@ export default {
     console: {
       boite: {
         chargement: 'Nous récupérons les messages des utilisateurs.',
-        compteurs: '{{nonLus}} non lus · {{enAttente}} en attente de réponse',
+        compteurs: 'Non lus : {{nonLus}} · En attente de réponse : {{enAttente}}',
         enAttente: 'En attente de réponse',
         erreur: 'La boîte de l’assistance ne se charge pas.',
         nous: 'Assistance',
@@ -2241,7 +2241,7 @@ export default {
       },
       compteSupprime: 'Compte supprimé',
       meta: 'Messages',
-      nonLus: 'non lus',
+      nonLus: 'Non lus : {{nombre}}',
       placeholder: 'Répondre au nom d’Assistance FoundClub',
       sousTitre: 'Boîte commune · ta réponse est signée Assistance FoundClub',
       titre: 'Assistance',

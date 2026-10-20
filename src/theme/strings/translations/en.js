@@ -2047,7 +2047,7 @@ export default {
     console: {
       boite: {
         chargement: 'Loading the users’ messages.',
-        compteurs: '{{nonLus}} unread · {{enAttente}} awaiting a reply',
+        compteurs: 'Unread: {{nonLus}} · Awaiting a reply: {{enAttente}}',
         enAttente: 'Awaiting a reply',
         erreur: 'The support inbox could not be loaded.',
         nous: 'Assistance',
@@ -2057,7 +2057,7 @@ export default {
       },
       compteSupprime: 'Deleted account',
       meta: 'Messages',
-      nonLus: 'unread',
+      nonLus: 'Unread: {{nombre}}',
       placeholder: 'Reply as Assistance FoundClub',
       sousTitre: 'Shared inbox · your reply is signed Assistance FoundClub',
       titre: 'Assistance',

@@ -109,7 +109,9 @@ function AdminAssistance() {
     // « Assistance : » — l'espace insécable avant les deux-points, à la française.
     const prefixe = dernier.deLAssistance ? `${nous}${ESPACE_INSECABLE}: ` : '';
     const etat = [
-      nonLus > 0 ? `${pastille} ${t('assistance.console.nonLus', 'non lus')}` : '',
+      nonLus > 0
+        ? t('assistance.console.nonLus', { defaultValue: 'Non lus : {{nombre}}', nombre: pastille })
+        : '',
       item?.enAttente ? t('assistance.console.boite.enAttente', 'En attente de réponse') : '',
     ].filter(Boolean).join(', ');
     return (
@@ -203,7 +205,7 @@ function AdminAssistance() {
               testID="boite-assistance-compteurs"
             >
               {t('assistance.console.boite.compteurs', {
-                defaultValue: '{{nonLus}} non lus · {{enAttente}} en attente de réponse',
+                defaultValue: 'Non lus : {{nonLus}} · En attente de réponse : {{enAttente}}',
                 enAttente: Number(data?.enAttenteTotal) || 0,
                 nonLus: Number(data?.nonLusTotal) || 0,
               })}

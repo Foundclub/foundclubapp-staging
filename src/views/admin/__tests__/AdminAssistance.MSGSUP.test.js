@@ -147,7 +147,7 @@ describe('MSG-SUPPORT — la boîte commune de l\'assistance', () => {
     expect(parTestId(arbre, 'boite-assistance-non-lus-fil-marc')).toBeNull();
     expect(parTestId(arbre, 'boite-assistance-en-attente-fil-lina')).not.toBeNull();
     expect(parTestId(arbre, 'boite-assistance-en-attente-fil-marc')).toBeNull();
-    expect(vus).toContain('2 non lus · 2 en attente de réponse');
+    expect(vus).toContain('Non lus : 2 · En attente de réponse : 2');
   });
 
   test('2. un appui ouvre la conversation (type assistance, titre du titulaire)', async () => {
