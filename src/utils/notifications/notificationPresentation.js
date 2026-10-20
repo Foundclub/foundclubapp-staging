@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 
+import { iconeDuGerant } from '@/domains/complexe/notificationsDuComplexe';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
@@ -139,6 +140,9 @@ const iconeDUneDemande = (data) => {
  */
 export const getNotificationIcon = (type, data = null) => {
   if (type === NOTIFICATION_TYPES.OVERBOOKING_REQUEST) return iconeDUneDemande(data);
+  // RESA-L5B-1 (20/10/2026) — le gérant de complexe (planche EG19) ; null hors de lui.
+  const duGerant = iconeDuGerant(type, data);
+  if (duGerant) return duGerant;
   // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe, côté joueur.
   if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) return 'stadium';
   if (TEAM_ICON_TYPES.has(type)) return 'users';

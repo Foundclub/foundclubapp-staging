@@ -79,6 +79,18 @@ export const modifierComplexeGere = async (complexeId, donnees) => corps(
 );
 
 /**
+ * RESA-L5B-1, partie B (serveur RESA-L2C) — l'APERÇU d'un changement de réglages (E-G16) :
+ * `dryRun` à la racine, RIEN n'est écrit ; pour un âge minimum relevé, le serveur compte les
+ * réservations à venir dont le réserveur est plus jeune (`reservationsPlusJeunes`).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {Record<string, any>} donnees - Les réglages essayés (`{ minAge }`).
+ * @returns {Promise<any>} `{ data: { dryRun: true, minAge, reservationsPlusJeunes } }`.
+ */
+export const apercuReglages = async (complexeId, donnees) => corps(
+  client().put(`/complexes/${enc(complexeId)}/manage`, { data: donnees, dryRun: true }),
+);
+
+/**
  * « Mes installations » (E-G07) : les terrains de SON complexe, avec le résumé de leurs créneaux.
  * @param {string} complexeId - documentId du complexe.
  * @returns {Promise<any>} `{ data: [terrain] }`.
@@ -246,6 +258,74 @@ export const retirerTerrain = async (complexeId, terrainId, { apercu = false } =
     `/complexes/${enc(complexeId)}/terrains/${enc(terrainId)}/retirer`,
     apercu ? { dryRun: true } : {},
   ),
+);
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L5B-1 (20/10/2026) — les routes ajoutées par RESA-L2B (admin `origin/feat/RESA-admin`,
+// `routes/protection-custom.ts`). NON LIVRÉES : cachées, comme le reste, par `COMPLEXES_GERANT`.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * « Non honorée » (E-G04, E-G05, RG-NONHONOREE) : une réservation de l'app, confirmée, dont le
+ * créneau a commencé il y a 7 jours au plus ; le réserveur est prévenu (N-17) et, au x-ième, banni
+ * automatiquement ici (N-12 au gérant). Le serveur ne lit pas le corps.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }` (la fiche du gérant).
+ */
+export const marquerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree`,
+    {},
+  ),
+);
+
+/**
+ * « Annuler le marquage », dans les 7 jours (le même délai que le marquage) ; personne n'est
+ * prévenu, et le bannissement automatique que CE marquage avait déclenché part avec lui.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: reservation }`.
+ */
+export const annulerNonHonoree = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/non-honoree/annuler`,
+    {},
+  ),
+);
+
+/**
+ * La fiche d'un CLIENT (E-G15) : un joueur qui a réservé ici (sinon 404
+ * COMPLEXE_CLIENT_NOT_FOUND) — ses non honorées, ses annulations hors délai, ses réservations à
+ * venir, son bannissement (raison PRIVÉE, lue par le gérant seul). Jamais un numéro.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, firstname, lastname, noShows, lateCancellations,
+ *   upcoming, ban } }`.
+ */
+export const lireClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}`),
+);
+
+/**
+ * « Bannir » (E-G15, RG-BAN) : chez CE complexe seulement ; le joueur n'est PAS prévenu.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ cancelUpcoming?: boolean, joueur: string, reason: string, until?: string }} ban - La
+ *   liste blanche du serveur (`until` : le dernier jour banni, AAAA-MM-JJ).
+ * @returns {Promise<any>} `{ data: client }` (201).
+ */
+export const bannir = async (complexeId, ban) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis`, { data: ban }),
+);
+
+/**
+ * « Débannir » : le bannissement est levé (sa ligne reste) ; le compteur des non honorées repart.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: client }`.
+ */
+export const debannir = async (complexeId, joueurId) => corps(
+  client().post(`/complexes/${enc(complexeId)}/bannis/${enc(joueurId)}/lever`, {}),
 );
 
 // ---------------------------------------------------------------------------------------------

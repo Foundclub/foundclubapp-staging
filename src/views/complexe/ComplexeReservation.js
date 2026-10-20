@@ -12,7 +12,8 @@ import { RouteNames } from '@/navigation/routeNames';
  * fiche (`FicheReservation`) en écran entier. Entrées : une carte de E-G04, de E-G06, la frise et
  * « Prochaines réservations » de E-G02, le planning (E-G03), une notification
  * `complexeReservationGerant` (« nouvelle », « annulée »). « Voir dans le planning » ouvre l'onglet
- * Planning (E-G03) de l'espace, au jour et au terrain de la réservation.
+ * Planning (E-G03) de l'espace, au jour et au terrain de la réservation. RESA-L5B-1 : le nom du
+ * réserveur ouvre sa fiche client (E-G15).
  * Paramètres de route : `complexeId`, `reservationId`. Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -31,6 +32,9 @@ function ComplexeReservation() {
     >
       <FicheReservation
         complexeId={params?.complexeId || null}
+        onVoirClient={(joueurId) => navigation.navigate(RouteNames.ComplexeClient, {
+          complexeId: params?.complexeId, joueurId,
+        })}
         onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexeEspace, {
           params: {
             complexeId: params?.complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,

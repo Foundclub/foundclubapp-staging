@@ -6,7 +6,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
-/** @typedef {'attention' | 'erreur' | 'info' | 'ok'} TonDuBandeau */
+/** @typedef {'attention' | 'erreur' | 'info' | 'interdit' | 'ok'} TonDuBandeau */
 
 /**
  * Le jeton de couleur et l'icône d'un ton.
@@ -20,6 +20,10 @@ const allureDu = (ton) => {
       return { cle: 'warning500', icone: 'triangleExclamation' };
     case 'erreur':
       return { cle: 'error500', icone: 'triangleExclamation' };
+    // RESA-L5B-1 (20/10/2026) — planche EG15 état 5 : « Julien M. ne peut plus réserver chez
+    // toi. » (le geste a réussi : pas une alerte, mais le rouge et le pictogramme « interdit »).
+    case 'interdit':
+      return { cle: 'error500', icone: 'ban' };
     case 'ok':
       return { cle: 'success500', icone: 'circleCheck' };
     default:

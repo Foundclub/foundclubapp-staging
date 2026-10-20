@@ -327,6 +327,62 @@ describe('RESA-L5A2 E-G10 — fermer (états 1, 2, 3, 5)', () => {
   });
 });
 
+describe('RESA-L5B-1 B2 E-G10 — « Voir lesquelles » : la source (serveur RESA-L2C)', () => {
+  /**
+   * Un nœud de l'arbre, lu comme un arbre par les outils du banc.
+   * @param {any} noeud - Le nœud.
+   * @returns {{ root: any }} L'arbre.
+   */
+  const dans = (noeud) => ({ root: noeud });
+  const touchee = (/** @type {Record<string, any>} */ autres) => ({
+    date: '2026-10-25',
+    documentId: 'r-1',
+    from: '19:00',
+    label: 'Julien M.',
+    source: 'app',
+    terrainId: 't-1',
+    to: '20:00',
+    ...autres,
+  });
+
+  it('« App » ou « Extérieur » sur chaque ligne ; une extérieure : appeler le client', async () => {
+    mockApercu = {
+      data: {
+        count: 2,
+        items: [
+          touchee({}),
+          touchee({
+            documentId: 'r-2', from: '20:00', label: 'M. Dupont', source: 'exterieur', to: '21:00',
+          }),
+        ],
+      },
+      isLoading: false,
+    };
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-voir-lesquelles');
+    expect(parRepere(dans(parRepere(arbre, 'fermeture-touchee-r-1')), 'pastille-source-app'))
+      .not.toBeNull();
+    expect(parRepere(dans(parRepere(arbre, 'fermeture-touchee-r-2')), 'pastille-source-exterieur'))
+      .not.toBeNull();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'dimanche 25/10 · 19 h · Terrain 1 · Julien M.',
+      'dimanche 25/10 · 20 h · Terrain 1 · M. Dupont',
+      'Une réservation « extérieur » n’a personne à prévenir dans l’app : appelle le client.',
+    ]));
+  });
+
+  it('aucune extérieure : pas de phrase « appelle le client »', async () => {
+    mockApercu = { data: { count: 1, items: [touchee({})] }, isLoading: false };
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-voir-lesquelles');
+    expect(lisibles(arbre)).not.toContain(
+      'Une réservation « extérieur » n’a personne à prévenir dans l’app : appelle le client.',
+    );
+  });
+});
+
 describe('RESA-L5A2 E-G10 — un terrain d’E-G07', () => {
   it('le terrain de l’adresse est déjà coché', async () => {
     mockParams = { complexeId: 'cx-five', terrainId: 't-2' };

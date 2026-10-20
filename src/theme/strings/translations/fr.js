@@ -7126,6 +7126,50 @@ export default {
     prestigeDivision: 'Division 1 prestige.',
     seasonLabel: '| Saison:',
   },
+  // RESA-L5B-1 (20/10/2026) — la fiche d'un client du complexe (E-G15 : non honorées, bannir /
+  // débannir). La raison d'un bannissement est PRIVÉE : seul le gérant la lit.
+  complexeClients: {
+    ban: {
+      aucun: 'Non banni',
+      automatique: 'Banni depuis le {{depuis}} · automatique : {{raison}}',
+      automatiqueAu_one: 'Bannissement automatique à la 1re non honorée.',
+      automatiqueAu_other: 'Bannissement automatique au bout de {{count}} non honorées.',
+      bannir: 'Bannir',
+      ceQuIlLit: '{{prenom}} lit seulement « Tu ne peux plus réserver dans ce complexe. »',
+      debannir: 'Débannir',
+      depuis: 'Banni depuis le {{depuis}} · raison privée : {{raison}}',
+      jusqua: 'Banni jusqu’au {{jusqua}} · raison privée : {{raison}}',
+      nePeutPlus: '{{nom}} ne peut plus réserver chez toi.',
+      peutANouveau: '{{nom}} peut à nouveau réserver.',
+      titre: 'Bannissement',
+    },
+    bannir: {
+      annulerAVenir_one: 'Annuler aussi sa réservation à venir',
+      annulerAVenir_other: 'Annuler aussi ses {{count}} réservations à venir',
+      dit: 'Il ne pourra plus réserver chez toi. Rien ne change ailleurs.',
+      jusqua: 'Jusqu’au (facultatif)',
+      raison: 'Raison (privée, jamais montrée à {{prenom}})',
+      sansFin: 'Sans date de fin',
+      titre: 'Bannir {{nom}}',
+    },
+    chiffres: {
+      aVenir_one: 'réservation à venir',
+      aVenir_other: 'réservations à venir',
+      horsDelai_one: 'annulation hors délai',
+      horsDelai_other: 'annulations hors délai',
+      nonHonorees_one: 'non honorée',
+      nonHonorees_other: 'non honorées',
+    },
+    debannir: {
+      dit: '{{nom}} pourra à nouveau réserver chez toi.',
+      titre: 'Débannir {{nom}} ?',
+    },
+    fiche: {
+      banni: 'Banni',
+      erreur: 'Impossible de charger la fiche du client.',
+      jamaisVenu: 'Ce joueur n’a jamais réservé chez toi.',
+    },
+  },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
   // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Au « tu », gérant compris.
   complexeGerant: {
@@ -7235,6 +7279,10 @@ export default {
       exceptions: 'Exceptions',
       fermeture: 'Fermeture',
       finAvantDebut: 'La fin doit être après le début.',
+      // eslint-disable-next-line max-len
+      horsHoraires_one: '{{count}} réservation tombe hors de tes nouveaux horaires. Elle est gardée.',
+      // eslint-disable-next-line max-len
+      horsHoraires_other: '{{count}} réservations tombent hors de tes nouveaux horaires. Elles sont gardées.',
       joursManquants: 'Choisis au moins un jour.',
       lesHeures: 'Les heures',
       lesJours: 'Les jours',
@@ -7387,6 +7435,10 @@ export default {
       nonHonoreesCompte: '{{nombre}} réservations non honorées',
       notifications: 'Notifications',
       plus: 'Plus : {{reglage}}',
+      // eslint-disable-next-line max-len
+      plusJeunes_one: '{{count}} réservation à venir compte des joueurs de moins de {{age}} ans. Elle est gardée.',
+      // eslint-disable-next-line max-len
+      plusJeunes_other: '{{count}} réservations à venir comptent des joueurs de moins de {{age}} ans. Elles sont gardées.',
       quiPeutReserver: 'Qui peut réserver',
       resumeMatin: 'Résumé du matin à 8 h',
       veille: 'Demander aux joueurs de confirmer la veille',
@@ -7460,7 +7512,9 @@ export default {
       erreur: 'Les demandes n’ont pas pu être lues.',
       erreurDecision: 'La demande n’a pas pu être tranchée.',
       etatAcceptee: 'Acceptée',
+      etatAccepteeLe: 'Acceptée le {{le}}',
       etatRefusee: 'Refusée',
+      etatRefuseeMotif: 'Refusée : {{motif}}',
       expireHeures: 'Expire dans {{nombre}} h',
       expireJours_one: 'Expire dans {{count}} jour',
       expireJours_other: 'Expire dans {{count}} jours',
@@ -7490,6 +7544,8 @@ export default {
       erreurFermer: 'La fermeture n’a pas pu être posée.',
       erreurRouvrir: 'La fermeture n’a pas pu être rouverte.',
       etDautres: 'et d’autres…',
+      // eslint-disable-next-line max-len
+      exterieurAppeler: 'Une réservation « extérieur » n’a personne à prévenir dans l’app : appelle le client.',
       ferie: 'Jour férié',
       ferme: 'Fermé : {{jours}}.',
       fermeEtPrevenu_one: 'Fermé : {{jours}}. {{count}} joueur prévenu.',
@@ -7553,6 +7609,7 @@ export default {
       supprimerDit: 'Le créneau redevient libre.',
       supprimerQuestion: 'Supprimer la réservation de {{nom}} ?',
       titre: 'Réservation',
+      voirClientIndice: 'Ouvre sa fiche client',
       voirPlanning: 'Voir dans le planning',
     },
     filtres: {
@@ -7566,8 +7623,11 @@ export default {
     historique: {
       acceptee: 'Acceptée par toi le {{le}}',
       annuleePar: 'Annulée par {{nom}} le {{le}}',
+      annuleeParHorsDelai: 'Annulée par {{nom}} le {{le}} — hors délai',
       annuleeParToi: 'Annulée par toi le {{le}}',
+      confirmeeLaVeille: 'Confirmée la veille à {{heure}}',
       leJoueur: 'le joueur',
+      nonHonoree: 'Marquée non honorée par toi le {{le}}',
       notee: 'Notée par toi le {{le}}',
       refusee: 'Refusée par toi le {{le}}',
       reservee: 'Réservée le {{le}} dans l’app',
@@ -7593,6 +7653,23 @@ export default {
       dejaPris: 'Créneau déjà pris à l’extérieur',
       fermeture: 'Fermeture',
       indisponible: 'Terrain indisponible',
+    },
+    nonHonoree: {
+      annule: 'Marquage annulé.',
+      annulerLeMarquage: 'Annuler le marquage',
+      bouton: 'Non honorée',
+      exterieure: 'Une réservation extérieure ne se marque pas.',
+      marquee: 'Marquée non honorée',
+      marquer: 'Marquer',
+      marquerLaReservation: 'Marquer non honorée',
+      prevenu: 'Il en sera prévenu.',
+      question: 'Marquer la réservation de {{nom}} ({{quand}}) comme non honorée ?',
+    },
+    nonHonorees: {
+      seules_one: '{{count}} non honorée',
+      seules_other: '{{count}} non honorées',
+      sur_one: '{{count}} non honorée sur {{seuil}}',
+      sur_other: '{{count}} non honorées sur {{seuil}}',
     },
     notifications: {
       modeComplexe: 'Mode complexe',
@@ -7665,6 +7742,8 @@ export default {
       annulee: 'Annulée',
       confirmee: 'Confirmée',
       enAttente: 'En attente',
+      jouee: 'Jouée',
+      nonHonoree: 'Non honorée',
       refusee: 'Refusée',
       sansReponse: 'Sans réponse',
     },
@@ -7674,6 +7753,9 @@ export default {
       gardees_one: 'La réservation à venir est gardée.',
       gardees_other: 'Les {{count}} réservations à venir sont gardées.',
       retirerCeTerrain: 'Retirer ce terrain',
+    },
+    veille: {
+      confirmee: 'Confirmée la veille',
     },
     voirPlus: 'Voir plus',
   },

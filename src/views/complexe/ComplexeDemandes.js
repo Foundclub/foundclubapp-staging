@@ -8,10 +8,10 @@ import {
 import {
   expireDans,
   jourCourt,
+  libelleDemandeTraitee,
   lignesDesPages,
   messageDeRefusResa,
   plageHoraire,
-  STATUTS,
   totalDesPages,
 } from '@/domains/complexe/complexeReservation';
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
@@ -51,9 +51,10 @@ const TRAITEES = 'traitees';
  * Accepter ; la toucher ouvre la fiche (E-G05). « Refuser » ouvre la feuille du motif (obligatoire
  * pour le serveur : le joueur le lit). Un créneau pris entre-temps (409) : la carte le dit et ne
  * propose plus que de refuser.
+ * RESA-L5B-1, partie B (serveur RESA-L2C) : « Traitées » dit la date d'une décision et le motif
+ * d'un refus (« Acceptée le 14/10 », « Refusée : terrain indisponible », « Sans réponse »).
  * Pas encore servi par le serveur (dit dans le compte rendu du lot) : « 10 joueurs ont déjà
- * répondu présent » (collecte, lot L3) ; la date d'une décision et le motif d'un refus dans
- * « Traitées » (la liste du serveur ne les rend pas : ils sont dans la fiche).
+ * répondu présent » (collecte, lot L3).
  * Ordinateur (planche OR1, ≥ 1024 px) : deux volets, la file à gauche, la demande choisie à droite
  * (sa fiche, E-G05) ; Refuser / Accepter vivent dans le volet, pas sur chaque carte.
  * Paramètre de route : `complexeId` (sinon le premier complexe du compte). Caché par
@@ -164,17 +165,6 @@ function ComplexeDemandes() {
     `${jourCourt(demande.date)} · ${plageHoraire(demande.from, demande.to)}`
   );
 
-  const libelleTraitee = (/** @type {any} */ demande) => {
-    switch (demande.status) {
-      case STATUTS.confirmee:
-        return t('complexeReservations.demandes.etatAcceptee', 'Acceptée');
-      case STATUTS.refusee:
-        return t('complexeReservations.demandes.etatRefusee', 'Refusée');
-      default:
-        return '';
-    }
-  };
-
   // ── Une demande en attente (état 1) ────────────────────────────────────────────────────
   const carteEnAttente = (/** @type {any} */ demande) => {
     const conflit = conflits[demande.documentId] || '';
@@ -188,6 +178,8 @@ function ComplexeDemandes() {
         testID={`demande-${demande.documentId}`}
       >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
+          {/* RESA-L5B-1 : le gras de l'app est NOIR par défaut (`Fonts.p2Bold`) ; sur le fond
+              sombre, le nom et le terrain doivent rester blancs. */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{String(demande.label || '')}</Text>
           {` ${t('complexeReservations.demandes.demandeLe', 'demande le')} `}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{String(demande.terrain?.name || '')}</Text>
@@ -249,7 +241,7 @@ function ComplexeDemandes() {
         {` · ${String(demande.terrain?.name || '')} · ${jourCourt(demande.date)}`}
         {` · ${texteHeure(demande.from)}`}
       </Text>
-      <PastillesReservation statut={demande.status} texteEtat={libelleTraitee(demande)} />
+      <PastillesReservation statut={demande.status} texteEtat={libelleDemandeTraitee(t, demande)} />
     </TouchableOpacity>
   );
 
@@ -347,6 +339,9 @@ function ComplexeDemandes() {
   const volet = ouverte ? (
     <FicheReservation
       complexeId={complexeId}
+      onVoirClient={(joueurId) => navigation.navigate(RouteNames.ComplexeClient, {
+        complexeId, joueurId,
+      })}
       onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexePlanning, {
         complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,
       })}

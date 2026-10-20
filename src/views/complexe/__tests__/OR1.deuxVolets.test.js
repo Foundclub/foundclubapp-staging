@@ -44,12 +44,15 @@ const mockLigne = (/** @type {string} */ id, /** @type {string} */ status) => ({
   to: '20:00',
 });
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  // RESA-L5B-1 : les gestes « non honorée » de l'onglet Passées (E-G04).
+  useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useComplexeChoisi: () => ({
     complexe: jest.requireActual('@/testSupport/temoinComplexe').COMPLEXE_FIVE,
     complexeId: 'cx-five',
     mes: { isLoading: false },
   }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => (
     filtres.vue === 'demandes' || filtres.vue === 'traitees'
       ? mockPages([mockLigne('d-1', 'en_attente'), mockLigne('d-2', 'en_attente')])

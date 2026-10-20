@@ -25,6 +25,7 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import {
   useApercuFermeture,
@@ -48,10 +49,11 @@ import { useIsDesktop } from '@/responsive';
  * « Voir lesquelles ») ; « Fermer et prévenir », ou « Fermer » sans impact. UNE fermeture PAR
  * terrain (règle d'app du contrat L2A) ; le serveur annule les réservations touchées et prévient
  * leurs joueurs (N-19).
+ * RESA-L5B-1, partie B (serveur RESA-L2C) : « Voir lesquelles » dit la source de chaque réservation
+ * (App / Extérieur) et, s'il y en a une notée à l'extérieur, qu'il faut appeler le client.
  * Pas fait (dit dans le compte rendu du lot) : « 1 collecte en cours s'arrêtera » (collecte, lot
- * L3) ; la source App / Extérieur dans « Voir lesquelles » (l'aperçu du serveur ne la rend pas) ;
- * modifier une fermeture (rouvrir puis refermer) ; le panneau à droite du planning sur ordinateur
- * (deux colonnes à la place).
+ * L3) ; modifier une fermeture (rouvrir puis refermer) ; le panneau à droite du planning sur
+ * ordinateur (deux colonnes à la place).
  * Paramètres de route : `complexeId`, `terrainId` (le terrain coché d'avance, depuis E-G07 /
  * E-G09).
  * Caché par `COMPLEXES_GERANT`.
@@ -328,11 +330,33 @@ function ComplexeFermetures() {
           </Text>
         </TouchableOpacity>
         {voir ? (touchees.items || []).map((/** @type {any} */ item) => (
-          <Text key={item.documentId} style={[Fonts.p3, Fonts.neutral100]}>
-            {[jourCourt(item.date), texteHeure(item.from), nomDuTerrain(item.terrainId), item.label]
-              .filter(Boolean).join(' · ')}
-          </Text>
+          <View
+            key={item.documentId}
+            style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}
+            testID={`fermeture-touchee-${item.documentId}`}
+          >
+            <Text style={[Fonts.p3, Fonts.neutral100, { flexShrink: 1 }]}>
+              {[
+                jourCourt(item.date),
+                texteHeure(item.from),
+                nomDuTerrain(item.terrainId),
+                item.label,
+              ].filter(Boolean).join(' · ')}
+            </Text>
+            {item.source ? <PastillesReservation sansEtat source={item.source} statut="" /> : null}
+          </View>
         )) : null}
+        {voir && (touchees.items || []).some((/** @type {any} */ item) => (
+          item.source === 'exterieur'
+        )) ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'complexeReservations.fermetures.exterieurAppeler',
+              // eslint-disable-next-line max-len
+              'Une réservation « extérieur » n’a personne à prévenir dans l’app : appelle le client.',
+            )}
+          </Text>
+          ) : null}
         {voir && touchees.count > (touchees.items || []).length ? (
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t('complexeReservations.fermetures.etDautres', 'et d’autres…')}

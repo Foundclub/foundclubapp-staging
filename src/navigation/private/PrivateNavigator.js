@@ -1485,6 +1485,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5B-1 (20/10/2026) — E-G15, la fiche d'un client (bannir / débannir). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeClient').default}
+            name={RouteNames.ComplexeClient}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen

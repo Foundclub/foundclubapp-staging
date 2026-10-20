@@ -24,8 +24,12 @@ const mockDecider = jest.fn();
 const mockAnnuler = jest.fn();
 const mockModifier = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  // RESA-L5B-1 : « non honorée » et le seuil du complexe (témoin EG05.nonHonoree.L5B1).
+  useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useAnnulerReservation: () => ({ isPending: false, mutateAsync: mockAnnuler }),
+  useComplexeGere: () => ({ data: null }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
+  useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
   useReservationGeree: () => mockFiche,
 }));
