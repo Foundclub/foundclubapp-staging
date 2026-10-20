@@ -40,3 +40,26 @@ describe('N-11 — la suspension, le rétablissement, le retrait du complexe', (
     expect(module.destinationDuGerant({ change: 'suspendu', complexeId: 'cx-five' })).toBeNull();
   });
 });
+
+// N-09 (serveur RESA-L4 : type `complexeSignale`, `complexeId`, `signalementId`) : le SuperAdmin
+// est prévenu qu'un joueur a signalé un complexe ⇒ sa fiche dans la console (E-S01).
+describe('N-09 — un complexe signalé, chez le SuperAdmin', () => {
+  it('allumé : la fiche du complexe dans la console', () => {
+    const module = charger(true);
+    expect(module.TYPE_SIGNALEMENT_DU_COMPLEXE).toBe('complexeSignale');
+    expect(module.destinationDuSignalement({ complexeId: 'cx-five', signalementId: 's-1' }))
+      .toEqual({
+        params: { params: { complexeId: 'cx-five' }, screen: 'AdminComplexeDetail' },
+        route: 'AdminStack',
+      });
+    // Sans complexe : la liste, onglet « À traiter ».
+    expect(module.destinationDuSignalement({})).toEqual({
+      params: { params: {}, screen: 'AdminComplexeList' },
+      route: 'AdminStack',
+    });
+  });
+
+  it('éteint : aucune destination', () => {
+    expect(charger(false).destinationDuSignalement({ complexeId: 'cx-five' })).toBeNull();
+  });
+});

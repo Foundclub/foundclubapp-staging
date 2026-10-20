@@ -18,12 +18,14 @@ import {
   enregistrerCreneaux,
   enregistrerPartenaires,
   fermerTerrains,
+  gesteDeLaConsole,
   lireApercuFermeture,
   lireCanal,
   lireChiffres,
   lireClient,
   lireClients,
   lireComplexeGere,
+  lireDansLaConsole,
   lireFermetures,
   lireFidelite,
   lireHistoriqueClient,
@@ -33,6 +35,7 @@ import {
   lireReservationGeree,
   lireReservationsDuComplexe,
   lireTerrains,
+  listerLaConsole,
   marquerNonHonoree,
   modifierComplexeGere,
   modifierExterieur,
@@ -603,3 +606,39 @@ export const useApercuCreneaux = () => useMutation({
     { apercu: true },
   ),
 });
+
+/**
+ * E-S01 — la liste de la console des complexes (SuperAdmin) : un onglet, une recherche.
+ * @param {string} onglet - `a-traiter | tous | suspendus`.
+ * @param {string} recherche - Le nom ou la ville cherchés.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ compteurs, items,
+ *   pagination }`.
+ */
+export const useConsoleDesComplexes = (onglet, recherche, { enabled = true } = {}) => useQuery({
+  enabled,
+  meta: { preventToastError: true },
+  queryFn: async () => (await listerLaConsole({ onglet, recherche }))?.data ?? null,
+  queryKey: ['complexe', 'console', onglet, recherche],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-S01 — la fiche d'un complexe dans la console.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La fiche.
+ */
+export const useComplexeDeLaConsole = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  meta: { preventToastError: true },
+  queryFn: async () => (await lireDansLaConsole(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', 'console', 'fiche', complexeId],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-S01 — un geste de la console ; la liste et la fiche se relisent ensuite.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, geste, motif?, signalementId?, verified? })`.
+ */
+export const useGesteDeLaConsole = () => useGeste((demande) => gesteDeLaConsole(demande));

@@ -37,7 +37,27 @@ export const TYPE_DU_GERANT = 'complexeReservationGerant';
 /** RESA-L5B-2 — N-11, le statut du complexe (serveur RESA-L4, `COMPLEXE_STATUT`). */
 export const TYPE_STATUT_DU_COMPLEXE = 'complexeStatut';
 
+/** RESA-L5B-2 — N-09, un joueur a signalé un complexe : aux SuperAdmin (`COMPLEXE_SIGNALE`). */
+export const TYPE_SIGNALEMENT_DU_COMPLEXE = 'complexeSignale';
+
 const TYPES_DU_GERANT = Object.freeze([TYPE_DU_GERANT, TYPE_STATUT_DU_COMPLEXE]);
+
+/**
+ * RESA-L5B-2 — N-09 : la fiche du complexe signalé dans la console du SuperAdmin (E-S01), ou la
+ * liste (« À traiter ») sans complexe. Éteint (`COMPLEXES_GERANT`) : null.
+ * @param {Record<string, any>} charge - `complexeId`, `signalementId`.
+ * @returns {{ params: Record<string, any>, route: string } | null} La destination, ou null.
+ */
+export const destinationDuSignalement = (charge) => {
+  if (!interrupteur()) return null;
+  const complexeId = String(charge?.complexeId || '');
+  return {
+    params: complexeId
+      ? { params: { complexeId }, screen: RouteNames.AdminComplexeDetail }
+      : { params: {}, screen: RouteNames.AdminComplexeList },
+    route: RouteNames.AdminStack,
+  };
+};
 
 /**
  * Un type que l'app aiguille vers l'espace du complexe (sans regarder l'interrupteur) ?

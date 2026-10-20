@@ -444,6 +444,9 @@ export const RouteNames = /** @type {const} */ ({
   ComplexeReservations: 'ComplexeReservations',
   // RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) : le canal
   // (E-G12), la liste des clients (E-G15), la fidélité (E-G14). Cachés par `COMPLEXES_GERANT`.
+  // E-S01 : la console des complexes du SuperAdmin (sa liste, sa fiche sur téléphone).
+  AdminComplexeDetail: 'AdminComplexeDetail',
+  AdminComplexeList: 'AdminComplexeList',
   ComplexeAffiches: 'ComplexeAffiches',
   ComplexeCanal: 'ComplexeCanal',
   ComplexeClients: 'ComplexeClients',

@@ -217,6 +217,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-CONSOLE (02/10) — les demandes de rattachement et « Par FoundClub » (hors de
   // /admin/collectivites/:id, pour la meme raison que la file des gestionnaires).
   [RouteNames.AdminCollectiviteInvitations]: '/admin/rattachements-collectivites',
+  // RESA-L5B-2 (20/10/2026) — E-S01, la console des complexes (COMPLEXES_GERANT).
+  [RouteNames.AdminComplexeList]: '/admin/complexes',
+  [RouteNames.AdminComplexeDetail]: '/admin/complexes/:complexeId',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',

@@ -599,3 +599,54 @@ export const bloquerCreneau = async (terrainId, {
  * @returns {Promise<{ id: number, url?: string } | null>} Le fichier, ou null.
  */
 export const televerserPhoto = async (brut) => uploadActualiteFile(brut);
+
+/**
+ * E-S01 — LA CONSOLE DES COMPLEXES (SuperAdmin, serveur RESA-L4, policy is-superadmin) : « À
+ * traiter » (un signalement ouvert, ou créé depuis 7 jours ; jamais un retiré), « Tous »,
+ * « Suspendus » ; recherche par nom ou ville ; pages de 20.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, la
+ *   recherche.
+ * @returns {Promise<any>} `{ data: { compteurs{ aTraiter, suspendus, tous }, items[],
+ *   pagination } }`.
+ */
+export const listerLaConsole = async ({ onglet, page = 1, recherche = '' }) => corps(
+  client().get('/superadmin/complexes', { params: remplis({ onglet, page, recherche }) }),
+);
+
+/**
+ * La fiche d'un complexe dans la console (E-S01) : identité, gérants, terrains, réservations,
+ * signalements, journal.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { complexe, gerants[], journal[], reservations{ aVenir, total },
+ *   signalements[], terrains[] } }`.
+ */
+export const lireDansLaConsole = async (complexeId) => corps(
+  client().get(`/superadmin/complexes/${enc(complexeId)}`),
+);
+
+/**
+ * Un geste de la console (E-S01) : « Suspendre » et « Retirer » (motif de 3 à 300 caractères),
+ * « Réactiver », « Marquer vérifié » (ou le retirer), « Signalement traité ».
+ * @param {{ complexeId: string, geste: 'reactiver' | 'retirer' | 'suspendre' | 'traiter'
+ *   | 'verifier', motif?: string, signalementId?: string, verified?: boolean }} demande - Le geste.
+ * @returns {Promise<any>} `{ data: { documentId, status | verified, reservationsAnnulees? } }`.
+ */
+export const gesteDeLaConsole = async ({
+  complexeId, geste, motif, signalementId, verified,
+}) => {
+  const racine = `/superadmin/complexes/${enc(complexeId)}`;
+  switch (geste) {
+    case 'reactiver':
+      return corps(client().post(`${racine}/retablir`, {}));
+    case 'retirer':
+      return corps(client().post(`${racine}/retirer`, { data: { motif } }));
+    case 'suspendre':
+      return corps(client().post(`${racine}/suspendre`, { data: { motif } }));
+    case 'traiter':
+      return corps(client().post(`${racine}/signalements/${enc(signalementId)}/traiter`, {}));
+    case 'verifier':
+      return corps(client().post(`${racine}/verifier`, { data: { verified: Boolean(verified) } }));
+    default:
+      throw new Error(`Geste inconnu : ${String(geste)}`);
+  }
+};
