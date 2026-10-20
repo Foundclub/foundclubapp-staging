@@ -61,7 +61,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FoundClub a besoin d'accéder à votre galerie photo pour votre photo de profil et pour envoyer des images dans vos conversations.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>FoundClub enregistre ta carte de collection dans ta phototheque quand tu le demandes.</string>
+	<string>FoundClub enregistre dans ta photothèque les images que tu demandes à enregistrer : ta carte de collection, ou une photo reçue dans une conversation.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Montserrat-Black.ttf</string>
