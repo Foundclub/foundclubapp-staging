@@ -22,6 +22,7 @@ import {
 } from '@/domains/search/recruitmentFlow';
 
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
+import EvenementsVilleRecherche from '@/components/organisms/evenementVille/RechercheVille';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
 import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
@@ -196,6 +197,10 @@ function SearchHubScreen({ navigation, route }) {
           additionalFilters={DEFAULT_EVENT_FILTERS}
           annuaire={annuaire}
           enableMapMode={enableMapMode}
+          // R17-EVT-1-BIS (g) (20/10) : sur le téléphone, la recherche d'événements est ICI ; la
+          // bande « Événements de la Ville » en tête de liste. Pas sur l'annuaire du site (sans
+          // compte, la lecture n'est pas ouverte à Public).
+          entete={annuaire ? null : <EvenementsVilleRecherche />}
           refreshSignal={refreshSignals.events}
           screenActive={activeType === 'events'}
           showFilters

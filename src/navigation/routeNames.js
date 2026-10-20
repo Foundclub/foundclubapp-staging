@@ -421,6 +421,11 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
+  // R17-EVT-1 (20/10/2026, REC17-005) — « Ajouter un événement de la Ville » (et « Modifier »),
+  // et la fiche d un événement de la Ville (la Ville, un club, un membre : le serveur juge ce
+  // qu il montre).
+  CollectiviteEvenement: 'CollectiviteEvenement',
+  EvenementDeLaVille: 'EvenementDeLaVille',
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation, toile BLG79NHv2) : son
   // espace (accueil E-G02, en onglets), « Devenir gérant » (E-G01), ses terrains (E-G07, E-G08),
   // leurs créneaux (E-G09) et ses réglages (E-G16). Cachés par l'interrupteur `COMPLEXES_GERANT`

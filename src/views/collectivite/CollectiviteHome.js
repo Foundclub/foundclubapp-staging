@@ -719,6 +719,12 @@ function CollectiviteHome() {
   // ── 2. VOS ACTIONS ─────────────────────────────────────────────────────────────────────
   const texteAction = (/** @type {string} */ cle) => {
     switch (cle) {
+      // R17-EVT-1 (20/10) — la 7e action (planche P11-evenement-ou-ca-vit).
+      case 'addEvent':
+        return {
+          dit: t('collectiviteAccueil.actions.addEvent.dit', 'Fête du sport, tournoi, réunion.'),
+          titre: t('collectiviteAccueil.actions.addEvent.titre', 'Ajouter un événement'),
+        };
       case 'assignSlot':
         return {
           dit: t(
@@ -794,9 +800,12 @@ function CollectiviteHome() {
                 // parts égales, l'icône à gauche du titre. FINITIONS16 21 (T15, 1 280 px) : la
                 // carte fait 150 px ; un cadre serré laisse 94 px au titre, il tient sur deux
                 // lignes (« Attribuer un » = 90,6 px en Montserrat gras 14).
+                // R17-EVT-1-BIS (i) (20/10) : 7 actions, DEUX rangées (4 puis 3) ; une seule
+                // repliait les libellés sur 3 lignes à 1 360 px. Un quart chacune, les 3 dernières
+                // s élargissent.
                 enColonnes ? {
                   alignItems: 'center',
-                  flexBasis: 0,
+                  flexBasis: '22%',
                   flexDirection: 'row',
                   gap: 8,
                   minHeight: 56,

@@ -169,6 +169,9 @@ function EventListSeparator() {
  * @param {boolean} [props.annuaire] - ANNUAIRE-E1 : posé par l'annuaire du site seulement. La liste
  *   défile AVEC la page (cartes à plat, « Voir plus ») au lieu de défiler dans sa propre boîte :
  *   sans borne, une liste de l'app réclamait toutes ses pages d'un coup (banc du 25/09).
+ * @param {import('react').ReactElement | null} [props.entete] - R17-EVT-1-BIS (20/10) : posé en
+ *   tête de la liste, au-dessus de « Événements à partir de », et défile avec elle (la bande
+ *   « Événements de la Ville » de la recherche). Sans lui, rien ne change.
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
@@ -176,6 +179,7 @@ function EventListContent({
   annuaire = false,
   customEmptyComponent = null,
   enableMapMode = false,
+  entete = null,
   events: propEvents,
   isLoading: propIsLoading,
   isPlanning = false,
@@ -1441,6 +1445,7 @@ function EventListContent({
   );
   const listHeader = (
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+      {entete}
       {!propEvents && !showFilters && featuredEvents.length > 0 ? (
         <FeaturedEvents events={featuredEvents} />
       ) : null}

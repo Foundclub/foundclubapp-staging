@@ -1419,6 +1419,22 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
+        {/* R17-EVT-1 (20/10/2026, REC17-005) — « Ajouter un événement de la Ville » : le tunnel
+            plein écran au téléphone (son propre en-tête), le panneau sur l ordinateur ; et la
+            fiche d un événement de la Ville (planning d une installation, Mon planning). */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteEvenement').default}
+          name={RouteNames.CollectiviteEvenement}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/EvenementDeLaVille').default}
+          name={RouteNames.EvenementDeLaVille}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteEvenement.fiche.titre', 'Événement de la Ville'),
+          }}
+        />
         {/* RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans ne
             sont DÉCLARÉS que si l'interrupteur `COMPLEXES_GERANT` est allumé (éteint : aucune
             porte, aucun lien ne les atteint).
