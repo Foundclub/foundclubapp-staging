@@ -96,7 +96,8 @@ export function PuceDeChoix({
           borderRadius: 999,
           borderWidth: 1,
           justifyContent: 'center',
-          minHeight: 36,
+          // A7-UX (20/10) — 44 px, la cible minimale (mesuré au banc du site : 36 px).
+          minHeight: 44,
         },
       ]}
       testID={testID}
@@ -1074,7 +1075,7 @@ function SeasonSlotForm({
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setVoirLibres(true)}
-            style={[Alignments.row, Alignments.alignCenter, { minHeight: 32 }]}
+            style={[Alignments.row, Alignments.alignCenter, { minHeight: 44 }]}
             testID="attribuer-voir-libres"
           >
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
@@ -1130,8 +1131,12 @@ function SeasonSlotForm({
   const libelleDuChamp = (/** @type {string} */ texte) => (
     tunnelPleinEcran ? null : titreDuChamp(texte)
   );
+  // A7-UX (20/10) — `flex-start` : une puce suivie de « complet … » étirait toutes ses voisines
+  // en ovales (capture du banc, « Quel jour ? », panneau du site).
   const rangee = (/** @type {import('react').ReactNode} */ enfants) => (
-    <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>{enfants}</View>
+    <View style={[Alignments.row, Alignments.wrap, { alignItems: 'flex-start', gap: 8 }]}>
+      {enfants}
+    </View>
   );
   /**
    * COLL-R-A7 — une liste de choix : des puces dans le panneau du site, des lignes a cocher en
@@ -1478,10 +1483,15 @@ function SeasonSlotForm({
           <Button
             disabled={envoiEnCours}
             icon="arrowLeft"
+            // A7-UX (20/10) — les boutons discrets du tunnel en cyan pâle, comme la planche P4v4
+            // (`btn-g` = primary200, « moins de gris ») : « Retour » mesuré à 4,35:1 en gris sur le
+            // fond du site, 6,5:1 ainsi.
+            iconColor={Colors.primary200}
             // COL-005 : la fleche avant le mot (elle etait apres, capture S04).
             iconPosition="before"
             onPress={reculer}
             style={{ alignSelf: 'flex-start', minHeight: 44 }}
+            textStyle={{ color: Colors.primary200 }}
             title={t('common.back', 'Retour')}
             variant="Ghost"
           />
@@ -1730,9 +1740,11 @@ function SeasonSlotForm({
           {joursDifferents ? (
             <Button
               icon="arrowLeft"
+              iconColor={Colors.primary200}
               iconPosition="before"
               onPress={() => allerA('jour')}
               style={{ alignSelf: 'flex-start', minHeight: 44 }}
+              textStyle={{ color: Colors.primary200 }}
               title={t('collectiviteCreneaux.quand.unJourFixe', 'Un jour fixe chaque semaine')}
               variant="Ghost"
             />
@@ -2064,6 +2076,7 @@ function SeasonSlotForm({
             {besoinDeConfirmer ? (
               <Button
                 onPress={changerLHeure}
+                textStyle={{ color: Colors.primary200 }}
                 title={t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure')}
                 variant="Ghost"
               />
@@ -2071,6 +2084,7 @@ function SeasonSlotForm({
             {onCancel && !besoinDeConfirmer && !parcoursGuide ? (
               <Button
                 onPress={onCancel}
+                textStyle={{ color: Colors.primary200 }}
                 title={t('common.cancel', 'Annuler')}
                 variant="Ghost"
               />
