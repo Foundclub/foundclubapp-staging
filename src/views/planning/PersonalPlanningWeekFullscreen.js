@@ -1315,7 +1315,8 @@ function PlanningWeekFullscreen() {
     }
 
     // COLL-C4B-BIS : une semaine FERMEE sans seance se dessine (la plage), comme la planche.
-    if (!hasEvents && !bandesDeFermeture.length) {
+    // R17-EVT-1 (20/10) : une semaine avec un evenement de la Ville aussi (son bloc clair).
+    if (!hasEvents && !bandesDeFermeture.length && !blocsDesEvenementsDeLaVille.length) {
       return (
         <View
           style={{
