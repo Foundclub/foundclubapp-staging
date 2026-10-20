@@ -29,6 +29,11 @@ const mockPublier = jest.fn(async () => ({ data: { documentId: 'evt-neuf' } }));
 const mockModifier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
 /** @type {any} */
 let mockFormulaireProps = null;
+// R17-EVT-1-BIS (h) : la lecture des seances touchees (useApercuEvenement) et ce qu elle rend.
+/** @type {any} */
+let mockApercuFiche = { data: undefined };
+/** @type {any[]} */
+const mockApercuDemandes = [];
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -60,6 +65,10 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/collectivite/collectiviteEvenementQueries', () => ({
+  useApercuEvenement: (/** @type {any} */ id, /** @type {any} */ params) => {
+    mockApercuDemandes.push({ id, params });
+    return id ? mockApercuFiche : { data: undefined };
+  },
   useEvenementDeLaVille: () => mockFiche,
   useGestesEvenementDeLaVille: () => ({
     annuler: { isPending: false, mutateAsync: mockAnnuler },
@@ -78,6 +87,8 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   }),
 }));
 jest.mock('@/domains/collectivite/collectiviteDisplay', () => ({
+  // R17-EVT-1-BIS (h) : la date de l actualite passe par le vrai formatCollectiviteDay.
+  ...jest.requireActual('@/domains/collectivite/collectiviteDisplay'),
   findManagedCollectivite: (/** @type {any[]} */ liste, /** @type {string} */ id) => {
     const trouvee = (liste || []).find((item) => item.documentId === id);
     return trouvee || null;
@@ -249,6 +260,70 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
       facilityId: 'stade',
       sourceType: 'facility',
     });
+  });
+
+  // R17-EVT-1-BIS (h) (20/10, tri du chef) — la fiche de la Ville dit les séances que son blocage
+  // touche ENCORE (lues comme avant de publier : celles que leur club a déplacées en sortent) et
+  // QUAND son actualité est partie. Un club, un membre : ni l'un ni l'autre, et aucune lecture des
+  // séances. ROUGE avant (ni encart, ni date, aucune lecture).
+  it('🔴 la Ville : les séances encore touchées, et la date de son actualité', async () => {
+    mockApercuFiche = {
+      data: {
+        clubsCount: 1,
+        sessions: [{
+          club: { name: 'AS Montrivage' },
+          date: '2026-10-24',
+          endTime: '12:00',
+          startTime: '10:00',
+          team: { name: 'U13' },
+        }],
+        sessionsCount: 1,
+      },
+    };
+    mockFiche = {
+      data: {
+        ...VUE_DE_LA_VILLE,
+        actualite: { documentId: 'actu-1', publishedAt: '2026-10-13T08:00:00.000Z' },
+        closure: { documentId: 'bloc-1', status: 'active' },
+      },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      '1 séance touchée',
+      'AS Montrivage · U13, sam. 24 oct. 10:00 – 12:00',
+      'Son club la voit « Bloqué par la Ville · à déplacer » et peut la déplacer.',
+      'Actualité publiée : mar. 13 oct.',
+    ]));
+    expect(mockApercuDemandes.at(-1)).toEqual({
+      id: 'ville-montrivage',
+      params: expect.objectContaining({
+        endDate: '2026-10-24',
+        endTime: '17:00',
+        facilityId: 'stade',
+        startDate: '2026-10-24',
+        startTime: '10:00',
+        takesPlace: true,
+      }),
+    });
+  });
+
+  it('🔴 un membre, un blocage levé : ni encart, ni date, aucune lecture des séances', async () => {
+    mockApercuFiche = { data: { sessions: [], sessionsCount: 3 } };
+    mockApercuDemandes.length = 0;
+    mockFiche = { data: VUE_DU_MEMBRE, isLoading: false };
+    const membre = await monter(<EvenementDeLaVille />);
+    expect(textes(membre).join(' ')).not.toMatch(/séances? touchées?|Actualité publiée/);
+    expect(mockApercuDemandes.length).toBeGreaterThan(0);
+    expect(mockApercuDemandes.every((demande) => demande.id === null)).toBe(true);
+    mockApercuDemandes.length = 0;
+    mockFiche = {
+      data: { ...VUE_DE_LA_VILLE, closure: { documentId: 'bloc-1', status: 'reopened' } },
+      isLoading: false,
+    };
+    const leve = await monter(<EvenementDeLaVille />);
+    expect(textes(leve).join(' ')).not.toMatch(/séances? touchées?/);
+    expect(mockApercuDemandes.every((demande) => demande.id === null)).toBe(true);
   });
 
   it('annulé : « Annulé », plus aucun geste ; introuvable : une phrase', async () => {
