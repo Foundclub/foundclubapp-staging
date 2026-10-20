@@ -18,6 +18,7 @@ import {
   enregistrerCreneaux,
   fermerTerrains,
   lireApercuFermeture,
+  lireCanal,
   lireClient,
   lireClients,
   lireComplexeGere,
@@ -484,6 +485,20 @@ export const useHistoriqueClient = (complexeId, joueurId) => useQuery({
     await lireHistoriqueClient(String(complexeId), String(joueurId))
   )?.data ?? null,
   queryKey: ['complexe', complexeId, 'client', joueurId, 'historique'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Le canal de SON complexe (E-G12) : sa conversation et ses membres.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ chatId, liste, membres }`.
+ */
+export const useCanalDuComplexe = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  meta: { preventToastError: true },
+  queryFn: async () => (await lireCanal(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'canal'],
+  retry: false,
   staleTime: DEMI_MINUTE,
 });
 

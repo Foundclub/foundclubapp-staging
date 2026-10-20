@@ -1509,6 +1509,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5B-2 — le canal du complexe (E-G12, serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeCanal').default}
+            name={RouteNames.ComplexeCanal}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen

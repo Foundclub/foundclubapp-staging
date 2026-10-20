@@ -6668,6 +6668,25 @@ export default {
     prestigeDivision: 'Prestige Division 1.',
     seasonLabel: '| Season:',
   },
+  // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
+  complexeCanal: {
+    ecrire: 'Write to members',
+    erreur: 'Your channel could not be loaded.',
+    membres: {
+      chercher: 'Search a member',
+      parFavori: 'Joined through favourites · {{jour}}',
+      parReservation: 'Joined through a booking · {{jour}}',
+      plafond: 'The first {{affiches}} members are shown.',
+      titre: 'Members',
+    },
+    nombre_one: '{{count}} member',
+    nombre_other: '{{count}} members',
+    pause: 'Your venue is suspended: its channel is paused.',
+    regle: 'All members will be notified.',
+    titre: 'Channel · {{nom}}',
+    vide: 'Your channel is ready. Write your first message: it will reach everyone who books with '
+      + 'you or adds you to their favourites.',
+  },
   // RESA-L5B-1 (20/10/2026) — a venue client's page (E-G15: no-shows, ban / unban). The reason for
   // a ban is PRIVATE: only the manager reads it. Same keys as fr.js.
   complexeClients: {

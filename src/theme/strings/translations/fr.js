@@ -7126,6 +7126,25 @@ export default {
     prestigeDivision: 'Division 1 prestige.',
     seasonLabel: '| Saison:',
   },
+  // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
+  complexeCanal: {
+    ecrire: 'Écrire aux membres',
+    erreur: 'Impossible de charger ton canal.',
+    membres: {
+      chercher: 'Chercher un membre',
+      parFavori: 'Entré·e par les favoris · {{jour}}',
+      parReservation: 'Entré·e par une réservation · {{jour}}',
+      plafond: 'Les {{affiches}} premiers membres sont affichés.',
+      titre: 'Membres',
+    },
+    nombre_one: '{{count}} membre',
+    nombre_other: '{{count}} membres',
+    pause: 'Ton complexe est suspendu : son canal est en pause.',
+    regle: 'Tous les membres seront prévenus.',
+    titre: 'Canal · {{nom}}',
+    vide: 'Ton canal est prêt. Écris ton premier message : il arrivera chez tous ceux qui '
+      + 'réservent chez toi ou te mettent en favori.',
+  },
   // RESA-L5B-1 (20/10/2026) — la fiche d'un client du complexe (E-G15 : non honorées, bannir /
   // débannir). La raison d'un bannissement est PRIVÉE : seul le gérant la lit.
   complexeClients: {

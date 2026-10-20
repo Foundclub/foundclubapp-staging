@@ -442,8 +442,9 @@ export const RouteNames = /** @type {const} */ ({
   ComplexePlanning: 'ComplexePlanning',
   ComplexeReservation: 'ComplexeReservation',
   ComplexeReservations: 'ComplexeReservations',
-  // RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) : la liste
-  // des clients (E-G15), la fidélité (E-G14). Cachés par `COMPLEXES_GERANT`.
+  // RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) : le canal
+  // (E-G12), la liste des clients (E-G15), la fidélité (E-G14). Cachés par `COMPLEXES_GERANT`.
+  ComplexeCanal: 'ComplexeCanal',
   ComplexeClients: 'ComplexeClients',
   ComplexeFidelite: 'ComplexeFidelite',
   // RESA-L6A (14/10/2026) — le joueur (chantier Réservation, toile BLG79NHv2) : la page du complexe

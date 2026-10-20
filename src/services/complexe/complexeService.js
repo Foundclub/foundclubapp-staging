@@ -394,6 +394,18 @@ export const validerRecompense = async (complexeId, joueurId) => corps(
 );
 
 /**
+ * Le CANAL de SON complexe (E-G12) : ouvert s'il ne l'est pas ; un groupe de la messagerie où seuls
+ * les gérants écrivent (la conversation habituelle, `chatId`). Ses membres, gérants exceptés : le
+ * nom (prénom + initiale), comment ils sont entrés, depuis quand ; jamais un numéro. Complexe qui
+ * n'est pas actif : 409 COMPLEXE_CANAL_INACTIF.
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { chatId, liste[{ depuis, documentId, nom, via }], membres } }`.
+ */
+export const lireCanal = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/canal`),
+);
+
+/**
  * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
  * par le gérant (la même que celle du réserveur ; RESA-L3).
  * @param {string} complexeId - documentId du complexe.
