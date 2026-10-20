@@ -6697,10 +6697,14 @@ export default {
     chiffres: {
       aVenir_one: 'upcoming booking',
       aVenir_other: 'upcoming bookings',
+      // RESA-L5B-2 (20/10/2026) — loyalty and games played (RESA-L4 server).
+      fidelite: 'loyalty',
       horsDelai_one: 'late cancellation',
       horsDelai_other: 'late cancellations',
       nonHonorees_one: 'no-show',
       nonHonorees_other: 'no-shows',
+      parties_one: 'game played',
+      parties_other: 'games played',
     },
     debannir: {
       dit: '{{nom}} will be able to book with you again.',
@@ -6708,8 +6712,30 @@ export default {
     },
     fiche: {
       banni: 'Banned',
+      // RESA-L5B-2 (20/10/2026) — "Client since", "Message", the history.
+      depuis: 'Client since {{jour}}',
+      ecrire: 'Message',
       erreur: 'The client\'s page could not be loaded.',
+      historique: 'History',
       jamaisVenu: 'This player has never booked with you.',
+    },
+    // RESA-L5B-2 (20/10/2026) — the client LIST (E-G15, RESA-L4 server).
+    liste: {
+      bannis: 'Banned',
+      chercher: 'Search a client',
+      erreur: 'Your clients could not be loaded.',
+      fidelite: 'loyalty {{compte}}/{{seuil}}',
+      habitues: 'Regulars',
+      nonHonorees_one: '{{count}} no-show',
+      nonHonorees_other: '{{count}} no-shows',
+      parties_one: '{{count}} game',
+      parties_other: '{{count}} games',
+      rechercheVide: 'No client "{{recherche}}". A booking made outside the app has no client page.',
+      titre: 'Clients',
+      tous: 'All',
+      vide: 'Your clients will appear after their first booking.',
+      videBannis: 'No banned client.',
+      videHabitues: 'No regular yet: a client becomes one at their 3rd game played with you.',
     },
   },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans

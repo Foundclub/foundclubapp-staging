@@ -30,6 +30,7 @@ const mockApercu = jest.fn();
 const mockEnregistrer = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useApercuCreneaux: () => ({ isPending: false, mutateAsync: mockApercu }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useEnregistrerCreneaux: () => ({ isPending: false, mutateAsync: mockEnregistrer }),
   useTerrains: () => mockTerrains,
 }));

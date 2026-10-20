@@ -215,7 +215,8 @@ export const CASES_GERER = Object.freeze([
   { cle: 'canal', icone: 'envelope', route: null },
   { cle: 'affiches', icone: 'share2', route: null },
   { cle: 'fidelite', icone: 'trophy', route: null },
-  { cle: 'clients', icone: 'users', route: null },
+  // RESA-L5B-2 (20/10/2026) : la liste des clients (E-G15, serveur RESA-L4).
+  { cle: 'clients', icone: 'users', route: RouteNames.ComplexeClients },
   { cle: 'statistiques', icone: 'chart', route: null },
   { cle: 'reglages', icone: 'edit', route: RouteNames.ComplexeReglages },
 ]);

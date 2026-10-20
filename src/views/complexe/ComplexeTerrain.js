@@ -42,6 +42,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetActivities } from '@/services/activity/activityQueries';
 import {
   useApercuRetrait,
+  useComplexeChoisi,
   useComplexeGere,
   useEnregistrerTerrain,
   useReservationsDuComplexe,
@@ -82,7 +83,8 @@ function ComplexeTerrain() {
   const params = /** @type {{ complexeId?: string, terrainId?: string } | undefined} */ (
     route?.params
   );
-  const complexeId = params?.complexeId || null;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   const terrainId = params?.terrainId || null;
   const terrainsLus = useTerrains(complexeId);
   const complexe = useComplexeGere(complexeId);

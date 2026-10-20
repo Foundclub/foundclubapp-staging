@@ -38,6 +38,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useApercuCreneaux,
+  useComplexeChoisi,
   useEnregistrerCreneaux,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
@@ -112,7 +113,8 @@ function ComplexeCreneaux() {
   const route = useRoute();
   /** @typedef {{ complexeId?: string, terrainAjoute?: string, terrainId?: string }} Parametres */
   const params = /** @type {Parametres | undefined} */ (route?.params);
-  const complexeId = params?.complexeId || null;
+  // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
   const terrainId = params?.terrainId || null;
   const terrainsLus = useTerrains(complexeId);
   const apercu = useApercuCreneaux();

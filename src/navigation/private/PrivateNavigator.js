@@ -1493,6 +1493,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5B-2 — E-G15, la liste des clients (serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeClients').default}
+            name={RouteNames.ComplexeClients}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen

@@ -177,8 +177,21 @@ const PLAN_OUVERT = Object.freeze({
   rates: [],
 });
 
+/**
+ * RESA-L5B-2 (20/10/2026) — la doublure de `useComplexeChoisi` (complexeQueries) : le complexe de
+ * l'adresse, tel quel (les témoins des écrans du gérant passent toujours `complexeId`).
+ * @param {string | null | undefined} complexeId - Le complexe demandé.
+ * @returns {{ complexe: any, complexeId: string | null, mes: any }} Le complexe et la lecture.
+ */
+const complexeChoisiDeTemoin = (complexeId) => ({
+  complexe: complexeId ? { documentId: complexeId } : null,
+  complexeId: complexeId || null,
+  mes: { data: [], isLoading: false },
+});
+
 module.exports = {
   COMPLEXE_FIVE,
+  complexeChoisiDeTemoin,
   lisibles,
   ongletsDeTemoin,
   parRepere,

@@ -42,6 +42,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     mockApercusAge.push(args);
     return mockApercuAge;
   },
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => mockComplexe,
   useModifierComplexe: () => ({ isPending: false, mutateAsync: mockModifier }),
 }));

@@ -329,6 +329,51 @@ export const debannir = async (complexeId, joueurId) => corps(
 );
 
 // ---------------------------------------------------------------------------------------------
+// RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4, contrat
+// `docs/RESERVATION_CONTRAT_API_L1.md`, section « Ajouté après RESA-L3 et RESA-L4 »).
+// ---------------------------------------------------------------------------------------------
+/**
+ * Les CLIENTS de SON complexe (E-G15) : Tous · Habitués (3 parties jouées ici ou plus) · Bannis,
+ * cherchés par nom, par pages de 20. Jamais un numéro ; la photo d'un mineur n'est pas rendue.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {{ onglet: string, page?: number, recherche?: string }} filtres - L'onglet, le nom, la
+ *   page.
+ * @returns {Promise<any>} `{ data: { items[{ documentId, firstname, lastname, avatar, parties,
+ *   noShows, lateCancellations, reservations, derniereReservation, habitue, banni,
+ *   fidelite{count, threshold} | null }], compteurs{ tous, habitues, bannis },
+ *   pagination{ page, pageSize, total } } }`.
+ */
+export const lireClients = async (complexeId, filtres) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients`, { params: remplis(filtres) }),
+);
+
+/**
+ * L'HISTORIQUE d'un client ICI (E-G15, la fiche) : ses parties jouées et ses 50 dernières
+ * réservations, la plus récente d'abord ; jamais venu ici : 404 COMPLEXE_CLIENT_NOT_FOUND.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} joueurId - documentId du joueur.
+ * @returns {Promise<any>} `{ data: { documentId, parties, reservations[{ documentId, startsAt,
+ *   endsAt, terrain{documentId, name}, status, noShow, lateCancellation, cancelledBy }] } }`.
+ */
+export const lireHistoriqueClient = async (complexeId, joueurId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/clients/${enc(joueurId)}/historique`),
+);
+
+/**
+ * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
+ * par le gérant (la même que celle du réserveur ; RESA-L3).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat } }` (le documentId de la conversation).
+ */
+export const ecrireAuReserveur = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/conversation`,
+    {},
+  ),
+);
+
+// ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
 // Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
 // des fermetures est chargé À L'APPEL (`./complexeChargeurs`, même raison que le client).

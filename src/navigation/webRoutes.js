@@ -329,6 +329,10 @@ const WEB_ROUTE_PATTERNS = {
   // Le formulaire d un terrain (sans identifiant : l ajouter ; avec : le modifier).
   [RouteNames.ComplexeTerrain]: '/mon-complexe/terrain/:terrainId?',
   [RouteNames.ComplexeReglages]: '/mon-complexe/reglages',
+  // RESA-L5B-2 (20/10/2026) — la communauté du complexe (serveur RESA-L4) : la liste des clients
+  // (E-G15) et la fiche d'un client (RESA-L5B-1, jusque-là sans adresse).
+  [RouteNames.ComplexeClients]: '/mon-complexe/clients',
+  [RouteNames.ComplexeClient]: '/mon-complexe/clients/:joueurId',
   // RESA-L7-1 — LE JOUEUR (RESA-L6A). La page du complexe EST sa page publique dans l annuaire,
   // par son slug (planche OR2 : « d abord une page du site » ; le cadre change selon qu on a un
   // compte, web/src/pages/seo/CadreAnnuaire.tsx). Les écrans qui demandent un compte sous

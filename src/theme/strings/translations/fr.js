@@ -7155,10 +7155,14 @@ export default {
     chiffres: {
       aVenir_one: 'réservation à venir',
       aVenir_other: 'réservations à venir',
+      // RESA-L5B-2 (20/10/2026) — la fidélité et les parties jouées (serveur RESA-L4).
+      fidelite: 'fidélité',
       horsDelai_one: 'annulation hors délai',
       horsDelai_other: 'annulations hors délai',
       nonHonorees_one: 'non honorée',
       nonHonorees_other: 'non honorées',
+      parties_one: 'partie jouée',
+      parties_other: 'parties jouées',
     },
     debannir: {
       dit: '{{nom}} pourra à nouveau réserver chez toi.',
@@ -7166,8 +7170,31 @@ export default {
     },
     fiche: {
       banni: 'Banni',
+      // RESA-L5B-2 (20/10/2026) — « Client depuis le », « Écrire », l'historique.
+      depuis: 'Client depuis le {{jour}}',
+      ecrire: 'Écrire',
       erreur: 'Impossible de charger la fiche du client.',
+      historique: 'Historique',
       jamaisVenu: 'Ce joueur n’a jamais réservé chez toi.',
+    },
+    // RESA-L5B-2 (20/10/2026) — la LISTE des clients (E-G15, serveur RESA-L4).
+    liste: {
+      bannis: 'Bannis',
+      chercher: 'Chercher un client',
+      erreur: 'Impossible de charger tes clients.',
+      fidelite: 'fidélité {{compte}}/{{seuil}}',
+      habitues: 'Habitués',
+      nonHonorees_one: '{{count}} non honorée',
+      nonHonorees_other: '{{count}} non honorées',
+      parties_one: '{{count}} partie',
+      parties_other: '{{count}} parties',
+      rechercheVide: 'Aucun client « {{recherche}} ». '
+        + 'Une réservation à l’extérieur n’a pas de fiche client.',
+      titre: 'Clients',
+      tous: 'Tous',
+      vide: 'Tes clients apparaîtront après leur première réservation.',
+      videBannis: 'Aucun client banni.',
+      videHabitues: 'Pas encore d’habitué : un client le devient à sa 3e partie jouée chez toi.',
     },
   },
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans

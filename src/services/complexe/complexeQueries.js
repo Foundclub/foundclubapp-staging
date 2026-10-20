@@ -14,12 +14,15 @@ import {
   creerTerrain,
   debannir,
   deciderDemande,
+  ecrireAuReserveur,
   enregistrerCreneaux,
   fermerTerrains,
   lireApercuFermeture,
   lireClient,
+  lireClients,
   lireComplexeGere,
   lireFermetures,
+  lireHistoriqueClient,
   lireMesComplexes,
   lirePlanning,
   lireReservationGeree,
@@ -431,6 +434,67 @@ export const useBannir = () => useGeste(({ ban, complexeId }) => bannir(complexe
 export const useDebannir = () => useGeste(
   ({ complexeId, joueurId }) => debannir(complexeId, joueurId),
 );
+
+// ── RESA-L5B-2 (20/10/2026) — la communauté du complexe, côté gérant (serveur RESA-L4) ──────
+/**
+ * La page suivante d'une lecture par pages de 20 (`{ pagination: { page, pageSize, total } }`).
+ * @param {any} derniere - La dernière page lue.
+ * @returns {number | undefined} Son numéro, ou rien à la fin.
+ */
+const pageSuivante = (derniere) => {
+  const pagination = derniere?.pagination;
+  if (!pagination) return undefined;
+  return pagination.page * pagination.pageSize < pagination.total ? pagination.page + 1 : undefined;
+};
+
+/**
+ * Les CLIENTS de SON complexe (E-G15), par pages de 20 ; la fiche s'en sert aussi pour lire la
+ * fidélité d'un client (cherché par son nom).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {{ onglet: string, recherche?: string }} filtres - L'onglet et le nom cherché.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<any>} Les pages.
+ */
+export const useClientsDuComplexe = (complexeId, filtres, { enabled = true } = {}) => (
+  useInfiniteQuery({
+    enabled: enabled && Boolean(complexeId),
+    getNextPageParam: pageSuivante,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => (await lireClients(
+      String(complexeId),
+      { ...filtres, page: pageParam },
+    ))?.data ?? null,
+    queryKey: ['complexe', complexeId, 'clients', filtres],
+    staleTime: DEMI_MINUTE,
+  })
+);
+
+/**
+ * L'historique d'un client ICI (E-G15, la fiche).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {string | null | undefined} joueurId - documentId du joueur.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ parties, reservations }`.
+ */
+export const useHistoriqueClient = (complexeId, joueurId) => useQuery({
+  enabled: Boolean(complexeId && joueurId),
+  queryFn: async () => (
+    await lireHistoriqueClient(String(complexeId), String(joueurId))
+  )?.data ?? null,
+  queryKey: ['complexe', complexeId, 'client', joueurId, 'historique'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * « Écrire » au réserveur (E-G15) : ouvre la conversation de sa réservation ; rien à relire.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })` rend `{ data: { chat } }`.
+ */
+export const useEcrireAuReserveur = () => useMutation({
+  meta: { preventToastError: true },
+  mutationFn: (/** @type {any} */ { complexeId, reservationId }) => (
+    ecrireAuReserveur(complexeId, reservationId)
+  ),
+});
 
 /**
  * L'APERÇU du modèle (`dryRun`) : jugé et résumé par le serveur, rien n'est écrit, rien ne se
