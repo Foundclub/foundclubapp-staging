@@ -3,6 +3,7 @@ import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
 import {
   blocsDeLaVille,
   blocsDuMois,
+  fermeturesDuJour,
   grilleDeLaSemaine,
   journeeParInstallation,
   listeDeLaSemaine,
@@ -129,5 +130,54 @@ describe('R17-PLANNING — le planning de toutes les installations', () => {
     const apres = prochainBloc(blocs, new Date(2026, 9, 18, 12));
     expect(apres?.title).toBe('Montrivage FC · Senior B');
     expect(prochainBloc(blocs, new Date(2026, 9, 21, 12))).toBeNull();
+  });
+
+  // 🏟️ R17-PLANNING-2 (20/10, tri du chef, point 1 A) — « complet » et les fermetures dans les
+  // cases (planche P10-planning-ordi 1 : « 18:00 – 19:30 · complet », « Fermé · désinfection »).
+  test('8 ROUGE-AVANT — « complet » : capacité atteinte AU MÊME MOMENT, même installation', () => {
+    const lectures = [
+      {
+        data: [
+          bloc(AS, '2026-10-22', '18:00', 'U15'),
+          bloc(FC, '2026-10-22', '18:00', 'Senior B'),
+          bloc(AS, '2026-10-22', '20:00', 'U17'),
+        ],
+      },
+      { data: [bloc(AS, '2026-10-22', '18:00', 'Judo')] },
+      { data: [{ ...bloc(FC, '2026-10-22', '18:00', 'U13'), pending: true }] },
+    ];
+    const blocs = blocsDeLaVille(lectures, INSTALLATIONS, null);
+    const complet = (/** @type {string} */ titre) => blocs.find((b) => b.title === titre)?.complet;
+    // Gymnase, 2 équipes à la fois : les deux de 18:00 le remplissent ; celle de 20:00, non.
+    expect(complet('AS Montrivage · U15')).toBe(true);
+    expect(complet('Montrivage FC · Senior B')).toBe(true);
+    expect(complet('AS Montrivage · U17')).toBe(false);
+    // Dojo, 1 équipe à la fois : une séance le remplit.
+    expect(complet('AS Montrivage · Judo')).toBe(true);
+    // Une demande en attente ne prend pas de place et n est jamais « complet ».
+    expect(complet('Montrivage FC · U13')).toBe(false);
+  });
+
+  test('9 ROUGE-AVANT — les fermetures d UNE installation, UN jour', () => {
+    const fermetures = [
+      {
+        endDate: '2026-10-22',
+        facility: { documentId: 'dojo' },
+        kind: 'closure',
+        startDate: '2026-10-22',
+      },
+      {
+        endDate: '2026-10-30',
+        facility: { documentId: 'gym' },
+        kind: 'closure',
+        startDate: '2026-10-26',
+      },
+    ];
+    const jeudi = new Date(2026, 9, 22, 12);
+    const mardiSuivant = new Date(2026, 9, 27, 12);
+    expect(fermeturesDuJour(fermetures, INSTALLATIONS[1], jeudi)).toHaveLength(1);
+    expect(fermeturesDuJour(fermetures, INSTALLATIONS[0], jeudi)).toHaveLength(0);
+    expect(fermeturesDuJour(fermetures, INSTALLATIONS[0], mardiSuivant)).toHaveLength(1);
+    expect(fermeturesDuJour(null, INSTALLATIONS[0], new Date(2026, 9, 27, 12))).toEqual([]);
   });
 });

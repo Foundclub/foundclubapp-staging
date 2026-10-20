@@ -1,4 +1,8 @@
-import { addDays, endOfDay, isSameDay } from 'date-fns';
+import {
+  addDays, endOfDay, format, isSameDay,
+} from 'date-fns';
+
+import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 
 import {
   assignClubPlanningColors,
@@ -36,6 +40,55 @@ const debutDe = (bloc) => {
 const parHeure = (blocs) => [...blocs].sort((gauche, droite) => debutDe(gauche) - debutDe(droite));
 
 /**
+ * Une demande en attente ne prend pas encore de place (contrat C2A §7).
+ * @param {any} bloc - Un bloc normalisé.
+ * @returns {boolean} Vrai si le bloc est en attente.
+ */
+const enAttente = (bloc) => bloc?.raw?.pending === true;
+
+/**
+ * 🏟️ R17-PLANNING-2 (20/10) — « complet » (planche P10-planning-ordi 1, « 18:00 – 19:30 ·
+ * complet ») : au moment de ce bloc, son installation a atteint sa capacité (`maxSlots`). On
+ * compte les blocs du même jour, de la même installation, qui le chevauchent, lui compris ; une
+ * demande en attente ne compte pas et n'est jamais « complet ».
+ * @param {any[]} blocs - Les blocs de la Ville, avec `installation`.
+ * @returns {any[]} Les mêmes blocs, avec `complet`.
+ */
+const marquerComplets = (blocs) => {
+  const fenetres = blocs.map((bloc) => (enAttente(bloc) ? null : getPlanningItemWindow(bloc)));
+  return blocs.map((bloc, rang) => {
+    const fenetre = fenetres[rang];
+    if (!fenetre?.startAt || !fenetre?.endAt) return { ...bloc, complet: false };
+    const capacite = Math.max(1, Number(bloc.installation?.maxSlots || 1));
+    const ensemble = blocs.filter((autre, autreRang) => {
+      const autreFenetre = fenetres[autreRang];
+      if (!autreFenetre?.startAt || !autreFenetre?.endAt) return false;
+      return autre.installation?.documentId === bloc.installation?.documentId
+        && isSameDay(autreFenetre.startAt, fenetre.startAt)
+        && autreFenetre.startAt < fenetre.endAt
+        && fenetre.startAt < autreFenetre.endAt;
+    }).length;
+    return { ...bloc, complet: ensemble >= capacite };
+  });
+};
+
+/**
+ * Les fermetures d'UNE installation qui touchent UN jour (planche : « Fermé · désinfection »).
+ * @param {any[] | null | undefined} fermetures - Les fermetures de la Ville
+ *   (`GET /collectivites/:id/closures`).
+ * @param {any} installation - L'installation.
+ * @param {Date} jour - Le jour.
+ * @returns {any[]} Ses fermetures ce jour-là.
+ */
+export const fermeturesDuJour = (fermetures, installation, jour) => {
+  const cle = format(jour, 'yyyy-MM-dd');
+  return (Array.isArray(fermetures) ? fermetures : []).filter((fermeture) => (
+    fermeture?.facility?.documentId === installation?.documentId
+    && closureCoversDay(fermeture, cle)
+  ));
+};
+
+/**
  * Tous les blocs de la Ville, chacun avec SON installation, colorés PAR CLUB (COL-019) : un club a
  * la même couleur d'une installation à l'autre (les couleurs sont posées sur l'ensemble).
  * @param {Array<{ data?: any[] } | null | undefined>} lectures - Les réponses, dans l'ordre des
@@ -49,7 +102,7 @@ export const blocsDeLaVille = (lectures, installations, clubsDeLaVille) => {
     normalizePlanningItems(lectures[index]?.data || [])
       .map((/** @type {any} */ item) => ({ ...item, installation }))
   ));
-  return assignClubPlanningColors(blocs, clubsDeLaVille);
+  return marquerComplets(assignClubPlanningColors(blocs, clubsDeLaVille));
 };
 
 /**
