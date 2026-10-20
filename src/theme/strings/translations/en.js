@@ -6063,6 +6063,13 @@ export default {
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
   // R17-EVT-1 (20/10/2026, REC17-005) — the town event: the steps, the panel, the page.
   collectiviteEvenement: {
+    affiche: {
+      ajouter: '+ Add a poster',
+      echec: 'The poster was not sent. Please try again.',
+      envoi: 'Sending the poster…',
+      retirer: 'Remove the poster',
+      tropLourde: 'This image is larger than 10 MB.',
+    },
     annulation: {
       deplacees: 'A session its club has already moved does not come back by itself.',
       garder: 'Keep the event',
@@ -6080,6 +6087,7 @@ export default {
     fermerLePanneau: 'Close the panel',
     fiche: {
       actualitePubliee: 'News posted: {{quand}}',
+      affiche: 'Poster of “{{nom}}”',
       annule: 'Cancelled',
       annuler: 'Cancel the event',
       etiquette: 'Town event',

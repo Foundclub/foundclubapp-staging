@@ -6611,6 +6611,13 @@ export default {
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
   // R17-EVT-1 (20/10/2026, REC17-005) — l'événement de la Ville : le tunnel, le panneau, la fiche.
   collectiviteEvenement: {
+    affiche: {
+      ajouter: '+ Ajouter une affiche',
+      echec: 'L’affiche n’est pas partie. Réessayez.',
+      envoi: 'Envoi de l’affiche…',
+      retirer: 'Retirer l’affiche',
+      tropLourde: 'Cette image dépasse 10 Mo.',
+    },
     annulation: {
       deplacees: 'Une séance déjà déplacée par son club ne revient pas toute seule.',
       garder: 'Garder l’événement',
@@ -6629,6 +6636,7 @@ export default {
     fermerLePanneau: 'Fermer le panneau',
     fiche: {
       actualitePubliee: 'Actualité publiée : {{quand}}',
+      affiche: 'Affiche de « {{nom}} »',
       annule: 'Annulé',
       annuler: 'Annuler l’événement',
       etiquette: 'Événement de la Ville',

@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
@@ -24,6 +24,8 @@ import {
   useEvenementDeLaVille,
   useGestesEvenementDeLaVille,
 } from '@/services/collectivite/collectiviteEvenementQueries';
+
+import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 /**
  * 🏛️ R17-EVT-1 (20/10/2026, REC17-005) — LA FICHE D'UN ÉVÉNEMENT DE LA VILLE.
@@ -148,6 +150,29 @@ function EvenementDeLaVille() {
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
       <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 32, paddingTop: 16 }}>
+        {/* R17-EVT-1-BIS (f) (20/10) : l'affiche, en tête, pour tous ceux qui la lisent. */}
+        {evenement.poster?.url ? (
+          <Image
+            accessibilityLabel={t('collectiviteEvenement.fiche.affiche', 'Affiche de « {{nom}} »', {
+              interpolation: { escapeValue: false },
+              nom: evenement.name,
+            })}
+            resizeMode="cover"
+            source={{
+              uri: resolveMediaUrl(evenement.poster.formats?.medium?.url || evenement.poster.url),
+            }}
+            style={{
+              alignSelf: 'center',
+              aspectRatio: Number(evenement.poster.width) > 0 && Number(evenement.poster.height) > 0
+                ? Number(evenement.poster.width) / Number(evenement.poster.height)
+                : 3 / 4,
+              borderRadius: 16,
+              maxWidth: 360,
+              width: '100%',
+            }}
+            testID="evenement-affiche"
+          />
+        ) : null}
         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
           <View
             style={{
