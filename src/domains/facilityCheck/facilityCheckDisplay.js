@@ -47,6 +47,14 @@ export const pickerFromIso = (iso) => (iso ? format(jour(iso), SAISIE) : '');
 export const checkLongDate = (iso) => format(jour(iso), 'd MMMM yyyy', { locale: locale() });
 
 /**
+ * « 12 mars » (accueil de la Ville : « Contrôle à refaire avant le 12 mars », planche
+ * P11-securite-ou-ca-vit porte 1).
+ * @param {string} iso - AAAA-MM-JJ.
+ * @returns {string} Le jour et le mois.
+ */
+export const checkDayMonth = (iso) => format(jour(iso), 'd MMMM', { locale: locale() });
+
+/**
  * « 15 janv. 2027 » (« Prochain : 15 janv. 2027 », planches P10-securite-ordi A et tel 1).
  * @param {string} iso - AAAA-MM-JJ.
  * @returns {string} Le jour abrege.

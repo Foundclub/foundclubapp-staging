@@ -4,6 +4,7 @@
 // est le seul juge de l etat ; l app le dit en mots : « À jour », « Dans 3 mois », « Avant le 12/03 »,
 // « En retard ». Elle propose le prochain controle (un an apres, ou le meme ecart que la fois precedente).
 import {
+  checkDayMonth,
   checkLongDate,
   checkPill,
   checkShortDate,
@@ -72,5 +73,6 @@ describe('R17CTRL — affichage du carnet des contrôles', () => {
     expect(pickerFromIso('2026-03-12')).toBe('12/03/2026');
     expect(checkLongDate('2027-03-12')).toBe('12 mars 2027');
     expect(checkShortDate('2027-01-15')).toBe('15 janv. 2027');
+    expect(checkDayMonth('2027-03-12')).toBe('12 mars');
   });
 });
