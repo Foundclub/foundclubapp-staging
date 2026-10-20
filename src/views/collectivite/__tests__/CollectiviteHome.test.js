@@ -588,16 +588,19 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
       .toHaveBeenLastCalledWith('CollectiviteInviteClub', { collectiviteId: 'ville-montrivage' });
   });
 
-  it('ordinateur : les sept actions sur UNE rangée, l icône à gauche du titre', async () => {
+  // R17-EVT-1-BIS (i) (20/10, tri du chef) : avec la 7e action, une rangée unique repliait les
+  // libellés sur 3 lignes à 1 360 px. DEUX rangées, 4 puis 3 : chaque carte part d un quart
+  // (22 % + 3 espaces de 12 px), les 3 dernières s élargissent. ROUGE avant (flexBasis 0).
+  it('🔴 ordinateur : sept actions sur DEUX rangées (4 puis 3), l icône à gauche', async () => {
     mockLargeur = 1280;
     const arbre = await monter();
     const cartes = cartesDAction(arbre);
     expect(cartes).toHaveLength(7);
     cartes.forEach((/** @type {any} */ carte) => {
       const style = StyleSheet.flatten(carte.props.style);
-      // Six parts égales : aucune ne passe à la ligne, aucune largeur plafonnée.
+      // Un quart chacune : 4 tiennent sur la rangée (4 × 22 % + 36 px), la 5e passe à la ligne.
       expect(style).toEqual(expect.objectContaining({
-        flexBasis: 0, flexDirection: 'row', flexGrow: 1,
+        flexBasis: '22%', flexDirection: 'row', flexGrow: 1,
       }));
       expect(style.maxWidth).toBeUndefined();
     });
