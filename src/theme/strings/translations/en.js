@@ -1370,6 +1370,7 @@ export default {
   },
   adminStack: {
     titles: {
+      assistance: 'Assistance',
       claimDetail: 'Request details',
       claims: 'Claims',
       clubDetail: 'Club details',
@@ -2038,6 +2039,49 @@ export default {
         description: 'Unable to find the coach to assign. Go back to the request and start the assignment again.',
         title: 'Coach not found',
       },
+    },
+  },
+  // MSG-SUPPORT (20/10/2026) — the « Assistance FoundClub » conversation (every user) and its
+  // shared inbox in the console (super-admins).
+  assistance: {
+    console: {
+      boite: {
+        chargement: 'Loading the users’ messages.',
+        compteurs: '{{nonLus}} unread · {{enAttente}} awaiting a reply',
+        enAttente: 'Awaiting a reply',
+        erreur: 'The support inbox could not be loaded.',
+        nous: 'Assistance',
+        ouvrir: 'Opens the conversation to reply',
+        sousTitre: 'Shared inbox: every reply is signed « Assistance FoundClub ».',
+        vide: 'No conversation yet.',
+      },
+      compteSupprime: 'Deleted account',
+      meta: 'Messages',
+      nonLus: 'unread',
+      placeholder: 'Reply as Assistance FoundClub',
+      sousTitre: 'Shared inbox · your reply is signed Assistance FoundClub',
+      titre: 'Assistance',
+      tuileEnAttente_one: '{{count}} awaiting a reply',
+      tuileEnAttente_other: '{{count}} awaiting a reply',
+      tuileRien: 'Nothing waiting',
+    },
+    ligne: {
+      erreur: 'Support could not be opened. Try again in a moment.',
+      erreurVous: 'Support could not be opened. Please try again in a moment.',
+      indice: 'Opens your conversation with the FoundClub team',
+      invitation: 'A question? Write to us.',
+      invitationVous: 'A question? Write to us.',
+    },
+    placeholder: 'Write your message to the team',
+    placeholderVous: 'Write your message to the team',
+    sousTitre: 'The FoundClub team replies here',
+    sousTitreVous: 'The FoundClub team replies here',
+    titre: 'Assistance FoundClub',
+    vide: {
+      texte: 'Only the FoundClub team reads this. A notification tells you when we reply.',
+      texteVous: 'Only the FoundClub team reads this. A notification tells you when we reply.',
+      titre: 'A question? Write to us.',
+      titreVous: 'A question? Write to us.',
     },
   },
   authWeb: {
@@ -16841,6 +16885,9 @@ export default {
       title: 'My clubs',
     },
     contactSupport: {
+      ecrire: 'Write to support',
+      email: 'Send an email',
+      reessayer: 'Try again',
       unavailableBody: 'No email app could be opened. Write to us at contact@foundclubpro.com.',
       unavailableTitle: "Can't open email",
     },

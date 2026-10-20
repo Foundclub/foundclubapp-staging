@@ -13,6 +13,7 @@ import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
+import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
@@ -98,9 +99,11 @@ import {
   BoutonMembresDuFil,
   EcussonDuFil,
   FilDeLaVilleQuitte,
-  useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+// MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
+import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
+import LigneAssistance from '@/views/chat/LigneAssistance';
 // MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
 // differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
@@ -805,6 +808,7 @@ function ColonneDesConversations({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: relireLaListe,
   } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
@@ -830,12 +834,15 @@ function ColonneDesConversations({
       : [];
     return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
   }, [listeDesFils, meId, mesBlocages]);
+  // 🛟 MSG-SUPPORT (20/10) — l'assistance est épinglée à part, en tête (comme au
+  // téléphone) ; elle quitte donc les lignes ordinaires.
+  const { autres: filsSansAssistance, filDAssistance } = separerLeFilDAssistance(filsTries);
   const monClubId = userData?.club?.documentId || null;
   // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
   const mineur = estMineurConnu(userData);
-  const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
+  const actifs = filsSansAssistance.filter((fil) => !estArchivePourMoi(fil, meId));
   const archivees = filsDeLaMessagerie(
-    filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
+    filsSansAssistance.filter((fil) => estArchivePourMoi(fil, meId)),
     { mineur, monClubId },
   );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
@@ -1131,6 +1138,15 @@ function ColonneDesConversations({
             </span>
           </button>
         ) : null}
+        {enModeArchivees ? null : (
+          <LigneAssistance
+            fil={filDAssistance}
+            meId={meId}
+            navigation={navigation}
+            onFilCree={() => { relireLaListe?.(); }}
+            style={{ paddingHorizontal: 14 }}
+          />
+        )}
         {fils.length === 0 && filsTries.length > 0 ? (
           <p
             style={{
@@ -1877,11 +1893,13 @@ function Conversation({ navigation, route }) {
   // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) : le
   // titre, la ligne sous le titre, qui écrit et pour quel club, la voix demandée au serveur, et
   // « Tu ne fais plus partie de ce canal » (voir Conversation.js). Ailleurs, rien ne change.
-  const filDeLaVille = useFilDeLaVille({
+  // 🛟 MSG-SUPPORT (20/10) — et l'assistance (views/chat/FilDAssistance.js).
+  const filDeLaVille = useHabillageDuFil({
     chatData,
     chatId,
     espaceVille: route?.params?.espace === 'ville',
     messagesError,
+    messagesPages,
     navigation,
     routeChatType: route?.params?.chatType || null,
   });
@@ -3864,7 +3882,9 @@ function Conversation({ navigation, route }) {
     }
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
     const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
+    // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite.
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
+      || Boolean(filDeLaVille.estDeMonCote?.(message))
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
     const maVoix = isMine && filDeLaVille.estFil
       ? String(message?.senderSignature?.nom || '').trim()
@@ -5130,7 +5150,16 @@ function Conversation({ navigation, route }) {
                 ) : null}
                 {filVideHorsVille ? (
                   <div style={{ color: mutedTextColor }}>
-                    {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                    {filDeLaVille.videTitre ? (
+                      <>
+                        <strong
+                          style={{ color: PALETTE_DU_FIL.texte, display: 'block', marginBottom: 6 }}
+                        >
+                          {filDeLaVille.videTitre}
+                        </strong>
+                        {filDeLaVille.videTexte}
+                      </>
+                    ) : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
                   </div>
                 ) : null}
                 <style>{REACTION_HOVER_STYLE}</style>
