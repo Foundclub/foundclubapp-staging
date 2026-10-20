@@ -14,8 +14,6 @@ import {
   NOM_MAX,
   quandLabel,
   quiLeVoitLabel,
-  seancesToucheesTitre,
-  seanceToucheeLabel,
   verifierEvenement,
   versCorpsDeLApi,
 } from '@/domains/collectivite/evenementDeLaVille';
@@ -28,6 +26,7 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
 import { useApercuEvenement } from '@/services/collectivite/collectiviteEvenementQueries';
@@ -355,41 +354,16 @@ function EvenementDeLaVilleForm({
     </View>
   );
 
-  const encadreTouchees = touchees && Number(touchees.sessionsCount) > 0 ? (
-    <View
-      accessibilityRole="summary"
-      style={{
-        backgroundColor: withAlpha(Colors.warning500, 0.12),
-        borderColor: withAlpha(Colors.warning500, 0.5),
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 4,
-        padding: 12,
-      }}
-      testID="evenement-seances-touchees"
-    >
-      <Text style={[Fonts.p2Bold, { color: Colors.warning400 }]}>
-        {seancesToucheesTitre(t, touchees.sessionsCount)}
-      </Text>
-      {(Array.isArray(touchees.sessions) ? touchees.sessions : [])
-        .slice(0, 5)
-        .map((/** @type {any} */ seance) => {
-          const cle = [seance?.club?.documentId, seance?.team?.name, seance?.date]
-            .concat(seance?.startTime).join('-');
-          return (
-            <Text key={cle} style={[Fonts.p3, Fonts.neutral100]}>
-              {seanceToucheeLabel(t, seance)}
-            </Text>
-          );
-        })}
-      <Text style={[Fonts.p3, Fonts.neutral200]}>
-        {t(
-          'collectiviteEvenement.touchees.explication',
-          'Son club la verra « Bloqué par la Ville · à déplacer » et pourra la déplacer.',
-        )}
-      </Text>
-    </View>
-  ) : null;
+  // R17-EVT-1-BIS (h) : l'encart est partagé avec la fiche de la Ville (SeancesTouchees).
+  const encadreTouchees = (
+    <SeancesTouchees
+      explication={t(
+        'collectiviteEvenement.touchees.explication',
+        'Son club la verra « Bloqué par la Ville · à déplacer » et pourra la déplacer.',
+      )}
+      touchees={touchees}
+    />
+  );
 
   const lignesPlace = (
     <View

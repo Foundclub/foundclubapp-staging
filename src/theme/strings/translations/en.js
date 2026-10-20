@@ -6079,12 +6079,16 @@ export default {
     enregistrer: 'Save',
     fermerLePanneau: 'Close the panel',
     fiche: {
+      actualitePubliee: 'News posted: {{quand}}',
       annule: 'Cancelled',
       annuler: 'Cancel the event',
       etiquette: 'Town event',
       introuvable: 'This event no longer exists, or it is not shown to you.',
       modifier: 'Edit',
       titre: 'Town event',
+      toucheesExplication_one: 'Its club sees it “Blocked by the town · to move” and can move it.',
+      toucheesExplication_other:
+        'Their clubs see them “Blocked by the town · to move” and can move them.',
       voirActualite: 'See the news',
     },
     horsVille: 'This space is for the town.',

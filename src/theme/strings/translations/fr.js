@@ -6628,12 +6628,17 @@ export default {
     enregistrer: 'Enregistrer',
     fermerLePanneau: 'Fermer le panneau',
     fiche: {
+      actualitePubliee: 'Actualité publiée : {{quand}}',
       annule: 'Annulé',
       annuler: 'Annuler l’événement',
       etiquette: 'Événement de la Ville',
       introuvable: 'Cet événement n’existe plus, ou il ne vous est pas montré.',
       modifier: 'Modifier',
       titre: 'Événement de la Ville',
+      toucheesExplication_one:
+        'Son club la voit « Bloqué par la Ville · à déplacer » et peut la déplacer.',
+      toucheesExplication_other:
+        'Leurs clubs les voient « Bloqué par la Ville · à déplacer » et peuvent les déplacer.',
       voirActualite: 'Voir l’actualité',
     },
     horsVille: 'Cet espace est réservé à la Ville.',

@@ -5,6 +5,7 @@ import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
 import { lieuLabel, quandLabel, quiLeVoitLabel } from '@/domains/collectivite/evenementDeLaVille';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -13,11 +14,13 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  useApercuEvenement,
   useEvenementDeLaVille,
   useGestesEvenementDeLaVille,
 } from '@/services/collectivite/collectiviteEvenementQueries';
@@ -50,6 +53,17 @@ function EvenementDeLaVille() {
   const collectiviteId = evenement?.collectivite?.documentId || null;
   const { annuler } = useGestesEvenementDeLaVille(collectiviteId);
   const [confirmer, setConfirmer] = useState(false);
+  // R17-EVT-1-BIS (h) (20/10) : les séances que son blocage touche ENCORE (lues comme avant de
+  // publier ; celles que leur club a déplacées en sortent). La Ville seule, blocage actif.
+  const blocageActif = deLaVille && evenement?.closure?.status === 'active';
+  const touchees = useApercuEvenement(blocageActif ? collectiviteId : null, {
+    endDate: evenement?.endDate,
+    endTime: evenement?.endTime,
+    facilityId: evenement?.facility?.documentId,
+    startDate: evenement?.startDate,
+    startTime: evenement?.startTime,
+    takesPlace: evenement?.takesPlace,
+  });
 
   if (lecture.isLoading) {
     return (
@@ -192,6 +206,22 @@ function EvenementDeLaVille() {
             })
             : null}
         </View>
+        {deLaVille && evenement.actualite?.publishedAt ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-actualite-date">
+            {t('collectiviteEvenement.fiche.actualitePubliee', 'Actualité publiée : {{quand}}', {
+              interpolation: { escapeValue: false },
+              quand: publicationDateLabel(t, evenement.actualite.publishedAt),
+            })}
+          </Text>
+        ) : null}
+        {blocageActif && !annule ? (
+          <SeancesTouchees
+            explication={t('collectiviteEvenement.fiche.toucheesExplication', {
+              count: Number(touchees.data?.sessionsCount) || 0,
+            })}
+            touchees={touchees.data}
+          />
+        ) : null}
         {evenement.description ? (
           <Text style={[Fonts.p2, Fonts.neutral100]}>{evenement.description}</Text>
         ) : null}
