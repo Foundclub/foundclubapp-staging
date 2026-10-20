@@ -221,3 +221,10 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// R17-PLANNING (20/10) : la section « Planning de toutes les installations » a son propre témoin
+// (PlanningDesInstallations.R17PLAN.test.js) ; ici elle est doublée.
+jest.mock(
+  '@/components/organisms/planning/PlanningDesInstallations',
+  () => function PlanningDesInstallationsDouble() { return null; },
+);
