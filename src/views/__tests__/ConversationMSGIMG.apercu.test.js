@@ -530,3 +530,121 @@ describe('MSGIMG-1 — la croix se voit sur n importe quelle image', () => {
     expect(contrasteSurImage(glyphe.props.color, backgroundColor, 0)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MSGIMG-2 — GLISSER VERS LE BAS POUR FERMER. Le geste est joue sur la doublure partagee
+// de Gesture Handler (`animationDouble`), qui retient les rappels du geste : on les
+// appelle dans l'ordre ou le telephone les appellerait.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Le geste de glissement de l'apercu, et les deux calques qu'il fait bouger.
+ * @param {any} ecran L'arbre de l'ecran.
+ * @returns {{ geste: any, image: any, fond: any }} Le geste et les calques.
+ */
+const gesteDeLApercu = (ecran) => {
+  const detecteurs = ecran.root.findAll((/** @type {any} */ noeud) => (
+    noeud.props?.testID === 'gesture-detector' && noeud.props?.gesture?.type === 'Pan'
+    && noeud.findAll((/** @type {any} */ n) => (
+      n.props?.source?.uri === ADRESSE_DE_LA_PHOTO
+    )).length > 0
+  ));
+  const calque = (/** @type {string} */ testID) => ecran.root.findAll(
+    (/** @type {any} */ noeud) => noeud.props?.testID === testID,
+  )[0];
+  return {
+    fond: calque('MSGIMG-fond'),
+    geste: detecteurs[0]?.props?.gesture,
+    image: calque('MSGIMG-image-glissante'),
+  };
+};
+
+/**
+ * Le deplacement vertical d'un calque anime.
+ * @param {any} calque Le calque.
+ * @returns {number} Le deplacement (0 s'il n'en a pas).
+ */
+const deplacementDe = (calque) => {
+  const transformation = styleDe(calque).transform || [];
+  const pas = transformation.find((/** @type {any} */ t) => 'translateY' in t);
+  return pas ? pas.translateY : 0;
+};
+
+/**
+ * Joue un glissement complet : debut, deplacement, lacher.
+ * @param {any} geste Le geste enregistre par la doublure.
+ * @param {number} glissement Le deplacement vertical du doigt (positif = vers le bas).
+ * @param {number} vitesse La vitesse au lacher (px/s).
+ * @param {() => void} [pendant] Ce qu'on verifie doigt pose, avant de lacher.
+ */
+const glisser = async (geste, glissement, vitesse, pendant) => {
+  act(() => {
+    geste.rappels.onStart?.({ translationY: 0, velocityY: 0 });
+    geste.rappels.onUpdate({ translationY: glissement, velocityY: vitesse });
+  });
+  if (pendant) pendant();
+  await act(async () => {
+    geste.rappels.onEnd({ translationY: glissement, velocityY: vitesse });
+  });
+};
+
+describe('MSGIMG-2 — glisser l image vers le bas la referme', () => {
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = TETE_A_TETE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('MSGIMG-2a — l image suit le doigt, le fond pali, puis elle se ferme', async () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+    const { fond, geste, image } = gesteDeLApercu(ecran);
+    expect(geste).toBeTruthy();
+    expect(styleDe(fond).opacity).toBe(1);
+
+    await glisser(geste, 320, 300, () => {
+      expect(deplacementDe(image)).toBe(320);
+      expect(styleDe(fond).opacity).toBeLessThan(1);
+    });
+
+    expect(imagesPleinEcran(ecran)).toHaveLength(0);
+  });
+
+  test('MSGIMG-2b — un petit glissement lent ne ferme pas : l image revient', async () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+    const { geste, image } = gesteDeLApercu(ecran);
+
+    await glisser(geste, 60, 100);
+
+    expect(imagesPleinEcran(ecran)).toHaveLength(1);
+    expect(deplacementDe(image)).toBe(0);
+  });
+
+  test('MSGIMG-2c — un coup sec vers le bas ferme meme court', async () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+    const { geste } = gesteDeLApercu(ecran);
+
+    await glisser(geste, 70, 1600);
+
+    expect(imagesPleinEcran(ecran)).toHaveLength(0);
+  });
+
+  test('MSGIMG-2d — vers le HAUT, rien ne bouge et rien ne se ferme', async () => {
+    const { ecran, gifted } = monterLaConversation();
+    ouvrirLaPhoto(gifted);
+    const { geste, image } = gesteDeLApercu(ecran);
+
+    await glisser(geste, -300, -2000, () => {
+      expect(deplacementDe(image)).toBe(0);
+    });
+
+    expect(imagesPleinEcran(ecran)).toHaveLength(1);
+  });
+});
