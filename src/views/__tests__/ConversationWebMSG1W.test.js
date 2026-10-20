@@ -659,3 +659,37 @@ describe('IPH09 — ordre de la colonne Messages du site', () => {
     expect(lignes()).toEqual(['MSG1W-ligne-archive']);
   });
 });
+
+// RESA-L6B-2 (20/10/2026) — E-P12, LE CANAL D'UN COMPLEXE SUR LE SITE (planche EP12 ; serveur
+// RESA-L4) : comme sur le téléphone, la ligne sous le titre dit le NOMBRE de membres, et le panneau
+// du groupe ne montre jamais la liste à un membre ; « Quitter le canal » et sa confirmation (Q5).
+describe('RESA-L6B-2 — E-P12, le canal d’un complexe sur le site', () => {
+  test('« Canal du complexe · 214 membres », pas de liste, « Quitter le canal »', async () => {
+    mockFil = {
+      documentId: CHAT_ID,
+      groupAdmins: [BRUNO],
+      groupName: 'Le Five de Montrivage',
+      groupPermissions: { membersCanSendMessages: false },
+      name: 'Le Five de Montrivage',
+      participants: [MOI, BRUNO],
+      participantsCount: 214,
+      type: 'group',
+    };
+    const { arbre } = await monter();
+    expect(texteDe(arbre.root)).toContain('Canal du complexe · 214 membres');
+    expect(texteDe(arbre.root)).not.toContain('Bruno, Vous');
+    const cliquer = async (/** @type {any} */ noeud) => {
+      await act(async () => { await noeud.props.onClick(); });
+    };
+    const boutonDeTexte = (/** @type {string} */ texte) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && texteDe(n) === texte,
+    )[0];
+    await cliquer(parTestId(arbre, 'MSG1W-titre-du-fil')[0]);
+    expect(arbre.root.findAll((/** @type {any} */ n) => (
+      String(n.props?.['data-testid'] || '').startsWith('MSG1W-membre-')
+    ))).toHaveLength(0);
+    await cliquer(boutonDeTexte('Quitter le canal'));
+    expect(texteDe(arbre.root)).toContain('Quitter le canal « Le Five de Montrivage » ? Tu ne '
+      + 'recevras plus ses nouvelles. Tu y reviendras en le remettant en favori.');
+  });
+});

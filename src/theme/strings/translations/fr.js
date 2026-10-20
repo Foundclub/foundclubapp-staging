@@ -8288,6 +8288,14 @@ export default {
       nextDay: '[Demain]',
       sameDay: "[Aujourd'hui]",
     },
+    canalDuComplexe: {
+      quitter: 'Quitter le canal',
+      quitterConfirmation: 'Quitter le canal « {{name}} » ? Tu ne recevras plus ses nouvelles. Tu '
+        + 'y reviendras en le remettant en favori.',
+      sousTitre_one: 'Canal du complexe · {{count}} membre',
+      sousTitre_other: 'Canal du complexe · {{count}} membres',
+      vide: 'Le complexe n’a encore rien publié.',
+    },
     // CONVAVERT (C4) — l'avertissement permanent en tête de fil. Il ne
     // s'affiche QUE sur un fil rattaché à un club (fil de club, fil d'équipe) :
     // ailleurs, aucun dirigeant ne peut lire, et la phrase serait fausse.

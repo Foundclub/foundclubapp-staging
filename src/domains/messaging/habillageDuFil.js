@@ -130,15 +130,36 @@ export const placeDansLeGroupe = ({ courant, precedent, suivant }) => ({
 export const estUnTeteATete = (typeDuFil) => typeDuFil === 'whisper';
 
 /**
+ * RESA-L6B-2 (20/10/2026) — LE CANAL D'UN COMPLEXE (serveur RESA-L4, `masquerMembresDuCanal`) : un
+ * fil de groupe dont le serveur joint le NOMBRE reel de membres (`participantsCount`) ; a un membre
+ * qui n'est pas gerant, il ne joint que lui-meme et les gerants (les membres ne se voient pas entre
+ * eux, plan E-P12). Temoin : `habillageDuFil.RESAL6B2.canal.test.js`.
+ * @param {any} chat - Le fil.
+ * @returns {boolean} Vrai pour le canal d'un complexe.
+ */
+export const estUnCanalDeComplexe = (chat) => chat?.type === 'group'
+  && chat?.participantsCount !== undefined
+  && chat?.participantsCount !== null
+  && Number.isFinite(Number(chat.participantsCount));
+
+/**
  * MSG1A (§3.1) — LA LIGNE SOUS LE TITRE D'UN FIL A PLUSIEURS : les prenoms des autres membres,
  * puis « Vous » (regle du telephone, Conversation.js). Rien pour un tete-a-tete, ni quand le
  * serveur ne joint pas les membres (fil d'equipe, de club : MSG1/N4) — le site en tirait
  * « 0 participants » (SMF, T20).
- * @param {{ chat: any, meId?: string | null, vous: string }} params - Le fil, moi, « Vous ».
+ * RESA-L6B-2 : le canal d'un complexe dit son NOMBRE de membres (`canal`, la phrase), jamais les
+ * prenoms de la liste reduite que le serveur joint a un membre (plan E-P12).
+ * @param {{ canal?: (nombre: number) => string, chat: any, meId?: string | null,
+ *   vous: string }} params - Le fil, moi, « Vous », la phrase du canal.
  * @returns {string} La ligne, ou '' s'il n'y a rien a dire.
  */
-export const sousTitreDesMembres = ({ chat, meId = null, vous }) => {
+export const sousTitreDesMembres = ({
+  canal = undefined, chat, meId = null, vous,
+}) => {
   if (!chat || estUnTeteATete(chat?.type)) return '';
+  if (typeof canal === 'function' && estUnCanalDeComplexe(chat)) {
+    return canal(Number(chat.participantsCount));
+  }
   const prenoms = (Array.isArray(chat?.participants) ? chat.participants : [])
     .filter((/** @type {any} */ membre) => (
       String(membre?.documentId || '') !== String(meId || '')

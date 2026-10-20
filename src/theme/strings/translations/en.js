@@ -7802,6 +7802,14 @@ export default {
       nextDay: '[Tomorrow]',
       sameDay: '[Today]',
     },
+    canalDuComplexe: {
+      quitter: 'Leave the channel',
+      quitterConfirmation: 'Leave the “{{name}}” channel? You won\'t get its news anymore. '
+        + 'You\'ll come back by adding it to your favourites again.',
+      sousTitre_one: 'Venue channel · {{count}} member',
+      sousTitre_other: 'Venue channel · {{count}} members',
+      vide: 'The venue hasn\'t posted anything yet.',
+    },
     clubReadNotice: "This club's conversations can be viewed by its club manager.",
     connectionUnavailable: 'Messaging connection unavailable. Try again in a few seconds.',
     connectionUnavailableReconnect: 'Messaging connection unavailable. Try again once the conversation reconnects.',
