@@ -130,7 +130,10 @@ function FacilityCheckPanel({
               {ligne.document?.url ? (
                 <TouchableOpacity
                   accessibilityRole="link"
-                  onPress={() => Linking.openURL(getImageUrl(ligne.document.url))}
+                  onPress={() => {
+                    const adresse = getImageUrl(ligne.document.url);
+                    if (adresse) Linking.openURL(adresse);
+                  }}
                   style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
                   testID={`controle-rapport-${ligne.documentId}`}
                 >
