@@ -106,7 +106,9 @@ function GrilleDesHeures({
           colonnes={colonnes}
           desactivee={passee((h * 60) + 55)}
           key={`h${h}`}
-          libelle={t('timePickerInput.heure', '{{heure}} h', { heure: deuxChiffres(h) })}
+          libelle={t('timePickerInput.heure', '{{heure}} h', {
+            heure: deuxChiffres(h), interpolation: { escapeValue: false },
+          })}
           onPress={() => setHeure(h)}
           suggeree={heureSaisie === null && h === heureDe(suggestion)}
         />
@@ -135,7 +137,9 @@ function GrilleDesHeures({
       >
         <SvgIcon color={Colors.primary200} height={16} name="arrow-left" width={16} />
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {t('timePickerInput.heure', '{{heure}} h', { heure: deuxChiffres(heure) })}
+          {t('timePickerInput.heure', '{{heure}} h', {
+            heure: deuxChiffres(heure), interpolation: { escapeValue: false },
+          })}
         </Text>
       </TouchableOpacity>
       {grille(MINUTES.map((m) => {
