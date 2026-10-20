@@ -34,6 +34,10 @@ function useAssistanceTile() {
     return tuile({ accessibilityLabel: indisponible, detail: indisponible, value: '—' });
   }
   const nonLus = String(Number(boite.nonLusTotal) || 0);
+  const libelleNonLus = t('assistance.console.nonLus', {
+    defaultValue: 'Non lus : {{nombre}}',
+    nombre: nonLus,
+  });
   const enAttente = Number(boite.enAttenteTotal) || 0;
   if (enAttente > 0) {
     const detail = t('assistance.console.tuileEnAttente', {
@@ -41,7 +45,7 @@ function useAssistanceTile() {
       defaultValue: '{{count}} en attente de réponse',
     });
     return tuile({
-      accessibilityLabel: `${nonLus} ${t('assistance.console.nonLus', 'non lus')}, ${detail}`,
+      accessibilityLabel: `${libelleNonLus}, ${detail}`,
       color: Colors.warning500,
       detail,
       detailColor: Colors.warning500,
@@ -50,7 +54,7 @@ function useAssistanceTile() {
   }
   const rien = t('assistance.console.tuileRien', 'Rien en attente');
   return tuile({
-    accessibilityLabel: `${nonLus} ${t('assistance.console.nonLus', 'non lus')}, ${rien}`,
+    accessibilityLabel: `${libelleNonLus}, ${rien}`,
     detail: rien,
     value: nonLus,
   });
