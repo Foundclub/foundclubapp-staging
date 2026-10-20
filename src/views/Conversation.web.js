@@ -1525,12 +1525,12 @@ function FenetreDuSite({
  * MSG1W — UNE CONFIRMATION DU SITE (SPECS §4 : boite de 300, titre centre, « Annuler » au contour,
  * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne,
  * quitter un groupe (la question seule, sans texte, comme le telephone).
- * @param {{ id: string, libelleAction: string, onAnnuler: () => void, onConfirmer: () => void,
- *   texte?: string, titre: string }} props - Les mots et les deux gestes.
+ * @param {{ id: string, libelleAction: string, libelleAnnuler?: string, onAnnuler: () => void,
+ *   onConfirmer: () => void, texte?: string, titre: string }} props - Les mots et les deux gestes.
  * @returns {import('react').ReactElement} La confirmation.
  */
 function ConfirmationDuSite({
-  id, libelleAction, onAnnuler, onConfirmer, texte, titre,
+  id, libelleAction, libelleAnnuler, onAnnuler, onConfirmer, texte, titre,
 }) {
   return (
     <div
@@ -1585,7 +1585,7 @@ function ConfirmationDuSite({
           }}
         >
           <button onClick={onAnnuler} style={STYLE_BOUTON_CONTOUR} type="button">
-            {i18next.t('common.actions.cancel', 'Annuler')}
+            {libelleAnnuler || i18next.t('common.actions.cancel', 'Annuler')}
           </button>
           <button
             onClick={onConfirmer}
@@ -6182,6 +6182,10 @@ function Conversation({ navigation, route }) {
         <ConfirmationDuSite
           id="msg1w-depart"
           libelleAction={t('conversation.groupInfo.leaveConfirmAction', 'Quitter')}
+          // RESA-L6B-2 — E-P12 : « Rester » / « Quitter » (planche EP12 état 3).
+          libelleAnnuler={canalVuDUnMembre
+            ? t('conversation.canalDuComplexe.rester', 'Rester')
+            : undefined}
           onAnnuler={() => setDepartAConfirmer(false)}
           onConfirmer={quitterLeGroupe}
           titre={canalVuDUnMembre

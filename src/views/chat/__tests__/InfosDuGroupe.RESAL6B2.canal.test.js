@@ -112,7 +112,9 @@ it('« Quitter le canal », puis sa confirmation (Q5), puis le départ', () => {
     'Quitter le canal',
     'Quitter le canal « Le Five de Montrivage » ? Tu ne recevras plus ses nouvelles. Tu y '
       + 'reviendras en le remettant en favori.',
+    'Rester',
   ]));
+  expect(textes(arbre)).not.toContain('Annuler');
   act(() => { parId(arbre, 'infos-du-groupe-confirmer-depart').props.onPress(); });
   expect(onQuitter).toHaveBeenCalled();
 });

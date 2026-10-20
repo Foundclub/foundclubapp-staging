@@ -7806,6 +7806,7 @@ export default {
       quitter: 'Leave the channel',
       quitterConfirmation: 'Leave the “{{name}}” channel? You won\'t get its news anymore. '
         + 'You\'ll come back by adding it to your favourites again.',
+      rester: 'Stay',
       sousTitre_one: 'Venue channel · {{count}} member',
       sousTitre_other: 'Venue channel · {{count}} members',
       vide: 'The venue hasn\'t posted anything yet.',

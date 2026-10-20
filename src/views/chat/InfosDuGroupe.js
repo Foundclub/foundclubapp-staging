@@ -614,7 +614,10 @@ function InfosDuGroupe({
                   ]}
                 >
                   <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
-                    {t('common.cancel', 'Annuler')}
+                    {/* RESA-L6B-2 — E-P12 : « Rester » / « Quitter » (planche EP12 état 3). */}
+                    {canalVuDUnMembre
+                      ? t('conversation.canalDuComplexe.rester', 'Rester')
+                      : t('common.cancel', 'Annuler')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity

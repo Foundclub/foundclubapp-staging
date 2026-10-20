@@ -691,6 +691,8 @@ describe('RESA-L6B-2 — E-P12, le canal d’un complexe sur le site', () => {
     await cliquer(boutonDeTexte('Quitter le canal'));
     expect(texteDe(arbre.root)).toContain('Quitter le canal « Le Five de Montrivage » ? Tu ne '
       + 'recevras plus ses nouvelles. Tu y reviendras en le remettant en favori.');
+    // Planche EP12 état 3 : « Rester » / « Quitter ».
+    expect(boutonDeTexte('Rester')).toBeDefined();
   });
 
   // Seuls ses gérants (administrateurs du fil) y publient : le serveur ferme l'envoi aux membres

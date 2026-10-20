@@ -8292,6 +8292,7 @@ export default {
       quitter: 'Quitter le canal',
       quitterConfirmation: 'Quitter le canal « {{name}} » ? Tu ne recevras plus ses nouvelles. Tu '
         + 'y reviendras en le remettant en favori.',
+      rester: 'Rester',
       sousTitre_one: 'Canal du complexe · {{count}} membre',
       sousTitre_other: 'Canal du complexe · {{count}} membres',
       vide: 'Le complexe n’a encore rien publié.',
