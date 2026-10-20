@@ -18281,6 +18281,7 @@ export default {
       nombre_other: '{{count}} venues',
       plusDisponible: '{{nom}} is no longer available',
       quitterCanal: 'Also leave the channel',
+      raccourci: 'My favourites',
       resterasDansLeCanal: 'You\'ll stay in the channel.',
       retirer: 'Remove',
       retirerQuestion: 'Remove from favourites?',

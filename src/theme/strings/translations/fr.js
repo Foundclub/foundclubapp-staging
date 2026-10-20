@@ -18900,6 +18900,7 @@ export default {
       nombre_other: '{{count}} complexes',
       plusDisponible: '{{nom}} n’est plus disponible',
       quitterCanal: 'Quitter aussi le canal',
+      raccourci: 'Mes favoris',
       resterasDansLeCanal: 'Tu resteras dans le canal.',
       retirer: 'Retirer',
       retirerQuestion: 'Retirer des favoris ?',
