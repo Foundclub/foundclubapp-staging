@@ -30,6 +30,10 @@ import LieuSurCarte from './LieuSurCarte';
  * @property {string} [type]
  */
 
+// ADRESSE-EN-PREMIER — au-delà, le texte tapé est tronqué dans la ligne « Ajouter « … » » (deux
+// lignes sur un téléphone) ; le lecteur d'écran et la carte le reçoivent entier.
+const TITRE_MAX = 60;
+
 const extractBoundingBox = (/** @type {any} */ place) => {
   const rawBbox = place?.bbox || place?.properties?.bbox || place?.properties?.boundingbox;
   if (Array.isArray(rawBbox) && rawBbox.length >= 4) {
@@ -127,6 +131,8 @@ const placeToOption = (place) => {
  *   puis sous le champ) ; le texte tapé survit à la fermeture de la liste jusqu'à ce que la carte
  *   soit proposée, et devient le nom du lieu ; une adresse enregistrée SANS point le dit. Jamais
  *   de texte libre : un lieu public sans point disparaît de la recherche par distance.
+ *   ADRESSE-EN-PREMIER (20/10) — la porte vers la carte est la 1re ligne de la liste,
+ *   « Ajouter « <texte tapé> » », dès 3 caractères ; plus de lien sous les propositions.
  * @param {string} [props.villeConnue] - R17-ADRESSE : la ville de l'objet (club, Ville, équipe),
  *   où la carte s'ouvre quand le texte tapé ne nomme aucune commune.
  * @param {boolean} [props.vouvoyer] - R17-ADRESSE : l'invitation vouvoie (l'espace de la Ville).
@@ -273,19 +279,28 @@ function AutocompleteAddressInput({
       'Ton lieu n’est pas répertorié : place-le sur la carte',
     );
   const libelleOuvrir = t('autocompleteAddressInput.lieu.ouvrir', 'Placer sur la carte');
-  let lienCarte;
-  if (aucuneProposition) {
-    lienCarte = {
-      label: libelleOuvrir,
-      onPress: () => ouvrirCarte(texteTape, null),
-      texte: invitation,
-    };
-  } else if (permettreLieuSurCarte && rechercheFaite) {
-    lienCarte = {
-      label: t(
-        'autocompleteAddressInput.lieu.lien',
-        'Adresse introuvable ? Placez-la sur la carte',
-      ),
+  // ADRESSE-EN-PREMIER (REC17-008 bis, Adel le 20/10) — « mettre en premier l'adresse qu'on est en
+  // train de taper, avec « ajouter cette adresse » […] plutôt que de devoir scroller jusqu'en
+  // bas ». Dès que le texte est tapé (sans attendre la recherche), la 1re ligne de la liste ouvre
+  // la carte, le texte comme nom ; la carte part de la 1re proposition s'il y en a une (comme le
+  // lien du bas qu'elle remplace), sinon de ce qu'on sait (R17-ADRESSE). Une seule porte.
+  const ajouter = (/** @type {string} */ texte) => t(
+    'autocompleteAddressInput.lieu.ajouter',
+    'Ajouter « {{texte}} »',
+    { texte },
+  );
+  let actionEnTete;
+  if (permettreLieuSurCarte && texteTape.length >= safeMinChars) {
+    let aide = invitation;
+    if (!aucuneProposition) {
+      aide = vouvoyer
+        ? t('autocompleteAddressInput.lieu.ajouterAideVous', 'Placez-le sur la carte')
+        : t('autocompleteAddressInput.lieu.ajouterAide', 'Place-le sur la carte');
+    }
+    actionEnTete = {
+      // Le lecteur d'écran lit le texte ENTIER ; l'écran le tronque proprement.
+      accessibilityLabel: `${ajouter(texteTape)}. ${aide}`,
+      aide,
       onPress: () => {
         const premier = placesOptions.find(
           (option) => Number.isFinite(option.lat) && Number.isFinite(option.lng),
@@ -295,6 +310,9 @@ function AutocompleteAddressInput({
           premier ? { lat: Number(premier.lat), lng: Number(premier.lng) } : null,
         );
       },
+      titre: ajouter(texteTape.length > TITRE_MAX
+        ? `${texteTape.slice(0, TITRE_MAX - 1).trimEnd()}…`
+        : texteTape),
     };
   }
 
@@ -336,13 +354,13 @@ function AutocompleteAddressInput({
   // Le champ garde sa forme d'origine (une constante, même indentation) : seul le lien s'y ajoute.
   const champ = (
     <AutocompleteSelect
+      actionEnTete={actionEnTete}
       disabled={disabled}
       error={error}
       garderLaRecherche={permettreLieuSurCarte}
       isLoading={isLoading}
       isSearchable
       label={label || ''}
-      lienSousLesOptions={lienCarte}
       lightMode={lightMode}
       onBlur={handleBlur}
       onFocus={handleFocus}

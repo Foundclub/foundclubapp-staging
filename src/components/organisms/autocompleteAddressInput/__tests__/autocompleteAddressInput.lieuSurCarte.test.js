@@ -155,6 +155,10 @@ const LIEN = 'Adresse introuvable ? Placez-la sur la carte';
 // R17-ADRESSE (19/10) : quand la liste ne propose RIEN, le lien cède la place à une invitation et
 // à ce bouton (autocompleteAddressInput.invitationCarte.test.js) ; le lien reste sous une liste
 // qui propose quelque chose.
+// ADRESSE-EN-PREMIER (20/10, Adel : « plutôt que de devoir scroller jusqu'en bas ») : ni lien en
+// bas ni bouton dans la liste ; la porte est la 1re ligne, « Ajouter « <texte tapé> » ». Elle
+// ouvre la MÊME carte, au même départ (autocompleteAddressInput.ajouterEnTete.test.js).
+const PORTE = (/** @type {string} */ texte) => `Ajouter « ${texte} »`;
 const OUVRIR = 'Placer sur la carte';
 const INVITATION = 'Ton lieu n’est pas répertorié : place-le sur la carte';
 const NOM = 'Ex. Stade de Luminy';
@@ -288,12 +292,12 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     jest.useRealTimers();
   });
 
-  it('① adresse introuvable ⇒ l invitation et son bouton sous la liste (lieu public)', async () => {
+  it('① adresse introuvable ⇒ l invitation sur la porte en tête (lieu public)', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(mockSearchPlaces).toHaveBeenCalledWith('stade de luminy', undefined);
     expect(texteVisible(arbre)).toContain(INVITATION);
-    expect(texteVisible(arbre)).toContain(OUVRIR);
+    expect(texteVisible(arbre)).toContain(PORTE('stade de luminy'));
   });
 
   it('① bis sans le réglage : JAMAIS le lien (profil, filtres, conversation)', async () => {
@@ -301,6 +305,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(texteVisible(arbre)).not.toContain(LIEN);
     expect(texteVisible(arbre)).not.toContain(OUVRIR);
+    expect(texteVisible(arbre)).not.toContain('Ajouter «');
   });
 
   it('② la carte part de la 1re proposition tapée, sans rien demander', async () => {
@@ -308,7 +313,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'luminy');
     expect(texteVisible(arbre)).toContain('Route de Luminy 13009 Marseille');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
 
     expect(arbre.root.findAllByProps({ testID: 'carte-a-epingle' }).length).toBeGreaterThan(0);
     expect(derniereCarte().regionHint).toEqual({ lat: 43.2321, lng: 5.4352, zoom: 16 });
@@ -320,7 +325,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     mockPositionSiAccordee.mockResolvedValue({ lat: 45.76, lng: 4.83 });
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
-    await appuyerSurLeTexte(arbre, OUVRIR);
+    await appuyerSurLeTexte(arbre, PORTE('stade inconnu'));
     await laisserTourner(2);
 
     expect(mockPositionSiAccordee).toHaveBeenCalledTimes(1);
@@ -331,7 +336,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
   it('② ter sinon la France, et « Placer ici » attend le zoom de la rue', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
-    await appuyerSurLeTexte(arbre, OUVRIR);
+    await appuyerSurLeTexte(arbre, PORTE('stade inconnu'));
     await laisserTourner(2);
 
     expect(derniereCarte().regionHint.zoom).toBeLessThan(10);
@@ -348,7 +353,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     const setAddress = jest.fn();
     const { arbre } = monter({ address: undefined, permettreLieuSurCarte: true, setAddress });
     await ouvrirEtTaper(arbre, 'luminy');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
 
     // On déplace la carte : l'épingle (au centre) est sur le stade.
     await act(async () => {
@@ -388,7 +393,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     const setAddress = jest.fn();
     const { arbre } = monter({ permettreLieuSurCarte: true, setAddress });
     await ouvrirEtTaper(arbre, 'luminy');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
     await act(async () => {
       arbre.root.findByProps({ testID: `saisie:${NOM}` }).props.onChangeText('St');
     });
@@ -407,7 +412,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     const setAddress = jest.fn();
     const { arbre } = monter({ permettreLieuSurCarte: true, setAddress });
     await ouvrirEtTaper(arbre, 'luminy');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
     await act(async () => {
       arbre.root.findByProps({ testID: `saisie:${NOM}` })
         .props.onChangeText('Chez Paul 06 12 34 56 78');
@@ -427,7 +432,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     };
     const { arbre } = monter({ address: avant, permettreLieuSurCarte: true, setAddress });
     await ouvrirEtTaper(arbre, 'luminy');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
     await appuyerSurLeTexte(arbre, 'Annuler');
 
     expect(arbre.root.findAllByProps({ testID: 'carte-a-epingle' }).length).toBe(0);
@@ -440,7 +445,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     const { arbre } = monter({ permettreLieuSurCarte: true, setAddress: jest.fn() });
     await ouvrirEtTaper(arbre, 'luminy');
     const appelsAvant = mockSearchPlaces.mock.calls.length;
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
     await act(async () => {
       derniereCarte().onRegionChangeComplete({ lat: 43.2289, lng: 5.4371, zoom: 17 });
     });
@@ -458,7 +463,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     mockSearchPlaces.mockResolvedValue([RUE]);
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'luminy');
-    await appuyerSurLeTexte(arbre, LIEN);
+    await appuyerSurLeTexte(arbre, PORTE('luminy'));
     const texte = texteVisible(arbre);
     expect(texte).toContain('Placer le lieu sur la carte');
     expect(arbre.root.findAllByProps({ testID: `saisie:${NOM}` }, { deep: false }).length).toBe(1);
