@@ -451,4 +451,9 @@ export const RouteNames = /** @type {const} */ ({
   ReserverMaReservation: 'ReserverMaReservation',
   ReserverRecapitulatif: 'ReserverRecapitulatif',
   ReserverResultat: 'ReserverResultat',
+  // RESA-L6B-1 (19/10/2026) — la confirmation la veille (E-P14), ouverte par la notification N-20
+  // (`complexeReservationJoueur`, `change: 'veille'`) et la cloche ; « Mes réservations » (E-P10),
+  // ouverte par « Mon compte » et le raccourci de E-P01. Cachées par `COMPLEXES_JOUEUR`.
+  ReserverMesReservations: 'ReserverMesReservations',
+  ReserverVeille: 'ReserverVeille',
 });

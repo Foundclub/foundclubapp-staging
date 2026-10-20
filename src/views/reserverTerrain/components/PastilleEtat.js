@@ -7,7 +7,7 @@ import useTheme from '@/theme/themeContext';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
 /**
- * @typedef {{ couleur: string, icone: string, mot: string, pleine?: boolean,
+ * @typedef {{ couleur: string, encre?: string, icone: string, mot: string, pleine?: boolean,
  *   pointillee?: boolean }} Apparence
  */
 
@@ -15,7 +15,8 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
  * L'ÉTAT D'UNE RÉSERVATION, EN PASTILLE — RESA-L6A (14/10/2026), planche P00 bloc 4 (plan §1.2) :
  * teintée tant qu'elle est en cours ou à venir, pleine une fois le créneau passé, pointillée
  * quand elle n'a pas eu lieu ; le mot est toujours écrit. Vert : confirmée, jouée ; orange : en
- * attente ; rouge : refusée, annulée ; cyan pâle en pointillé : sans réponse (« moins de gris »).
+ * attente ; rouge : refusée, annulée ; cyan pâle en pointillé : sans réponse (« moins de gris ») ;
+ * rouge plein, encre blanche, drapeau : non honorée (RESA-L6B-1, planche EP10 `pe-nonhonoree`).
  * @param {object} props - Les propriétés.
  * @param {string} props.etat - `etatAffiche` (domains/complexe/reserverTerrain.js).
  * @returns {import('react').ReactElement | null} La pastille, ou rien pour un état inconnu.
@@ -54,6 +55,13 @@ function PastilleEtat({ etat }) {
       mot: t('reserverTerrain.etat.jouee', 'Jouée'),
       pleine: true,
     },
+    nonHonoree: {
+      couleur: Colors.error700,
+      encre: Colors.neutral00,
+      icone: 'drapeau',
+      mot: t('reserverTerrain.etat.nonHonoree', 'Non honorée'),
+      pleine: true,
+    },
     refusee: {
       couleur: Colors.error500,
       icone: 'croix',
@@ -68,12 +76,13 @@ function PastilleEtat({ etat }) {
   };
   const choisi = etats[etat];
   if (!choisi) return null;
-  const encre = choisi.pleine ? Colors.neutral900 : choisi.couleur;
+  const encre = choisi.encre || (choisi.pleine ? Colors.neutral900 : choisi.couleur);
+  const images = { coche: Images.check, croix: Images.close, drapeau: Images.flag };
   const icone = choisi.icone === 'sablier' ? (
     <GlyphIcon color={encre} name="hourglass" size={12} />
   ) : (
     <Image
-      source={choisi.icone === 'coche' ? Images.check : Images.close}
+      source={images[/** @type {'coche' | 'croix' | 'drapeau'} */ (choisi.icone)]}
       style={[{ height: 12, width: 12 }, { tintColor: encre }]}
     />
   );

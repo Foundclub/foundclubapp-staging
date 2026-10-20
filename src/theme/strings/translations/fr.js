@@ -18356,6 +18356,7 @@ export default {
       confirmee: 'Confirmée',
       enAttente: 'En attente',
       jouee: 'Jouée',
+      nonHonoree: 'Non honorée',
       refusee: 'Refusée',
       sansReponse: 'Sans réponse',
     },
@@ -18399,6 +18400,24 @@ export default {
       reserverANouveau: 'Réserver à nouveau',
       retirerQuestion: 'Retirer ta demande du {{quand}} ?',
       titre: 'Ma réservation',
+    },
+    mesReservations: {
+      demande: 'Demande envoyée',
+      demandeAvant: 'Demande envoyée · réponse avant le {{jour}} à {{heure}}',
+      erreur: 'Impossible de charger tes réservations.',
+      onglets: {
+        aVenir: 'À venir',
+        passees: 'Passées',
+        refusees: 'Refusées et annulées',
+      },
+      reserver: 'Réserver un terrain',
+      titre: 'Mes réservations',
+      tuAsReserve: 'Tu as réservé',
+      vide: {
+        aVenir: 'Aucune réservation à venir.',
+        passees: 'Aucune réservation passée.',
+        refusees: 'Aucune réservation refusée ou annulée.',
+      },
     },
     mode: {
       automatique: 'Confirmation immédiate',
@@ -18529,6 +18548,24 @@ export default {
       texteEtNumero: '{{texte}} {{numero}}.',
       texteParDefaut: 'Ce terrain ne peut être réservé que par appel au',
     },
+    veille: {
+      aide: 'Si tu annules, le créneau est libéré tout de suite.',
+      annule: 'C’est annulé.',
+      annuleeParLeComplexe: 'Cette réservation a été annulée par le complexe.',
+      annulerQuestion: 'Annuler ta réservation de demain {{heure}} ?',
+      annuleTexte: 'Le créneau est libéré.',
+      confirme: 'Merci, c’est confirmé.',
+      dejaAnnulee: 'Tu as déjà annulé cette réservation.',
+      dejaConfirmee: 'Tu as confirmé à {{heure}}.',
+      // eslint-disable-next-line max-len
+      horsDelai: 'Le délai d’annulation est passé : le complexe sera prévenu d’une annulation tardive.',
+      jAnnule: 'J’annule',
+      jeConfirme: 'Je confirme',
+      pasPartie: 'La réponse n’est pas partie.',
+      titre: 'Demain, tu joues ?',
+      tropTard: 'Trop tard pour confirmer.',
+      voirMaReservation: 'Voir ma réservation',
+    },
   },
   rsvpActions: {
     absent: {
@@ -18560,6 +18597,22 @@ export default {
     present: {
       body: 'Ta présence est enregistrée.',
       title: 'Présence confirmée',
+    },
+    resaVeille: {
+      annule: {
+        body: 'Le créneau est libéré.',
+        title: 'Réservation annulée',
+      },
+      annuler: 'J’annule',
+      confirme: {
+        body: 'Merci, c’est confirmé.',
+        title: 'Réservation confirmée',
+      },
+      confirmer: 'Je confirme',
+      echec: {
+        body: 'Touche ici pour répondre dans l’app.',
+        title: 'Réponse non envoyée',
+      },
     },
   },
   scoreFlow: {

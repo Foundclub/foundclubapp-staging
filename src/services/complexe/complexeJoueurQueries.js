@@ -7,7 +7,9 @@ import {
   lireComplexePublic,
   lireCreneauxDuJour,
   lireMaReservation,
+  lireMesReservations,
   lireTerrainsPublics,
+  repondreALaVeille,
   reserverUnCreneau,
 } from './complexeJoueurService';
 
@@ -155,4 +157,28 @@ export const useReserverUnCreneau = () => useGesteDuJoueur(
  */
 export const useAnnulerMaReservation = () => useGesteDuJoueur(
   (reservationId) => annulerMaReservation(reservationId),
+);
+
+/**
+ * RESA-L6B-1 — E-P10 : SES réservations d'un onglet (la clef commence par celle de ses
+ * réservations : un geste du joueur la relit).
+ * @param {'a-venir' | 'passees' | 'refusees'} periode - L'onglet.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les réservations.
+ */
+export const useMesReservations = (periode) => useQuery({
+  queryFn: async () => {
+    const liste = donnees(await lireMesReservations(periode));
+    return Array.isArray(liste) ? liste : [];
+  },
+  queryKey: [...MES_RESERVATIONS_CLEF, 'mine', periode],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * RESA-L6B-1 — E-P14 : répondre à la question de la veille.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ reservationId, reponse })` rend la réservation après la réponse.
+ */
+export const useRepondreALaVeille = () => useGesteDuJoueur(
+  ({ reponse, reservationId }) => repondreALaVeille(reservationId, reponse),
 );

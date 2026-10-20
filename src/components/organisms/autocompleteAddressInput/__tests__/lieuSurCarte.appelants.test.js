@@ -21,7 +21,7 @@ import path from 'path';
 // chercher : un filtre « autour de… », il n'enregistre rien ⇒ sans le lien (dernier témoin).
 // R17-ADRESSE (REC17-008, 19/10) : +1. « Modifier le club » (ClubEdit.js) quitte le texte libre
 // pour ce champ, et le rejoint côté « lieu public » (l'adresse d'un club se cherche par distance).
-// RESA-INSCRIPTION (19/10) : fusion de staging dans la branche RESA ⇒ 30 + 2 (RESA) + 1 (R17) = 33.
+// RESA-INSCRIPTION (19/10, et RESA-L6B-1 : meme compte) : fusion de staging dans la branche RESA ⇒ 30 + 2 (RESA) + 1 (R17) = 33.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.

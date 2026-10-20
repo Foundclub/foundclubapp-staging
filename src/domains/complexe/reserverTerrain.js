@@ -592,20 +592,22 @@ export const lienAgendaGoogle = (rendezVous) => {
 };
 
 /**
- * L'état AFFICHÉ d'une réservation (P00 bloc 4, plan §1.2) : ceux du serveur, et « jouée » pour une
- * confirmée dont le créneau est fini. « Non honorée » viendra avec le serveur L2B ; « en collecte »
- * et « non aboutie » avec L3.
- * @param {{ cancelledBy?: string | null, endsAt?: string | null, status?: string | null }
- *   | null | undefined} reservation - La réservation vue par son réserveur.
+ * L'état AFFICHÉ d'une réservation (P00 bloc 4, plan §1.2) : ceux du serveur, « jouée » pour une
+ * confirmée dont le créneau est fini, et « non honorée » quand le complexe l'a marquée (serveur
+ * L2B, `noShowAt` ; RESA-L6B-1). « En collecte » et « non aboutie » viendront avec L3.
+ * @param {{ cancelledBy?: string | null, endsAt?: string | null, noShowAt?: string | null,
+ *   status?: string | null } | null | undefined} reservation - La réservation vue par son
+ *   réserveur.
  * @param {Date} [maintenant] - L'instant de référence.
- * @returns {string} `enAttente | confirmee | jouee | refusee | sansReponse | annuleeParToi |
- *   annuleeParLeComplexe`, ou ''.
+ * @returns {string} `enAttente | confirmee | jouee | nonHonoree | refusee | sansReponse |
+ *   annuleeParToi | annuleeParLeComplexe`, ou ''.
  */
 export const etatAffiche = (reservation, maintenant = new Date()) => {
   switch (reservation?.status) {
     case 'annulee':
       return reservation?.cancelledBy === 'reserveur' ? 'annuleeParToi' : 'annuleeParLeComplexe';
     case 'confirmee': {
+      if (reservation?.noShowAt) return 'nonHonoree';
       const fin = new Date(String(reservation?.endsAt || '')).getTime();
       return Number.isFinite(fin) && fin <= maintenant.getTime() ? 'jouee' : 'confirmee';
     }

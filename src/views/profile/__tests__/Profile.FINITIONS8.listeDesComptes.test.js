@@ -139,6 +139,9 @@ jest.mock('@/services/auth/authService', () => ({ deleteAccount: jest.fn() }));
 // défaut. Un objet stable par témoin (un objet neuf à chaque appel ferait boucler les mémos).
 /** @type {any} */
 let mockVillesGerees = { data: [] };
+// RESA-L6B-1 — le nombre de « Mes réservations » (rangée cachée par COMPLEXES_JOUEUR) lit le
+// serveur des complexes : doublé ici comme les autres services de « Mon compte ».
+jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.

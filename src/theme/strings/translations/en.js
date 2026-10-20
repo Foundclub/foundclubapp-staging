@@ -17750,6 +17750,7 @@ export default {
       confirmee: 'Confirmed',
       enAttente: 'Pending',
       jouee: 'Played',
+      nonHonoree: 'No-show',
       refusee: 'Declined',
       sansReponse: 'No answer',
     },
@@ -17793,6 +17794,24 @@ export default {
       reserverANouveau: 'Book again',
       retirerQuestion: 'Withdraw your request for {{quand}}?',
       titre: 'My booking',
+    },
+    mesReservations: {
+      demande: 'Request sent',
+      demandeAvant: 'Request sent · answer before {{jour}} at {{heure}}',
+      erreur: 'Could not load your bookings.',
+      onglets: {
+        aVenir: 'Upcoming',
+        passees: 'Past',
+        refusees: 'Declined and cancelled',
+      },
+      reserver: 'Book a pitch',
+      titre: 'My bookings',
+      tuAsReserve: 'You booked',
+      vide: {
+        aVenir: 'No upcoming bookings.',
+        passees: 'No past bookings.',
+        refusees: 'No declined or cancelled bookings.',
+      },
     },
     mode: {
       automatique: 'Instant confirmation',
@@ -17918,6 +17937,23 @@ export default {
       texteEtNumero: '{{texte}} {{numero}}.',
       texteParDefaut: 'This pitch can only be booked by calling',
     },
+    veille: {
+      aide: 'If you cancel, the slot is released straight away.',
+      annule: 'It’s cancelled.',
+      annuleeParLeComplexe: 'This booking was cancelled by the venue.',
+      annulerQuestion: 'Cancel your booking tomorrow at {{heure}}?',
+      annuleTexte: 'The slot has been released.',
+      confirme: 'Thanks, it’s confirmed.',
+      dejaAnnulee: 'You have already cancelled this booking.',
+      dejaConfirmee: 'You confirmed at {{heure}}.',
+      horsDelai: 'The cancellation deadline has passed: the venue will be told about a late cancellation.',
+      jAnnule: 'I’ll cancel',
+      jeConfirme: 'I confirm',
+      pasPartie: 'Your answer was not sent.',
+      titre: 'Playing tomorrow?',
+      tropTard: 'Too late to confirm.',
+      voirMaReservation: 'View my booking',
+    },
   },
   rsvpActions: {
     absent: {
@@ -17949,6 +17985,22 @@ export default {
     present: {
       body: 'Your attendance has been recorded.',
       title: 'Attendance confirmed',
+    },
+    resaVeille: {
+      annule: {
+        body: 'The slot has been released.',
+        title: 'Booking cancelled',
+      },
+      annuler: 'I’ll cancel',
+      confirme: {
+        body: 'Thanks, it’s confirmed.',
+        title: 'Booking confirmed',
+      },
+      confirmer: 'I confirm',
+      echec: {
+        body: 'Tap here to answer in the app.',
+        title: 'Answer not sent',
+      },
     },
   },
   scoreFlow: {
