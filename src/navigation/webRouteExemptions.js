@@ -183,46 +183,12 @@ const MOBILE_ONLY_SCREENS = {
   // --- RESA-L5A1 (13/10/2026) ---
   // Le gérant de complexe : écrans cachés par l interrupteur COMPLEXES_GERANT (serveur non
   // livré). Leur adresse sur le site viendra avec le lot web du gérant (screenRegistry.tsx).
-  [RouteNames.ComplexeAccueil]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeCreneaux]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeEspace]:
     'RESA-L5A1 : tab navigator of the venue space (hidden by COMPLEXES_GERANT), not a screen',
-  [RouteNames.ComplexeInstallations]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeReglages]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeTerrain]:
-    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-
-  // --- RESA-L5A2 (14/10/2026) ---
-  // La suite du gérant (serveur RESA-L2A, non livré) : même raison, même lot web à venir.
-  [RouteNames.ComplexeDemandes]:
-    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeFermetures]:
-    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexePlanning]:
-    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeReservation]:
-    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  [RouteNames.ComplexeReservations]:
-    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
-  // --- RESA-L6A (14/10/2026) ---
-  // Le joueur : écrans cachés par l interrupteur COMPLEXES_JOUEUR (serveur non livré). Leur
-  // adresse sur le site (page publique du complexe, réserver) viendra avec le lot site L7.
-  [RouteNames.ReserverComplexe]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its public website page comes with the L7 web lot',
-  [RouteNames.ReserverCreneau]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  [RouteNames.ReserverEchec]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  [RouteNames.ReserverMaReservation]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  [RouteNames.ReserverRecapitulatif]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  [RouteNames.ReserverResultat]:
-    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
+  // RESA-L7-1 (20/10/2026) : les 9 autres écrans du gérant (RESA-L5A1 / L5A2) et les 6 du joueur
+  // (RESA-L6A) ont leur adresse sur le site (webRoutes.js) ; sur ordinateur, le menu latéral de
+  // l AppShell porte les onglets de l espace du complexe. ComplexeDevenirGerant a la sienne
+  // (/onboarding/complexe, RESA-INSCRIPTION) — intégration du soutien, 20/10.
   // --- RESA-L6B-1 (19/10/2026) ---
   // La confirmation la veille (E-P14) et « Mes réservations » (E-P10) : même interrupteur, même
   // lot site L7.

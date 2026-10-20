@@ -188,9 +188,9 @@ function ComplexeDemandes() {
         testID={`demande-${demande.documentId}`}
       >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
-          <Text style={Fonts.p2Bold}>{String(demande.label || '')}</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{String(demande.label || '')}</Text>
           {` ${t('complexeReservations.demandes.demandeLe', 'demande le')} `}
-          <Text style={Fonts.p2Bold}>{String(demande.terrain?.name || '')}</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{String(demande.terrain?.name || '')}</Text>
           {` · ${quand(demande)}`}
         </Text>
         {echeance ? (
@@ -245,7 +245,7 @@ function ComplexeDemandes() {
       testID={`demande-${demande.documentId}`}
     >
       <Text style={[Fonts.p2, Fonts.neutral00]}>
-        <Text style={Fonts.p2Bold}>{String(demande.label || '')}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{String(demande.label || '')}</Text>
         {` · ${String(demande.terrain?.name || '')} · ${jourCourt(demande.date)}`}
         {` · ${texteHeure(demande.from)}`}
       </Text>

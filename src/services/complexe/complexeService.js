@@ -16,27 +16,21 @@
  * non par `import()` : jest n'exécute pas un import dynamique (mémoire
  * piege-jest-import-dynamique), et ce service a son témoin.
  *
- * RESA-L6A (14/10) : ces DEUX `require` à l'appel (le client, et le service des fermetures qui
+ * RESA-L6A (14/10) : ces DEUX chargements à l'appel (le client, et le service des fermetures qui
  * importe le client) RESTENT, mesurés : les importer en tête fait échouer au CHARGEMENT 10
  * suites de témoins dans toute copie de travail sans `.env` (9 de `views/profile` + le témoin des
  * fermetures : « API_URL is missing », runtimeUrls.native.js:50) ; un `import()` dynamique, jest
  * ne l'exécute pas (« dynamic import callback was invoked without --experimental-vm-modules »,
- * 15 témoins du service rouges). Prix : le site plantera le jour où il APPELLERA ce service (son
- * serveur de dev n'a pas `require`) ; les écrans du gérant n'y sont pas avant le lot web L7.
- * Toute autre dépendance est importée en tête (témoin
- * `views/reserverTerrain/__tests__/site.sansRequire.test.js`, qui tolère ces deux lignes
- * seulement).
+ * 15 témoins du service rouges).
+ * RESA-L7-1 (20/10) : ils passent par `./complexeChargeurs` — l'app et jest prennent
+ * `complexeChargeurs.js` (`require` à l'appel), le site prend `complexeChargeurs.web.js` (imports
+ * en tête : son serveur de dev n'a pas `require`). Plus aucun `require` dans ce fichier (témoin
+ * `views/reserverTerrain/__tests__/site.sansRequire.test.js`).
  *
  * Témoin : `__tests__/complexeService.test.js`.
  */
 import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
-
-/**
- * Le client HTTP de l'app, chargé à l'appel.
- * @returns {any} Le client axios.
- */
-// eslint-disable-next-line global-require
-const client = () => require('../client').default;
+import { client, fermetures } from './complexeChargeurs';
 
 /**
  * Le corps d'une réponse.
@@ -257,15 +251,8 @@ export const retirerTerrain = async (complexeId, terrainId, { apercu = false } =
 // ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des
 // Villes, élargies par RESA-L2A (`facility-closure.ts` : `canManage`, `reservationsOf`). Le service
-// des fermetures est chargé À L'APPEL (même raison que le client, en tête de ce fichier).
+// des fermetures est chargé À L'APPEL (`./complexeChargeurs`, même raison que le client).
 // ---------------------------------------------------------------------------------------------
-
-/**
- * Le service des fermetures, chargé à l'appel.
- * @returns {any} Le module.
- */
-// eslint-disable-next-line global-require
-const fermetures = () => require('../facilityClosure/facilityClosureService');
 
 /**
  * Lance un geste par terrain, l'un après l'autre : ce qui est fait reste fait. Tout échoue ⇒ le
