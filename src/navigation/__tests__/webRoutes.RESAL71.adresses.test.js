@@ -62,10 +62,11 @@ describe('RESA-L7-1 — les écrans de réservation ont leur adresse sur le site
       .toMatch(/^\/annuaire\/complexes\/le-five(\?|$)/);
   });
 
-  it('restent exemptés : le navigateur à onglets, et le tunnel (lot RESA-INSCRIPTION)', () => {
-    expect(Object.keys(MOBILE_ONLY_SCREENS)).toEqual(expect.arrayContaining([
-      RouteNames.ComplexeDevenirGerant,
-      RouteNames.ComplexeEspace,
-    ]));
+  // Intégration du soutien (20/10) : RESA-INSCRIPTION a donné au tunnel son adresse (/onboarding/complexe) ;
+  // seul le navigateur à onglets reste exempté.
+  it('reste exempté : le navigateur à onglets ; le tunnel a son adresse (lot RESA-INSCRIPTION)', () => {
+    expect(Object.keys(MOBILE_ONLY_SCREENS)).toEqual(expect.arrayContaining([RouteNames.ComplexeEspace]));
+    expect(Object.keys(MOBILE_ONLY_SCREENS)).not.toContain(RouteNames.ComplexeDevenirGerant);
+    expect(buildWebPath(RouteNames.ComplexeDevenirGerant)).toMatch(/^\/onboarding\/complexe(\?|$)/);
   });
 });
