@@ -36,6 +36,8 @@ export const RouteNames = /** @type {const} */ ({
   AddClubManager: 'AddClubManager',
   AddCoach: 'AddCoach',
   AddSponsor: 'AddSponsor',
+  // MSG-SUPPORT (20/10) — la boîte commune de l'assistance (console, super-admins).
+  AdminAssistance: 'AdminAssistance',
   AdminClaimDetail: 'AdminClaimDetail',
   AdminClaimList: 'AdminClaimList',
   AdminClubDetail: 'AdminClubDetail',
