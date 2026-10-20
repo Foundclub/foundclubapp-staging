@@ -4,7 +4,9 @@ import ReserverCreneau from '@/views/reserverTerrain/ReserverCreneau';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import {
+  dessins, enUnMot, lisibles, parRepere, pressable,
+} from '@/testSupport/temoinComplexe';
 import { creneau, recapitulatif } from '@/testSupport/temoinReserver';
 
 // RESA-L6A (14/10/2026) — E-P03 « Choisir un créneau » (planche EP03, P00 bloc 3 ; plan E-P03) :
@@ -327,5 +329,15 @@ describe('E-P03 — un terrain « par téléphone » et les états', () => {
     expect(lisibles(arbre)).toContain('Impossible de charger les créneaux.');
     await toucher(pressable(arbre, 'Réessayer'));
     expect(mockRelire).toHaveBeenCalled();
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (Android 16) : le bouton s'affichait « Voir le jour » (son dernier mot
+// passait sur une ligne invisible : bouton qui épouse son libellé). Dessiné en un seul mot.
+describe('RESA-FIN-APP (1) E-P03 — « Voir le jour suivant » dessiné en un seul mot', () => {
+  it('un jour sans créneau : le bouton garde « suivant »', async () => {
+    const arbre = await monter();
+    await toucher(parRepere(arbre, 'jour-2026-10-16'));
+    expect(dessins(arbre, 'Voir le jour suivant')).toEqual([enUnMot('Voir le jour suivant')]);
   });
 });

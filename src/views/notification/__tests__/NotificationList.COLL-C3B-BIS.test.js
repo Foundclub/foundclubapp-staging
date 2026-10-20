@@ -137,3 +137,29 @@ test('C3B-BIS/N2 — la cloche vide : la cloche du système de design, en bleu (
   const arbre = monter();
   expect(icones(arbre)).toEqual(['couleur-primary200']);
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : dans la cloche du JOUEUR, « Réservation annulée » (par le complexe) et
+// « Complexe fermé » portaient la pastille rouge « Refusée » : une annulation n'est pas un refus. La pastille
+// reste rouge, mais dit ce qui est arrivé (les mots des pastilles de « Mes réservations », E-P10).
+const notificationDuJoueur = (/** @type {string} */ documentId, /** @type {string} */ change) => ({
+  body: 'Le Five de Montrivage · Terrain 1 · jeu. 22/10, 20 h.',
+  createdAt: new Date().toISOString(),
+  data: { change, reservationId: `r-${documentId}`, type: 'complexeReservationJoueur' },
+  documentId,
+  read: false,
+  title: 'Réservation',
+  type: 'complexeReservationJoueur',
+});
+
+test('RESA-FIN-APP (2) — annulée ou fermeture : « Annulée par le complexe » ; refusée : « Refusée »', () => {
+  mockNotifications.list = [
+    notificationDuJoueur('n-annulee', 'annulee'),
+    notificationDuJoueur('n-fermeture', 'fermeture'),
+    notificationDuJoueur('n-refusee', 'refusee'),
+    notificationDuJoueur('n-sans', 'sans-reponse'),
+  ];
+  const rouges = textesEnCouleur(monter())
+    .filter((ligne) => ligne.couleur === 'couleur-error500')
+    .map((ligne) => ligne.texte);
+  expect(rouges).toEqual(['Annulée par le complexe', 'Annulée par le complexe', 'Refusée', 'Sans réponse']);
+});

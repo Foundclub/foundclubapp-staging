@@ -4,7 +4,9 @@ import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import {
+  lisibles, parRepere, pressable, textes,
+} from '@/testSupport/temoinComplexe';
 import { carteDeRecherche } from '@/testSupport/temoinReserver';
 
 // RESA-L6A (14/10/2026) — E-P01 « Réserver un terrain : la recherche » (planches EP01, RA1 ; plan
@@ -375,5 +377,42 @@ describe('E-P01 — les états', () => {
       jest.advanceTimersByTime(300);
     });
     expect(lisibles(arbre)).toContain('Aucun terrain pour « squash » autour de toi.');
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : la carte montrait « 17 h » TROIS fois (une puce par terrain,
+// le nom du terrain seulement dans la lecture d'écran). Une heure partagée par plusieurs terrains dit son
+// terrain (« 17 h · Padel A ») ; une heure seule reste courte (plan E-P01 §3.5 : « 18 h », « 19 h »). Et chaque
+// puce est dessinée en un seul mot (Android 16 : un texte gras de plusieurs mots perd son dernier mot).
+describe('RESA-FIN-APP (3) E-P01 — une heure partagée par plusieurs terrains dit son terrain', () => {
+  const aDixSeptHeures = (/** @type {string} */ id, /** @type {string} */ nom) => ({
+    from: '17:00',
+    price: { amount: 60, perPlayer: 6, unit: 'creneau' },
+    startsAt: '2026-10-14T15:00:00.000Z',
+    terrain: { bookingMode: 'automatique', documentId: id, name: nom },
+    to: '18:00',
+  });
+
+  it('« 17 h · Padel A », « 17 h · Terrain 1 », « 17 h · Terrain 2 », puis « 18 h »', async () => {
+    const base = carteDeRecherche();
+    mockRecherche = {
+      ...mockRecherche,
+      data: {
+        complexes: [carteDeRecherche({
+          slots: [
+            aDixSeptHeures('t-padel', 'Padel A'), aDixSeptHeures('t-1', 'Terrain 1'),
+            aDixSeptHeures('t-2', 'Terrain 2'), base.slots[0],
+          ],
+        })],
+        date: '2026-10-14',
+      },
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      '17 h · Padel A', '17 h · Terrain 1', '17 h · Terrain 2', '18 h',
+    ]));
+    expect(lisibles(arbre).filter((texte) => texte === '17 h')).toEqual([]);
+    const puce = textes(arbre).find((texte) => texte.includes('Padel A') && texte.includes('17'));
+    expect(puce).not.toMatch(/ /);
   });
 });

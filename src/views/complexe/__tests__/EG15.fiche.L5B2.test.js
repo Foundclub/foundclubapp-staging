@@ -4,7 +4,9 @@ import ComplexeClient from '@/views/complexe/ComplexeClient';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import {
+  lisibles, parRepere, pressable, textes,
+} from '@/testSupport/temoinComplexe';
 
 // RESA-L5B-2 (20/10/2026) — E-G15, CE QUE LA FICHE D'UN CLIENT ATTENDAIT DE RESA-L4 (planche EG15
 // état 2 ; plan :970-1010) : « Client depuis le 02/09 », les parties jouées et la fidélité « 8/10 »
@@ -186,5 +188,17 @@ describe('E-G15 — la fiche d’un client, avec RESA-L4', () => {
     mockHistorique.data.reservations = mockHistorique.data.reservations.slice(1);
     const arbre = await monter();
     expect(() => pressable(arbre, 'Écrire')).toThrow();
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées de recette 1 et 2 (Android 16) : « jeu. 22/10 · 20 h · Terrain 2 »
+// s'affichait « … · Terrain » (le dernier mot passe sur une ligne invisible). La ligne de
+// l'historique est dessinée en un seul « mot » (espaces insécables, `texteInsecable`).
+describe('RESA-FIN-APP (1) E-G15 — les lignes de l’historique ne perdent plus leur terrain', () => {
+  it('chaque ligne « jour · heure · terrain » est dessinée sans espace ordinaire', async () => {
+    const arbre = await monter();
+    const lignes = textes(arbre).filter((texte) => /\d\d\/\d\d/.test(texte) && /Terrain/.test(texte));
+    expect(lignes).toHaveLength(3);
+    lignes.forEach((ligne) => expect(ligne).not.toMatch(/ /));
   });
 });

@@ -212,3 +212,21 @@ describe('RESA-L5A2 E-G07 — le menu « … » complet (Fermetures, Voir le pla
       .toContain('Terrain 1 est retiré. 4 réservations annulées, les joueurs sont prévenus.');
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : « Terrain Test 4 est retiré. 0 réservation annulée, le
+// joueur est prévenu. » — la phrase ne connaissait pas le cas zéro (personne n'est prévenu).
+describe('RESA-FIN-APP (3) E-G07 — retirer un terrain sans réservation à venir', () => {
+  it('« … est retiré. Aucune réservation à annuler. »', async () => {
+    mockRetirer.mockResolvedValue({ data: { reservationsAnnulees: 0, retired: true } });
+    const arbre = await monter();
+    await appuyer(arbre, 'Plus d’actions : Terrain 1');
+    await appuyer(arbre, 'Retirer');
+    const confirmer = parRepere(arbre, 'retrait-confirmer')
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')[0];
+    await act(async () => {
+      await confirmer.props.onPress();
+    });
+    expect(lisibles(arbre)).toContain('Terrain 1 est retiré. Aucune réservation à annuler.');
+    expect(lisibles(arbre).some((texte) => texte.includes('prévenu'))).toBe(false);
+  });
+});

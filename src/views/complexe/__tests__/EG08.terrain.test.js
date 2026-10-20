@@ -8,6 +8,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { televerserPhoto } from '@/services/complexe/complexeService';
 
 import {
+  dessins,
+  enUnMot,
   lisibles,
   parRepere,
   pressable,
@@ -375,5 +377,20 @@ describe('RESA-L5A2 E-G08 — modifier un terrain qui a des réservations', () =
     });
     expect(mockRetirer).toHaveBeenCalledWith({ complexeId: 'cx-five', terrainId: 't-1' });
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (Android 16) : après la 1re photo, le bouton s'affichait
+// « Ajouter une » (bouton à icône : le libellé épouse sa largeur et perd son dernier mot).
+describe('RESA-FIN-APP (1) E-G08 — « Ajouter une photo » dessiné en un seul mot', () => {
+  it('avant et après la première photo', async () => {
+    const arbre = await monter();
+    expect(dessins(arbre, 'Ajouter une photo')).toEqual([enUnMot('Ajouter une photo')]);
+    mockChoisie = { assets: [{ fileSize: 200000, uri: 'file:///legere.jpg' }] };
+    /** @type {any} */ (televerserPhoto)
+      .mockResolvedValue({ id: 41, url: 'https://exemple.test/a.jpg' });
+    await appuyer(arbre, 'Ajouter une photo');
+    expect(parRepere(arbre, 'complexe-terrain-photo-41')).not.toBeNull();
+    expect(dessins(arbre, 'Ajouter une photo')).toEqual([enUnMot('Ajouter une photo')]);
   });
 });

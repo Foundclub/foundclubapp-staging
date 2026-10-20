@@ -394,3 +394,26 @@ describe('RESA-L5A2 E-G10 — un terrain d’E-G07', () => {
     expect(terrainDeTemoin().name).toBe('Terrain 1');
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 1 : « 1 réservation est touchée. Elles seront annulées… »
+// (la 2e phrase restait au pluriel). Elle suit le nombre, comme la 1re.
+describe('RESA-FIN-APP (3) E-G10 — la phrase de l’aperçu suit le nombre', () => {
+  it('une seule réservation touchée : « Elle sera annulée… »', async () => {
+    mockApercu = {
+      data: {
+        count: 1,
+        items: [{
+          date: '2026-10-25', documentId: 'r-1', from: '19:00', label: 'Julien M.', terrainId: 't-1', to: '20:00',
+        }],
+      },
+      isLoading: false,
+    };
+    const arbre = await monter();
+    await remplir(arbre);
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      '1 réservation est touchée.',
+      'Elle sera annulée et les joueurs prévenus.',
+    ]));
+    expect(lisibles(arbre)).not.toContain('Elles seront annulées et les joueurs prévenus.');
+  });
+});
