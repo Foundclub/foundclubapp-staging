@@ -44,11 +44,14 @@ const blobToBase64 = (blob) => new Promise((resolve, reject) => {
   reader.readAsDataURL(blob);
 });
 
+// RESA-L5B-2 (20/10/2026) : `params.path` et `params.body` (facultatifs) visent une AUTRE route qui
+// rend des octets — l'affiche d'un complexe, `POST /complexes/:id/affiche` (RESA-L4) ; sans eux, la
+// requête d'avant (témoin `visualRender.L5B2.test.js`).
 const requestRender = async (params) => {
   const baseURL = getApiBaseUrl();
   const token = getAuthTokens()?.token;
-  const res = await fetch(`${baseURL}${RENDER_PATH}`, {
-    body: buildRenderBody(params),
+  const res = await fetch(`${baseURL}${params.path || RENDER_PATH}`, {
+    body: params.body ? JSON.stringify(params.body) : buildRenderBody(params),
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

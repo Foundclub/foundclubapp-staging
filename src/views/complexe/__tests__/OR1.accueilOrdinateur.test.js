@@ -29,6 +29,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
 jest.mock('@/services/complexe/complexeQueries', () => {
   const temoin = jest.requireActual('@/testSupport/temoinComplexe');
   return {
+    useChiffresDuComplexe: () => ({ data: undefined, isLoading: false }),
     useMesComplexes: () => ({ data: [temoin.COMPLEXE_FIVE] }),
     // RESA-L5A2 (14/10/2026) — l'accueil lit aussi le planning et les listes : vides ici.
     usePlanning: () => ({ data: undefined }),

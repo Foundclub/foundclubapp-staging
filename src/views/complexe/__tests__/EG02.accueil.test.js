@@ -47,6 +47,8 @@ const mockPeriodes = [];
 let mockListes = {};
 let mockTerrains = /** @type {any} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  // RESA-L5B-2 : les nouveaux favoris de la semaine (E-G17) ; aucun ici.
+  useChiffresDuComplexe: () => ({ data: undefined, isLoading: false }),
   useMesComplexes: () => mockMes,
   usePlanning: (/** @type {any} */ _id, /** @type {any} */ periode) => {
     mockPeriodes.push(periode);
@@ -196,7 +198,7 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
       'réservations aujourd’hui',
       'd’occupation cette semaine',
       'demandes en attente',
-      'nouveaux favoris (7 jours)',
+      'nouveaux favoris cette semaine',
       'Prochaines réservations',
       'Aucune réservation à venir. Fais connaître ta page.',
       'Gérer',
@@ -351,9 +353,12 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
       complexeId: 'cx-five',
     });
+    // RESA-L5B-2 : « Gérer mon complexe » a son écran (E-G11).
     const complexe = parRepere(arbre, 'complexe-accueil-case-complexe');
-    expect(complexe?.props.accessibilityState).toEqual({ disabled: true });
-    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(6);
+    expect(complexe?.props.accessibilityState).toEqual({ disabled: false });
+    // RESA-L5B-2 : « Clients » a son écran (E-G15) ; ce que les autres cases deviennent est
+    // vérifié par `EG02.cases.L5B2.test.js`.
+    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(0);
   });
 });
 

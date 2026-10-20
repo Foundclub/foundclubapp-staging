@@ -1509,6 +1509,54 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5B-2 — E-G15, la liste des clients (serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeClients').default}
+            name={RouteNames.ComplexeClients}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-2 — E-G14, la fidélité (serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeFidelite').default}
+            name={RouteNames.ComplexeFidelite}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-2 — les statistiques du complexe (E-G17, serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeStatistiques').default}
+            name={RouteNames.ComplexeStatistiques}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-2 — « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeMaPage').default}
+            name={RouteNames.ComplexeMaPage}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-2 — les affiches du complexe (E-G13, serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeAffiches').default}
+            name={RouteNames.ComplexeAffiches}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5B-2 — le canal du complexe (E-G12, serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeCanal').default}
+            name={RouteNames.ComplexeCanal}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen

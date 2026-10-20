@@ -25,6 +25,7 @@ const mockMarquer = jest.fn();
 const mockAnnulerMarquage = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: mockAnnulerMarquage }),
+  useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: mockMarquer }),
   useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => {
     mockFiltresLus.push(filtres);

@@ -196,9 +196,8 @@ const MOBILE_ONLY_SCREENS = {
     'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
   [RouteNames.ReserverVeille]:
     'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  // --- RESA-L5B-1 (20/10/2026) --- la fiche d'un client du complexe (E-G15) : même raison.
-  [RouteNames.ComplexeClient]:
-    'RESA-L5B-1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  // RESA-L5B-2 (20/10/2026) : la fiche d'un client du complexe (RESA-L5B-1) a son adresse
+  // (/mon-complexe/clients/:joueurId) et sort de cette liste.
 };
 
 /**
