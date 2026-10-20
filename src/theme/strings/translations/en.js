@@ -5404,6 +5404,17 @@ export default {
       clubsCouverts_other: '{{count}} clubs covered',
       indisponible: 'Number unavailable',
     },
+    vacances: {
+      aucune: 'The INSEE code gives no zone: choose it.',
+      codeInsee: 'The INSEE code gives zone {{zone}} ({{academie}} education authority, {{departement}}).',
+      corrigee: '{{zone}} · corrected by FoundClub',
+      corse: 'Corsica',
+      deduite: 'Deduced',
+      deduiteLigne: '{{zone}} · deduced',
+      inconnue: 'Unknown zone',
+      outremer: 'Overseas',
+      titre: 'School holidays',
+    },
   },
   // COLL-CONSOLE-BIS (03/10/2026) — what was left of the local-authority console and sign-up
   // (design HY521H1, pages 1 and 2: boards 7, 8, 12 to 17).

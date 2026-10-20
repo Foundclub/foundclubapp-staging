@@ -46,6 +46,7 @@ import {
   useAttachAdminCollectiviteClub,
   useDetachAdminCollectiviteClub,
   useRemoveAdminCollectiviteGestionnaire,
+  useSetAdminCollectiviteHolidayZone,
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -173,6 +174,8 @@ function AdminCollectiviteDetail() {
 
   const lecture = useAdminCollectivite(collectiviteId);
   const detail = toAdminCollectiviteDetail(lecture.data);
+  // 🌴 R17-QUAND-2 — corriger la zone de vacances scolaires.
+  const corrigerLaZone = useSetAdminCollectiviteHolidayZone();
   const offre = useAdminCollectiviteOfferStates(detail);
   const demandes = useAdminCollectiviteInvitations();
   const [retourClubs, setRetourClubs] = useState(/** @type {Retour} */ (null));
@@ -469,6 +472,86 @@ function AdminCollectiviteDetail() {
       ? t('collectiviteConsole.fiche.siren', 'SIREN {{code}}', { code: detail.siren }) : null,
   ].filter(Boolean).join(' · ');
 
+  // 🌴 R17-QUAND-2 (planches P11-quand-v2-tel « La zone », P11-quand-v2-ordi C) — LA ZONE DE
+  // VACANCES SCOLAIRES : déduite du code INSEE (serveur), corrigeable ici d'un appui.
+  const zoneQuiVaut = detail.holidayZone?.effective || null;
+  const zoneDeduite = detail.holidayZone?.deduced || null;
+  let ligneDeLaZone = t('collectiviteConsole.vacances.inconnue', 'Zone inconnue');
+  if (zoneQuiVaut) {
+    ligneDeLaZone = zoneQuiVaut.origin === 'console'
+      ? t('collectiviteConsole.vacances.corrigee', '{{zone}} · corrigée par FoundClub', {
+        zone: zoneQuiVaut.label, ...SANS_ECHAPPEMENT,
+      })
+      : t('collectiviteConsole.vacances.deduiteLigne', '{{zone}} · déduite', {
+        zone: zoneQuiVaut.label, ...SANS_ECHAPPEMENT,
+      });
+  }
+  const origineDeLaZone = zoneDeduite
+    ? t(
+      'collectiviteConsole.vacances.codeInsee',
+      'Le code INSEE donne la zone {{zone}} (académie de {{academie}}, {{departement}}).',
+      {
+        academie: zoneDeduite.academie,
+        departement: zoneDeduite.departementName || '',
+        zone: zoneDeduite.zone,
+        ...SANS_ECHAPPEMENT,
+      },
+    )
+    : t(
+      'collectiviteConsole.vacances.aucune',
+      'Le code INSEE ne donne aucune zone : choisissez-la.',
+    );
+  const choixDeZone = [
+    { cle: null, libelle: t('collectiviteConsole.vacances.deduite', 'Déduite') },
+    { cle: 'A', libelle: 'A' },
+    { cle: 'B', libelle: 'B' },
+    { cle: 'C', libelle: 'C' },
+    { cle: 'corse', libelle: t('collectiviteConsole.vacances.corse', 'Corse') },
+    { cle: 'outremer', libelle: t('collectiviteConsole.vacances.outremer', 'Outre-mer') },
+  ];
+  const carteVacances = detail.codeInsee !== undefined ? (
+    <View style={[carteStyle, { gap: 8 }]} testID="admin-collectivite-vacances">
+      {titreSection(t('collectiviteConsole.vacances.titre', 'Vacances scolaires'))}
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligneDeLaZone}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>{origineDeLaZone}</Text>
+      <View accessibilityRole="radiogroup" style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+        {choixDeZone.map(({ cle, libelle }) => {
+          const actif = (detail.schoolHolidayZone || null) === cle;
+          return (
+            <TouchableOpacity
+              accessibilityRole="radio"
+              accessibilityState={{ checked: actif, disabled: corrigerLaZone.isPending }}
+              disabled={corrigerLaZone.isPending}
+              key={cle || 'deduite'}
+              onPress={() => {
+                if (!actif) corrigerLaZone.mutate({ collectiviteId: detail.documentId, zone: cle });
+              }}
+              style={[Alignments.center, {
+                backgroundColor: actif ? Colors.primary500 : 'transparent',
+                borderColor: actif ? Colors.primary500 : withAlpha(Colors.primary500, 0.45),
+                borderRadius: 100,
+                borderWidth: 1,
+                minHeight: 44,
+                minWidth: 44,
+                paddingHorizontal: 14,
+              }]}
+              testID={`admin-collectivite-zone-${cle || 'deduite'}`}
+            >
+              <Text style={[Fonts.p3Bold, { color: actif ? Colors.primary900 : Colors.neutral00 }]}>
+                {libelle}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {corrigerLaZone.error ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+          {getErrorMessage(/** @type {any} */ (corrigerLaZone.error))}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
   // 🖥️ VT18E — sur ordinateur, à gauche sous les clubs ; sur téléphone, en dernier, comme avant.
   const carteInstallations = (
     <View
@@ -560,6 +643,8 @@ function AdminCollectiviteDetail() {
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral300]}>{identite}</Text>
             </View>
+
+            {carteVacances}
 
             {justCreated ? (
               <View
