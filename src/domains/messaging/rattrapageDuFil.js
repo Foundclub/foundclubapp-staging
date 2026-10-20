@@ -25,7 +25,10 @@ const rattrapageLogger = createLogger('messaging-rattrapage');
 
 /** Un rattrapage en vol par fil : la liste ET la conversation reçoivent le même `joined`. */
 const rattrapagesEnCours = new Map();
-/** Le rattrapage de la liste en vol (tous les crochets le demandent). @type {Promise<void>|null} */
+/**
+ * Le rattrapage de la liste en vol (tous les crochets montés le demandent).
+ * @type {Promise<void> | null}
+ */
 let rattrapageDeLaListe = null;
 
 /**
