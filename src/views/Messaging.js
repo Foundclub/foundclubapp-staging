@@ -158,9 +158,14 @@ function Messaging({ navigation, route }) {
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
-  const canCreateConversation = userData?.role?.name === 'Entraîneur'
+  // MSG-VILLE-NOUVELLE (20/10, décisions d’Adel « 1- B » / « 2- A ») — dans l’espace de
+  // la Ville, le bouton rond ouvre « Nouvelle conversation » AU NOM DE LA VILLE (ses contacts :
+  // membres majeurs de ses clubs et autres gestionnaires), quel que soit le rôle du compte ;
+  // ailleurs, la règle d’avant (entraîneur, dirigeant, super-admin).
+  const roleQuiOuvreUneConversation = userData?.role?.name === 'Entraîneur'
     || userData?.role?.name === 'Dirigeant'
     || userData?.role?.name === 'SuperAdmin';
+  const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
   const floatingButtonBottom = floatingActionBottomOffset;
   const chatListBottomInset = canCreateConversation
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
@@ -1044,6 +1049,7 @@ function Messaging({ navigation, route }) {
               activeOpacity={0.85}
               onPress={() => navigation.navigate(RouteNames.NewConversation, {
                 chatScope: chatScopeFilter,
+                ...(espaceVille ? { collectiviteId: villeId, espace: 'ville' } : {}),
               })}
               style={[
                 ApplicationStyle.shadow200,
@@ -1066,6 +1072,7 @@ function Messaging({ navigation, route }) {
                   width: 64,
                 },
               ]}
+              testID="messaging-nouvelle-conversation"
             >
               <Image
                 resizeMode="contain"
