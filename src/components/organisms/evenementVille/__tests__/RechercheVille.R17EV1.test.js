@@ -11,6 +11,10 @@ jest.setTimeout(30000);
 
 /** @type {any} */
 let mockPublics;
+// R17-EVT-1-BIS (g) : le mot tape dans la recherche (eventFilters.q, partage par la liste).
+let mockMot = '';
+/** @type {string[]} */
+const mockMotsDemandes = [];
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -32,7 +36,13 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/collectivite/collectiviteEvenementQueries', () => ({
-  useEvenementsPublicsDeLaVille: () => mockPublics,
+  useEvenementsPublicsDeLaVille: (/** @type {string} */ mot) => {
+    mockMotsDemandes.push(mot);
+    return mockPublics;
+  },
+}));
+jest.mock('@/store/appContext', () => ({
+  useAppContext: () => ([{ eventFilters: { q: mockMot } }, jest.fn()]),
 }));
 
 const FETE = {
@@ -77,6 +87,21 @@ describe('R17-EVT-1 — la recherche d’événements : ceux de la Ville', () =>
       arbre.root.findByType(TouchableOpacity).props.onPress();
     });
     expect(mockNavigate).toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-1' });
+  });
+
+  // R17-EVT-1-BIS (g) (20/10, tri du chef) : la bande montrait les 10 prochains, quel que soit le
+  // mot tape. Elle suit maintenant le champ de la recherche (deja retenu 300 ms par le champ) :
+  // le serveur filtre sur le nom, le lieu, la Ville (publicList, q). ROUGE avant (toujours '').
+  it('🔴 elle suit le mot tapé dans la recherche (sans les espaces autour)', async () => {
+    mockPublics = { data: [FETE] };
+    mockMot = '  fête ';
+    mockMotsDemandes.length = 0;
+    await monter();
+    expect(mockMotsDemandes.at(-1)).toBe('fête');
+    mockMot = '';
+    mockMotsDemandes.length = 0;
+    await monter();
+    expect(mockMotsDemandes.at(-1)).toBe('');
   });
 
   it('aucun, ou le serveur ne répond pas : rien', async () => {

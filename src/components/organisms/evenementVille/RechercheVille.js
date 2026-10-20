@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { lieuLabel, quandLabel } from '@/domains/collectivite/evenementDeLaVille';
+import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -20,13 +21,16 @@ import {
  * au-dessus des résultats, une carte par événement public à venir : la Ville, le nom, quand et
  * où, « Voir la fiche ». Rien du tout s'il n'y en a pas, ou si le serveur ne répond pas (un
  * visiteur sans compte : la lecture sans compte attend le GO d'Adel).
+ * R17-EVT-1-BIS (g) (20/10) : elle suit le mot tapé dans la recherche (`eventFilters.q`, le champ
+ * le retient déjà 300 ms) ; le serveur filtre sur le nom, le lieu et la Ville.
  * @returns {import('react').ReactElement | null} La bande, ou rien.
  */
 function EvenementsVilleRecherche() {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
-  const lecture = useEvenementsPublicsDeLaVille('');
+  const [{ eventFilters }] = useAppContext();
+  const lecture = useEvenementsPublicsDeLaVille(String(eventFilters?.q || '').trim());
   const evenements = Array.isArray(lecture.data) ? lecture.data.slice(0, 10) : [];
   if (!evenements.length) return null;
   return (
