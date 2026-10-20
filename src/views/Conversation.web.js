@@ -63,6 +63,8 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
+// MSGIMG (20/10) — l image ouverte en grand : memes regles que le telephone.
+import ApercuDImageDuSite from '@/components/molecules/apercuDImage/ApercuDImageDuSite';
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 // MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
@@ -1801,6 +1803,9 @@ function Conversation({ navigation, route }) {
   // vide. UN SEUL ETAT : un booleen « ouverte » doublé d un identifiant pourraient
   // se contredire, et deux barres s ouvrir en meme temps.
   const [reactionBarMessageId, setReactionBarMessageId] = useState('');
+  // MSGIMG — l adresse de la photo ouverte en grand, ou une chaine vide (fermee).
+  const [imageEnGrand, setImageEnGrand] = useState('');
+  const fermerLImageEnGrand = useCallback(() => setImageEnGrand(''), []);
   const [reactionBarAnchor, setReactionBarAnchor] = useState(
     /** @type {{left: number, top: number} | null} */ (null),
   );
@@ -2839,7 +2844,8 @@ function Conversation({ navigation, route }) {
           return (
             <button
               key={`${label}-${index}`}
-              onClick={() => openUrl(attachmentUrl)}
+              // MSGIMG — la photo s ouvre en grand DANS la page (avant : un nouvel onglet).
+              onClick={() => setImageEnGrand(attachmentUrl)}
               style={{
                 background: 'transparent',
                 border: 0,
@@ -6190,6 +6196,7 @@ function Conversation({ navigation, route }) {
           titre={t('userBlock.confirm.title', 'Bloquer cette personne ?')}
         />
       ) : null}
+      <ApercuDImageDuSite onClose={fermerLImageEnGrand} uri={imageEnGrand} />
       {annonce ? (
         <div
           role="status"
