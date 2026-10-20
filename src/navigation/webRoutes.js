@@ -89,6 +89,10 @@ const WEB_ROUTE_PATTERNS = {
   // la demande. Hors de /collectivite/:collectiviteId : « demande » y serait lu comme un id.
   [RouteNames.CollectiviteSignup]: '/onboarding/collectivite',
   [RouteNames.CollectiviteSignupStatus]: '/collectivite-demande',
+  // RESA-INSCRIPTION (19/10/2026) — « Je gère un complexe » au choix du statut : le tunnel du
+  // gérant (E-G01), à côté de l'inscription de la mairie. Le site ne le déclare qu'interrupteur
+  // COMPLEXES_GERANT allumé (screenRegistry.tsx) ; les autres écrans du gérant : lot RESA-L7-1.
+  [RouteNames.ComplexeDevenirGerant]: '/onboarding/complexe',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',
@@ -311,6 +315,34 @@ const WEB_ROUTE_PATTERNS = {
   // R17-EVT-1 (20/10/2026) — ajouter ou modifier un événement de la Ville ; sa fiche.
   [RouteNames.CollectiviteEvenement]: '/collectivite/:collectiviteId/evenement/:evenementId?',
   [RouteNames.EvenementDeLaVille]: '/evenements-de-la-ville/:evenementId',
+  // RESA-L7-1 (20/10/2026) — LE GÉRANT DE COMPLEXE (RESA-L5A1 / L5A2). Son complexe voyage en
+  // paramètre d adresse (?complexeId=) : les écrans le lisent comme un paramètre facultatif
+  // (« mon » complexe par défaut), et l accueil, premier onglet de l espace, s ouvre sans rien à
+  // remplir (WEB_STACK_INITIAL_ROUTES). Le site ne déclare ces écrans qu interrupteur
+  // COMPLEXES_GERANT allumé (web/src/routes/screenRegistry.tsx). Le tunnel « Devenir gérant » :
+  // lot RESA-INSCRIPTION.
+  [RouteNames.ComplexeAccueil]: '/mon-complexe',
+  [RouteNames.ComplexeDemandes]: '/mon-complexe/demandes',
+  [RouteNames.ComplexePlanning]: '/mon-complexe/planning',
+  [RouteNames.ComplexeReservations]: '/mon-complexe/reservations',
+  [RouteNames.ComplexeReservation]: '/mon-complexe/reservations/:reservationId',
+  [RouteNames.ComplexeFermetures]: '/mon-complexe/fermetures',
+  [RouteNames.ComplexeInstallations]: '/mon-complexe/installations',
+  [RouteNames.ComplexeCreneaux]: '/mon-complexe/installations/:terrainId/creneaux',
+  // Le formulaire d un terrain (sans identifiant : l ajouter ; avec : le modifier).
+  [RouteNames.ComplexeTerrain]: '/mon-complexe/terrain/:terrainId?',
+  [RouteNames.ComplexeReglages]: '/mon-complexe/reglages',
+  // RESA-L7-1 — LE JOUEUR (RESA-L6A). La page du complexe EST sa page publique dans l annuaire,
+  // par son slug (planche OR2 : « d abord une page du site » ; le cadre change selon qu on a un
+  // compte, web/src/pages/seo/CadreAnnuaire.tsx). Les écrans qui demandent un compte sous
+  // /reserver-un-terrain ; « Ma réservation » hors de /reservations/:id (l ancienne réservation-
+  // événement). Déclarés interrupteur COMPLEXES_JOUEUR allumé seulement.
+  [RouteNames.ReserverComplexe]: '/annuaire/complexes/:slug',
+  [RouteNames.ReserverCreneau]: '/reserver-un-terrain/:slug/:terrainId',
+  [RouteNames.ReserverRecapitulatif]: '/reserver-un-terrain/:slug/:terrainId/recapitulatif',
+  [RouteNames.ReserverResultat]: '/reserver-un-terrain/resultat',
+  [RouteNames.ReserverEchec]: '/reserver-un-terrain/echec',
+  [RouteNames.ReserverMaReservation]: '/reservation-terrain/:reservationId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();
@@ -388,12 +420,15 @@ export const getWebRoutePattern = (routeName) => WEB_ROUTE_PATTERNS[routeName] |
  * et les 5 `navigate(ProfileStack)` aussi. Le premier ecran de chaque pile, LE MEME que
  * celui du telephone (un temoin relit les piles) ; seulement ceux dont l'adresse n'a pas
  * de parametre a remplir (EventStack, qui demande un match, n'y est pas).
+ * RESA-L7-1 (20/10/2026) — l'espace du complexe (navigateur a onglets) ouvre son accueil, comme
+ * le telephone (`ComplexeTabNavigator.js`, initialRouteName).
  */
 /** @type {Readonly<Record<string, string>>} */
 const WEB_STACK_INITIAL_ROUTES = Object.freeze({
   [RouteNames.AdWizardStack]: RouteNames.AdWizardAudienceType,
   [RouteNames.AdminStack]: RouteNames.SuperAdminHome,
   [RouteNames.ClubStack]: RouteNames.ClubList,
+  [RouteNames.ComplexeEspace]: RouteNames.ComplexeAccueil,
   [RouteNames.FriendlyMatchWizardStack]: RouteNames.FriendlyMatchWizardTeam,
   [RouteNames.ProfileStack]: RouteNames.Profile,
   [RouteNames.TeamStack]: RouteNames.TeamList,

@@ -15,8 +15,13 @@ import path from 'path';
 //
 // Carte des appelants (R2) mesurée le 07/10 : 30 usages dans 30 fichiers. Ce témoin lit le code
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
-// R17-ADRESSE (REC17-008, 19/10) : 31. « Modifier le club » (ClubEdit.js) quitte le texte libre
+// RESA-L5A1 (13/10) : 31 — « Devenir gérant » (E-G01) enregistre l'adresse d'un complexe, un lieu
+// PUBLIC (sa page est publique, il est sur la carte), comme l'adresse d'un club.
+// RESA-L6A (14/10) : 32 — la recherche de terrains (E-P01) choisit une VILLE autour de laquelle
+// chercher : un filtre « autour de… », il n'enregistre rien ⇒ sans le lien (dernier témoin).
+// R17-ADRESSE (REC17-008, 19/10) : +1. « Modifier le club » (ClubEdit.js) quitte le texte libre
 // pour ce champ, et le rejoint côté « lieu public » (l'adresse d'un club se cherche par distance).
+// RESA-INSCRIPTION (19/10, et RESA-L6B-1, RESA-L7-1 et RESA-CARTE, RESA-L5B-1 : meme compte ; la vue Carte n en ajoute aucun) : fusion de staging dans la branche RESA ⇒ 30 + 2 (RESA) + 1 (R17) = 33.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -27,6 +32,7 @@ const LIEU_PUBLIC = [
   'views/admin/clubWizard/AdminClubWizardAddress.js',
   'views/club/ClubEdit.js',
   'views/club/wizard/ClubWizardAddress.js',
+  'views/complexe/ComplexeDevenirGerant.js',
   'views/facility/FacilityForm.js',
   'views/friendlyMatch/wizard/FriendlyMatchWizardLocation.js',
   'views/team/TeamEdit.js',
@@ -68,8 +74,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (31 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(31);
+  it('la carte des appelants tient toujours (33 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(33);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {

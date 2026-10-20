@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { destinationDuGerant, TYPE_DU_GERANT } from '@/domains/complexe/notificationsDuComplexe';
+
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -8,6 +10,8 @@ import {
   normalizeNotificationType,
   NOTIFICATION_TYPES,
 } from '@/utils/notifications/notificationTypes';
+
+import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 /**
  * @typedef {Record<string, unknown> & {
@@ -644,6 +648,40 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
         route: RouteNames.FriendlyMatchAdDetails,
       }
       : null);
+  }
+
+  // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe, côté joueur (N-14 à N-19) : le
+  // serveur n'envoie aucun ctaRoute (contrat L2A) ; on aiguille par le type, `change` et
+  // `reservationId` vers « Ma réservation » (E-P07), qui porte l'en-tête d'échec d'une réservation
+  // refusée ou annulée. Interrupteur COMPLEXES_JOUEUR éteint : l'écran n'est pas déclaré, on ne
+  // navigue pas. Témoin : views/reserverTerrain/__tests__/EP07.notification.test.js.
+  // RESA-L6B-1 (19/10/2026) — N-20, la question de la veille (`change: 'veille'`) : E-P14
+  // « Demain, tu joues ? » (témoin EP14.notification.test.js).
+  if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
+    const reservationId = toSafeString(payload.reservationId).trim();
+    if (!COMPLEXES_JOUEUR || !reservationId) return null;
+    const change = toSafeString(payload.change).trim();
+    if (change === 'veille') {
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: { reservationId },
+        route: RouteNames.ReserverVeille,
+      });
+    }
+    const fermeture = toSafeString(payload.closureLabel).trim();
+    return adaptDestinationForCurrentPlatform(payload, {
+      params: {
+        ...(change ? { change } : {}),
+        ...(change === 'fermeture' && fermeture ? { fermeture } : {}),
+        reservationId,
+      },
+      route: RouteNames.ReserverMaReservation,
+    });
+  }
+
+  // RESA-L5A2 (14/10/2026) — le gerant de complexe (contrat L2A : aucun ctaRoute ; l'app aiguille
+  // par type, data.change et reservationId). Eteint avec COMPLEXES_GERANT : aucune destination.
+  if (type === TYPE_DU_GERANT) {
+    return adaptDestinationForCurrentPlatform(payload, destinationDuGerant(payload));
   }
 
   switch (type) {

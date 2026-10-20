@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import ChoixPourUnComplexe from '@/views/onboarding/components/ChoixPourUnComplexe';
 import {
   continuerSurOrdinateur,
   STYLE_CONTINUER_ORDINATEUR,
@@ -32,6 +33,7 @@ import {
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
+import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
 import { useIsDesktop } from '@/responsive';
 
 /**
@@ -56,6 +58,9 @@ function UserRole({ navigation }) {
   // une collectivité ». Ce n'est PAS un rôle Strapi : le compte garde son rôle provisoire, et
   // l'inscription de la mairie (CollectiviteSignup) remplace toutes les questions de sport.
   const [representeCollectivite, setRepresenteCollectivite] = useState(false);
+  // RESA-INSCRIPTION (19/10/2026, plan E-G01 état 0) — « Je gère un complexe », même modèle :
+  // pas un rôle Strapi, et le tunnel du complexe remplace les questions de sport.
+  const [gereUnComplexe, setGereUnComplexe] = useState(false);
   // hooks
   const {
     Alignments, Fonts, Spaces,
@@ -146,12 +151,20 @@ function UserRole({ navigation }) {
   const handleSelection = (selectedRole) => {
     const newRole = getRoleDocumentIdByKey(roles, selectedRole);
     setRepresenteCollectivite(false);
+    setGereUnComplexe(false);
     setRole((currentRole) => (newRole === currentRole ? '' : newRole));
   };
 
   const handleSelectCollectivite = () => {
     setRole('');
+    setGereUnComplexe(false);
     setRepresenteCollectivite((avant) => !avant);
+  };
+
+  const handleSelectComplexe = () => {
+    setRole('');
+    setRepresenteCollectivite(false);
+    setGereUnComplexe((avant) => !avant);
   };
 
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
@@ -172,6 +185,11 @@ function UserRole({ navigation }) {
     // COLL-ACCUEIL — la mairie : aucun rôle à poser, aucune question de sport.
     if (representeCollectivite) {
       navigation.navigate(RouteNames.CollectiviteSignup);
+      return;
+    }
+    // RESA-INSCRIPTION — le complexe : aucun rôle à poser, le tunnel EXISTANT (RESA-L5A1).
+    if (gereUnComplexe) {
+      navigation.navigate(RouteNames.ComplexeDevenirGerant);
       return;
     }
     if (!hasChosenRole) return;
@@ -308,11 +326,14 @@ function UserRole({ navigation }) {
               )}
               testID="statut-collectivite"
             />
+            {COMPLEXES_GERANT ? (
+              <ChoixPourUnComplexe checked={gereUnComplexe} onPress={handleSelectComplexe} />
+            ) : null}
           </View>
         </WithDataWrapper>
       </ScrollView>
       <Button
-        disabled={!hasChosenRole && !representeCollectivite}
+        disabled={!hasChosenRole && !representeCollectivite && !gereUnComplexe}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         style={surOrdinateur

@@ -48,8 +48,10 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import EntreeComplexe from '@/views/complexe/components/EntreeComplexe';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
+import NombreAVenir from '@/views/reserverTerrain/components/NombreAVenir';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
@@ -61,6 +63,7 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 import { useMyFacilityReports } from '@/services/facilityReport/facilityReportQueries';
 
+import { COMPLEXES_GERANT, COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import {
   isBirthdateUnderAge,
@@ -755,12 +758,14 @@ function Profile({ navigation, route }) {
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
    *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
-   *   nombre?: number, a11y?: string }} params - `nombre` (PAR-L7) : un compte qui n'est pas
-   *   une alerte (« 2 » enfants), dit par une pastille cyan, jamais par la pastille rouge.
+   *   nombre?: number, a11y?: string, accessoire?: import('react').ReactNode }} params -
+   *   `nombre` (PAR-L7) : un compte qui n'est pas une alerte (« 2 » enfants), dit par une pastille
+   *   cyan, jamais par la pastille rouge. `accessoire` (RESA-L6B-1) : ce qui se lit lui-même (le
+   *   nombre de « Mes réservations »), posé à la place de cette pastille.
    */
   const renderAccountRow = ({
-    a11y = undefined, badge = 0, destructive = false, icon, isLast = false, key, label,
-    nombre = 0, onPress, value = undefined,
+    a11y = undefined, accessoire = null, badge = 0, destructive = false, icon, isLast = false,
+    key, label, nombre = 0, onPress, value = undefined,
   }) => (
     <TouchableOpacity
       accessibilityLabel={a11y}
@@ -811,6 +816,7 @@ function Profile({ navigation, route }) {
       {nombre > 0 ? (
         <PastilleDEtat testID={`${key}-nombre`} texte={String(nombre)} ton="compte" />
       ) : null}
+      {accessoire}
       {badge > 0 ? (
         <View
           style={{
@@ -880,6 +886,17 @@ function Profile({ navigation, route }) {
         value: t('collectivite.home.kicker', 'Ma collectivité'),
       };
     }),
+    // RESA-L6B-1 (19/10) — « Mes réservations » (E-P10) EN TÊTE de la rubrique, pour tout
+    // pratiquant (planche EP10 état 5, choix S-19 validé avec les planches le 13/10), avec le
+    // nombre de réservations à venir. Caché par `COMPLEXES_JOUEUR` (éteint : rien de plus, rien
+    // n'est lu). « Mes complexes favoris » (E-P11) attend le serveur L4 (RESA-L6B-2).
+    ...(COMPLEXES_JOUEUR ? [{
+      accessoire: <NombreAVenir />,
+      icon: Images.calendar,
+      key: 'mesReservations',
+      label: t('reserverTerrain.mesReservations.titre', 'Mes réservations'),
+      onPress: () => navigation.navigate(RouteNames.ReserverMesReservations),
+    }] : []),
     {
       icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,
     },
@@ -1326,6 +1343,11 @@ function Profile({ navigation, route }) {
               {profileActivitySection}
             </OnboardingWrapper>
           ) : profileActivitySection}
+
+          {/* RESA-L5A1 (13/10) — « Je gère un complexe » (planche E-G01, état 1, AT-01), caché
+              par l'interrupteur `COMPLEXES_GERANT` tant que le serveur des complexes n'est pas
+              livré. */}
+          {COMPLEXES_GERANT ? <EntreeComplexe compteId={userData?.documentId || null} /> : null}
 
           {accountSection}
 
