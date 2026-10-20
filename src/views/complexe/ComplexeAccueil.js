@@ -264,7 +264,7 @@ function ComplexeAccueil() {
     plateforme: Platform.OS,
     roleDuCompte: tonMode.roleDuCompte,
   });
-  let laBascule = bascule;
+  let laBascule = /** @type {import('react').ReactElement | null} */ (bascule);
   if (tonMode.positions.length >= 2) {
     laBascule = dansLeMenu ? null : (
       <TonMode

@@ -61,7 +61,7 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
  *   Joueur par la feuille (« Ton compte est passé en Joueur. »).
  * @param {() => void} props.onPratiqueAussi - PAR-L12 : ouvrir la feuille « pratiquer aussi ».
  * @param {string[]} props.prenoms - PAR-L12 : les prénoms de ses enfants.
- * @returns {import('react').ReactElement} Le bandeau.
+ * @returns {import('react').ReactElement | null} Le bandeau (rien quand le menu du site l'a).
  */
 function BasculeComplexe({
   accountRoleKey, canUseParentMode, canUsePlayerMode, compteId, displayMode, onChange, onMonter,

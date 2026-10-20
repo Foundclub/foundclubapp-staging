@@ -284,6 +284,7 @@ function SegmentedControl({
         activeOpacity={0.8}
         disabled={radio ? inerte : undefined}
         key={option.value}
+        // @ts-ignore — `nativeID` : l'identifiant que lit Espace, sur le site (react-native-web).
         nativeID={radio && isWeb ? `${idDuGroupe}-${rang}` : undefined}
         onPress={() => onChange(option.value)}
         style={[
@@ -412,7 +413,11 @@ function SegmentedControl({
   };
 
   return (
-    <View onKeyDown={radio && isWeb ? choisirAuClavier : undefined} style={styles.wrapper}>
+    <View
+      // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
+      onKeyDown={radio && isWeb ? choisirAuClavier : undefined}
+      style={styles.wrapper}
+    >
       {content}
     </View>
   );
