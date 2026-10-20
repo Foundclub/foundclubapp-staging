@@ -713,7 +713,6 @@ function EvenementDeLaVilleForm({
           </View>
           {champDescription}
           {champAffiche}
-          {champAffiche}
           {encadrePanne}
         </ScrollView>
         <View style={[Alignments.row, { gap: 12 }]}>
@@ -828,6 +827,7 @@ function EvenementDeLaVilleForm({
       </View>
       {encadreTouchees}
       {champDescription}
+      {champAffiche}
       {encadrePanne}
     </View>
   );

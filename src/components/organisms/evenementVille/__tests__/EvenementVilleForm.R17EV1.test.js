@@ -631,3 +631,19 @@ describe('R17-EVT-1-BIS — « Où ? », l’occupation et la fermeture', () => 
     );
   });
 });
+
+// R17-EVT-1-BIS (f), correctif : l'affiche UNE fois dans le panneau, et dans le récapitulatif du
+// tunnel (avec la description). ROUGE avant (deux dans le panneau, aucune dans le tunnel).
+describe('R17-EVT-1-BIS — l’affiche, une fois, partout', () => {
+  const affiches = (/** @type {any} */ arbre) => arbre.root.findAllByType(TouchableOpacity)
+    .filter((/** @type {any} */ n) => n.props.testID === 'evenement-ajouter-affiche');
+  it('🔴 le panneau : une seule ; le tunnel : au récapitulatif', async () => {
+    const panneau = await monter({ presentation: 'panneau' });
+    expect(affiches(panneau)).toHaveLength(1);
+    const tunnel = await monter();
+    await remplirJusquaQui(tunnel);
+    await touche(tunnel, 'tunnel-suivant');
+    expect(titre(tunnel)).toBe('Récapitulatif');
+    expect(affiches(tunnel)).toHaveLength(1);
+  });
+});
