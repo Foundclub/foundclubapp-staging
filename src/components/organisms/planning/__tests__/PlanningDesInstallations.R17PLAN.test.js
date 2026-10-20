@@ -252,7 +252,7 @@ describe('R17-PLANNING — téléphone', () => {
     expect(mardi).toEqual(expect.arrayContaining([
       'AS Montrivage · U15', 'Gymnase des Tilleuls', 'Montrivage FC · U17', 'Stade municipal',
     ]));
-    expect(lus).toContain('19 – 25 oct.');
+    expect(lus).toContain('19 – 25 octobre'); // R17-PLANNING-2 : le mois en entier (planche, barre)
   });
 
   test('3 — Mois : couleur de l INSTALLATION ; toucher un jour garde le mois', async () => {
@@ -407,7 +407,7 @@ describe('R17-PLANNING — états', () => {
     servir({ '2026-10-19': { dojo: [bloc(AS, '2026-10-24', 10, 'U9')], gym: [], stade: [] } });
     const arbre = await rendre();
     const lus = textes(arbre);
-    expect(lus).toContain('19 – 25 oct.');
+    expect(lus).toContain('19 – 25 octobre');
     expect(lus).toContain('Samedi 24');
     expect(lus).toContain('Dojo municipal');
   });

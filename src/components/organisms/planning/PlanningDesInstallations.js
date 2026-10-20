@@ -265,9 +265,12 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
 
   const debutDeSemaine = startOfWeek(date, { weekStartsOn: 1 });
   const finDeSemaine = addDays(debutDeSemaine, 6);
-  const formatDuDebut = isSameMonth(debutDeSemaine, finDeSemaine) ? 'd' : 'd MMM';
+  const memeMois = isSameMonth(debutDeSemaine, finDeSemaine);
+  const formatDuDebut = memeMois ? 'd' : 'd MMM';
+  // La planche écrit « 19 – 25 octobre » ; à cheval sur deux mois, « 26 oct. – 1 nov. » tient
+  // dans la barre du téléphone.
   const semaineCourte = `${format(debutDeSemaine, formatDuDebut, { locale })} – ${
-    format(finDeSemaine, 'd MMM', { locale })}`;
+    format(finDeSemaine, memeMois ? 'd MMMM' : 'd MMM', { locale })}`;
   let titreDeLaPage = capitalize(format(date, 'EEEE d MMMM', { locale }));
   if (vue === VUES.semaine) titreDeLaPage = semaineCourte;
   if (vue === VUES.mois) titreDeLaPage = capitalize(format(date, 'MMMM yyyy', { locale }));
