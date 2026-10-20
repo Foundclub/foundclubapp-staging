@@ -50,6 +50,9 @@ const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
 
+// R17-CONTROLES (20/10) : l onglet « Sécurité et suivi » porte « Noter un contrôle », qui charge le
+// selecteur de documents (module natif, absent des temoins) : doublure.
+jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' } }),

@@ -34,6 +34,7 @@ import {
   seancesDeLInstallation,
 } from '@/domains/collectivite/collectiviteChiffres';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
+import { checkDayMonth } from '@/domains/facilityCheck/facilityCheckDisplay';
 import {
   closureDaysLabel,
   closureHoursLabel,
@@ -66,6 +67,9 @@ import {
   useCollectiviteWeek,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCollectiviteFacilityChecksSummary,
+} from '@/services/facilityCheck/facilityCheckQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useCollectiviteFacilityReportsSummary,
@@ -160,6 +164,8 @@ function CollectiviteHome() {
   // R17-SIGNALER-1 (19/10, planche P11-securite-ou-ca-vit 1) — « Ce qui vous attend » gagne les
   // signalements à traiter (« Envoyé »). Seulement pour le gestionnaire de CETTE Ville.
   const signalements = useCollectiviteFacilityReportsSummary(collectivite ? collectiviteId : null);
+  // R17-CONTROLES (20/10, Q6 B) — les controles a refaire dans les 30 jours, ou en retard.
+  const controles = useCollectiviteFacilityChecksSummary(collectivite ? collectiviteId : null);
   // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
   // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
   const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
@@ -587,6 +593,55 @@ function CollectiviteHome() {
     </TouchableOpacity>
   ) : null;
 
+  // R17-CONTROLES (20/10, REC17-011 lot 2, Q6 B ; planche P11-securite-ou-ca-vit porte 1) —
+  // « Contrôle à refaire avant le 12 mars » : le plus urgent des controles a refaire dans les 30
+  // jours (ou en retard), « n contrôles à refaire » s il y en a plusieurs ; un appui ouvre l onglet
+  // « Sécurité et suivi » de SON installation.
+  const aRefaire = Array.isArray(controles.data?.data) ? controles.data.data : [];
+  const plusUrgent = aRefaire[0] || null;
+  let titreDesControles = '';
+  if (aRefaire.length > 1) {
+    titreDesControles = t('facilityReports.controles.accueilPlusieurs', {
+      ...SANS_ECHAPPEMENT,
+      count: aRefaire.length,
+    });
+  } else if (plusUrgent) {
+    titreDesControles = t(
+      plusUrgent.state === 'en_retard'
+        ? 'facilityReports.controles.accueilRetard'
+        : 'facilityReports.controles.accueilAvant',
+      { ...SANS_ECHAPPEMENT, date: checkDayMonth(plusUrgent.nextDue) },
+    );
+  }
+  const blocDesControles = plusUrgent ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => ouvrir(RouteNames.CollectiviteInstallation, {
+        facilityId: plusUrgent.facility?.documentId,
+        onglet: 'securite',
+      })}
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(Colors.warning500, 0.08),
+          borderColor: withAlpha(Colors.warning500, 0.45),
+          gap: 4,
+        },
+      ]}
+      testID="collectivite-home-controles"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titreDesControles}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t('facilityReports.controles.accueilDetail', {
+          ...SANS_ECHAPPEMENT,
+          facility: plusUrgent.facility?.name || '',
+          label: plusUrgent.label,
+        })}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   const renderAttente = () => {
     if (pending.isLoading) {
       return (
@@ -634,11 +689,12 @@ function CollectiviteHome() {
     }
     // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
     // à traiter) : elle seule attend.
-    if (!enTete && (blocDesSignalements || blocDesFermetures)) {
+    if (!enTete && (blocDesSignalements || blocDesControles || blocDesFermetures)) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
           {blocDesSignalements}
+          {blocDesControles}
           {blocDesFermetures}
         </View>
       );
@@ -711,6 +767,7 @@ function CollectiviteHome() {
           )}
         </View>
         {blocDesSignalements}
+        {blocDesControles}
         {blocDesFermetures}
       </View>
     );
