@@ -150,6 +150,14 @@ function PersonalPlanningContainer({
     });
   };
 
+  // 🏛️ R17-EVT-1 (20/10) — « Mon planning » (niveau 3) : le bloc clair d un evenement de la Ville
+  // ouvre sa fiche (le serveur l a verse, sans `documentId` de seance).
+  const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
+    if (evenement?.documentId) {
+      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+    }
+  };
+
   const handleOpenFullscreen = () => {
     navigation.navigate(RouteNames.PlanningWeekFullscreen, {
       contextLabel: t('planning.fullscreen.personal', 'Mon planning'),
@@ -173,6 +181,7 @@ function PersonalPlanningContainer({
       expandToContent={isWebPlanning}
       mode={viewMode}
       onDateChange={choisirLaDate}
+      onEvenementVillePress={ouvrirLEvenementDeLaVille}
       onEventPress={handleEventPress}
       onSummaryPress={onSummaryPress}
       scrollEnabled={!isWebPlanning}

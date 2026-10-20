@@ -35,6 +35,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  blocsDesEvenements,
+  fermeturesSansLesEvenements,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import {
   closureBandLabel,
@@ -913,6 +917,13 @@ function PlanningWeekFullscreen() {
   // COLL-C4B (02/10) — les plages fermees ou bloquees de la fenetre (`meta.closures`, contrat §13).
   // COLL-C4B-BIS : plus le brouillon du panneau (a la place de la fermeture qu il modifie).
   const fermeturesDuServeur = Array.isArray(data?.meta?.closures) ? data.meta.closures : [];
+  // 🏛️ R17-EVT-1 (20/10, REC17-005) — les evenements de la Ville sur CETTE installation
+  // (`meta.evenementsDeLaVille`) : un bloc CLAIR par jour ; leur blocage lie ne se dessine pas en
+  // plus.
+  const evenementsDeLaVille = isFacilitySource && Array.isArray(data?.meta?.evenementsDeLaVille)
+    ? data.meta.evenementsDeLaVille
+    : [];
+  const fermeturesADessiner = fermeturesSansLesEvenements(fermeturesDuServeur, evenementsDeLaVille);
   // COLL-C4B-BIS (03/10), point 6 — LE BANDEAU suit la periode concernee (P3b-actu-tel ecran 6 :
   // « tant que la fermeture dure ou approche ») : la fermeture de la page d abord, sinon celle que
   // le serveur annonce (`meta.bandeau` : en cours, ou dans les 14 jours). Pour TOUS les lecteurs —
@@ -931,11 +942,11 @@ function PlanningWeekFullscreen() {
   ));
   const fermeturesDessinees = brouillon
     ? [
-      ...fermeturesDuServeur.filter((/** @type {any} */ fermeture) => !brouillon.documentId
+      ...fermeturesADessiner.filter((/** @type {any} */ fermeture) => !brouillon.documentId
         || fermeture?.documentId !== brouillon.documentId),
       { ...brouillon, enSaisie: true },
     ]
-    : fermeturesDuServeur;
+    : fermeturesADessiner;
   // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) — LES VACANCES SCOLAIRES de la zone que la page
   // montre (`meta.holidays`, serveur) : un bandeau violet, jamais confondu avec une fermeture, pour
   // tous les lecteurs. En vue Jour, le seul jour affiché ; sinon la période lue.
@@ -952,6 +963,14 @@ function PlanningWeekFullscreen() {
       (/** @type {any} */ fermeture) => closureBandLabel(t, fermeture),
     ))
     : [];
+  const blocsDesEvenementsDeLaVille = isFacilitySource
+    ? normalizePlanningItems(blocsDesEvenements(evenementsDeLaVille, planningRange))
+    : [];
+  const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
+    if (evenement?.documentId) {
+      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+    }
+  };
   const attribuerA = useCallback((
     /** @type {Date} */ jour,
     /** @type {number} */ debut,
@@ -1378,7 +1397,7 @@ function PlanningWeekFullscreen() {
         // sous les seances (jamais comptees comme une seance). COLL-C4B-BIS : aussi en colonnes de
         // plateaux (la grille les pose sous toutes les colonnes).
         // Recolte 03/10 : avec COLL-C3B-BIS, les blocs affiches portent aussi la place « U13 ? » en pointille.
-        events={[...bandesDeFermeture, ...evenementsAffiches]}
+        events={[...bandesDeFermeture, ...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         // 🏛️ COLL-R-APP-PLANNING (COL-012) : des fleches aussi dans la rangee des jours (la ou est
         // le regard), les memes que celles du haut, avec leurs noms.
@@ -1390,6 +1409,7 @@ function PlanningWeekFullscreen() {
         onDateChange={vue === VUES.troisJours
           ? (/** @type {Date} */ ancre) => setCurrentDate(addDays(ancre, 1))
           : setCurrentDate}
+        onEvenementVillePress={ouvrirLEvenementDeLaVille}
         onEventPress={handleEventPress}
         onFreeSlotPress={toucherUneHeureLibre}
         onReadOnlyEventPress={handleReadOnlyEventPress}
