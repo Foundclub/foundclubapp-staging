@@ -6240,9 +6240,12 @@ export default {
         ferme: '{{date}}, fermé ({{fermeture}})',
         legendeChoisi: 'Choisi',
         legendeFerme: 'Complet ou fermé',
+        // 🌴 R17-QUAND-2 : les vacances scolaires de la zone (planche P11-quand-v2-tel).
+        legendeVacances: 'Vacances ({{zone}})',
         libre: '{{date}}, libre',
         precedent: 'Mois précédent',
         suivant: 'Mois suivant',
+        vacances: '{{date}}, vacances ({{nom}})',
       },
       chaqueDeLaPeriode: 'chaque {{jour}} de la période',
       chaqueDeLaSaison: 'chaque {{jour}} de la saison',
@@ -6294,6 +6297,27 @@ export default {
       uneDate: 'Une date',
       unJourFixe: 'Un jour fixe chaque semaine',
       unSurDeuxCourt: 'un {{jour}} sur deux',
+      // 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi) : sauf vacances.
+      vacances: {
+        aucune: 'Aucune séance ne tombe pendant les vacances.',
+        calendrierOfficiel: 'Calendrier officiel {{annees}}',
+        case: 'Sauf vacances scolaires',
+        ligne: '{{du}} – {{au}} · {{jours}}',
+        masquer: 'Masquer les dates retirées',
+        origineConsole: 'Zone choisie par FoundClub. Une erreur ? Écrivez à FoundClub : nous la '
+          + 'corrigeons.',
+        origineDeduite: 'Zone déduite de votre commune ({{departement}}). Une erreur ? '
+          + 'Écrivez à FoundClub : nous la corrigeons.',
+        periode: '{{nom}} : retirer ces séances',
+        recap: '{{detail}}, sauf vacances scolaires ({{zone}})',
+        retirees_one: '{{count}} retiré pendant les vacances : {{noms}}.',
+        retirees_other: '{{count}} retirés pendant les vacances : {{noms}}.',
+        retireesDates_one: '{{count}} date retirée pendant les vacances : {{noms}}.',
+        retireesDates_other: '{{count}} dates retirées pendant les vacances : {{noms}}.',
+        titreListe: 'Vacances retirées · {{zone}}',
+        voir: 'Voir les dates retirées',
+        zone: '{{zone}} · académie de {{academie}}',
+      },
     },
     tunnel: {
       // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
