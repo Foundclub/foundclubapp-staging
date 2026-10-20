@@ -937,6 +937,10 @@ describe('MSG-SUPPORT — la conversation d\'assistance rattrape comme les autre
 
     expect(ecranDuHaut()?.textes).toEqual(['En direct', DEMANDE]);
     expect(lecturesDu(ASSISTANCE)).toBe(lecturesAvant);
+    // … et le message reçu en direct GARDE sa signature : c'est elle qui le range du côté de
+    // l'équipe et dit qui a répondu (sans elle, la console le croyait d'ailleurs).
+    const enCache = client.getQueryData(clefDesMessages(ASSISTANCE))?.pages?.[0]?.data?.[0];
+    expect(enCache?.senderSignature).toEqual({ nom: 'Assistance FoundClub', voix: 'assistance' });
   });
 
   test('(p) côté équipe : la notif « newGroupMessage » ouvre la conversation', async () => {
