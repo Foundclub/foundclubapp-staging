@@ -415,6 +415,34 @@ export const validerRecompense = async (complexeId, joueurId) => corps(
 );
 
 /**
+ * Les STATISTIQUES V1 de SON complexe (E-G17) pour une période : l'occupation (le complexe et
+ * chaque terrain, sur les créneaux de son modèle), les réservations, les favoris, la fidélité, les
+ * 5 clients qui ont le plus joué (nom court, jamais un numéro).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<any>} `{ data: { periode, from, to, occupation{ taux, terrains[] },
+ *   reservations, favoris{ total, nouveaux }, fidelite, clientsFideles[] } }`.
+ */
+export const lireChiffres = async (complexeId, periode) => corps(
+  client().get(`/complexes/${enc(complexeId)}/chiffres`, { params: { periode } }),
+);
+
+/**
+ * « Exporter (CSV) » (E-G17) : une ligne par réservation de la période, le texte du serveur.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @returns {Promise<string>} Le CSV.
+ */
+export const lireExportChiffres = async (complexeId, periode) => {
+  const reponse = await client().get(`/complexes/${enc(complexeId)}/chiffres/export`, {
+    params: { periode },
+    responseType: 'text',
+    transformResponse: [(/** @type {any} */ brut) => brut],
+  });
+  return String(reponse?.data ?? '');
+};
+
+/**
  * Le CANAL de SON complexe (E-G12) : ouvert s'il ne l'est pas ; un groupe de la messagerie où seuls
  * les gérants écrivent (la conversation habituelle, `chatId`). Ses membres, gérants exceptés : le
  * nom (prénom + initiale), comment ils sont entrés, depuis quand ; jamais un numéro. Complexe qui

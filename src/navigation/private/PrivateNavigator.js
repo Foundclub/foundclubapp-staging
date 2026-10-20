@@ -1509,6 +1509,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5B-2 — les statistiques du complexe (E-G17, serveur RESA-L4). */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeStatistiques').default}
+            name={RouteNames.ComplexeStatistiques}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L5B-2 — « Mon complexe », la page (E-G11, serveurs RESA-L1A et RESA-L4). */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen

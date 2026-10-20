@@ -20,6 +20,7 @@ import {
   fermerTerrains,
   lireApercuFermeture,
   lireCanal,
+  lireChiffres,
   lireClient,
   lireClients,
   lireComplexeGere,
@@ -487,6 +488,21 @@ export const useHistoriqueClient = (complexeId, joueurId) => useQuery({
     await lireHistoriqueClient(String(complexeId), String(joueurId))
   )?.data ?? null,
   queryKey: ['complexe', complexeId, 'client', joueurId, 'historique'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Les statistiques de SON complexe (E-G17) pour une période ; aussi les deux tuiles de l'accueil
+ * (occupation, nouveaux favoris de la semaine).
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @param {'mois' | 'saison' | 'semaine'} periode - La période.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} Les chiffres.
+ */
+export const useChiffresDuComplexe = (complexeId, periode, { enabled = true } = {}) => useQuery({
+  enabled: enabled && Boolean(complexeId),
+  queryFn: async () => (await lireChiffres(String(complexeId), periode))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'chiffres', periode],
   staleTime: DEMI_MINUTE,
 });
 

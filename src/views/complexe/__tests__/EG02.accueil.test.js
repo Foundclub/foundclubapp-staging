@@ -351,12 +351,12 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
       complexeId: 'cx-five',
     });
-    // RESA-L5B-2 : « Gérer mon complexe » a son écran (E-G11) ; seule « Statistiques » reste.
+    // RESA-L5B-2 : « Gérer mon complexe » a son écran (E-G11).
     const complexe = parRepere(arbre, 'complexe-accueil-case-complexe');
     expect(complexe?.props.accessibilityState).toEqual({ disabled: false });
     // RESA-L5B-2 : « Clients » a son écran (E-G15) ; ce que les autres cases deviennent est
     // vérifié par `EG02.cases.L5B2.test.js`.
-    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(1);
+    expect(textes(arbre).filter((texte) => texte === 'Bientôt')).toHaveLength(0);
   });
 });
 
