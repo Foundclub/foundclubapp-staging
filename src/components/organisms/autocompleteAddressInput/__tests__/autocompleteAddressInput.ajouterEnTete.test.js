@@ -313,6 +313,23 @@ describe('ADRESSE-EN-PREMIER — « Ajouter « <texte tapé> » » en TÊTE de l
     expect(texteVisible(arbre)).not.toContain(AJOUTER('Gym'));
   });
 
+  // La ligne précède la réponse de la recherche : un appui AVANT elle part de ce qu'on sait (la
+  // commune tapée, la ville de l'objet, la position), comme R17-ADRESSE quand rien n'est trouvé.
+  it('e2 bis appuyée avant la réponse : la carte part de la commune tapée', async () => {
+    mockSearchPlaces.mockReturnValue(new Promise(() => {}));
+    mockChercherCommune.mockImplementation((/** @type {string} */ texte) => Promise.resolve(
+      texte === TAPE ? AIX : null,
+    ));
+    const arbre = monter({ permettreLieuSurCarte: true });
+    await ouvrirLeChamp(arbre);
+    await taper(arbre, TAPE);
+    await appuyerSur(arbre, AJOUTER(TAPE));
+    await laisserTourner(2);
+
+    expect(mockChercherCommune).toHaveBeenCalledWith(TAPE);
+    expect(derniereCarte().regionHint).toEqual({ lat: 43.5297, lng: 5.4474, zoom: 13 });
+  });
+
   it('e3 l appui ferme la liste, ouvre la carte, nom pré-rempli, valeur intacte', async () => {
     const setAddress = jest.fn();
     const arbre = monter({ permettreLieuSurCarte: true, setAddress });
