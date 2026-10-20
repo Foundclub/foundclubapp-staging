@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   closureBandLabel,
@@ -133,6 +134,7 @@ const hexToRgba = (hex, alpha) => {
  * @param root0.onPress
  * @param root0.selectedDate
  * @param root0.state
+ * @param root0.todayKey
  */
 function PlanningCalendarDay({
   colors,
@@ -157,7 +159,11 @@ function PlanningCalendarDay({
   if (journeeFermee) testIDDuJour = `jour-ferme-${dateString}`;
   else if (jourBloque) testIDDuJour = `jour-bloque-${dateString}`;
 
-  const dayEvents = eventsByDate.get(dateString) || [];
+  // R17-EVT-1-BIS (b) (20/10) : un événement de la Ville n'est pas une séance : un repère CLAIR
+  // à part, jamais compté dans les pastilles des séances.
+  const duJour = eventsByDate.get(dateString) || [];
+  const avecEvenementVille = duJour.some((event) => event?.raw?.evenementDeLaVille);
+  const dayEvents = duJour.filter((event) => !event?.raw?.evenementDeLaVille);
   const hasPendingEvent = dayEvents.some((event) => isPlanningPendingParticipation(event));
   // R17-PLANNING-2 (20/10) : le nombre de seances de chaque couleur (planche P10-planning-ordi 3,
   // « une pastille par installation avec son nombre de seances »).
@@ -240,6 +246,12 @@ function PlanningCalendarDay({
         ) : null}
 
         <View style={styles.dayMarkersRow}>
+          {avecEvenementVille ? (
+            <View
+              style={[styles.dayMarker, { backgroundColor: colors.primary100 }]}
+              testID={`jour-evenement-ville-${dateString}`}
+            />
+          ) : null}
           {uniqueColors.map((color) => (compterLesSeances ? (
             <View
               key={`${dateString}-${color}`}
@@ -343,6 +355,53 @@ function PlanningCalendarView({
   );
 
   const renderPlanningListCard = useCallback(({ item }) => {
+    // R17-EVT-1-BIS (b) (20/10) : l'événement de la Ville, sa carte CLAIRE (pleine s'il prend toute
+    // l'installation, en contour à côté), comme son bloc dans la grille ; elle s'ouvre pareil.
+    const evenementVille = item?.raw?.evenementDeLaVille;
+    if (evenementVille) {
+      const plein = Boolean(evenementVille.takesPlace);
+      return (
+        <TouchableOpacity
+          accessibilityLabel={t(
+            'collectiviteEvenement.planning.aria',
+            'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+            {
+              heures: `${evenementVille.startTime || ''} – ${evenementVille.endTime || ''}`,
+              interpolation: { escapeValue: false },
+              nom: evenementVille.name,
+              place: etiquetteDuPlanning(t, evenementVille),
+            },
+          )}
+          accessibilityRole="button"
+          onPress={() => onEventPress?.(item)}
+          style={[Spaces.marginBottom[12], {
+            backgroundColor: plein ? Colors.primary100 : withAlpha(Colors.primary100, 0.18),
+            borderColor: Colors.primary100,
+            borderRadius: 12,
+            borderWidth: plein ? 0 : 1.5,
+            gap: 2,
+            padding: 12,
+          }]}
+          testID={`liste-evenement-ville-${evenementVille.documentId}`}
+        >
+          <Text
+            style={[Fonts.p4Bold, {
+              color: plein ? Colors.primary700 : Colors.primary100,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+            }]}
+          >
+            {etiquetteDuPlanning(t, evenementVille)}
+          </Text>
+          <Text numberOfLines={2} style={[Fonts.p2Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}>
+            {evenementVille.name}
+          </Text>
+          <Text style={[Fonts.p3, { color: plein ? Colors.primary700 : Colors.neutral300 }]}>
+            {`${evenementVille.startTime || ''} – ${evenementVille.endTime || ''}`}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
     const accentColor = item?.displayColor
       || resolveFacilityPlanningColor(item?.facility)
       || Colors.primary500;
@@ -432,13 +491,17 @@ function PlanningCalendarView({
   }, [
     ApplicationStyle.backgroundColor.primary700,
     ApplicationStyle.borderRadius24,
+    Colors.neutral00,
     Colors.neutral300,
     Colors.gold500,
+    Colors.primary100,
     Colors.primary500,
+    Colors.primary700,
     Colors.warning400,
     Colors.warning500,
     Fonts.neutral00,
     Fonts.p1Bold,
+    Fonts.p2Bold,
     Fonts.p3,
     Fonts.p3Bold,
     Fonts.p4Bold,

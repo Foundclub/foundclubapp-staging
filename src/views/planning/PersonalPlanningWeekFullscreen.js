@@ -1088,6 +1088,11 @@ function PlanningWeekFullscreen() {
     setBrouillon(null);
   }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
+    // R17-EVT-1-BIS (b) (20/10) : vues Mois et Liste, l événement de la Ville ouvre SA fiche.
+    if (bloc?.raw?.evenementDeLaVille) {
+      ouvrirLEvenementDeLaVille(bloc.raw.evenementDeLaVille);
+      return;
+    }
     if (bloc?.documentId) {
       /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
         params: { eventId: bloc.documentId },
@@ -1294,7 +1299,8 @@ function PlanningWeekFullscreen() {
             // COLL-C4B-BIS : les jours fermes du mois, marques (et le brouillon du panneau).
             closures={fermeturesDessinees}
             currentDate={currentDate}
-            events={evenementsAffiches}
+            // R17-EVT-1-BIS (b) : les événements de la Ville de CETTE installation (repère clair).
+            events={[...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
             onDateSelect={setCurrentDate}
             onEventPress={ouvrirUnBloc}
           />
@@ -1312,7 +1318,8 @@ function PlanningWeekFullscreen() {
         <FacilityPlanningList
           capacite={facilityPlanningSummary?.maxSlots || 1}
           debutDeSemaine={startOfWeek(currentDate, { weekStartsOn: 1 })}
-          evenements={events}
+          // R17-EVT-1-BIS (b) : ses événements de la Ville (carte claire, heures prises).
+          evenements={[...blocsDesEvenementsDeLaVille, ...events]}
           fermeture={fromMinutes(fermetureDuJour)}
           // COLL-C4B-BIS : un jour ferme n a aucune place libre (T10, planche 25).
           fermetures={fermeturesDessinees}
