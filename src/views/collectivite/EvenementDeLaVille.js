@@ -251,10 +251,10 @@ function EvenementDeLaVille() {
               'Une séance déjà déplacée par son club ne revient pas toute seule.',
             )}
           </Text>
-          <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+          {/* Les deux libellés sont longs : l'un sous l'autre, jamais coupés (390 px). */}
+          <View style={{ gap: 12 }}>
             <Button
               onPress={() => setConfirmer(false)}
-              style={{ flex: 1 }}
               testID="evenement-garder"
               title={t('collectiviteEvenement.annulation.garder', 'Garder l’événement')}
               variant="Secondary"
@@ -262,7 +262,6 @@ function EvenementDeLaVille() {
             <Button
               isLoading={annuler.isPending}
               onPress={confirmerLAnnulation}
-              style={{ flex: 1 }}
               testID="evenement-confirmer-annulation"
               title={t('collectiviteEvenement.fiche.annuler', 'Annuler l’événement')}
               variant="DangerFilled"
