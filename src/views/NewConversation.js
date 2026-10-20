@@ -511,7 +511,7 @@ function NewConversation({ navigation, route }) {
         const chatId = String(reponse?.data?.documentId || '');
         queryClient.invalidateQueries({ queryKey: ['chats'] });
         if (chatId) {
-          navigation.replace(RouteNames.Conversation, {
+          /** @type {any} */ (navigation).replace(RouteNames.Conversation, {
             chatId,
             chatType: 'collectivite_conversation',
             espace: 'ville',
@@ -678,7 +678,7 @@ function NewConversation({ navigation, route }) {
   // 🏛️ MSG-VILLE-NOUVELLE — côté Ville, les puces sont ses clubs ; « Gérants » (aucun
   // club ouvert) montre ses autres gestionnaires. Une Ville peut avoir des dizaines de
   // clubs : la rangée défile, et la recherche couvre tous les clubs.
-  /** @type {Array<{ documentId: string | null, name: string }>} */
+  /** @type {any[]} */
   const filtresAffiches = modeVille
     ? [
       { documentId: null, name: t('newConversation.ville.gerants', 'Gérants') },
