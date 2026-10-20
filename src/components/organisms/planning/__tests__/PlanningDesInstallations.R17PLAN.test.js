@@ -4,6 +4,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
+import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
+
 import PlanningDesInstallations from '../PlanningDesInstallations';
 
 // 🏟️ R17-PLANNING (20/10/2026, REC17-005 lot 1) — « Planning de toutes les installations », sous
@@ -23,6 +25,9 @@ const frTemoin = require('@/theme/strings/translations/fr');
   lng: 'fr',
   resources: { fr: { translation: frTemoin.default } },
 });
+
+// Les couleurs d installation de la palette du projet (contrat de thème : aucun hexa en clair).
+const [, , VERT, ORANGE, , VIOLET] = FACILITY_PLANNING_PALETTE;
 
 /** @type {any} */
 let mockNavigation;
@@ -90,13 +95,13 @@ jest.mock('@/components/organisms/planningWeekTimelineView', () => function Gril
 
 const INSTALLATIONS = [
   {
-    documentId: 'gym', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: '#27D6A3',
+    documentId: 'gym', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: VERT,
   },
   {
-    documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: '#9D4DFF',
+    documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: VIOLET,
   },
   {
-    documentId: 'stade', maxSlots: 2, name: 'Stade municipal', planningColor: '#FFA115',
+    documentId: 'stade', maxSlots: 2, name: 'Stade municipal', planningColor: ORANGE,
   },
 ];
 const AS = { documentId: 'club-as', name: 'AS Montrivage' };
@@ -243,7 +248,7 @@ describe('R17-PLANNING — téléphone', () => {
     await choisir(arbre, 'month');
     const calendrier = mockCalendriers.at(-1);
     expect(calendrier.events.filter((/** @type {any} */ b) => b.installation.documentId === 'stade')
-      .every((/** @type {any} */ b) => b.displayColor === '#FFA115')).toBe(true);
+      .every((/** @type {any} */ b) => b.displayColor === ORANGE)).toBe(true);
     await act(async () => { calendrier.onDateSelect(new Date(2026, 9, 20, 12)); });
     await attendre();
     // Au téléphone, toucher un jour garde le mois (sa liste s'affiche sous le calendrier).

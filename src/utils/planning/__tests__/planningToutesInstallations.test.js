@@ -1,3 +1,5 @@
+import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
+
 import {
   blocsDeLaVille,
   blocsDuMois,
@@ -14,16 +16,19 @@ import {
 // installation utilisée. Une couleur PAR CLUB (celle de COL-019), la même d'une installation à
 // l'autre.
 
+// Les couleurs d installation de la palette du projet (contrat de thème : aucun hexa en clair).
+const [, , VERT, ORANGE, , VIOLET] = FACILITY_PLANNING_PALETTE;
+
 const LUNDI = new Date(2026, 9, 19, 0, 0, 0);
 const INSTALLATIONS = [
   {
-    documentId: 'gym', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: '#27D6A3',
+    documentId: 'gym', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: VERT,
   },
   {
-    documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: '#9D4DFF',
+    documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: VIOLET,
   },
   {
-    documentId: 'stade', maxSlots: 2, name: 'Stade municipal', planningColor: '#FFA115',
+    documentId: 'stade', maxSlots: 2, name: 'Stade municipal', planningColor: ORANGE,
   },
 ];
 const AS = { documentId: 'club-as', name: 'AS Montrivage' };
@@ -114,9 +119,9 @@ describe('R17-PLANNING — le planning de toutes les installations', () => {
   test('6 — Mois : la couleur de l INSTALLATION (on compte des installations utilisées)', () => {
     const mois = blocsDuMois(blocsDeLaVille(LECTURES, INSTALLATIONS, null));
     expect(mois.filter((b) => b.installation.documentId === 'gym')
-      .every((b) => b.displayColor === '#27D6A3')).toBe(true);
+      .every((b) => b.displayColor === VERT)).toBe(true);
     expect(mois.filter((b) => b.installation.documentId === 'stade')
-      .every((b) => b.displayColor === '#FFA115')).toBe(true);
+      .every((b) => b.displayColor === ORANGE)).toBe(true);
   });
 
   test('7 — un jour sans rien : la prochaine séance connue, ou rien', () => {
