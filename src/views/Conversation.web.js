@@ -1400,7 +1400,12 @@ function useHauteurDuCadre(cadreRef, isDesktop, declencheur) {
       const cadre = cadreRef.current;
       if (!cadre?.getBoundingClientRect) return;
       const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
-      const reserveDuBas = isDesktop ? 20 : 96;
+      // SAISIE : Joueur/Parent gardent le dock sur ordinateur. La coque connaît sa réserve,
+      // y compris quand le menu latéral le remplace ; la largeur seule ne le dit pas.
+      const coque = cadre.closest?.('.shell-content');
+      const retraitDeLaCoque = coque && typeof window.getComputedStyle === 'function'
+        ? Number.parseFloat(window.getComputedStyle(coque).paddingBottom) || 0 : 0;
+      const reserveDuBas = Math.max(isDesktop ? 20 : 96, retraitDeLaCoque);
       setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
     };
     mesurer();
