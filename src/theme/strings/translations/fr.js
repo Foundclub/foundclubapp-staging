@@ -16239,6 +16239,9 @@ export default {
     unableToLoadThePlanning: 'Impossible de charger le planning',
     // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) : « Vacances de la Toussaint · Zone B ».
     vacances: '{{vacances}} · {{zone}}',
+    absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
+    retourVacances: 'Retour le {{jour}}.',
+    finVacances: 'Aucune autre séance prévue sur ce créneau.',
     // eslint-disable-next-line max-len
     weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },

@@ -58,11 +58,12 @@ import {
   fullMomentsOfPlanning,
   isoWeekdayOf,
   momentLabel,
+  slotWho,
   timeRange,
   toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
-import { vacancesDeLaPage } from '@/domains/seasonSlot/seasonSlotHolidays';
+import { creneauxEnVacances, vacancesDeLaPage } from '@/domains/seasonSlot/seasonSlotHolidays';
 import { formeEnMots } from '@/domains/seasonSlot/seasonSlotWhen';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -103,6 +104,7 @@ import {
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
+import { useFacilitySeasonSlots } from '@/services/seasonSlot/seasonSlotQueries';
 import {
   getClubSharedPlanning,
   getCMPlanning,
@@ -960,6 +962,29 @@ function PlanningWeekFullscreen() {
   const vacancesAffichees = vue === VUES.jour
     ? vacancesDeLaPage(vacancesDeLaZone, jourAffiche, jourAffiche)
     : vacancesDeLaPage(vacancesDeLaZone, planningRange.from, planningRange.to);
+  // Les occurrences retirées sont absentes du planning. La lecture existante des séries
+  // retrouve leur équipe ; elle reste réservée à la Ville et aux pages de vacances.
+  const seriesDeLInstallation = useFacilitySeasonSlots(
+    peutAttribuer && vacancesAffichees.length ? facilityId : null,
+  );
+  const absencesScolaires = (/** @type {string} */ jour) => (
+    creneauxEnVacances(seriesDeLInstallation.data?.data, jour)
+  );
+  const ouvrirVacances = (
+    /** @type {Date} */ jour,
+    /** @type {number} */ debut,
+    /** @type {number} */ fin,
+    /** @type {number | null} */ plateau,
+  ) => {
+    const absences = absencesScolaires(format(jour, 'yyyy-MM-dd')).filter(({ creneau }) => (
+      (toMinutes(creneau.startTime) ?? 0) < fin
+      && debut < (toMinutes(creneau.endTime) ?? 0)
+      && (!plateau || !creneau.plateau?.number || creneau.plateau.number === plateau)
+    ));
+    if (!absences.length) return false;
+    setPanneau({ absences, debut, fin, jour, plateau, type: 'vacances' });
+    return true;
+  };
   const bandesDeFermeture = isFacilitySource
     ? normalizePlanningItems(closureBandsForRange(
       fermeturesDessinees,
@@ -1054,12 +1079,13 @@ function PlanningWeekFullscreen() {
       /** @type {Date} */ jour,
       /** @type {number} */ heure,
       /** @type {number | undefined} */ colonne,
-    ) => attribuerA(
-      jour,
-      heure * 60,
-      heure * 60 + 90,
-      Number.isInteger(colonne) && Number(colonne) < nombreDePlateaux ? Number(colonne) + 1 : null,
-    );
+    ) => {
+      const plateau = Number.isInteger(colonne) && Number(colonne) < nombreDePlateaux
+        ? Number(colonne) + 1 : null;
+      if (!ouvrirVacances(jour, heure * 60, heure * 60 + 90, plateau)) {
+        attribuerA(jour, heure * 60, heure * 60 + 90, plateau);
+      }
+    };
   } else if (peutDemander) {
     toucherUneHeureLibre = (/** @type {Date} */ jour, /** @type {number} */ heure) => (
       demanderA(jour, heure)
@@ -1654,6 +1680,35 @@ function PlanningWeekFullscreen() {
             presentation="panneau"
           />
         </Suspense>
+      </View>
+    );
+  } else if (panneau?.type === 'vacances') {
+    panneauRendu = (
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}>
+        {panneau.absences.map((/** @type {{ creneau: any, retour: string | null }} */ absence) => (
+          <Text key={absence.creneau.documentId} style={[Fonts.p2, Fonts.neutral00]}>
+            {[
+              t('personalPlanningWeekFullscreen.absenceVacances',
+                '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).', {
+                  ...SANS_ECHAPPEMENT,
+                  club: slotWho(absence.creneau),
+                  zone: vacancesDeLaZone?.label || '',
+                }),
+              absence.retour ? t('personalPlanningWeekFullscreen.retourVacances',
+                'Retour le {{jour}}.', {
+                  ...SANS_ECHAPPEMENT,
+                  jour: format(parseISO(absence.retour), 'EEE d MMM', { locale: localeDesDates() }),
+                }) : t('personalPlanningWeekFullscreen.finVacances',
+                'Aucune autre séance prévue sur ce créneau.'),
+            ].join(' ')}
+          </Text>
+        ))}
+        <Button
+          onPress={() => attribuerA(panneau.jour, panneau.debut, panneau.fin, panneau.plateau)}
+          title={t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau')}
+          variant="Primary"
+        />
+        <Button onPress={fermerPanneau} title={t('common.close', 'Fermer')} variant="Secondary" />
       </View>
     );
   } else if (panneau?.type === 'demander') {
