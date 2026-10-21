@@ -61,6 +61,8 @@ const chatSchema = Joi.object({
       'collectivite_club',
       'collectivite_ville',
       'assistance',
+      // MSG-VILLE-NOUVELLE (20/10) : la conversation que la Ville ouvre avec qui elle veut.
+      'collectivite_conversation',
     )
     .required(),
   updatedAt: Joi.date().required(),

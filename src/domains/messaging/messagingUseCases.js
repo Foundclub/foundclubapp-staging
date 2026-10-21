@@ -171,6 +171,13 @@ export const getConversationName = ({
       return i18next.t('assistance.titre', 'Assistance FoundClub');
     case 'club':
       return chatClub?.name || '';
+    // MSG-VILLE-NOUVELLE (20/10) — la conversation ouverte par la Ville : son nom de groupe, ou,
+    // pour un tête-à-tête, la personne d'en face (le nom de la Ville côté membre : titreDuFil).
+    case 'collectivite_conversation': {
+      if (String(chatGroupName || '').trim()) return String(chatGroupName).trim();
+      const enFace = chatParticipants?.find((p) => p.documentId !== meId) || chatParticipants?.[0];
+      return `${enFace?.firstname || ''} ${enFace?.lastname || ''}`.trim();
+    }
     // COLL-C4A2 (02/10) — le canal des dirigeants de la Ville (D72). La conversation privee
     // Ville <-> club (D73) se nomme par collectiviteCanaux.titreDuFil (qui sait de quel cote).
     case 'collectivite_dirigeants':
