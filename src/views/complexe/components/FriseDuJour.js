@@ -61,9 +61,7 @@ function FriseDuJour({
   const heures = Array.from({ length: (fin - debut) / 60 + 1 }, (_v, index) => debut + index * 60);
 
   const libelleDe = (/** @type {EtatDuCreneau} */ etat) => libelleDeLEtat(t, etat);
-  const styleDe = (/** @type {EtatDuCreneau} */ etat, /** @type {string} */ couleur) => (
-    styleDuCreneau(Colors, etat, couleur)
-  );
+  const styleDe = (/** @type {EtatDuCreneau} */ etat) => styleDuCreneau(Colors, etat);
 
   const caseDuCreneau = (
     /** @type {LigneDeLaFrise} */ ligne,
@@ -71,7 +69,6 @@ function FriseDuJour({
   ) => {
     const de = Number(minutesDe(creneau.from));
     const a = Number(minutesDe(creneau.to));
-    const couleur = ligne.couleur || Colors.primary500;
     const libelle = creneau.libelle || libelleDe(creneau.etat);
     const Case = onToucher ? TouchableOpacity : View;
     return (
@@ -103,7 +100,7 @@ function FriseDuJour({
             top: 4,
             width: Math.max(8, (a - de) * PAR_MINUTE - 2),
           },
-          styleDe(creneau.etat, couleur),
+          styleDe(creneau.etat),
         ]}
         testID={`frise-creneau-${ligne.cle}-${creneau.from}`}
       >
@@ -182,7 +179,7 @@ function FriseDuJour({
                   {
                     borderRadius: 4, borderWidth: 1, height: 14, width: 22,
                   },
-                  styleDe(etat, Colors.primary500),
+                  styleDe(etat),
                 ]}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>{libelleDe(etat)}</Text>

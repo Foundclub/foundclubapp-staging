@@ -412,7 +412,7 @@ function ComplexePlanning() {
               {
                 borderRadius: 4, borderWidth: 1, height: 14, width: 22,
               },
-              styleDuCreneau(Colors, etat, Colors.primary500),
+              styleDuCreneau(Colors, etat),
             ]}
           />
           <Text style={[Fonts.p3, Fonts.neutral100]}>{libelleDeLEtat(t, etat)}</Text>

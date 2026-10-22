@@ -120,7 +120,7 @@ function GrillePlanning({
             right: 3,
             top: (de - debut) * PAR_MINUTE + 2,
           },
-          styleDuCreneau(Colors, etat, colonne.couleur || Colors.primary500),
+          styleDuCreneau(Colors, etat),
         ]}
         testID={`creneau-${creneau.terrainId}-${creneau.date}-${debutTexte}`}
       >
