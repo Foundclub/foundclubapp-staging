@@ -654,3 +654,116 @@ describe('R17-PLANNING-2 — semaine vide : combien la suivante en a (P10-planni
     expect(lecturesDeLaSuivante()).toHaveLength(0);
   });
 });
+
+// 🏛️ R17-EVT-1-BIS (a) (20/10/2026, tri du chef) — L'ÉVÉNEMENT DE LA VILLE dans « Planning de
+// toutes les installations » : le planning de chaque installation le porte déjà
+// (`meta.evenementsDeLaVille`). Il s'y lit comme dans le planning d'UNE installation : un bloc
+// CLAIR « Ville · toute l'installation », à part des séances ; son blocage lié (« Bloqué par la
+// Ville ») ne se dessine pas en plus ; le toucher ouvre SA fiche. Semaine et jour (ordinateur et
+// téléphone), mois. ROUGE avant.
+describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installations', () => {
+  const FETE_VILLE = {
+    closureDocumentId: 'bloc-fete',
+    collectivite: { documentId: 'ville-montrivage', name: 'Ville de Montrivage' },
+    documentId: 'evt-fete',
+    endDate: '2026-10-22',
+    endTime: '15:30',
+    facility: { documentId: 'stade', name: 'Stade municipal' },
+    name: 'Fête du sport',
+    startDate: '2026-10-22',
+    startTime: '14:00',
+    takesPlace: true,
+  };
+  beforeEach(() => {
+    mockFermetures = [{
+      documentId: 'bloc-fete',
+      endDate: '2026-10-22',
+      endTime: '15:30',
+      facility: { documentId: 'stade', name: 'Stade municipal' },
+      kind: 'block',
+      label: 'Fête du sport',
+      startDate: '2026-10-22',
+      startTime: '14:00',
+    }];
+    /** @type {any} */ (getFacilityPlanning).mockImplementation(async (
+      /** @type {string} */ id,
+      /** @type {any} */ plage,
+    ) => ({
+      data: plage.from <= '2026-10-21' && plage.to >= '2026-10-21' ? (SEMAINE[id] || []) : [],
+      meta: id === 'stade' && plage.from <= '2026-10-22' && plage.to >= '2026-10-22'
+        ? { evenementsDeLaVille: [FETE_VILLE] }
+        : {},
+    }));
+  });
+  const allerAuJeudi = async (/** @type {any} */ arbre) => {
+    await act(async () => { parTestID(arbre, 'toutes-vue-day')[0].props.onPress(); });
+    await attendre();
+    const suivant = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Jour suivant' && typeof n.props?.onPress === 'function'))[0];
+    await act(async () => { suivant.props.onPress(); });
+    await attendre();
+    await attendre();
+  };
+
+  test('16 ROUGE-AVANT — ordinateur, Semaine : au stade, sans le blocage', async () => {
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    const stade = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'toutes-rangee-stade'))[0];
+    const lusStade = stade.findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    expect(lusStade)
+      .toEqual(expect.arrayContaining(['Ville · toute l’installation', 'Fête du sport']));
+    expect(lusStade.join(' ')).not.toMatch(/Bloqué par la Ville/);
+    // Une seule case (le bouton, pas ses nœuds natifs).
+    const case22 = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => (
+      n.props.testID === 'toutes-evenement-ville-evt-fete-2026-10-22'));
+    expect(case22).toHaveLength(1);
+    await act(async () => { case22[0].props.onPress(); });
+    expect(mockNavigation.navigate)
+      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+  });
+
+  test('17 ROUGE-AVANT — ordinateur, Jour : dans la colonne du stade, et il s’ouvre', async () => {
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await allerAuJeudi(arbre);
+    const grille = mockGrilles[mockGrilles.length - 1];
+    const evenement = grille.events.find((/** @type {any} */ e) => e?.raw?.evenementDeLaVille);
+    expect(evenement).toBeDefined();
+    expect(grille.laneOf(evenement)).toBe(2);
+    grille.onEvenementVillePress(evenement.raw.evenementDeLaVille);
+    expect(mockNavigation.navigate)
+      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+  });
+
+  test('18 ROUGE-AVANT — téléphone, Jour : sous le stade, le bloc clair', async () => {
+    const arbre = await rendre();
+    await allerAuJeudi(arbre);
+    const lus = textes(arbre);
+    expect(lus.indexOf('Fête du sport')).toBeGreaterThan(lus.indexOf('Stade municipal'));
+    expect(lus.join(' ')).not.toMatch(/Bloqué par la Ville/);
+  });
+
+  test('19 ROUGE-AVANT — téléphone, Semaine : le jeudi 22, et son installation', async () => {
+    const arbre = await rendre();
+    await choisir(arbre, 'week');
+    const lus = textes(arbre);
+    expect(lus.indexOf('Fête du sport')).toBeGreaterThan(lus.indexOf('Jeudi 22'));
+    expect(lus).toContain('Stade municipal · 14:00 – 15:30');
+  });
+
+  test('20 ROUGE-AVANT — Mois : le calendrier reçoit l’événement (son repère clair)', async () => {
+    mockOrdinateur = true;
+    const arbre = await rendre();
+    await choisir(arbre, 'month');
+    const calendrier = mockCalendriers[mockCalendriers.length - 1];
+    const evenement = calendrier.events
+      .find((/** @type {any} */ e) => e?.raw?.evenementDeLaVille?.documentId === 'evt-fete');
+    expect(evenement).toBeDefined();
+    calendrier.onEventPress(evenement);
+    expect(mockNavigation.navigate)
+      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+  });
+});

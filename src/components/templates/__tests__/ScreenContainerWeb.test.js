@@ -71,6 +71,12 @@ afterEach(() => {
 });
 
 describe('E6 · ScreenContainer.web — ce qu’il fait aujourd’hui', () => {
+  test('SAISIE : le minimum de page soustrait la place déjà réservée par la coque', () => {
+    const page = rendre().root.findAllByType(View)[0];
+    expect(aplatir(page.props.style).minHeight)
+      .toBe('calc(100dvh - var(--fc-shell-bottom-space, 0px))');
+  });
+
   test('le cadre de contenu prend toute la largeur, plafonnée à 1 180, et ne s’étire PAS', () => {
     const style = aplatir(cadreDeContenu(rendre()).props.style);
 

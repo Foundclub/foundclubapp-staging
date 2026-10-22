@@ -17,7 +17,6 @@ import {
   ImageBackground,
   Keyboard,
   Linking,
-  Modal,
   PermissionsAndroid,
   Platform,
   ScrollView,
@@ -104,6 +103,7 @@ import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import ApercuDImage from '@/components/molecules/apercuDImage/ApercuDImage';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
@@ -153,9 +153,10 @@ import {
   BoutonMembresDuFil,
   EcussonDuFil,
   FilDeLaVilleQuitte,
-  useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+// MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
+import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
 import ConvocationWizardDiffere from '@/views/conversationConvocation/ConvocationWizardDiffere';
 import {
@@ -1085,11 +1086,13 @@ function Conversation({ navigation, route }) {
   // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) :
   // titre, ligne sous le titre, signature de l'expéditeur, voix demandée au serveur, et « Tu ne
   // fais plus partie de ce canal ». Hors de ces fils tout est vide : la conversation ne change pas.
-  const filDeLaVille = useFilDeLaVille({
+  // 🛟 MSG-SUPPORT (20/10) — et l'assistance (views/chat/FilDAssistance.js).
+  const filDeLaVille = useHabillageDuFil({
     chatData,
     chatId,
     espaceVille: route?.params?.espace === 'ville',
     messagesError,
+    messagesPages,
     navigation,
     routeChatType: route?.params?.chatType || null,
   });
@@ -4189,6 +4192,8 @@ function Conversation({ navigation, route }) {
         readBy: msg.readBy,
         replyTo: msg.replyTo,
         senderDocumentId: senderEntityId,
+        // MSG-SUPPORT — une réponse de l'équipe vue de la console : à droite, mais nommée.
+        ...(filDeLaVille.estDeMonCote?.(msg) ? { signeParLEquipe: true } : {}),
         // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : ligne centrée, sans bulle.
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
@@ -4210,7 +4215,10 @@ function Conversation({ navigation, route }) {
           )
           : msg.message,
         user: {
-          _id: senderEntityId,
+          // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite, signées.
+          _id: filDeLaVille.estDeMonCote?.(msg)
+            ? String(userData?.documentId || '')
+            : senderEntityId,
           avatar: avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
           name: filDeLaVille.nomDeLExpediteur(msg)
@@ -5847,7 +5855,8 @@ function Conversation({ navigation, route }) {
       precedent: previousMessage,
       suivant: nextMessage,
     });
-    const nomEnTete = isLeft && estPremierDuGroupe && !estUnTeteATete(chatData?.type)
+    const nomEnTete = (isLeft || currentMessage.signeParLEquipe) && estPremierDuGroupe
+      && !estUnTeteATete(chatData?.type)
       ? String(currentMessage.user?.name || '').trim()
       : '';
     // 🏷️ MSG1A (§3.1, `genre A`) — « Karim · Entraîneur » : la clef du serveur, un libelle
@@ -6491,6 +6500,8 @@ function Conversation({ navigation, route }) {
     // COLL-C4A2 — un fil de la Ville : ses membres (calculés par le serveur) écrivent tous.
     // R17-CANAUX — sauf « Toute la ville » : la Ville seule (useFilDeLaVille).
     if (filDeLaVille.estFil) return filDeLaVille.peutEcrire;
+    // MSG-SUPPORT — la conversation d'assistance : son titulaire et l'équipe écrivent.
+    if (filDeLaVille.estAssistance) return true;
 
     // Whisper, Team, League Match and Friendly Match chats: all participants write.
     // D92 — `friendly_match` manquait ici alors que son jumeau `league_match` y
@@ -6531,7 +6542,8 @@ function Conversation({ navigation, route }) {
 
     return false;
   }, [
-    chatData, envoiReserve, filDeLaVille.estFil, filDeLaVille.peutEcrire, hasClubAccess,
+    chatData, envoiReserve, filDeLaVille.estAssistance, filDeLaVille.estFil,
+    filDeLaVille.peutEcrire, hasClubAccess,
     isLeagueConversation, userData,
   ]);
 
@@ -6786,7 +6798,8 @@ function Conversation({ navigation, route }) {
     ]}
     >
       <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-        {i18n.t('conversation.empty.title', 'Aucun message pour le moment')}
+        {filDeLaVille.videTitre
+          || i18n.t('conversation.empty.title', 'Aucun message pour le moment')}
       </Text>
       <Text style={[
         Fonts.p2,
@@ -6794,7 +6807,7 @@ function Conversation({ navigation, route }) {
         { color: Colors.neutral300, textAlign: 'center' },
       ]}
       >
-        {i18n.t(
+        {filDeLaVille.videTexte || i18n.t(
           'conversation.empty.body',
           'Envoie le premier message pour lancer la conversation.',
         )}
@@ -7346,74 +7359,38 @@ function Conversation({ navigation, route }) {
           />
         ) : null}
 
-        <Modal
-          animationType="fade"
-          onRequestClose={() => {
+        {/* MSGIMG — l'image ouverte en grand : croix toujours visible (cf. ApercuDImage). */}
+        <ApercuDImage
+          onClose={() => {
             setIsImagePreviewVisible(false);
             setPreviewImageUrl('');
             setDidTryImageHttpsFallback(false);
           }}
-          transparent={false}
-          visible={isImagePreviewVisible}
-        >
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: '#000',
-            flex: 1,
-            justifyContent: 'center',
+          onImageError={(event) => {
+            const canRetryWithHttps = /^http:\/\//i.test(previewImageUrl)
+              && !didTryImageHttpsFallback;
+            if (canRetryWithHttps) {
+              const httpsUrl = previewImageUrl.replace(/^http:\/\//i, 'https://');
+              setDidTryImageHttpsFallback(true);
+              setPreviewImageUrl(httpsUrl);
+              logAttachmentDebug('imagePreviewModal retry with https', {
+                previousUrl: previewImageUrl,
+                retryUrl: httpsUrl,
+              });
+              return;
+            }
+            logAttachmentDebug('imagePreviewModal load error', {
+              didTryImageHttpsFallback,
+              error: event?.nativeEvent?.error || 'unknown',
+              previewImageUrl,
+            });
           }}
-          >
-            <TouchableOpacity
-              onPress={() => {
-                setIsImagePreviewVisible(false);
-                setPreviewImageUrl('');
-                setDidTryImageHttpsFallback(false);
-              }}
-              style={{
-                left: 20,
-                padding: 12,
-                position: 'absolute',
-                top: top + 8,
-                zIndex: 2,
-              }}
-            >
-              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>X</Text>
-            </TouchableOpacity>
-
-            {previewImageUrl ? (
-              <Image
-                onError={(event) => {
-                  const canRetryWithHttps = /^http:\/\//i.test(previewImageUrl)
-                    && !didTryImageHttpsFallback;
-                  if (canRetryWithHttps) {
-                    const httpsUrl = previewImageUrl.replace(/^http:\/\//i, 'https://');
-                    setDidTryImageHttpsFallback(true);
-                    setPreviewImageUrl(httpsUrl);
-                    logAttachmentDebug('imagePreviewModal retry with https', {
-                      previousUrl: previewImageUrl,
-                      retryUrl: httpsUrl,
-                    });
-                    return;
-                  }
-                  logAttachmentDebug('imagePreviewModal load error', {
-                    didTryImageHttpsFallback,
-                    error: event?.nativeEvent?.error || 'unknown',
-                    previewImageUrl,
-                  });
-                }}
-                onLoad={() => {
-                  logAttachmentDebug('imagePreviewModal load success', { previewImageUrl });
-                }}
-                resizeMode="contain"
-                source={{ uri: previewImageUrl }}
-                style={{
-                  height: '90%',
-                  width: '100%',
-                }}
-              />
-            ) : null}
-          </View>
-        </Modal>
+          onImageLoad={() => {
+            logAttachmentDebug('imagePreviewModal load success', { previewImageUrl });
+          }}
+          uri={previewImageUrl}
+          visible={isImagePreviewVisible}
+        />
 
         {/* ⋮ MSG1A (§3.16) — le petit menu du pack. Memes entrees qu'avant (« Annuler le
             match », le groupe, « Signaler », « Bloquer » en tete-a-tete), sans « Fermer ». */}

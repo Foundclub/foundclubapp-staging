@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -21,6 +22,14 @@ import Input, {
   INPUT_ROW_IOS_BOTTOM_PADDING,
   INPUT_ROW_MIN_HEIGHT,
 } from '../input/Input';
+/**
+ * @typedef {object} ActionEnTete
+ * @property {string} titre - Le libellé (« Ajouter « Gymnase Toto » »).
+ * @property {string} aide - La ligne d'aide, dessous.
+ * @property {string} accessibilityLabel - Ce que lit le lecteur d'écran (le texte entier).
+ * @property {() => void} onPress - L'action, liste refermée.
+ */
+
 /**
  * @typedef {object} SelectProps
  * @property {Array<Option>} options - The options of the select.
@@ -73,11 +82,12 @@ import Input, {
  * @property {import('react-native').TextStyle
  * | Array<import('react-native').TextStyle>} [optionTextStyle]
  *  - Optional text style applied to option labels.
- * @property {{ label: string, onPress: () => void, texte?: string }} [lienSousLesOptions]
- *  - ADRESSE-CARTE (07/10) : un lien SOUS les propositions (« Adresse introuvable ? Placez-la
- *  sur la carte »). L'appui referme la feuille SANS toucher à la valeur choisie, puis appelle
- *  `onPress`. R17-ADRESSE (19/10) : avec `texte`, une PHRASE et un bouton (`label`) à la place
- *  du lien et du « aucune donnée ». Absent : rien ne change.
+ * @property {ActionEnTete} [actionEnTete] - ADRESSE-EN-PREMIER (20/10, demande d'Adel) : une
+ *  ligne d'ACTION en TÊTE des propositions (« Ajouter « <texte tapé> » » et son aide), à la place
+ *  du « aucune donnée ».
+ *  L'appui referme la feuille SANS toucher à la valeur choisie, puis appelle `onPress`. Elle
+ *  remplace le lien SOUS les propositions (ADRESSE-CARTE, 07/10 : il fallait faire défiler) et la
+ *  phrase + bouton de R17-ADRESSE (19/10) : une seule porte. Absent : rien ne change.
  * @property {boolean} [garderLaRecherche] - R17-ADRESSE (19/10) : le texte tapé n'est plus
  *  effacé à la fermeture de la feuille ; la saisie le montre à la réouverture. L'appelant
  *  l'efface lui-même quand il a servi. Absent : effacé à la fermeture, comme avant.
@@ -311,10 +321,10 @@ const AutocompleteSelect = forwardRef(
 
     // ADRESSE-CARTE — referme SANS persister : chercher ailleurs ne doit pas effacer
     // l'adresse d'avant.
-    const handleLienSousLesOptions = () => {
-      const lien = props.lienSousLesOptions;
+    const handleActionEnTete = () => {
+      const action = props.actionEnTete;
       handleCloseModal(false);
-      lien?.onPress();
+      action?.onPress();
     };
 
     /**
@@ -642,6 +652,40 @@ const AutocompleteSelect = forwardRef(
 
             {/* Options - Scrollable area */}
             <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
+              {/* ADRESSE-EN-PREMIER — la boîte d'une proposition, mais une ACTION : bord et */}
+              {/* fond de la couleur primaire, l'épingle à la place du rond à cocher. */}
+              {props.actionEnTete ? (
+                <TouchableOpacity
+                  accessibilityLabel={props.actionEnTete.accessibilityLabel}
+                  accessibilityRole="button"
+                  activeOpacity={0.82}
+                  onPress={handleActionEnTete}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    ApplicationStyle.borderRadius12,
+                    ApplicationStyle.borderWidth2,
+                    ApplicationStyle.borderColor.primary500,
+                    Spaces.marginTop[8],
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    { backgroundColor: withAlpha(Colors.primary500, 0.12) },
+                  ]}
+                >
+                  <Image
+                    source={Images.pin}
+                    style={[ApplicationStyle.icon24, ApplicationStyle.tintColor.primary500]}
+                  />
+                  <View style={[Alignments.fill, Spaces.gap[4]]}>
+                    <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {props.actionEnTete.titre}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.primary500]}>
+                      {props.actionEnTete.aide}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
               {renderOptions.map(({ key, option }) => {
                 if (option.isHeader) {
                   return (
@@ -683,35 +727,12 @@ const AutocompleteSelect = forwardRef(
                 );
               })}
               {props.options.length === 0 && (props.searchValue?.length || 0) > 0
-                && !props.lienSousLesOptions?.texte
+                && !props.actionEnTete
                 ? (
                   <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
                     {t('common.messages.noData')}
                   </Text>
                 ) : null}
-              {props.lienSousLesOptions?.texte ? (
-                <View style={[Spaces.marginTop[8], Spaces.gap[12]]}>
-                  <Text accessibilityLiveRegion="polite" style={[Fonts.p2, Fonts.neutral00]}>
-                    {props.lienSousLesOptions.texte}
-                  </Text>
-                  <Button
-                    onPress={handleLienSousLesOptions}
-                    title={props.lienSousLesOptions.label}
-                    variant="Secondary"
-                  />
-                </View>
-              ) : null}
-              {props.lienSousLesOptions && !props.lienSousLesOptions.texte ? (
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  onPress={handleLienSousLesOptions}
-                  style={[Spaces.marginTop[8], Spaces.paddingVertical[8]]}
-                >
-                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                    {props.lienSousLesOptions.label}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
             </View>
           </View>
         </BottomModal>

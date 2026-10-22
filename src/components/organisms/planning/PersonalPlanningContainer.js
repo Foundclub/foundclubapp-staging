@@ -142,12 +142,28 @@ function PersonalPlanningContainer({
   const events = withViewerChildrenTitles(normalizePlanningItems(eventsData?.data || []), t);
 
   const handleEventPress = (event) => {
+    // R17-EVT-1-BIS (b) (20/10) : vue Mois, l événement de la Ville (sans documentId) ouvre SA
+    // fiche, comme son bloc dans la grille.
+    if (event?.raw?.evenementDeLaVille) {
+      ouvrirLEvenementDeLaVille(event.raw.evenementDeLaVille);
+      return;
+    }
     if (!event?.documentId) return;
 
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
     });
+  };
+
+  // 🏛️ R17-EVT-1 (20/10) — « Mon planning » (niveau 3) : le bloc clair d un evenement de la Ville
+  // ouvre sa fiche (le serveur l a verse, sans `documentId` de seance).
+  const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
+    if (evenement?.documentId) {
+      /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
+        evenementId: evenement.documentId,
+      });
+    }
   };
 
   const handleOpenFullscreen = () => {
@@ -173,6 +189,7 @@ function PersonalPlanningContainer({
       expandToContent={isWebPlanning}
       mode={viewMode}
       onDateChange={choisirLaDate}
+      onEvenementVillePress={ouvrirLEvenementDeLaVille}
       onEventPress={handleEventPress}
       onSummaryPress={onSummaryPress}
       scrollEnabled={!isWebPlanning}

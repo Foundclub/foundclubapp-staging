@@ -87,7 +87,8 @@ export const finDuCreneau = (slot) => (
 // 🗓️ R17-QUAND-1 (REC17-007, 19/10) — LA RÈGLE « LE CRÉNEAU TOMBE CE JOUR-LÀ », la même que le
 // serveur (admin `utils/season-slot.ts`, `occursOn`) : chaque semaine, toutes les 2 semaines à
 // compter de `anchorDate`, ou des dates choisies (`dates`) ; `skippedDates` : les dates
-// retirées une à une.
+// retirées une à une ; `holidayDates` (R17-QUAND-2) : celles que « sauf vacances scolaires »
+// retire.
 // Jours civils « AAAA-MM-JJ », calculés en UTC : aucun fuseau ne s'en mêle.
 // Témoin : __tests__/seasonSlotOccurrence.R17Q1.test.js.
 // ---------------------------------------------------------------------------
@@ -112,6 +113,7 @@ const listeDeJours = (/** @type {unknown} */ valeur) => (Array.isArray(valeur)
  * chaque semaine.
  * @param {any} creneau - Le créneau.
  * @returns {{ anchorDate: string | null, dates: string[] | null, everyWeeks: number,
+ *   exceptHolidays: boolean, holidayDates: string[],
  *   recurrence: 'weekly' | 'dates', skippedDates: string[], weekday: number | null }} Sa forme.
  */
 export const slotShape = (creneau) => {
@@ -122,6 +124,9 @@ export const slotShape = (creneau) => {
     anchorDate: everyWeeks > 1 ? (String(creneau?.anchorDate || '').slice(0, 10) || null) : null,
     dates: recurrence === 'dates' ? listeDeJours(creneau?.dates) : null,
     everyWeeks,
+    // R17-QUAND-2 — « sauf vacances scolaires » et les jours qu'il retire (rangés à part).
+    exceptHolidays: creneau?.exceptHolidays === true,
+    holidayDates: creneau?.exceptHolidays === true ? listeDeJours(creneau?.holidayDates) : [],
     recurrence,
     skippedDates: listeDeJours(creneau?.skippedDates),
     weekday: recurrence === 'weekly' && Number.isInteger(weekday) && weekday >= 1 && weekday <= 7
@@ -142,7 +147,7 @@ export const slotOccursOn = (creneau, jour) => {
   const du = String(creneau?.validFrom || '0000-01-01').slice(0, 10);
   const au = finDuCreneau(creneau) || '9999-12-31';
   if (!JOUR_CIVIL.test(String(jour)) || jour < du || jour > au) return false;
-  if (forme.skippedDates.includes(jour)) return false;
+  if (forme.skippedDates.includes(jour) || forme.holidayDates.includes(jour)) return false;
   if (forme.dates) return forme.dates.includes(jour);
   if (jourIso(jour) !== forme.weekday) return false;
   if (forme.everyWeeks === 1) return true;
@@ -403,7 +408,8 @@ export const fullRangesOfSlots = (creneaux, capacite) => {
   const au = (/** @type {any} */ c) => String(c?.validUntil || '9999-12-31').slice(0, 10);
   const simple = (/** @type {any} */ c) => {
     const forme = slotShape(c);
-    return !forme.dates && forme.everyWeeks === 1 && !forme.skippedDates.length;
+    return !forme.dates && forme.everyWeeks === 1
+      && !forme.skippedDates.length && !forme.holidayDates.length;
   };
   // Tous « chaque semaine » : le calcul d'avant, à chaque début de période. Sinon, jour par jour
   // par la règle ; les créneaux d'UN jour type sans `weekday` prennent celui des autres.

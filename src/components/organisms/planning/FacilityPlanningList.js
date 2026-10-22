@@ -5,6 +5,7 @@ import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
 import {
   closureBandLabel,
   closureHoursLabel,
@@ -90,12 +91,20 @@ function FacilityPlanningList({
   return (
     <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
       {jours.map((jour) => {
-        const duJour = evenements
+        const toutDuJour = evenements
           .filter((bloc) => {
             const date = getPlanningItemDate(bloc);
             return date ? isSameDay(date, jour) : false;
           })
           .sort((a, b) => minutesDuBloc(a).start - minutesDuBloc(b).start);
+        // R17-EVT-1-BIS (b) (20/10) : l'événement de la Ville, à part (ce n'est pas une séance) ;
+        // s'il prend toute l'installation, ses heures sortent du libre (son blocage lié n'est plus
+        // dessiné : c'est lui qui les prend).
+        const evenementsVille = toutDuJour.filter((bloc) => bloc?.raw?.evenementDeLaVille);
+        const duJour = toutDuJour.filter((bloc) => !bloc?.raw?.evenementDeLaVille);
+        const prisParLaVille = evenementsVille
+          .filter((bloc) => bloc.raw.evenementDeLaVille.takesPlace)
+          .map(minutesDuBloc);
         const confirmes = duJour.filter((bloc) => bloc?.raw?.pending !== true);
         const complet = fullRanges(confirmes.map(minutesDuBloc), capacite)[0];
         // COLL-C4B-BIS : la fermeture du jour. Toute la journee : aucune place. Un blocage : sa
@@ -109,11 +118,15 @@ function FacilityPlanningList({
           }
           : null;
         const libres = journeeFermee ? [] : freeRanges(
-          [...confirmes.map(minutesDuBloc), ...(plageBloquee ? [plageBloquee] : [])],
+          [
+            ...confirmes.map(minutesDuBloc),
+            ...prisParLaVille,
+            ...(plageBloquee ? [plageBloquee] : []),
+          ],
           debutDuJour,
           finDuJour,
         );
-        const toutLibre = duJour.length === 0 && !fermetureDuJour;
+        const toutLibre = duJour.length === 0 && !fermetureDuJour && !prisParLaVille.length;
         const titre = [
           capitalize(format(jour, 'EEEE d', { locale })),
           complet
@@ -158,6 +171,56 @@ function FacilityPlanningList({
                 </Text>
               </View>
             ) : null}
+            {evenementsVille.map((bloc) => {
+              const evenementVille = bloc.raw.evenementDeLaVille;
+              const plein = Boolean(evenementVille.takesPlace);
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={t(
+                    'collectiviteEvenement.planning.aria',
+                    'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+                    {
+                      heures: `${evenementVille.startTime || ''} – ${evenementVille.endTime || ''}`,
+                      interpolation: { escapeValue: false },
+                      nom: evenementVille.name,
+                      place: etiquetteDuPlanning(t, evenementVille),
+                    },
+                  )}
+                  accessibilityRole="button"
+                  onPress={() => onBlockPress?.(bloc)}
+                  style={[{
+                    backgroundColor: plein ? Colors.primary100 : withAlpha(Colors.primary100, 0.18),
+                    borderColor: Colors.primary100,
+                    borderRadius: 12,
+                    borderWidth: plein ? 0 : 1.5,
+                    gap: 2,
+                    padding: 12,
+                  }]}
+                  testID={`liste-evenement-ville-${evenementVille.documentId}`}
+                >
+                  <Text
+                    style={[Fonts.p4Bold, {
+                      color: plein ? Colors.primary700 : Colors.primary100,
+                      letterSpacing: 0.6,
+                      textTransform: 'uppercase',
+                    }]}
+                  >
+                    {etiquetteDuPlanning(t, evenementVille)}
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    style={[Fonts.p2Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
+                  >
+                    {evenementVille.name}
+                  </Text>
+                  <Text
+                    style={[Fonts.p3, { color: plein ? Colors.primary700 : Colors.neutral300 }]}
+                  >
+                    {`${evenementVille.startTime || ''} – ${evenementVille.endTime || ''}`}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
             {duJour.map((bloc, index) => {
               // COL-014 : la regle du bandeau et de la liste « En attente » (T05). Une demande
               // restee sans reponse et passee se lit, grise (sa couleur), sans « En attente ».

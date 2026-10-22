@@ -128,9 +128,19 @@ jest.mock('@/components/organisms/clubListContent/ClubListContent', () => {
 
 // R17-INVITER : l'écran réserve la place de la barre d'onglets du site (useBottomDockLayout tire
 // @react-navigation/stack, que jest ne transforme pas) : doublé, comme dans ClubListContent.
+// INVPAD : la place réservée à la barre (132 px sur le site) se règle par témoin.
+const mockDock = { dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 };
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
+}));
+// INVPAD : la largeur de la fenêtre (ordinateur ou non). Par défaut, celle du téléphone de jest.
+const mockFenetre = {
+  fontScale: 2, height: 1334, scale: 2, width: 750,
+};
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => mockFenetre,
 }));
 
 jest.mock('@/utils/shareLinks', () => ({
@@ -378,5 +388,45 @@ describe('R17INVIT · I6 — seul un gestionnaire de CETTE Ville voit le bouton'
     const arbre = await monter();
     expect(dans(arbre, 'carte-judo-e')).toBeTruthy();
     expect(boutons(arbre, LE_BOUTON)).toHaveLength(0);
+  });
+});
+
+// INVPAD (20/10/2026) — Adel, le site sur un écran d'ordinateur : « il y a des gros problèmes de
+// padding inutile » (colonne de 720 px dans un cadre de 1 180, 132 px réservés sous le lien à une
+// barre d'onglets que le menu de la Ville remplace dès 1 024 px, une seule carte et son bouton coupé).
+describe('INVPAD — sur ordinateur, ni colonne étroite, ni place pour une barre absente', () => {
+  const { Platform, StyleSheet } = jest.requireActual('react-native');
+  const osDOrigine = Platform.OS;
+  const zone = (/** @type {any} */ arbre) => StyleSheet.flatten(dans(arbre, 'inviter-recherche').props.style);
+  const regler = (/** @type {string} */ os, /** @type {number} */ largeur) => {
+    Platform.OS = os;
+    mockFenetre.width = largeur;
+    mockDock.dockClearance = 132;
+  };
+
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+    mockFenetre.width = 750;
+    mockDock.dockClearance = 0;
+  });
+
+  it('site, 1 360 px : la largeur du cadre (comme Clubs), rien sous le lien, les cartes sur deux colonnes', async () => {
+    regler('web', 1360);
+    const arbre = await monter();
+    expect(zone(arbre).maxWidth).toBeUndefined();
+    expect(zone(arbre).paddingBottom).toBe(0);
+    expect(mockListeProps.surDeuxColonnes).toBe(true);
+  });
+
+  it('site, 390 px : la place de la barre d’onglets flottante reste (R17-INVITER)', async () => {
+    regler('web', 390);
+    const arbre = await monter();
+    expect(zone(arbre).paddingBottom).toBe(132);
+  });
+
+  it('téléphone (même une tablette de 1 366 px) : pas de barre sous cet écran, rien de réservé', async () => {
+    regler('ios', 1366);
+    const arbre = await monter();
+    expect(zone(arbre).paddingBottom).toBe(0);
   });
 });

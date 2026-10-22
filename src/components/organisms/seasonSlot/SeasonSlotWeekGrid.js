@@ -224,6 +224,9 @@ function SeasonSlotWeekGrid({
     // 🗓️ R17-QUAND-1, point 6 (planche P10-quand-ordi, état A) — un créneau qui ne revient pas
     // chaque semaine est HACHURÉ et dit sa forme (« 1 sem. sur 2 ») ; « chaque semaine » : plein.
     const pasChaqueSemaine = slotShape(creneau).everyWeeks > 1;
+    // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A) — « sauf vacances » : une pastille, sans
+    // hachures (le créneau revient chaque semaine hors vacances).
+    const saufVacances = slotShape(creneau).exceptHolidays;
     const largeurVoie = largeurJour > 0 ? largeurJour / place.voies : Infinity;
     let contenu = 'rien';
     if (largeurVoie >= VOIE_NOM_ENTIER) contenu = 'entier';
@@ -237,7 +240,7 @@ function SeasonSlotWeekGrid({
           '{{qui}}, {{jour}} {{heures}}',
           {
             heures,
-            jour: pasChaqueSemaine
+            jour: pasChaqueSemaine || saufVacances
               ? formeEnMots(t, creneau)
               : weekdayName(creneau.weekday).toLocaleLowerCase(),
             qui: slotWho(creneau),
@@ -311,7 +314,7 @@ function SeasonSlotWeekGrid({
             {contenu === 'entier' && place.fin - place.debut >= 75 ? (
               <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{heures}</Text>
             ) : null}
-            {pasChaqueSemaine && contenu !== 'rien' && !serre ? (
+            {(pasChaqueSemaine || saufVacances) && contenu !== 'rien' && !serre ? (
               <Text
                 numberOfLines={1}
                 style={[Fonts.p4Bold, Fonts.neutral00, {
@@ -322,7 +325,9 @@ function SeasonSlotWeekGrid({
                   paddingHorizontal: 6,
                 }]}
               >
-                {formeEnMots(t, creneau, { court: true })}
+                {pasChaqueSemaine
+                  ? formeEnMots(t, creneau, { court: true })
+                  : t('collectiviteCreneaux.quand.vacances.pastille', 'sauf vacances')}
               </Text>
             ) : null}
           </View>

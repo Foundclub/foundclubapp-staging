@@ -45,6 +45,10 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({ useFacilityReports: () => mockSuivi }));
+// R17-CONTROLES (20/10) : l onglet lit aussi le carnet des controles (vide ici).
+jest.mock('@/services/facilityCheck/facilityCheckQueries', () => ({
+  useFacilityChecks: () => ({ data: { data: [], meta: {} }, isError: false, isLoading: false }),
+}));
 // P10-securite-ordi F : le chargement est le squelette du projet (sa vraie version charge un
 // module natif) ; la doublure garde ses blocs pour qu on les mesure. La roue ne doit plus servir.
 jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => {

@@ -48,6 +48,7 @@ import {
   searchCollectivitesForSignup,
   searchCommunes,
   setAdminCollectiviteActive,
+  setAdminCollectiviteHolidayZone,
   setClubPlanningColor,
 } from './collectiviteService';
 
@@ -590,6 +591,16 @@ const useGesteSuperAdmin = (mutationFn, options = {}, autresClefs = []) => {
  */
 export const useSetAdminCollectiviteActive = (options) => useGesteSuperAdmin(
   setAdminCollectiviteActive,
+  options,
+);
+
+/**
+ * 🌴 R17-QUAND-2 — corriger la zone de vacances ; variables `{ collectiviteId, zone }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useSetAdminCollectiviteHolidayZone = (options) => useGesteSuperAdmin(
+  setAdminCollectiviteHolidayZone,
   options,
 );
 

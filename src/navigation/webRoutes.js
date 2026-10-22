@@ -188,6 +188,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminRevenue]: '/admin/revenue',
   [RouteNames.AdminEvents]: '/admin/events',
   [RouteNames.AdminReports]: '/admin/reports',
+  // MSG-SUPPORT (20/10) — la boîte commune de l'assistance.
+  [RouteNames.AdminAssistance]: '/admin/assistance',
   [RouteNames.AdminPopupCampaignList]: '/admin/popup-campaigns',
   [RouteNames.AdminPopupCampaignDetail]: '/admin/popup-campaigns/:campaignId',
   [RouteNames.AdminPopupCampaignForm]: '/admin/popup-campaigns/:campaignId?/edit',
@@ -315,6 +317,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MyFacilityReports]: '/mes-signalements',
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export.
   [RouteNames.CollectiviteChiffres]: '/collectivite/:collectiviteId/chiffres',
+  // R17-EVT-1 (20/10/2026) — ajouter ou modifier un événement de la Ville ; sa fiche.
+  [RouteNames.CollectiviteEvenement]: '/collectivite/:collectiviteId/evenement/:evenementId?',
+  [RouteNames.EvenementDeLaVille]: '/evenements-de-la-ville/:evenementId',
   // RESA-L7-1 (20/10/2026) — LE GÉRANT DE COMPLEXE (RESA-L5A1 / L5A2). Son complexe voyage en
   // paramètre d adresse (?complexeId=) : les écrans le lisent comme un paramètre facultatif
   // (« mon » complexe par défaut), et l accueil, premier onglet de l espace, s ouvre sans rien à

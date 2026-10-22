@@ -1431,6 +1431,7 @@ export default {
   },
   adminStack: {
     titles: {
+      assistance: 'Assistance',
       claimDetail: 'Détail Demande',
       claims: 'Revendications',
       clubDetail: 'Détail Club',
@@ -2074,6 +2075,9 @@ export default {
     COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_CLUB_WITHOUT_LEADER: 'Ce club n’a aucun dirigeant sur FoundClub : invitez-le par le lien de la Ville.',
+    //   MSG-VILLE-NOUVELLE (20/10) — hors des clubs de la Ville, ou compte supprimé
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_CONTACT_NOT_ALLOWED: 'La Ville écrit seulement aux membres majeurs de ses clubs et à ses autres gérants.',
     COLLECTIVITE_DEMO_FORBIDDEN: 'La Ville de démonstration n’envoie aucune demande.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Vous ne gérez pas cette collectivité.',
@@ -2128,6 +2132,11 @@ export default {
     FACILITY_REPORT_PHOTO_INVALID:
       'Cette photo ne peut pas être envoyée (une image de 15 Mo au plus).',
     FACILITY_REPORT_STATUS_LOCKED: 'Ce signalement est déjà clos.',
+    // R17-CONTROLES (20/10) — les refus du carnet des controles d une installation.
+    FACILITY_CHECK_ALREADY_RENEWED: 'Ce contrôle a déjà été refait.',
+    FACILITY_CHECK_DOCUMENT_INVALID: 'Le rapport est un PDF ou une photo de 15 Mo au plus.',
+    FACILITY_CHECK_INVALID_PAYLOAD: 'Le contrôle est incomplet.',
+    FACILITY_CHECK_NOT_FOUND: 'Ce contrôle est introuvable.',
   },
   app: {
     bootError: {
@@ -2224,6 +2233,49 @@ export default {
       },
     },
   },
+  // MSG-SUPPORT (20/10/2026) — la conversation « Assistance FoundClub » (tout
+  // utilisateur) et sa boîte commune dans la console (super-admins).
+  assistance: {
+    console: {
+      boite: {
+        chargement: 'Nous récupérons les messages des utilisateurs.',
+        compteurs: 'Non lus : {{nonLus}} · En attente de réponse : {{enAttente}}',
+        enAttente: 'En attente de réponse',
+        erreur: 'La boîte de l’assistance ne se charge pas.',
+        nous: 'Assistance',
+        ouvrir: 'Ouvre la conversation pour répondre',
+        sousTitre: 'Boîte commune : chaque réponse part signée « Assistance FoundClub ».',
+        vide: 'Aucune conversation pour le moment.',
+      },
+      compteSupprime: 'Compte supprimé',
+      meta: 'Messages',
+      nonLus: 'Non lus : {{nombre}}',
+      placeholder: 'Répondre au nom d’Assistance FoundClub',
+      sousTitre: 'Boîte commune · ta réponse est signée Assistance FoundClub',
+      titre: 'Assistance',
+      tuileEnAttente_one: '{{count}} en attente de réponse',
+      tuileEnAttente_other: '{{count}} en attente de réponse',
+      tuileRien: 'Rien en attente',
+    },
+    ligne: {
+      erreur: 'L’assistance ne s’ouvre pas. Réessaie dans un instant.',
+      erreurVous: 'L’assistance ne s’ouvre pas. Réessayez dans un instant.',
+      indice: 'Ouvre ta conversation avec l’équipe FoundClub',
+      invitation: 'Une question ? Écris-nous.',
+      invitationVous: 'Une question ? Écrivez-nous.',
+    },
+    placeholder: 'Écris ton message à l’équipe',
+    placeholderVous: 'Écrivez votre message à l’équipe',
+    sousTitre: 'L’équipe FoundClub te répond ici',
+    sousTitreVous: 'L’équipe FoundClub vous répond ici',
+    titre: 'Assistance FoundClub',
+    vide: {
+      texte: 'Seule l’équipe FoundClub lit ici. Une notification t’annonce notre réponse.',
+      texteVous: 'Seule l’équipe FoundClub lit ici. Une notification vous annonce notre réponse.',
+      titre: 'Une question ? Écris-nous.',
+      titreVous: 'Une question ? Écrivez-nous.',
+    },
+  },
   authWeb: {
     errors: {
       browserRequired: 'Le navigateur est requis pour initialiser le reCAPTCHA.',
@@ -2231,9 +2283,13 @@ export default {
     },
   },
   autocompleteAddressInput: {
-    // ADRESSE-CARTE (07/10) — « Adresse introuvable ? Placez-la sur la carte » (champ d'adresse).
+    // ADRESSE-CARTE (07/10) — placer sur la carte un lieu introuvable (champ d'adresse).
     lieu: {
       aide: 'Déplacez la carte pour mettre l’épingle sur le lieu, puis donnez-lui un nom.',
+      // ADRESSE-EN-PREMIER (20/10) — la 1re ligne de la liste, le texte tapé (la Ville vouvoyée).
+      ajouter: 'Ajouter « {{texte}} »',
+      ajouterAide: 'Place-le sur la carte',
+      ajouterAideVous: 'Placez-le sur la carte',
       annuler: 'Annuler',
       erreurs: {
         connexion: 'Connectez-vous pour poser un lieu.',
@@ -2251,7 +2307,6 @@ export default {
       invitationTexte: '« {{texte}} » n’est pas répertorié : place-le sur la carte',
       invitationTexteVous: '« {{texte}} » n’est pas répertorié : placez-le sur la carte',
       invitationVous: 'Votre lieu n’est pas répertorié : placez-le sur la carte',
-      lien: 'Adresse introuvable ? Placez-la sur la carte',
       nom: 'Nom du lieu',
       nomExemple: 'Ex. Stade de Luminy',
       ouvrir: 'Placer sur la carte',
@@ -4919,6 +4974,11 @@ export default {
   },
   collectiviteAccueil: {
     actions: {
+      // R17-EVT-1 (20/10) — la 7e action de l'accueil de la Ville.
+      addEvent: {
+        dit: 'Fête du sport, tournoi, réunion.',
+        titre: 'Ajouter un événement',
+      },
       addInstallation: {
         dit: 'Gymnase, terrain, salle.',
         titre: 'Ajouter une installation',
@@ -5225,18 +5285,30 @@ export default {
       priveeClub: 'Écris à la Ville…',
       priveeMairie: 'Écrire à {{club}}…',
     },
+    // MSG-VILLE-NOUVELLE (20/10) — la conversation que la Ville ouvre avec qui elle veut.
+    libre: {
+      sousTitreMairie: 'Seules les personnes choisies la lisent',
+      sousTitreMembre: 'Conversation avec {{ville}}',
+      // eslint-disable-next-line max-len
+      videMairie: 'Conversation privée : seules les personnes que vous avez choisies la lisent. Vos messages partent au nom de la Ville.',
+      // eslint-disable-next-line max-len
+      videMembre: 'Conversation privée ouverte par {{ville}} : seules les personnes choisies la lisent.',
+    },
     mairieLigne: 'Vous et les dirigeants des {{nombre}} clubs · échanges de créneaux',
     mairieLigneUn: 'Vous et les dirigeants d’1 club · échanges de créneaux',
     membres: {
       aucunDirigeant: 'Aucun dirigeant sur l’app pour l’instant.',
       dirigeant: 'dirigeant',
       gestionnaire: 'gestionnaire',
+      membre: 'membre',
       moiToi: '{{nom}} (toi)',
       moiVous: '{{nom}} (vous)',
       ouvrirCanal: 'Qui est dans ce canal',
       ouvrirPrivee: 'Qui est dans cette conversation',
       // eslint-disable-next-line max-len
       regleCanal: 'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
+      // eslint-disable-next-line max-len
+      regleLibre: 'Seules les personnes choisies par la Ville lisent cette conversation. Jamais un mineur.',
       reglePrivee: 'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
       sousTitreCanal: 'Dirigeants des clubs · {{ville}}',
       sousTitrePrivee: '{{club}} · {{ville}}',
@@ -5799,6 +5871,19 @@ export default {
       clubsCouverts_other: '{{count}} clubs couverts',
       indisponible: 'Nombre indisponible',
     },
+    // 🌴 R17-QUAND-2 (planches P11-quand-v2-tel « La zone », P11-quand-v2-ordi C).
+    vacances: {
+      aucune: 'Le code INSEE ne donne aucune zone : choisissez-la.',
+      codeInsee: 'Le code INSEE donne la zone {{zone}} (académie de {{academie}}, '
+        + '{{departement}}).',
+      corrigee: '{{zone}} · corrigée par FoundClub',
+      corse: 'Corse',
+      deduite: 'Déduite',
+      deduiteLigne: '{{zone}} · déduite',
+      inconnue: 'Zone inconnue',
+      outremer: 'Outre-mer',
+      titre: 'Vacances scolaires',
+    },
   },
   // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
   // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
@@ -6079,6 +6164,8 @@ export default {
       retires: 'Créneaux retirés',
       saison: 'Saison {{debut}}-{{fin}}',
       surtitre: 'Installations de la Ville',
+      // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A).
+      vacances: 'vacances : {{zone}}',
       vide: 'Aucun créneau attribué',
       videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
         + 'choisies : le club y pose ses entraînements sans rien vous demander.',
@@ -6253,9 +6340,12 @@ export default {
         ferme: '{{date}}, fermé ({{fermeture}})',
         legendeChoisi: 'Choisi',
         legendeFerme: 'Complet ou fermé',
+        // 🌴 R17-QUAND-2 : les vacances scolaires de la zone (planche P11-quand-v2-tel).
+        legendeVacances: 'Vacances ({{zone}})',
         libre: '{{date}}, libre',
         precedent: 'Mois précédent',
         suivant: 'Mois suivant',
+        vacances: '{{date}}, vacances ({{nom}})',
       },
       chaqueDeLaPeriode: 'chaque {{jour}} de la période',
       chaqueDeLaSaison: 'chaque {{jour}} de la saison',
@@ -6307,6 +6397,29 @@ export default {
       uneDate: 'Une date',
       unJourFixe: 'Un jour fixe chaque semaine',
       unSurDeuxCourt: 'un {{jour}} sur deux',
+      // 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi) : sauf vacances.
+      vacances: {
+        aucune: 'Aucune séance ne tombe pendant les vacances.',
+        calendrierOfficiel: 'Calendrier officiel {{annees}}',
+        case: 'Sauf vacances scolaires',
+        forme: '{{forme}}, sauf vacances',
+        ligne: '{{du}} – {{au}} · {{jours}}',
+        masquer: 'Masquer les dates retirées',
+        origineConsole: 'Zone choisie par FoundClub. Une erreur ? Écrivez à FoundClub : nous la '
+          + 'corrigeons.',
+        origineDeduite: 'Zone déduite de votre commune ({{departement}}). Une erreur ? '
+          + 'Écrivez à FoundClub : nous la corrigeons.',
+        pastille: 'sauf vacances',
+        periode: '{{nom}} : retirer ces séances',
+        recap: '{{detail}}, sauf vacances scolaires ({{zone}})',
+        retirees_one: '{{count}} retiré pendant les vacances : {{noms}}.',
+        retirees_other: '{{count}} retirés pendant les vacances : {{noms}}.',
+        retireesDates_one: '{{count}} date retirée pendant les vacances : {{noms}}.',
+        retireesDates_other: '{{count}} dates retirées pendant les vacances : {{noms}}.',
+        titreListe: 'Vacances retirées · {{zone}}',
+        voir: 'Voir les dates retirées',
+        zone: '{{zone}} · académie de {{academie}}',
+      },
     },
     tunnel: {
       // 📐 COLL-R-A7-FINITIONS (14/10, planche P4v4-attribuer-entrees-tel) : la bulle du retour.
@@ -6604,6 +6717,157 @@ export default {
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
+  // R17-EVT-1 (20/10/2026, REC17-005) — l'événement de la Ville : le tunnel, le panneau, la fiche.
+  collectiviteEvenement: {
+    affiche: {
+      ajouter: '+ Ajouter une affiche',
+      echec: 'L’affiche n’est pas partie. Réessayez.',
+      envoi: 'Envoi de l’affiche…',
+      retirer: 'Retirer l’affiche',
+      tropLourde: 'Cette image dépasse 10 Mo.',
+    },
+    annulation: {
+      deplacees: 'Une séance déjà déplacée par son club ne revient pas toute seule.',
+      garder: 'Garder l’événement',
+      libere: 'Ceux qui avaient été prévenus le sont de l’annulation. '
+        + '{{installation}} redevient libre : {{quand}}.',
+      prevenus: 'Ceux qui avaient été prévenus le sont de l’annulation.',
+      titre: 'Annuler « {{nom}} » ?',
+    },
+    annulerSaisie: 'Annuler',
+    description: {
+      ajouter: '+ Ajouter une description',
+      exemple: 'Stands des clubs, initiations, remise des trophées à 16:00.',
+      label: 'Description',
+    },
+    enregistrer: 'Enregistrer',
+    fermerLePanneau: 'Fermer le panneau',
+    fiche: {
+      actualitePubliee: 'Actualité publiée : {{quand}}',
+      affiche: 'Affiche de « {{nom}} »',
+      annule: 'Annulé',
+      annuler: 'Annuler l’événement',
+      etiquette: 'Événement de la Ville',
+      introuvable: 'Cet événement n’existe plus, ou il ne vous est pas montré.',
+      modifier: 'Modifier',
+      titre: 'Événement de la Ville',
+      toucheesExplication_one:
+        'Son club la voit « Bloqué par la Ville · à déplacer » et peut la déplacer.',
+      toucheesExplication_other:
+        'Leurs clubs les voient « Bloqué par la Ville · à déplacer » et peuvent les déplacer.',
+      voirActualite: 'Voir l’actualité',
+    },
+    horsVille: 'Cet espace est réservé à la Ville.',
+    lieu: {
+      aCote: '{{installation}} · à côté',
+      toute: '{{installation}} · toute l’installation',
+    },
+    ou: {
+      adresse: 'Adresse ou lieu',
+      adresseExemple: 'Place de la mairie',
+      ailleurs: 'Ailleurs dans la commune',
+      ailleursAide: 'Place, parc, salle des fêtes…',
+      fermeeAvertissement:
+        '{{installation}} : fermeture ce jour-là. Vous pouvez quand même y tenir l’événement.',
+      occupationComplet: 'Complet sur ces heures',
+      occupationFermee: 'Fermeture ce jour-là',
+      occupationLibre: 'Libre sur ces heures',
+      occupationPlusieurs: '{{nombre}} séances sur ces heures',
+      occupationUne: '1 séance sur ces heures',
+      titre: 'Où ?',
+      titrePanneau: 'Où',
+    },
+    panne: {
+      connexion: 'La connexion a été perdue. Ce que vous avez saisi est gardé.',
+      reessayer: 'Réessayer',
+      titre: 'L’événement n’a pas été publié.',
+    },
+    place: {
+      aucune: 'Aucune',
+      aucuneAide: 'À côté : abords, parking, salle voisine.',
+      titre: 'Quelle place prend-il ?',
+      toute: 'Toute l’installation',
+      touteAide: 'Aucun club n’y est pendant l’événement.',
+    },
+    planning: {
+      aCote: 'Ville · à côté',
+      aria: 'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+      toute: 'Ville · toute l’installation',
+    },
+    publier: 'Publier l’événement',
+    quand: {
+      a: 'À',
+      choisir: 'Choisir',
+      de: 'De',
+      jusquau: 'Jusqu’au',
+      le: 'Le',
+      memesHeures: 'Les mêmes heures chaque jour.',
+      plusieursJours: 'Sur plusieurs jours',
+      plusieursJoursPhrase: 'du {{debut}} au {{fin}} · {{heures}}',
+      titre: 'Quand ?',
+      unJour: '{{jour}} · {{heures}}',
+    },
+    qui: {
+      actualite: 'Les clubs et une actualité',
+      actualiteAide: 'En plus : une actualité de la Ville, avec la date et le lieu.',
+      actualiteVa: 'L’actualité va à',
+      clubs: 'Les clubs',
+      clubsAide: 'Sur les plannings des installations. Pas d’actualité.',
+      dirigeants: 'Les dirigeants',
+      membres: 'Tous les membres',
+      public: 'Tout le monde',
+      publicAide: 'En plus : dans « Mon planning » des membres des clubs, '
+        + 'et dans la recherche d’événements (une fiche publique).',
+      recapClubs: 'Les clubs',
+      recapDirigeants: 'Les clubs + actualité aux dirigeants',
+      recapMembres: 'Les clubs + actualité à tous les membres',
+      recapPublic: 'Tout le monde',
+      regle: 'Le club dont une séance est touchée est prévenu dans tous les cas.',
+      titre: 'Qui le voit ?',
+    },
+    quoi: {
+      nom: 'Son nom',
+      nomAide: 'Les clubs le liront tel quel sur leurs plannings.',
+      nomExemple: 'Fête du sport',
+      nomPanneau: 'Nom de l’événement',
+      titre: 'Quel événement ?',
+      type: 'Type',
+    },
+    recap: {
+      evenement: 'Événement',
+      modifier: 'Modifier',
+      ou: 'Où · place prise',
+      qui: 'Qui le voit',
+      sousTitre: 'Relisez, puis publiez.',
+      titre: 'Récapitulatif',
+    },
+    recherche: {
+      titre: 'Événements de la Ville',
+      voir: 'Voir la fiche ›',
+    },
+    refus: {
+      date: 'Choisissez le jour.',
+      finApresDebut: 'La fin doit venir après le début.',
+      heures: 'Choisissez l’heure de début et l’heure de fin.',
+      lieu: 'Dites où a lieu l’événement : une installation, ou une adresse.',
+      nom: 'Donnez un nom à l’événement.',
+    },
+    titre: 'Ajouter un événement de la Ville',
+    titreModifier: 'Modifier l’événement',
+    touchees: {
+      explication: 'Son club la verra « Bloqué par la Ville · à déplacer » et pourra la déplacer.',
+      ligne: '{{qui}}, {{jour}} {{heures}}',
+      plusieurs: '{{nombre}} séances touchées',
+      une: '1 séance touchée',
+    },
+    types: {
+      autre: 'Autre',
+      manifestation: 'Manifestation',
+      portes_ouvertes: 'Portes ouvertes',
+      reunion: 'Réunion',
+      tournoi: 'Tournoi',
+    },
+  },
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Fermeture à venir',
@@ -8433,6 +8697,22 @@ export default {
     header: {
       openGroupHint: 'Ouvre les infos du groupe',
       you: 'Vous',
+    },
+    imagePreview: {
+      cancel: 'Annuler',
+      close: 'Fermer l’image',
+      downloaded: 'Image téléchargée',
+      downloadHint: 'Télécharger l’image',
+      openedInTab: 'L’image s’ouvre dans un nouvel onglet : enregistre-la depuis là.',
+      openSettings: 'Ouvrir les réglages',
+      permissionBody: 'Autorise FoundClub à ajouter des photos, dans les réglages du téléphone.',
+      permissionTitle: 'Accès aux photos refusé',
+      save: 'Enregistrer',
+      saved: 'Image enregistrée dans ta galerie',
+      saveFailed: 'L’image n’a pas pu être enregistrée. Réessaie.',
+      saveHint: 'Enregistrer l’image dans ta galerie',
+      saving: 'Enregistrement…',
+      title: 'Image en grand',
     },
     league: {
       cancelBody: 'Cette action annulera le match et supprimera la conversation.',
@@ -11979,6 +12259,60 @@ export default {
       proprete: 'Propreté',
       securite: 'Sécurité',
     },
+    controles: {
+      accueilAvant: 'Contrôle à refaire avant le {{date}}',
+      accueilDetail: '{{label}} · {{facility}}',
+      accueilPlusieurs_one: '{{count}} contrôle à refaire',
+      accueilPlusieurs_other: '{{count}} contrôles à refaire',
+      accueilRetard: 'Contrôle en retard depuis le {{date}}',
+      ajouter: 'Ajouter un contrôle',
+      annuler: 'Annuler',
+      aRefaire: 'À refaire avant le {{date}}',
+      avantLe: 'Avant le {{date}}',
+      dansMois_one: 'Dans {{count}} mois',
+      dansMois_other: 'Dans {{count}} mois',
+      dernier: 'Dernier : {{dernier}}.',
+      enregistrer: 'Enregistrer',
+      enRetard: 'En retard depuis le {{date}}',
+      erreur: 'Les contrôles n’ont pas pu être chargés.',
+      erreurs: {
+        envoi: 'Le contrôle n’a pas été enregistré.',
+        label: 'Nommez le contrôle.',
+        nextDue: 'Le prochain contrôle vient après celui-ci.',
+      },
+      etat: {
+        a_jour: 'À jour',
+        en_retard: 'En retard',
+      },
+      faitBouton: 'Noter le contrôle fait',
+      faitLe: 'Fait le',
+      fermer: 'Fermer le contrôle',
+      formTitre: 'Noter un contrôle',
+      histoCourt: '{{date}} · {{par}}',
+      histoDetail: '{{date}} · {{par}} · prochain : {{prochain}}',
+      histoDetailSansPar: '{{date}} · prochain : {{prochain}}',
+      historique: 'Historique',
+      histoTitre: 'Contrôle : {{label}}',
+      joindre: 'Joindre le rapport (PDF, facultatif)',
+      ouvrir: 'Ouvrir le contrôle {{label}}',
+      par: 'Par',
+      parPlaceholder: 'Société, organisme',
+      prochain: 'Prochain : {{date}}',
+      prochainChamp: 'Prochain contrôle',
+      propose: 'Proposé : un an après. Modifiable.',
+      proposeEcart: 'Proposé : le même écart que la fois précédente. Modifiable.',
+      quel: 'Quel contrôle ?',
+      quelPlaceholder: 'Buts et paniers, extincteurs…',
+      rappel: 'Un rappel arrive 30 jours avant chaque échéance.',
+      rapportJoint: 'rapport joint',
+      retirerRapport: 'Retirer le rapport',
+      titre: 'Contrôles obligatoires',
+      videTexte:
+        'Notez ici vos contrôles obligatoires : FoundClub vous prévient 30 jours avant chaque '
+        + 'échéance.',
+      videTitre: 'Aucun contrôle noté',
+      voirRapport: 'Voir le rapport',
+    },
     etapes: 'Envoyé · Pris en charge · Résolu',
     membre: {
       ajouterPhoto: 'Ajouter une photo (facultatif)',
@@ -12084,6 +12418,9 @@ export default {
       histoFermeture: 'Fermé du {{debut}} au {{fin}}',
       histoFermetureJour: 'Fermé le {{jour}}',
       histoFermetureMotif: 'Fermeture · {{motif}}',
+      histoFermetureSeances: 'Fermeture · {{seances}}',
+      histoFermetureTitreMotif: 'Fermé du {{debut}} au {{fin}} · {{motif}}',
+      histoMotifSeances: '{{motif}} · {{seances}}',
       histoPeriode: '{{debut}} – {{fin}}',
       histoResolu: '{{title}} · résolu',
       historique: 'Historique',
@@ -12108,6 +12445,12 @@ export default {
       reessayer: 'Réessayer',
       resoudre: 'Résolu…',
       sansSuite: 'Sans suite…',
+      seancesDeplacees_one: '{{count}} déplacée',
+      seancesDeplacees_other: '{{count}} déplacées',
+      seancesEtDeplacees: '{{touchees}}, {{deplacees}}',
+      seancesTouchees_one: '{{count}} séance touchée',
+      seancesTouchees_other: '{{count}} séances touchées',
+      seancesTouchees_zero: 'aucune séance touchée',
       titreFiche: 'Signalement',
       videTexte:
         'Les membres des clubs qui utilisent l’installation peuvent signaler un problème depuis '
@@ -16147,6 +16490,27 @@ export default {
       selected_one: '{{count}} sélectionné',
       selected_other: '{{count}} sélectionnés',
     },
+    // MSG-VILLE-NOUVELLE (20/10) — « Nouvelle conversation » depuis l’espace de la Ville (vous).
+    ville: {
+      aide: 'Choisissez un club ci-dessus, ou cherchez un nom.',
+      auMoinsDeux: 'Ajoutez au moins 2 personnes pour créer un groupe.',
+      chercher: 'Chercher un nom dans les clubs de la Ville…',
+      dirigeant: 'Dirigeant',
+      dirigeants: 'Dirigeants',
+      entraineur: 'Coach',
+      entraineurs: 'Coachs',
+      gerants: 'Gérants',
+      gestionnaire: 'Gérant de la Ville',
+      gestionnaires: 'Gérants de la Ville',
+      joueur: 'Joueur',
+      joueurs: 'Joueurs',
+      laVille: 'la Ville',
+      nomDuGroupeAide: 'Sans nom, il s’appellera « {{name}} ». Il part au nom de la Ville.',
+      parent: 'Parent',
+      parents: 'Parents',
+      plus: 'Afficher plus',
+      sousTitre: 'Au nom de {{ville}} · 1 personne = privé · 2 et plus = groupe',
+    },
   },
   nextMatchCard: {
     alerts: {
@@ -16834,6 +17198,8 @@ export default {
     today: 'Aujourd’hui',
     tryAgain: 'Réessayer',
     unableToLoadThePlanning: 'Impossible de charger le planning',
+    // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) : « Vacances de la Toussaint · Zone B ».
+    vacances: '{{vacances}} · {{zone}}',
     // eslint-disable-next-line max-len
     weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },
@@ -17494,6 +17860,9 @@ export default {
     // contact qui ne fait rien vaut un lien absent : on donne alors l'adresse
     // en toutes lettres pour qu'elle reste recopiable.
     contactSupport: {
+      ecrire: 'Écrire à l’assistance',
+      email: 'Envoyer un e-mail',
+      reessayer: 'Réessaie',
       unavailableBody: "Aucune application e-mail n'a pu s'ouvrir. Écris-nous à contact@foundclubpro.com.",
       unavailableTitle: "Impossible d'ouvrir l'e-mail",
     },
@@ -23810,7 +24179,11 @@ export default {
     },
   },
   timePickerInput: {
+    // ⏰ A7-UX (20/10) — le choix de l'heure du site : la grille des heures, puis des minutes.
+    autreHeure: 'Autre heure',
+    autresHeures: 'Autres heures',
     cancel: 'Annuler',
+    heure: '{{heure}} h',
   },
   tomTomSearchMapNative: {
     error: {

@@ -344,6 +344,9 @@ export const toAdminCollectiviteDetail = (entry) => {
       planningColor: installation?.planningColor || null,
       type: installation?.type || null,
     })).sort(parNom),
+    // 🌴 R17-QUAND-2 — la zone de vacances : déduite et celle qui vaut (serveur), la correction.
+    holidayZone: entry.holidayZone || null,
+    schoolHolidayZone: entry.schoolHolidayZone || null,
     siren: entry.siren || null,
   };
 };

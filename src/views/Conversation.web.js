@@ -13,6 +13,7 @@ import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
+import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
@@ -69,6 +70,8 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
+// MSGIMG (20/10) — l image ouverte en grand : memes regles que le telephone.
+import ApercuDImageDuSite from '@/components/molecules/apercuDImage/ApercuDImageDuSite';
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 // MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
@@ -104,9 +107,11 @@ import {
   BoutonMembresDuFil,
   EcussonDuFil,
   FilDeLaVilleQuitte,
-  useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+// MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
+import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
+import LigneAssistance from '@/views/chat/LigneAssistance';
 // MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
 // differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
@@ -811,6 +816,7 @@ function ColonneDesConversations({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: relireLaListe,
   } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
@@ -836,12 +842,15 @@ function ColonneDesConversations({
       : [];
     return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
   }, [listeDesFils, meId, mesBlocages]);
+  // 🛟 MSG-SUPPORT (20/10) — l'assistance est épinglée à part, en tête (comme au
+  // téléphone) ; elle quitte donc les lignes ordinaires.
+  const { autres: filsSansAssistance, filDAssistance } = separerLeFilDAssistance(filsTries);
   const monClubId = userData?.club?.documentId || null;
   // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
   const mineur = estMineurConnu(userData);
-  const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
+  const actifs = filsSansAssistance.filter((fil) => !estArchivePourMoi(fil, meId));
   const archivees = filsDeLaMessagerie(
-    filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
+    filsSansAssistance.filter((fil) => estArchivePourMoi(fil, meId)),
     { mineur, monClubId },
   );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
@@ -1137,6 +1146,15 @@ function ColonneDesConversations({
             </span>
           </button>
         ) : null}
+        {enModeArchivees ? null : (
+          <LigneAssistance
+            fil={filDAssistance}
+            meId={meId}
+            navigation={navigation}
+            onFilCree={() => { relireLaListe?.(); }}
+            style={{ paddingHorizontal: 14 }}
+          />
+        )}
         {fils.length === 0 && filsTries.length > 0 ? (
           <p
             style={{
@@ -1406,7 +1424,12 @@ function useHauteurDuCadre(cadreRef, isDesktop, declencheur) {
       const cadre = cadreRef.current;
       if (!cadre?.getBoundingClientRect) return;
       const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
-      const reserveDuBas = isDesktop ? 20 : 96;
+      // SAISIE : Joueur/Parent gardent le dock sur ordinateur. La coque connaît sa réserve,
+      // y compris quand le menu latéral le remplace ; la largeur seule ne le dit pas.
+      const coque = cadre.closest?.('.shell-content');
+      const retraitDeLaCoque = coque && typeof window.getComputedStyle === 'function'
+        ? Number.parseFloat(window.getComputedStyle(coque).paddingBottom) || 0 : 0;
+      const reserveDuBas = Math.max(isDesktop ? 20 : 96, retraitDeLaCoque);
       setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
     };
     mesurer();
@@ -1807,6 +1830,9 @@ function Conversation({ navigation, route }) {
   // vide. UN SEUL ETAT : un booleen « ouverte » doublé d un identifiant pourraient
   // se contredire, et deux barres s ouvrir en meme temps.
   const [reactionBarMessageId, setReactionBarMessageId] = useState('');
+  // MSGIMG — l adresse de la photo ouverte en grand, ou une chaine vide (fermee).
+  const [imageEnGrand, setImageEnGrand] = useState('');
+  const fermerLImageEnGrand = useCallback(() => setImageEnGrand(''), []);
   const [reactionBarAnchor, setReactionBarAnchor] = useState(
     /** @type {{left: number, top: number} | null} */ (null),
   );
@@ -1883,11 +1909,13 @@ function Conversation({ navigation, route }) {
   // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) : le
   // titre, la ligne sous le titre, qui écrit et pour quel club, la voix demandée au serveur, et
   // « Tu ne fais plus partie de ce canal » (voir Conversation.js). Ailleurs, rien ne change.
-  const filDeLaVille = useFilDeLaVille({
+  // 🛟 MSG-SUPPORT (20/10) — et l'assistance (views/chat/FilDAssistance.js).
+  const filDeLaVille = useHabillageDuFil({
     chatData,
     chatId,
     espaceVille: route?.params?.espace === 'ville',
     messagesError,
+    messagesPages,
     navigation,
     routeChatType: route?.params?.chatType || null,
   });
@@ -2854,7 +2882,8 @@ function Conversation({ navigation, route }) {
           return (
             <button
               key={`${label}-${index}`}
-              onClick={() => openUrl(attachmentUrl)}
+              // MSGIMG — la photo s ouvre en grand DANS la page (avant : un nouvel onglet).
+              onClick={() => setImageEnGrand(attachmentUrl)}
               style={{
                 background: 'transparent',
                 border: 0,
@@ -3884,11 +3913,17 @@ function Conversation({ navigation, route }) {
     const senderName = filDeLaVille.nomDeLExpediteur(message)
       || nomDansLeCanal(chatData)
       || getDisplayName(message?.sender);
+    // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite.
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
+      || Boolean(filDeLaVille.estDeMonCote?.(message))
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
-    const maVoix = isMine && filDeLaVille.estFil
+    let maVoix = isMine && filDeLaVille.estFil
       ? String(message?.senderSignature?.nom || '').trim()
       : '';
+    // MSG-SUPPORT — en console, NOS réponses disent qui de l'équipe les a écrites.
+    if (isMine && filDeLaVille.estAssistance) {
+      maVoix = String(filDeLaVille.nomDeLExpediteur(message) || '');
+    }
     // Le nom et l avatar ne servent qu a plusieurs : un tete-a-tete n en porte pas (SPECS §1).
     const estAPlusieurs = chatData?.type !== 'whisper';
     const montrerNom = (!isMine && estAPlusieurs && premier) || Boolean(maVoix && premier);
@@ -5163,13 +5198,19 @@ function Conversation({ navigation, route }) {
                 ) : null}
                 {filVideHorsVille ? (
                   <div style={{ color: mutedTextColor }}>
-                    {/* RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre. */}
-                    {canalVuDUnMembre
-                      ? i18next.t(
-                        'conversation.canalDuComplexe.vide',
-                        'Le complexe n’a encore rien publié.',
-                      )
-                      : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                    {filDeLaVille.videTitre ? (
+                      <>
+                        <strong
+                          style={{ color: PALETTE_DU_FIL.texte, display: 'block', marginBottom: 6 }}
+                        >
+                          {filDeLaVille.videTitre}
+                        </strong>
+                        {filDeLaVille.videTexte}
+                      </>
+                    ) : canalVuDUnMembre ? (
+                      // RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre.
+                      i18next.t('conversation.canalDuComplexe.vide', 'Le complexe n’a encore rien publié.')
+                    ) : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
                   </div>
                 ) : null}
                 <style>{REACTION_HOVER_STYLE}</style>
@@ -6242,6 +6283,7 @@ function Conversation({ navigation, route }) {
           titre={t('userBlock.confirm.title', 'Bloquer cette personne ?')}
         />
       ) : null}
+      <ApercuDImageDuSite onClose={fermerLImageEnGrand} uri={imageEnGrand} />
       {annonce ? (
         <div
           role="status"

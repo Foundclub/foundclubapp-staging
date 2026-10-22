@@ -99,7 +99,11 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     // eslint-disable-next-line max-len
     await expect(getAdminCollectivite('ville')).resolves.toEqual({ documentId: 'ville', name: 'Ville de X' });
     expect(mockPost).toHaveBeenCalledWith(EXPLORATEUR, {
-      fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt'],
+      // R17-QUAND-2 : + la zone de vacances corrigée par FoundClub.
+      fields: [
+        'documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt',
+        'schoolHolidayZone',
+      ],
       filters: { documentId: { $eq: 'ville' } },
       pagination: { page: 1, pageSize: 1 },
       populate: ADMIN_COLLECTIVITE_DETAIL_POPULATE,

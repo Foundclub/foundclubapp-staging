@@ -159,13 +159,15 @@ export const splitReports = (reports) => {
 };
 
 /**
- * L historique de l onglet : les signalements clos et les fermetures, du plus recent au plus
- * ancien.
+ * L historique de l onglet : les signalements clos, les fermetures et (R17-CONTROLES, 20/10) les
+ * controles faits, du plus recent au plus ancien.
  * @param {any[]} traites - Les signalements clos.
  * @param {any[]} closures - Les fermetures (meta.closures).
- * @returns {Array<{ date: string, kind: 'report' | 'closure', item: any }>} Les jalons.
+ * @param {any[]} [checks] - Les lignes du carnet des controles (en cours et refaites).
+ * @returns {Array<{ date: string, kind: 'report' | 'closure' | 'check', item: any }>} Les
+ *   jalons.
  */
-export const securityHistory = (traites, closures) => [
+export const securityHistory = (traites, closures, checks = []) => [
   ...(Array.isArray(traites) ? traites : []).map((item) => ({
     date: String(item?.closedAt || item?.createdAt || ''),
     item,
@@ -178,6 +180,11 @@ export const securityHistory = (traites, closures) => [
       item,
       kind: /** @type {'closure'} */ ('closure'),
     })),
+  ...(Array.isArray(checks) ? checks : []).map((item) => ({
+    date: String(item?.doneOn || ''),
+    item,
+    kind: /** @type {'check'} */ ('check'),
+  })),
 ].sort((a, b) => b.date.localeCompare(a.date));
 
 /**
