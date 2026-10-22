@@ -4,7 +4,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -823,6 +823,31 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
     );
   }
 
+  /**
+   * La carte du complexe touché, posée à `bas` du bas de son conteneur.
+   * @param {number} bas - La distance au bas.
+   * @returns {import('react').ReactElement} La carte.
+   */
+  const carteDuComplexeTouche = (bas) => (
+    <View
+      onLayout={(evenement) => setHauteurChoisie(
+        Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
+      )}
+      style={{
+        bottom: bas, left: 12, position: 'absolute', right: 12,
+      }}
+      testID="reserver-recherche-carte-choisie"
+    >
+      <CarteComplexeRecherche
+        carte={carteChoisie}
+        choisie
+        compacte
+        onCreneau={(creneau) => ouvrirLeCreneau(carteChoisie, creneau)}
+        onOuvrir={() => ouvrirLeComplexe(carteChoisie)}
+      />
+    </View>
+  );
+
   return (
     <View style={[Alignments.fill]}>
       {feuilles}
@@ -896,7 +921,10 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
         {corps}
       </ScrollView>
       {carteEnPlace ? (
-        <View style={{ flex: 1, paddingBottom: Math.max(12, sceneBottomInset) }}>
+        <View
+          style={{ flex: 1, paddingBottom: Math.max(12, sceneBottomInset) }}
+          testID="reserver-recherche-zone-carte"
+        >
           <View
             onLayout={(evenement) => setHauteurCarte(Math.max(
               HAUTEUR_CARTE_MIN,
@@ -912,26 +940,16 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
               onChoisir={setEpingleChoisie}
               onOuvrir={ouvrirLeComplexe}
             />
-            {carteChoisie ? (
-              <View
-                onLayout={(evenement) => setHauteurChoisie(
-                  Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
-                )}
-                style={{
-                  bottom: 12, left: 12, position: 'absolute', right: 12,
-                }}
-                testID="reserver-recherche-carte-choisie"
-              >
-                <CarteComplexeRecherche
-                  carte={carteChoisie}
-                  choisie
-                  compacte
-                  onCreneau={(creneau) => ouvrirLeCreneau(carteChoisie, creneau)}
-                  onOuvrir={() => ouvrirLeComplexe(carteChoisie)}
-                />
-              </View>
-            ) : null}
+            {carteChoisie && Platform.OS === 'web' ? carteDuComplexeTouche(12) : null}
           </View>
+          {/* RESA-FIN-APP (20/10) — au TÉLÉPHONE, la carte du complexe touché se pose au bas de la
+              ZONE (bornée par l'écran, dessinée sous la barre flottante), au-dessus de la barre :
+              posée au bas de la CARTE (320 px au moins), elle passait SOUS la barre dès que la
+              carte dépassait de l'écran (tournée 2, Pixel 9). Le site, lui, défile : sa carte du
+              complexe reste au bas de la carte (RESA-CARTE). */}
+          {carteChoisie && Platform.OS !== 'web'
+            ? carteDuComplexeTouche(Math.max(12, sceneBottomInset))
+            : null}
         </View>
       ) : null}
     </View>
