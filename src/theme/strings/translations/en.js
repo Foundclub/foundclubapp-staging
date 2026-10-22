@@ -18131,6 +18131,8 @@ export default {
       favoris: 'Notify players who have this venue as a favourite',
       favorisAge: 'Only those who meet the venue\'s minimum age ({{age}}) are notified.',
       favorisAgeSansChiffre: 'Only those who meet the venue\'s minimum age are notified.',
+      favorisPrevenus_one: '{{count}} favourite notified',
+      favorisPrevenus_other: '{{count}} favourites notified',
       fermee: 'Closed',
       fermeeTexte: 'This ad is closed.',
       fermer: 'Close the ad',
@@ -18551,6 +18553,7 @@ export default {
     },
     resultat: {
       auNomDe: 'in the name of {{nom}}',
+      canalRejoint: 'You joined the {{complexe}} channel.',
       collecteLancee: 'Player call started: {{presents}}/{{quorum}}',
       collecteTexte: 'Nothing is booked until {{quorum}} players have said yes. The slot stays '
         + 'free: someone may take it before you.',

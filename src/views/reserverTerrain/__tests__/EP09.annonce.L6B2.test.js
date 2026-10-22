@@ -222,3 +222,32 @@ describe('N-28 — la notification d’une annonce ouvre sa page', () => {
     });
   });
 });
+
+// RESA-FIN-APP (22/10, Adel « 1- A ») — « 38 favoris prévenus » après la publication (`favoritesNotified` de
+// RESA-FIN-SERVEUR, relayé par E-P07). Lecture tolérante : rien si le nombre manque, rien à 0 (case décochée,
+// heures calmes, débit : l'app ne sait pas lequel, une phrase fausse serait pire que rien).
+describe('RESA-FIN-APP — le nombre de favoris prévenus', () => {
+  beforeEach(() => {
+    mockLecture = { data: annonceDeReservation({ canJoin: false }) };
+  });
+
+  it.each([
+    [38, '38 favoris prévenus'],
+    [1, '1 favori prévenu'],
+  ])('%i ⇒ « %s »', async (nombre, attendu) => {
+    mockParams = {
+      annonceId: 'a-1', favorisPrevenus: nombre, publiee: true, reservationId: 'r-1',
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain(attendu);
+  });
+
+  it.each([[0], [undefined]])('%s ⇒ rien', async (nombre) => {
+    mockParams = {
+      annonceId: 'a-1', favorisPrevenus: nombre, publiee: true, reservationId: 'r-1',
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Annonce publiée.');
+    expect(parRepere(arbre, 'annonce-favoris-prevenus')).toBeNull();
+  });
+});

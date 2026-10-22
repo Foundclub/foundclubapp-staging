@@ -159,3 +159,20 @@ describe('E-P05 — le résultat', () => {
     expect(mockNavigate).toHaveBeenLastCalledWith(...VERS_L_ACCUEIL);
   });
 });
+
+// RESA-FIN-APP (22/10, Adel « 1- A ») — RG-CANAL : « Tu as rejoint le canal de … » quand CETTE réservation fait
+// entrer le joueur dans le canal (`joinedChannel`, RESA-FIN-SERVEUR). Lecture tolérante : champ absent ou faux,
+// rien n'est dit.
+describe('RESA-FIN-APP — « Tu as rejoint le canal »', () => {
+  it('joinedChannel vrai : la phrase, avec le nom du complexe', async () => {
+    mockParams = { reservation: maReservation({ joinedChannel: true }) };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Tu as rejoint le canal de Le Five de Montrivage.');
+  });
+
+  it.each([[false], [undefined]])('joinedChannel %s : rien', async (valeur) => {
+    mockParams = { reservation: maReservation({ joinedChannel: valeur }) };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'resultat-canal-rejoint')).toBeNull();
+  });
+});

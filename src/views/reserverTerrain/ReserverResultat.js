@@ -197,6 +197,16 @@ function ReserverResultat() {
         {phrase ? (
           <Text style={[Fonts.p1, Fonts.neutral100, Fonts.textCenter]}>{phrase}</Text>
         ) : null}
+        {/* RESA-FIN-APP (22/10, Adel « 1- A ») — RG-CANAL : « Tu as rejoint le canal de … » quand
+            CETTE réservation fait entrer le joueur dans le canal (`joinedChannel`, RESA-FIN-SERVEUR) ;
+            lecture tolérante : rien si le serveur ne le dit pas. */}
+        {reservation?.joinedChannel === true ? (
+          <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]} testID="resultat-canal-rejoint">
+            {t('reserverTerrain.resultat.canalRejoint', 'Tu as rejoint le canal de {{complexe}}.', {
+              complexe: String(reservation?.complexe?.name || ''), ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        ) : null}
         <View
           style={{
             alignSelf: 'stretch',

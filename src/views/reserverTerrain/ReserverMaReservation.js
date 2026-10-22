@@ -864,6 +864,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               if (annonce?.documentId) {
                 navigation.navigate(RouteNames.ReserverAnnonce, {
                   annonceId: annonce.documentId,
+                  // RESA-FIN-APP (22/10) — le nombre de favoris prévenus (`favoritesNotified`,
+                  // RESA-FIN-SERVEUR), s'il est rendu.
+                  favorisPrevenus: Number.isFinite(annonce?.favoritesNotified)
+                    ? annonce.favoritesNotified
+                    : undefined,
                   publiee: true,
                   reservationId: reservation.documentId,
                 });

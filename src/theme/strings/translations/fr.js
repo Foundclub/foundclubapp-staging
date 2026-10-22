@@ -18747,6 +18747,8 @@ export default {
       favoris: 'Prévenir les joueurs qui ont ce complexe en favori',
       favorisAge: 'Seuls ceux qui ont l’âge minimum du complexe ({{age}} ans) sont prévenus.',
       favorisAgeSansChiffre: 'Seuls ceux qui ont l’âge minimum du complexe sont prévenus.',
+      favorisPrevenus_one: '{{count}} favori prévenu',
+      favorisPrevenus_other: '{{count}} favoris prévenus',
       fermee: 'Fermée',
       fermeeTexte: 'Cette annonce est fermée.',
       fermer: 'Fermer l’annonce',
@@ -19175,6 +19177,7 @@ export default {
     },
     resultat: {
       auNomDe: 'au nom de {{nom}}',
+      canalRejoint: 'Tu as rejoint le canal de {{complexe}}.',
       collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
       collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
         + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
