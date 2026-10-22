@@ -225,3 +225,16 @@ describe('E-G14 — la fidélité du complexe', () => {
     expect(mockLecture.refetch).toHaveBeenCalled();
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G14, tournée 2 : « Enregistrer » répondait 200 mais rien ne se
+// voyait : « Programme enregistré. » s'écrivait tout en haut, loin du bouton, hors de la vue. Le
+// bilan d'un enregistrement s'écrit SOUS le bouton.
+describe('RESA-FIN-APP-2 E-G14 — le bilan d’« Enregistrer » se lit là où l’on a appuyé', () => {
+  it('« Programme enregistré. » juste sous « Enregistrer »', async () => {
+    mockRegler.mockResolvedValue({ data: { programme: PROGRAMME } });
+    const arbre = await monter();
+    await appuyer(arbre, 'Enregistrer');
+    const lus = lisibles(arbre);
+    expect(lus.indexOf('Programme enregistré.')).toBe(lus.indexOf('Enregistrer') + 1);
+  });
+});

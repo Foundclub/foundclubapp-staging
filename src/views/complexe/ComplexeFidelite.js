@@ -75,7 +75,7 @@ function ComplexeFidelite() {
   const enregistre = /** @type {Programme | null} */ (lecture.data?.programme || null);
   const [saisie, setSaisie] = useState(/** @type {Programme | null} */ (null));
   const [message, setMessage] = useState(
-    /** @type {{ texte: string, ton: 'erreur' | 'ok' } | null} */ (null),
+    /** @type {{ ou?: 'programme', texte: string, ton: 'erreur' | 'ok' } | null} */ (null),
   );
   const [aValider, setAValider] = useState(/** @type {any} */ (null));
   const [erreurFeuille, setErreurFeuille] = useState('');
@@ -462,13 +462,23 @@ function ComplexeFidelite() {
     try {
       await regler.mutateAsync({ complexeId, programme: corpsDuProgramme(saisie) });
       setMessage({
+        ou: 'programme',
         texte: t('complexeFidelite.programme.enregistre', 'Programme enregistré.'),
         ton: 'ok',
       });
     } catch (erreur) {
-      setMessage({ texte: messageDeRefusResa(t, erreur, repli), ton: 'erreur' });
+      setMessage({ ou: 'programme', texte: messageDeRefusResa(t, erreur, repli), ton: 'erreur' });
     }
   };
+  // RESA-FIN-APP-2 (E-G14) : le bilan d'« Enregistrer » sous le bouton (en haut, il était hors de
+  // la vue) ; celui d'une validation reste en haut de l'écran.
+  const bandeau = (/** @type {any} */ lu) => (
+    <BandeauComplexe
+      testID="fidelite-message"
+      texte={lu.texte}
+      ton={lu.ton === 'ok' ? 'ok' : 'erreur'}
+    />
+  );
   const confirmerLaValidation = async () => {
     if (!aValider?.joueur?.documentId) return;
     setErreurFeuille('');
@@ -500,6 +510,7 @@ function ComplexeFidelite() {
           />
         </View>
       ) : null}
+      {message?.ou === 'programme' ? bandeau(message) : null}
     </View>
   );
 
@@ -536,13 +547,7 @@ function ComplexeFidelite() {
         >
           {t('complexeFidelite.titre', 'Fidélité').toUpperCase()}
         </Text>
-        {message ? (
-          <BandeauComplexe
-            testID="fidelite-message"
-            texte={message.texte}
-            ton={message.ton === 'ok' ? 'ok' : 'erreur'}
-          />
-        ) : null}
+        {message && message.ou !== 'programme' ? bandeau(message) : null}
         {corps}
         {saisie ? (
           <DeuxVolets actif={surOrdinateur} droite={listes}>
