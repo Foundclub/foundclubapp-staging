@@ -3,16 +3,35 @@ import {
 } from '@tanstack/react-query';
 
 import {
+  ajouterAuxFavoris,
   annulerMaReservation,
   apercuDeReservation,
   chercherDesTerrains,
+  ecrireAuComplexe,
+  fermerUneAnnonce,
+  lienDInvitation,
   lireComplexePublic,
   lireCreneauxDuJour,
+  lireLeGroupe,
+  lireLesPartenaires,
+  lireLInvitation,
+  lireMaFidelite,
+  lireMaRelationAuComplexe,
   lireMaReservation,
+  lireMesFavoris,
   lireMesReservations,
   lireTerrainsPublics,
+  lireUneAnnonce,
+  ouvrirLaDiscussion,
+  publierUneAnnonce,
+  quitterLeCanal,
+  rejoindreUneAnnonce,
+  repondreALaPartie,
   repondreALaVeille,
+  repondreParLeLien,
   reserverUnCreneau,
+  retirerDesFavoris,
+  signalerUnComplexe,
 } from './complexeJoueurService';
 
 /**
@@ -212,3 +231,326 @@ export const useMesReservations = (periode) => useQuery({
 export const useRepondreALaVeille = () => useGesteDuJoueur(
   ({ reponse, reservationId }) => repondreALaVeille(reservationId, reponse),
 );
+
+// ---------------------------------------------------------------------------------------------
+// RESA-L6B-2 (20/10/2026) — jouer à plusieurs (serveur RESA-L3) et la communauté (RESA-L4).
+// Le groupe d'une réservation se range SOUS ses réservations (un geste du joueur le relit) ; la
+// communauté sous `['complexe', 'moi']` (favoris, relation, fidélité) ; la page d'un lien et les
+// partenaires se lisent sans compte (`LECTURE_PUBLIQUE_CLEF`).
+// ---------------------------------------------------------------------------------------------
+
+/** Le préfixe de la communauté du joueur (favoris, relation à un complexe, fidélité). */
+export const MA_COMMUNAUTE_CLEF = Object.freeze(['complexe', 'moi']);
+
+/** Le préfixe des annonces « Il me manque des joueurs ». */
+export const ANNONCES_CLEF = Object.freeze(['complexe', 'annonces']);
+
+/**
+ * La clef du groupe d'une réservation.
+ * @param {unknown} reservationId - documentId.
+ * @returns {unknown[]} La clef.
+ */
+export const clefDuGroupe = (reservationId) => [...MES_RESERVATIONS_CLEF, reservationId, 'groupe'];
+
+/**
+ * E-P07 — le groupe d'une réservation (participants, lien, collecte, équipe, annonce, fils).
+ * @param {string | null | undefined} reservationId - documentId.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} Le groupe.
+ */
+export const useGroupeDeLaReservation = (reservationId, { enabled = true } = {}) => useQuery({
+  enabled: enabled && Boolean(reservationId),
+  queryFn: async () => donnees(await lireLeGroupe(String(reservationId))),
+  queryKey: clefDuGroupe(reservationId),
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P10, onglet « En collecte » — les groupes de plusieurs réservations (la jauge et la date limite
+ * de chaque collecte : la liste du serveur ne les porte pas). Même clef que
+ * `useGroupeDeLaReservation` : la fiche (E-P07) les retrouve sans relire.
+ * ponytail: une lecture par collecte de l'onglet (une poignée) ; voie de sortie : `collecte` dans
+ * les lignes de `GET /reservations-terrain/mine` (serveur).
+ * @param {string[]} reservationIds - Les documentId.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {{ groupes: Record<string, any> }} Les groupes lus, par réservation.
+ */
+export const useGroupesDeReservations = (reservationIds, { enabled = true } = {}) => useQueries({
+  combine: (resultats) => ({
+    groupes: Object.fromEntries(resultats.flatMap((resultat, rang) => (
+      resultat.data ? [[reservationIds[rang], resultat.data]] : []
+    ))),
+  }),
+  queries: reservationIds.map((reservationId) => ({
+    enabled: enabled && Boolean(reservationId),
+    queryFn: async () => donnees(await lireLeGroupe(String(reservationId))),
+    queryKey: clefDuGroupe(reservationId),
+    staleTime: DEMI_MINUTE,
+  })),
+});
+
+/**
+ * Un geste qui rend le GROUPE (répondre, rejoindre) : le groupe se pose, les réservations, les
+ * annonces et la page du lien se relisent.
+ * @param {(variables: any) => Promise<any>} geste - Le geste.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation.
+ */
+const useGesteDuGroupe = (geste) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    meta: { preventToastError: true },
+    mutationFn: async (/** @type {any} */ variables) => donnees(await geste(variables)),
+    onSuccess: async (/** @type {any} */ groupe) => {
+      if (groupe?.reservation) queryClient.setQueryData(clefDuGroupe(groupe.reservation), groupe);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...MES_RESERVATIONS_CLEF] }),
+        queryClient.invalidateQueries({ queryKey: [...ANNONCES_CLEF] }),
+        queryClient.invalidateQueries({ queryKey: [...LECTURE_PUBLIQUE_CLEF, 'invitation'] }),
+      ]);
+    },
+  });
+};
+
+/**
+ * E-P07 — un participant répond « Présent » / « Absent ».
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ reservationId, reponse })` rend le groupe.
+ */
+export const useRepondreALaPartie = () => useGesteDuGroupe(
+  ({ reponse, reservationId }) => repondreALaPartie(reservationId, reponse),
+);
+
+/**
+ * E-P08 — répondre par le lien (avec un compte).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ code, reponse })` rend le groupe.
+ */
+export const useRepondreParLeLien = () => useGesteDuGroupe(
+  ({ code, reponse }) => repondreParLeLien(code, reponse),
+);
+
+/**
+ * E-P09 B — « Je viens ».
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync(annonceId)` rend le groupe.
+ */
+export const useRejoindreUneAnnonce = () => useGesteDuGroupe(
+  (annonceId) => rejoindreUneAnnonce(annonceId),
+);
+
+/**
+ * Un geste du réserveur sur SA partie (le lien, l'annonce) : le groupe et les annonces se
+ * relisent.
+ * @param {(variables: any) => Promise<any>} geste - Le geste.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation.
+ */
+const useGesteDuReserveur = (geste) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    meta: { preventToastError: true },
+    mutationFn: async (/** @type {any} */ variables) => donnees(await geste(variables)),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...MES_RESERVATIONS_CLEF] }),
+        queryClient.invalidateQueries({ queryKey: [...ANNONCES_CLEF] }),
+      ]);
+    },
+  });
+};
+
+/**
+ * E-P05 / E-P07 — le lien d'invitation : l'activer (le lire) ou le désactiver.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ actif, reservationId })` rend `{ actif, code, url }`.
+ */
+export const useLienDInvitation = () => useGesteDuReserveur(
+  ({ actif, reservationId }) => lienDInvitation(reservationId, actif),
+);
+
+/**
+ * E-P09 A — publier l'annonce.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ annonce, reservationId })` rend l'annonce.
+ */
+export const usePublierUneAnnonce = () => useGesteDuReserveur(
+  ({ annonce, reservationId }) => publierUneAnnonce(reservationId, annonce),
+);
+
+/**
+ * E-P09 B — « Fermer l'annonce ».
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync(annonceId)` rend l'annonce fermée.
+ */
+export const useFermerUneAnnonce = () => useGesteDuReserveur(
+  (annonceId) => fermerUneAnnonce(annonceId),
+);
+
+/**
+ * E-P07 — ouvrir un fil : la discussion du groupe, ou la conversation avec le complexe. Rien ne
+ * se relit (le fil s'ouvre dans la messagerie).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ fil: 'discussion' | 'complexe', reservationId })` rend `{ chat }`.
+ */
+export const useOuvrirUnFil = () => useMutation({
+  meta: { preventToastError: true },
+  mutationFn: async (/** @type {any} */ { fil, reservationId }) => donnees(
+    await (fil === 'complexe'
+      ? ecrireAuComplexe(reservationId)
+      : ouvrirLaDiscussion(reservationId)),
+  ),
+});
+
+/**
+ * E-P08 — la page d'un lien, sans compte.
+ * @param {string | null | undefined} code - Le code du lien.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La partie, vue du lien.
+ */
+export const useInvitation = (code) => useQuery({
+  enabled: Boolean(code),
+  queryFn: async () => donnees(await lireLInvitation(String(code))),
+  queryKey: [...LECTURE_PUBLIQUE_CLEF, 'invitation', code],
+  retry: false,
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P09 B — la page d'une annonce.
+ * @param {string | null | undefined} annonceId - documentId.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} L'annonce.
+ */
+export const useAnnonce = (annonceId) => useQuery({
+  enabled: Boolean(annonceId),
+  queryFn: async () => donnees(await lireUneAnnonce(String(annonceId))),
+  queryKey: [...ANNONCES_CLEF, annonceId],
+  retry: false,
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P11 — mes complexes favoris.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les favoris.
+ */
+export const useMesFavoris = () => useQuery({
+  queryFn: async () => {
+    const corps = donnees(await lireMesFavoris());
+    return Array.isArray(corps?.items) ? corps.items : [];
+  },
+  queryKey: [...MA_COMMUNAUTE_CLEF, 'favoris'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P02 — ce complexe et moi (favori, fidélité, canal).
+ * @param {string | null | undefined} slug - L'adresse publique.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux (sans compte) : rien n'est lu.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La relation.
+ */
+export const useMaRelationAuComplexe = (slug, { enabled = true } = {}) => useQuery({
+  enabled: enabled && Boolean(slug),
+  queryFn: async () => donnees(await lireMaRelationAuComplexe(String(slug))),
+  queryKey: [...MA_COMMUNAUTE_CLEF, 'relation', slug],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P11 — la relation à chacun de mes complexes favoris (le canal : membre, son fil). Même clef
+ * que `useMaRelationAuComplexe` : la page du complexe (E-P02) la retrouve sans relire.
+ * ponytail: une lecture par favori (une poignée) ; voie de sortie : `canal` dans les lignes de
+ * `GET /complexes-favoris/mine` (serveur).
+ * @param {string[]} slugs - Les adresses publiques.
+ * @returns {{ relations: Record<string, any> }} Les relations lues, par slug.
+ */
+export const useRelationsAuxComplexes = (slugs) => useQueries({
+  combine: (resultats) => ({
+    relations: Object.fromEntries(resultats.flatMap((resultat, rang) => (
+      resultat.data ? [[slugs[rang], resultat.data]] : []
+    ))),
+  }),
+  queries: slugs.map((slug) => ({
+    enabled: Boolean(slug),
+    queryFn: async () => donnees(await lireMaRelationAuComplexe(String(slug))),
+    queryKey: [...MA_COMMUNAUTE_CLEF, 'relation', slug],
+    staleTime: DEMI_MINUTE,
+  })),
+});
+
+/**
+ * E-P10 « MA FIDÉLITÉ ».
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Une carte par complexe.
+ */
+export const useMaFidelite = () => useQuery({
+  queryFn: async () => {
+    const corps = donnees(await lireMaFidelite());
+    return Array.isArray(corps?.items) ? corps.items : [];
+  },
+  queryKey: [...MA_COMMUNAUTE_CLEF, 'fidelite'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * E-P02 — les partenaires du complexe, sans compte.
+ * @param {string | null | undefined} slug - L'adresse publique.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les partenaires.
+ */
+export const usePartenairesPublics = (slug) => useQuery({
+  enabled: Boolean(slug),
+  queryFn: async () => {
+    const corps = donnees(await lireLesPartenaires(String(slug)));
+    return Array.isArray(corps?.items) ? corps.items : [];
+  },
+  queryKey: [...LECTURE_PUBLIQUE_CLEF, 'partenaires', slug],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * Un geste de la communauté (favori, canal) : favoris et relations se relisent.
+ * @param {(variables: any) => Promise<any>} geste - Le geste.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation.
+ */
+const useGesteDeLaCommunaute = (geste) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    meta: { preventToastError: true },
+    mutationFn: async (/** @type {any} */ variables) => donnees(await geste(variables)),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...MA_COMMUNAUTE_CLEF] });
+    },
+  });
+};
+
+/**
+ * E-P02 — mettre en favori.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ origin, slug })`.
+ */
+export const useAjouterAuxFavoris = () => useGesteDeLaCommunaute(
+  ({ origin, slug }) => ajouterAuxFavoris(slug, origin),
+);
+
+/**
+ * E-P02 / E-P11 — retirer des favoris (le canal gardé, sauf la case).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ quitterCanal, slug })`.
+ */
+export const useRetirerDesFavoris = () => useGesteDeLaCommunaute(
+  ({ quitterCanal, slug }) => retirerDesFavoris(slug, { quitterCanal }),
+);
+
+/**
+ * E-P12 — quitter le canal.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync(slug)`.
+ */
+export const useQuitterLeCanal = () => useGesteDeLaCommunaute((slug) => quitterLeCanal(slug));
+
+/**
+ * E-P02 — signaler un complexe (rien ne se relit).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexe, details, motif })`.
+ */
+export const useSignalerUnComplexe = () => useMutation({
+  meta: { preventToastError: true },
+  mutationFn: async (/** @type {any} */ signalement) => donnees(
+    await signalerUnComplexe(signalement),
+  ),
+});

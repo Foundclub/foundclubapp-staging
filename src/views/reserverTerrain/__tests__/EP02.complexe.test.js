@@ -29,10 +29,16 @@ let mockComplexe = /** @type {any} */ ({});
 let mockTerrains = /** @type {any} */ ({});
 let mockCreneaux = /** @type {Record<string, any>} */ ({});
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  // RESA-L6B-2 : la communauté du complexe (favori, relation, partenaires, signalement), vide.
+  useAjouterAuxFavoris: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useComplexePublic: () => mockComplexe,
   useCreneauxDuJour: (/** @type {any} */ _slug, /** @type {string} */ terrainId) => (
     mockCreneaux[terrainId] || { data: { slots: [] } }
   ),
+  useMaRelationAuComplexe: () => ({ data: null }),
+  usePartenairesPublics: () => ({ data: [] }),
+  useRetirerDesFavoris: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useSignalerUnComplexe: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useTerrainsPublics: () => mockTerrains,
 }));
 

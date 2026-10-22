@@ -894,13 +894,19 @@ function Profile({ navigation, route }) {
     // RESA-L6B-1 (19/10) — « Mes réservations » (E-P10) EN TÊTE de la rubrique, pour tout
     // pratiquant (planche EP10 état 5, choix S-19 validé avec les planches le 13/10), avec le
     // nombre de réservations à venir. Caché par `COMPLEXES_JOUEUR` (éteint : rien de plus, rien
-    // n'est lu). « Mes complexes favoris » (E-P11) attend le serveur L4 (RESA-L6B-2).
+    // n'est lu). RESA-L6B-2 (20/10) : « Mes complexes favoris » (E-P11) juste après (planche EP10
+    // état 5), sans compteur (rien n'est lu ici).
     ...(COMPLEXES_JOUEUR ? [{
       accessoire: <NombreAVenir />,
       icon: Images.calendar,
       key: 'mesReservations',
       label: t('reserverTerrain.mesReservations.titre', 'Mes réservations'),
       onPress: () => navigation.navigate(RouteNames.ReserverMesReservations),
+    }, {
+      icon: Images.heart,
+      key: 'mesFavoris',
+      label: t('reserverTerrain.favoris.titre', 'Mes complexes favoris'),
+      onPress: () => navigation.navigate(RouteNames.ReserverFavoris),
     }] : []),
     {
       icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,

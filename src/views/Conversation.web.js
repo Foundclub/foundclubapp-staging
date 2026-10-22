@@ -21,7 +21,11 @@ import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
-import { couleurDuNom, sousTitreDesMembres } from '@/domains/messaging/habillageDuFil';
+import {
+  couleurDuNom,
+  estUnCanalDeComplexe,
+  sousTitreDesMembres,
+} from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
   estEpinglePourMoi,
@@ -1544,12 +1548,12 @@ function FenetreDuSite({
  * MSG1W — UNE CONFIRMATION DU SITE (SPECS §4 : boite de 300, titre centre, « Annuler » au contour,
  * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne,
  * quitter un groupe (la question seule, sans texte, comme le telephone).
- * @param {{ id: string, libelleAction: string, onAnnuler: () => void, onConfirmer: () => void,
- *   texte?: string, titre: string }} props - Les mots et les deux gestes.
+ * @param {{ id: string, libelleAction: string, libelleAnnuler?: string, onAnnuler: () => void,
+ *   onConfirmer: () => void, texte?: string, titre: string }} props - Les mots et les deux gestes.
  * @returns {import('react').ReactElement} La confirmation.
  */
 function ConfirmationDuSite({
-  id, libelleAction, onAnnuler, onConfirmer, texte, titre,
+  id, libelleAction, libelleAnnuler, onAnnuler, onConfirmer, texte, titre,
 }) {
   return (
     <div
@@ -1604,7 +1608,7 @@ function ConfirmationDuSite({
           }}
         >
           <button onClick={onAnnuler} style={STYLE_BOUTON_CONTOUR} type="button">
-            {i18next.t('common.actions.cancel', 'Annuler')}
+            {libelleAnnuler || i18next.t('common.actions.cancel', 'Annuler')}
           </button>
           <button
             onClick={onConfirmer}
@@ -2179,11 +2183,20 @@ function Conversation({ navigation, route }) {
   // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
   // R17-CANAUX — « Toute la ville » : la Ville seule (useFilDeLaVille), depuis son espace ou quand
   // le serveur le dit ; un membre y lit « Seule la Ville écrit ici ».
+  // RESA-L6B-2 (20/10/2026) — E-P12 : dans le canal d'un complexe, seuls ses gérants
+  // (administrateurs du fil) publient ; le serveur ferme l'envoi aux membres, comme le téléphone.
+  const adminsDuFil = /** @type {any} */ (chatData)?.groupAdmins;
+  const canalSansMaVoix = estUnCanalDeComplexe(chatData) && !(
+    Array.isArray(adminsDuFil) ? adminsDuFil : []
+  ).some((/** @type {any} */ admin) => (
+    String(admin?.documentId || admin?.id || '') === String(userData?.documentId || '')
+  ));
   const peutEcrire = useMemo(
     () => (
-      canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) || filDeLaVille.peutEcrire
+      (canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) && !canalSansMaVoix)
+      || filDeLaVille.peutEcrire
     ),
-    [chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
+    [canalSansMaVoix, chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
   );
   // MSG1W §3.10 (« avertissement B », Adel 07/10) — un fil rattache a un club (fil de club, fil
   // d equipe) peut etre lu par son dirigeant : une notice EN TETE DU FIL le dit. Un tete-a-tete ou
@@ -3638,6 +3651,9 @@ function Conversation({ navigation, route }) {
       .filter(Boolean)
   ), [chatData]);
   const jeSuisAdmin = estUnGroupe && adminsDuGroupe.includes(String(userData?.documentId || ''));
+  // RESA-L6B-2 (20/10/2026) — E-P12 : le canal d'un complexe, vu d'un membre : le NOMBRE de
+  // membres, jamais la liste (serveur RESA-L4). Témoin : ConversationWebMSG1W, E-P12.
+  const canalVuDUnMembre = estUnCanalDeComplexe(chatData) && !jeSuisAdmin;
   const autrePersonne = resolveOtherParticipantId(chatData, userData?.documentId);
   // Les crochets de blocage se declarent `object` : on dit ce qu on en lit.
   const { data: mesBlocages } = /** @type {{ data?: any[] }} */ (
@@ -4614,6 +4630,11 @@ function Conversation({ navigation, route }) {
   // SMF (T20) — la regle du telephone (MSG1A §3.1) : les prenoms des membres puis « Vous », et
   // rien quand le serveur ne les joint pas (fil d equipe : « 0 participants » avant).
   const prenomsDuFil = filDeLaVille.estFil ? '' : sousTitreDesMembres({
+    canal: (nombre) => t('conversation.canalDuComplexe.sousTitre', {
+      count: nombre,
+      defaultValue_one: 'Canal du complexe · {{count}} membre',
+      defaultValue_other: 'Canal du complexe · {{count}} membres',
+    }),
     chat: chatData,
     meId: userData?.documentId,
     vous: t('conversation.header.you', 'Vous'),
@@ -4622,7 +4643,10 @@ function Conversation({ navigation, route }) {
   // MSG1W §3.1 — le titre du fil et sa ligne (« … écrit » en cyan). §3.16 : dans un groupe, il
   // ouvre les infos du groupe.
   // @ts-ignore: FIXME: Baseline TS regression
-  const membresDuFil = Array.isArray(chatData?.participants) ? chatData.participants : [];
+  // RESA-L6B-2 — E-P12 : à un membre du canal d'un complexe, aucune liste (même réduite).
+  const membresDuFil = !canalVuDUnMembre && Array.isArray(chatData?.participants)
+    ? chatData.participants
+    : [];
   const libelleRetirer = t('conversation.group.remove', 'Retirer');
   const blocDuTitre = (
     <>
@@ -5174,6 +5198,9 @@ function Conversation({ navigation, route }) {
                         </strong>
                         {filDeLaVille.videTexte}
                       </>
+                    ) : canalVuDUnMembre ? (
+                      // RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre.
+                      i18next.t('conversation.canalDuComplexe.vide', 'Le complexe n’a encore rien publié.')
                     ) : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
                   </div>
                 ) : null}
@@ -6066,7 +6093,7 @@ function Conversation({ navigation, route }) {
               </div>
             )}
             <span style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14 }}>
-              {t('conversation.web.fil.groupeMembres', {
+              {canalVuDUnMembre ? prenomsDuFil : t('conversation.web.fil.groupeMembres', {
                 count: Array.isArray(chatData?.participants) ? chatData.participants.length : 0,
                 defaultValue_one: 'Groupe · {{count}} membre',
                 defaultValue_other: 'Groupe · {{count}} membres',
@@ -6179,7 +6206,9 @@ function Conversation({ navigation, route }) {
             style={STYLE_BOUTON_ROUGE_DES_INFOS}
             type="button"
           >
-            {t('conversation.groupInfo.leave', 'Quitter le groupe')}
+            {canalVuDUnMembre
+              ? t('conversation.canalDuComplexe.quitter', 'Quitter le canal')
+              : t('conversation.groupInfo.leave', 'Quitter le groupe')}
           </button>
           <button
             onClick={() => setAnnonce(texteDuSignalement)}
@@ -6194,13 +6223,24 @@ function Conversation({ navigation, route }) {
         <ConfirmationDuSite
           id="msg1w-depart"
           libelleAction={t('conversation.groupInfo.leaveConfirmAction', 'Quitter')}
+          // RESA-L6B-2 — E-P12 : « Rester » / « Quitter » (planche EP12 état 3).
+          libelleAnnuler={canalVuDUnMembre
+            ? t('conversation.canalDuComplexe.rester', 'Rester')
+            : undefined}
           onAnnuler={() => setDepartAConfirmer(false)}
           onConfirmer={quitterLeGroupe}
-          titre={t('conversation.groupInfo.leaveConfirm', {
-            defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
-            name: conversationName,
-            ...SANS_ECHAPPEMENT,
-          })}
+          titre={canalVuDUnMembre
+            ? t('conversation.canalDuComplexe.quitterConfirmation', {
+              defaultValue: 'Quitter le canal « {{name}} » ? Tu ne recevras plus ses nouvelles. '
+                + 'Tu y reviendras en le remettant en favori.',
+              name: conversationName,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('conversation.groupInfo.leaveConfirm', {
+              defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
+              name: conversationName,
+              ...SANS_ECHAPPEMENT,
+            })}
         />
       ) : null}
       {membreARetirer ? (
