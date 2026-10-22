@@ -49,6 +49,10 @@ jest.mock('@/components/templates/ScreenContainer', () => (
     return children;
   }
 ));
+// RESA-FIN-APP : la liste lit la largeur (volet de la fiche sur ordinateur) ; ici, le téléphone.
+jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
+// La fiche (volet de l'ordinateur) a son propre témoin : ici, la liste seule.
+jest.mock('@/views/complexe/ComplexeClient', () => function FausseFiche() { return null; });
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
