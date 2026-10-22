@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -70,7 +70,9 @@ function ComplexeDemandes() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
+  const params = /** @type {{ complexeId?: string, refuser?: string } | undefined} */ (
+    route?.params
+  );
   const { complexe, complexeId } = useComplexeChoisi(params?.complexeId);
   const [onglet, setOnglet] = useState(ATTENTE);
   const attente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
@@ -151,6 +153,17 @@ function ComplexeDemandes() {
     setErreurFeuille('');
     setRefus(demande);
   };
+  // RESA-FIN-APP-2 (plan E-G19 §3.4) : « Refuser » dans la cloche ⇒ la feuille du motif de CETTE
+  // demande, une fois par adresse, dès qu'elle est dans la liste.
+  const refusOuvert = useRef('');
+  const aRefuser = params?.refuser && refusOuvert.current !== params.refuser
+    ? lignesDesPages(attente.data).find((ligne) => ligne.documentId === params.refuser)
+    : null;
+  useEffect(() => {
+    if (!aRefuser) return;
+    refusOuvert.current = aRefuser.documentId;
+    ouvrirLeRefus(aRefuser);
+  });
 
   const refuser = async (/** @type {string} */ motif) => {
     if (!refus) return;

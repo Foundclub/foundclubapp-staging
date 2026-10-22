@@ -16593,6 +16593,10 @@ export default {
     },
   },
   notificationList: {
+    complexe: {
+      dejaTranchee: 'Cette demande est déjà tranchée.',
+      demandeAcceptee: 'Demande acceptée.',
+    },
     delete: {
       cancel: 'Annuler',
       confirm: 'Supprimer cette notification ?',

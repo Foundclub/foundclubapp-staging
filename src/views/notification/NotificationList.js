@@ -15,12 +15,16 @@ import {
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { estNotificationDuComplexe } from '@/domains/complexe/notificationsDuComplexe';
+import {
+  demandeATrancher,
+  estNotificationDuComplexe,
+} from '@/domains/complexe/notificationsDuComplexe';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -467,6 +471,14 @@ function NotificationList() {
               ) : null}
             </TouchableOpacity>
 
+            {/* RESA-FIN-APP-2 (plan E-G19 §3.3) : Accepter / Refuser, demande en attente. */}
+            {demandeATrancher(notification.type, notification.data) ? (
+              <ActionsDeDemandeDansLaCloche
+                data={/** @type {Record<string, any>} */ (notification.data)}
+                relire={refreshNotifications}
+                testID={String(notification.documentId || notification.id)}
+              />
+            ) : null}
             {isRsvpReminder ? (
               <View
                 style={{
@@ -507,7 +519,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
+  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

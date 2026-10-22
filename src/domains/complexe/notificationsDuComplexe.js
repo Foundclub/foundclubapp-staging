@@ -105,6 +105,21 @@ export const iconeDuGerant = (type, data) => {
 };
 
 /**
+ * RESA-FIN-APP-2 (plan E-G19 §3.3) — une notification de DEMANDE (N-02, N-03) qui attend encore la
+ * réponse du gérant : « Accepter » / « Refuser » dans la cloche. Le serveur (RESAFINSRV2) dit
+ * l'état
+ * de la demande (`reservationStatus`) ; sans ce champ, rien (lecture tolérante).
+ * @param {string | null | undefined} type - Le type de la notification.
+ * @param {Record<string, any> | null | undefined} data - Sa charge utile.
+ * @returns {boolean} Vrai si la demande est encore à trancher.
+ */
+export const demandeATrancher = (type, data) => estNotificationDuComplexe(type)
+  && String(type) === TYPE_DU_GERANT
+  && VERS_LES_DEMANDES.includes(String(data?.change || ''))
+  && data?.reservationStatus === 'en_attente'
+  && Boolean(data?.reservationId);
+
+/**
  * La destination d'une notification du gérant (charge utile déjà aplatie).
  * @param {Record<string, any>} charge - `change`, `complexeId`, `reservationId`.
  * @returns {{ params: Record<string, any>, route: string } | null} La destination, ou null.

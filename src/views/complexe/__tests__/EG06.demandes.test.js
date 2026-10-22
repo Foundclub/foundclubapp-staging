@@ -19,9 +19,10 @@ import {
 // l'erreur. Doublures : le contrat d'API L2A (`GET /complexes/:id/reservations?vue=demandes`).
 
 const mockNavigate = jest.fn();
+let mockParams = /** @type {Record<string, any>} */ ({ complexeId: 'cx-five' });
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
-  useRoute: () => ({ params: { complexeId: 'cx-five' } }),
+  useRoute: () => ({ params: mockParams }),
 }));
 
 let mockAttente = /** @type {any} */ ({});
@@ -415,5 +416,24 @@ describe('RESA-FIN-APP (5) E-G06 — une demande expirée ne propose plus de ges
     expect(mockAttente.refetch).toHaveBeenCalled();
     expect(parRepere(arbre, 'demande-accepter-r-1')).toBeNull();
     expect(parRepere(arbre, 'demande-refuser-r-1')).toBeNull();
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — plan E-G19 §3.4 : « Refuser » dans la cloche ⇒ la feuille du motif.
+// La cloche ouvre « Demandes » avec `refuser` : la feuille s'ouvre sur cette demande, une fois.
+describe('RESA-FIN-APP-2 E-G06 — ouvert depuis la cloche avec « refuser »', () => {
+  afterEach(() => {
+    mockParams = { complexeId: 'cx-five' };
+  });
+
+  it('la feuille du motif s’ouvre sur la demande nommée', async () => {
+    mockParams = { complexeId: 'cx-five', refuser: 'r-1' };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'feuille-motif')).not.toBeNull();
+  });
+
+  it('sans « refuser », aucune feuille ne s’ouvre seule', async () => {
+    const arbre = await monter();
+    expect(parRepere(arbre, 'feuille-motif')).toBeNull();
   });
 });

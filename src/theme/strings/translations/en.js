@@ -15874,6 +15874,10 @@ export default {
     },
   },
   notificationList: {
+    complexe: {
+      dejaTranchee: 'This request has already been decided.',
+      demandeAcceptee: 'Request accepted.',
+    },
     delete: {
       cancel: 'Cancel',
       confirm: 'Delete this notification?',
