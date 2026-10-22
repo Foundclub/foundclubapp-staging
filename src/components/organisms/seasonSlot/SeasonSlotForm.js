@@ -1240,8 +1240,9 @@ function SeasonSlotForm({
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
   );
   // COLL-R-A7 — en plein ecran, le titre de l etape pose deja la question : pas de libelle.
+  // A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose aussi la question : pareil.
   const libelleDuChamp = (/** @type {string} */ texte) => (
-    tunnelPleinEcran ? null : titreDuChamp(texte)
+    parcoursGuide ? null : titreDuChamp(texte)
   );
   // A7-UX (20/10) — `flex-start` : une puce suivie de « complet … » étirait toutes ses voisines
   // en ovales (capture du banc, « Quel jour ? », panneau du site).
@@ -1641,6 +1642,13 @@ function SeasonSlotForm({
             }}
             />
           </View>
+          {/* A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose la question de l'étape en
+              titre, comme le téléphone (le récapitulatif a déjà le sien, plus bas). */}
+          {etapeCourante === 'recap' ? null : (
+            <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {titres[etapeCourante]}
+            </Text>
+          )}
         </View>
       ) : null}
       {compact || tunnelPleinEcran ? null : (

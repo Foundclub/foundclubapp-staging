@@ -186,6 +186,11 @@ const aplatir = (/** @type {any} */ enfants) => {
   return String(enfants);
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((/** @type {any} */ n) => aplatir(n.props.children).replace(/\u00a0/g, ' ').trim());
+const suivant = async () => {
+  const bouton = [...mockBoutons].reverse().find((props) => props.title === 'Suivant');
+  await act(async () => { bouton.onPress(); });
+  await tours();
+};
 
 describe('A7-UX-2 — le parcours guidé du panneau', () => {
   it('🔴 P2 : club et équipe sur la même étape, cinq étapes au lieu de six', async () => {
@@ -194,6 +199,13 @@ describe('A7-UX-2 — le parcours guidé du panneau', () => {
     expect(lus).toContain('Étape 1/5');
     expect(lus).toContain('Montrivage Basket');
     expect(lus).toContain('Tout le club');
+  });
+
+  it('🔴 P6 : le panneau pose la question de l étape en titre (« Pour qui ? », puis « Quel jour ? »)', async () => {
+    const arbre = await monter({ guided: true });
+    expect(textes(arbre)).toContain('Pour qui ?');
+    await suivant();
+    expect(textes(arbre)).toContain('Quel jour ?');
   });
 });
 jest.mock(
