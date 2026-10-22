@@ -256,7 +256,11 @@ export const searchPlaces = async (search, type) => {
 
   try {
     try {
-      const geoResults = await fetchPlacesFromGeoSearch(normalizedSearch, resolvedType);
+      const geoResults = (await fetchPlacesFromGeoSearch(normalizedSearch, resolvedType))
+        // RESA-FIN-APP-2 (E-P01) : une COMMUNE demandée ne garde que les communes de la base
+        // d'adresses ; notre recherche y mêle installations et imports (« Stade du Moulin »).
+        .filter((place) => resolvedType !== 'municipality'
+          || place.properties.source === 'autocomplete');
       if (geoResults.length > 0) {
         return geoResults;
       }
