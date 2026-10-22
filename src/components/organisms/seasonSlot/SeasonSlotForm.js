@@ -43,6 +43,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
@@ -2074,62 +2075,77 @@ function SeasonSlotForm({
             </TouchableOpacity>
           ) : null}
 
-          {avecVacances && vacancesDepliees ? (
-            <View style={{ gap: 4 }} testID="quand-vacances-liste">
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t(
-                  'collectiviteCreneaux.quand.vacances.titreListe',
-                  'Vacances retirées · {{zone}}',
-                  { zone: vacances.label, ...SANS_ECHAPPEMENT },
-                )}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'collectiviteCreneaux.quand.vacances.calendrierOfficiel',
-                  'Calendrier officiel {{annees}}',
-                  { annees: anneesScolaires, ...SANS_ECHAPPEMENT },
-                )}
-              </Text>
-              {vacancesDeLaForme.parPeriode.map(({ gardee, jours, periode }) => (
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'collectiviteCreneaux.quand.vacances.periode',
-                    '{{nom}} : retirer ces séances',
-                    { nom: periode.name, ...SANS_ECHAPPEMENT },
+          {/* R17-QUAND-2-BIS (planches P11-quand-v2-tel / -ordi) — les dates retirees dans une
+              FEUILLE DU BAS, au telephone comme sur le site. */}
+          {avecVacances ? (
+            <BottomModal
+              close={() => setVacancesDepliees(false)}
+              footerComponent={(
+                <Button
+                  onPress={() => setVacancesDepliees(false)}
+                  title={t('common.close', 'Fermer')}
+                  variant="Secondary"
+                />
+              )}
+              isVisible={vacancesDepliees}
+              webPresentation="sheet"
+            >
+              <View style={{ gap: 4 }} testID="quand-vacances-liste">
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t(
+                    'collectiviteCreneaux.quand.vacances.titreListe',
+                    'Vacances retirées · {{zone}}',
+                    { zone: vacances.label, ...SANS_ECHAPPEMENT },
                   )}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: !gardee }}
-                  key={periode.key}
-                  onPress={() => basculerLaPeriode(periode.key)}
-                  style={[Alignments.row, Alignments.alignCenter, {
-                    borderBottomColor: withAlpha(Colors.neutral00, 0.08),
-                    borderBottomWidth: 1,
-                    gap: 8,
-                    minHeight: 48,
-                    paddingVertical: 8,
-                  }]}
-                  testID={`vacances-${periode.key}`}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{periode.name}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {t(
-                        'collectiviteCreneaux.quand.vacances.ligne',
-                        '{{du}} – {{au}} · {{jours}}',
-                        {
-                          au: formatDayMonth(periode.end),
-                          du: formatDayMonth(periode.start),
-                          jours: listeDeDates(jours, 6),
-                          ...SANS_ECHAPPEMENT,
-                        },
-                      )}
-                    </Text>
-                  </View>
-                  {coche(!gardee)}
-                </TouchableOpacity>
-              ))}
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{origineDesVacances}</Text>
-            </View>
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'collectiviteCreneaux.quand.vacances.calendrierOfficiel',
+                    'Calendrier officiel {{annees}}',
+                    { annees: anneesScolaires, ...SANS_ECHAPPEMENT },
+                  )}
+                </Text>
+                {vacancesDeLaForme.parPeriode.map(({ gardee, jours, periode }) => (
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'collectiviteCreneaux.quand.vacances.periode',
+                      '{{nom}} : retirer ces séances',
+                      { nom: periode.name, ...SANS_ECHAPPEMENT },
+                    )}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: !gardee }}
+                    key={periode.key}
+                    onPress={() => basculerLaPeriode(periode.key)}
+                    style={[Alignments.row, Alignments.alignCenter, {
+                      borderBottomColor: withAlpha(Colors.neutral00, 0.08),
+                      borderBottomWidth: 1,
+                      gap: 8,
+                      minHeight: 48,
+                      paddingVertical: 8,
+                    }]}
+                    testID={`vacances-${periode.key}`}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{periode.name}</Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {t(
+                          'collectiviteCreneaux.quand.vacances.ligne',
+                          '{{du}} – {{au}} · {{jours}}',
+                          {
+                            au: formatDayMonth(periode.end),
+                            du: formatDayMonth(periode.start),
+                            jours: listeDeDates(jours, 6),
+                            ...SANS_ECHAPPEMENT,
+                          },
+                        )}
+                      </Text>
+                    </View>
+                    {coche(!gardee)}
+                  </TouchableOpacity>
+                ))}
+                <Text style={[Fonts.p3, Fonts.neutral300]}>{origineDesVacances}</Text>
+              </View>
+            </BottomModal>
           ) : null}
 
           {erreurDuQuand ? (
@@ -2162,11 +2178,9 @@ function SeasonSlotForm({
               ) : null}
               {avecVacances && vacancesDeLaForme.parPeriode.length ? (
                 <Button
-                  onPress={() => setVacancesDepliees((avant) => !avant)}
+                  onPress={() => setVacancesDepliees(true)}
                   style={{ alignSelf: 'flex-start', minHeight: 44 }}
-                  title={vacancesDepliees
-                    ? t('collectiviteCreneaux.quand.vacances.masquer', 'Masquer les dates retirées')
-                    : t('collectiviteCreneaux.quand.vacances.voir', 'Voir les dates retirées')}
+                  title={t('collectiviteCreneaux.quand.vacances.voir', 'Voir les dates retirées')}
                   variant="Ghost"
                 />
               ) : null}
