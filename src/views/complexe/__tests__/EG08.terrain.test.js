@@ -1,4 +1,4 @@
-import { TextInput } from 'react-native';
+import { ScrollView, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeTerrain from '@/views/complexe/ComplexeTerrain';
@@ -392,5 +392,19 @@ describe('RESA-FIN-APP (1) E-G08 — « Ajouter une photo » dessiné en un seul
     await appuyer(arbre, 'Ajouter une photo');
     expect(parRepere(arbre, 'complexe-terrain-photo-41')).not.toBeNull();
     expect(dessins(arbre, 'Ajouter une photo')).toEqual([enUnMot('Ajouter une photo')]);
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G08, tournée 2 : « Enregistrer » sans nom, en bas d'une longue
+// fiche, n'affichait rien de visible : « Donne un nom au terrain. » s'écrit sous le champ Nom,
+// tout en haut, hors de la vue. La fiche remonte donc jusqu'au premier champ qui manque.
+describe('RESA-FIN-APP-2 E-G08 — un champ manquant se montre', () => {
+  it('« Enregistrer » sans nom : la fiche remonte en haut, rien ne part', async () => {
+    const arbre = await monter();
+    const fiche = arbre.root.findByType(ScrollView).instance;
+    const remonter = jest.spyOn(fiche, 'scrollTo');
+    await appuyer(arbre, 'Enregistrer');
+    expect(remonter).toHaveBeenCalledWith(expect.objectContaining({ y: 0 }));
+    expect(mockEnregistrer).not.toHaveBeenCalled();
   });
 });
