@@ -357,6 +357,12 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ReserverResultat]: '/reserver-un-terrain/resultat',
   [RouteNames.ReserverEchec]: '/reserver-un-terrain/echec',
   [RouteNames.ReserverMaReservation]: '/reservation-terrain/:reservationId',
+  // RESA-FIN-SITE (21/10/2026) — « Mes réservations » (E-P10) et « Demain, tu joues ? » (E-P14,
+  // RESA-L6B-1), exemptés par erreur jusque-là (tournée 2 du site, §3). « mes-… » comme les autres
+  // listes personnelles (/mes-signalements) ; « terrain » pour ne pas les confondre avec
+  // /reservations/:id ; la veille est une sous-page de la réservation.
+  [RouteNames.ReserverMesReservations]: '/mes-reservations-terrain',
+  [RouteNames.ReserverVeille]: '/reservation-terrain/:reservationId/veille',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();
