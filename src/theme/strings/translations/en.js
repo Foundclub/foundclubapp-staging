@@ -16724,6 +16724,10 @@ export default {
       coach: 'coach',
       president: 'manager',
     },
+    staffDe: {
+      coach: 'coach',
+      president: 'manager',
+    },
   },
   pollCreationModal: {
     thisOptionIsAlreadyUsed: 'This option is already used.',
@@ -18908,7 +18912,8 @@ export default {
       noneVisible: 'No visible markers',
       tap: 'Tap a marker',
       updating: 'Updating markers...',
-      visible: '{{total}} visible markers',
+      visible_one: '{{count}} visible marker',
+      visible_other: '{{count}} visible markers',
       zoomToSeeAll: 'Zoom in to see everything',
     },
     recenter: 'Recenter',

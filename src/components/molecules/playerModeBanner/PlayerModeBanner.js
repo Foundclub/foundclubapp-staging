@@ -92,6 +92,11 @@ function PlayerModeBanner(props) {
   const staffLabel = accountRoleKey === 'coach'
     ? t('playerMode.staff.coach', 'entraîneur')
     : t('playerMode.staff.president', 'dirigeant');
+  // RESA-FIN-APP (20/10) — « Tes droits d’entraîneur », « de dirigeant » (tournée 2 : « de
+  // entraîneur »). L'anglais garde `{{staff}}`.
+  const staffDe = accountRoleKey === 'coach'
+    ? t('playerMode.staffDe.coach', 'd’entraîneur')
+    : t('playerMode.staffDe.president', 'de dirigeant');
   const revenirAuStaff = t('playerMode.active.exit', 'Revenir en mode {{staff}}', {
     staff: staffLabel,
     ...SANS_ECHAPPEMENT,
@@ -108,8 +113,8 @@ function PlayerModeBanner(props) {
       }],
       lignes: [t(
         'playerMode.active.description',
-        'Tu vois l\'app comme un joueur de ton équipe. Tes droits de {{staff}} sont intacts.',
-        { staff: staffLabel, ...SANS_ECHAPPEMENT },
+        'Tu vois l\'app comme un joueur de ton équipe. Tes droits {{staffDe}} sont intacts.',
+        { staff: staffLabel, staffDe, ...SANS_ECHAPPEMENT },
       )],
       testID: 'player-mode-active',
       titre: t('playerMode.active.title', 'Mode joueur'),
@@ -120,7 +125,9 @@ function PlayerModeBanner(props) {
       actions: [{
         cle: 'sortir', libelle: revenirAuStaff, mode: null, plein: true, testID: 'parent-mode-exit',
       }],
-      lignes: [t('playerMode.parent.description', { staff: staffLabel, ...SANS_ECHAPPEMENT })],
+      lignes: [t('playerMode.parent.description', {
+        staff: staffLabel, staffDe, ...SANS_ECHAPPEMENT,
+      })],
       testID: 'parent-mode-active',
       titre: t('playerMode.parent.title', 'Mode parent'),
     };

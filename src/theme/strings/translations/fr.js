@@ -17275,7 +17275,7 @@ export default {
   playerMode: {
     active: {
       // eslint-disable-next-line max-len
-      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits de {{staff}} sont intacts.",
+      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits {{staffDe}} sont intacts.",
       exit: 'Revenir en mode {{staff}}',
       title: 'Mode joueur',
     },
@@ -17293,7 +17293,7 @@ export default {
     parent: {
       and: 'et',
       back: 'Revenir en mode parent',
-      description: 'Tu vois l’app comme un parent. Tes droits de {{staff}} sont intacts.',
+      description: 'Tu vois l’app comme un parent. Tes droits {{staffDe}} sont intacts.',
       enter: 'Basculer en mode parent',
       title: 'Mode parent',
       waiting_one: '{{prenoms}} t’attend dans le mode parent.',
@@ -17323,6 +17323,11 @@ export default {
     staff: {
       coach: 'entraîneur',
       president: 'dirigeant',
+    },
+    // RESA-FIN-APP : « Tes droits d’entraîneur » (l'élision manquait : « de entraîneur »).
+    staffDe: {
+      coach: 'd’entraîneur',
+      president: 'de dirigeant',
     },
   },
   pollCreationModal: {
@@ -19562,7 +19567,8 @@ export default {
       noneVisible: 'Aucun repère visible',
       tap: 'Touche un repère',
       updating: 'Mise à jour des repères...',
-      visible: '{{total}} repères visibles',
+      visible_one: '{{count}} repère visible',
+      visible_other: '{{count}} repères visibles',
       zoomToSeeAll: 'Zoome pour tout voir',
     },
     recenter: 'Recentrer',

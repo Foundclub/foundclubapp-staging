@@ -20,7 +20,9 @@ import { DIAL_CODES } from '@/utils/dial_codes';
 // Default to France (+33) for all users
 const getDeviceDialCode = () => DIAL_CODES.find(({ value }) => value === '+33');
 
-const DIALCODE_WIDTH = Platform.OS === 'web' ? 96 : 72;
+// RESA-FIN-APP (20/10) — « FR +33 » (SANS-EMOJI, 01/10) ne tenait pas dans 72 px dont 24 de
+// marges : le téléphone affichait « FR +… » (tournées 1 et 2). La largeur du site, partout.
+const DIALCODE_WIDTH = 96;
 
 const repairCountryLabel = (label) => {
   const normalizedLabel = String(label || '');
