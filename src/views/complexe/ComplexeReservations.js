@@ -267,7 +267,9 @@ function ComplexeReservations() {
   const carteDe = (/** @type {any} */ ligne) => {
     const exterieur = ligne.source === 'exterieur';
     // Planche EG04 état 2 : le bouton n'existe que si le serveur dit la réservation marquable.
-    const marquable = vue === 'passees' && ligne.canMarkNoShow === true;
+    // RESA-FIN-APP-2 (RG-NONHONOREE, « créneau commencé ») : le serveur juge ; un créneau commencé
+    // aujourd'hui se marque depuis « Aujourd'hui », pas seulement depuis « Passées ».
+    const marquable = ligne.canMarkNoShow === true;
     const noteExterieure = vue === 'passees' && exterieur && ligne.status === STATUTS.confirmee;
     return (
       <View
