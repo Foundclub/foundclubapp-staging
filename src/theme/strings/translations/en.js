@@ -22640,6 +22640,9 @@ export default {
     autreHeure: 'Another hour',
     autresHeures: 'Other hours',
     cancel: 'Cancel',
+    // A7-UX-2 (22/10) : les heures pleines du jour dans la grille du site.
+    complet: 'full',
+    enPartie: 'partly full',
     heure: '{{heure}}h',
   },
   tomTomSearchMapNative: {

@@ -262,3 +262,35 @@ describe('A7-UX — sur le site, le choix de l heure aux couleurs de FoundClub',
     expect(libelles(fin)).toContain('08 h');
   });
 });
+
+// ⏰ A7-UX-2 (22/10, Adel « P4 oui ») — LES HEURES PLEINES DANS LA GRILLE DU SITE. Le formulaire
+// passe les plages pleines du jour (`pleines`, en minutes) : une heure toute pleine dit
+// « complet »,
+// une heure en partie pleine dit « en partie », à l'œil ET au lecteur d'écran ; elles restent
+// touchables (« Attribuer quand même », D74). Aux minutes, chaque case pleine dit « complet ».
+// ROUGE avant : la grille ne savait rien des places.
+describe('A7-UX-2 — les heures pleines du jour dans la grille', () => {
+  const PLEINES = [{ end: (20 * 60) + 30, start: 19 * 60 }];
+
+  test('🔴 19 h pleine : « complet » ; 20 h à moitié : « en partie » ; 18 h libre', () => {
+    const arbre = monter({ pleines: PLEINES });
+    ouvrir(arbre);
+
+    expect(libelles(arbre))
+      .toEqual(expect.arrayContaining(['18 h', '19 h, complet', '20 h, en partie']));
+    expect(unChoix(arbre, '19 h, complet').props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: false }),
+    );
+  });
+
+  test('🔴 minutes de 20 h : 20:00 à 20:25 « complet », 20:30 libre ; le choix part', () => {
+    const arbre = monter({ pleines: PLEINES });
+    ouvrir(arbre);
+    toucher(arbre, '20 h, en partie');
+
+    expect(libelles(arbre))
+      .toEqual(expect.arrayContaining(['20:00, complet', '20:25, complet', '20:30']));
+    toucher(arbre, '20:00, complet');
+    expect(rendues).toEqual(['20:00']);
+  });
+});
