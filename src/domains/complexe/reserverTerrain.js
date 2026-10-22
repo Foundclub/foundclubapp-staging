@@ -573,7 +573,8 @@ export const varianteDEchec = (erreur) => {
 /**
  * La variante de E-P13 que porte une réservation (son en-tête sur E-P07, variantes 3 à 7) : null
  * pour une réservation en cours (en attente, confirmée).
- * @param {{ cancelledBy?: string | null, status?: string | null } | null | undefined} reservation
+ * @param {{ cancelledBy?: string | null, role?: string, status?: string | null }
+ *   | null | undefined} reservation
  *   - La réservation vue par son réserveur.
  * @param {{ change?: string | null, echecDeCollecte?: string | null }} [contexte] - La
  *   notification qui l'a ouverte (`data.change`) ; RESA-L6B-2 : pourquoi la collecte s'est arrêtée
@@ -679,8 +680,8 @@ export const lienAgendaGoogle = (rendezVous) => {
  * confirmée dont le créneau est fini, et « non honorée » quand le complexe l'a marquée (serveur
  * L2B, `noShowAt` ; RESA-L6B-1). « En collecte » et « non aboutie » viendront avec L3.
  * @param {{ cancelledBy?: string | null, endsAt?: string | null, noShowAt?: string | null,
- *   status?: string | null } | null | undefined} reservation - La réservation vue par son
- *   réserveur.
+ *   role?: string, status?: string | null } | null | undefined} reservation - La réservation vue
+ *   par son réserveur.
  * @param {Date} [maintenant] - L'instant de référence.
  * @returns {string} `enAttente | confirmee | jouee | nonHonoree | refusee | sansReponse |
  *   annuleeParToi | annuleeParLeComplexe | annulee | enCollecte | nonAboutie`, ou ''.
@@ -799,8 +800,10 @@ const texteDeLAge = (t, age, rejoindre) => (rejoindre
  * l'expose ici.
  * @param {Traduire} t - Traduction.
  * @param {string} variante - La variante (`varianteDEchec`, `varianteDeLaReservation`).
- * @param {{ complexe?: string | null, erreur?: any, fermeture?: string | null,
- *   motif?: string | null, telephone?: string | null }} [contexte] - Ce que l'écran sait ;
+ * @param {{ collecte?: { collectDeadline?: string | null, presents?: number, quorum?: number },
+ *   complexe?: string | null, debut?: string | null, erreur?: any, fermeture?: string | null,
+ *   motif?: string | null, rejoindre?: boolean, reserveur?: string | null,
+ *   telephone?: string | null }} [contexte] - Ce que l'écran sait ;
  *   RESA-L6B-2 : `rejoindre` (le refus vient d'une partie qu'on rejoint : lien, annonce,
  *   présence), `collecte` (`{ collectDeadline, presents, quorum }`), `reserveur` (« Julien M. ») et
  *   `debut` (ISO) d'une partie annulée par son réserveur.

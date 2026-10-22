@@ -76,6 +76,7 @@ function BlocPourQui({
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
 
+  /** @type {import('react-native').ViewStyle} */
   const ligne = {
     alignItems: 'center',
     backgroundColor: withAlpha(Colors.primary800, 0.6),
