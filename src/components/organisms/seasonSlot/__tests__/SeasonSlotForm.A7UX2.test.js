@@ -129,6 +129,7 @@ const tours = async () => {
     await act(async () => { await new Promise((fini) => { setTimeout(fini, 0); }); });
   }
 };
+const heure = (/** @type {string} */ libelle) => [...mockHeureProps].reverse().find((props) => props.label === libelle);
 const monter = async (/** @type {any} */ props = {}) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   /** @type {any} */
@@ -191,6 +192,13 @@ const suivant = async () => {
   await act(async () => { bouton.onPress(); });
   await tours();
 };
+// Avance jusqu'à l'étape des heures (le sélecteur « Début » monté), sans compter les étapes.
+const allerAuxHeures = async () => {
+  for (let tour = 0; tour < 6 && !heure('Début'); tour += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await suivant();
+  }
+};
 
 describe('A7-UX-2 — le parcours guidé du panneau', () => {
   it('🔴 P2 : club et équipe sur la même étape, cinq étapes au lieu de six', async () => {
@@ -206,6 +214,19 @@ describe('A7-UX-2 — le parcours guidé du panneau', () => {
     expect(textes(arbre)).toContain('Pour qui ?');
     await suivant();
     expect(textes(arbre)).toContain('Quel jour ?');
+  });
+
+  it('🔴 P4 : « Libre ce mardi : … » s écrit au panneau, à l étape des heures', async () => {
+    const arbre = await monter({ guided: true });
+    await allerAuxHeures();
+    expect(heure('Début')).toBeTruthy();
+    expect(textes(arbre)).toContain('Libre ce mardi : 08:00 – 18:00, 19:30 – 22:00.');
+  });
+
+  it('🔴 P4 : le Début reçoit les heures pleines du mardi (18:00 – 19:30)', async () => {
+    await monter({ guided: true });
+    await allerAuxHeures();
+    expect(heure('Début').pleines).toEqual([{ end: (19 * 60) + 30, start: 18 * 60 }]);
   });
 });
 jest.mock(

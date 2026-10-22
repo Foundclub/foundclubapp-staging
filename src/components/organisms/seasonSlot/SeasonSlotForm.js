@@ -753,13 +753,14 @@ function SeasonSlotForm({
   // ponytail: ouverture 08:00 – 22:00 (defaut de `freeRanges`) : la liste des creneaux ne dit pas
   // les horaires de l installation, et leur retrait est decide (VILLE-INSTALLATION). Le serveur
   // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
-  const heuresLibres = useMemo(() => {
-    if (!jour) return [];
-    return freeRanges(fullRangesOfSlots(
-      creneauxDuJour(lecture.data?.data, jour, slot?.documentId),
-      capacite,
-    ));
-  }, [capacite, jour, lecture.data, slot?.documentId]);
+  // A7-UX-2 (22/10, Adel « P4 oui ») : les moments complets, aussi passés à la grille du Début.
+  const heuresPleines = useMemo(() => (jour && !joursDifferents
+    ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jour, slot?.documentId), capacite)
+    : []), [capacite, jour, joursDifferents, lecture.data, slot?.documentId]);
+  const heuresLibres = useMemo(
+    () => (jour ? freeRanges(heuresPleines) : []),
+    [heuresPleines, jour],
+  );
 
   const nomDuClub = slot?.club?.name
     || clubs.find((ligne) => ligne.documentId === club)?.name
@@ -1506,7 +1507,8 @@ function SeasonSlotForm({
   );
 
   // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
-  const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+  // A7-UX-2 (22/10, Adel « P4 oui ») : aussi au panneau du site (avant : plein écran seulement).
+  const libresDuJour = parcoursGuide && visible('horaires') && !voirLibres && jour
     && !joursDifferents
     && !lecture.isLoading && !lecture.error
     && !heuresFigees && !repartition ? (
@@ -1848,6 +1850,7 @@ function SeasonSlotForm({
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
               onChange={changerLeDebut}
               placeholder="17:30"
+              pleines={heuresPleines}
               value={debut}
             />
           </View>
