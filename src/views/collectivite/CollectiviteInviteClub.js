@@ -390,12 +390,17 @@ function CollectiviteInviteClub() {
     // `boundedHeight` (RECHERCHE-UNIQUE, comme SearchScreenShell) : sur le SITE, sans lui la liste
     // prend la hauteur de tout son contenu, réclame toutes ses pages et pousse le lien du bas
     // sous la barre d'onglets. Sans effet sur le téléphone.
+    // INVPAD-2 (22/10) : sur ordinateur, la coque du site réserve déjà le bas
+    // (`--fc-shell-bottom-space`, lot SAISIE) : une seule réserve, pas la nôtre en plus.
+    const margeDuBas = Platform.OS === 'web' && isDesktop ? 0 : 24;
     return (
       <ScreenContainer
         bgImage="bg2"
         bottomInsetMode="screen"
         boundedHeight
-        contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+        contentContainerStyle={[
+          Spaces.paddingTop[0], { paddingBottom: margeDuBas }, Alignments.fill,
+        ]}
       >
         <View style={[Alignments.fill, zoneDeRecherche]} testID="inviter-recherche">
           {enTete(t(
