@@ -1746,7 +1746,9 @@ function PlanningWeekFullscreen() {
                 'Retour le {{jour}}.',
                 {
                   ...SANS_ECHAPPEMENT,
-                  jour: format(parseISO(absence.retour), 'EEE d MMM', { locale: localeDesDates() }),
+                  // Le mois abrégé porte son point (« nov. ») : la phrase met le sien.
+                  jour: format(parseISO(absence.retour), 'EEE d MMM', { locale: localeDesDates() })
+                    .replace(/\.$/, ''),
                 },
               ) : t(
                 'personalPlanningWeekFullscreen.finVacances',
