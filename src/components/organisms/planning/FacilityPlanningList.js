@@ -10,6 +10,7 @@ import {
   closureBandLabel,
   closureHoursLabel,
   closureOfDay,
+  motDuBlocTouche,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   capitalize,
@@ -253,7 +254,8 @@ function FacilityPlanningList({
                     {origine ? <Text style={[Fonts.p4, Fonts.neutral300]}>{origine}</Text> : null}
                     {aDeplacer ? (
                       <Text style={[Fonts.p4, Fonts.warning500]}>
-                        {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+                        {/* CRDEP2 : le meme mot que la grille (« n a pas lieu »…). */}
+                        {motDuBlocTouche(t, bloc?.raw)}
                       </Text>
                     ) : null}
                   </View>

@@ -51,6 +51,24 @@ export const reasonLabel = (t, reason) => {
 };
 
 /**
+ * COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a un bloc que la fermeture touche, dit a sa
+ * place (grille et Liste) : la Ville a propose une place (« proposition envoyee ») ; un creneau de
+ * SAISON sans seance posee « n a pas lieu » ; sinon « a deplacer ».
+ * @param {any} t - i18next.
+ * @param {any} raw - Le bloc tel que le serveur le rend (`event.raw`).
+ * @returns {string} Le mot.
+ */
+export const motDuBlocTouche = (t, raw) => {
+  if (raw?.relocationProposal?.status === 'pending') {
+    return t('deplacerSeance.planning.propositionEnvoyee', 'proposition envoyée');
+  }
+  if (raw?.kind === 'slot' && raw?.origin === 'slot') {
+    return t('deplacerSeance.planning.nAPasLieu', 'n’a pas lieu');
+  }
+  return t('collectiviteFermetures.planning.aDeplacer', 'à déplacer');
+};
+
+/**
  * Un jour civil en « ven. 2 oct. » (ou « vendredi 2 octobre » en long).
  * @param {string | null | undefined} jour - AAAA-MM-JJ.
  * @param {{ long?: boolean }} [options] - Long : « vendredi 2 octobre ».
