@@ -25,7 +25,9 @@ const mockNavigate = jest.fn();
 const mockPopToTop = jest.fn();
 let mockParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate, popToTop: mockPopToTop }),
+  // RESA-FIN-APP : la fiche REMPLACE le résultat (rien de périmé derrière elle) ; `replace` est ici
+  // le même espion que `navigate` : le témoin lit la destination, pas la manière.
+  useNavigation: () => ({ navigate: mockNavigate, popToTop: mockPopToTop, replace: mockNavigate }),
   useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('@/domains/auth/useAuth', () => ({
