@@ -2048,6 +2048,9 @@ function SeasonSlotForm({
               )}
               isVisible={vacancesDepliees}
               webPresentation="sheet"
+              // Le tunnel plein ecran est un <Modal> (couche 9999 sur le site) : la feuille
+              // passe dessus. `webZIndex` n'existe que sur le site (BottomModal.web.js).
+              {.../** @type {any} */ ({ webZIndex: tunnelPleinEcran ? 10000 : undefined })}
             >
               <View style={{ gap: 4 }} testID="quand-vacances-liste">
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
