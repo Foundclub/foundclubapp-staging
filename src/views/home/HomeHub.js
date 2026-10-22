@@ -2629,7 +2629,11 @@ function HomeHubContent({ auth, navigation, route }) {
             RESA-L5A1 (13/10) — un compte qui gère un complexe lit, au même endroit, la bascule
             « mode complexe / mode joueur » (planche RB), qui reprend ce bandeau (mêmes
             propriétés depuis PAR-L12, RESA-RAT-APP 19/10) ; cachée par l'interrupteur
-            `COMPLEXES_GERANT`. */}
+            `COMPLEXES_GERANT`.
+            RESA-BASCULE (20/10/2026, planche RB-3) — pour un compte gérant à deux modes ou plus,
+            la bascule est « Ton mode » : un changement de mode remonte la page (5c), et le
+            compte Parent qui passe en Joueur par sa feuille lit « Ton compte est passé en
+            Joueur. » (2c). */}
         {COMPLEXES_GERANT ? (
           <BasculeComplexe
             accountRoleKey={getUserRoleKey(roleName)}
@@ -2638,6 +2642,10 @@ function HomeHubContent({ auth, navigation, route }) {
             compteId={userData?.documentId || null}
             displayMode={modeActif}
             onChange={setDisplayMode}
+            onMonter={scrollToTop}
+            onPasseEnJoueur={() => showBanner({
+              title: t('tonMode.passeEnJoueur'), tone: 'success',
+            })}
             onPratiqueAussi={ouvrirLaFeuillePratique}
             prenoms={prenomsDesEnfants}
           />

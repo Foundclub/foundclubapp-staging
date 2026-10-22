@@ -26,6 +26,15 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
   useBottomTabBarHeight: () => 0,
 }));
 
+// RESA-BASCULE (20/10/2026) : l'accueil importe la bascule « Ton mode » (cachée, interrupteur
+// éteint), qui charge le contrôle à onglets et ses gestes : leurs doublures partagées.
+/* eslint-disable global-require */
+jest.mock('react-native-reanimated', () => require('@/testSupport/animationDouble').reanimated());
+jest.mock('react-native-gesture-handler', () => (
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+/* eslint-enable global-require */
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
   useIsFocused: () => true,

@@ -1,13 +1,24 @@
 import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Platform, Text, TouchableOpacity, useWindowDimensions, View,
+} from 'react-native';
 
 import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
+import {
+  dansLeMenuDuSite,
+  LARGEUR_DES_MENUS_DU_SITE,
+  positionActive,
+  positionsDuCompte,
+} from '@/domains/complexe/tonMode';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerModeBanner';
+import TonMode from '@/views/complexe/components/TonMode';
+import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -28,6 +39,16 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
  * Monté seulement quand `COMPLEXES_GERANT` est allumé (`HomeHub.js`).
  * RESA-RAT-APP (19/10/2026) : PAR-L12 a donné trois positions au bandeau (rôle du compte, joueur,
  * parent) ; la bascule reçoit et transmet ses propriétés telles quelles.
+ *
+ * RESA-BASCULE (20/10/2026, planche RB-3 validée par Adel, « parent-gérant A ») — UNE seule
+ * bascule, aucun mode perdu : un compte qui gère un complexe et a au moins deux modes lit « Ton
+ * mode » (`TonMode`) à la place du duo bascule + bandeau. Joueur, Parent, Dirigeant, Coach changent
+ * l'accueil sur place (la page remonte) ; Complexe ouvre son espace. Un compte Parent y trouve
+ * l'offre « Tu pratiques aussi un sport ? » et SA feuille (la ligne du complexe en plus ; « Oui »
+ * mène à l'accueil joueur, T1 A). Sur le site, à partir de 1 024 px, la bascule d'un dirigeant ou
+ * d'un coach est en bas du menu du club : l'accueil ne la répète pas ; un joueur ou un parent la
+ * garde en tête, sur une ligne (O2). Sans complexe, et pour un compte à un seul mode (né « pour un
+ * complexe », super admin) : rien ne change (le bandeau, ou les états de la planche RB).
  * @param {object} props - Les propriétés du bandeau du mode joueur, et le compte.
  * @param {string} props.accountRoleKey - Le rôle du COMPTE (`getUserRoleKey`).
  * @param {boolean} props.canUseParentMode - PAR-L12 : le mode parent a un sens (des enfants).
@@ -35,21 +56,77 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
  * @param {string | null} props.compteId - Le documentId du compte (le mode se garde par compte).
  * @param {'player' | 'parent' | null} props.displayMode - Le mode ACTIF (rien = le rôle du compte).
  * @param {(mode: 'player' | 'parent' | null) => void} props.onChange - Le mode choisi.
+ * @param {() => void} [props.onMonter] - RESA-BASCULE : la page remonte en haut (planche 5c).
+ * @param {() => void} [props.onPasseEnJoueur] - RESA-BASCULE : le compte Parent est passé en
+ *   Joueur par la feuille (« Ton compte est passé en Joueur. »).
  * @param {() => void} props.onPratiqueAussi - PAR-L12 : ouvrir la feuille « pratiquer aussi ».
  * @param {string[]} props.prenoms - PAR-L12 : les prénoms de ses enfants.
- * @returns {import('react').ReactElement} Le bandeau.
+ * @returns {import('react').ReactElement | null} Le bandeau (rien quand le menu du site l'a).
  */
 function BasculeComplexe({
-  accountRoleKey, canUseParentMode, canUsePlayerMode, compteId, displayMode, onChange,
-  onPratiqueAussi, prenoms,
+  accountRoleKey, canUseParentMode, canUsePlayerMode, compteId, displayMode, onChange, onMonter,
+  onPasseEnJoueur, onPratiqueAussi, prenoms,
 }) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
+  const { width } = useWindowDimensions();
+  const [feuilleOuverte, setFeuilleOuverte] = useState(false);
   const mes = useMesComplexes({ enabled: Boolean(compteId) });
   const complexe = Array.isArray(mes.data) && mes.data.length ? mes.data[0] : null;
+  const positions = positionsDuCompte({
+    aDesEnfants: canUseParentMode === true,
+    aUnComplexe: Boolean(complexe),
+    peutJouer: canUsePlayerMode === true,
+    roleDuCompte: accountRoleKey,
+  });
+
+  if (complexe && positions.length >= 2) {
+    const ordinateur = Platform.OS === 'web' && width >= LARGEUR_DES_MENUS_DU_SITE;
+    if (dansLeMenuDuSite({
+      dansLeComplexe: false, largeur: width, plateforme: Platform.OS, roleDuCompte: accountRoleKey,
+    })) {
+      return null;
+    }
+    const estParent = accountRoleKey === 'parent';
+    return (
+      <>
+        <TonMode
+          actif={positionActive({
+            dansLeComplexe: false, modeAffiche: displayMode, roleDuCompte: accountRoleKey,
+          })}
+          disposition={ordinateur ? 'ligne' : 'auto'}
+          nomDuComplexe={String(complexe.name || '')}
+          offre={estParent ? { onPress: () => setFeuilleOuverte(true) } : null}
+          onChoisir={(position) => {
+            if (position.cle === 'complexe') {
+              ecrireModeComplexe(compteId, true);
+              navigation.navigate(RouteNames.ComplexeEspace, { complexeId: complexe.documentId });
+              return;
+            }
+            onChange(position.mode);
+            onMonter?.();
+          }}
+          positions={positions}
+          prenoms={prenoms}
+        />
+        {estParent ? (
+          <FeuillePratiqueAussi
+            gereUnComplexe
+            isVisible={feuilleOuverte}
+            onClose={() => setFeuilleOuverte(false)}
+            onDone={() => {
+              setFeuilleOuverte(false);
+              onPasseEnJoueur?.();
+            }}
+            prenoms={prenoms}
+          />
+        ) : null}
+      </>
+    );
+  }
   const fondActif = {
     backgroundColor: withAlpha(Colors.primary500, 0.15),
     borderColor: Colors.primary500,

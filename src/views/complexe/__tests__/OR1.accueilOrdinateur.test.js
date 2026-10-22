@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeAccueil from '@/views/complexe/ComplexeAccueil';
@@ -17,6 +17,7 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   }),
 }));
 jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: () => {},
   useNavigation: () => ({ getParent: () => ({ reset: jest.fn() }), navigate: jest.fn() }),
   useRoute: () => ({ params: { complexeId: 'cx-five' } }),
 }));
@@ -50,6 +51,19 @@ jest.mock('@/components/templates/ScreenContainer', () => (
     return children;
   }
 ));
+// RESA-BASCULE (20/10/2026) : la bascule « Ton mode » (planche RB-3) charge le contrôle à onglets
+// et ses gestes (doublures partagées), et lit les enfants du compte (aucun ici, sauf mention).
+/* eslint-disable global-require */
+jest.mock('react-native-reanimated', () => require('@/testSupport/animationDouble').reanimated());
+jest.mock('react-native-gesture-handler', () => (
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+/* eslint-enable global-require */
+const mockEnfants = { lignes: [], reste: 0, total: 0 };
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref', () => ({
+  __esModule: true,
+  default: () => mockEnfants,
+}));
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -92,5 +106,29 @@ describe('RESA-L5A1 OR1 — l’accueil du gérant sur ordinateur', () => {
     expect(style(parRepere(arbre, 'complexe-accueil-chiffres')).flexWrap).toBe('wrap');
     expect(style(parRepere(arbre, 'complexe-accueil-case-installations')).flexBasis).toBe(140);
     expect(style(parRepere(arbre, 'frise-noms')).width).toBe(84);
+  });
+
+  // RESA-BASCULE (20/10/2026, planche RB-3 O1) — sur le site, à partir de 1 024 px, « Ton mode »
+  // est en bas du menu du complexe : l'accueil ne la répète pas. Sur téléphone et tablette, elle y
+  // est.
+  describe('RESA-BASCULE — la bascule « Ton mode » et le menu du site', () => {
+    const plateformeDOrigine = Platform.OS;
+    afterEach(() => {
+      Platform.OS = plateformeDOrigine;
+    });
+
+    it('site à 1 440 px : pas de bascule dans l accueil (elle est dans le menu)', async () => {
+      Platform.OS = 'web';
+      const arbre = await monterA(1440);
+      expect(parRepere(arbre, 'ton-mode')).toBeNull();
+      expect(parRepere(arbre, 'complexe-accueil-bascule')).toBeNull();
+    });
+
+    it('site à 412 px, et tablette à 1 440 px : la bascule en tête de l accueil', async () => {
+      Platform.OS = 'web';
+      expect(parRepere(await monterA(412), 'ton-mode')).not.toBeNull();
+      Platform.OS = 'ios';
+      expect(parRepere(await monterA(1440), 'ton-mode')).not.toBeNull();
+    });
   });
 });

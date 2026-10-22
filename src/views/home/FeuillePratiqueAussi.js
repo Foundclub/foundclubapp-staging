@@ -32,16 +32,23 @@ import { updateMe } from '@/services/auth/authService';
  * complexe » (aucun rôle sportif), ouverte par « Voir l'app en joueur » de l'accueil du complexe.
  * Même mise à jour du rôle ; il GARDE son complexe (relation `gestionnaires`, indépendante du
  * rôle) ; pas de mode parent à poser. Son parcours d'inscription de joueur reprend à l'accueil.
+ *
+ * RESA-BASCULE (20/10/2026, planche RB-3 état 2b, T1 A) — `gereUnComplexe` : un compte Parent qui
+ * gère un complexe (ouverte par la bascule « Ton mode », interrupteur `COMPLEXES_GERANT`). La
+ * feuille de PAR-L12 plus la ligne du complexe ; « Oui » ne pose PAS le mode parent : l'accueil
+ * passe en joueur, comme le bouton le promettait (maquette parent E27). Les autres parents :
+ * inchangés.
  * @param {object} props - Les propriétés.
  * @param {boolean} props.isVisible - La feuille est ouverte.
  * @param {() => void} props.onClose - « Pas maintenant », ou la fermeture.
+ * @param {boolean} [props.gereUnComplexe] - RESA-BASCULE : le parent gère aussi un complexe.
  * @param {() => void} props.onDone - Le compte est passé en Joueur.
  * @param {boolean} [props.pourLeComplexe] - La variante du compte né « pour un complexe ».
  * @param {string[]} [props.prenoms] - Les prénoms de ses enfants (« Anissa et Martin »).
  * @returns {import('react').ReactElement} - La feuille.
  */
 function FeuillePratiqueAussi({
-  isVisible, onClose, onDone, pourLeComplexe = false, prenoms = [],
+  gereUnComplexe = false, isVisible, onClose, onDone, pourLeComplexe = false, prenoms = [],
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
@@ -57,7 +64,9 @@ function FeuillePratiqueAussi({
     onSuccess: async () => {
       // Il reste en mode parent : écrit AVANT de relire le profil, sinon l'accueil joueur
       // passerait un instant à l'écran.
-      if (!pourLeComplexe) setDisplayMode('parent');
+      // RESA-BASCULE (T1 A) : le parent qui gère un complexe arrive sur l'accueil JOUEUR.
+      if (gereUnComplexe) setDisplayMode(null);
+      else if (!pourLeComplexe) setDisplayMode('parent');
       try {
         await refetchUserData?.();
       } catch {
@@ -86,17 +95,25 @@ function FeuillePratiqueAussi({
       ...SANS_ECHAPPEMENT,
     })
     : t('playerMode.sheet.keepChildren');
-  const lignes = pourLeComplexe
-    ? [
+  let lignes = [
+    gardes,
+    t('playerMode.sheet.joinTeam'),
+    t('playerMode.sheet.switch'),
+  ];
+  if (pourLeComplexe) {
+    lignes = [
       t('complexeGerant.joueurAussi.garde'),
       t('playerMode.sheet.joinTeam'),
       t('complexeGerant.creation.bouton'),
-    ]
-    : [
+    ];
+  } else if (gereUnComplexe) {
+    lignes = [
       gardes,
+      t('complexeGerant.joueurAussi.garde'),
       t('playerMode.sheet.joinTeam'),
       t('playerMode.sheet.switch'),
     ];
+  }
 
   return (
     <BottomModal

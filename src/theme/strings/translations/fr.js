@@ -23957,6 +23957,29 @@ export default {
     },
     tapMarker: 'Touche un repère pour voir la fiche',
   },
+  // RESA-BASCULE (20/10/2026, planche RB-3 validée par Adel) — la bascule « Ton mode » d'un
+  // compte qui gère un complexe : ses positions (ordre fixe), la phrase de la position active, les
+  // annonces du lecteur d'écran.
+  tonMode: {
+    annonce: 'Mode {{mode}}. {{phrase}}',
+    ouverture: 'Ouverture de ton complexe…',
+    ouvertureAnnonce: 'Ouverture de ton complexe.',
+    passeEnJoueur: 'Ton compte est passé en Joueur.',
+    phrase: {
+      coach: 'Tu vois l’app comme un coach.',
+      dirigeant: 'Tu vois l’app comme un dirigeant.',
+      parent: 'Tu vois l’app comme un parent.',
+    },
+    position: '{{rang}} sur {{total}}',
+    positions: {
+      coach: 'Coach',
+      complexe: 'Complexe',
+      dirigeant: 'Dirigeant',
+      joueur: 'Joueur',
+      parent: 'Parent',
+    },
+    titre: 'Ton mode',
+  },
   tourBanner: {
     collapse: 'Réduire le tour',
     compact: 'Tour {{step}}/{{total}}',
