@@ -261,3 +261,25 @@ describe('E-P10 — sur ordinateur (OR3, gabarit A) : la liste à gauche, la fic
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-P10, tournée 2 : « À » au lieu de « À venir », et « Refusées
+// et annulées » qui sortait de l'écran. Plan E-P10 §9 : « onglets défilants ». Ce témoin fige ce
+// que le plan demande : les quatre onglets dans UNE rangée qui défile, chaque libellé en un seul
+// mot (Android 16, `texteInsecable`, corrigé au lot RESA-FIN-APP 527fae41).
+describe('RESA-FIN-APP-2 E-P10 — les onglets défilent, aucun libellé coupé', () => {
+  it('une rangée horizontale qui défile, les quatre onglets, en un seul mot', async () => {
+    const arbre = await monter();
+    const rangee = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.horizontal === true && typeof n.type !== 'string'
+    ))[0];
+    const onglets = ['a-venir', 'en-collecte', 'passees', 'refusees'];
+    onglets.forEach((onglet) => {
+      expect(parRepere({ root: rangee }, `mes-reservations-onglet-${onglet}`)).not.toBeNull();
+    });
+    const dessines = rangee.findAllByType(Text)
+      .map((/** @type {any} */ n) => String(n.props.children));
+    expect(dessines).toEqual([
+      'À venir', 'En collecte', 'Passées', 'Refusées et annulées',
+    ].map((libelle) => libelle.split(' ').join(String.fromCharCode(160))));
+  });
+});
