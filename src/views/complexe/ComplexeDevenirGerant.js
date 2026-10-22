@@ -7,6 +7,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  champsManquants,
   CHOIX_AGE_MINIMUM,
   CHOIX_ANNULATION,
   distanceLisible,
@@ -126,6 +127,15 @@ function ComplexeDevenirGerant() {
   };
   const siretChiffres = siret.replace(/\s+/g, '');
   const siretFaux = Boolean(siretChiffres) && !SIRET_RE.test(siretChiffres);
+  // RESA-FIN-APP-2 (E-G01) : « Continuer » éteint dit ce qui manque, sous chaque champ, dès que la
+  // fiche est commencée (une fiche vierge ne crie pas).
+  const commencee = Boolean(nom.trim() || adresse || sports.length || siretChiffres);
+  const manquants = commencee ? champsManquants(fiche) : [];
+  const manque = (/** @type {string} */ champ, /** @type {string} */ texte) => (
+    manquants.includes(/** @type {any} */ (champ)) ? (
+      <Text accessibilityRole="alert" style={[Fonts.p3Bold, Fonts.error300]}>{texte}</Text>
+    ) : null
+  );
 
   const ouvrirLEspace = (/** @type {any} */ complexe = cree) => {
     ecrireModeComplexe(userData?.documentId, true);
@@ -187,28 +197,43 @@ function ComplexeDevenirGerant() {
 
   const etapeComplexe = (
     <View style={{ gap: 20 }}>
-      <Input
-        label={t('complexeGerant.creation.nom', 'Nom')}
-        onChangeText={setNom}
-        placeholder={t('complexeGerant.creation.nomExemple', 'Ex. : Le Five de Montrivage')}
-        value={nom}
-      />
-      <AutocompleteAddressInput
-        address={adresse || undefined}
-        label={t('complexeGerant.creation.adresse', 'Adresse')}
-        permettreLieuSurCarte
-        placeholder={t('complexeGerant.creation.adresseExemple', 'Rue, ville…')}
-        setAddress={(option) => setAdresse(option || null)}
-      />
-      <PhoneInput
-        label={t('complexeGerant.creation.telephone', 'Téléphone montré aux joueurs')}
-        onBlur={() => {}}
-        onChange={(/** @type {string} */ valeur) => {
-          setTelephoneTouche(true);
-          setTelephone(String(valeur || ''));
-        }}
-        value={telephone}
-      />
+      <View style={{ gap: 4 }}>
+        <Input
+          label={t('complexeGerant.creation.nom', 'Nom')}
+          onChangeText={setNom}
+          placeholder={t('complexeGerant.creation.nomExemple', 'Ex. : Le Five de Montrivage')}
+          value={nom}
+        />
+        {manque('nom', t('complexeGerant.creation.manqueNom', 'Donne un nom au complexe.'))}
+      </View>
+      <View style={{ gap: 4 }}>
+        <AutocompleteAddressInput
+          address={adresse || undefined}
+          label={t('complexeGerant.creation.adresse', 'Adresse')}
+          permettreLieuSurCarte
+          placeholder={t('complexeGerant.creation.adresseExemple', 'Rue, ville…')}
+          setAddress={(option) => setAdresse(option || null)}
+        />
+        {manque('adresse', t(
+          'complexeGerant.creation.manqueAdresse',
+          'Choisis l’adresse dans la liste.',
+        ))}
+      </View>
+      <View style={{ gap: 4 }}>
+        <PhoneInput
+          label={t('complexeGerant.creation.telephone', 'Téléphone montré aux joueurs')}
+          onBlur={() => {}}
+          onChange={(/** @type {string} */ valeur) => {
+            setTelephoneTouche(true);
+            setTelephone(String(valeur || ''));
+          }}
+          value={telephone}
+        />
+        {manque('telephone', t(
+          'complexeGerant.creation.manqueTelephone',
+          'Ajoute le téléphone montré aux joueurs.',
+        ))}
+      </View>
       <View style={{ gap: 8 }}>
         <ChoiceChipGroup
           onSelect={(valeur) => setSports(basculerSport(sports, String(valeur)))}
@@ -224,6 +249,7 @@ function ComplexeDevenirGerant() {
             variant="Ghost"
           />
         </View>
+        {manque('sports', t('complexeGerant.creation.manqueSports', 'Choisis au moins un sport.'))}
       </View>
       <View style={{ gap: 4 }}>
         <Input

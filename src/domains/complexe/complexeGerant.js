@@ -73,6 +73,25 @@ export const telephoneAPreRemplir = (compte) => {
 const chiffresDuSiret = (siret) => String(siret || '').replace(/\s+/g, '');
 
 /**
+ * RESA-FIN-APP-2 (22/10/2026) — E-G01 : les champs obligatoires qui manquent encore, dans
+ * l'ordre de l'étape (plan E-G01 §4 : « l'erreur s'écrit sous le champ »). Le SIRET,
+ * facultatif, a sa règle.
+ * @param {{ adresse?: any, nom?: string, sports?: string[], telephone?: string }} fiche - La fiche.
+ * @returns {Array<'adresse' | 'nom' | 'sports' | 'telephone'>} Les champs manquants.
+ */
+export const champsManquants = (fiche) => {
+  /** @type {Array<'adresse' | 'nom' | 'sports' | 'telephone'>} */
+  const manquants = [];
+  if (String(fiche?.nom || '').trim().length < NOM_MIN) manquants.push('nom');
+  if (!Number.isFinite(fiche?.adresse?.lat) || !Number.isFinite(fiche?.adresse?.lng)) {
+    manquants.push('adresse');
+  }
+  if (!String(fiche?.telephone || '').trim()) manquants.push('telephone');
+  if (!Array.isArray(fiche?.sports) || !fiche.sports.length) manquants.push('sports');
+  return manquants;
+};
+
+/**
  * L'étape 1 est-elle complète ? Nom, adresse AVEC sa position (le complexe se trouve sur une
  * carte), téléphone, au moins un sport ; le SIRET est facultatif, mais 14 chiffres s'il est donné.
  * @param {{ adresse?: any, nom?: string, siret?: string, sports?: string[],

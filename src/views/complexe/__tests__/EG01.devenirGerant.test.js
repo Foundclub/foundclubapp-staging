@@ -453,3 +453,34 @@ describe('RESA-INSCRIPTION — un compte né « pour un complexe » (aucun rôle
     expect(mockValeurs.size).toBe(0);
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G01, tournée 2 : « Continuer » restait éteint sans dire quel
+// champ manque. Plan E-G01 §4 : « inactif tant qu'un champ obligatoire manque, l'erreur
+// s'écrit sous le champ ». Rien sur une fiche vierge ; dès qu'elle est commencée, chaque champ
+// qui manque le dit.
+describe('RESA-FIN-APP-2 E-G01 — « Continuer » éteint dit ce qui manque', () => {
+  const MANQUES = [
+    'Donne un nom au complexe.',
+    'Choisis l’adresse dans la liste.',
+    'Ajoute le téléphone montré aux joueurs.',
+    'Choisis au moins un sport.',
+  ];
+
+  it('fiche vierge : aucune erreur ; nom tapé : l’adresse et le sport manquent', async () => {
+    const arbre = await monter();
+    expect(textes(arbre).filter((texte) => MANQUES.includes(texte))).toEqual([]);
+    const [nom] = arbre.root.findAll((n) => n.props?.accessibilityLabel === 'Nom'
+      && n.props?.onChangeText);
+    await act(async () => {
+      nom.props.onChangeText('Le Five');
+    });
+    expect(textes(arbre).filter((texte) => MANQUES.includes(texte))).toEqual([
+      'Choisis l’adresse dans la liste.',
+      'Choisis au moins un sport.',
+    ]);
+    expect(suivantActif(arbre)).toBe(false);
+    await remplirEtape1(arbre);
+    expect(textes(arbre).filter((texte) => MANQUES.includes(texte))).toEqual([]);
+    expect(suivantActif(arbre)).toBe(true);
+  });
+});
