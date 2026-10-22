@@ -410,8 +410,9 @@ function NotificationList() {
 
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  {/* RESA-FIN-APP-2 (T13) : deux lignes avant de couper. */}
                   <Text
-                    numberOfLines={1}
+                    numberOfLines={2}
                     style={[
                       notification.read ? Fonts.p2 : Fonts.p2Bold,
                       { color: Colors.neutral00, flex: 1 },

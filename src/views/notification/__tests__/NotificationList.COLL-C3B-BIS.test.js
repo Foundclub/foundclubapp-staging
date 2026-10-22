@@ -163,3 +163,15 @@ test('RESA-FIN-APP (2) — annulée ou fermeture : « Annulée par le complexe �
     .map((ligne) => ligne.texte);
   expect(rouges).toEqual(['Annulée par le complexe', 'Annulée par le complexe', 'Refusée', 'Sans réponse']);
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — T13, tournée 2 : « Complexe de nouve… », le titre d'une
+// notification tenait sur UNE ligne à côté de l'heure. Il passe sur deux lignes avant de couper.
+test('RESA-FIN-APP-2 (T13) — le titre a deux lignes avant de couper', () => {
+  mockNotifications.list = [{
+    ...notificationDuJoueur('n-retabli', 'retabli'),
+    title: 'Complexe de nouveau visible',
+  }];
+  const [titre] = monter().root.findAllByType(Text)
+    .filter((/** @type {any} */ noeud) => noeud.props.children === 'Complexe de nouveau visible');
+  expect(titre.props.numberOfLines).toBe(2);
+});
