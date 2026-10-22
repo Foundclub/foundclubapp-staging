@@ -1106,5 +1106,10 @@ jest.mock('@/context/AppFeedbackContext', () => ({
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
   /** @type {any} */ { children, footerComponent, isVisible },
 ) {
-  return isVisible ? <>{children}{footerComponent}</> : null;
+  return isVisible ? (
+    <>
+      {children}
+      {footerComponent}
+    </>
+  ) : null;
 });

@@ -16211,6 +16211,7 @@ export default {
     },
   },
   personalPlanningWeekFullscreen: {
+    absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
     backToTheCurrentWeek: 'Revenir à la semaine actuelle',
     backToToday: 'Revenir à aujourd’hui',
     blockSheet: {
@@ -16225,12 +16226,15 @@ export default {
     closeTheFullScreenPlanning: 'Fermer le planning plein écran',
     events_one: '{{count}} événement',
     events_other: '{{count}} événements',
+    finVacances: 'Aucune autre séance prévue sur ce créneau.',
+    libreVacances: '{{heures}} · libre ({{equipe}} : sauf vacances)',
     nextDay: 'Jour suivant',
     nextWeek: 'Semaine suivante',
     noSlotThisWeek: 'Aucun créneau cette semaine',
     peak: 'Au plus chargé : {{peak}} sur {{max}}',
     previousDay: 'Jour précédent',
     previousWeek: 'Semaine précédente',
+    retourVacances: 'Retour le {{jour}}.',
     rotateForWeek: 'Téléphone à l’horizontale : toute la semaine.',
     slots_one: '{{count}} équipe à la fois',
     slots_other: '{{count}} équipes à la fois',
@@ -16239,10 +16243,6 @@ export default {
     unableToLoadThePlanning: 'Impossible de charger le planning',
     // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) : « Vacances de la Toussaint · Zone B ».
     vacances: '{{vacances}} · {{zone}}',
-    absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
-    retourVacances: 'Retour le {{jour}}.',
-    finVacances: 'Aucune autre séance prévue sur ce créneau.',
-    libreVacances: '{{heures}} · libre ({{equipe}} : sauf vacances)',
     // eslint-disable-next-line max-len
     weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },
