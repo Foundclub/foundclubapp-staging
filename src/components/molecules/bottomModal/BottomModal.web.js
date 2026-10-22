@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,12 +27,14 @@ import useTheme from '@/theme/themeContext';
  * @param {(string|number)[]} [props.snapPoints]
  * @param {import('react-native').ViewStyle} [props.style]
  * @param {'sheet' | 'dialog'} [props.webPresentation]
+ * @param {boolean} [props.fermerParEchap] - La touche Échap ferme la feuille (RESA-FIN-SITE).
  * @returns {import('react').ReactElement | null}
  */
 function BottomModal({
   children,
   close,
   closeOnBackdropPress = true,
+  fermerParEchap = false,
   contentContainerStyle,
   footerComponent,
   headerComponent,
@@ -50,6 +53,18 @@ function BottomModal({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  // RESA-FIN-SITE (21/10/2026) — Échap ferme la feuille, à la demande de l'appelant seulement (les
+  // autres feuilles du site ne changent pas). Écoutée à la DESCENTE : un TextInput de
+  // react-native-web arrête la touche avant le document (piège du 08/10).
+  useEffect(() => {
+    if (!fermerParEchap || !isVisible || typeof document === 'undefined') return undefined;
+    const surTouche = (/** @type {KeyboardEvent} */ evenement) => {
+      if (evenement.key === 'Escape') close?.();
+    };
+    document.addEventListener('keydown', surTouche, true);
+    return () => document.removeEventListener('keydown', surTouche, true);
+  }, [close, fermerParEchap, isVisible]);
 
   if (!isVisible) {
     return null;
