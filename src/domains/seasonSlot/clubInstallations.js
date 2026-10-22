@@ -56,13 +56,19 @@ export const groupClubInstallations = (facilities) => {
  * dates choisies (`formeEnMots`, avec la traduction `t`).
  * @param {any} slot - Un créneau du club (vue du contrat §4.1).
  * @param {Function | null} [t] - La traduction.
- * @returns {{ day: string, hours: string, period: string, rythme: string, team: string | null }} Le
- *   jour en minuscules, la plage, la forme,
+ * R17-QUAND-2-BIS : `quand` = la forme ET les heures, dans l ordre de la planche
+ * (« chaque mardi, 17:30 – 19:00, sauf vacances »).
+ * @returns {{ day: string, hours: string, period: string, quand: string, rythme: string,
+ *   team: string | null }} Le jour en minuscules, la plage, la forme avec ou sans les heures,
  *   l équipe (null : « tout le club »).
  */
 export const clubSlotParts = (slot, t = null) => ({
   day: weekdayName(slot?.weekday).toLocaleLowerCase(),
   hours: timeRange(slot?.startTime, slot?.endTime),
+  quand: t
+    ? formeEnMots(t, slot, { heures: timeRange(slot?.startTime, slot?.endTime) })
+    : `chaque ${weekdayName(slot?.weekday).toLocaleLowerCase()} ${
+      timeRange(slot?.startTime, slot?.endTime)}`,
   rythme: t ? formeEnMots(t, slot) : `chaque ${weekdayName(slot?.weekday).toLocaleLowerCase()}`,
   // 🎨 COLL-FIX2 (03/10), planche 42 (tournée T10) : un créneau RÉPARTI (« Tout le club » du
   // 1 sept. au 6 oct., puis « U15 » du 7 oct. au 30 juin) se lisait en deux lignes identiques,

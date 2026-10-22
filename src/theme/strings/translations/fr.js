@@ -5998,9 +5998,9 @@ export default {
       avecCreneaux: '{{count}} avec tes créneaux de la Ville',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {

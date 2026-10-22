@@ -239,14 +239,15 @@ function SeasonSlotWeekGrid({
           'collectiviteCreneaux.creneaux.ouvrirCreneau',
           '{{qui}}, {{jour}} {{heures}}',
           {
-            heures,
+            // R17-QUAND-2-BIS : la forme porte les heures, avant « sauf vacances ».
+            heures: pasChaqueSemaine || saufVacances ? '' : heures,
             jour: pasChaqueSemaine || saufVacances
-              ? formeEnMots(t, creneau)
+              ? formeEnMots(t, creneau, { heures })
               : weekdayName(creneau.weekday).toLocaleLowerCase(),
             qui: slotWho(creneau),
             ...SANS_ECHAPPEMENT,
           },
-        )}
+        ).trim()}
         accessibilityRole="button"
         key={creneau.documentId}
         onPress={() => onCreneau(creneau)}
