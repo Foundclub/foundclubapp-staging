@@ -108,6 +108,7 @@ function FeuilleAnnonce({
             min={1}
             onDecrement={() => setPlaces((avant) => Math.max(1, avant - 1))}
             onIncrement={() => setPlaces((avant) => Math.min(restantes, avant + 1))}
+            tone="tunnel"
             value={places}
           />
         </View>

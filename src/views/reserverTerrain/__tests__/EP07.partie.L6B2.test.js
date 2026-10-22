@@ -185,6 +185,11 @@ describe('E-P07 — le réserveur (blocs 2 et 4)', () => {
     const arbre = await monter();
     await toucher(pressable(arbre, 'Il me manque des joueurs'));
     expect(lisibles(arbre)).toEqual(expect.arrayContaining(['Combien ?', 'Publier l’annonce']));
+    // RESA-FIN-APP-2 (8.7) : le compteur des places, sur le ton sombre de la feuille.
+    const [places] = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onIncrement === 'function' && n.props?.incrementLabel === 'Une place de plus'
+    ));
+    expect(places.props.tone).toBe('tunnel');
   });
 
   it('une annonce déjà publiée : la carte l’ouvre (E-P09 B)', async () => {

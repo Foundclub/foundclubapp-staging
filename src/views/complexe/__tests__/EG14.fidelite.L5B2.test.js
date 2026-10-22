@@ -238,3 +238,16 @@ describe('RESA-FIN-APP-2 E-G14 — le bilan d’« Enregistrer » se lit là où
     expect(lus.indexOf('Programme enregistré.')).toBe(lus.indexOf('Enregistrer') + 1);
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026, 8.7 rendu par RESA-FIN-SITE) — tournées : le compteur « − 10 + »
+// de la fidélité était une barre GRIS CLAIR sur l'écran sombre (le ton « surface », fait pour les
+// fiches claires). Il prend le ton sombre, comme le récapitulatif (E-P04).
+describe('RESA-FIN-APP-2 E-G14 — le compteur « Au bout de » sur le ton sombre', () => {
+  it('le compteur « Au bout de » : ton « tunnel »', async () => {
+    const arbre = await monter();
+    const [compteur] = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onIncrement === 'function' && n.props?.label === 'Au bout de'
+    ));
+    expect(compteur.props.tone).toBe('tunnel');
+  });
+});

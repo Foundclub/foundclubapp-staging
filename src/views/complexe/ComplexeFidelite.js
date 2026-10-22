@@ -269,6 +269,7 @@ function ComplexeFidelite() {
           min={SEUIL_MIN}
           onDecrement={() => changer({ threshold: Math.max(SEUIL_MIN, saisie.threshold - 1) })}
           onIncrement={() => changer({ threshold: Math.min(SEUIL_MAX, saisie.threshold + 1) })}
+          tone="tunnel"
           value={saisie.threshold}
         />
         <Text style={[Fonts.p3, Fonts.neutral200]}>
