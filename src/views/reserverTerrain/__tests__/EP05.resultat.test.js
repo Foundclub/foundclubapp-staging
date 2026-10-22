@@ -22,6 +22,19 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: mockParams }),
 }));
 
+// RESA-L6B-2 : l'écran lit le compte (« au nom de ») et ouvre la feuille du lien.
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: { documentId: 'u-1' } }),
+}));
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+}));
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
+  function FausseFeuille(/** @type {any} */ { children, isVisible }) {
+    return isVisible ? children : null;
+  }
+));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {

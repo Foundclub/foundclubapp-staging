@@ -469,4 +469,11 @@ export const RouteNames = /** @type {const} */ ({
   // ouverte par « Mon compte » et le raccourci de E-P01. Cachées par `COMPLEXES_JOUEUR`.
   ReserverMesReservations: 'ReserverMesReservations',
   ReserverVeille: 'ReserverVeille',
+  // RESA-L6B-2 (20/10/2026) — jouer à plusieurs et la communauté (serveurs RESA-L3 / L4) : la page
+  // d'une annonce « Il me manque des joueurs » (E-P09 B, notification N-28), la page d'invitation
+  // par lien DANS l'app (E-P08 ; celle du site, `/r/<code>`, est le lot RESA-L7-2) et « Mes
+  // complexes favoris » (E-P11). Cachées par `COMPLEXES_JOUEUR`.
+  ReserverAnnonce: 'ReserverAnnonce',
+  ReserverFavoris: 'ReserverFavoris',
+  ReserverInvitation: 'ReserverInvitation',
 });

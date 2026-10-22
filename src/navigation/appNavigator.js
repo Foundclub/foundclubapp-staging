@@ -22,6 +22,10 @@ import { RouteNames } from './routeNames';
 
 const appNavigatorLogger = createLogger('app-navigator');
 
+// RESA-L6B-2 (20/10/2026) -- l'interrupteur du joueur de complexe (lu par `require`, comme
+// PrivateNavigator.js : un `import` ici ferait se contredire les deux règles d'ordre des imports).
+const { COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
+
 // LIENS-EVENEMENT (2026-09-15, decision Q2 = B d Adel) -- le lien d evenement partage
 // ouvre l app si elle est installee, la page web sinon. UNE seule adresse :
 // `https://foundclub.app/events/<id>` (shareLinks.js, buildPublicEventUrl), la meme
@@ -44,6 +48,12 @@ const VILLE_REQUEST_LINK = 'invitation-ville/:token/rattacher';
 // schema : foundclub://recruitment/<id>. Connecte seulement : la fiche lit une route reservee aux
 // comptes. La page publique, elle, reste au site (aucune des trois listes ne la reclame).
 const RECRUITMENT_AD_LINK = 'recruitment/:adId';
+// RESA-L6B-2 (20/10/2026) -- la page d'invitation d'une réservation de terrain (E-P08) : son lien
+// `foundclub.app/r/<code>` est une page du SITE (lot RESA-L7-2) ; connecté, l'app l'ouvre par le
+// schéma, foundclub://r/<code> (le bouton de la page du site), ou par https si le téléphone le lui
+// confie (fichier iPhone du site et manifeste Android : vague 4). Seulement l'interrupteur
+// `COMPLEXES_JOUEUR` allumé : éteint, l'écran n'est pas déclaré. Témoin : appNavigator.RESAL6B2.
+const RESA_INVITATION_LINK = 'r/:code';
 const WEB_LINK_ORIGINS = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
 
 /**
@@ -108,6 +118,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
             },
           },
           [RouteNames.RecruitmentAdDetails]: RECRUITMENT_AD_LINK,
+          ...(COMPLEXES_JOUEUR ? { [RouteNames.ReserverInvitation]: RESA_INVITATION_LINK } : {}),
           [RouteNames.SquadDetails]: 'squad/:teamId',
           [RouteNames.TeamStack]: {
             screens: {

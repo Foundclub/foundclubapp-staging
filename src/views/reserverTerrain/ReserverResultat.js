@@ -1,10 +1,13 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, Text, View,
+  Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { formatEuros, texteHeure } from '@/domains/complexe/complexeTerrain';
+import { texteEcheance } from '@/domains/complexe/partieDuJoueur';
 import {
   dateEtHeureDeParis,
   etatAffiche,
@@ -18,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -37,9 +41,16 @@ const PICTO = 72;
  * retour au récapitulatif : E-P04 a cédé sa place à cet écran). Aucun chargement : l'écran arrive
  * avec la réponse du serveur (paramètre `reservation`).
  * Ordinateur (OR3, gabarit B) : la colonne centrée.
- * ⛔ Pas dans ce lot : « Inviter par lien », « Il me manque des joueurs », la collecte, la
- * réservation d'équipe, « Tu as rejoint le canal » (serveurs L3 / L4, puis L6b). Caché par
- * `COMPLEXES_JOUEUR`.
+ * RESA-L6B-2 (20/10/2026, serveur RESA-L3 ; planche EP05 états 1, 3, 4) : « Inviter par lien »
+ * (Primary, la feuille du lien sans « Désactiver ») et « Voir ma réservation » (Secondary) ; la
+ * collecte lancée (« Collecte lancée : 1/10 », la phrase d'A-P08 annoncée d'avance, la jauge et la
+ * date limite, « Il me manque des joueurs » ⇒ l'annonce sur la fiche, « Voir ma collecte ») ; la
+ * réservation d'une équipe (« C'est réservé pour U15 Valbrune ! », « au nom de », les joueurs
+ * prévenus, N-27). Paramètres en plus : `collecte` (`{ quorum, collectDeadline }`) et `equipe`
+ * (`{ name, membres }`), que E-P04 connaît et que la réservation du serveur ne porte pas.
+ * ⛔ « Tu as rejoint le canal » (1re réservation, RG-CANAL) : la réponse du serveur ne le dit pas
+ * (le serveur y fait entrer sans le rendre) ; rien n'est affiché plutôt qu'une phrase devinée.
+ * Caché par `COMPLEXES_JOUEUR`.
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverResultat() {
@@ -49,13 +60,31 @@ function ReserverResultat() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const reservation = /** @type {any} */ (route?.params)?.reservation || null;
+  /** @type {{ collecte?: any, equipe?: any, reservation?: any }} */
+  const params = /** @type {any} */ (route?.params) || {};
+  const reservation = params.reservation || null;
+  const collecte = params.collecte || null;
+  const equipe = params.equipe || null;
   const surOrdinateur = useIsDesktop();
+  const { userData } = useAuth();
+  const [inviter, setInviter] = useState(false);
 
   const versLAccueil = () => navigation.popToTop?.();
+  const versLaFiche = (/** @type {Record<string, any>} */ autres = {}) => navigation.navigate(
+    RouteNames.ReserverMaReservation,
+    { reservationId: reservation.documentId, ...autres },
+  );
   const etat = etatAffiche(reservation);
   const demande = etat === 'enAttente';
+  const enCollecte = etat === 'enCollecte';
   const echeance = dateEtHeureDeParis(reservation?.expiresAt);
+  // À la création, le seul présent d'une collecte est son réserveur (D3).
+  const presents = 1;
+  const quorum = Number(collecte?.quorum) || Number(reservation?.players) || 0;
+  const nomDuCompte = [userData?.firstname, userData?.lastname]
+    .map((morceau) => String(morceau || '').trim())
+    .filter(Boolean)
+    .join(' ');
 
   let corps;
   if (!reservation) {
@@ -75,7 +104,14 @@ function ReserverResultat() {
       })
       : '';
     let phrase = null;
-    if (demande && echeance) {
+    if (enCollecte && quorum) {
+      phrase = t(
+        'reserverTerrain.resultat.collecteTexte',
+        'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. Le créneau '
+          + 'reste libre : quelqu’un peut le prendre avant toi.',
+        { quorum },
+      );
+    } else if (demande && echeance) {
       const [, mois, jour] = echeance.date.split('-');
       phrase = t(
         'reserverTerrain.resultat.demandeEcheance',
@@ -94,6 +130,39 @@ function ReserverResultat() {
         { complexe, ...SANS_ECHAPPEMENT },
       );
     }
+    let couleur = Colors.success500;
+    let picto = (
+      <Image
+        source={Images.check}
+        style={[{ height: 32, width: 32 }, ApplicationStyle.tintColor.success500]}
+      />
+    );
+    let titre = t('reserverTerrain.resultat.reserve', 'C’est réservé !');
+    if (demande) {
+      couleur = Colors.warning500;
+      picto = <GlyphIcon color={Colors.warning500} name="hourglass" size={32} />;
+      titre = t('reserverTerrain.resultat.demandeEnvoyee', 'Demande envoyée');
+    } else if (enCollecte) {
+      couleur = Colors.primary500;
+      picto = <Image source={Images.users} style={{ height: 32, tintColor: couleur, width: 32 }} />;
+      titre = t(
+        'reserverTerrain.resultat.collecteLancee',
+        'Collecte lancée : {{presents}}/{{quorum}}',
+        { presents, quorum },
+      );
+    } else if (equipe?.name) {
+      titre = t('reserverTerrain.resultat.reservePourEquipe', 'C’est réservé pour {{equipe}} !', {
+        equipe: String(equipe.name),
+        ...SANS_ECHAPPEMENT,
+      });
+    }
+    const membres = Number(equipe?.membres);
+    const deuxiemeLigne = equipe?.name && nomDuCompte
+      ? [complexe, t('reserverTerrain.resultat.auNomDe', 'au nom de {{nom}}', {
+        nom: nomDuCompte,
+        ...SANS_ECHAPPEMENT,
+      })]
+      : [complexe, prix];
     corps = (
       <View style={{ alignItems: 'center', gap: 16 }}>
         <View
@@ -101,26 +170,17 @@ function ReserverResultat() {
             Alignments.alignCenter,
             Alignments.justifyCenter,
             {
-              backgroundColor: withAlpha(demande ? Colors.warning500 : Colors.success500, 0.16),
+              backgroundColor: withAlpha(couleur, 0.16),
               borderRadius: PICTO / 2,
               height: PICTO,
               width: PICTO,
             },
           ]}
         >
-          {demande ? (
-            <GlyphIcon color={Colors.warning500} name="hourglass" size={32} />
-          ) : (
-            <Image
-              source={Images.check}
-              style={[{ height: 32, width: 32 }, ApplicationStyle.tintColor.success500]}
-            />
-          )}
+          {picto}
         </View>
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00, Fonts.textCenter]}>
-          {demande
-            ? t('reserverTerrain.resultat.demandeEnvoyee', 'Demande envoyée')
-            : t('reserverTerrain.resultat.reserve', 'C’est réservé !')}
+          {titre}
         </Text>
         {phrase ? (
           <Text style={[Fonts.p1, Fonts.neutral100, Fonts.textCenter]}>{phrase}</Text>
@@ -144,11 +204,69 @@ function ReserverResultat() {
               ...SANS_ECHAPPEMENT,
             })}
           </Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {[complexe, prix].filter(Boolean).join(' · ')}
-          </Text>
-          <PastilleEtat etat={etat} />
+          {enCollecte ? (
+            <View style={{ gap: 6 }}>
+              <View
+                style={{
+                  backgroundColor: withAlpha(Colors.primary500, 0.18),
+                  borderRadius: 4,
+                  height: 8,
+                  overflow: 'hidden',
+                }}
+                testID="resultat-jauge"
+              >
+                <View
+                  style={{
+                    backgroundColor: Colors.primary500,
+                    height: 8,
+                    width: `${quorum ? Math.round((presents / quorum) * 100) : 0}%`,
+                  }}
+                />
+              </View>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'reserverTerrain.resultat.jauge',
+                  '{{presents}} sur {{quorum}} · date limite {{echeance}}',
+                  {
+                    echeance: texteEcheance(t, collecte?.collectDeadline).toLocaleLowerCase(),
+                    presents,
+                    quorum,
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {deuxiemeLigne.filter(Boolean).join(' · ')}
+              </Text>
+              <PastilleEtat etat={etat} />
+            </>
+          )}
         </View>
+        {equipe?.name && Number.isFinite(membres) && membres > 0 ? (
+          <View
+            style={{
+              alignSelf: 'stretch',
+              backgroundColor: withAlpha(Colors.success500, 0.12),
+              borderColor: withAlpha(Colors.success500, 0.5),
+              borderRadius: 16,
+              borderWidth: 1,
+              padding: 12,
+            }}
+          >
+            <Text style={[Fonts.p2, Fonts.neutral00]}>
+              {t('reserverTerrain.resultat.equipePrevenue', {
+                count: membres,
+                defaultValue_one: 'Le joueur de {{equipe}} est prévenu.',
+                defaultValue_other: 'Les {{count}} joueurs de {{equipe}} sont prévenus.',
+                equipe: String(equipe.name),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -173,17 +291,41 @@ function ReserverResultat() {
       >
         {corps}
         <View style={{ gap: 10 }}>
-          {reservation?.documentId ? (
+          {reservation?.documentId && !demande ? (
             <Button
-              onPress={() => navigation.navigate(RouteNames.ReserverMaReservation, {
-                reservationId: reservation.documentId,
-              })}
+              icon="share"
+              onPress={() => setInviter(true)}
+              title={t('reserverTerrain.lien.titre', 'Inviter par lien')}
+              variant="Primary"
+            />
+          ) : null}
+          {reservation?.documentId && enCollecte ? (
+            <>
+              <Button
+                onPress={() => versLaFiche({ ouvrir: 'annonce' })}
+                title={t('reserverTerrain.annonce.titre', 'Il me manque des joueurs')}
+                variant="Secondary"
+              />
+              <TouchableOpacity
+                accessibilityRole="link"
+                onPress={() => versLaFiche()}
+                style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                  {t('reserverTerrain.resultat.voirMaCollecte', 'Voir ma collecte')}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+          {reservation?.documentId && !enCollecte ? (
+            <Button
+              onPress={() => versLaFiche()}
               title={
                 demande
                   ? t('reserverTerrain.resultat.voirMaDemande', 'Voir ma demande')
                   : t('reserverTerrain.resultat.voirMaReservation', 'Voir ma réservation')
               }
-              variant="Primary"
+              variant="Secondary"
             />
           ) : null}
           <Button
@@ -193,6 +335,19 @@ function ReserverResultat() {
           />
         </View>
       </ScrollView>
+      {inviter && reservation?.documentId ? (
+        <FeuilleInviterParLien
+          close={() => setInviter(false)}
+          partie={{
+            complexe: reservation?.complexe?.name,
+            date: reservation.date,
+            from: reservation.from,
+            sport: reservation?.terrain?.sport?.name,
+          }}
+          reservationId={reservation.documentId}
+          sansDesactiver
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

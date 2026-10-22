@@ -16,6 +16,7 @@ import {
   peutDansLeGroupe,
   resumeDesAutorisations,
 } from '@/domains/messaging/autorisationsDuGroupe';
+import { estUnCanalDeComplexe } from '@/domains/messaging/habillageDuFil';
 import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -155,6 +156,10 @@ function InfosDuGroupe({
   }, [nomDuGroupe, visible]);
 
   const participants = Array.isArray(chat?.participants) ? chat.participants : [];
+  // RESA-L6B-2 (20/10/2026) — E-P12 : le canal d'un complexe, vu d'un membre : le NOMBRE de membres
+  // (`participantsCount`, serveur RESA-L4), jamais la liste (les membres ne se voient pas entre
+  // eux). Le gérant, administrateur, garde la liste. Témoin : InfosDuGroupe.RESAL6B2.canal.
+  const canalVuDUnMembre = estUnCanalDeComplexe(chat) && !estAdmin;
   const moi = participants.find((/** @type {any} */ membre) => idDe(membre) === meId);
   const autres = participants.filter(
     (/** @type {any} */ membre) => idDe(membre) && idDe(membre) !== meId,
@@ -348,10 +353,15 @@ function InfosDuGroupe({
               </TouchableOpacity>
             )}
             <Text style={[styles.resume, { color: withAlpha(Colors.neutral00, 0.6) }]}>
-              {t('conversation.groupInfo.summary', {
-                count: participants.length,
-                defaultValue: 'Groupe · {{count}} membres',
-              })}
+              {canalVuDUnMembre
+                ? t('conversation.canalDuComplexe.sousTitre', {
+                  count: Number(chat?.participantsCount) || 0,
+                  defaultValue: 'Canal du complexe · {{count}} membres',
+                })
+                : t('conversation.groupInfo.summary', {
+                  count: participants.length,
+                  defaultValue: 'Groupe · {{count}} membres',
+                })}
             </Text>
           </View>
 
@@ -380,73 +390,80 @@ function InfosDuGroupe({
             </TouchableOpacity>
           ) : null}
 
-          <Text style={[styles.majuscules, { color: withAlpha(Colors.neutral00, 0.6) }]}>
-            {t('conversation.groupInfo.membersCaps', {
-              count: participants.length,
-              defaultValue: '{{count}} MEMBRES',
-            })}
-          </Text>
-          <View style={[styles.carte, { backgroundColor: Colors.primary800 }]}>
-            {peutAjouter ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={onAjouter}
-                style={styles.ligneMembre}
-                testID="infos-du-groupe-ajouter"
-              >
-                <View style={[styles.rondAjouter, { backgroundColor: Colors.primary500 }]}>
-                  <GlyphIcon color={Colors.primary900} name="userPlus" size={20} />
-                </View>
-                <Text style={[styles.nomMembre, { color: Colors.primary500 }]}>
-                  {t('conversation.group.addMembers', 'Ajouter des membres')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            {ordonnes.map((/** @type {any} */ membre, /** @type {number} */ index) => {
-              const id = idDe(membre);
-              const cEstMoi = id === meId;
-              return (
+          {!canalVuDUnMembre ? (
+            <Text style={[styles.majuscules, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+              {t('conversation.groupInfo.membersCaps', {
+                count: participants.length,
+                defaultValue: '{{count}} MEMBRES',
+              })}
+            </Text>
+          ) : null}
+          {!canalVuDUnMembre ? (
+            <View style={[styles.carte, { backgroundColor: Colors.primary800 }]}>
+              {peutAjouter ? (
                 <TouchableOpacity
-                  accessibilityRole={cEstMoi ? 'text' : 'button'}
-                  disabled={cEstMoi}
-                  key={`membre:${id}`}
-                  onPress={() => setMembreOuvert(membre)}
-                  style={[
-                    styles.ligneMembre,
-                    peutAjouter || index ? { borderTopColor: filet, borderTopWidth: 1 } : null,
-                  ]}
-                  testID={`infos-du-groupe-membre-${id}`}
+                  accessibilityRole="button"
+                  onPress={onAjouter}
+                  style={styles.ligneMembre}
+                  testID="infos-du-groupe-ajouter"
                 >
-                  <ProfileAvatar
-                    enablePreview={false}
-                    imageUrl={resolveAvatar(membre) || undefined}
-                    name={nomDe(membre)}
-                    size={42}
-                  />
-                  <View style={styles.membreTextes}>
-                    <Text numberOfLines={1} style={[styles.nomMembre, { color: Colors.neutral00 }]}>
-                      {cEstMoi ? t('conversation.header.you', 'Vous') : nomDe(membre)}
-                    </Text>
-                    <Text numberOfLines={1} style={[styles.roleMembre, { color: sourdine }]}>
-                      {roleDe(membre)}
-                    </Text>
+                  <View style={[styles.rondAjouter, { backgroundColor: Colors.primary500 }]}>
+                    <GlyphIcon color={Colors.primary900} name="userPlus" size={20} />
                   </View>
-                  {membreEstAdmin(membre) ? (
-                    <View
-                      style={[
-                        styles.pastilleAdmin,
-                        { borderColor: withAlpha(Colors.primary500, 0.5) },
-                      ]}
-                    >
-                      <Text style={[styles.pastilleAdminTexte, { color: Colors.primary500 }]}>
-                        {t('conversation.group.admin', 'Admin')}
+                  <Text style={[styles.nomMembre, { color: Colors.primary500 }]}>
+                    {t('conversation.group.addMembers', 'Ajouter des membres')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {ordonnes.map((/** @type {any} */ membre, /** @type {number} */ index) => {
+                const id = idDe(membre);
+                const cEstMoi = id === meId;
+                return (
+                  <TouchableOpacity
+                    accessibilityRole={cEstMoi ? 'text' : 'button'}
+                    disabled={cEstMoi}
+                    key={`membre:${id}`}
+                    onPress={() => setMembreOuvert(membre)}
+                    style={[
+                      styles.ligneMembre,
+                      peutAjouter || index ? { borderTopColor: filet, borderTopWidth: 1 } : null,
+                    ]}
+                    testID={`infos-du-groupe-membre-${id}`}
+                  >
+                    <ProfileAvatar
+                      enablePreview={false}
+                      imageUrl={resolveAvatar(membre) || undefined}
+                      name={nomDe(membre)}
+                      size={42}
+                    />
+                    <View style={styles.membreTextes}>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.nomMembre, { color: Colors.neutral00 }]}
+                      >
+                        {cEstMoi ? t('conversation.header.you', 'Vous') : nomDe(membre)}
+                      </Text>
+                      <Text numberOfLines={1} style={[styles.roleMembre, { color: sourdine }]}>
+                        {roleDe(membre)}
                       </Text>
                     </View>
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    {membreEstAdmin(membre) ? (
+                      <View
+                        style={[
+                          styles.pastilleAdmin,
+                          { borderColor: withAlpha(Colors.primary500, 0.5) },
+                        ]}
+                      >
+                        <Text style={[styles.pastilleAdminTexte, { color: Colors.primary500 }]}>
+                          {t('conversation.group.admin', 'Admin')}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
 
           <View
             style={[styles.carte, styles.carteSignaler, { backgroundColor: Colors.primary800 }]}
@@ -472,7 +489,9 @@ function InfosDuGroupe({
               >
                 <GlyphIcon color={Colors.chatDanger} name="userMinus" size={20} />
                 <Text style={[LIGNE_DE_MENU, { color: Colors.chatDanger }]}>
-                  {t('conversation.groupInfo.leave', 'Quitter le groupe')}
+                  {canalVuDUnMembre
+                    ? t('conversation.canalDuComplexe.quitter', 'Quitter le canal')
+                    : t('conversation.groupInfo.leave', 'Quitter le groupe')}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -570,12 +589,19 @@ function InfosDuGroupe({
               testID="infos-du-groupe-confirmation-depart"
             >
               <Text style={[styles.boiteTitre, { color: Colors.neutral00 }]}>
-                {t('conversation.groupInfo.leaveConfirm', {
-                  defaultValue:
-                    'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
-                  name: nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe'),
-                  ...SANS_ECHAPPEMENT,
-                })}
+                {canalVuDUnMembre
+                  ? t('conversation.canalDuComplexe.quitterConfirmation', {
+                    defaultValue: 'Quitter le canal « {{name}} » ? Tu ne recevras plus ses '
+                      + 'nouvelles. Tu y reviendras en le remettant en favori.',
+                    name: nomDuGroupe,
+                    ...SANS_ECHAPPEMENT,
+                  })
+                  : t('conversation.groupInfo.leaveConfirm', {
+                    defaultValue:
+                      'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
+                    name: nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe'),
+                    ...SANS_ECHAPPEMENT,
+                  })}
               </Text>
               <View style={styles.boutons}>
                 <TouchableOpacity
@@ -588,7 +614,10 @@ function InfosDuGroupe({
                   ]}
                 >
                   <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
-                    {t('common.cancel', 'Annuler')}
+                    {/* RESA-L6B-2 — E-P12 : « Rester » / « Quitter » (planche EP12 état 3). */}
+                    {canalVuDUnMembre
+                      ? t('conversation.canalDuComplexe.rester', 'Rester')
+                      : t('common.cancel', 'Annuler')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
