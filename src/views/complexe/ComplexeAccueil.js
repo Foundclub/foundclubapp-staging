@@ -408,13 +408,21 @@ function ComplexeAccueil() {
 
   // ── Les 4 chiffres ─────────────────────────────────────────────────────────────────────
   const chiffresDeLaSemaine = chiffresDuPlanning(planning.data, date);
+  const demandesEnAttente = totalDesPages(enAttente.data) || 0;
+  const nouveauxFavoris = chiffresDuServeur.data?.favoris?.nouveaux || 0;
+  // RESA-FIN-APP (20/10) — chaque libellé s'accorde à son nombre (« 1 demandes en attente »,
+  // tournées 1 et 2 ; i18next : 0 et 1 au singulier en français).
   /**
    * @type {Array<{ cle: string, jauge?: number, libelle: string, onPress?: () => void,
       valeur: string }>} */
   const tuiles = [
     {
       cle: 'reservations',
-      libelle: t('complexeGerant.accueil.reservationsDuJour', 'réservations aujourd’hui'),
+      libelle: t('complexeGerant.accueil.reservationsDuJour', {
+        count: chiffresDeLaSemaine.reservations,
+        defaultValue_one: 'réservation aujourd’hui',
+        defaultValue_other: 'réservations aujourd’hui',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeReservations, { vue: 'aujourdhui' }),
       valeur: String(chiffresDeLaSemaine.reservations),
     },
@@ -427,15 +435,23 @@ function ComplexeAccueil() {
     },
     {
       cle: 'demandes',
-      libelle: t('complexeGerant.accueil.demandes', 'demandes en attente'),
+      libelle: t('complexeGerant.accueil.demandes', {
+        count: demandesEnAttente,
+        defaultValue_one: 'demande en attente',
+        defaultValue_other: 'demandes en attente',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeDemandes),
-      valeur: String(totalDesPages(enAttente.data) || 0),
+      valeur: String(demandesEnAttente),
     },
     {
       cle: 'favoris',
-      libelle: t('complexeGerant.accueil.favoris', 'nouveaux favoris cette semaine'),
+      libelle: t('complexeGerant.accueil.favoris', {
+        count: nouveauxFavoris,
+        defaultValue_one: 'nouveau favori cette semaine',
+        defaultValue_other: 'nouveaux favoris cette semaine',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeStatistiques),
-      valeur: String(chiffresDuServeur.data?.favoris?.nouveaux || 0),
+      valeur: String(nouveauxFavoris),
     },
   ];
   const chiffres = (

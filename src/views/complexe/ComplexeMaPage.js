@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { messageDeRefus } from '@/domains/complexe/complexeGerant';
+import { libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
   corpsDeLaPage,
   DESCRIPTION_MAX,
@@ -500,7 +501,9 @@ function ComplexeMaPage() {
                   paddingVertical: 6,
                 }}
               >
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{sport.name}</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {texteInsecable(libelleSport(sport))}
+                </Text>
               </View>
             ))}
           </View>

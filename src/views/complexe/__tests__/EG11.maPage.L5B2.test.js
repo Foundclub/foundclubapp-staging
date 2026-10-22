@@ -140,7 +140,8 @@ describe('E-G11 — Mon complexe (la page)', () => {
     blocs.forEach((bloc) => expect(rang(bloc)).toBeGreaterThan(-1));
     blocs.slice(1).forEach((bloc, i) => expect(rang(bloc)).toBeGreaterThan(rang(blocs[i])));
     expect(vus).toContain('Sport Montrivage');
-    expect(vus).toContain('Football à 5');
+    // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1).
+    expect(vus).toContain('Foot à 5');
     expect(vus)
       .toContain('Ils viennent de tes terrains : ajoute un terrain pour ajouter un sport.');
     expect(vus)

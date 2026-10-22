@@ -18,7 +18,7 @@ import {
   telephoneLisible,
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
-import { formatEuros } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -222,7 +222,8 @@ function FicheReservation({
   }
   const ligneTerrain = [
     String(r.terrain?.name || ''),
-    String(r.terrain?.sport?.name || ''),
+    // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1), plus « Football à 5 ».
+    libelleSport(r.terrain?.sport),
     r.players ? t('complexeReservations.fiche.joueurs', '{{nombre}} joueurs', {
       nombre: r.players, ...SANS_ECHAPPEMENT,
     }) : '',
