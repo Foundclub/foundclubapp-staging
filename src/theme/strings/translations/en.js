@@ -7324,6 +7324,8 @@ export default {
       acceptee: 'Request accepted. {{nom}} has been notified.',
       accepter: 'Accept',
       changer: 'Change',
+      // RESA-FIN-SITE (21/10/2026) — RG-DELAIS: an expired request can no longer be decided.
+      delaiPasse: 'Reply deadline passed: the request expires without an answer.',
       demandeLe: 'requests',
       erreur: 'The requests could not be loaded.',
       erreurDecision: 'The request could not be decided.',

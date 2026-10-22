@@ -124,6 +124,20 @@ export const nonHonoreesLisibles = (t, nombre, seuil) => {
 };
 
 /**
+ * RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expire au début du créneau moins le délai
+ * minimum (`expiresAt`, posé par le serveur). Passé ce moment, le gérant ne la tranche plus, même
+ * si la tâche qui la passe « Sans réponse » n'est pas encore passée.
+ * @param {unknown} expiresAt - L'échéance (ISO).
+ * @param {Date} [maintenant] - L'instant de référence.
+ * @returns {boolean} L'échéance est passée.
+ */
+export const demandeExpiree = (expiresAt, maintenant = new Date()) => {
+  if (!expiresAt) return false;
+  const echeance = new Date(String(expiresAt)).getTime();
+  return Number.isFinite(echeance) && echeance <= maintenant.getTime();
+};
+
+/**
  * « Expire dans 5 h » (E-G06) : en minutes sous l'heure, en heures sous le jour, en jours au-delà.
  * @param {Traduire} t - Traduction.
  * @param {unknown} expiresAt - L'échéance (ISO).
