@@ -66,7 +66,10 @@ function SearchMapHud({
   );
 
   let geolocatableLabel = t('searchMapHud.markers.none', 'Aucun repère');
-  if (visibleMarkerCount > 0) {
+  if (visibleMarkerCount === 1) {
+    // RESA-FIN-SITE (21/10/2026) : « 1 repère visible », pas « 1 repères visibles ».
+    geolocatableLabel = t('searchMapHud.markers.visibleUn', '1 repère visible');
+  } else if (visibleMarkerCount > 0) {
     geolocatableLabel = t(
       'searchMapHud.markers.visible',
       '{{total}} repères visibles',

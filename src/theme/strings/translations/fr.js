@@ -19557,6 +19557,8 @@ export default {
       tap: 'Touche un repère',
       updating: 'Mise à jour des repères...',
       visible: '{{total}} repères visibles',
+      // RESA-FIN-SITE (21/10/2026) : le singulier (« 1 repères visibles », tournée du site du 22/10).
+      visibleUn: '1 repère visible',
       zoomToSeeAll: 'Zoome pour tout voir',
     },
     recenter: 'Recentrer',

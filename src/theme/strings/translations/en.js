@@ -18903,6 +18903,8 @@ export default {
       tap: 'Tap a marker',
       updating: 'Updating markers...',
       visible: '{{total}} visible markers',
+      // RESA-FIN-SITE (21/10/2026): the singular.
+      visibleUn: '1 visible marker',
       zoomToSeeAll: 'Zoom in to see everything',
     },
     recenter: 'Recenter',
