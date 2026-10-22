@@ -20,6 +20,7 @@ import {
   texteJourCourt,
   varianteDEchec,
 } from '@/domains/complexe/reserverTerrain';
+import { lireVilleRetenue, retenirVille } from '@/domains/complexe/villeRetenue';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -163,7 +164,8 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const [distanceKm, setDistanceKm] = useState(DISTANCE_PAR_DEFAUT);
   const [cadre, setCadre] = useState(/** @type {string | null} */ (null));
   const [position, setPosition] = useState(/** @type {Lieu | null} */ (null));
-  const [ville, setVille] = useState(/** @type {Ville | null} */ (null));
+  // RESA-FIN-APP : la ville choisie à la visite d'avant (gardée sur le téléphone).
+  const [ville, setVille] = useState(/** @type {Ville | null} */ (lireVilleRetenue));
   // `lecture` (on regarde si elle est déjà accordée) · `accordee` · `aDemander` · `refusee`.
   const [etatPosition, setEtatPosition] = useState('lecture');
   const [feuillePosition, setFeuillePosition] = useState(false);
@@ -209,6 +211,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
     if (lue) {
       setPosition(lue);
       setVille(null);
+      retenirVille(null);
       setEtatPosition('accordee');
     } else {
       setEtatPosition('refusee');
@@ -310,6 +313,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
     const choisie = villeDuChoix(choix);
     if (!choisie) return;
     setVille(choisie);
+    retenirVille(choisie);
     setPosition(null);
     setTexte('');
     setTexteCherche('');
