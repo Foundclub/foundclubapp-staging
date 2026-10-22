@@ -48,6 +48,7 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import VilleSecurityOverview from '@/components/organisms/facilityReport/VilleSecurityOverview';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // 📰 COLL-C4A (02/10) — « Actualités de la Ville », à la place laissée par COLL-ACCUEIL, et
 // le bandeau « Votre actualité · en ligne » (planche P3b-bandeau-tel, écran 1).
@@ -1586,13 +1587,31 @@ function CollectiviteHome() {
     />
   );
 
+  // R17-SECURITE-VUE (22/10, decision d Adel « 2- A ») — la vue d ensemble « Sécurité et suivi » :
+  // les deux resumes deja lus plus haut (signalements, controles) ; aucun appel de plus.
+  // « Voir tout » ouvre la liste des installations : chaque carte dit ses signalements ouverts.
+  const securite = collectivite ? (
+    <VilleSecurityOverview
+      controles={controles}
+      onOpenFacility={(facilityId) => ouvrir(RouteNames.CollectiviteInstallation, {
+        facilityId,
+        onglet: 'securite',
+      })}
+      onSeeAll={() => ouvrir(RouteNames.CollectiviteInstallations)}
+      signalements={signalements}
+    />
+  ) : null;
+
   // Téléphone : une colonne, dans l'ordre de la planche. Ordinateur : les actions en tête,
   // puis trois colonnes — ce qui attend · la vision (semaine, clubs) · les actualités.
   const corps = enColonnes ? (
     <>
       {renderActions()}
       <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
-        <View style={{ flex: 1, gap: 12 }}>{renderAttente()}</View>
+        <View style={{ flex: 1, gap: 24 }}>
+          <View style={{ gap: 12 }}>{renderAttente()}</View>
+          {securite}
+        </View>
         <View style={{ flex: 1, gap: 24 }}>
           {renderSemaine()}
           {renderClubs()}
@@ -1603,6 +1622,7 @@ function CollectiviteHome() {
   ) : (
     <>
       {renderAttente()}
+      {securite}
       {renderActions()}
       {renderSemaine()}
       {renderClubs()}

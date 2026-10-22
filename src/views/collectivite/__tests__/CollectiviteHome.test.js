@@ -1284,3 +1284,106 @@ describe('R17-CONTROLES — « Ce qui vous attend » : les contrôles à refaire
     expect(lignes).toHaveLength(0);
   });
 });
+
+/* eslint-disable max-len -- donnees de test SECVUE : les fixtures se lisent mieux sur une ligne */
+// R17-SECURITE-VUE (22/10/2026, decision d Adel « 2- A ») — la vue d ensemble « Sécurité et suivi » de
+// l accueil : les signalements ouverts, les installations à surveiller, les contrôles à refaire, lus dans
+// les DEUX résumés que l accueil lit déjà (aucun appel par installation). Un appui ouvre l installation
+// sur son onglet « Sécurité et suivi ». Quand tout va bien, une phrase le dit.
+describe('SECVUE — le bloc « Sécurité et suivi » de l accueil', () => {
+  const GYM = { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' };
+  const DOJO_V = { documentId: 'dojo', name: 'Dojo municipal' };
+  const signalement = (/** @type {string} */ id, /** @type {string} */ category, /** @type {string} */ status, facility = GYM) => ({
+    category, createdAt: '2026-10-21T08:00:00.000Z', documentId: id, facility, status, title: 'Panier cote nord descelle',
+  });
+  const resume = (/** @type {Record<string, any>} */ meta) => ({
+    data: {
+      data: [],
+      meta: {
+        facilityCount: 2, openCount: 0, openReports: [], toHandle: [], toHandleCount: 0, watch: [], ...meta,
+      },
+    },
+    isError: false,
+    isLoading: false,
+  });
+
+  it('tout va bien : « Rien à signaler sur vos 2 installations. »', async () => {
+    mockSignalements = resume({});
+    mockControles = { data: { data: [], meta: { dueCount: 0 } }, isError: false, isLoading: false };
+    const arbre = await monter();
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Sécurité et suivi', 'Rien à signaler sur vos 2 installations.']));
+  });
+
+  it('3 signalements, 1 installation à surveiller, 2 contrôles dus : les 3 lignes, et un appui ouvre l onglet', async () => {
+    mockSignalements = resume({
+      openCount: 4,
+      openReports: [signalement('s1', 'securite', 'envoye'), signalement('s2', 'eclairage', 'pris_en_charge'), signalement('s3', 'proprete', 'envoye', DOJO_V)],
+      watch: [{
+        facility: DOJO_V,
+        state: {
+          closure: null, code: 'a_surveiller', nonConformChecks: [{ documentId: 'c-ext', doneOn: '2026-01-15', label: 'Extincteurs' }], securityOpenCount: 0,
+        },
+      }],
+    });
+    mockControles = {
+      data: {
+        data: [
+          {
+            documentId: 'c-ecl', facility: DOJO_V, label: 'Éclairage de secours', nextDue: '2026-09-02', state: 'en_retard',
+          },
+          {
+            documentId: 'c-buts', facility: GYM, label: 'Buts et paniers', nextDue: '2026-11-10', state: 'bientot',
+          },
+        ],
+        meta: { dueCount: 2 },
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      '4 signalements ouverts',
+      'Sécurité · Gymnase des Tilleuls',
+      'Nouveau · Panier cote nord descelle',
+      'Éclairage · Gymnase des Tilleuls',
+      'Propreté · Dojo municipal',
+      'Voir tout (4)',
+      '1 installation à surveiller',
+      'Contrôle non conforme : Extincteurs',
+      '2 contrôles à refaire',
+      'En retard depuis le 2 septembre',
+      'À refaire avant le 10 novembre',
+    ]));
+    await appuyer(arbre, 'ville-securite-installation-dojo');
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'dojo', onglet: 'securite',
+    });
+    await appuyer(arbre, 'ville-securite-signalement-s1');
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'securite',
+    });
+    await appuyer(arbre, 'ville-securite-tout-signalements');
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteInstallations', { collectiviteId: 'ville-montrivage' });
+  });
+
+  it('chargement : le squelette ; erreur : « Réessayer » relit les deux résumés', async () => {
+    mockSignalements = { data: null, isError: false, isLoading: true };
+    let arbre = await monter();
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'ville-securite-chargement').length).toBeGreaterThan(0);
+    const relire = jest.fn();
+    mockSignalements = {
+      data: null, isError: true, isLoading: false, refetch: relire,
+    };
+    mockControles = {
+      data: null, isError: false, isLoading: false, refetch: relire,
+    };
+    arbre = await monter();
+    expect(textes(arbre)).toContain('La vue d’ensemble n’a pas pu être chargée.');
+    const [bouton] = arbre.root.findAll((/** @type {any} */ n) => n.props?.title === 'Réessayer' && typeof n.type !== 'string'
+      && n.props?.testID === undefined && typeof n.props?.onPress === 'function');
+    await act(async () => { bouton.props.onPress(); });
+    expect(relire).toHaveBeenCalledTimes(2);
+  });
+});
+/* eslint-enable max-len */
