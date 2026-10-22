@@ -179,7 +179,7 @@ function ReserverAnnonce() {
   // RC-T02, RG-AGE : sans date de naissance, le serveur refuse aussi (« Ajoute ta date de
   // naissance ») ; l'écran ne cache le bouton que si l'âge connu est trop jeune.
   const tropJeune = Boolean(ageMinimum && naissance && isBirthdateUnderAge(naissance, ageMinimum));
-  const prix = prixDuCreneau(t, partie.price);
+  const prix = prixDuCreneau(t, partie.price, null);
   const niveaux = /** @type {Record<string, string>} */ ({
     confirme: t('reserverTerrain.annonce.confirme', 'Confirmé'),
     debutant: t('reserverTerrain.annonce.debutant', 'Débutant'),

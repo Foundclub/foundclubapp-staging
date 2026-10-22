@@ -226,7 +226,8 @@ function ReserverRecapitulatif() {
       });
     } catch (erreur) {
       const variante = varianteDEchec(erreur);
-      setRefusCollecte(String(erreur?.message || '').trim()
+      const message = /** @type {{ message?: unknown } | null} */ (erreur)?.message;
+      setRefusCollecte(String(message || '').trim()
         || contenuDEchec(t, variante, { erreur }).titre);
     } finally {
       setCollecteEnCours(false);

@@ -85,8 +85,10 @@ function ReserverMesReservations() {
   );
   const fidelites = useMaFidelite()?.data;
   const cartesDeFidelite = (Array.isArray(fidelites) ? fidelites : [])
-    .map((carte) => ({ apercu: apercuDeLaFidelite(t, carte), carte }))
-    .filter(({ apercu }) => apercu);
+    .flatMap((carte) => {
+      const apercu = apercuDeLaFidelite(t, carte);
+      return apercu ? [{ apercu, carte }] : [];
+    });
   const ficheDuVolet = surOrdinateur
     ? (reservations.find((r) => r?.documentId === choisie) || reservations[0])?.documentId || null
     : null;

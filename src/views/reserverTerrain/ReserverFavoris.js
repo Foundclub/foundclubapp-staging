@@ -189,7 +189,7 @@ function ReserverFavoris() {
           }
           const canal = relations?.[slug]?.canal;
           const sports = (Array.isArray(complexe.sports) ? complexe.sports : [])
-            .map((sport) => libelleSport(sport))
+            .map((/** @type {any} */ sport) => libelleSport(sport))
             .filter(Boolean)
             .join(', ');
           return (
