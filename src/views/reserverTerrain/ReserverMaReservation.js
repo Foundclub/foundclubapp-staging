@@ -235,6 +235,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const jusquA = momentLisible(reservation.cancellableUntil);
   const echeance = momentLisible(reservation.expiresAt);
   const creation = momentLisible(reservation.createdAt);
+  // RESA-FIN-APP (20/10) — l'historique dit aussi « Confirmée la veille » et « Marquée non honorée »
+  // (plan E-P07 §3.7 ; tournées 1 et 2 : seul « Réservée le … » y était).
+  const confirmeeLaVeille = momentLisible(reservation.dayBeforeConfirmedAt);
+  const marqueeNonHonoree = momentLisible(reservation.noShowAt);
   const commence = new Date(String(reservation.startsAt)).getTime() <= Date.now();
   const adresse = complexePublic?.address?.label ? String(complexePublic.address.label) : '';
   const partieEnCours = !varianteDEnTete && PARTIE_EN_COURS.includes(etat) && !commence;
@@ -693,7 +697,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     );
   }
 
-  const historique = creation || reservation.note ? (
+  const historique = creation || reservation.note || confirmeeLaVeille || marqueeNonHonoree ? (
     <View style={{ gap: 4 }}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {t('reserverTerrain.maReservation.historique', 'Historique')}
@@ -703,6 +707,25 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {t('reserverTerrain.maReservation.reservee', 'Réservée le {{jour}} à {{heure}}', {
             heure: creation.heure,
             jour: creation.jour,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {confirmeeLaVeille ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('reserverTerrain.maReservation.confirmeeLaVeille', {
+            defaultValue: 'Confirmée la veille, le {{jour}} à {{heure}}',
+            heure: confirmeeLaVeille.heure,
+            jour: confirmeeLaVeille.jour,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {marqueeNonHonoree ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('reserverTerrain.maReservation.marqueeNonHonoree', {
+            defaultValue: 'Marquée non honorée par le complexe le {{jour}}',
+            jour: marqueeNonHonoree.jour,
             ...SANS_ECHAPPEMENT,
           })}
         </Text>
