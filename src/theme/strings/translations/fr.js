@@ -19385,6 +19385,8 @@ export default {
       inscritsPrevenus_other: 'Les {{count}} inscrits seront prévenus.',
       jourAHeure: '{{jour}} à {{heure}}',
       marqueeNonHonoree: 'Marquée non honorée par le complexe le {{jour}}',
+      // eslint-disable-next-line max-len
+      marqueeNonHonoreeRang: 'Marquée non honorée par le complexe le {{jour}} ({{rang}} sur {{seuil}})',
       ouiAnnuler: 'Oui, annuler',
       ouiArreter: 'Oui, arrêter',
       ouiRetirer: 'Oui, retirer',

@@ -239,6 +239,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   // honorée » (plan E-P07 §3.7 ; tournées 1 et 2 : seul « Réservée le … » y était).
   const confirmeeLaVeille = momentLisible(reservation.dayBeforeConfirmedAt);
   const marqueeNonHonoree = momentLisible(reservation.noShowAt);
+  // RESA-FIN-APP-2 (plan N-17, « 1 sur 3 ») : le rang et le seuil du serveur (RESAFINSRV2) ;
+  // lecture tolérante, rien sans seuil.
+  const rang = Number(reservation.noShowCount);
+  const seuil = Number(reservation.noShowThreshold);
+  const rangDeNonHonoree = rang > 0 && seuil > 0 ? { rang, seuil } : null;
   const commence = new Date(String(reservation.startsAt)).getTime() <= Date.now();
   const adresse = complexePublic?.address?.label ? String(complexePublic.address.label) : '';
   const partieEnCours = !varianteDEnTete && PARTIE_EN_COURS.includes(etat) && !commence;
@@ -729,11 +734,19 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       ) : null}
       {marqueeNonHonoree ? (
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {t('reserverTerrain.maReservation.marqueeNonHonoree', {
-            defaultValue: 'Marquée non honorée par le complexe le {{jour}}',
-            jour: marqueeNonHonoree.jour,
-            ...SANS_ECHAPPEMENT,
-          })}
+          {rangDeNonHonoree
+            ? t('reserverTerrain.maReservation.marqueeNonHonoreeRang', {
+              defaultValue:
+                'Marquée non honorée par le complexe le {{jour}} ({{rang}} sur {{seuil}})',
+              jour: marqueeNonHonoree.jour,
+              ...rangDeNonHonoree,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('reserverTerrain.maReservation.marqueeNonHonoree', {
+              defaultValue: 'Marquée non honorée par le complexe le {{jour}}',
+              jour: marqueeNonHonoree.jour,
+              ...SANS_ECHAPPEMENT,
+            })}
         </Text>
       ) : null}
       {reservation.note ? (

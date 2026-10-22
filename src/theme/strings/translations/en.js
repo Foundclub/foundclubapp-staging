@@ -18748,6 +18748,7 @@ export default {
       inscritsPrevenus_other: 'The {{count}} players who signed up will be notified.',
       jourAHeure: '{{jour}} at {{heure}}',
       marqueeNonHonoree: 'Marked as a no-show by the venue on {{jour}}',
+      marqueeNonHonoreeRang: 'Marked as a no-show by the venue on {{jour}} ({{rang}} of {{seuil}})',
       ouiAnnuler: 'Yes, cancel',
       ouiArreter: 'Yes, stop',
       ouiRetirer: 'Yes, withdraw',

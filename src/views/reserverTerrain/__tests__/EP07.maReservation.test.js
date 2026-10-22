@@ -324,3 +324,23 @@ describe('RESA-FIN-APP (4) E-P07 — l’historique dit « Confirmée la veille 
       .toBeGreaterThan(lus.findIndex((texte) => texte.startsWith('Réservée le')));
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-P07 « 1 sur 3 » (plan N-17) : le serveur RESA-FIN-SERVEUR-2
+// (RESAFINSRV2 64efe693) rend `noShowCount` et `noShowThreshold`. Lecture tolérante : sans seuil,
+// « non honorée » sans « sur x » ; sans les champs, la ligne d'avant.
+describe('RESA-FIN-APP-2 E-P07 — « (1 sur 3) » dans l’historique', () => {
+  const NON_HONOREE = { noShowAt: '2026-10-16T16:30:00.000Z' };
+
+  it('rang et seuil : « … le 16/10 (1 sur 3) »', async () => {
+    mockLecture = lue({ ...NON_HONOREE, noShowCount: 1, noShowThreshold: 3 });
+    expect(lisibles(await monter()))
+      .toContain('Marquée non honorée par le complexe le 16/10 (1 sur 3)');
+  });
+
+  it('sans seuil, ou sans les champs : la ligne sans « sur x »', async () => {
+    mockLecture = lue({ ...NON_HONOREE, noShowCount: 2, noShowThreshold: null });
+    expect(lisibles(await monter())).toContain('Marquée non honorée par le complexe le 16/10');
+    mockLecture = lue(NON_HONOREE);
+    expect(lisibles(await monter())).toContain('Marquée non honorée par le complexe le 16/10');
+  });
+});
