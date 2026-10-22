@@ -58,6 +58,7 @@ import {
   estUnCanalDeComplexe,
   estUnTeteATete,
   extraitDuMessageCite,
+  nomDansLeCanal,
   placeDansLeGroupe,
   reserveDeLHeure,
   sousTitreDesMembres,
@@ -4204,7 +4205,9 @@ function Conversation({ navigation, route }) {
           _id: senderEntityId,
           avatar: avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
-          name: filDeLaVille.nomDeLExpediteur(msg) || getAnonymizedName(msg.sender),
+          name: filDeLaVille.nomDeLExpediteur(msg)
+            || nomDansLeCanal(chatData)
+            || getAnonymizedName(msg.sender),
           // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil
           // (contrat 1B §2.3 : `sender.staffRole`, repli `chat.staffRoles`). Absente = rien.
           staffRole: msg.sender?.staffRole || chatData?.staffRoles?.[senderEntityId] || undefined,
@@ -4214,7 +4217,7 @@ function Conversation({ navigation, route }) {
     return [...acc, ...formattedMessages];
   }, /** @type {any[]} */ ([])) : []), blockedUserIds), [
     blockedUserIds,
-    chatData?.staffRoles,
+    chatData,
     filDeLaVille,
     messagesPages,
     getAnonymizedName,

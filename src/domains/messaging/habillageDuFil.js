@@ -143,6 +143,18 @@ export const estUnCanalDeComplexe = (chat) => chat?.type === 'group'
   && Number.isFinite(Number(chat.participantsCount));
 
 /**
+ * RESA-FIN-APP (20/10/2026) — LE CANAL D'UN COMPLEXE PARLE AU NOM DU COMPLEXE (tournée 2 : le
+ * message aux membres était signé du nom personnel du gérant). Seuls les gérants y écrivent : leurs
+ * messages se signent du nom du fil, celui du complexe (serveur RESA-L4, `groupName`).
+ * Témoin : `habillageDuFil.RESAFIN.test.js`.
+ * @param {any} chat - Le fil.
+ * @returns {string} Le nom du complexe, ou '' hors canal d'un complexe.
+ */
+export const nomDansLeCanal = (chat) => (estUnCanalDeComplexe(chat)
+  ? String(chat?.groupName || '').trim()
+  : '');
+
+/**
  * MSG1A (§3.1) — LA LIGNE SOUS LE TITRE D'UN FIL A PLUSIEURS : les prenoms des autres membres,
  * puis « Vous » (regle du telephone, Conversation.js). Rien pour un tete-a-tete, ni quand le
  * serveur ne joint pas les membres (fil d'equipe, de club : MSG1/N4) — le site en tirait

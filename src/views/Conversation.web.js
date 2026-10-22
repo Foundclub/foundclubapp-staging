@@ -23,6 +23,7 @@ import { getMessageActions } from '@/domains/messaging/messageActions';
 import {
   couleurDuNom,
   estUnCanalDeComplexe,
+  nomDansLeCanal,
   sousTitreDesMembres,
 } from '@/domains/messaging/habillageDuFil';
 import {
@@ -3879,7 +3880,9 @@ function Conversation({ navigation, route }) {
       );
     }
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
-    const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
+    const senderName = filDeLaVille.nomDeLExpediteur(message)
+      || nomDansLeCanal(chatData)
+      || getDisplayName(message?.sender);
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
     const maVoix = isMine && filDeLaVille.estFil
@@ -4459,7 +4462,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
-    chatData?.type,
+    chatData,
     clavierOuvert,
     familleEmoji,
     filDeLaVille,
