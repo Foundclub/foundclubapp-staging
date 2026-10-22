@@ -19517,6 +19517,7 @@ export default {
       erreurTexte: 'Vérifie ta connexion et réessaie.',
       exterieur: 'Extérieur',
       filtrer: 'Filtrer',
+      filtrerActifs: 'Filtrer · {{count}}',
       filtrerLeSport: 'Filtrer les terrains de {{sport}}',
       filtres: 'Filtres',
       heure: 'Heure',

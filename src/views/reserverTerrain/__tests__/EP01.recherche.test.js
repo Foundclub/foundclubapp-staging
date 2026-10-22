@@ -338,6 +338,22 @@ describe('E-P01 — le champ et les filtres (RA1 état 4, EP01 état 4)', () => 
     expect(vus).toContain('10 h');
     expect(vus).not.toContain('19 h');
   });
+
+  // RESA-FIN-APP-2 (22/10/2026) — E-P01, tournée 2 : après « Avant 12 h », la puce « Filtrer » ne
+  // montrait rien ; on lisait « Aucun terrain libre avec ces filtres. » sans voir lequel était
+  // actif. La puce dit combien de filtres cachés sont actifs, et passe à l'état choisi.
+  it('« Filtrer » dit qu’un filtre caché est actif (« Filtrer · 1 », choisie)', async () => {
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Filtrer');
+    await appuyer(arbre, 'Filtrer');
+    await appuyer(arbre, 'Avant 12 h');
+    await appuyer(arbre, 'Voir les terrains');
+    expect(lisibles(arbre)).toContain('Filtrer · 1');
+    const puce = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.libelle === 'Filtrer · 1' && n.props?.onPress
+    ))[0];
+    expect(puce.props.choisie).toBe(true);
+  });
 });
 
 describe('E-P01 — les états', () => {

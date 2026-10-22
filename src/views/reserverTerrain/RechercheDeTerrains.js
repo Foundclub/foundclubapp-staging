@@ -163,6 +163,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const [heure, setHeure] = useState(/** @type {'matin' | 'apresMidi' | 'soir' | null} */ (null));
   const [distanceKm, setDistanceKm] = useState(DISTANCE_PAR_DEFAUT);
   const [cadre, setCadre] = useState(/** @type {string | null} */ (null));
+  const filtresCaches = [heure, cadre].filter(Boolean).length;
   const [position, setPosition] = useState(/** @type {Lieu | null} */ (null));
   // RESA-FIN-APP : la ville choisie à la visite d'avant (gardée sur le téléphone).
   const [ville, setVille] = useState(/** @type {Ville | null} */ (lireVilleRetenue));
@@ -577,11 +578,15 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
           onPress={ouvrirLesFiltres}
         />
       ) : null}
+      {/* RESA-FIN-APP-2 (E-P01) : les filtres sans puce à eux (l'heure, intérieur ou extérieur)
+          se comptent sur « Filtrer », qui passe à l'état choisi. */}
       <PuceChoix
-        libelle={t(
-          'reserverTerrain.recherche.filtrer',
-          'Filtrer',
-        )}
+        choisie={filtresCaches > 0}
+        libelle={filtresCaches > 0
+          ? t('reserverTerrain.recherche.filtrerActifs', 'Filtrer · {{count}}', {
+            count: filtresCaches,
+          })
+          : t('reserverTerrain.recherche.filtrer', 'Filtrer')}
         onPress={ouvrirLesFiltres}
       />
     </View>

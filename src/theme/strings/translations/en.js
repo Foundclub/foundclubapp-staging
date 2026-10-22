@@ -18879,6 +18879,7 @@ export default {
       erreurTexte: 'Check your connection and try again.',
       exterieur: 'Outdoor',
       filtrer: 'Filter',
+      filtrerActifs: 'Filter · {{count}}',
       filtrerLeSport: 'Filter {{sport}} pitches',
       filtres: 'Filters',
       heure: 'Time',
