@@ -7,9 +7,11 @@ import {
 
 import {
   aujourdhuiAParis,
+  depuisJourIso,
   jourCourt,
   joursLisibles,
   messageDeRefusResa,
+  motifDeLaFermeture,
   MOTIFS_DE_FERMETURE,
   regrouperFermetures,
   versJourIso,
@@ -32,6 +34,7 @@ import {
   useComplexeChoisi,
   useFermerTerrains,
   useFermetures,
+  useModifierFermetures,
   useRouvrirFermetures,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
@@ -76,6 +79,7 @@ function ComplexeFermetures() {
   const lecture = useFermetures(complexeId, tousLesIds);
   const fermer = useFermerTerrains();
   const rouvrir = useRouvrirFermetures();
+  const modifier = useModifierFermetures();
 
   const [choisis, setChoisis] = useState(/** @type {string[]} */ (
     params?.terrainId ? [params.terrainId] : []
@@ -88,6 +92,8 @@ function ComplexeFermetures() {
   const [message, setMessage] = useState('');
   const [erreur, setErreur] = useState('');
   const [aRouvrir, setARouvrir] = useState(/** @type {any} */ (null));
+  // RESA-FIN-APP-2 (plan E-G10 §4) : la ligne en cours de modification ; le formulaire est le même.
+  const [enEdition, setEnEdition] = useState(/** @type {any} */ (null));
 
   const debut = versJourIso(du);
   const fin = versJourIso(au);
@@ -141,6 +147,72 @@ function ComplexeFermetures() {
     </TouchableOpacity>
   );
 
+  const viderLeFormulaire = () => {
+    setDu('');
+    setAu('');
+    setMotif('');
+    setMot('');
+    setVoir(false);
+    setEnEdition(null);
+  };
+  const commencerLaModification = (/** @type {any} */ ligne) => {
+    setMessage('');
+    setErreur('');
+    setChoisis(ligne.terrainIds);
+    setDu(depuisJourIso(ligne.debut));
+    setAu(depuisJourIso(ligne.fin));
+    setMotif(motifDeLaFermeture(t, ligne));
+    setMot(String(ligne.message || ''));
+    setVoir(false);
+    setEnEdition(ligne);
+  };
+
+  // RESA-FIN-APP-2 — « Modifier » : chaque fermeture du geste prend les jours, le motif, le mot.
+  const modifierLesJours = async (
+    /** @type {any} */ choix,
+    /** @type {string} */ texteDuMot,
+  ) => {
+    if (!dates || !enEdition) return;
+    const avecMot = texteDuMot ? { message: texteDuMot } : {};
+    const motEfface = !texteDuMot && enEdition.message ? { message: null } : {};
+    try {
+      const bilan = await modifier.mutateAsync({
+        fermeture: {
+          ...dates, ...choix.corps(t), ...avecMot, ...motEfface,
+        },
+        fermetureIds: enEdition.ids,
+      });
+      const jours = joursLisibles(debut, fin);
+      setMessage(bilan?.annulees
+        ? t(
+          'complexeReservations.fermetures.modifieEtPrevenu',
+          'Modifié : {{jours}}. {{count}} joueurs prévenus.',
+          {
+            count: bilan.annulees,
+            defaultValue_one: 'Modifié : {{jours}}. {{count}} joueur prévenu.',
+            defaultValue_other: 'Modifié : {{jours}}. {{count}} joueurs prévenus.',
+            jours,
+            ...SANS_ECHAPPEMENT,
+          },
+        )
+        : t('complexeReservations.fermetures.modifie', 'Modifié : {{jours}}.', {
+          jours, ...SANS_ECHAPPEMENT,
+        }));
+      if (bilan?.echecs?.length) {
+        setErreur(t(
+          'complexeReservations.fermetures.erreurModifier',
+          'La fermeture n’a pas pu être modifiée.',
+        ));
+      }
+      viderLeFormulaire();
+    } catch (refus) {
+      setErreur(messageDeRefusResa(t, refus, t(
+        'complexeReservations.fermetures.erreurModifier',
+        'La fermeture n’a pas pu être modifiée.',
+      )));
+    }
+  };
+
   // ── Fermer ─────────────────────────────────────────────────────────────────────────────
   const fermerLesJours = async () => {
     const choix = MOTIFS_DE_FERMETURE.find((option) => option.cle === motif);
@@ -148,6 +220,10 @@ function ComplexeFermetures() {
     setErreur('');
     setMessage('');
     const texteDuMot = mot.replace(/\s+/g, ' ').trim();
+    if (enEdition) {
+      await modifierLesJours(choix, texteDuMot);
+      return;
+    }
     try {
       const bilan = await fermer.mutateAsync({
         fermeture: { ...dates, ...choix.corps(t), ...(texteDuMot ? { message: texteDuMot } : {}) },
@@ -182,11 +258,7 @@ function ComplexeFermetures() {
           },
         ));
       }
-      setDu('');
-      setAu('');
-      setMotif('');
-      setMot('');
-      setVoir(false);
+      viderLeFormulaire();
     } catch (refus) {
       setErreur(messageDeRefusResa(t, refus, t(
         'complexeReservations.fermetures.erreurFermer',
@@ -215,6 +287,25 @@ function ComplexeFermetures() {
   };
 
   // ── La liste à venir ───────────────────────────────────────────────────────────────────
+  // RESA-FIN-APP-2 (plan E-G10 §5) : en cours, à venir, ou rouverte.
+  const etatDeLaLigne = (/** @type {any} */ ligne) => {
+    if (ligne.rouverte) {
+      return {
+        couleur: Colors.neutral200,
+        texte: t('complexeReservations.fermetures.rouverte', 'Rouverte'),
+      };
+    }
+    if (ligne.enCours) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('complexeReservations.fermetures.enCours', 'En cours'),
+      };
+    }
+    return {
+      couleur: Colors.primary200,
+      texte: t('complexeReservations.fermetures.aVenir', 'À venir'),
+    };
+  };
   let liste;
   if (lecture.isLoading || terrainsLus.isLoading) {
     liste = (
@@ -268,24 +359,29 @@ function ComplexeFermetures() {
                 Alignments.row, Alignments.alignCenter, { gap: 8, justifyContent: 'space-between' },
               ]}
             >
-              <Text
-                style={[
-                  Fonts.p3Bold,
-                  { color: ligne.enCours ? Colors.warning500 : Colors.primary200 },
-                ]}
-              >
-                {ligne.enCours
-                  ? t('complexeReservations.fermetures.enCours', 'En cours')
-                  : t('complexeReservations.fermetures.aVenir', 'À venir')}
+              <Text style={[Fonts.p3Bold, { color: etatDeLaLigne(ligne).couleur }]}>
+                {etatDeLaLigne(ligne).texte}
               </Text>
-              <View testID={`fermeture-rouvrir-${ligne.cle}`}>
-                <Button
-                  onPress={() => setARouvrir(ligne)}
-                  size="sm"
-                  title={t('complexeReservations.fermetures.rouvrir', 'Rouvrir')}
-                  variant="Secondary"
-                />
-              </View>
+              {ligne.rouverte ? null : (
+                <View style={[Alignments.row, { gap: 8 }]}>
+                  <View testID={`fermeture-modifier-${ligne.cle}`}>
+                    <Button
+                      onPress={() => commencerLaModification(ligne)}
+                      size="sm"
+                      title={t('complexeReservations.fermetures.modifier', 'Modifier')}
+                      variant="Ghost"
+                    />
+                  </View>
+                  <View testID={`fermeture-rouvrir-${ligne.cle}`}>
+                    <Button
+                      onPress={() => setARouvrir(ligne)}
+                      size="sm"
+                      title={t('complexeReservations.fermetures.rouvrir', 'Rouvrir')}
+                      variant="Secondary"
+                    />
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         ))}
@@ -377,11 +473,19 @@ function ComplexeFermetures() {
   }
 
   // ── Le formulaire ──────────────────────────────────────────────────────────────────────
+  let titreDuBouton = touchees?.count
+    ? t('complexeReservations.fermetures.fermerEtPrevenir', 'Fermer et prévenir')
+    : t('complexeReservations.fermetures.fermer', 'Fermer');
+  if (enEdition) {
+    titreDuBouton = t('complexeReservations.fermetures.enregistrerModification', 'Enregistrer');
+  }
   const tousCoches = terrains.length > 0 && terrainsChoisis.length === terrains.length;
   const formulaire = (
     <View style={{ gap: 16 }}>
       <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-        {t('complexeReservations.fermetures.nouvelle', 'Nouvelle fermeture')}
+        {enEdition
+          ? t('complexeReservations.fermetures.modifierTitre', 'Modifier la fermeture')
+          : t('complexeReservations.fermetures.nouvelle', 'Nouvelle fermeture')}
       </Text>
       <View style={{ gap: 8 }}>
         {legende(t('complexeReservations.fermetures.terrains', 'Terrains concernés'))}
@@ -445,14 +549,22 @@ function ComplexeFermetures() {
       {impact}
       <View testID="fermeture-fermer">
         <Button
-          disabled={!pret || Boolean(fermer.isPending)}
-          isLoading={Boolean(fermer.isPending)}
+          disabled={!pret || Boolean(fermer.isPending || modifier.isPending)}
+          isLoading={Boolean(fermer.isPending || modifier.isPending)}
           onPress={fermerLesJours}
-          title={touchees?.count
-            ? t('complexeReservations.fermetures.fermerEtPrevenir', 'Fermer et prévenir')
-            : t('complexeReservations.fermetures.fermer', 'Fermer')}
+          title={titreDuBouton}
         />
       </View>
+      {enEdition ? (
+        <Button
+          onPress={viderLeFormulaire}
+          title={t(
+            'complexeReservations.fermetures.annulerModification',
+            'Annuler la modification',
+          )}
+          variant="Ghost"
+        />
+      ) : null}
     </View>
   );
 

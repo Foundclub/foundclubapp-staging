@@ -747,24 +747,56 @@ export const joursLisibles = (debut, fin) => {
 };
 
 /**
+ * RESA-FIN-APP-2 (E-G10, « Modifier ») — « AAAA-MM-JJ » en saisie « JJ/MM/AAAA », l'inverse de
+ * `versJourIso`.
+ * @param {string | null | undefined} jour - Le jour.
+ * @returns {string} La saisie, ou ''.
+ */
+export const depuisJourIso = (jour) => {
+  const morceaux = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(jour || '').slice(0, 10));
+  return morceaux ? `${morceaux[3]}/${morceaux[2]}/${morceaux[1]}` : '';
+};
+
+/**
+ * RESA-FIN-APP-2 (E-G10, « Modifier ») — la puce de motif d'une fermeture lue (son `reason` et son
+ * `label`), l'inverse de `MOTIFS_DE_FERMETURE[].corps`.
+ * @param {Traduire} t - Traduction.
+ * @param {{ label?: string | null, reason?: string | null }} fermeture - La fermeture.
+ * @returns {string} La clé de la puce (« autre » à défaut).
+ */
+export const motifDeLaFermeture = (t, fermeture) => {
+  const option = MOTIFS_DE_FERMETURE.find((candidat) => {
+    const corps = /** @type {{ label?: string, reason: string }} */ (candidat.corps(t));
+    return corps.reason === fermeture?.reason
+      && String(corps.label || '') === String(fermeture?.label || '');
+  });
+  return option ? option.cle : 'autre';
+};
+
+/**
  * Les fermetures à venir d'un complexe, regroupées : une fermeture PAR terrain côté serveur, une
  * ligne par geste à l'écran (« 25/10 – 26/10 · Travaux · Terrain 1, Terrain 2 »). Les blocages
- * (une plage d'heures) vivent dans le planning, pas ici.
+ * (une plage d'heures) vivent dans le planning, pas ici. RESA-FIN-APP-2 : une fermeture ROUVERTE
+ * reste, sur sa ligne à elle (`rouverte`, plan E-G10 §5) ; une ligne garde de quoi la modifier.
  * @param {Traduire} t - Traduction.
  * @param {any[]} fermetures - Les fermetures (`terrainId` ajouté par le service).
  * @param {any[]} terrains - Les terrains (leurs noms).
  * @param {string} aujourdhui - « AAAA-MM-JJ ».
  * @returns {Array<{ cle: string, debut: string, enCours: boolean, fin: string, ids: string[],
- *   motif: string, terrains: string[] }>} Les lignes, la plus proche d'abord.
+ *   label: string | null, message: string | null, motif: string, reason: string | null,
+ *   rouverte: boolean, terrainIds: string[], terrains: string[] }>} Les lignes, la plus proche
+ *   d'abord.
  */
 export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
   /** @type {Map<string, any>} */
   const groupes = new Map();
   fermetures
-    .filter((fermeture) => fermeture?.kind === 'closure' && fermeture?.status !== 'reopened')
+    .filter((fermeture) => fermeture?.kind === 'closure')
     .forEach((fermeture) => {
+      const rouverte = fermeture.status === 'reopened';
       const cle = [
         fermeture.startDate, fermeture.endDate, fermeture.reason, fermeture.label || '',
+        ...(rouverte ? ['rouverte'] : []),
       ].join('|');
       const nom = terrains.find((terrain) => terrain.documentId === fermeture.terrainId)?.name;
       const groupe = groupes.get(cle) || {
@@ -773,15 +805,23 @@ export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
         enCours: fermeture.startDate <= aujourdhui,
         fin: fermeture.endDate,
         ids: [],
+        label: fermeture.label || null,
+        message: fermeture.message || null,
         motif: majuscule(motifDeFermeture(t, fermeture))
           || t('complexeReservations.motifs.autre', 'Autre'),
+        reason: fermeture.reason || null,
+        rouverte,
+        terrainIds: [],
         terrains: [],
       };
       groupe.ids.push(fermeture.documentId);
+      if (fermeture.terrainId) groupe.terrainIds.push(String(fermeture.terrainId));
       if (nom) groupe.terrains.push(String(nom));
       groupes.set(cle, groupe);
     });
-  return [...groupes.values()].sort((a, b) => a.debut.localeCompare(b.debut));
+  return [...groupes.values()].sort((a, b) => (
+    a.debut.localeCompare(b.debut) || Number(a.rouverte) - Number(b.rouverte)
+  ));
 };
 
 /**

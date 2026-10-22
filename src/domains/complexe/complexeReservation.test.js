@@ -313,9 +313,13 @@ describe('RESA-L5A2 — les fermetures (E-G10)', () => {
         terrainId: 't-3',
       }),
     ], terrains, '2026-10-14');
-    expect(lignes.map((ligne) => [ligne.motif, ligne.terrains, ligne.ids, ligne.enCours])).toEqual([
-      ['Météo', ['Padel A'], ['f-4'], true],
-      ['Travaux', ['Terrain 1', 'Terrain 2'], ['f-1', 'f-2'], false],
+    // RESA-FIN-APP-2 : la rouverte reste, à part (« Rouverte », plan E-G10 §5).
+    expect(lignes.map((ligne) => [
+      ligne.motif, ligne.terrains, ligne.ids, ligne.enCours, ligne.rouverte,
+    ])).toEqual([
+      ['Météo', ['Padel A'], ['f-4'], true, false],
+      ['Travaux', ['Terrain 1', 'Terrain 2'], ['f-1', 'f-2'], false, false],
+      ['Travaux', ['Padel A'], ['f-5'], false, true],
     ]);
   });
 });

@@ -39,6 +39,7 @@ import {
   marquerNonHonoree,
   modifierComplexeGere,
   modifierExterieur,
+  modifierFermetures,
   modifierTerrain,
   noterExterieur,
   reglerFidelite,
@@ -354,6 +355,15 @@ export const useApercuRetrait = () => useMutation({
  */
 export const useFermerTerrains = () => useGeste(
   ({ fermeture, terrainIds }) => fermerTerrains(terrainIds, fermeture),
+);
+
+/**
+ * RESA-FIN-APP-2 — « Modifier » une fermeture (E-G10) : les mêmes jours, motif et mot pour chacune.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ fermeture, fermetureIds })`.
+ */
+export const useModifierFermetures = () => useGeste(
+  ({ fermeture, fermetureIds }) => modifierFermetures(fermetureIds, fermeture),
 );
 
 /**

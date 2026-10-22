@@ -501,13 +501,14 @@ const unParUn = async (ids, geste) => {
 };
 
 /**
- * Les fermetures à venir (actives) de ces terrains, chacune avec son terrain.
+ * Les fermetures à venir de ces terrains, chacune avec son terrain. RESA-FIN-APP-2 : les rouvertes
+ * aussi (`status=all`, réservé au gestionnaire : plan E-G10 §5, « rouverte »).
  * @param {string[]} terrainIds - Les terrains.
  * @returns {Promise<any[]>} Les fermetures (`terrainId` ajouté).
  */
 export const lireFermetures = async (terrainIds) => {
   const listes = await Promise.all(terrainIds.map(async (terrainId) => {
-    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'active' });
+    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'all' });
     return (Array.isArray(reponse?.data) ? reponse.data : [])
       .map((/** @type {any} */ fermeture) => ({ ...fermeture, terrainId }));
   }));
@@ -552,6 +553,31 @@ export const fermerTerrains = async (terrainIds, fermeture) => {
     terrainId,
     { ...fermeture, kind: 'closure', publishActualite: false },
   ));
+  return {
+    annulees: reponses.reduce(
+      (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),
+      0,
+    ),
+    echecs,
+    faits: reponses.length,
+  };
+};
+
+/**
+ * RESA-FIN-APP-2 (E-G10) — « Modifier » une fermeture : chacune du geste (une par terrain) prend
+ * les mêmes jours, motif et mot. Le serveur annule et prévient ce que la fermeture touche
+ * maintenant.
+ * @param {string[]} fermetureIds - Les fermetures du geste.
+ * @param {{ endDate: string, label?: string | null, message?: string | null, reason: string,
+ *   startDate: string }} fermeture - Les jours, le motif, le mot aux joueurs.
+ * @returns {Promise<{ annulees: number, echecs: Array<{ erreur: any, id: string }>,
+ *   faits: number }>} Le bilan.
+ */
+export const modifierFermetures = async (fermetureIds, fermeture) => {
+  const { echecs, reponses } = await unParUn(
+    fermetureIds,
+    (fermetureId) => fermetures().modifyFacilityClosure(fermetureId, fermeture),
+  );
   return {
     annulees: reponses.reduce(
       (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),
