@@ -29,6 +29,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en paramètre.
+  useMaReservation: () => ({ data: null, isLoading: false }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {

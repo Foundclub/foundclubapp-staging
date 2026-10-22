@@ -25,6 +25,7 @@ import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInv
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { useMaReservation } from '@/services/complexe/complexeJoueurQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -60,9 +61,14 @@ function ReserverResultat() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ collecte?: any, equipe?: any, reservation?: any }} */
+  /** @type {{ collecte?: any, equipe?: any, reservation?: any, reservationId?: string }} */
   const params = /** @type {any} */ (route?.params) || {};
-  const reservation = params.reservation || null;
+  // RESA-FIN-SITE (21/10/2026, tournée connectée du 22/10) — la réservation arrive en paramètre ;
+  // sans elle (page du site rechargée), l'écran la relit par son identifiant au lieu de dire
+  // « Cette réservation n'existe plus. ».
+  const relue = useMaReservation(params.reservation ? null : (params.reservationId || null));
+  const reservation = params.reservation || relue?.data || null;
+  const enRelecture = !params.reservation && Boolean(params.reservationId) && Boolean(relue?.isLoading);
   const collecte = params.collecte || null;
   const equipe = params.equipe || null;
   const surOrdinateur = useIsDesktop();
@@ -86,8 +92,10 @@ function ReserverResultat() {
     .filter(Boolean)
     .join(' ');
 
-  let corps;
-  if (!reservation) {
+  let corps = null;
+  if (enRelecture) {
+    corps = null;
+  } else if (!reservation) {
     corps = (
       <View style={{ alignItems: 'center', gap: 16 }}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
