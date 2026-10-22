@@ -56,9 +56,9 @@ export const listFacilityChecks = async (facilityId) => {
  * @returns {Promise<any>} `{ data: ligne }`.
  */
 export const createFacilityCheck = async (facilityId, {
-  document = null, doneBy = null, doneOn, label, nextDue,
+  document = null, doneBy = null, doneOn, label, nextDue, result,
 }) => envoyer(`/facilities/${facilityId}/checks`, {
-  doneBy, doneOn, label, nextDue,
+  doneBy, doneOn, label, nextDue, result,
 }, document);
 
 /**
@@ -69,8 +69,10 @@ export const createFacilityCheck = async (facilityId, {
  * @returns {Promise<any>} `{ data: ligne neuve }`.
  */
 export const markFacilityCheckDone = async (checkId, {
-  document = null, doneBy = null, doneOn, nextDue,
-}) => envoyer(`/facility-checks/${checkId}/done`, { doneBy, doneOn, nextDue }, document);
+  document = null, doneBy = null, doneOn, nextDue, result,
+}) => envoyer(`/facility-checks/${checkId}/done`, {
+  doneBy, doneOn, nextDue, result,
+}, document);
 
 /**
  * « Ce qui vous attend » (accueil de la Ville) : les controles a refaire dans les 30 jours, ou en
