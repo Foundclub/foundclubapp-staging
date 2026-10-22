@@ -89,3 +89,13 @@ export const useModeComplexe = (compteId) => useSyncExternalStore(
   () => lireModeComplexe(compteId),
   () => false,
 );
+
+/**
+ * RESA-FIN-APP (20/10/2026) — l'espace d'un complexe RETIRÉ par FoundClub ne remet plus le mode
+ * complexe (tournée 2 : après « Changer de compte », l'app rouvrait le compte sur un complexe retiré).
+ * Un complexe suspendu reste celui du gérant (bandeau, « Écrire à FoundClub ») ; pas encore lu : rien
+ * ne change. Témoin : `modeComplexe.RESAFIN.test.js`.
+ * @param {{ status?: string } | null | undefined} complexe - Le complexe de l'espace.
+ * @returns {boolean} Vrai si l'app peut se rouvrir sur lui.
+ */
+export const rouvrirSurLeComplexe = (complexe) => complexe?.status !== 'retire';

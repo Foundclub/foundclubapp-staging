@@ -23,6 +23,8 @@ import { getMessageActions } from '@/domains/messaging/messageActions';
 import {
   couleurDuNom,
   estUnCanalDeComplexe,
+  nomDansLeCanal,
+  pageDuCanal,
   sousTitreDesMembres,
 } from '@/domains/messaging/habillageDuFil';
 import {
@@ -3884,7 +3886,9 @@ function Conversation({ navigation, route }) {
       );
     }
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
-    const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
+    const senderName = filDeLaVille.nomDeLExpediteur(message)
+      || nomDansLeCanal(chatData)
+      || getDisplayName(message?.sender);
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
     const maVoix = isMine && filDeLaVille.estFil
@@ -4464,7 +4468,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
-    chatData?.type,
+    chatData,
     clavierOuvert,
     familleEmoji,
     filDeLaVille,
@@ -4911,7 +4915,12 @@ function Conversation({ navigation, route }) {
             {estUnGroupe ? (
               <button
                 data-testid="MSG1W-titre-du-fil"
-                onClick={() => setInfosOuvertes(true)}
+                // RESA-FIN-APP (22/10) — canal d'un complexe, vu d'un membre : sa page (E-P02).
+                onClick={() => (pageDuCanal(chatData) && canalVuDUnMembre
+                  ? navigation.navigate(RouteNames.ReserverComplexe, {
+                    slug: pageDuCanal(chatData),
+                  })
+                  : setInfosOuvertes(true))}
                 style={{
                   background: 'transparent',
                   border: 0,

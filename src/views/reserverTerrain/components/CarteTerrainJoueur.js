@@ -15,6 +15,8 @@ import PuceChoix from '@/views/reserverTerrain/components/PuceChoix';
 
 import { useCreneauxDuJour } from '@/services/complexe/complexeJoueurQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 const PUCES_MAX = 6;
 const PHOTO = 120;
 
@@ -122,7 +124,7 @@ function CarteTerrainJoueur({
         <Button
           icon="phone"
           onPress={onTelephone}
-          title={t('reserverTerrain.complexe.reserverParTelephone', 'Réserver par téléphone')}
+          title={texteInsecable(t('reserverTerrain.complexe.reserverParTelephone', 'Réserver par téléphone'))}
           variant="Secondary"
         />
       ) : (

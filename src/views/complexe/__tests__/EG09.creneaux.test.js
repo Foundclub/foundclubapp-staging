@@ -6,6 +6,8 @@ import ComplexeCreneaux from '@/views/complexe/ComplexeCreneaux';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  dessins,
+  enUnMot,
   lisibles,
   parRepere,
   PLAN_OUVERT,
@@ -363,5 +365,39 @@ describe('RESA-L5A2 E-G09 — vers les fermetures et le planning', () => {
       params: { complexeId: 'cx-five', terrainId: 't-1' },
       screen: RouteNames.ComplexePlanning,
     });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées de recette 1 et 2 (Android 16) : « Ajouter une [plage] » et
+// « Ajouter un [tarif] » perdaient leur dernier mot (bouton à icône : le libellé épouse sa largeur).
+describe('RESA-FIN-APP (1) E-G09 — les boutons « Ajouter … » dessinés en un seul mot', () => {
+  beforeEach(() => {
+    mockParams = { complexeId: 'cx-five', terrainId: 't-1' };
+    mockTerrains = { data: [terrainDeTemoin()], isLoading: false };
+  });
+
+  it('« Ajouter une plage », « Ajouter un tarif », « Ajouter un créneau ponctuel »', async () => {
+    const arbre = await monter();
+    ['Ajouter une plage', 'Ajouter un tarif', 'Ajouter un créneau ponctuel'].forEach((libelle) => {
+      expect(dessins(arbre, libelle)).toEqual([enUnMot(libelle)]);
+    });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : sur un terrain au prix PAR JOUEUR, la ligne du tarif disait « 7 € » alors
+// que le joueur lit « 7 € par joueur » : le gérant ne savait pas ce qu'il venait de régler. La ligne dit l'unité
+// du terrain (« par joueur » ; le créneau reste « 7 € »).
+describe('RESA-FIN-APP (5) E-G09 — la ligne d’un tarif dit son unité', () => {
+  it('terrain au prix par joueur : « 7 € par joueur »', async () => {
+    mockParams = { complexeId: 'cx-five', terrainId: 't-1' };
+    mockTerrains = {
+      data: [terrainDeTemoin({
+        priceUnit: 'joueur',
+        slotPlan: { ...PLAN_OUVERT, rates: [{ days: [3], price: 7 }] },
+      })],
+      isLoading: false,
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('7 € par joueur');
   });
 });

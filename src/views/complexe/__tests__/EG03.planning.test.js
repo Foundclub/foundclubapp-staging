@@ -7,6 +7,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   COMPLEXE_FIVE,
+  enUnMot,
   lisibles,
   parRepere,
   pressable,
@@ -479,5 +480,37 @@ describe('RESA-L5A2 E-G03 — l’onglet suit l’adresse (frise, « Voir le pla
     expect(mockPeriodes[mockPeriodes.length - 1]).toEqual({
       from: '2026-10-20', terrain: 't-2', to: '2026-10-20',
     });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (Android 16) : les puces de fin de « Bloquer à partir
+// d'ici » s'affichaient « jusqu'à 20 », « jusqu'à 21 »… (le « h » perdu). Puces en un seul mot.
+describe('RESA-FIN-APP (1) E-G03 — les puces « jusqu’à … h » dessinées en un seul mot', () => {
+  it('chaque fin proposée garde son « h »', async () => {
+    const arbre = await monter();
+    await toucher(arbre, 'creneau-t-1-2026-10-16-20:00', 'onLongPress');
+    const puces = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.testID === 'string' && n.props.testID.startsWith('fin-')
+      && typeof n.props.onPress === 'function'
+    ));
+    expect(puces.length).toBeGreaterThan(1);
+    puces.forEach((/** @type {any} */ puce) => {
+      const [texte] = puce.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children));
+      expect(texte).toBe(enUnMot(texte.split(String.fromCharCode(160)).join(' ')));
+      expect(texte).toMatch(/h$/);
+    });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : le bandeau « Créneau bloqué. » / « Plage bloquée. » restait affiché
+// quand on changeait de vue (Jour → Semaine → Liste) : il parlait d'un geste fait sur une AUTRE vue.
+describe('RESA-FIN-APP (5) E-G03 — le bandeau d’un geste s’efface quand on change de vue', () => {
+  it('« Créneau bloqué. » puis « Semaine » : plus de bandeau', async () => {
+    const arbre = await monter();
+    await toucher(arbre, 'creneau-t-1-2026-10-16-20:00');
+    await toucher(arbre, 'creneau-bloquer');
+    expect(lisibles(arbre)).toContain('Créneau bloqué.');
+    await appuyer(arbre, 'Semaine');
+    expect(lisibles(arbre)).not.toContain('Créneau bloqué.');
   });
 });

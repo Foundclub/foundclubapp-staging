@@ -62,6 +62,26 @@ const lisibles = (arbre) => textes(arbre)
   .map((texte) => texte.split(String.fromCharCode(160)).join(' '));
 
 /**
+ * RESA-FIN-APP (20/10/2026) — les textes affichés qui se LISENT `libelle`, TELS QU'ILS SONT DESSINÉS.
+ * Sous Android 16, un texte gras de plusieurs mots dans une boîte qui épouse sa largeur perd son
+ * dernier mot (mémoire piege-android16-gras-dernier-mot-perdu) ; la parade `texteInsecable` ne lui
+ * laisse aucun espace ordinaire. Un témoin ne voit pas la mise en page : il fige cette STRUCTURE
+ * (`expect(dessins(arbre, 'Voir ma page')).toEqual([enUnMot('Voir ma page')])`).
+ * @param {any} arbre - L'arbre.
+ * @param {string} libelle - Le texte lu, espaces ordinaires.
+ * @returns {string[]} Les textes dessinés qui se lisent ainsi.
+ */
+const dessins = (arbre, libelle) => textes(arbre)
+  .filter((texte) => texte.split(String.fromCharCode(160)).join(' ') === libelle);
+
+/**
+ * Le texte tel que la parade le dessine : ses espaces deviennent insécables.
+ * @param {string} libelle - Le texte, espaces ordinaires.
+ * @returns {string} Le même texte, en un seul « mot ».
+ */
+const enUnMot = (libelle) => libelle.split(' ').join(String.fromCharCode(160));
+
+/**
  * Le premier élément pressable dont le libellé (texte, `title` ou `accessibilityLabel`) contient
  * `libelle`.
  * @param {any} arbre - L'arbre.
@@ -192,6 +212,8 @@ const complexeChoisiDeTemoin = (complexeId) => ({
 module.exports = {
   COMPLEXE_FIVE,
   complexeChoisiDeTemoin,
+  dessins,
+  enUnMot,
   lisibles,
   ongletsDeTemoin,
   parRepere,

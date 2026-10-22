@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { totalDesPages } from '@/domains/complexe/complexeReservation';
-import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
+import { ecrireModeComplexe, rouvrirSurLeComplexe } from '@/domains/complexe/modeComplexe';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import useTheme from '@/theme/themeContext';
 
@@ -45,10 +45,12 @@ function ComplexeTabNavigator() {
   const { userData } = useAuth();
   // RESA-L5A2 (planche RB, état 4) : ouvrir l'espace (par la bascule, « Mon compte » ou une
   // notification du complexe reçue en mode joueur) repasse le téléphone en mode complexe.
+  const { complexe, complexeId } = useComplexeChoisi(params?.complexeId);
+  // RESA-FIN-APP : jamais pour un complexe RETIRÉ (l'app s'y rouvrait) — le mode s'efface alors.
+  const rouvrir = rouvrirSurLeComplexe(complexe);
   useEffect(() => {
-    ecrireModeComplexe(userData?.documentId, true);
-  }, [userData?.documentId]);
-  const { complexeId } = useComplexeChoisi(params?.complexeId);
+    ecrireModeComplexe(userData?.documentId, rouvrir);
+  }, [rouvrir, userData?.documentId]);
   const enAttente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
   const demandes = totalDesPages(enAttente.data) || 0;
 

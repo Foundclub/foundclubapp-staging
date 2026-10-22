@@ -26,9 +26,10 @@ import { carteDeRecherche, complexePublic } from '@/testSupport/temoinReserver';
 
 // La place de la barre d'onglets flottante : useBottomDockLayout tire @react-navigation/stack, que
 // jest ne transforme pas ; doublé, comme dans les témoins de ClubListContent.
+let mockDock = { dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 };
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
 }));
 
 const mockNavigate = jest.fn();
@@ -426,5 +427,27 @@ describe('RESA-CARTE — E-P01 sur ordinateur (planche OR2)', () => {
     expect(ordre()).toEqual([five, padel]);
     await toucherLEpingle('padel-club-valbrune');
     expect(ordre()).toEqual([padel, five]);
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (Pixel 9, écran court) : la carte du complexe touché passait SOUS la barre
+// d'onglets flottante (ses créneaux inatteignables) : posée au bas de la CARTE, qui impose 320 px même quand
+// l'écran en laisse moins. Au téléphone, elle se pose au bas de la ZONE (bornée par l'écran, dessinée sous la
+// barre), à la hauteur de la barre (`sceneBottomInset`).
+describe('RESA-FIN-APP (2) E-P01 — la carte du complexe touché reste au-dessus de la barre', () => {
+  afterEach(() => {
+    mockDock = { dockClearance: 0, floatingActionBottomOffset: 0, sceneBottomInset: 0 };
+  });
+
+  it('posée dans la zone, à la hauteur de la barre (124), pas au bas de la carte', async () => {
+    mockDock = { dockClearance: 112, floatingActionBottomOffset: 126, sceneBottomInset: 124 };
+    const arbre = await monter();
+    await passerEnCarte(arbre);
+    await toucherLEpingle('le-five-de-montrivage');
+    const zone = parRepere(arbre, 'reserver-recherche-zone-carte');
+    const choisie = parRepere(arbre, 'reserver-recherche-carte-choisie');
+    expect(choisie).not.toBeNull();
+    expect(choisie.parent.parent === zone || choisie.parent === zone).toBe(true);
+    expect(Object.assign({}, ...[choisie.props.style].flat()).bottom).toBe(124);
   });
 });

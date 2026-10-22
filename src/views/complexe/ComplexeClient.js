@@ -45,6 +45,7 @@ import {
 } from '@/services/complexe/complexeQueries';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 /** « Jusqu'au » : un jour à venir, dans les 5 ans (la borne du serveur, `BAN_DAYS_MAX`). */
 const CINQ_ANS_EN_MS = 5 * 365 * 24 * 60 * 60 * 1000;
@@ -83,16 +84,28 @@ const nombre = (valeur) => (Number.isFinite(Number(valeur)) ? Number(valeur) : 0
  * réservation, RESA-L3). La liste elle-même : `ComplexeClients`.
  * Paramètres de route : `complexeId` et `joueurId`, ou `reservationId`. Caché par
  * `COMPLEXES_GERANT`.
+ * @param {object} [props] - Les propriétés (seulement dans le volet de la liste, sur ordinateur).
+ * @param {string | null} [props.complexeId] - Le complexe.
+ * @param {boolean} [props.dansUnVolet] - Dans le volet de droite de E-G15.
+ * @param {string | null} [props.joueurId] - Le client.
  * @returns {import('react').ReactElement} L'écran.
  */
-function ComplexeClient() {
+function ComplexeClient({
+  complexeId: complexeDuVolet = null,
+  dansUnVolet = false,
+  joueurId: joueurDuVolet = null,
+} = {}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {ParamsDuClient | undefined} */ (route?.params);
+  // RESA-FIN-APP (20/10) — sur ordinateur, la fiche s'ouvre DANS LE VOLET de droite de la liste
+  // (plan :279, :1007 ; reste de RESA-L5B-2) : ses paramètres viennent alors de la liste.
+  const params = /** @type {ParamsDuClient | undefined} */ (dansUnVolet
+    ? { complexeId: complexeDuVolet || undefined, joueurId: joueurDuVolet || undefined }
+    : route?.params);
   // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
   const { complexeId } = useComplexeChoisi(params?.complexeId);
   // N-12 ne porte que la réservation : le joueur est lu dans sa fiche (rien n'est lu sinon).
@@ -384,7 +397,7 @@ function ComplexeClient() {
                   }]}
                   testID={`client-historique-${reservation.documentId}`}
                 >
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.texte}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>{texteInsecable(ligne.texte)}</Text>
                   <PastillesReservation statut={ligne.etat} />
                 </TouchableOpacity>
               );
@@ -519,12 +532,20 @@ function ComplexeClient() {
     />
   );
 
-  return (
+  const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (dansUnVolet ? (
+    <View style={[Alignments.fill]}>{contenu}</View>
+  ) : (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[12], Spaces.paddingBottom[16], Alignments.fill]}
     >
+      {contenu}
+    </ScreenContainer>
+  ));
+
+  return enveloppe(
+    <>
       <ScrollView
         // Sur ordinateur, une colonne de 720 px au plus, centrée (comme E-G09).
         contentContainerStyle={{
@@ -629,7 +650,7 @@ function ComplexeClient() {
           {boutonsDeLaFeuille('feuille-debannir-confirmer', boutonDebannir)}
         </View>
       </BottomModal>
-    </ScreenContainer>
+    </>,
   );
 }
 

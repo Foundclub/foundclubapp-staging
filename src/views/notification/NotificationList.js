@@ -343,6 +343,18 @@ function NotificationList() {
     }
 
     const notification = item.data;
+    // RESA-FIN-APP (20/10) — la réservation d'un terrain : une annulation (par le complexe, ou par
+    // une fermeture) n'est pas un refus ; la pastille rouge dit ce qui est arrivé (mots de E-P10).
+    const libelleDuRefus = (/** @type {NotificationItem} */ ligne) => {
+      const change = String(/** @type {any} */ (ligne)?.data?.change || '');
+      if (ligne?.type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
+        if (change === 'annulee' || change === 'fermeture') {
+          return t('reserverTerrain.etat.annuleeParLeComplexe', 'Annulée par le complexe');
+        }
+        if (change === 'sans-reponse') return t('reserverTerrain.etat.sansReponse', 'Sans réponse');
+      }
+      return t('collectiviteDemandes.notification.refusee', 'Refusée');
+    };
     // COLL-C3B-BIS (planche 35) : une icône par famille ; acceptée en vert, refusée en rouge.
     const icon = getNotificationIcon(notification.type, notification.data);
     const ton = getNotificationTone(notification.type, notification.data);
@@ -434,7 +446,7 @@ function NotificationList() {
                 ) : null}
                 {ton === 'refus' ? (
                   <Text style={[Fonts.p3Bold, { color: Colors.error500, marginTop: 8 }]}>
-                    {t('collectiviteDemandes.notification.refusee', 'Refusée')}
+                    {libelleDuRefus(notification)}
                   </Text>
                 ) : null}
               </View>

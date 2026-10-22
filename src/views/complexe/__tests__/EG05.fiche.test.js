@@ -32,7 +32,10 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
+  // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).
+  useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useReservationGeree: () => mockFiche,
+  useValiderRecompense: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
@@ -350,3 +353,18 @@ async function appuyer(arbre, libelle) {
     pressable(arbre, libelle).props.onPress();
   });
 }
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : la fiche écrivait « Football à 5 » (le nom de
+// l'activité dans l'app) quand tout le reste dit « Foot à 5 » (plan §1.1, `libelleSport`).
+describe('RESA-FIN-APP (3) E-G05 — le sport s’écrit comme partout ailleurs', () => {
+  it('« Football à 5 » du serveur s’affiche « Foot à 5 »', async () => {
+    const base = fiche();
+    mockFiche = {
+      ...mockFiche,
+      data: fiche({ terrain: { ...base.terrain, sport: { documentId: 'a-five', name: 'Football à 5' } } }),
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Terrain 1 · Foot à 5 · 10 joueurs');
+    expect(lisibles(arbre).some((texte) => texte.includes('Football à 5'))).toBe(false);
+  });
+});

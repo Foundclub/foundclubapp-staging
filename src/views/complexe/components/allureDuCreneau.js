@@ -41,13 +41,18 @@ export const libelleDeLEtat = (t, etat) => {
  * Le style d'un créneau selon son état.
  * @param {Record<string, string>} Colors - Les couleurs du thème.
  * @param {EtatDuCreneau} etat - L'état.
- * @param {string} couleur - La couleur du sport.
  * @returns {import('react-native').ViewStyle} Le style.
  */
-export const styleDuCreneau = (Colors, etat, couleur) => {
+export const styleDuCreneau = (Colors, etat) => {
   switch (etat) {
+    // RESA-FIN-APP (20/10) — la couleur dit la SOURCE, jamais le terrain (plan :118-119 : « App
+    // primary500, Extérieur liseré neutral200 ») : la couleur du terrain (palette du planning de la
+    // Ville, dont l'orange de « Fermé ») faisait mentir la légende (tournée 2). La ligne, ou la
+    // colonne, dit le terrain.
     case 'app':
-      return { backgroundColor: withAlpha(couleur, 0.85), borderColor: couleur };
+      return {
+        backgroundColor: withAlpha(Colors.primary500, 0.85), borderColor: Colors.primary500,
+      };
     case 'attente':
       return {
         backgroundColor: 'transparent',
@@ -60,7 +65,9 @@ export const styleDuCreneau = (Colors, etat, couleur) => {
         borderColor: withAlpha(Colors.primary200, 0.4),
       };
     case 'exterieur':
-      return { backgroundColor: withAlpha(couleur, 0.3), borderColor: couleur };
+      return {
+        backgroundColor: withAlpha(Colors.neutral200, 0.18), borderColor: Colors.neutral200,
+      };
     case 'ferme':
       return {
         backgroundColor: withAlpha(Colors.warning500, 0.2),

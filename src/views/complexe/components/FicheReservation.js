@@ -19,7 +19,7 @@ import {
   telephoneLisible,
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
-import { formatEuros } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -38,12 +38,15 @@ import {
   useAnnulerReservation,
   useComplexeGere,
   useDeciderDemande,
+  useFideliteDuComplexe,
   useMarquerNonHonoree,
   useModifierExterieur,
   useReservationGeree,
+  useValiderRecompense,
 } from '@/services/complexe/complexeQueries';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 /**
  * E-G05 — LA FICHE D'UNE RÉSERVATION, CÔTÉ GÉRANT — RESA-L5A2 (14/10/2026), planche EG05 : l'écran
@@ -88,10 +91,21 @@ function FicheReservation({
   const annulerMarquage = useAnnulerNonHonoree();
   // Le seuil vit sous `rules` dans la lecture du gérant (`toManagedView`, RESA-L1A).
   const seuil = useComplexeGere(complexeId).data?.rules?.autoBanNoShows;
-  /** @typedef {'' | 'annuler' | 'nom' | 'nonHonoree' | 'refuser' | 'supprimer'} FeuilleDeLaFiche */
+  // RESA-FIN-APP (20/10) — « Valider la partie offerte » depuis la fiche (plan E-G05 :542-551,
+  // reste de RESA-L5B-2) : la récompense du RÉSERVEUR se lit dans la fidélité du complexe (liste
+  // `aValider`, RESA-L4), comme la fiche client lit la sienne dans la liste des clients.
+  const fidelite = useFideliteDuComplexe(complexeId);
+  const valider = useValiderRecompense();
+  /**
+   * @typedef {'' | 'annuler' | 'nom' | 'nonHonoree' | 'refuser' | 'supprimer' | 'valider'}
+   *   FeuilleDeLaFiche
+   */
   const [feuille, setFeuille] = useState(/** @type {FeuilleDeLaFiche} */ (''));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflit, setConflit] = useState('');
+  // RESA-FIN-APP — une demande que le serveur dit déjà traitée ou EXPIRÉE (409 d'état) : plus aucun
+  // geste ne passe ; la fiche se relit et ne propose plus ni « Accepter » ni « Refuser » (tournée 2).
+  const [close, setClose] = useState(false);
   const [message, setMessage] = useState('');
   const [nom, setNom] = useState('');
 
@@ -206,6 +220,10 @@ function FicheReservation({
       ));
     } catch (erreur) {
       setConflit(messageDeRefusResa(t, erreur, repli));
+      if (getServerErrorCode(erreur) === 'COMPLEXE_RESERVATION_STATE') {
+        setClose(true);
+        lecture.refetch?.();
+      }
     }
   };
 
@@ -222,7 +240,8 @@ function FicheReservation({
   }
   const ligneTerrain = [
     String(r.terrain?.name || ''),
-    String(r.terrain?.sport?.name || ''),
+    // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1), plus « Football à 5 ».
+    libelleSport(r.terrain?.sport),
     r.players ? t('complexeReservations.fiche.joueurs', '{{nombre}} joueurs', {
       nombre: r.players, ...SANS_ECHAPPEMENT,
     }) : '',
@@ -241,6 +260,11 @@ function FicheReservation({
       : '',
     nonHonoreesLisibles(t, r.booker?.noShowsHere, seuil),
   ].filter(Boolean).join(' · ');
+  const recompense = !exterieur && r.booker?.documentId
+    ? (fidelite.data?.aValider || []).find((/** @type {any} */ ligne) => (
+      ligne?.joueur?.documentId === r.booker.documentId
+    )) || null
+    : null;
 
   // ── « Qui » ────────────────────────────────────────────────────────────────────────────
   const qui = exterieur ? (
@@ -290,6 +314,13 @@ function FicheReservation({
           {chiffresDuReserveur ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>{chiffresDuReserveur}</Text>
           ) : null}
+          {recompense ? (
+            <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+              {t('complexeReservations.fiche.recompense', 'Récompense disponible : {{recompense}}', {
+                recompense: String(fidelite.data?.programme?.reward || ''), ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
         </View>
       </View>
       {r.booker?.phone ? (
@@ -328,6 +359,8 @@ function FicheReservation({
         )}
       </Text>
     );
+  } else if (enAttente && close) {
+    pied = null;
   } else if (enAttente) {
     pied = (
       <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
@@ -400,7 +433,7 @@ function FicheReservation({
           icon="flag"
           iconPosition="before"
           onPress={() => ouvrir('nonHonoree')}
-          title={t('complexeReservations.nonHonoree.marquerLaReservation', 'Marquer non honorée')}
+          title={texteInsecable(t('complexeReservations.nonHonoree.marquerLaReservation', 'Marquer non honorée'))}
           variant="Secondary"
         />
       </View>
@@ -482,6 +515,18 @@ function FicheReservation({
           </TouchableOpacity>
         ) : null}
       </ScrollView>
+      {recompense ? (
+        <View testID="fiche-valider-recompense">
+          <Button
+            onPress={() => ouvrir('valider')}
+            title={texteInsecable(t(
+              'complexeReservations.fiche.validerRecompense',
+              'Valider la partie offerte',
+            ))}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
       {pied}
 
       <FeuilleMotif
@@ -628,6 +673,40 @@ function FicheReservation({
           <Button
             onPress={fermerLaFeuille}
             title={t('complexeReservations.fiche.garder', 'Garder')}
+            variant="Ghost"
+          />
+        </View>
+      </BottomModal>
+      <BottomModal
+        close={fermerLaFeuille}
+        isVisible={feuille === 'valider'}
+        webPresentation="dialog"
+      >
+        <View style={{ gap: 16 }}>
+          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('complexeFidelite.valider.titre', 'Valider la partie offerte de {{nom}} ?', options)}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('complexeFidelite.valider.dit', 'Son compteur repart à 0.')}
+          </Text>
+          {erreurFeuille ? (
+            <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>
+              {erreurFeuille}
+            </Text>
+          ) : null}
+          <View testID="fiche-valider-confirmer">
+            <Button
+              isLoading={Boolean(valider.isPending)}
+              onPress={() => depuisLaFeuille(
+                () => valider.mutateAsync({ complexeId, joueurId: r.booker?.documentId }),
+                t('complexeFidelite.listes.validee', '{{nom}} : validée.', options),
+              )}
+              title={t('complexeFidelite.listes.valider', 'Valider')}
+            />
+          </View>
+          <Button
+            onPress={fermerLaFeuille}
+            title={t('complexeReservations.feuille.annuler', 'Annuler')}
             variant="Ghost"
           />
         </View>

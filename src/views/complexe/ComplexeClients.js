@@ -17,10 +17,14 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ComplexeClient from '@/views/complexe/ComplexeClient';
+import DeuxVolets from '@/views/complexe/components/DeuxVolets';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useClientsDuComplexe, useComplexeChoisi } from '@/services/complexe/complexeQueries';
+
+import { useIsDesktop } from '@/responsive';
 
 /** @typedef {'bannis' | 'habitues' | 'tous'} OngletDesClients */
 
@@ -51,6 +55,10 @@ function ComplexeClients() {
   const recherche = saisie.trim();
   const lecture = useClientsDuComplexe(complexeId, { onglet, recherche });
   const clients = lignesDesPages(lecture.data);
+  // RESA-FIN-APP (20/10) — sur ordinateur, la fiche d'un client s'ouvre dans le VOLET de droite, la
+  // liste reste à gauche (plan :279, :1007 ; reste de RESA-L5B-2), comme E-G04 et E-G06.
+  const surOrdinateur = useIsDesktop();
+  const [choisi, setChoisi] = useState(/** @type {string | null} */ (null));
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -74,9 +82,11 @@ function ComplexeClients() {
         accessibilityLabel={[nom, resume, banni].filter(Boolean).join(', ')}
         accessibilityRole="button"
         key={client.documentId}
-        onPress={() => navigation.navigate(RouteNames.ComplexeClient, {
-          complexeId, joueurId: client.documentId,
-        })}
+        onPress={() => (surOrdinateur
+          ? setChoisi(client.documentId)
+          : navigation.navigate(RouteNames.ComplexeClient, {
+            complexeId, joueurId: client.documentId,
+          }))}
         style={[carte, Alignments.row, Alignments.alignCenter, Spaces.padding[12], {
           gap: 12, minHeight: 64,
         }]}
@@ -158,7 +168,13 @@ function ComplexeClients() {
     );
   } else if (!clients.length && recherche) {
     corps = (
-      <View style={[carte, Spaces.padding[16]]} testID="clients-recherche-vide">
+      // RESA-FIN-APP : la vue du squelette (« busy ») est réutilisée par ce bloc, et Android ne remet
+      // pas l'état à zéro quand la propriété disparaît : le bloc le DIT (lu « occupé », tournées 1-2).
+      <View
+        accessibilityState={{ busy: false }}
+        style={[carte, Spaces.padding[16]]}
+        testID="clients-recherche-vide"
+      >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
           {t(
             'complexeClients.liste.rechercheVide',
@@ -198,57 +214,70 @@ function ComplexeClients() {
     );
   }
 
+  // Le volet ouvre le client touché, sinon le premier de la liste (comme E-G04).
+  const joueurDuVolet = choisi || clients[0]?.documentId || null;
+  const volet = surOrdinateur && joueurDuVolet ? (
+    <ComplexeClient
+      complexeId={complexeId}
+      dansUnVolet
+      joueurId={joueurDuVolet}
+      key={joueurDuVolet}
+    />
+  ) : null;
+
   return (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
-      <ScrollView
+      <DeuxVolets actif={surOrdinateur} droite={volet}>
+        <ScrollView
         // Sur ordinateur, une colonne de 720 px au plus, centrée (comme la fiche).
-        contentContainerStyle={{
-          alignSelf: 'center',
-          gap: 16,
-          maxWidth: 720,
-          paddingBottom: 24,
-          paddingTop: 12,
-          width: '100%',
-        }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={(
-          <RefreshControl
-            colors={[Colors.primary500]}
-            onRefresh={() => lecture.refetch?.()}
-            refreshing={Boolean(lecture.isRefetching)}
-            tintColor={Colors.primary500}
-          />
+          contentContainerStyle={{
+            alignSelf: 'center',
+            gap: 16,
+            maxWidth: 720,
+            paddingBottom: 24,
+            paddingTop: 12,
+            width: '100%',
+          }}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={(
+            <RefreshControl
+              colors={[Colors.primary500]}
+              onRefresh={() => lecture.refetch?.()}
+              refreshing={Boolean(lecture.isRefetching)}
+              tintColor={Colors.primary500}
+            />
         )}
-        showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
-      >
-        <Text
-          accessibilityRole="header"
-          style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
         >
-          {t('complexeClients.liste.titre', 'Clients').toUpperCase()}
-        </Text>
-        <SearchBar
-          onChangeText={setSaisie}
-          placeholder={t('complexeClients.liste.chercher', 'Chercher un client')}
-          value={saisie}
-          withCalendar={false}
-          withFilter={false}
-        />
-        <SegmentedControl
-          onChange={(valeur) => setOnglet(/** @type {OngletDesClients} */ (valeur))}
-          options={ONGLETS_CLIENTS.map((cle) => ({
-            label: libelles[cle],
-            value: cle,
-          }))}
-          value={onglet}
-        />
-        {corps}
-      </ScrollView>
+          <Text
+            accessibilityRole="header"
+            style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+          >
+            {t('complexeClients.liste.titre', 'Clients').toUpperCase()}
+          </Text>
+          <SearchBar
+            onChangeText={setSaisie}
+            placeholder={t('complexeClients.liste.chercher', 'Chercher un client')}
+            value={saisie}
+            withCalendar={false}
+            withFilter={false}
+          />
+          <SegmentedControl
+            onChange={(valeur) => setOnglet(/** @type {OngletDesClients} */ (valeur))}
+            options={ONGLETS_CLIENTS.map((cle) => ({
+              label: libelles[cle],
+              value: cle,
+            }))}
+            value={onglet}
+          />
+          {corps}
+        </ScrollView>
+      </DeuxVolets>
     </ScreenContainer>
   );
 }

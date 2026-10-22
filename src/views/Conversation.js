@@ -58,6 +58,8 @@ import {
   estUnCanalDeComplexe,
   estUnTeteATete,
   extraitDuMessageCite,
+  nomDansLeCanal,
+  pageDuCanal,
   placeDansLeGroupe,
   reserveDeLHeure,
   sousTitreDesMembres,
@@ -3277,6 +3279,13 @@ function Conversation({ navigation, route }) {
   // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
     if (!isGroupChat) return;
+    // RESA-FIN-APP (22/10) — le canal d'un complexe, vu d'un membre : son en-tête ouvre la page du
+    // complexe (E-P12 ⇒ E-P02) ; le gérant garde les infos du groupe.
+    const slugDuComplexe = pageDuCanal(chatData);
+    if (slugDuComplexe && !isGroupAdmin) {
+      navigation.navigate(RouteNames.ReserverComplexe, { slug: slugDuComplexe });
+      return;
+    }
     setIsMenuVisible(false);
     setIsGroupManagementVisible(true);
   };
@@ -4204,7 +4213,9 @@ function Conversation({ navigation, route }) {
           _id: senderEntityId,
           avatar: avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
-          name: filDeLaVille.nomDeLExpediteur(msg) || getAnonymizedName(msg.sender),
+          name: filDeLaVille.nomDeLExpediteur(msg)
+            || nomDansLeCanal(chatData)
+            || getAnonymizedName(msg.sender),
           // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil
           // (contrat 1B §2.3 : `sender.staffRole`, repli `chat.staffRoles`). Absente = rien.
           staffRole: msg.sender?.staffRole || chatData?.staffRoles?.[senderEntityId] || undefined,
@@ -4214,7 +4225,7 @@ function Conversation({ navigation, route }) {
     return [...acc, ...formattedMessages];
   }, /** @type {any[]} */ ([])) : []), blockedUserIds), [
     blockedUserIds,
-    chatData?.staffRoles,
+    chatData,
     filDeLaVille,
     messagesPages,
     getAnonymizedName,

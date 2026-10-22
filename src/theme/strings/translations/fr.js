@@ -7158,6 +7158,7 @@ export default {
       promotionDit: 'Une place de réservation à un prix que tu fixes.',
       titre: 'Le texte',
     },
+    texteDuPartage: 'Réserve ton terrain chez {{nom}} sur FoundClub.',
     titre: 'Ton affiche complexe est prête',
   },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
@@ -7407,10 +7408,14 @@ export default {
       aujourdhui: 'Aujourd’hui · {{jour}}',
       creerAffiche: 'Créer une affiche',
       demandes: 'demandes en attente',
+      demandes_one: 'demande en attente',
+      demandes_other: 'demandes en attente',
       ecrireFoundClub: 'Écrire à FoundClub',
       enLigne: '{{nom}} est en ligne. Ajoute ton premier terrain.',
       erreur: 'Impossible de charger ta journée.',
       favoris: 'nouveaux favoris cette semaine',
+      favoris_one: 'nouveau favori cette semaine',
+      favoris_other: 'nouveaux favoris cette semaine',
       occupation: 'd’occupation cette semaine',
       ouvrirCreneaux: 'Ouvrir des créneaux',
       premierTerrain: 'Ajoute ton premier terrain pour recevoir des réservations.',
@@ -7418,6 +7423,8 @@ export default {
       reessayer: 'Réessayer',
       refus: 'Tu ne gères plus ce complexe.',
       reservationsDuJour: 'réservations aujourd’hui',
+      reservationsDuJour_one: 'réservation aujourd’hui',
+      reservationsDuJour_other: 'réservations aujourd’hui',
       revenirJoueur: 'Revenir en mode joueur',
       sansCreneaux: '{{terrain}} n’a pas encore de créneaux.',
       suspendu: 'Ton complexe est suspendu par FoundClub : il n’apparaît plus dans l’app.',
@@ -7764,6 +7771,7 @@ export default {
     partenaires: {
       aide: 'Il apparaîtra sur ta page et sur ta carte dans la recherche.',
       lien: 'Lien vers le site du partenaire (facultatif)',
+      lienExemple: 'https://www.exemple.fr',
       supprimer: 'Supprimer {{nom}}',
     },
     pasVerifie: '« Vérifié » s’ajoutera quand FoundClub l’aura vérifié.',
@@ -7862,6 +7870,8 @@ export default {
       touchees_one: '{{count}} réservation est touchée.',
       touchees_other: '{{count}} réservations sont touchées.',
       toucheesDit: 'Elles seront annulées et les joueurs prévenus.',
+      toucheesDit_one: 'Elle sera annulée et les joueurs prévenus.',
+      toucheesDit_other: 'Elles seront annulées et les joueurs prévenus.',
       tous: 'Tous',
       travaux: 'Travaux',
       vide: 'Aucune fermeture prévue.',
@@ -7892,6 +7902,7 @@ export default {
       prixJoueur: '{{montant}} par joueur, à régler sur place',
       quandOu: 'Quand, où',
       qui: 'Qui',
+      recompense: 'Récompense disponible : {{recompense}}',
       reservationsIci_one: '{{count}} réservation ici',
       reservationsIci_other: '{{count}} réservations ici',
       seraPrevenu: '{{nom}} sera prévenu.',
@@ -7900,6 +7911,7 @@ export default {
       supprimerDit: 'Le créneau redevient libre.',
       supprimerQuestion: 'Supprimer la réservation de {{nom}} ?',
       titre: 'Réservation',
+      validerRecompense: 'Valider la partie offerte',
       voirClientIndice: 'Ouvre sa fiche client',
       voirPlanning: 'Voir dans le planning',
     },
@@ -8022,6 +8034,7 @@ export default {
       erreur: 'Le terrain n’a pas pu être retiré.',
       fait_one: '{{nom}} est retiré. {{count}} réservation annulée, le joueur est prévenu.',
       fait_other: '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',
+      faitSansReservation: '{{nom}} est retiré. Aucune réservation à annuler.',
       retirer: 'Retirer',
       titre: 'Retirer {{nom}} ?',
     },
@@ -17270,7 +17283,7 @@ export default {
   playerMode: {
     active: {
       // eslint-disable-next-line max-len
-      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits de {{staff}} sont intacts.",
+      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits {{staffDe}} sont intacts.",
       exit: 'Revenir en mode {{staff}}',
       title: 'Mode joueur',
     },
@@ -17288,7 +17301,7 @@ export default {
     parent: {
       and: 'et',
       back: 'Revenir en mode parent',
-      description: 'Tu vois l’app comme un parent. Tes droits de {{staff}} sont intacts.',
+      description: 'Tu vois l’app comme un parent. Tes droits {{staffDe}} sont intacts.',
       enter: 'Basculer en mode parent',
       title: 'Mode parent',
       waiting_one: '{{prenoms}} t’attend dans le mode parent.',
@@ -17318,6 +17331,11 @@ export default {
     staff: {
       coach: 'entraîneur',
       president: 'dirigeant',
+    },
+    // RESA-FIN-APP : « Tes droits d’entraîneur » (l'élision manquait : « de entraîneur »).
+    staffDe: {
+      coach: 'd’entraîneur',
+      president: 'de dirigeant',
     },
   },
   pollCreationModal: {
@@ -18731,6 +18749,8 @@ export default {
       favoris: 'Prévenir les joueurs qui ont ce complexe en favori',
       favorisAge: 'Seuls ceux qui ont l’âge minimum du complexe ({{age}} ans) sont prévenus.',
       favorisAgeSansChiffre: 'Seuls ceux qui ont l’âge minimum du complexe sont prévenus.',
+      favorisPrevenus_one: '{{count}} favori prévenu',
+      favorisPrevenus_other: '{{count}} favoris prévenus',
       fermee: 'Fermée',
       fermeeTexte: 'Cette annonce est fermée.',
       fermer: 'Fermer l’annonce',
@@ -18852,6 +18872,7 @@ export default {
       dateDeNaissance: 'Ajoute ta date de naissance pour réserver.',
       dateDeNaissanceTexte: 'Chaque complexe fixe un âge minimum.',
       delaiAnnulation: 'Le délai est passé : appelle le complexe.',
+      demandeRetiree: 'Ta demande est retirée',
       equipe: 'Seul un encadrant majeur réserve pour son équipe.',
       ferme: 'Ce créneau est fermé par le complexe.',
       fermeture: 'Le complexe sera fermé',
@@ -18970,6 +18991,7 @@ export default {
       annulerTexte: 'Le complexe sera prévenu. C’est gratuit jusqu’au {{jour}} à {{heure}}.',
       arreterLaCollecte: 'Arrêter la collecte',
       arreterQuestion: 'Arrêter la collecte du {{quand}} ?',
+      confirmeeLaVeille: 'Confirmée la veille, le {{jour}} à {{heure}}',
       dateLimite: 'Date limite : {{echeance}} · le créneau reste libre jusque-là',
       discussion: 'Discussion du groupe',
       ecrireAuComplexe: 'Écrire au complexe',
@@ -18981,6 +19003,7 @@ export default {
       inscritsPrevenus_one: 'L’inscrit sera prévenu.',
       inscritsPrevenus_other: 'Les {{count}} inscrits seront prévenus.',
       jourAHeure: '{{jour}} à {{heure}}',
+      marqueeNonHonoree: 'Marquée non honorée par le complexe le {{jour}}',
       ouiAnnuler: 'Oui, annuler',
       ouiArreter: 'Oui, arrêter',
       ouiRetirer: 'Oui, retirer',
@@ -19156,6 +19179,7 @@ export default {
     },
     resultat: {
       auNomDe: 'au nom de {{nom}}',
+      canalRejoint: 'Tu as rejoint le canal de {{complexe}}.',
       collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
       collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
         + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
@@ -19557,9 +19581,8 @@ export default {
       tap: 'Touche un repère',
       updating: 'Mise à jour des repères...',
       visible: '{{total}} repères visibles',
-      // RESA-FIN-SITE (21/10/2026) : le singulier (« 1 repères visibles », tournée du site du
-      // 22/10).
-      visibleUn: '1 repère visible',
+      visible_one: '{{count}} repère visible',
+      visible_other: '{{count}} repères visibles',
       zoomToSeeAll: 'Zoome pour tout voir',
     },
     recenter: 'Recentrer',

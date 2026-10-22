@@ -313,10 +313,11 @@ function ComplexeFermetures() {
           })}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100]}>
-          {t(
-            'complexeReservations.fermetures.toucheesDit',
-            'Elles seront annulées et les joueurs prévenus.',
-          )}
+          {t('complexeReservations.fermetures.toucheesDit', {
+            count: touchees.count,
+            defaultValue_one: 'Elle sera annulée et les joueurs prévenus.',
+            defaultValue_other: 'Elles seront annulées et les joueurs prévenus.',
+          })}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"

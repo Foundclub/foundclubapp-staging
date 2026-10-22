@@ -127,6 +127,7 @@ function BlocCollecte({
               onIncrement={() => onChange({
                 ...collecte, quorum: Math.min(Math.max(REQUIS_MIN, joueurs), collecte.quorum + 1),
               })}
+              tone="tunnel"
               value={collecte.quorum}
             />
           </View>

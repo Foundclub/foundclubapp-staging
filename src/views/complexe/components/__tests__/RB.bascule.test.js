@@ -383,3 +383,24 @@ describe('RESA-L5A1 RB — l’interrupteur COMPLEXES_GERANT cache tout', () => 
     expect(bandeau).toBeGreaterThan(bascule);
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (RB-01) : un complexe RETIRÉ par FoundClub restait proposé dans la bascule
+// de l'accueil (« Mode complexe » menait à « Ce complexe a été retiré »). Tranché : un complexe retiré sort de la
+// bascule (le serveur ne le rendra plus, RESA-FIN-SERVEUR) ; côté app, rien ne doit l'ouvrir — même si une
+// ancienne réponse le contient encore.
+describe('RESA-FIN-APP (5) RB — un complexe retiré n’est plus proposé', () => {
+  it('seul complexe, retiré : le bandeau du mode joueur, comme sans complexe', async () => {
+    mockMes = { data: [{ ...COMPLEXE_FIVE, status: 'retire' }], isLoading: false };
+    const arbre = await monter(
+      <BasculeComplexe
+        accountRoleKey="coach"
+        canUsePlayerMode
+        compteId="u-1"
+        displayMode={null}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(parRepere(arbre, 'player-mode-offer')).not.toBeNull();
+    expect(textes(arbre)).not.toContain('Complexe');
+  });
+});

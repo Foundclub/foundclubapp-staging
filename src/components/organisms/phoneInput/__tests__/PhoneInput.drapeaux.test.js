@@ -98,3 +98,16 @@ describe('PhoneInput — l indicatif sans drapeau en emoji', () => {
     expect(dernierSelect().options.find((option) => option.value === '+33').label).toBe('France');
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 (E-G01, téléphone Android) : le bouton fermé de l'indicatif
+// affichait « FR +… ». Depuis SANS-EMOJI (01/10) il écrit « FR +33 » (6 signes, ~53 px en Montserrat 16) dans une
+// boîte de 72 px dont 24 px de marges (AutocompleteSelect) : 48 px, le texte est coupé d'une ellipse. Le
+// composant est PARTAGÉ (connexion, « Ajouter un entraîneur », écrans des complexes) : la boîte prend la largeur
+// du site (96 px), assez pour « FR +33 » comme pour « GB +44 ».
+describe('RESA-FIN-APP (3) — l’indicatif fermé « FR +33 » tient dans sa boîte', () => {
+  it('au moins 64 px de texte une fois les marges ôtées', () => {
+    monter();
+    const largeur = Number(dernierSelect().wrapperStyle?.width);
+    expect(largeur - 24).toBeGreaterThanOrEqual(64);
+  });
+});

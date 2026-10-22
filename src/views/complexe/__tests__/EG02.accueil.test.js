@@ -214,10 +214,12 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
       'AUJOURD’HUI · MERCREDI 14 OCTOBRE',
       'Terrain 1',
       'Padel A',
-      'réservations aujourd’hui',
+      // RESA-FIN-APP (tournées 1 et 2 : « 1 demandes en attente ») : les libellés s’accordent au nombre
+      // (ici 0 : singulier en français, comme i18next).
+      'réservation aujourd’hui',
       'd’occupation cette semaine',
-      'demandes en attente',
-      'nouveaux favoris cette semaine',
+      'demande en attente',
+      'nouveau favori cette semaine',
       'Prochaines réservations',
       'Aucune réservation à venir. Fais connaître ta page.',
       'Gérer',
@@ -232,7 +234,7 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
   it('sans réservation, les chiffres sont à 0', async () => {
     const arbre = await monter();
     expect(parRepere(arbre, 'complexe-accueil-chiffre-reservations')?.props.accessibilityLabel)
-      .toBe('0 réservations aujourd’hui');
+      .toBe('0 réservation aujourd’hui');
     expect(parRepere(arbre, 'complexe-accueil-chiffre-occupation')?.props.accessibilityLabel)
       .toBe('0 % d’occupation cette semaine');
   });
@@ -524,7 +526,7 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     const libelle = (/** @type {string} */ cle) => (
       parRepere(arbre, `complexe-accueil-chiffre-${cle}`)?.props.accessibilityLabel
     );
-    expect(libelle('reservations')).toBe('1 réservations aujourd’hui');
+    expect(libelle('reservations')).toBe('1 réservation aujourd’hui');
     expect(libelle('occupation')).toBe('75 % d’occupation cette semaine');
     expect(libelle('demandes')).toBe('2 demandes en attente');
     await act(async () => {
@@ -564,5 +566,16 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservations, {
       complexeId: 'cx-five', vue: 'passees',
     });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : « 1 demandes en attente », « 0 demandes en attente ». Les
+// quatre chiffres de l'accueil s'accordent au nombre (i18next : 0 et 1 au singulier en français).
+describe('RESA-FIN-APP (3) E-G02 — « 1 demande en attente », « 2 demandes en attente »', () => {
+  it('le libellé de chaque chiffre suit son nombre', async () => {
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining(['demande en attente', 'réservation aujourd’hui']));
+    expect(lus).not.toContain('demandes en attente');
   });
 });

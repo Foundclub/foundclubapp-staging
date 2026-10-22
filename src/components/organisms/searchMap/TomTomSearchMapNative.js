@@ -306,7 +306,9 @@ function TomTomSearchMapNative({
   const [mapStatus, setMapStatus] = useState(
     /** @type {'loading' | 'ready' | 'error'} */ ('loading'),
   );
-  const [diagnosticTrail, setDiagnosticTrail] = useState([]);
+  // RESA-FIN-APP : la trace reste (journal, témoins) ; elle n'est plus ÉCRITE à l'écran
+  // (« Diagnostic: focus_results_single » vu par un joueur, tournée 1 ; tranché : jamais montré).
+  const [, setDiagnosticTrail] = useState([]);
   const [userLocation, setUserLocation] = useState(
     /** @type {{ lat: number; lng: number } | null} */ (null),
   );
@@ -861,8 +863,6 @@ function TomTomSearchMapNative({
     }
   }, [handleMarkerOpen, handleMarkerSelect, logContext, mapId, mapStatus, onRegionChangeComplete]);
 
-  const latestDiagnostic = diagnosticTrail[diagnosticTrail.length - 1] || null;
-
   return (
     <View
       style={[
@@ -943,11 +943,6 @@ function TomTomSearchMapNative({
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {loadingCopy.body}
             </Text>
-            {__DEV__ && latestDiagnostic?.stage ? (
-              <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter]}>
-                {`Diagnostic: ${latestDiagnostic.stage}`}
-              </Text>
-            ) : null}
           </View>
         </View>
       ) : null}
@@ -970,13 +965,6 @@ function TomTomSearchMapNative({
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {getSearchMapProviderErrorMessage(mapErrorReason)}
             </Text>
-            {__DEV__ && latestDiagnostic ? (
-              <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter]}>
-                {`Diagnostic: ${latestDiagnostic.stage || latestDiagnostic.phase || mapErrorReason}${
-                  latestDiagnostic.status ? ` (${latestDiagnostic.status})` : ''
-                }`}
-              </Text>
-            ) : null}
             <View
               style={[
                 Alignments.row,

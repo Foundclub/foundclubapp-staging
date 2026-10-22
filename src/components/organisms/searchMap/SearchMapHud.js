@@ -66,15 +66,13 @@ function SearchMapHud({
   );
 
   let geolocatableLabel = t('searchMapHud.markers.none', 'Aucun repère');
-  if (visibleMarkerCount === 1) {
-    // RESA-FIN-SITE (21/10/2026) : « 1 repère visible », pas « 1 repères visibles ».
-    geolocatableLabel = t('searchMapHud.markers.visibleUn', '1 repère visible');
-  } else if (visibleMarkerCount > 0) {
-    geolocatableLabel = t(
-      'searchMapHud.markers.visible',
-      '{{total}} repères visibles',
-      { total: visibleMarkerCount },
-    );
+  if (visibleMarkerCount > 0) {
+    // RESA-FIN-APP : « 1 repère visible » au singulier (tournée 2 : « 1 repères visibles »).
+    geolocatableLabel = t('searchMapHud.markers.visible', {
+      count: visibleMarkerCount,
+      defaultValue_one: '{{count}} repère visible',
+      defaultValue_other: '{{count}} repères visibles',
+    });
   } else if (safeAvailableCount > 0 && truncated) {
     geolocatableLabel = t('searchMapHud.markers.zoomToSeeAll', 'Zoome pour tout voir');
   } else if (safeAvailableCount > 0 && isLoadingResults) {

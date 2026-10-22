@@ -50,6 +50,7 @@ import {
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import texteInsecable from '@/utils/texteInsecable';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -411,7 +412,7 @@ function ComplexePlanning() {
               {
                 borderRadius: 4, borderWidth: 1, height: 14, width: 22,
               },
-              styleDuCreneau(Colors, etat, Colors.primary500),
+              styleDuCreneau(Colors, etat),
             ]}
           />
           <Text style={[Fonts.p3, Fonts.neutral100]}>{libelleDeLEtat(t, etat)}</Text>
@@ -516,9 +517,9 @@ function ComplexePlanning() {
               testID={`fin-${choix.to}`}
             >
               <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                {t('complexeReservations.planning.jusqua', 'jusqu’à {{heure}}', {
+                {texteInsecable(t('complexeReservations.planning.jusqua', 'jusqu’à {{heure}}', {
                   heure: texteHeure(choix.to), ...SANS_ECHAPPEMENT,
-                })}
+                }))}
               </Text>
             </TouchableOpacity>
           ))}
@@ -650,7 +651,12 @@ function ComplexePlanning() {
           </ScrollView>
         ) : null}
         <SegmentedControl
-          onChange={(valeur) => setVue(/** @type {VueDuPlanning} */ (valeur))}
+          onChange={(valeur) => {
+            // RESA-FIN-APP : le bandeau d'un geste parle de CETTE vue ; il s'efface en changeant
+            // de vue (« Créneau bloqué. » restait affiché, tournées 1 et 2).
+            setMessage('');
+            setVue(/** @type {VueDuPlanning} */ (valeur));
+          }}
           options={[
             { label: t('complexeReservations.planning.jour', 'Jour'), value: 'jour' },
             { label: t('complexeReservations.planning.semaine', 'Semaine'), value: 'semaine' },

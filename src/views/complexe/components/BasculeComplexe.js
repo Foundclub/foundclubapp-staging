@@ -5,6 +5,7 @@ import {
   Platform, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 
+import { complexesOuvrables } from '@/domains/complexe/complexeGerant';
 import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import {
   dansLeMenuDuSite,
@@ -75,7 +76,7 @@ function BasculeComplexe({
   const { width } = useWindowDimensions();
   const [feuilleOuverte, setFeuilleOuverte] = useState(false);
   const mes = useMesComplexes({ enabled: Boolean(compteId) });
-  const complexe = Array.isArray(mes.data) && mes.data.length ? mes.data[0] : null;
+  const complexe = complexesOuvrables(mes.data)[0] || null;
   const positions = positionsDuCompte({
     aDesEnfants: canUseParentMode === true,
     aUnComplexe: Boolean(complexe),

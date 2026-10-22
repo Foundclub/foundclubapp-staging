@@ -43,6 +43,8 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { useIsDesktop } from '@/responsive';
 
 /** @typedef {'a-venir' | 'aujourdhui' | 'passees'} VueDesReservations */
@@ -320,7 +322,7 @@ function ComplexeReservations() {
                   iconPosition="before"
                   onPress={() => ouvrirLeMarquage(ligne)}
                   size="sm"
-                  title={t('complexeReservations.nonHonoree.bouton', 'Non honorée')}
+                  title={texteInsecable(t('complexeReservations.nonHonoree.bouton', 'Non honorée'))}
                   variant="Secondary"
                 />
               </View>
