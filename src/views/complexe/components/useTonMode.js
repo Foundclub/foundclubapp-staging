@@ -8,7 +8,7 @@ import {
   useDisplayModeRequest,
   writeDisplayModeRequest,
 } from '@/domains/auth/playerMode';
-import { complexeChoisi } from '@/domains/complexe/complexeGerant';
+import { complexeChoisi, complexesOuvrables } from '@/domains/complexe/complexeGerant';
 import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import { positionActive, positionsDuCompte } from '@/domains/complexe/tonMode';
 
@@ -60,7 +60,7 @@ export default function useTonMode({
   else if (affichage === 'parent' && roleDuCompte !== 'parent') modeAffiche = 'parent';
 
   const mes = useMesComplexes({ enabled: lu });
-  const complexe = lu ? complexeChoisi(mes.data, complexeId) : null;
+  const complexe = lu ? complexeChoisi(complexesOuvrables(mes.data), complexeId) : null;
   const enfants = useMesEnfantsEnBref({ actif: lu && peutAvoirDesEnfants(roleDuCompte) });
   const prenoms = useMemo(() => enfants.lignes.map((ligne) => ligne.prenom), [enfants.lignes]);
   const positions = positionsDuCompte({

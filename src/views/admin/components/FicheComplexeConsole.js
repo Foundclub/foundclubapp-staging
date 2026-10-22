@@ -352,7 +352,9 @@ function FicheComplexeConsole({ complexeId }) {
 
   const gerants = Array.isArray(fiche.gerants) ? fiche.gerants : [];
   return (
-    <View style={{ gap: 12 }} testID="console-fiche">
+    // RESA-FIN-APP : même vue que le squelette (« busy ») ; Android garde l'état si la propriété
+    // disparaît (fiche lue « occupée », tournée 1) : elle le dit.
+    <View accessibilityState={{ busy: false }} style={{ gap: 12 }} testID="console-fiche">
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
         <LogoComplexe logo={complexe.logo || null} nom={nom} taille={48} />
         <View style={{ flex: 1, gap: 2 }}>

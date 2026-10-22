@@ -237,6 +237,8 @@ function AdminComplexeList() {
   } else if (!lignes.length) {
     corps = (
       <View
+        // RESA-FIN-APP : la vue du squelette (« busy ») réutilisée ; l'état se DIT (tournée 2).
+        accessibilityState={{ busy: false }}
         style={[ApplicationStyle.borderRadius16, Spaces.padding[16], carte]}
         testID="console-vide"
       >

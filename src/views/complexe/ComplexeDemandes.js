@@ -38,6 +38,8 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 
+import { getServerErrorCode } from '@/utils/errors/displayError';
+
 import { useIsDesktop } from '@/responsive';
 
 const ATTENTE = 'attente';
@@ -82,6 +84,7 @@ function ComplexeDemandes() {
   const [refus, setRefus] = useState(/** @type {any} */ (null));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflits, setConflits] = useState(/** @type {Record<string, string>} */ ({}));
+  const [closes, setCloses] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [message, setMessage] = useState('');
   const [enCours, setEnCours] = useState('');
   const surOrdinateur = useIsDesktop();
@@ -133,6 +136,12 @@ function ComplexeDemandes() {
     } catch (erreur) {
       const texte = messageDeRefusResa(t, erreur, repli);
       setConflits((avant) => ({ ...avant, [demande.documentId]: texte }));
+      // RESA-FIN-APP (20/10) — déjà traitée ou EXPIRÉE (409 d'état) : aucun geste ne passe plus
+      // (« Refuser avec un mot » échouait aussi, tournée 2) ; la liste se relit.
+      if (getServerErrorCode(erreur) === 'COMPLEXE_RESERVATION_STATE') {
+        setCloses((avant) => ({ ...avant, [demande.documentId]: true }));
+        lecture.refetch?.();
+      }
     } finally {
       setEnCours('');
     }
@@ -189,7 +198,7 @@ function ComplexeDemandes() {
           <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>{echeance}</Text>
         ) : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
-        {surOrdinateur ? null : (
+        {surOrdinateur || closes[demande.documentId] ? null : (
           <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
             <View
               style={{ flexBasis: 120, flexGrow: 1 }}

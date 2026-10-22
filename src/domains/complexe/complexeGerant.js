@@ -227,6 +227,16 @@ export const CASES_GERER = Object.freeze([
 ]);
 
 /**
+ * RESA-FIN-APP (20/10/2026) — les complexes que la bascule peut proposer : jamais un complexe RETIRÉ
+ * (tranché : il sort de la bascule ; le serveur ne le rendra plus, RESA-FIN-SERVEUR — ici, même si
+ * une ancienne réponse le contient encore). « Mon compte » garde son entrée (« Écrire à FoundClub »).
+ * @param {unknown} liste - « Mes complexes ».
+ * @returns {any[]} Les complexes proposables.
+ */
+export const complexesOuvrables = (liste) => (Array.isArray(liste) ? liste : [])
+  .filter((complexe) => complexe?.status !== 'retire');
+
+/**
  * Le complexe que l'accueil montre : celui de l'adresse s'il est parmi ceux du compte (sinon
  * aucun : l'accès est retiré), le premier du compte sans adresse (un complexe par compte en V1).
  * @param {unknown} liste - « Mes complexes ».

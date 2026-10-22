@@ -168,7 +168,13 @@ function ComplexeClients() {
     );
   } else if (!clients.length && recherche) {
     corps = (
-      <View style={[carte, Spaces.padding[16]]} testID="clients-recherche-vide">
+      // RESA-FIN-APP : la vue du squelette (« busy ») est réutilisée par ce bloc, et Android ne remet
+      // pas l'état à zéro quand la propriété disparaît : le bloc le DIT (lu « occupé », tournées 1-2).
+      <View
+        accessibilityState={{ busy: false }}
+        style={[carte, Spaces.padding[16]]}
+        testID="clients-recherche-vide"
+      >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
           {t(
             'complexeClients.liste.rechercheVide',

@@ -651,7 +651,12 @@ function ComplexePlanning() {
           </ScrollView>
         ) : null}
         <SegmentedControl
-          onChange={(valeur) => setVue(/** @type {VueDuPlanning} */ (valeur))}
+          onChange={(valeur) => {
+            // RESA-FIN-APP : le bandeau d'un geste parle de CETTE vue ; il s'efface en changeant
+            // de vue (« Créneau bloqué. » restait affiché, tournées 1 et 2).
+            setMessage('');
+            setVue(/** @type {VueDuPlanning} */ (valeur));
+          }}
           options={[
             { label: t('complexeReservations.planning.jour', 'Jour'), value: 'jour' },
             { label: t('complexeReservations.planning.semaine', 'Semaine'), value: 'semaine' },
