@@ -82,8 +82,10 @@ function ComplexeCanal() {
   const affiches = cherche
     ? membres.filter((/** @type {any} */ membre) => comparable(membre?.nom).includes(cherche))
     : membres;
+  // RESA-FIN-SITE (21/10/2026) : `espace: 'complexe'` — sur le site, la conversation garde le menu du
+  // complexe (AppShell, menuDuComplexe.ts) ; ailleurs, le paramètre ne change rien.
   const ecrire = () => {
-    if (canal?.chatId) navigation.navigate(RouteNames.Conversation, { chatId: canal.chatId });
+    if (canal?.chatId) navigation.navigate(RouteNames.Conversation, { chatId: canal.chatId, espace: 'complexe' });
   };
 
   const origineDe = (/** @type {any} */ membre) => {
