@@ -6436,6 +6436,8 @@ export default {
       modifie: 'Créneau modifié',
       modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
       pourLeClub: 'Pour {{club}}',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une seule étape.
+      pourQui: 'Pour qui ?',
       recapClub: 'Club · équipe',
       recapHeures: 'Jour et heures',
       relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',

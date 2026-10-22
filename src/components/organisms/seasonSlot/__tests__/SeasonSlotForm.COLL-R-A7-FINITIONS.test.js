@@ -197,10 +197,10 @@ const appuyerSur = async (/** @type {any} */ arbre, /** @type {string} */ libell
   expect(cible).toBeDefined();
   await appeler(() => cible.props.onPress());
 };
-// Depuis une heure libre du planning : 3 étapes (club, équipe, récapitulatif).
+// Depuis une heure libre du planning : 2 étapes (« Pour qui ? », récapitulatif) ; 3 avant A7-UX-2
+// (22/10, Adel « P2 oui » : le club et l'équipe sur une seule étape).
 const jusquAuRecap = async (/** @type {any} */ arbre) => {
   await choisir(arbre, 'Montrivage Basket');
-  await avancer(arbre);
   await avancer(arbre);
   expect(tunnel(arbre).title).toBe('Récapitulatif');
 };
@@ -247,8 +247,7 @@ describe('COLL-R-A7-FINITIONS 1 — la bulle de confirmation au retour sur l’�
   test('la fermeture du panneau large confirme aussi le créneau attribué', async () => {
     const arbre = await monter({ ...DEPUIS_LE_PLANNING, pleinEcran: false });
     await choisir(arbre, 'Montrivage Basket');
-    await appuyerSur(arbre, 'Suivant');
-    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Suivant'); // A7-UX-2 : club et équipe sur une étape
     await appuyerSur(arbre, 'Attribuer pour la saison');
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
     expect(mockShowBanner).toHaveBeenCalledWith(expect.objectContaining({
@@ -293,8 +292,8 @@ describe('COLL-R-A7-FINITIONS 3 — les lectures ont un squelette', () => {
     let finir;
     /** @type {any} */ (getClubTeamsForSlot).mockReturnValue(new Promise((resolve) => { finir = resolve; }));
     const arbre = await monter(DEPUIS_LE_PLANNING);
+    // A7-UX-2 : les équipes se lisent sur l'étape du club, sans « Suivant ».
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
     expect(arbre.root.findAllByType(SkeletonLoader)).toHaveLength(1);
     expect(tunnel(arbre).isNextDisabled).toBe(true);
     await appeler(() => finir([{ documentId: 'u13', name: 'U13' }]));
@@ -328,8 +327,8 @@ describe('COLL-R-A7-FINITIONS 4 — une lecture en échec peut être relancée',
   test('équipes : relance réelle puis retrouve les équipes du club choisi', async () => {
     /** @type {any} */ (getClubTeamsForSlot).mockRejectedValueOnce(new Error('Network Error'));
     const arbre = await monter(DEPUIS_LE_PLANNING);
+    // A7-UX-2 : les équipes se lisent sur l'étape du club, sans « Suivant ».
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
     expect(tunnel(arbre).isNextDisabled).toBe(true);
     expect(choix(arbre, 'Tout le club')).toBeUndefined();
     await appuyerSur(arbre, 'Réessayer');
@@ -379,16 +378,16 @@ describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes
   };
 
   // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6 étapes).
-  test('garde six étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
+  // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 6 → 5.
+  test('garde cinq étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
     avecOccupation();
     const arbre = await monter({ pleinEcran: false });
     await choisir(arbre, 'Montrivage Basket');
     await appuyerSur(arbre, 'Suivant');
-    await appuyerSur(arbre, 'Suivant');
     const mardi = choix(arbre, 'Mar.');
     expect(mardi).toBeDefined();
     expect(mardi.parent.parent.findAllByType(Text).some((n) => texte(n) === 'complet 18:00 – 19:00')).toBe(true);
-    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 3/6')).toBe(true);
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 2/5')).toBe(true);
   });
 
   test('ne compte pas le créneau modifié parmi les occupations', async () => {

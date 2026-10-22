@@ -20,7 +20,7 @@ import SeasonSlotForm from '../SeasonSlotForm';
 // Avant (ROUGE) : après le jour et l'heure, le tunnel allait au récapitulatif avec une période
 // figée (« Toute la saison ») et n'envoyait AUCUNE période ; ni « toutes les 2 semaines », ni
 // « des dates choisies », ni « Des jours différents » (Q4 B).
-// Ce fichier exige : l'étape vient après les heures (6 étapes), ses quatre formes avec leur nombre
+// Ce fichier exige : l'étape vient après les heures (6 étapes ; 5 depuis A7-UX-2), ses quatre formes avec leur nombre
 // de séances et celles qui tombent dans une fermeture ; la forme part au serveur ; « Des jours
 // différents » ouvre le calendrier libre ; la ligne « Quand » du récapitulatif se touche.
 
@@ -207,10 +207,10 @@ const ligneDuRecap = (/** @type {any} */ arbre, /** @type {string} */ cle) => ar
   (/** @type {any} */ n) => n.props.testID === `recap-${cle}`,
 )[0];
 
-// Club, équipe (tout le club), mercredi, 17:30 – 19:00, puis « Quand ? ».
+// Club et équipe (tout le club), mercredi, 17:30 – 19:00, puis « Quand ? ».
+// A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur UNE étape, un « Suivant » de moins.
 const jusquAuQuand = async (/** @type {any} */ arbre, { jour = 'Mercredi' } = {}) => {
   await choisir(arbre, 'Montrivage Basket');
-  await avancer(arbre);
   await avancer(arbre);
   await choisir(arbre, jour);
   await avancer(arbre);
@@ -220,11 +220,12 @@ const jusquAuQuand = async (/** @type {any} */ arbre, { jour = 'Mercredi' } = {}
 };
 
 describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure', () => {
-  test('1. l’étape 5/6, déjà répondue « Toute la saison » : 37 mercredis, 2 dans « Vacances de Noël »', async () => {
+  // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 5/6 → 4/5.
+  test('1. l’étape 4/5, déjà répondue « Toute la saison » : 37 mercredis, 2 dans « Vacances de Noël »', async () => {
     const arbre = await monter();
     await jusquAuQuand(arbre);
     expect(etape(arbre)).toEqual({
-      stepCount: 6, stepIndex: 5, subtitle: 'Mercredi 17:30 – 19:00 · T18 Salle essai', title: 'Quand ?',
+      stepCount: 5, stepIndex: 4, subtitle: 'Mercredi 17:30 – 19:00 · T18 Salle essai', title: 'Quand ?',
     });
     expect(['Toute la saison', 'Une période', 'Toutes les 2 semaines', 'Des dates choisies'].map((libelle) => choix(arbre, libelle)?.props.accessibilityState))
       .toEqual([{ checked: true }, { checked: false }, { checked: false }, { checked: false }]);
@@ -280,8 +281,7 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
   test('4. trois dates, deux jours différents : « Quelles dates ? », rien avant la 1re coche, la liste part sans jour', async () => {
     const arbre = await monter();
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
-    await avancer(arbre);
+    await avancer(arbre); // A7-UX-2 : club et équipe sur une étape
     await choisir(arbre, 'Des jours différents');
     await avancer(arbre);
     expect(tunnel(arbre).subtitle).toBe('Dates choisies · T18 Salle essai');
@@ -289,7 +289,7 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
     await choisirHeure('Fin', '19:00');
     await avancer(arbre);
     expect(etape(arbre)).toEqual({
-      stepCount: 6, stepIndex: 5, subtitle: '17:30 – 19:00 · T18 Salle essai', title: 'Quelles dates ?',
+      stepCount: 5, stepIndex: 4, subtitle: '17:30 – 19:00 · T18 Salle essai', title: 'Quelles dates ?',
     });
     expect(choix(arbre, 'Toute la saison')).toBeUndefined();
     expect(lus(arbre)).toContain('Aucune date cochée.');
@@ -311,8 +311,7 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
   test('5. une date dans une fermeture ne se coche pas, et le dit', async () => {
     const arbre = await monter();
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
-    await avancer(arbre);
+    await avancer(arbre); // A7-UX-2 : club et équipe sur une étape
     await choisir(arbre, 'Mercredi');
     await avancer(arbre);
     await choisirHeure('Début', '17:30');
@@ -332,15 +331,15 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
 });
 
 describe('R17Q1-4 — la ligne « Quand » du récapitulatif se touche', () => {
-  test('6. depuis une case du planning (3 étapes) : « Quand » rouvre l’étape, sans étape de plus au départ', async () => {
+  // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 3 → 2.
+  test('6. depuis une case du planning (2 étapes) : « Quand » rouvre l’étape, sans étape de plus au départ', async () => {
     const arbre = await monter({ compact: true, initial: { endTime: '19:30', startTime: '18:00', weekday: 3 } });
-    expect(tunnel(arbre).stepCount).toBe(3);
+    expect(tunnel(arbre).stepCount).toBe(2);
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
     await avancer(arbre);
     expect(tunnel(arbre).title).toBe('Récapitulatif');
     await appeler(() => ligneDuRecap(arbre, 'quand').props.onPress());
-    expect([tunnel(arbre).title, tunnel(arbre).stepIndex, tunnel(arbre).stepCount]).toEqual(['Quand ?', 3, 4]);
+    expect([tunnel(arbre).title, tunnel(arbre).stepIndex, tunnel(arbre).stepCount]).toEqual(['Quand ?', 2, 3]);
     await choisir(arbre, 'Toutes les 2 semaines');
     await avancer(arbre);
     expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
