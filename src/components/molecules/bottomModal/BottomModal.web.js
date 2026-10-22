@@ -26,6 +26,9 @@ import useTheme from '@/theme/themeContext';
  * @param {(string|number)[]} [props.snapPoints]
  * @param {import('react-native').ViewStyle} [props.style]
  * @param {'sheet' | 'dialog'} [props.webPresentation]
+ * @param {number} [props.webZIndex] - R17-QUAND-2-BIS : la couche de la feuille (1100 par defaut,
+ *   sous les toasts et les invites). Une feuille ouverte DEPUIS un <Modal> de react-native-web
+ *   (couche 9999, ex. le tunnel plein ecran) doit passer au-dessus de lui.
  * @returns {import('react').ReactElement | null}
  */
 function BottomModal({
@@ -41,6 +44,7 @@ function BottomModal({
   snapPoints,
   style,
   webPresentation = 'sheet',
+  webZIndex = 1100,
 }) {
   const {
     Alignments,
@@ -111,7 +115,7 @@ function BottomModal({
           position: 'fixed',
           right: 0,
           top: 0,
-          zIndex: 1100,
+          zIndex: webZIndex,
         },
       ]}
     >
