@@ -422,6 +422,8 @@ function ReserverRecapitulatif() {
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {t('reserverTerrain.recapitulatif.combien', 'Combien de joueurs ?')}
           </Text>
+          {/* RESA-FIN-APP : le ton sombre du parcours (le ton « surface » est une barre gris
+              clair, faite pour les fiches claires — tournées 1 et 2). */}
           <InputStepper
             decrementLabel={t('reserverTerrain.recapitulatif.moins', 'Un joueur de moins')}
             incrementLabel={t('reserverTerrain.recapitulatif.plus', 'Un joueur de plus')}
@@ -434,6 +436,7 @@ function ReserverRecapitulatif() {
               if (collecte && collecte.quorum > apres) setCollecte({ ...collecte, quorum: apres });
             }}
             onIncrement={() => setJoueurs((avant) => Math.min(capacite, avant + 1))}
+            tone="tunnel"
             value={joueurs}
           />
           <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -568,6 +571,18 @@ function ReserverRecapitulatif() {
           </View>
         ) : null}
 
+      </ScrollView>
+      {/* RESA-FIN-APP (20/10) — le bouton en PIED FIXE (planche EP04) : il était au bas de la page,
+          il fallait défiler pour le trouver (tournées 1 et 2). */}
+      <View
+        style={{
+          alignSelf: 'center',
+          maxWidth: surOrdinateur ? COLONNE : undefined,
+          paddingBottom: 12,
+          paddingTop: 12,
+          width: '100%',
+        }}
+      >
         <Button
           disabled={equipeAttendue}
           isLoading={Boolean(reserver?.isPending)}
@@ -575,7 +590,7 @@ function ReserverRecapitulatif() {
           title={titreDuBouton}
           variant="Primary"
         />
-      </ScrollView>
+      </View>
     </ScreenContainer>
   );
 }
