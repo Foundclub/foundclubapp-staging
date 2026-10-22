@@ -420,7 +420,8 @@ describe('RESA-FIN-APP (3) E-P01 — une heure partagée par plusieurs terrains 
       '17 h · Padel A', '17 h · Terrain 1', '17 h · Terrain 2', '18 h',
     ]));
     expect(lisibles(arbre).filter((texte) => texte === '17 h')).toEqual([]);
-    const puce = textes(arbre).find((texte) => texte.includes('Padel A') && texte.includes('17'));
+    const puce = textes(arbre)
+      .find((texte) => texte.split(String.fromCharCode(160)).join(' ') === '17 h · Padel A');
     expect(puce).not.toMatch(/ /);
   });
 });

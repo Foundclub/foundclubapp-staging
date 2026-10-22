@@ -7768,6 +7768,7 @@ export default {
     partenaires: {
       aide: 'Il apparaîtra sur ta page et sur ta carte dans la recherche.',
       lien: 'Lien vers le site du partenaire (facultatif)',
+      lienExemple: 'https://www.exemple.fr',
       supprimer: 'Supprimer {{nom}}',
     },
     pasVerifie: '« Vérifié » s’ajoutera quand FoundClub l’aura vérifié.',
@@ -8025,6 +8026,7 @@ export default {
       erreur: 'Le terrain n’a pas pu être retiré.',
       fait_one: '{{nom}} est retiré. {{count}} réservation annulée, le joueur est prévenu.',
       fait_other: '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',
+      faitSansReservation: '{{nom}} est retiré. Aucune réservation à annuler.',
       retirer: 'Retirer',
       titre: 'Retirer {{nom}} ?',
     },

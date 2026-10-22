@@ -124,7 +124,11 @@ function CarteComplexeRecherche({
                 },
               )}
               key={`${creneau?.terrain?.documentId}-${creneau.from}`}
-              libelle={texteHeure(creneau.from)}
+              // RESA-FIN-APP : une heure partagée par plusieurs terrains dit son terrain
+              // (« 17 h » trois fois, tournées 1 et 2) ; une heure seule reste courte.
+              libelle={montres.filter((autre) => autre.from === creneau.from).length > 1
+                ? `${texteHeure(creneau.from)} · ${String(creneau?.terrain?.name || '')}`
+                : texteHeure(creneau.from)}
               onPress={() => onCreneau(creneau)}
             />
           ))}

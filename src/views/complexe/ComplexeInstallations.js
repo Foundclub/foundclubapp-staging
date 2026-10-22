@@ -292,6 +292,16 @@ function ComplexeInstallations() {
         onFermer={() => setARetirer(null)}
         onRetire={({ annulees, nom }) => {
           setARetirer(null);
+          // RESA-FIN-APP : sans réservation à venir, personne n'est prévenu (tournée 2 : « 0
+          // réservation annulée, le joueur est prévenu »).
+          if (!annulees) {
+            setMessage(t(
+              'complexeReservations.retrait.faitSansReservation',
+              '{{nom}} est retiré. Aucune réservation à annuler.',
+              { nom, ...SANS_ECHAPPEMENT },
+            ));
+            return;
+          }
           setMessage(t(
             'complexeReservations.retrait.fait',
             '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',

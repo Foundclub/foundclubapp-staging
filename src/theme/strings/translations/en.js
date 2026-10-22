@@ -7295,6 +7295,7 @@ export default {
     partenaires: {
       aide: 'It will appear on your page and on your card in search.',
       lien: 'Link to the partner\'s website (optional)',
+      lienExemple: 'https://www.example.com',
       supprimer: 'Delete {{nom}}',
     },
     pasVerifie: '"Verified" will be added once FoundClub has checked it.',
@@ -7551,6 +7552,7 @@ export default {
       erreur: 'The court could not be removed.',
       fait_one: '{{nom}} is removed. {{count}} booking cancelled, the player is notified.',
       fait_other: '{{nom}} is removed. {{count}} bookings cancelled, the players are notified.',
+      faitSansReservation: '{{nom}} is removed. No booking to cancel.',
       retirer: 'Remove',
       titre: 'Remove {{nom}}?',
     },
