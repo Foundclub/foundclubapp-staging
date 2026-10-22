@@ -11,7 +11,11 @@
  * ce que l'écran a demandé : `useMesEnfantsEnBref.appels` (les `{ actif }` reçus).
  */
 
-/** @typedef {{ lignes: any[], reste: number, total: number }} Bref */
+/**
+ * @typedef {{
+ *   lignes: any[], reste: number, total: number, connu?: boolean, resume?: any,
+ * }} Bref - `connu` et `resume` (REC17-001-B) : absents, la carte d'accueil reste « pas lue ».
+ */
 
 /** @type {Bref} */
 const AUCUN = Object.freeze({ lignes: [], reste: 0, total: 0 });
