@@ -131,6 +131,11 @@ function ComplexeAccueil() {
   // complexe à l'arrivée dans l'espace, une fois (le téléphone le fait après l'annonce de la
   // bascule, plus bas). Le titre n'est pas un arrêt de Tab (tabIndex -1).
   const curseurPose = useRef(false);
+  // RESA-FIN-APP-2 — la minuterie du curseur (plus bas) s'annule quand l'écran se démonte.
+  const minuterieDuCurseur = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+  useEffect(() => () => {
+    if (minuterieDuCurseur.current) clearTimeout(minuterieDuCurseur.current);
+  }, []);
   const nomCharge = Boolean(complexe?.name);
   useEffect(() => {
     if (Platform.OS !== 'web' || !nomCharge || curseurPose.current) return;
@@ -265,7 +270,7 @@ function ComplexeAccueil() {
   const poserLeCurseurSurLeNom = () => {
     if (Platform.OS === 'web') return;
     // Après l'annonce « Mode complexe. Tu gères … » : un changement de curseur l'interromprait.
-    setTimeout(() => {
+    minuterieDuCurseur.current = setTimeout(() => {
       const noeud = findNodeHandle(nomDuComplexeRef.current);
       if (noeud) AccessibilityInfo.setAccessibilityFocus(noeud);
     }, 1200);

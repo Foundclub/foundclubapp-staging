@@ -336,6 +336,28 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     annonce.mockRestore();
   });
 
+  // RESA-FIN-APP-2 (22/10/2026, relayé par le chef depuis RESA-FIN-SITE) — la minuterie de
+  // 1,2 s qui pose le curseur sur le nom n'était jamais annulée : l'écran démonté, elle partait quand même
+  // (« findNodeHandle is not a function » dans le témoin suivant). Démonter l'écran l'annule.
+  it('RB-3 5b · démonté avant 1,2 s : la minuterie du curseur est annulée', async () => {
+    const annonce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+      .mockImplementation(() => {});
+    const poser = jest.spyOn(global, 'setTimeout');
+    const annuler = jest.spyOn(global, 'clearTimeout');
+    demanderLAnnonceDArrivee();
+    const arbre = await monter();
+    const appel = poser.mock.calls.findIndex((args) => args[1] === 1200);
+    expect(appel).toBeGreaterThan(-1);
+    const minuterie = poser.mock.results[appel].value;
+    await act(async () => {
+      arbre.unmount();
+    });
+    expect(annuler).toHaveBeenCalledWith(minuterie);
+    poser.mockRestore();
+    annuler.mockRestore();
+    annonce.mockRestore();
+  });
+
   // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » n'a AUCUN rôle sportif : un
   // accueil de joueur lui offrirait des gestes que son rôle provisoire n'a pas, sans âge connu.
   // « Voir l'app en joueur » ouvre d'abord « Tu pratiques aussi un sport ? » (PAR-L12, variante
