@@ -747,9 +747,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     </View>
   ) : null;
 
+  // RESA-FIN-APP (22/10) — l'heure en un seul mot (même défaut que la veille, « 17 / h »).
   const quand = debut
     ? t('reserverTerrain.maReservation.jourAHeure', '{{jour}} à {{heure}}', {
-      heure: debut.heure,
+      heure: texteInsecable(debut.heure),
       jour: debut.jour,
       ...SANS_ECHAPPEMENT,
     })

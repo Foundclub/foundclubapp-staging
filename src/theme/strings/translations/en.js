@@ -16684,7 +16684,7 @@ export default {
   },
   playerMode: {
     active: {
-      description: 'You see the app as a player of your team. Your {{staff}} rights are intact.',
+      description: 'You see the app as a player of your team. Your {{staffDe}} rights are intact.',
       exit: 'Back to {{staff}} mode',
       title: 'Player mode',
     },
@@ -16699,7 +16699,7 @@ export default {
     parent: {
       and: 'and',
       back: 'Back to parent mode',
-      description: 'You see the app as a parent. Your {{staff}} rights are intact.',
+      description: 'You see the app as a parent. Your {{staffDe}} rights are intact.',
       enter: 'Switch to parent mode',
       title: 'Parent mode',
       waiting_one: '{{prenoms}} is waiting for you in parent mode.',

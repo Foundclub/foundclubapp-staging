@@ -33,6 +33,8 @@ import {
   useRepondreALaVeille,
 } from '@/services/complexe/complexeJoueurQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { useIsDesktop } from '@/responsive';
 
 /** Planche OR3, gabarit B : la colonne centrée de 560 px. */
@@ -378,13 +380,15 @@ function ReserverVeille() {
   }
 
   const quand = estDemain(reservation.date)
+    // RESA-FIN-APP (22/10) — l'heure en un seul mot : « demain 17 / h » sur Android 16 (tournée des
+    // notifications) ; même parade que les autres textes gras (`texteInsecable`).
     ? t('reserverTerrain.veille.annulerQuestion', 'Annuler ta réservation de demain {{heure}} ?', {
-      heure: texteHeure(reservation.from),
+      heure: texteInsecable(texteHeure(reservation.from)),
       ...SANS_ECHAPPEMENT,
     })
     : t('reserverTerrain.maReservation.annulerQuestion', 'Annuler ta réservation du {{quand}} ?', {
       quand: t('reserverTerrain.maReservation.jourAHeure', '{{jour}} à {{heure}}', {
-        heure: texteHeure(reservation.from),
+        heure: texteInsecable(texteHeure(reservation.from)),
         jour: texteJourCourt(t, reservation.date),
         ...SANS_ECHAPPEMENT,
       }),
