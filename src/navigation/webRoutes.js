@@ -362,6 +362,17 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ReserverResultat]: '/reserver-un-terrain/resultat',
   [RouteNames.ReserverEchec]: '/reserver-un-terrain/echec',
   [RouteNames.ReserverMaReservation]: '/reservation-terrain/:reservationId',
+  // RESA-FIN-SITE (21/10/2026) — « Mes réservations » (E-P10) et « Demain, tu joues ? » (E-P14,
+  // RESA-L6B-1), exemptés par erreur jusque-là (tournée 2 du site, §3). « mes-… » comme les autres
+  // listes personnelles (/mes-signalements) ; « terrain » pour ne pas les confondre avec
+  // /reservations/:id ; la veille est une sous-page de la réservation.
+  [RouteNames.ReserverMesReservations]: '/mes-reservations-terrain',
+  [RouteNames.ReserverVeille]: '/reservation-terrain/:reservationId/veille',
+  // RESA-FIN-SITE (21/10/2026) — « Mes complexes favoris » (E-P11) et la page d'une annonce « Il me
+  // manque des joueurs » (E-P09) de RESA-L6B-2 : leurs boutons (Mon compte, la recherche, Ma
+  // réservation) ne menaient nulle part sur le site.
+  [RouteNames.ReserverFavoris]: '/mes-complexes-favoris',
+  [RouteNames.ReserverAnnonce]: '/annonce-terrain/:annonceId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

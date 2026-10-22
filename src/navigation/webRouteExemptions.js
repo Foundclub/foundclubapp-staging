@@ -189,20 +189,13 @@ const MOBILE_ONLY_SCREENS = {
   // (RESA-L6A) ont leur adresse sur le site (webRoutes.js) ; sur ordinateur, le menu latéral de
   // l AppShell porte les onglets de l espace du complexe. ComplexeDevenirGerant a la sienne
   // (/onboarding/complexe, RESA-INSCRIPTION) — intégration du soutien, 20/10.
-  // --- RESA-L6B-1 (19/10/2026) ---
-  // La confirmation la veille (E-P14) et « Mes réservations » (E-P10) : même interrupteur, même
-  // lot site L7.
-  [RouteNames.ReserverMesReservations]:
-    'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
-  [RouteNames.ReserverVeille]:
-    'RESA-L6B-1 : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
+  // RESA-FIN-SITE (21/10/2026) : la confirmation la veille (E-P14) et « Mes réservations » (E-P10)
+  // ont leur adresse (webRoutes.js) et sortent de cette liste.
   // --- RESA-L6B-2 (20/10/2026) ---
   // La page d'invitation DANS l'app (E-P08) : sur le site, le lien `/r/<code>` est une page
   // publique à part (lot RESA-L7-2), lue sans compte.
-  [RouteNames.ReserverAnnonce]:
-    'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; its website URL comes with a later RESA web lot',
-  [RouteNames.ReserverFavoris]:
-    'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; its website URL comes with a later RESA web lot',
+  // RESA-FIN-SITE (21/10/2026) : ReserverAnnonce (E-P09) et ReserverFavoris (E-P11) ont leur
+  // adresse.
   [RouteNames.ReserverInvitation]:
     'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; the website invitation page is /r/:code (RESA-L7-2)',
   // RESA-L5B-2 (20/10/2026) : la fiche d'un client du complexe (RESA-L5B-1) a son adresse

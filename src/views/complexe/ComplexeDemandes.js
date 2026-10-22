@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import {
+  demandeExpiree,
   expireDans,
   jourCourt,
   libelleDemandeTraitee,
@@ -191,6 +192,8 @@ function ComplexeDemandes() {
   const carteEnAttente = (/** @type {any} */ demande) => {
     const conflit = conflits[demande.documentId] || '';
     const echeance = expireDans(t, demande.expiresAt, maintenant);
+    // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : délai passé, la demande ne se tranche plus.
+    const expiree = demandeExpiree(demande.expiresAt, maintenant);
     return (
       <TouchableOpacity
         accessibilityRole="button"
@@ -211,7 +214,15 @@ function ComplexeDemandes() {
           <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>{echeance}</Text>
         ) : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
-        {surOrdinateur || closes[demande.documentId] ? null : (
+        {expiree ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {t(
+              'complexeReservations.demandes.delaiPasse',
+              'Délai de réponse passé : la demande expire sans réponse.',
+            )}
+          </Text>
+        ) : null}
+        {surOrdinateur || expiree || closes[demande.documentId] ? null : (
           <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
             <View
               style={{ flexBasis: 120, flexGrow: 1 }}

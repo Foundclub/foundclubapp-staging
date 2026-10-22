@@ -213,6 +213,9 @@ describe('E-P04 — réserver', () => {
     });
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, {
       reservation: maReservation(),
+      // RESA-FIN-SITE : l'identifiant, pour que le site relise la réservation après un
+      // rechargement.
+      reservationId: maReservation().documentId,
     });
   });
 

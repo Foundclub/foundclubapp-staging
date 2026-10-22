@@ -142,9 +142,11 @@ const filtrerLHeure = (carte, heure) => {
  * @param {number} [props.refreshSignal] - Un nouveau nombre relance la lecture (retour au
  *   premier plan).
  * @param {boolean} [props.screenActive] - Le panneau est l'onglet visible.
+ * @param {boolean} [props.visiteur] - Lue sans compte (le site, RESA-FIN-SITE) : sans les
+ *   raccourcis « Mes réservations » et « Mes favoris », qui demandent un compte.
  * @returns {import('react').ReactElement} Le panneau.
  */
-function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
+function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur = false }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Images,
@@ -266,6 +268,29 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
   const carteChoisie = cartes.find((/** @type {any} */ carte) => (
     carte.slug === epingleChoisie
   )) || null;
+  // RESA-FIN-SITE (21/10/2026) — sur le SITE (vue Carte sous 1 024 px), la carte du complexe touché
+  // reste posée sur la carte, mais remonte de ce que la barre d'onglets flottante en cache : sur un
+  // écran court (390 × 640), posée à 12 px du bas de la carte, elle passait sous la barre.
+  const carteDuSiteRef = useRef(/** @type {any} */ (null));
+  const [basSurLeSite, setBasSurLeSite] = useState(12);
+  const slugChoisi = carteChoisie?.slug || null;
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !slugChoisi || typeof window === 'undefined') return undefined;
+    const mesurer = () => {
+      const boite = carteDuSiteRef.current?.getBoundingClientRect?.();
+      if (!boite) return;
+      const cache = Math.round(boite.bottom - (window.innerHeight - sceneBottomInset));
+      const plafond = Math.max(12, Math.round(boite.height) - hauteurChoisie - 12);
+      setBasSurLeSite(Math.min(plafond, Math.max(12, cache + 12)));
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    window.addEventListener('scroll', mesurer, true);
+    return () => {
+      window.removeEventListener('resize', mesurer);
+      window.removeEventListener('scroll', mesurer, true);
+    };
+  }, [hauteurChoisie, sceneBottomInset, slugChoisi]);
   const enCarte = !surOrdinateur && vue === 'carte';
   const distanceSuivante = [20, DISTANCE_MAX].find((km) => km > distanceKm) || null;
 
@@ -886,34 +911,38 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
             RESA-L6B-2 (20/10) — « Mes favoris » (E-P11, planche EP11 : « depuis le raccourci de la
             recherche ») sur la MÊME ligne : une ligne de plus repoussait la carte du complexe
             choisi sous la barre flottante du site (390 px). */}
-        <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
-            testID="reserver-recherche-mes-reservations"
+        {visiteur ? null : (
+          <View
+            style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}
           >
-            <Image
-              source={Images.calendar}
-              style={{ height: 16, tintColor: Colors.primary200, width: 16 }}
-            />
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel={t('reserverTerrain.favoris.titre', 'Mes complexes favoris')}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate(RouteNames.ReserverFavoris)}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
-            testID="reserver-recherche-mes-favoris"
-          >
-            <SvgIcon color={Colors.primary200} height={16} name="heart" width={16} />
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('reserverTerrain.favoris.raccourci', 'Mes favoris')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+              testID="reserver-recherche-mes-reservations"
+            >
+              <Image
+                source={Images.calendar}
+                style={{ height: 16, tintColor: Colors.primary200, width: 16 }}
+              />
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityLabel={t('reserverTerrain.favoris.titre', 'Mes complexes favoris')}
+              accessibilityRole="button"
+              onPress={() => navigation.navigate(RouteNames.ReserverFavoris)}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+              testID="reserver-recherche-mes-favoris"
+            >
+              <SvgIcon color={Colors.primary200} height={16} name="heart" width={16} />
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {t('reserverTerrain.favoris.raccourci', 'Mes favoris')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <Input
           accessibilityLabel={t('reserverTerrain.recherche.champ', 'Complexe, ville ou sport')}
           autoCorrect={false}
@@ -939,6 +968,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
               HAUTEUR_CARTE_MIN,
               Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
             ))}
+            ref={carteDuSiteRef}
             style={{ flex: 1, minHeight: HAUTEUR_CARTE_MIN }}
           >
             <CarteDesComplexes
@@ -949,7 +979,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
               onChoisir={setEpingleChoisie}
               onOuvrir={ouvrirLeComplexe}
             />
-            {carteChoisie && Platform.OS === 'web' ? carteDuComplexeTouche(12) : null}
+            {carteChoisie && Platform.OS === 'web' ? carteDuComplexeTouche(basSurLeSite) : null}
           </View>
           {/* RESA-FIN-APP (20/10) — au TÉLÉPHONE, la carte du complexe touché se pose au bas de la
               ZONE (bornée par l'écran, dessinée sous la barre flottante), au-dessus de la barre :

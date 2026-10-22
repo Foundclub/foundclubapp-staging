@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,6 +11,10 @@ import {
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+/** Les feuilles ouvertes, de la plus ancienne à celle du dessus (Échap ferme la dernière). */
+/** @type {Array<() => void>} */
+const FEUILLES_OUVERTES = [];
 
 /**
  * Web replacement for the mobile bottom sheet.
@@ -50,6 +55,33 @@ function BottomModal({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  // RESA-FIN-SITE (21/10/2026, décision du chef du 22/10) — au clavier, Échap ferme la feuille :
+  // sans croix (`hideCloseButton` par défaut), on ne pouvait pas en sortir. Comme le fond : une
+  // feuille que l'appelant garde ouverte (`closeOnBackdropPress={false}`) le reste. Deux feuilles
+  // l'une sur l'autre : seule celle du dessus se ferme. Écoutée à la DESCENTE : un TextInput de
+  // react-native-web arrête la touche avant le document (piège du 08/10).
+  const fermerRef = useRef(close);
+  useEffect(() => {
+    fermerRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    if (!closeOnBackdropPress || !isVisible || typeof document === 'undefined') return undefined;
+    const fermer = () => fermerRef.current?.();
+    FEUILLES_OUVERTES.push(fermer);
+    const surTouche = (/** @type {KeyboardEvent} */ evenement) => {
+      const dessus = FEUILLES_OUVERTES[FEUILLES_OUVERTES.length - 1];
+      if (evenement.key !== 'Escape' || dessus !== fermer) return;
+      evenement.stopPropagation();
+      fermer();
+    };
+    document.addEventListener('keydown', surTouche, true);
+    return () => {
+      document.removeEventListener('keydown', surTouche, true);
+      const rang = FEUILLES_OUVERTES.indexOf(fermer);
+      if (rang >= 0) FEUILLES_OUVERTES.splice(rang, 1);
+    };
+  }, [closeOnBackdropPress, isVisible]);
 
   if (!isVisible) {
     return null;

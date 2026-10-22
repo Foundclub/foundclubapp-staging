@@ -266,6 +266,8 @@ function ReserverRecapitulatif() {
           equipe: { membres: equipe.membres, name: equipe.name },
         } : {}),
         reservation,
+        // RESA-FIN-SITE : l'identifiant voyage dans l'adresse du site ; l'objet, en mémoire.
+        reservationId: reservation?.documentId,
       });
     } catch (erreur) {
       const variante = varianteDEchec(erreur);

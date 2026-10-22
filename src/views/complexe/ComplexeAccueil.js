@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
@@ -127,6 +127,18 @@ function ComplexeAccueil() {
     roleDuCompte: String(accountRoleKey || ''),
   });
   const nomDuComplexeRef = useRef(/** @type {any} */ (null));
+  // RESA-FIN-SITE (21/10/2026, planche RB-3 5b) — sur le SITE, le curseur se pose sur le nom du
+  // complexe à l'arrivée dans l'espace, une fois (le téléphone le fait après l'annonce de la
+  // bascule, plus bas). Le titre n'est pas un arrêt de Tab (tabIndex -1).
+  const curseurPose = useRef(false);
+  const nomCharge = Boolean(complexe?.name);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !nomCharge || curseurPose.current) return;
+    curseurPose.current = true;
+    const titre = nomDuComplexeRef.current;
+    titre?.setAttribute?.('tabindex', '-1');
+    titre?.focus?.();
+  }, [nomCharge]);
   // RESA-L5A2 (14/10/2026) — la semaine (et hier, un lundi) au planning, les listes du serveur.
   const lundi = joursDeLaSemaine(date)[0];
   const hier = enJours(date, -1);

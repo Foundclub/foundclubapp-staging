@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import {
+  demandeExpiree,
   etatAffiche,
   expireDans,
   historiqueLisible,
@@ -348,7 +349,17 @@ function FicheReservation({
 
   // ── Le pied, selon l'état et la source ─────────────────────────────────────────────────
   let pied = null;
-  if (enAttente && close) {
+  // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : délai passé, la demande ne se tranche plus.
+  if (enAttente && demandeExpiree(r.expiresAt)) {
+    pied = (
+      <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
+        {t(
+          'complexeReservations.demandes.delaiPasse',
+          'Délai de réponse passé : la demande expire sans réponse.',
+        )}
+      </Text>
+    );
+  } else if (enAttente && close) {
     pied = null;
   } else if (enAttente) {
     pied = (

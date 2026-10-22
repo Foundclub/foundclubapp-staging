@@ -8073,6 +8073,8 @@ export default {
       acceptee: 'Demande acceptée. {{nom}} est prévenu.',
       accepter: 'Accepter',
       changer: 'Changer',
+      // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expirée ne se tranche plus.
+      delaiPasse: 'Délai de réponse passé : la demande expire sans réponse.',
       demandeLe: 'demande le',
       erreur: 'Les demandes n’ont pas pu être lues.',
       erreurDecision: 'La demande n’a pas pu être tranchée.',
