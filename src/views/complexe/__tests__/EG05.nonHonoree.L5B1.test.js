@@ -31,7 +31,10 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useDeciderDemande: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: mockMarquer }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).
+  useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useReservationGeree: () => mockFiche,
+  useValiderRecompense: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
