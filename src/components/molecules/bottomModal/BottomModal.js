@@ -58,7 +58,6 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @param {import('react-native').ViewStyle} [props.style] - Additional styles for modal
  * @param {boolean} [props.useSafeAreaBottomInset] - Apply safe area bottom inset to the sheet container
  * @param {'sheet' | 'dialog'} [props.webPresentation] - Web-only presentation hint (ignored on native).
- * @param {boolean} [props.fermerParEchap] - Site seulement : Échap ferme la feuille (ignoré ici).
  * @returns {import('react').ReactElement} Modal component
  */
 function BottomModal({

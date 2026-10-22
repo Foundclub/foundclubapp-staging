@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,6 +11,10 @@ import {
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+/** Les feuilles ouvertes, de la plus ancienne à celle du dessus (Échap ne ferme que la dernière). */
+/** @type {Array<() => void>} */
+const FEUILLES_OUVERTES = [];
 
 /**
  * Web replacement for the mobile bottom sheet.
@@ -27,14 +31,12 @@ import useTheme from '@/theme/themeContext';
  * @param {(string|number)[]} [props.snapPoints]
  * @param {import('react-native').ViewStyle} [props.style]
  * @param {'sheet' | 'dialog'} [props.webPresentation]
- * @param {boolean} [props.fermerParEchap] - La touche Échap ferme la feuille (RESA-FIN-SITE).
  * @returns {import('react').ReactElement | null}
  */
 function BottomModal({
   children,
   close,
   closeOnBackdropPress = true,
-  fermerParEchap = false,
   contentContainerStyle,
   footerComponent,
   headerComponent,
@@ -54,17 +56,31 @@ function BottomModal({
   } = useTheme();
   const { t } = useTranslation();
 
-  // RESA-FIN-SITE (21/10/2026) — Échap ferme la feuille, à la demande de l'appelant seulement (les
-  // autres feuilles du site ne changent pas). Écoutée à la DESCENTE : un TextInput de
-  // react-native-web arrête la touche avant le document (piège du 08/10).
+  // RESA-FIN-SITE (21/10/2026, décision du chef du 22/10) — au clavier, Échap ferme la feuille : sans
+  // croix (`hideCloseButton` par défaut), on ne pouvait pas en sortir. Comme le fond : une feuille
+  // que l'appelant veut garder ouverte (`closeOnBackdropPress={false}`) le reste. Deux feuilles
+  // ouvertes l'une sur l'autre : seule celle du dessus se ferme. Écoutée à la DESCENTE : un
+  // TextInput de react-native-web arrête la touche avant le document (piège du 08/10).
+  const fermerRef = useRef(close);
   useEffect(() => {
-    if (!fermerParEchap || !isVisible || typeof document === 'undefined') return undefined;
+    fermerRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    if (!closeOnBackdropPress || !isVisible || typeof document === 'undefined') return undefined;
+    const fermer = () => fermerRef.current?.();
+    FEUILLES_OUVERTES.push(fermer);
     const surTouche = (/** @type {KeyboardEvent} */ evenement) => {
-      if (evenement.key === 'Escape') close?.();
+      if (evenement.key !== 'Escape' || FEUILLES_OUVERTES[FEUILLES_OUVERTES.length - 1] !== fermer) return;
+      evenement.stopPropagation();
+      fermer();
     };
     document.addEventListener('keydown', surTouche, true);
-    return () => document.removeEventListener('keydown', surTouche, true);
-  }, [close, fermerParEchap, isVisible]);
+    return () => {
+      document.removeEventListener('keydown', surTouche, true);
+      const rang = FEUILLES_OUVERTES.indexOf(fermer);
+      if (rang >= 0) FEUILLES_OUVERTES.splice(rang, 1);
+    };
+  }, [closeOnBackdropPress, isVisible]);
 
   if (!isVisible) {
     return null;

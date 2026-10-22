@@ -76,7 +76,7 @@ function FeuilleTelephone({
   };
 
   return (
-    <BottomModal close={onFermer} fermerParEchap isVisible={visible} webPresentation="dialog">
+    <BottomModal close={onFermer} isVisible={visible} webPresentation="dialog">
       <View style={{ gap: 14 }} testID="feuille-telephone">
         <View style={{ gap: 4 }}>
           <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
