@@ -295,7 +295,8 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       const reponse = await ouvrirUnFil.mutateAsync({ fil, reservationId: reservation.documentId });
       if (reponse?.chat) navigation.navigate(RouteNames.Conversation, { chatId: reponse.chat });
     } catch (erreur) {
-      setRefusDuFil(String(erreur?.message || '').trim()
+      const message = /** @type {{ message?: unknown } | null} */ (erreur)?.message;
+      setRefusDuFil(String(message || '').trim()
         || contenuDEchec(t, varianteDEchec(erreur), { erreur }).titre);
     }
   };

@@ -153,7 +153,7 @@ function ReserverInvitation() {
       ...SANS_ECHAPPEMENT,
     });
   }
-  const prix = prixDuCreneau(t, page.price);
+  const prix = prixDuCreneau(t, page.price, null);
   const lieu = [page?.complexe?.name, page?.complexe?.city].filter(Boolean).join(', ');
   const quand = [
     // La page du lien nomme le sport en toutes lettres (liste fermée du serveur).
