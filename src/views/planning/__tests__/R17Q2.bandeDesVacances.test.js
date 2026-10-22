@@ -373,28 +373,48 @@ describe('R17Q2-4 — la bande des vacances au planning d’une installation', (
     expect(bandeau(arbre)).toBeUndefined();
   });
 
-  it('R17Q2B-1. une case rendue pendant les vacances nomme le club, son équipe et sa vraie reprise', async () => {
+  it('R17Q2B-1. case rendue en vacances : le club, son équipe, sa vraie reprise', async () => {
     gereLaVille();
     lePlanning('2026-10-20', { label: 'Zone B', periods: [TOUSSAINT], zone: 'B' });
     /** @type {any} */ (getFacilityPlanning).mockResolvedValue({
-      data: [bloc({ startAt: '2026-10-20T08:00:00Z', endAt: '2026-10-20T09:00:00Z' })],
+      data: [bloc({
+        endAt: '2026-10-20T09:00:00Z',
+        endTime: '11:00:00.000',
+        startAt: '2026-10-20T08:00:00Z',
+        startTime: '10:00:00.000',
+      })],
       meta: { ...reponse([]).meta, holidays: { label: 'Zone B', periods: [TOUSSAINT], zone: 'B' } },
     });
-    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({ data: [{
-      club: { name: 'AS Montrivage' }, documentId: 'u15', team: { name: 'U15' },
-      startTime: '17:30', endTime: '19:00', weekday: 2,
-      validFrom: '2026-09-01', validUntil: '2027-06-30',
-      exceptHolidays: true, holidayDates: ['2026-10-20', '2026-10-27'],
-    }], meta: {} });
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [{
+        club: { name: 'AS Montrivage' },
+        documentId: 'u15',
+        endTime: '19:00',
+        exceptHolidays: true,
+        holidayDates: ['2026-10-20', '2026-10-27'],
+        startTime: '17:30',
+        team: { name: 'U15' },
+        validFrom: '2026-09-01',
+        validUntil: '2027-06-30',
+        weekday: 2,
+      }],
+      meta: {},
+    });
     const arbre = await rendre();
     // Une autre séance garde la grille visible, comme un planning réel.
     await attendre();
     expect(listFacilitySeasonSlots).toHaveBeenCalledWith('gym-ville', { status: 'active' });
     const grille = mockTimelineProps[mockTimelineProps.length - 1];
     expect(grille).toBeDefined();
+    expect(grille.freeSlotAnnotations).toEqual([expect.objectContaining({
+      endMinutes: 1140,
+      label: '17:30 – 19:00 · libre (U15 : sauf vacances)',
+      startMinutes: 1050,
+    })]);
     await act(async () => grille.onFreeSlotPress(new Date('2026-10-20T12:00:00'), 18));
     expect(textes(arbre).join('\n')).toContain(
-      'AS Montrivage · U15 ne vient pas pendant les vacances scolaires (Zone B). Retour le mar. 3 nov.',
+      'AS Montrivage · U15 ne vient pas pendant les vacances scolaires (Zone B). '
+        + 'Retour le mar. 3 nov.',
     );
     expect(textes(arbre).join(' ')).not.toMatch(/SECRET-NOM|Jeanne/);
   });

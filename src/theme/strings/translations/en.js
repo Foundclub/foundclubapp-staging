@@ -15686,6 +15686,7 @@ export default {
     absenceVacances: '{{club}} does not attend during school holidays ({{zone}}).',
     retourVacances: 'Back on {{jour}}.',
     finVacances: 'No further session is scheduled for this slot.',
+    libreVacances: '{{heures}} · free ({{equipe}}: except school holidays)',
     weekPlanningLoadError: 'This week’s planning couldn’t be retrieved. Try again or change week.',
   },
   planning: {

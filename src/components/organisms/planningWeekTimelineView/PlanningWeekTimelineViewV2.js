@@ -195,6 +195,7 @@ function EventBlock({
  * @param {string} [root0.cardDisplayProfile] - 'default', 'teamFocused' ou 'clubFocused'.
  * @param {any} [root0.currentDate]
  * @param {any[]} [root0.events]
+ * @param {any[]} [root0.freeSlotAnnotations] - Informations de places rendues, sans occupation.
  * @param {string} [root0.mode] - 'week' (7 jours), 'day' (1 jour) ; sinon 3 jours.
  * @param {Function} [root0.onDateChange]
  * @param {Function} [root0.onEventPress]
@@ -231,6 +232,7 @@ function PlanningWeekTimelineView({
   expandToContent = false,
   firstHour,
   flechesDesJours = false,
+  freeSlotAnnotations = [],
   laneOf,
   lanes,
   mode = '3days',
@@ -343,8 +345,15 @@ function PlanningWeekTimelineView({
       for (let hour = startHour; hour <= inclusiveEnd; hour += 1) values.add(hour);
     });
 
+    if (mode === 'day') {
+      freeSlotAnnotations.forEach((annotation) => {
+        for (let hour = Math.floor(annotation.startMinutes / 60);
+          hour < Math.ceil(annotation.endMinutes / 60); hour += 1) values.add(hour);
+      });
+    }
+
     return values;
-  }, [heuresOuvrantes]);
+  }, [freeSlotAnnotations, heuresOuvrantes, mode]);
 
   const timelineBlocks = useMemo(() => {
     const blocks = [];
@@ -1415,6 +1424,32 @@ function PlanningWeekTimelineView({
       />
     )));
   }) : null;
+  const annotationsLibres = mode === 'day' ? freeSlotAnnotations.map((annotation) => (
+    <TouchableOpacity
+      accessibilityLabel={annotation.label}
+      accessibilityRole="button"
+      key={annotation.key}
+      onPress={annotation.onPress}
+      style={{
+        backgroundColor: hexToRgba(Colors.primary500, 0.08),
+        borderColor: Colors.primary500,
+        borderRadius: 8,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        justifyContent: 'center',
+        left: `${((annotation.lane || 0) * 100) / colonnesDesCases.length}%`,
+        minHeight: 44,
+        padding: 8,
+        position: 'absolute',
+        top: (hourPositions[Math.floor(annotation.startMinutes / 60)] ?? 0)
+          + ((annotation.startMinutes % 60) * hourHeight) / 60,
+        width: `${100 / colonnesDesCases.length}%`,
+      }}
+      testID={`planning-libre-vacances-${annotation.key}`}
+    >
+      <Text style={[Fonts.p3, { color: Colors.primary200 }]}>{annotation.label}</Text>
+    </TouchableOpacity>
+  )) : null;
   // COLL-C2B (D66) : le nom de chaque plateau, en tete de sa colonne (mode « jour »).
   const tetesDePlateaux = colonnesDePlateaux ? (
     <View style={{ flexDirection: 'row', marginBottom: 4 }}>
@@ -1663,6 +1698,7 @@ function PlanningWeekTimelineView({
                     ))}
 
                     {cellulesLibres}
+                    {annotationsLibres}
 
                     {nowLine ? (
                       <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
@@ -1739,6 +1775,7 @@ function PlanningWeekTimelineView({
                   ))}
 
                   {cellulesLibres}
+                  {annotationsLibres}
 
                   {nowLine ? (
                     <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>

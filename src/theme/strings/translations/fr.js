@@ -16242,6 +16242,7 @@ export default {
     absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
     retourVacances: 'Retour le {{jour}}.',
     finVacances: 'Aucune autre séance prévue sur ce créneau.',
+    libreVacances: '{{heures}} · libre ({{equipe}} : sauf vacances)',
     // eslint-disable-next-line max-len
     weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },
