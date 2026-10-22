@@ -194,7 +194,8 @@ const MOBILE_ONLY_SCREENS = {
   // --- RESA-L6B-2 (20/10/2026) ---
   // La page d'invitation DANS l'app (E-P08) : sur le site, le lien `/r/<code>` est une page
   // publique à part (lot RESA-L7-2), lue sans compte.
-  // RESA-FIN-SITE (21/10/2026) : ReserverAnnonce (E-P09) et ReserverFavoris (E-P11) ont leur adresse.
+  // RESA-FIN-SITE (21/10/2026) : ReserverAnnonce (E-P09) et ReserverFavoris (E-P11) ont leur
+  // adresse.
   [RouteNames.ReserverInvitation]:
     'RESA-L6B-2 : hidden by COMPLEXES_JOUEUR; the website invitation page is /r/:code (RESA-L7-2)',
   // RESA-L5B-2 (20/10/2026) : la fiche d'un client du complexe (RESA-L5B-1) a son adresse

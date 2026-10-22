@@ -35,7 +35,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 const mockLien = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
-  // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en paramètre.
+  // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en
+  // paramètre.
   useMaReservation: () => ({ data: null, isLoading: false }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (

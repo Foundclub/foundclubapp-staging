@@ -3,7 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import SearchMapHud from '@/components/organisms/searchMap/SearchMapHud';
 
-// RESA-FIN-SITE (21/10/2026) — tournée connectée du site du 22/10 : « 1 repères visibles » sur la carte
+// RESA-FIN-SITE (21/10/2026) — tournée connectée du site du 22/10 : « 1 repères visibles » sur la
+// carte
 // de recherche. Un repère : le singulier ; plusieurs : le pluriel (inchangé).
 
 jest.mock('react-i18next', () => (
@@ -33,7 +34,8 @@ const textes = async (/** @type {number} */ reperes) => {
       />,
     );
   });
-  return arbre.root.findAllByType(Text).map((/** @type {any} */ n) => [n.props.children].flat().join(''));
+  return arbre.root.findAllByType(Text)
+    .map((/** @type {any} */ n) => [n.props.children].flat().join(''));
 };
 
 describe('RESA-FIN-SITE — le nombre de repères visibles', () => {

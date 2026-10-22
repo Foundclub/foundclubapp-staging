@@ -31,12 +31,12 @@ const CARRIED_ROUTES = new Set([
   RouteNames.MatchCompositionBoard,
   RouteNames.MatchCompositionStart,
   RouteNames.MatchConvocationPublished,
-  // RESA-FIN-SITE (21/10/2026, tournée connectée du 22/10) — le parcours de réservation d'un terrain :
+  // RESA-FIN-SITE (21/10/2026, tournée connectée du 22/10) — la réservation d'un terrain :
   // l'aperçu du serveur, la réservation créée, le détail d'un refus voyagent en objets. Sans eux,
   // « Cette réservation n'existe plus. » s'affichait après « Réserver ». Rechargé, l'écran relit.
+  RouteNames.ReserverEchec,
   RouteNames.ReserverRecapitulatif,
   RouteNames.ReserverResultat,
-  RouteNames.ReserverEchec,
 ]);
 
 /** Au-dela, les plus anciennes entrees s'oublient : un onglet ne grossit pas sans fin. */

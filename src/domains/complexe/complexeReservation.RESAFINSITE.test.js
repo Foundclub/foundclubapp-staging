@@ -1,6 +1,7 @@
 import { demandeExpiree } from './complexeReservation';
 
-// RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expire à `expiresAt` (début du créneau moins le
+// RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expire à `expiresAt` (début du créneau moins
+// le
 // délai minimum). Passé ce moment, le gérant ne la tranche plus (E-G05, E-G06).
 describe('demandeExpiree', () => {
   const maintenant = new Date('2026-10-21T18:00:00.000Z');

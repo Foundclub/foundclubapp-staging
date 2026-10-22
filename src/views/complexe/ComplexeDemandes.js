@@ -194,7 +194,10 @@ function ComplexeDemandes() {
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
         {expiree ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-            {t('complexeReservations.demandes.delaiPasse', 'Délai de réponse passé : la demande expire sans réponse.')}
+            {t(
+              'complexeReservations.demandes.delaiPasse',
+              'Délai de réponse passé : la demande expire sans réponse.',
+            )}
           </Text>
         ) : null}
         {surOrdinateur || expiree ? null : (

@@ -135,7 +135,9 @@ function ComplexeAccueil() {
   useEffect(() => {
     if (Platform.OS !== 'web' || !nomCharge || curseurPose.current) return;
     curseurPose.current = true;
-    nomDuComplexeRef.current?.focus?.();
+    const titre = nomDuComplexeRef.current;
+    titre?.setAttribute?.('tabindex', '-1');
+    titre?.focus?.();
   }, [nomCharge]);
   // RESA-L5A2 (14/10/2026) — la semaine (et hier, un lundi) au planning, les listes du serveur.
   const lundi = joursDeLaSemaine(date)[0];
@@ -198,7 +200,6 @@ function ComplexeAccueil() {
           accessibilityRole="header"
           numberOfLines={2}
           ref={nomDuComplexeRef}
-          {.../** @type {any} */ (Platform.OS === 'web' ? { tabIndex: -1 } : {})}
           style={[
             surOrdinateur ? Fonts.h2Black : Fonts.p1Black,
             Fonts.neutral00,

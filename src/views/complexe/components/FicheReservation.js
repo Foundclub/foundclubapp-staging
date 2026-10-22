@@ -322,7 +322,10 @@ function FicheReservation({
   if (enAttente && demandeExpiree(r.expiresAt)) {
     pied = (
       <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
-        {t('complexeReservations.demandes.delaiPasse', 'Délai de réponse passé : la demande expire sans réponse.')}
+        {t(
+          'complexeReservations.demandes.delaiPasse',
+          'Délai de réponse passé : la demande expire sans réponse.',
+        )}
       </Text>
     );
   } else if (enAttente) {

@@ -855,7 +855,9 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
             recherche ») sur la MÊME ligne : une ligne de plus repoussait la carte du complexe
             choisi sous la barre flottante du site (390 px). */}
         {visiteur ? null : (
-          <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}>
+          <View
+            style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}
+          >
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}

@@ -25,6 +25,7 @@ import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInv
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
 import { RouteNames } from '@/navigation/routeNames';
+
 import { useMaReservation } from '@/services/complexe/complexeJoueurQueries';
 
 import { useIsDesktop } from '@/responsive';
@@ -68,7 +69,9 @@ function ReserverResultat() {
   // « Cette réservation n'existe plus. ».
   const relue = useMaReservation(params.reservation ? null : (params.reservationId || null));
   const reservation = params.reservation || relue?.data || null;
-  const enRelecture = !params.reservation && Boolean(params.reservationId) && Boolean(relue?.isLoading);
+  const enRelecture = !params.reservation
+    && Boolean(params.reservationId)
+    && Boolean(relue?.isLoading);
   const collecte = params.collecte || null;
   const equipe = params.equipe || null;
   const surOrdinateur = useIsDesktop();
