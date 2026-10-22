@@ -183,11 +183,111 @@ const maReservation = (autres = {}) => ({
   ...autres,
 });
 
+/**
+ * RESA-L6B-2 — le groupe d'une réservation (`GET /reservations-terrain/:id/groupe`, serveur
+ * RESA-L3 `toGroupView` + `extrasOf`), vu par son réserveur : 8 présents sur 10.
+ * @param {Record<string, any>} [autres] - Ce qui change.
+ * @returns {Record<string, any>} Le groupe.
+ */
+const groupe = (autres = {}) => ({
+  annonce: null,
+  collecte: null,
+  complete: false,
+  conversation: null,
+  counts: { absents: 1, presents: 8, sansReponse: 1 },
+  discussion: null,
+  equipe: null,
+  lien: null,
+  myResponse: 'present',
+  participants: [
+    {
+      isBooker: true, isMe: true, label: 'Julien M.', response: 'present', via: 'reserveur',
+    },
+    ...['Karim B.', 'Sami A.', 'Lucas T.', 'Ilyes K.', 'Hugo P.', 'Adam R.', 'Yanis D.'].map(
+      (label) => ({
+        isBooker: false, isMe: false, label, response: 'present', via: 'lien',
+      }),
+    ),
+    {
+      isBooker: false, isMe: false, label: 'Théo L.', response: 'absent', via: 'lien',
+    },
+    {
+      isBooker: false, isMe: false, label: 'Noah R.', response: 'sans_reponse', via: 'lien',
+    },
+  ],
+  places: 10,
+  reservation: 'r-1',
+  role: 'reserveur',
+  status: 'confirmee',
+  ...autres,
+});
+
+/**
+ * RESA-L6B-2 — la même réservation vue par un PARTICIPANT (`toParticipantView`) : ni annuler, ni
+ * délais, le réserveur se dit « Julien M. ».
+ * @param {Record<string, any>} [autres] - Ce qui change.
+ * @returns {Record<string, any>} La réservation.
+ */
+const reservationDeParticipant = (autres = {}) => ({
+  bookerLabel: 'Julien M.',
+  complexe: {
+    name: 'Le Five de Montrivage', phoneNumber: '+33639981234', slug: 'le-five-de-montrivage',
+  },
+  date: '2026-10-16',
+  documentId: 'r-1',
+  endsAt: '2026-10-16T17:00:00.000Z',
+  from: '18:00',
+  myResponse: 'sans_reponse',
+  note: null,
+  players: 10,
+  price: { amount: 60, perPlayer: 6, unit: 'creneau' },
+  role: 'participant',
+  startsAt: '2026-10-16T16:00:00.000Z',
+  status: 'confirmee',
+  terrain: {
+    documentId: 't-1', name: 'Terrain 1', sport: { documentId: 'a-five', name: 'Football à 5' },
+  },
+  to: '19:00',
+  ...autres,
+});
+
+/**
+ * RESA-L6B-2 — la page d'une annonce (`GET /annonces-reservation/:id`, `lireAnnonce`).
+ * @param {Record<string, any>} [autres] - Ce qui change.
+ * @returns {Record<string, any>} L'annonce.
+ */
+const annonceDeReservation = (autres = {}) => ({
+  canJoin: true,
+  documentId: 'a-1',
+  joined: 0,
+  level: 'loisir',
+  minAge: 16,
+  notifyFavorites: true,
+  participants: ['Julien M.', 'Karim B.', 'Sami A.', 'Théo L.', 'Noah R.', 'Lucas T.', 'Ilyes K.',
+    'Hugo P.'],
+  places: 2,
+  reservation: {
+    complexe: { city: 'Montrivage', name: 'Le Five de Montrivage', slug: 'le-five-de-montrivage' },
+    date: '2026-10-16',
+    endsAt: '2026-10-16T17:00:00.000Z',
+    from: '18:00',
+    price: { amount: 60, perPlayer: 6, unit: 'creneau' },
+    startsAt: '2026-10-16T16:00:00.000Z',
+    terrain: { name: 'Terrain 1', sport: 'Football à 5' },
+    to: '19:00',
+  },
+  status: 'ouverte',
+  ...autres,
+});
+
 module.exports = {
+  annonceDeReservation,
   carteDeRecherche,
   complexePublic,
   creneau,
+  groupe,
   maReservation,
   recapitulatif,
+  reservationDeParticipant,
   terrainPublic,
 };

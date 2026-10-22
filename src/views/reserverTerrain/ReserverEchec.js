@@ -60,6 +60,7 @@ function ReserverEchec() {
   const agir = (/** @type {string} */ action) => {
     switch (action) {
       case 'ailleurs':
+      case 'reserverUnTerrain':
         navigateToSearchHub(navigation, 'reservations');
         break;
       case 'appeler':
@@ -72,11 +73,15 @@ function ReserverEchec() {
         });
         break;
       case 'autresCreneaux':
+      case 'relancer':
         navigation.navigate(RouteNames.ReserverCreneau, {
           ...(params.date ? { date: params.date } : {}),
           slug: params.slug,
           terrainId: params.terrainId,
         });
+        break;
+      case 'mesReservations':
+        navigation.navigate(RouteNames.ReserverMesReservations);
         break;
       case 'profil':
         navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.ProfileEdit });
@@ -88,9 +93,13 @@ function ReserverEchec() {
   // Sans terrain connu, « Voir d'autres créneaux » et « un autre jour » mènent à la recherche.
   const sansTerrain = !(params.slug && params.terrainId);
   const versLaRecherche = (/** @type {string} */ action) => (
-    sansTerrain && (action === 'autresCreneaux' || action === 'autreJour')
+    sansTerrain && ['autreJour', 'autresCreneaux', 'relancer'].includes(action)
   );
-  const actions = contenu.actions.map((action) => (versLaRecherche(action) ? 'ailleurs' : action));
+  // RESA-L6B-2 : « Écrire au complexe » ouvre la conversation d'UNE réservation ; cet écran, venu
+  // d'un refus au moment de réserver, n'en a pas (l'en-tête de E-P07 la propose).
+  const actions = contenu.actions
+    .filter((action) => action !== 'ecrire')
+    .map((action) => (versLaRecherche(action) ? 'ailleurs' : action));
 
   const aUnCreneau = Boolean(params.date && params.from);
   const carte = aUnCreneau || params.complexe ? (

@@ -55,10 +55,12 @@ import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 import {
   auteurDuMessageCite,
   couleurDuNom,
+  estUnCanalDeComplexe,
   estUnTeteATete,
   extraitDuMessageCite,
   placeDansLeGroupe,
   reserveDeLHeure,
+  sousTitreDesMembres,
 } from '@/domains/messaging/habillageDuFil';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
@@ -1205,6 +1207,9 @@ function Conversation({ navigation, route }) {
     autorisations: autorisationsDuFil,
     estAdmin: isGroupAdmin,
   });
+  // RESA-L6B-2 (20/10/2026) — E-P12 : le canal d'un complexe (serveur RESA-L4 ; il joint le
+  // nombre réel de membres et, à un membre, seulement lui et les gérants). Témoin : MSG1A, C1-C3.
+  const canalDuComplexe = estUnCanalDeComplexe(chatData);
 
   // 🚫 BLOQUER (K3) — LE SECOND ENDROIT QU APPLE REGARDE : le menu du fil.
   //
@@ -6730,7 +6735,28 @@ function Conversation({ navigation, route }) {
   const redresse = Platform.OS === 'android'
     ? { transform: [{ scale: -1 }] }
     : { transform: [{ scaleY: -1 }] };
-  const renderChatEmpty = () => (filDeLaVille.estFil ? (
+  const renderChatEmpty = () => {
+    // RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre, avant le premier message.
+    if (canalDuComplexe && !isGroupAdmin) {
+      return (
+        <View
+          style={[
+            Alignments.fill,
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.padding[24],
+            redresse,
+          ]}
+        >
+          <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+            {i18n.t('conversation.canalDuComplexe.vide', 'Le complexe n’a encore rien publié.')}
+          </Text>
+        </View>
+      );
+    }
+    return renderChatEmptyDuFil();
+  };
+  const renderChatEmptyDuFil = () => (filDeLaVille.estFil ? (
     // COLL-C4A2 — la première phrase d'un fil de la Ville : à quoi il sert, qui le lit.
     <View style={[Alignments.fill, Alignments.justifyCenter, redresse]}>
       <VideDuFilDeLaVille
@@ -6792,7 +6818,7 @@ function Conversation({ navigation, route }) {
               { color: withAlpha(Colors.neutral00, 0.72) },
             ]}
           >
-            {filDeLaVille.texteLectureSeule || (envoiReserve
+            {filDeLaVille.texteLectureSeule || (envoiReserve && !canalDuComplexe
               ? t('conversation.adminsOnlySend', 'Seuls les admins peuvent envoyer des messages.')
               : t('conversation.readOnly', 'Canal d\'annonce (lecture seule)'))}
           </Text>
@@ -7068,17 +7094,18 @@ function Conversation({ navigation, route }) {
   } else if (
     !sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil
   ) {
-    const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
-      .filter((/** @type {any} */ membre) => (
-        String(membre?.documentId || '') !== String(userData?.documentId || '')
-      ))
-      .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
-      .filter(Boolean)
-      .slice(0, 30);
-    if (prenomsDesMembres.length > 0) {
-      const vous = t('conversation.header.you', 'Vous');
-      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${vous}`;
-    }
+    // La règle écrite une fois (habillageDuFil.js, partagée avec le site) ; RESA-L6B-2 : le canal
+    // d'un complexe dit son NOMBRE de membres, jamais la liste réduite que le serveur joint.
+    sousTitreDeLEnTete = sousTitreDesMembres({
+      canal: (nombre) => i18n.t(
+        'conversation.canalDuComplexe.sousTitre',
+        'Canal du complexe · {{count}} membres',
+        { count: nombre },
+      ),
+      chat: chatData,
+      meId: userData?.documentId,
+      vous: t('conversation.header.you', 'Vous'),
+    });
   }
   const peutOuvrirLaGestionDuGroupe = isGroupChat;
 

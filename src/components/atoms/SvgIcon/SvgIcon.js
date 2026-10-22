@@ -29,6 +29,11 @@ const icons = {
   envelope: require('@/assets/icons/envelope.png'),
   'euro-circle': require('@/assets/icons/euro-circle.png'),
   flag: require('@/assets/icons/flag.png'),
+  // RESA-L6B-2 (20/10/2026) — le favori d'un complexe : le cœur dessiné sur la toile validée
+  // (AT-15 A, planches EP02 / EP11), contour (« Ajouter aux favoris ») et plein (« Dans tes
+  // favoris ») ; même gabarit (viewBox 24, trait 2 arrondi, PNG 96 x 96, encre blanche).
+  heart: require('@/assets/icons/heart.png'),
+  'heart-filled': require('@/assets/icons/heart-filled.png'),
   'location-pin-alt-1': require('@/assets/icons/location.png'),
   'message-circle': require('@/assets/icons/message-circle.png'),
   money_bag: require('@/assets/icons/money_bag.png'),

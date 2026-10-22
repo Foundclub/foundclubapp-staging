@@ -666,6 +666,17 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     const reservationId = toSafeString(payload.reservationId).trim();
     if (!COMPLEXES_JOUEUR || !reservationId) return null;
     const change = toSafeString(payload.change).trim();
+    // RESA-L6B-2 (20/10/2026) — N-28, « Il me manque des joueurs » aux favoris (`change:
+    // 'annonce'`, `annonceId`) : la page de l'annonce (E-P09 B), pour la rejoindre. Les autres
+    // changements de la partie (N-21 à N-27, N-31, N-33) restent sur « Ma réservation ».
+    // Témoin : views/reserverTerrain/__tests__/EP09.annonce.L6B2.test.js.
+    const annonceId = toSafeString(payload.annonceId).trim();
+    if (change === 'annonce' && annonceId) {
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: { annonceId },
+        route: RouteNames.ReserverAnnonce,
+      });
+    }
     if (change === 'veille') {
       return adaptDestinationForCurrentPlatform(payload, {
         params: { reservationId },

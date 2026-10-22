@@ -31,6 +31,8 @@ const mockApercu = jest.fn();
 let mockReservationEnCours = false;
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useApercuDeReservation: () => ({ isPending: false, mutateAsync: mockApercu }),
+  // RESA-L6B-2 : l'âge minimum du bandeau « Pour mon équipe » (témoin EP04.pourQuiCollecte).
+  useComplexePublic: () => ({ data: null }),
   useReserverUnCreneau: () => ({ isPending: mockReservationEnCours, mutateAsync: mockReserver }),
 }));
 
@@ -69,6 +71,21 @@ const monter = async () => {
     await Promise.resolve();
   });
   return arbre;
+};
+
+/**
+ * Le bouton dont le titre est EXACTEMENT celui-ci (RESA-L6B-2 : « Réserver seulement quand assez
+ * de joueurs ont répondu présent » contient aussi « Réserver »).
+ * @param {any} arbre - L'arbre.
+ * @param {string} titre - Le titre.
+ * @returns {any} Le bouton ; lève une erreur s'il n'existe pas.
+ */
+const bouton = (arbre, titre) => {
+  const trouves = arbre.root.findAll((/** @type {any} */ noeud) => (
+    noeud.props?.title === titre && typeof noeud.props?.onPress === 'function'
+  ));
+  if (!trouves.length) throw new Error(`Aucun bouton « ${titre} »`);
+  return trouves[0];
 };
 
 /**
@@ -139,7 +156,7 @@ describe('E-P04 — les blocs, dans l’ordre de la fiche', () => {
           && String(n.props?.accessibilityLabel || '').includes('honneur'),
       ),
     ).toHaveLength(0);
-    expect(pressable(arbre, 'Réserver').props.disabled).toBeFalsy();
+    expect(bouton(arbre, 'Réserver').props.disabled).toBeFalsy();
   });
 
   it('le mot du complexe (A-G26)', async () => {
@@ -184,7 +201,7 @@ describe('E-P04 — réserver', () => {
     });
     await toucher(parRepere(arbre, 'reserver-partager-numero'));
     await toucher(pressable(arbre, 'Un joueur de moins'));
-    await toucher(pressable(arbre, 'Réserver'));
+    await toucher(bouton(arbre, 'Réserver'));
     expect(mockReserver).toHaveBeenCalledWith({
       date: '2026-10-16',
       from: '18:00',
@@ -204,7 +221,7 @@ describe('E-P04 — réserver', () => {
     await act(async () => {
       parRepere(arbre, 'reserver-petit-mot').props.onChangeText('Foot du jeudi');
     });
-    await toucher(pressable(arbre, 'Réserver'));
+    await toucher(bouton(arbre, 'Réserver'));
     expect(lisibles(arbre)).toContain('La réservation n’est pas partie. Réessaie.');
     expect(parRepere(arbre, 'reserver-petit-mot').props.value).toBe('Foot du jeudi');
     expect(mockReplace).not.toHaveBeenCalled();
@@ -216,7 +233,7 @@ describe('E-P04 — réserver', () => {
       status: 409,
     });
     const arbre = await monter();
-    await toucher(pressable(arbre, 'Réserver'));
+    await toucher(bouton(arbre, 'Réserver'));
     expect(mockReplace).toHaveBeenCalledWith(
       RouteNames.ReserverEchec,
       expect.objectContaining({

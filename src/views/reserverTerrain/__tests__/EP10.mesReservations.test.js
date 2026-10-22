@@ -29,6 +29,9 @@ let mockLectures = {};
 const mockRelire = jest.fn();
 const mockPeriodesLues = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  // RESA-L6B-2 : les groupes de l'onglet « En collecte » et « Ma fidélité » (aucun ici).
+  useGroupesDeReservations: () => ({ groupes: {} }),
+  useMaFidelite: () => ({ data: [] }),
   useMesReservations: (/** @type {string} */ periode) => {
     mockPeriodesLues(periode);
     return mockLectures[periode];
@@ -148,13 +151,15 @@ afterEach(() => {
 });
 
 describe('E-P10 — l’en-tête et les onglets', () => {
-  it('« MES RÉSERVATIONS » et trois onglets, ni « En collecte » ni « Ma fidélité »', async () => {
+  // RESA-L6B-2 (20/10/2026) : « En collecte » arrive (serveur RESA-L3) ; « Ma fidélité » ne
+  // s'affiche qu'avec un programme actif (aucun ici). Témoin : EP10.collecteFidelite.L6B2.test.js.
+  it('« MES RÉSERVATIONS » et quatre onglets, sans « Ma fidélité » sans programme', async () => {
     const arbre = await monter();
     const textes = lisibles(arbre);
     expect(textes).toEqual(expect.arrayContaining([
-      'MES RÉSERVATIONS', 'À venir', 'Passées', 'Refusées et annulées',
+      'MES RÉSERVATIONS', 'À venir', 'En collecte', 'Passées', 'Refusées et annulées',
     ]));
-    expect(textes.join(' ')).not.toMatch(/En collecte|fidélité/i);
+    expect(textes.join(' ')).not.toMatch(/fidélité/i);
     expect(mockPeriodesLues).toHaveBeenLastCalledWith('a-venir');
   });
 });
