@@ -397,3 +397,14 @@ describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes
     expect(arbre.root.findAllByType(Text).some((n) => texte(n).startsWith('complet '))).toBe(false);
   });
 });
+// R17-QUAND-2-BIS — l'étape « Quand ? » ouvre ses dates retirées dans une feuille du bas.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, footerComponent, isVisible },
+) {
+  return isVisible ? (
+    <>
+      {children}
+      {footerComponent}
+    </>
+  ) : null;
+});
