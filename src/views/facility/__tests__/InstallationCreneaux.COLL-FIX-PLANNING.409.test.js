@@ -399,7 +399,7 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // A7-UX-2 (22/10, Adel « P2 oui ») : l'équipe se choisit sur l'étape du club.
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));

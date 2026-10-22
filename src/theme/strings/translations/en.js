@@ -5793,6 +5793,8 @@ export default {
       modifie: 'Slot updated',
       modifierLaLigne: '{{cle}}: {{valeur}}. Edit',
       pourLeClub: 'For {{club}}',
+      // ⏰ A7-UX-2 (22/10): club and team on a single step.
+      pourQui: 'For whom?',
       recapClub: 'Club · team',
       recapHeures: 'Day and times',
       relisezAttribuez: 'Review, then assign. The club is notified.',

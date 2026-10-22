@@ -483,8 +483,9 @@ function SeasonSlotForm({
     ? ['jour', 'horaires', 'quand', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
-      ...(fixedClubId ? [] : ['club']),
-      'equipe',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») — le club et l'équipe sur UNE étape (« Pour qui ? ») ;
+      // un club fixé (fiche d'un club) garde l'étape « Pour quelle équipe ? » seule.
+      fixedClubId ? 'equipe' : 'club',
       ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
       ...(compact && !quandOuvert ? [] : ['quand']),
       'recap',
@@ -492,7 +493,8 @@ function SeasonSlotForm({
   const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
-  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
+  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ
+    || (champ === 'equipe' && etapeCourante === 'club');
   const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
   const tunnelPleinEcran = pleinEcran && parcoursGuide;
   // Aller a une etape par son nom ; « Jour » et « Horaires » sautes (planning) se rouvrent.
@@ -1200,7 +1202,8 @@ function SeasonSlotForm({
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
     if (etapeCourante === 'club') {
-      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error)
+        || equipes.isLoading || Boolean(equipes.error);
     }
     if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
     if (etapeCourante === 'jour') {
@@ -1262,7 +1265,7 @@ function SeasonSlotForm({
     : [nomDuClub, nomEquipe].filter(Boolean).join(' · ');
   /** @type {Record<string, string>} */
   const titres = {
-    club: t('collectiviteCreneaux.tunnel.club', 'Pour quel club ?'),
+    club: t('collectiviteCreneaux.tunnel.pourQui', 'Pour qui ?'),
     equipe: t('collectiviteCreneaux.tunnel.equipe', 'Pour quelle équipe ?'),
     horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
     installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
@@ -1610,7 +1613,11 @@ function SeasonSlotForm({
 
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
-          {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
+          {/* A7-UX-2 : sur l'étape « Pour qui ? », la liste des équipes suit celle des clubs ; elle
+              garde son titre, même en plein écran. */}
+          {parcoursGuide && etapeCourante === 'club'
+            ? titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))
+            : libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
           {(() => {
             if (equipes.error) {
               return <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />;
