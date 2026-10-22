@@ -50,6 +50,8 @@ import {
 } from '@/services/complexe/complexeQueries';
 import { televerserPhoto } from '@/services/complexe/complexeService';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import MediaPlatform from '@/platform/media';
 
 const VIGNETTE = 72;
@@ -507,7 +509,7 @@ function ComplexeTerrain() {
                 isLoading={envoiPhoto}
                 onPress={ajouterUnePhoto}
                 size="sm"
-                title={t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo')}
+                title={texteInsecable(t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo'))}
                 variant="Secondary"
               />
             </View>

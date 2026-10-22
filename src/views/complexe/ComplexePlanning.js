@@ -50,6 +50,7 @@ import {
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import texteInsecable from '@/utils/texteInsecable';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -516,9 +517,9 @@ function ComplexePlanning() {
               testID={`fin-${choix.to}`}
             >
               <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                {t('complexeReservations.planning.jusqua', 'jusqu’à {{heure}}', {
+                {texteInsecable(t('complexeReservations.planning.jusqua', 'jusqu’à {{heure}}', {
                   heure: texteHeure(choix.to), ...SANS_ECHAPPEMENT,
-                })}
+                }))}
               </Text>
             </TouchableOpacity>
           ))}

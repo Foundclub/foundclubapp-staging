@@ -24,6 +24,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useComplexeDeLaConsole, useGesteDeLaConsole } from '@/services/complexe/complexeQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 /** Le compte d'un gérant dans l'explorateur du SuperAdmin (suspension de compte, Q1). */
@@ -385,7 +387,7 @@ function FicheComplexeConsole({ complexeId }) {
                 style={[Alignments.justifyCenter, { minHeight: 44 }]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('complexeConsole.fiche.voirLeCompte', 'voir le compte')}
+                  {texteInsecable(t('complexeConsole.fiche.voirLeCompte', 'voir le compte'))}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -416,7 +418,7 @@ function FicheComplexeConsole({ complexeId }) {
             style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
           >
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('complexeConsole.fiche.voirLaPage', 'Voir la page')}
+              {texteInsecable(t('complexeConsole.fiche.voirLaPage', 'Voir la page'))}
             </Text>
           </TouchableOpacity>
         ) : null}

@@ -43,6 +43,8 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 const JOURS = [1, 2, 3, 4, 5, 6, 7];
 const DUREES = [60, 90, 120];
 const DUREE_MIN = 30;
@@ -485,7 +487,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('plage')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterPlage', 'Ajouter une plage')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterPlage', 'Ajouter une plage'))}
             variant="Secondary"
           />
         </View>
@@ -521,7 +523,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('tarif')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterTarif', 'Ajouter un tarif')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterTarif', 'Ajouter un tarif'))}
             variant="Secondary"
           />
         </View>
@@ -643,7 +645,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('ponctuel')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterPonctuel', 'Ajouter un créneau ponctuel')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterPonctuel', 'Ajouter un créneau ponctuel'))}
             variant="Secondary"
           />
         </View>

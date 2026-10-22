@@ -45,6 +45,7 @@ import {
 } from '@/services/complexe/complexeQueries';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 /** « Jusqu'au » : un jour à venir, dans les 5 ans (la borne du serveur, `BAN_DAYS_MAX`). */
 const CINQ_ANS_EN_MS = 5 * 365 * 24 * 60 * 60 * 1000;
@@ -384,7 +385,7 @@ function ComplexeClient() {
                   }]}
                   testID={`client-historique-${reservation.documentId}`}
                 >
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.texte}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>{texteInsecable(ligne.texte)}</Text>
                   <PastillesReservation statut={ligne.etat} />
                 </TouchableOpacity>
               );

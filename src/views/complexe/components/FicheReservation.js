@@ -43,6 +43,7 @@ import {
 } from '@/services/complexe/complexeQueries';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 /**
  * E-G05 — LA FICHE D'UNE RÉSERVATION, CÔTÉ GÉRANT — RESA-L5A2 (14/10/2026), planche EG05 : l'écran
@@ -389,7 +390,7 @@ function FicheReservation({
           icon="flag"
           iconPosition="before"
           onPress={() => ouvrir('nonHonoree')}
-          title={t('complexeReservations.nonHonoree.marquerLaReservation', 'Marquer non honorée')}
+          title={texteInsecable(t('complexeReservations.nonHonoree.marquerLaReservation', 'Marquer non honorée'))}
           variant="Secondary"
         />
       </View>

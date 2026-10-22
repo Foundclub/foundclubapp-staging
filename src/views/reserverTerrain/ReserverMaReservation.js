@@ -50,6 +50,8 @@ import {
   useRepondreALaPartie,
 } from '@/services/complexe/complexeJoueurQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { openExternalMap } from '@/platform/maps/externalMap';
 import { useIsDesktop } from '@/responsive';
 
@@ -478,7 +480,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               isLoading={Boolean(ouvrirUnFil?.isPending)}
               onPress={() => ouvrirLeFil('complexe')}
               size="sm"
-              title={t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe')}
+              title={texteInsecable(t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe'))}
               variant="Secondary"
             />
           ) : null}

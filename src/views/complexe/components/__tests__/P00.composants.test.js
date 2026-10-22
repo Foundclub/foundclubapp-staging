@@ -110,7 +110,7 @@ describe('RESA-L5A1 P00 — la carte d’un terrain (E-G07, P00 bloc 5)', () => 
     expect(textes(arbre)).toEqual([
       'Padel A',
       'Foot à 5 · Extérieur · 10 joueurs',
-      'Téléphone seulement',
+      enUnMot('Téléphone seulement'),
       'Aucun créneau ouvert',
       'Pas réservable',
     ]);

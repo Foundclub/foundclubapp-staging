@@ -38,6 +38,8 @@ import {
   useTerrainsPublics,
 } from '@/services/complexe/complexeJoueurQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { useIsDesktop } from '@/responsive';
 
 const COLONNE = 560;
@@ -353,7 +355,7 @@ function ReserverCreneau() {
             <View style={{ alignSelf: 'flex-start' }}>
               <Button
                 onPress={() => changerDeJour(ajouterJours(date, 1))}
-                title={t('reserverTerrain.creneau.jourSuivant', 'Voir le jour suivant')}
+                title={texteInsecable(t('reserverTerrain.creneau.jourSuivant', 'Voir le jour suivant'))}
                 variant="Secondary"
               />
             </View>

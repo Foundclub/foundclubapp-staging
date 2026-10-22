@@ -40,6 +40,8 @@ import {
 } from '@/services/complexe/complexeQueries';
 import { televerserPhoto } from '@/services/complexe/complexeService';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import MediaPlatform from '@/platform/media';
 
@@ -607,7 +609,7 @@ function ComplexeMaPage() {
                 style={[Alignments.justifyCenter, { minHeight: 44 }]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('complexeMaPage.voirMaPage', 'Voir ma page')}
+                  {texteInsecable(t('complexeMaPage.voirMaPage', 'Voir ma page'))}
                 </Text>
               </TouchableOpacity>
             ) : null}
