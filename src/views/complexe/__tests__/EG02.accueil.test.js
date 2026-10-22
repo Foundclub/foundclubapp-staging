@@ -337,8 +337,9 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
   });
 
   // RESA-FIN-APP-2 (22/10/2026, relayé par le chef depuis RESA-FIN-SITE) — la minuterie de
-  // 1,2 s qui pose le curseur sur le nom n'était jamais annulée : l'écran démonté, elle partait quand même
-  // (« findNodeHandle is not a function » dans le témoin suivant). Démonter l'écran l'annule.
+  // 1,2 s qui pose le curseur sur le nom n'était jamais annulée : l'écran démonté, elle partait
+  // quand même (« findNodeHandle is not a function » dans le témoin suivant). Démonter l'écran
+  // l'annule.
   it('RB-3 5b · démonté avant 1,2 s : la minuterie du curseur est annulée', async () => {
     const annonce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
       .mockImplementation(() => {});
