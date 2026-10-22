@@ -267,6 +267,29 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   const carteChoisie = cartes.find((/** @type {any} */ carte) => (
     carte.slug === epingleChoisie
   )) || null;
+  // RESA-FIN-SITE (21/10/2026) — sur le SITE (vue Carte sous 1 024 px), la carte du complexe touché
+  // reste posée sur la carte, mais remonte de ce que la barre d'onglets flottante en cache : sur un
+  // écran court (390 × 640), posée à 12 px du bas de la carte, elle passait sous la barre.
+  const carteDuSiteRef = useRef(/** @type {any} */ (null));
+  const [basSurLeSite, setBasSurLeSite] = useState(12);
+  const slugChoisi = carteChoisie?.slug || null;
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !slugChoisi || typeof window === 'undefined') return undefined;
+    const mesurer = () => {
+      const boite = carteDuSiteRef.current?.getBoundingClientRect?.();
+      if (!boite) return;
+      const cache = Math.round(boite.bottom - (window.innerHeight - sceneBottomInset));
+      const plafond = Math.max(12, Math.round(boite.height) - hauteurChoisie - 12);
+      setBasSurLeSite(Math.min(plafond, Math.max(12, cache + 12)));
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    window.addEventListener('scroll', mesurer, true);
+    return () => {
+      window.removeEventListener('resize', mesurer);
+      window.removeEventListener('scroll', mesurer, true);
+    };
+  }, [hauteurChoisie, sceneBottomInset, slugChoisi]);
   const enCarte = !surOrdinateur && vue === 'carte';
   const distanceSuivante = [20, DISTANCE_MAX].find((km) => km > distanceKm) || null;
 
@@ -940,6 +963,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
               HAUTEUR_CARTE_MIN,
               Math.round(Number(evenement?.nativeEvent?.layout?.height) || 0),
             ))}
+            ref={carteDuSiteRef}
             style={{ flex: 1, minHeight: HAUTEUR_CARTE_MIN }}
           >
             <CarteDesComplexes
@@ -950,7 +974,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
               onChoisir={setEpingleChoisie}
               onOuvrir={ouvrirLeComplexe}
             />
-            {carteChoisie && Platform.OS === 'web' ? carteDuComplexeTouche(12) : null}
+            {carteChoisie && Platform.OS === 'web' ? carteDuComplexeTouche(basSurLeSite) : null}
           </View>
           {/* RESA-FIN-APP (20/10) — au TÉLÉPHONE, la carte du complexe touché se pose au bas de la
               ZONE (bornée par l'écran, dessinée sous la barre flottante), au-dessus de la barre :
