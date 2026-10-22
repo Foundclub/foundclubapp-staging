@@ -212,3 +212,32 @@ describe('R17CTRL — l historique : les contrôles faits, et les séances d une
     expect(tout.some((texte) => /séances? touchées?|déplacées?/.test(texte))).toBe(false);
   });
 });
+
+// R17CTRL-1 (22/10/2026, decision d Adel « 5- A ») — un controle EN COURS non conforme met l installation
+// « À surveiller » : l etat vient du serveur (deduit), l onglet le dit en nommant le controle ; le jalon et la
+// ligne du carnet portent le resultat.
+describe('R17CTRL-1 — « Non conforme » dans l onglet', () => {
+  it('l état « À surveiller » nomme le contrôle non conforme ; avec un signalement, les deux phrases', () => {
+    const etat = (/** @type {any} */ state) => ({ ...suivi(), data: { ...suivi().data, meta: { ...suivi().data.meta, state } } });
+    mockSuivi = etat({
+      closure: null, code: 'a_surveiller', nonConformChecks: [{ documentId: 'c-ext', doneOn: '2026-01-15', label: 'Extincteurs' }], securityOpenCount: 0,
+    });
+    expect(textes(monter().arbre)).toEqual(expect.arrayContaining(['À surveiller', 'Contrôle non conforme : Extincteurs ; l’installation reste ouverte.']));
+    mockSuivi = etat({
+      closure: null,
+      code: 'a_surveiller',
+      nonConformChecks: [{ documentId: 'c-ext', doneOn: '2026-01-15', label: 'Extincteurs' }, { documentId: 'c-ecl', doneOn: '2025-09-02', label: 'Éclairage de secours' }],
+      securityOpenCount: 1,
+      securitySince: '2026-10-18T08:42:00.000Z',
+    });
+    expect(textes(monter().arbre).find((ligne) => ligne.startsWith('1 signalement'))).toBe(
+      '1 signalement « sécurité » est ouvert depuis le dim. 18 oct. ; l’installation reste ouverte. 2 contrôles non conformes ; l’installation reste ouverte.',
+    );
+  });
+
+  it('le jalon « Contrôle : Buts et paniers · conforme » et la ligne « Prochain : … · non conforme »', () => {
+    mockCarnet = carnet([{ ...CONTROLES[0], result: 'conforme' }, { ...CONTROLES[2], result: 'non_conforme' }]);
+    const tout = textes(monter().arbre);
+    expect(tout).toEqual(expect.arrayContaining(['Contrôle : Buts et paniers · conforme', 'Prochain : 15 janv. 2027 · non conforme']));
+  });
+});
