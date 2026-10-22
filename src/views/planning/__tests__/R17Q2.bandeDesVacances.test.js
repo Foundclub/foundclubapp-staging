@@ -417,6 +417,8 @@ describe('R17Q2-4 — la bande des vacances au planning d’une installation', (
         + 'Retour le mar. 3 nov.',
     );
     expect(textes(arbre).join(' ')).not.toMatch(/SECRET-NOM|Jeanne/);
+    // Le mois abrégé porte déjà son point : pas de « nov.. » (vu sur le site, 22/10).
+    expect(textes(arbre).join(' ')).not.toContain('nov..');
   });
 });
 jest.mock(
