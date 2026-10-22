@@ -606,7 +606,10 @@ function ComplexeMaPage() {
             {COMPLEXES_JOUEUR && enregistre?.slug ? (
               <TouchableOpacity
                 accessibilityRole="link"
+                // RESA-FIN-APP : la page s'ouvre EN APERÇU (bandeau « Aperçu : c'est ce que voient
+                // les joueurs. Quitter », plan E-G11 :809-810 ; absent, tournée 2).
                 onPress={() => navigation.navigate(RouteNames.ReserverComplexe, {
+                  apercu: true,
                   slug: enregistre.slug,
                 })}
                 style={[Alignments.justifyCenter, { minHeight: 44 }]}
