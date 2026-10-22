@@ -229,7 +229,7 @@ const jourDuCalendrier = (/** @type {any} */ arbre, /** @type {string} */ jour) 
 // Club, équipe (tout le club), mercredi, 17:30 – 19:00, puis « Quand ? ».
 const jusquAuQuand = async (/** @type {any} */ arbre, { jour = 'Mercredi' } = {}) => {
   await choisir(arbre, 'Montrivage Basket');
-  await avancer(arbre);
+  // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une étape, un « Suivant » de moins.
   await avancer(arbre);
   await choisir(arbre, jour);
   await avancer(arbre);
@@ -323,7 +323,7 @@ describe('R17Q2-3 — « Sauf vacances scolaires » dans « Quand ? »', () => {
     });
     const arbre = await monter();
     await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre);
+    // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une étape, un « Suivant » de moins.
     await avancer(arbre);
     await choisir(arbre, 'Des jours différents');
     await avancer(arbre);
