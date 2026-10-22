@@ -1441,7 +1441,8 @@ function PlanningWeekTimelineView({
         minHeight: 44,
         padding: 8,
         position: 'absolute',
-        top: (hourPositions[Math.floor(annotation.startMinutes / 60)] ?? 0)
+        top: ((/** @type {Record<number, number>} */ (hourPositions))[
+          Math.floor(annotation.startMinutes / 60)] ?? 0)
           + ((annotation.startMinutes % 60) * hourHeight) / 60,
         width: `${100 / colonnesDesCases.length}%`,
       }}
