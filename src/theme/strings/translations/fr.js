@@ -18849,6 +18849,7 @@ export default {
       complexeParti: 'Ce complexe n’est plus sur FoundClub.',
       dateDeNaissance: 'Ajoute ta date de naissance pour réserver.',
       dateDeNaissanceTexte: 'Chaque complexe fixe un âge minimum.',
+      demandeRetiree: 'Ta demande est retirée',
       delaiAnnulation: 'Le délai est passé : appelle le complexe.',
       equipe: 'Seul un encadrant majeur réserve pour son équipe.',
       ferme: 'Ce créneau est fermé par le complexe.',

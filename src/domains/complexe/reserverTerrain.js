@@ -892,6 +892,18 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
         ),
         titre: t('reserverTerrain.echec.annuleeParToi', 'Ta réservation est annulée'),
       };
+    // RESA-FIN-APP (20/10) — après le retrait d'une DEMANDE : il n'y avait pas de réservation.
+    case 'demandeRetiree':
+      return {
+        ...base,
+        actions: ['ailleurs'],
+        icone: 'coche',
+        texte: t(
+          'reserverTerrain.echec.annuleeParToiTexte',
+          'Le complexe est prévenu : le créneau est de nouveau libre.',
+        ),
+        titre: t('reserverTerrain.echec.demandeRetiree', 'Ta demande est retirée'),
+      };
     case 'banni':
       return {
         ...base,

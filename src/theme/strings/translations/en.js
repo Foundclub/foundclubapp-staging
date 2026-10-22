@@ -18230,6 +18230,7 @@ export default {
       complexeParti: 'This venue is no longer on FoundClub.',
       dateDeNaissance: 'Add your date of birth to book.',
       dateDeNaissanceTexte: 'Each venue sets a minimum age.',
+      demandeRetiree: 'Your request is withdrawn',
       delaiAnnulation: 'The deadline has passed: call the venue.',
       equipe: 'Only an adult coach can book for their team.',
       ferme: 'This slot is closed by the venue.',

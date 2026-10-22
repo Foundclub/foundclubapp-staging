@@ -267,7 +267,8 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           slug,
           telephone,
           terrain: reservation.terrain,
-          variante: enCollecte ? 'collecteArretee' : 'annuleeParToi',
+          // RESA-FIN-APP : retirer une DEMANDE n'annule aucune réservation (tournée 2).
+          variante: (enCollecte && 'collecteArretee') || (demande && 'demandeRetiree') || 'annuleeParToi',
         }),
       );
     } catch (erreur) {
