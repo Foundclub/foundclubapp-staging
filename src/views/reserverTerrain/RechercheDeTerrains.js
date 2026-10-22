@@ -141,9 +141,11 @@ const filtrerLHeure = (carte, heure) => {
  * @param {number} [props.refreshSignal] - Un nouveau nombre relance la lecture (retour au
  *   premier plan).
  * @param {boolean} [props.screenActive] - Le panneau est l'onglet visible.
+ * @param {boolean} [props.visiteur] - Lue sans compte (le site, RESA-FIN-SITE) : sans les
+ *   raccourcis « Mes réservations » et « Mes favoris », qui demandent un compte.
  * @returns {import('react').ReactElement} Le panneau.
  */
-function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
+function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur = false }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Images,
@@ -852,34 +854,36 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true }) {
             RESA-L6B-2 (20/10) — « Mes favoris » (E-P11, planche EP11 : « depuis le raccourci de la
             recherche ») sur la MÊME ligne : une ligne de plus repoussait la carte du complexe
             choisi sous la barre flottante du site (390 px). */}
-        <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
-            testID="reserver-recherche-mes-reservations"
-          >
-            <Image
-              source={Images.calendar}
-              style={{ height: 16, tintColor: Colors.primary200, width: 16 }}
-            />
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel={t('reserverTerrain.favoris.titre', 'Mes complexes favoris')}
-            accessibilityRole="button"
-            onPress={() => navigation.navigate(RouteNames.ReserverFavoris)}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
-            testID="reserver-recherche-mes-favoris"
-          >
-            <SvgIcon color={Colors.primary200} height={16} name="heart" width={16} />
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('reserverTerrain.favoris.raccourci', 'Mes favoris')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {visiteur ? null : (
+          <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 20, flexWrap: 'wrap' }]}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => navigation.navigate(RouteNames.ReserverMesReservations)}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+              testID="reserver-recherche-mes-reservations"
+            >
+              <Image
+                source={Images.calendar}
+                style={{ height: 16, tintColor: Colors.primary200, width: 16 }}
+              />
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {t('reserverTerrain.mesReservations.titre', 'Mes réservations')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityLabel={t('reserverTerrain.favoris.titre', 'Mes complexes favoris')}
+              accessibilityRole="button"
+              onPress={() => navigation.navigate(RouteNames.ReserverFavoris)}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+              testID="reserver-recherche-mes-favoris"
+            >
+              <SvgIcon color={Colors.primary200} height={16} name="heart" width={16} />
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {t('reserverTerrain.favoris.raccourci', 'Mes favoris')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <Input
           accessibilityLabel={t('reserverTerrain.recherche.champ', 'Complexe, ville ou sport')}
           autoCorrect={false}
