@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -82,7 +82,10 @@ function ComplexePlanning() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @typedef {{ complexeId?: string, date?: string, terrainId?: string }} ParamsDuPlanning */
+  /**
+   * @typedef {{ complexeId?: string, creneau?: string, date?: string, terrainId?: string }}
+   *   ParamsDuPlanning
+   */
   const params = /** @type {ParamsDuPlanning | undefined} */ (route?.params);
   const { complexe, complexeId } = useComplexeChoisi(params?.complexeId);
   const surOrdinateur = useIsDesktop();
@@ -103,7 +106,9 @@ function ComplexePlanning() {
   useEffect(() => {
     if (params?.date) setDate(params.date);
     if (params?.terrainId) setTerrainChoisi(params.terrainId);
-  }, [params?.date, params?.terrainId]);
+    // RESA-FIN-APP-2 (plan E-G02 §4) : la case libre de la frise ⇒ vue Jour, sur SON créneau.
+    if (params?.creneau) setVue('jour');
+  }, [params?.creneau, params?.date, params?.terrainId]);
 
   const terrainsLus = useTerrains(complexeId);
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
@@ -164,6 +169,21 @@ function ComplexePlanning() {
     setFeuille({ creneau, quoi });
   };
   const fermer = () => setFeuille(null);
+  // RESA-FIN-APP-2 — la feuille « Ce créneau » du créneau libre de la frise, une fois par adresse.
+  const positionne = useRef('');
+  const cible = params?.creneau && params?.terrainId
+    ? `${params.date || ''}|${params.terrainId}|${params.creneau}` : '';
+  const creneauCible = cible && vue === 'jour' && positionne.current !== cible
+    ? colonnes.flatMap((colonne) => colonne.creneaux).find((creneau) => (
+      creneau.terrainId === params?.terrainId && creneau.from === params?.creneau
+      && creneau.state === 'libre' && (!params?.date || creneau.date === params.date)
+    ))
+    : null;
+  useEffect(() => {
+    if (!creneauCible) return;
+    positionne.current = cible;
+    ouvrir(creneauCible, 'libre');
+  });
   const toucher = (/** @type {Creneau} */ creneau) => {
     if (creneau.reservation?.documentId) {
       navigation.navigate(RouteNames.ComplexeReservation, {

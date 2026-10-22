@@ -516,8 +516,9 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     await act(async () => {
       parRepere(arbre, 'frise-creneau-t-1-19:00').props.onPress();
     });
+    // RESA-FIN-APP-2 : la case libre positionne le planning sur SON créneau (plan E-G02 §4).
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
-      complexeId: 'cx-five', date: '2026-10-14', terrainId: 't-1',
+      complexeId: 'cx-five', creneau: '19:00', date: '2026-10-14', terrainId: 't-1',
     });
   });
 

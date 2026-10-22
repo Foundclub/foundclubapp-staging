@@ -383,7 +383,8 @@ function ComplexeAccueil() {
     if (creneau.reservationId) {
       ouvrir(RouteNames.ComplexeReservation, { reservationId: creneau.reservationId });
     } else {
-      ouvrir(RouteNames.ComplexePlanning, { date, terrainId: ligne.cle });
+      // RESA-FIN-APP-2 (plan E-G02 §4) : positionné sur ce créneau.
+      ouvrir(RouteNames.ComplexePlanning, { creneau: creneau.from, date, terrainId: ligne.cle });
     }
   };
   const jour = instant.toLocaleDateString(localeDesFormats(), {

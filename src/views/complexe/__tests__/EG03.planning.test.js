@@ -514,3 +514,26 @@ describe('RESA-FIN-APP (5) E-G03 — le bandeau d’un geste s’efface quand on
     expect(lisibles(arbre)).not.toContain('Créneau bloqué.');
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G02, tournée 2 : la case LIBRE de la frise ouvrait le planning du
+// bon terrain, mais dans la dernière vue (Liste), pas sur le créneau. Plan E-G02 §4 : « libre ⇒
+// E-G03 positionné sur ce créneau » : vue Jour, et la feuille « Ce créneau » de cette case.
+describe('RESA-FIN-APP-2 E-G02 ⇒ E-G03 — positionné sur le créneau libre de la frise', () => {
+  it('vue Jour même sur ordinateur, la feuille « Ce créneau » du Terrain 2 à 19 h', async () => {
+    mockOrdinateur = true;
+    mockParams = {
+      complexeId: 'cx-five', creneau: '19:00', date: JOUR, terrainId: 't-2',
+    };
+    const arbre = await monter();
+    expect(mockPeriodes[mockPeriodes.length - 1]).toEqual({ from: JOUR, terrain: 't-2', to: JOUR });
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Ce créneau', 'Terrain 2 · vendredi 16/10 · 19 h – 20 h',
+    ]));
+  });
+
+  it('sans créneau dans l’adresse, aucune feuille ne s’ouvre seule', async () => {
+    mockParams = { complexeId: 'cx-five', date: JOUR, terrainId: 't-2' };
+    const arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('Ce créneau');
+  });
+});
