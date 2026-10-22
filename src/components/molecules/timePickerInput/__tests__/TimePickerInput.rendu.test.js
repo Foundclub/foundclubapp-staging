@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { Platform } from 'react-native';
+import { Platform, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TimePickerInput from '../TimePickerInput';
@@ -273,12 +273,14 @@ describe('D19 — le selecteur d heure, etat du 2026-08-07', () => {
 // FINITIONS16 · POINT 6 (tranche `heure oui`, 06/10) — LE SELECTEUR D'HEURE ETAIT INERTE SUR LE
 // SITE, comme celui des dates (point 3) : la roue ne se montait que sur iOS et Android. 11 champs
 // du site (assistant de creation d'evenement, creneaux et conditions de match amical, tournoi).
-// Sur le site : un vrai champ d'heure du navigateur. ROUGE avant.
-describe('FINITIONS16 6 — sur le site, un vrai champ d heure du navigateur', () => {
+// INVERSÉ PAR A7-UX (20/10, constat d'Adel : « le défilement d'heure n'est pas UX/UI ») — motif :
+// le champ du navigateur (`<input type="time">`) ouvrait une liste grise, minutes de 1 en 1, posée
+// par-dessus « Suivant ». Le site monte désormais le champ de FoundClub (un TextInput qui se tape,
+// la grille des heures dessous : TimePickerInput.A7UX.test.js). Ce qui RESTE vrai et reste épinglé
+// ici : pas de roue native, l'heure saisie affichée, « HH:mm » ou « » rendus, le libellé lu.
+describe('FINITIONS16 6 — sur le site, un vrai champ d heure (de FoundClub, A7-UX)', () => {
   const osDOrigine = Platform.OS;
-  const champDHeure = () => arbre.root.findAll(
-    (/** @type {any} */ noeud) => noeud.type === 'input' && noeud.props.type === 'time',
-  );
+  const champDHeure = () => arbre.root.findAllByType(TextInput);
 
   beforeEach(() => {
     Platform.OS = 'web';
@@ -288,33 +290,35 @@ describe('FINITIONS16 6 — sur le site, un vrai champ d heure du navigateur', (
     Platform.OS = osDOrigine;
   });
 
-  test('🔴 le champ d heure est la, sans appui prealable, sur l heure saisie', () => {
+  test('le champ d heure est la, sans appui prealable, sur l heure saisie ; sans liste', () => {
     afficherLeChamp();
 
     expect(champDHeure()).toHaveLength(1);
     expect(champDHeure()[0].props.value).toBe('09:30');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'input')).toHaveLength(0);
     expect(mockRoues).toHaveLength(0);
   });
 
-  test('🔴 sans valeur, le champ est vide (le navigateur montre --:--)', () => {
+  test('sans valeur, le champ est vide (il montre l exemple HH:mm)', () => {
     afficherLeChamp({ value: '' });
 
     expect(champDHeure()[0].props.value).toBe('');
+    expect(champDHeure()[0].props.placeholder).toBe('HH:mm');
   });
 
-  test('🔴 un choix rend HH:mm, comme la roue ; vider rend une chaine vide', () => {
+  test('un choix rend HH:mm, comme la roue ; vider rend une chaine vide', () => {
     afficherLeChamp();
 
-    act(() => { champDHeure()[0].props.onChange({ currentTarget: { value: '19:05' } }); });
-    act(() => { champDHeure()[0].props.onChange({ currentTarget: { value: '' } }); });
+    act(() => { champDHeure()[0].props.onChangeText('19:05'); });
+    act(() => { champDHeure()[0].props.onChangeText(''); });
 
     expect(heuresRendues).toEqual(['19:05', '']);
   });
 
-  test('🔴 le champ porte le libelle (lecteur d ecran) ; le libelle reste visible', () => {
+  test('le champ porte le libelle (lecteur d ecran) ; le libelle reste visible', () => {
     const { textes } = afficherLeChamp();
 
-    expect(champDHeure()[0].props['aria-label']).toBe('Heure de début');
+    expect(champDHeure()[0].props.accessibilityLabel).toBe('Heure de début');
     expect(textes).toContain('Heure de début');
   });
 });

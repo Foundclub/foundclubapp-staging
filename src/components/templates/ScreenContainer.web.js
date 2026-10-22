@@ -143,7 +143,8 @@ function ScreenContainer({
     Alignments.fullWidth,
     {
       backgroundColor: backgroundImageUri ? 'transparent' : backgroundColor,
-      minHeight: height,
+      // La coque réserve déjà le bas : ne pas lui ajouter une deuxième hauteur de fenêtre.
+      minHeight: 'calc(100dvh - var(--fc-shell-bottom-space, 0px))',
       paddingHorizontal: horizontalPadding,
       paddingTop: withHeaderPadding ? Math.max(insets.top, 20) : 0,
     },

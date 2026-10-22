@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { resolveFriendlyMatchOpponent } from '@/domains/messaging/messagingUseCases';
 import useTheme from '@/theme/themeContext';
@@ -31,7 +31,7 @@ import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 function AvatarDuFil({
   chat, espaceVille = false, meId = '', myTeams = [], size = 52,
 }) {
-  const { Colors } = useTheme();
+  const { Colors, Images } = useTheme();
   const ecusson = Math.round(size * 0.9);
   /** @type {import('react-native').ViewStyle} */
   const place = {
@@ -43,6 +43,32 @@ function AvatarDuFil({
 
   let contenu;
   switch (chat?.type) {
+    // MSG-SUPPORT (20/10) — la conversation « Assistance FoundClub » porte le logo de FoundClub.
+    case 'assistance':
+      contenu = (
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.neutral900,
+            borderColor: Colors.primary500,
+            borderRadius: size / 2,
+            borderWidth: 2,
+            height: size,
+            justifyContent: 'center',
+            overflow: 'hidden',
+            width: size,
+          }}
+        >
+          {Images?.logo ? (
+            <Image
+              resizeMode="contain"
+              source={Images.logo}
+              style={{ height: size * 0.62, width: size * 0.62 }}
+            />
+          ) : null}
+        </View>
+      );
+      break;
     case 'club':
       contenu = <ClubLogoMark club={chat?.club} isNeutral size={ecusson} />;
       break;
@@ -55,6 +81,28 @@ function AvatarDuFil({
         <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />
       );
       break;
+    // MSG-VILLE-NOUVELLE (20/10) — la conversation ouverte par la Ville : côté membre, l'écusson de
+    // la Ville ; côté Ville, le groupe (son nom) ou la personne d'en face.
+    case 'collectivite_conversation': {
+      const nomDuGroupe = String(chat?.groupName || '').trim();
+      const enFace = chat?.participants?.find((/** @type {any} */ p) => p?.documentId !== meId);
+      if (!espaceVille) {
+        contenu = <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />;
+      } else if (nomDuGroupe) {
+        contenu = <ClubLogoMark name={nomDuGroupe} size={ecusson} />;
+      } else {
+        contenu = (
+          <ProfileAvatar
+            enablePreview={false}
+            imageStyle={{ borderRadius: size }}
+            imageUrl={enFace?.avatar?.url}
+            name={[enFace?.firstname, enFace?.lastname].filter(Boolean).join(' ')}
+            size={size}
+          />
+        );
+      }
+      break;
+    }
     case 'collectivite_dirigeants':
       contenu = <IconeDuCanal taille={ecusson} />;
       break;

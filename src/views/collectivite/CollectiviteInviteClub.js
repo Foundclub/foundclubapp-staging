@@ -36,6 +36,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { share } from '@/platform/share';
+import { useIsDesktop } from '@/responsive';
 
 /**
  * Copie un texte : le presse-papiers du navigateur sur le site, le module natif sur le
@@ -91,6 +92,7 @@ function CollectiviteInviteClub() {
   } = useTheme();
   const route = useRoute();
   const { dockClearance } = useBottomDockLayout();
+  const isDesktop = useIsDesktop();
   const routeParams = /** @type {{ collectiviteId?: string, onglet?: string } | undefined} */ (
     route?.params
   );
@@ -372,27 +374,35 @@ function CollectiviteInviteClub() {
   );
 
   if (onglet === 'recherche') {
-    // Sur le SITE, la barre d'onglets flotte au-dessus du bas de l'écran : le lien du bas garde sa
-    // place au-dessus d'elle (`dockClearance`, comme la liste). Au téléphone, cet écran n'a pas
-    // de barre.
+    // Sur le SITE mobile, la barre d'onglets flotte au-dessus du bas de l'écran : le lien du bas
+    // garde sa place au-dessus d'elle (`dockClearance`, comme la liste). Sur ordinateur, le menu
+    // de la Ville est sur le côté et la barre n'existe plus (web/src/index.css, dès 1 024 px) :
+    // rien à réserver. Au téléphone, cet écran n'a pas de barre.
+    // INVPAD (20/10, Adel sur grand écran) : ni `maxWidth` (720 px dans un cadre de 1 180), ni
+    // les 132 px de la barre absente ; la largeur est celle du cadre, comme Clubs, Demandes et
+    // Planning, et les cartes vont sur deux colonnes (`surDeuxColonnes`, le site seulement).
     const zoneDeRecherche = {
       gap: 12,
-      maxWidth: 720,
-      paddingBottom: Platform.OS === 'web' ? dockClearance : 0,
+      paddingBottom: Platform.OS === 'web' && !isDesktop ? dockClearance : 0,
       paddingTop: 12,
       width: /** @type {'100%'} */ ('100%'),
     };
     // `boundedHeight` (RECHERCHE-UNIQUE, comme SearchScreenShell) : sur le SITE, sans lui la liste
     // prend la hauteur de tout son contenu, réclame toutes ses pages et pousse le lien du bas
     // sous la barre d'onglets. Sans effet sur le téléphone.
+    // INVPAD-2 (22/10) : sur ordinateur, la coque du site réserve déjà le bas
+    // (`--fc-shell-bottom-space`, lot SAISIE) : une seule réserve, pas la nôtre en plus.
+    const margeDuBas = Platform.OS === 'web' && isDesktop ? 0 : 24;
     return (
       <ScreenContainer
         bgImage="bg2"
         bottomInsetMode="screen"
         boundedHeight
-        contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+        contentContainerStyle={[
+          Spaces.paddingTop[0], { paddingBottom: margeDuBas }, Alignments.fill,
+        ]}
       >
-        <View style={[Alignments.fill, zoneDeRecherche]}>
+        <View style={[Alignments.fill, zoneDeRecherche]} testID="inviter-recherche">
           {enTete(t(
             'collectiviteRattachement.ajouter.title',
             'Ajouter un club',
@@ -404,7 +414,11 @@ function CollectiviteInviteClub() {
             )}
           </Text>
           <View style={Alignments.fill}>
-            <ClubListContent actionDeCarte={actionDeCarte} paramsDeFiche={paramsDeFiche} />
+            <ClubListContent
+              actionDeCarte={actionDeCarte}
+              paramsDeFiche={paramsDeFiche}
+              surDeuxColonnes
+            />
           </View>
           {lienDiscret(
             'inviter-absent',

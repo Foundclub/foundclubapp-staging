@@ -24,12 +24,22 @@ import path from 'path';
 // RESA-INSCRIPTION (19/10, et RESA-L6B-1, RESA-L7-1 et RESA-CARTE, RESA-L5B-1 : meme compte ; la vue Carte n en ajoute aucun) : fusion de staging dans la branche RESA ⇒ 30 + 2 (RESA) + 1 (R17) = 33.
 // RESA-L5B-2 (20/10) : 34 — « Mon complexe » (E-G11) modifie l'adresse du complexe, le même lieu
 // PUBLIC que « Devenir gérant » (E-G01) : avec le lien.
+// ADRESSE-EN-PREMIER (20/10) : 34, liste INCHANGÉE. Le lien devient la 1re ligne de la liste,
+// « Ajouter « <texte tapé> » », toujours par ce seul réglage : les 10 LIEU_PUBLIC l'ont. Mesuré
+// appelant par appelant : AUCUN des 24 autres n'accepte de texte libre aujourd'hui (profil et
+// inscription : une ville de la liste ; conversation : un point, sinon le partage part sans
+// coordonnées ; filtres : un centre de recherche) ; le lieu court de la convocation est une saisie
+// simple, hors de ce champ. Une ligne « Utiliser « <texte> » » n'y aurait donc rien à reprendre :
+// elle n'est pas posée.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
 const LE_CHAMP = 'components/organisms/autocompleteAddressInput/';
 
 const LIEU_PUBLIC = [
+  // R17-EVT-1-BIS (e) (20/10) : 35 — l'événement de la Ville « Ailleurs dans la commune » (place,
+  // parc, salle des fêtes) : un lieu PUBLIC, avec le lien.
+  'components/organisms/evenementVille/EvenementVilleForm.js',
   'components/organisms/facilitySelector/FacilitySelector.js',
   'views/admin/clubWizard/AdminClubWizardAddress.js',
   'views/club/ClubEdit.js',
@@ -71,14 +81,26 @@ const appelants = (dossier = SRC) => entreesDe(dossier).flatMap((entree) => {
   return /<AutocompleteAddressInput\b/.test(source) ? [path.relative(SRC, complet).replace(/\\/g, '/')] : [];
 });
 
+/**
+ * Tous les fichiers de production de `src`.
+ * @param {string} dossier - Le dossier à parcourir.
+ * @returns {string[]} Les chemins relatifs à `src`.
+ */
+const fichiersDe = (dossier = SRC) => entreesDe(dossier).flatMap((entree) => {
+  const complet = path.join(dossier, entree.name);
+  if (entree.isDirectory()) return entree.name === '__tests__' ? [] : fichiersDe(complet);
+  if (!/\.(js|jsx|ts|tsx)$/.test(entree.name) || /\.test\./.test(entree.name)) return [];
+  return [path.relative(SRC, complet).replace(/\\/g, '/')];
+});
+
 const usagesDe = (/** @type {string} */ fichier) => {
   const source = fs.readFileSync(path.join(SRC, fichier), 'utf8');
   return [...source.matchAll(/<AutocompleteAddressInput\b([\s\S]*?)\/>/g)].map((m) => m[1]);
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (34 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(34);
+  it('la carte des appelants tient toujours (35 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(35);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {
@@ -100,6 +122,14 @@ describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, o
     ['views/facility/FacilityForm.js', /\bvouvoyer=\{isCollectiviteMode\}/],
   ])('%s : le champ reçoit ce qu on sait de l objet', (fichier, attendu) => {
     usagesDe(fichier).forEach((usage) => expect(usage).toMatch(attendu));
+  });
+
+  // ADRESSE-EN-PREMIER — la ligne de tête ne s'obtient QUE par le champ d'adresse et son réglage :
+  // aucun écran ne la passe lui-même à la liste déroulante (ni l'ancien lien).
+  it('la ligne « Ajouter » ne se pose que par le champ d adresse', () => {
+    const porteurs = fichiersDe().filter((f) => /\b(actionEnTete|lienSousLesOptions)=/
+      .test(fs.readFileSync(path.join(SRC, f), 'utf8')));
+    expect(porteurs).toEqual([`${LE_CHAMP}autocompleteAddressInput.js`]);
   });
 
   it('aucun autre appelant ne l a (filtres, adversaire, écrans sans témoin)', () => {

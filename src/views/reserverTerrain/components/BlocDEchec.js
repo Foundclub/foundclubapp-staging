@@ -65,8 +65,14 @@ function BlocDEchec({ children = null, contenu, onAction }) {
       : '',
     autreJour: t('reserverTerrain.echec.autreJour', 'Réserver un autre jour'),
     autresCreneaux: t('reserverTerrain.echec.autresCreneaux', 'Voir d’autres créneaux'),
+    // RESA-L6B-2 : la conversation de la réservation (refusée, annulée par le complexe), E-P10.
+    ecrire: t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe'),
+    mesReservations: t('reserverTerrain.echec.voirMesReservations', 'Voir mes réservations'),
     profil: t('reserverTerrain.echec.completerProfil', 'Compléter mon profil'),
     reessayer: t('reserverTerrain.recherche.reessayer', 'Réessayer'),
+    // RESA-L6B-2 : la collecte arrêtée à sa date limite, la partie annulée par son réserveur.
+    relancer: t('reserverTerrain.echec.relancer', 'Relancer sur un autre créneau'),
+    reserverUnTerrain: t('reserverTerrain.echec.reserverUnTerrain', 'Réserver un terrain'),
   };
 
   return (

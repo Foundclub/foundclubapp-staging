@@ -52,6 +52,13 @@ let mockSignalements = { data: null };
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
   useCollectiviteFacilityReportsSummary: () => mockSignalements,
 }));
+// R17-CONTROLES (20/10) : « Ce qui vous attend » lit aussi les controles a refaire (doublure
+// reglable).
+/** @type {any} */
+let mockControles = { data: null };
+jest.mock('@/services/facilityCheck/facilityCheckQueries', () => ({
+  useCollectiviteFacilityChecksSummary: () => mockControles,
+}));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({
@@ -269,6 +276,7 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 
 beforeEach(() => {
   mockSignalements = { data: null };
+  mockControles = { data: null };
   mockLargeur = 390;
   mockRetenu.clear();
   mockNavigate.mockClear();
@@ -523,6 +531,8 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
 describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet', () => {
   const ORDRE_DE_LA_PLANCHE = [
     'assignSlot', 'publishNews', 'closeInstallation', 'blockSlot', 'inviteClub', 'addInstallation',
+    // R17-EVT-1 (20/10, planche P11-evenement-ou-ca-vit) : « Ajouter un événement », en 7e.
+    'addEvent',
   ];
   // Une carte par testID : la plus extérieure (le TouchableOpacity et son style ; ses enfants
   // internes reprennent le même testID).
@@ -548,11 +558,11 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     expect(textes(await monter())).toContain('Demandé par Karim Benali');
   });
 
-  it('les SIX actions de la planche, dans son ordre', async () => {
+  it('les SEPT actions de la planche, dans son ordre', async () => {
     const arbre = await monter();
     expect(actionsAffichees(arbre)).toEqual(ORDRE_DE_LA_PLANCHE);
     expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Attribuer un créneau', 'Inviter un club',
+      'Attribuer un créneau', 'Inviter un club', 'Ajouter un événement',
     ]));
   });
 
@@ -571,6 +581,14 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     });
   });
 
+  // R17-EVT-1 (20/10) — « Ajouter un événement » ouvre le formulaire de l événement de CETTE Ville.
+  it('« Ajouter un événement » ouvre l événement de la Ville (R17-EVT-1)', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-action-addEvent');
+    expect(mockNavigate)
+      .toHaveBeenLastCalledWith('CollectiviteEvenement', { collectiviteId: 'ville-montrivage' });
+  });
+
   it('« Inviter un club » ouvre l invitation de CETTE Ville (le lien, lot C-CLUBS)', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'collectivite-home-action-inviteClub');
@@ -578,16 +596,19 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
       .toHaveBeenLastCalledWith('CollectiviteInviteClub', { collectiviteId: 'ville-montrivage' });
   });
 
-  it('ordinateur : les six actions sur UNE rangée, l icône à gauche du titre', async () => {
+  // R17-EVT-1-BIS (i) (20/10, tri du chef) : avec la 7e action, une rangée unique repliait les
+  // libellés sur 3 lignes à 1 360 px. DEUX rangées, 4 puis 3 : chaque carte part d un quart
+  // (22 % + 3 espaces de 12 px), les 3 dernières s élargissent. ROUGE avant (flexBasis 0).
+  it('🔴 ordinateur : sept actions sur DEUX rangées (4 puis 3), l icône à gauche', async () => {
     mockLargeur = 1280;
     const arbre = await monter();
     const cartes = cartesDAction(arbre);
-    expect(cartes).toHaveLength(6);
+    expect(cartes).toHaveLength(7);
     cartes.forEach((/** @type {any} */ carte) => {
       const style = StyleSheet.flatten(carte.props.style);
-      // Six parts égales : aucune ne passe à la ligne, aucune largeur plafonnée.
+      // Un quart chacune : 4 tiennent sur la rangée (4 × 22 % + 36 px), la 5e passe à la ligne.
       expect(style).toEqual(expect.objectContaining({
-        flexBasis: 0, flexDirection: 'row', flexGrow: 1,
+        flexBasis: '22%', flexDirection: 'row', flexGrow: 1,
       }));
       expect(style.maxWidth).toBeUndefined();
     });
@@ -603,7 +624,7 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     mockLargeur = 1280;
     const arbre = await monter();
     const cartes = cartesDAction(arbre);
-    expect(cartes).toHaveLength(6);
+    expect(cartes).toHaveLength(7);
     cartes.forEach((/** @type {any} */ carte) => {
       const style = StyleSheet.flatten(carte.props.style);
       const [pastille] = carte.findAll((/** @type {any} */ n) => typeof n.type === 'string'
@@ -1204,5 +1225,62 @@ describe('R17-SIGNALER-1 — « Ce qui vous attend » : les signalements à trai
     mockSignalements = { data: null };
     arbre = await monter();
     expect(textes(arbre).filter((texte) => /signalement/.test(texte))).toEqual([]);
+  });
+});
+
+// R17-CONTROLES (20/10/2026, REC17-011 lot 2, decision d Adel Q6 B ; planche P11-securite-ou-ca-vit
+// porte 1, validée) — « Ce qui vous attend » porte la ligne des contrôles à refaire (dans les 30
+// jours, ou en retard) : le plus urgent en détail ; un appui ouvre l onglet « Sécurité et suivi »
+// de SON installation. Absente quand rien n est à refaire.
+describe('R17-CONTROLES — « Ce qui vous attend » : les contrôles à refaire', () => {
+  const BUTS = {
+    documentId: 'c-buts',
+    facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' },
+    label: 'Buts et paniers',
+    nextDue: '2027-03-12',
+    state: 'bientot',
+  };
+  const ECLAIRAGE = {
+    documentId: 'c-ecl',
+    facility: { documentId: 'dojo', name: 'Dojo municipal' },
+    label: 'Éclairage de secours',
+    nextDue: '2026-09-02',
+    state: 'en_retard',
+  };
+
+  it('un contrôle : « Contrôle à refaire avant le 12 mars », il ouvre l onglet', async () => {
+    mockControles = { data: { data: [BUTS], meta: { dueCount: 1 } } };
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toContain('Contrôle à refaire avant le 12 mars');
+    expect(lus).toContain('Buts et paniers · Gymnase des Tilleuls');
+    await appuyer(arbre, 'collectivite-home-controles');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'securite',
+    });
+  });
+
+  it('en retard : « Contrôle en retard depuis le 2 septembre »', async () => {
+    mockControles = { data: { data: [ECLAIRAGE], meta: { dueCount: 1 } } };
+    expect(textes(await monter())).toContain('Contrôle en retard depuis le 2 septembre');
+  });
+
+  it('plusieurs : « 2 contrôles à refaire », le plus urgent en détail', async () => {
+    mockControles = { data: { data: [ECLAIRAGE, BUTS], meta: { dueCount: 2 } } };
+    const lus = textes(await monter());
+    expect(lus).toContain('2 contrôles à refaire');
+    expect(lus).toContain('Éclairage de secours · Dojo municipal');
+  });
+
+  it('un contrôle seul : « Ce qui vous attend » ; rien à refaire : ligne ABSENTE', async () => {
+    mockRequetes = lu([]);
+    mockControles = { data: { data: [BUTS], meta: { dueCount: 1 } } };
+    expect(textes(await monter())).toContain('Ce qui vous attend');
+    mockControles = { data: { data: [], meta: { dueCount: 0 } } };
+    const arbre = await monter();
+    const lignes = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'collectivite-home-controles',
+    );
+    expect(lignes).toHaveLength(0);
   });
 });

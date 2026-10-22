@@ -133,3 +133,24 @@ it('« Mes réservations » est en tête du panneau et ouvre E-P10', async () =>
   expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverMesReservations);
   // Le premier montage de E-P01 dépasse 5 s sous charge (constaté par RESA-L6A, EP01.portes).
 }, 30_000);
+
+// RESA-L6B-2 (20/10/2026) — « Mes complexes favoris » (E-P11, planche EP11 : « depuis le raccourci
+// de la recherche ») tient sur la MÊME ligne que « Mes réservations », au libellé court « Mes
+// favoris » : une ligne de plus repoussait la carte du complexe choisi sous la barre d'onglets
+// flottante du site, à 390 px (porte composants, resa-carte.spec.ts, 20/10 20:45).
+it('« Mes favoris » sur la même ligne que « Mes réservations », ouvre E-P11', async () => {
+  const arbre = await monter();
+  const parId = (/** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.testID === id && typeof n.props?.onPress === 'function'
+  ))[0];
+  const reservations = parId('reserver-recherche-mes-reservations');
+  const favoris = parId('reserver-recherche-mes-favoris');
+  expect(favoris.parent).toBe(reservations.parent);
+  const ligne = Object.assign({}, ...[favoris.parent.props.style].flat(Infinity).filter(Boolean));
+  expect(ligne.flexDirection).toBe('row');
+  expect(favoris.props.accessibilityLabel).toBe('Mes complexes favoris');
+  await act(async () => {
+    favoris.props.onPress();
+  });
+  expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverFavoris);
+}, 30_000);

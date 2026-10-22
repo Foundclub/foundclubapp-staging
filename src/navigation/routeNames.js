@@ -36,6 +36,8 @@ export const RouteNames = /** @type {const} */ ({
   AddClubManager: 'AddClubManager',
   AddCoach: 'AddCoach',
   AddSponsor: 'AddSponsor',
+  // MSG-SUPPORT (20/10) — la boîte commune de l'assistance (console, super-admins).
+  AdminAssistance: 'AdminAssistance',
   AdminClaimDetail: 'AdminClaimDetail',
   AdminClaimList: 'AdminClaimList',
   AdminClubDetail: 'AdminClubDetail',
@@ -421,6 +423,11 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
+  // R17-EVT-1 (20/10/2026, REC17-005) — « Ajouter un événement de la Ville » (et « Modifier »),
+  // et la fiche d un événement de la Ville (la Ville, un club, un membre : le serveur juge ce
+  // qu il montre).
+  CollectiviteEvenement: 'CollectiviteEvenement',
+  EvenementDeLaVille: 'EvenementDeLaVille',
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation, toile BLG79NHv2) : son
   // espace (accueil E-G02, en onglets), « Devenir gérant » (E-G01), ses terrains (E-G07, E-G08),
   // leurs créneaux (E-G09) et ses réglages (E-G16). Cachés par l'interrupteur `COMPLEXES_GERANT`
@@ -469,4 +476,11 @@ export const RouteNames = /** @type {const} */ ({
   // ouverte par « Mon compte » et le raccourci de E-P01. Cachées par `COMPLEXES_JOUEUR`.
   ReserverMesReservations: 'ReserverMesReservations',
   ReserverVeille: 'ReserverVeille',
+  // RESA-L6B-2 (20/10/2026) — jouer à plusieurs et la communauté (serveurs RESA-L3 / L4) : la page
+  // d'une annonce « Il me manque des joueurs » (E-P09 B, notification N-28), la page d'invitation
+  // par lien DANS l'app (E-P08 ; celle du site, `/r/<code>`, est le lot RESA-L7-2) et « Mes
+  // complexes favoris » (E-P11). Cachées par `COMPLEXES_JOUEUR`.
+  ReserverAnnonce: 'ReserverAnnonce',
+  ReserverFavoris: 'ReserverFavoris',
+  ReserverInvitation: 'ReserverInvitation',
 });

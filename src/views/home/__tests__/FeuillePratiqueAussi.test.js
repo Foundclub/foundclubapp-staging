@@ -219,3 +219,58 @@ describe('RESA-INSCRIPTION — la variante « complexe » (compte sans rôle spo
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
+
+// RESA-BASCULE (20/10/2026, planche RB-3 état 2b, T1 A) — LA MÊME FEUILLE, POUR UN PARENT QUI GÈRE
+// UN COMPLEXE : la feuille de PAR-L12, plus la ligne du complexe de RESA-INSCRIPTION (rien n'est
+// perdu, ni l'enfant, ni le complexe). « Oui » le fait Joueur et l'accueil passe en JOUEUR (2c,
+// « c'est ce que le bouton promettait », maquette parent E27) : le mode parent n'est PAS posé. Les
+// parents sans complexe gardent la feuille d'avant (écart PAR-L12 relayé, hors de ce lot).
+describe('RESA-BASCULE — la variante du parent gérant (gereUnComplexe)', () => {
+  const monterGerant = () => {
+    const onDone = jest.fn();
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <FeuillePratiqueAussi
+            gereUnComplexe
+            isVisible
+            onClose={jest.fn()}
+            onDone={onDone}
+            prenoms={['Léa']}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    arbres.push(arbre);
+    return { arbre, onDone };
+  };
+
+  test('2b · ses lignes, dans l ordre de la planche : l enfant, PUIS le complexe', () => {
+    const { arbre } = monterGerant();
+    expect(textes(arbre).slice(0, 6)).toEqual([
+      'Tu pratiques aussi un sport ?',
+      'Ton compte passe de Parent à Joueur.',
+      'Tu gardes Léa, sa fiche et ses demandes.',
+      'Tu gardes ton complexe et tes droits de gestionnaire.',
+      'Tu peux rejoindre une équipe et participer à des événements.',
+      'En haut de l’accueil, tu passes de « Joueur » à « Parent » d’un geste.',
+    ]);
+  });
+
+  test('T1 A · « Oui » : compte Joueur, accueil JOUEUR, puis le compte est relu', async () => {
+    updateMe.mockResolvedValue({ data: {} });
+    const ordre = [];
+    mockAuth.setDisplayMode.mockImplementation((mode) => ordre.push(`mode:${mode}`));
+    mockAuth.refetchUserData.mockImplementation(() => { ordre.push('relu'); });
+    const { arbre, onDone } = monterGerant();
+
+    await appuyer(arbre, 'Oui, je pratique aussi');
+
+    expect(updateMe.mock.calls[0][0]).toEqual({ role: 'r-joueur' });
+    expect(ordre).toEqual(['mode:null', 'relu']);
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+});

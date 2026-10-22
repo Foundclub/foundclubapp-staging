@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  Suspense, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,6 +35,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  blocsDesEvenements,
+  fermeturesSansLesEvenements,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import {
   closureBandLabel,
@@ -74,6 +78,9 @@ import FacilityPlanningList from '@/components/organisms/planning/FacilityPlanni
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
+// R17-EVT-1-BIS (c) : le formulaire de l evenement de la Ville, charge a la demande.
+import EvenementDeLaVilleForm
+  from '@/components/organisms/evenementVille/EvenementVilleFormDiffere';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -83,10 +90,12 @@ import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirige
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGestesEvenementDeLaVille } from '@/services/collectivite/collectiviteEvenementQueries';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
   useManagingCollectivite,
+  useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import {
   getClubPlanning,
@@ -916,6 +925,13 @@ function PlanningWeekFullscreen() {
   // COLL-C4B (02/10) — les plages fermees ou bloquees de la fenetre (`meta.closures`, contrat §13).
   // COLL-C4B-BIS : plus le brouillon du panneau (a la place de la fermeture qu il modifie).
   const fermeturesDuServeur = Array.isArray(data?.meta?.closures) ? data.meta.closures : [];
+  // 🏛️ R17-EVT-1 (20/10, REC17-005) — les evenements de la Ville sur CETTE installation
+  // (`meta.evenementsDeLaVille`) : un bloc CLAIR par jour ; leur blocage lie ne se dessine pas en
+  // plus.
+  const evenementsDeLaVille = isFacilitySource && Array.isArray(data?.meta?.evenementsDeLaVille)
+    ? data.meta.evenementsDeLaVille
+    : [];
+  const fermeturesADessiner = fermeturesSansLesEvenements(fermeturesDuServeur, evenementsDeLaVille);
   // COLL-C4B-BIS (03/10), point 6 — LE BANDEAU suit la periode concernee (P3b-actu-tel ecran 6 :
   // « tant que la fermeture dure ou approche ») : la fermeture de la page d abord, sinon celle que
   // le serveur annonce (`meta.bandeau` : en cours, ou dans les 14 jours). Pour TOUS les lecteurs —
@@ -934,11 +950,11 @@ function PlanningWeekFullscreen() {
   ));
   const fermeturesDessinees = brouillon
     ? [
-      ...fermeturesDuServeur.filter((/** @type {any} */ fermeture) => !brouillon.documentId
+      ...fermeturesADessiner.filter((/** @type {any} */ fermeture) => !brouillon.documentId
         || fermeture?.documentId !== brouillon.documentId),
       { ...brouillon, enSaisie: true },
     ]
-    : fermeturesDuServeur;
+    : fermeturesADessiner;
   // 🌴 R17-QUAND-2 (planche P11-quand-ou-ca-vit, 5) — LES VACANCES SCOLAIRES de la zone que la page
   // montre (`meta.holidays`, serveur) : un bandeau violet, jamais confondu avec une fermeture, pour
   // tous les lecteurs. En vue Jour, le seul jour affiché ; sinon la période lue.
@@ -980,17 +996,28 @@ function PlanningWeekFullscreen() {
       (/** @type {any} */ fermeture) => closureBandLabel(t, fermeture),
     ))
     : [];
+  const blocsDesEvenementsDeLaVille = isFacilitySource
+    ? normalizePlanningItems(blocsDesEvenements(evenementsDeLaVille, planningRange))
+    : [];
+  const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
+    if (evenement?.documentId) {
+      /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
+        evenementId: evenement.documentId,
+      });
+    }
+  };
   const annotationsVacances = vue === VUES.jour ? absencesScolaires(jourAffiche)
     .filter(({ creneau }) => {
       const debut = toMinutes(creneau.startTime) ?? 0;
       const fin = toMinutes(creneau.endTime) ?? 0;
       // Ne pas annoncer une place libre si une séance ou une fermeture l'a reprise.
-      return ![...bandesDeFermeture, ...evenementsAffiches].some((bloc) => {
-        const plage = getPlanningItemWindow(bloc);
-        return plage && format(plage.startAt, 'yyyy-MM-dd') === jourAffiche
-          && plage.startAt.getHours() * 60 + plage.startAt.getMinutes() < fin
-          && debut < plage.endAt.getHours() * 60 + plage.endAt.getMinutes();
-      });
+      return ![...bandesDeFermeture, ...blocsDesEvenementsDeLaVille, ...evenementsAffiches]
+        .some((bloc) => {
+          const plage = getPlanningItemWindow(bloc);
+          return plage && format(plage.startAt, 'yyyy-MM-dd') === jourAffiche
+            && plage.startAt.getHours() * 60 + plage.startAt.getMinutes() < fin
+            && debut < plage.endAt.getHours() * 60 + plage.endAt.getMinutes();
+        });
     })
     .map(({ creneau }) => ({
       day: jourAffiche,
@@ -1130,6 +1157,11 @@ function PlanningWeekFullscreen() {
     setBrouillon(null);
   }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
+    // R17-EVT-1-BIS (b) (20/10) : vues Mois et Liste, l événement de la Ville ouvre SA fiche.
+    if (bloc?.raw?.evenementDeLaVille) {
+      ouvrirLEvenementDeLaVille(bloc.raw.evenementDeLaVille);
+      return;
+    }
     if (bloc?.documentId) {
       /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
         params: { eventId: bloc.documentId },
@@ -1220,6 +1252,13 @@ function PlanningWeekFullscreen() {
   const ongletsDInstallations = Array.isArray(installationsDeLaVille.data)
     ? installationsDeLaVille.data.filter((/** @type {any} */ ligne) => ligne?.documentId)
     : [];
+  // 🏛️ R17-EVT-1-BIS (c) (20/10, tri du chef) — « Ajouter un événement de la Ville » dans le
+  // panneau de droite, comme « Attribuer un créneau » (planche P10-evenement-ordi) : la Ville
+  // (son nom, sa commune), l'envoi ; publié, le panneau se ferme et la grille se relit.
+  const villesGerees = useMyCollectivites({ enabled: isFacilitySource && isDesktop });
+  const villeGeree = (Array.isArray(villesGerees.data) ? villesGerees.data : [])
+    .find((/** @type {any} */ ville) => ville?.documentId === managingCollectiviteId) || null;
+  const { publier: publierEvenement } = useGestesEvenementDeLaVille(managingCollectiviteId);
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -1336,7 +1375,8 @@ function PlanningWeekFullscreen() {
             // COLL-C4B-BIS : les jours fermes du mois, marques (et le brouillon du panneau).
             closures={fermeturesDessinees}
             currentDate={currentDate}
-            events={evenementsAffiches}
+            // R17-EVT-1-BIS (b) : les événements de la Ville de CETTE installation (repère clair).
+            events={[...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
             onDateSelect={setCurrentDate}
             onEventPress={ouvrirUnBloc}
           />
@@ -1354,7 +1394,8 @@ function PlanningWeekFullscreen() {
         <FacilityPlanningList
           capacite={facilityPlanningSummary?.maxSlots || 1}
           debutDeSemaine={startOfWeek(currentDate, { weekStartsOn: 1 })}
-          evenements={events}
+          // R17-EVT-1-BIS (b) : ses événements de la Ville (carte claire, heures prises).
+          evenements={[...blocsDesEvenementsDeLaVille, ...events]}
           fermeture={fromMinutes(fermetureDuJour)}
           // COLL-C4B-BIS : un jour ferme n a aucune place libre (T10, planche 25).
           fermetures={fermeturesDessinees}
@@ -1368,7 +1409,9 @@ function PlanningWeekFullscreen() {
     }
 
     // COLL-C4B-BIS : une semaine FERMEE sans seance se dessine (la plage), comme la planche.
-    if (!hasEvents && !bandesDeFermeture.length && !annotationsVacances.length) {
+    // R17-EVT-1 (20/10) : une semaine avec un evenement de la Ville aussi (son bloc clair).
+    if (!hasEvents && !bandesDeFermeture.length && !blocsDesEvenementsDeLaVille.length
+      && !annotationsVacances.length) {
       return (
         <View
           style={{
@@ -1441,7 +1484,7 @@ function PlanningWeekFullscreen() {
         // sous les seances (jamais comptees comme une seance). COLL-C4B-BIS : aussi en colonnes de
         // plateaux (la grille les pose sous toutes les colonnes).
         // Recolte 03/10 : avec COLL-C3B-BIS, les blocs affiches portent aussi la place « U13 ? » en pointille.
-        events={[...bandesDeFermeture, ...evenementsAffiches]}
+        events={[...bandesDeFermeture, ...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         freeSlotAnnotations={annotationsVacances}
         // 🏛️ COLL-R-APP-PLANNING (COL-012) : des fleches aussi dans la rangee des jours (la ou est
@@ -1454,6 +1497,7 @@ function PlanningWeekFullscreen() {
         onDateChange={vue === VUES.troisJours
           ? (/** @type {Date} */ ancre) => setCurrentDate(addDays(ancre, 1))
           : setCurrentDate}
+        onEvenementVillePress={ouvrirLEvenementDeLaVille}
         onEventPress={handleEventPress}
         onFreeSlotPress={toucherUneHeureLibre}
         onReadOnlyEventPress={handleReadOnlyEventPress}
@@ -1576,6 +1620,17 @@ function PlanningWeekFullscreen() {
       startTime: panneau.initial?.startTime,
     });
   };
+  // R17-EVT-1-BIS (c) : une heure libre, l'événement de la Ville, déjà rempli (ce jour,
+  // ces heures).
+  const ajouterUnEvenement = () => setPanneau({
+    initial: {
+      date: panneau.date,
+      endTime: panneau.initial?.endTime,
+      facilityId,
+      startTime: panneau.initial?.startTime,
+    },
+    type: 'evenement',
+  });
   if (['attribuer', 'modifier'].includes(panneau?.type) && !isDesktop) {
     tunnelPleinEcran = (
       <SeasonSlotForm
@@ -1635,6 +1690,36 @@ function PlanningWeekFullscreen() {
             variant="Secondary"
           />
         ) : null}
+        {/* R17-EVT-1-BIS (c) — une heure libre : l'événement de la Ville, à côté de la grille. */}
+        {panneau.type === 'attribuer' && panneau.date && peutAttribuer ? (
+          <Button
+            onPress={ajouterUnEvenement}
+            title={t('collectiviteEvenement.titre', 'Ajouter un événement de la Ville')}
+            variant="Ghost"
+          />
+        ) : null}
+      </View>
+    );
+  } else if (panneau?.type === 'evenement' && isDesktop && peutAttribuer) {
+    panneauRendu = (
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+        <Suspense fallback={null}>
+          <EvenementDeLaVilleForm
+            collectiviteId={String(managingCollectiviteId)}
+            collectiviteNom={String(villeGeree?.name || '')}
+            collectiviteVille={String(villeGeree?.address?.city || '')}
+            etroit
+            initial={panneau.initial}
+            installations={ongletsDInstallations}
+            key={`evenement-${panneau.initial?.date || ''}-${panneau.initial?.startTime || ''}`}
+            onClose={fermerPanneau}
+            onPublier={async (/** @type {any} */ corps) => {
+              await publierEvenement.mutateAsync(corps?.data ?? corps);
+              fermerPanneau();
+            }}
+            presentation="panneau"
+          />
+        </Suspense>
       </View>
     );
   } else if (panneau?.type === 'vacances') {

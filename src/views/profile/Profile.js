@@ -48,6 +48,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useOuvrirLAssistance from '@/views/chat/useOuvrirLAssistance';
 import EntreeComplexe from '@/views/complexe/components/EntreeComplexe';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
@@ -153,6 +154,10 @@ function Profile({ navigation, route }) {
   // 🔤 I18N-0 — le réglage « Langue ». `null` = suivre la langue du téléphone.
   const [choixDeLangue, setChoixDeLangue] = useState(() => lireChoixDeLangue());
   const [isLanguageChoiceOpen, setIsLanguageChoiceOpen] = useState(false);
+  // 🛟 MSG-SUPPORT (20/10, décision d'Adel « 3 ») — « Nous contacter » propose les DEUX : écrire à
+  // l'assistance (la conversation dans l'app) ou envoyer un e-mail (le lien de R24).
+  const [isContactChoiceOpen, setIsContactChoiceOpen] = useState(false);
+  const assistance = useOuvrirLAssistance({ navigation });
   const safeAuthSessions = authSessions || [];
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
@@ -889,13 +894,19 @@ function Profile({ navigation, route }) {
     // RESA-L6B-1 (19/10) — « Mes réservations » (E-P10) EN TÊTE de la rubrique, pour tout
     // pratiquant (planche EP10 état 5, choix S-19 validé avec les planches le 13/10), avec le
     // nombre de réservations à venir. Caché par `COMPLEXES_JOUEUR` (éteint : rien de plus, rien
-    // n'est lu). « Mes complexes favoris » (E-P11) attend le serveur L4 (RESA-L6B-2).
+    // n'est lu). RESA-L6B-2 (20/10) : « Mes complexes favoris » (E-P11) juste après (planche EP10
+    // état 5), sans compteur (rien n'est lu ici).
     ...(COMPLEXES_JOUEUR ? [{
       accessoire: <NombreAVenir />,
       icon: Images.calendar,
       key: 'mesReservations',
       label: t('reserverTerrain.mesReservations.titre', 'Mes réservations'),
       onPress: () => navigation.navigate(RouteNames.ReserverMesReservations),
+    }, {
+      icon: Images.heart,
+      key: 'mesFavoris',
+      label: t('reserverTerrain.favoris.titre', 'Mes complexes favoris'),
+      onPress: () => navigation.navigate(RouteNames.ReserverFavoris),
     }] : []),
     {
       icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,
@@ -1079,8 +1090,26 @@ function Profile({ navigation, route }) {
       icon: Images.envelope,
       key: 'contactSupport',
       label: t('profile.actions.contactSupport', 'Nous contacter'),
-      onPress: handleContactSupport,
+      onPress: () => setIsContactChoiceOpen((ouvert) => !ouvert),
     },
+    ...(isContactChoiceOpen ? [
+      {
+        a11y: assistance.erreur
+          ? t('assistance.ligne.erreur', 'L’assistance ne s’ouvre pas. Réessaie dans un instant.')
+          : undefined,
+        icon: Images.send,
+        key: 'contactSupport-assistance',
+        label: t('profile.contactSupport.ecrire', 'Écrire à l’assistance'),
+        onPress: assistance.ouvrir,
+        value: assistance.erreur ? t('profile.contactSupport.reessayer', 'Réessaie') : undefined,
+      },
+      {
+        icon: Images.envelope,
+        key: 'contactSupport-email',
+        label: t('profile.contactSupport.email', 'Envoyer un e-mail'),
+        onPress: handleContactSupport,
+      },
+    ] : []),
     ...(isSuperAdmin ? [
       {
         icon: Images.shield,

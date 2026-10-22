@@ -57,6 +57,11 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
   {
     icon: 'stadium', key: 'addInstallation', lot: 'COLL1C', route: 'CollectiviteInstallationForm',
   },
+  // R17-EVT-1 (20/10, REC17-005, planche P11-evenement-ou-ca-vit) : « Ajouter un événement »,
+  // en 7e.
+  {
+    icon: 'plus', key: 'addEvent', lot: 'R17-EVT-1', route: 'CollectiviteEvenement',
+  },
 ]);
 
 /**

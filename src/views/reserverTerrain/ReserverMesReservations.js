@@ -6,9 +6,12 @@ import {
 } from 'react-native';
 
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
+import { apercuDeLaFidelite, jourEtHeure } from '@/domains/complexe/partieDuJoueur';
 import {
   joursDeMesReservations,
-  PERIODES_DE_MES_RESERVATIONS,
+  ONGLETS_DE_MES_RESERVATIONS,
+  periodeDeLOnglet,
+  reservationsDeLOnglet,
 } from '@/domains/complexe/reservationsDuJoueur';
 import { etatAffiche, momentLisible, texteJourLong } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -25,7 +28,11 @@ import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { useMesReservations } from '@/services/complexe/complexeJoueurQueries';
+import {
+  useGroupesDeReservations,
+  useMaFidelite,
+  useMesReservations,
+} from '@/services/complexe/complexeJoueurQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -42,9 +49,15 @@ const LARGEUR_MAX = 1160;
  * États : chargement, erreur, vide par onglet (« Réserver un terrain » ⇒ E-P01) ; tirer pour
  * rafraîchir. Ordinateur (≥ 1 024 px) : la liste à gauche, la fiche à droite, toucher une ligne
  * remplit le volet au lieu de changer d'écran.
- * ⛔ Pas dans ce lot : l'onglet « En collecte » et « Ma fidélité » (serveurs L3 et L4, puis
- * RESA-L6B-2), « 8/10 joueurs », « Pour U15 Valbrune », « Invité par … » (participants, L3).
- * Paramètre facultatif : `onglet` (`a-venir | passees | refusees`). Caché par `COMPLEXES_JOUEUR`.
+ * RESA-L6B-2 (20/10/2026, serveurs RESA-L3 / L4 ; planche EP10 états 1 et 2) : l'onglet « En
+ * collecte » (chaque collecte avec sa jauge et sa date limite), « Invité par Julien M. » pour une
+ * partie où l'on est participant, et « MA FIDÉLITÉ » sous « À venir » (une carte par complexe ⇒
+ * E-P02).
+ * ⛔ « 8/10 joueurs » et « Pour U15 Valbrune » sur chaque ligne : la liste du serveur ne porte ni
+ * les présents ni l'équipe (une lecture du groupe par ligne serait le prix) ; la fiche (E-P07) les
+ * dit.
+ * Paramètre facultatif : `onglet` (`a-venir | en-collecte | passees | refusees`). Caché par
+ * `COMPLEXES_JOUEUR`.
  * Témoin : `__tests__/EP10.mesReservations.test.js`.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -59,12 +72,23 @@ function ReserverMesReservations() {
   const params = /** @type {any} */ (route?.params) || {};
   const surOrdinateur = useIsDesktop();
   const { dockClearance } = useBottomDockLayout();
-  const [periode, setPeriode] = useState(/** @type {'a-venir' | 'passees' | 'refusees'} */ (
-    PERIODES_DE_MES_RESERVATIONS.find((p) => p === params.onglet) || 'a-venir'
+  const [periode, setPeriode] = useState(/** @type {string} */ (
+    ONGLETS_DE_MES_RESERVATIONS.find((p) => p === params.onglet) || 'a-venir'
   ));
   const [choisie, setChoisie] = useState(/** @type {string | null} */ (null));
-  const lecture = useMesReservations(periode);
-  const reservations = Array.isArray(lecture?.data) ? lecture.data : [];
+  const lecture = useMesReservations(periodeDeLOnglet(periode));
+  const reservations = reservationsDeLOnglet(periode, lecture?.data);
+  const enCollecte = periode === 'en-collecte';
+  const { groupes } = useGroupesDeReservations(
+    enCollecte ? reservations.map((r) => String(r?.documentId || '')) : [],
+    { enabled: enCollecte },
+  );
+  const fidelites = useMaFidelite()?.data;
+  const cartesDeFidelite = (Array.isArray(fidelites) ? fidelites : [])
+    .flatMap((carte) => {
+      const apercu = apercuDeLaFidelite(t, carte);
+      return apercu ? [{ apercu, carte }] : [];
+    });
   const ficheDuVolet = surOrdinateur
     ? (reservations.find((r) => r?.documentId === choisie) || reservations[0])?.documentId || null
     : null;
@@ -72,12 +96,17 @@ function ReserverMesReservations() {
   /** @type {Record<string, string>} */
   const onglets = {
     'a-venir': t('reserverTerrain.mesReservations.onglets.aVenir', 'À venir'),
+    'en-collecte': t('reserverTerrain.mesReservations.onglets.enCollecte', 'En collecte'),
     passees: t('reserverTerrain.mesReservations.onglets.passees', 'Passées'),
     refusees: t('reserverTerrain.mesReservations.onglets.refusees', 'Refusées et annulées'),
   };
   /** @type {Record<string, string>} */
   const vides = {
     'a-venir': t('reserverTerrain.mesReservations.vide.aVenir', 'Aucune réservation à venir.'),
+    'en-collecte': t(
+      'reserverTerrain.mesReservations.vide.enCollecte',
+      'Aucune collecte en cours.',
+    ),
     passees: t('reserverTerrain.mesReservations.vide.passees', 'Aucune réservation passée.'),
     refusees: t(
       'reserverTerrain.mesReservations.vide.refusees',
@@ -112,6 +141,27 @@ function ReserverMesReservations() {
    * @returns {string} La phrase, ou ''.
    */
   const sousLigne = (reservation, etat) => {
+    // RESA-L6B-2 : une partie où l'on est participant (D3 : la même réservation, d'autres droits).
+    if (reservation?.role === 'participant' && reservation?.bookerLabel) {
+      return t('reserverTerrain.mesReservations.invitePar', 'Invité par {{reserveur}}', {
+        reserveur: String(reservation.bookerLabel),
+        ...SANS_ECHAPPEMENT,
+      });
+    }
+    // RESA-L6B-2 : une collecte, sa jauge et sa date limite (le groupe lu pour l'onglet).
+    const collecte = groupes?.[reservation?.documentId]?.collecte;
+    if (etat === 'enCollecte' && collecte) {
+      return t(
+        'reserverTerrain.resultat.jauge',
+        '{{presents}} sur {{quorum}} · date limite {{echeance}}',
+        {
+          echeance: jourEtHeure(t, collecte.collectDeadline),
+          presents: Number(collecte.presents) || 0,
+          quorum: Number(collecte.quorum) || 0,
+          ...SANS_ECHAPPEMENT,
+        },
+      );
+    }
     if (etat === 'confirmee') {
       return t('reserverTerrain.mesReservations.tuAsReserve', 'Tu as réservé');
     }
@@ -138,7 +188,7 @@ function ReserverMesReservations() {
       horizontal
       showsHorizontalScrollIndicator={false}
     >
-      {PERIODES_DE_MES_RESERVATIONS.map((p) => (
+      {ONGLETS_DE_MES_RESERVATIONS.map((p) => (
         <PuceChoix
           choisie={p === periode}
           key={p}
@@ -222,6 +272,7 @@ function ReserverMesReservations() {
         {jour.reservations.map((/** @type {any} */ reservation) => {
           const etat = etatAffiche(reservation);
           const phrase = sousLigne(reservation, etat);
+          const collecte = groupes?.[reservation.documentId]?.collecte;
           const choisi = surOrdinateur && reservation.documentId === ficheDuVolet;
           return (
             <TouchableOpacity
@@ -248,7 +299,10 @@ function ReserverMesReservations() {
               </Text>
               {phrase ? <Text style={[Fonts.p3, Fonts.neutral200]}>{phrase}</Text> : null}
               <View style={{ marginTop: 4 }}>
-                <PastilleEtat etat={etat} />
+                <PastilleEtat
+                  compte={collecte ? `${collecte.presents}/${collecte.quorum}` : null}
+                  etat={etat}
+                />
               </View>
             </TouchableOpacity>
           );
@@ -256,6 +310,80 @@ function ReserverMesReservations() {
       </View>
     ));
   }
+
+  // RESA-L6B-2 — « MA FIDÉLITÉ » (planche EP10 état 1, RG-FIDELITE) : sous « À venir ».
+  const maFidelite = periode === 'a-venir' && cartesDeFidelite.length ? (
+    <View style={{ gap: 8 }} testID="mes-reservations-fidelite">
+      <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+        {t('reserverTerrain.mesReservations.maFidelite', 'Ma fidélité').toUpperCase()}
+      </Text>
+      {cartesDeFidelite.map(({ apercu, carte: fidelite }) => (
+        <TouchableOpacity
+          accessibilityLabel={String(fidelite?.complexe?.name || '')}
+          accessibilityRole="button"
+          disabled={!fidelite?.complexe?.slug}
+          key={String(fidelite?.complexe?.slug || fidelite?.complexe?.name)}
+          onPress={() => navigation.navigate(RouteNames.ReserverComplexe, {
+            slug: fidelite.complexe.slug,
+          })}
+          style={[carte, { gap: 8, minHeight: 44 }]}
+        >
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
+            <View
+              style={[
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                {
+                  backgroundColor: withAlpha(Colors.primary500, 0.2),
+                  borderRadius: 10,
+                  height: 32,
+                  width: 32,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                {String(fidelite?.complexe?.name || '')
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((mot) => mot.charAt(0).toLocaleUpperCase())
+                  .join('')}
+              </Text>
+            </View>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+              {String(fidelite?.complexe?.name || '')}
+            </Text>
+            {!apercu.disponible ? (
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {`${apercu.compte}/${apercu.seuil}`}
+              </Text>
+            ) : null}
+          </View>
+          {!apercu.disponible ? (
+            <View
+              style={{
+                backgroundColor: withAlpha(Colors.primary500, 0.18),
+                borderRadius: 4,
+                height: 6,
+                overflow: 'hidden',
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: Colors.primary500,
+                  height: 6,
+                  width: `${Math.round((apercu.compte / Math.max(1, apercu.seuil)) * 100)}%`,
+                }}
+              />
+            </View>
+          ) : null}
+          <Text style={[Fonts.p3, apercu.disponible ? Fonts.success500 : Fonts.neutral200]}>
+            {apercu.texte}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  ) : null;
 
   const rafraichir = (
     <RefreshControl
@@ -294,6 +422,7 @@ function ReserverMesReservations() {
             >
               {puces}
               {corps}
+              {maFidelite}
             </ScrollView>
             {ficheDuVolet ? (
               <View
@@ -332,6 +461,7 @@ function ReserverMesReservations() {
           {enTete}
           {puces}
           {corps}
+          {maFidelite}
         </ScrollView>
       )}
     </ScreenContainer>

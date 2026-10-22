@@ -100,7 +100,8 @@ export function PuceDeChoix({
           borderRadius: 999,
           borderWidth: 1,
           justifyContent: 'center',
-          minHeight: 36,
+          // A7-UX (20/10) — 44 px, la cible minimale (mesuré au banc du site : 36 px).
+          minHeight: 44,
         },
       ]}
       testID={testID}
@@ -793,6 +794,19 @@ function SeasonSlotForm({
     setVoirLibres(false);
     toucherLaSaisie();
   };
+  // ⏰ A7-UX (20/10) — LA FIN SE PROPOSE TOUTE SEULE : le Début choisi pose la Fin à + 1 h 30 (la
+  // durée de « Voir les heures libres ») ; un créneau déjà lisible garde sa durée (la Fin suit) ;
+  // une Fin déjà après le Début, sans durée connue, reste. Rien au-delà de 23:55 (elle se choisit).
+  const changerLeDebut = (/** @type {string} */ valeur) => {
+    const nouveau = String(valeur || '').trim();
+    setDebut(nouveau);
+    toucherLaSaisie();
+    const depart = isTime(nouveau) ? Number(toMinutes(nouveau)) : null;
+    if (depart === null) return;
+    if (!ordreJuste && finLisible && Number(toMinutes(fin)) > depart) return;
+    const proposee = depart + (ordreJuste ? Number(toMinutes(fin)) - Number(toMinutes(debut)) : 90);
+    if (proposee <= (23 * 60) + 55) setFin(fromMinutes(proposee));
+  };
   // « Changer l heure » : les heures sont a choisir de nouveau, les heures libres sous les yeux.
   // En mode compact (planning), les heures viennent de la case : rien a vider.
   // COLL-R-A7 : depuis le planning, l etape « Horaires » etait sautee ; elle se rouvre ici.
@@ -1172,7 +1186,7 @@ function SeasonSlotForm({
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setVoirLibres(true)}
-            style={[Alignments.row, Alignments.alignCenter, { minHeight: 32 }]}
+            style={[Alignments.row, Alignments.alignCenter, { minHeight: 44 }]}
             testID="attribuer-voir-libres"
           >
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
@@ -1228,8 +1242,12 @@ function SeasonSlotForm({
   const libelleDuChamp = (/** @type {string} */ texte) => (
     tunnelPleinEcran ? null : titreDuChamp(texte)
   );
+  // A7-UX (20/10) — `flex-start` : une puce suivie de « complet … » étirait toutes ses voisines
+  // en ovales (capture du banc, « Quel jour ? », panneau du site).
   const rangee = (/** @type {import('react').ReactNode} */ enfants) => (
-    <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>{enfants}</View>
+    <View style={[Alignments.row, Alignments.wrap, { alignItems: 'flex-start', gap: 8 }]}>
+      {enfants}
+    </View>
   );
   // 🌴 R17-QUAND-2 — le carré d'une case à cocher (« Sauf vacances scolaires », une période).
   const coche = (/** @type {boolean} */ actif) => (
@@ -1591,10 +1609,15 @@ function SeasonSlotForm({
           <Button
             disabled={envoiEnCours}
             icon="arrowLeft"
+            // A7-UX (20/10) — les boutons discrets du tunnel en cyan pâle, comme la planche P4v4
+            // (`btn-g` = primary200, « moins de gris ») : « Retour » mesuré à 4,35:1 en gris sur le
+            // fond du site, 6,5:1 ainsi.
+            iconColor={Colors.primary200}
             // COL-005 : la fleche avant le mot (elle etait apres, capture S04).
             iconPosition="before"
             onPress={reculer}
             style={{ alignSelf: 'flex-start', minHeight: 44 }}
+            textStyle={{ color: Colors.primary200 }}
             title={t('common.back', 'Retour')}
             variant="Ghost"
           />
@@ -1809,16 +1832,14 @@ function SeasonSlotForm({
           <View style={{ flex: 1 }}>
             <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-              onChange={(/** @type {string} */ valeur) => {
-                setDebut(String(valeur || '').trim());
-                toucherLaSaisie();
-              }}
+              onChange={changerLeDebut}
               placeholder="17:30"
               value={debut}
             />
           </View>
           <View style={{ flex: 1 }}>
             <TimePickerInput
+              apres={debutLisible ? debut : null}
               label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
               onChange={(/** @type {string} */ valeur) => {
                 setFin(String(valeur || '').trim());
@@ -1845,9 +1866,11 @@ function SeasonSlotForm({
           {joursDifferents ? (
             <Button
               icon="arrowLeft"
+              iconColor={Colors.primary200}
               iconPosition="before"
               onPress={() => allerA('jour')}
               style={{ alignSelf: 'flex-start', minHeight: 44 }}
+              textStyle={{ color: Colors.primary200 }}
               title={t('collectiviteCreneaux.quand.unJourFixe', 'Un jour fixe chaque semaine')}
               variant="Ghost"
             />
@@ -2307,6 +2330,7 @@ function SeasonSlotForm({
             {besoinDeConfirmer ? (
               <Button
                 onPress={changerLHeure}
+                textStyle={{ color: Colors.primary200 }}
                 title={t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure')}
                 variant="Ghost"
               />
@@ -2314,6 +2338,7 @@ function SeasonSlotForm({
             {onCancel && !besoinDeConfirmer && !parcoursGuide ? (
               <Button
                 onPress={onCancel}
+                textStyle={{ color: Colors.primary200 }}
                 title={t('common.cancel', 'Annuler')}
                 variant="Ghost"
               />

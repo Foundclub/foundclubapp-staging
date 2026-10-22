@@ -1419,6 +1419,22 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
+        {/* R17-EVT-1 (20/10/2026, REC17-005) — « Ajouter un événement de la Ville » : le tunnel
+            plein écran au téléphone (son propre en-tête), le panneau sur l ordinateur ; et la
+            fiche d un événement de la Ville (planning d une installation, Mon planning). */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteEvenement').default}
+          name={RouteNames.CollectiviteEvenement}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/EvenementDeLaVille').default}
+          name={RouteNames.EvenementDeLaVille}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteEvenement.fiche.titre', 'Événement de la Ville'),
+          }}
+        />
         {/* RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans ne
             sont DÉCLARÉS que si l'interrupteur `COMPLEXES_GERANT` est allumé (éteint : aucune
             porte, aucun lien ne les atteint).
@@ -1614,6 +1630,33 @@ function PrivateNavigator() {
           <Stack.Screen
             getComponent={() => require('@/views/reserverTerrain/ReserverMesReservations').default}
             name={RouteNames.ReserverMesReservations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6B-2 (20/10/2026) — E-P11, « Mes complexes favoris » (Mon compte, raccourci de
+            E-P01). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverFavoris').default}
+            name={RouteNames.ReserverFavoris}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6B-2 (20/10/2026) — E-P09 B, la page d'une annonce « Il me manque des joueurs »
+            (E-P07 et la notification N-28). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverAnnonce').default}
+            name={RouteNames.ReserverAnnonce}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6B-2 (20/10/2026) — E-P08, la page d'invitation par lien DANS l'app
+            (foundclub://r/<code>, appNavigator.js) : répondre avec son compte. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverInvitation').default}
+            name={RouteNames.ReserverInvitation}
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}

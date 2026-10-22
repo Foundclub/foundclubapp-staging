@@ -34,7 +34,14 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
+  // RESA-L6B-2 : le groupe, la relation au complexe, les fils, le lien et l'annonce (aucun ici).
+  useGroupeDeLaReservation: () => ({ data: null }),
+  useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useMaRelationAuComplexe: () => ({ data: null }),
   useMaReservation: () => mockLecture,
+  useOuvrirUnFil: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useRepondreALaPartie: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 const mockCarte = jest.fn();

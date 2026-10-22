@@ -1,5 +1,7 @@
-import { Linking } from 'react-native';
+import { AccessibilityInfo, Linking } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { demanderLAnnonceDArrivee, prendreLAnnonceDArrivee } from '@/domains/complexe/tonMode';
 
 import ComplexeAccueil from '@/views/complexe/ComplexeAccueil';
 
@@ -82,6 +84,19 @@ jest.mock('@/components/templates/ScreenContainer', () => (
     return children;
   }
 ));
+// RESA-BASCULE (20/10/2026) : la bascule « Ton mode » (planche RB-3) charge le contrôle à onglets
+// et ses gestes (doublures partagées), et lit les enfants du compte (aucun ici, sauf mention).
+/* eslint-disable global-require */
+jest.mock('react-native-reanimated', () => require('@/testSupport/animationDouble').reanimated());
+jest.mock('react-native-gesture-handler', () => (
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+/* eslint-enable global-require */
+let mockEnfants = /** @type {any} */ ({ lignes: [], reste: 0, total: 0 });
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref', () => ({
+  __esModule: true,
+  default: () => mockEnfants,
+}));
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -160,6 +175,7 @@ afterAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockEnfants = { lignes: [], reste: 0, total: 0 };
   mockValeurs.clear();
   mockValeurs.set('user.complexe_mode.u-1', 'on');
   mockParams = { complexeId: 'cx-five', space: true };
@@ -190,8 +206,11 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
     const ordre = [
       'LE FIVE DE MONTRIVAGE',
       'COMPLEXE DE RÉSERVATION',
-      'Tu joues aussi ?',
-      'Voir l\'app en joueur',
+      // RESA-BASCULE (planche RB-3, 1a) : « Ton mode » remplace « Tu joues aussi ? ».
+      'TON MODE',
+      'Complexe',
+      'Joueur',
+      'Tu gères Le Five de Montrivage.',
       'AUJOURD’HUI · MERCREDI 14 OCTOBRE',
       'Terrain 1',
       'Padel A',
@@ -270,19 +289,49 @@ describe('RESA-L5A1 E-G02 — UN bandeau d’état, le premier vrai', () => {
 });
 
 describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
-  it('« Voir l’app en joueur » : le mode complexe s’éteint, l’accueil revient', async () => {
+  // RESA-BASCULE (20/10/2026, planche RB-3 validée par Adel) : « Ton mode » à la place de « Tu
+  // joues aussi ? ». Ces témoins sont réécrits sur la planche validée (1a, 3c, 4, 5b).
+  it('RB-3 1a · « Joueur » : le mode complexe s’éteint, l’accueil joueur revient', async () => {
+    mockValeurs.set('user.player_mode.u-1', 'parent');
     const arbre = await monter();
-    await appuyer(arbre, 'Voir l\'app en joueur');
+    await appuyer(arbre, 'Joueur, 2 sur 2');
+    expect(mockValeurs.has('user.complexe_mode.u-1')).toBe(false);
+    expect(mockValeurs.has('user.player_mode.u-1')).toBe(false);
+    expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+  });
+
+  it('RB-3 · un entraîneur : « Coach » ramène à son accueil d’entraîneur', async () => {
+    mockRole = 'coach';
+    mockValeurs.set('user.player_mode.u-1', 'on');
+    const arbre = await monter();
+    expect(textes(arbre)).not.toContain('Revenir en mode entraîneur');
+    await appuyer(arbre, 'Coach, 2 sur 2');
+    expect(mockValeurs.has('user.player_mode.u-1')).toBe(false);
+    expect(mockValeurs.has('user.complexe_mode.u-1')).toBe(false);
+    expect(mockReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('RB-3 3c · joueur avec un enfant : 3 positions ; « Parent », l accueil parent', async () => {
+    mockEnfants = { lignes: [{ prenom: 'Léa' }], reste: 0, total: 1 };
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus.slice(lus.indexOf('TON MODE'), lus.indexOf('TON MODE') + 5)).toEqual([
+      'TON MODE', 'Complexe', 'Joueur', 'Parent', 'Tu gères Le Five de Montrivage.',
+    ]);
+    await appuyer(arbre, 'Parent, 3 sur 3');
+    expect(mockValeurs.get('user.player_mode.u-1')).toBe('parent');
     expect(mockValeurs.has('user.complexe_mode.u-1')).toBe(false);
     expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
   });
 
-  it('un entraîneur lit « Revenir en mode entraîneur » (planche RB, état 3)', async () => {
-    mockRole = 'coach';
-    const arbre = await monter();
-    await appuyer(arbre, 'Revenir en mode entraîneur');
-    expect(mockSetPlayerMode).toHaveBeenCalledWith(false);
-    expect(mockReset).toHaveBeenCalledTimes(1);
+  it('RB-3 5b · arrivé par la bascule : « Mode complexe. Tu gères … », une fois', async () => {
+    const annonce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+      .mockImplementation(() => {});
+    demanderLAnnonceDArrivee();
+    await monter();
+    expect(annonce).toHaveBeenCalledWith('Mode complexe. Tu gères Le Five de Montrivage.');
+    expect(prendreLAnnonceDArrivee()).toBe(false);
+    annonce.mockRestore();
   });
 
   // RESA-INSCRIPTION (19/10/2026) — un compte né « pour un complexe » n'a AUCUN rôle sportif : un
@@ -329,10 +378,10 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
       expect(mockReset).not.toHaveBeenCalled();
     });
 
-    it('un joueur, lui, revient directement (inchangé) : la feuille reste fermée', async () => {
+    it('un joueur, lui, revient par « Joueur » (RB-3) : la feuille reste fermée', async () => {
       mockRole = 'player';
       const arbre = await monter();
-      await appuyer(arbre, 'Voir l\'app en joueur');
+      await appuyer(arbre, 'Joueur, 2 sur 2');
       expect(mockFeuille?.isVisible ?? false).toBe(false);
       expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
     });

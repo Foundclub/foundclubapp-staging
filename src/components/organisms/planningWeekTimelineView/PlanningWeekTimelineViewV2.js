@@ -26,6 +26,7 @@ import {
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
+import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { images as Images } from '@/theme/images';
@@ -219,6 +220,9 @@ function EventBlock({
  * @param {Array<{ key: string, label: string }>} [root0.lanes] - COLL-C2B (D66) : en mode
  *   « jour », une colonne par plateau, nommee en tete.
  * @param {(evenement: any) => number} [root0.laneOf] - La colonne d un bloc (0 a lanes.length-1).
+ * @param {(evenement: any) => void} [root0.onEvenementVillePress] - R17-EVT-1 : toucher le bloc
+ *   clair d un evenement de la Ville (`raw.evenementDeLaVille`) ouvre sa fiche. Sans elle, il ne se
+ *   touche pas.
  */
 function PlanningWeekTimelineView({
   cardDisplayProfile = 'default',
@@ -234,6 +238,7 @@ function PlanningWeekTimelineView({
   mode = '3days',
   nomsDesFleches = [],
   onDateChange,
+  onEvenementVillePress,
   onEventPress,
   onFreeSlotPress,
   onReadOnlyEventPress,
@@ -611,8 +616,9 @@ function PlanningWeekTimelineView({
     weekDays.forEach((day) => counts.set(getDayKey(day), 0));
 
     weekEvents.forEach((event) => {
-      // COLL-C4B-BIS : la plage fermee n est pas une seance.
-      if (event?.raw?.closureBand) return;
+      // COLL-C4B-BIS : la plage fermee n est pas une seance ; R17-EVT-1 : l evenement de la Ville
+      // non plus.
+      if (event?.raw?.closureBand || event?.raw?.evenementDeLaVille) return;
       const eventDate = getPlanningItemDate(event);
       if (!eventDate) return;
       const key = getDayKey(eventDate);
@@ -710,7 +716,8 @@ function PlanningWeekTimelineView({
     /** @type {number} */ left,
     /** @type {number} */ width,
   ) => {
-    const seances = event.events.filter((/** @type {any} */ e) => !e.raw?.closureBand);
+    const seances = event.events
+      .filter((/** @type {any} */ e) => !e.raw?.closureBand && !e.raw?.evenementDeLaVille);
     const nombre = seances.length || event.events.length;
     // 🧮 FINITIONS12-COLL (03/10) — MÊME MOT (tournée T11, C27_1) : trois CRÉNEAUX groupés se
     // disaient « 3 séances ». Un créneau est une attribution, pas une séance (admin
@@ -775,6 +782,77 @@ function PlanningWeekTimelineView({
   };
 
   const renderTimedEventCard = (event, left, width) => {
+    // 🏛️ R17-EVT-1 (20/10, REC17-005, planches P10-planning-ordi et P10-evenement-ordi etat 11) —
+    // un EVENEMENT DE LA VILLE : le seul bloc CLAIR du planning (`primary100`), PLEIN s il prend
+    // toute l installation, en CONTOUR s il est a cote. « Ville · toute l installation », ses
+    // heures, son nom. Le toucher ouvre sa fiche (si l ecran le permet).
+    const evenementVille = event?.raw?.evenementDeLaVille;
+    if (evenementVille) {
+      const plein = Boolean(evenementVille.takesPlace);
+      const heures = `${evenementVille.startTime || ''} – ${evenementVille.endTime || ''}`;
+      const etiquette = etiquetteDuPlanning(t, evenementVille);
+      return (
+        <EventBlock
+          accessibilityLabel={t(
+            'collectiviteEvenement.planning.aria',
+            'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
+            {
+              heures, nom: evenementVille.name, place: etiquette, ...SANS_ECHAPPEMENT,
+            },
+          )}
+          event={event}
+          key={`ville-${evenementVille.documentId}-${event.dayIndex}`}
+          onReadOnlyEventPress={onEvenementVillePress
+            ? () => onEvenementVillePress(evenementVille)
+            : undefined}
+          style={[styles.eventCard, {
+            backgroundColor: plein ? Colors.primary100 : hexToRgba(Colors.primary100, 0.18),
+            borderColor: Colors.primary100,
+            borderRadius: 6,
+            borderStyle: 'solid',
+            borderWidth: plein ? 0 : 1.5,
+            height: event.height - 2,
+            left: `${left}%`,
+            paddingHorizontal: mode === 'week' ? 3 : 8,
+            paddingVertical: 4,
+            top: event.top + 1,
+            width: `${width}%`,
+          }]}
+        >
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4Bold, {
+              color: plein ? Colors.primary700 : Colors.primary100,
+              fontSize: 9,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+            }]}
+          >
+            {etiquette}
+          </Text>
+          {event.height > 34 ? (
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p4Bold, {
+                color: plein ? Colors.primary700 : Colors.primary100,
+                fontSize: 10,
+              }]}
+            >
+              {heures}
+            </Text>
+          ) : null}
+          <Text
+            numberOfLines={3}
+            style={[Fonts.p3Bold, {
+              color: plein ? Colors.primary900 : Colors.neutral00,
+              fontSize: mode === 'week' ? 10 : 12,
+            }]}
+          >
+            {evenementVille.name}
+          </Text>
+        </EventBlock>
+      );
+    }
     // COLL-C4B (02/10, design P4v3-fermer ecran 4) — une plage FERMEE ou BLOQUEE par la Ville :
     // orange (attention), avec ce qu elle dit ; la mairie la touche (lecture seule ailleurs). Elle
     // n est jamais une seance : ni club, ni equipe.

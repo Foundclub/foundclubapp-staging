@@ -23,10 +23,11 @@ import {
 // 🏛️ COLL-ACCUEIL (01/10) — les calculs PURS de l'accueil de la Ville.
 
 describe('COLL-ACCUEIL — les actions de l accueil', () => {
-  it('six actions, dans l ordre de la planche', () => {
+  // R17-EVT-1 (20/10, planche P11-evenement-ou-ca-vit) : « Ajouter un événement », en 7e.
+  it('sept actions, dans l ordre de la planche', () => {
     expect(COLLECTIVITE_HOME_ACTIONS.map((action) => action.key)).toEqual([
       'assignSlot', 'publishNews', 'closeInstallation',
-      'blockSlot', 'inviteClub', 'addInstallation',
+      'blockSlot', 'inviteClub', 'addInstallation', 'addEvent',
     ]);
   });
 
@@ -37,7 +38,7 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Inviter un club » (C-CLUBS).
     expect(affichees.map((action) => action.key)).toEqual([
       'assignSlot', 'publishNews', 'closeInstallation',
-      'blockSlot', 'inviteClub', 'addInstallation',
+      'blockSlot', 'inviteClub', 'addInstallation', 'addEvent',
     ]);
     affichees.forEach((action) => {
       expect(RouteNames[/** @type {keyof typeof RouteNames} */ (action.route)]).toBe(action.route);

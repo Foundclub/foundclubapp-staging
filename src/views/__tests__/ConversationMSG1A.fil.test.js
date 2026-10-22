@@ -909,3 +909,54 @@ describe('MSG1A — `genre A`, notices de groupe, `quitter maintenant`', () => {
     },
   );
 });
+
+// RESA-L6B-2 (20/10/2026) — E-P12, LE CANAL D'UN COMPLEXE CÔTÉ JOUEUR (planche EP12 ; plan E-P12 ;
+// A-G07, RC-T02) : la conversation reprise telle quelle, mais l'en-tête dit le NOMBRE de membres
+// (le serveur joint `participantsCount` et, à un membre, seulement lui et les gérants), la barre du
+// bas « Canal d'annonce (lecture seule) », et un canal vide « Le complexe n'a encore rien
+// publié. ».
+describe('RESA-L6B-2 — E-P12, le canal d’un complexe côté joueur', () => {
+  const CANAL_DU_COMPLEXE = {
+    documentId: 'chat-1',
+    groupAdmins: [{ documentId: 'gerant' }],
+    groupName: 'Le Five de Montrivage',
+    groupPermissions: { membersCanSendMessages: false },
+    participants: [
+      { documentId: 'moi', firstname: 'Adel' },
+      { documentId: 'gerant', firstname: 'Marc' },
+    ],
+    participantsCount: 214,
+    type: 'group',
+  };
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = CANAL_DU_COMPLEXE;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('C1 — l’en-tête : « Canal du complexe · 214 membres », jamais « Marc, Vous »', () => {
+    const { ecran } = monterLaConversation();
+    const sousTitre = ecran.root.findAll(
+      (n) => n.props?.testID === 'conversation-sous-titre' && typeof n.type === 'string',
+    )[0];
+    expect(sousTitre.props.children).toBe('Canal du complexe · 214 membres');
+  });
+
+  test('C2 — la barre du bas : « Canal d’annonce (lecture seule) »', () => {
+    const { gifted } = monterLaConversation();
+    expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
+  });
+
+  test('C3 — un canal vide : « Le complexe n’a encore rien publié. »', () => {
+    const { gifted } = monterLaConversation();
+    expect(contientLeTexte(gifted.renderChatEmpty(), 'Le complexe n’a encore rien publié.'))
+      .toBe(true);
+  });
+});

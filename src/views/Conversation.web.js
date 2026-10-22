@@ -13,6 +13,7 @@ import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
+import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
@@ -20,7 +21,11 @@ import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
-import { couleurDuNom, sousTitreDesMembres } from '@/domains/messaging/habillageDuFil';
+import {
+  couleurDuNom,
+  estUnCanalDeComplexe,
+  sousTitreDesMembres,
+} from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
   estEpinglePourMoi,
@@ -63,6 +68,8 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
+// MSGIMG (20/10) — l image ouverte en grand : memes regles que le telephone.
+import ApercuDImageDuSite from '@/components/molecules/apercuDImage/ApercuDImageDuSite';
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 // MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
@@ -98,9 +105,11 @@ import {
   BoutonMembresDuFil,
   EcussonDuFil,
   FilDeLaVilleQuitte,
-  useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+// MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
+import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
+import LigneAssistance from '@/views/chat/LigneAssistance';
 // MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
 // differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
@@ -805,6 +814,7 @@ function ColonneDesConversations({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: relireLaListe,
   } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
@@ -830,12 +840,15 @@ function ColonneDesConversations({
       : [];
     return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
   }, [listeDesFils, meId, mesBlocages]);
+  // 🛟 MSG-SUPPORT (20/10) — l'assistance est épinglée à part, en tête (comme au
+  // téléphone) ; elle quitte donc les lignes ordinaires.
+  const { autres: filsSansAssistance, filDAssistance } = separerLeFilDAssistance(filsTries);
   const monClubId = userData?.club?.documentId || null;
   // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
   const mineur = estMineurConnu(userData);
-  const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
+  const actifs = filsSansAssistance.filter((fil) => !estArchivePourMoi(fil, meId));
   const archivees = filsDeLaMessagerie(
-    filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
+    filsSansAssistance.filter((fil) => estArchivePourMoi(fil, meId)),
     { mineur, monClubId },
   );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
@@ -1131,6 +1144,15 @@ function ColonneDesConversations({
             </span>
           </button>
         ) : null}
+        {enModeArchivees ? null : (
+          <LigneAssistance
+            fil={filDAssistance}
+            meId={meId}
+            navigation={navigation}
+            onFilCree={() => { relireLaListe?.(); }}
+            style={{ paddingHorizontal: 14 }}
+          />
+        )}
         {fils.length === 0 && filsTries.length > 0 ? (
           <p
             style={{
@@ -1400,7 +1422,12 @@ function useHauteurDuCadre(cadreRef, isDesktop, declencheur) {
       const cadre = cadreRef.current;
       if (!cadre?.getBoundingClientRect) return;
       const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
-      const reserveDuBas = isDesktop ? 20 : 96;
+      // SAISIE : Joueur/Parent gardent le dock sur ordinateur. La coque connaît sa réserve,
+      // y compris quand le menu latéral le remplace ; la largeur seule ne le dit pas.
+      const coque = cadre.closest?.('.shell-content');
+      const retraitDeLaCoque = coque && typeof window.getComputedStyle === 'function'
+        ? Number.parseFloat(window.getComputedStyle(coque).paddingBottom) || 0 : 0;
+      const reserveDuBas = Math.max(isDesktop ? 20 : 96, retraitDeLaCoque);
       setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
     };
     mesurer();
@@ -1521,12 +1548,12 @@ function FenetreDuSite({
  * MSG1W — UNE CONFIRMATION DU SITE (SPECS §4 : boite de 300, titre centre, « Annuler » au contour,
  * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne,
  * quitter un groupe (la question seule, sans texte, comme le telephone).
- * @param {{ id: string, libelleAction: string, onAnnuler: () => void, onConfirmer: () => void,
- *   texte?: string, titre: string }} props - Les mots et les deux gestes.
+ * @param {{ id: string, libelleAction: string, libelleAnnuler?: string, onAnnuler: () => void,
+ *   onConfirmer: () => void, texte?: string, titre: string }} props - Les mots et les deux gestes.
  * @returns {import('react').ReactElement} La confirmation.
  */
 function ConfirmationDuSite({
-  id, libelleAction, onAnnuler, onConfirmer, texte, titre,
+  id, libelleAction, libelleAnnuler, onAnnuler, onConfirmer, texte, titre,
 }) {
   return (
     <div
@@ -1581,7 +1608,7 @@ function ConfirmationDuSite({
           }}
         >
           <button onClick={onAnnuler} style={STYLE_BOUTON_CONTOUR} type="button">
-            {i18next.t('common.actions.cancel', 'Annuler')}
+            {libelleAnnuler || i18next.t('common.actions.cancel', 'Annuler')}
           </button>
           <button
             onClick={onConfirmer}
@@ -1801,6 +1828,9 @@ function Conversation({ navigation, route }) {
   // vide. UN SEUL ETAT : un booleen « ouverte » doublé d un identifiant pourraient
   // se contredire, et deux barres s ouvrir en meme temps.
   const [reactionBarMessageId, setReactionBarMessageId] = useState('');
+  // MSGIMG — l adresse de la photo ouverte en grand, ou une chaine vide (fermee).
+  const [imageEnGrand, setImageEnGrand] = useState('');
+  const fermerLImageEnGrand = useCallback(() => setImageEnGrand(''), []);
   const [reactionBarAnchor, setReactionBarAnchor] = useState(
     /** @type {{left: number, top: number} | null} */ (null),
   );
@@ -1877,11 +1907,13 @@ function Conversation({ navigation, route }) {
   // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) : le
   // titre, la ligne sous le titre, qui écrit et pour quel club, la voix demandée au serveur, et
   // « Tu ne fais plus partie de ce canal » (voir Conversation.js). Ailleurs, rien ne change.
-  const filDeLaVille = useFilDeLaVille({
+  // 🛟 MSG-SUPPORT (20/10) — et l'assistance (views/chat/FilDAssistance.js).
+  const filDeLaVille = useHabillageDuFil({
     chatData,
     chatId,
     espaceVille: route?.params?.espace === 'ville',
     messagesError,
+    messagesPages,
     navigation,
     routeChatType: route?.params?.chatType || null,
   });
@@ -2151,11 +2183,20 @@ function Conversation({ navigation, route }) {
   // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
   // R17-CANAUX — « Toute la ville » : la Ville seule (useFilDeLaVille), depuis son espace ou quand
   // le serveur le dit ; un membre y lit « Seule la Ville écrit ici ».
+  // RESA-L6B-2 (20/10/2026) — E-P12 : dans le canal d'un complexe, seuls ses gérants
+  // (administrateurs du fil) publient ; le serveur ferme l'envoi aux membres, comme le téléphone.
+  const adminsDuFil = /** @type {any} */ (chatData)?.groupAdmins;
+  const canalSansMaVoix = estUnCanalDeComplexe(chatData) && !(
+    Array.isArray(adminsDuFil) ? adminsDuFil : []
+  ).some((/** @type {any} */ admin) => (
+    String(admin?.documentId || admin?.id || '') === String(userData?.documentId || '')
+  ));
   const peutEcrire = useMemo(
     () => (
-      canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) || filDeLaVille.peutEcrire
+      (canWriteInChat({ chat: chatData, hasClubAccess, user: userData }) && !canalSansMaVoix)
+      || filDeLaVille.peutEcrire
     ),
-    [chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
+    [canalSansMaVoix, chatData, filDeLaVille.peutEcrire, hasClubAccess, userData],
   );
   // MSG1W §3.10 (« avertissement B », Adel 07/10) — un fil rattache a un club (fil de club, fil
   // d equipe) peut etre lu par son dirigeant : une notice EN TETE DU FIL le dit. Un tete-a-tete ou
@@ -2839,7 +2880,8 @@ function Conversation({ navigation, route }) {
           return (
             <button
               key={`${label}-${index}`}
-              onClick={() => openUrl(attachmentUrl)}
+              // MSGIMG — la photo s ouvre en grand DANS la page (avant : un nouvel onglet).
+              onClick={() => setImageEnGrand(attachmentUrl)}
               style={{
                 background: 'transparent',
                 border: 0,
@@ -3609,6 +3651,9 @@ function Conversation({ navigation, route }) {
       .filter(Boolean)
   ), [chatData]);
   const jeSuisAdmin = estUnGroupe && adminsDuGroupe.includes(String(userData?.documentId || ''));
+  // RESA-L6B-2 (20/10/2026) — E-P12 : le canal d'un complexe, vu d'un membre : le NOMBRE de
+  // membres, jamais la liste (serveur RESA-L4). Témoin : ConversationWebMSG1W, E-P12.
+  const canalVuDUnMembre = estUnCanalDeComplexe(chatData) && !jeSuisAdmin;
   const autrePersonne = resolveOtherParticipantId(chatData, userData?.documentId);
   // Les crochets de blocage se declarent `object` : on dit ce qu on en lit.
   const { data: mesBlocages } = /** @type {{ data?: any[] }} */ (
@@ -3864,11 +3909,17 @@ function Conversation({ navigation, route }) {
     }
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
     const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
+    // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite.
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
+      || Boolean(filDeLaVille.estDeMonCote?.(message))
     // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
-    const maVoix = isMine && filDeLaVille.estFil
+    let maVoix = isMine && filDeLaVille.estFil
       ? String(message?.senderSignature?.nom || '').trim()
       : '';
+    // MSG-SUPPORT — en console, NOS réponses disent qui de l'équipe les a écrites.
+    if (isMine && filDeLaVille.estAssistance) {
+      maVoix = String(filDeLaVille.nomDeLExpediteur(message) || '');
+    }
     // Le nom et l avatar ne servent qu a plusieurs : un tete-a-tete n en porte pas (SPECS §1).
     const estAPlusieurs = chatData?.type !== 'whisper';
     const montrerNom = (!isMine && estAPlusieurs && premier) || Boolean(maVoix && premier);
@@ -4579,6 +4630,11 @@ function Conversation({ navigation, route }) {
   // SMF (T20) — la regle du telephone (MSG1A §3.1) : les prenoms des membres puis « Vous », et
   // rien quand le serveur ne les joint pas (fil d equipe : « 0 participants » avant).
   const prenomsDuFil = filDeLaVille.estFil ? '' : sousTitreDesMembres({
+    canal: (nombre) => t('conversation.canalDuComplexe.sousTitre', {
+      count: nombre,
+      defaultValue_one: 'Canal du complexe · {{count}} membre',
+      defaultValue_other: 'Canal du complexe · {{count}} membres',
+    }),
     chat: chatData,
     meId: userData?.documentId,
     vous: t('conversation.header.you', 'Vous'),
@@ -4587,7 +4643,10 @@ function Conversation({ navigation, route }) {
   // MSG1W §3.1 — le titre du fil et sa ligne (« … écrit » en cyan). §3.16 : dans un groupe, il
   // ouvre les infos du groupe.
   // @ts-ignore: FIXME: Baseline TS regression
-  const membresDuFil = Array.isArray(chatData?.participants) ? chatData.participants : [];
+  // RESA-L6B-2 — E-P12 : à un membre du canal d'un complexe, aucune liste (même réduite).
+  const membresDuFil = !canalVuDUnMembre && Array.isArray(chatData?.participants)
+    ? chatData.participants
+    : [];
   const libelleRetirer = t('conversation.group.remove', 'Retirer');
   const blocDuTitre = (
     <>
@@ -5130,7 +5189,19 @@ function Conversation({ navigation, route }) {
                 ) : null}
                 {filVideHorsVille ? (
                   <div style={{ color: mutedTextColor }}>
-                    {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                    {filDeLaVille.videTitre ? (
+                      <>
+                        <strong
+                          style={{ color: PALETTE_DU_FIL.texte, display: 'block', marginBottom: 6 }}
+                        >
+                          {filDeLaVille.videTitre}
+                        </strong>
+                        {filDeLaVille.videTexte}
+                      </>
+                    ) : canalVuDUnMembre ? (
+                      // RESA-L6B-2 — E-P12 : le canal d'un complexe, vu d'un membre.
+                      i18next.t('conversation.canalDuComplexe.vide', 'Le complexe n’a encore rien publié.')
+                    ) : i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
                   </div>
                 ) : null}
                 <style>{REACTION_HOVER_STYLE}</style>
@@ -6022,7 +6093,7 @@ function Conversation({ navigation, route }) {
               </div>
             )}
             <span style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14 }}>
-              {t('conversation.web.fil.groupeMembres', {
+              {canalVuDUnMembre ? prenomsDuFil : t('conversation.web.fil.groupeMembres', {
                 count: Array.isArray(chatData?.participants) ? chatData.participants.length : 0,
                 defaultValue_one: 'Groupe · {{count}} membre',
                 defaultValue_other: 'Groupe · {{count}} membres',
@@ -6135,7 +6206,9 @@ function Conversation({ navigation, route }) {
             style={STYLE_BOUTON_ROUGE_DES_INFOS}
             type="button"
           >
-            {t('conversation.groupInfo.leave', 'Quitter le groupe')}
+            {canalVuDUnMembre
+              ? t('conversation.canalDuComplexe.quitter', 'Quitter le canal')
+              : t('conversation.groupInfo.leave', 'Quitter le groupe')}
           </button>
           <button
             onClick={() => setAnnonce(texteDuSignalement)}
@@ -6150,13 +6223,24 @@ function Conversation({ navigation, route }) {
         <ConfirmationDuSite
           id="msg1w-depart"
           libelleAction={t('conversation.groupInfo.leaveConfirmAction', 'Quitter')}
+          // RESA-L6B-2 — E-P12 : « Rester » / « Quitter » (planche EP12 état 3).
+          libelleAnnuler={canalVuDUnMembre
+            ? t('conversation.canalDuComplexe.rester', 'Rester')
+            : undefined}
           onAnnuler={() => setDepartAConfirmer(false)}
           onConfirmer={quitterLeGroupe}
-          titre={t('conversation.groupInfo.leaveConfirm', {
-            defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
-            name: conversationName,
-            ...SANS_ECHAPPEMENT,
-          })}
+          titre={canalVuDUnMembre
+            ? t('conversation.canalDuComplexe.quitterConfirmation', {
+              defaultValue: 'Quitter le canal « {{name}} » ? Tu ne recevras plus ses nouvelles. '
+                + 'Tu y reviendras en le remettant en favori.',
+              name: conversationName,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('conversation.groupInfo.leaveConfirm', {
+              defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
+              name: conversationName,
+              ...SANS_ECHAPPEMENT,
+            })}
         />
       ) : null}
       {membreARetirer ? (
@@ -6190,6 +6274,7 @@ function Conversation({ navigation, route }) {
           titre={t('userBlock.confirm.title', 'Bloquer cette personne ?')}
         />
       ) : null}
+      <ApercuDImageDuSite onClose={fermerLImageEnGrand} uri={imageEnGrand} />
       {annonce ? (
         <div
           role="status"
