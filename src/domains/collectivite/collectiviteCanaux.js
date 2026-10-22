@@ -23,11 +23,6 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
  *     écrit, et personne n'y voit qui le lit (un NOMBRE de clubs). Ses actualités « membres »
  *     y arrivent seules, en lignes de la Ville qui mènent à l'actualité.
  *
- *   · `collectivite_conversation` (MSG-VILLE-NOUVELLE, 20/10, REC17-004 ter) — la conversation que
- *     la Ville OUVRE avec qui elle veut (« Nouvelle conversation » : membres majeurs de ses clubs,
- *     ses autres gestionnaires ; décisions d'Adel « 1- B » / « 2- A »). Tête-à-tête ou groupe :
- *     côté Ville, il porte le nom de la personne (ou du groupe) ; côté membre, celui de la Ville.
- *
  * Design validé HY521H1 page 3 (P3c-canal-tel, P3v2-messages-tel). « Vous » pour la mairie,
  * « tu » pour le dirigeant. Chaque message dit qui écrit ET pour quel club : la signature est
  * écrite par le serveur, l'app ne fait que DEMANDER la voix de la Ville depuis l'espace de la
@@ -37,8 +32,6 @@ import { getServerErrorCode } from '@/utils/errors/displayError';
 export const CANAL_DIRIGEANTS = 'collectivite_dirigeants';
 export const CONVERSATION_CLUB = 'collectivite_club';
 export const CANAL_VILLE = 'collectivite_ville';
-/** MSG-VILLE-NOUVELLE — la conversation ouverte par la Ville (tête-à-tête ou groupe). */
-export const CONVERSATION_LIBRE = 'collectivite_conversation';
 export const CODE_PLUS_DANS_LE_FIL = 'COLLECTIVITE_CANAL_NOT_MEMBER';
 /** R17-CANAUX — la notice d'une actualité posée par la Ville dans son canal (admin). */
 export const NOTICE_ACTUALITE = 'collectivite_actualite';
@@ -51,7 +44,6 @@ export const NOTICE_ACTUALITE = 'collectivite_actualite';
  */
 export const estFilDeLaVille = (chat) => (
   chat?.type === CANAL_DIRIGEANTS || chat?.type === CONVERSATION_CLUB || chat?.type === CANAL_VILLE
-  || chat?.type === CONVERSATION_LIBRE
 );
 
 /**
@@ -75,13 +67,6 @@ export const titreDuFil = (t, { chat, espaceVille = false }) => {
   }
   if (chat?.type === CONVERSATION_CLUB) {
     return String((espaceVille ? chat?.collectiviteClub?.name : chat?.collectivite?.name) || '');
-  }
-  // MSG-VILLE-NOUVELLE — un groupe porte son nom ; un tête-à-tête porte, côté membre, le nom de
-  // la Ville, et côté Ville le nom de la personne (vide ici : `getConversationName` le dit).
-  if (chat?.type === CONVERSATION_LIBRE) {
-    const nomDuGroupe = String(chat?.groupName || '').trim();
-    if (nomDuGroupe || espaceVille) return nomDuGroupe;
-    return String(chat?.collectivite?.name || '');
   }
   return '';
 };
@@ -124,15 +109,6 @@ export const sousTitreDuFil = (t, { chat, clubsCount = 0, espaceVille = false })
     return espaceVille
       ? t('collectiviteCanaux.sousTitre.priveeMairie', 'Vous et les dirigeants du club')
       : t('collectiviteCanaux.sousTitre.priveeClub', 'Conversation privée avec la Ville');
-  }
-  // MSG-VILLE-NOUVELLE — côté membre, d'où vient la conversation ; côté Ville, qui la lit.
-  if (chat?.type === CONVERSATION_LIBRE) {
-    return espaceVille
-      ? t('collectiviteCanaux.libre.sousTitreMairie', 'Seules les personnes choisies la lisent')
-      : t('collectiviteCanaux.libre.sousTitreMembre', 'Conversation avec {{ville}}', {
-        ...SANS_ECHAPPEMENT,
-        ville: chat?.collectivite?.name || '',
-      });
   }
   return '';
 };

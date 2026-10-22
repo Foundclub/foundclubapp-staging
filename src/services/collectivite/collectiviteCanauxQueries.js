@@ -1,8 +1,6 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
-import {
-  getContactsDeLaVille, getMembresDuFil, getMesCanauxDeLaVille,
-} from './collectiviteCanauxService';
+import { getMembresDuFil, getMesCanauxDeLaVille } from './collectiviteCanauxService';
 
 /**
  * 🏛️ COLL-C4A2 (02/10/2026) — les lectures des canaux de la Ville. Un fichier à part : les lots
@@ -49,39 +47,3 @@ export const useMembresDuFil = (chatId, options = {}) => useQuery({
   staleTime: 60_000,
   ...options,
 });
-
-/** MSG-VILLE-NOUVELLE — une page de contacts : 50 personnes (le serveur en rend au plus 200). */
-export const CONTACTS_PAR_PAGE = 50;
-
-/**
- * MSG-VILLE-NOUVELLE (20/10/2026) — les personnes à qui la Ville peut écrire, page par page
- * (« Afficher plus ») : une Ville peut avoir des dizaines de clubs, l'écran en ouvre un à la fois.
- * @param {string | null | undefined} collectiviteId - La Ville (documentId).
- * @param {{ club?: string | null, q?: string }} [filtres] - Le club ouvert, le texte cherché.
- * @param {Record<string, any>} [options] - Options react-query (`enabled`).
- * @returns {import('@tanstack/react-query').UseInfiniteQueryResult<any, Error>} Les pages.
- */
-export const useContactsDeLaVille = (
-  collectiviteId,
-  { club = null, q = '' } = {},
-  options = {},
-) => (
-  useInfiniteQuery({
-    enabled: Boolean(collectiviteId),
-    getNextPageParam: (/** @type {any} */ page) => {
-      const recus = Array.isArray(page?.contacts) ? page.contacts.length : 0;
-      const vus = Number(page?.start || 0) + recus;
-      return vus < Number(page?.total || 0) ? vus : undefined;
-    },
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => (await getContactsDeLaVille(String(collectiviteId), {
-      club,
-      limit: CONTACTS_PAR_PAGE,
-      q,
-      start: pageParam,
-    }))?.data || null,
-    queryKey: ['collectivite-canaux', 'contacts', collectiviteId, club || null, q || ''],
-    staleTime: 30_000,
-    ...options,
-  })
-);

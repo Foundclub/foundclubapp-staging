@@ -6,7 +6,6 @@ import {
   CANAL_DIRIGEANTS,
   CANAL_VILLE,
   CONVERSATION_CLUB,
-  CONVERSATION_LIBRE,
   estFilDeLaVille,
   estRefusDuFilDeLaVille,
   peutEcrireDansLeFil,
@@ -26,7 +25,6 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -90,16 +88,6 @@ export function EcussonDuFil({
   // R17-CANAUX — « Toute la ville » : l'écusson de la Ville, des deux côtés.
   if (type === CANAL_VILLE && chat) {
     return <EcussonVille nom={String(chat.collectivite?.name || '')} taille={taille} />;
-  }
-  // MSG-VILLE-NOUVELLE — côté membre, l'écusson de la Ville ; côté Ville, le groupe (son nom) ou
-  // une pastille neutre (le titre dit qui est en face).
-  if (type === CONVERSATION_LIBRE && chat) {
-    const nomDuGroupe = String(chat.groupName || '').trim();
-    const ville = String(chat.collectivite?.name || '');
-    if (!espaceVille) return <EcussonVille nom={ville} taille={taille} />;
-    return nomDuGroupe
-      ? <ClubLogoMark name={nomDuGroupe} size={taille} />
-      : <ProfileAvatar enablePreview={false} size={taille} />;
   }
   if (type !== CONVERSATION_CLUB || !chat) return null;
   return espaceVille
@@ -226,21 +214,6 @@ export function VideDuFilDeLaVille({ chat, clubsCount = 0, espaceVille = false }
         'Les actualités de {{ville}} arrivent ici. Seule la Ville écrit ; personne ne voit qui le lit.',
         { ville, ...SANS_ECHAPPEMENT },
       );
-  } else if (chat.type === CONVERSATION_LIBRE) {
-    // MSG-VILLE-NOUVELLE — qui la lit : les personnes choisies par la Ville, et elles seules.
-    const nomDuGroupe = String(chat?.groupName || '').trim();
-    titre = nomDuGroupe || (espaceVille ? '' : String(chat?.collectivite?.name || ''));
-    texte = espaceVille
-      ? t(
-        'collectiviteCanaux.libre.videMairie',
-        // eslint-disable-next-line max-len
-        'Conversation privée : seules les personnes que vous avez choisies la lisent. Vos messages partent au nom de la Ville.',
-      )
-      : t(
-        'collectiviteCanaux.libre.videMembre',
-        'Conversation privée ouverte par {{ville}} : seules les personnes choisies la lisent.',
-        { ville, ...SANS_ECHAPPEMENT },
-      );
   } else if (chat.type === CANAL_DIRIGEANTS && espaceVille) {
     titre = t(
       'collectiviteCanaux.vide.mairieTitre',
@@ -312,15 +285,10 @@ export const useFilDeLaVille = ({
   return useMemo(() => {
     const contexte = { chat: chatData, clubsCount, espaceVille };
     const estCanalVille = (chatData?.type || routeChatType) === CANAL_VILLE;
-    // MSG-VILLE-NOUVELLE — la conversation ouverte par la Ville est une conversation, pas un
-    // canal ; « Qui est dans cette conversation » pour un groupe seulement (un tête-à-tête se lit
-    // dans son titre).
-    const estLibre = (chatData?.type || routeChatType) === CONVERSATION_LIBRE;
-    const teteATete = estLibre && !String(chatData?.groupName || '').trim();
     return {
-      afficheMembres: estFil && !estCanalVille && !teteATete,
+      afficheMembres: estFil && !estCanalVille,
       clubsCount,
-      estCanal: !estLibre && (chatData?.type || routeChatType) !== CONVERSATION_CLUB,
+      estCanal: (chatData?.type || routeChatType) !== CONVERSATION_CLUB,
       estCanalVille,
       estFil,
       estLigneSysteme: (/** @type {any} */ message) => estFil && !message?.sender,

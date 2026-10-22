@@ -5,7 +5,6 @@ import { ScrollView, Text, View } from 'react-native';
 
 import {
   CONVERSATION_CLUB,
-  CONVERSATION_LIBRE,
   estRefusDuFilDeLaVille,
 } from '@/domains/collectivite/collectiviteCanaux';
 import { withAlpha } from '@/theme/colors';
@@ -31,12 +30,9 @@ function LigneMembre({ espaceVille, membre }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
   const nom = `${membre?.firstname || ''} ${membre?.lastname || ''}`.trim();
-  let fonction = t('collectiviteCanaux.membres.dirigeant', 'dirigeant');
-  if (membre?.fonction === 'gestionnaire') {
-    fonction = t('collectiviteCanaux.membres.gestionnaire', 'gestionnaire');
-  }
-  // MSG-VILLE-NOUVELLE — une personne choisie par la Ville (membre d'un club, autre gestionnaire).
-  if (membre?.fonction === 'membre') fonction = t('collectiviteCanaux.membres.membre', 'membre');
+  const fonction = membre?.fonction === 'gestionnaire'
+    ? t('collectiviteCanaux.membres.gestionnaire', 'gestionnaire')
+    : t('collectiviteCanaux.membres.dirigeant', 'dirigeant');
   let affiche = nom;
   if (membre?.estMoi) {
     affiche = espaceVille
@@ -64,40 +60,20 @@ export function ListeDesMembresDuFil({ espaceVille = false, fil }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const estPrivee = fil?.chat?.type === CONVERSATION_CLUB;
-  // MSG-VILLE-NOUVELLE — la conversation ouverte par la Ville : la Ville, puis les choisis.
-  const estLibre = fil?.chat?.type === CONVERSATION_LIBRE;
   const villeNom = String(fil?.collectivite?.name || '');
-  let sousTitre = t(
-    'collectiviteCanaux.membres.sousTitreCanal',
-    'Dirigeants des clubs · {{ville}}',
-    { ville: villeNom, ...SANS_ECHAPPEMENT },
-  );
-  let regle = t(
-    'collectiviteCanaux.membres.regleCanal',
-    // eslint-disable-next-line max-len
-    'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
-  );
-  if (estPrivee) {
-    sousTitre = t('collectiviteCanaux.membres.sousTitrePrivee', '{{club}} · {{ville}}', {
-      club: String(fil?.club?.name || ''),
-      ville: villeNom,
-      ...SANS_ECHAPPEMENT,
-    });
-    regle = t(
-      'collectiviteCanaux.membres.reglePrivee',
-      'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
-    );
-  } else if (estLibre) {
-    sousTitre = villeNom;
-    regle = t(
-      'collectiviteCanaux.membres.regleLibre',
-      'Seules les personnes choisies par la Ville lisent cette conversation. Jamais un mineur.',
-    );
-  }
   return (
     <View style={{ gap: 8 }} testID="canal-membres-liste">
       <Text style={[Fonts.p3, Fonts.neutral300]} testID="canal-membres-sous-titre">
-        {sousTitre}
+        {estPrivee
+          ? t('collectiviteCanaux.membres.sousTitrePrivee', '{{club}} · {{ville}}', {
+            club: String(fil?.club?.name || ''),
+            ville: villeNom,
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('collectiviteCanaux.membres.sousTitreCanal', 'Dirigeants des clubs · {{ville}}', {
+            ville: villeNom,
+            ...SANS_ECHAPPEMENT,
+          })}
       </Text>
       {(Array.isArray(fil?.groupes) ? fil.groupes : []).map((/** @type {any} */ groupe) => {
         const membres = Array.isArray(groupe?.membres) ? groupe.membres : [];
@@ -106,7 +82,7 @@ export function ListeDesMembresDuFil({ espaceVille = false, fil }) {
             <View style={[Alignments.row, Alignments.alignCenter, { gap: 10, marginTop: 6 }]}>
               {groupe?.cle === 'ville'
                 ? <EcussonVille nom={villeNom} taille={28} />
-                : <ClubLogoMark club={groupe?.club} isNeutral name={groupe?.nom} size={28} />}
+                : <ClubLogoMark club={groupe?.club} isNeutral size={28} />}
               <Text
                 accessibilityRole="header"
                 style={[
@@ -142,7 +118,16 @@ export function ListeDesMembresDuFil({ espaceVille = false, fil }) {
         ]}
       >
         <Text style={[Fonts.p3, Fonts.neutral100]} testID="canal-membres-regle">
-          {regle}
+          {estPrivee
+            ? t(
+              'collectiviteCanaux.membres.reglePrivee',
+              'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
+            )
+            : t(
+              'collectiviteCanaux.membres.regleCanal',
+              // eslint-disable-next-line max-len
+              'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
+            )}
         </Text>
       </View>
     </View>

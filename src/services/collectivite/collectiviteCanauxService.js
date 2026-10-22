@@ -82,31 +82,3 @@ export const ecrireLePremierMessageAuClub = async ({ clubId, collectiviteId, mes
   await createChatMessage({ chatId, message, senderSignature: { voix: 'ville' } });
   return ouverte;
 };
-
-/**
- * 🏛️ MSG-VILLE-NOUVELLE (20/10/2026, décisions d'Adel « 1- B » et « 2- A ») — les personnes à qui
- * la Ville peut écrire : ses autres gestionnaires, et les membres MAJEURS de ses clubs (jamais un
- * mineur : le serveur les écarte). Sans `club` ni `q`, le serveur ne rend que les gestionnaires et
- * la liste des clubs ; `club` ouvre un club ; `q` cherche dans tous.
- * @param {string} collectiviteId - La Ville (documentId).
- * @param {{ club?: string | null, limit?: number, q?: string, start?: number }} [params] - Filtres.
- * @returns {Promise<any>} `{ data: { clubs, collectivite, contacts, limit, start, total } }`.
- */
-export const getContactsDeLaVille = async (collectiviteId, params = {}) => (
-  (await (await client()).get(`/collectivites/${collectiviteId}/contacts`, {
-    params: Object.fromEntries(Object.entries(params).filter(([, valeur]) => valeur !== null
-      && valeur !== undefined && valeur !== '')),
-  })).data
-);
-
-/**
- * MSG-VILLE-NOUVELLE — la Ville ouvre la conversation : un tête-à-tête (une personne, deux appuis
- * rendent le même) ou un groupe (plusieurs personnes, avec un nom). Le serveur refuse TOUT si une
- * personne ne peut pas y entrer (un mineur, quelqu'un hors de la Ville).
- * @param {string} collectiviteId - La Ville (documentId).
- * @param {{ groupName?: string, participants: string[] }} data - Les personnes, le nom.
- * @returns {Promise<any>} `{ data: { collectivite, created, documentId } }`.
- */
-export const ouvrirConversationDeLaVille = async (collectiviteId, data) => (
-  (await (await client()).post(`/collectivites/${collectiviteId}/conversations`, { data })).data
-);

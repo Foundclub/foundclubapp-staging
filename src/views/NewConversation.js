@@ -40,8 +40,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetChatById } from '@/services/chat/chatQueriesCompat';
 import { setGroupPhoto } from '@/services/chat/groupPhotoService';
 import client from '@/services/client';
-import { useContactsDeLaVille } from '@/services/collectivite/collectiviteCanauxQueries';
-import { ouvrirConversationDeLaVille } from '@/services/collectivite/collectiviteCanauxService';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
@@ -181,16 +179,6 @@ function NewConversation({ navigation, route }) {
   const mode = String(route?.params?.mode || '').trim();
   const addMembersChatId = String(route?.params?.chatId || '').trim();
   const isAddMembersMode = mode === 'add_group_members' && Boolean(addMembersChatId);
-  // 🏛️ MSG-VILLE-NOUVELLE (20/10/2026, décisions d'Adel « 1- B » / « 2- A ») — depuis
-  // l'espace de la Ville : ses contacts (autres gestionnaires, membres MAJEURS de ses clubs ;
-  // le serveur écarte les mineurs), par club puis par fonction, un club à la fois ou par
-  // recherche ; la conversation s'ouvre AU NOM de la Ville. Sans photo ni autorisations de
-  // groupe (le serveur ne les tient pas).
-  const collectiviteId = String(route?.params?.collectiviteId || '').trim();
-  const modeVille = route?.params?.espace === 'ville'
-    && Boolean(collectiviteId)
-    && !isAddMembersMode;
-  const [clubDeLaVille, setClubDeLaVille] = useState(/** @type {string | null} */ (null));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState(/** @type {Set<string>} */ (new Set()));
@@ -268,12 +256,11 @@ function NewConversation({ navigation, route }) {
 
   const {
     data: users,
-    error: erreurDesMembres,
-    isLoading: chargementDesMembres,
-    refetch: relireLesMembres,
+    error: usersError,
+    isLoading,
+    refetch,
   } = useQuery({
-    // MSG-VILLE-NOUVELLE — la Ville n'a pas d'équipes : ses contacts viennent du serveur.
-    enabled: !modeVille,
+    enabled: true,
     queryFn: async () => {
       const res = await searchUsers({
         clubId,
@@ -290,60 +277,6 @@ function NewConversation({ navigation, route }) {
     },
     queryKey: ['users', 'search', searchQuery, clubId, multisportId, isSuperAdminUser],
   });
-
-  // 🏛️ MSG-VILLE-NOUVELLE — les contacts de la Ville, page par page (« Afficher plus »).
-  const contactsDeLaVille = useContactsDeLaVille(
-    modeVille ? collectiviteId : null,
-    { club: clubDeLaVille, q: searchQuery.trim() },
-  );
-  const pagesRecues = contactsDeLaVille.data?.pages;
-  const pagesDeLaVille = useMemo(
-    () => /** @type {any[]} */ (pagesRecues || []),
-    [pagesRecues],
-  );
-  const clubsDeLaVille = /** @type {any[]} */ (pagesDeLaVille[0]?.clubs || []);
-  const nomDeLaVille = String(pagesDeLaVille[0]?.collectivite?.name || '');
-  const contactsVille = useMemo(
-    () => pagesDeLaVille.flatMap((/** @type {any} */ page) => page?.contacts || []),
-    [pagesDeLaVille],
-  );
-  const isLoading = modeVille ? contactsDeLaVille.isLoading : chargementDesMembres;
-  const usersError = modeVille ? contactsDeLaVille.error : erreurDesMembres;
-  const refetch = modeVille ? contactsDeLaVille.refetch : relireLesMembres;
-  /** @type {Record<string, string>} */
-  const fonctionsAuPluriel = {
-    dirigeant: t('newConversation.ville.dirigeants', 'Dirigeants'),
-    entraineur: t('newConversation.ville.entraineurs', 'Coachs'),
-    gestionnaire: t('newConversation.ville.gestionnaires', 'Gérants de la Ville'),
-    joueur: t('newConversation.ville.joueurs', 'Joueurs'),
-    parent: t('newConversation.ville.parents', 'Parents'),
-  };
-  /** @type {Record<string, string>} */
-  const fonctionsAuSingulier = {
-    dirigeant: t('newConversation.ville.dirigeant', 'Dirigeant'),
-    entraineur: t('newConversation.ville.entraineur', 'Coach'),
-    gestionnaire: t('newConversation.ville.gestionnaire', 'Gérant de la Ville'),
-    joueur: t('newConversation.ville.joueur', 'Joueur'),
-    parent: t('newConversation.ville.parent', 'Parent'),
-  };
-  // Le serveur rend les contacts rangés (gérants, puis club par club, fonction par
-  // fonction) : une section par (club, fonction), dans cet ordre.
-  /** @type {Array<{ data: any[], title: string }>} */
-  const sectionsDeLaVille = [];
-  if (modeVille) {
-    const parCle = new Map();
-    contactsVille.forEach((/** @type {any} */ contact) => {
-      const club = String(contact?.club?.name || '');
-      const fonction = fonctionsAuPluriel[contact?.fonction] || fonctionsAuPluriel.joueur;
-      const cle = `${club}|${contact?.fonction}`;
-      if (!parCle.has(cle)) {
-        const section = { data: [], title: club ? `${club} · ${fonction}` : fonction };
-        parCle.set(cle, section);
-        sectionsDeLaVille.push(section);
-      }
-      parCle.get(cle).data.push(contact);
-    });
-  }
 
   const processedSections = useMemo(() => {
     if (!users) return [];
@@ -499,24 +432,6 @@ function NewConversation({ navigation, route }) {
           memberIds: participants,
         });
         navigation.goBack();
-      } else if (modeVille) {
-        // 🏛️ MSG-VILLE-NOUVELLE — la Ville ouvre la conversation ; le serveur refuse TOUT
-        // si une personne ne peut pas y entrer (un mineur, quelqu'un hors de la Ville).
-        const reponse = await ouvrirConversationDeLaVille(collectiviteId, {
-          ...(participants.length > 1
-            ? { groupName: nomDuGroupe.trim() || `Groupe (${participants.length + 1})` }
-            : {}),
-          participants,
-        });
-        const chatId = String(reponse?.data?.documentId || '');
-        queryClient.invalidateQueries({ queryKey: ['chats'] });
-        if (chatId) {
-          navigation.replace(RouteNames.Conversation, {
-            chatId,
-            chatType: 'collectivite_conversation',
-            espace: 'ville',
-          });
-        }
       } else {
         const shouldCreateGroup = isGroupChatEnabled && participants.length > 1;
         // MSG1BA (§3.15) — seulement ce qui differe des defauts : rien de change = la requete
@@ -564,11 +479,6 @@ function NewConversation({ navigation, route }) {
     const itemId = getUserIdentifier(item);
     const isSelected = itemId ? selectedUserIds.has(itemId) : false;
     const dejaDansLeGroupe = itemId ? dejaMembres.has(itemId) : false;
-    // 🏛️ MSG-VILLE-NOUVELLE — un contact de la Ville dit sa fonction et son club.
-    const contact = /** @type {any} */ (item);
-    const sousTitreDeLaLigne = modeVille
-      ? [fonctionsAuSingulier[contact?.fonction], contact?.club?.name].filter(Boolean).join(' · ')
-      : item.role?.name || t('common.member');
     // 🧑 MSG1A (§3.15) — ligne de 64 : avatar 44, nom, role (ou « Deja dans le groupe », grise).
     return (
       <TouchableOpacity
@@ -580,7 +490,6 @@ function NewConversation({ navigation, route }) {
           isSelected ? { backgroundColor: withAlpha(Colors.primary500, 0.08) } : null,
           dejaDansLeGroupe ? stylesDuChoix.ligneGrisee : null,
         ]}
-        testID={`nouvelle-discussion-personne-${itemId}`}
       >
         <ProfileAvatar
           imageUrl={item.avatar?.url}
@@ -597,7 +506,7 @@ function NewConversation({ navigation, route }) {
           >
             {dejaDansLeGroupe
               ? t('newConversation.alreadyInGroup', 'Déjà dans le groupe')
-              : sousTitreDeLaLigne}
+              : item.role?.name || t('common.member')}
           </Text>
         </View>
         <View style={{
@@ -655,16 +564,6 @@ function NewConversation({ navigation, route }) {
   let sousTitreDeLEnTete = isAddMembersMode
     ? t('newConversation.subtitle.add', 'Choisis qui ajouter')
     : t('newConversation.subtitle.rule', '1 personne = privé · 2 et plus = groupe');
-  if (modeVille) {
-    sousTitreDeLEnTete = t(
-      'newConversation.ville.sousTitre',
-      'Au nom de {{ville}} · 1 personne = privé · 2 et plus = groupe',
-      {
-        ...SANS_ECHAPPEMENT,
-        ville: nomDeLaVille || t('newConversation.ville.laVille', 'la Ville'),
-      },
-    );
-  }
   if (nombreChoisi > 0) {
     sousTitreDeLEnTete = t('newConversation.subtitle.selected', {
       count: nombreChoisi,
@@ -675,65 +574,21 @@ function NewConversation({ navigation, route }) {
     ? t('messaging.addGroupMembers', 'Ajouter des membres')
     : t('messaging.newConversation', 'Nouvelle discussion');
 
-  // 🏛️ MSG-VILLE-NOUVELLE — côté Ville, les puces sont ses clubs ; « Gérants » (aucun
-  // club ouvert) montre ses autres gestionnaires. Une Ville peut avoir des dizaines de
-  // clubs : la rangée défile, et la recherche couvre tous les clubs.
-  /** @type {Array<{ documentId: string | null, name: string }>} */
-  const filtresAffiches = modeVille
-    ? [
-      { documentId: null, name: t('newConversation.ville.gerants', 'Gérants') },
-      ...clubsDeLaVille.map((/** @type {any} */ club) => ({
-        documentId: String(club?.documentId || ''),
-        name: String(club?.name || ''),
-      })),
-    ]
-    : teamFilters;
-  const filtreChoisi = modeVille ? clubDeLaVille : selectedTeamId;
-  const choisirLeFiltre = modeVille ? setClubDeLaVille : setSelectedTeamId;
-  const montrerLesFiltres = modeVille ? clubsDeLaVille.length > 0 : accessibleTeams.length > 0;
-
-  // 🏛️ MSG-VILLE-NOUVELLE — sous la liste de la Ville : « Afficher plus » (un grand
-  // club), ou ce qu'il faut faire quand aucun club n'est ouvert.
-  const villeSansClubNiRecherche = modeVille && !clubDeLaVille && searchQuery.trim().length < 2;
-  let piedDeLaListe = null;
-  if (modeVille && contactsDeLaVille.hasNextPage) {
-    piedDeLaListe = (
-      <Button
-        disabled={contactsDeLaVille.isFetchingNextPage}
-        onPress={() => contactsDeLaVille.fetchNextPage()}
-        title={t('newConversation.ville.plus', 'Afficher plus')}
-        variant="Secondary"
-      />
-    );
-  } else if (villeSansClubNiRecherche) {
-    piedDeLaListe = (
-      <Text
-        style={[Fonts.p2, Fonts.neutral300, Fonts.textCenter, Spaces.marginTop[16]]}
-        testID="nouvelle-discussion-ville-aide"
-      >
-        {t('newConversation.ville.aide', 'Choisissez un club ci-dessus, ou cherchez un nom.')}
-      </Text>
-    );
-  }
-
   let userListContent = (
     <SectionList
       contentContainerStyle={Spaces.paddingBottom[80]}
       keyExtractor={(item, index) => {
         const userId = getUserIdentifier(item);
-        // Un contact de la Ville peut être dans deux clubs : une ligne par club.
-        const club = modeVille ? `${/** @type {any} */ (item)?.club?.documentId || 'ville'}:` : '';
-        return userId ? `user:${club}${userId}` : `user:fallback:${index}`;
+        return userId ? `user:${userId}` : `user:fallback:${index}`;
       }}
-      ListEmptyComponent={villeSansClubNiRecherche ? null : (
+      ListEmptyComponent={(
         <Text style={[Fonts.p2, Fonts.neutral500, Fonts.textCenter, Spaces.marginTop[32]]}>
           {t('common.noResults', 'Aucun membre trouve')}
         </Text>
       )}
-      ListFooterComponent={piedDeLaListe}
       renderItem={renderItem}
       renderSectionHeader={renderSectionHeader}
-      sections={modeVille ? sectionsDeLaVille : processedSections}
+      sections={processedSections}
       stickySectionHeadersEnabled={false}
     />
   );
@@ -801,16 +656,12 @@ function NewConversation({ navigation, route }) {
               `groupName`, sans nom on garde « Groupe (N) » et on le dit. La photo et les
               autorisations du pack demandent le serveur : lot MESSAGERIE-1B. */}
           <View style={[stylesDuChoix.carteNom, { backgroundColor: Colors.primary800 }]}>
-            {/* 🖼️ MSG1BA (§3.15) — la photo du groupe : toucher l'avatar ouvre la feuille.
-                🏛️ MSG-VILLE-NOUVELLE — un groupe de la Ville n'a pas de photo (le
-                serveur ne la tient pas) : son monogramme seul, sans pastille. */}
+            {/* 🖼️ MSG1BA (§3.15) — la photo du groupe : toucher l'avatar ouvre la feuille. */}
             <TouchableOpacity
               accessibilityLabel={photoDuGroupe
                 ? t('newConversation.changeGroupPhoto', 'Changer la photo du groupe')
                 : t('newConversation.addGroupPhoto', 'Ajouter une photo de groupe')}
               accessibilityRole="button"
-              accessibilityState={{ disabled: modeVille }}
-              disabled={modeVille}
               onPress={() => setFeuillePhotoVisible(true)}
               testID="nouveau-groupe-photo"
             >
@@ -827,7 +678,6 @@ function NewConversation({ navigation, route }) {
                 style={[
                   stylesDuChoix.pastillePhoto,
                   { backgroundColor: Colors.primary500, borderColor: Colors.primary800 },
-                  modeVille ? stylesDuChoix.cache : null,
                 ]}
               >
                 <GlyphIcon color={Colors.primary900} name="camera" size={14} />
@@ -848,30 +698,18 @@ function NewConversation({ navigation, route }) {
             />
           </View>
           <Text style={[stylesDuChoix.aide, { color: withAlpha(Colors.neutral00, 0.6) }]}>
-            {modeVille
-              ? t('newConversation.ville.nomDuGroupeAide', {
-                defaultValue:
-                  'Sans nom, il s’appellera « {{name}} ». Il part au nom de la Ville.',
-                ...SANS_ECHAPPEMENT,
-                name: nomParDefaut,
-              })
-              : t('newConversation.groupNameHint', {
-                defaultValue:
-                  'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
-                ...SANS_ECHAPPEMENT,
-                name: nomParDefaut,
-              })}
+            {t('newConversation.groupNameHint', {
+              defaultValue:
+                'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
+              ...SANS_ECHAPPEMENT,
+              name: nomParDefaut,
+            })}
           </Text>
-          {/* 🛡️ MSG1BA (§3.15) — les autorisations (et les admins), des la creation. Pas
-              pour un groupe de la Ville (MSG-VILLE-NOUVELLE) : le serveur ne les tient pas. */}
+          {/* 🛡️ MSG1BA (§3.15) — les autorisations (et les admins), des la creation. */}
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setPageAutorisations(true)}
-            style={[
-              stylesDuChoix.ligneAutorisations,
-              { backgroundColor: Colors.primary800 },
-              modeVille ? stylesDuChoix.cache : null,
-            ]}
+            style={[stylesDuChoix.ligneAutorisations, { backgroundColor: Colors.primary800 }]}
             testID="nouveau-groupe-autorisations"
           >
             <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
@@ -908,9 +746,7 @@ function NewConversation({ navigation, route }) {
                 {t('conversation.header.you', 'Vous')}
               </Text>
               <Text style={[stylesDuChoix.tuileRole, { color: Colors.primary500 }]}>
-                {modeVille
-                  ? nomDeLaVille || t('newConversation.ville.laVille', 'la Ville')
-                  : t('newConversation.admin', 'Admin')}
+                {t('newConversation.admin', 'Admin')}
               </Text>
             </View>
             {personnesChoisies.map((personne) => {
@@ -959,15 +795,7 @@ function NewConversation({ navigation, route }) {
           </View>
           {nombreChoisi < 2 ? (
             <Text style={[stylesDuChoix.alerte, { color: Colors.chatDanger }]}>
-              {modeVille
-                ? t(
-                  'newConversation.ville.auMoinsDeux',
-                  'Ajoutez au moins 2 personnes pour créer un groupe.',
-                )
-                : t(
-                  'newConversation.atLeastTwo',
-                  'Ajoute au moins 2 membres pour créer un groupe.',
-                )}
+              {t('newConversation.atLeastTwo', 'Ajoute au moins 2 membres pour créer un groupe.')}
             </Text>
           ) : null}
         </View>
@@ -991,23 +819,20 @@ function NewConversation({ navigation, route }) {
           />
           <TextInput
             onChangeText={setSearchQuery}
-            placeholder={modeVille
-              ? t('newConversation.ville.chercher', 'Chercher un nom dans les clubs de la Ville…')
-              : t('messaging.searchUserPlaceholder', 'Rechercher un membre...')}
+            placeholder={t('messaging.searchUserPlaceholder', 'Rechercher un membre...')}
             placeholderTextColor={Colors.neutral300}
             style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
-            testID="nouvelle-discussion-recherche"
             value={searchQuery}
           />
         </View>
       ) : null}
 
-      {/* Team Filters — MSG-VILLE-NOUVELLE : côté Ville, ses clubs (« Gérants » d'abord). */}
-      {etape === 'choix' && montrerLesFiltres && (
+      {/* Team Filters */}
+      {etape === 'choix' && accessibleTeams.length > 0 && (
         <View>
           <FlatList
             contentContainerStyle={Spaces.gap[8]}
-            data={filtresAffiches}
+            data={teamFilters}
             horizontal
             keyExtractor={(item, index) => {
               const teamId = typeof item.documentId === 'string' && item.documentId.length > 0
@@ -1017,12 +842,10 @@ function NewConversation({ navigation, route }) {
               return `team-filter:${teamId}:${teamName}:${index}`;
             }}
             renderItem={(/** @type {{ item: TeamFilter & { documentId?: string | null } }} */ { item }) => {
-              const isSelected = filtreChoisi === item.documentId;
+              const isSelected = selectedTeamId === item.documentId;
               return (
                 <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => choisirLeFiltre(item.documentId || null)}
+                  onPress={() => setSelectedTeamId(item.documentId || null)}
                   style={[
                     Spaces.paddingHorizontal[16],
                     Spaces.paddingVertical[8],
@@ -1033,7 +856,6 @@ function NewConversation({ navigation, route }) {
                       borderWidth: 1,
                     },
                   ]}
-                  testID={`nouvelle-discussion-filtre-${item.documentId || 'tous'}`}
                 >
                   <Text style={[
                     Fonts.p3Bold,
@@ -1311,10 +1133,6 @@ const stylesDuChoix = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     fontSize: 15,
     lineHeight: 20,
-  },
-  // MSG-VILLE-NOUVELLE — ce qu'un groupe de la Ville n'a pas (photo, autorisations).
-  cache: {
-    display: 'none',
   },
   carteNom: {
     alignItems: 'center',
