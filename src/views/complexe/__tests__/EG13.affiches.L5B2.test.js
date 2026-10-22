@@ -211,6 +211,7 @@ describe('RESA-FIN-APP (2) (4) E-G13 — où est l’affiche, et le texte du par
     await appuyer(arbre, 'Partager l’affiche');
     const { message } = mockPartager.mock.calls.at(-1)[2];
     expect(message).toContain('Le Five de Montrivage');
-    expect(message).toMatch(/\/annuaire\/complexes\/le-five\?depuis=affiche$/);
+    // RESA-FIN-APP-2 : l'adresse publique avec la barre finale (serveur RESAFINSRV2 65eb5cda).
+    expect(message).toMatch(/\/annuaire\/complexes\/le-five\/\?depuis=affiche$/);
   });
 });

@@ -177,7 +177,8 @@ function ComplexeAffiches() {
       // RESA-FIN-APP (20/10) — le texte du partage : le complexe et le lien de sa page (celui du QR).
       // Sur Android il part dans le presse-papiers (l'affiche part par « ouvrir avec »).
       const lien = complexe?.slug
-        ? buildPublicWebUrl({ path: `/annuaire/complexes/${complexe.slug}?depuis=affiche` })
+        // RESA-FIN-APP-2 : l'adresse publique avec sa barre finale, comme le serveur (65eb5cda).
+        ? buildPublicWebUrl({ path: `/annuaire/complexes/${complexe.slug}/?depuis=affiche` })
         : null;
       const message = buildShareMessageWithUrl({
         intro: t('complexeAffiches.texteDuPartage', 'Réserve ton terrain chez {{nom}} sur FoundClub.', {
