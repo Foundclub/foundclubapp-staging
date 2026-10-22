@@ -155,6 +155,17 @@ export const nomDansLeCanal = (chat) => (estUnCanalDeComplexe(chat)
   : '');
 
 /**
+ * RESA-FIN-APP (22/10/2026) — LA PAGE DU COMPLEXE D'UN CANAL : le fil porte désormais
+ * `complexe: { documentId, name, slug }` (RESA-FIN-SERVEUR) ; l'en-tête du canal, vu d'un membre,
+ * ouvre sa page (E-P12 ⇒ E-P02). Lecture tolérante : '' si le fil ne la porte pas.
+ * @param {any} chat - Le fil.
+ * @returns {string} Le slug du complexe, ou ''.
+ */
+export const pageDuCanal = (chat) => (estUnCanalDeComplexe(chat)
+  ? String(chat?.complexe?.slug || '').trim()
+  : '');
+
+/**
  * MSG1A (§3.1) — LA LIGNE SOUS LE TITRE D'UN FIL A PLUSIEURS : les prenoms des autres membres,
  * puis « Vous » (regle du telephone, Conversation.js). Rien pour un tete-a-tete, ni quand le
  * serveur ne joint pas les membres (fil d'equipe, de club : MSG1/N4) — le site en tirait

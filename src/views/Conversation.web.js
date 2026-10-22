@@ -24,6 +24,7 @@ import {
   couleurDuNom,
   estUnCanalDeComplexe,
   nomDansLeCanal,
+  pageDuCanal,
   sousTitreDesMembres,
 } from '@/domains/messaging/habillageDuFil';
 import {
@@ -4909,7 +4910,12 @@ function Conversation({ navigation, route }) {
             {estUnGroupe ? (
               <button
                 data-testid="MSG1W-titre-du-fil"
-                onClick={() => setInfosOuvertes(true)}
+                // RESA-FIN-APP (22/10) — canal d'un complexe, vu d'un membre : sa page (E-P02).
+                onClick={() => (pageDuCanal(chatData) && canalVuDUnMembre
+                  ? navigation.navigate(RouteNames.ReserverComplexe, {
+                    slug: pageDuCanal(chatData),
+                  })
+                  : setInfosOuvertes(true))}
                 style={{
                   background: 'transparent',
                   border: 0,
