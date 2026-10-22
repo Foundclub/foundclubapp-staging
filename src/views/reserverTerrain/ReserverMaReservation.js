@@ -235,8 +235,8 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const jusquA = momentLisible(reservation.cancellableUntil);
   const echeance = momentLisible(reservation.expiresAt);
   const creation = momentLisible(reservation.createdAt);
-  // RESA-FIN-APP (20/10) — l'historique dit aussi « Confirmée la veille » et « Marquée non honorée »
-  // (plan E-P07 §3.7 ; tournées 1 et 2 : seul « Réservée le … » y était).
+  // RESA-FIN-APP (20/10) — l'historique dit aussi « Confirmée la veille » et « Marquée non
+  // honorée » (plan E-P07 §3.7 ; tournées 1 et 2 : seul « Réservée le … » y était).
   const confirmeeLaVeille = momentLisible(reservation.dayBeforeConfirmedAt);
   const marqueeNonHonoree = momentLisible(reservation.noShowAt);
   const commence = new Date(String(reservation.startsAt)).getTime() <= Date.now();
@@ -272,7 +272,9 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           telephone,
           terrain: reservation.terrain,
           // RESA-FIN-APP : retirer une DEMANDE n'annule aucune réservation (tournée 2).
-          variante: (enCollecte && 'collecteArretee') || (demande && 'demandeRetiree') || 'annuleeParToi',
+          variante: (enCollecte && 'collecteArretee')
+            || (demande && 'demandeRetiree')
+            || 'annuleeParToi',
         }),
       );
     } catch (erreur) {
@@ -485,7 +487,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               isLoading={Boolean(ouvrirUnFil?.isPending)}
               onPress={() => ouvrirLeFil('complexe')}
               size="sm"
-              title={texteInsecable(t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe'))}
+              title={texteInsecable(t(
+                'reserverTerrain.maReservation.ecrireAuComplexe',
+                'Écrire au complexe',
+              ))}
               variant="Secondary"
             />
           ) : null}
