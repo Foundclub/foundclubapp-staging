@@ -5543,9 +5543,9 @@ export default {
       avecCreneaux: '{{count}} with your town slots',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — a slot over part of the season (board 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Whole club',
     },
     fiche: {

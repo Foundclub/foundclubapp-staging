@@ -1280,12 +1280,11 @@ function FacilityList() {
                   ? 'clubInstallations.creneau.lignePeriode'
                   : 'clubInstallations.creneau.ligne',
                 morceaux.period
-                  ? '{{team}} · {{rythme}} {{hours}} · {{periode}}'
-                  : '{{team}} · {{rythme}} {{hours}}',
+                  ? '{{team}} · {{quand}} · {{periode}}'
+                  : '{{team}} · {{quand}}',
                 {
-                  hours: morceaux.hours,
                   periode: morceaux.period,
-                  rythme: morceaux.rythme,
+                  quand: morceaux.quand,
                   team: morceaux.team
                     || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
                   ...SANS_ECHAPPEMENT,
