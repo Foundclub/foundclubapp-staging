@@ -6700,6 +6700,7 @@ export default {
       promotionDit: 'A booking slot at a price you set.',
       titre: 'The text',
     },
+    texteDuPartage: 'Book your pitch at {{nom}} on FoundClub.',
     titre: 'Your venue poster is ready',
   },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).

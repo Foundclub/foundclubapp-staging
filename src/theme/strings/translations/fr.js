@@ -7158,6 +7158,7 @@ export default {
       promotionDit: 'Une place de réservation à un prix que tu fixes.',
       titre: 'Le texte',
     },
+    texteDuPartage: 'Réserve ton terrain chez {{nom}} sur FoundClub.',
     titre: 'Ton affiche complexe est prête',
   },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
