@@ -407,7 +407,7 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
   const remplir = async (/** @type {any} */ arbre) => {
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // A7-UX-2 (22/10, Adel « P2 oui ») : l'équipe se choisit sur l'étape du club.
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
@@ -451,10 +451,11 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     expect(fenetre.props.presentationStyle).toBe('fullScreen');
     expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
       headerVariant: 'focus',
-      // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6).
-      stepCount: 6,
+      // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6). A7-UX-2 (22/10, Adel « P2 oui ») :
+      // le club et l'équipe sur une étape, « Pour qui ? » (6 → 5).
+      stepCount: 5,
       subtitle: 'Gymnase des Tilleuls · 2 équipes à la fois',
-      title: 'Pour quel club ?',
+      title: 'Pour qui ?',
     }));
     await act(async () => { fenetre.findByType(WizardStepLayout).props.onClose(); });
     await attendre();
@@ -606,8 +607,7 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
-    await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant')); // A7-UX-2 : club et équipe sur une étape
     await appuyer(parTestID(arbre, 'jour-3'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
@@ -653,8 +653,7 @@ describe('COLL-C2B planche 3 — 7. aucun nom de personne a la mairie', () => {
     await appuyer(parTexte(arbre, 'Fermer'));
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
-    await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant')); // A7-UX-2 : club et équipe sur une étape
     await appuyer(parTestID(arbre, 'jour-3'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
