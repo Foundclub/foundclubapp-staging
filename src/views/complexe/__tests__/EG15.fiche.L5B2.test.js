@@ -28,6 +28,8 @@ let mockListe = /** @type {any} */ ({});
 /** @type {any[]} */
 const mockRecherches = [];
 const mockEcrire = jest.fn();
+/** RESA-FIN-APP-3 : ce que le serveur ajoute à la fiche (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). */
+let mockClientEnPlus = /** @type {Record<string, any>} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useBannir: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useClientDuComplexe: () => ({
@@ -39,6 +41,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
       lateCancellations: 0,
       noShows: 1,
       upcoming: 1,
+      ...mockClientEnPlus,
     },
     isLoading: false,
   }),
@@ -89,6 +92,7 @@ const monter = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRecherches.length = 0;
+  mockClientEnPlus = {};
   mockParams = { complexeId: 'cx-five', joueurId: 'u-julien' };
   mockHistorique = {
     data: {
@@ -184,7 +188,10 @@ describe('E-G15 — la fiche d’un client, avec RESA-L4', () => {
       pressable(arbre, 'Écrire').props.onPress();
     });
     expect(mockEcrire).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-demain' });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'chat-r-demain' });
+    // RESA-FIN-APP-3 : la conversation garde l'espace du complexe (barre du bas du gérant, tournée 3).
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, {
+      chatId: 'chat-r-demain', espace: 'complexe',
+    });
   });
 
   it('sans réservation à venir, pas de « Écrire » (AT-04)', async () => {
@@ -203,5 +210,26 @@ describe('RESA-FIN-APP (1) E-G15 — les lignes de l’historique ne perdent plu
     const lignes = textes(arbre).filter((texte) => /\d\d\/\d\d/.test(texte) && /Terrain/.test(texte));
     expect(lignes).toHaveLength(3);
     lignes.forEach((ligne) => expect(ligne).not.toMatch(/ /));
+  });
+});
+
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — « 3 non honorées · Non banni · ban automatique au
+// bout de 3 » était trompeur : le compteur du ban automatique repart de la levée du dernier ban
+// (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). L'écran dit le total ET le compte depuis la levée.
+describe('RESA-FIN-APP-3 E-G15 — les non honorées depuis la levée du ban', () => {
+  it('3 au total, 0 depuis la levée : les deux, et le ban automatique compte depuis la levée', async () => {
+    mockClientEnPlus = { noShows: 3, noShowsSinceLift: 0 };
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      '3', 'non honorées', '0 depuis la levée du ban',
+      'Bannissement automatique au bout de 3 non honorées.',
+      'Le compteur repart de la levée du ban : 0 sur 3.',
+    ]));
+  });
+
+  it('jamais banni (autant depuis la levée qu’au total) : rien de plus', async () => {
+    mockClientEnPlus = { noShows: 1, noShowsSinceLift: 1 };
+    const vus = lisibles(await monter());
+    expect(vus.some((texte) => /depuis la levée|repart de la levée/.test(texte))).toBe(false);
   });
 });

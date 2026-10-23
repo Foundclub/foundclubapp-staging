@@ -300,6 +300,24 @@ export const totalDesPages = (donnees) => {
 };
 
 /**
+ * RESA-FIN-APP-3 (23/10/2026) — le nombre d'un onglet : seules les réservations Confirmées et les
+ * demandes En attente comptent (STATUTS_ACTIFS, la règle de la tuile de l'accueil et de « À venir ») ;
+ * la liste, elle, montre aussi les annulées, refusées et sans réponse du jour.
+ * ponytail: le serveur compte TOUTES les lignes de la vue ; on retire celles qu'on a lues hors de la
+ * règle. Exact quand toutes les pages sont lues (le cas d'une journée : < 20 lignes) ; au-delà, un
+ * majorant. Sortie : un total « actives » rendu par le serveur.
+ * @param {any} donnees - `data` de la lecture.
+ * @returns {number | null} Le nombre, ou null avant la 1re page.
+ */
+export const totalQuiCompte = (donnees) => {
+  const total = totalDesPages(donnees);
+  if (total === null) return null;
+  const horsRegle = lignesDesPages(donnees)
+    .filter((ligne) => !STATUTS_ACTIFS.includes(ligne?.status)).length;
+  return Math.max(0, total - horsRegle);
+};
+
+/**
  * Une liste groupée par jour, dans l'ordre reçu (le serveur trie).
  * @template {{ date: string }} T
  * @param {T[]} items - Les lignes.

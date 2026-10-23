@@ -60,8 +60,12 @@ describe('E-S01 — la console des complexes, sans le serveur', () => {
       ],
     });
     expect(lignes).toEqual([
-      { cle: 'suspendu', motif: 'vérification', quand: '2026-10-14T09:00:00.000Z' },
-      { cle: 'cree', motif: null, quand: '2026-10-13T08:00:00.000Z' },
+      {
+        auteur: null, cle: 'suspendu', motif: 'vérification', quand: '2026-10-14T09:00:00.000Z',
+      },
+      {
+        auteur: null, cle: 'cree', motif: null, quand: '2026-10-13T08:00:00.000Z',
+      },
     ]);
   });
 

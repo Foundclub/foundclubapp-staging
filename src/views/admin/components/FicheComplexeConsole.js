@@ -214,6 +214,11 @@ function FicheComplexeConsole({ complexeId }) {
             t(`complexeConsole.fiche.journalLignes.${ligne.cle}`, {
               date: jourCourt(ligne.quand), ...SANS_ECHAPPEMENT,
             }),
+            ligne.auteur
+              ? t('complexeConsole.fiche.journalPar', 'par {{nom}}', {
+                nom: ligne.auteur, ...SANS_ECHAPPEMENT,
+              })
+              : '',
             ligne.motif ? `« ${ligne.motif} »` : '',
           ].filter(Boolean).join(' · ')}
         </Text>

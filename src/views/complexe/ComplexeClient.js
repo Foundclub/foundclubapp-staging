@@ -239,11 +239,19 @@ function ComplexeClient({
           complexeId, reservationId: aEcrire.documentId,
         });
         const chatId = reponse?.data?.chat;
-        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId });
+        // RESA-FIN-APP-3 : `espace: 'complexe'` — sur le site, la conversation garde la barre du
+        // gérant (comme le canal, ComplexeCanal), au lieu des onglets du joueur (tournée 3).
+        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId, espace: 'complexe' });
       } catch (erreur) {
         setErreurEcrire(messageDeRefusResa(t, erreur, repli));
       }
     };
+    // RESA-FIN-APP-3 — `noShowsSinceLift` (RESA-FIN-SERVEUR 9/11) : moins que le total = un ban levé.
+    const depuisLaLevee = Number.isInteger(client.noShowsSinceLift)
+      ? client.noShowsSinceLift
+      : null;
+    const leveeDuBan = depuisLaLevee !== null && depuisLaLevee < nombre(client.noShows);
+    /** @type {Array<{ cle: string, depuis?: string | null, libelle: string, valeur: any }>} */
     const chiffres = [
       ...(parties === null ? [] : [{
         cle: 'parties',
@@ -256,6 +264,11 @@ function ComplexeClient({
       }]),
       {
         cle: 'non-honorees',
+        // RESA-FIN-APP-3 (23/10/2026) — le compte depuis la levée du dernier ban, quand il diffère
+        // du total : c'est lui que le ban automatique regarde (tournée 3).
+        depuis: leveeDuBan ? t('complexeClients.chiffres.depuisLaLevee', '{{nombre}} depuis la levée du ban', {
+          nombre: depuisLaLevee,
+        }) : null,
         libelle: t('complexeClients.chiffres.nonHonorees', 'non honorée', {
           count: nombre(client.noShows),
           defaultValue_one: 'non honorée',
@@ -375,6 +388,9 @@ function ComplexeClient({
             >
               <Text style={[Fonts.h3Black, Fonts.neutral00]}>{String(chiffre.valeur)}</Text>
               <Text style={[Fonts.p3, Fonts.neutral100]}>{chiffre.libelle}</Text>
+              {chiffre.depuis ? (
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{chiffre.depuis}</Text>
+              ) : null}
             </View>
           ))}
         </View>
@@ -444,6 +460,15 @@ function ComplexeClient({
                   defaultValue_other: 'Bannissement automatique au bout de {{count}} non honorées.',
                   ...SANS_ECHAPPEMENT,
                 },
+              )}
+            </Text>
+          ) : null}
+          {!banni && leveeDuBan && Number.isInteger(seuil) && seuil > 0 ? (
+            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+              {t(
+                'complexeClients.ban.repartDeLaLevee',
+                'Le compteur repart de la levée du ban : {{nombre}} sur {{seuil}}.',
+                { nombre: depuisLaLevee, seuil },
               )}
             </Text>
           ) : null}

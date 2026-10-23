@@ -15,7 +15,7 @@ import {
   quandCourt,
   STATUTS,
   titreDuJour,
-  totalDesPages,
+  totalQuiCompte,
 } from '@/domains/complexe/complexeReservation';
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -146,7 +146,8 @@ function ComplexeReservations() {
   };
 
   const avecNombre = (/** @type {string} */ libelle, /** @type {any} */ donnees) => {
-    const total = totalDesPages(donnees);
+    // RESA-FIN-APP-3 : une annulée du jour ne compte pas dans « Aujourd'hui (n) » (tournée 3).
+    const total = totalQuiCompte(donnees);
     return total === null ? libelle : `${libelle} (${total})`;
   };
 

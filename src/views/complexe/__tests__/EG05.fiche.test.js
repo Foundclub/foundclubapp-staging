@@ -30,6 +30,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => ({ data: null }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
+  // RESA-FIN-APP-3 : « Écrire au réserveur » dans la fiche (E-G05).
+  useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
   // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).

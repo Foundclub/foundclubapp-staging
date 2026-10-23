@@ -6985,6 +6985,8 @@ export default {
       jusqua: 'Banned until {{jusqua}} · private reason: {{raison}}',
       nePeutPlus: '{{nom}} can no longer book with you.',
       peutANouveau: '{{nom}} can book again.',
+      // RESA-FIN-APP-3 (23/10/2026) — the automatic ban counts since the last lifted ban.
+      repartDeLaLevee: 'The count restarts when the ban was lifted: {{nombre}} of {{seuil}}.',
       titre: 'Ban',
     },
     bannir: {
@@ -6999,6 +7001,8 @@ export default {
     chiffres: {
       aVenir_one: 'upcoming booking',
       aVenir_other: 'upcoming bookings',
+      // RESA-FIN-APP-3 (23/10/2026) — no-shows since the last lifted ban (`noShowsSinceLift`).
+      depuisLaLevee: '{{nombre}} since the ban was lifted',
       // RESA-L5B-2 (20/10/2026) — loyalty and games played (RESA-L4 server).
       fidelite: 'loyalty',
       horsDelai_one: 'late cancellation',
@@ -7077,6 +7081,8 @@ export default {
         suspendu: 'Suspended on {{date}}',
         verifie: 'Marked verified on {{date}}',
       },
+      // RESA-FIN-APP-3 (23/10/2026) — who did a log entry (`auteurNom`).
+      journalPar: 'by {{nom}}',
       parAuteur: 'By {{nom}} · {{jour}} at {{heure}}',
       reservations_one: '{{count}} booking',
       reservations_other: '{{count}} bookings',
@@ -7675,6 +7681,8 @@ export default {
       appeler: 'Call',
       auNomDe: 'In the name of: {{nom}}',
       auNomDeChamp: 'In the name of',
+      // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, the booking's conversation.
+      ecrireAuReserveur: 'Message the booker',
       enregistrer: 'Save',
       erreur: 'The booking could not be loaded.',
       erreurGeste: 'This could not be done.',

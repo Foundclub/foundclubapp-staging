@@ -116,16 +116,21 @@ const ACTIONS_DU_JOURNAL = Object.freeze({
  * Le journal de la fiche : les gestes connus du serveur (le plus récent d'abord), puis la création
  * (sans validation, D6). Une action inconnue ne s'affiche pas.
  * @param {Record<string, any>} fiche - `complexe.createdAt`, `journal[]`.
- * @returns {Array<{ cle: string, motif: string | null, quand: string | null }>} Les lignes.
+ * RESA-FIN-APP-3 (23/10/2026) : l'auteur du geste (`auteurNom`, « Superadmin T. »), sinon null.
+ * @returns {Array<{ auteur: string | null, cle: string, motif: string | null,
+ *   quand: string | null }>} Les lignes.
  */
 export const lignesDuJournal = (fiche) => {
   const gestes = (Array.isArray(fiche?.journal) ? fiche.journal : [])
     .map((/** @type {any} */ ligne) => ({
+      auteur: ligne?.auteurNom ? String(ligne.auteurNom) : null,
       cle: /** @type {Record<string, string>} */ (ACTIONS_DU_JOURNAL)[String(ligne?.action)],
       motif: ligne?.reason ? String(ligne.reason) : null,
       quand: ligne?.timestamp || null,
     }))
     .filter((ligne) => Boolean(ligne.cle));
   const cree = fiche?.complexe?.createdAt || null;
-  return cree ? [...gestes, { cle: 'cree', motif: null, quand: cree }] : gestes;
+  return cree ? [...gestes, {
+    auteur: null, cle: 'cree', motif: null, quand: cree,
+  }] : gestes;
 };

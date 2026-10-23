@@ -400,3 +400,38 @@ describe('E-S01 — la tuile « Complexes » du dashboard', () => {
     expect(tuile.value).toBe('—');
   });
 });
+
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — le serveur nomme l'auteur de chaque geste du
+// journal (`auteurNom`, « Superadmin T. », RESA-FIN-SERVEUR) : chaque ligne le dit.
+describe('RESA-FIN-APP-3 E-S01 — l’auteur de chaque ligne du journal', () => {
+  it('« Retiré le 20/10 · par Superadmin T. · « motif » » ; sans auteur, la ligne d’avant', async () => {
+    mockFiche = {
+      data: {
+        ...FICHE,
+        journal: [
+          {
+            action: 'SUPERADMIN_COMPLEXE_RETIRED',
+            actorDocumentId: 'u-sa',
+            auteurNom: 'Superadmin T.',
+            reason: 'Test console retrait',
+            timestamp: '2026-10-20T09:00:00.000Z',
+          },
+          {
+            action: 'SUPERADMIN_COMPLEXE_VERIFIED',
+            actorDocumentId: null,
+            auteurNom: null,
+            reason: null,
+            timestamp: '2026-10-19T09:00:00.000Z',
+          },
+        ],
+      },
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    const vus = lisibles(await monter(<FicheComplexeConsole complexeId="cx-five" />));
+    expect(vus).toEqual(expect.arrayContaining([
+      'Retiré le 20/10 · par Superadmin T. · « Test console retrait »',
+      'Marqué vérifié le 19/10',
+    ]));
+  });
+});

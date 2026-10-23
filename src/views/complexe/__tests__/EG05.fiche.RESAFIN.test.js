@@ -4,6 +4,8 @@ import ComplexeReservation from '@/views/complexe/ComplexeReservation';
 
 import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 
 
 // RESA-L5A2 (14/10/2026) — E-G05 « La fiche d'une réservation, côté gérant » (planche EG05) : quand
@@ -24,6 +26,7 @@ const mockAnnuler = jest.fn();
 const mockModifier = jest.fn();
 let mockFidelite = /** @type {any} */ ({ data: null, isLoading: false });
 const mockValider = jest.fn();
+const mockEcrire = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   // RESA-FIN-APP : la fidélité du complexe (RESA-L4) et « Valider » (E-G14).
   useFideliteDuComplexe: () => mockFidelite,
@@ -34,6 +37,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => ({ data: null }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
+  // RESA-FIN-APP-3 : « Écrire au réserveur » (le chemin de « Écrire » de la fiche client, E-G15).
+  useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: mockEcrire }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
   useReservationGeree: () => mockFiche,
@@ -219,5 +224,45 @@ describe('RESA-FIN-APP (5) E-G05 — une demande expirée ne propose plus de ges
     expect(mockFiche.refetch).toHaveBeenCalled();
     expect(parRepere(arbre, 'fiche-accepter')).toBeNull();
     expect(parRepere(arbre, 'fiche-refuser')).toBeNull();
+  });
+});
+
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — plan E-G05 :549 : une réservation Confirmée à venir
+// propose « Écrire au réserveur » + « Annuler la réservation ». « Écrire » ouvre la conversation de la
+// réservation par le même chemin que la fiche client (E-G15), dans l'espace du complexe.
+describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
+  it('confirmée à venir, de l’app : « Écrire au réserveur » ouvre la conversation, espace complexe', async () => {
+    mockEcrire.mockResolvedValue({ data: { chat: 'chat-r-1' } });
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Écrire au réserveur', 'Annuler la réservation',
+    ]));
+    await appuyerDans(arbre, 'fiche-ecrire');
+    expect(mockEcrire).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-1' });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, {
+      chatId: 'chat-r-1', espace: 'complexe',
+    });
+  });
+
+  it('extérieure, en attente ou passée : pas de « Écrire au réserveur »', async () => {
+    const cas = [
+      { booker: null, externalName: 'M. Dupont', source: 'exterieur' },
+      { status: 'en_attente' },
+      { endsAt: '2026-10-12T18:00:00.000Z', startsAt: '2026-10-12T17:00:00.000Z' },
+    ];
+    for (const autres of cas) {
+      mockFiche = { data: fiche(autres), isLoading: false, refetch: jest.fn() };
+      // eslint-disable-next-line no-await-in-loop
+      const arbre = await monter();
+      expect(lisibles(arbre)).not.toContain('Écrire au réserveur');
+    }
+  });
+
+  it('un refus du serveur se dit, sans ouvrir de conversation', async () => {
+    mockEcrire.mockRejectedValue(new Error('refus'));
+    const arbre = await monter();
+    await appuyerDans(arbre, 'fiche-ecrire');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(parRepere(arbre, 'fiche-ecrire-erreur')).not.toBeNull();
   });
 });

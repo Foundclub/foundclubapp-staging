@@ -36,6 +36,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     mes: { isLoading: false },
   }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
+  // RESA-FIN-APP-3 : « Écrire au réserveur » dans la fiche (E-G05).
+  useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => (
     filtres.vue === 'demandes' ? mockAttente : mockTraitees
   ),

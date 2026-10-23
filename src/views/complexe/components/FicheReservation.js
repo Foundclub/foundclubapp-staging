@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,11 +34,14 @@ import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
 import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   useAnnulerNonHonoree,
   useAnnulerReservation,
   useComplexeGere,
   useDeciderDemande,
+  useEcrireAuReserveur,
   useFideliteDuComplexe,
   useMarquerNonHonoree,
   useModifierExterieur,
@@ -66,8 +70,9 @@ import texteInsecable from '@/utils/texteInsecable';
  * non honorée par toi » et « — hors délai » (AT-07).
  * RESA-L5B-1 (morceau A2) : le nom du réserveur ouvre sa fiche client (E-G15, `onVoirClient`).
  * Pas encore servi (dit dans le compte rendu du lot) : « Participants · 8/10 » (lot L3) ;
- * « Écrire au réserveur » (conversation de la réservation, lot L3) ; « Récompense disponible » et
- * « Valider la partie offerte » (fidélité, lot L4).
+ * « Récompense disponible » et « Valider la partie offerte » (fidélité, lot L4).
+ * RESA-FIN-APP-3 (23/10/2026) : « Écrire au réserveur » (plan :549), le chemin de « Écrire » de
+ * la fiche client (E-G15) : la conversation de la réservation, dans l'espace du complexe.
  * @param {object} props - Les propriétés.
  * @param {string | null} props.complexeId - Le complexe.
  * @param {(joueurId: string) => void} [props.onVoirClient] - Le nom du réserveur ⇒ sa fiche.
@@ -82,7 +87,10 @@ function FicheReservation({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const navigation = useNavigation();
   const lecture = useReservationGeree(complexeId, reservationId);
+  const ecrire = useEcrireAuReserveur();
+  const [erreurEcrire, setErreurEcrire] = useState('');
   const decider = useDeciderDemande();
   const annuler = useAnnulerReservation();
   const modifier = useModifierExterieur();
@@ -404,13 +412,46 @@ function FicheReservation({
       </View>
     );
   } else if (confirmeeAVenir) {
+    const ecrireAuReserveur = async () => {
+      setErreurEcrire('');
+      try {
+        const reponse = await ecrire.mutateAsync({ complexeId, reservationId });
+        const chatId = reponse?.data?.chat;
+        if (chatId) {
+          /** @type {any} */ (navigation).navigate(RouteNames.Conversation, {
+            chatId, espace: 'complexe',
+          });
+        }
+      } catch (erreur) {
+        setErreurEcrire(messageDeRefusResa(t, erreur, repli));
+      }
+    };
     pied = (
-      <View testID="fiche-annuler">
-        <Button
-          onPress={() => ouvrir('annuler')}
-          title={t('complexeReservations.fiche.annulerLaReservation', 'Annuler la réservation')}
-          variant="Danger"
-        />
+      <View style={{ gap: 8 }}>
+        <View testID="fiche-ecrire">
+          <Button
+            isLoading={Boolean(ecrire.isPending)}
+            onPress={ecrireAuReserveur}
+            title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au réserveur')}
+            variant="Secondary"
+          />
+        </View>
+        {erreurEcrire ? (
+          <Text
+            accessibilityRole="alert"
+            style={[Fonts.p2Bold, Fonts.error300]}
+            testID="fiche-ecrire-erreur"
+          >
+            {erreurEcrire}
+          </Text>
+        ) : null}
+        <View testID="fiche-annuler">
+          <Button
+            onPress={() => ouvrir('annuler')}
+            title={t('complexeReservations.fiche.annulerLaReservation', 'Annuler la réservation')}
+            variant="Danger"
+          />
+        </View>
       </View>
     );
   } else if (r.canUndoNoShow === true) {

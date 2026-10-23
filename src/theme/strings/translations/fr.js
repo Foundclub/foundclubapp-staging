@@ -7459,6 +7459,8 @@ export default {
       jusqua: 'Banni jusqu’au {{jusqua}} · raison privée : {{raison}}',
       nePeutPlus: '{{nom}} ne peut plus réserver chez toi.',
       peutANouveau: '{{nom}} peut à nouveau réserver.',
+      // RESA-FIN-APP-3 (23/10/2026) — le ban automatique compte depuis la levée du dernier ban.
+      repartDeLaLevee: 'Le compteur repart de la levée du ban : {{nombre}} sur {{seuil}}.',
       titre: 'Bannissement',
     },
     bannir: {
@@ -7473,6 +7475,8 @@ export default {
     chiffres: {
       aVenir_one: 'réservation à venir',
       aVenir_other: 'réservations à venir',
+      // RESA-FIN-APP-3 (23/10/2026) — les non honorées depuis la levée du dernier ban (`noShowsSinceLift`).
+      depuisLaLevee: '{{nombre}} depuis la levée du ban',
       // RESA-L5B-2 (20/10/2026) — la fidélité et les parties jouées (serveur RESA-L4).
       fidelite: 'fidélité',
       horsDelai_one: 'annulation hors délai',
@@ -7552,6 +7556,8 @@ export default {
         suspendu: 'Suspendu le {{date}}',
         verifie: 'Marqué vérifié le {{date}}',
       },
+      // RESA-FIN-APP-3 (23/10/2026) — l'auteur d'une ligne du journal (`auteurNom`).
+      journalPar: 'par {{nom}}',
       parAuteur: 'Par {{nom}} · {{jour}} à {{heure}}',
       reservations_one: '{{count}} réservation',
       reservations_other: '{{count}} réservations',
@@ -8165,6 +8171,8 @@ export default {
       appeler: 'Appeler',
       auNomDe: 'Au nom de : {{nom}}',
       auNomDeChamp: 'Au nom de',
+      // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, la conversation de la réservation.
+      ecrireAuReserveur: 'Écrire au réserveur',
       enregistrer: 'Enregistrer',
       erreur: 'Impossible de charger la réservation.',
       erreurGeste: 'Le geste n’a pas pu être fait.',
