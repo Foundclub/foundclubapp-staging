@@ -137,3 +137,14 @@ describe('R17CTRL — un contrôle (planche Q6 écran 4)', () => {
     expect(textes(monter({ series: 'nulle-part' }).arbre)).toContain('Ce contrôle est introuvable.');
   });
 });
+
+// R17CTRL-1 (22/10/2026) — l historique d un controle dit son resultat (planche Q6 ecran 4 : « 12/03/2026 · conforme ») ;
+// un controle note avant le lot (sans resultat) garde sa seule date.
+describe('R17CTRL-1 — le résultat dans l historique du contrôle', () => {
+  it('« 12/03/2026 · conforme », « 10/03/2025 · non conforme » ; sans résultat : la date seule', () => {
+    mockCarnet = carnet([{ ...SERIE[0], result: 'conforme' }, { ...SERIE[1], result: 'non_conforme' }]);
+    expect(textes(monter().arbre)).toEqual(expect.arrayContaining(['12/03/2026 · conforme', '10/03/2025 · non conforme']));
+    mockCarnet = carnet(SERIE);
+    expect(textes(monter().arbre)).toEqual(expect.arrayContaining(['12/03/2026', '10/03/2025']));
+  });
+});

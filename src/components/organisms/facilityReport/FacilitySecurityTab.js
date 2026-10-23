@@ -131,12 +131,26 @@ function FacilitySecurityTab({
     'facilityReports.ville.etatEnService',
     'Aucun signalement ouvert, aucune fermeture en cours.',
   );
-  if (state.code === 'a_surveiller') {
-    phraseEtat = t('facilityReports.ville.etatASurveiller', {
+  // R17CTRL-1 (22/10) : un controle EN COURS non conforme met l installation « À surveiller ».
+  // (L etat vient du serveur ; ici, seulement la phrase.)
+  const nonConformes = Array.isArray(state.nonConformChecks) ? state.nonConformChecks : [];
+  let phraseNonConforme = '';
+  if (nonConformes.length === 1) {
+    phraseNonConforme = t('facilityReports.ville.etatNonConforme', {
       ...SANS_ECHAPPEMENT,
-      count: state.securityOpenCount || 1,
-      date: reportDayLabel(state.securitySince),
+      label: nonConformes[0].label,
     });
+  } else if (nonConformes.length > 1) {
+    phraseNonConforme = t('facilityReports.ville.etatNonConformes', { count: nonConformes.length });
+  }
+  if (state.code === 'a_surveiller') {
+    phraseEtat = state.securityOpenCount
+      ? [t('facilityReports.ville.etatASurveiller', {
+        ...SANS_ECHAPPEMENT,
+        count: state.securityOpenCount,
+        date: reportDayLabel(state.securitySince),
+      }), phraseNonConforme].filter(Boolean).join(' ')
+      : phraseNonConforme;
   }
   if (state.code === 'fermee' && state.closure) {
     const jours = {
@@ -260,10 +274,17 @@ function FacilitySecurityTab({
     if (kind === 'check') {
       // R17-CONTROLES (planches A et tel 1) : « Contrôle : Buts et paniers », puis la date, qui
       // l a fait et (ordinateur) le prochain.
-      const titreDuControle = t('facilityReports.controles.histoTitre', {
-        ...SANS_ECHAPPEMENT,
-        label: item.label,
-      });
+      // R17CTRL-1 : « Contrôle : Buts et paniers · conforme » (planche A) ; rien avant le lot.
+      const titreDuControle = item.result
+        ? t('facilityReports.controles.histoTitreResultat', {
+          ...SANS_ECHAPPEMENT,
+          label: item.label,
+          resultat: String(t(`facilityReports.controles.resultats.${item.result}`)),
+        })
+        : t('facilityReports.controles.histoTitre', {
+          ...SANS_ECHAPPEMENT,
+          label: item.label,
+        });
       if (!isDesktop) {
         const date = reportShortSpan(item.doneOn, null);
         const jour = date && 'jour' in date ? date.jour : '';
@@ -421,10 +442,15 @@ function FacilitySecurityTab({
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.label}</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('facilityReports.controles.prochain', {
-                ...SANS_ECHAPPEMENT,
-                date: checkShortDate(ligne.nextDue),
-              })}
+              {t(
+                ligne.result === 'non_conforme'
+                  ? 'facilityReports.controles.prochainNonConforme'
+                  : 'facilityReports.controles.prochain',
+                {
+                  ...SANS_ECHAPPEMENT,
+                  date: checkShortDate(ligne.nextDue),
+                },
+              )}
             </Text>
           </View>
           <View

@@ -67,6 +67,8 @@ function FacilityCheckForm({
   );
   const [prochainTouche, setProchainTouche] = useState(false);
   const [rapport, setRapport] = useState(/** @type {any} */ (null));
+  // R17CTRL-1 (22/10, decision « 5- A ») : « Conforme » ou « Non conforme », dit a chaque fois.
+  const [resultat, setResultat] = useState(/** @type {string | null} */ (null));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   const envoi = refait ? noterFait : noter;
 
@@ -109,8 +111,15 @@ function FacilityCheckForm({
       ));
       return;
     }
+    if (!resultat) {
+      setErreur(t(
+        'facilityReports.controles.erreurs.result',
+        'Dites si le contrôle est conforme.',
+      ));
+      return;
+    }
     const champs = {
-      document: rapport, doneBy: par.trim() || null, doneOn, nextDue,
+      document: rapport, doneBy: par.trim() || null, doneOn, nextDue, result: resultat,
     };
     try {
       const reponse = refait
@@ -163,6 +172,40 @@ function FacilityCheckForm({
             testID="controle-par"
             value={par}
           />
+        </View>
+      </View>
+      <View style={{ gap: 6 }}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+          {t('facilityReports.controles.resultat', 'Résultat')}
+        </Text>
+        <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 8 }}>
+          {['conforme', 'non_conforme'].map((valeur) => {
+            const choisi = resultat === valeur;
+            const ton = valeur === 'conforme' ? Colors.success500 : Colors.error500;
+            return (
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: choisi }}
+                key={valeur}
+                onPress={() => setResultat(valeur)}
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: choisi ? withAlpha(ton, 0.16) : 'transparent',
+                  borderColor: choisi ? ton : withAlpha(Colors.neutral00, 0.2),
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  flex: 1,
+                  justifyContent: 'center',
+                  minHeight: 44,
+                }}
+                testID={`controle-resultat-${valeur}`}
+              >
+                <Text style={[Fonts.p2Bold, choisi ? { color: ton } : Fonts.neutral100]}>
+                  {String(t(`facilityReports.controles.choix.${valeur}`))}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
       <View style={{ gap: 4 }}>

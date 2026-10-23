@@ -108,7 +108,12 @@ const ecrire = async (/** @type {any} */ arbre, /** @type {string} */ id, /** @t
   await act(async () => { champ(arbre, id).props.onChangeText(texte); });
 };
 const parId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props.testID === id && typeof n.type !== 'string');
+// R17CTRL-1 (22/10) : le resultat se dit a chaque envoi ; le banc choisit « Conforme ».
+const choisir = async (/** @type {any} */ arbre, /** @type {string} */ valeur = 'conforme') => {
+  await act(async () => { parId(arbre, `controle-resultat-${valeur}`)[0].props.onPress(); });
+};
 const enregistrer = async (/** @type {any} */ arbre) => {
+  await choisir(arbre);
   const [bouton] = arbre.root.findAll((/** @type {any} */ n) => n.props.title === 'Enregistrer' && typeof n.type !== 'string');
   await act(async () => { await bouton.props.onPress(); });
 };
@@ -149,7 +154,7 @@ describe('R17CTRL — « Noter un contrôle » (planche Q6 écran 1)', () => {
     expect(textes(arbre)).toContain('rapport-buts.pdf');
     await enregistrer(arbre);
     expect(mockNoter.mutateAsync).toHaveBeenCalledWith({
-      document: PDF, doneBy: 'Société Exemple', doneOn: '2026-03-12', facilityId: 'gym-tilleuls', label: 'Buts et paniers', nextDue: '2027-03-12',
+      document: PDF, doneBy: 'Société Exemple', doneOn: '2026-03-12', facilityId: 'gym-tilleuls', label: 'Buts et paniers', nextDue: '2027-03-12', result: 'conforme',
     });
     expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ series: 's-neuve' }));
   });
@@ -190,6 +195,7 @@ describe('R17CTRL — « Noter un contrôle » (planche Q6 écran 1)', () => {
     expect(gabarit.subtitle).toBe('Gymnase des Tilleuls');
     expect(gabarit.nextLabel).toBe('Enregistrer');
     await ecrire(arbre, 'controle-quel', 'Buts et paniers');
+    await choisir(arbre);
     await act(async () => { await parId(arbre, 'gabarit-suivant')[0].props.onPress(); });
     expect(mockNoter.mutateAsync).toHaveBeenCalledTimes(1);
   });
@@ -205,8 +211,38 @@ describe('R17CTRL — « Noter le contrôle fait » (planche Q6 écran 4)', () =
     expect(champ(arbre, 'controle-prochain').props.value).toBe('20/10/2027');
     await enregistrer(arbre);
     expect(mockNoterFait.mutateAsync).toHaveBeenCalledWith({
-      checkId: 'c-buts-2', document: null, doneBy: 'Société Exemple', doneOn: '2026-10-20', nextDue: '2027-10-20',
+      checkId: 'c-buts-2', document: null, doneBy: 'Société Exemple', doneOn: '2026-10-20', nextDue: '2027-10-20', result: 'conforme',
     });
     expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ documentId: 'c-buts-3' }));
+  });
+});
+
+// R17CTRL-1 (22/10/2026, decision d Adel « 5- A ») — le resultat : « Conforme » ou « Non conforme », dit a
+// chaque envoi, sans valeur par defaut (rien n est presume conforme).
+describe('R17CTRL-1 — « Résultat » : Conforme / Non conforme', () => {
+  it('les deux choix, aucun coché ; sans choix : « Dites si le contrôle est conforme. », rien ne part', async () => {
+    const { arbre } = monter();
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Résultat', 'Conforme', 'Non conforme']));
+    expect(parId(arbre, 'controle-resultat-conforme')[0].props.accessibilityState).toEqual({ checked: false });
+    await ecrire(arbre, 'controle-quel', 'Extincteurs');
+    const [bouton] = arbre.root.findAll((/** @type {any} */ n) => n.props.title === 'Enregistrer' && typeof n.type !== 'string');
+    await act(async () => { await bouton.props.onPress(); });
+    expect(textes(arbre)).toContain('Dites si le contrôle est conforme.');
+    expect(mockNoter.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('« Non conforme » coché part avec le contrôle, noté comme refait', async () => {
+    const { arbre } = monter();
+    await ecrire(arbre, 'controle-quel', 'Extincteurs');
+    await choisir(arbre, 'non_conforme');
+    expect(parId(arbre, 'controle-resultat-non_conforme')[0].props.accessibilityState).toEqual({ checked: true });
+    const [bouton] = arbre.root.findAll((/** @type {any} */ n) => n.props.title === 'Enregistrer' && typeof n.type !== 'string');
+    await act(async () => { await bouton.props.onPress(); });
+    expect(mockNoter.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ label: 'Extincteurs', result: 'non_conforme' }));
+    const refait = monter({ series: 's-buts' });
+    await choisir(refait.arbre, 'non_conforme');
+    const [boutonRefait] = refait.arbre.root.findAll((/** @type {any} */ n) => n.props.title === 'Enregistrer' && typeof n.type !== 'string');
+    await act(async () => { await boutonRefait.props.onPress(); });
+    expect(mockNoterFait.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ checkId: 'c-buts-2', result: 'non_conforme' }));
   });
 });
