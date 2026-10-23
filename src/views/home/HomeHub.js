@@ -70,7 +70,12 @@ import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
-import { peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
+import {
+  libelleDeLaCarte,
+  pastilleDeLaCarte,
+  peutAvoirDesEnfants,
+} from '@/views/profile/parent/mesEnfantsEnBref';
+import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
@@ -174,6 +179,9 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  title: any;
  *  subtitle: any;
  *  onPress: () => void;
+ *  accessibilityLabel?: string;
+ *  titleCount?: number;
+ *  footer?: import('react').ReactNode;
  *  disabled?: boolean;
  *  icon?: any;
  *  accentColor?: string;
@@ -254,9 +262,11 @@ function HomeSection({
           const body = (
             <HomeActionCard
               accentColor={card.accentColor}
+              accessibilityLabel={card.accessibilityLabel}
               badgeCount={card.badgeCount}
               disabled={card.disabled}
               emphasis={card.emphasis}
+              footer={card.footer}
               hasAlert={card.hasAlert}
               highlighted={card.highlighted}
               icon={card.icon}
@@ -268,6 +278,7 @@ function HomeSection({
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
               title={card.title}
+              titleCount={card.titleCount}
               tone={card.tone}
               tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
             />
@@ -2468,21 +2479,40 @@ function HomeHubContent({ auth, navigation, route }) {
     // (meme raison que « Mes reponses », posee par D57).
     // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
     // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
+    // REC17-001-B (choix d'Adel « carte B » du 22/10, planche 14 du parcours parent) — la même
+    // porte dit l'essentiel : le nombre d'enfants dans un rond et UNE pastille, la plus urgente
+    // (`pastilleDeLaCarte`, règle de « Mes enfants ») ; sans enfant, « Ajoute ton enfant ».
+    // Toujours aucun prénom. Tant que les lectures n'ont pas répondu, la phrase d'avant.
+    const enfantsConnus = mesEnfants.connu === true;
+    const pastilleDesEnfants = enfantsConnus ? pastilleDeLaCarte(mesEnfants, t) : null;
+    let sousTitreDesEnfants = t(
+      'homeHub.cards.search.myChildren.subtitle',
+      'Declare-les, corrige leur fiche, cherche-leur un club.',
+    );
+    if (enfantsConnus && mesEnfants.total === 0) {
+      sousTitreDesEnfants = t('homeHub.cards.search.myChildren.empty', 'Ajoute ton enfant');
+    }
     const carteMesEnfants = /** @type {any} */ ({
       accentColor: Colors.primary500,
+      accessibilityLabel: libelleDeLaCarte(mesEnfants, t),
       emphasis: 'primary',
+      footer: pastilleDesEnfants ? (
+        <PastilleDEtat
+          testID="carte-mes-enfants-pastille"
+          texte={pastilleDesEnfants.texte}
+          ton={pastilleDesEnfants.ton}
+        />
+      ) : null,
       icon: 'users',
       key: 'search-my-children',
       layout: 'full',
       onPress: () => navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.MyChildren,
       }),
-      subtitle: t(
-        'homeHub.cards.search.myChildren.subtitle',
-        'Declare-les, corrige leur fiche, cherche-leur un club.',
-      ),
+      subtitle: pastilleDesEnfants ? '' : sousTitreDesEnfants,
       subtitleLines: 2,
       title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+      titleCount: enfantsConnus ? mesEnfants.total : undefined,
     });
 
     if (isParent) {

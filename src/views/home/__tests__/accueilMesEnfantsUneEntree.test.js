@@ -46,21 +46,10 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
-jest.mock('react-i18next', () => {
-  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
-
-  return {
-    useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
-        const valeur = String(cle || '')
-          .split('.')
-          .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
-        if (typeof valeur === 'string') return valeur;
-        return typeof repli === 'string' ? repli : cle;
-      },
-    }),
-  };
-});
+// REC17-001-B : la doublure commune (le pluriel et les {{jetons}}, comme l'app en français).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
@@ -366,6 +355,103 @@ describe('REC17-001 — l accueil n a qu UNE entrée « Mes enfants »', () => {
     avecEnfants(0);
     const { arbre } = monterLAccueil();
     expect(cartesMesEnfants(arbre)).toHaveLength(0);
+    act(() => arbre.unmount());
+  });
+});
+
+// 🟢 REC17-001-B (choix d'Adel « carte B » du 22/10, planche 14 du parcours parent) — la même
+// porte unique dit l'essentiel : le nombre d'enfants dans un rond et UNE pastille, la plus
+// urgente. Toujours aucun prénom, aucune flèche par enfant. ROUGE avant le lot.
+describe('REC17-001-B — la carte dit le nombre et UNE pastille', () => {
+  afterEach(() => {
+    /** @type {any} */ (useMesEnfantsEnBref).regler();
+  });
+
+  /**
+   * Régler la doublure sur un état LU.
+   * @param {number} total - Le nombre d'enfants.
+   * @param {Record<string, number>} resume - Le résumé du crochet.
+   * @returns {void}
+   */
+  const lu = (total, resume) => {
+    /** @type {any} */ (useMesEnfantsEnBref).regler({
+      connu: true,
+      lignes: ENFANTS.slice(0, total),
+      reste: 0,
+      resume: {
+        comptes: 0, demandesEnAttente: 0, enEquipe: 0, sansEquipe: 0, ...resume,
+      },
+      total,
+    });
+  };
+
+  /**
+   * La carte, son libellé, son nombre et sa pastille.
+   * @param {any} arbre - L'accueil monté.
+   * @returns {{ carte: any, libelles: string[], nombre: string, pastille: string }} - Ce qu'elle
+   *   dit.
+   */
+  const lire = (arbre) => {
+    const [carte] = cartesMesEnfants(arbre);
+    const sous = (/** @type {string} */ id) => {
+      const noeud = carte.findAll(natif((props) => props.testID === id))[0];
+      // La pastille garde ses mots ensemble par des espaces insécables (`texteInsecable`).
+      return noeud ? textesSous(noeud).replace(/\u00a0/g, ' ') : '';
+    };
+    return {
+      carte,
+      libelles: carte.findAll(natif((props) => props.accessibilityRole === 'button'))
+        .map((/** @type {any} */ b) => b.props.accessibilityLabel),
+      nombre: sous('home-card-title-count'),
+      pastille: sous('carte-mes-enfants-pastille'),
+    };
+  };
+
+  it.each([
+    ['une demande attend', 2, { demandesEnAttente: 1, sansEquipe: 1 }, '1 demande en attente',
+      'Mes enfants, 2 enfants, 1 demande en attente'],
+    ['un enfant sans équipe', 2, { enEquipe: 1, sansEquipe: 1 }, '1 sans équipe',
+      'Mes enfants, 2 enfants, 1 sans équipe'],
+    ['tous en équipe', 2, { enEquipe: 2 }, 'Tous en équipe',
+      'Mes enfants, 2 enfants, Tous en équipe'],
+  ])('ROUGE-AVANT — %s : nombre, pastille, libellé', (_c, total, resume, pastille, libelle) => {
+    mockAuth = compte('Parent');
+    lu(total, resume);
+    const { arbre, navigate } = monterLAccueil();
+    const lus = lire(arbre);
+    expect(lus.nombre).toBe(String(total));
+    expect(lus.pastille).toBe(pastille);
+    expect(lus.libelles).toEqual([libelle]);
+    // Toujours une porte : une flèche, aucun prénom, un appui vers « Mes enfants ».
+    expect(lus.carte.findAll(natif((props) => props.source?.uri === 'arrowRight'))).toHaveLength(1);
+    ENFANTS.forEach(({ prenom }) => expect(textesSous(lus.carte)).not.toContain(prenom));
+    act(() => { lus.carte.props.onPress(); });
+    expect(navigate)
+      .toHaveBeenCalledWith(RouteNames.ProfileStack, { screen: RouteNames.MyChildren });
+    act(() => arbre.unmount());
+  });
+
+  it('ROUGE-AVANT — le parent sans enfant : « Ajoute ton enfant », ni nombre ni pastille', () => {
+    mockAuth = compte('Parent');
+    lu(0, {});
+    const { arbre } = monterLAccueil();
+    const lus = lire(arbre);
+    expect(textesSous(lus.carte)).toContain('Ajoute ton enfant');
+    expect(lus.nombre).toBe('');
+    expect(lus.pastille).toBe('');
+    expect(lus.libelles).toEqual(['Mes enfants, Ajoute ton enfant']);
+    act(() => arbre.unmount());
+  });
+
+  it('PROTEGE — pas encore lu : la phrase d avant, ni nombre ni pastille', () => {
+    mockAuth = compte('Parent');
+    avecEnfants(0);
+    const { arbre } = monterLAccueil();
+    const lus = lire(arbre);
+    expect(textesSous(lus.carte))
+      .toContain('Déclare-les, corrige leur fiche, cherche-leur un club.');
+    expect(lus.nombre).toBe('');
+    expect(lus.pastille).toBe('');
     act(() => arbre.unmount());
   });
 });

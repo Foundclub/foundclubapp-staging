@@ -80,7 +80,16 @@ test('éteint : aucune lecture ne part, et il ne dit rien', () => {
   expect(mockAppels.fiches.at(-1)).toEqual({ enabled: false });
   expect(mockAppels.liens.at(-1)).toEqual({ enabled: false });
   expect(mockAppels.demandes.at(-1).options).toEqual({ enabled: false });
-  expect(resultat).toEqual({ lignes: [], reste: 0, total: 0 });
+  // REC17-001-B : `connu` faux et un résumé à zéro (la carte d'accueil ne dit rien).
+  expect(resultat).toEqual({
+    connu: false,
+    lignes: [],
+    reste: 0,
+    resume: {
+      comptes: 0, demandesEnAttente: 0, enEquipe: 0, sansEquipe: 0,
+    },
+    total: 0,
+  });
   act(() => arbre.unmount());
 });
 

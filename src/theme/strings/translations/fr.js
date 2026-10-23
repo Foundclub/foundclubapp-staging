@@ -13334,6 +13334,15 @@ export default {
         },
         // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
         myChildren: {
+          // REC17-001-B (carte B, 22/10) : le nombre et UNE pastille, la plus urgente.
+          allInTeam: 'Tous en équipe',
+          count_one: '{{count}} enfant',
+          count_other: '{{count}} enfants',
+          empty: 'Ajoute ton enfant',
+          noTeam_one: '{{count}} sans équipe',
+          noTeam_other: '{{count}} sans équipe',
+          pending_one: '{{count}} demande en attente',
+          pending_other: '{{count}} demandes en attente',
           subtitle: 'Déclare-les, corrige leur fiche, cherche-leur un club.',
           title: 'Mes enfants',
         },

@@ -450,7 +450,9 @@ describe('PAR-L7 — « Mes enfants » : chez le parent, et chez un sportif pare
 
     expect(carte).toContain("'homeHub.cards.search.myChildren.subtitle'");
     expect(carte).toContain('screen: RouteNames.MyChildren,');
-    expect(carte).not.toMatch(/\blignes: |lignesAAfficher|lignesDeLaCarte|mesEnfants\./);
+    // REC17-001-B (carte B, 22/10) : la carte lit le NOMBRE et l'ÉTAT (`mesEnfants.connu`,
+    // `.total`, `pastilleDeLaCarte`), jamais les lignes ni les prénoms.
+    expect(carte).not.toMatch(/\blignes: |lignesAAfficher|lignesDeLaCarte|mesEnfants\.lignes|\.prenom\b/);
     expect(SOURCE).not.toContain('lignes={card.lignes}');
   });
 

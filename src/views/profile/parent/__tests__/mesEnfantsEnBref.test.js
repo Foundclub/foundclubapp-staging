@@ -95,9 +95,17 @@ describe('mesEnfantsEnBref — une ligne par enfant, le prénom d abord', () => 
   });
 
   test('rien à lire : aucun enfant, aucune erreur', () => {
-    expect(mesEnfantsEnBref({ t })).toEqual({ lignes: [], reste: 0, total: 0 });
+    // REC17-001-B : le résumé de la carte d'accueil s'ajoute, tout à zéro.
+    const SANS_RESUME = {
+      comptes: 0, demandesEnAttente: 0, enEquipe: 0, sansEquipe: 0,
+    };
+    expect(mesEnfantsEnBref({ t })).toEqual({
+      lignes: [], reste: 0, resume: SANS_RESUME, total: 0,
+    });
     expect(mesEnfantsEnBref({
       comptesRelies: 'illisible', demandes: null, fiches: undefined, t,
-    })).toEqual({ lignes: [], reste: 0, total: 0 });
+    })).toEqual({
+      lignes: [], reste: 0, resume: SANS_RESUME, total: 0,
+    });
   });
 });
