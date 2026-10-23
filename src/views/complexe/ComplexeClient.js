@@ -246,7 +246,8 @@ function ComplexeClient({
         setErreurEcrire(messageDeRefusResa(t, erreur, repli));
       }
     };
-    // RESA-FIN-APP-3 — `noShowsSinceLift` (RESA-FIN-SERVEUR 9/11) : moins que le total = un ban levé.
+    // RESA-FIN-APP-3 — `noShowsSinceLift` (RESA-FIN-SERVEUR 9/11) : moins que le total = un ban
+    // levé.
     const depuisLaLevee = Number.isInteger(client.noShowsSinceLift)
       ? client.noShowsSinceLift
       : null;
@@ -266,9 +267,11 @@ function ComplexeClient({
         cle: 'non-honorees',
         // RESA-FIN-APP-3 (23/10/2026) — le compte depuis la levée du dernier ban, quand il diffère
         // du total : c'est lui que le ban automatique regarde (tournée 3).
-        depuis: leveeDuBan ? t('complexeClients.chiffres.depuisLaLevee', '{{nombre}} depuis la levée du ban', {
-          nombre: depuisLaLevee,
-        }) : null,
+        depuis: leveeDuBan
+          ? t('complexeClients.chiffres.depuisLaLevee', '{{nombre}} depuis la levée du ban', {
+            nombre: depuisLaLevee,
+          })
+          : null,
         libelle: t('complexeClients.chiffres.nonHonorees', 'non honorée', {
           count: nombre(client.noShows),
           defaultValue_one: 'non honorée',

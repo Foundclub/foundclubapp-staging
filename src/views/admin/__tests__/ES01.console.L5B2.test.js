@@ -404,7 +404,7 @@ describe('E-S01 — la tuile « Complexes » du dashboard', () => {
 // RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — le serveur nomme l'auteur de chaque geste du
 // journal (`auteurNom`, « Superadmin T. », RESA-FIN-SERVEUR) : chaque ligne le dit.
 describe('RESA-FIN-APP-3 E-S01 — l’auteur de chaque ligne du journal', () => {
-  it('« Retiré le 20/10 · par Superadmin T. · « motif » » ; sans auteur, la ligne d’avant', async () => {
+  it('« Retiré le 20/10 · par Superadmin T. · « motif » » ; sans auteur, comme avant', async () => {
     mockFiche = {
       data: {
         ...FICHE,

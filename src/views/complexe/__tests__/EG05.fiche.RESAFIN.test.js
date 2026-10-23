@@ -2,9 +2,9 @@ import renderer, { act } from 'react-test-renderer';
 
 import ComplexeReservation from '@/views/complexe/ComplexeReservation';
 
-import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
-
 import { RouteNames } from '@/navigation/routeNames';
+
+import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 
 
 
@@ -227,11 +227,12 @@ describe('RESA-FIN-APP (5) E-G05 — une demande expirée ne propose plus de ges
   });
 });
 
-// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — plan E-G05 :549 : une réservation Confirmée à venir
-// propose « Écrire au réserveur » + « Annuler la réservation ». « Écrire » ouvre la conversation de la
-// réservation par le même chemin que la fiche client (E-G15), dans l'espace du complexe.
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — plan E-G05 :549 : une réservation Confirmée à
+// venir propose « Écrire au réserveur » + « Annuler la réservation ». « Écrire » ouvre la
+// conversation de la réservation par le même chemin que la fiche client (E-G15), dans l'espace du
+// complexe.
 describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
-  it('confirmée à venir, de l’app : « Écrire au réserveur » ouvre la conversation, espace complexe', async () => {
+  it('confirmée à venir, de l’app : « Écrire au réserveur », espace complexe', async () => {
     mockEcrire.mockResolvedValue({ data: { chat: 'chat-r-1' } });
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
@@ -250,12 +251,12 @@ describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
       { status: 'en_attente' },
       { endsAt: '2026-10-12T18:00:00.000Z', startsAt: '2026-10-12T17:00:00.000Z' },
     ];
-    for (const autres of cas) {
+    const lus = await cas.reduce(async (avant, autres) => {
+      const deja = await avant;
       mockFiche = { data: fiche(autres), isLoading: false, refetch: jest.fn() };
-      // eslint-disable-next-line no-await-in-loop
-      const arbre = await monter();
-      expect(lisibles(arbre)).not.toContain('Écrire au réserveur');
-    }
+      return [...deja, lisibles(await monter())];
+    }, Promise.resolve(/** @type {string[][]} */ ([])));
+    lus.forEach((vus) => expect(vus).not.toContain('Écrire au réserveur'));
   });
 
   it('un refus du serveur se dit, sans ouvrir de conversation', async () => {

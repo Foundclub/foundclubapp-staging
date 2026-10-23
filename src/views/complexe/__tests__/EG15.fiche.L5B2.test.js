@@ -28,7 +28,7 @@ let mockListe = /** @type {any} */ ({});
 /** @type {any[]} */
 const mockRecherches = [];
 const mockEcrire = jest.fn();
-/** RESA-FIN-APP-3 : ce que le serveur ajoute à la fiche (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). */
+/** RESA-FIN-APP-3 : ce que le serveur ajoute (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). */
 let mockClientEnPlus = /** @type {Record<string, any>} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useBannir: () => ({ isPending: false, mutateAsync: jest.fn() }),
@@ -188,7 +188,7 @@ describe('E-G15 — la fiche d’un client, avec RESA-L4', () => {
       pressable(arbre, 'Écrire').props.onPress();
     });
     expect(mockEcrire).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-demain' });
-    // RESA-FIN-APP-3 : la conversation garde l'espace du complexe (barre du bas du gérant, tournée 3).
+    // RESA-FIN-APP-3 : la conversation garde l'espace du complexe (barre du gérant, tournée 3).
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, {
       chatId: 'chat-r-demain', espace: 'complexe',
     });
@@ -213,11 +213,12 @@ describe('RESA-FIN-APP (1) E-G15 — les lignes de l’historique ne perdent plu
   });
 });
 
-// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — « 3 non honorées · Non banni · ban automatique au
-// bout de 3 » était trompeur : le compteur du ban automatique repart de la levée du dernier ban
-// (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). L'écran dit le total ET le compte depuis la levée.
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — « 3 non honorées · Non banni · ban
+// automatique au bout de 3 » était trompeur : le compteur du ban automatique repart de la levée
+// du dernier ban (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). L'écran dit le total ET le compte
+// depuis la levée.
 describe('RESA-FIN-APP-3 E-G15 — les non honorées depuis la levée du ban', () => {
-  it('3 au total, 0 depuis la levée : les deux, et le ban automatique compte depuis la levée', async () => {
+  it('3 au total, 0 depuis la levée : les deux ; le ban auto repart de la levée', async () => {
     mockClientEnPlus = { noShows: 3, noShowsSinceLift: 0 };
     const vus = lisibles(await monter());
     expect(vus).toEqual(expect.arrayContaining([
