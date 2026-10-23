@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useWindowDimensions, View } from 'react-native'
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
@@ -97,6 +98,8 @@ import {
 import {
   estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+
+import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -1155,6 +1158,11 @@ function ColonneDesConversations({
             style={{ paddingHorizontal: 14 }}
           />
         )}
+        {/* SUPADM (23/10) — la boîte commune de l'assistance, pour un super-admin. */}
+        {enModeArchivees || getUserRoleKey(userData?.role?.type || userData?.role?.name)
+          !== 'superAdmin' ? null : (
+            <BoiteAssistanceDansMessages navigation={navigation} style={{ paddingHorizontal: 14 }} />
+          )}
         {fils.length === 0 && filsTries.length > 0 ? (
           <p
             style={{
