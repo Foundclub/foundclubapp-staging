@@ -662,7 +662,15 @@ function EventEditForm({ navigation, route }) {
 
           {!isBootstrapping && !setupLoading && !setupError && !missingEvent && hasTeams && hasTypes ? (
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
-              <div style={{ display: 'grid', gap: 16, gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr' }}>
+              {/* A7-UX-2 (22/10, décision du chef) — « start » : la grille d'heures ouverte
+                  n'étire plus les champs de sa rangée ; chaque champ garde sa hauteur. */}
+              <div style={{
+                alignItems: 'start',
+                display: 'grid',
+                gap: 16,
+                gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr',
+              }}
+              >
                 <label style={{ display: 'grid', gap: 8 }}>
                   <span style={{ color: mutedTextColor, fontSize: 13 }}>Type</span>
                   <select onChange={(eventObject) => updateField('type', eventObject.target.value)} style={fieldStyle} value={formState.type}>

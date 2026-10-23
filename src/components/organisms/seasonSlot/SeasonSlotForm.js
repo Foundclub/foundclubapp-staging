@@ -486,8 +486,9 @@ function SeasonSlotForm({
     ? ['jour', 'horaires', 'quand', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
-      ...(fixedClubId ? [] : ['club']),
-      'equipe',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») — le club et l'équipe sur UNE étape (« Pour qui ? ») ;
+      // un club fixé (fiche d'un club) garde l'étape « Pour quelle équipe ? » seule.
+      fixedClubId ? 'equipe' : 'club',
       ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
       ...(compact && !quandOuvert ? [] : ['quand']),
       'recap',
@@ -495,7 +496,8 @@ function SeasonSlotForm({
   const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
-  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
+  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ
+    || (champ === 'equipe' && etapeCourante === 'club');
   const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
   const tunnelPleinEcran = pleinEcran && parcoursGuide;
   // Aller a une etape par son nom ; « Jour » et « Horaires » sautes (planning) se rouvrent.
@@ -751,13 +753,14 @@ function SeasonSlotForm({
   // ponytail: ouverture 08:00 – 22:00 (defaut de `freeRanges`) : la liste des creneaux ne dit pas
   // les horaires de l installation, et leur retrait est decide (VILLE-INSTALLATION). Le serveur
   // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
-  const heuresLibres = useMemo(() => {
-    if (!jour) return [];
-    return freeRanges(fullRangesOfSlots(
-      creneauxDuJour(lecture.data?.data, jour, slot?.documentId),
-      capacite,
-    ));
-  }, [capacite, jour, lecture.data, slot?.documentId]);
+  // A7-UX-2 (22/10, Adel « P4 oui ») : les moments complets, aussi passés à la grille du Début.
+  const heuresPleines = useMemo(() => (jour && !joursDifferents
+    ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jour, slot?.documentId), capacite)
+    : []), [capacite, jour, joursDifferents, lecture.data, slot?.documentId]);
+  const heuresLibres = useMemo(
+    () => (jour ? freeRanges(heuresPleines) : []),
+    [heuresPleines, jour],
+  );
 
   const nomDuClub = slot?.club?.name
     || clubs.find((ligne) => ligne.documentId === club)?.name
@@ -1238,8 +1241,9 @@ function SeasonSlotForm({
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
   );
   // COLL-R-A7 — en plein ecran, le titre de l etape pose deja la question : pas de libelle.
+  // A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose aussi la question : pareil.
   const libelleDuChamp = (/** @type {string} */ texte) => (
-    tunnelPleinEcran ? null : titreDuChamp(texte)
+    parcoursGuide ? null : titreDuChamp(texte)
   );
   // A7-UX (20/10) — `flex-start` : une puce suivie de « complet … » étirait toutes ses voisines
   // en ovales (capture du banc, « Quel jour ? », panneau du site).
@@ -1325,7 +1329,8 @@ function SeasonSlotForm({
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
     if (etapeCourante === 'club') {
-      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error)
+        || equipes.isLoading || Boolean(equipes.error);
     }
     if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
     if (etapeCourante === 'jour') {
@@ -1387,7 +1392,7 @@ function SeasonSlotForm({
     : [nomDuClub, nomEquipe].filter(Boolean).join(' · ');
   /** @type {Record<string, string>} */
   const titres = {
-    club: t('collectiviteCreneaux.tunnel.club', 'Pour quel club ?'),
+    club: t('collectiviteCreneaux.tunnel.pourQui', 'Pour qui ?'),
     equipe: t('collectiviteCreneaux.tunnel.equipe', 'Pour quelle équipe ?'),
     horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
     installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
@@ -1502,7 +1507,8 @@ function SeasonSlotForm({
   );
 
   // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
-  const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+  // A7-UX-2 (22/10, Adel « P4 oui ») : aussi au panneau du site (avant : plein écran seulement).
+  const libresDuJour = parcoursGuide && visible('horaires') && !voirLibres && jour
     && !joursDifferents
     && !lecture.isLoading && !lecture.error
     && !heuresFigees && !repartition ? (
@@ -1638,6 +1644,13 @@ function SeasonSlotForm({
             }}
             />
           </View>
+          {/* A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose la question de l'étape en
+              titre, comme le téléphone (le récapitulatif a déjà le sien, plus bas). */}
+          {etapeCourante === 'recap' ? null : (
+            <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {titres[etapeCourante]}
+            </Text>
+          )}
         </View>
       ) : null}
       {compact || tunnelPleinEcran ? null : (
@@ -1735,7 +1748,11 @@ function SeasonSlotForm({
 
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
-          {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
+          {/* A7-UX-2 : sur l'étape « Pour qui ? », la liste des équipes suit celle des clubs ; elle
+              garde son titre, même en plein écran. */}
+          {parcoursGuide && etapeCourante === 'club'
+            ? titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))
+            : libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
           {(() => {
             if (equipes.error) {
               return <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />;
@@ -1833,6 +1850,7 @@ function SeasonSlotForm({
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
               onChange={changerLeDebut}
               placeholder="17:30"
+              pleines={heuresPleines}
               value={debut}
             />
           </View>

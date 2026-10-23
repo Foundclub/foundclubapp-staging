@@ -6436,6 +6436,8 @@ export default {
       modifie: 'Créneau modifié',
       modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
       pourLeClub: 'Pour {{club}}',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une seule étape.
+      pourQui: 'Pour qui ?',
       recapClub: 'Club · équipe',
       recapHeures: 'Jour et heures',
       relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',
@@ -24240,6 +24242,9 @@ export default {
     autreHeure: 'Autre heure',
     autresHeures: 'Autres heures',
     cancel: 'Annuler',
+    // A7-UX-2 (22/10) : les heures pleines du jour dans la grille du site.
+    complet: 'complet',
+    enPartie: 'en partie',
     heure: '{{heure}} h',
   },
   tomTomSearchMapNative: {
