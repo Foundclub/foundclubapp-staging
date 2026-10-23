@@ -5543,9 +5543,9 @@ export default {
       avecCreneaux: '{{count}} with your town slots',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — a slot over part of the season (board 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Whole club',
     },
     fiche: {
@@ -16655,6 +16655,7 @@ export default {
     },
   },
   personalPlanningWeekFullscreen: {
+    absenceVacances: '{{club}} does not attend during school holidays ({{zone}}).',
     backToTheCurrentWeek: 'Back to the current week',
     backToToday: 'Back to today',
     blockSheet: {
@@ -16669,12 +16670,15 @@ export default {
     closeTheFullScreenPlanning: 'Close the full-screen planning',
     events_one: '{{count}} event',
     events_other: '{{count}} events',
+    finVacances: 'No further session is scheduled for this slot.',
+    libreVacances: '{{heures}} · free ({{equipe}}: except school holidays)',
     nextDay: 'Next day',
     nextWeek: 'Next week',
     noSlotThisWeek: 'No slot this week',
     peak: 'Busiest moment: {{peak}} of {{max}}',
     previousDay: 'Previous day',
     previousWeek: 'Previous week',
+    retourVacances: 'Back on {{jour}}.',
     rotateForWeek: 'Phone sideways: the whole week.',
     slots_one: '{{count}} team at a time',
     slots_other: '{{count}} teams at a time',

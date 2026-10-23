@@ -6070,9 +6070,9 @@ export default {
       avecCreneaux: '{{count}} avec tes créneaux de la Ville',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -17227,6 +17227,7 @@ export default {
     },
   },
   personalPlanningWeekFullscreen: {
+    absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
     backToTheCurrentWeek: 'Revenir à la semaine actuelle',
     backToToday: 'Revenir à aujourd’hui',
     blockSheet: {
@@ -17241,12 +17242,15 @@ export default {
     closeTheFullScreenPlanning: 'Fermer le planning plein écran',
     events_one: '{{count}} événement',
     events_other: '{{count}} événements',
+    finVacances: 'Aucune autre séance prévue sur ce créneau.',
+    libreVacances: '{{heures}} · libre ({{equipe}} : sauf vacances)',
     nextDay: 'Jour suivant',
     nextWeek: 'Semaine suivante',
     noSlotThisWeek: 'Aucun créneau cette semaine',
     peak: 'Au plus chargé : {{peak}} sur {{max}}',
     previousDay: 'Jour précédent',
     previousWeek: 'Semaine précédente',
+    retourVacances: 'Retour le {{jour}}.',
     rotateForWeek: 'Téléphone à l’horizontale : toute la semaine.',
     slots_one: '{{count}} équipe à la fois',
     slots_other: '{{count}} équipes à la fois',

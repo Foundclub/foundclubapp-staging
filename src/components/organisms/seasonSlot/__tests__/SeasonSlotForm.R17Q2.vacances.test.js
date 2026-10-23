@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import {
@@ -89,6 +90,16 @@ jest.mock('@/components/atoms/button/Button', () => {
   };
 });
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) { return children; });
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, footerComponent, isVisible },
+) {
+  return isVisible ? (
+    <>
+      {children}
+      {footerComponent}
+    </>
+  ) : null;
+});
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => function ClubLogoMarkMock() { return null; });
 jest.mock('@/components/molecules/timePickerInput/TimePickerInput', () => function TimePickerInputMock(/** @type {any} */ props) {
   mockHeureProps.push(props);
@@ -266,6 +277,9 @@ describe('R17Q2-3 — « Sauf vacances scolaires » dans « Quand ? »', () => {
     await jusquAuQuand(arbre);
     await appeler(() => caseVacances(arbre).props.onPress());
     await appeler(() => bouton(arbre, 'Voir les dates retirées').props.onPress());
+    const feuille = arbre.root.findAllByType(BottomModal).find((n) => n.props.isVisible);
+    expect(feuille).toBeDefined();
+    expect(feuille.props.webPresentation).toBe('sheet');
     expect(lus(arbre)).toEqual(expect.arrayContaining([
       'Vacances retirées · Zone B',
       'Calendrier officiel 2026-2027',
@@ -281,6 +295,9 @@ describe('R17Q2-3 — « Sauf vacances scolaires » dans « Quand ? »', () => {
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('salle-t18', expect.objectContaining({
       exceptHolidays: '1', keepHolidays: '2026-2027:toussaint',
     }));
+    await appeler(() => bouton(arbre, 'Fermer').props.onPress());
+    expect(arbre.root.findAllByType(BottomModal).some((n) => n.props.isVisible)).toBe(false);
+    expect(lus(arbre)).not.toContain('Vacances retirées · Zone B');
     await avancer(arbre);
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', expect.objectContaining({

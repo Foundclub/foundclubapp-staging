@@ -6,7 +6,7 @@
 // Avant (ROUGE) : le module n'existe pas.
 
 import {
-  nomDeVacances, periodesGardeesDuCreneau, vacancesDesSeances,
+  creneauxEnVacances, nomDeVacances, periodesGardeesDuCreneau, vacancesDesSeances,
 } from '../seasonSlotHolidays';
 
 const PERIODES = [
@@ -29,6 +29,27 @@ const MERCREDIS = [
 ];
 
 describe('R17-QUAND-2 — les séances retirées pour vacances', () => {
+  it('R17Q2B : le retour garde la parité et les exceptions, sans inventer de séance', () => {
+    const creneau = {
+      anchorDate: '2026-10-20',
+      everyWeeks: 2,
+      exceptHolidays: true,
+      holidayDates: ['2026-10-20'],
+      skippedDates: ['2026-11-03'],
+      validFrom: '2026-09-01',
+      validUntil: '2026-12-31',
+      weekday: 2,
+    };
+    expect(creneauxEnVacances([creneau], '2026-10-20')).toEqual([
+      { creneau, retour: '2026-11-17' },
+    ]);
+    expect(creneauxEnVacances([creneau], '2026-10-27')).toEqual([]);
+    expect(creneauxEnVacances([{ ...creneau, holidayDates: [] }], '2026-10-20')).toEqual([]);
+    expect(creneauxEnVacances([{ ...creneau, validUntil: '2026-10-20' }], '2026-10-20')[0].retour)
+      .toBeNull();
+    expect(creneauxEnVacances([{ ...creneau, skippedDates: ['2026-10-20'] }], '2026-10-20'))
+      .toEqual([]);
+  });
   it('par période, dans l’ordre ; une période gardée ne retire rien', () => {
     const tout = vacancesDesSeances(MERCREDIS, PERIODES, []);
     expect(tout.retirees).toEqual([

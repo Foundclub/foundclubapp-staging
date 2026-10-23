@@ -1,4 +1,4 @@
-import { slotOccurrences } from './seasonSlotDisplay';
+import { slotOccurrences, slotOccursOn } from './seasonSlotDisplay';
 
 /**
  * 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi, P11-quand-ou-ca-vit validées
@@ -74,6 +74,24 @@ export const periodesGardeesDuCreneau = (creneau, periodes) => {
 export const vacancesDeLaPage = (vacances, du, au) => (
   (Array.isArray(vacances?.periods) ? vacances.periods : [])
     .filter((/** @type {PeriodeDeVacances} */ periode) => periode.start <= au && periode.end >= du)
+);
+
+/**
+ * Les séries absentes ce jour à cause des vacances, et leur prochaine vraie occurrence.
+ * La règle partagée garde la parité, les dates choisies, les retraits et les autres exceptions.
+ * @param {any[] | null | undefined} creneaux - Les séries actives de l'installation.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {Array<{ creneau: any, retour: string | null }>} Les absences scolaires seulement.
+ */
+export const creneauxEnVacances = (creneaux, jour) => (
+  (Array.isArray(creneaux) ? creneaux : [])
+    .filter((creneau) => creneau.exceptHolidays === true
+      && Array.isArray(creneau.holidayDates) && creneau.holidayDates.includes(jour)
+      && slotOccursOn({ ...creneau, exceptHolidays: false, holidayDates: [] }, jour))
+    .map((creneau) => ({
+      creneau,
+      retour: slotOccurrences(creneau, { from: jour }).find((date) => date > jour) || null,
+    }))
 );
 
 const SAISONS = new Set(['Automne', 'Été', 'Hiver', 'Printemps']);

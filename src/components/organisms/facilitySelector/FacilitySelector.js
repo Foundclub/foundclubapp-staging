@@ -169,9 +169,8 @@ function FacilitySelector({
   const ligneDeCreneau = (/** @type {any} */ slot) => {
     // R17-QUAND-1 : la forme du créneau (« un mercredi sur deux »), plus « chaque » en dur.
     const morceaux = clubSlotParts(slot, t);
-    return t('clubInstallations.creneau.ligne', '{{team}} · {{rythme}} {{hours}}', {
-      hours: morceaux.hours,
-      rythme: morceaux.rythme,
+    return t('clubInstallations.creneau.ligne', '{{team}} · {{quand}}', {
+      quand: morceaux.quand,
       team: morceaux.team || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
       ...SANS_ECHAPPEMENT,
     });

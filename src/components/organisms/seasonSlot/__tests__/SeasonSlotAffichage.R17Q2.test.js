@@ -83,10 +83,21 @@ describe('R17Q2 — « sauf vacances » se lit', () => {
     expect(formeEnMots(t, CHAQUE)).toBe('chaque mardi');
   });
 
+  // R17-QUAND-2-BIS (planche P11-quand-ou-ca-vit) : les heures AVANT « sauf vacances ».
+  it('R17Q2B-4 avec les heures : « chaque mardi, 17:30 – 19:00, sauf vacances »', () => {
+    expect(formeEnMots(t, SAUF, { heures: '17:30 – 19:00' })).toBe('chaque mardi, 17:30 – 19:00, sauf vacances');
+    expect(formeEnMots(t, CHAQUE, { heures: '17:30 – 19:00' })).toBe('chaque mardi 17:30 – 19:00');
+  });
+
   it('« Tes créneaux de la Ville » : la ligne le dit', () => {
     const morceaux = clubSlotParts(SAUF, t);
-    expect(t('clubInstallations.creneau.ligne', { hours: morceaux.hours, rythme: morceaux.rythme, team: morceaux.team }))
-      .toBe('Senior B · chaque mardi, sauf vacances 17:30 – 19:00');
+    expect(t('clubInstallations.creneau.ligne', { quand: morceaux.quand, team: morceaux.team }))
+      .toBe('Senior B · chaque mardi, 17:30 – 19:00, sauf vacances');
+    const periode = clubSlotParts({ ...SAUF, validFrom: '2026-10-06' }, t);
+    expect(t('clubInstallations.creneau.lignePeriode', { periode: periode.period, quand: periode.quand, team: periode.team }))
+      .toMatch(/^Senior B · chaque mardi, 17:30 – 19:00, sauf vacances · /);
+    const chaque = clubSlotParts(CHAQUE, t);
+    expect(t('clubInstallations.creneau.ligne', { quand: chaque.quand, team: chaque.team })).toBe('Senior B · chaque mardi 17:30 – 19:00');
   });
 
   it('la semaine type : la pastille « sauf vacances », sans hachures (le créneau revient chaque semaine)', () => {
@@ -95,6 +106,6 @@ describe('R17Q2 — « sauf vacances » se lit', () => {
     act(() => { cadre.props.onLayout({ nativeEvent: { layout: { height: 400, width: 1000 } } }); });
     expect(lus(arbre)).toEqual(expect.arrayContaining(['sauf vacances', '1 sem. sur 2']));
     expect(parTestID(arbre, 'hachures-sauf')).toHaveLength(0);
-    expect(parTestID(arbre, 'creneau-sauf')[0].props.accessibilityLabel).toBe('Montrivage FC · Senior B, chaque mardi, sauf vacances 17:30 – 19:00');
+    expect(parTestID(arbre, 'creneau-sauf')[0].props.accessibilityLabel).toBe('Montrivage FC · Senior B, chaque mardi, 17:30 – 19:00, sauf vacances');
   });
 });

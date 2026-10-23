@@ -82,7 +82,7 @@ describe('R17Q1-6 — la forme en mots', () => {
   it('« Tes créneaux de la Ville » : la ligne dit la forme', () => {
     const ligne = (/** @type {any} */ creneau) => {
       const morceaux = clubSlotParts(creneau, t);
-      return t('clubInstallations.creneau.ligne', { hours: morceaux.hours, rythme: morceaux.rythme, team: morceaux.team });
+      return t('clubInstallations.creneau.ligne', { quand: morceaux.quand, team: morceaux.team });
     };
     expect(ligne(CHAQUE)).toBe('Senior B · chaque mardi 17:30 – 19:00');
     expect(ligne(UN_SUR_DEUX)).toBe('U13 · un mercredi sur deux 17:30 – 19:00');
