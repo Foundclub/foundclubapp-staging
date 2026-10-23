@@ -3946,6 +3946,9 @@ function EventDetails({ navigation, route }) {
   const [isOpponentSheetVisible, setIsOpponentSheetVisible] = useState(false);
   const [opponentNameDraft, setOpponentNameDraft] = useState('');
   const [isOpponentSaving, setIsOpponentSaving] = useState(false);
+  // ⌨️ CLAV-ADVERSAIRE — le clavier se donne quand la feuille est arrivee (`onOpened`), pas au
+  // montage : demande pendant l'animation, il recouvrait le champ sur iPhone.
+  const opponentInputRef = useRef(/** @type {any} */ (null));
 
   const handleOpenOpponentSheet = useCallback(() => {
     setOpponentNameDraft(matchOpponentName || '');
@@ -9815,6 +9818,7 @@ function EventDetails({ navigation, route }) {
       <BottomModal
         close={() => setIsOpponentSheetVisible(false)}
         isVisible={isOpponentSheetVisible}
+        onOpened={() => opponentInputRef.current?.focus()}
         snapPoints={['52%']}
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
@@ -9831,11 +9835,11 @@ function EventDetails({ navigation, route }) {
           </View>
 
           <TextInput
-            autoFocus
             maxLength={OPPONENT_NAME_MAX_LENGTH}
             onChangeText={setOpponentNameDraft}
             placeholder={t('eventDetails.matchCard.opponentPlaceholder', 'Nom de l\'équipe adverse')}
             placeholderTextColor={Colors.neutral400}
+            ref={opponentInputRef}
             selectionColor={Colors.primary500}
             style={[
               ApplicationStyle.input,
