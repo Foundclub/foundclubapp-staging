@@ -3,7 +3,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Keyboard, Text, View, // Removed TextInput import
+  Text, View, // Removed TextInput import
 } from 'react-native'; // Removed Modal and Platform import
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -34,7 +34,6 @@ function RefuseParticipationModal({
   } = useTheme();
   const [reason, setReason] = useState('');
   const inputRef = useRef(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (isVisible && inputRef.current) {
@@ -48,26 +47,6 @@ function RefuseParticipationModal({
       setReason('');
     }
   }, [isVisible]);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      },
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   const handleSubmit = () => {
     const normalizedReason = String(reason || '').trim();
@@ -85,7 +64,8 @@ function RefuseParticipationModal({
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          { paddingBottom: keyboardHeight + 24 },
+          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier (BottomModal) ; pas de vide en plus.
+          { paddingBottom: 24 },
         ]}
         keyboardShouldPersistTaps="handled"
         style={[Alignments.fullHeight]}

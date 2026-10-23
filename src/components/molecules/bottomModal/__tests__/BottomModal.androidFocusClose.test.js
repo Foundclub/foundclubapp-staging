@@ -34,6 +34,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const React = jest.requireActual('react');
   const { View: NativeView } = jest.requireActual('react-native');
   return {
+    // CLAVREGLE : BottomModal lit le contexte interne de la feuille (absent ici).
+    useBottomSheetInternal: () => null,
     BottomSheetBackdrop: () => null,
     BottomSheetModal: React.forwardRef((props, ref) => {
       mockSheetProps = props;

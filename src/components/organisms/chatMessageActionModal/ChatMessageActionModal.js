@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Keyboard, Text, View,
+  Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -29,7 +29,6 @@ function ChatMessageActionModal({
     Alignments, Fonts, Spaces,
   } = useTheme();
   const inputRef = useRef(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (isVisible && inputRef.current) {
@@ -37,26 +36,6 @@ function ChatMessageActionModal({
       inputRef.current.focus();
     }
   }, [isVisible, inputRef]);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      },
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      },
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   const handleSubmit = () => {
     onSubmit(reason);
@@ -75,7 +54,7 @@ function ChatMessageActionModal({
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          { paddingBottom: keyboardHeight },
+          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier (BottomModal) ; pas de vide en plus.
         ]}
         keyboardShouldPersistTaps="handled"
         style={[Alignments.fullHeight]}

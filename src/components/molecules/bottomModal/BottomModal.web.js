@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -87,6 +87,29 @@ function BottomModal({
     };
   }, [closeOnBackdropPress, isVisible]);
 
+  // ⌨️ CLAVREGLE (23/10) — un champ touché reste au-dessus du clavier, comme dans l'app
+  // (BottomModal.js). La feuille est fixée au bas de la PAGE ; sur un téléphone, le clavier ne
+  // réduit que la zone VISIBLE (`visualViewport`) : la feuille restait dessous. Elle se pose au bas
+  // de la zone visible. Un zoom au doigt réduit aussi cette zone : on ne suit qu'à l'échelle 1.
+  // Témoin : __tests__/BottomModalWebCLAVREGLE.clavier.test.js.
+  const [hauteurDuClavier, setHauteurDuClavier] = useState(0);
+  useEffect(() => {
+    const zoneVisible = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!isVisible || !zoneVisible) return undefined;
+    const mesurer = () => {
+      const recouvert = window.innerHeight - zoneVisible.height - zoneVisible.offsetTop;
+      setHauteurDuClavier(Math.abs(zoneVisible.scale - 1) < 0.01 ? Math.max(0, Math.round(recouvert)) : 0);
+    };
+    mesurer();
+    zoneVisible.addEventListener('resize', mesurer);
+    zoneVisible.addEventListener('scroll', mesurer);
+    return () => {
+      zoneVisible.removeEventListener('resize', mesurer);
+      zoneVisible.removeEventListener('scroll', mesurer);
+      setHauteurDuClavier(0);
+    };
+  }, [isVisible]);
+
   if (!isVisible) {
     return null;
   }
@@ -142,7 +165,7 @@ function BottomModal({
         isDialog ? Alignments.justifyCenter : Alignments.justifyEnd,
         isDialog ? Alignments.alignCenter : null,
         {
-          bottom: 0,
+          bottom: hauteurDuClavier,
           left: 0,
           position: 'fixed',
           right: 0,
