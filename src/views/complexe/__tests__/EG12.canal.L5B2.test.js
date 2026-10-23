@@ -31,6 +31,12 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   }),
 }));
 
+// RESA-PARTAGER : la feuille « Partager une annonce » (témoin EG12.partager.RESAPARTAGER).
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
+  function FausseFeuille(/** @type {any} */ { children, isVisible }) {
+    return isVisible ? children : null;
+  }
+));
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;

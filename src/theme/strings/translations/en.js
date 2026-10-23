@@ -6975,6 +6975,18 @@ export default {
     },
     nombre_one: '{{count}} member',
     nombre_other: '{{count}} members',
+    // RESA-PARTAGER (23/10/2026, A-G32) — "Share in my channel" (E-G05) and "Share a post"
+    // (E-G12). Same keys as fr.js.
+    partager: {
+      aucune: 'No game to fill right now. When a player posts "Players wanted" on a booking at '
+        + 'your venue, it shows up here.',
+      choisir: 'Pick the game to fill: it lands as a card in your channel.',
+      dansMonCanal: 'Share in my channel',
+      deja: 'Post already shared in your channel.',
+      erreur: 'Your bookings could not be loaded.',
+      fait: 'Post shared in your channel.',
+      titre: 'Share a post',
+    },
     pause: 'Your venue is suspended: its channel is paused.',
     regle: 'All members will be notified.',
     titre: 'Channel · {{nom}}',

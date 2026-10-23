@@ -41,6 +41,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: mockEcrire }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
+  // RESA-PARTAGER : « Partager dans mon canal » (témoin EG05.partager.RESAPARTAGER).
+  usePartagerAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationGeree: () => mockFiche,
 }));
 

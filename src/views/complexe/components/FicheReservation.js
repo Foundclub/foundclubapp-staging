@@ -5,6 +5,7 @@ import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { messageDuPartage, peutPartagerLAnnonce } from '@/domains/complexe/annonceDuCanal';
 import {
   demandeExpiree,
   etatAffiche,
@@ -45,6 +46,7 @@ import {
   useFideliteDuComplexe,
   useMarquerNonHonoree,
   useModifierExterieur,
+  usePartagerAnnonce,
   useReservationGeree,
   useValiderRecompense,
 } from '@/services/complexe/complexeQueries';
@@ -96,6 +98,8 @@ function FicheReservation({
   const modifier = useModifierExterieur();
   // RESA-L5B-1 — « non honorée », et le seuil du bannissement automatique (« 1 sur 3 »).
   const marquer = useMarquerNonHonoree();
+  // RESA-PARTAGER (A-G32) — « Partager dans mon canal » (plan E-G05 :528).
+  const partager = usePartagerAnnonce();
   const annulerMarquage = useAnnulerNonHonoree();
   // Le seuil vit sous `rules` dans la lecture du gérant (`toManagedView`, RESA-L1A).
   const seuil = useComplexeGere(complexeId).data?.rules?.autoBanNoShows;
@@ -426,8 +430,31 @@ function FicheReservation({
         setErreurEcrire(messageDeRefusResa(t, erreur, repli));
       }
     };
+    // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
+    // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
+    const partagerDansLeCanal = async () => {
+      setMessage('');
+      setConflit('');
+      try {
+        setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
+      } catch (erreur) {
+        setConflit(messageDeRefusResa(t, erreur, repli));
+      }
+    };
     pied = (
       <View style={{ gap: 8 }}>
+        {peutPartagerLAnnonce(r) ? (
+          <View testID="fiche-partager-annonce">
+            <Button
+              icon="share"
+              iconPosition="before"
+              isLoading={Boolean(partager.isPending)}
+              onPress={partagerDansLeCanal}
+              title={t('complexeCanal.partager.dansMonCanal', 'Partager dans mon canal')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
         <View testID="fiche-ecrire">
           <Button
             isLoading={Boolean(ecrire.isPending)}

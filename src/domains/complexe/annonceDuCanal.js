@@ -76,3 +76,32 @@ export const carteDAnnonce = (t, notice) => {
     terrain: String(notice.partie?.terrain || ''),
   };
 };
+
+/**
+ * « Partager dans mon canal » se propose-t-il pour cette réservation (E-G05, E-G12) ? Une
+ * réservation de l'app, confirmée, à venir. Si le serveur dit son annonce (`annonce`, `null` sans
+ * annonce), seulement quand elle est OUVERTE ; s'il ne la dit pas (champ absent), le bouton est là
+ * et le serveur répond (409 « pas d'annonce ouverte »).
+ * ponytail: champ absent = serveur sans `annonce` dans la fiche du gérant ; sortie : le serveur
+ * l'ajoute (`toManagerView`, `toManagerListItem`), rien ne change ici.
+ * @param {any} reservation - La fiche ou la ligne du gérant.
+ * @param {number} [maintenant] - L'instant de référence (ms).
+ * @returns {boolean} Vrai si le geste se propose.
+ */
+export const peutPartagerLAnnonce = (reservation, maintenant = Date.now()) => {
+  if (reservation?.source !== 'app' || reservation?.status !== 'confirmee') return false;
+  const debut = new Date(String(reservation?.startsAt || '')).getTime();
+  if (Number.isNaN(debut) || debut <= maintenant) return false;
+  if (reservation.annonce === undefined) return true;
+  return reservation.annonce?.status === 'ouverte';
+};
+
+/**
+ * Ce que le gérant lit après le geste : partagée, ou déjà partagée.
+ * @param {Traduire} t - Traduction.
+ * @param {any} reponse - `{ data: { dejaPartagee } }`.
+ * @returns {string} Le message.
+ */
+export const messageDuPartage = (t, reponse) => (reponse?.data?.dejaPartagee
+  ? t('complexeCanal.partager.deja', 'Annonce déjà partagée dans ton canal.')
+  : t('complexeCanal.partager.fait', 'Annonce partagée dans ton canal.'));
