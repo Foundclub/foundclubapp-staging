@@ -383,6 +383,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     motif: reservation.reason,
     reserveur: reservation.bookerLabel,
     telephone,
+    terrain: reservation.terrain?.name,
   }) : null;
   const enTeteDEchec = contenuDEnTete ? (
     <View style={carte}>

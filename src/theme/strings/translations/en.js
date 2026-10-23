@@ -18626,6 +18626,7 @@ export default {
       equipe: 'Only an adult coach can book for their team.',
       ferme: 'This slot is closed by the venue.',
       fermeture: 'The venue will be closed',
+      fermetureDuTerrain: '{{terrain}} will be closed',
       fermetureSansDate: 'A venue closure cancelled your booking.',
       fermetureTexte: 'Closed {{fermeture}}: your booking is cancelled.',
       introuvable: 'This booking no longer exists.',

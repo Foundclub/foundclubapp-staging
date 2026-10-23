@@ -19263,6 +19263,7 @@ export default {
       equipe: 'Seul un encadrant majeur réserve pour son équipe.',
       ferme: 'Ce créneau est fermé par le complexe.',
       fermeture: 'Le complexe sera fermé',
+      fermetureDuTerrain: '{{terrain}} sera fermé',
       fermetureSansDate: 'Une fermeture du complexe a annulé ta réservation.',
       fermetureTexte: 'Fermé {{fermeture}} : ta réservation est annulée.',
       introuvable: 'Cette réservation n’existe plus.',

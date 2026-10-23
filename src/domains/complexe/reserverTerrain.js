@@ -803,7 +803,7 @@ const texteDeLAge = (t, age, rejoindre) => (rejoindre
  * @param {{ collecte?: { collectDeadline?: string | null, presents?: number, quorum?: number },
  *   complexe?: string | null, debut?: string | null, erreur?: any, fermeture?: string | null,
  *   motif?: string | null, rejoindre?: boolean, reserveur?: string | null,
- *   telephone?: string | null }} [contexte] - Ce que l'écran sait ;
+ *   telephone?: string | null, terrain?: string | null }} [contexte] - Ce que l'écran sait ;
  *   RESA-L6B-2 : `rejoindre` (le refus vient d'une partie qu'on rejoint : lien, annonce,
  *   présence), `collecte` (`{ collectDeadline, presents, quorum }`), `reserveur` (« Julien M. ») et
  *   `debut` (ISO) d'une partie annulée par son réserveur.
@@ -1059,7 +1059,13 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
             'reserverTerrain.echec.fermetureSansDate',
             'Une fermeture du complexe a annulé ta réservation.',
           ),
-        titre: t('reserverTerrain.echec.fermeture', 'Le complexe sera fermé'),
+        // RESA-FIN-APP-2 (T12, Adel « 1- A » 23/10) : la fermeture touche UN terrain, il est nommé.
+        titre: String(contexte?.terrain || '').trim()
+          ? t('reserverTerrain.echec.fermetureDuTerrain', '{{terrain}} sera fermé', {
+            terrain: String(contexte?.terrain).trim(),
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('reserverTerrain.echec.fermeture', 'Le complexe sera fermé'),
         ton: 'orange',
       };
     }

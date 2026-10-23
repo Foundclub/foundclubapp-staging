@@ -15,3 +15,15 @@ describe('RESA-FIN-APP (2) — « Ta demande est retirée »', () => {
     }));
   });
 });
+
+// RESA-FIN-APP-2 (23/10/2026) — T12, décision d'Adel « 1- A » (23/10 vers 11:05, relayée par le
+// chef) : une fermeture touche UN terrain (le serveur ferme terrain par terrain) ; le titre dit son
+// nom, « Padel A sera fermé », plus « Le complexe sera fermé ». Sans nom connu, l'ancien titre.
+describe('RESA-FIN-APP-2 (T12) — « <Terrain> sera fermé »', () => {
+  it('le nom du terrain dans le titre ; sans nom, « Le complexe sera fermé »', () => {
+    const fermePadel = { fermeture: 'le 25/10 (travaux)', terrain: 'Padel A' };
+    expect(contenuDEchec(t, 'fermeture', fermePadel).titre).toBe('Padel A sera fermé');
+    expect(contenuDEchec(t, 'fermeture', { fermeture: 'le 25/10 (travaux)' }).titre)
+      .toBe('Le complexe sera fermé');
+  });
+});

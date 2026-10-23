@@ -159,7 +159,7 @@ describe('E-P13 — les variantes', () => {
       ...CRENEAU, fermeture: 'le 25/10 (travaux)', variante: 'fermeture',
     });
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Le complexe sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
+      'Terrain 1 sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
     ]));
     await appuyer(arbre, 'Réserver un autre jour');
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverCreneau, {

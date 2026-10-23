@@ -245,7 +245,7 @@ describe('E-P07 — les autres états', () => {
     mockParams = { change: 'fermeture', fermeture: 'le 25/10 (travaux)', reservationId: 'r-1' };
     mockLecture = lue({ canCancel: false, cancelledBy: 'complexe', status: 'annulee' });
     expect(lisibles(await monter())).toEqual(expect.arrayContaining([
-      'Le complexe sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
+      'Terrain 1 sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
     ]));
   });
 
