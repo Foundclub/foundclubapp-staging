@@ -15,6 +15,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
 
 import { useEventWizard } from './EventWizardContext';
+import preventionDuCreneau from './preventionDuCreneau';
 import {
   getEventWizardExitRoute,
   getEventWizardLocationStepIndex,
@@ -81,20 +82,22 @@ function EventWizardLocation({ navigation, route }) {
     !occupancyWindow.start || !occupancyWindow.end || availability.isFetching
     || availability.isLoading || availability.isError
   ));
-  // Sur un gymnase de la Ville ou la mairie decide, ni « validation au club » ni « le club
-  // l autorise » : le serveur l envoie a la mairie, place libre ou non (SPEC-PLACE).
-  const requiresApproval = Boolean(
-    facilityId
-    && selectedOccupancy?.saturated
-    && selectedOccupancy?.requiresApproval
-    && !decisionDeLaVille.mairie,
-  );
-  const allowsImmediateConfirmation = Boolean(
-    facilityId
-    && selectedOccupancy?.saturated
-    && selectedOccupancy?.allowsImmediateConfirmation
-    && !decisionDeLaVille.mairie,
-  );
+  // 🗓️ DATESDABORD (23/10, point 4 d'Adel) — le jour et l'heure sont choisis avant : des que
+  // l'installation est cochee, « libre » ou « deja pris, demande a <gestionnaire> pour <le type> ».
+  // Sur un gymnase de la Ville, le selecteur dit deja le creneau du club ou la mairie : pas de
+  // « libre » ici ; la mairie qui decide l'emporte sur la place (SPEC-PLACE).
+  const occupationLue = facilityId && !isBlocked && !isAvailabilityUnknown ? selectedOccupancy : null;
+  const prevention = decisionDeLaVille.deLaVille && !occupationLue?.saturated
+    ? null
+    : preventionDuCreneau(t, {
+      gestionnaire: (decisionDeLaVille.deLaVille && decisionDeLaVille.ville)
+        || (occupationLue?.isShared && state.team?.club?.parentMultisport?.name)
+        || state.team?.club?.name
+        || t('eventWizard.steps.location.prevention.tonClub', 'ton club'),
+      mairie: decisionDeLaVille.mairie,
+      occupation: occupationLue,
+      typeName: state.type?.name,
+    });
   const canGoNext = Boolean(location || facilityId) && !isBlocked && !isAvailabilityUnknown;
 
   const handleNext = () => {
@@ -203,25 +206,14 @@ function EventWizardLocation({ navigation, route }) {
             )}
           </Text>
         ) : null}
-        {/* D58 — pack §2.4 : un conflit de creneau tient en UNE ligne orange,
-            et elle dit la CONSEQUENCE. Les deux cas restent distingues — le
-            club valide, ou le club laisse passer — mais dans la meme grammaire.
-            ⚠️ Orange des deux cotes : le second etait cyan, or le pack reserve
-            le cyan a la selection et a l'action. */}
-        {requiresApproval ? (
-          <Text style={[Fonts.p3, Fonts.warning500]}>
-            {t(
-              'eventWizard.steps.location.pendingValidationHint',
-              "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
-            )}
-          </Text>
-        ) : null}
-        {allowsImmediateConfirmation ? (
-          <Text style={[Fonts.p3, Fonts.warning500]}>
-            {t(
-              'eventWizard.steps.location.allowAndNotifyHint',
-              "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
-            )}
+        {/* D58 — pack §2.4 : un conflit de creneau tient en UNE ligne orange qui dit la
+            CONSEQUENCE ; DATESDABORD : la place libre se dit aussi, en vert (le cyan reste a la selection). */}
+        {prevention ? (
+          <Text
+            style={[Fonts.p3, prevention.pris ? Fonts.warning500 : Fonts.success500]}
+            testID={prevention.pris ? 'lieu-creneau-pris' : 'lieu-creneau-libre'}
+          >
+            {prevention.texte}
           </Text>
         ) : null}
       </View>

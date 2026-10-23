@@ -290,8 +290,15 @@ function FacilitySelector({
       return;
     }
 
-    onOccupancyResolved(occupancySummary || null);
-  }, [facilityId, mode, occupancySummary, occupancyWindow?.end, occupancyWindow?.start, onOccupancyResolved]);
+    // DATESDABORD (23/10) — `isShared` : l installation est celle du club multisport (l etape
+    // « Lieu » nomme alors le club multisport dans sa phrase de prevention).
+    onOccupancyResolved(occupancySummary
+      ? { ...occupancySummary, isShared: Boolean(selectedFacility?.isShared) }
+      : null);
+  }, [
+    facilityId, mode, occupancySummary, occupancyWindow?.end, occupancyWindow?.start,
+    onOccupancyResolved, selectedFacility?.isShared,
+  ]);
 
   return (
     <View style={[Spaces.gap[16]]}>

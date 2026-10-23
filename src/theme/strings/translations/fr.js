@@ -11610,6 +11610,23 @@ export default {
         pendingValidationConflict: "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'à validation d'un dirigeant.",
         // eslint-disable-next-line max-len
         pendingValidationHint: "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+        // DATESDABORD (23/10, point 4 d'Adel) — la phrase de l'étape « Lieu », dès que
+        // l'installation est cochée (preventionDuCreneau.js).
+        prevention: {
+          autorise: 'Attention, ce créneau est déjà pris : {{gestionnaire}} l’autorise quand même, sans demande.',
+          // eslint-disable-next-line max-len
+          demande: 'Attention, ce créneau est déjà pris : tu vas devoir envoyer une demande à {{gestionnaire}} pour faire {{pour}}. Elle partira quand tu créeras l’événement.',
+          libre: 'Ce créneau est libre.',
+          pour: {
+            detection: 'ta détection',
+            entrainement: 'ton entraînement',
+            evenement: 'ton événement',
+            match: 'ton match',
+            stage: 'ton stage',
+            tournoi: 'ton tournoi',
+          },
+          tonClub: 'ton club',
+        },
         remaining_one: '{{count}} restante',
         remaining_other: '{{count}} restantes',
         subtitle: 'Le lieu est obligatoire pour continuer.',
