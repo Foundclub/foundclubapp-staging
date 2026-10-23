@@ -64,7 +64,7 @@ function RefuseParticipationModal({
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier (BottomModal) ; pas de vide en plus.
+          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier, pas de vide.
           { paddingBottom: 24 },
         ]}
         keyboardShouldPersistTaps="handled"

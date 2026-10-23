@@ -53,7 +53,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
     animatedKeyboardState: {
       get: () => mockEtatClavier,
       set: (/** @type {any} */ suite) => {
-        Object.assign(mockEtatClavier, typeof suite === 'function' ? suite(mockEtatClavier) : suite);
+        const etat = typeof suite === 'function' ? suite(mockEtatClavier) : suite;
+        Object.assign(mockEtatClavier, etat);
       },
     },
   };
@@ -107,7 +108,7 @@ const remonter = (champ, nom, target) => {
 describe('CLAVREGLE — la règle de @gorhom/bottom-sheet 5.2.4', () => {
   // Témoin de la BIBLIOTHÈQUE, vert avant comme après. S'il rougit (montée de version), revoir si
   // la feuille suit toujours le clavier sans champ déclaré.
-  it('un clavier annoncé SANS champ déclaré est mis de côté ; seul BottomSheetTextInput déclare', () => {
+  it('clavier annoncé SANS champ déclaré : mis de côté ; seul BottomSheetTextInput déclare', () => {
     expect(JSON.parse(fs.readFileSync(path.join(BIBLIOTHEQUE, 'package.json'), 'utf8')).version)
       .toBe('5.2.4');
     expect(lire('hooks', 'useAnimatedKeyboard.js'))
@@ -146,7 +147,7 @@ describe('CLAVREGLE — toute feuille déclare le champ touché', () => {
     ['contenu', 101],
     ['entete', 102],
     ['pied', 103],
-  ])('un TextInput simple (%s) : la feuille le déclare au focus, l\'oublie au blur', (testID, target) => {
+  ])('TextInput simple (%s) : déclaré au focus, oublié au blur', (testID, target) => {
     const arbre = monter();
     const champ = arbre.root.findByProps({ testID });
     act(() => remonter(champ, 'onFocusCapture', target));
@@ -156,7 +157,7 @@ describe('CLAVREGLE — toute feuille déclare le champ touché', () => {
     act(() => arbre.unmount());
   });
 
-  it('le blur d\'un AUTRE champ ne retire pas le champ déclaré (passage d\'un champ à l\'autre)', () => {
+  it('le blur d\'un AUTRE champ ne retire pas le champ déclaré (passage de champ)', () => {
     const arbre = monter();
     const contenu = arbre.root.findByProps({ testID: 'contenu' });
     const pied = arbre.root.findByProps({ testID: 'pied' });
@@ -172,7 +173,8 @@ describe('CLAVREGLE — aucune feuille ne contourne BottomModal', () => {
   // La règle vit dans BottomModal : une feuille montée directement sur la bibliothèque
   // échapperait au suivi du clavier.
   const SRC = path.resolve(__dirname, '..', '..', '..', '..');
-  const fichiers = (/** @type {string} */ dossier) => fs.readdirSync(dossier, { withFileTypes: true })
+  const fichiers = (/** @type {string} */ dossier) => fs
+    .readdirSync(dossier, { withFileTypes: true })
     .flatMap((entree) => {
       const chemin = path.join(dossier, entree.name);
       if (entree.isDirectory()) return entree.name === '__tests__' ? [] : fichiers(chemin);

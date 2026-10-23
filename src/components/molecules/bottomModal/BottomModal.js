@@ -38,7 +38,10 @@ const STALE_DISMISS_WINDOW_MS = 400;
 // l'arbre : la feuille déclare elle-même tout champ qu'elle contient, en-tête et pied compris,
 // comme le fait `BottomSheetTextInput`. Témoin : __tests__/BottomModalCLAVREGLE.clavier.test.js.
 /**
- * @param {{ children: React.ReactNode, style?: import('react-native').StyleProp<import('react-native').ViewStyle> }} props
+ * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
+ * @param {object} props
+ * @param {React.ReactNode} props.children
+ * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
  * @returns {React.ReactElement}
  */
 function ChampsSuivisParLeClavier({ children, style }) {

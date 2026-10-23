@@ -3,9 +3,9 @@ import { Keyboard, StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import renderer, { act } from 'react-test-renderer';
 
-import ChatMessageActionModal from '@/components/organisms/chatMessageActionModal/ChatMessageActionModal';
-import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
-import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
+import ChatMessageActionModal from '../chatMessageActionModal/ChatMessageActionModal';
+import RefuseParticipationModal from '../refuseParticipationModal/RefuseParticipationModal';
+import ReportEventModal from '../reportEventModal/ReportEventModal';
 
 // ⌨️ CLAVREGLE (23/10) — trois feuilles à motif ajoutaient ELLES-MÊMES, sous leur champ, un vide
 // de la hauteur du clavier : c'était leur façon de rester visibles, la feuille ne remontant pas.
@@ -20,7 +20,10 @@ jest.mock('react-native-gesture-handler', () => ({
 
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
-  useTranslation: () => ({ t: (/** @type {string} */ cle, /** @type {any} */ defaut) => (typeof defaut === 'string' ? defaut : cle) }),
+  useTranslation: () => ({
+    t: (/** @type {string} */ cle, /** @type {any} */ defaut) => (
+      typeof defaut === 'string' ? defaut : cle),
+  }),
 }));
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => ({
@@ -53,10 +56,11 @@ let ecouteurs = {};
 
 beforeEach(() => {
   ecouteurs = {};
-  jest.spyOn(Keyboard, 'addListener').mockImplementation((/** @type {any} */ nom, /** @type {any} */ rappel) => {
+  const ecouter = (/** @type {any} */ nom, /** @type {any} */ rappel) => {
     (ecouteurs[nom] = ecouteurs[nom] || []).push(rappel);
     return /** @type {any} */ ({ remove: () => {} });
-  });
+  };
+  jest.spyOn(Keyboard, 'addListener').mockImplementation(ecouter);
 });
 
 afterEach(() => {
@@ -82,7 +86,8 @@ describe.each([
     });
     const ferme = basDuContenu(arbre);
     act(() => {
-      (ecouteurs.keyboardDidShow || []).forEach((rappel) => rappel({ endCoordinates: { height: 336 } }));
+      (ecouteurs.keyboardDidShow || [])
+        .forEach((rappel) => rappel({ endCoordinates: { height: 336 } }));
     });
     expect(basDuContenu(arbre)).toBe(ferme);
     act(() => arbre.unmount());

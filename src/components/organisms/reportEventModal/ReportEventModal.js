@@ -58,7 +58,7 @@ function ReportEventModal({
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier (BottomModal) ; pas de vide en plus.
+          // CLAVREGLE (23/10) : la feuille remonte au-dessus du clavier, pas de vide.
         ]}
         keyboardShouldPersistTaps="handled"
         style={[Alignments.fullHeight]}

@@ -134,8 +134,6 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const { View: VueRN } = jest.requireActual('react-native');
 
   return {
-    // CLAVREGLE : BottomModal lit le contexte interne de la feuille (absent ici).
-    useBottomSheetInternal: () => null,
     BottomSheetBackdrop: () => null,
     BottomSheetModal: reactActuel.forwardRef(
       (/** @type {any} */ props, /** @type {any} */ ref) => {
@@ -159,6 +157,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
       null,
       props.children,
     ),
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 

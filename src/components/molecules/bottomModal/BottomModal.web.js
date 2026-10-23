@@ -98,7 +98,8 @@ function BottomModal({
     if (!isVisible || !zoneVisible) return undefined;
     const mesurer = () => {
       const recouvert = window.innerHeight - zoneVisible.height - zoneVisible.offsetTop;
-      setHauteurDuClavier(Math.abs(zoneVisible.scale - 1) < 0.01 ? Math.max(0, Math.round(recouvert)) : 0);
+      const aLEchelleUn = Math.abs(zoneVisible.scale - 1) < 0.01;
+      setHauteurDuClavier(aLEchelleUn ? Math.max(0, Math.round(recouvert)) : 0);
     };
     mesurer();
     zoneVisible.addEventListener('resize', mesurer);

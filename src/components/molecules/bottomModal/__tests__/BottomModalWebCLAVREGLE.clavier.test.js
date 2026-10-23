@@ -11,7 +11,9 @@ import BottomModal from '../BottomModal.web';
 // Rouge avant : `bottom` restait à 0 clavier ouvert.
 
 // `react-dom` n'existe que dans le dépôt du site : doublure virtuelle.
-jest.mock('react-dom', () => ({ createPortal: (/** @type {any} */ enfant) => enfant }), { virtual: true });
+jest.mock('react-dom', () => ({
+  createPortal: (/** @type {any} */ enfant) => enfant,
+}), { virtual: true });
 
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
@@ -34,19 +36,26 @@ jest.mock('@/theme/themeContext', () => {
 
 /** Une zone visible de téléphone (iPhone 15 : 844 pt), clavier fermé. */
 const zone = {
-  /** @type {Record<string, Function>} */
+  /** @type {Record<string, Function>} Les écouteurs posés par la feuille. */
+  addEventListener(/** @type {string} */ nom, /** @type {Function} */ rappel) {
+    this.ecouteurs[nom] = rappel;
+  },
   ecouteurs: {},
   height: 844,
   offsetTop: 0,
-  scale: 1,
-  addEventListener(/** @type {string} */ nom, /** @type {Function} */ rappel) { this.ecouteurs[nom] = rappel; },
   removeEventListener(/** @type {string} */ nom) { delete this.ecouteurs[nom]; },
+  scale: 1,
 };
 
-const globalAvant = { innerHeight: global.window?.innerHeight, visualViewport: global.window?.visualViewport };
+const globalAvant = {
+  innerHeight: global.window?.innerHeight,
+  visualViewport: global.window?.visualViewport,
+};
 
 beforeEach(() => {
-  Object.assign(zone, { ecouteurs: {}, height: 844, offsetTop: 0, scale: 1 });
+  Object.assign(zone, {
+    ecouteurs: {}, height: 844, offsetTop: 0, scale: 1,
+  });
   /** @type {any} */ (global.window).innerHeight = 844;
   /** @type {any} */ (global.window).visualViewport = zone;
 });
@@ -57,7 +66,8 @@ afterAll(() => {
 
 const basDeLaFeuille = (/** @type {any} */ arbre) => arbre.root
   .findAll((/** @type {any} */ noeud) => StyleSheet.flatten(noeud.props?.style)?.position === 'fixed')[0]
-  .props.style.flat(Infinity).reduce((bas, morceau) => (morceau && 'bottom' in morceau ? morceau.bottom : bas), undefined);
+  .props.style.flat(Infinity)
+  .reduce((bas, morceau) => (morceau && 'bottom' in morceau ? morceau.bottom : bas), undefined);
 
 const ouvrir = (/** @type {string} */ presentation) => {
   /** @type {any} */
@@ -78,7 +88,7 @@ const clavier = (/** @type {number} */ hauteur) => act(() => {
   zone.ecouteurs.resize?.();
 });
 
-describe.each(['sheet', 'dialog'])('CLAVREGLE (site, %s) — la feuille se pose au bas de la zone visible', (presentation) => {
+describe.each(['sheet', 'dialog'])('CLAVREGLE (site, %s) — au bas de la zone visible', (presentation) => {
   it('clavier ouvert (336) : la feuille remonte de 336 ; fermé : retour à 0', () => {
     const arbre = ouvrir(presentation);
     expect(basDeLaFeuille(arbre)).toBe(0);
