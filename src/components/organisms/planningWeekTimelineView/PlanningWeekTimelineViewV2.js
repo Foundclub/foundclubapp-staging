@@ -29,6 +29,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
+import { motDuBlocTouche } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { images as Images } from '@/theme/images';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -911,15 +912,9 @@ function PlanningWeekTimelineView({
     }
     // COLL-C4B — une seance que la fermeture touche GARDE sa place (D16), cernee d orange.
     const aDeplacer = Boolean(event?.raw?.closure);
-    // COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a la seance touchee, dit a sa place : la
-    // Ville a propose une place (« proposition envoyee », planche P5v4-deplacer-ville-tel ecran
-    // 6 b) ; un creneau de SAISON sans seance posee « n a pas lieu » ; sinon « a deplacer ».
-    let motDeFermeture = t('collectiviteFermetures.planning.aDeplacer', 'à déplacer');
-    if (event?.raw?.relocationProposal?.status === 'pending') {
-      motDeFermeture = t('deplacerSeance.planning.propositionEnvoyee', 'proposition envoyée');
-    } else if (event?.raw?.kind === 'slot' && event?.raw?.origin === 'slot') {
-      motDeFermeture = t('deplacerSeance.planning.nAPasLieu', 'n’a pas lieu');
-    }
+    // COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a la seance touchee, dit a sa place
+    // (planche P5v4-deplacer-ville-tel ecran 6 b) ; la Liste dit le meme mot (CRDEP2).
+    const motDeFermeture = motDuBlocTouche(t, event?.raw);
     const color = event.color || Colors.primary500;
     const isPendingParticipation = isPlanningPendingParticipation(event);
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
