@@ -627,3 +627,89 @@ describe('R17-CANAUX — « Toute la ville » dans la conversation', () => {
     expect(liens).toHaveLength(0);
   });
 });
+
+// 🏟️ RESA-PARTAGER (23/10/2026, A-G32, plan E-G12) — L'ANNONCE PARTAGÉE DANS LE CANAL DU COMPLEXE.
+// Le serveur (canal.partagerAnnonce) pose une ligne sans expéditeur, `systemNotice` de sorte
+// `complexe_annonce`. Chez le gérant comme chez le joueur, elle se lit en CARTE : le complexe, le
+// jour, l'heure, le terrain, « n places », et un bouton qui ouvre l'annonce (E-P09).
+describe('RESA-PARTAGER — la carte de l’annonce dans le canal du complexe', () => {
+  const CANAL_COMPLEXE = {
+    documentId: 'chat-1', groupName: 'Le Five de Montrivage', participants: [], type: 'group',
+  };
+  const LIGNE_ANNONCE = {
+    createdAt: '2026-10-23T15:00:00.000Z',
+    documentId: 'm-annonce',
+    message: 'Il manque 2 joueurs pour la partie du vendredi 30/10 à 19:00 · Terrain 1. '
+      + 'Ouvre l’annonce pour la rejoindre.',
+    sender: null,
+    systemNotice: {
+      annonce: {
+        documentId: 'annonce-1', joined: 1, level: null, places: 3,
+      },
+      complexe: { documentId: 'cx-1', name: 'Le Five de Montrivage' },
+      kind: 'complexe_annonce',
+      partie: { startsAt: '2026-10-30T18:00:00.000Z', terrain: 'Terrain 1' },
+      version: 1,
+    },
+    updatedAt: '2026-10-23T15:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockBoutons.length = 0;
+    mockChatData = CANAL_COMPLEXE;
+    mockMessagesPage = {
+      data: [LIGNE_ANNONCE], meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+    };
+    mockMessagesError = undefined;
+    mockMembres = undefined;
+    mockBlockedRows = [];
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) aDemonter.pop()();
+  });
+
+  it('une carte : complexe, jour, heure, terrain, places ; « Voir l’annonce » ouvre E-P09', () => {
+    const { navigation, props } = monter({ espace: 'complexe' });
+    const [ligne] = props.messages;
+    expect(ligne.system).toBe(true);
+    /** @type {any} */
+    let rendu;
+    act(() => { rendu = renderer.create(props.renderSystemMessage({ currentMessage: ligne })); });
+    aDemonter.push(() => act(() => { rendu.unmount(); }));
+    expect(rendu.root.findAllByProps({ testID: 'carte-annonce-du-canal' }).length)
+      .toBeGreaterThan(0);
+    const texte = textes(rendu).join(' · ');
+    expect(texte).toContain('Le Five de Montrivage');
+    expect(texte).toContain('Vendredi 30 octobre');
+    expect(texte).toContain('19 h');
+    expect(texte).toContain('Terrain 1');
+    expect(texte).toContain('2 places');
+    const bouton = rendu.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'button'
+      && typeof n.props.onPress === 'function'))[0];
+    expect(bouton.props.accessibilityLabel).toContain('Voir l’annonce');
+    act(() => { bouton.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('ReserverAnnonce', { annonceId: 'annonce-1' });
+  });
+
+  it('une notice sans annonce reste la phrase du serveur, sans carte', () => {
+    mockMessagesPage = {
+      data: [{
+        ...LIGNE_ANNONCE,
+        systemNotice: { ...LIGNE_ANNONCE.systemNotice, annonce: null },
+      }],
+      meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+    };
+    const { props } = monter({ espace: 'complexe' });
+    /** @type {any} */
+    let rendu;
+    act(() => {
+      rendu = renderer.create(props.renderSystemMessage({ currentMessage: props.messages[0] }));
+    });
+    aDemonter.push(() => act(() => { rendu.unmount(); }));
+    expect(rendu.root.findAllByProps({ testID: 'carte-annonce-du-canal' })).toHaveLength(0);
+    expect(JSON.stringify(rendu.toJSON())).toContain('Il manque 2 joueurs');
+  });
+});

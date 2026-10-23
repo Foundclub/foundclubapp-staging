@@ -7429,6 +7429,15 @@ export default {
   },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — l'annonce « Il me manque des joueurs » partagée dans le
+    // canal : sa carte (gérant et joueurs).
+    annonce: {
+      places_one: '{{count}} place',
+      places_other: '{{count}} places',
+      titre: 'Partie à compléter',
+      voir: 'Voir l’annonce',
+      voirLibelle: 'Voir l’annonce : {{quand}}, {{places}}',
+    },
     ecrire: 'Écrire aux membres',
     erreur: 'Impossible de charger ton canal.',
     membres: {

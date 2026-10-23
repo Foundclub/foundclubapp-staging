@@ -6955,6 +6955,15 @@ export default {
   },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — the "Players wanted" post shared in the channel: its
+    // card (manager and players). Same keys as fr.js.
+    annonce: {
+      places_one: '{{count}} spot',
+      places_other: '{{count}} spots',
+      titre: 'Players wanted',
+      voir: 'See the post',
+      voirLibelle: 'See the post: {{quand}}, {{places}}',
+    },
     ecrire: 'Write to members',
     erreur: 'Your channel could not be loaded.',
     membres: {

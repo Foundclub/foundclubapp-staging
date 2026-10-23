@@ -636,3 +636,45 @@ describe('R17-CANAUX — « Toute la ville » sur le site', () => {
     expect(pieds).toHaveLength(0);
   });
 });
+
+// 🏟️ RESA-PARTAGER (23/10/2026, A-G32, plan E-G12) — L'ANNONCE PARTAGÉE DANS LE CANAL DU COMPLEXE,
+// SUR LE SITE : la ligne `complexe_annonce` se lit en carte (complexe, jour, heure, terrain,
+// « n places ») et son bouton ouvre l'annonce (E-P09).
+describe('RESA-PARTAGER — la carte de l’annonce dans le canal du complexe (site)', () => {
+  const LIGNE_ANNONCE = {
+    createdAt: '2026-10-23T15:00:00.000Z',
+    documentId: 'm-annonce',
+    message: 'Il manque 2 joueurs pour la partie du vendredi 30/10 à 19:00 · Terrain 1. '
+      + 'Ouvre l’annonce pour la rejoindre.',
+    sender: null,
+    systemNotice: {
+      annonce: {
+        documentId: 'annonce-1', joined: 1, level: null, places: 3,
+      },
+      complexe: { documentId: 'cx-1', name: 'Le Five de Montrivage' },
+      kind: 'complexe_annonce',
+      partie: { startsAt: '2026-10-30T18:00:00.000Z', terrain: 'Terrain 1' },
+      version: 1,
+    },
+  };
+
+  test('une carte, et « Voir l’annonce » ouvre E-P09', async () => {
+    mockChatOuvert = {
+      documentId: 'canal-1', groupName: 'Le Five de Montrivage', participants: [], type: 'group',
+    };
+    mockMessagesDuFil = [LIGNE_ANNONCE];
+    const { arbre, navigation } = await monter({ chatType: 'group', espace: 'complexe' });
+    const [carte] = parTestID(arbre, 'carte-annonce-du-canal');
+    expect(carte).toBeTruthy();
+    const texte = texteDe(carte);
+    expect(texte).toContain('Le Five de Montrivage');
+    expect(texte).toContain('Vendredi 30 octobre');
+    expect(texte).toContain('19 h');
+    expect(texte).toContain('Terrain 1');
+    expect(texte).toContain('2 places');
+    const bouton = carte.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button'
+      && typeof n.props.onPress === 'function')[0];
+    await act(async () => { bouton.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('ReserverAnnonce', { annonceId: 'annonce-1' });
+  });
+});
