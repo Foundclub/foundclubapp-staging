@@ -710,6 +710,38 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     });
   });
 
+  // ⌨️ CLAV-ADVERSAIRE (23/10) — sur iPhone, le clavier RECOUVRAIT le champ (capture d'Adel,
+  // TestFlight 2.6.79). Le champ demandait le clavier AU MONTAGE (`autoFocus`), pendant que la
+  // feuille montait : `@gorhom/bottom-sheet` 5.2.4 relance alors son animation vers le cran,
+  // sans le clavier (regle lue dans son code : BottomModalCLAVADV.clavier.test.js). Le clavier
+  // se demande donc quand la feuille est ARRIVEE (`onOpened`) — elle remonte alors au-dessus.
+  test('N3 · temoin 7 bis — le clavier attend que la feuille de l\'adversaire soit arrivee', () => {
+    const racine = monter({
+      auth: ORGANISATEUR(),
+      event: buildMatch({ name: 'Match', opponentName: null }),
+    });
+    act(() => {
+      resume().onNameOpponent();
+    });
+
+    const champ = racine.findAllByType(TextInput)
+      .find((/** @type {any} */ n) => n.props.placeholder === 'Nom de l\'équipe adverse');
+    expect(champ).toBeDefined();
+    // Pas de clavier au montage : il tomberait pendant l'animation d'ouverture.
+    expect(champ.props.autoFocus).toBeFalsy();
+
+    const feuille = racine
+      .findAll((/** @type {any} */ n) => n.type?.name === 'BottomModalDouble' && n.props.isVisible)
+      .find((/** @type {any} */ n) => n.findAllByType(TextInput).includes(champ));
+    expect(typeof feuille?.props.onOpened).toBe('function');
+
+    const focus = jest.spyOn(champ.instance, 'focus');
+    act(() => {
+      feuille.props.onOpened();
+    });
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
   test('N3 · temoin 8 — le lecteur qui n\'organise pas n\'a AUCUN bouton (D10)', () => {
     monter({
       auth: SPECTATEUR(),
