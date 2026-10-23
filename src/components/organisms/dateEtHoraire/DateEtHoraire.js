@@ -81,6 +81,43 @@ export const intervalleLu = (rawValue) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : MIN_RECURRENCE_INTERVAL;
 };
 
+export const areSameDay = (/** @type {Date} */ firstDate, /** @type {Date} */ secondDate) => (
+  firstDate.getFullYear() === secondDate.getFullYear()
+  && firstDate.getMonth() === secondDate.getMonth()
+  && firstDate.getDate() === secondDate.getDate()
+);
+
+/**
+ * 🎨 FINITIONS13-COLL (04/10) — LE DÉBUT DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE tant qu'on ne
+ * l'a pas choisi ailleurs : resté au jour d'avant, ou plus tôt que la séance, il prend son nouveau
+ * jour ; choisi plus tard, il reste. Tournée T13 (C2_2a) : « samedi 3 octobre », le jour de la
+ * saisie, pour une séance le jeudi 8 ; déplacée au 22, la série aurait gardé les 8 et 15.
+ * @param {Date | null} debut - Le début de la répétition retenu.
+ * @param {Date} ancienne - Le jour de la séance avant le changement.
+ * @param {Date} nouvelle - Le nouveau jour de la séance.
+ * @returns {Date} Le début à retenir.
+ */
+export const debutDeRepetitionSuivant = (debut, ancienne, nouvelle) => (
+  !debut || areSameDay(debut, ancienne) || debut < nouvelle ? new Date(nouvelle) : debut
+);
+
+/**
+ * 🐞 FINITIONS15 point 1 (T14, C08 et C08b) — LE JOUR DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE
+ * quand c'est le seul retenu : la répétition ne portait que le jour présélectionné (celui de
+ * l'ancienne date), le jour de la nouvelle date le remplace. Avant, il s'ajoutait à côté (lundi +
+ * jeudi) et la série prenait des séances en trop. Plusieurs jours choisis par l'utilisateur :
+ * son choix reste (l'effet qui suit y ajoute le jour de la séance, comme avant).
+ * @param {any[]} jours - Les jours retenus (0 = dimanche).
+ * @param {Date} ancienne - Le jour de la séance avant le changement.
+ * @param {Date} nouvelle - Le nouveau jour de la séance.
+ * @returns {any[]} Les jours à retenir.
+ */
+export const joursDeRepetitionSuivants = (jours, ancienne, nouvelle) => (
+  Array.isArray(jours) && jours.length === 1 && Number(jours[0]) === ancienne.getDay()
+    ? [nouvelle.getDay()]
+    : jours
+);
+
 export const buildDefaultRecurrenceEndDate = (
   /** @type {Date} */ startDate,
   /** @type {string} */ frequency,
@@ -158,9 +195,11 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  * Temoins : __tests__/DateEtHoraire.DATESDABORD.test.js, et ceux de l'etape « Date & horaire ».
  * @param {{
  *   date: Date,
- *   debut: Date,
- *   fin: Date,
+ *   debut: Date | null,
+ *   fin: Date | null,
  *   finApres?: string | null,
+ *   libelleDebut?: string | null,
+ *   libelleFin?: string | null,
  *   onDate: (date: Date) => void,
  *   onDebut: (debut: Date) => void,
  *   onFin: (fin: Date) => void,
@@ -168,7 +207,9 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   pleines?: Array<{ end: number, start: number }>,
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
- * }} props - `finApres` et `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
+ * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDebut` /
+ *   `libelleFin` : les mots de l ecran (« Début », « Fin » de la Ville) ; `finApres` et
+ *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
  *   `onRepetition(null)` revient a « Une seule fois ».
  * @returns {import('react').ReactElement} Le bloc.
  */
@@ -177,6 +218,8 @@ function DateEtHoraire({
   debut,
   fin,
   finApres = null,
+  libelleDebut = null,
+  libelleFin = null,
   onDate,
   onDebut,
   onFin,
@@ -309,18 +352,18 @@ function DateEtHoraire({
       <View style={[Alignments.row, Spaces.gap[12]]}>
         <View style={{ flex: 1 }}>
           <TimePickerInput
-            label={t('eventEdit.fields.startTime.label')}
-            onChange={(/** @type {string} */ text) => onDebut(mergeTimeInput(text, debut))}
+            label={libelleDebut || t('eventEdit.fields.startTime.label')}
+            onChange={(/** @type {string} */ text) => onDebut(mergeTimeInput(text, debut || date))}
             pleines={pleines}
-            value={toTimeInputText(debut)}
+            value={debut ? toTimeInputText(debut) : ''}
           />
         </View>
         <View style={{ flex: 1 }}>
           <TimePickerInput
             apres={finApres}
-            label={t('eventEdit.fields.endTime.label')}
-            onChange={(/** @type {string} */ text) => onFin(mergeTimeInput(text, fin))}
-            value={toTimeInputText(fin)}
+            label={libelleFin || t('eventEdit.fields.endTime.label')}
+            onChange={(/** @type {string} */ text) => onFin(mergeTimeInput(text, fin || date))}
+            value={fin ? toTimeInputText(fin) : ''}
           />
         </View>
       </View>

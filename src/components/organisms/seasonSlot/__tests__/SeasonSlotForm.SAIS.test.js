@@ -153,16 +153,23 @@ afterEach(() => {
 });
 
 describe('SAIS lot 1 — « Attribuer un créneau » : un jour présélectionné, comme le site', () => {
+  // INVERSÉ PAR DATESDABORD (23/10, point 9 d'Adel) — motif : à la création, le jour se choisit
+  // par une DATE (le bloc « Date & horaire » de l'événement) ; elle s'ouvre sur ce jour-là.
+  const dateDuModele = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+  )[0]?.props.date;
   test('ouvert sans jour : celui d’aujourd’hui est choisi', async () => {
     const arbre = await monter();
-    expect(jourChoisi(arbre)).toEqual([`jour-${isoWeekdayOf(new Date())}`]);
+    expect(dateDuModele(arbre).toDateString()).toBe(new Date().toDateString());
   });
 
   test('ouvert sur un jour (une case du planning) : ce jour-là', async () => {
     const aujourdhui = isoWeekdayOf(new Date());
     const autre = (aujourdhui % 7) + 1;
     const arbre = await monter({ initial: { weekday: autre } });
-    expect(jourChoisi(arbre)).toEqual([`jour-${autre}`]);
+    expect(isoWeekdayOf(dateDuModele(arbre))).toBe(autre);
+    // Le 1er à venir : demain.
+    expect(dateDuModele(arbre).getTime() - Date.now()).toBeLessThan(2 * 86400000);
   });
 
   test('« Modifier » garde le jour du créneau', async () => {

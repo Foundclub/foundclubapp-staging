@@ -18,7 +18,10 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import DateEtHoraire, {
+  areSameDay,
   buildDefaultRecurrenceEndDate,
+  debutDeRepetitionSuivant,
+  joursDeRepetitionSuivants,
   mergeDateInput,
   mergeTimeInput,
   toDateInputText,
@@ -35,6 +38,9 @@ import {
   getEventWizardStepCount,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
+
+// DATESDABORD (23/10) — les deux regles vivent avec le bloc partage ; leur temoin les lit ici.
+export { debutDeRepetitionSuivant, joursDeRepetitionSuivants };
 
 const parseInteger = (rawValue) => {
   if (!rawValue || String(rawValue).trim() === '') return null;
@@ -93,43 +99,6 @@ const buildNextAvailableStart = (referenceDate = new Date()) => {
   next.setHours(next.getHours() + 1, 0, 0, 0);
   return next;
 };
-
-const areSameDay = (firstDate, secondDate) => (
-  firstDate.getFullYear() === secondDate.getFullYear()
-  && firstDate.getMonth() === secondDate.getMonth()
-  && firstDate.getDate() === secondDate.getDate()
-);
-
-/**
- * 🎨 FINITIONS13-COLL (04/10) — LE DÉBUT DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE tant qu'on ne
- * l'a pas choisi ailleurs : resté au jour d'avant, ou plus tôt que la séance, il prend son nouveau
- * jour ; choisi plus tard, il reste. Tournée T13 (C2_2a) : « samedi 3 octobre », le jour de la
- * saisie, pour une séance le jeudi 8 ; déplacée au 22, la série aurait gardé les 8 et 15.
- * @param {Date | null} debut - Le début de la répétition retenu.
- * @param {Date} ancienne - Le jour de la séance avant le changement.
- * @param {Date} nouvelle - Le nouveau jour de la séance.
- * @returns {Date} Le début à retenir.
- */
-export const debutDeRepetitionSuivant = (debut, ancienne, nouvelle) => (
-  !debut || areSameDay(debut, ancienne) || debut < nouvelle ? new Date(nouvelle) : debut
-);
-
-/**
- * 🐞 FINITIONS15 point 1 (T14, C08 et C08b) — LE JOUR DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE
- * quand c'est le seul retenu : la répétition ne portait que le jour présélectionné (celui de
- * l'ancienne date), le jour de la nouvelle date le remplace. Avant, il s'ajoutait à côté (lundi +
- * jeudi) et la série prenait des séances en trop. Plusieurs jours choisis par l'utilisateur :
- * son choix reste (l'effet qui suit y ajoute le jour de la séance, comme avant).
- * @param {any[]} jours - Les jours retenus (0 = dimanche).
- * @param {Date} ancienne - Le jour de la séance avant le changement.
- * @param {Date} nouvelle - Le nouveau jour de la séance.
- * @returns {any[]} Les jours à retenir.
- */
-export const joursDeRepetitionSuivants = (jours, ancienne, nouvelle) => (
-  Array.isArray(jours) && jours.length === 1 && Number(jours[0]) === ancienne.getDay()
-    ? [nouvelle.getDay()]
-    : jours
-);
 
 const buildDateKey = (value) => format(new Date(value), 'yyyy-MM-dd');
 

@@ -227,15 +227,19 @@ const jourDuCalendrier = (/** @type {any} */ arbre, /** @type {string} */ jour) 
 )[0];
 
 // Club, équipe (tout le club), mercredi, 17:30 – 19:00, puis « Quand ? ».
-const jusquAuQuand = async (/** @type {any} */ arbre, { jour = 'Mercredi' } = {}) => {
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? » et
+// « Quand ? » ne font plus qu'une étape, « Date & horaire » (le modèle de l'événement) : le jour
+// se choisit par une date ; « Sauf vacances scolaires » et ses séances y restent, sous « Répéter ».
+const modele = (/** @type {any} */ arbre) => arbre.root.findAll(
+  (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+)[0];
+const jusquAuQuand = async (/** @type {any} */ arbre, { jour = new Date(2026, 9, 21, 12, 0, 0) } = {}) => {
   await choisir(arbre, 'Montrivage Basket');
   // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une étape, un « Suivant » de moins.
   await avancer(arbre);
-  await choisir(arbre, jour);
-  await avancer(arbre);
+  await appeler(() => modele(arbre).props.onDate(jour));
   await choisirHeure('Début', '17:30');
   await choisirHeure('Fin', '19:00');
-  await avancer(arbre);
 };
 
 const caseVacances = (/** @type {any} */ arbre) => arbre.root.findAll(
@@ -317,18 +321,18 @@ describe('R17Q2-3 — « Sauf vacances scolaires » dans « Quand ? »', () => {
     expect(lus(arbre)).toContain('37 mercredis');
   });
 
+  // DATESDABORD (23/10) : le calendrier libre n'est plus à la création ; il reste à « Modifier »
+  // un créneau à dates choisies (sa 3e étape).
   test('4. des jours différents : le calendrier marque les vacances de la zone', async () => {
     /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
       data: [], meta: { facility: { ...SALLE, plateaux: [] }, holidays: ZONE_B, season: SAISON },
     });
-    const arbre = await monter();
-    await choisir(arbre, 'Montrivage Basket');
-    // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une étape, un « Suivant » de moins.
+    const arbre = await monter({
+      slot: {
+        club: { documentId: 'basket', name: 'Montrivage Basket' }, dates: ['2026-10-23'], documentId: 'c-dates', endTime: '19:00', recurrence: 'dates', startTime: '17:30', validFrom: '2026-10-23', validUntil: '2026-10-23', weekday: null,
+      },
+    });
     await avancer(arbre);
-    await choisir(arbre, 'Des jours différents');
-    await avancer(arbre);
-    await choisirHeure('Début', '17:30');
-    await choisirHeure('Fin', '19:00');
     await avancer(arbre);
     // Avant toute date cochée : la zone de la liste des créneaux suffit.
     expect(jourDuCalendrier(arbre, '2026-10-21').props.accessibilityLabel).toMatch(/vacances \(Toussaint\)/);

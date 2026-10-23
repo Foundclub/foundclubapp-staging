@@ -379,15 +379,22 @@ describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes
 
   // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6 étapes).
   // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 6 → 5.
-  test('garde cinq étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
+  // INVERSÉ PAR DATESDABORD (23/10, point 9 d'Adel) — motif : à la création, jour, heures et
+  // « Quand ? » sur une étape (5 → 3), le jour par une date ; un mardi choisi, ses heures pleines
+  // (18:00 – 19:00) passent au sélecteur du Début. « complet … » sous le nom du jour reste à
+  // « Modifier » (témoin suivant).
+  test('garde trois étapes ; un mardi choisi, ses heures pleines 18:00 – 19:00 au Début', async () => {
     avecOccupation();
     const arbre = await monter({ pleinEcran: false });
     await choisir(arbre, 'Montrivage Basket');
     await appuyerSur(arbre, 'Suivant');
-    const mardi = choix(arbre, 'Mar.');
-    expect(mardi).toBeDefined();
-    expect(mardi.parent.parent.findAllByType(Text).some((n) => texte(n) === 'complet 18:00 – 19:00')).toBe(true);
-    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 2/5')).toBe(true);
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 2/3')).toBe(true);
+    const modele = () => arbre.root.findAll((n) => typeof n.props?.onRepetition === 'function')[0];
+    const mardi = new Date();
+    mardi.setHours(12, 0, 0, 0);
+    mardi.setDate(mardi.getDate() + ((2 - mardi.getDay() + 7) % 7));
+    await act(async () => { modele().props.onDate(mardi); });
+    expect(modele().props.pleines).toEqual([{ end: 1140, start: 1080 }]);
   });
 
   test('ne compte pas le créneau modifié parmi les occupations', async () => {

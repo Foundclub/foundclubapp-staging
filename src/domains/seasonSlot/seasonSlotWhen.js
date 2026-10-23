@@ -249,3 +249,102 @@ export const formeCourte = (creneau) => {
   if (forme.everyWeeks === 2) return { count: 2, kind: 'deuxSemaines' };
   return { count: 1, kind: 'chaqueSemaine' };
 };
+
+const versJour = (/** @type {string} */ jour) => new Date(`${jour}T00:00:00.000Z`);
+const enTexte = (/** @type {Date} */ date) => date.toISOString().slice(0, 10);
+const lundiDe = (/** @type {Date} */ date) => {
+  const lundi = new Date(date);
+  lundi.setUTCDate(lundi.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return lundi;
+};
+
+/**
+ * 🗓️ DATESDABORD (23/10/2026, recette iPhone d'Adel, point 9) — « ATTRIBUER UN CRÉNEAU » PREND LE
+ * MODÈLE DE LA CRÉATION D'ÉVÉNEMENT (le bloc partagé `DateEtHoraire` : une date, des heures,
+ * « Répéter »). La répétition devient une forme que le serveur connaît déjà (aucun champ neuf) :
+ * un seul jour toutes les semaines → `periode` (`saison` dès la prochaine date jusqu'à la fin de
+ * saison) ; toutes les 2 semaines → `deuxSemaines` (la parité,
+ * « sauf vacances ») ; le reste (une seule fois, plusieurs jours, tous les 3 et plus, tous les
+ * mois) → des `dates`, d'aujourd'hui à la fin de saison. Le jour de la date est toujours compris
+ * (comme l'étape « Date & horaire » de l'événement).
+ * Témoin : __tests__/seasonSlotWhen.DATESDABORD.test.js.
+ * @param {{
+ *   aujourdhui: string,
+ *   date: string,
+ *   finDeSaison: string,
+ *   repetition: { actif?: boolean, au?: string | null, du?: string | null, frequence?: string,
+ *     intervalleTexte?: string, jours?: any[] } | null,
+ * }} entree - Les jours en AAAA-MM-JJ ; `jours` de la répétition : 0 = dimanche (DayPicker).
+ * @returns {{ forme: string, jour: number, joursDifferents: boolean, dates?: string[],
+ *   periodeDu?: string, periodeAu?: string, deuxDu?: string, deuxAu?: string | null }} La forme.
+ */
+export const quandDeLaRepetition = ({
+  aujourdhui, date, finDeSaison, repetition,
+}) => {
+  const base = versJour(date);
+  const jour = ((base.getUTCDay() + 6) % 7) + 1;
+  if (!repetition?.actif) {
+    return {
+      dates: [date], forme: 'dates', jour, joursDifferents: true,
+    };
+  }
+
+  const debut = jourCivil(repetition.du) || date;
+  const voulue = jourCivil(repetition.au);
+  const fin = voulue && voulue < finDeSaison ? voulue : finDeSaison;
+  const saisi = Number.parseInt(String(repetition.intervalleTexte ?? ''), 10);
+  const intervalle = Math.max(1, saisi || 1);
+  const jours = [...new Set([base.getUTCDay(), ...(repetition.jours || []).map(Number)])]
+    .filter((numero) => Number.isInteger(numero) && numero >= 0 && numero <= 6);
+  const mensuel = repetition.frequence === 'month';
+
+  if (!mensuel && jours.length === 1 && intervalle === 1) {
+    // Dès la prochaine date jusqu'à la fin de saison : c'est « toute la saison » (le serveur la
+    // prend par défaut ; le corps reste celui d'avant le lot).
+    if (fin === finDeSaison && debut <= premierJourDepuis(aujourdhui, jour)) {
+      return { forme: 'saison', jour, joursDifferents: false };
+    }
+    return {
+      forme: 'periode', jour, joursDifferents: false, periodeAu: fin, periodeDu: debut,
+    };
+  }
+  if (!mensuel && jours.length === 1 && intervalle === 2) {
+    return {
+      deuxAu: voulue ? fin : null,
+      deuxDu: debut,
+      forme: 'deuxSemaines',
+      jour,
+      joursDifferents: false,
+    };
+  }
+
+  /** @type {string[]} */
+  const dates = [];
+  if (mensuel) {
+    const quantieme = base.getUTCDate();
+    for (let rang = 0; ; rang += intervalle) {
+      const mois = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + rang, 1));
+      const candidat = new Date(Date.UTC(mois.getUTCFullYear(), mois.getUTCMonth(), quantieme));
+      if (enTexte(mois) > fin) break;
+      const texte = enTexte(candidat);
+      if (candidat.getUTCMonth() === mois.getUTCMonth() && texte >= debut && texte <= fin) {
+        dates.push(texte);
+      }
+    }
+  } else {
+    const premierLundi = lundiDe(versJour(debut)).getTime();
+    for (let curseur = versJour(debut); enTexte(curseur) <= fin;
+      curseur.setUTCDate(curseur.getUTCDate() + 1)) {
+      const semaine = Math.round((lundiDe(curseur).getTime() - premierLundi) / (7 * 86400000));
+      if (semaine % intervalle === 0 && jours.includes(curseur.getUTCDay())) {
+        dates.push(enTexte(curseur));
+      }
+    }
+  }
+  return {
+    dates: dates.filter((texte) => texte >= aujourdhui),
+    forme: 'dates',
+    jour,
+    joursDifferents: true,
+  };
+};

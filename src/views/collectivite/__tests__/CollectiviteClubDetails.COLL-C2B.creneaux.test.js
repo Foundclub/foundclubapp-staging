@@ -264,6 +264,18 @@ const appuyer = async (/** @type {any} */ noeud) => {
   await act(async () => { noeud.props.onPress(); });
   await attendre();
 };
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? »
+// et « Quand ? » ne font plus qu'une étape, « Date & horaire » (le bloc de la création
+// d'événement) : le jour se choisit par une date, ici le prochain mercredi, sur la même étape que
+// les heures ; un « Suivant » mène au récapitulatif.
+const choisirMercredi = async (/** @type {any} */ arbre) => {
+  const modele = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onRepetition === 'function')[0];
+  const mercredi = new Date();
+  mercredi.setHours(12, 0, 0, 0);
+  mercredi.setDate(mercredi.getDate() + ((3 - mercredi.getDay() + 7) % 7));
+  await act(async () => { modele.props.onDate(mercredi); });
+  await attendre();
+};
 const saisir = async (/** @type {string} */ libelle, /** @type {string} */ valeur) => {
   const champ = mockInputProps.filter((props) => props.label === libelle).pop();
   await act(async () => { champ.onChangeText(valeur); });
@@ -377,14 +389,11 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     expect(parTexte(arbre, 'Tout le club')).toBeDefined();
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTestID(arbre, 'jour-3'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     const attendu = expect.objectContaining({ endTime: '19:00', startTime: '17:30', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', attendu);
-    await appuyer(parTexte(arbre, 'Suivant'));
-    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
@@ -398,7 +407,7 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
   // ce club » ouvre le plein écran des tunnels : le club est fixé, on commence par l'installation
   // (5 étapes). ROUGE avant : la feuille du bas (SAIS, 85 %), 7 étapes dont « Club ».
   // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6).
-  it('COL-005 : plein écran, « Dans quelle installation ? », 6 étapes, sans feuille', async () => {
+  it('COL-005 : plein écran, « Dans quelle installation ? », 4 étapes, sans feuille', async () => {
     const arbre = await rendre();
     mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
@@ -407,7 +416,7 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     expect(fenetre.props.presentationStyle).toBe('fullScreen');
     expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
       headerVariant: 'focus',
-      stepCount: 6,
+      stepCount: 4, // DATESDABORD (23/10) : jour, heures et « Quand ? » sur une étape (6 → 4).
       subtitle: 'Pour AS Montrivage',
       title: 'Dans quelle installation ?',
     }));
