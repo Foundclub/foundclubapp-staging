@@ -39,6 +39,18 @@ const mockBoutons = [];
 
 // COLL-R-A7 (COL-005) : le formulaire importe le gabarit des tunnels (son plein écran) ; le fond
 // d'écran de ce gabarit (dégradé natif) reste hors de ce banc, comme dans les témoins d'écran.
+// R17Q2B (22/10) : « Quand ? » ouvre « Voir les dates retirées » dans une FEUILLE DU BAS (BottomModal) ;
+// sa vraie version charge @gorhom/bottom-sheet et le geste natif, illisibles ici : même doublure que R17Q2.vacances.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, footerComponent, isVisible },
+) {
+  return isVisible ? (
+    <>
+      {children}
+      {footerComponent}
+    </>
+  ) : null;
+});
 jest.mock(
   '@/components/templates/ScreenContainer',
   () => function ScreenContainerMock({ children }) { return children; },
