@@ -1,7 +1,8 @@
 import i18next from 'i18next';
 
 const DOCUMENT_FALLBACK_PREFIXES = [
-  'pièce jointe',
+  // P3-13 : le texte est comparé sans accents (normalizeString).
+  'piece jointe',
 ];
 
 const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/i;
