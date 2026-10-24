@@ -3045,6 +3045,7 @@ function EventDetails({ navigation, route }) {
                       )}
                       scoreAuteur={matchStatsPayload?.score?.recordedBy || null}
                       scoreDeLaFeuille={matchStatsReport
+                        && matchStatsReport?.scoreFor != null
                         && Number.isFinite(Number(matchStatsReport?.scoreFor))
                         ? `${matchStatsReport.scoreFor} - ${matchStatsReport.scoreAgainst}`
                         : ''}

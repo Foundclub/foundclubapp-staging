@@ -447,9 +447,11 @@ export const buildTeamParticipationSections = ({
   const externalMissing = uniqueUsers(
     missingUsers.filter((/** @type {User} */ user) => !knownTeamPlayerKeys.has(getUserKey(user))),
   );
-  const externalPending = pendingParticipations.filter(
-    (participation) => !knownTeamPlayerKeys.has(getUserKey(participation?.user)),
-  );
+  // P1-17 : un encadrant n est pas un participant externe.
+  const externalPending = pendingParticipations.filter((participation) => {
+    const key = getUserKey(participation?.user);
+    return !trainerKeys.has(key) && !knownTeamPlayerKeys.has(key);
+  });
   const externalHistorical = {
     missing: uniqueUsers(historicalExternal.missing || []),
     participating: uniqueUsers(historicalExternal.participating || []),

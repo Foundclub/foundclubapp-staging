@@ -717,6 +717,7 @@ export const createReccurrentEventPayload = (event) => {
     } else {
       // Fallback for Month or Week without specific days (legacy/simple mode)
       // Or if user didn't select days for week (should be validated, but safe fallback)
+      let occurrence = 0;
       while (currentDate <= endDate) {
         const formattedEvent = {
           ...event,
@@ -729,7 +730,11 @@ export const createReccurrentEventPayload = (event) => {
         if (event.recurrenceFrequency === 'week') {
           currentDate.setDate(currentDate.getDate() + (7 * interval));
         } else if (event.recurrenceFrequency === 'month') {
-          currentDate.setMonth(currentDate.getMonth() + interval);
+          // P1-04 : chaque mois depuis la date de départ, borné au dernier jour (31/01 → 28/02 → 31/03).
+          occurrence += 1;
+          const monthIndex = startDate.getMonth() + (occurrence * interval);
+          const lastDay = new Date(startDate.getFullYear(), monthIndex + 1, 0).getDate();
+          currentDate.setFullYear(startDate.getFullYear(), monthIndex, Math.min(startDate.getDate(), lastDay));
         }
       }
     }

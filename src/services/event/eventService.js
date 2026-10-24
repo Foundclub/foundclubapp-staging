@@ -1808,6 +1808,13 @@ export const exportEventParticipants = async (eventId, eventName, options = {}) 
       Authorization: `Bearer ${token}`,
     });
 
+    // P1-09 : une réponse d erreur (401, 500…) n est pas un classeur ; on efface le faux fichier.
+    const status = res.info?.()?.status;
+    if (status !== undefined && (status < 200 || status >= 300)) {
+      await ReactNativeBlobUtil.fs.unlink(res.path()).catch(() => {});
+      throw new Error(`Export participants failed with status ${status}`);
+    }
+
     // On Android, explicitly trying to show the file or notify
     if (Platform.OS === 'android') {
       try {
