@@ -58,7 +58,7 @@ const declarationFor = (signatory) => (
   || DECLARATION_BY_SIGNATORY[PARENTAL_DECLARATION_SIGNATORIES.MINOR_SELF]
 );
 
-const parseBirthdate = (value) => {
+export const parseBirthdate = (value) => {
   if (!value || typeof value !== 'string') return null;
 
   const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);

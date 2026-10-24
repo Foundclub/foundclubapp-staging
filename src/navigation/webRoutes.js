@@ -480,7 +480,7 @@ export const buildWebPath = (routeName, params = {}, options = {}) => {
 
   const pattern = getWebRoutePattern(routeName);
   const resolvedPath = replacePathParams(pattern, params);
-  const reservedKeys = Array.from(resolvedPath.matchAll(/:([A-Za-z0-9_]+)/g)).map((match) => match[1]);
+  const reservedKeys = Array.from(pattern.matchAll(/:([A-Za-z0-9_]+)/g)).map((match) => match[1]);
   const queryString = buildQueryString(params, reservedKeys.concat(['screen', 'params']));
   const relativePath = `${resolvedPath}${queryString}`;
 

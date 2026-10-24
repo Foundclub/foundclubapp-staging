@@ -4,7 +4,7 @@ import { enGB, fr } from 'date-fns/locale';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
-import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
+import { isBirthdateUnderAge, parseBirthdate } from '@/constants/parentalDeclaration';
 
 /**
  * « sam. 18 oct. » (P10-securite-ordi), dans la langue de l ecran.
@@ -95,7 +95,7 @@ export const isOpenReport = (report) => OPEN_STATUSES.includes(report?.status);
  * @returns {boolean} Vrai a partir de 15 ans ; faux si la date est inconnue.
  */
 export const canAttachReportPhoto = (birthdate) => (
-  Boolean(birthdate) && !isBirthdateUnderAge(birthdate, REPORT_PHOTO_MIN_AGE)
+  Boolean(parseBirthdate(birthdate)) && !isBirthdateUnderAge(birthdate, REPORT_PHOTO_MIN_AGE)
 );
 
 /**
