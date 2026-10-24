@@ -36,20 +36,20 @@ export function getShortAddress(addressDetails) {
   if (normalized?.postcode && normalized?.city) {
     return `${normalized.postcode} ${normalized.city}`;
   }
-  if (normalized?.label) {
-    return normalized.label;
-  }
-  if (normalized?.address) {
-    return normalized.address;
-  }
-
-  // Priority 0: Structured data (Clubs format preservation)
+  // Priority 0 (P3-17, avant label/address): Structured data (Clubs format preservation)
   if (parsed && typeof parsed === 'object') {
     const zip = parsed.zipCode || parsed.postcode;
     const { city } = parsed;
     if (zip && city) {
       return `${zip} ${city}`;
     }
+  }
+
+  if (normalized?.label) {
+    return normalized.label;
+  }
+  if (normalized?.address) {
+    return normalized.address;
   }
 
   if (!raw || typeof raw !== 'string') return '';
