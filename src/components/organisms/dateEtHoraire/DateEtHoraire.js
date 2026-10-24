@@ -198,6 +198,7 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   debut: Date | null,
  *   fin: Date | null,
  *   finApres?: string | null,
+ *   libelleDate?: string | null,
  *   libelleDebut?: string | null,
  *   libelleFin?: string | null,
  *   onDate: (date: Date) => void,
@@ -208,8 +209,9 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
  *   webZIndex?: number,
- * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDebut` /
- *   `libelleFin` : les mots de l ecran (« Début », « Fin » de la Ville) ; `finApres` et
+ * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDate`,
+ *   `libelleDebut`, `libelleFin` : les mots de l ecran (« Première date », « Début », « Fin » de
+ *   la Ville) ; `finApres` et
  *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
  *   `onRepetition(null)` revient a « Une seule fois » ; `webZIndex` : la couche de la feuille sur
  *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
@@ -220,6 +222,7 @@ function DateEtHoraire({
   debut,
   fin,
   finApres = null,
+  libelleDate = null,
   libelleDebut = null,
   libelleFin = null,
   onDate,
@@ -346,7 +349,7 @@ function DateEtHoraire({
       </Text>
 
       <DatePickerInput
-        label={t('eventEdit.fields.date.label')}
+        label={libelleDate || t('eventEdit.fields.date.label')}
         minimumDate={new Date()}
         onChange={(/** @type {string} */ text) => onDate(mergeDateInput(text, date))}
         value={toDateInputText(date)}

@@ -1932,6 +1932,7 @@ function SeasonSlotForm({
           debut={heureDuModele(debut)}
           fin={heureDuModele(fin)}
           finApres={debutLisible ? debut : null}
+          libelleDate={t('collectiviteCreneaux.quand.premiereDate', 'Première date')}
           libelleDebut={t('collectiviteCreneaux.attribuer.debut', 'Début')}
           libelleFin={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
           onDate={changerLaDateDuModele}

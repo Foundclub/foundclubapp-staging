@@ -162,6 +162,11 @@ describe('DATESDABORD — le bloc « Date et horaire » partagé', () => {
     expect(appels.repetition).toEqual([null]);
   });
 
+  test('le libellé de la date se règle (« Première date » à la Ville)', () => {
+    monter({ libelleDate: 'Première date' });
+    expect(mockDates[mockDates.length - 1].label).toBe('Première date');
+  });
+
   test('la couche de la feuille passe à BottomModal (le site, sous une fenêtre plein écran)', async () => {
     monter({ webZIndex: 10000 });
     act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());

@@ -279,6 +279,15 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(modele(arbre).props.webZIndex).toBe(10000);
   });
 
+  // DATESDABORD (24/10, « 2- B » du chef) : « Date de l'événement » se lisait mal pour un créneau
+  // attribué ; le champ dit « Première date » (le 1er jour, la répétition suit). ROUGE avant.
+  test('2 ter. le champ de date dit « Première date »', async () => {
+    const arbre = await monter();
+    await choisir(arbre, 'Montrivage Basket');
+    await avancer(arbre);
+    expect(arbre.root.findAll((n) => n.props.label === 'Première date' && typeof n.props.onChange === 'function')).toHaveLength(1);
+  });
+
   test('3. les choix sont des lignes à cocher ; un nom long n’est jamais coupé', async () => {
     const arbre = await monter();
     const ligne = choix(arbre, 'STADE MARSEILLAIS UNIVERSITE CLUB (SMUC)');
