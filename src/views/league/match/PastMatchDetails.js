@@ -476,8 +476,8 @@ function PastMatchDetails() {
               </View>
 
               <View style={styles.teamBlock}>
-                {opponent?.crest?.url ? (
-                  <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={styles.opponentCrest} />
+                {teamB?.crest?.url ? (
+                  <Image source={{ uri: getImageUrl(teamB.crest.url) }} style={styles.opponentCrest} />
                 ) : (
                   <TeamShield
                     imageUrl={teamB?.crest?.url}
