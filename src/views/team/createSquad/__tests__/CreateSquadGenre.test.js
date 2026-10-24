@@ -7,6 +7,9 @@ describe('sectionToLeagueGender', () => {
     expect(sectionToLeagueGender({ label: 'Mixte', value: 'def456' })).toBe('Mixed');
     expect(sectionToLeagueGender({ label: 'Masculin', value: 'ghi789' })).toBe('Male');
   });
+  it('accepte le code posé par l import d une équipe source', () => {
+    expect(sectionToLeagueGender({ label: 'Women', value: 'female' })).toBe('Female');
+  });
   it('replie sur Male sans section', () => {
     expect(sectionToLeagueGender(undefined)).toBe('Male');
   });
