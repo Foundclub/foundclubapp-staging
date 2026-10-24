@@ -43,3 +43,9 @@ it('P13-10 — en partagé, pas plus de joueurs confirmés que le total prévu m
   await act(async () => { champ().props.onChange({ target: { value: '50' } }); });
   expect(champ().props.value).toBe(9);
 });
+
+it('P13-09 — « 2026-10-14 » dans l’adresse = le 14/10, même à l’ouest d’UTC (lancer aussi avec TZ=America/New_York)', async () => {
+  const arbre = await monter();
+  const textes = arbre.root.findAll((n) => n.type === 'strong').map((n) => n.children.join(''));
+  expect(textes).toContain('14/10/2026');
+});
