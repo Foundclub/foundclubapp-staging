@@ -739,7 +739,8 @@ function Messaging({ navigation, route }) {
     // AE06 — le serveur sait combien de MESSAGES sont non lus (il relit le
     // curseur de lecture). Quand il le dit, il gagne sur le « lu » garde en
     // local, qui ne connait que le dernier message.
-    const serverUnreadCount = Number(chat?.unreadCount);
+    // P6-09 : `Number(null)` vaut 0 ; un compteur absent laisse décider le « lu » local.
+    const serverUnreadCount = chat?.unreadCount == null ? NaN : Number(chat.unreadCount);
     const hasServerUnreadCount = Number.isFinite(serverUnreadCount);
     const unreadBadge = formatThreadUnreadBadge(serverUnreadCount);
     const hasUnread = hasServerUnreadCount
