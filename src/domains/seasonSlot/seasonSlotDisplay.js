@@ -202,8 +202,10 @@ export const isTime = (valeur) => typeof valeur === 'string' && HEURE.test(valeu
  */
 export const seanceDeplacee = (seance, saisie) => {
   const brute = seance?.date;
-  // Un jour seul (« 2026-10-05 ») se lit en heure locale : new Date le lirait minuit UTC (la veille à l'ouest).
-  const jourEnregistre = brute ? format(JOUR_CIVIL.test(String(brute)) ? parseISO(String(brute)) : new Date(brute), 'yyyy-MM-dd') : '';
+  // Un jour seul (« 2026-10-05 ») se lit en heure locale : new Date le lirait
+  // minuit UTC (la veille à l'ouest).
+  const lue = JOUR_CIVIL.test(String(brute)) ? parseISO(String(brute)) : new Date(brute);
+  const jourEnregistre = brute ? format(lue, 'yyyy-MM-dd') : '';
   return (saisie?.facilityId || null) !== (seance?.facility?.documentId || null)
     || saisie?.jour !== jourEnregistre
     || saisie?.debut !== String(seance?.startTime || '').slice(0, 5)

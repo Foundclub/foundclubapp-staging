@@ -1,6 +1,5 @@
 /* eslint-disable max-len -- des phrases entieres de l ecran, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -156,15 +155,6 @@ const CARTE = {
   },
 };
 
-const aplatir = (/** @type {any} */ enfants) => {
-  if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
-  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
-  if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
-};
-const textes = (/** @type {any} */ noeud) => noeud
-  .findAllByType(Text)
-  .map((/** @type {any} */ texte) => aplatir(texte.props.children).trim());
 const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
   .findAll((/** @type {any} */ noeud) => noeud.props?.testID === id && typeof noeud.props?.onPress === 'function')[0];
 const attendre = async () => {
@@ -184,7 +174,6 @@ const appuyer = async (/** @type {any} */ noeud) => {
   });
   await attendre();
 };
-const champ = (/** @type {string} */ libelle) => mockInputProps.filter((props) => props.label === libelle).pop();
 const date = (/** @type {string} */ libelle) => mockDateProps.filter((props) => props.label === libelle).pop();
 const changer = async (/** @type {any} */ props, /** @type {string} */ valeur) => {
   await act(async () => {
@@ -242,8 +231,13 @@ afterEach(() => {
 test('BH13/P12-12 fermer depuis un signalement : occupé pendant l envoi', async () => {
   /** @type {any} */ (closeFacilityFromReport).mockImplementation(() => new Promise(() => {}));
   mockParams = {
-    collectiviteId: 'ville-montrivage', date: '2026-10-21', facilityId: 'gym-tilleuls',
-    facilityName: 'Gymnase des Tilleuls', mode: 'fermer', motif: 'travaux', reportId: 'sig-1',
+    collectiviteId: 'ville-montrivage',
+    date: '2026-10-21',
+    facilityId: 'gym-tilleuls',
+    facilityName: 'Gymnase des Tilleuls',
+    mode: 'fermer',
+    motif: 'travaux',
+    reportId: 'sig-1',
   };
   const arbre = await rendre();
   await changer(date('Au'), '23/10/2026');
