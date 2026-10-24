@@ -79,6 +79,8 @@ function TeamWizardActivity({ navigation }) {
   );
 
   useEffect(() => {
+    // P12-15 : une liste pas encore arrivee (ou en panne) ne dit rien du choix fait.
+    if (isLoading || hasError) return;
     if (allActivities.length === 1) {
       const singleSportId = allActivities[0].documentId;
       if (singleSportId && state.activities !== singleSportId) {
@@ -91,7 +93,7 @@ function TeamWizardActivity({ navigation }) {
       && !allActivities.some((activity) => activity.documentId === state.activities)) {
       dispatch({ payload: '', type: 'SET_ACTIVITY' });
     }
-  }, [allActivities, dispatch, state.activities]);
+  }, [allActivities, dispatch, hasError, isLoading, state.activities]);
 
   // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
   // `TeamWizardEmptyReferential` pour la mesure qui exclut le filtre et la panne.

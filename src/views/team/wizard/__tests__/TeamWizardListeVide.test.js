@@ -469,3 +469,34 @@ describe('W06 — aucune etape du tunnel ne laisse l utilisateur sans action', (
     expect(gabarit.isNextDisabled).toBe(true);
   });
 });
+
+describe('BH12 P12-15 — le sport choisi survit au chargement de la liste', () => {
+  test('pendant le chargement, le sport deja choisi n est pas efface', () => {
+    /** @type {any} */
+    let etat = null;
+    /**
+     * Lit l'etat du tunnel.
+     * @returns {null} Rien.
+     */
+    function Lecteur() {
+      etat = useTeamWizard().state;
+      return null;
+    }
+    mockReferentiels.activities = { data: undefined, error: null, isLoading: true };
+    act(() => {
+      arbre = renderer.create(createElement(
+        TeamWizardProvider,
+        null,
+        createElement(PriseDeCourant),
+        createElement(Lecteur),
+        createElement(TeamWizardActivity, { navigation: /** @type {any} */ ({ getParent: () => null, navigate: jest.fn(), reset: jest.fn() }) }),
+      ));
+    });
+    act(() => {
+      semer({ payload: { clubId: 'club-1' }, type: 'INIT_FROM_PARAMS' });
+      semer({ payload: 'act-1', type: 'SET_ACTIVITY' });
+    });
+
+    expect(etat.activities).toBe('act-1');
+  });
+});
