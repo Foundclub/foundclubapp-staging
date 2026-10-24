@@ -557,7 +557,10 @@ function GuideOffersRecap({ navigation }) {
           }),
         };
       });
-    const selectedTierId = isClub ? clubTier : teamSlotCount;
+    // BH01/P14-03 : la pilule allumee est le palier ACHETE (repli si `clubTier` est bloque ou absent).
+    const selectedTierId = isClub
+      ? (selectedClubEntry ? getCatalogEntryClubTier(selectedClubEntry) : clubTier)
+      : teamSlotCount;
     const cardEntry = isClub ? selectedClubEntry : selectedTeamEntry;
     const cardPriceAmount = getEntryPriceAmountLabel(cardEntry);
     // Equivalence mensuelle : uniquement sur l'ancre annuelle.
