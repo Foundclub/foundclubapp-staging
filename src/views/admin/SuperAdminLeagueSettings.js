@@ -24,14 +24,17 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
-const formatInputDate = (value) => {
+export const formatInputDate = (value) => {
   if (!value) return '';
   const parsedDate = new Date(String(value));
   if (Number.isNaN(parsedDate.getTime())) return '';
-  return parsedDate.toISOString().slice(0, 16);
+  // Composantes locales : parseInputDate relit la saisie en heure locale (BH09 P9-01).
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${parsedDate.getFullYear()}-${pad(parsedDate.getMonth() + 1)}-${pad(parsedDate.getDate())}`
+    + `T${pad(parsedDate.getHours())}:${pad(parsedDate.getMinutes())}`;
 };
 
-const parseInputDate = (value) => {
+export const parseInputDate = (value) => {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
   const parsedDate = new Date(trimmed);
