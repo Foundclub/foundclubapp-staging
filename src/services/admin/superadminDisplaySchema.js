@@ -40,7 +40,7 @@ const OVERRIDE_RULES = [
   {
     badgeFields: ['role', 'status', 'isActive'],
     keyFields: ['email', 'phoneNumber', 'city', 'section', 'preferredSport'],
-    match: (uid = '') => uid.includes('user.'),
+    match: (uid = '') => uid.includes('user.') || uid.endsWith('.user'),
     titleFields: ['fullname', 'firstname', 'username', 'email'],
   },
   {
@@ -133,7 +133,7 @@ const normalizeComparisonValue = (/** @type {any} */ value) => normalizeString(v
 
 const isDateLikeField = (/** @type {string} */ key = '') => (
   /date$/i.test(key)
-  || /at$/i.test(key)
+  || /(At|_at)$/.test(key)
   || /time$/i.test(key)
 );
 
@@ -172,16 +172,17 @@ const getScalarAttributeNames = (/** @type {any[]} */ attributes = []) => attrib
 const getListFieldNames = (/** @type {string} */ uid, /** @type {any[]} */ attributes = []) => {
   const scalarNames = getScalarAttributeNames(attributes);
   const rule = getRule(uid);
+  // BH14 P2-16 : les champs système en tête, pour que slice(0, 18) ne les coupe jamais.
   const selected = [
+    'documentId',
+    'createdAt',
+    'updatedAt',
     ...DEFAULT_TITLE_FIELDS,
     ...(rule?.titleFields || []),
     ...DEFAULT_KEY_FIELDS,
     ...(rule?.keyFields || []),
     ...DEFAULT_BADGE_FIELDS,
     ...(rule?.badgeFields || []),
-    'createdAt',
-    'updatedAt',
-    'documentId',
   ]
     .map((field) => normalizeString(field))
     .filter((field) => (
