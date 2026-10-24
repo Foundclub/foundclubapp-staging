@@ -242,7 +242,7 @@ function SectionLicenseCard({
  *
  * @param root0
  * @param root0.assignment
- * @param root0.isBusy
+ * @param {boolean} root0.isBusy - Une validation ou un rejet est en cours.
  * @param root0.onApprove
  * @param root0.onOpen
  * @param root0.onReject

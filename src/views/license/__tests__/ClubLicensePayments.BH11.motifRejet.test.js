@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import '@/theme/strings';
 
 import { TextInput } from 'react-native';
@@ -45,7 +46,10 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @typ
 jest.mock('@/components/atoms/marqueeText/MarqueeText', () => function MarqueeMock() { return null; });
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function ModalMock({ children }) { return children; });
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenMock({ children }) { return children; });
-jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonLoaderMock() { return null; });
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
 jest.mock('react-native-linear-gradient', () => function GradientMock() { return null; });
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
@@ -67,7 +71,11 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-/** @param {string} titre */
+/**
+ * Le dernier bouton rendu portant ce titre.
+ * @param {string} titre - Le titre exact.
+ * @returns {any} Ses props.
+ */
 const dernier = (titre) => [...mockBoutons].reverse().find((props) => props.title === titre);
 
 test('BH11 P5-21 — « Rejeter » reste inactif tant que le motif est vide', () => {

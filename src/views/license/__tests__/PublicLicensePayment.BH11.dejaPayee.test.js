@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import '@/theme/strings';
 
 import renderer, { act } from 'react-test-renderer';
@@ -31,7 +32,10 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @typ
 });
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function ModalMock({ children }) { return children; });
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenMock({ children }) { return children; });
-jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonLoaderMock() { return null; });
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
 jest.mock('react-native-linear-gradient', () => function GradientMock() { return null; });
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;

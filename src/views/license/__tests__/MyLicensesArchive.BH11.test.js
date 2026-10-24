@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import '@/theme/strings';
 
 import renderer, { act } from 'react-test-renderer';
@@ -15,7 +16,10 @@ jest.mock('@/services/license/licenseQueries', () => ({ useMyLicenses: () => moc
 jest.mock('@/platform/media/downloadRemoteFile', () => ({ downloadRemoteFile: jest.fn() }));
 jest.mock('@/utils/mediaUrl', () => ({ resolveMediaUrl: (/** @type {string} */ url) => url }));
 jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }) }));
-jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonLoaderMock() { return null; });
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenMock({ children }) { return children; });
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;

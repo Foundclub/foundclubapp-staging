@@ -1,9 +1,13 @@
+/* eslint-disable max-len */
 import { euroToCents } from '../CMLicensesDashboard';
 import { isoDateFromEventValue } from '../eventCampaignDefaults';
 import { canValidateAssignmentPayment } from '../licenseDesignSystem';
 import { lastReceiptOf } from '../MyLicensesArchive';
 
-jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonLoaderMock() { return null; });
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
 jest.mock('@/components/templates/ScreenContainer', () => function ScreenMock() { return null; });
 jest.mock('react-native-linear-gradient', () => function GradientMock() { return null; });
 jest.mock('@/services/license/licenseQueries', () => ({}));

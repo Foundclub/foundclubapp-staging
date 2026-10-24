@@ -124,6 +124,8 @@ function InfoRow({ label, value }) {
 /**
  *
  * @param root0
+ * @param {boolean} [root0.isBusy] - Un envoi est en cours.
+ * @param {number | null} [root0.maxCents] - Plafond du montant (remboursement).
  * @param root0.onClose
  * @param root0.onSubmit
  * @param root0.title

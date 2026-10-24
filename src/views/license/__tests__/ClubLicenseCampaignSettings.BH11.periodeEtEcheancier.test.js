@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import renderer, { act } from 'react-test-renderer';
 
 import ClubLicenseCampaignSettings from '../ClubLicenseCampaignSettings';
@@ -210,10 +211,14 @@ const {
 //   P5-13 : une campagne a dates libres chargee APRES le premier rendu rouvre en « Dates libres » ;
 //   P5-01 : changer le montant regenere l echeancier en plusieurs fois.
 
-/** @returns {any} la derniere fonction d enregistrement rangee par l ecran */
+/**
+ * La derniere fonction d enregistrement.
+ * @returns {any} la derniere fonction d enregistrement rangee par l ecran
+ */
 const derniereSauvegarde = () => mockFonctionsDeMutation[mockFonctionsDeMutation.length - 2];
 
 /**
+ * Monte l ecran de reglages.
  * @param {any} params - Parametres de route.
  * @returns {Promise<any>} l arbre monte
  */

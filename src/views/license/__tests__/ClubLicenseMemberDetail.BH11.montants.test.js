@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -120,17 +121,35 @@ const monter = () => {
     arbre = renderer.create(
       <ClubLicenseMemberDetail
         navigation={{ goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }}
-        route={{ params: { assignmentId: 'assign-BH11', campaignId: 'camp-BH11', canManageLicenses: true, scope: 'manager' } }}
+        route={{
+          params: {
+            assignmentId: 'assign-BH11', campaignId: 'camp-BH11', canManageLicenses: true, scope: 'manager',
+          },
+        }}
       />,
     );
   });
 };
 
-/** @param {string} titre */
+/**
+ * Le dernier bouton rendu portant ce titre.
+ * @param {string} titre - Le titre exact.
+ * @returns {any} Ses props.
+ */
 const dernierBouton = (titre) => [...mockBoutons].reverse().find((props) => props.title === titre);
-/** @param {string} titre */
-const appuyer = (titre) => act(() => { dernierBouton(titre).onPress(); });
-/** @param {string} valeur */
+/**
+ * Appuie sur le dernier bouton portant ce titre.
+ * @param {string} titre - Le titre exact.
+ * @returns {void}
+ */
+const appuyer = (titre) => act(() => {
+  dernierBouton(titre).onPress();
+});
+/**
+ * Tape un montant dans le champ des montants.
+ * @param {string} valeur - Le texte saisi.
+ * @returns {void}
+ */
 const saisirMontant = (valeur) => act(() => {
   arbre.root.findAll((n) => n.type === TextInput && n.props.keyboardType === 'decimal-pad')[0]
     .props.onChangeText(valeur);
