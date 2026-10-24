@@ -57,6 +57,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     }),
     BottomSheetScrollView: Vue,
     BottomSheetView: Vue,
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 

@@ -48,6 +48,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
         return reactActuel.createElement(VueRN, { testID: 'feuille', ...props }, props.children);
       },
     ),
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
     // La zone que la bibliothèque MESURE pour tailler la feuille.
     BottomSheetScrollView: (/** @type {any} */ props) => reactActuel.createElement(
       VueRN,

@@ -1,5 +1,6 @@
 import {
   BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView, BottomSheetView,
+  useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@sbaiahmed1/react-native-blur';
 import {
@@ -26,6 +27,41 @@ import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 // l'animation de sortie qu'on vient d'interrompre. Calée sur la même échelle
 // que la reprise de présentation ci-dessous (260 ms), avec de la marge.
 const STALE_DISMISS_WINDOW_MS = 400;
+
+// ⌨️ CLAVREGLE (23/10) — LA RÈGLE DU CLAVIER, POUR TOUTES LES FEUILLES : un champ touché se place
+// au-dessus du clavier. `@gorhom/bottom-sheet` 5.2.4 ne suit le clavier que si un champ est
+// DÉCLARÉ (`animatedKeyboardState.target`) : sinon l'annonce du clavier est mise de côté, jamais
+// appliquée (hooks/useAnimatedKeyboard). Seul son `BottomSheetTextInput` se déclare, à son focus ;
+// nos feuilles portent des `TextInput` simples (le champ commun ne prend celui de la bibliothèque
+// qu'avec `useBottomSheetInput`, et sur Android seulement). Sur iPhone, AUCUNE feuille ne remontait
+// (VU par Adel, 2.6.80, « Nommer l'adversaire », malgré CLAVADV). Le focus d'un TextInput remonte
+// l'arbre : la feuille déclare elle-même tout champ qu'elle contient, en-tête et pied compris,
+// comme le fait `BottomSheetTextInput`. Témoin : __tests__/BottomModalCLAVREGLE.clavier.test.js.
+/**
+ * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
+ * @param {object} props
+ * @param {React.ReactNode} props.children
+ * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
+ * @returns {React.ReactElement}
+ */
+function ChampsSuivisParLeClavier({ children, style }) {
+  const interne = useBottomSheetInternal(true);
+  const declarer = useCallback((/** @type {any} */ event) => {
+    const target = event?.nativeEvent?.target;
+    if (!interne || !target) return;
+    interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target }));
+  }, [interne]);
+  const oublier = useCallback((/** @type {any} */ event) => {
+    const target = event?.nativeEvent?.target;
+    if (!interne || !target || interne.animatedKeyboardState.get().target !== target) return;
+    interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target: undefined }));
+  }, [interne]);
+  return (
+    <View onBlurCapture={oublier} onFocusCapture={declarer} style={style}>
+      {children}
+    </View>
+  );
+}
 
 /**
  * Bottom modal component using @gorhom/bottom-sheet.
@@ -380,7 +416,7 @@ function BottomModal({
           />
         </TouchableOpacity>
       )}
-      <View style={[snapPoints ? Alignments.fill : undefined]}>
+      <ChampsSuivisParLeClavier style={[snapPoints ? Alignments.fill : undefined]}>
         {/* Fixed Header */}
         {headerComponent && (
           <View
@@ -449,7 +485,7 @@ function BottomModal({
             {footerComponent}
           </View>
         )}
-      </View>
+      </ChampsSuivisParLeClavier>
     </BottomSheetModal>
   );
 }

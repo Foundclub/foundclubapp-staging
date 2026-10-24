@@ -63,6 +63,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
       { ...props, testID: 'zone-fixe' },
       props.children,
     ),
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 

@@ -83,6 +83,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
         return reactActuel.createElement(VueRN, { testID: 'feuille' }, props.children);
       },
     ),
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
     // Comme `createBottomSheetScrollableComponent` : le style de contenu passe
     // par la fonction de la bibliotheque avant d'atteindre la vue native.
     BottomSheetScrollView: (/** @type {any} */ props) => {
