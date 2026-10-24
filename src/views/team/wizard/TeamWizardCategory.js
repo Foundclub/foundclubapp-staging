@@ -46,9 +46,11 @@ function TeamWizardCategory({ navigation }) {
   const dedupedCategories = (() => {
     const seen = new Set();
     return (Array.isArray(categories) ? categories : []).filter((category) => {
-      const key = String(category?.documentId || category?.name || '').trim().toLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
+      const id = String(category?.documentId || '').trim().toLowerCase();
+      const name = String(category?.name || '').trim().toLowerCase();
+      if ((!id && !name) || (id && seen.has(`id:${id}`)) || (name && seen.has(`nom:${name}`))) return false;
+      if (id) seen.add(`id:${id}`);
+      if (name) seen.add(`nom:${name}`);
       return true;
     });
   })();

@@ -500,3 +500,15 @@ describe('BH12 P12-15 — le sport choisi survit au chargement de la liste', () 
     expect(etat.activities).toBe('act-1');
   });
 });
+
+describe('BH12 P12-17 — categories en double', () => {
+  test('deux categories de meme nom (ids differents) ne s affichent qu une fois', () => {
+    mockReferentiels.categories = {
+      data: [{ documentId: 'cat-1', name: 'U15' }, { documentId: 'cat-2', name: 'U15' }],
+      error: null,
+      isLoading: false,
+    };
+    const { textes } = afficherLEtape(TeamWizardCategory);
+    expect(textes.filter((texte) => texte === 'U15').length).toBe(1);
+  });
+});
