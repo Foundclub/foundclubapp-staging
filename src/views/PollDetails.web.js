@@ -145,6 +145,11 @@ function PollDetails({ navigation, route }) {
   const handleVote = useCallback(async (optionId) => {
     const currentUserId = String(userData?.documentId || '').trim();
     if (!currentUserId || !poll || poll.type !== 'poll' || !optionId || !effectiveMessageId) return;
+    // P6-15 : même garde que le mobile, le serveur ne connaît pas encore un `temp-`.
+    if (String(effectiveMessageId).startsWith('temp-')) {
+      window.alert(t('conversation.poll.details.syncInProgress', 'Le sondage est en cours de synchronisation.'));
+      return;
+    }
 
     const optimistic = applyOptimisticPollVote({
       currentUserId,

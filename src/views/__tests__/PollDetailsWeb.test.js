@@ -325,3 +325,23 @@ describe('le site rend le detail d un sondage', () => {
     expect(textOf(root)).toContain('Option 1');
   });
 });
+
+describe('BH04 / P6-15 — sondage encore en synchronisation', () => {
+  test('voter sur un identifiant temp- prévient au lieu d appeler le serveur', async () => {
+    const alerte = jest.fn();
+    const ancienne = window.alert;
+    window.alert = alerte;
+    mockChatQuery.data = { participants: PARTICIPANTS };
+    mockMessagesQuery.data = { pages: [{ data: [{ composition: buildPoll(), documentId: 'temp-1' }] }] };
+    mockUseAuth.mockReturnValue({ userData: { documentId: 'user-1', firstname: 'Adel', lastname: 'F' } });
+    act(() => {
+      mounted = renderer.create(
+        <PollDetailsWeb navigation={{ goBack: jest.fn() }} route={{ params: { chatId: CHAT_ID, messageId: 'temp-1' } }} />,
+      );
+    });
+    await click(mounted.root, 'Voter');
+    window.alert = ancienne;
+    expect(mockVotePoll).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith('Le sondage est en cours de synchronisation.');
+  });
+});
