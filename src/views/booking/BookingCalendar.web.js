@@ -565,7 +565,11 @@ function BookingCalendar({ navigation, route }) {
                     <input
                       max={Math.max(1, targetPlayers - 1)}
                       min={1}
-                      onChange={(event) => setCurrentPlayers(Math.max(1, Number(event.target.value || 1)))}
+                      // BH16 P13-10 : jamais plus que le total prévu moins un.
+                      onChange={(event) => setCurrentPlayers(Math.max(1, Math.min(
+                        Number(event.target.value || 1),
+                        targetPlayers - 1,
+                      )))}
                       style={fieldStyle}
                       type="number"
                       value={currentPlayers}
