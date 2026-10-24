@@ -65,7 +65,7 @@ export const buildSearchMapHostMessage = (mapId, payload) => ({
 });
 
 export const buildSearchMapSyncScript = (mapId, payload) => {
-  const encodedPayload = encodeURIComponent(JSON.stringify(payload));
+  const encodedPayload = encodeURIComponent(JSON.stringify(payload)).replace(/'/g, '%27');
   return `
     (function() {
       var nextState = JSON.parse(decodeURIComponent('${encodedPayload}'));
@@ -82,7 +82,7 @@ export const buildSearchMapSyncScript = (mapId, payload) => {
 };
 
 export const buildSearchMapCommandScript = (mapId, command) => {
-  const encodedCommand = encodeURIComponent(JSON.stringify(command));
+  const encodedCommand = encodeURIComponent(JSON.stringify(command)).replace(/'/g, '%27');
   return `
     (function() {
       var nextCommand = JSON.parse(decodeURIComponent('${encodedCommand}'));

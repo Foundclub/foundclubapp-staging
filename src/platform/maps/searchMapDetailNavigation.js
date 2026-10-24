@@ -28,6 +28,10 @@ export const getSearchMapDetailTarget = ({
     }
 
     if (Reflect.get(rawItem || {}, '_type') === 'multisport') {
+      // P4-02 : la fiche multisport est privée ; hors connexion, la connexion d'abord.
+      if (!isAuthenticated) {
+        return { name: RouteNames.PublicAuthStack, params: { screen: RouteNames.Login } };
+      }
       return {
         name: RouteNames.MultisportClubDetails,
         params: { cmId: clubId },
