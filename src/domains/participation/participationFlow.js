@@ -309,13 +309,28 @@ const buildEventFlow = (entity, context) => {
   }
 
   if (detectionSlotsCount > 0) {
-    return {
-      actionLabel: 'Participer',
-      blockedReason: isPlayer ? '' : i18next.t(
+    // P1-06 : pas joueur, déjà répondu, date passée — dans cet ordre, toujours avec un motif.
+    let detectionBlockedReason = '';
+    if (!isPlayer) {
+      detectionBlockedReason = i18next.t(
         'participationFlow.onlyPlayersCanApplyTo',
         'Seuls les joueurs peuvent candidater à cette détection.',
-      ),
-      canAct: isPlayer && !alreadyHandled,
+      );
+    } else if (alreadyHandled) {
+      detectionBlockedReason = i18next.t(
+        'participationFlow.youVeAlreadyAnsweredThis',
+        'Tu as déjà répondu à cet événement.',
+      );
+    } else if (!isFutureDatedEntity(entity)) {
+      detectionBlockedReason = i18next.t(
+        'participationFlow.thisEventIsAlreadyOver',
+        'Cet événement est déjà passé.',
+      );
+    }
+    return {
+      actionLabel: 'Participer',
+      blockedReason: detectionBlockedReason,
+      canAct: !detectionBlockedReason,
       confirmLabel: 'Participer',
       kind: ParticipationFlowKind.detectionSlot,
       submitMode: 'detection-slot-picker',
