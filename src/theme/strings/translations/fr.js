@@ -4800,6 +4800,10 @@ export default {
         message: 'Crée au moins une campagne avant de relancer une synchronisation de secours.',
         title: 'Aucune campagne',
       },
+      rejectPayment: {
+        message: 'La déclaration sera refusée et le membre devra payer à nouveau.',
+        title: 'Rejeter ce paiement ?',
+      },
       resync: {
         // eslint-disable-next-line max-len
         message: 'Opération de maintenance: les cotisations manquantes seront rattachées sans dupliquer les dossiers déjà existants.',

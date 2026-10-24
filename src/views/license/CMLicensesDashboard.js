@@ -1,7 +1,7 @@
 // @ts-nocheck
 /* eslint-disable no-nested-ternary, object-curly-newline, perfectionist/sort-imports, perfectionist/sort-named-imports */
 import i18next from 'i18next';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -242,12 +242,14 @@ function SectionLicenseCard({
  *
  * @param root0
  * @param root0.assignment
+ * @param root0.isBusy
  * @param root0.onApprove
  * @param root0.onOpen
  * @param root0.onReject
  */
 function ReviewCard({
   assignment,
+  isBusy,
   onApprove,
   onOpen,
   onReject,
@@ -299,6 +301,7 @@ function ReviewCard({
           variant="Secondary"
         />
         <Button
+          disabled={isBusy}
           onPress={onReject}
           style={{ flex: 1 }}
           title={t(
@@ -308,6 +311,8 @@ function ReviewCard({
           variant="Secondary"
         />
         <Button
+          disabled={isBusy}
+          isLoading={isBusy}
           onPress={onApprove}
           style={{ flex: 1 }}
           title={t(
@@ -347,6 +352,31 @@ function CMLicensesDashboard({ navigation, route }) {
   const bulkGenerateMutation = useLicenseMutation((payload) => bulkGenerateCMLicenseAssignments(cmId, payload), cmId);
   const approveMutation = useLicenseMutation((paymentId) => approveExternalLicensePayment(paymentId), cmId);
   const rejectMutation = useLicenseMutation((paymentId) => rejectExternalLicensePayment(paymentId, { reason: 'Rejete depuis le cockpit multisport' }), cmId);
+  // BH11 P5-10 : une seule revue a la fois (double appui), et un rejet confirme.
+  const reviewEnCours = useRef(false);
+  const runReview = useCallback((mutation, paymentId) => {
+    if (!paymentId || reviewEnCours.current) return;
+    reviewEnCours.current = true;
+    mutation.mutate(paymentId, { onSettled: () => { reviewEnCours.current = false; } });
+  }, []);
+  const confirmReject = useCallback((paymentId) => {
+    if (!paymentId) return;
+    Alert.alert(
+      t('cmLicensesDashboard.alerts.rejectPayment.title', 'Rejeter ce paiement ?'),
+      t(
+        'cmLicensesDashboard.alerts.rejectPayment.message',
+        'La déclaration sera refusée et le membre devra payer à nouveau.',
+      ),
+      [
+        { style: 'cancel', text: t('cmLicensesDashboard.alerts.cancel', 'Annuler') },
+        {
+          onPress: () => runReview(rejectMutation, paymentId),
+          style: 'destructive',
+          text: t('cmLicensesDashboard.reviewCard.reject', 'Rejeter'),
+        },
+      ],
+    );
+  }, [rejectMutation, runReview, t]);
 
   const dashboard = dashboardQuery.data || {};
   const totals = dashboard.totals || {};
@@ -678,10 +708,11 @@ function CMLicensesDashboard({ navigation, route }) {
             return (
               <ReviewCard
                 assignment={assignment}
+                isBusy={approveMutation.isPending || rejectMutation.isPending}
                 key={String(assignment?.documentId || assignment?.id)}
-                onApprove={() => payment?.id && approveMutation.mutate(payment.id)}
+                onApprove={() => runReview(approveMutation, payment?.id)}
                 onOpen={() => openAssignment(assignment)}
-                onReject={() => payment?.id && rejectMutation.mutate(payment.id)}
+                onReject={() => confirmReject(payment?.id)}
               />
             );
           })}

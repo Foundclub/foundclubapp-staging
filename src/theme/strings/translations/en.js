@@ -4461,6 +4461,10 @@ export default {
         message: 'Create at least one campaign before running a backup sync.',
         title: 'No campaign',
       },
+      rejectPayment: {
+        message: 'The declaration will be refused and the member will have to pay again.',
+        title: 'Reject this payment?',
+      },
       resync: {
         message: 'Maintenance operation: missing fees will be attached without duplicating existing records.',
         title: 'Resync campaigns',
