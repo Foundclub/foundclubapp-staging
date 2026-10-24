@@ -16518,6 +16518,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Télécharger le reçu',
+      remaining: 'reste {{amount}} à payer',
       settled: 'soldée',
       settledOn: 'soldée le {{settledOn}}',
     },

@@ -15799,6 +15799,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Download the receipt',
+      remaining: '{{amount}} left to pay',
       settled: 'settled',
       settledOn: 'settled on {{settledOn}}',
     },

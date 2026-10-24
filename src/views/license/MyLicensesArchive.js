@@ -18,6 +18,7 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -131,6 +132,29 @@ function MyLicensesArchive({ navigation }) {
     );
   }
 
+  // BH11 P5-23 : une panne n est pas « aucune saison » ; memes mots que « Mes cotisations ».
+  if (query.isError) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        <MemberTopBar onBack={goBack} title={t('myLicensesArchive.title', 'Saisons passées')} />
+        <LicenseEmptyState
+          action={(
+            <Button
+              onPress={() => query.refetch()}
+              title={t('myLicenses.error.retry', 'Réessayer')}
+              variant="Secondary"
+            />
+          )}
+          description={t(
+            'myLicenses.error.description',
+            'Impossible de charger tes cotisations pour le moment.',
+          )}
+          title={t('myLicenses.error.title', 'Cotisations indisponibles')}
+        />
+      </ScreenContainer>
+    );
+  }
+
   if (!seasons.length) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
@@ -163,20 +187,30 @@ function MyLicensesArchive({ navigation }) {
               const currency = currencyOf(assignment);
               const receipt = lastReceiptOf(assignment);
               const settledOn = settledDateOf(assignment);
+              const remainingCents = Number(assignment.amountRemainingCents) || 0;
+              let settledLabel = settledOn ? t(
+                'myLicensesArchive.row.settledOn',
+                'soldée le {{settledOn}}',
+                { settledOn, ...SANS_ECHAPPEMENT },
+              ) : t(
+                'myLicensesArchive.row.settled',
+                'soldée',
+              );
+              // BH11 P5-15 : archivee ne veut pas dire soldee.
+              if (remainingCents > 0) {
+                settledLabel = t(
+                  'myLicensesArchive.row.remaining',
+                  'reste {{amount}} à payer',
+                  { amount: formatLicenseMoney(remainingCents, currency), ...SANS_ECHAPPEMENT },
+                );
+              }
               return (
                 <MemberRow
                   key={licenseKeyOf(assignment)}
                   // ⛔ Pas de pastille, pas de barre : tout est regle.
                   state={[
                     formatLicenseMoney(assignment.amountDueCents, currency),
-                    settledOn ? t(
-                      'myLicensesArchive.row.settledOn',
-                      'soldée le {{settledOn}}',
-                      { settledOn, ...SANS_ECHAPPEMENT },
-                    ) : t(
-                      'myLicensesArchive.row.settled',
-                      'soldée',
-                    ),
+                    settledLabel,
                   ].join(' · ')}
                   title={`${clubNameOf(assignment)} · ${campaignTitleOf(assignment)}`}
                   trailing={receipt ? (
