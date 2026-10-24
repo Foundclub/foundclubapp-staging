@@ -103,7 +103,7 @@ const getDefaultScopeForUser = (userData) => {
 
 export const normalizeScopeRecord = (scopeRecord, userData) => {
   const fallback = getDefaultScopeForUser(userData);
-  const activeMode = ['section', 'multisport'].includes(scopeRecord?.activeMode)
+  const activeMode = ['multisport', 'section'].includes(scopeRecord?.activeMode)
     ? scopeRecord.activeMode
     : fallback.activeMode;
   const activeMultisportClubId = resolvePreferredMultisportClubId(

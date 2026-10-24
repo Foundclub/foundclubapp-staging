@@ -14,6 +14,7 @@ describe('BH03 · P11-11 — isPendingRequestForClub', () => {
   });
 
   it('une demande sans identifiant se reconnait encore a son nom', () => {
-    expect(isPendingRequestForClub({ clubName: ' as saint-pierre ' }, 'club-y', 'AS Saint-Pierre')).toBe(true);
+    const demandeSansId = { clubName: ' as saint-pierre ' };
+    expect(isPendingRequestForClub(demandeSansId, 'club-y', 'AS Saint-Pierre')).toBe(true);
   });
 });

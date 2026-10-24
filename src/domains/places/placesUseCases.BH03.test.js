@@ -3,7 +3,8 @@ import { getGeohashForPointAndRadius } from './placesUseCases';
 // BH03 · P11-14 — sans ville choisie, des coordonnees NaN donnaient un geohash
 // « 00000 » qui filtrait la liste des clubs.
 describe('BH03 · P11-14 — coordonnees invalides', () => {
-  test.each([[NaN, NaN], [undefined, 2.35], [48.85, NaN]])('(%p, %p) ne donne aucun geohash', (lat, lon) => {
+  const invalides = [[NaN, NaN], [undefined, 2.35], [48.85, NaN]];
+  test.each(invalides)('(%p, %p) ne donne aucun geohash', (lat, lon) => {
     // @ts-expect-error entree invalide voulue
     expect(getGeohashForPointAndRadius(lat, lon, 20)).toBe('');
   });

@@ -37,9 +37,15 @@ const { getClubs } = require('./clubService');
 // des clubs multisports NON filtres, et gonflait `pagination.total`.
 const CLUB = {
   address: { city: 'Marseille', label: '1 rue du Stade' },
-  clubPartner: true, documentId: 'club-1', id: 1, maxTeamNumber: 3, name: 'SMUC Football',
+  clubPartner: true,
+  documentId: 'club-1',
+  id: 1,
+  maxTeamNumber: 3,
+  name: 'SMUC Football',
 };
-const PAGINATION = { page: 1, pageCount: 1, pageSize: 7, total: 1 };
+const PAGINATION = {
+  page: 1, pageCount: 1, pageSize: 7, total: 1,
+};
 
 describe('BH03 · P1-11 — getClubs filtre', () => {
   beforeEach(() => {

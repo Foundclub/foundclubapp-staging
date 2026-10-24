@@ -132,8 +132,12 @@ describe('BH03 · P11-19 — resolveMatchSheetTarget', () => {
     const { resolveMatchSheetTarget } = require('../stats/ProfileStatsForViewer');
     const stats = {
       recentMatches: [
-        { documentId: 'match-seniors', sourceType: 'event', sport: 'football', teamName: 'Seniors' },
-        { documentId: 'match-u15', sourceType: 'event', sport: 'football', teamName: 'U15' },
+        {
+          documentId: 'match-seniors', sourceType: 'event', sport: 'football', teamName: 'Seniors',
+        },
+        {
+          documentId: 'match-u15', sourceType: 'event', sport: 'football', teamName: 'U15',
+        },
       ],
       scope: { teams: [{ documentId: 'u15', name: 'U15' }], viewer: 'coach' },
     };

@@ -4,7 +4,8 @@ import { profileSchema } from '../profileFormContract';
 // `phoneNumber: Joi.string()` refusait '' et null.
 describe('BH03 · P11-08 — telephone vide', () => {
   test.each(['', null])('phoneNumber %p est accepte', (phoneNumber) => {
-    const { error } = profileSchema.validate({ firstname: 'Hugo', lastname: 'Lemaire', phoneNumber });
+    const profil = { firstname: 'Hugo', lastname: 'Lemaire', phoneNumber };
+    const { error } = profileSchema.validate(profil);
     expect(error).toBeUndefined();
   });
 });

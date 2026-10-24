@@ -13,7 +13,8 @@ export const isPendingRequestForClub = (requestItem, clubId, clubName) => {
   const requestClubId = String(requestItem?.searchContext?.clubId || '').trim();
   if (requestClubId) return Boolean(currentClubId && currentClubId === requestClubId);
   const currentClubName = normalizeComparableValue(clubName);
-  return Boolean(currentClubName && normalizeComparableValue(requestItem?.clubName) === currentClubName);
+  const requestClubName = normalizeComparableValue(requestItem?.clubName);
+  return Boolean(currentClubName && requestClubName === currentClubName);
 };
 
 export default isPendingRequestForClub;

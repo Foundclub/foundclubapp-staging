@@ -42,7 +42,9 @@ describe('BH03 · P11-19 — claimClub garde la raison du refus', () => {
     mockPost.mockRejectedValueOnce({
       message: 'Request failed with status code 403',
       response: {
-        data: { error: { code: 'CLUB_ALREADY_CLAIMED', details: { scope: 'claim' }, message: 'Forbidden' } },
+        data: {
+          error: { code: 'CLUB_ALREADY_CLAIMED', details: { scope: 'claim' }, message: 'Forbidden' },
+        },
         status: 403,
       },
     });

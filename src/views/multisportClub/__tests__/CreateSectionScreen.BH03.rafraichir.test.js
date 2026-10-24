@@ -23,10 +23,15 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/components/atoms/button/Button', () => () => null);
 jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => () => null);
 jest.mock('@/components/molecules/input/Input', () => () => null);
-jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressInput', () => () => null);
+jest.mock(
+  '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput',
+  () => () => null,
+);
 jest.mock('@/components/templates/ScreenContainer', () => ({ children }) => children);
 jest.mock('@/services/activity/activityService', () => ({ getActivities: jest.fn() }));
-jest.mock('@/services/multisportClub/multisportClubService', () => ({ createCMSection: jest.fn() }));
+jest.mock('@/services/multisportClub/multisportClubService', () => ({
+  createCMSection: jest.fn(),
+}));
 jest.mock('../components/MultisportStateView', () => () => null);
 jest.mock('../useResolvedMultisportClub', () => () => ({
   cmData: { documentId: 'cm-1', name: 'SMUC' },
@@ -46,7 +51,9 @@ describe('BH03 · P14-10 — CreateSectionScreen', () => {
   it('apres la creation, les listes du tableau de bord sont invalidees', async () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     act(() => {
-      TestRenderer.create(<CreateSectionScreen navigation={{ goBack: jest.fn() }} route={{ params: { cmId: 'cm-1' } }} />);
+      TestRenderer.create(
+        <CreateSectionScreen navigation={{ goBack: jest.fn() }} route={{ params: { cmId: 'cm-1' } }} />,
+      );
     });
 
     await mockMutationOptions.onSuccess({ data: { name: 'Basket' } });

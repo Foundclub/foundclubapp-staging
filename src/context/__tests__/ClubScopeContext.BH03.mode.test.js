@@ -16,6 +16,7 @@ describe('BH03 · P2-04 — normalizeScopeRecord', () => {
   });
 
   it('un choix enregistre « multisport » reste respecte', () => {
-    expect(normalizeScopeRecord({ activeMode: 'multisport' }, userData).activeMode).toBe('multisport');
+    const scope = normalizeScopeRecord({ activeMode: 'multisport' }, userData);
+    expect(scope.activeMode).toBe('multisport');
   });
 });
