@@ -174,7 +174,7 @@ describe('W3 — poster meme sans identifiant de transaction', () => {
 });
 
 describe('BH01/P1-03 — le repli ne prend jamais le droit d un AUTRE produit', () => {
-  it('achat equipe sans transaction, seul droit actif = club : aucun identifiant emprunte', async () => {
+  it('achat equipe sans transaction, seul droit = club : rien d emprunte', async () => {
     purchaseSubscriptionViaRevenueCat.mockResolvedValue({
       customerInfo: {
         entitlements: {
@@ -195,7 +195,10 @@ describe('BH01/P1-03 — le repli ne prend jamais le droit d un AUTRE produit', 
     });
 
     await performSubscriptionPurchase({
-      catalogEntry: offreClub({ planCode: 'fc_team_1_monthly', providerProductId: 'fc_team_1_monthly' }),
+      catalogEntry: offreClub({
+        planCode: 'fc_team_1_monthly',
+        providerProductId: 'fc_team_1_monthly',
+      }),
       clubDocumentId: 'club-1',
     });
 

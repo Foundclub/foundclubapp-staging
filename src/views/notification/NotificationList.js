@@ -217,7 +217,7 @@ function NotificationList() {
         notificationId: payload.notificationId,
         source: 'in_app',
       });
-      // BH01/P5-18 : la réponse est enregistrée ; un échec de « marquer lu » ne doit pas dire le contraire.
+      // BH01/P5-18 : réponse enregistrée ; l'échec de « marquer lu » ne doit pas dire le contraire.
       await markAsRead(String(notification.documentId || notification.id || '')).catch(() => {});
       refreshNotifications();
 

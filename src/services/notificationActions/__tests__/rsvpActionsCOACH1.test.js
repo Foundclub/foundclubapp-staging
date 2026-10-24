@@ -37,6 +37,7 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 
 // eslint-disable-next-line import/first
 import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
+
 // eslint-disable-next-line import/first
 import { EVENT_RSVP_ACTION_ABSENT, EVENT_RSVP_ACTION_PRESENT } from '../constants';
 // eslint-disable-next-line import/first

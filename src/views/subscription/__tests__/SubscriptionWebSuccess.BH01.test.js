@@ -31,13 +31,20 @@ jest.mock('@/theme/themeContext', () => {
   const makeRamp = () => new Proxy({}, { get: () => ({}) });
   return {
     __esModule: true,
-    default: () => ({ Alignments: makeRamp(), Fonts: makeRamp(), Spaces: new Proxy({}, { get: () => makeRamp() }) }),
+    default: () => ({
+      Alignments: makeRamp(),
+      Fonts: makeRamp(),
+      Spaces: new Proxy({}, { get: () => makeRamp() }),
+    }),
   };
 });
 
-jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) {
-  return children;
-});
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) {
+    return children;
+  },
+);
 
 const mockButtons = new Map();
 jest.mock('@/components/atoms/button/Button', () => function ButtonMock({ onPress, title }) {
@@ -47,11 +54,13 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock({ onPres
 
 const monter = async (navigation) => {
   await act(async () => {
-    renderer.create(<SubscriptionWebSuccess navigation={navigation} route={{ params: { session_id: 'cs_1' } }} />);
+    renderer.create(
+      <SubscriptionWebSuccess navigation={navigation} route={{ params: { session_id: 'cs_1' } }} />,
+    );
   });
 };
 
-test('BH01/P5-04 — paiement en attente : pas de célébration, relances posées, retour accueil', async () => {
+test('BH01/P5-04 — paiement en attente : pas de célébration, retour accueil', async () => {
   mockFinalize.mockResolvedValue({ status: 'open' });
   const navigation = { replace: jest.fn(), reset: jest.fn() };
   await monter(navigation);
@@ -59,7 +68,10 @@ test('BH01/P5-04 — paiement en attente : pas de célébration, relances posée
   expect(navigation.replace).not.toHaveBeenCalled();
   expect(mockScheduleRefresh).toHaveBeenCalled();
   await act(async () => { mockButtons.get("Retour à l'accueil")(); });
-  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+  expect(navigation.reset).toHaveBeenCalledWith({
+    index: 0,
+    routes: [{ name: RouteNames.HomeTab }],
+  });
 });
 
 test('BH01/P5-04 — paiement confirmé : la célébration reste', async () => {
@@ -67,5 +79,6 @@ test('BH01/P5-04 — paiement confirmé : la célébration reste', async () => {
   const navigation = { replace: jest.fn(), reset: jest.fn() };
   await monter(navigation);
 
-  expect(navigation.replace).toHaveBeenCalledWith(RouteNames.SubscriptionSuccess, expect.any(Object));
+  expect(navigation.replace)
+    .toHaveBeenCalledWith(RouteNames.SubscriptionSuccess, expect.any(Object));
 });

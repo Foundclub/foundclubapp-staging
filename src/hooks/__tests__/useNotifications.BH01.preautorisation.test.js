@@ -1,10 +1,9 @@
 // BH01/P2-03 — banc repris de useNotifications.fcmstorm.test.js (mêmes doublures).
-import { PermissionsAndroid, Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PermissionsAndroid, Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { forgetDeviceRegistrationsExcept } from '@/utils/notifications/deviceRegistrationMemory';
-import { TOKEN_SYNC_MAX_ATTEMPTS } from '@/utils/notifications/tokenSyncBackoff';
 
 import useNotifications from '../useNotifications';
 // et fait tomber la SUITE ENTIERE (0 test execute).
@@ -13,7 +12,7 @@ const mockAddDeviceToken = jest.fn();
 const mockAddDeviceTokenForSession = jest.fn();
 const mockGetToken = jest.fn();
 
-let mockUserData = { documentId: 'user-doc-1', id: 1 };
+const mockUserData = { documentId: 'user-doc-1', id: 1 };
 // Les sessions du telephone au montage (FCMSYNC) ; vide pour les temoins FCMSTORM.
 let mockSessions = [];
 jest.mock('@/services/client', () => ({
@@ -152,7 +151,7 @@ jest.mock('@/store/appContext', () => {
 // `startupPhase` change (PopupManagerContext.js:79-87, :166-183). Autrement dit :
 // A CHAQUE CHANGEMENT D'ECRAN, l'objet est neuf.
 // C'est la pompe de production, et `mockEligibiliteInstable` la rallume.
-let mockEligibiliteInstable = false;
+const mockEligibiliteInstable = false;
 
 jest.mock('@/context/PopupManagerContext', () => {
   const eligibiliteStable = {
@@ -176,7 +175,7 @@ jest.mock('@/context/PopupManagerContext', () => {
   };
 });
 
-test('BH01/P2-03 — accepter la pre-autorisation Android DEMANDE la permission, meme < 30 s', async () => {
+test('BH01/P2-03 — accepter la pre-autorisation Android DEMANDE la permission', async () => {
   Platform.OS = 'android';
   jest.spyOn(PermissionsAndroid, 'check').mockResolvedValue(false);
   const demander = jest.spyOn(PermissionsAndroid, 'request').mockResolvedValue('denied');
@@ -186,6 +185,10 @@ test('BH01/P2-03 — accepter la pre-autorisation Android DEMANDE la permission,
   forgetDeviceRegistrationsExcept([]);
 
   let resultat;
+  /**
+   * Sonde : fait vivre le hook et garde ce qu'il rend.
+   * @returns {null} Aucun rendu.
+   */
   function Sonde() {
     resultat = useNotifications({ navigate: () => true });
     return null;
