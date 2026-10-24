@@ -1,6 +1,8 @@
 import renderer, { act } from 'react-test-renderer';
 
-const mockQuery = { data: null, isLoading: false, error: null, refetch: jest.fn() };
+const mockQuery = {
+  data: null, error: null, isLoading: false, refetch: jest.fn(),
+};
 
 jest.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_k, fallback) => fallback }) }));
 jest.mock('@/theme/themeContext', () => () => ({

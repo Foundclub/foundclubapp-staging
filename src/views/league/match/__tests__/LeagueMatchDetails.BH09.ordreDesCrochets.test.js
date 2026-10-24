@@ -11,8 +11,8 @@ const declarationLine = (name) => lines.findIndex((l) => l.startsWith(`  const $
 const depsOf = (name) => {
   const start = declarationLine(name);
   let i = start + 1;
-  while (!/^  \}, \[/.test(lines[i])) i += 1;
-  let deps = lines[i].replace(/^  \}, \[/, '');
+  while (!/^ {2}\}, \[/.test(lines[i])) i += 1;
+  let deps = lines[i].replace(/^ {2}\}, \[/, '');
   while (!/\]\);/.test(deps)) { i += 1; deps += lines[i]; }
   return deps.replace(/\]\);.*/, '').split(',').map((d) => d.trim()).filter(Boolean);
 };

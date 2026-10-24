@@ -7,10 +7,11 @@ jest.mock('@/components/organisms/league/LeagueLegalAcceptanceModal', () => () =
 // BH09 P3-09 : un second appel ne doit pas laisser la première promesse en suspens.
 test('double appui : la première promesse se termine (null)', async () => {
   let api;
-  const Probe = () => {
+  /** Sonde du crochet. */
+  function Probe() {
     api = useLeagueLegalAcceptance();
     return null;
-  };
+  }
   act(() => { renderer.create(<Probe />); });
   let first;
   act(() => {
