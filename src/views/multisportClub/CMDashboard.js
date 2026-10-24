@@ -143,10 +143,12 @@ function CMDashboard({ navigation, route }) {
     () => relatedCmSummaries.find((/** @type {CMMultisportSummary} */ club) => club?.documentId === resolvedCmId) || null,
     [relatedCmSummaries, resolvedCmId],
   );
+  // BH03 · P14-02 : `parentMultisport` dit quel club AFFICHER, jamais qui l'administre ;
+  // seuls les clubs de `userData.multisportClubs` sont geres.
   const isManagedCmByAuth = Boolean(
     resolvedCmId
-    && managedCmSummary?.documentId
-    && managedCmSummary.documentId === resolvedCmId,
+    && (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : [])
+      .some((/** @type {CMMultisportSummary} */ club) => club?.documentId === resolvedCmId),
   );
 
   const {
@@ -178,8 +180,8 @@ function CMDashboard({ navigation, route }) {
   });
 
   const canFallbackToManagedSummary = Boolean(
-    managedCmSummary?.documentId
-    && managedCmSummary.documentId === resolvedCmId
+    isManagedCmByAuth
+    && managedCmSummary?.documentId
     && isForbiddenError(cmError),
   );
   const cm = /** @type {CMMultisport | null | undefined} */ (cmData || managedCmSummary);

@@ -285,4 +285,18 @@ describe('ECRAN18-OMNI · « Gestion du club » d un club omnisport, sur ordinat
     const [carte] = arbre.root.findAllByType(MultisportHeroCard);
     expect(carte.props.canEdit).toBe(false);
   });
+
+  // BH03 · P14-02 — un joueur ou un coach d'une SECTION (son club a un `parentMultisport`)
+  // etait traite en administrateur du club multisport : « Modifier », sections, etc.
+  it('🔒 un membre d une section n administre pas le club multisport parent', () => {
+    mockUserData = {
+      club: { parentMultisport: { documentId: 'cm-1', name: 'Union Sportive de Montrivage' } },
+      documentId: 'u-9',
+      multisportClubs: [],
+    };
+    const arbre = monter();
+
+    const [carte] = arbre.root.findAllByType(MultisportHeroCard);
+    expect(carte.props.canEdit).toBe(false);
+  });
 });
