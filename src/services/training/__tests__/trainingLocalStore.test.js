@@ -142,7 +142,8 @@ describe('la fusion serveur / local', () => {
 
   it('fait gagner le serveur quand le local a déjà été envoyé', () => {
     putLocalResult(SESSION, ligne({ value: 32.9 }));
-    markResultsSynced(SESSION, [ligne()]);
+    // BH15 P3-22 : on marque envoyée la valeur réellement partie (32.9), pas une autre.
+    markResultsSynced(SESSION, [ligne({ value: 32.9 })]);
 
     const fusion = mergeResults(
       [{

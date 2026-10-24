@@ -143,7 +143,12 @@ export const markResultsSynced = (sessionDocumentId, rows = [], rejected = []) =
   rows.forEach((row) => {
     const id = measureId(row);
     // BH15 P3-22 : une ligne modifiee pendant l'envoi n'est pas celle qui est partie.
-    if (all[id] && !refusees.has(id) && JSON.stringify(all[id]) === JSON.stringify(row)) {
+    const stockee = all[id];
+    const inchangee = stockee && Object.keys(row)
+      .filter((k) => k !== 'savedAt' && k !== 'synced')
+      .every((k) => JSON.stringify(stockee[k]) === JSON.stringify(row[k]))
+      && (!row.savedAt || row.savedAt === stockee.savedAt);
+    if (inchangee && !refusees.has(id)) {
       all[id] = { ...all[id], synced: true };
     }
   });
