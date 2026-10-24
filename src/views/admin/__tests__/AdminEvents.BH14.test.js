@@ -49,10 +49,10 @@ jest.mock(
   () => function ScreenContainerMock({ children }) { return children; },
 );
 
-test('P9-10 : à 00:30 à Paris, la journée est celle du jour, de minuit à minuit (heure locale)', async () => {
+test('P9-10 : à 00:30 à Paris, la journée est celle du jour, de minuit à minuit (heure locale, jour du passage à l heure d hiver)', async () => {
   jest.useFakeTimers({ now: new Date('2026-10-24T22:30:00.000Z') });
   await act(async () => { renderer.create(<AdminEvents />); });
   jest.useRealTimers();
   expect(mockFiltres.startDateAfter.toISOString()).toBe('2026-10-24T22:00:00.000Z');
-  expect(mockFiltres.startDateBefore.toISOString()).toBe('2026-10-25T21:59:59.999Z');
+  expect(mockFiltres.startDateBefore.toISOString()).toBe('2026-10-25T22:59:59.999Z');
 });
