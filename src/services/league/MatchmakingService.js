@@ -25,10 +25,11 @@ const buildApiError = (error, fallbackMessage) => {
   const nextError = /** @type {MatchmakingServiceError} */ (new Error(message));
   nextError.code = apiError?.response?.data?.code
     || apiError?.response?.data?.details?.code
+    || apiError?.details?.code
     || apiError?.code
     || null;
   nextError.status = apiError?.response?.status || apiError?.status || null;
-  nextError.details = apiError?.response?.data?.details || null;
+  nextError.details = apiError?.response?.data?.details || apiError?.details || null;
   return nextError;
 };
 

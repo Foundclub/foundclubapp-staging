@@ -111,7 +111,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   const isAdSideStaff = useMemo(() => canManageTeamAd(ad, userData), [ad, userData]);
 
   const myApplication = useMemo(
-    () => findMyApplicationOnAd(ad, managedTeamIds),
+    () => findMyApplicationOnAd(ad, managedTeamIds, { activeOnly: true }),
     [ad, managedTeamIds],
   );
 
@@ -207,7 +207,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
     try {
       const freshAd = await getFriendlyMatchAd(adId);
       setAd(freshAd);
-      freshApplication = findMyApplicationOnAd(freshAd, managedTeamIds)
+      freshApplication = findMyApplicationOnAd(freshAd, managedTeamIds, { activeOnly: true })
         || (getFriendlyMatchChatId(application) ? application : null)
         || application;
     } catch (error) {
