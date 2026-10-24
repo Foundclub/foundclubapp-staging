@@ -1893,6 +1893,8 @@ function Conversation({ navigation, route }) {
       // Jest la verrait comme une poignée restée ouverte.
       minuteries.forEach((minuterie) => clearTimeout(minuterie));
       minuteries.clear();
+      // P6-13 : sans ses minuteries, personne n'éteindrait plus ceux qui écrivaient.
+      setTypingUsers((prev) => (prev.size === 0 ? prev : new Set()));
     };
   }, [socket, chatId, userData?.documentId]);
 
