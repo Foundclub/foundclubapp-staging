@@ -291,8 +291,11 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
   // le coach a choisie. Sans repere (placement libre), on retombe sur le poste
   // declare du joueur, jamais sur un poste invente.
   const slotIndex = getSlotIndex(myPlacement?.slotId);
+  // BH05 · P6-10 — le libelle publie avec le placement d'abord : avec une
+  // formation du catalogue (3-5-2), la table par defaut donne le poste du 4-3-3.
   const positionLabel = String(
-    getMatchPositionLabels(sport)[slotIndex - 1]
+    myPlacement?.label
+    || getMatchPositionLabels(sport)[slotIndex - 1]
     || viewerPlayer?.position
     || '',
   ).trim();
