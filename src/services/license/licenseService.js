@@ -10,7 +10,13 @@ import client from '../client';
 const unwrap = (/** @type {any} */ response) => response?.data?.data ?? response?.data;
 const unwrapFetchJson = async (response) => {
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  // BH11 P2-20 : une page HTML (413, 502) n est pas du JSON ; on garde le code HTTP.
+  let payload = null;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    if (response.ok) throw new Error(`Invalid JSON response (status ${response.status})`);
+  }
   if (!response.ok) {
     throw new Error(
       payload?.error?.message
