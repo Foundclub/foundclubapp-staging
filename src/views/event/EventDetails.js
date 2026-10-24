@@ -729,6 +729,7 @@ function EventDetails({ navigation, route }) {
   // armee par l'AUTRE.
   /** @type {{ current: null | { action: () => void, sheet: string } }} */
   const pendingSheetActionRef = useRef(null);
+  const detectionCandidateRequestRef = useRef(0);
 
   const armSheetAction = useCallback((
     /** @type {string} */ sheet,
@@ -3161,6 +3162,9 @@ function EventDetails({ navigation, route }) {
   // demander aux deux appelants de la porter.
   const handleOpenDetectionCandidate = ({ participation = null, user }) => {
     if (!user) return;
+    // P7-12 : seule la DERNIÈRE fiche ouverte écrit sa note ; une réponse en retard se tait.
+    detectionCandidateRequestRef.current += 1;
+    const requestId = detectionCandidateRequestRef.current;
     const userKey = String(getUserKey(user) || '');
     const resolvedParticipation = participation || activeEventParticipations.find(
       (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
@@ -3192,6 +3196,7 @@ function EventDetails({ navigation, route }) {
     Promise.resolve()
       .then(() => getRecruitmentApplications(slotId))
       .then((/** @type {any[]} */ applications) => {
+        if (requestId !== detectionCandidateRequestRef.current) return;
         const application = (applications || []).find(
           (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
         );
@@ -3200,7 +3205,10 @@ function EventDetails({ navigation, route }) {
           state: 'loaded',
         });
       })
-      .catch(() => setDetectionCandidateReview({ note: '', state: 'error' }));
+      .catch(() => {
+        if (requestId !== detectionCandidateRequestRef.current) return;
+        setDetectionCandidateReview({ note: '', state: 'error' });
+      });
   };
 
   // 🏷️ LES LIBELLES DE LA FICHE, CALCULES ICI ET PAS DANS LE JSX. Une regle
