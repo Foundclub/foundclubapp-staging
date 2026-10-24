@@ -123,18 +123,19 @@ test('P8-10 — echec partiel : la fiche se relit, le nouvel essai ne renvoie qu
   });
   await monter({
     documentId: 'ev-1',
-    eventTasks: [{ assignments: [], documentId: 't-1', requiredCount: 3, title: 'Buvette' }],
+    eventTasks: [{
+      assignments: [], documentId: 't-1', requiredCount: 3, title: 'Buvette',
+    }],
     team: { players: MEMBRES, trainers: [MOI] },
   }, { canManageEvent: true });
   await presser(bouton('Assigner des membres'));
   const textes = (/** @type {any} */ n) => n.findAll((/** @type {any} */ e) => typeof e.props?.children === 'string')
     .map((/** @type {any} */ e) => e.props.children).join(' ');
-  for (const nom of ['Ali Ba', 'Bea Ca']) {
-    const ligne = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function'
-      && typeof n.type !== 'string' && !n.props.testID && textes(n).includes(nom))[0];
-    // eslint-disable-next-line no-await-in-loop -- gestes sequentiels
-    await presser(ligne);
-  }
+  const ligneDe = (/** @type {string} */ nom) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.props?.onPress === 'function' && typeof n.type !== 'string' && !n.props.testID
+    && textes(n).includes(nom)))[0];
+  await presser(ligneDe('Ali Ba'));
+  await presser(ligneDe('Bea Ca'));
   await presser(bouton('Assigner'));
   expect(eventService.assignEventTask).toHaveBeenCalledTimes(2);
   expect(client.invalidateQueries).toHaveBeenCalled();

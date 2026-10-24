@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
@@ -206,14 +207,11 @@ function PriseDeCourant() {
   return null;
 }
 
-
 test('P7-01 — fermer la feuille d echec partiel puis recreer ne duplique pas les dates creees', async () => {
   const navigation = {
     canGoBack: () => true, goBack: () => {}, navigate: () => {}, push: () => {}, replace: () => {}, reset: () => {},
   };
-  const rendre = (/** @type {any} */ contenu) => createElement(
-    EventWizardProvider, null, createElement(PriseDeCourant), contenu,
-  );
+  const rendre = (/** @type {any} */ contenu) => createElement(EventWizardProvider, null, createElement(PriseDeCourant), contenu);
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(rendre(null)); });

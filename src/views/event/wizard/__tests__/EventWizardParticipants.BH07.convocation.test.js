@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
@@ -179,7 +180,7 @@ jest.mock('@/services/team/teamQueries', () => ({
   useGetTeam: (/** @type {string} */ identifiant, /** @type {any} */ options) => (
     options?.enabled === false || !identifiant
       ? { data: undefined, isLoading: false }
-      : mockEquipeEnVol.vrai ? { data: undefined, isLoading: true } : { data: EQUIPE_COMPLETE, isLoading: false }
+      : { data: mockEquipeEnVol.vrai ? undefined : EQUIPE_COMPLETE, isLoading: mockEquipeEnVol.vrai }
   ),
 }));
 
@@ -547,9 +548,7 @@ test('P8-05 — une convocation videe a la main reste vide au retour', () => {
   ['Karim Benali', 'Louis Marchand', 'Theo Nguyen'].forEach((nom) => presserParTexte(arbre, nom));
   act(() => { gabarit().onNext(); });
   expect(PriseDeCourant.etat.matchCallUpPlayerIds).toEqual([]);
-  const rendre = (/** @type {any} */ contenu) => createElement(
-    EventWizardProvider, null, createElement(PriseDeCourant), contenu,
-  );
+  const rendre = (/** @type {any} */ contenu) => createElement(EventWizardProvider, null, createElement(PriseDeCourant), contenu);
   act(() => { arbre.update(rendre(null)); });
   act(() => {
     arbre.update(rendre(createElement(EventWizardParticipants, {

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
 // BH07 / P8-16 (24/10) — une reponse en retard du club precedent n'ecrase plus les equipes du club
 // choisi ensuite. Montage repris de S10B-adversaire-invite.test.js.
 import { createElement } from 'react';
@@ -368,9 +369,7 @@ test('P8-16 — les equipes du club precedent n arrivent pas sous le club actuel
   const navigation = {
     goBack: () => {}, navigate: () => {}, push: () => {}, replace: () => {}, setParams: () => {},
   };
-  const rendre = (/** @type {any} */ contenu) => createElement(
-    EventWizardProvider, null, createElement(PriseDeCourant), contenu,
-  );
+  const rendre = (/** @type {any} */ contenu) => createElement(EventWizardProvider, null, createElement(PriseDeCourant), contenu);
   await act(async () => { arbre = renderer.create(rendre(null)); });
   await act(async () => {
     semer({ payload: { team: EQUIPE_ORGANISATRICE, type: TYPE_MATCH }, type: 'SET_META' });

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 

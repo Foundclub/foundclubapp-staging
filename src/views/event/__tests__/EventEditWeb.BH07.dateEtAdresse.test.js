@@ -1,10 +1,11 @@
-process.env.TZ = 'Europe/Paris';
 /* eslint-disable max-len -- des phrases entieres, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
 import EventEdit from '../EventEdit.web';
+
+process.env.TZ = 'Europe/Paris';
 
 // BH07 (24/10) — P7-08 : une seance qui commence a 1 h 30 a Paris (23:30 UTC la veille) ne doit
 // pas reculer d'un jour a la modification. P7-10 : vider l'adresse doit l'effacer (null envoye).
@@ -100,14 +101,14 @@ const eventService = jest.requireMock('@/services/event/eventService');
 
 const SEANCE = {
   date: '2030-05-15T23:30:00.000Z',
-  location: { lat: 43.3, lng: 5.4 },
-  locationDetails: JSON.stringify({ address: { label: '21 rue Fortia' } }),
   description: 'Seance technique',
   documentId: 'event-1',
   endTime: '20:00:00.000',
   eventTasks: [],
   facility: { documentId: 'facility-1' },
   invitedTeams: [],
+  location: { lat: 43.3, lng: 5.4 },
+  locationDetails: JSON.stringify({ address: { label: '21 rue Fortia' } }),
   sessionStatus: 'closed',
   startTime: '18:30:00.000',
   team: { club: { documentId: 'club-1' }, documentId: 'team-1' },

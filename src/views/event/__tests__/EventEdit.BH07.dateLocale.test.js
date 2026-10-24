@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
 // BH07 / P7-07 (24/10) — a l'ouest d'UTC, une date 'YYYY-MM-DD' s'ouvrait un jour trop tot.
 // Montage repris de EventEditEvedit3Ouverture.test.js.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -315,12 +316,12 @@ const retablir = () => {
 test('P7-07 — la date 2030-05-16 s ouvre au 16/05/2030', async () => {
   simulerUtcMoins5();
   try {
-  eventService.getEventByIdForEdit.mockResolvedValue(evenementRempli());
-  await monterEcran();
-  const valeurs = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'function'
+    eventService.getEventByIdForEdit.mockResolvedValue(evenementRempli());
+    await monterEcran();
+    const valeurs = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'function'
     && n.type.name === 'TextDouble' && typeof n.props.value === 'string')
-    .map((/** @type {any} */ n) => n.props.value);
-  expect(valeurs).toContain('16/05/2030');
+      .map((/** @type {any} */ n) => n.props.value);
+    expect(valeurs).toContain('16/05/2030');
   } finally {
     retablir();
   }
