@@ -942,8 +942,8 @@ export const claimClub = async (clubId) => {
     const response = await client.post(`/clubs/${clubId}/claim`);
     return response.data;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
-    throw new Error(`Failed to claim club: ${errorToDisplay}`);
+    // BH03 · P11-19 : le code et les details du refus servent a l'ecran (resolveClubAffiliationRefusal).
+    throw buildPreservedApiError(error, 'Failed to claim club');
   }
 };
 
