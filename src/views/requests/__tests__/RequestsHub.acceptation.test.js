@@ -424,4 +424,27 @@ describe('Y04 — accepter une demande : la fenetre, la vitesse, et l echec', ()
       'teams',
     ]);
   });
+  it('BH12 P5-17 — un double appui sur « Accepter » n envoie qu UNE requete', async () => {
+    /** @type {Array<(v: any) => void>} */
+    const liberations = [];
+    /** @type {any} */ (acceptTeamMembershipRequest).mockImplementation(
+      () => new Promise((resolve) => { liberations.push(resolve); }),
+    );
+    const tree = await monterLeHub([DEMANDE_EQUIPE]);
+    const carte = tree.root.findAll(
+      (/** @type {any} */ node) => typeof node.props?.onPrimaryPress === 'function'
+        && node.props?.item?.id === DEMANDE_EQUIPE.id,
+      { deep: true },
+    )[0];
+
+    /** @type {any[]} */
+    const envois = [];
+    act(() => {
+      envois.push(carte.props.onPrimaryPress(carte.props.item));
+      envois.push(carte.props.onPrimaryPress(carte.props.item));
+    });
+    await act(async () => { liberations.forEach((liberer) => liberer({ ok: true })); await Promise.all(envois); });
+
+    expect(acceptTeamMembershipRequest).toHaveBeenCalledTimes(1);
+  });
 });
