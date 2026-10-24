@@ -35,6 +35,8 @@ const getGeohashPrecision = (radius) => {
  * @returns {string} Geohash covering the area
  */
 export const getGeohashForPointAndRadius = (latitude, longitude, radius) => {
+  // BH03 · P11-14 : NaN donnait « 00000 », un faux filtre de zone.
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
   const precision = getGeohashPrecision(radius);
   return encode(latitude, longitude, precision);
 };

@@ -461,6 +461,28 @@ describe('AddSponsor — aiguillage club / structure multisport', () => {
     expect(updateClub).not.toHaveBeenCalled();
     expect(updateMultisportClub).toHaveBeenCalledWith('cm-1', expect.anything());
   });
+
+  // BH03 · P11-13 — le sponsor ajoute a un club multisport n'apparaissait qu'apres un
+  // rafraichissement : la structure (meme cle de cache que le tableau de bord) est relue.
+  it('apres l ajout a un club multisport, la structure est relue', async () => {
+    mockClubQuery = {
+      data: null, error: null, isLoading: false, refetch: jest.fn(),
+    };
+    mockMultisportQuery = {
+      data: { documentId: 'cm-1', name: 'SMUC omnisport', sponsor: [] },
+      error: null,
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+
+    const arbre = await monterEcran({ params: { cmId: 'cm-1' } });
+    await saisirNom('Nike');
+    await choisirLogo();
+
+    await appuyerSur(arbre, 'Ajouter');
+
+    expect(mockMultisportQuery.refetch).toHaveBeenCalled();
+  });
 });
 
 // D63 : Adel a compare l'ecran 04 du meme pack a sa maquette et a vu un ecart

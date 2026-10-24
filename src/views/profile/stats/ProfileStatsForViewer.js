@@ -56,11 +56,18 @@ export const resolveProfileStatsMode = ({ isSelfPreview = false, stats }) => {
  */
 export const resolveMatchSheetTarget = (stats) => {
   const teams = Array.isArray(stats?.scope?.teams) ? stats.scope.teams : [];
+  // BH03 · P11-19 : le repli « une seule equipe » ne vaut que pour un match SANS equipe nommee ;
+  // sinon un match d'une autre equipe etait rattache a celle du coach.
+  const findTeam = (/** @type {any} */ entry) => (
+    teams.find((/** @type {any} */ team) => team?.name === entry.teamName)
+    || (!entry.teamName && teams.length === 1 ? teams[0] : null)
+  );
   const match = (Array.isArray(stats?.recentMatches) ? stats.recentMatches : [])
-    .find((/** @type {any} */ entry) => entry?.documentId && entry?.sourceType === 'event');
+    .find((/** @type {any} */ entry) => (
+      entry?.documentId && entry?.sourceType === 'event' && findTeam(entry)?.documentId
+    ));
   if (!match) return null;
-  const team = teams.find((/** @type {any} */ entry) => entry?.name === match.teamName)
-    || (teams.length === 1 ? teams[0] : null);
+  const team = findTeam(match);
   if (!team?.documentId) return null;
   return {
     eventId: String(match.documentId),
