@@ -322,6 +322,12 @@ function EventTeamAudiencesEditor({
       status: draft.audienceKind === 'external_invited' ? 'PENDING' : 'ACCEPTED',
       team: selectedTeam,
     };
+    // BH07 / P8-07 — meme equipe, meme genre de public : la reponse deja donnee
+    // (acceptee, refusee) est gardee, on ne la remet pas « en attente ».
+    const editedAudience = audiences.find((item) => getAudienceKey(item) === editingKey);
+    if (editedAudience?.status && getAudienceKey(editedAudience) === getAudienceKey(normalizedAudience)) {
+      normalizedAudience.status = editedAudience.status;
+    }
 
     const nextAudiences = audiences.filter((item) => getAudienceKey(item) !== editingKey);
     const duplicateIndex = nextAudiences.findIndex((item) => getAudienceKey(item) === getAudienceKey(normalizedAudience));
