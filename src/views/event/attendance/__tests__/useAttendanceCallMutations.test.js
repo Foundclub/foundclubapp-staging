@@ -417,3 +417,45 @@ describe('R7-d — un pointage perime les six bonnes clefs', () => {
     queryClient.clear();
   });
 });
+
+// BUGHUNT BH08 (24/10) — P8-01 et P8-17.
+describe('BH08 — pointage groupe', () => {
+  test('P8-01 : « Tout le monde est là » transmet arrivedAt et lateMinutes au serveur', async () => {
+    mockMarkCoachArrivalBulk.mockResolvedValue({
+      data: { failedCount: 0, items: [{ ok: true, userDocumentId: 'user-a' }], markedCount: 1 },
+    });
+
+    const { demonter, vues } = await monterLaSonde();
+    await act(async () => {
+      await vues[vues.length - 1].bulkMutation.mutateAsync({
+        arrivedAt: '2026-10-24T16:00:00.000Z',
+        lateMinutes: 0,
+        userIds: ['user-a'],
+      });
+    });
+    await vidangerLaFile();
+
+    expect(mockMarkCoachArrivalBulk).toHaveBeenCalledWith(
+      EVENEMENT_ID,
+      expect.objectContaining({ arrivedAt: '2026-10-24T16:00:00.000Z', lateMinutes: 0 }),
+    );
+
+    await demonter();
+  });
+
+  test('P8-17 : fenetre fermee pour une partie seulement — on ne dit pas « Personne »', () => {
+    const bilan = {
+      failedCount: 2,
+      failures: [1, 2].map((index) => ({
+        code: 'EVENT_ATTENDANCE_WINDOW_CLOSED',
+        userDocumentId: `user-${index}`,
+      })),
+      markedCount: 5,
+    };
+
+    const phrase = describeBulkOutcome(bilan, traduire);
+
+    expect(phrase).not.toMatch(/Personne/);
+    expect(phrase).toMatch(/^5 /);
+  });
+});
