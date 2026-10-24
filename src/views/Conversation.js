@@ -3041,10 +3041,14 @@ function Conversation({ navigation, route }) {
       type: 'location_share',
     };
 
-    sendMessage(chatId, '', {
+    // P6-08 : fil coupé, `sendMessage` rend null ; on le dit et la fenêtre reste ouverte.
+    if (!sendMessage(chatId, '', {
       composition,
       sender: userData,
-    });
+    })) {
+      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      return;
+    }
     setSelectedLocationOption(undefined);
     setIsLocationShareModalVisible(false);
   };
@@ -3063,10 +3067,13 @@ function Conversation({ navigation, route }) {
       userDocumentId: selectedContact.documentId,
     };
 
-    sendMessage(chatId, '', {
+    if (!sendMessage(chatId, '', {
       composition,
       sender: userData,
-    });
+    })) {
+      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      return;
+    }
     setSelectedContactId('');
     setIsContactShareModalVisible(false);
   };
@@ -3140,15 +3147,18 @@ function Conversation({ navigation, route }) {
       type: 'event_share',
     };
 
-    sendMessage(chatId, 'Partage', {
+    if (!sendMessage(chatId, 'Partage', {
       composition,
       event: eventDocumentId,
       sender: userData,
-    });
+    })) {
+      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      return;
+    }
     if (closeModal) {
       setIsEventShareModalVisible(false);
     }
-  }, [chatId, resolveEventLocationLabel, sendMessage, userData]);
+  }, [chatId, resolveEventLocationLabel, sendMessage, showErrorBanner, t, userData]);
 
   const hasMeaningfulEventValue = useCallback((/** @type {any} */ value) => {
     if (value == null) return false;
@@ -3843,6 +3853,8 @@ function Conversation({ navigation, route }) {
       await invalidatePendingLeagueActionQueries();
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
+      // P6-04 : la bulle avait été passée « acceptée / refusée » d'avance ; on relit le vrai statut.
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       showErrorBanner(i18n.t(
         'conversation.proposal.replyError',
         'Une erreur est survenue lors de la réponse.',
@@ -4177,6 +4189,10 @@ function Conversation({ navigation, route }) {
       const senderAvatarUrl = msg.sender?.avatar?.url || '';
       const avatarUrl = resolveMediaUri(senderAvatarUrl);
       const senderEntityId = getEntityDocumentId(msg.sender);
+      const nomDuFil = filDeLaVille.nomDeLExpediteur(msg) || nomDansLeCanal(chatData);
+      const nomAffiche = nomDuFil || getAnonymizedName(msg.sender);
+      const expediteurAnonyme = !nomDuFil
+        && (nomAffiche === 'Joueur Adverse' || nomAffiche === 'Capitaine Adverse');
       const stableMessageId = String(
         msg?.documentId
         || msg?.id
@@ -4227,11 +4243,11 @@ function Conversation({ navigation, route }) {
           _id: filDeLaVille.estDeMonCote?.(msg)
             ? String(userData?.documentId || '')
             : senderEntityId,
-          avatar: avatarUrl,
+          // P6-05 : un adversaire anonymisé ne montre ni sa photo ni son profil.
+          avatar: expediteurAnonyme ? undefined : avatarUrl,
+          anonymized: expediteurAnonyme,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
-          name: filDeLaVille.nomDeLExpediteur(msg)
-            || nomDansLeCanal(chatData)
-            || getAnonymizedName(msg.sender),
+          name: nomAffiche,
           // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil
           // (contrat 1B §2.3 : `sender.staffRole`, repli `chat.staffRoles`). Absente = rien.
           staffRole: msg.sender?.staffRole || chatData?.staffRoles?.[senderEntityId] || undefined,
@@ -5223,6 +5239,7 @@ function Conversation({ navigation, route }) {
    * @returns {void}
    */
   const handleAvatarPress = (user) => {
+    if (user?.anonymized) return;
     if (user._id === userData?.documentId) {
       navigation.navigate(RouteNames.ProfileStack);
     } else {
@@ -7976,12 +7993,14 @@ function Conversation({ navigation, route }) {
           isVisible={isReportModalVisible}
         >
           <View style={[Spaces.gap[16], Spaces.marginTop[32]]}>
-            <Button
-              disabled={isReportingMessage}
-              onPress={handleGoToUserDetails}
-              title={t('conversation.modals.actions.seeUser')}
-              variant="PrimaryLight"
-            />
+            {selectedMessage?.user?.anonymized ? null : (
+              <Button
+                disabled={isReportingMessage}
+                onPress={handleGoToUserDetails}
+                title={t('conversation.modals.actions.seeUser')}
+                variant="PrimaryLight"
+              />
+            )}
             <Button
               disabled={isReportingMessage}
               isLoading={isReportingMessage}
