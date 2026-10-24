@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -69,9 +69,9 @@ function TeamList({ navigation, route }) {
     && canShowTrainerGuide,
   );
 
-  useFocusEffect(() => {
+  useFocusEffect(useCallback(() => {
     refetchUserData();
-  });
+  }, [refetchUserData]));
 
   useEffect(() => {
     if (!isTrainerGuideVisible) return;
