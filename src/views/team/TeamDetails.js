@@ -4884,7 +4884,7 @@ function TeamDetails({ navigation, route }) {
                     last: true,
                     lock: isTeamOfferUnlocked ? null : 'team',
                     onPress: isTeamOfferUnlocked
-                      ? () => navigation.navigate(RouteNames.ClubLicenses)
+                      ? () => navigation.navigate(RouteNames.ClubLicenses, { clubId: team?.club?.documentId })
                       : openTeamOfferUnlockSheet,
                   })}
                 </View>

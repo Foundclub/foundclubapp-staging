@@ -791,7 +791,8 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
     ouvrirLeMenu(racine);
     appuyerSurLaRangee(racine, "Cotisation de l'équipe");
     expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
-    expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses');
+    // BH12 P12-06 : les cotisations du club DE L'EQUIPE, pas du club actif.
+    expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses', { clubId: CLUB.documentId });
   });
 
   test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille', () => {
