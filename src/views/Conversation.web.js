@@ -2104,7 +2104,8 @@ function Conversation({ navigation, route }) {
       messagePaneRef.current.scrollTop = messagePaneRef.current.scrollHeight
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [messages.length])
+    // P6-07 : seul un message plus RÉCENT descend le fil ; une page d'anciens messages non.
+  }, [latestMessageId])
 
   // P6-02 : la route garde l'écran monté d'un fil à l'autre ; la saisie du fil quitté
   // ne doit pas partir dans le suivant, et le fil quitté apprend que la frappe s'arrête.

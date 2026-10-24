@@ -369,4 +369,35 @@ describe('BH04 — messagerie du site', () => {
     });
     expect(saisie(arbre).props.value).toBe('mon brouillon');
   });
+
+  test('P6-07 : charger d anciens messages ne ramène pas tout en bas', async () => {
+    /** @type {any[]} */
+    const noeuds = [];
+    const options = {
+      createNodeMock: () => {
+        const noeud = { scrollHeight: 1000, scrollTop: 0 };
+        noeuds.push(noeud);
+        return noeud;
+      },
+    };
+    const navigation = { goBack: jest.fn(), navigate: jest.fn(), setParams: jest.fn() };
+    const ecran = () => (
+      <QueryClientProvider client={queryClient}>
+        <ConversationWeb navigation={navigation} route={{ params: { chatId: CHAT_ID } }} />
+      </QueryClientProvider>
+    );
+    /** @type {any} */
+    let arbre;
+    await act(async () => { arbre = renderer.create(ecran(), options); });
+    montes.push(arbre);
+    await act(async () => { await new Promise((r) => { setTimeout(r, 30); }); });
+    noeuds.forEach((n) => { n.scrollTop = 5; });
+    mockMessagesDuFil = [
+      ...mockMessagesDuFil,
+      { createdAt: '2026-10-01T08:00:00.000Z', documentId: 'vieux', message: 'Ancien', sender: BRUNO },
+    ];
+    await act(async () => { arbre.update(ecran()); });
+    await act(async () => { await new Promise((r) => { setTimeout(r, 30); }); });
+    expect(noeuds.filter((n) => n.scrollTop === 1000)).toHaveLength(0);
+  });
 });
