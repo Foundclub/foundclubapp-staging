@@ -393,4 +393,25 @@ describe('UserTrainedTeams — « Quelles equipes entraines-tu ? » (D16)', () =
 
     expect(actifs.length).toBeGreaterThan(1);
   });
+  it('BH12 P5-19 — apres un echec partiel, le nouvel essai ne renvoie QUE les equipes en echec', async () => {
+    const { tree } = rendre();
+    mockCreateTeamMembershipRequest.mockImplementation((/** @type {any} */ payload) => (
+      payload.team === 'team-2' ? Promise.reject(new Error('panne')) : Promise.resolve({ documentId: 'req' })
+    ));
+
+    act(() => { rangees(tree)[0].props.onPress(); });
+    act(() => { rangees(tree)[1].props.onPress(); });
+    await act(async () => {
+      await pressableIntitule(tree, 'Envoyer ma demande').props.onPress();
+    });
+    mockCreateTeamMembershipRequest.mockClear();
+    mockCreateTeamMembershipRequest.mockResolvedValue({ documentId: 'req' });
+
+    await act(async () => {
+      await pressableIntitule(tree, 'Envoyer ma demande').props.onPress();
+    });
+
+    expect(mockCreateTeamMembershipRequest).toHaveBeenCalledTimes(1);
+    expect(mockCreateTeamMembershipRequest).toHaveBeenCalledWith({ team: 'team-2', user: 'coach-1' });
+  });
 });

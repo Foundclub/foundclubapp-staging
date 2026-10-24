@@ -122,12 +122,23 @@ function UserTrainedTeams({ navigation, route }) {
     // Une seule action pour l'entraineur, N appels cote reseau : il n'existe
     // pas de route groupee, et en creer une demanderait un lot `admin` que la
     // mesure du 2026-08-05 a justement montre inutile.
-    mutationFn: (/** @type {string[]} */ teamIds) => Promise.all(
-      teamIds.map((teamId) => createTeamMembershipRequest({
-        team: teamId,
-        user: userData?.documentId,
-      })),
-    ),
+    // P5-19 : un echec partiel ne doit pas faire renvoyer les demandes deja creees
+    // (le serveur les refuserait) ; on ne garde cochees que les equipes en echec.
+    mutationFn: async (/** @type {string[]} */ teamIds) => {
+      const results = await Promise.allSettled(
+        teamIds.map((teamId) => createTeamMembershipRequest({
+          team: teamId,
+          user: userData?.documentId,
+        })),
+      );
+      const failed = results.filter((result) => result.status === 'rejected');
+      if (failed.length) {
+        setSelectedTeamIds(teamIds.filter((_teamId, index) => results[index].status === 'rejected'));
+        refetchUserData?.();
+        throw /** @type {PromiseRejectedResult} */ (failed[0]).reason;
+      }
+      return results;
+    },
     onError: (error) => {
       Alert.alert(
         t('onboarding.trainedTeams.errorTitle', 'Demande non envoyée'),
@@ -212,8 +223,9 @@ function UserTrainedTeams({ navigation, route }) {
   };
 
   const handleSend = () => {
-    if (!selectedTeamIds.length) return;
-    sendRequestsMutation.mutate(selectedTeamIds);
+    const teamIdsToSend = selectedTeamIds.filter((teamId) => !pendingTeamIds.has(teamId));
+    if (!teamIdsToSend.length) return;
+    sendRequestsMutation.mutate(teamIdsToSend);
   };
 
   return (
