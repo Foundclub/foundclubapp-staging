@@ -54,6 +54,9 @@ function AdminClaimDetail() {
   const isAffiliationHelp = !!request?.__isAffiliationHelp;
   const isClubCreation = request?.requestKind === 'club_creation';
   const [adminNote, setAdminNote] = useState('');
+  // BH14 P9-16 : une décision à la fois — l'une en cours éteint les deux boutons.
+  const actionEnCours = approveMutation.isPending || processHelpMutation.isPending
+    || refuseClaimMutation.isPending || refuseHelpMutation.isPending;
 
   useEffect(() => {
     if (!request?.adminNote) return;
@@ -411,7 +414,7 @@ function AdminClaimDetail() {
 
         <View style={Spaces.marginTop[12]}>
           <Button
-            disabled={approveMutation.isPending || processHelpMutation.isPending}
+            disabled={actionEnCours}
             onPress={handleApprove}
             style={[Spaces.marginBottom[12], isAffiliationHelp ? null : { backgroundColor: Colors.success500 }]}
             textStyle={Fonts.button}
@@ -431,7 +434,7 @@ function AdminClaimDetail() {
           />
 
           <Button
-            disabled={refuseClaimMutation.isPending || refuseHelpMutation.isPending}
+            disabled={actionEnCours}
             onPress={handleRefuse}
             style={{ borderColor: Colors.error500 }}
             textStyle={[Fonts.button, { color: Colors.error500 }]}
