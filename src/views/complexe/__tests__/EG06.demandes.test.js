@@ -439,3 +439,12 @@ describe('RESA-FIN-APP-2 E-G06 — ouvert depuis la cloche avec « refuser »', 
     expect(parRepere(arbre, 'feuille-motif')).toBeNull();
   });
 });
+
+describe('BH16 P13-14 — une panne n’est pas un conflit', () => {
+  it('« Accepter » échoue (500) : le bouton reste, on peut réessayer', async () => {
+    mockDecider.mockRejectedValueOnce({ message: 'panne', status: 500 });
+    const arbre = await monter();
+    await appuyerDans(arbre, 'demande-accepter-r-1');
+    expect(parRepere(arbre, 'demande-accepter-r-1')).not.toBeNull();
+  });
+});

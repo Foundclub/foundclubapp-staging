@@ -39,7 +39,7 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 
-import { getServerErrorCode } from '@/utils/errors/displayError';
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -89,6 +89,7 @@ function ComplexeDemandes() {
   const [conflits, setConflits] = useState(/** @type {Record<string, string>} */ ({}));
   const [closes, setCloses] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [message, setMessage] = useState('');
+  const [erreurDecision, setErreurDecision] = useState('');
   const [enCours, setEnCours] = useState('');
   const surOrdinateur = useIsDesktop();
   const [choisie, setChoisie] = useState('');
@@ -126,6 +127,7 @@ function ComplexeDemandes() {
 
   const accepter = async (/** @type {any} */ demande) => {
     setMessage('');
+    setErreurDecision('');
     setEnCours(demande.documentId);
     try {
       await decider.mutateAsync({
@@ -138,6 +140,11 @@ function ComplexeDemandes() {
       ));
     } catch (erreur) {
       const texte = messageDeRefusResa(t, erreur, repli);
+      // BH16 P13-14 : seul un vrai conflit (409) retire « Accepter » ; une panne se réessaie.
+      if (getErrorStatus(erreur) !== 409) {
+        setErreurDecision(texte);
+        return;
+      }
       setConflits((avant) => ({ ...avant, [demande.documentId]: texte }));
       // RESA-FIN-APP (20/10) — déjà traitée ou EXPIRÉE (409 d'état) : aucun geste ne passe plus
       // (« Refuser avec un mot » échouait aussi, tournée 2) ; la liste se relit.
@@ -432,6 +439,7 @@ function ComplexeDemandes() {
             value={onglet}
           />
           {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
+          {erreurDecision ? <BandeauComplexe texte={erreurDecision} ton="erreur" /> : null}
           {corps}
         </ScrollView>
       </DeuxVolets>
