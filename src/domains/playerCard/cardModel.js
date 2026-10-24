@@ -41,7 +41,11 @@ const toInt = (value) => {
  */
 export const computeAge = (birthdate, now = new Date()) => {
   if (!birthdate) return null;
-  const dob = birthdate instanceof Date ? birthdate : new Date(birthdate);
+  // Une date nue YYYY-MM-DD se lit en heure locale (sinon minuit UTC = la veille outre-mer).
+  const jour = typeof birthdate === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthdate);
+  const dob = birthdate instanceof Date ? birthdate
+    : jour ? new Date(Number(jour[1]), Number(jour[2]) - 1, Number(jour[3]))
+      : new Date(birthdate);
   if (Number.isNaN(dob.getTime())) return null;
   let age = now.getFullYear() - dob.getFullYear();
   const m = now.getMonth() - dob.getMonth();
@@ -236,7 +240,8 @@ export const evaluateMinorGuard = (user = {}, now = new Date()) => {
   // (cardConsentAcceptedAt, champ optionnel a ajouter au schema).
   const hasConsent = Boolean(user.parentalDeclarationAccepted || user.cardConsentAcceptedAt);
   // Publication auto autorisee si adulte, OU mineur >=15, OU consentement present.
-  const canPublish = age === null ? true : (!requiresConsent || hasConsent);
+  // Age inconnu : on ne peut pas exclure un mineur, le consentement est donc exige.
+  const canPublish = age === null ? hasConsent : (!requiresConsent || hasConsent);
   return {
     age, canPublish, hasConsent, isMinor, requiresConsent,
   };
