@@ -68,7 +68,12 @@ function FeuilleTelephone({
     try {
       // Sur ordinateur, le presse-papiers du navigateur (même motif que CollectiviteInviteClub).
       const presse = typeof navigator !== 'undefined' ? navigator?.clipboard : null;
-      await presse?.writeText?.(numero);
+      // BH16 P13-19 : sans presse-papiers, rien n'est copié ; on ne le prétend pas.
+      if (typeof presse?.writeText !== 'function') {
+        setCopie(false);
+        return;
+      }
+      await presse.writeText(numero);
       setCopie(true);
     } catch (erreur) {
       setCopie(false);
