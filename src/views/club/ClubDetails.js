@@ -128,6 +128,7 @@ import {
   resolveEmptyClubClaimGesture,
   showsCityNewsBlock,
 } from './clubDetailsActionMatrix';
+import { isPendingRequestForClub } from './pendingRequestMatch';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
 import DemandePlaceEnfant from './components/DemandePlaceEnfant';
@@ -186,8 +187,6 @@ const getTeamMetaSummary = (team) => (
 );
 
 const getTeamIdentity = (team) => String(team?.documentId || team?.id || '').trim();
-
-const normalizeComparableValue = (value) => String(value || '').trim().toLowerCase();
 
 const isValidEmail = (value) => {
   const normalizedValue = String(value || '').trim();
@@ -1376,18 +1375,9 @@ function ClubDetails({ navigation, route }) {
     queryKey: ['clubRequests', 'pending', 'clubCreation', userData?.documentId],
   });
 
-  const hasPendingClubCreationRequest = useMemo(() => {
-    const currentClubId = String(clubId || '').trim();
-    const currentClubName = normalizeComparableValue(club?.name);
-
-    return (pendingClubCreationRequestsResponse?.data || []).some((requestItem) => {
-      const requestClubId = String(requestItem?.searchContext?.clubId || '').trim();
-      const requestClubName = normalizeComparableValue(requestItem?.clubName);
-      const matchesClubById = Boolean(currentClubId && requestClubId && currentClubId === requestClubId);
-      const matchesClubByName = Boolean(currentClubName && requestClubName === currentClubName);
-      return matchesClubById || matchesClubByName;
-    });
-  }, [club?.name, clubId, pendingClubCreationRequestsResponse?.data]);
+  const hasPendingClubCreationRequest = useMemo(() => (pendingClubCreationRequestsResponse?.data || []).some(
+    (requestItem) => isPendingRequestForClub(requestItem, clubId, club?.name),
+  ), [club?.name, clubId, pendingClubCreationRequestsResponse?.data]);
 
   const hasPendingClubPartneringRequest = hasPendingClubCreationRequest || clubPartnerRequestPending;
 
@@ -1403,18 +1393,9 @@ function ClubDetails({ navigation, route }) {
     queryKey: ['clubRequests', 'pending', 'teamNotFound', userData?.documentId],
   });
 
-  const hasPendingTeamNotFoundRequest = useMemo(() => {
-    const currentClubId = String(clubId || '').trim();
-    const currentClubName = normalizeComparableValue(club?.name);
-
-    return (pendingTeamNotFoundResponse?.data || []).some((requestItem) => {
-      const requestClubId = String(requestItem?.searchContext?.clubId || '').trim();
-      const requestClubName = normalizeComparableValue(requestItem?.clubName);
-      const matchesClubById = Boolean(currentClubId && requestClubId && currentClubId === requestClubId);
-      const matchesClubByName = Boolean(currentClubName && requestClubName === currentClubName);
-      return matchesClubById || matchesClubByName;
-    });
-  }, [club?.name, clubId, pendingTeamNotFoundResponse?.data]);
+  const hasPendingTeamNotFoundRequest = useMemo(() => (pendingTeamNotFoundResponse?.data || []).some(
+    (requestItem) => isPendingRequestForClub(requestItem, clubId, club?.name),
+  ), [club?.name, clubId, pendingTeamNotFoundResponse?.data]);
 
   const hasPendingPlayerNoTeamRequest = hasPendingTeamNotFoundRequest || playerNoTeamRequestPending;
 
@@ -1826,10 +1807,10 @@ function ClubDetails({ navigation, route }) {
     const currentRole = userData?.role?.name;
     // ponytail: BH03 · P11-02 — le serveur quitte le club ACTIF (meme resolution ci-dessous) ;
     // sur un autre club, pas de bouton. Sortie : envoyer clubId quand le serveur le lira.
-    const activeClubId = userData?.club?.documentId
+    const clubLeftByServer = userData?.club?.documentId
       || userData?.clubAffiliations?.[0]?.club?.documentId;
     return Boolean(clubId && hasClubAccess(clubId))
-      && (!activeClubId || activeClubId === clubId)
+      && (!clubLeftByServer || clubLeftByServer === clubId)
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
   }, [
     USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess,
