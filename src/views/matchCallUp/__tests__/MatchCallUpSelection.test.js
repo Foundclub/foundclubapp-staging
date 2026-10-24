@@ -573,6 +573,21 @@ describe('D77 ecran 2 — convoquer hors equipe', () => {
     expect(style.flexWrap).toBe('wrap');
   });
 
+  // BH05 · P6-16 — un joueur present dans DEUX autres equipes ne compte qu'une fois.
+  test('un renfort inscrit dans deux autres equipes n apparait qu une fois', async () => {
+    mockClubTeams.pages[0].data.push({
+      documentId: 'team_3',
+      name: 'U17',
+      players: [joueur('r1', 'Bilal', 'Lopez', { number: 14, position: 'MC' })],
+    });
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Autres équipes');
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('RENFORTS DU CLUB · 3');
+    expect(texte.split('AVATAR:Bilal Lopez').length - 1).toBe(1);
+  });
+
   test('sans autre equipe dans le club, l onglet le dit au lieu de rester vide', async () => {
     mockClubTeams = {
       pages: [{ data: [{ documentId: 'team_1', name: 'Senior 1', players: EFFECTIF }] }],

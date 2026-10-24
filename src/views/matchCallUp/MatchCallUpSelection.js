@@ -248,7 +248,14 @@ function MatchCallUpSelection() {
           fromTeamName: team?.name || '',
         })))
       .filter(Boolean)
-      .filter((player) => !squadIds.has(getCompositionPlayerId(player)));
+      // BH05 · P6-16 — un joueur de deux autres equipes ne compte qu'une fois :
+      // `squadIds` retient aussi chaque renfort deja vu.
+      .filter((player) => {
+        const id = getCompositionPlayerId(player);
+        if (squadIds.has(id)) return false;
+        squadIds.add(id);
+        return true;
+      });
   }, [clubTeamsPages?.pages, squadPlayers, teamId]);
 
   // AC09 — LA REPONSE DE CHACUN, calculee UNE fois pour toute la liste.
