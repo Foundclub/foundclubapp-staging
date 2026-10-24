@@ -963,6 +963,10 @@ function MyLicenseDetail({ navigation, route }) {
                       'Envoyée · le club vérifie',
                     );
                   }
+                  // BH11 P5-16 : le motif ne s affiche que sur un depot refuse ou a remplacer.
+                  const refusalReason = ['refused', 'to_replace'].includes(submission?.status)
+                    ? submission?.refusalReason
+                    : null;
                   return (
                     <View
                       key={licenseKeyOf(request) || request?.name}
@@ -974,8 +978,8 @@ function MyLicenseDetail({ navigation, route }) {
                         glyphColor={submission?.status === 'validated'
                           ? Colors.success500
                           : Colors.warning400}
-                        state={submission?.refusalReason || state}
-                        stateColor={submission?.refusalReason ? Colors.error300 : undefined}
+                        state={refusalReason || state}
+                        stateColor={refusalReason ? Colors.error300 : undefined}
                         title={request?.name || t(
                           'myLicenseDetail.dossier.request.titleFallback',
                           'Pièce demandée',
