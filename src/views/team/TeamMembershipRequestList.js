@@ -187,7 +187,7 @@ function TeamMembershipRequestList({ navigation, route }) {
    * @returns {import('react').ReactElement}
    */
   const renderItem = ({ item }) => {
-    const canManageRequest = item?.permissions?.canManage !== false;
+    const canManageRequest = item?.permissions?.canManage === true;
     let governanceText = t(
       'teamMembershipRequestList.governance.readOnly',
       'Tu vois cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
