@@ -153,7 +153,13 @@ function ChildEdit() {
    */
   const verdictDate = useMemo(() => {
     const naissance = dateSaisie();
-    if (!naissance) return '';
+    // P11-15 : une date a moitie saisie ne se tait pas (sinon, en modification, elle partait
+    // ignoree sans un mot).
+    if (!naissance) {
+      return day.trim() || month.trim() || year.trim()
+        ? t('myChildren.form.errors.invalidDate', 'Cette date n’existe pas.')
+        : '';
+    }
 
     // ② La date existe-t-elle vraiment ? Un 31 février n'est pas une date, et
     //    `new Date('2017-02-31')` ne le dit pas franchement selon les moteurs.
@@ -183,7 +189,7 @@ function ChildEdit() {
       );
     }
     return '';
-  }, [dateSaisie, t]);
+  }, [dateSaisie, day, month, t, year]);
 
   // Le texte du palier des 13 ans : sous la date, il porte « Relier son compte » (E08).
   const texteTropGrand = t(
