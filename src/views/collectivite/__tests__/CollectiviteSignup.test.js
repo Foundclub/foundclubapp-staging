@@ -271,6 +271,24 @@ describe('COLL-ACCUEIL — planche 5 : « Vous » (étape 2 sur 2) et l envoi', 
     });
   });
 
+  // BH13 P12-14 : pendant la mise à jour du nom, un deuxième appui n envoie pas une deuxième demande.
+  it('BH13/P12-14 deux appuis pendant la mise à jour du nom : un seul envoi', async () => {
+    const arbre = await allerAVous();
+    await saisir(arbre, 'collectivite-inscription-firstname', 'Agnès');
+    await saisir(arbre, 'collectivite-inscription-lastname', 'Mairie');
+    await saisir(arbre, 'collectivite-inscription-jobTitle', 'Service des sports');
+    await saisir(arbre, 'collectivite-inscription-professionalEmail', 'sports@montrivage.fr');
+    /** @type {any} */ let finir = () => {};
+    /** @type {any} */ (updateMe).mockImplementationOnce(() => new Promise((resolve) => { finir = resolve; }));
+    const bouton = () => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'bouton-Envoyer ma demande'
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { bouton().props.onPress(); });
+    await act(async () => { bouton().props.onPress(); });
+    await act(async () => { finir({}); });
+    expect(updateMe).toHaveBeenCalledTimes(1);
+    expect(mockEnvoi).toHaveBeenCalledTimes(1);
+  });
+
   it('une demande déjà en cours se dit en français', async () => {
     mockEnvoi.mockRejectedValue({
       details: { code: 'COLLECTIVITE_MANAGER_REQUEST_DUPLICATE' }, status: 409,

@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -353,10 +353,15 @@ function CollectiviteSignup() {
     navigation.goBack();
   };
 
+  // P12-14 : un seul envoi à la fois, mise à jour du nom comprise (avant `envoi.isPending`).
+  const envoiEnCours = useRef(false);
+  const [nomEnCours, setNomEnCours] = useState(false);
   const envoyer = async () => {
     setEnvoiTente(true);
     setErreurServeur('');
-    if (!choix || Object.keys(fautes).length > 0) return;
+    if (!choix || Object.keys(fautes).length > 0 || envoiEnCours.current) return;
+    envoiEnCours.current = true;
+    setNomEnCours(true);
     try {
       const prenom = champs.firstname.trim();
       const nom = champs.lastname.trim();
@@ -374,6 +379,9 @@ function CollectiviteSignup() {
       const erreur = /** @type {any} */ (error);
       const code = erreur?.details?.code || erreur?.response?.data?.error?.details?.code;
       setErreurServeur(refusLisible(t, code) || getErrorMessage(erreur));
+    } finally {
+      envoiEnCours.current = false;
+      setNomEnCours(false);
     }
   };
 
@@ -783,8 +791,8 @@ function CollectiviteSignup() {
             />
           ) : (
             <Button
-              disabled={Boolean(envoi.isPending)}
-              isLoading={Boolean(envoi.isPending)}
+              disabled={Boolean(envoi.isPending) || nomEnCours}
+              isLoading={Boolean(envoi.isPending) || nomEnCours}
               onPress={envoyer}
               style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
               title={t('collectiviteAccueil.inscription.envoyer', 'Envoyer ma demande')}
