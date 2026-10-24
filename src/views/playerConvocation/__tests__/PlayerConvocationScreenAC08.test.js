@@ -292,7 +292,9 @@ describe('AC08 · TEMOIN 2 — ⛔ aucun cul-de-sac', () => {
   // BH05 · P6-17 — corps vide (204, `null`) : la requete a REUSSI, il n y a
   // juste rien. Le joueur ne doit pas rester devant un rond qui tourne.
   test('une reponse REUSSIE au corps vide ne laisse pas un chargement infini', () => {
-    mockQueryState = { data: null, isError: false, isLoading: false, isSuccess: true };
+    mockQueryState = {
+      data: null, isError: false, isLoading: false, isSuccess: true,
+    };
 
     expect(texteVisible(rendre())).toContain('Aucune composition publiée ne te concerne');
   });

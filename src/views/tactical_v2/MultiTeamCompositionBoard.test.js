@@ -767,7 +767,9 @@ describe('BH05 — qui est convoque reste vrai', () => {
       reservePlayerIds: ['p1'],
       schemaVersion: 3,
       sportContext: 'football',
-      teams: [{ id: 'team_1', name: 'Équipe 1', placements: [], presetKey: '4-4-2' }],
+      teams: [{
+        id: 'team_1', name: 'Équipe 1', placements: [], presetKey: '4-4-2',
+      }],
     },
     published: null,
   };
@@ -794,8 +796,12 @@ describe('BH05 — qui est convoque reste vrai', () => {
           id: 'team_1',
           name: 'Équipe 1',
           placements: [
-            { playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk' },
-            { playerId: 'p2', positionX: 30, positionY: 40, slotId: 'team_1:cb' },
+            {
+              playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+            },
+            {
+              playerId: 'p2', positionX: 30, positionY: 40, slotId: 'team_1:cb',
+            },
           ],
           presetKey: '4-4-2',
         }],

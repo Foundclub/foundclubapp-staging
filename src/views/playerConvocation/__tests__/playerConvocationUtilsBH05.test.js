@@ -40,8 +40,12 @@ describe('BH05 — P6-11 joueurs ajoutes a la main sur le terrain du joueur', ()
             id: 'team_1',
             name: 'Senior 1',
             placements: [
-              { playerId: 'joueur-1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1' },
-              { playerId: 'manual-1', positionX: 50, positionY: 50, slotId: 'team_1:slot_2' },
+              {
+                playerId: 'joueur-1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+              },
+              {
+                playerId: 'manual-1', positionX: 50, positionY: 50, slotId: 'team_1:slot_2',
+              },
             ],
           }],
         },
