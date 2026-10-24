@@ -46,7 +46,7 @@ const money = (value = 0) => new Intl.NumberFormat(localeDesFormats(), {
 const currentSeason = () => `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
 // BH11 P5-03 : espaces et points de milliers retires (« 1 000 », « 1.234,50 »).
 export const euroToCents = (value) => {
-  let raw = String(value || '0').replace(/s/g, '');
+  let raw = String(value || '0').replace(/\s/g, '');
   if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
   return Math.round(Number(raw) * 100);
 };
