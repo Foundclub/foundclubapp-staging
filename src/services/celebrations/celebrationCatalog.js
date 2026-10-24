@@ -979,7 +979,10 @@ export const inferCelebrationActionFromNotification = (notificationType, context
 };
 
 export const buildCelebrationPayload = (actionKey, context = {}, overrides = {}) => {
-  const definition = celebrationCatalog[actionKey];
+  // BH15 P3-20 : une clé héritée (« constructor ») n est pas une fête du catalogue.
+  const definition = Object.prototype.hasOwnProperty.call(celebrationCatalog, actionKey)
+    ? celebrationCatalog[actionKey]
+    : null;
   if (!definition) return null;
 
   const copy = definition.buildCopy(context || {});
