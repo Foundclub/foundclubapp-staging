@@ -5,7 +5,9 @@ import AdminEvents from '../AdminEvents';
 // BH14 P9-10 (BUGHUNT 24/10/2026) — la plage du jour mélangeait UTC (la date choisie) et heure
 // locale (la fin de journée) : à 00:30 à Paris, « Aujourd'hui » désignait la veille, et les
 // événements de 0 h à 2 h étaient exclus.
+const tzDOrigine = process.env.TZ;
 process.env.TZ = 'Europe/Paris';
+afterAll(() => { process.env.TZ = tzDOrigine; });
 
 /** @type {any} */
 let mockFiltres;
