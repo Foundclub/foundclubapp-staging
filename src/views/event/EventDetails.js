@@ -9547,9 +9547,14 @@ function EventDetails({ navigation, route }) {
             // @ts-ignore: FIXME: Baseline TS regression
             availableTournamentSourceTeams.map((sourceTeam) => (
               <TouchableOpacity
+                // P7-09 : une seule inscription à la fois (double appui, deuxième équipe).
+                disabled={registerTournamentTeamMutation.isPending}
                 key={sourceTeam?.documentId}
-                // @ts-ignore: FIXME: Baseline TS regression
-                onPress={() => registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId })}
+                onPress={() => {
+                  if (registerTournamentTeamMutation.isPending) return;
+                  // @ts-ignore: FIXME: Baseline TS regression
+                  registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId });
+                }}
                 style={[
                   ...tournamentDs.styles.compactPanelCard,
                   {
