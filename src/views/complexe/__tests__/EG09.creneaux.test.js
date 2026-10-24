@@ -401,3 +401,23 @@ describe('RESA-FIN-APP (5) E-G09 — la ligne d’un tarif dit son unité', () =
     expect(lisibles(arbre)).toContain('7 € par joueur');
   });
 });
+
+describe('BH16 P13-13 — deux suppressions rapides', () => {
+  it('la seconde attend la réponse de la première : aucun retrait n’en écrase un autre', async () => {
+    const arbre = await monter();
+    /** @type {(v: any) => void} */
+    let finir = () => {};
+    mockApercu.mockImplementationOnce(() => new Promise((ok) => { finir = ok; }));
+    const croix = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Retirer : ') && n.props.onPress
+      && typeof n.type !== 'string'
+    ));
+    await act(async () => {
+      croix[croix.length - 1].props.onPress();
+      croix[croix.length - 2].props.onPress();
+    });
+    expect(mockApercu).toHaveBeenCalledTimes(1);
+    await act(async () => { finir({ data: {} }); });
+  });
+});
