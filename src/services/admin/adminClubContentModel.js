@@ -108,8 +108,7 @@ export const getClubCity = (club = {}) => {
     || address?.city
     || address?.town
     || address?.locality
-    || address?.municipality
-    || address?.postcode,
+    || address?.municipality,
   );
 };
 
@@ -250,12 +249,13 @@ export const buildAddressFromForm = (form = {}) => {
   return {
     ...advanced,
     address: normalizeText(typedForm.addressLabel) || advanced.address,
-    city: normalizeText(typedForm.city) || advanced.city,
+    // BH14 P9-18 / P2-15 : un champ présent mais vidé efface la valeur ; absent, l'adresse avancée reste.
+    city: typedForm.city !== undefined ? normalizeText(typedForm.city) : advanced.city,
     description: normalizeText(typedForm.addressLabel) || advanced.description,
     label: normalizeText(typedForm.addressLabel) || advanced.label,
-    lat: normalizeText(typedForm.latitude) ? normalizeNumber(typedForm.latitude, null) : advanced.lat,
-    lng: normalizeText(typedForm.longitude) ? normalizeNumber(typedForm.longitude, null) : advanced.lng,
-    postcode: normalizeText(typedForm.postcode) || advanced.postcode,
+    lat: typedForm.latitude !== undefined ? (normalizeText(typedForm.latitude) ? normalizeNumber(typedForm.latitude, null) : null) : advanced.lat,
+    lng: typedForm.longitude !== undefined ? (normalizeText(typedForm.longitude) ? normalizeNumber(typedForm.longitude, null) : null) : advanced.lng,
+    postcode: typedForm.postcode !== undefined ? normalizeText(typedForm.postcode) : advanced.postcode,
   };
 };
 
