@@ -88,7 +88,7 @@ function DetectionTeamsManual() {
     teamId,
   } = params;
 
-  const { data: teamComposition } = useGetEventTeamComposition(eventId, teamId, {
+  const { data: teamComposition, refetch: refetchComposition } = useGetEventTeamComposition(eventId, teamId, {
     enabled: Boolean(eventId),
   });
 
@@ -150,21 +150,38 @@ function DetectionTeamsManual() {
     try {
       // Les equipes se construisent depuis les affectations de l'ecran, jamais
       // par un recalcul : le coach a decide, on range sa decision.
-      const teams = BIB_COLORS.map((bibColor) => ({
-        bibColor,
-        playerIds: players
+      // BH15 P14-04 : le tri, le mode, le nombre d'equipes, les rotations et les terrains
+      // deja ranges sont repris ; seules les affectations viennent de cet ecran.
+      const storedSplit = teamComposition?.detectionSplit;
+      const storedTeams = Array.isArray(storedSplit?.teams) ? storedSplit.teams : EMPTY_LIST;
+      const allTeams = BIB_COLORS.map((bibColor) => {
+        const playerIds = players
           .filter((/** @type {any} */ player) => assignments[getPlayerId(player)] === bibColor)
-          .map(getPlayerId),
-      }));
+          .map(getPlayerId);
+        const stored = storedTeams.find((/** @type {any} */ team) => team?.bibColor === bibColor);
+        const kept = new Set(playerIds);
+        return {
+          bibColor,
+          playerIds,
+          rotationIds: (Array.isArray(stored?.rotation) ? stored.rotation : EMPTY_LIST)
+            .map(String)
+            .filter((/** @type {string} */ id) => kept.has(id)),
+          terrain: stored?.terrain || null,
+        };
+      });
+      const lastUsed = allTeams.reduce((last, team, index) => (team.playerIds.length ? index + 1 : last), 0);
+      const storedCount = Number(storedSplit?.teamCount) || BIB_COLORS.length;
+      const teams = allTeams.slice(0, Math.min(BIB_COLORS.length, Math.max(storedCount, lastUsed)));
 
       const detectionSplit = buildDetectionSplitPayload({
         checkInFirst,
-        memberMode,
+        memberMode: memberMode || storedSplit?.memberMode,
         players,
         presentIds: presentIds || players.map(getPlayerId),
-        rounds: teamComposition?.detectionSplit?.rounds || EMPTY_LIST,
-        teamCount: BIB_COLORS.length,
-        teamNames: BIB_COLORS.map((bibColor) => t(`detection.teams.manual.bibs.${bibColor}`)),
+        rounds: storedSplit?.rounds || EMPTY_LIST,
+        splitBy: storedSplit?.splitBy,
+        teamCount: teams.length,
+        teamNames: teams.map(({ bibColor }) => t(`detection.teams.manual.bibs.${bibColor}`)),
         teams,
       });
 
@@ -172,6 +189,8 @@ function DetectionTeamsManual() {
         draft: buildDraftPayloadWithSplit(teamComposition?.draft, detectionSplit),
         teamId,
       });
+      // BH15 P14-05 : l'ecran suivant relit la composition qui vient d'etre ecrite.
+      await refetchComposition?.();
       Alert.alert(
         t('detection.alerts.saved.title'),
         t('detection.alerts.saved.message'),
@@ -195,7 +214,7 @@ function DetectionTeamsManual() {
     }
   }, [
     assignments, checkInFirst, eventId, isBusy, memberMode, navigation, params, players,
-    presentIds, t, teamComposition?.detectionSplit?.rounds, teamComposition?.draft, teamId,
+    presentIds, refetchComposition, t, teamComposition?.detectionSplit, teamComposition?.draft, teamId,
   ]);
 
   const renderBibPill = (/** @type {string} */ bibColor) => {
