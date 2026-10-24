@@ -44,6 +44,7 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { carteDAnnonce, NOTICE_ANNONCE_COMPLEXE } from '@/domains/complexe/annonceDuCanal';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import {
@@ -157,6 +158,7 @@ import {
 } from '@/views/collectivite/components/FilDeLaVille';
 // MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
 import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
+import CarteAnnonceDuCanal from '@/views/complexe/components/CarteAnnonceDuCanal';
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
 import ConvocationWizardDiffere from '@/views/conversationConvocation/ConvocationWizardDiffere';
 import {
@@ -4198,6 +4200,10 @@ function Conversation({ navigation, route }) {
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
         ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
+        // 🏟️ RESA-PARTAGER — l'annonce partagée dans le canal du complexe : une carte.
+        ...(msg?.systemNotice?.kind === NOTICE_ANNONCE_COMPLEXE
+          ? { annonceDuCanal: msg.systemNotice }
+          : {}),
         // 🏛️ R17-CANAUX — une actualité posée par la Ville : sa phrase traduite et son lien.
         ...(filDeLaVille.ligneDActualite(msg)
           ? { lienActualite: filDeLaVille.ligneDActualite(msg) }
@@ -6337,6 +6343,18 @@ function Conversation({ navigation, route }) {
   // 🔕 MSG1A (§3.1, §3.17) — une ligne sans auteur (« … a rejoint le canal ») : notice
   // DISCRETE, centree, comme demande (11,5, texte a 62 %, pastille de la barre a 55 %).
   const renderNoticeSysteme = (/** @type {any} */ props) => {
+    // 🏟️ RESA-PARTAGER (A-G32) — l'annonce partagée dans le canal : une carte qui l'ouvre.
+    const carteDuFil = carteDAnnonce(t, props?.currentMessage?.annonceDuCanal);
+    if (carteDuFil) {
+      return (
+        <CarteAnnonceDuCanal
+          carte={carteDuFil}
+          onOuvrir={() => navigation.navigate(RouteNames.ReserverAnnonce, {
+            annonceId: carteDuFil.annonceId,
+          })}
+        />
+      );
+    }
     const lien = props?.currentMessage?.lienActualite;
     const texte = String(lien?.texte || props?.currentMessage?.text || '').trim();
     if (!texte) return null;

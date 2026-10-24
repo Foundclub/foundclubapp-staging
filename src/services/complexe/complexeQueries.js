@@ -42,6 +42,7 @@ import {
   modifierFermetures,
   modifierTerrain,
   noterExterieur,
+  partagerAnnonce,
   reglerFidelite,
   retirerTerrain,
   rouvrirFermetures,
@@ -406,6 +407,15 @@ export const useMarquerNonHonoree = () => useGeste(
  */
 export const useAnnulerNonHonoree = () => useGeste(
   ({ complexeId, reservationId }) => annulerNonHonoree(complexeId, reservationId),
+);
+
+/**
+ * RESA-PARTAGER (A-G32) — « Partager dans mon canal » (E-G05) et « Partager une annonce » (E-G12).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })` rend `{ data: { dejaPartagee } }`.
+ */
+export const usePartagerAnnonce = () => useGeste(
+  ({ complexeId, reservationId }) => partagerAnnonce(complexeId, reservationId),
 );
 
 /**

@@ -6955,6 +6955,15 @@ export default {
   },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — the "Players wanted" post shared in the channel: its
+    // card (manager and players). Same keys as fr.js.
+    annonce: {
+      places_one: '{{count}} spot',
+      places_other: '{{count}} spots',
+      titre: 'Players wanted',
+      voir: 'See the post',
+      voirLibelle: 'See the post: {{quand}}, {{places}}',
+    },
     ecrire: 'Write to members',
     erreur: 'Your channel could not be loaded.',
     membres: {
@@ -6966,6 +6975,18 @@ export default {
     },
     nombre_one: '{{count}} member',
     nombre_other: '{{count}} members',
+    // RESA-PARTAGER (23/10/2026, A-G32) — "Share in my channel" (E-G05) and "Share a post"
+    // (E-G12). Same keys as fr.js.
+    partager: {
+      aucune: 'No game to fill right now. When a player posts "Players wanted" on a booking at '
+        + 'your venue, it shows up here.',
+      choisir: 'Pick the game to fill: it lands as a card in your channel.',
+      dansMonCanal: 'Share in my channel',
+      deja: 'Post already shared in your channel.',
+      erreur: 'Your bookings could not be loaded.',
+      fait: 'Post shared in your channel.',
+      titre: 'Share a post',
+    },
     pause: 'Your venue is suspended: its channel is paused.',
     regle: 'All members will be notified.',
     titre: 'Channel · {{nom}}',

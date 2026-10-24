@@ -62,6 +62,7 @@ import {
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
 // MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
+import { carteDAnnonce } from '@/domains/complexe/annonceDuCanal';
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
@@ -112,6 +113,7 @@ import {
 // MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
 import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
 import LigneAssistance from '@/views/chat/LigneAssistance';
+import CarteAnnonceDuCanal from '@/views/complexe/components/CarteAnnonceDuCanal';
 // MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
 // differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
@@ -3847,6 +3849,20 @@ function Conversation({ navigation, route }) {
     // jamais sur un message ordinaire) : sa phrase, dans le style discret du pack.
     // 🏛️ R17-CANAUX — l'actualité posée par la Ville dans son canal : une notice qui mène à elle
     // (bouton de 44 de haut au moins, nommé pour le lecteur d'écran).
+    // 🏟️ RESA-PARTAGER (A-G32) — l'annonce partagée dans le canal : une carte qui l'ouvre.
+    const carteDuFil = carteDAnnonce(t, message?.systemNotice);
+    if (carteDuFil) {
+      return (
+        <div data-msg1w-id={idMessage} key={idMessage}>
+          <CarteAnnonceDuCanal
+            carte={carteDuFil}
+            onOuvrir={() => navigation.navigate(RouteNames.ReserverAnnonce, {
+              annonceId: carteDuFil.annonceId,
+            })}
+          />
+        </div>
+      );
+    }
     const lienActualite = filDeLaVille.ligneDActualite(message);
     if (lienActualite) {
       return (
@@ -4519,6 +4535,8 @@ function Conversation({ navigation, route }) {
     renderComposition,
     repondreA,
     rolesDuStaff,
+    navigation,
+    t,
     userData?.documentId,
   ])
 

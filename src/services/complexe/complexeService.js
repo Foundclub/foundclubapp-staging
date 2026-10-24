@@ -455,6 +455,22 @@ export const lireCanal = async (complexeId) => corps(
 );
 
 /**
+ * RESA-PARTAGER (A-G32, E-G05 / E-G12) — « Partager dans mon canal » : l'annonce OUVERTE « Il me
+ * manque des joueurs » d'une réservation de SON complexe, posée en carte dans son canal. Deux fois
+ * de suite : rien n'est doublé (`dejaPartagee`) ; sans annonce ouverte : 409
+ * COMPLEXE_RESERVATION_STATE ; complexe qui n'est pas actif : 409 COMPLEXE_CANAL_INACTIF.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat, dejaPartagee, message } }`.
+ */
+export const partagerAnnonce = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/annonce/partager`,
+    {},
+  ),
+);
+
+/**
  * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
  * par le gérant (la même que celle du réserveur ; RESA-L3).
  * @param {string} complexeId - documentId du complexe.
