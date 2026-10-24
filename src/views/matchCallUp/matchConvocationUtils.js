@@ -82,7 +82,13 @@ export const getPlayerRoleInPack = (pack, playerId) => {
  */
 export const buildPlayerIndex = (pack) => {
   const index = new Map();
-  [...asArray(pack?.snapshotPlayers), ...asArray(pack?.manualPlayers)].forEach((player) => {
+  // BH05 · P6-12 — `reserveSnapshotPlayers` aussi : sans lui, un remplacant
+  // qui n'y figure que la apparaissait sans nom.
+  [
+    ...asArray(pack?.snapshotPlayers),
+    ...asArray(pack?.manualPlayers),
+    ...asArray(pack?.reserveSnapshotPlayers),
+  ].forEach((player) => {
     const id = getCompositionPlayerId(player);
     if (id && !index.has(id)) index.set(id, player);
   });
