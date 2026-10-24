@@ -283,7 +283,12 @@ describe('FINITIONS11 · point 3 — l absent pointé à l appel, chez l entraî
   // 🐞 BUGHUNT P7-06 (BH06) — la section « Participants externes » ne passait pas par le rangement.
   test('8 · 🔴 P7-06 — participants externes : Hugo pointé absent quitte « Présent·e·s »', async () => {
     const arbre = await monter(proprietes({
-      externalParticipationSection: { ...SECTION_U15, isExternal: true, key: 'external-participants', teamName: 'Participants externes' },
+      externalParticipationSection: {
+        ...SECTION_U15,
+        isExternal: true,
+        key: 'external-participants',
+        teamName: 'Participants externes',
+      },
       participationsByStatus: undefined,
     }));
 

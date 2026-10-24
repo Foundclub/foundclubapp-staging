@@ -19,7 +19,9 @@ jest.mock('@/domains/auth/authUseCases', () => ({ getAuthTokens: () => ({ token:
 jest.mock('@/config/runtimeUrls', () => ({ getApiBaseUrl: () => 'https://api.test' }));
 jest.mock('@/services/client', () => ({
   __esModule: true,
-  default: { delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn() },
+  default: {
+    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+  },
 }));
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
 jest.mock('@/domains/guidance/guidanceRuntime', () => ({ emitGuidanceAction: jest.fn() }));
@@ -40,6 +42,7 @@ describe('BH06 P1-09 — export en erreur', () => {
 
   it('200 : rend le chemin du fichier', async () => {
     mockFetch.mockResolvedValueOnce(reponse(200));
-    await expect(exportEventParticipants('evt', 'U15')).resolves.toBe('/telechargements/participants_U15.xlsx');
+    await expect(exportEventParticipants('evt', 'U15'))
+      .resolves.toBe('/telechargements/participants_U15.xlsx');
   });
 });

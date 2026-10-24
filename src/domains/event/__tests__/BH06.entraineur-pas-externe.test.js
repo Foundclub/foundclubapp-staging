@@ -10,7 +10,9 @@ const event = {
   invitedTeams: [],
   missings: [],
   participations: [],
-  team: { documentId: 'team-1', name: 'Senior', players: [{ documentId: 'j1' }], trainers: [entraineur] },
+  team: {
+    documentId: 'team-1', name: 'Senior', players: [{ documentId: 'j1' }], trainers: [entraineur],
+  },
 };
 
 test('BH06 P1-17 — un entraîneur en attente n est pas un participant externe', () => {

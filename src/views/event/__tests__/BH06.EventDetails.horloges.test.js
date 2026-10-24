@@ -41,7 +41,8 @@ test('P7-04 — 2025-06-01 à 18:00 (heure de Paris) = 16:00 UTC', () => {
   expect(resolveEventStartAt({ date: '2025-06-01', startTime: '18:00' }).toISOString())
     .toBe('2025-06-01T16:00:00.000Z');
   // Une date qui porte déjà son heure ne bouge pas.
-  expect(resolveEventStartAt({ date: '2025-06-01T16:30:00.000Z', startTime: '18:00' }).toISOString())
+  const dejaHeure = { date: '2025-06-01T16:30:00.000Z', startTime: '18:00' };
+  expect(resolveEventStartAt(dejaHeure).toISOString())
     .toBe('2025-06-01T16:30:00.000Z');
 });
 

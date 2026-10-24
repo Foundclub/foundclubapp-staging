@@ -299,7 +299,12 @@ describe('BH06 P8-22 — l heure sans heure de fin', () => {
   };
 
   test('date seule + debut 18:30, sans fin : on lit 18:30', () => {
-    const event = { ...makeEvent({ facility: null }), date: '2026-09-12', endTime: null, startTime: '18:30:00' };
+    const event = {
+      ...makeEvent({ facility: null }),
+      date: '2026-09-12',
+      endTime: null,
+      startTime: '18:30:00',
+    };
     const lus = textes(renderHeader(event));
     expect(lus).toContain('18:30');
     expect(lus).not.toContain('02:00');

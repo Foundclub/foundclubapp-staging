@@ -930,11 +930,13 @@ describe('P7 - la fiche candidat, en feuille', () => {
 
   // 🐞 BUGHUNT P7-12 (BH06) — la réponse EN RETARD d'une première fiche écrasait la seconde.
   test('P7 · temoin 17 bis — une lecture en retard n écrit pas sur la fiche suivante', async () => {
-    /** @type {(valeur: any) => void} */
+    /** @type {(valeur: any) => void} La réponse de la première lecture, rendue à la main. */
     let libererLaPremiere = () => {};
     mockLireLesCandidatures
       .mockImplementationOnce(() => new Promise((resolve) => { libererLaPremiere = resolve; }))
-      .mockResolvedValueOnce([{ documentId: 'candidature-alix', reviewNote: 'Note d Alix', user: GARDIEN_1 }]);
+      .mockResolvedValueOnce([
+        { documentId: 'candidature-alix', reviewNote: 'Note d Alix', user: GARDIEN_1 },
+      ]);
     const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
 
     taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
@@ -944,7 +946,9 @@ describe('P7 - la fiche candidat, en feuille', () => {
     });
     await act(async () => {});
     await act(async () => {
-      libererLaPremiere([{ documentId: 'candidature-bahia', reviewNote: 'Note de Bahia', user: GARDIEN_2 }]);
+      libererLaPremiere([
+        { documentId: 'candidature-bahia', reviewNote: 'Note de Bahia', user: GARDIEN_2 },
+      ]);
     });
 
     expect(contient(root, 'Note de Bahia')).toBe(false);

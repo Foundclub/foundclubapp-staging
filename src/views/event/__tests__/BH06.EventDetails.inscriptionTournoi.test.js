@@ -10,7 +10,8 @@ const SOURCE = fs.readFileSync(path.resolve(__dirname, '..', 'EventDetails.js'),
 test('P7-09 — chaque ligne d équipe est éteinte et refuse l appui pendant l inscription', () => {
   const appel = SOURCE.indexOf('registerTournamentTeamMutation.mutate({ sourceTeamId');
   expect(appel).toBeGreaterThan(-1);
-  const ligne = SOURCE.slice(SOURCE.lastIndexOf('<TouchableOpacity', appel), SOURCE.indexOf('>', appel));
+  const debut = SOURCE.lastIndexOf('<TouchableOpacity', appel);
+  const ligne = SOURCE.slice(debut, SOURCE.indexOf('>', appel));
   expect(ligne).toContain('disabled={registerTournamentTeamMutation.isPending}');
   expect(ligne).toMatch(/if \(registerTournamentTeamMutation\.isPending\) return;/);
 });

@@ -445,7 +445,7 @@ describe('EventFilters (ecran plein) — ce qui part a la recherche', () => {
     expect(mockDispatch.mock.calls[0][0].payload.q).toBeUndefined();
   });
 
-  it('DEFAUT CORRIGE (BUGHUNT P8-14) : le sport applique revient quand on rouvre l ecran', async () => {
+  it('DEFAUT CORRIGE (BUGHUNT P8-14) : le sport applique revient a la reouverture', async () => {
     // L'ecran ECRIVAIT `activity` mais RELISAIT `eventFilters.activities` (au
     // pluriel) : le sport choisi n'etait jamais reaffiche. Il se relit sous son nom.
     mockEventFilters = { activity: ['a-1'] };

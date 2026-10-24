@@ -18,6 +18,6 @@ test.each(['createEventParticipationMutation', 'joinReservationMutation'])(
   'P7-13 — %s ne lève pas sa propre alerte (l appelant le dit déjà)',
   (nom) => {
     expect(optionsDe(nom)).not.toContain('Alert.alert');
-    expect(SOURCE).toMatch(new RegExp(`await ${nom}\.mutateAsync`));
+    expect(SOURCE).toMatch(new RegExp(`await ${nom}[.]mutateAsync`));
   },
 );
