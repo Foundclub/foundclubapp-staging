@@ -153,9 +153,12 @@ const normalizeFriendlyMatchCollection = (items) => (
  * qui n entraine aucune equipe n a aucun `teamId` : sans cette seconde porte,
  * sa propre candidature ne se reconnait pas et disparait. La relation
  * `applications.team.club` est deja peuplee par AD_OWNER_POPULATE.
+ * BH10 P10-04 — `scope.activeOnly` ne retient que `pending` / `accepted` :
+ * une proposition retiree ou refusee ne doit plus empecher d en refaire une.
+ * La liste « mes candidatures » garde, elle, tous les statuts.
  * @param {any} ad
  * @param {any} teamIds
- * @param {{ clubId?: string }} [scope]
+ * @param {{ activeOnly?: boolean, clubId?: string }} [scope]
  * @returns {any | null}
  */
 export const findMyApplicationOnAd = (ad, teamIds, scope = {}) => {
@@ -165,6 +168,8 @@ export const findMyApplicationOnAd = (ad, teamIds, scope = {}) => {
 
   const applications = Array.isArray(ad?.applications) ? ad.applications : [];
   return applications.find((/** @type {any} */ application) => (
+    (!scope?.activeOnly || ['accepted', 'pending'].includes(application?.status))
+  ) && (
     wantedTeamIds.has(getDocumentKey(application?.team))
     || (Boolean(wantedClubId) && getDocumentKey(application?.team?.club) === wantedClubId)
   )) || null;
