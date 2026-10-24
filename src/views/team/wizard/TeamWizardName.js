@@ -196,7 +196,7 @@ function TeamWizardName({ navigation, route }) {
   useEffect(() => {
     const nextClubId = routeClubId || accountClubId;
     const nextPreselectedTrainerId = routePreselectedTrainerId;
-    const shouldInitClubId = Boolean(nextClubId) && !state.clubId;
+    const shouldInitClubId = Boolean(nextClubId) && (!state.clubId || (Boolean(routeClubId) && routeClubId !== state.clubId));
     const shouldInitTrainerId = Boolean(nextPreselectedTrainerId)
       && !state.preselectedTrainerId
       && !state.trainers?.includes(nextPreselectedTrainerId);
