@@ -84,6 +84,8 @@ const createInitialState = () => {
     // SUR un evenement, et l'evenement n'existe pas encore. Le Recap les rejoue
     // apres coup (`saveEventCompositionDraft`).
     matchCallUpPlayerIds: [],
+    // BH07 / P8-05 — vrai des que l'etape a ecrit une convocation, meme vide.
+    matchCallUpTouched: false,
     totalPlayers: null,
     // Step 6: Validation mode
     externalParticipantValidationMode: 'manual',
@@ -235,6 +237,7 @@ function eventWizardReducer(state, action) {
       return {
         ...state,
         matchCallUpPlayerIds: Array.isArray(action.payload) ? action.payload : [],
+        matchCallUpTouched: true,
       };
     case 'SET_META':
       return { ...state, ...action.payload };
@@ -253,6 +256,7 @@ function eventWizardReducer(state, action) {
         // AC04 — changer d'equipe change l'effectif : garder des identifiants
         // de joueurs d'une AUTRE equipe fabriquerait une convocation fantome.
         matchCallUpPlayerIds: [],
+        matchCallUpTouched: false,
         team: action.payload,
       };
     case 'SET_TEAM_AUDIENCES':
@@ -264,6 +268,7 @@ function eventWizardReducer(state, action) {
         detectionSlots: [],
         invitedTeams: [],
         matchCallUpPlayerIds: [],
+        matchCallUpTouched: false,
         team: action.payload?.team || null,
         tournamentActivity: action.payload?.tournamentActivity || null,
         tournamentCategory: action.payload?.tournamentCategory || null,
@@ -303,6 +308,7 @@ function eventWizardReducer(state, action) {
         // AC04 : meme raison que `opponentName` — une convocation n'a de sens
         // que sur un match.
         matchCallUpPlayerIds: isMatch ? state.matchCallUpPlayerIds : [],
+        matchCallUpTouched: isMatch ? state.matchCallUpTouched : false,
         opponentClubId: isMatch ? state.opponentClubId : null,
         // Y02 : changer de type pour autre chose qu'un match efface l'adversaire.
         // Sinon un adversaire saisi puis abandonne (« finalement c'est un
