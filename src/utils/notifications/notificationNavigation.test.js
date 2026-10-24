@@ -96,6 +96,16 @@ describe('notificationNavigation', () => {
     });
   });
 
+  test.each([
+    NOTIFICATION_TYPES.LEAGUE_QUORUM_REACHED,
+    NOTIFICATION_TYPES.LEAGUE_QUORUM_REMINDER,
+  ])('BH01/P1-13 — %s ouvre la presence du match', (type) => {
+    expect(resolveNotificationDestination({ matchId: 'm1', type })).toEqual({
+      params: { focusSection: 'presence', matchId: 'm1' },
+      route: RouteNames.LeagueMatchDetails,
+    });
+  });
+
   test('normalizes notification payload ids and keeps a deterministic open key', () => {
     const normalized = normalizeNotificationPayload({
       data: JSON.stringify({
