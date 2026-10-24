@@ -217,3 +217,26 @@ describe('une sauvegarde locale qui rate ne fait jamais semblant', () => {
     })).not.toThrow();
   });
 });
+
+describe('BH15 · P3-01 — ne marquer envoyé que ce qui est vraiment parti', () => {
+  it('P3-22 : une mesure modifiée PENDANT l envoi reste à envoyer', () => {
+    putLocalResult(SESSION, ligne({ value: 30 }));
+    const envoyees = getUnsyncedResults(SESSION);
+    putLocalResult(SESSION, ligne({ value: 35 }));
+
+    markResultsSynced(SESSION, envoyees);
+
+    expect(getUnsyncedResults(SESSION)).toEqual([expect.objectContaining({ value: 35 })]);
+    expect(getPendingSessions()).toContain(SESSION);
+  });
+
+  it('P3-23 : une mesure refusée par le serveur reste à envoyer', () => {
+    putLocalResult(SESSION, ligne());
+    putLocalResult(SESSION, ligne({ measureKey: 'temps' }));
+    const envoyees = getUnsyncedResults(SESSION);
+
+    markResultsSynced(SESSION, envoyees, [{ reason: 'refus', row: envoyees[1] }]);
+
+    expect(getUnsyncedResults(SESSION)).toEqual([expect.objectContaining({ measureKey: 'temps' })]);
+  });
+});

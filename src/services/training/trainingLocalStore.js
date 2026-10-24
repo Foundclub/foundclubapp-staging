@@ -130,13 +130,22 @@ export const getUnsyncedResults = (sessionDocumentId) => (
  * Marque comme envoyees les mesures que le serveur a acceptees.
  * @param {string} sessionDocumentId Identifiant Strapi de la seance concernee.
  * @param {Record<string, any>[]} [rows] Les mesures acceptees par le serveur.
+ * @param {Record<string, any>[]} [rejected] Les refus du serveur, { row, reason }.
  */
-export const markResultsSynced = (sessionDocumentId, rows = []) => {
+export const markResultsSynced = (sessionDocumentId, rows = [], rejected = []) => {
   if (!rows.length) return;
   const all = getLocalResults(sessionDocumentId);
+  // BH15 P3-23 : une ligne refusee par le serveur ({ row, reason }) reste a envoyer.
+  const refusees = new Set((Array.isArray(rejected) ? rejected : [])
+    .map((r) => r?.row || r)
+    .filter((r) => r?.testDocumentId && r?.measureKey)
+    .map(measureId));
   rows.forEach((row) => {
     const id = measureId(row);
-    if (all[id]) all[id] = { ...all[id], synced: true };
+    // BH15 P3-22 : une ligne modifiee pendant l'envoi n'est pas celle qui est partie.
+    if (all[id] && !refusees.has(id) && JSON.stringify(all[id]) === JSON.stringify(row)) {
+      all[id] = { ...all[id], synced: true };
+    }
   });
   writeJson(`${PREFIX}${sessionDocumentId}`, all);
   if (!getUnsyncedResults(sessionDocumentId).length) unmarkSessionPending(sessionDocumentId);
