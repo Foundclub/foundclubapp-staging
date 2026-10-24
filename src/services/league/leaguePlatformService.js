@@ -25,10 +25,10 @@ export const LEAGUE_PLATFORM_RUNTIME_QUERY_KEY = ['league', 'platform-runtime'];
 const unwrapResponse = (response) => response?.data?.data || response?.data || null;
 
 const normalizeMessageLines = (lines, fallbackLines) => {
-  if (Array.isArray(lines) && lines.length > 0) {
-    return lines.map((line) => String(line || '').trim()).filter(Boolean);
-  }
-  return fallbackLines;
+  const cleaned = Array.isArray(lines)
+    ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+    : [];
+  return cleaned.length > 0 ? cleaned : fallbackLines;
 };
 
 export const getLeaguePlatformRuntime = async () => {

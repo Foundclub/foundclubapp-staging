@@ -21,6 +21,8 @@ function useLeagueLegalAcceptance() {
   }, []);
 
   const requestLeagueLegalAcceptance = useCallback((config) => new Promise((resolve) => {
+    // Double appui : la promesse précédente se termine (BH09 P3-09).
+    if (resolverRef.current) resolverRef.current(null);
     resolverRef.current = resolve;
     setRequest(config || {});
   }), []);
