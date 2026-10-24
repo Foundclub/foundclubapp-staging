@@ -44,7 +44,12 @@ const money = (value = 0) => new Intl.NumberFormat(localeDesFormats(), {
   style: 'currency',
 }).format((value || 0) / 100);
 const currentSeason = () => `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
-const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
+// BH11 P5-03 : espaces et points de milliers retires (« 1 000 », « 1.234,50 »).
+export const euroToCents = (value) => {
+  let raw = String(value || '0').replace(/[\s  ]/g, '');
+  if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
+  return Math.round(Number(raw) * 100);
+};
 
 const statusOptions = [
   {
@@ -371,7 +376,7 @@ function CMLicensesDashboard({ navigation, route }) {
       return;
     }
     const amountCents = euroToCents(defaultAmount);
-    if (amountCents <= 0) {
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
       Alert.alert(t('cmLicensesDashboard.alerts.amountRequired.title', 'Montant requis'), t(
         'cmLicensesDashboard.alerts.amountRequired.message',
         'Indique un montant par défaut avant de créer les campagnes manquantes.',

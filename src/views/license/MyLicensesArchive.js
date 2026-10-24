@@ -52,9 +52,9 @@ import {
  * @param {any} assignment une affectation archivee
  * @returns {any} le recu portant un fichier, ou null
  */
-const lastReceiptOf = (assignment) => (assignment?.receipts || [])
+export const lastReceiptOf = (assignment) => (assignment?.receipts || [])
   .concat((assignment?.payments || []).map((payment) => payment?.receipt).filter(Boolean))
-  .find((receipt) => receipt?.pdfFile?.url) || null;
+  .filter((receipt) => receipt?.pdfFile?.url).pop() || null;
 
 /**
  * LA DATE DE SOLDE — ce qui date vraiment une cotisation archivee.

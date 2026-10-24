@@ -13,7 +13,9 @@ export const isoDateFromEventValue = (value) => {
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
+  // BH11 P5-14 : champs LOCAUX, toISOString passerait en UTC (veille a minuit).
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
 };
 
 /**
