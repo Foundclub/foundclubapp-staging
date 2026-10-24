@@ -215,7 +215,7 @@ export function AttendanceCloseSheet({
             <View key={item?.user?.documentId || index} style={styles.nameRow}>
               <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>
                 {identitiesHidden
-                  ? `${mots.anonymous} ${index + 1}`
+                  ? `${mots.anonymous} ${items.indexOf(item) + 1}`
                   : `${item?.user?.firstname || ''} ${item?.user?.lastname || ''}`.trim()}
               </Text>
             </View>
