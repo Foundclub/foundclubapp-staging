@@ -6531,6 +6531,7 @@ export default {
       placePrise: 'This place is no longer free. Pick another one.',
       placePriseVille: 'This place is no longer free. Pick another one.',
       propositionClose: 'This proposal is no longer waiting for an answer.',
+      propositionDeclinee: 'The City’s proposal has been declined: pick another spot.',
       titre: 'The session hasn’t moved',
       titreVille: 'Nothing was sent',
       tropTard: 'The session has already started.',

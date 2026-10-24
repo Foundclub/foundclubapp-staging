@@ -91,8 +91,11 @@ const normalizeInitialSchedule = (rawSchedule = []) => rawSchedule.map((entry) =
   date: entry?.date ? new Date(entry.date) : new Date(),
   endTime: entry?.endTime ? new Date(entry.endTime) : new Date(),
   facilityId: entry?.facilityId || entry?.facility?.documentId || entry?.facility || null,
-  hasCustomTime: Boolean(entry?.startTime && entry?.endTime),
-  hasLocationOverride: Boolean(entry?.facilityId || entry?.facility || entry?.location),
+  // BH07 / P8-06 — le choix enregistre gagne : un jour aux horaires par defaut porte
+  // aussi ses heures, il ne doit pas revenir « personnalise ».
+  hasCustomTime: entry?.hasCustomTime ?? Boolean(entry?.startTime && entry?.endTime),
+  hasLocationOverride: entry?.hasLocationOverride
+    ?? Boolean(entry?.facilityId || entry?.facility || entry?.location),
   isActive: entry?.isActive !== false,
   location: entry?.location || null,
   startTime: entry?.startTime ? new Date(entry.startTime) : new Date(),

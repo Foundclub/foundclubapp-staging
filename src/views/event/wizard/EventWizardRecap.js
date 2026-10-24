@@ -383,6 +383,9 @@ function EventWizardRecap({ navigation }) {
   const [selectedFeaturedScopes, setSelectedFeaturedScopes] = useState([]);
   const [submitProgress, setSubmitProgress] = useState(null);
   const [partialState, setPartialState] = useState(null);
+  // BH07 / P7-01 — la feuille d'echec partiel fermee (geste, fond) : ses dates
+  // creees existent deja. « Creer » la rouvre au lieu de tout renvoyer.
+  const [dismissedPartialState, setDismissedPartialState] = useState(null);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   // Une seule option avancee ouverte a la fois : `'tasks'`, `'featured'`, ou
   // rien. Les invitations, elles, sont un ECRAN — leur rangee y navigue.
@@ -1010,6 +1013,11 @@ function EventWizardRecap({ navigation }) {
   const handleSubmit = async () => {
     if (missingExternalPlaces) {
       navigation.push(RouteNames.EventWizardParticipants, EVENT_WIZARD_RETURN_TO_RECAP);
+      return;
+    }
+    if (dismissedPartialState) {
+      setPartialState(dismissedPartialState);
+      setDismissedPartialState(null);
       return;
     }
     setIsSubmitting(true);
@@ -1903,7 +1911,10 @@ function EventWizardRecap({ navigation }) {
       </WizardStepLayout>
 
       <BottomModal
-        close={() => setPartialState(null)}
+        close={() => {
+          setDismissedPartialState(partialState);
+          setPartialState(null);
+        }}
         isVisible={Boolean(partialState)}
         scrollable={false}
       >

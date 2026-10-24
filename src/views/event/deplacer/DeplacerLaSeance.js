@@ -571,6 +571,9 @@ function DeplacerLaSeance({
   const envoyer = async () => {
     if (!lieu?.documentId || !jourChoisi || !heureDebut || !heureFin) return;
     setEnvoi(true);
+    // BH07 / P8-08 — le refus de la proposition est definitif : si le deplacement echoue
+    // ensuite, le message doit le dire.
+    let propositionDeclinee = false;
     try {
       if (ville) {
         await proposeRelocation(eventId, {
@@ -583,6 +586,7 @@ function DeplacerLaSeance({
         if (proposalId) {
           await Promise.resolve()
             .then(() => decideRelocation(proposalId, 'refuse'))
+            .then(() => { propositionDeclinee = true; })
             .catch(() => null);
         }
         // UNE séance : aucun `recurrenceMode`. Le serveur rejuge (créneau, Ville, fermeture).
@@ -629,7 +633,15 @@ function DeplacerLaSeance({
           t('deplacerSeance.erreurs.titre', 'La séance n’a pas bougé'),
           t('deplacerSeance.erreurs.titreVille', 'Rien n’a été envoyé'),
         ),
-        relocationErrorMessage(t, erreur, { viewer }),
+        [
+          relocationErrorMessage(t, erreur, { viewer }),
+          propositionDeclinee
+            ? t(
+              'deplacerSeance.erreurs.propositionDeclinee',
+              'La proposition de la Ville a été déclinée : choisis une autre place.',
+            )
+            : '',
+        ].filter(Boolean).join('\n\n'),
       );
     } finally {
       setEnvoi(false);

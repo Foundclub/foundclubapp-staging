@@ -7101,6 +7101,7 @@ export default {
       placePrise: 'Cette place n’est plus libre. Choisis-en une autre.',
       placePriseVille: 'Cette place n’est plus libre. Choisissez-en une autre.',
       propositionClose: 'Cette proposition n’attend plus de réponse.',
+      propositionDeclinee: 'La proposition de la Ville a été déclinée : choisis une autre place.',
       titre: 'La séance n’a pas bougé',
       titreVille: 'Rien n’a été envoyé',
       tropTard: 'La séance a déjà commencé.',

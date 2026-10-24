@@ -50,7 +50,11 @@ const toDateInputValue = (value) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 10);
+  // BH07 / P7-08 — le jour LOCAL : `toISOString` rendait le jour UTC, la veille
+  // pour une seance avant 1 h ou 2 h du matin a Paris. Un 'YYYY-MM-DD' nu reste tel quel.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value);
+  const pad = (nombre) => String(nombre).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const toDisplayDateValue = (value) => {
@@ -482,6 +486,11 @@ function EventEditForm({ navigation, route }) {
     const payload = eventId
       ? createEventUpdatePayload(baseFormPayload)
       : createEventPayload(baseFormPayload);
+    // BH07 / P7-10 — l'adresse videe : le paquet l'omettait, le serveur gardait l'ancienne.
+    if (eventId && !formState.locationLabel) {
+      payload.location = null;
+      payload.locationDetails = null;
+    }
 
     try {
       if (eventId) {

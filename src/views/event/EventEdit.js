@@ -230,6 +230,13 @@ const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInpu
   return { end, start };
 };
 
+// BH07 / P7-07 — `new Date('YYYY-MM-DD')` lit minuit UTC : a l'ouest d'UTC, la veille.
+// Une date nue se recopie telle quelle ; une date complete se lit dans le fuseau local.
+const formatDateDeLaFiche = (valeur) => {
+  const nue = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valeur));
+  return nue ? `${nue[3]}/${nue[2]}/${nue[1]}` : format(new Date(valeur), 'dd/MM/yyyy');
+};
+
 const getEventLocationLabel = (locationDetails) => {
   const parsed = safeJsonParse(locationDetails, null);
   const address = parsed?.address;
@@ -526,9 +533,9 @@ function EventEditForm({ navigation, route }) {
 
   let initialDateValue = '';
   if (event?.date) {
-    initialDateValue = format(new Date(event.date), 'dd/MM/yyyy');
+    initialDateValue = formatDateDeLaFiche(event.date);
   } else if (route.params?.date) {
-    initialDateValue = format(new Date(route.params.date), 'dd/MM/yyyy');
+    initialDateValue = formatDateDeLaFiche(route.params.date);
   }
 
   const {
@@ -842,7 +849,7 @@ function EventEditForm({ navigation, route }) {
         ...defaultValues,
         arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
         capacity: event?.capacity,
-        date: event?.date ? format(new Date(event?.date), 'dd/MM/yyyy') : '',
+        date: event?.date ? formatDateDeLaFiche(event?.date) : '',
         description: event?.description || '',
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
         eventTasks: Array.isArray(event?.eventTasks) ? event.eventTasks : [],
@@ -1008,7 +1015,7 @@ function EventEditForm({ navigation, route }) {
         };
 
         if (event?.recurrenceGroupId) {
-          const originalDate = event?.date ? format(new Date(event.date), 'dd/MM/yyyy') : '';
+          const originalDate = event?.date ? formatDateDeLaFiche(event.date) : '';
           const recurrenceScopeHint = originalDate && data?.date && data.date !== originalDate
             ? t(
               'eventEdit.ifYouChooseTheFuture',
