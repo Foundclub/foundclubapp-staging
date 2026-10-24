@@ -172,6 +172,7 @@ import {
 import { lireLeMomentCourt } from '@/utils/date';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
+import { toUtcFromZonedLocal } from '@/utils/parisTime';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import {
@@ -584,9 +585,14 @@ const resolveEventStartAt = (event) => {
     && eventDate.getUTCSeconds() === 0;
   if (!isMidnight) return eventDate;
 
-  const withTime = new Date(eventDate);
-  withTime.setUTCHours(Number(match[1]), Number(match[2]), 0, 0);
-  return withTime;
+  // P7-04 : l heure saisie est l heure de Paris, pas l heure UTC.
+  return toUtcFromZonedLocal({
+    day: eventDate.getUTCDate(),
+    hour: Number(match[1]),
+    minute: Number(match[2]),
+    month: eventDate.getUTCMonth() + 1,
+    year: eventDate.getUTCFullYear(),
+  });
 };
 
 /**
@@ -1516,7 +1522,10 @@ function EventDetails({ navigation, route }) {
   // Le compte a rebours d'arrivee, lui, doit rester affichable meme sans le
   // serveur : il tombe alors sur l'horloge locale, comme avant AC10.
   const serverNowMs = useMemo(
-    () => (serverClockMs === null ? Date.now() + elapsedSinceServerNowMs : serverClockMs),
+    // P7-05 : Date.now() avance déjà ; `elapsedSinceServerNowMs` ne sert ici qu à recalculer
+    // toutes les 30 s (d où la dépendance, que la règle des crochets croit inutile).
+    () => (serverClockMs === null ? Date.now() : serverClockMs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [elapsedSinceServerNowMs, serverClockMs],
   );
 
