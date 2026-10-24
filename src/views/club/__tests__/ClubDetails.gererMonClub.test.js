@@ -622,6 +622,14 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
     expect(pressableAvecTexte(monter(), 'Quitter le club')).toBeUndefined();
   });
 
+  // BH03 · P11-02 — le serveur fait quitter le club ACTIF (`POST /me/leave-club` sans
+  // clubId) : sur la fiche d un AUTRE club, le bouton ferait quitter le mauvais club.
+  it('ne l offre PAS sur la fiche d un club qui n est pas le club actif', () => {
+    mockUserData = { ...mockUserData, club: { documentId: 'club-actif' } };
+
+    expect(pressableAvecTexte(monter(), 'Quitter le club')).toBeUndefined();
+  });
+
   it('demande confirmation avant de quitter, et ne part sur le reseau qu apres', () => {
     const arbre = monter();
 

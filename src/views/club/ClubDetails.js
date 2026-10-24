@@ -1824,9 +1824,17 @@ function ClubDetails({ navigation, route }) {
 
   const canLeaveClub = useMemo(() => {
     const currentRole = userData?.role?.name;
+    // ponytail: BH03 · P11-02 — le serveur quitte le club ACTIF (meme resolution ci-dessous) ;
+    // sur un autre club, pas de bouton. Sortie : envoyer clubId quand le serveur le lira.
+    const activeClubId = userData?.club?.documentId
+      || userData?.clubAffiliations?.[0]?.club?.documentId;
     return Boolean(clubId && hasClubAccess(clubId))
+      && (!activeClubId || activeClubId === clubId)
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
-  }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
+  }, [
+    USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess,
+    userData?.club?.documentId, userData?.clubAffiliations, userData?.role?.name,
+  ]);
   // 👨‍👧 PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
   //
   // La MEME clef react-query que l ecran « Mes enfants » (`declaredChildren/
