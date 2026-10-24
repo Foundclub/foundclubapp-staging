@@ -77,6 +77,25 @@ describe('buildCompoTemplateSources — les 3 segments du pack', () => {
     expect(template?.placements).toHaveLength(1);
   });
 
+  // BH05 · P12-10 — le serveur jette `slotId` : au rechargement, le repere est
+  // retrouve, sinon deposer un joueur sur ce poste empilait deux joueurs.
+  test('la compo type rechargee retrouve le repere de chaque poste', () => {
+    const sources = buildCompoTemplateSources({
+      defaultComposition: {
+        composition: {
+          placements: [{
+            playerId: 'joueur-1', position: 'GB', positionX: 50, positionY: 93,
+          }],
+        },
+      },
+      players: EFFECTIF,
+      sport: 'football',
+    });
+
+    const template = sources.find((source) => source.key === COMPO_SOURCE_TEMPLATE);
+    expect(template?.placements[0]?.slotId).toBe('team_1:slot_1');
+  });
+
   test('🧾 « Dernier » n a AUCUNE source au niveau d une equipe — il le dit', () => {
     const sources = buildCompoTemplateSources({ players: EFFECTIF, sport: 'football' });
     const last = sources.find((source) => source.key === COMPO_SOURCE_LAST);
