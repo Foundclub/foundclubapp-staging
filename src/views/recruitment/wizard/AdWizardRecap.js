@@ -1,7 +1,7 @@
 import { CommonActions } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
@@ -170,6 +170,9 @@ function AdWizardRecap({ navigation }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  // BH15 P13-01 : les annonces deja creees, par poste, survivent a un echec partiel ;
+  // un nouvel appui ne relance que les postes qui ont echoue.
+  const createdAdsByPositionRef = useRef(/** @type {Map<string, any>} */ (new Map()));
 
   const createAdMutation = useMutation({
     meta: { preventToastError: true },
@@ -500,14 +503,26 @@ function AdWizardRecap({ navigation }) {
         // sans poste ni quantite, et le serveur lui donne sa quantite par defaut (1).
         // Avant, zero poste faisait zero annonce : rien n'etait publie.
         const playerSlots = state.positions.length > 0 ? state.positions : [{}];
-        createdAds = await Promise.all(playerSlots.map((position) => createAdMutation
-          .mutateAsync({
-            ...sharedData,
-            event: state.event?.documentId || state.event?.id,
-            position: position.name,
-            quantity: position.quantity,
-            validationMode: state.event ? state.validationMode : 'auto',
-          })));
+        const dejaCreees = createdAdsByPositionRef.current;
+        const resultats = await Promise.allSettled(playerSlots.map((position) => {
+          const cle = String(position.name || '');
+          if (dejaCreees.has(cle)) return Promise.resolve(dejaCreees.get(cle));
+          return createAdMutation
+            .mutateAsync({
+              ...sharedData,
+              event: state.event?.documentId || state.event?.id,
+              position: position.name,
+              quantity: position.quantity,
+              validationMode: state.event ? state.validationMode : 'auto',
+            })
+            .then((ad) => {
+              dejaCreees.set(cle, ad);
+              return ad;
+            });
+        }));
+        const echec = resultats.find((r) => r.status === 'rejected');
+        if (echec) throw /** @type {PromiseRejectedResult} */ (echec).reason;
+        createdAds = resultats.map((r) => /** @type {PromiseFulfilledResult<any>} */ (r).value);
       }
 
       await Promise.all([
@@ -521,6 +536,7 @@ function AdWizardRecap({ navigation }) {
       // n'afficherait rien du tout.
       const publishedAd = createdAds.find((ad) => ad?.documentId || ad?.id);
 
+      createdAdsByPositionRef.current = new Map();
       dispatch({ type: 'RESET' });
       resetToPublishedAd(publishedAd?.documentId || publishedAd?.id || '');
     } catch (error) {
