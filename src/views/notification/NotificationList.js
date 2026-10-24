@@ -217,7 +217,8 @@ function NotificationList() {
         notificationId: payload.notificationId,
         source: 'in_app',
       });
-      await markAsRead(String(notification.documentId || notification.id || ''));
+      // BH01/P5-18 : la réponse est enregistrée ; un échec de « marquer lu » ne doit pas dire le contraire.
+      await markAsRead(String(notification.documentId || notification.id || '')).catch(() => {});
       refreshNotifications();
 
       const successMessage = answer === 'present'
@@ -235,7 +236,8 @@ function NotificationList() {
 
   const handlePressNotification = useCallback(async (/** @type {NotificationItem} */ notification) => {
     try {
-      await markAsRead(String(notification.documentId || notification.id || ''));
+      // BH01/P5-18 : la réponse est enregistrée ; un échec de « marquer lu » ne doit pas dire le contraire.
+      await markAsRead(String(notification.documentId || notification.id || '')).catch(() => {});
     } catch (error) {
       showActionError(i18next.t(
         'notificationList.errors.markRead',
