@@ -303,3 +303,21 @@ describe('BH15 · P14-04 / P14-05 — l enregistrement a la main garde ce qui et
     expect(/** @type {any} */ (mockCompositionQuery).refetch).toHaveBeenCalled();
   });
 });
+
+describe('BH15 · P14-01 — la repartition rangee arrive APRES le premier affichage', () => {
+  test('l ecran la reprend au lieu de repartir de zero', async () => {
+    /** @type {any} */ (mockCompositionQuery).refetch = jest.fn(async () => ({}));
+    const racine = monter(DetectionTeamsManual);
+    /** @type {any} */ (mockCompositionQuery).data = {
+      detectionSplit: { teamCount: 4, teams: [{ bibColor: 'rouge', players: ['p1', 'p2'] }] },
+      draft: {},
+    };
+    act(() => { monte.update(<DetectionTeamsManual />); });
+
+    appuyer(racine, 'detection.teams.manual.actions.field');
+    await attendreLAlerte();
+
+    const { detectionSplit } = jest.mocked(saveEventCompositionDraft).mock.calls[0][1].draft;
+    expect(detectionSplit.teams[1]).toMatchObject({ bibColor: 'rouge', players: ['p1', 'p2'] });
+  });
+});

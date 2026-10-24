@@ -1,6 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -70,6 +72,22 @@ const getBibToken = (/** @type {any} */ Colors, /** @type {string} */ bibColor) 
   vert: Colors.success500,
 }[bibColor] || Colors.primary500);
 
+/**
+ * Les affectations { joueur: chasuble } d'une repartition rangee.
+ * @param {any} stored les equipes rangees
+ * @returns {Record<string, string>} les affectations
+ */
+const readStoredAssignments = (/** @type {any} */ stored) => {
+  if (!Array.isArray(stored)) return {};
+  return stored.reduce((accumulator, team) => {
+    if (!team?.bibColor) return accumulator;
+    (Array.isArray(team.players) ? team.players : []).forEach((/** @type {any} */ playerId) => {
+      accumulator[String(playerId)] = team.bibColor;
+    });
+    return accumulator;
+  }, /** @type {Record<string, string>} */ ({}));
+};
+
 function DetectionTeamsManual() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -88,9 +106,10 @@ function DetectionTeamsManual() {
     teamId,
   } = params;
 
-  const { data: teamComposition, refetch: refetchComposition } = useGetEventTeamComposition(eventId, teamId, {
-    enabled: Boolean(eventId),
-  });
+  const {
+    data: teamComposition,
+    refetch: refetchComposition,
+  } = useGetEventTeamComposition(eventId, teamId, { enabled: Boolean(eventId) });
 
   const allPlayers = useMemo(() => {
     const fromServer = teamComposition?.eligiblePlayers;
@@ -108,20 +127,22 @@ function DetectionTeamsManual() {
   const [activeBib, setActiveBib] = useState(BIB_COLORS[0]);
   // { [playerId]: bibColor } — une seule chasuble par joueur, par construction :
   // c'est ce qui rend le doublon impossible sur cet ecran.
-  const [assignments, setAssignments] = useState(() => {
+  const [assignments, setAssignments] = useState(
+    () => readStoredAssignments(teamComposition?.detectionSplit?.teams),
+  );
+  // BH15 P14-01 : sans cache (lien web, rechargement), la repartition rangee arrive
+  // apres le premier affichage ; on la reprend UNE fois, si le coach n'a encore rien touche.
+  const assignmentsSettledRef = useRef(Array.isArray(teamComposition?.detectionSplit?.teams));
+  useEffect(() => {
     const stored = teamComposition?.detectionSplit?.teams;
-    if (!Array.isArray(stored)) return {};
-    return stored.reduce((accumulator, team) => {
-      if (!team?.bibColor) return accumulator;
-      (Array.isArray(team.players) ? team.players : []).forEach((/** @type {any} */ playerId) => {
-        accumulator[String(playerId)] = team.bibColor;
-      });
-      return accumulator;
-    }, /** @type {Record<string, string>} */ ({}));
-  });
+    if (assignmentsSettledRef.current || !Array.isArray(stored)) return;
+    assignmentsSettledRef.current = true;
+    setAssignments(readStoredAssignments(stored));
+  }, [teamComposition?.detectionSplit?.teams]);
   const [isBusy, setIsBusy] = useState(false);
 
   const toggleAssignment = useCallback((/** @type {string} */ playerId) => {
+    assignmentsSettledRef.current = true;
     setAssignments((/** @type {Record<string, string>} */ current) => {
       const next = { ...current };
       if (next[playerId] === activeBib) delete next[playerId];
@@ -169,7 +190,10 @@ function DetectionTeamsManual() {
           terrain: stored?.terrain || null,
         };
       });
-      const lastUsed = allTeams.reduce((last, team, index) => (team.playerIds.length ? index + 1 : last), 0);
+      const lastUsed = allTeams.reduce(
+        (last, team, index) => (team.playerIds.length ? index + 1 : last),
+        0,
+      );
       const storedCount = Number(storedSplit?.teamCount) || BIB_COLORS.length;
       const teams = allTeams.slice(0, Math.min(BIB_COLORS.length, Math.max(storedCount, lastUsed)));
 
@@ -214,7 +238,8 @@ function DetectionTeamsManual() {
     }
   }, [
     assignments, checkInFirst, eventId, isBusy, memberMode, navigation, params, players,
-    presentIds, refetchComposition, t, teamComposition?.detectionSplit, teamComposition?.draft, teamId,
+    presentIds, refetchComposition, t, teamComposition?.detectionSplit, teamComposition?.draft,
+    teamId,
   ]);
 
   const renderBibPill = (/** @type {string} */ bibColor) => {
