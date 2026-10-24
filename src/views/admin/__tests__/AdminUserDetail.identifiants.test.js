@@ -238,3 +238,18 @@ test('FICHE/4 — R17-ROLES : les boutons de role disent « Coach / Prof »', ()
   expect(texte).toContain('SuperAdmin');
   expect(texte).not.toContain('Entraineur');
 });
+
+// BH14 P9-02 (BUGHUNT 24/10/2026) — « Sauvegarder » (rôle, blocage) passe par PUT /users/:id du
+// greffon users-permissions, qui veut le NUMÉRO : le documentId échouait toujours.
+test('FICHE/5 — la sauvegarde du rôle envoie le NUMÉRO, pas l identifiant document', () => {
+  const arbre = monter();
+  const bouton = arbre.root.findAll(
+    (noeud) => noeud.props?.title === 'Sauvegarder' && typeof noeud.props?.onPress === 'function',
+    { deep: true },
+  )[0];
+  expect(bouton).toBeTruthy();
+  act(() => { bouton.props.onPress(); });
+
+  expect(mockMisesAJour).toHaveLength(1);
+  expect(mockMisesAJour[0].documentId).toBe(195);
+});
