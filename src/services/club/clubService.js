@@ -313,6 +313,7 @@ const buildMultisportClubListParams = (params = {}) => {
  * @param {{
  *   activity?: string;
  *   geohash?: string[];
+ *   clubPartner?: boolean;
  *   isCustomer?: boolean;
  *   name?: string;
  *   page?: number;
@@ -342,7 +343,9 @@ export const getClubs = async (params = {}) => {
   let totalFromCM = 0;
 
   // Fetch multisport clubs if requested and on first page
-  if (includeMultisport && (page || 1) === 1) {
+  // BH03 · P1-11 : les clubs multisports ne sont pas filtres par activite, partenaire ou client.
+  const isFilteredSearch = Boolean(params.activity || params.clubPartner || params.isCustomer);
+  if (includeMultisport && !isFilteredSearch && (page || 1) === 1) {
     try {
       const cmResponse = await getMultisportClubs({ ...params, page: 1, pageSize: 10 });
       const cmWithType = cmResponse?.data || [];
