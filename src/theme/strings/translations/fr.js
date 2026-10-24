@@ -2264,6 +2264,11 @@ export default {
       invitation: 'Une question ? Écris-nous.',
       invitationVous: 'Une question ? Écrivez-nous.',
     },
+    messages: {
+      titre: 'Boîte de l’assistance',
+      tout_one: 'Voir toute la boîte ({{count}})',
+      tout_other: 'Voir toute la boîte ({{count}})',
+    },
     placeholder: 'Écris ton message à l’équipe',
     placeholderVous: 'Écrivez votre message à l’équipe',
     sousTitre: 'L’équipe FoundClub te répond ici',

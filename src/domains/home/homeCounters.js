@@ -253,17 +253,57 @@ export const selectMyApplicationsStatus = (counters) => (
 );
 
 /**
- * Total de la file de moderation — le chiffre de la pilule « A traiter ».
+ * Les lignes « À traiter » du SuperAdmin, toutes, dans l'ordre du bandeau (avant le tri des
+ * zéros et le plafond de 4). Le bandeau et la carte « À traiter » lisent cette seule liste.
  * @param {HomeCounters} counters
+ * @param {{ demandesGestionnaire?: number, mairiesAActiver?: number }} [collectivites] - Les
+ *   nombres de la console des collectivités.
+ * @returns {{ hasAlert: boolean, key: string, value: number }[]}
+ */
+const superAdminLines = (counters, collectivites = {}) => {
+  const { moderation } = counters;
+  return [
+    { hasAlert: true, key: 'signalements', value: moderation.signalements },
+    { hasAlert: true, key: 'revendications', value: moderation.revendications },
+    { hasAlert: false, key: 'aLaUne', value: moderation.aLaUne },
+    {
+      hasAlert: true,
+      key: 'mairiesAActiver',
+      value: Number(collectivites?.mairiesAActiver) || 0,
+    },
+    {
+      hasAlert: true,
+      key: 'demandesGestionnaire',
+      value: Number(collectivites?.demandesGestionnaire) || 0,
+    },
+    { hasAlert: false, key: 'clubsAOnboarder', value: moderation.clubsAOnboarder },
+  ];
+};
+
+/**
+ * Total de la file de moderation — le chiffre de la pilule « A traiter ».
+ * SUPADM (recette du 23/10) — la carte disait 4, le bandeau 3 + 1 + 1 = 5 : elle oubliait les
+ * deux lignes « Collectivités ». Elle additionne désormais les MÊMES lignes que le bandeau.
+ * @param {HomeCounters} counters
+ * @param {{ demandesGestionnaire?: number, mairiesAActiver?: number }} [collectivites]
  * @returns {number}
  */
-export const selectModerationTotal = (counters) => {
-  const { moderation } = counters;
-  return moderation.aLaUne
-    + moderation.clubsAOnboarder
-    + moderation.revendications
-    + moderation.signalements;
-};
+export const selectModerationTotal = (counters, collectivites = {}) => superAdminLines(
+  counters,
+  collectivites,
+).reduce((total, line) => total + line.value, 0);
+
+/**
+ * SUPADM (recette du 23/10) — la file qu'ouvre la carte « À traiter » : la première non vide,
+ * dans l'ordre du bandeau. Elle ouvrait toujours « Signalements », vide quand le chiffre venait
+ * d'ailleurs. Rien à traiter : « signalements », comme avant.
+ * @param {HomeCounters} counters
+ * @param {{ demandesGestionnaire?: number, mairiesAActiver?: number }} [collectivites]
+ * @returns {string} La clef de la ligne.
+ */
+export const selectTriageTarget = (counters, collectivites = {}) => (
+  superAdminLines(counters, collectivites).find((line) => line.value > 0)?.key || 'signalements'
+);
 
 // Aucun bandeau ne depasse 4 lignes (pack, regles de contenu).
 const MAX_BANNER_LINES = 4;
@@ -290,23 +330,7 @@ export const selectBannerLines = (counters, roleKey, collectivites = {}) => {
   let lines = [];
 
   if (roleKey === 'superAdmin') {
-    const { moderation } = counters;
-    lines = [
-      { hasAlert: true, key: 'signalements', value: moderation.signalements },
-      { hasAlert: true, key: 'revendications', value: moderation.revendications },
-      { hasAlert: false, key: 'aLaUne', value: moderation.aLaUne },
-      {
-        hasAlert: true,
-        key: 'mairiesAActiver',
-        value: Number(collectivites?.mairiesAActiver) || 0,
-      },
-      {
-        hasAlert: true,
-        key: 'demandesGestionnaire',
-        value: Number(collectivites?.demandesGestionnaire) || 0,
-      },
-      { hasAlert: false, key: 'clubsAOnboarder', value: moderation.clubsAOnboarder },
-    ];
+    lines = superAdminLines(counters, collectivites);
   } else if (roleKey === 'president') {
     lines = [
       { hasAlert: true, key: 'demandes', value: counters.demandes },

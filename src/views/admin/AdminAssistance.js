@@ -6,27 +6,22 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
 import { ASSISTANCE_CHAT_TYPE } from '@/domains/messaging/assistance';
-import { formatChatTimestamp } from '@/domains/messaging/messagingUseCases';
-import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
+import LigneBoiteAssistance, { nomDuTitulaire } from '@/views/chat/LigneBoiteAssistance';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useBoiteAssistance } from '@/services/chat/assistanceQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-
-const ESPACE_INSECABLE = '\u00A0';
 
 /**
  * MSG-SUPPORT (20/10/2026) — LA BOÎTE « ASSISTANCE » DE LA CONSOLE (super-admins).
@@ -81,107 +76,22 @@ function AdminAssistance() {
     );
   }
 
-  const nomDuTitulaire = (/** @type {any} */ conversation) => {
-    const titulaire = conversation?.titulaire || {};
-    if (titulaire.supprime) return t('assistance.console.compteSupprime', 'Compte supprimé');
-    const prenom = String(titulaire.firstname || '').trim();
-    return `${prenom} ${String(titulaire.lastname || '').trim()}`.trim()
-      || t('assistance.console.compteSupprime', 'Compte supprimé');
-  };
-
   const ouvrir = (/** @type {any} */ conversation) => {
     navigation.navigate(/** @type {never} */ (RouteNames.Conversation), /** @type {never} */ ({
       chatId: conversation.documentId,
       chatType: ASSISTANCE_CHAT_TYPE,
-      title: nomDuTitulaire(conversation),
+      title: nomDuTitulaire(conversation, t),
     }));
   };
 
   /**
-   * Une conversation de la boîte.
+   * Une conversation de la boîte (SUPADM, 23/10 : la ligne est partagée avec l'onglet Messages).
    * @param {{ item: any }} ligne - La conversation rendue par le serveur.
    * @returns {import('react').ReactElement} La ligne.
    */
-  const renderItem = ({ item }) => {
-    const id = String(item?.documentId || '');
-    const nom = nomDuTitulaire(item);
-    const nonLus = Number(item?.nonLus) || 0;
-    const pastille = formatThreadUnreadBadge(nonLus);
-    const dernier = item?.dernierMessage || {};
-    const sourdine = withAlpha(Colors.neutral00, 0.58);
-    const apercu = String(dernier.apercu || '');
-    const nous = t('assistance.console.boite.nous', 'Assistance');
-    // « Assistance : » — l'espace insécable avant les deux-points, à la française.
-    const prefixe = dernier.deLAssistance ? `${nous}${ESPACE_INSECABLE}: ` : '';
-    const etat = [
-      nonLus > 0
-        ? t('assistance.console.nonLus', { defaultValue: 'Non lus : {{nombre}}', nombre: pastille })
-        : '',
-      item?.enAttente ? t('assistance.console.boite.enAttente', 'En attente de réponse') : '',
-    ].filter(Boolean).join(', ');
-    return (
-      <TouchableOpacity
-        accessibilityHint={t(
-          'assistance.console.boite.ouvrir',
-          'Ouvre la conversation pour répondre',
-        )}
-        accessibilityLabel={[nom, etat, `${prefixe}${apercu}`].filter(Boolean).join(', ')}
-        accessibilityRole="button"
-        onPress={() => ouvrir(item)}
-        style={styles.ligne}
-        testID={`boite-assistance-ligne-${id}`}
-      >
-        <ProfileAvatar
-          enablePreview={false}
-          imageStyle={{ borderRadius: 52 }}
-          imageUrl={item?.titulaire?.avatar?.url}
-          name={nom}
-          size={52}
-        />
-        <View style={[styles.corps, { borderBottomColor: withAlpha(Colors.neutral00, 0.07) }]}>
-          <View style={styles.rangee}>
-            <Text numberOfLines={1} style={[styles.titre, { color: Colors.neutral00 }]}>{nom}</Text>
-            {dernier.createdAt ? (
-              <Text
-                style={[
-                  styles.heure,
-                  nonLus > 0
-                    ? { color: Colors.primary500, fontFamily: 'Montserrat-Bold' }
-                    : { color: withAlpha(Colors.neutral00, 0.5) },
-                ]}
-              >
-                {formatChatTimestamp(dernier.createdAt)}
-              </Text>
-            ) : null}
-          </View>
-          <View style={styles.rangee}>
-            <Text numberOfLines={1} style={[styles.apercu, { color: sourdine }]}>
-              {prefixe}
-              {apercu}
-            </Text>
-            {nonLus > 0 ? (
-              <View
-                style={[styles.pastille, { backgroundColor: Colors.primary500 }]}
-                testID={`boite-assistance-non-lus-${id}`}
-              >
-                <Text style={[styles.pastilleTexte, { color: Colors.primary900 }]}>{pastille}</Text>
-              </View>
-            ) : null}
-          </View>
-          {item?.enAttente ? (
-            <View
-              style={[styles.puce, { backgroundColor: withAlpha(Colors.warning500, 0.16) }]}
-              testID={`boite-assistance-en-attente-${id}`}
-            >
-              <Text style={[styles.puceTexte, { color: Colors.warning500 }]}>
-                {t('assistance.console.boite.enAttente', 'En attente de réponse')}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderItem = ({ item }) => (
+    <LigneBoiteAssistance conversation={item} onPress={() => ouvrir(item)} />
+  );
 
   return (
     <ScreenContainer bgImage="bg2">
@@ -232,82 +142,20 @@ function AdminAssistance() {
 }
 
 const styles = StyleSheet.create({
-  apercu: {
-    flex: 1,
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 14,
-    lineHeight: 19,
-  },
   compteurs: {
     fontFamily: 'Montserrat-Bold',
     fontSize: 15,
     lineHeight: 20,
-  },
-  corps: {
-    alignSelf: 'stretch',
-    borderBottomWidth: 1,
-    flex: 1,
-    gap: 4,
-    justifyContent: 'center',
-    minWidth: 0,
-    paddingVertical: 4,
   },
   entete: {
     gap: 8,
     paddingBottom: 12,
     paddingTop: 16,
   },
-  heure: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12.5,
-    lineHeight: 17,
-  },
-  ligne: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: 76,
-    paddingVertical: 8,
-  },
-  pastille: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 20,
-    justifyContent: 'center',
-    minWidth: 20,
-    paddingHorizontal: 6,
-  },
-  pastilleTexte: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 11.5,
-    lineHeight: 14,
-  },
-  puce: {
-    alignSelf: 'flex-start',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  puceTexte: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  rangee: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
   sousTitre: {
     fontFamily: 'Montserrat-Regular',
     fontSize: 14,
     lineHeight: 20,
-  },
-  titre: {
-    flex: 1,
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 16,
-    lineHeight: 21,
   },
   vide: {
     fontFamily: 'Montserrat-Regular',

@@ -32,6 +32,7 @@ import {
   selectHomeAlerts,
   selectModerationTotal,
   selectMyApplicationsStatus,
+  selectTriageTarget,
 } from '@/domains/home/homeCounters';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab, getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
@@ -159,6 +160,18 @@ const CARTES_MASQUEES_A_TOUS = new Set(CARTES_ACCUEIL_MASQUEES);
  * @returns {boolean}
  */
 const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
+
+// SUPADM (recette du 23/10) — l'écran de chaque ligne « À traiter » du SuperAdmin, les mêmes que
+// ceux du bandeau (`headBanner`) : la carte « À traiter » ouvre celui de sa première ligne non vide.
+/** @type {Record<string, string>} */
+const ECRANS_A_TRAITER = {
+  aLaUne: RouteNames.FeaturedRequestsList,
+  clubsAOnboarder: RouteNames.AdminClubOnboardingList,
+  demandesGestionnaire: RouteNames.AdminManagerRequests,
+  mairiesAActiver: RouteNames.AdminCollectiviteList,
+  revendications: RouteNames.AdminClaimList,
+  signalements: RouteNames.AdminReports,
+};
 
 /**
  * @typedef {{
@@ -2159,15 +2172,19 @@ function HomeHubContent({ auth, navigation, route }) {
           accentColor: Colors.primary500,
           // ⚠️ SEULE CARTE DU LOT A PORTER UN CHIFFRE, et la seule dont la
           // destination soit un choix par defaut : l'ecran « A traiter » qui
-          // agrege les 4 files N'EXISTE PAS. On ouvre donc la plus grosse,
-          // les signalements. Les 4 lignes du bandeau, elles, visent chacune
-          // leur ecran reel.
-          badgeCount: selectModerationTotal(homeCounters),
+          // agrege les files N'EXISTE PAS. Les lignes du bandeau, elles, visent
+          // chacune leur ecran reel.
+          // SUPADM (recette du 23/10) — la carte disait 4 quand le bandeau disait 5,
+          // et ouvrait toujours « Signalements », vide ce jour-la. Elle additionne
+          // les memes lignes que le bandeau et ouvre la premiere non vide.
+          badgeCount: selectModerationTotal(homeCounters, collectivitesATraiter),
           emphasis: 'primary',
           icon: 'bell',
           key: 'admin-triage',
           layout: 'full',
-          onPress: openAdminScreen(RouteNames.AdminReports),
+          onPress: openAdminScreen(
+            ECRANS_A_TRAITER[selectTriageTarget(homeCounters, collectivitesATraiter)],
+          ),
           subtitle: t(
             'homeHub.cards.admin.triage.subtitle',
             'Signalements, revendications, à la une, clubs à onboarder.',
@@ -2210,6 +2227,7 @@ function HomeHubContent({ auth, navigation, route }) {
     addAdLock,
     addEventLock,
     clubCardPremiumScope,
+    collectivitesATraiter,
     Colors.gold500,
     homeAlerts,
     homeCounters,

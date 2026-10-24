@@ -2078,6 +2078,11 @@ export default {
       invitation: 'A question? Write to us.',
       invitationVous: 'A question? Write to us.',
     },
+    messages: {
+      titre: 'Support inbox',
+      tout_one: 'See the whole inbox ({{count}})',
+      tout_other: 'See the whole inbox ({{count}})',
+    },
     placeholder: 'Write your message to the team',
     placeholderVous: 'Write your message to the team',
     sousTitre: 'The FoundClub team replies here',
