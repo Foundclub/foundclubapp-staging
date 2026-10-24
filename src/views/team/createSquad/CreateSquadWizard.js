@@ -8,6 +8,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
+import { sectionToLeagueGender } from '@/views/team/createSquad/sectionGender';
 import SquadAvailabilitiesStep from '@/views/team/createSquad/steps/SquadAvailabilitiesStep';
 import SquadCategoryStep from '@/views/team/createSquad/steps/SquadCategoryStep';
 import SquadImageStep from '@/views/team/createSquad/steps/SquadImageStep';
@@ -18,7 +19,6 @@ import SquadSectionStep from '@/views/team/createSquad/steps/SquadSectionStep';
 import SquadSourceTeamStep from '@/views/team/createSquad/steps/SquadSourceTeamStep';
 import SquadSportStep from '@/views/team/createSquad/steps/SquadSportStep';
 import SquadSummaryStep from '@/views/team/createSquad/steps/SquadSummaryStep';
-import { sectionToLeagueGender } from '@/views/team/createSquad/sectionGender';
 
 import { RouteNames } from '@/navigation/routeNames';
 

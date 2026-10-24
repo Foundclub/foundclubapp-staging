@@ -46,7 +46,9 @@ test('P12-09 : le serveur ne dit rien ⇒ aucun bouton', () => {
 });
 
 test('P12-09 : canManage true ⇒ Accepter et Refuser', () => {
-  mockDemandes = [{ documentId: 'd1', permissions: { canManage: true }, team: { name: 'A' }, user: { firstname: 'Bo' } }];
+  mockDemandes = [{
+    documentId: 'd1', permissions: { canManage: true }, team: { name: 'A' }, user: { firstname: 'Bo' },
+  }];
   monter();
   expect(mockBoutons.length).toBe(2);
 });
