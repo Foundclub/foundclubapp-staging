@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -167,7 +168,11 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
     setFiltersDraft(filters);
   }, [filters, isFiltersModalOpen]);
 
+  // BH07 / P8-16 — jeton de requete : une reponse en retard (club precedent) est ignoree.
+  const clubTeamsRequestRef = useRef(0);
   const loadClubTeams = useCallback(async (/** @type {any} */ club) => {
+    clubTeamsRequestRef.current += 1;
+    const requestId = clubTeamsRequestRef.current;
     const externalClubId = getAudienceTeamId(club);
     if (!externalClubId) {
       setClubTeams([]);
@@ -179,12 +184,14 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
     setHasTeamsError(false);
     try {
       const response = await getTeams({ clubId: externalClubId, pageSize: 100 });
+      if (requestId !== clubTeamsRequestRef.current) return;
       setClubTeams(Array.isArray(response?.data) ? response.data : []);
     } catch (_error) {
+      if (requestId !== clubTeamsRequestRef.current) return;
       setClubTeams([]);
       setHasTeamsError(true);
     } finally {
-      setIsLoadingTeams(false);
+      if (requestId === clubTeamsRequestRef.current) setIsLoadingTeams(false);
     }
   }, []);
 
@@ -310,6 +317,8 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
   };
 
   const handleResetClub = () => {
+    clubTeamsRequestRef.current += 1;
+    setIsLoadingTeams(false);
     setSelectedClub(null);
     setTeamSearch('');
     setClubTeams([]);
