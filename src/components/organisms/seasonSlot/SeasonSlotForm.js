@@ -1943,6 +1943,9 @@ function SeasonSlotForm({
           onRepetition={changerLaRepetition}
           pleines={heuresPleines}
           repetition={repetitionDuModele}
+          // Le tunnel plein écran est un <Modal> (couche 9999 sur le site) : la feuille « Répéter »
+          // passe dessus, comme celle des vacances (porte du site, 390 px, DATESDABORD).
+          webZIndex={tunnelPleinEcran ? 10000 : undefined}
         />
       ) : null}
       {!visible('horaires') || heuresFigees || repartition || avecLeModele ? null : (

@@ -88,7 +88,9 @@ const monter = (/** @type {any} */ props = {}) => {
   mockDates.length = 0;
   mockHeures.length = 0;
   mockFeuilles.length = 0;
-  const appels = { date: [], debut: [], fin: [], repetition: [] };
+  const appels = {
+    date: [], debut: [], fin: [], repetition: [],
+  };
   act(() => {
     arbre = renderer.create(createElement(DateEtHoraire, {
       date: MARDI,
@@ -158,6 +160,12 @@ describe('DATESDABORD — le bloc « Date et horaire » partagé', () => {
     )).pop();
     act(() => neRienRepeter.props.onPress());
     expect(appels.repetition).toEqual([null]);
+  });
+
+  test('la couche de la feuille passe à BottomModal (le site, sous une fenêtre plein écran)', async () => {
+    monter({ webZIndex: 10000 });
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());
+    expect(mockFeuilles[mockFeuilles.length - 1].webZIndex).toBe(10000);
   });
 
   test('sans répétition (un tournoi) : pas de rangée « Répéter » ; les réglages d heure passent', () => {

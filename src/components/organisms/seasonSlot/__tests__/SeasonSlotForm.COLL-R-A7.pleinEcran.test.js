@@ -269,6 +269,16 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(onDone).toHaveBeenCalledWith({ documentId: 'neuf' });
   });
 
+  // DATESDABORD (23/10) — porte du site, 390 px : la feuille « Répéter » s'ouvrait SOUS la fenêtre
+  // plein écran du tunnel (un <Modal>, couche 9999 sur le site), comme celle des vacances avant
+  // R17-QUAND-2-BIS. ROUGE avant : aucune couche passée au bloc.
+  test('2 bis. au plein écran, la feuille « Répéter » passe au-dessus du tunnel (site)', async () => {
+    const arbre = await monter();
+    await choisir(arbre, 'Montrivage Basket');
+    await avancer(arbre);
+    expect(modele(arbre).props.webZIndex).toBe(10000);
+  });
+
   test('3. les choix sont des lignes à cocher ; un nom long n’est jamais coupé', async () => {
     const arbre = await monter();
     const ligne = choix(arbre, 'STADE MARSEILLAIS UNIVERSITE CLUB (SMUC)');

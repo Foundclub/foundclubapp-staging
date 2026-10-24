@@ -207,10 +207,12 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   pleines?: Array<{ end: number, start: number }>,
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
+ *   webZIndex?: number,
  * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDebut` /
  *   `libelleFin` : les mots de l ecran (« Début », « Fin » de la Ville) ; `finApres` et
  *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
- *   `onRepetition(null)` revient a « Une seule fois ».
+ *   `onRepetition(null)` revient a « Une seule fois » ; `webZIndex` : la couche de la feuille sur
+ *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
  * @returns {import('react').ReactElement} Le bloc.
  */
 function DateEtHoraire({
@@ -227,6 +229,7 @@ function DateEtHoraire({
   pleines = undefined,
   repetition = null,
   sansRepetition = false,
+  webZIndex = undefined,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -444,6 +447,8 @@ function DateEtHoraire({
           )}
           isVisible={isRecurrenceSheetOpen}
           snapPoints={RECURRENCE_SHEET_SNAP_POINTS}
+          // `webZIndex` n'existe que sur le site (BottomModal.web.js).
+          {.../** @type {any} */ ({ webZIndex })}
         >
           <View style={[Spaces.gap[16]]}>
             <View style={[Spaces.gap[8]]}>

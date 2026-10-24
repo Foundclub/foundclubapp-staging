@@ -15,13 +15,13 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
 
 import { useEventWizard } from './EventWizardContext';
-import preventionDuCreneau from './preventionDuCreneau';
 import {
   getEventWizardExitRoute,
   getEventWizardLocationStepIndex,
   getEventWizardNextRoute,
   getEventWizardStepCount,
 } from './eventWizardDetectionUtils';
+import preventionDuCreneau from './preventionDuCreneau';
 import useMairieDecideALaCreation from './useMairieDecideALaCreation';
 
 const buildDateTimeIso = (baseDate, timeValue) => {
