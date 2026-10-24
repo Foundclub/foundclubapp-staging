@@ -8,7 +8,12 @@ describe('authSanitizer - BH02 P1-05', () => {
     expect(haveSameSanitizedUser(base, { ...base, email: 'c@d.fr' })).toBe(false);
   });
   test('une demande d\'équipe ou de club qui change d\'état change la signature', () => {
-    const team = (state) => ({ ...base, teamMembershipRequests: [{ documentId: 'r1', state, direction: 'invite', team: { documentId: 't1' } }] });
+    const team = (state) => ({
+      ...base,
+      teamMembershipRequests: [{
+        direction: 'invite', documentId: 'r1', state, team: { documentId: 't1' },
+      }],
+    });
     expect(haveSameSanitizedUser(team('pending'), team('accepted'))).toBe(false);
     const club = (state) => ({ ...base, clubMembershipRequests: [{ documentId: 'c1', state }] });
     expect(haveSameSanitizedUser(club('pending'), club('accepted'))).toBe(false);

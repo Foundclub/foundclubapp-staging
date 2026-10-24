@@ -12,6 +12,9 @@ jest.mock('react-native-mmkv', () => ({
 
 /** @type {any} */
 let ctx;
+/**
+ *
+ */
 function Sonde() {
   ctx = useOnboarding();
   return null;
