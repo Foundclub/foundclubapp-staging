@@ -314,7 +314,12 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     reservePlayers: buildConvocationReserveList(published),
     responsesByPlayerId: byPlayerId && typeof byPlayerId === 'object' ? byPlayerId : {},
     role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
-    snapshotPlayers: ensureList(published?.snapshotPlayers),
+    // BH05 · P6-11 — les joueurs ajoutes a la main sont places comme les autres :
+    // sans eux, leur jeton disparaissait du terrain du joueur convoque.
+    snapshotPlayers: [
+      ...ensureList(published?.manualPlayers),
+      ...ensureList(published?.snapshotPlayers),
+    ],
     sport,
     staff: buildConvocationStaffList(branch),
     teamId: toId(branch?.team?.documentId || convocation?.team?.documentId),
