@@ -25,6 +25,7 @@ import AdminCollectiviteForm from '../AdminCollectiviteForm';
 //   - créée : la fiche s ouvre avec `justCreated` (elle dit les gestes qui restent).
 
 const mockPost = jest.fn();
+const mockGet = jest.fn();
 const COULEURS = jest.requireActual('@/theme/colors').default();
 const mockReplace = jest.fn();
 // TEXTES-COLLECTIVITES (01/10) — la navigation doublee joue « retirer l ecran » comme React
@@ -67,7 +68,7 @@ jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {
     delete: jest.fn(),
-    get: jest.fn(),
+    get: (...args) => mockGet(...args),
     post: (...args) => mockPost(...args),
     put: jest.fn(),
   },
@@ -453,5 +454,37 @@ describe('VT18E — l aperçu porte l écusson de la Ville', () => {
     expect(textesSous(apercuEssai)).toEqual(expect.arrayContaining(['R']));
     expect(textes(arbre)).not.toContain('TC');
     expect(textes(arbre)).not.toContain('Ton club');
+  });
+});
+
+// BH14 P9-11 (BUGHUNT 24/10/2026) — choisir la commune B, sans SIREN, après la commune A gardait
+// le SIREN de A : le code INSEE de B partait avec le SIREN de A.
+describe('BH14 — choisir une commune', () => {
+  it('P9-11 : une commune sans SIREN efface le SIREN de la commune choisie avant', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ options) => ({
+      data: {
+        data: options?.params?.q === 'Aaa'
+          ? [{ codeInsee: '11111', name: 'Aaa', siren: '211111111' }]
+          : [{ codeInsee: '22222', name: 'Bbb' }],
+      },
+    }));
+    const arbre = await monter();
+    const recherche = () => arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ n) => n.props.accessibilityLabel === 'Chercher la commune');
+    const choisirCommune = async (/** @type {string} */ nom) => {
+      await act(async () => { recherche().props.onChangeText(nom); });
+      await attendre(() => arbre.root.findAll((/** @type {any} */ n) => (
+        n.props?.accessibilityRole === 'button' && typeof n.props?.onPress === 'function'
+        && aplatirTexte(n.props.children).includes(nom))).length > 0);
+      const bouton = arbre.root.findAll((/** @type {any} */ n) => (
+        n.props?.accessibilityRole === 'button' && typeof n.props?.onPress === 'function'
+        && aplatirTexte(n.props.children).includes(nom)))[0];
+      await act(async () => { bouton.props.onPress(); });
+    };
+    await choisirCommune('Aaa');
+    expect(champ(arbre, 'siren').props.value).toBe('211111111');
+    await choisirCommune('Bbb');
+    expect(champ(arbre, 'codeInsee').props.value).toBe('22222');
+    expect(champ(arbre, 'siren').props.value).toBe('');
   });
 });
