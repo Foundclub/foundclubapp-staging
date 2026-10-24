@@ -277,7 +277,7 @@ function TrainingVideoEntry({ navigation, route }) {
 
   const restantes = valeurs.filter(({ essai: n, mesure: m }) => {
     const ligne = dejaRelevé[`${m.key}|${n}`];
-    return !(ligne?.value != null || ligne?.textValue);
+    return !(ligne?.value != null || ligne?.textValue || ligne?.isValid === false);
   }).length;
 
   return (
