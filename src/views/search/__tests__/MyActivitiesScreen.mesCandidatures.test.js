@@ -342,3 +342,19 @@ describe('A12 — le tableau par role : 0 destination perdue', () => {
     }
   });
 });
+
+describe('BH15 · P14-11 — serveur en panne : la page le DIT, au lieu d une liste vide', () => {
+  it('le joueur voit « on n arrive pas a joindre le serveur »', async () => {
+    mockGetMyApplications.mockRejectedValue(new Error('hors ligne'));
+    mockGetMyFriendlyMatchApplications.mockRejectedValue(new Error('hors ligne'));
+
+    expect(allText(await renderFor(JOUEUR))).toContain('joindre le serveur');
+  });
+
+  it('l entraineur aussi', async () => {
+    mockGetMyRecruitmentAds.mockRejectedValue(new Error('hors ligne'));
+    mockGetMyFriendlyMatchAds.mockRejectedValue(new Error('hors ligne'));
+
+    expect(allText(await renderFor(ENTRAINEUR))).toContain('joindre le serveur');
+  });
+});

@@ -143,7 +143,8 @@ function MyActivitiesScreen({ navigation }) {
       setFriendlyAds(valeur(matchs));
       setSentApplications(valeur(mesCandidatures));
       setSentFriendlyApplications(valeur(mesPropositions));
-      setUnreachable([offres, matchs, mesCandidatures, mesPropositions]
+      // BH15 P14-11 : seules les requetes du role comptent ; les autres repondent [] d'office.
+      setUnreachable((isStaff ? [offres, matchs] : [mesCandidatures, mesPropositions])
         .every((resultat) => resultat.status === 'rejected'));
 
       // MES-CANDIDATURES (A13) — la liste est a l'ecran : ses reponses sont VUES, et

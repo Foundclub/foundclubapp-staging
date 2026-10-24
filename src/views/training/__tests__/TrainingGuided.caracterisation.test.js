@@ -552,6 +552,24 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     });
   });
 
+  it('BH15 · P13-05 — deux etapes avant la reponse du serveur : la seconde garde la premiere', () => {
+    const arbre = rendre({ step: 'prep' });
+
+    act(() => { bouton(arbre, 'prep').props.onPress(); });
+    // Les arrets sans etape (echauffement…) se passent jusqu'au premier essai.
+    for (let i = 0; i < 5 && !bouton(arbre, 'attempt'); i += 1) {
+      const suivant = arbre.root.findAllByType(Button)
+        .find((b) => String(b.props.title).startsWith('training.guided.go.'));
+      act(() => { suivant.props.onPress(); });
+    }
+    act(() => { bouton(arbre, 'attempt').props.onPress(); });
+
+    expect(mockMaj.mutate).toHaveBeenLastCalledWith({
+      payload: { conditions: { stepsDone: ['B1-prep', 'B1-e1'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
   it('n ecrase JAMAIS ce que la seance porte deja', () => {
     // `conditions` porte aussi les reperes coches et les tests valides : ecrire la
     // liste seule les effacerait tous.

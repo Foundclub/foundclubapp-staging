@@ -322,3 +322,32 @@ describe('H3 dans le recapitulatif — le role entraineur n est jamais un nom te
     expect(texteVisible()).not.toContain('n à encore');
   });
 });
+
+describe('BH15 · P13-01 — deux postes, un echec : le second appui ne republie pas le poste deja cree', () => {
+  const ETAT_DEUX_POSTES = Object.freeze({
+    ...ETAT_ARTS_MARTIAUX,
+    positions: Object.freeze([
+      Object.freeze({ name: 'Gardien', quantity: 1 }),
+      Object.freeze({ name: 'Défenseur', quantity: 1 }),
+    ]),
+  });
+
+  it('ne relance que le poste qui a echoue', async () => {
+    monterLeRecap(ETAT_DEUX_POSTES);
+    let panne = true;
+    mockCreerAnnonce.mockImplementation(async (/** @type {any} */ donnees) => {
+      mockAnnoncesEnvoyees.push(donnees);
+      if (panne && donnees.position === 'Défenseur') throw new Error('réseau');
+      return { documentId: `annonce-${mockAnnoncesEnvoyees.length}` };
+    });
+
+    await publier();
+    expect(resetRacine).not.toHaveBeenCalled();
+
+    panne = false;
+    await publier();
+
+    expect(mockAnnoncesEnvoyees.map((a) => a.position)).toEqual(['Gardien', 'Défenseur', 'Défenseur']);
+    expect(resetRacine).toHaveBeenCalledTimes(1);
+  });
+});
