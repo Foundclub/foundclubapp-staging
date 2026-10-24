@@ -511,9 +511,12 @@ export const handleResaVeilleActionPress = async ({
 
   try {
     const activationResult = await activateSessionForNotificationPayload(normalizedData);
-    await repondreALaVeille(reservationId, reponse, {
-      jeton: activationResult?.session?.token || null,
-    });
+    // BH01/P2-02 : sans jeton du compte visé, le client prendrait celui du compte ACTIF.
+    const sessionToken = activationResult?.session?.token;
+    if (!sessionToken) {
+      throw new Error(`resa_veille_no_session:${activationResult?.reason || 'unknown'}`);
+    }
+    await repondreALaVeille(reservationId, reponse, { jeton: sessionToken });
     const feedback = reponse === 'confirme'
       ? {
         body: i18next.t('rsvpActions.resaVeille.confirme.body', 'Merci, c’est confirmé.'),
@@ -575,7 +578,12 @@ export const handleEventRsvpActionPress = async ({
 
   try {
     const activationResult = await activateSessionForNotificationPayload(normalizedData);
-    await sendRsvpAnswer(eventId, answer, notificationId, activationResult?.session?.token);
+    // BH01/P2-01 : sans jeton du compte visé, le client prendrait celui du compte ACTIF.
+    const sessionToken = activationResult?.session?.token;
+    if (!sessionToken) {
+      throw new Error(`rsvp_no_session:${activationResult?.reason || 'unknown'}`);
+    }
+    await sendRsvpAnswer(eventId, answer, notificationId, sessionToken);
 
     const feedback = getRsvpFeedbackCopy(answer);
     await displayLocalNotification({

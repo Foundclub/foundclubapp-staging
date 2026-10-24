@@ -70,7 +70,9 @@ function SubscriptionWebSuccess({ navigation, route }) {
         }
         // paiement pas encore confirme cote Stripe (paiement differe) : la
         // reconciliation passera par le webhook, on informe sans bloquer.
-        setStatus('success');
+        // BH01/P5-04 : sans celebrer « C'est debloque » (rien n'est encore paye).
+        scheduleSubscriptionStateRefresh(queryClient);
+        setStatus('processing');
       } catch (error) {
         if (!cancelled) {
           setStatus('error');
@@ -152,6 +154,25 @@ function SubscriptionWebSuccess({ navigation, route }) {
             <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter]}>
               {t('subscriptionWebSuccess.pending', 'Confirmation du paiement…')}
             </Text>
+            {status === 'processing' ? (
+              <>
+                <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter, { maxWidth: 320 }]}>
+                  {t(
+                    'subscriptionWebSuccess.error.chargedHint',
+                    "Si tu as bien été débité, tes droits s'activeront automatiquement d'ici "
+                      + 'quelques minutes.',
+                  )}
+                </Text>
+                <Button
+                  onPress={handleContinue}
+                  title={t(
+                    'subscriptionWebSuccess.actions.backHome',
+                    "Retour à l'accueil",
+                  )}
+                  variant="Primary"
+                />
+              </>
+            ) : null}
           </>
         )}
       </View>

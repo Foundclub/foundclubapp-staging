@@ -217,7 +217,8 @@ function NotificationList() {
         notificationId: payload.notificationId,
         source: 'in_app',
       });
-      await markAsRead(String(notification.documentId || notification.id || ''));
+      // BH01/P5-18 : réponse enregistrée ; l'échec de « marquer lu » ne doit pas dire le contraire.
+      await markAsRead(String(notification.documentId || notification.id || '')).catch(() => {});
       refreshNotifications();
 
       const successMessage = answer === 'present'

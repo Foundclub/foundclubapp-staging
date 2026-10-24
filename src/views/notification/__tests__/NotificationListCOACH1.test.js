@@ -150,3 +150,18 @@ test('COACH1/L3 🔒 — une notification qui n est pas un rappel n a pas ces bo
 
   expect(boutonNomme(tree, 'Je participe')).toBeFalsy();
 });
+
+test('BH01/P5-18 — la presence enregistree le dit, meme si « marquer lu » echoue', async () => {
+  // eslint-disable-next-line global-require
+  const { Alert } = require('react-native');
+  const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  mockMarkAsRead.mockRejectedValueOnce(new Error('reseau'));
+  const tree = monter();
+
+  await act(async () => {
+    await boutonNomme(tree, 'Je participe').props.onPress();
+  });
+
+  expect(alerte).toHaveBeenCalledWith('Notifications', 'Présence enregistrée.');
+  alerte.mockRestore();
+});

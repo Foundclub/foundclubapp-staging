@@ -6,6 +6,8 @@ import '@/theme/strings';
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import TierSelector from '@/components/molecules/tierSelector/TierSelector';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import GuideOffersRecap from '../GuideOffersRecap';
@@ -486,5 +488,23 @@ describe('RETOUR-ONGLET-2 — « Plus tard » revient a L accueil, sans en empil
     });
 
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.LeagueHomeTab, undefined, { pop: true });
+  });
+});
+
+describe('BH01/P14-03 — le palier en surbrillance est celui qui sera achete', () => {
+  it('palier 1 absent du catalogue : la pilule allumee suit le palier achete', () => {
+    mockCatalogQueryState = {
+      data: {
+        data: CATALOG_ENTRIES.filter((entry) => !String(entry.planCode).startsWith('fc_club_tier_1_')),
+      },
+      isError: false,
+      isLoading: false,
+    };
+    const tree = renderRecap();
+    act(() => { findByText(tree, 'Club').props.onPress(); });
+
+    const selecteurClub = tree.root.findAllByType(TierSelector)
+      .find((noeud) => noeud.props.options.some((option) => option.label === '500'));
+    expect(selecteurClub.props.value).toBe(2);
   });
 });
