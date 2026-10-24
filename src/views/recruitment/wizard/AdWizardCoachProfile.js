@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Text,
@@ -66,6 +66,10 @@ function AdWizardCoachProfile({ navigation }) {
     Spaces,
   } = useTheme();
   const { dispatch, state } = useAdWizard();
+  // BH15 P13-02 : le texte tapé reste brut à l'écran ; seul le brouillon reçoit la liste découpée.
+  const [certificationsText, setCertificationsText] = useState(
+    () => (Array.isArray(state.certificationsWanted) ? state.certificationsWanted.join(', ') : ''),
+  );
 
   const selectedRoleLabel = useMemo(
     () => COACH_ROLE_OPTIONS.find((option) => option.value === state.coachRole)?.label || '',
@@ -198,10 +202,13 @@ function AdWizardCoachProfile({ navigation }) {
               {t('adWizardCoachProfile.certificationsLabel', 'Certifications souhaitées')}
             </Text>
             <TextInput
-              onChangeText={(text) => dispatch({
-                payload: text.split(',').map((item) => item.trim()).filter(Boolean),
-                type: 'SET_CERTIFICATIONS_WANTED',
-              })}
+              onChangeText={(text) => {
+                setCertificationsText(text);
+                dispatch({
+                  payload: text.split(',').map((item) => item.trim()).filter(Boolean),
+                  type: 'SET_CERTIFICATIONS_WANTED',
+                });
+              }}
               placeholder={t(
                 'adWizardCoachProfile.certificationsPlaceholder',
                 'Ex. BMF, BPJEPS, expérience formation jeunes',
@@ -219,7 +226,7 @@ function AdWizardCoachProfile({ navigation }) {
                   color: Colors.neutral00,
                 },
               ]}
-              value={Array.isArray(state.certificationsWanted) ? state.certificationsWanted.join(', ') : ''}
+              value={certificationsText}
             />
             <Text style={[Fonts.p4, Fonts.neutral300]}>
               {t(
