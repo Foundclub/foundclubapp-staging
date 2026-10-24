@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 const mockPost = jest.fn();
 
 jest.mock('react-native', () => ({
@@ -51,15 +52,21 @@ class DateNewYork extends RealDate {
     if (args.length > 1) super(RealDate.UTC(...args) + DECALAGE);
     else super(...args);
   }
-  local() { return new RealDate(this.getTime() - DECALAGE); }
-  getFullYear() { return this.local().getUTCFullYear(); }
-  getMonth() { return this.local().getUTCMonth(); }
+
   getDate() { return this.local().getUTCDate(); }
+
+  getFullYear() { return this.local().getUTCFullYear(); }
+
   getHours() { return this.local().getUTCHours(); }
+
+  getMonth() { return this.local().getUTCMonth(); }
+
+  local() { return new RealDate(this.getTime() - DECALAGE); }
 }
 
 class FormDataEspion {
   constructor() { this.champs = {}; }
+
   append(cle, valeur) { this.champs[cle] = valeur; }
 }
 const FormDataDOrigine = global.FormData;

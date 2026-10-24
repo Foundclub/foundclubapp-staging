@@ -1,6 +1,7 @@
 // BH02 (BUGHUNT 24/10) — P2-07 : un échec d'écriture (sérialisation ratée ou trop grosse)
 // ne doit pas effacer les sessions enregistrées. Échafaudage repris de FINITIONS6.
 import renderer, { act } from 'react-test-renderer';
+
 const mockStockage = new Map();
 
 jest.mock('@/platform/storage', () => {
@@ -32,11 +33,6 @@ const TEST_ADEL = session('test-adel', 'Test');
 const KARIM = session('karim-benali', 'Karim');
 
 /** @type {any} */
-let vu;
-/** @type {any} */
-let envoyer;
-
-/** @type {any} */
 let AppProvider;
 /** @type {any} */
 let useAppContext;
@@ -46,9 +42,7 @@ let useAppContext;
  * @returns {null}
  */
 function Sonde() {
-  const [etat, dispatch] = useAppContext();
-  vu = etat;
-  envoyer = dispatch;
+  useAppContext();
   return null;
 }
 
@@ -77,9 +71,8 @@ beforeAll(() => {
 
 beforeEach(remplirLeTelephone);
 
-
 test('P2-07 : une sérialisation ratée garde les sessions enregistrées', () => {
-  const stringify = JSON.stringify;
+  const { stringify } = JSON;
   const espion = jest.spyOn(JSON, 'stringify').mockImplementation((valeur, ...reste) => {
     if (Array.isArray(valeur)) throw new Error('echec simule');
     return stringify(valeur, ...reste);
