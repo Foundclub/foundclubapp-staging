@@ -373,7 +373,7 @@ function FormulaireDeFermeture({
   const fermerDepuisSignalement = useCloseFacilityFromReport();
   const depuisSignalement = Boolean(params.reportId) && !modification && !bloquer;
   const modifier = useModifyFacilityClosure();
-  const enCours = fermer.isPending || modifier.isPending;
+  const enCours = fermer.isPending || modifier.isPending || fermerDepuisSignalement.isPending;
   // SAIS : un blocage d avant n a qu un nom (aucun motif) ; il se modifie tel quel.
   const motifOuNom = bloquer ? Boolean(motifRetenu || nomRetenu) : Boolean(motif);
   const pret = Boolean(facilityId) && datesLisibles && heuresLisibles && motifOuNom;
