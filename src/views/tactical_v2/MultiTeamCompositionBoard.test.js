@@ -752,6 +752,73 @@ describe('D47 — l\'app dit au serveur qui est convoque', () => {
   });
 });
 
+// BH05 · P10-17 et P10-18 — la selection explicite et la generation auto.
+describe('BH05 — qui est convoque reste vrai', () => {
+  const TROIS = [
+    { documentId: 'p1', firstname: 'Ana', lastname: 'Bern' },
+    { documentId: 'p2', firstname: 'Chloe', lastname: 'Diaz' },
+    { documentId: 'p3', firstname: 'Emma', lastname: 'Faure' },
+  ];
+  const PACK_P1 = {
+    availablePresets: [PRESET_442],
+    draft: {
+      manualPlayers: [],
+      mode: 'manual',
+      reservePlayerIds: ['p1'],
+      schemaVersion: 3,
+      sportContext: 'football',
+      teams: [{ id: 'team_1', name: 'Équipe 1', placements: [], presetKey: '4-4-2' }],
+    },
+    published: null,
+  };
+
+  test('P10-17 — les joueurs tout juste coches demarrent convoques, pas ecartes', () => {
+    const arbre = monter(parametresEdition({
+      players: TROIS, selectedPlayers: TROIS, teamComposition: PACK_P1,
+    }));
+
+    expect(compter(arbre, 'Écarté')).toBe(0);
+    expect(compter(arbre, 'Convoqué')).toBe(3);
+  });
+
+  test('P10-18 — la generation auto ne place pas un joueur ecarte', async () => {
+    saveEventCompositionDraft.mockResolvedValue({ draft: null });
+    generateEventCompositionDraft.mockResolvedValue({
+      draft: {
+        manualPlayers: [],
+        mode: 'auto',
+        reservePlayerIds: ['p3'],
+        schemaVersion: 3,
+        sportContext: 'football',
+        teams: [{
+          id: 'team_1',
+          name: 'Équipe 1',
+          placements: [
+            { playerId: 'p1', positionX: 50, positionY: 12, slotId: 'team_1:gk' },
+            { playerId: 'p2', positionX: 30, positionY: 40, slotId: 'team_1:cb' },
+          ],
+          presetKey: '4-4-2',
+        }],
+      },
+    });
+    const arbre = monter(parametresEdition({ players: TROIS }));
+
+    appuyerSur(arbre, 'Chloe Diaz');
+    appuyerSur(arbre, 'Emma Faure');
+    appuyerSur(arbre, 'Génération auto');
+    await act(async () => {
+      appuyerSur(arbre, 'Générer le brouillon');
+    });
+    await act(async () => {
+      appuyerSur(arbre, 'Sauvegarder');
+    });
+    const [, charge] = saveEventCompositionDraft.mock.calls[0];
+    const placesIds = charge.draft.teams.flatMap((team) => team.placements.map((pl) => pl.playerId));
+    expect(placesIds).toEqual(['p1']);
+    expect(charge.draft.reservePlayerIds).toEqual([]);
+  });
+});
+
 describe('D42 — la consigne decrit le geste qui existe vraiment', () => {
   test('le temps 2 parle de GLISSER, plus seulement de toucher un poste', () => {
     const arbre = monter(parametresEdition());

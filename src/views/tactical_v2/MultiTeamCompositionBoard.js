@@ -435,6 +435,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   // vierge ne dit rien du tout -> personne n'est ecarte, tout le monde est
   // convoque, ce qui est le comportement d'avant ce lot.
   const initialExcludedPlayerIds = useMemo(() => {
+    // BH05 · P10-17 — une selection explicite EST la convocation : le pack vient
+    // d'y etre restreint, donc un joueur tout juste coche n'y figure pas encore.
+    if (hasExplicitSelection) return new Set();
     const packPlayerIds = new Set([
       ...(Array.isArray(initialPack?.reservePlayerIds) ? initialPack.reservePlayerIds : []),
       ...getAssignedPlayerIdsFromPack(initialPack),
@@ -446,7 +449,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         .map((player) => getCompositionPlayerId(player))
         .filter((playerId) => playerId && !packPlayerIds.has(playerId)),
     );
-  }, [editablePlayers, initialPack]);
+  }, [editablePlayers, hasExplicitSelection, initialPack]);
 
   const [draftPack, setDraftPack] = useState(initialPack);
   const [excludedPlayerIds, setExcludedPlayerIds] = useState(initialExcludedPlayerIds);
@@ -1140,10 +1143,24 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         teamPresets: autoPresetKeys.slice(0, autoTeamCount).map((presetKey) => ({ presetKey })),
       });
       const nextPresets = response?.availablePresets || availablePresets;
-      setDraftPack(normalizeMultiTeamPack(response?.draft, {
+      const generated = normalizeMultiTeamPack(response?.draft, {
         availablePresets: nextPresets,
         sportContext: response?.draft?.sportContext || sport,
-      }));
+      });
+      // BH05 · P10-18 — le serveur ne connait pas les joueurs ecartes au temps 1 :
+      // on retire leurs placements et leur place en reserve.
+      setDraftPack(excludedPlayerIds.size === 0 ? generated : {
+        ...generated,
+        reservePlayerIds: (Array.isArray(generated?.reservePlayerIds) ? generated.reservePlayerIds : [])
+          .filter((playerId) => !excludedPlayerIds.has(String(playerId || ''))),
+        reserveSnapshotPlayers: (Array.isArray(generated?.reserveSnapshotPlayers) ? generated.reserveSnapshotPlayers : [])
+          .filter((player) => !excludedPlayerIds.has(getCompositionPlayerId(player))),
+        teams: (Array.isArray(generated?.teams) ? generated.teams : []).map((team) => ({
+          ...team,
+          placements: (Array.isArray(team?.placements) ? team.placements : [])
+            .filter((placement) => !excludedPlayerIds.has(String(placement?.playerId || ''))),
+        })),
+      });
       setSelectedPlayerId('');
       setShowAutoSetup(false);
       // La generation REMPLACE tout le pack : on emmene le coach voir le
@@ -1161,7 +1178,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     } finally {
       setIsSaving(false);
     }
-  }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, invalidateQueries, sport, teamId, t]);
+  }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, excludedPlayerIds, invalidateQueries, sport, teamId, t]);
 
   const isPlayersStep = !readOnly && compositionStep === STEP_PLAYERS;
   const isFieldStep = readOnly || compositionStep === STEP_FIELD;
