@@ -68,7 +68,7 @@ export const cloneWithoutSystemFields = (club = {}) => ({
   createdAt: undefined,
   documentId: undefined,
   id: undefined,
-  // BH14 P9-17 : les sponsors (composants) de la copie sont neufs, sans l'id de ceux du club source.
+  // BH14 P9-17 : les sponsors (composants) de la copie sont neufs, sans l id du club source.
   sponsor: Array.isArray(club?.sponsor)
     ? club.sponsor.map(({ id, ...sponsor } = {}) => sponsor)
     : club?.sponsor,

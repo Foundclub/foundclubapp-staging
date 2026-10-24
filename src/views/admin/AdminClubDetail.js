@@ -305,19 +305,20 @@ function AdminClubDetail() {
     }
   }, [relationConfig, relationQuery, relationSearchMutation, t]);
 
-  const mutateRelation = useCallback(async (action, target) => {
-    if (!relationConfig || !clubId) return;
+  // BH14 P9-08 : « Retirer » passe SA configuration (relationConfig n'existe que fenêtre ouverte).
+  const mutateRelation = useCallback(async (action, target, config = relationConfig) => {
+    if (!config || !clubId) return;
 
     const targetDocumentId = getDocumentId(target);
-    const reason = normalizeText(relationReason) || `${action} ${relationConfig.label}`;
+    const reason = normalizeText(relationReason) || `${action} ${config.label}`;
     if (!targetDocumentId) return;
 
     try {
       await updateRelationMutation.mutateAsync({
         action,
         documentId: clubId,
-        field: relationConfig.field,
-        isMany: relationConfig.isMany,
+        field: config.field,
+        isMany: config.isMany,
         reason,
         targetDocumentId,
       });
@@ -444,7 +445,7 @@ function AdminClubDetail() {
               <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>
                 {getClubRelationLabel(item)}
               </Text>
-              <TouchableOpacity onPress={() => mutateRelation('disconnect', item)}>
+              <TouchableOpacity onPress={() => mutateRelation('disconnect', item, config)}>
                 <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
                   {t('adminClubDetail.remove', 'Retirer')}
                 </Text>
