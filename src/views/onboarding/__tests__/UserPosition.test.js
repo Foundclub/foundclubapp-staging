@@ -177,3 +177,14 @@ describe('UserPosition — l`ecran se retire quand il n`a rien a montrer (D23 (2
     expect(navigation.navigate).toHaveBeenCalledWith('HomeTab');
   });
 });
+
+// BH03 · P5-25 — les postes d'un AUTRE sport etaient pre-coches, invisibles, et renvoyes.
+describe('UserPosition — BH03 · P5-25 : seuls les postes du sport courant', () => {
+  it('un ancien poste de football ne compte pas pour un rugbyman', () => {
+    mockUserData.current = { documentId: 'user-d23', position: 'Gardien, Pilier' };
+    const { tree } = rendre({ selectedSport: 'Rugby' });
+
+    // « Continuer » (1 poste), pas « Continuer (2 postes) » : Gardien n'est pas du rugby.
+    expect(textes(tree).filter((texte) => texte.startsWith('Continuer'))).toEqual(['Continuer']);
+  });
+});
