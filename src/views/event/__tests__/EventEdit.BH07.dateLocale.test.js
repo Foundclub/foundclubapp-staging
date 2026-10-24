@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
+/* eslint-disable no-unused-vars, max-len -- montage repris tel quel d un temoin voisin (BH07) */
 // BH07 / P7-07 (24/10) — a l'ouest d'UTC, une date 'YYYY-MM-DD' s'ouvrait un jour trop tot.
 // Montage repris de EventEditEvedit3Ouverture.test.js.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

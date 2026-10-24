@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
+/* eslint-disable no-unused-vars, max-len -- montage repris tel quel d un temoin voisin (BH07) */
 // BH07 / P8-08 (24/10) — la proposition de la Ville est declinee, puis le deplacement echoue :
 // le message doit dire que la proposition a ete declinee. Montage repris de DeplacerLaSeance.CRDEP.test.js.
 /* eslint-disable max-len -- des phrases entieres de l ecran, comparees telles quelles */

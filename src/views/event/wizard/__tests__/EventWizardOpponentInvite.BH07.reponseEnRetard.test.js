@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars -- montage repris tel quel d un temoin voisin (BH07) */
+/* eslint-disable no-unused-vars, max-len -- montage repris tel quel d un temoin voisin (BH07) */
 // BH07 / P8-16 (24/10) — une reponse en retard du club precedent n'ecrase plus les equipes du club
 // choisi ensuite. Montage repris de S10B-adversaire-invite.test.js.
 import { createElement } from 'react';

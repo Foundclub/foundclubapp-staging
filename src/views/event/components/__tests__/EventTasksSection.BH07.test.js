@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des phrases entieres, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { Alert } from 'react-native';

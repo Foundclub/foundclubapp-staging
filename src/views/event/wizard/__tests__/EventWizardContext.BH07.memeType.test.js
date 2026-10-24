@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des phrases entieres, comparees telles quelles */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
