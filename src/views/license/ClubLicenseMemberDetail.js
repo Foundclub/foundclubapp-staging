@@ -1,6 +1,8 @@
 /* eslint-disable perfectionist/sort-imports */
 import i18next from 'i18next';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Pressable, ScrollView, Text, TextInput, View,
@@ -129,16 +131,21 @@ function InfoRow({ label, value }) {
  * @param root0.methodOptions
  */
 function ActionModal({
-  methodOptions = [], onClose, onSubmit, title, type,
+  isBusy = false, maxCents = null, methodOptions = [], onClose, onSubmit, title, type,
 }) {
   const { t } = useTranslation();
   const {
     Colors, Fonts, Spaces,
   } = useTheme();
-  const [amount, setAmount] = useState('');
+  // BH11 P5-07 : un remboursement part du reste remboursable.
+  const [amount, setAmount] = useState(maxCents ? String(maxCents / 100).replace('.', ',') : '');
   const [method, setMethod] = useState(methodOptions[0]?.mode || 'cash');
   const [note, setNote] = useState('');
   const [motifManquant, setMotifManquant] = useState(false);
+  const [montantInvalide, setMontantInvalide] = useState(false);
+  // BH11 P5-08 : un seul envoi tant que le serveur n a pas repondu.
+  const envoiEnCours = useRef(false);
+  useEffect(() => { if (!isBusy) envoiEnCours.current = false; }, [isBusy]);
   const needsAmount = ['amount', 'payment', 'refund'].includes(type);
   const needsMethod = type === 'payment';
   // AA07 / K2 — LE MOTIF ETAIT « OBLIGATOIRE » SANS L ETRE.
@@ -167,7 +174,7 @@ function ActionModal({
         {needsAmount ? (
           <TextInput
             keyboardType="decimal-pad"
-            onChangeText={setAmount}
+            onChangeText={(value) => { setAmount(value); setMontantInvalide(false); }}
             placeholder={t(
               'clubLicenseMemberDetail.actionModal.amountPlaceholder',
               'Montant en euros',
@@ -178,6 +185,14 @@ function ActionModal({
             }}
             value={amount}
           />
+        ) : null}
+        {montantInvalide ? (
+          <Text style={[Fonts.p3, { color: '#fda4af' }]}>
+            {t(
+              'clubLicenseMemberDetail.actionModal.amountInvalid',
+              'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
+            )}
+          </Text>
         ) : null}
         {needsMethod ? (
           <View style={Spaces.gap[8]}>
@@ -244,13 +259,24 @@ function ActionModal({
             variant="Secondary"
           />
           <Button
+            disabled={isBusy}
+            isLoading={isBusy}
             onPress={() => {
+              if (envoiEnCours.current) return;
               if (needsReason && !note.trim()) {
                 setMotifManquant(true);
                 return;
               }
+              const amountCents = euroToCents(amount);
+              // BH11 P5-06 / P5-07 : ni vide, ni negatif, ni NaN, ni au-dela du remboursable.
+              if (needsAmount && (!Number.isFinite(amountCents) || amountCents <= 0
+                || (maxCents !== null && amountCents > maxCents))) {
+                setMontantInvalide(true);
+                return;
+              }
+              envoiEnCours.current = true;
               onSubmit({
-                amountCents: euroToCents(amount), method, note, reason: note,
+                amountCents, method, note, reason: note,
               });
             }}
             style={{ flex: 1 }}
@@ -1320,6 +1346,12 @@ function ClubLicenseMemberDetail({ route }) {
       </ScrollView>
       {modal && (canUseSensitiveActions || (modalType === 'payment' && canValidatePayment)) ? (
         <ActionModal
+          isBusy={[manualPaymentMutation, amountMutation, waiveMutation, rejectPaymentMutation,
+            refundMutation, reviewDocumentMutation].some((mutation) => mutation.isPending)}
+          maxCents={modalType === 'refund'
+            ? refundableAmount((assignment?.payments || []).find((payment) => (
+              String(payment?.documentId || payment?.id) === String(modal.paymentId))))
+            : null}
           methodOptions={manualMethodOptions}
           onClose={() => setModal(null)}
           onSubmit={submitModal}
