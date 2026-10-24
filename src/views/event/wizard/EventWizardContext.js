@@ -298,7 +298,8 @@ function eventWizardReducer(state, action) {
         // lien « modifier » du Recap) ne touche a rien, meme regle que
         // `sessionStatus` juste en dessous.
         capacityMode: hasTypeChanged ? null : state.capacityMode,
-        detectionSlots: [],
+        // BH07 / P8-03 — un type inchange (lien « modifier » du Recap) garde ses creneaux.
+        detectionSlots: hasTypeChanged ? [] : state.detectionSlots,
         // AC04 : meme raison que `opponentName` — une convocation n'a de sens
         // que sur un match.
         matchCallUpPlayerIds: isMatch ? state.matchCallUpPlayerIds : [],
@@ -327,7 +328,7 @@ function eventWizardReducer(state, action) {
 
         return {
           ...normalizedState,
-          invitedTeams: [],
+          invitedTeams: hasTypeChanged ? [] : state.invitedTeams,
           isRecurrent: false,
           recurrenceDays: [],
           recurrenceEndDate: null,
