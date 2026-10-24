@@ -303,3 +303,38 @@ describe('AssignCoachTeams — ce que l ecran fait (fige par D62)', () => {
     expect(ecussons[0].props.name).toBe('Stade Marseillais');
   });
 });
+
+describe('BH12 P11-12 — echec partiel', () => {
+  it('une equipe rattachee, une en echec : la liste se relit et le message ne dit pas « rien n est fait »', async () => {
+    const { Alert } = jest.requireActual('react-native');
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockTeamsQuery.data = {
+      pages: [{
+        data: [...EQUIPES, {
+          activities: [{ name: 'Handball' }],
+          club: { documentId: 'club-1', name: 'Stade Marseillais' },
+          documentId: 't-3',
+          name: 'U17 Garcons',
+          trainers: [],
+        }],
+      }],
+    };
+    /** @type {any} */ (updateTeam).mockImplementation((/** @type {any} */ charge) => (
+      charge.documentId === 't-3' ? Promise.reject(new Error('panne')) : Promise.resolve({})
+    ));
+    const arbre = monter();
+    act(() => { pressableAvecTexte(arbre, 'U15 Filles').props.onPress(); });
+    act(() => { pressableAvecTexte(arbre, 'U17 Garcons').props.onPress(); });
+    mockTeamsQuery.refetch.mockClear();
+
+    await act(async () => {
+      pressableAvecTexte(arbre, 'Assigner').props.onPress();
+      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
+    });
+
+    expect(mockTeamsQuery.refetch).toHaveBeenCalled();
+    const message = alerte.mock.calls[alerte.mock.calls.length - 1]?.[1];
+    expect(message).not.toBe("Impossible d'assigner l'entraîneur aux équipes sélectionnées.");
+    alerte.mockRestore();
+  });
+});

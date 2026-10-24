@@ -2204,6 +2204,7 @@ export default {
     },
     errors: {
       assign: "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
+      partial: "{{done}} équipe(s) assignée(s), {{failed}} en échec. Réessaie pour celles qui restent.",
       noTeamSelected: 'Sélectionne au moins une équipe.',
       trainerNotFound: 'Impossible de retrouver cet entraîneur. Merci de réessayer.',
     },
