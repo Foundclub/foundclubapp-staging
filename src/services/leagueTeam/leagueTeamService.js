@@ -703,7 +703,7 @@ export const searchSquads = async (filters) => {
         if (!teamSport) return false;
 
         if (requestedSportToken === SPORT_KEYS.football5) {
-          return teamSport.includes('football') || teamSport.includes('futsal');
+          return (teamSport.includes('football') && !teamSport.includes('11')) || teamSport.includes('futsal');
         }
 
         if (requestedSportToken === SPORT_KEYS.football11) {
