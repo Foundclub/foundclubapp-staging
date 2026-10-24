@@ -123,3 +123,21 @@ describe('ST-VUES2 écran 17 — « Ses retours de match dans la feuille »', ()
     expect(page).toContain('screen: RouteNames.MatchStatsEditor');
   });
 });
+
+// BH03 · P11-19 — le dernier match du joueur, joue avec une AUTRE equipe que celle du coach,
+// etait rattache a l'equipe du coach (repli « une seule equipe ») : feuille d'un autre match.
+describe('BH03 · P11-19 — resolveMatchSheetTarget', () => {
+  it('un match d une autre equipe n est pas rattache a l equipe du coach', () => {
+    // eslint-disable-next-line global-require
+    const { resolveMatchSheetTarget } = require('../stats/ProfileStatsForViewer');
+    const stats = {
+      recentMatches: [
+        { documentId: 'match-seniors', sourceType: 'event', sport: 'football', teamName: 'Seniors' },
+        { documentId: 'match-u15', sourceType: 'event', sport: 'football', teamName: 'U15' },
+      ],
+      scope: { teams: [{ documentId: 'u15', name: 'U15' }], viewer: 'coach' },
+    };
+
+    expect(resolveMatchSheetTarget(stats)?.eventId).toBe('match-u15');
+  });
+});
