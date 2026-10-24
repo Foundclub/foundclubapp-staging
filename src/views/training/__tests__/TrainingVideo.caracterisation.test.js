@@ -388,6 +388,28 @@ describe('UN ESSAI A LA FOIS', () => {
     expect(apres).toContain('T2_essai01.mp4');
   });
 
+  it('BH15 · P13-06 — ce qui vient d etre enregistre se COMPTE tout de suite, sans attendre l envoi', () => {
+    const arbre = rendre();
+    /** @type {Record<string, any>} */
+    const carnet = {};
+    mockCarnet.record.mockImplementation((/** @type {any} */ row) => {
+      carnet[`${row.testDocumentId}|${row.measureKey}|${row.attempt}`] = row;
+    });
+    mockCarnet.merge.mockImplementation(() => ({ ...carnet }));
+    const restantes = () => textes(arbre).find((v) => v.startsWith('training.video.remaining'));
+    const avant = restantes();
+
+    const touche = (libelle) => arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityLabel === libelle)[0];
+    act(() => { touche('9').props.onPress(); });
+    act(() => {
+      arbre.root.findAllByType(Button)
+        .find((b) => b.props.title === 'training.video.save').props.onPress();
+    });
+
+    expect(restantes()).not.toBe(avant);
+  });
+
   it('le rail compte ce qui est FAIT, pas ce que le programme prevoit', () => {
     // 🪤 Un essai qui n a pas ete filme n a pas de video : le proposer ferait
     // chercher un fichier qui n existe pas.

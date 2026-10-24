@@ -181,6 +181,8 @@ function TrainingVideoEntry({ navigation, route }) {
    * 🪤 C'était indexé par essai seul : deux mesures du même essai se marchaient
    * dessus, et la seconde affichait la valeur de la première.
    */
+  // BH15 P13-06 : chaque enregistrement local fait relire le carnet, sans attendre l'envoi.
+  const [versionCarnet, setVersionCarnet] = useState(0);
   const dejaRelevé = useMemo(() => {
     /** @type {Record<string, any>} */
     const parCouple = {};
@@ -194,7 +196,7 @@ function TrainingVideoEntry({ navigation, route }) {
     return parCouple;
     // `results` est recréé à chaque rendu : le dépendre relancerait la boucle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.results, test?.documentId]);
+  }, [session?.results, test?.documentId, versionCarnet]);
 
   /**
    * En changeant d'essai, le champ reprend ce qui est déjà noté : sans ça, on
@@ -236,6 +238,7 @@ function TrainingVideoEntry({ navigation, route }) {
       unit: mesure.unit,
       value: Number.isFinite(nombre) ? nombre : null,
     });
+    setVersionCarnet((v) => v + 1);
     if (rang < valeurs.length - 1) setRang(rang + 1);
   }, [essai, mesure, rang, results, saisie, test, valeurs]);
 
@@ -269,6 +272,7 @@ function TrainingVideoEntry({ navigation, route }) {
       unit: mesure.unit,
       value: null,
     });
+    setVersionCarnet((v) => v + 1);
     if (!dejaNulle && rang < valeurs.length - 1) setRang(rang + 1);
   }, [dejaRelevé, essai, mesure, rang, results, test, valeurs]);
 
