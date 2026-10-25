@@ -16,6 +16,8 @@ import {
   versCorpsDeLApi,
 } from '@/domains/collectivite/evenementDeLaVille';
 
+import { toDeviceDateFromParisInstant } from '@/utils/parisTime';
+
 // 🏛️ R17-EVT-1 (20/10/2026, REC17-005) — l'événement de la Ville, en règles pures (planches
 // P10-evenement-ordi / -tel, P11-evenement-v2-tel). Ce témoin fige : les étapes du tunnel (6, ou 4
 // depuis une case du planning ; « Ailleurs » saute « Quelle place ? »), les refus du formulaire,
@@ -263,8 +265,9 @@ describe('R17-EVT-1 — sur le planning d’une installation', () => {
       evenementDeLaVille: EV,
       title: 'Fête du sport',
     });
-    expect(new Date(blocs[0].startAt).getHours()).toBe(10);
-    expect(new Date(blocs[1].endAt).getDate()).toBe(25);
+    // C05 (Q2-08) : lus comme le planning les lit, à l'heure de Paris.
+    expect(toDeviceDateFromParisInstant(blocs[0].startAt)?.getHours()).toBe(10);
+    expect(toDeviceDateFromParisInstant(blocs[1].endAt)?.getDate()).toBe(25);
     expect(blocsDesEvenements([EV], { from: '2026-10-25', to: '2026-10-31' })).toHaveLength(1);
     expect(blocsDesEvenements([EV], { from: 'x', to: 'y' })).toEqual([]);
   });
@@ -399,5 +402,22 @@ describe('R17-EVT-1-BIS — « Où ? » : l’occupation de chaque installation'
     expect(occupationLabel(t, { complet: false, fermeture: { kind: 'closure' }, seances: 0 }))
       .toBe('Fermeture ce jour-là');
     expect(occupationLabel(t, undefined)).toBe('');
+  });
+});
+
+describe('C05 (Q2-08) — les blocs d un événement de la Ville sont à l heure de Paris', () => {
+  // Témoin à lancer aussi hors de Paris : `$env:TZ='America/New_York'` (PowerShell).
+  it('le 27/10 de 09:00 à 11:00, quel que soit le fuseau de l appareil', () => {
+    const evenement = {
+      endDate: '2026-10-27',
+      endTime: '11:00',
+      name: 'Fête',
+      startDate: '2026-10-27',
+      startTime: '09:00',
+    };
+    const [bloc] = blocsDesEvenements([evenement], { from: '2026-10-26', to: '2026-11-01' });
+    // Paris est en UTC+1 le 27/10 (heure d hiver depuis le 25/10).
+    expect(bloc.startAt).toBe('2026-10-27T08:00:00.000Z');
+    expect(bloc.endAt).toBe('2026-10-27T10:00:00.000Z');
   });
 });
