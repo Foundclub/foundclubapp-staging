@@ -423,4 +423,23 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
       startTime: '14:00',
     });
   });
+
+  it('C05 (Q2-03) : « Modifier » illisible : une erreur, jamais un formulaire vide', async () => {
+    mockOrdinateur = false;
+    mockFormulaireProps = null;
+    const relire = jest.fn();
+    mockParams = { collectiviteId: 'ville-montrivage', evenementId: 'evt-1' };
+    mockFiche = {
+      data: undefined, error: new Error('403'), isError: true, isLoading: false, refetch: relire,
+    };
+    const arbre = await monter(<CollectiviteEvenement />);
+    expect(mockFormulaireProps).toBeNull();
+    expect(textes(arbre)).toContain(
+      'Cet événement n’a pas pu être lu : il ne peut pas être modifié pour l’instant.',
+    );
+    await act(async () => {
+      arbre.root.findByProps({ testID: 'bouton:Réessayer' }).props.onPress();
+    });
+    expect(relire).toHaveBeenCalledTimes(1);
+  });
 });

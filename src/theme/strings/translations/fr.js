@@ -6771,6 +6771,7 @@ export default {
       voirActualite: 'Voir l’actualité',
     },
     horsVille: 'Cet espace est réservé à la Ville.',
+    illisible: 'Cet événement n’a pas pu être lu : il ne peut pas être modifié pour l’instant.',
     lieu: {
       aCote: '{{installation}} · à côté',
       toute: '{{installation}} · toute l’installation',

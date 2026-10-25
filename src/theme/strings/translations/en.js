@@ -6209,6 +6209,7 @@ export default {
       voirActualite: 'See the news',
     },
     horsVille: 'This space is for the town.',
+    illisible: 'This event could not be loaded, so it cannot be edited for now.',
     lieu: {
       aCote: '{{installation}} · next to it',
       toute: '{{installation}} · whole facility',
