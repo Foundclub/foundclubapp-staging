@@ -205,3 +205,23 @@ describe('R17-VUE — le planning omnisport a l arrivee', () => {
     expect(selecteur().value).toBe('3days');
   });
 });
+
+describe('C05 (Q2-15) — « Événements à partir du » hors de la plage du planning', () => {
+  const cartes = () => montes[montes.length - 1].arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.item?.documentId && typeof n.type === 'function')
+    .map((/** @type {any} */ n) => n.props.item.documentId);
+
+  test('le 27/10 choisi, la semaine du 19 affichee : la liste lit sa propre semaine', async () => {
+    await monter({
+      '2026-10-19': [evenement('2026-10-22')],
+      '2026-10-26': [evenement('2026-10-27')],
+    });
+    expect(cartes()).toEqual(['evt-2026-10-22']);
+    const curseur = montes[montes.length - 1].arbre.root
+      .find((/** @type {any} */ n) => typeof n.props?.onDateSelected === 'function');
+    await act(async () => { curseur.props.onDateSelected(new Date(2026, 9, 27)); });
+    await attendre();
+    expect(cartes()).toEqual(['evt-2026-10-27']);
+    expect(selecteur().value).toBe('week');
+  });
+});
