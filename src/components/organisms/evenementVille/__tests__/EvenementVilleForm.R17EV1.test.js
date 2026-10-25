@@ -428,6 +428,20 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
     expect(onPublier).toHaveBeenCalledTimes(2);
     expect(textes(arbre)).not.toContain('L’événement n’a pas été publié.');
   });
+
+  it('C05 (Q2-11) : un refus du serveur dit sa raison, pas « connexion perdue »', async () => {
+    // La forme rejetée par les intercepteurs HTTP : `response.data.error`, sans `response`.
+    const onPublier = jest.fn().mockRejectedValueOnce({
+      message: 'Cet événement est déjà annulé', name: 'ConflictError', status: 409,
+    });
+    const arbre = await monter({ onPublier });
+    await remplirJusquaQui(arbre);
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    const lus = textes(arbre);
+    expect(lus).toContain('Cet événement est déjà annulé');
+    expect(lus).not.toContain('La connexion a été perdue. Ce que vous avez saisi est gardé.');
+  });
 });
 
 describe('R17-EVT-1 — le panneau (ordinateur)', () => {
