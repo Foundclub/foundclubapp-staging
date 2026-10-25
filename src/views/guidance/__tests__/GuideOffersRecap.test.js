@@ -508,3 +508,30 @@ describe('BH01/P14-03 — le palier en surbrillance est celui qui sera achete', 
     expect(selecteurClub.props.value).toBe(2);
   });
 });
+
+// BUGHUNT phase 2, lot C03 (25/10) — memes defauts que la feuille de vente.
+describe('BUGHUNT C03 — recapitulatif du tour guide', () => {
+  it('Q1-04 — l achat Équipe ne coche pas une équipe que le club paie déjà', async () => {
+    const auth = authValue();
+    auth.subscriptionSummary = {
+      teamSlotSummary: { coveredTeamDocumentIds: [], coveredTeams: [{ reason: 'club', teamDocumentId: 'A' }] },
+    };
+    auth.userData.myTeams = [];
+    auth.userData.trainedTeams = [{ documentId: 'A', name: 'A U13' }, { documentId: 'B', name: 'B U15' }];
+    const tree = renderRecap(auth);
+
+    await act(async () => { findByText(tree, 'Débloquer Équipe · 59,99 €/an').props.onPress(); });
+
+    expect(mockPerformPurchase.mock.calls[0][0].teamDocumentIds).toEqual(['B']);
+  });
+
+  it('Q1-05 — un passage vers Stripe n est ni compté ni présenté comme un succès', async () => {
+    mockPerformPurchase.mockResolvedValue({ checkoutRedirect: true });
+    const tree = renderRecap();
+
+    await act(async () => { findByText(tree, 'Débloquer Équipe · 59,99 €/an').props.onPress(); });
+
+    expect(mockTrackFunnelEvent.mock.calls.map((appel) => appel[0])).not.toContain('recap_unlock_succeeded');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});

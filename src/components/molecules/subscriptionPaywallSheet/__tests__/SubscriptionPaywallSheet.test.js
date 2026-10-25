@@ -943,3 +943,129 @@ describe('ABOPARCLUB — la feuille n achete pas a travers les clubs', () => {
     expect(mockPerformPurchase.mock.calls[0][0].clubDocumentId).toBe('club-aiki');
   });
 });
+
+// BUGHUNT phase 2, lot C03 (25/10) — quatre bugs de la feuille, prouves par la
+// 2e chasse (TECHNIQUE.md Q1-04, Q1-05, Q1-08, Q1-09).
+describe('BUGHUNT C03 — feuille de vente', () => {
+  afterEach(() => {
+    mockRail = 'trusted-test';
+  });
+
+  it('Q1-04 — l achat Équipe ne coche pas les équipes que le club paie déjà', async () => {
+    const auth = baseAuthValue({
+      subscriptionSummary: {
+        teamSlotSummary: {
+          coveredTeamDocumentIds: [],
+          coveredTeams: [
+            { reason: 'club', teamDocumentId: 'A' },
+            { reason: 'club', teamDocumentId: 'B' },
+          ],
+        },
+      },
+    });
+    auth.userData.myTeams = [];
+    auth.userData.trainedTeams = [
+      { documentId: 'A', name: 'A U13' },
+      { documentId: 'B', name: 'B U15' },
+      { documentId: 'C', name: 'C Seniors' },
+    ];
+    const tree = renderSheet({ auth, decision: TEAM_QUOTA_DECISION });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer 2 équipes').props.onPress();
+    });
+
+    expect(mockPerformPurchase.mock.calls[0][0].teamDocumentIds).toEqual(['C']);
+  });
+
+  it('Q1-05 — un passage vers Stripe n est ni compté ni présenté comme un achat réussi', async () => {
+    mockPerformPurchase.mockResolvedValue({ checkoutRedirect: true, sessionId: 'cs_1' });
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer 2 équipes').props.onPress();
+    });
+
+    const evenements = mockTrackFunnelEvent.mock.calls.map((appel) => appel[0]);
+    expect(evenements).not.toContain('paywall_purchase_succeeded');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('Q1-08 — un changement d offre que le magasin n encaisse pas prend effet à l échéance', async () => {
+    mockRail = 'revenuecat';
+    // Ce que rend le rail quand Apple n'a fait que noter une preference de
+    // renouvellement : la reponse du serveur, et l'achat sans transaction.
+    mockPerformPlanChange.mockResolvedValue({
+      purchase: { productIdentifier: 'fc_club_tier_1_yearly', transactionIdentifier: '' },
+      subscription: { documentId: 'sub-equipe' },
+    });
+    const tree = renderSheet({
+      auth: baseAuthValue({
+        entitlementsSummary: [],
+        subscriptionSummary: {
+          payerSubscriptionIds: ['sub-equipe'],
+          payerSubscriptionsSummary: [{
+            documentId: 'sub-equipe',
+            planCode: 'fc_team_1_yearly',
+            provider: 'apple',
+            scopeClubDocumentIds: ['club-du-payeur'],
+            status: 'active',
+          }],
+          teamSlotSummary: { assigned: 1, available: 0, total: 1 },
+        },
+      }),
+      clubDocumentId: 'club-du-payeur',
+      decision: FACILITY_DECISION,
+    });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
+    });
+
+    expect(mockPerformPlanChange).toHaveBeenCalledTimes(1);
+    expect(mockNavigate.mock.calls[0][1].takesEffectAtRenewal).toBe(true);
+  });
+
+  it('Q1-08 TEMOIN — un achat encaissé (transaction connue) reste « dès maintenant »', async () => {
+    mockPerformPurchase.mockResolvedValue({
+      purchase: { productIdentifier: 'fc_team_2_yearly', transactionIdentifier: 'GPA.1' },
+    });
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer 2 équipes').props.onPress();
+    });
+
+    expect(mockNavigate.mock.calls[0][1].takesEffectAtRenewal).toBe(false);
+  });
+
+  it('Q1-09 — l arrivée des prix du magasin ne remet pas le choix en annuel palier 2', async () => {
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+    act(() => {
+      findButtonByText(tree, 'Mensuel').props.onPress();
+    });
+    act(() => {
+      findButtonByText(tree, '3 équipes').props.onPress();
+    });
+
+    // Les prix RevenueCat arrivent : le catalogue change de reference.
+    mockCatalogQueryState = { data: { data: [...CATALOG_ENTRIES] }, isError: false, isLoading: false };
+    act(() => {
+      tree.update(
+        <SubscriptionPaywallSheet
+          close={jest.fn()}
+          clubDocumentId="club-1"
+          decision={TEAM_QUOTA_DECISION}
+          isVisible
+          navigation={{ navigate: mockNavigate }}
+        />,
+      );
+    });
+
+    expect(findButtonByText(tree, 'Débloquer 2 équipes')).toBeUndefined();
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer 3 équipes').props.onPress();
+    });
+    expect(purchasedPlanCode()).toBe('fc_team_3_monthly');
+  });
+});

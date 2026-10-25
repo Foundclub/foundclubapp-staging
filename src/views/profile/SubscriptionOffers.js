@@ -43,6 +43,7 @@ import {
   getSubscriptionEntryTierRank,
   getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionSelectableTeams,
+  isDeferredStorePlanChange,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
   resolveSubscriptionChangeTarget,
@@ -729,6 +730,12 @@ function SubscriptionOffers({ navigation, route }) {
         return null;
       }
 
+      // BUGHUNT C03 / Q1-05 — la page Stripe est seulement demandee : rien n'est
+      // paye. Aucun ecran de succes avant le retour sur /subscription/web-success.
+      if (result?.checkoutRedirect === true) {
+        return result;
+      }
+
       // L38 — l'ecran de succes (refondu par L11 puis par le lot design D1), et
 
       // non plus une alerte systeme. Le decalage d'ouverture des droits par le
@@ -750,9 +757,10 @@ function SubscriptionOffers({ navigation, route }) {
       // Le garde-fou `action === 'change'` est indispensable : un ACHAT dont la
       // transaction est inconnue du client rend le meme `pendingWebhook: true`
       // alors qu'il EST encaisse (subscriptionPurchaseRail.js:247-250).
-      const isDeferredPlanChange = action === 'change'
-        && result?.pendingWebhook === true
-        && !String(result?.purchase?.transactionIdentifier || '').trim();
+      // BUGHUNT C03 / Q1-08 — depuis VITRINE le rail rend la reponse du serveur
+      // sur un 200, sans `pendingWebhook` : la garde ne se declenchait plus. Le
+      // rail rend desormais aussi l'achat du magasin, et la regle est partagee.
+      const isDeferredPlanChange = action === 'change' && isDeferredStorePlanChange(result);
 
       leaveOffers(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
         isTeamSlotUpdate: action === 'change'

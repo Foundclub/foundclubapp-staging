@@ -559,7 +559,10 @@ export const performSubscriptionPlanChange = async ({
   // compte soit proprietaire de l abonnement source. Fabriquer un identifiant de
   // repli ferait echouer cette preuve au lieu de l apporter.
   try {
-    return await changeSubscriptionPlan(changePlanPayload);
+    // BUGHUNT C03 / Q1-08 — l'achat du magasin voyage avec la reponse : sans
+    // transaction, l'ecran sait que rien n'est encaisse avant l'echeance.
+    const response = await changeSubscriptionPlan(changePlanPayload);
+    return { ...response, purchase: purchaseResult };
   } catch (error) {
     // `catch` rend `{}` sous ce jsconfig : le cast garde `?.message` lisible sans
     // ajouter une alerte de type (meme motif que subscriptionRevenueCat.js).
