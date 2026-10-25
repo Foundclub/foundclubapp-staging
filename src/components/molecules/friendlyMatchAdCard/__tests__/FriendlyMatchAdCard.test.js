@@ -625,3 +625,34 @@ describe('D90 — la carte nomme toutes les categories visees', () => {
     expect(affiches).toContain('Catégorie libre');
   });
 });
+
+// C07 / Q1-11 — une annonce encore ouverte dont le premier creneau est passe
+// affichait ce creneau passe : la carte doit montrer le PROCHAIN, et ne plus
+// compter les creneaux passes dans « +N ».
+describe('FriendlyMatchAdCard — creneau a venir (Q1-11)', () => {
+  const { formatDateWithDayPrefix } = jest.requireActual('@/utils/date');
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-25T10:00:00'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('montre le prochain creneau, pas un creneau deja passe', () => {
+    const affiches = textesVisibles(rendre({
+      ad: annonce({
+        candidateDates: [
+          { date: '2026-10-18', end: '16:00', start: '14:00' },
+          { date: '2026-11-08', end: '18:00', start: '16:00' },
+        ],
+      }),
+    })).join(' ');
+    expect(affiches).toContain(formatDateWithDayPrefix(new Date('2026-11-08T12:00:00')));
+    expect(affiches).not.toContain(formatDateWithDayPrefix(new Date('2026-10-18T12:00:00')));
+    expect(affiches).toContain('16:00-18:00');
+    expect(affiches).not.toMatch(/\d{4} \+1/);
+  });
+});

@@ -15,6 +15,7 @@ import {
   getAdCategories,
   getAdLevels,
   getHostingTag,
+  getNextCandidateDate,
   getReferenceNames,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
@@ -128,9 +129,14 @@ function FriendlyMatchAdCard({
   // La maquette separe date et heure en deux cellules meta. La carte ne montre
   // donc plus que le PREMIER creneau, et compte les autres : le detail les
   // affiche tous, et deux dates entieres ne tiennent pas dans une demi-rangee.
+  // Q1-11 : le PROCHAIN creneau, pas le premier de la liste (deja passe sur
+  // une annonce encore ouverte) ; « +N » ne compte que ceux qui le suivent.
   const candidateSlots = normalizeCandidateDates(ad?.candidateDates);
-  const firstSlot = candidateSlots[0];
-  const extraSlotsCount = Math.max(0, candidateSlots.length - 1);
+  const firstSlot = getNextCandidateDate(ad);
+  const firstSlotIndex = candidateSlots.findIndex((slot) => (
+    slot.date === firstSlot?.date && slot.start === firstSlot?.start
+  ));
+  const extraSlotsCount = Math.max(0, candidateSlots.length - 1 - Math.max(0, firstSlotIndex));
   const dateLabel = firstSlot
     ? [
       formatDateWithDayPrefix(new Date(`${firstSlot.date}T12:00:00`)),
