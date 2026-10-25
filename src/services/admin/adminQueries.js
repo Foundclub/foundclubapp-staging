@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { HOME_SUMMARY_QUERY_KEY } from '@/services/home/homeSummaryQueries';
+
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
@@ -24,6 +26,7 @@ import {
   getPendingClubClaims,
   getPendingClubOnboardingRequests,
   getSubscriptionOps,
+  markAdminReportTreated,
   migrateLegacySubscriptions,
   processAffiliationHelpRequest,
   purgeNotificationDeliveries,
@@ -295,12 +298,30 @@ export const usePurgeNotificationDeliveries = () => {
 
 /**
  * Hook to get aggregated admin reports.
+ * @param {{ treated?: boolean }} [options] - `treated: true` : les signalements traités.
  * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>}
  */
-export const useGetAdminReports = () => useQuery({
-  queryFn: getAdminReports,
-  queryKey: ['admin', 'reports'],
+export const useGetAdminReports = ({ treated = false } = {}) => useQuery({
+  queryFn: () => getAdminReports({ treated }),
+  queryKey: ['admin', 'reports', treated ? 'treated' : 'toTreat'],
 });
+
+/**
+ * SIGNALTRAITE (25/10) — « Marquer traité ». Les deux listes, la tuile du tableau de bord et le
+ * bandeau d'accueil (même source côté serveur) se relisent.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, any>} La mutation.
+ */
+export const useMarkReportTreated = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markAdminReportTreated,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      queryClient.invalidateQueries({ queryKey: HOME_SUMMARY_QUERY_KEY });
+    },
+  });
+};
 
 /**
  * Hook to get pending club claims count

@@ -184,31 +184,42 @@ export const purgeNotificationDeliveries = async (payload = {}) => {
   return result.data;
 };
 
+// SIGNALTRAITE (25/10) — « À traiter » = statut NULL (ligne d avant le lot) ou en attente ;
+// la meme definition que le compteur du serveur (admin src/utils/report-treatment.ts).
+const REPORT_TO_TREAT_FILTERS = {
+  $or: [{ status: { $null: true } }, { status: { $eq: 'pending' } }],
+};
+const REPORT_TREATED_FILTERS = { status: { $eq: 'resolved' } };
+
 /**
  * Get aggregated admin reports inbox.
+ * @param {{ treated?: boolean }} [options] - `treated: true` : les signalements traités.
  * @returns {Promise<{ data: Array<any> }>}
  */
-export const getAdminReports = async () => {
+export const getAdminReports = async ({ treated = false } = {}) => {
+  const filters = treated ? REPORT_TREATED_FILTERS : REPORT_TO_TREAT_FILTERS;
   const [eventReportsResponse, messageReportsResponse] = await Promise.all([
     client.get('/event-reports', {
       params: {
+        filters,
         pagination: { page: 1, pageSize: 100 },
         // ⛔ Ces cles sont celles du modele `event-report` : user, reason, event.
         // Strapi 5 REFUSE la requete entiere sur une cle inconnue (400
         // « Invalid key … »), il ne l ignore pas. `author` et `createdBy`
         // faisaient donc echouer l ecran « A traiter » en entier — constate en
         // production le 2026-09-09 (Sentry SERVEUR-STRAPI-8).
-        populate: ['event', 'event.team', 'event.team.club', 'event.club', 'user'],
+        populate: ['event', 'event.team', 'event.team.club', 'event.club', 'user', 'treatedBy'],
         sort: ['createdAt:desc'],
       },
     }),
     client.get('/chat-message-reports', {
       params: {
+        filters,
         pagination: { page: 1, pageSize: 100 },
         // Modele `chat-message-report` : message, user — et rien d autre.
         // L auteur du message signale s appelle `sender` sur `chat-message`,
         // jamais `author` : c est cette cle-la que le serveur refusait.
-        populate: ['message', 'message.chat', 'message.sender', 'user'],
+        populate: ['message', 'message.chat', 'message.sender', 'user', 'treatedBy'],
         sort: ['createdAt:desc'],
       },
     }),
@@ -220,6 +231,17 @@ export const getAdminReports = async () => {
   return {
     data: [...eventReports, ...messageReports].sort(sortByCreatedAtDesc),
   };
+};
+
+/**
+ * SIGNALTRAITE (25/10) — le SuperAdmin marque un signalement traité (PUT /…/:id/treat).
+ * @param {{ documentId: string; source: 'event' | 'message' }} report - Le signalement.
+ * @returns {Promise<any>} La réponse du serveur.
+ */
+export const markAdminReportTreated = async ({ documentId, source }) => {
+  const collection = source === 'message' ? 'chat-message-reports' : 'event-reports';
+  const result = await client.put(`/${collection}/${encodeURIComponent(documentId)}/treat`);
+  return result.data;
 };
 
 const toCollectionItems = (payload) => {
@@ -361,6 +383,8 @@ const mapEventReportItem = (item = {}) => {
       [team.name, club.name].filter(Boolean).join(' - '),
       i18next.t('adminService.reports.eventTargetFallback', 'Evenement'),
     ),
+    treatedAt: report.treatedAt || null,
+    treatedByLabel: getPersonLabel(report.treatedBy),
   };
 };
 
@@ -407,6 +431,8 @@ const mapMessageReportItem = (item = {}) => {
       ) : '',
       i18next.t('adminService.reports.conversationFallback', 'Conversation'),
     ),
+    treatedAt: report.treatedAt || null,
+    treatedByLabel: getPersonLabel(report.treatedBy),
   };
 };
 
