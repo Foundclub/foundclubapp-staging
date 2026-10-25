@@ -627,6 +627,32 @@ describe('la saisie ecrit dans le carnet LOCAL, avec le test en clair', () => {
     }));
   });
 
+  it('🐞 Q3-01 : la croix « essai nul » d une mesure seule GARDE la valeur saisie', () => {
+    // La croix renvoyait la ligne SANS sa valeur au carnet, qui la remplace
+    // entiere : 30 restait affiche, mais partait vide a l envoi.
+    const carnet = carnetNeutre();
+    const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
+    const champ = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ n) => n.props.accessibilityLabel === 'Vitesse');
+    act(() => { champ.props.onChangeText('30'); });
+    const croix = arbre.root.findAll((/** @type {any} */ n) => n.type === TouchableOpacity
+      && n.props.accessibilityLabel === 'training.actions.invalidAttempt').at(-1);
+
+    act(() => { croix.props.onPress(); });
+
+    expect(carnet.record).toHaveBeenLastCalledWith(expect.objectContaining({
+      isValid: false, measureKey: 'vitesse', value: 30,
+    }));
+
+    // Et la croix touchee une seconde fois remet l essai valide, valeur gardee.
+    act(() => { croix.props.onPress(); });
+
+    expect(carnet.record).toHaveBeenLastCalledWith(expect.objectContaining({
+      isValid: true, measureKey: 'vitesse', value: 30,
+    }));
+  });
+
   it('si le telephone refuse d ecrire, l ecran le DIT au lieu de faire semblant', () => {
     // Un chiffre affiche comme enregistre alors que rien ne l'a ete est le pire
     // cas possible sur un terrain : la mesure est perdue sans que personne le voie.
