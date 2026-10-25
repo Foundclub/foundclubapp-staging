@@ -295,9 +295,9 @@ const parseNumberValue = (type, rawValue) => {
 
   // BH14 P9-06 : plus de troncature silencieuse (« 1.5 » ou « 12abc » refusés dans un entier ;
   // la virgule décimale est acceptée).
-  const parsed = type === 'integer' || type === 'biginteger'
-    ? (/^-?\d+$/.test(normalized) ? Number(normalized) : Number.NaN)
-    : Number(normalized.replace(',', '.'));
+  const isInteger = type === 'integer' || type === 'biginteger';
+  const integerValue = /^-?\d+$/.test(normalized) ? Number(normalized) : Number.NaN;
+  const parsed = isInteger ? integerValue : Number(normalized.replace(',', '.'));
 
   if (!Number.isFinite(parsed)) {
     return { ok: false, value: null };

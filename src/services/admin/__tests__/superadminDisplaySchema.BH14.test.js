@@ -23,7 +23,9 @@ describe('BH14 — schéma d affichage superadmin', () => {
 
   test('P2-18 : la règle des utilisateurs s applique au vrai uid users-permissions', () => {
     const userCarte = getEntryCardViewModel({
-      entry: { category: 'c', documentId: 'u1', preferredSport: 'foot', status: 's', type: 't' },
+      entry: {
+        category: 'c', documentId: 'u1', preferredSport: 'foot', status: 's', type: 't',
+      },
       uid: 'plugin::users-permissions.user',
     });
     expect(JSON.stringify(userCarte.fields)).toContain('preferredSport');

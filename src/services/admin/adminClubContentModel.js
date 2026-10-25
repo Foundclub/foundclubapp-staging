@@ -243,6 +243,10 @@ export const buildClubListFilters = (params = {}) => {
   return filters;
 };
 
+const coordonneeOuNull = (/** @type {any} */ value) => (
+  normalizeText(value) ? normalizeNumber(value, null) : null
+);
+
 export const buildAddressFromForm = (form = {}) => {
   const typedForm = /** @type {AdminClubRecord} */ (form);
   const advanced = parseJsonObject(typedForm.addressJson, {});
@@ -253,8 +257,8 @@ export const buildAddressFromForm = (form = {}) => {
     city: typedForm.city !== undefined ? normalizeText(typedForm.city) : advanced.city,
     description: normalizeText(typedForm.addressLabel) || advanced.description,
     label: normalizeText(typedForm.addressLabel) || advanced.label,
-    lat: typedForm.latitude !== undefined ? (normalizeText(typedForm.latitude) ? normalizeNumber(typedForm.latitude, null) : null) : advanced.lat,
-    lng: typedForm.longitude !== undefined ? (normalizeText(typedForm.longitude) ? normalizeNumber(typedForm.longitude, null) : null) : advanced.lng,
+    lat: typedForm.latitude !== undefined ? coordonneeOuNull(typedForm.latitude) : advanced.lat,
+    lng: typedForm.longitude !== undefined ? coordonneeOuNull(typedForm.longitude) : advanced.lng,
     postcode: typedForm.postcode !== undefined ? normalizeText(typedForm.postcode) : advanced.postcode,
   };
 };

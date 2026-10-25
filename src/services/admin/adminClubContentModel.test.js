@@ -1,6 +1,8 @@
 import {
+  buildAddressFromForm,
   buildClubFormInitialValues,
   CLUB_DETAIL_POPULATE,
+  getClubCity,
 } from './adminClubContentModel';
 
 // La fiche club du superadmin passe par /superadmin/content/:uid/:documentId, qui
@@ -67,8 +69,9 @@ describe('buildClubFormInitialValues', () => {
 
 // BH14 (BUGHUNT 24/10/2026) — P2-12, P2-15, P9-18.
 describe('BH14 — ville, code postal et coordonnées du club', () => {
-  const { getClubCity, buildAddressFromForm } = require('./adminClubContentModel');
-  const ancien = JSON.stringify({ city: 'Lyon', postcode: '69001', lat: 45.7, lng: 4.8 });
+  const ancien = JSON.stringify({
+    city: 'Lyon', lat: 45.7, lng: 4.8, postcode: '69001',
+  });
 
   it('P2-12 : un club sans ville ne prend pas son code postal pour ville', () => {
     expect(getClubCity({ address: { postcode: '69001' } })).toBe('');
@@ -88,6 +91,8 @@ describe('BH14 — ville, code postal et coordonnées du club', () => {
 
   it('caractérisé : sans champ du formulaire, l adresse avancée est gardée', () => {
     const adresse = buildAddressFromForm({ addressJson: ancien });
-    expect(adresse).toMatchObject({ city: 'Lyon', postcode: '69001', lat: 45.7, lng: 4.8 });
+    expect(adresse).toMatchObject({
+      city: 'Lyon', lat: 45.7, lng: 4.8, postcode: '69001',
+    });
   });
 });

@@ -7,7 +7,9 @@ import AdminClaimDetail from '../AdminClaimDetail';
 
 /** @type {string} */
 let mockEnCours = '';
-const mutation = (/** @type {string} */ nom) => ({ isPending: mockEnCours === nom, mutate: jest.fn(), mutateAsync: jest.fn() });
+const mutation = (/** @type {string} */ nom) => ({
+  isPending: mockEnCours === nom, mutate: jest.fn(), mutateAsync: jest.fn(),
+});
 
 jest.setTimeout(30000);
 
@@ -18,7 +20,11 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('@/services/admin/adminQueries', () => ({
   useApproveClubClaim: () => mutation('accepter'),
   useGetClubClaimRequest: () => ({
-    data: { data: { club: { name: 'AS Test' }, documentId: 'dem-1', status: 'pending', user: { firstname: 'Léa' } } },
+    data: {
+      data: {
+        club: { name: 'AS Test' }, documentId: 'dem-1', status: 'pending', user: { firstname: 'Léa' },
+      },
+    },
     error: null,
     isLoading: false,
     refetch: jest.fn(),
@@ -28,10 +34,6 @@ jest.mock('@/services/admin/adminQueries', () => ({
   useRefuseClubClaim: () => mutation('refuser'),
 }));
 jest.mock('@/services/client', () => ({ __esModule: true, default: {} }));
-jest.mock('@/components/atoms/button/Button', () => (/** @type {any} */ props) => {
-  const { Text } = jest.requireActual('react-native');
-  return <Text {...props}>{props.title}</Text>;
-});
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
