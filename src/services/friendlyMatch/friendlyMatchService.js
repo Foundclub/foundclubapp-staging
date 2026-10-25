@@ -167,12 +167,16 @@ export const findMyApplicationOnAd = (ad, teamIds, scope = {}) => {
   if (wantedTeamIds.size === 0 && !wantedClubId) return null;
 
   const applications = Array.isArray(ad?.applications) ? ad.applications : [];
-  return applications.find((/** @type {any} */ application) => (
-    (!scope?.activeOnly || ['accepted', 'pending'].includes(application?.status))
+  const isActive = (/** @type {any} */ application) => ['accepted', 'pending'].includes(application?.status);
+  const mine = applications.filter((/** @type {any} */ application) => (
+    (!scope?.activeOnly || isActive(application))
   ) && (
     wantedTeamIds.has(getDocumentKey(application?.team))
     || (Boolean(wantedClubId) && getDocumentKey(application?.team?.club) === wantedClubId)
-  )) || null;
+  ));
+  // Q4-19 : apres un retrait puis une nouvelle proposition, la plus ancienne
+  // (retiree) sortait la premiere ; la proposition active passe devant.
+  return mine.find(isActive) || mine[0] || null;
 };
 
 /**
