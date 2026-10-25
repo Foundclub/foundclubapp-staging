@@ -11,12 +11,8 @@ export const isFirebaseBypassEnabled = (env = process.env) => {
     return false;
   }
 
-  const bypassFlag = normalizeFlag(env.BYPASS_FIREBASE_AUTH);
-  if (!bypassFlag) {
-    return true;
-  }
-
-  return bypassFlag === 'true';
+  // C11 : sans drapeau explicite, le contournement reste fermé.
+  return normalizeFlag(env.BYPASS_FIREBASE_AUTH) === 'true';
 };
 
 const normalizePhoneNumberForBypass = (value) => String(value || '')
