@@ -654,8 +654,36 @@ function AdminDashboard() {
     setManualEntitlementForm(buildManualEntitlementForm());
   }, []);
 
-  const handleRunLegacyMigration = useCallback((apply = false) => {
+  const handleRunLegacyMigration = useCallback((apply = false, confirmed = false) => {
     if (migrateLegacySubscriptionsMutation.isPending) return;
+
+    // C10 / P9-05 : l apply reel modifie les abonnements, et un champ club vide vise TOUS
+    // les clubs. Il demande donc une confirmation qui dit sa portee ; le dry-run reste direct.
+    if (apply && !confirmed) {
+      const clubCible = String(legacyMigrationClubDocumentId || '').trim();
+      Alert.alert(
+        t('adminDashboard.legacyMigration.confirmTitle', 'Appliquer la migration ?'),
+        clubCible
+          ? t(
+            'adminDashboard.legacyMigration.confirmOneClub',
+            'La migration réelle va modifier les abonnements du club {{documentId}}.',
+            { documentId: clubCible, ...SANS_ECHAPPEMENT },
+          )
+          : t(
+            'adminDashboard.legacyMigration.confirmAllClubs',
+            'Aucun club saisi : la migration réelle touchera TOUS les clubs.',
+          ),
+        [
+          { style: 'cancel', text: t('adminDashboard.cancel', 'Annuler') },
+          {
+            onPress: () => handleRunLegacyMigration(true, true),
+            style: 'destructive',
+            text: t('adminDashboard.legacyMigration.confirmAction', 'Appliquer'),
+          },
+        ],
+      );
+      return;
+    }
 
     migrateLegacySubscriptionsMutation.mutate(
       {

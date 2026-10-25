@@ -936,6 +936,10 @@ export default {
       applied: 'Migration executee',
       applyFailed: 'Migration impossible',
       clubLabel: 'Club documentId optionnel',
+      confirmAction: 'Appliquer',
+      confirmAllClubs: 'Aucun club saisi : la migration réelle touchera TOUS les clubs.',
+      confirmOneClub: 'La migration réelle va modifier les abonnements du club {{documentId}}.',
+      confirmTitle: 'Appliquer la migration ?',
       description: 'Lance un dry-run global ou cible un club precis avant l apply réel.',
       failedMessage: 'Impossible d executer la migration legacy.',
       previewed: 'Preview terminée',
@@ -1132,6 +1136,7 @@ export default {
       subscriptions: 'Abonnements',
     },
     no: 'Non',
+    notSent: 'échec, rien n’a été envoyé',
     runtime: {
       cronActive: 'Cron actif',
       cronLeader: 'Leader cron',
@@ -1158,7 +1163,6 @@ export default {
       // eslint-disable-next-line max-len
       unsubscribedLocal: 'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.',
     },
-    withWarning: ' avec avertissement',
     yes: 'Oui',
   },
   adminPopupCampaignDetail: {
@@ -1176,6 +1180,13 @@ export default {
       duplicateError: 'Duplication impossible',
       pauseError: 'Pause impossible',
       publishError: 'Publication impossible',
+    },
+    confirm: {
+      archiveBody: 'C’est définitif : elle ne pourra plus être publiée, seulement dupliquée.',
+      archiveTitle: 'Archiver cette campagne ?',
+      cancel: 'Annuler',
+      publishBody: 'La popup sera montrée aux utilisateurs ciblés.',
+      publishTitle: 'Publier cette campagne ?',
     },
     content: {
       noEyebrow: 'Sans eyebrow',
@@ -5768,10 +5779,13 @@ export default {
       ongletFoundClub: 'Par FoundClub ({{nombre}})',
       // VOIE 3 (« collectivité A », 07/10) : les pistes « Prévenir ma mairie », pour les agents.
       ongletPistes: 'Pistes ({{nombre}})',
+      ongletPistesNonLues: 'Pistes',
       ongletRattachements: 'Rattachements ({{nombre}})',
       pisteCommune: 'Mairie à contacter : {{commune}}',
       pisteLe: 'Signalée par un dirigeant le {{date}}',
       pisteRattache: 'Rattaché depuis à une collectivité : rien à faire.',
+      pistesChargement: 'Lecture des pistes…',
+      pistesIndisponibles: 'Pistes indisponibles pour l’instant.',
       pourVille: 'Pour {{ville}} · le {{date}}',
       rattacheA: 'Rattaché à {{ville}}',
       rattacher: 'Rattacher à {{ville}}',

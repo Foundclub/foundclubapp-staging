@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData, useMutation, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
@@ -18,7 +20,10 @@ const campaignListKey = (params = {}) => buildNormalizedQueryKey(['in-app-popup-
 const campaignDetailKey = (documentId) => ['in-app-popup-campaigns', 'detail', documentId];
 const campaignStatsKey = (documentId) => ['in-app-popup-campaigns', 'stats', documentId];
 
+// C10 / P9-14 : une recherche tapee change la cle a chaque lettre ; la liste precedente
+// reste affichee pendant la nouvelle requete, sinon l ecran retombe sur son chargement.
 export const useGetInAppPopupCampaigns = (params = {}) => useQuery({
+  placeholderData: keepPreviousData,
   queryFn: () => listInAppPopupCampaigns(params),
   queryKey: campaignListKey(params),
 });

@@ -77,6 +77,9 @@ function AdminCollectiviteInvitations() {
   // VOIE 3 (« collectivité A », 07/10) : les pistes « Prévenir ma mairie », leur propre lecture.
   const pistes = useAdminCollectiviteLeads();
   const lesPistes = Array.isArray(pistes.data) ? pistes.data : [];
+  // C10 / P9-20 : tant que les pistes ne sont pas lues (ou si la lecture échoue), l'onglet
+  // ne dit ni « (0) » ni « aucune piste » : il dit ce qu'il sait.
+  const pistesLues = Array.isArray(pistes.data);
   const rattacher = useAttachAdminCollectiviteClub();
   const relier = useLinkAdminCollectiviteInvitationClub();
   const enCours = Boolean(rattacher.isPending || relier.isPending);
@@ -461,9 +464,11 @@ function AdminCollectiviteInvitations() {
               value: 'faits',
             },
             {
-              label: t('collectiviteConsole.demandes.ongletPistes', 'Pistes ({{nombre}})', {
-                nombre: lesPistes.length,
-              }),
+              label: pistesLues
+                ? t('collectiviteConsole.demandes.ongletPistes', 'Pistes ({{nombre}})', {
+                  nombre: lesPistes.length,
+                })
+                : t('collectiviteConsole.demandes.ongletPistesNonLues', 'Pistes'),
               value: 'pistes',
             },
           ]}
@@ -483,9 +488,31 @@ function AdminCollectiviteInvitations() {
             variant="Ghost"
           />
         ) : null}
-        {affichees.length === 0 ? (
+        {onglet === 'pistes' && !pistesLues && pistes.error ? (
+          <View style={{ gap: 8 }}>
+            <Text style={[Fonts.p2, Fonts.neutral200]} testID="pistes-indisponibles">
+              {t(
+                'collectiviteConsole.demandes.pistesIndisponibles',
+                'Pistes indisponibles pour l’instant.',
+              )}
+            </Text>
+            <Button
+              onPress={() => pistes.refetch?.()}
+              size="sm"
+              title={t('adminCollectivites.list.retry', 'Réessayer')}
+              variant="Ghost"
+            />
+          </View>
+        ) : null}
+        {onglet === 'pistes' && !pistesLues && !pistes.error ? (
+          <Text style={[Fonts.p2, Fonts.neutral200]} testID="pistes-chargement">
+            {t('collectiviteConsole.demandes.pistesChargement', 'Lecture des pistes…')}
+          </Text>
+        ) : null}
+        {(onglet !== 'pistes' || pistesLues) && affichees.length === 0 ? (
           <Text style={[Fonts.p2, Fonts.neutral200]} testID="demandes-vide">{vides[onglet]}</Text>
-        ) : affichees.map((demande) => carteDe[onglet](demande))}
+        ) : null}
+        {affichees.length > 0 ? affichees.map((demande) => carteDe[onglet](demande)) : null}
       </ScrollView>
     </ScreenContainer>
   );

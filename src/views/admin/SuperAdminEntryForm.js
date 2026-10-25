@@ -306,8 +306,15 @@ const parseNumberValue = (type, rawValue) => {
   return { ok: true, value: parsed };
 };
 
+// C10 / P9-03 : une relation ou un média resté tel que chargé ne repart pas. Le `{ set }`
+// reconstruit depuis le formulaire remplaçait tout, y compris ce que le chargement n'avait pas
+// ramené en entier. `initialValues` absent (création) : tout part, comme avant.
 // @ts-ignore: FIXME: Baseline TS regression
-export const buildPayloadFromForm = (attributes, formValues) => {
+const isUnchangedLink = (value, initialValue) => JSON.stringify(value ?? null)
+  === JSON.stringify(initialValue ?? null);
+
+// @ts-ignore: FIXME: Baseline TS regression
+export const buildPayloadFromForm = (attributes, formValues, initialValues = null) => {
   // @ts-ignore: FIXME: Baseline TS regression
   const errors = [];
 
@@ -318,6 +325,14 @@ export const buildPayloadFromForm = (attributes, formValues) => {
     const value = formValues?.[name];
 
     if (!name) return accumulator;
+
+    if (
+      (type === 'relation' || type === MEDIA_TYPE)
+      && initialValues
+      && isUnchangedLink(value, initialValues[name])
+    ) {
+      return accumulator;
+    }
 
     if (type === 'relation') {
       if (attribute?.multiple) {
@@ -497,6 +512,10 @@ function SuperAdminEntryForm({ navigation, route }) {
   const isEditMode = !isCreateMode;
 
   const [formValues, setFormValues] = useState({});
+  // C10 / P9-03 : les valeurs telles que chargées, pour n'envoyer que les relations modifiées.
+  const [loadedValues, setLoadedValues] = useState(
+    /** @type {Record<string, any> | null} */ (null),
+  );
   const [reason, setReason] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
   const [relationQueries, setRelationQueries] = useState({});
@@ -567,6 +586,7 @@ function SuperAdminEntryForm({ navigation, route }) {
     const sourceData = isEditMode ? extractEditableData(entryQuery?.data?.data || {}) : {};
     const initialValues = buildInitialFormValues(editableAttributes, sourceData);
     setFormValues(initialValues);
+    setLoadedValues(isEditMode ? initialValues : null);
     setIsHydrated(true);
   }, [
     editableAttributes,
@@ -957,7 +977,7 @@ function SuperAdminEntryForm({ navigation, route }) {
   };
 
   const handleSave = async () => {
-    const { data, errors } = buildPayloadFromForm(editableAttributes, formValues);
+    const { data, errors } = buildPayloadFromForm(editableAttributes, formValues, loadedValues);
     if (errors.length > 0) {
       Alert.alert(
         t('superAdminContentManager.alerts.validationTitle', 'Validation'),
