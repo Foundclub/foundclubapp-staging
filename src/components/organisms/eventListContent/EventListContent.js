@@ -250,7 +250,12 @@ function EventListContent({
     tutorialId: PROPOSITION_ALERTE_EVENEMENTS,
     userId: userDocumentId,
   });
-  const viewportSession = searchMapSessions?.events || {};
+  // Q2-05 — sans filtres (fiche d'équipe, AdminEvents), la zone de la carte ne s'applique pas.
+  const viewportSession = showFilters ? (searchMapSessions?.events || {}) : {};
+  // Q2-19 — sans filtres, la date du curseur reste propre à cette liste : elle écrivait dans
+  // les filtres de la recherche d'événements, et la liste, elle, ne changeait pas.
+  const [filtresDeLaFiche, setFiltresDeLaFiche] = useState({});
+  const filtresDeLaListe = showFilters ? eventFilters : filtresDeLaFiche;
   const { sceneBottomInset } = useBottomDockLayout();
   const defaultFutureCutoffRef = useRef(startOfMinute(new Date()).toISOString());
   const explicitSearchText = useMemo(() => {
@@ -282,7 +287,7 @@ function EventListContent({
 
   const eventsConfig = useMemo(() => {
     const config = {
-      ...(showFilters ? eventFilters : {}),
+      ...(filtresDeLaListe || {}),
       ...additionalFilters,
       compact: true,
       pageSize: 15,
@@ -299,8 +304,7 @@ function EventListContent({
 
     return config;
   }, [
-    showFilters,
-    eventFilters,
+    filtresDeLaListe,
     additionalFilters,
     explicitSearchText,
     userDocumentId,
@@ -1205,6 +1209,10 @@ function EventListContent({
     queryClient.cancelQueries({ queryKey: ['search', 'events'] }).catch(() => {});
     prefetchDateEvents(date);
 
+    if (!showFilters) {
+      setFiltresDeLaFiche({ startDateAfter: start });
+      return;
+    }
     appDispatch({
       payload: {
         ...(eventFilters || {}),
@@ -1217,6 +1225,7 @@ function EventListContent({
     eventFilters,
     queryClient,
     prefetchDateEvents,
+    showFilters,
   ]);
 
   useEffect(() => {
@@ -1225,7 +1234,7 @@ function EventListContent({
     }
 
     const pendingDateAfter = pendingDateAfterRef.current;
-    const activeStartDateAfter = eventFilters?.startDateAfter;
+    const activeStartDateAfter = filtresDeLaListe?.startDateAfter;
     const hasPendingDateApplied = pendingDateAfter && activeStartDateAfter === pendingDateAfter;
 
     if (hasPendingDateApplied && isActiveQueryBusy && !hasDateRefreshStarted) {
@@ -1251,7 +1260,7 @@ function EventListContent({
     setHasDateRefreshFallbackElapsed(false);
     pendingDateAfterRef.current = '';
   }, [
-    eventFilters?.startDateAfter,
+    filtresDeLaListe?.startDateAfter,
     hasDateRefreshFallbackElapsed,
     hasDateRefreshMinimumElapsed,
     hasDateRefreshStarted,
