@@ -237,8 +237,11 @@ function TrainingGuided({ navigation, route }) {
     const conditions = changer(conditionsEnvoyeesRef.current || {});
     if (!conditions) return;
     conditionsEnvoyeesRef.current = conditions;
-    majSeance.mutate({ payload: { conditions }, sessionDocumentId: session.documentId });
-  }, [majSeance, session?.documentId]);
+    majSeance.mutate({ payload: { conditions }, sessionDocumentId: session.documentId }, {
+      // Q4-08 : un envoi raté n'a rien changé au serveur ; la mémoire recule avec lui.
+      onError: () => { conditionsEnvoyeesRef.current = session?.conditions || {}; },
+    });
+  }, [majSeance, session?.conditions, session?.documentId]);
 
   const franchir = useCallback((cleEtape) => {
     if (!cleEtape) return;

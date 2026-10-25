@@ -6,6 +6,9 @@ import TrainingStepRail from '@/components/organisms/training/TrainingStepRail';
 
 import TrainingGuided from '../TrainingGuided';
 
+/** Q4-08 : chaque envoi porte un retour en arriere si le serveur le refuse. */
+const ENVOI_AVEC_RETOUR = expect.objectContaining({ onError: expect.any(Function) });
+
 /**
  * « LE PARCOURS GUIDE D UN TEST » — LE FILET DES CINQ ARRETS.
  *
@@ -452,6 +455,22 @@ describe('LA RECUPERATION', () => {
   });
 });
 
+describe('🐞 Q4-08 : un envoi RATE ne bloque pas le suivant', () => {
+  it('« Valider le test » rate hors reseau : le second appui RENVOIE', () => {
+    // La memoire des envois avancait avant la reponse : apres un echec, elle
+    // croyait le test deja valide, et le second appui ne partait jamais.
+    const arbre = rendre({ step: 'end' });
+    mockMaj.mutate.mockImplementationOnce(
+      (/** @type {any} */ _v, /** @type {any} */ options) => options?.onError?.(),
+    );
+
+    act(() => { principal(arbre).props.onPress(); });
+    act(() => { principal(arbre).props.onPress(); });
+
+    expect(mockMaj.mutate).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('LA FIN DU TEST', () => {
   it('resume les essais, et propose de VALIDER', () => {
     const arbre = rendre({ step: 'end' });
@@ -471,7 +490,7 @@ describe('LA FIN DU TEST', () => {
     expect(mockMaj.mutate).toHaveBeenCalledWith({
       payload: { conditions: { validatedTests: ['B1'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('une fois valide, le bouton s eteint et le test SUIVANT se presente', () => {
@@ -555,7 +574,7 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     expect(mockMaj.mutate).toHaveBeenCalledWith({
       payload: { conditions: { stepsDone: ['B1-prep'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('valider un ESSAI note l essai, avec son numero', () => {
@@ -566,7 +585,7 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     expect(mockMaj.mutate).toHaveBeenCalledWith({
       payload: { conditions: { stepsDone: ['B1-e2'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('BH15 · P13-05 — deux etapes avant la reponse du serveur : la seconde garde la premiere', () => {
@@ -584,7 +603,7 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     expect(mockMaj.mutate).toHaveBeenLastCalledWith({
       payload: { conditions: { stepsDone: ['B1-prep', 'B1-e1'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('n ecrase JAMAIS ce que la seance porte deja', () => {
@@ -600,7 +619,7 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     expect(mockMaj.mutate).toHaveBeenCalledWith({
       payload: { conditions: { prepared: ['Avant'], stepsDone: ['B1-prep', 'B1-e1'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('ne note pas deux fois la meme etape', () => {
