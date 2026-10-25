@@ -21,7 +21,8 @@ const rappelLigue = {
 describe('resolveCoachStep', () => {
   it('Q2-12 : un rappel de ligue sans score validé ne propose pas de saisir le score ici', () => {
     expect(resolveCoachStep(rappelLigue)).toBe('sheet');
-    expect(resolveCoachStep({ ...rappelLigue, reportStatus: 'draft', state: 'draft' })).toBe('draft');
+    const brouillon = { ...rappelLigue, reportStatus: 'draft', state: 'draft' };
+    expect(resolveCoachStep(brouillon)).toBe('draft');
   });
 
   it('garde l étape « score » pour un événement sans score', () => {

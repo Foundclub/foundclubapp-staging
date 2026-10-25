@@ -167,7 +167,9 @@ export const findMyApplicationOnAd = (ad, teamIds, scope = {}) => {
   if (wantedTeamIds.size === 0 && !wantedClubId) return null;
 
   const applications = Array.isArray(ad?.applications) ? ad.applications : [];
-  const isActive = (/** @type {any} */ application) => ['accepted', 'pending'].includes(application?.status);
+  const isActive = (/** @type {any} */ application) => (
+    ['accepted', 'pending'].includes(application?.status)
+  );
   const mine = applications.filter((/** @type {any} */ application) => (
     (!scope?.activeOnly || isActive(application))
   ) && (

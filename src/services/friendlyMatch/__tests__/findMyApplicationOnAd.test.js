@@ -14,8 +14,9 @@ jest.mock('@/services/client', () => ({
 }));
 
 describe('findMyApplicationOnAd', () => {
-  const retiree = { documentId: 'a1', status: 'withdrawn', team: { club: { documentId: 'C1' }, documentId: 'T1' } };
-  const enAttente = { documentId: 'a2', status: 'pending', team: { club: { documentId: 'C1' }, documentId: 'T1' } };
+  const team = { club: { documentId: 'C1' }, documentId: 'T1' };
+  const retiree = { documentId: 'a1', status: 'withdrawn', team };
+  const enAttente = { documentId: 'a2', status: 'pending', team };
 
   it('rend la proposition active plutot qu une ancienne retiree', () => {
     const ad = { applications: [retiree, enAttente] };
@@ -28,7 +29,8 @@ describe('findMyApplicationOnAd', () => {
   });
 
   it('ignore la retiree en mode activeOnly', () => {
-    expect(findMyApplicationOnAd({ applications: [retiree] }, ['T1'], { activeOnly: true })).toBeNull();
+    const scope = { activeOnly: true };
+    expect(findMyApplicationOnAd({ applications: [retiree] }, ['T1'], scope)).toBeNull();
   });
 
   it('ne rend rien sans equipe ni club', () => {
