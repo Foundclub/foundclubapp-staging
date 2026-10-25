@@ -502,4 +502,43 @@ describe('MSG-SUPPORT — la conversation d\'assistance sur le téléphone', () 
     expect(textes(arbre)).not.toContain('Assistance FoundClub');
     expect(mockRepondants).not.toHaveBeenCalled();
   });
+
+  it('Q4-15 : en console, la réponse d un collègue n est ni à moi, ni ouvrable, et porte son nom', async () => {
+    mockUserData = SUPER_ADMIN;
+    mockRepondants.mockImplementationOnce(async () => ({
+      'm-reponse': { firstname: 'Sophie', lastname: 'Admin' },
+      'm-reponse-marc': { firstname: 'Marc', lastname: 'Durand' },
+    }));
+    mockMessagesPage = {
+      ...PAGE_ASSISTANCE,
+      data: [{
+        ...PAGE_ASSISTANCE.data[0],
+        createdAt: '2026-10-20T15:06:00.000Z',
+        documentId: 'm-reponse-marc',
+        message: 'Je confirme.',
+      }, ...PAGE_ASSISTANCE.data],
+    };
+    const { arbre, navigation } = monter({ chatType: 'assistance' });
+    await laisserSePoser();
+    const dernier = mockGiftedRenders[mockGiftedRenders.length - 1];
+    const messages = parId(dernier);
+    const marc = messages['m-reponse-marc'];
+    expect(marc.user.name).toBe('Assistance FoundClub · Marc D.');
+    // Le nom de Marc s écrit même juste après une réponse de Sophie (pas le même auteur).
+    /** @type {any} */
+    let bulle;
+    act(() => {
+      bulle = renderer.create(dernier.renderBubble({
+        currentMessage: marc, nextMessage: {}, position: 'right', previousMessage: messages['m-reponse'],
+      }));
+    });
+    expect(textes(bulle).join(' ')).toContain('Assistance FoundClub · Marc D.');
+    act(() => { bulle.unmount(); });
+    // Le menu du message : pas de « Modifier », pas de profil à ouvrir.
+    await act(async () => { dernier.onLongPress(null, marc); });
+    const menu = arbre.root.find((/** @type {any} */ n) => n.props && 'canEdit' in n.props && 'canCopy' in n.props);
+    expect(menu.props.canEdit).toBe(false);
+    expect(marc.user.anonymized).toBe(true);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  }, 30000);
 });

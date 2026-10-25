@@ -4252,8 +4252,19 @@ function Conversation({ navigation, route }) {
           _id: filDeLaVille.estDeMonCote?.(msg)
             ? String(userData?.documentId || '')
             : senderEntityId,
+          // Q4-15 — l'auteur RÉEL, pour « à moi » (Modifier) et les groupes : le serveur masque
+          // l'admin (« assistance-foundclub »), la console ne connaît que son nom.
+          // ponytail: deux collègues au même nom court font un seul groupe ; sortie : un
+          // `documentId` dans la route `repondants`.
+          ...(filDeLaVille.estDeMonCote?.(msg) ? {
+            auteurReel: senderEntityId === String(userData?.documentId || '')
+              ? senderEntityId
+              : `${senderEntityId}·${nomAffiche}`,
+          } : {}),
           // P6-05 : un adversaire anonymisé ne montre ni sa photo ni son profil.
-          anonymized: expediteurAnonyme,
+          // Q4-15 : l'identité masquée de l'assistance n'a pas de profil non plus.
+          anonymized: expediteurAnonyme || Boolean(filDeLaVille.estDeMonCote?.(msg)
+            && senderEntityId !== String(userData?.documentId || '')),
           avatar: expediteurAnonyme ? undefined : avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
           name: nomAffiche,
@@ -5286,7 +5297,7 @@ function Conversation({ navigation, route }) {
   ), []);
 
   const isMessageOwnedByCurrentUser = useCallback((message) => (
-    String(message?.user?._id || '') === String(userData?.documentId || '')
+    String(message?.user?.auteurReel || message?.user?._id || '') === String(userData?.documentId || '')
   ), [userData?.documentId]);
 
   const isMessageEditable = useCallback((message) => {
