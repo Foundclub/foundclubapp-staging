@@ -110,6 +110,8 @@ function ReservationListContent({
   ];
 
   const joinReservationMutation = useMutation({
+    // Q3-19 — l'alerte d'ici est la seule : `JoinEventModal` n'attrape pas l'erreur.
+    meta: { preventToastError: true },
     mutationFn: (reservationId) => joinReservation(reservationId),
     onError: (error) => {
       Alert.alert(

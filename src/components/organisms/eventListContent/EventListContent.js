@@ -509,11 +509,9 @@ function EventListContent({
    * Error, {user: string, event: string, reason?: string}, unknown>}
    */
   const createEventParticipationMutation = useMutation({
+    // Q3-19 — l'appelant dit l'erreur (alerte ou fenêtre) : ni alerte ici, ni filet global.
+    meta: { preventToastError: true },
     mutationFn: createEventParticipation,
-    onError: (mutationError) => {
-      const message = getParticipationErrorMessage(mutationError, t('common.errorOccurred'));
-      Alert.alert(t('common.error', 'Erreur'), message);
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
@@ -531,11 +529,9 @@ function EventListContent({
     },
   });
   const joinReservationMutation = useMutation({
+    // Q3-19 — l'appelant dit l'erreur (alerte ou fenêtre) : ni alerte ici, ni filet global.
+    meta: { preventToastError: true },
     mutationFn: (reservationId) => joinReservation(reservationId),
-    onError: (mutationError) => {
-      const message = getParticipationErrorMessage(mutationError, t('common.errorOccurred'));
-      Alert.alert(t('common.error', 'Erreur'), message);
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });

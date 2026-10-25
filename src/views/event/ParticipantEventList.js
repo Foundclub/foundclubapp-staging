@@ -359,7 +359,8 @@ function ParticipantEventList({ navigation }) {
    */
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
-    // P7-13 : pas d alerte ici, l appelant (`mutateAsync` + catch) dit déjà l erreur.
+    // P7-13 / Q3-19 : l appelant (`mutateAsync` + catch) dit déjà l erreur, le filet global se tait.
+    meta: { preventToastError: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
@@ -369,7 +370,8 @@ function ParticipantEventList({ navigation }) {
   });
   const joinReservationMutation = useMutation({
     mutationFn: (reservationId) => joinReservation(reservationId),
-    // P7-13 : pas d alerte ici, l appelant (`mutateAsync` + catch) dit déjà l erreur.
+    // P7-13 / Q3-19 : l appelant (`mutateAsync` + catch) dit déjà l erreur, le filet global se tait.
+    meta: { preventToastError: true },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
