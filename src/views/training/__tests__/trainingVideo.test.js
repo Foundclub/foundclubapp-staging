@@ -125,6 +125,23 @@ describe('ce qui reste a relever', () => {
     expect(file[0].tests[0].ratio).toBeCloseTo(0.5);
   });
 
+  it('BH15 · P13-03 — une mesure declaree ILLISIBLE est traitee, elle sort de la file', () => {
+    const file = fileDesRelevés(
+      [{
+        day: { documentId: 'jour-t' },
+        documentId: 's1',
+        results: [
+          ligne('T0', 1, 'haut', 0.4), ligne('T0', 2, 'haut', 0.42),
+          ligne('T0', 1, 'images', 14),
+          { ...ligne('T0', 2, 'images', null), isValid: false },
+        ],
+      }],
+      [JOURNEE],
+    );
+
+    expect(file[0].tests[0]).toMatchObject({ faites: 2, restantes: 0 });
+  });
+
   it('garde une journee PAS COMMENCEE, en la disant', () => {
     // 🪤 Sans ce cas, elle disparaissait de la liste et on croyait avoir tout
     // releve — alors qu on n avait simplement rien filme.

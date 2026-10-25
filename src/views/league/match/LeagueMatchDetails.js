@@ -474,182 +474,6 @@ function LeagueMatchDetails({ navigation, route }) {
       title,
     };
   }, [negotiationProposalDate, negotiationState, t, venueRequired]);
-  const renderNegotiationActions = useCallback(() => {
-    if (canCreateFirstProposalFromNegotiationCard && !hasNegotiationConversation) {
-      return (
-        <View style={{ gap: 10, marginTop: 16 }}>
-          <Button
-            disabled={actionLoading}
-            onPress={handleOpenCounterProposal}
-            title={t('leagueMatchDetails.negotiation.sendProposal', 'Envoyer une proposition')}
-            variant="Primary"
-          />
-        </View>
-      );
-    }
-
-    if (canReplyFromNegotiationCard) {
-      return (
-        <View style={{ gap: 10, marginTop: 16 }}>
-          <Button
-            disabled={actionLoading}
-            onPress={handleOpenNegotiationResponseSheet}
-            style={{
-              backgroundColor: Colors.gold500,
-              borderColor: Colors.gold500,
-            }}
-            textStyle={{ color: Colors.primary900 }}
-            title={t('leagueMatchDetails.negotiation.reply', 'Repondre')}
-            variant="Primary"
-          />
-          {hasNegotiationConversation ? (
-            <TouchableOpacity
-              disabled={actionLoading}
-              onPress={handleOpenChat}
-              style={{ alignSelf: 'flex-start', paddingVertical: 2 }}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {t('leagueMatchDetails.negotiation.openInChat', 'Ouvrir dans le chat >')}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      );
-    }
-
-    if (canCounterProposeFromNegotiationCard) {
-      return (
-        <View style={{ gap: 10, marginTop: 16 }}>
-          <Button
-            disabled={actionLoading}
-            onPress={handleOpenChat}
-            title={t('leagueMatchDetails.negotiation.openChat', 'Ouvrir le chat')}
-            variant="SecondaryLight"
-          />
-          <TouchableOpacity
-            disabled={actionLoading}
-            onPress={handleOpenCounterProposal}
-            style={{ alignItems: 'center', paddingVertical: 4 }}
-          >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              {t(
-                'leagueMatchDetails.negotiation.sendNewProposal',
-                'Envoyer une nouvelle proposition',
-              )}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return null;
-  }, [
-    actionLoading,
-    canCreateFirstProposalFromNegotiationCard,
-    canCounterProposeFromNegotiationCard,
-    canReplyFromNegotiationCard,
-    Colors.gold500,
-    Colors.primary500,
-    Colors.primary900,
-    Fonts.p4Bold,
-    Fonts.p3Bold,
-    handleOpenChat,
-    handleOpenCounterProposal,
-    handleOpenNegotiationResponseSheet,
-    hasNegotiationConversation,
-    t,
-  ]);
-  const renderPostSlotResolutionActions = useCallback(() => {
-    if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
-      return (
-        <View style={styles.bottomCaptainButtonsStack}>
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
-            title={t('leagueMatchDetails.postSlot.reschedule', 'Replanifier ce match')}
-            variant="Primary"
-          />
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
-            title={t('leagueMatchDetails.postSlot.cancelMatch', 'Annuler le match')}
-            variant="Secondary"
-          />
-          <Button
-            disabled={actionLoading}
-            onPress={() => setPostSlotResolutionStep(null)}
-            title={t('leagueMatchDetails.postSlot.back', 'Retour')}
-            variant="Secondary"
-          />
-        </View>
-      );
-    }
-
-    if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
-      return (
-        <View style={styles.bottomCaptainButtonsStack}>
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
-            title={t(
-              'leagueMatchDetails.postSlot.confirmReschedule',
-              'Confirmer la replanification',
-            )}
-            variant="Primary"
-          />
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
-            variant="Secondary"
-          />
-        </View>
-      );
-    }
-
-    if (effectivePostSlotResolutionStep === 'confirm_cancel') {
-      return (
-        <View style={styles.bottomCaptainButtonsStack}>
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
-            title={t('leagueMatchDetails.postSlot.confirmCancel', 'Confirmer l annulation')}
-            variant="Primary"
-          />
-          <Button
-            disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
-            variant="Secondary"
-          />
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.bottomCaptainButtonsStack}>
-        <Button
-          disabled={actionLoading}
-          onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-          title={t('leagueMatchDetails.postSlot.yesHappened', 'Oui, le match a eu lieu')}
-          variant="Primary"
-        />
-        <Button
-          disabled={actionLoading}
-          onPress={openPostSlotNoMatchChoices}
-          title={t('leagueMatchDetails.postSlot.noNotHappened', 'Non, le match n a pas eu lieu')}
-          variant="Secondary"
-        />
-      </View>
-    );
-  }, [
-    actionLoading,
-    effectivePostSlotResolutionStep,
-    handleSubmitPostSlotResolution,
-    openPostSlotNoMatchChoices,
-    t,
-  ]);
-
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
   const addressLabel = useMemo(() => resolveAddressLabel(match), [match]);
   const showAddressLine = useMemo(
@@ -1955,6 +1779,194 @@ function LeagueMatchDetails({ navigation, route }) {
     if (!canReplyFromNegotiationCard) return;
     setIsNegotiationResponseSheetVisible(true);
   }, [canReplyFromNegotiationCard]);
+
+  const renderNegotiationActions = useCallback(() => {
+    if (canCreateFirstProposalFromNegotiationCard && !hasNegotiationConversation) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            title={t('leagueMatchDetails.negotiation.sendProposal', 'Envoyer une proposition')}
+            variant="Primary"
+          />
+        </View>
+      );
+    }
+
+    if (canReplyFromNegotiationCard) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenNegotiationResponseSheet}
+            style={{
+              backgroundColor: Colors.gold500,
+              borderColor: Colors.gold500,
+            }}
+            textStyle={{ color: Colors.primary900 }}
+            title={t('leagueMatchDetails.negotiation.reply', 'Repondre')}
+            variant="Primary"
+          />
+          {hasNegotiationConversation ? (
+            <TouchableOpacity
+              disabled={actionLoading}
+              onPress={handleOpenChat}
+              style={{ alignSelf: 'flex-start', paddingVertical: 2 }}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('leagueMatchDetails.negotiation.openInChat', 'Ouvrir dans le chat >')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (canCounterProposeFromNegotiationCard) {
+      return (
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <Button
+            disabled={actionLoading}
+            onPress={handleOpenChat}
+            title={t('leagueMatchDetails.negotiation.openChat', 'Ouvrir le chat')}
+            variant="SecondaryLight"
+          />
+          <TouchableOpacity
+            disabled={actionLoading}
+            onPress={handleOpenCounterProposal}
+            style={{ alignItems: 'center', paddingVertical: 4 }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              {t(
+                'leagueMatchDetails.negotiation.sendNewProposal',
+                'Envoyer une nouvelle proposition',
+              )}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  }, [
+    actionLoading,
+    canCreateFirstProposalFromNegotiationCard,
+    canCounterProposeFromNegotiationCard,
+    canReplyFromNegotiationCard,
+    Colors.gold500,
+    Colors.primary500,
+    Colors.primary900,
+    Fonts.p4Bold,
+    Fonts.p3Bold,
+    handleOpenChat,
+    handleOpenCounterProposal,
+    handleOpenNegotiationResponseSheet,
+    hasNegotiationConversation,
+    t,
+  ]);
+  const renderPostSlotResolutionActions = useCallback(() => {
+    if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
+      return (
+        <View style={styles.bottomCaptainButtonsStack}>
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'reschedule',
+              outcome: 'not_played',
+            })}
+            title={t('leagueMatchDetails.postSlot.reschedule', 'Replanifier ce match')}
+            variant="Primary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'cancel',
+              outcome: 'not_played',
+            })}
+            title={t('leagueMatchDetails.postSlot.cancelMatch', 'Annuler le match')}
+            variant="Secondary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={() => setPostSlotResolutionStep(null)}
+            title={t('leagueMatchDetails.postSlot.back', 'Retour')}
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
+      return (
+        <View style={styles.bottomCaptainButtonsStack}>
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'reschedule',
+              outcome: 'not_played',
+            })}
+            title={t(
+              'leagueMatchDetails.postSlot.confirmReschedule',
+              'Confirmer la replanification',
+            )}
+            variant="Primary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
+            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    if (effectivePostSlotResolutionStep === 'confirm_cancel') {
+      return (
+        <View style={styles.bottomCaptainButtonsStack}>
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'cancel',
+              outcome: 'not_played',
+            })}
+            title={t('leagueMatchDetails.postSlot.confirmCancel', 'Confirmer l annulation')}
+            variant="Primary"
+          />
+          <Button
+            disabled={actionLoading}
+            onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
+            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
+            variant="Secondary"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.bottomCaptainButtonsStack}>
+        <Button
+          disabled={actionLoading}
+          onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
+          title={t('leagueMatchDetails.postSlot.yesHappened', 'Oui, le match a eu lieu')}
+          variant="Primary"
+        />
+        <Button
+          disabled={actionLoading}
+          onPress={openPostSlotNoMatchChoices}
+          title={t('leagueMatchDetails.postSlot.noNotHappened', 'Non, le match n a pas eu lieu')}
+          variant="Secondary"
+        />
+      </View>
+    );
+  }, [
+    actionLoading,
+    effectivePostSlotResolutionStep,
+    handleSubmitPostSlotResolution,
+    openPostSlotNoMatchChoices,
+    t,
+  ]);
   const handleAcceptNegotiationProposalFromSheet = useCallback(() => {
     setIsNegotiationResponseSheetVisible(false);
     handleAcceptNegotiationProposal();

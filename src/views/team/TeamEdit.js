@@ -245,7 +245,8 @@ function TeamEdit({ navigation, route }) {
 
   // Populate form with team data when editing OR pre-fill when creating
   useEffect(() => {
-    if (teamId && teamData) {
+    // P12-07 : une seule initialisation ; un rechargement ne doit pas ecraser la saisie.
+    if (teamId && teamData && !isInitialized.current) {
       const teamAddress = formatAddress(teamData.address)
                        || getClubAddress(teamData.club)
                        || getClubAddress(clubData);

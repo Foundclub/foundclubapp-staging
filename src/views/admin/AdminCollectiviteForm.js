@@ -207,7 +207,8 @@ function AdminCollectiviteForm() {
       ...avant,
       codeInsee: String(trouvee?.codeInsee || ''),
       name: nomOfficielDeCommune(t, trouvee?.name) || avant.name,
-      siren: String(trouvee?.siren || avant.siren),
+      // BH14 P9-11 : jamais le SIREN de la commune choisie avant.
+      siren: String(trouvee?.siren || ''),
     }));
     setCommune('');
   };

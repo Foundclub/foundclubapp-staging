@@ -78,39 +78,19 @@ const parseScore = (value) => {
 };
 
 /**
- * @param {string | undefined | null} beforeStatus
- * @param {string | undefined | null} afterStatus
- * @returns {boolean}
- */
-const hasForwardStatusProgression = (beforeStatus, afterStatus) => {
-  /** @type {Record<string, string[]>} */
-  const transitions = {
-    disputed: ['valid'],
-    pending_validation: ['valid', 'disputed'],
-    scheduled: ['pending_validation', 'valid', 'disputed'],
-  };
-
-  if (!beforeStatus || !afterStatus || beforeStatus === afterStatus) {
-    return false;
-  }
-
-  return Boolean(
-    transitions[String(beforeStatus)]?.includes(String(afterStatus)),
-  );
-};
-
-/**
  * @param {LeagueMatch | null} previousMatch
  * @param {LeagueMatch | null} refreshedMatch
  * @param {string | number | undefined | null} scoreA
  * @param {string | number | undefined | null} scoreB
+ * @param {string | null} teamSide côté de l'utilisateur ('a' ou 'b')
  * @returns {boolean}
  */
-const wasScorePersistedDespiteError = (
+export const wasScorePersistedDespiteError = (
   previousMatch,
   refreshedMatch,
   scoreA,
   scoreB,
+  teamSide,
 ) => {
   if (!refreshedMatch) {
     return false;
@@ -124,29 +104,22 @@ const wasScorePersistedDespiteError = (
 
   const finalA = parseScore(refreshedMatch.score_a);
   const finalB = parseScore(refreshedMatch.score_b);
-  const hasMatchingFinalScore = finalA === expectedA && finalB === expectedB;
+  // BH09 P10-02 : ni la saisie de l'adversaire ni un simple changement de statut ne prouvent
+  // que NOTRE score est passé ; seuls notre propre saisie ou un score final validé le prouvent.
+  const hasMatchingFinalScore = String(refreshedMatch.status || '').toLowerCase() === 'valid'
+    && finalA === expectedA && finalB === expectedB;
 
-  const submissions = /** @type {Array<{ score_a?: string | number | null, score_b?: string | number | null }>} */ ([
-    refreshedMatch.submitted_score_team_a,
-    refreshedMatch.submitted_score_team_b,
-  ].filter((submission) => Boolean(submission && typeof submission === 'object')));
-
-  const hasMatchingSubmission = submissions.some((submission) => {
-    if (!submission) {
-      return false;
-    }
-    return (
-      parseScore(submission.score_a) === expectedA
-      && parseScore(submission.score_b) === expectedB
-    );
-  });
-
-  const hasStatusProgression = hasForwardStatusProgression(
-    previousMatch?.status,
-    refreshedMatch.status,
+  let ownSubmission = null;
+  if (teamSide === 'a') ownSubmission = refreshedMatch.submitted_score_team_a;
+  if (teamSide === 'b') ownSubmission = refreshedMatch.submitted_score_team_b;
+  const hasMatchingSubmission = Boolean(
+    ownSubmission
+    && typeof ownSubmission === 'object'
+    && parseScore(ownSubmission.score_a) === expectedA
+    && parseScore(ownSubmission.score_b) === expectedB,
   );
 
-  return hasMatchingFinalScore || hasMatchingSubmission || hasStatusProgression;
+  return hasMatchingFinalScore || hasMatchingSubmission;
 };
 
 const disputeTypes = () => [
@@ -521,7 +494,7 @@ function EndMatchScreen() {
       ? automationMeta.final_recap
       : null;
     const source = recapByTeam || finalRecapByTeam || {};
-    return isCaptainB ? source.teamB : source.teamA;
+    return scoreTeamSide === 'b' ? source.teamB : source.teamA;
   };
 
   const hasReadyFinalRecap = (sourceMatch) => {
@@ -559,9 +532,9 @@ function EndMatchScreen() {
       matchId,
       phase: 'valid',
       recap: recap || {
-        myScore: isCaptainB ? sourceMatch?.score_b : sourceMatch?.score_a,
-        opponentScore: isCaptainB ? sourceMatch?.score_a : sourceMatch?.score_b,
-        scoreLabel: isCaptainB
+        myScore: scoreTeamSide === 'b' ? sourceMatch?.score_b : sourceMatch?.score_a,
+        opponentScore: scoreTeamSide === 'b' ? sourceMatch?.score_a : sourceMatch?.score_b,
+        scoreLabel: scoreTeamSide === 'b'
           ? `${sourceMatch?.score_b ?? '-'}-${sourceMatch?.score_a ?? '-'}`
           : `${sourceMatch?.score_a ?? '-'}-${sourceMatch?.score_b ?? '-'}`,
       },
@@ -614,6 +587,7 @@ function EndMatchScreen() {
           refreshedMatch,
           variables?.scoreA,
           variables?.scoreB,
+          scoreTeamSide,
         );
 
         if (recovered) {
@@ -841,6 +815,7 @@ function EndMatchScreen() {
   };
 
   const handleConfirmOpponentScore = () => {
+    if (submitMutation.isPending || !isScoreSubmissionAllowed) return;
     if (opponentScoreA === null || opponentScoreB === null) {
       Alert.alert(
         'Information',
@@ -1214,6 +1189,7 @@ function EndMatchScreen() {
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button
+                  disabled={submitMutation.isPending || !isScoreSubmissionAllowed}
                   icon="check"
                   iconColor={Colors.neutral00}
                   iconPosition="before"

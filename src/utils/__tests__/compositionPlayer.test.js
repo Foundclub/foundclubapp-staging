@@ -93,8 +93,8 @@ describe("getCompositionPlayerInitials — ce qui remplit l'avatar sans photo", 
 });
 
 describe('sanitizeCompositionText — la reparation de mojibake, invisible et indispensable', () => {
-  it('repare un « e accent aigu » casse par un double encodage', () => {
-    expect(sanitizeCompositionText('JÃ©rÃ´me')).toBe('Jerome');
+  it('repare un « e accent aigu » casse par un double encodage, accents gardes (P3-18)', () => {
+    expect(sanitizeCompositionText('JÃ©rÃ´me')).toBe('Jérôme');
   });
 
   it('repare l apostrophe typographique cassee', () => {
@@ -117,10 +117,10 @@ describe('sanitizeCompositionText — la reparation de mojibake, invisible et in
 
 describe("le mojibake traverse aussi les 3 fonctions qui s'en servent", () => {
   it('un identifiant mal encode est repare avant de servir de cle', () => {
-    expect(getCompositionPlayerId({ documentId: 'docÃ©1' })).toBe('doce1');
+    expect(getCompositionPlayerId({ documentId: 'docÃ©1' })).toBe('docé1');
   });
 
   it('un prenom mal encode donne quand meme la bonne initiale', () => {
-    expect(getCompositionPlayerInitials({ firstname: 'Ã‰lodie', lastname: 'Martin' })).toBe('EM');
+    expect(getCompositionPlayerInitials({ firstname: 'Ã‰lodie', lastname: 'Martin' })).toBe('ÉM');
   });
 });

@@ -2580,7 +2580,15 @@ function ClubLicenses({ navigation, route }) {
     const identifiant = item?.documentId || item?.id;
 
     if (montantEncaisseCents > 0 || nombreMembresAyantPaye > 0) {
-      const lifecycle = lifecycleForCampaign(item);
+      // BH11 P5-12 : la sortie d une campagne qui a encaisse, c est « Clore »
+      // (puis archiver), jamais « Mettre en pause » ni « Reprendre ».
+      let lifecycle = item?.status === 'closed' ? lifecycleForCampaign(item) : null;
+      if (['active', 'paused'].includes(item?.status)) {
+        lifecycle = {
+          action: 'close',
+          label: t('clubLicenses.lifecycle.close.title', 'Clore la campagne'),
+        };
+      }
       const peutArchiverMaintenant = lifecycle?.action === 'archive';
       const sortie = peutArchiverMaintenant
         ? t(
@@ -2596,7 +2604,12 @@ function ClubLicenses({ navigation, route }) {
         t(
           'clubLicenses.alerts.deleteCampaign.refusedStart',
           '« {{name}} » a déjà encaissé {{amount}} ',
-          { amount: formatLicenseMoney(montantEncaisseCents), name: nom, ...SANS_ECHAPPEMENT },
+          {
+            // BH11 P5-20 : la devise de la campagne, pas l euro par defaut.
+            amount: formatLicenseMoney(montantEncaisseCents, item?.currency || 'EUR'),
+            name: nom,
+            ...SANS_ECHAPPEMENT,
+          },
         )
         + t('clubLicenses.alerts.deleteCampaign.refusedMembers', {
           count: nombreMembresAyantPaye,

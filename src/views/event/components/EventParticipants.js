@@ -1070,7 +1070,10 @@ function EventParticipants({
 
   const sectionsToRender = [
     ...(teamParticipationSections || []),
-    ...(externalParticipationSection ? [externalParticipationSection] : []),
+    // P7-06 : l'appel range aussi les participants externes.
+    ...(externalParticipationSection
+      ? [rangerLesAbsentsALAppel(externalParticipationSection, attendanceByUserId)]
+      : []),
   ];
   const hasTeamSections = sectionsToRender.length > 0;
 

@@ -43,3 +43,16 @@ describe('leagueScoreDetails', () => {
     expect(result.error).toBe('Le vainqueur doit gagner 2 sets.');
   });
 });
+
+// BH09 P3-12 : aucun set ne se joue après qu'un camp a gagné 2 sets.
+describe('leagueScoreDetails — set de trop (BH09 P3-12)', () => {
+  it('rejects a third set played after a 2-0 win', () => {
+    const result = buildPadelScorePayload([
+      { a: '6', b: '0' },
+      { a: '6', b: '0' },
+      { a: '0', b: '6' },
+    ]);
+
+    expect(result.error).toBe('Le vainqueur doit gagner 2 sets.');
+  });
+});

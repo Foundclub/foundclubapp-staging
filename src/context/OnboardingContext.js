@@ -252,6 +252,10 @@ export function OnboardingProvider({ children, flowId = 'default' }) {
         && isSameLayout(previousStep.layout, nextStep.layout)
         && isSameSpotlight(previousStep.spotlight, nextStep.spotlight)
       ) {
+        // ponytail: P2-13 — l'action « Suivant » change souvent d'identite a chaque rendu
+        // (fonction en ligne) : la comparer relancerait un rendu en boucle. On la remplace
+        // donc en place, sans nouvel etat ; l'etape courante lit ainsi toujours la derniere.
+        previousStep.onNext = onNext;
         return prev;
       }
 

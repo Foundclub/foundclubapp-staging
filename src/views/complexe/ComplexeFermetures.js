@@ -203,6 +203,8 @@ function ComplexeFermetures() {
           'complexeReservations.fermetures.erreurModifier',
           'La fermeture n’a pas pu être modifiée.',
         ));
+        // BH16 P13-15 : un échec garde le formulaire, pour réessayer.
+        return;
       }
       viderLeFormulaire();
     } catch (refus) {
@@ -230,7 +232,11 @@ function ComplexeFermetures() {
         terrainIds: terrainsChoisis,
       });
       const jours = joursLisibles(debut, fin);
-      setMessage(bilan?.annulees
+      const echecs = bilan?.echecs || [];
+      // BH16 P13-15 : rien de fermé ⇒ pas de « Fermé » ; un échec garde le formulaire, avec les
+      // seuls terrains à refaire.
+      const rienDeFerme = echecs.length > 0 && echecs.length >= terrainsChoisis.length;
+      if (!rienDeFerme) setMessage(bilan?.annulees
         ? t(
           'complexeReservations.fermetures.fermeEtPrevenu',
           'Fermé : {{jours}}. {{count}} joueurs prévenus.',
@@ -247,8 +253,8 @@ function ComplexeFermetures() {
           'Fermé : {{jours}}.',
           { jours, ...SANS_ECHAPPEMENT },
         ));
-      if (bilan?.echecs?.length) {
-        const restes = bilan.echecs.map((/** @type {any} */ echec) => nomDuTerrain(echec.id));
+      if (echecs.length) {
+        const restes = echecs.map((/** @type {any} */ echec) => nomDuTerrain(echec.id));
         setErreur(t(
           'complexeReservations.fermetures.pasFerme',
           'Pas fermé : {{terrains}}. Réessaie pour eux.',
@@ -257,6 +263,8 @@ function ComplexeFermetures() {
             ...SANS_ECHAPPEMENT,
           },
         ));
+        setChoisis(echecs.map((/** @type {any} */ echec) => echec.id));
+        return;
       }
       viderLeFormulaire();
     } catch (refus) {

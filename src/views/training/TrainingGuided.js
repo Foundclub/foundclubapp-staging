@@ -1,5 +1,5 @@
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -216,18 +216,33 @@ function TrainingGuided({ navigation, route }) {
    * d'écran : le ruban permet de REVENIR sur un essai déjà passé, et marquer là
    * l'arrêt qu'on quitte déclarerait fait un essai qu'on n'a pas terminé.
    */
+  // BH15 P13-05 : deux ecritures rapprochees partent avant la reponse du serveur ;
+  // chacune fusionne depuis les DERNIERES conditions envoyees, pas la seance encore ancienne.
+  const conditionsEnvoyeesRef = useRef(session?.conditions || {});
+  useEffect(() => {
+    conditionsEnvoyeesRef.current = session?.conditions || {};
+  }, [session?.conditions]);
+
+  /**
+   * Envoie les conditions de la seance, fusionnees sur les dernieres envoyees.
+   * @param {(conditions: Record<string, any>) => Record<string, any>|null} changer
+   * @returns {void}
+   */
+  const ecrireConditions = useCallback((changer) => {
+    if (!session?.documentId) return;
+    const conditions = changer(conditionsEnvoyeesRef.current || {});
+    if (!conditions) return;
+    conditionsEnvoyeesRef.current = conditions;
+    majSeance.mutate({ payload: { conditions }, sessionDocumentId: session.documentId });
+  }, [majSeance, session?.documentId]);
+
   const franchir = useCallback((cleEtape) => {
-    if (!session?.documentId || !cleEtape) return;
-    const deja = Array.isArray(session.conditions?.stepsDone)
-      ? session.conditions.stepsDone : [];
-    if (deja.includes(cleEtape)) return;
-    majSeance.mutate({
-      payload: {
-        conditions: { ...(session.conditions || {}), stepsDone: [...deja, cleEtape] },
-      },
-      sessionDocumentId: session.documentId,
+    if (!cleEtape) return;
+    ecrireConditions((actuelles) => {
+      const deja = Array.isArray(actuelles.stepsDone) ? actuelles.stepsDone : [];
+      return deja.includes(cleEtape) ? null : { ...actuelles, stepsDone: [...deja, cleEtape] };
     });
-  }, [majSeance, session]);
+  }, [ecrireConditions]);
 
   /**
    * Le bouton principal : on note l'arrêt qu'on termine, PUIS on avance.
@@ -260,17 +275,13 @@ function TrainingGuided({ navigation, route }) {
    * chemin que les repères cochés de la veille.
    */
   const valider = useCallback(() => {
-    if (!session?.documentId || !test?.code) return;
-    const deja = Array.isArray(session.conditions?.validatedTests)
-      ? session.conditions.validatedTests : [];
-    if (deja.includes(test.code)) return;
-    majSeance.mutate({
-      payload: {
-        conditions: { ...(session.conditions || {}), validatedTests: [...deja, test.code] },
-      },
-      sessionDocumentId: session.documentId,
+    if (!test?.code) return;
+    ecrireConditions((actuelles) => {
+      const deja = Array.isArray(actuelles.validatedTests) ? actuelles.validatedTests : [];
+      return deja.includes(test.code)
+        ? null : { ...actuelles, validatedTests: [...deja, test.code] };
     });
-  }, [majSeance, session, test]);
+  }, [ecrireConditions, test]);
 
   const valide = Boolean(session?.conditions?.validatedTests?.includes?.(test?.code));
 

@@ -554,7 +554,8 @@ export const mapSubscriptionDecisionToPaywall = (decision) => {
     paywall,
     paywallKey: DEFAULT_PAYWALL_KEYS[paywall] || 'subscription-required',
     reason,
-    remainingFreeUses: Number.isFinite(Number(safeDecision?.remainingFreeUses))
+    remainingFreeUses: (safeDecision?.remainingFreeUses ?? '') !== ''
+      && Number.isFinite(Number(safeDecision?.remainingFreeUses))
       ? Number(safeDecision.remainingFreeUses)
       : null,
     requiredPlan: normalizeDecisionArray(safeDecision?.requiredPlan),
@@ -1885,7 +1886,9 @@ export const getSubscriptionQuotaItems = (freeUsageSummary, subscriptionAccessLe
       const quotaType = String(entry?.quotaType || '').trim();
       const total = Number(entry?.limit || 0);
       const used = Number(entry?.used || 0);
-      const remaining = Number(entry?.remaining || Math.max(0, total - used));
+      const remaining = entry?.remaining != null && Number.isFinite(Number(entry.remaining))
+        ? Number(entry.remaining)
+        : Math.max(0, total - used);
       if (!quotaType || total <= 0 || RETIRED_QUOTA_TYPES.has(quotaType)) {
         return itemsByType;
       }

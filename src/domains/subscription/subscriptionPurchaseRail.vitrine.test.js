@@ -173,6 +173,40 @@ describe('W3 — poster meme sans identifiant de transaction', () => {
   });
 });
 
+describe('BH01/P1-03 — le repli ne prend jamais le droit d un AUTRE produit', () => {
+  it('achat equipe sans transaction, seul droit = club : rien d emprunte', async () => {
+    purchaseSubscriptionViaRevenueCat.mockResolvedValue({
+      customerInfo: {
+        entitlements: {
+          active: {
+            club: {
+              expirationDate: '2027-09-04T10:00:00Z',
+              latestPurchaseDate: '2026-09-04T10:00:00Z',
+              originalPurchaseDate: '2026-09-04T10:00:00Z',
+              productIdentifier: 'fc_club_monthly',
+              store: 'APP_STORE',
+              willRenew: true,
+            },
+          },
+        },
+      },
+      productIdentifier: 'fc_team_1_monthly',
+      transactionIdentifier: '',
+    });
+
+    await performSubscriptionPurchase({
+      catalogEntry: offreClub({
+        planCode: 'fc_team_1_monthly',
+        providerProductId: 'fc_team_1_monthly',
+      }),
+      clubDocumentId: 'club-1',
+    });
+
+    const payload = validateSubscriptionPurchase.mock.calls[0][0];
+    expect(String(payload.providerTransactionId || '')).not.toContain('fc_club_monthly');
+  });
+});
+
 describe('W1 — un refus explicite n est pas un silence', () => {
   it('le serveur repond NON (400) : le rail le dit, avec le message francais', async () => {
     purchaseSubscriptionViaRevenueCat.mockResolvedValue({

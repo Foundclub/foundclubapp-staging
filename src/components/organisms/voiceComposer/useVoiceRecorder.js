@@ -214,7 +214,7 @@ export default function useVoiceRecorder({
       } catch (erreur) {
         enregistreRef.current = false;
         const code = String(/** @type {any} */ (erreur)?.message || '');
-        if (code === 'VOICE_ALREADY_RECORDING') return;
+        if (code === 'VOICE_ALREADY_RECORDING' || code === 'VOICE_CANCELLED') return;
         rappelsRef.current.onError(code === 'VOICE_MODULE_UNAVAILABLE' ? 'unavailable' : 'permission');
         if (phaseRef.current !== VOICE_PHASES.rest) setPhase(VOICE_PHASES.rest);
       }

@@ -172,6 +172,7 @@ import {
 import { lireLeMomentCourt } from '@/utils/date';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
+import { toUtcFromZonedLocal } from '@/utils/parisTime';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import {
@@ -584,9 +585,14 @@ const resolveEventStartAt = (event) => {
     && eventDate.getUTCSeconds() === 0;
   if (!isMidnight) return eventDate;
 
-  const withTime = new Date(eventDate);
-  withTime.setUTCHours(Number(match[1]), Number(match[2]), 0, 0);
-  return withTime;
+  // P7-04 : l heure saisie est l heure de Paris, pas l heure UTC.
+  return toUtcFromZonedLocal({
+    day: eventDate.getUTCDate(),
+    hour: Number(match[1]),
+    minute: Number(match[2]),
+    month: eventDate.getUTCMonth() + 1,
+    year: eventDate.getUTCFullYear(),
+  });
 };
 
 /**
@@ -723,6 +729,7 @@ function EventDetails({ navigation, route }) {
   // armee par l'AUTRE.
   /** @type {{ current: null | { action: () => void, sheet: string } }} */
   const pendingSheetActionRef = useRef(null);
+  const detectionCandidateRequestRef = useRef(0);
 
   const armSheetAction = useCallback((
     /** @type {string} */ sheet,
@@ -1516,7 +1523,10 @@ function EventDetails({ navigation, route }) {
   // Le compte a rebours d'arrivee, lui, doit rester affichable meme sans le
   // serveur : il tombe alors sur l'horloge locale, comme avant AC10.
   const serverNowMs = useMemo(
-    () => (serverClockMs === null ? Date.now() + elapsedSinceServerNowMs : serverClockMs),
+    // P7-05 : Date.now() avance déjà ; `elapsedSinceServerNowMs` ne sert ici qu à recalculer
+    // toutes les 30 s (d où la dépendance, que la règle des crochets croit inutile).
+    () => (serverClockMs === null ? Date.now() : serverClockMs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [elapsedSinceServerNowMs, serverClockMs],
   );
 
@@ -3152,6 +3162,9 @@ function EventDetails({ navigation, route }) {
   // demander aux deux appelants de la porter.
   const handleOpenDetectionCandidate = ({ participation = null, user }) => {
     if (!user) return;
+    // P7-12 : seule la DERNIÈRE fiche ouverte écrit sa note ; une réponse en retard se tait.
+    detectionCandidateRequestRef.current += 1;
+    const requestId = detectionCandidateRequestRef.current;
     const userKey = String(getUserKey(user) || '');
     const resolvedParticipation = participation || activeEventParticipations.find(
       (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
@@ -3183,6 +3196,7 @@ function EventDetails({ navigation, route }) {
     Promise.resolve()
       .then(() => getRecruitmentApplications(slotId))
       .then((/** @type {any[]} */ applications) => {
+        if (requestId !== detectionCandidateRequestRef.current) return;
         const application = (applications || []).find(
           (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
         );
@@ -3191,7 +3205,10 @@ function EventDetails({ navigation, route }) {
           state: 'loaded',
         });
       })
-      .catch(() => setDetectionCandidateReview({ note: '', state: 'error' }));
+      .catch(() => {
+        if (requestId !== detectionCandidateRequestRef.current) return;
+        setDetectionCandidateReview({ note: '', state: 'error' });
+      });
   };
 
   // 🏷️ LES LIBELLES DE LA FICHE, CALCULES ICI ET PAS DANS LE JSX. Une regle
@@ -8703,6 +8720,7 @@ function EventDetails({ navigation, route }) {
                       )}
                       scoreAuteur={matchStatsPayload?.score?.recordedBy || null}
                       scoreDeLaFeuille={matchStatsReport
+                        && matchStatsReport?.scoreFor != null
                         && Number.isFinite(Number(matchStatsReport?.scoreFor))
                         ? `${matchStatsReport.scoreFor} - ${matchStatsReport.scoreAgainst}`
                         : ''}
@@ -9538,9 +9556,14 @@ function EventDetails({ navigation, route }) {
             // @ts-ignore: FIXME: Baseline TS regression
             availableTournamentSourceTeams.map((sourceTeam) => (
               <TouchableOpacity
+                // P7-09 : une seule inscription à la fois (double appui, deuxième équipe).
+                disabled={registerTournamentTeamMutation.isPending}
                 key={sourceTeam?.documentId}
-                // @ts-ignore: FIXME: Baseline TS regression
-                onPress={() => registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId })}
+                onPress={() => {
+                  if (registerTournamentTeamMutation.isPending) return;
+                  // @ts-ignore: FIXME: Baseline TS regression
+                  registerTournamentTeamMutation.mutate({ sourceTeamId: sourceTeam.documentId });
+                }}
                 style={[
                   ...tournamentDs.styles.compactPanelCard,
                   {

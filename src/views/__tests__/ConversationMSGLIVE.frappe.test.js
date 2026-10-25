@@ -431,4 +431,32 @@ describe('MSGLIVE — « untel est en train d\'écrire » dans une conversation'
     expect(rendu).toContain('Lea Petit');
     expect(rendu).toContain('écrivent');
   });
+
+  it('8. BH04 / P6-13 : changer de fil n emporte pas « … écrit » du fil quitté', () => {
+    // eslint-disable-next-line global-require
+    const { QueryClientProvider } = require('@tanstack/react-query');
+    // eslint-disable-next-line global-require
+    const { createElement } = require('react');
+
+    // eslint-disable-next-line global-require
+    const { creerQueryClientDeTest } = require('@/testSupport/queryClientDeTest');
+    // eslint-disable-next-line global-require
+    const Conversation = require('../Conversation').default;
+    const clientRequetes = creerQueryClientDeTest();
+    const navigation = {
+      addListener: () => () => {}, goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn(),
+    };
+    const ecran = (/** @type {string} */ chatId) => createElement(
+      QueryClientProvider,
+      { client: clientRequetes },
+      createElement(Conversation, { navigation, route: { params: { chatId } } }),
+    );
+    let arbre;
+    act(() => { arbre = renderer.create(ecran('chat-1')); });
+    emettreDuServeur('typing-started', { chatDocumentId: 'chat-1', userDocumentId: 'marc' });
+    expect(noeuds(arbre, 'conversation-typing-indicator')).toHaveLength(1);
+
+    act(() => { arbre.update(ecran('chat-2')); });
+    expect(noeuds(arbre, 'conversation-typing-indicator')).toHaveLength(0);
+  });
 });

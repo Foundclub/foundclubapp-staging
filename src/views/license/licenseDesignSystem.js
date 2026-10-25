@@ -274,8 +274,10 @@ export const getEnabledManualPaymentMethods = (raw = {}) => {
 // refusera l appel. Une fiche muette — vieux serveur, ou liste qui ne porte pas
 // encore ce verdict — vaut NON : on n affiche jamais un bouton qui repondrait
 // « acces refuse ».
+// BH11 P5-09 : un NON explicite du serveur l emporte sur le role du dirigeant.
 export const canValidateAssignmentPayment = (assignment, canUseSensitiveActions) => (
-  canUseSensitiveActions === true || assignment?.canValidatePayments === true
+  assignment?.canValidatePayments !== false
+  && (canUseSensitiveActions === true || assignment?.canValidatePayments === true)
 );
 
 export const getLicenseStatusTone = (Colors, status) => ({

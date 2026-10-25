@@ -122,7 +122,13 @@ function ReserverResultat() {
     const complexe = String(reservation?.complexe?.name || '');
     const prix = Number.isFinite(Number(reservation?.price?.amount))
       ? t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
-        prix: formatEuros(Number(reservation.price.amount)),
+        // BH16 P13-20 : un prix par joueur le dit (même texte que le récapitulatif, prixSurPlace).
+        prix: reservation.price.unit === 'joueur'
+          ? t('reserverTerrain.prix.parJoueur', '{{prix}} par joueur', {
+            prix: formatEuros(Number(reservation.price.amount)),
+            ...SANS_ECHAPPEMENT,
+          })
+          : formatEuros(Number(reservation.price.amount)),
         ...SANS_ECHAPPEMENT,
       })
       : '';

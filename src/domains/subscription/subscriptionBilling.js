@@ -1303,11 +1303,16 @@ export const getInitialTeamSelection = ({
 export const buildSubscriptionBillingWindow = (billingPeriod, now = new Date()) => {
   const startDate = new Date(now);
   const endDate = new Date(now);
+  // BH01/P1-02 : le 31/01 + 1 mois = 28/02, pas 03/03 (setMonth deborde).
+  const dayOfMonth = endDate.getDate();
+  endDate.setDate(1);
   if (String(billingPeriod || '').trim().toLowerCase() === 'yearly') {
     endDate.setFullYear(endDate.getFullYear() + 1);
   } else {
     endDate.setMonth(endDate.getMonth() + 1);
   }
+  const daysInTargetMonth = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
+  endDate.setDate(Math.min(dayOfMonth, daysInTargetMonth));
 
   return {
     currentPeriodEnd: endDate.toISOString(),

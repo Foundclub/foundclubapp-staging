@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Platform, ScrollView, Text, TouchableOpacity, View,
@@ -74,6 +74,7 @@ function ReserverVeille() {
   const { dockClearance } = useBottomDockLayout();
   const lecture = useMaReservation(reservationId);
   const repondre = useRepondreALaVeille();
+  const enVol = useRef(false);
   const reservation = lecture?.data || null;
   const [confirmation, setConfirmation] = useState(false);
   const [echec, setEchec] = useState(false);
@@ -102,6 +103,10 @@ function ReserverVeille() {
   }, [fin, navigation, reservationId]);
 
   const envoyer = async (/** @type {'confirme' | 'annule'} */ reponse) => {
+    // BH16 P13-18 : une réponse à la fois ; « Je confirme » et « J'annule » ne partent pas tous
+    // deux.
+    if (enVol.current) return;
+    enVol.current = true;
     setConfirmation(false);
     setDerniere(reponse);
     setEchec(false);
@@ -113,6 +118,8 @@ function ReserverVeille() {
       // la réservation se relit, l'écran prend son nouvel état.
       setEchec(true);
       lecture?.refetch?.();
+    } finally {
+      enVol.current = false;
     }
   };
 
@@ -433,12 +440,14 @@ function ReserverVeille() {
         </>,
         <>
           <Button
+            disabled={envoiEnCours}
             isLoading={envoiEnCours && derniere === 'confirme'}
             onPress={() => envoyer('confirme')}
             title={t('reserverTerrain.veille.jeConfirme', 'Je confirme')}
             variant="Primary"
           />
           <Button
+            disabled={envoiEnCours}
             onPress={() => setConfirmation(true)}
             title={t('reserverTerrain.veille.jAnnule', 'J’annule')}
             variant="Secondary"

@@ -18,7 +18,7 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 
 import { createLogger } from '@/utils/logger/logger';
 
-import { toAgreedInstant, toShortDay } from '../friendlyMatchDateLabels';
+import { toAgreedInstant, toLocalIsoDay, toShortDay } from '../friendlyMatchDateLabels';
 // Les deux règles d'ordre se contredisent ici (perfectionist veut le voisin `../` d'abord,
 // import/order l'alias) : on suit perfectionist, comme ConvocationWizard, et on tait l'autre
 // sur CETTE ligne uniquement.
@@ -86,7 +86,7 @@ function FriendlyMatchTermsSheet({
     if (!visible) return;
     const agreed = application?.agreedTerms || {};
     const fallbackDate = String(agreed.date || application?.chosenDate || '');
-    setDay(fallbackDate.slice(0, 10));
+    setDay(toLocalIsoDay(fallbackDate));
     setTime(/^\d{4}-\d{2}-\d{2}T/.test(fallbackDate)
       ? new Date(fallbackDate).toTimeString().slice(0, 5)
       : '');

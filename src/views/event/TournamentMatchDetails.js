@@ -109,8 +109,12 @@ function TournamentMatchDetails({ navigation, route }) {
     setStartTime(formatTimeValue(match?.scheduledAt));
     setEndTime(formatTimeValue(match?.endAt));
     setSelectedFacilityId(match?.facility?.documentId || '');
-    setScoreAText(Number.isFinite(Number(match?.scoreA)) ? String(match.scoreA) : '');
-    setScoreBText(Number.isFinite(Number(match?.scoreB)) ? String(match.scoreB) : '');
+    // BH08 · P8-19 : Number(null) vaut 0, donc « null » s affichait dans le champ.
+    const scoreSaisi = (/** @type {any} */ score) => (
+      score != null && Number.isFinite(Number(score)) ? String(score) : ''
+    );
+    setScoreAText(scoreSaisi(match?.scoreA));
+    setScoreBText(scoreSaisi(match?.scoreB));
     setWinnerTeamId(match?.winner?.documentId || '');
     setNotesText(match?.notes || '');
   }, [match]);
@@ -179,7 +183,8 @@ function TournamentMatchDetails({ navigation, route }) {
     const scheduledAt = formatDateTimeToSend(scheduledDate, startTime);
     const endAt = formatDateTimeToSend(scheduledDate, endTime);
 
-    if (!scheduledAt || !endAt) {
+    // BH08 · P8-20 : une fin qui n est pas apres le debut est un creneau invalide.
+    if (!scheduledAt || !endAt || new Date(endAt).getTime() <= new Date(scheduledAt).getTime()) {
       Alert.alert(t('tournamentMatchDetails.incompleteSlot', 'Créneau incomplet'), t('tournamentMatchDetails.selectAValidDateStart', 'Sélectionne une date, une heure de début et une heure de fin valides.'));
       return;
     }
@@ -203,7 +208,8 @@ function TournamentMatchDetails({ navigation, route }) {
       scoreA,
       scoreB,
       status: options.status,
-      winnerTeamId: options.winnerTeamId || winnerTeamId || undefined,
+      // BH08 · P8-11 : le vainqueur choisi ne vaut que pour un nul qui en demande un.
+      winnerTeamId: options.winnerTeamId || (scoresNeedWinner ? winnerTeamId : '') || undefined,
     });
   };
 

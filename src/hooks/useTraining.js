@@ -221,7 +221,7 @@ export const useTrainingResults = (sessionDocumentId) => {
       const pending = getUnsyncedResults(sessionDocumentId);
       if (!pending.length) return { rejected: [], saved: 0 };
       const response = await saveTrainingResults(sessionDocumentId, pending);
-      markResultsSynced(sessionDocumentId, pending);
+      markResultsSynced(sessionDocumentId, pending, response?.rejected);
       return response;
     },
     onSuccess: refresh,

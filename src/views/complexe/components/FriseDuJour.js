@@ -54,7 +54,13 @@ function FriseDuJour({
   const creneaux = lignes.flatMap((ligne) => ligne.creneaux);
   if (!creneaux.length) return null;
   const debuts = creneaux.map((creneau) => Number(minutesDe(creneau.from)));
-  const fins = creneaux.map((creneau) => Number(minutesDe(creneau.to)));
+  // BH16 P13-16 : une fin à minuit (ou avant le début) tombe le lendemain.
+  const finDe = (/** @type {CreneauDeLaFrise} */ creneau) => {
+    const de = Number(minutesDe(creneau.from));
+    const a = Number(minutesDe(creneau.to));
+    return a <= de ? a + 24 * 60 : a;
+  };
+  const fins = creneaux.map(finDe);
   const debut = Math.floor(Math.min(...debuts) / 60) * 60;
   const fin = Math.ceil(Math.max(...fins) / 60) * 60;
   const largeur = (fin - debut) * PAR_MINUTE;
@@ -68,7 +74,7 @@ function FriseDuJour({
     /** @type {CreneauDeLaFrise} */ creneau,
   ) => {
     const de = Number(minutesDe(creneau.from));
-    const a = Number(minutesDe(creneau.to));
+    const a = finDe(creneau);
     const libelle = creneau.libelle || libelleDe(creneau.etat);
     const Case = onToucher ? TouchableOpacity : View;
     return (
@@ -146,7 +152,7 @@ function FriseDuJour({
                     { left: (minutes - debut) * PAR_MINUTE, position: 'absolute' },
                   ]}
                 >
-                  {texteHeure(heureDe(minutes))}
+                  {texteHeure(heureDe(minutes % (24 * 60)))}
                 </Text>
               ))}
             </View>

@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -120,6 +120,7 @@ function ComplexeCreneaux() {
   const terrainId = params?.terrainId || null;
   const terrainsLus = useTerrains(complexeId);
   const apercu = useApercuCreneaux();
+  const apercuEnVol = useRef(false);
   const enregistrer = useEnregistrerCreneaux();
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
   const terrain = terrains.find((candidat) => candidat?.documentId === terrainId) || null;
@@ -181,6 +182,9 @@ function ComplexeCreneaux() {
    * @returns {Promise<boolean>} Vrai s'il est accepté.
    */
   const jugerEtGarder = async (candidat, direLeRefus) => {
+    // BH16 P13-13 : un seul apercu à la fois ; sinon deux retraits partis du même plan s'écrasent.
+    if (apercuEnVol.current) return false;
+    apercuEnVol.current = true;
     direLeRefus('');
     setEnregistre(null);
     try {
@@ -199,6 +203,8 @@ function ComplexeCreneaux() {
         ),
       ));
       return false;
+    } finally {
+      apercuEnVol.current = false;
     }
   };
 

@@ -131,7 +131,8 @@ function FriendlyMatchApplicationCard({
   };
 
   const confirmAccept = () => {
-    const otherCount = Math.max(0, Number(ad?.applicationsCount || 0) - 1);
+    const pending = Number(ad?.pendingApplicationsCount ?? ad?.applicationsCount ?? 0);
+    const otherCount = Math.max(0, pending - 1);
     Alert.alert(
       t('friendlyMatchApplicationCard.acceptThisTeam', 'Accepter cette équipe ?'),
       [

@@ -466,3 +466,30 @@ describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
     expect(lisibles(arbre)).toContain('Modifié : 25/10 – 27/10.');
   });
 });
+
+describe('BH16 P13-15 — échec partiel ou total d’une fermeture', () => {
+  const champDu = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.props?.onChangeText === 'function' && n.props.accessibilityLabel === 'Du'))[0];
+
+  it('échec total : pas de « Fermé », le formulaire reste rempli', async () => {
+    mockFermer.mockResolvedValue({
+      annulees: 0, echecs: [{ id: 't-1' }, { id: 't-2' }, { id: 't-3' }], faits: 0,
+    });
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-fermer');
+    expect(lisibles(arbre).some((texte) => texte.startsWith('Fermé'))).toBe(false);
+    expect(champDu(arbre).props.value).toBe('25/10/2026');
+  });
+
+  it('échec partiel : « Fermé » pour les autres, le formulaire garde les terrains à refaire', async () => {
+    mockFermer.mockResolvedValue({ annulees: 0, echecs: [{ id: 't-2' }], faits: 2 });
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-fermer');
+    expect(champDu(arbre).props.value).toBe('25/10/2026');
+    mockFermer.mockClear();
+    await toucher(arbre, 'fermeture-fermer');
+    expect(mockFermer.mock.calls[0][0].terrainIds).toEqual(['t-2']);
+  });
+});

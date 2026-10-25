@@ -365,22 +365,22 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
                 style={tournamentDs.styles.insetPanelCard}
               >
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamA?.name || match?.sourceMatchA ? t(
+                  {match?.teamA?.name || (match?.sourceMatchA ? t(
                     'tournamentCompetitionComponents.qualifiedA',
                     'Qualifié A',
                   ) : t(
                     'tournamentCompetitionComponents.toBeDecided',
                     'À définir',
-                  )}
+                  ))}
                 </Text>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamB?.name || match?.sourceMatchB ? t(
+                  {match?.teamB?.name || (match?.sourceMatchB ? t(
                     'tournamentCompetitionComponents.qualifiedB',
                     'Qualifié B',
                   ) : t(
                     'tournamentCompetitionComponents.toBeDecided',
                     'À définir',
-                  )}
+                  ))}
                 </Text>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{formatTournamentScore(match)}</Text>
                 <Text style={[Fonts.p4, Fonts.neutral200]}>

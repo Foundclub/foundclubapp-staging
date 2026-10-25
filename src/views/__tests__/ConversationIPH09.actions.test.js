@@ -31,6 +31,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     }),
     BottomSheetScrollView: ({ children, ...props }) => React.createElement(View, { ...props, testID: 'iph09-scroll' }, children),
     BottomSheetView: View,
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 

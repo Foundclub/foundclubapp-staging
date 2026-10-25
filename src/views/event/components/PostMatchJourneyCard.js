@@ -152,7 +152,8 @@ function PostMatchJourneyCard({
   } = useTheme();
   const { t } = useTranslation();
 
-  const toutesLesReponses = reponsesAttendues > 0 && reponsesRecues >= reponsesAttendues;
+  // BH08 · P8-24 : personne d attendu = rien a attendre, l etape est faite.
+  const toutesLesReponses = reponsesRecues >= reponsesAttendues;
   const { courante, faites } = avantLaFin
     ? { courante: '', faites: [] }
     : resoudreLeParcours({

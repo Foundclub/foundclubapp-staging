@@ -5,6 +5,7 @@ import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { messageDuPartage, peutPartagerLAnnonce } from '@/domains/complexe/annonceDuCanal';
 import {
   demandeExpiree,
   etatAffiche,
@@ -45,11 +46,12 @@ import {
   useFideliteDuComplexe,
   useMarquerNonHonoree,
   useModifierExterieur,
+  usePartagerAnnonce,
   useReservationGeree,
   useValiderRecompense,
 } from '@/services/complexe/complexeQueries';
 
-import { getServerErrorCode } from '@/utils/errors/displayError';
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 import texteInsecable from '@/utils/texteInsecable';
 
 /**
@@ -96,6 +98,8 @@ function FicheReservation({
   const modifier = useModifierExterieur();
   // RESA-L5B-1 — « non honorée », et le seuil du bannissement automatique (« 1 sur 3 »).
   const marquer = useMarquerNonHonoree();
+  // RESA-PARTAGER (A-G32) — « Partager dans mon canal » (plan E-G05 :528).
+  const partager = usePartagerAnnonce();
   const annulerMarquage = useAnnulerNonHonoree();
   // Le seuil vit sous `rules` dans la lecture du gérant (`toManagedView`, RESA-L1A).
   const seuil = useComplexeGere(complexeId).data?.rules?.autoBanNoShows;
@@ -111,6 +115,7 @@ function FicheReservation({
   const [feuille, setFeuille] = useState(/** @type {FeuilleDeLaFiche} */ (''));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflit, setConflit] = useState('');
+  const [erreurDecision, setErreurDecision] = useState('');
   // RESA-FIN-APP — une demande que le serveur dit déjà traitée ou EXPIRÉE (409 d'état) : plus aucun
   // geste ne passe ; la fiche se relit et ne propose plus ni « Accepter » ni « Refuser » (tournée 2).
   const [close, setClose] = useState(false);
@@ -219,6 +224,7 @@ function FicheReservation({
 
   const accepter = async () => {
     setMessage('');
+    setErreurDecision('');
     try {
       await decider.mutateAsync({ complexeId, decision: 'accepter', reservationId });
       setMessage(t(
@@ -227,6 +233,11 @@ function FicheReservation({
         options,
       ));
     } catch (erreur) {
+      // BH16 P13-14 : seul un vrai conflit (409) retire « Accepter » ; une panne se réessaie.
+      if (getErrorStatus(erreur) !== 409) {
+        setErreurDecision(messageDeRefusResa(t, erreur, repli));
+        return;
+      }
       setConflit(messageDeRefusResa(t, erreur, repli));
       if (getServerErrorCode(erreur) === 'COMPLEXE_RESERVATION_STATE') {
         setClose(true);
@@ -426,8 +437,31 @@ function FicheReservation({
         setErreurEcrire(messageDeRefusResa(t, erreur, repli));
       }
     };
+    // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
+    // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
+    const partagerDansLeCanal = async () => {
+      setMessage('');
+      setConflit('');
+      try {
+        setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
+      } catch (erreur) {
+        setConflit(messageDeRefusResa(t, erreur, repli));
+      }
+    };
     pied = (
       <View style={{ gap: 8 }}>
+        {peutPartagerLAnnonce(r) ? (
+          <View testID="fiche-partager-annonce">
+            <Button
+              icon="share"
+              iconPosition="before"
+              isLoading={Boolean(partager.isPending)}
+              onPress={partagerDansLeCanal}
+              title={t('complexeCanal.partager.dansMonCanal', 'Partager dans mon canal')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
         <View testID="fiche-ecrire">
           <Button
             isLoading={Boolean(ecrire.isPending)}
@@ -503,6 +537,7 @@ function FicheReservation({
         </View>
         {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
+        {erreurDecision ? <BandeauComplexe texte={erreurDecision} ton="erreur" /> : null}
         <View style={[carte, Spaces.padding[16], { gap: 6 }]}>
           {legende(t('complexeReservations.fiche.quandOu', 'Quand, où'))}
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>

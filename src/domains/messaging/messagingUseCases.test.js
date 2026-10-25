@@ -226,3 +226,11 @@ describe('messagingUseCases', () => {
     });
   });
 });
+
+describe('BH04 / P1-23 — estEpinglePourMoi sans lecteur', () => {
+  test('un épinglage sans identifiant ne vaut pas pour un lecteur inconnu', () => {
+    // eslint-disable-next-line global-require
+    const { estEpinglePourMoi } = require('./messagingUseCases');
+    expect(estEpinglePourMoi({ pinnedBy: [{ id: 3 }] }, undefined)).toBe(false);
+  });
+});

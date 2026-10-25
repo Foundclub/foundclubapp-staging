@@ -35,10 +35,10 @@ jest.mock('i18next', () => (
 
 jest.mock('@/domains/auth/authUseCases', () => ({
   ...jest.requireActual('@/domains/auth/authUseCases'),
-  activateSessionForNotificationPayload: jest.fn(async () => ({
-    session: { token: 'jeton-du-compte-vise' },
-  })),
+  activateSessionForNotificationPayload: (...args) => mockActiver(...args),
 }));
+
+const mockActiver = jest.fn(async () => ({ session: { token: 'jeton-du-compte-vise' } }));
 
 const fr = require('@/theme/strings/translations/fr').default;
 
@@ -198,6 +198,19 @@ describe('RESA-L6B-1 — répondre sans ouvrir l’app', () => {
     expect(echec.data).toEqual(expect.objectContaining({
       change: 'veille', reservationId: 'r-1', type: 'complexeReservationJoueur',
     }));
+  });
+
+  it('BH01/P2-02 🔒 — sans session pour le compte visé, rien ne part', async () => {
+    const { handleResaVeilleActionPress } = charger(true);
+    mockActiver.mockResolvedValueOnce({
+      activated: false, reason: 'session_not_found',
+    });
+    const resultat = await handleResaVeilleActionPress({
+      notificationData: veille(),
+      pressActionId: 'resa_veille_confirmer',
+    });
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(resultat).toEqual({ handled: true, success: false });
   });
 
   it('un autre bouton (présence, réponse rapide) ne passe pas par ici', async () => {

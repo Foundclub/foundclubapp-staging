@@ -2021,6 +2021,7 @@ export default {
     errors: {
       assign: 'Unable to assign the coach to the selected teams.',
       noTeamSelected: 'Select at least one team.',
+      partial: '{{done}} assigned, {{failed}} failed: try again for the others.',
       trainerNotFound: 'Unable to find this coach. Please try again.',
     },
     fallbacks: {
@@ -2077,6 +2078,11 @@ export default {
       indice: 'Opens your conversation with the FoundClub team',
       invitation: 'A question? Write to us.',
       invitationVous: 'A question? Write to us.',
+    },
+    messages: {
+      titre: 'Support inbox',
+      tout_one: 'See the whole inbox ({{count}})',
+      tout_other: 'See the whole inbox ({{count}})',
     },
     placeholder: 'Write your message to the team',
     placeholderVous: 'Write your message to the team',
@@ -3413,6 +3419,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Enter an amount above 0, not more than what can be refunded.',
       amountPlaceholder: 'Amount in euros',
       noteOptional: 'Optional note',
       paymentMethod: 'Payment method',
@@ -4454,6 +4461,10 @@ export default {
       noCampaign: {
         message: 'Create at least one campaign before running a backup sync.',
         title: 'No campaign',
+      },
+      rejectPayment: {
+        message: 'The declaration will be refused and the member will have to pay again.',
+        title: 'Reject this payment?',
       },
       resync: {
         message: 'Maintenance operation: missing fees will be attached without duplicating existing records.',
@@ -6526,6 +6537,7 @@ export default {
       placePrise: 'This place is no longer free. Pick another one.',
       placePriseVille: 'This place is no longer free. Pick another one.',
       propositionClose: 'This proposal is no longer waiting for an answer.',
+      propositionDeclinee: 'The City’s proposal has been declined: pick another spot.',
       titre: 'The session hasn’t moved',
       titreVille: 'Nothing was sent',
       tropTard: 'The session has already started.',
@@ -6955,6 +6967,15 @@ export default {
   },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — the "Players wanted" post shared in the channel: its
+    // card (manager and players). Same keys as fr.js.
+    annonce: {
+      places_one: '{{count}} spot',
+      places_other: '{{count}} spots',
+      titre: 'Players wanted',
+      voir: 'See the post',
+      voirLibelle: 'See the post: {{quand}}, {{places}}',
+    },
     ecrire: 'Write to members',
     erreur: 'Your channel could not be loaded.',
     membres: {
@@ -6966,6 +6987,18 @@ export default {
     },
     nombre_one: '{{count}} member',
     nombre_other: '{{count}} members',
+    // RESA-PARTAGER (23/10/2026, A-G32) — "Share in my channel" (E-G05) and "Share a post"
+    // (E-G12). Same keys as fr.js.
+    partager: {
+      aucune: 'No game to fill right now. When a player posts "Players wanted" on a booking at '
+        + 'your venue, it shows up here.',
+      choisir: 'Pick the game to fill: it lands as a card in your channel.',
+      dansMonCanal: 'Share in my channel',
+      deja: 'Post already shared in your channel.',
+      erreur: 'Your bookings could not be loaded.',
+      fait: 'Post shared in your channel.',
+      titre: 'Share a post',
+    },
     pause: 'Your venue is suspended: its channel is paused.',
     regle: 'All members will be notified.',
     titre: 'Channel · {{nom}}',
@@ -15787,6 +15820,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Download the receipt',
+      remaining: '{{amount}} left to pay',
       settled: 'settled',
       settledOn: 'settled on {{settledOn}}',
     },

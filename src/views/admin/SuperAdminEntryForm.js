@@ -293,9 +293,11 @@ const parseNumberValue = (type, rawValue) => {
   const normalized = String(rawValue || '').trim();
   if (!normalized) return { ok: true, value: null };
 
-  const parsed = type === 'integer' || type === 'biginteger'
-    ? Number.parseInt(normalized, 10)
-    : Number.parseFloat(normalized);
+  // BH14 P9-06 : plus de troncature silencieuse (« 1.5 » ou « 12abc » refusés dans un entier ;
+  // la virgule décimale est acceptée).
+  const isInteger = type === 'integer' || type === 'biginteger';
+  const integerValue = /^-?\d+$/.test(normalized) ? Number(normalized) : Number.NaN;
+  const parsed = isInteger ? integerValue : Number(normalized.replace(',', '.'));
 
   if (!Number.isFinite(parsed)) {
     return { ok: false, value: null };
@@ -305,7 +307,7 @@ const parseNumberValue = (type, rawValue) => {
 };
 
 // @ts-ignore: FIXME: Baseline TS regression
-const buildPayloadFromForm = (attributes, formValues) => {
+export const buildPayloadFromForm = (attributes, formValues) => {
   // @ts-ignore: FIXME: Baseline TS regression
   const errors = [];
 
@@ -386,6 +388,15 @@ const buildPayloadFromForm = (attributes, formValues) => {
     }
 
     const normalizedUnknown = String(value || '').trim();
+    // BH14 P9-22 : un objet affiché en JSON (normalizeInitialValue) repart en objet.
+    if (/^[[{]/.test(normalizedUnknown)) {
+      try {
+        accumulator[name] = JSON.parse(normalizedUnknown);
+        return accumulator;
+      } catch {
+        // pas du JSON : gardé en texte, comme avant
+      }
+    }
     accumulator[name] = normalizedUnknown || null;
     return accumulator;
   }, {});
@@ -550,6 +561,8 @@ function SuperAdminEntryForm({ navigation, route }) {
     if (isHydrated) return;
     if (metadataQuery.isLoading) return;
     if (isEditMode && entryQuery.isLoading) return;
+    // BH14 P9-07 : pas de formulaire rempli à vide pendant une erreur ; « Réessayer » le remplira.
+    if (metadataQuery.error || (isEditMode && entryQuery.error)) return;
 
     const sourceData = isEditMode ? extractEditableData(entryQuery?.data?.data || {}) : {};
     const initialValues = buildInitialFormValues(editableAttributes, sourceData);
@@ -558,9 +571,11 @@ function SuperAdminEntryForm({ navigation, route }) {
   }, [
     editableAttributes,
     entryQuery?.data?.data,
+    entryQuery.error,
     entryQuery.isLoading,
     isEditMode,
     isHydrated,
+    metadataQuery.error,
     metadataQuery.isLoading,
   ]);
 

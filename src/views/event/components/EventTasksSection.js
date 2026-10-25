@@ -155,10 +155,26 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
     },
   });
   const managerAssignMutation = useMutation({
-    mutationFn: ({ taskId, userIds }) => Promise.all(
-      userIds.map((userId) => assignEventTask(taskId, { userId })),
-    ),
-    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToAssignTheseMembers', 'Impossible d assigner ces membres à la tâche.')),
+    // BH07 / P8-10 — un echec partiel : les reussites sont deja enregistrees. On relit la
+    // fiche et on ne garde selectionnes que les membres en echec, pour un nouvel essai.
+    mutationFn: async ({ taskId, userIds }) => {
+      const results = await Promise.allSettled(
+        userIds.map((userId) => assignEventTask(taskId, { userId })),
+      );
+      const failedIds = userIds.filter((_userId, index) => results[index].status === 'rejected');
+      if (failedIds.length > 0) {
+        const firstFailure = results.find((result) => result.status === 'rejected');
+        throw Object.assign(new Error(firstFailure?.reason?.message || ''), { failedIds });
+      }
+      return results;
+    },
+    onError: (error) => {
+      if (Array.isArray(error?.failedIds)) {
+        setSelectedManagerMemberIds(error.failedIds);
+        refreshEvent();
+      }
+      Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToAssignTheseMembers', 'Impossible d assigner ces membres à la tâche.'));
+    },
     onSuccess: () => {
       celebrate('event_task_members_assigned', {
         count: selectedManagerMemberIds.length,
@@ -290,6 +306,9 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
             const approvedAssignments = assignments.filter((assignment) => String(assignment?.status || '').toUpperCase() === 'APPROVED');
             const pendingAssignments = assignments.filter((assignment) => String(assignment?.status || '').toUpperCase() === 'PENDING');
             const userAssignment = assignments.find((assignment) => getUserKey(assignment?.user) === currentUserKey) || null;
+            // BH07 / P8-09 — une affectation annulee ou refusee n'empeche pas de se reproposer.
+            const hasActiveUserAssignment = ['APPROVED', 'PENDING']
+              .includes(String(userAssignment?.status || '').toUpperCase());
             const approvedCount = approvedAssignments.length;
             const isFull = approvedCount >= Number(task?.requiredCount || 1);
 
@@ -370,7 +389,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                 ) : null}
 
                 <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                  {!userAssignment && !isFull && canCurrentUserSelfAssign ? (
+                  {!hasActiveUserAssignment && !isFull && canCurrentUserSelfAssign ? (
                     <Button
                       disabled={assignMutation.isPending}
                       onPress={() => assignMutation.mutate({ taskId: task.documentId || task.id })}

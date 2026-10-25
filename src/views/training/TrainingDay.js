@@ -1,5 +1,5 @@
 import {
-  useCallback, useLayoutEffect, useMemo, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -407,16 +407,22 @@ function TrainingDay({ navigation, route }) {
     return new Set(Array.isArray(brut) ? brut : []);
   }, [session]);
 
+  // BH15 P13-04 : deux coches rapides partent avant la reponse du serveur ; chacune
+  // part de la DERNIERE liste envoyee, pas de la seance encore ancienne.
+  const preparesEnvoyesRef = useRef(prepares);
+  useEffect(() => { preparesEnvoyesRef.current = prepares; }, [prepares]);
+
   const cocher = useCallback((/** @type {string} */ repere) => {
     if (!session?.documentId) return;
-    const apres = new Set(prepares);
+    const apres = new Set(preparesEnvoyesRef.current);
     if (apres.has(repere)) apres.delete(repere);
     else apres.add(repere);
+    preparesEnvoyesRef.current = apres;
     updateSession.mutate({
       payload: { conditions: { ...(session.conditions || {}), prepared: [...apres] } },
       sessionDocumentId: session.documentId,
     });
-  }, [prepares, session, updateSession]);
+  }, [session, updateSession]);
 
   const start = useCallback(async () => {
     if (!session?.documentId) return;

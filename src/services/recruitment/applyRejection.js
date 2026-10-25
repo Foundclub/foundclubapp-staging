@@ -13,7 +13,7 @@
 // views/recruitment/__tests__/RecruitmentAdDetails.FINITIONS9.refusAccentues.test.js.
 
 // ANNONCE-RAPPEL 6 (05/10) : « Cette annonce a expiré : elle n'accepte plus de candidatures. »
-const EXPECTED_REJECTION = /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee|declaration de responsabilite|poste est deja complet|candidature active|detection fermee|annonce a expire/;
+const EXPECTED_REJECTION = /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee|declaration de responsabilite|poste est deja complet|candidature active|detection fermee|annonce a expire|deja ete ajoute/;
 const ALREADY_PENDING = /deja candidate|deja une candidature en attente|deja postule/;
 const ALREADY_ACCEPTED = /deja acceptee|deja validee|deja ete ajoute/;
 

@@ -299,6 +299,8 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // le bouton principal n'aurait rien à envoyer : il est GRISÉ, pas muet. En
   // régénération l'aperçu précédent est toujours là, donc il reste actif.
   const posterUnavailable = !previewUri && (isLoading || !!error);
+  // P7-14 : story et A4 sont d'autres images, fabriquées à part ; un aperçu en ÉCHEC ne les
+  // grise pas (seule l'attente de la première fabrication le fait, comme avant).
   // AA08 — LA SORTIE, nommée UNE fois : la croix et « Plus tard » font le même
   // geste. La pile posée après publication est [EventDetails,
   // EventPublishedShowcase] (EventWizardRecap) ⇒ reculer découvre le détail,
@@ -533,7 +535,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
           <ShowcaseAction
             busy={busyAction === 'story'}
             busyColor={Colors.primary500}
-            disabled={busyAction != null || posterUnavailable}
+            disabled={busyAction != null || (!previewUri && isLoading)}
             hidden={!formatsOpen}
             hint={saveThenOpen
               ? t(
@@ -553,7 +555,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
           <ShowcaseAction
             busy={busyAction === 'poster'}
             busyColor={Colors.primary500}
-            disabled={busyAction != null || posterUnavailable}
+            disabled={busyAction != null || (!previewUri && isLoading)}
             hidden={!formatsOpen}
             hint={saveThenOpen
               ? t(

@@ -186,7 +186,10 @@ function ComplexeAffiches() {
         }),
         url: lien,
       });
-      const resultat = await partagerAffiche(complexeId, { ...choix, format }, {
+      const resultat = await partagerAffiche(complexeId, {
+        // BH16 P13-12 : le partage prend la saisie du moment, pas celle retardée de l'aperçu.
+        ...choix, format, prix, textePromo: textePromotionAffiche,
+      }, {
         dialogTitle: t('complexeAffiches.partager', 'Partager l’affiche'),
         message,
       });

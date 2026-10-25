@@ -2205,6 +2205,7 @@ export default {
     errors: {
       assign: "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
       noTeamSelected: 'Sélectionne au moins une équipe.',
+      partial: '{{done}} assignée(s), {{failed}} en échec : réessaie pour les autres.',
       trainerNotFound: 'Impossible de retrouver cet entraîneur. Merci de réessayer.',
     },
     fallbacks: {
@@ -2263,6 +2264,11 @@ export default {
       indice: 'Ouvre ta conversation avec l’équipe FoundClub',
       invitation: 'Une question ? Écris-nous.',
       invitationVous: 'Une question ? Écrivez-nous.',
+    },
+    messages: {
+      titre: 'Boîte de l’assistance',
+      tout_one: 'Voir toute la boîte ({{count}})',
+      tout_other: 'Voir toute la boîte ({{count}})',
     },
     placeholder: 'Écris ton message à l’équipe',
     placeholderVous: 'Écrivez votre message à l’équipe',
@@ -3720,6 +3726,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
       amountPlaceholder: 'Montant en euros',
       noteOptional: 'Note optionnelle',
       paymentMethod: 'Moyen de paiement',
@@ -4793,6 +4800,10 @@ export default {
       noCampaign: {
         message: 'Crée au moins une campagne avant de relancer une synchronisation de secours.',
         title: 'Aucune campagne',
+      },
+      rejectPayment: {
+        message: 'La déclaration sera refusée et le membre devra payer à nouveau.',
+        title: 'Rejeter ce paiement ?',
       },
       resync: {
         // eslint-disable-next-line max-len
@@ -7096,6 +7107,7 @@ export default {
       placePrise: 'Cette place n’est plus libre. Choisis-en une autre.',
       placePriseVille: 'Cette place n’est plus libre. Choisissez-en une autre.',
       propositionClose: 'Cette proposition n’attend plus de réponse.',
+      propositionDeclinee: 'La proposition de la Ville a été déclinée : choisis une autre place.',
       titre: 'La séance n’a pas bougé',
       titreVille: 'Rien n’a été envoyé',
       tropTard: 'La séance a déjà commencé.',
@@ -7429,6 +7441,15 @@ export default {
   },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — l'annonce « Il me manque des joueurs » partagée dans le
+    // canal : sa carte (gérant et joueurs).
+    annonce: {
+      places_one: '{{count}} place',
+      places_other: '{{count}} places',
+      titre: 'Partie à compléter',
+      voir: 'Voir l’annonce',
+      voirLibelle: 'Voir l’annonce : {{quand}}, {{places}}',
+    },
     ecrire: 'Écrire aux membres',
     erreur: 'Impossible de charger ton canal.',
     membres: {
@@ -7440,6 +7461,18 @@ export default {
     },
     nombre_one: '{{count}} membre',
     nombre_other: '{{count}} membres',
+    // RESA-PARTAGER (23/10/2026, A-G32) — « Partager dans mon canal » (E-G05) et « Partager une
+    // annonce » (E-G12).
+    partager: {
+      aucune: 'Aucune partie à compléter en ce moment. Quand un joueur publie « Il me manque des '
+        + 'joueurs » sur une réservation chez toi, elle apparaît ici.',
+      choisir: 'Choisis la partie à compléter : elle arrive en carte dans ton canal.',
+      dansMonCanal: 'Partager dans mon canal',
+      deja: 'Annonce déjà partagée dans ton canal.',
+      erreur: 'Impossible de charger tes réservations.',
+      fait: 'Annonce partagée dans ton canal.',
+      titre: 'Partager une annonce',
+    },
     pause: 'Ton complexe est suspendu : son canal est en pause.',
     regle: 'Tous les membres seront prévenus.',
     titre: 'Canal · {{nom}}',
@@ -16508,6 +16541,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Télécharger le reçu',
+      remaining: 'reste {{amount}} à payer',
       settled: 'soldée',
       settledOn: 'soldée le {{settledOn}}',
     },

@@ -390,3 +390,18 @@ describe('RecruitmentAdDetails — GERER-ANNONCE : seul qui GERE l equipe a les 
     expect(outilsVisibles(tree)).toEqual([]);
   });
 });
+
+describe('BH15 · P13-08 — candidatures injoignables : l auteur le voit, et peut recharger', () => {
+  it('ne dit pas « Aucune candidature » quand le chargement a echoue', async () => {
+    mockGetRecruitmentApplications.mockRejectedValue(new Error('hors ligne'));
+    const tree = await renderFor(ENTRAINEUR_DE_L_EQUIPE);
+    for (let i = 0; i < 20 && !allText(tree).includes('Chargement impossible'); i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => { await new Promise((r) => { setTimeout(r, 10); }); });
+    }
+
+    expect(allText(tree)).toContain('Chargement impossible');
+    expect(allText(tree)).not.toContain('Aucune candidature pour le moment.');
+    expect(findButton(tree, 'Recharger')).toBeDefined();
+  });
+});

@@ -215,3 +215,21 @@ describe('RESA-FIN-APP (2) (4) E-G13 — où est l’affiche, et le texte du par
     expect(message).toMatch(/\/annuaire\/complexes\/le-five\/\?depuis=affiche$/);
   });
 });
+
+describe('BH16 P13-12 — partager juste après la saisie du prix', () => {
+  it('l’affiche partagée porte le prix qui vient d’être tapé, sans attendre', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Promotion');
+    const prix = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Prix de la place' && n.props?.onChangeText
+    ))[0];
+    await act(async () => {
+      prix.props.onChangeText('8');
+    });
+    await appuyer(arbre, 'Partager l’affiche');
+    expect(mockPartager.mock.calls.at(-1)[1]).toMatchObject({
+      prix: '8',
+      textePromo: expect.stringContaining('8 €'),
+    });
+  });
+});

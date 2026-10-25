@@ -263,7 +263,8 @@ export const getTeams = async (params = {}) => {
         ? response.data.data.map(normalizeTeamGovernanceSettings)
         : response.data?.data;
       const schema = Joi.object({
-        data: Joi.array().items(teamSchema).empty(Joi.array().length(0)),
+        // P1-21 : teamSchema est `required()` ; sans `.optional()` Joi exige au moins une equipe.
+        data: Joi.array().items(teamSchema.optional()),
         meta: Joi.object({
           pagination: Joi.object({
             page: Joi.number().required(),

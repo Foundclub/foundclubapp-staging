@@ -275,3 +275,57 @@ describe.each(ECRANS)('AD01 · porte B — $nom', ({ action, composant }) => {
     expect(mockGoBack).not.toHaveBeenCalled();
   });
 });
+
+describe('BH15 · P14-04 / P14-05 — l enregistrement a la main garde ce qui etait range', () => {
+  test('il reprend le tri, le mode, le nombre d equipes, les rotations et les terrains, puis relit la composition', async () => {
+    /** @type {any} */ (mockCompositionQuery).refetch = jest.fn(async () => ({}));
+    /** @type {any} */ (mockCompositionQuery).data = {
+      detectionSplit: {
+        memberMode: 'grouped',
+        splitBy: 'requested_position',
+        teamCount: 2,
+        teams: [
+          { bibColor: 'jaune', players: ['p1', 'p2'], rotation: ['p2'], terrain: 'A' },
+          { bibColor: 'rouge', players: ['p3'], rotation: [], terrain: 'B' },
+        ],
+      },
+      draft: {},
+    };
+    const racine = monter(DetectionTeamsManual, { ...PARAMS, memberMode: undefined });
+
+    appuyer(racine, 'detection.teams.manual.actions.field');
+    await attendreLAlerte();
+
+    const { detectionSplit } = jest.mocked(saveEventCompositionDraft).mock.calls[0][1].draft;
+    expect(detectionSplit).toMatchObject({
+      memberMode: 'grouped',
+      splitBy: 'requested_position',
+      teamCount: 2,
+    });
+    expect(detectionSplit.teams[0]).toMatchObject({
+      players: ['p1', 'p2'],
+      rotation: ['p2'],
+      terrain: 'A',
+    });
+    expect(detectionSplit.teams[1]).toMatchObject({ players: ['p3'], terrain: 'B' });
+    expect(/** @type {any} */ (mockCompositionQuery).refetch).toHaveBeenCalled();
+  });
+});
+
+describe('BH15 · P14-01 — la repartition rangee arrive APRES le premier affichage', () => {
+  test('l ecran la reprend au lieu de repartir de zero', async () => {
+    /** @type {any} */ (mockCompositionQuery).refetch = jest.fn(async () => ({}));
+    const racine = monter(DetectionTeamsManual);
+    /** @type {any} */ (mockCompositionQuery).data = {
+      detectionSplit: { teamCount: 4, teams: [{ bibColor: 'rouge', players: ['p1', 'p2'] }] },
+      draft: {},
+    };
+    act(() => { monte.update(<DetectionTeamsManual />); });
+
+    appuyer(racine, 'detection.teams.manual.actions.field');
+    await attendreLAlerte();
+
+    const { detectionSplit } = jest.mocked(saveEventCompositionDraft).mock.calls[0][1].draft;
+    expect(detectionSplit.teams[1]).toMatchObject({ bibColor: 'rouge', players: ['p1', 'p2'] });
+  });
+});

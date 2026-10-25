@@ -548,6 +548,19 @@ describe('Carrousel d\'offres — le temoin anti-regression de L10-A', () => {
       .toBe('fc_club_tier_1_yearly');
   });
 
+  it('BH01/P11-10 — deux appuis pendant un achat en cours ne lancent QU UN achat', async () => {
+    mockPerformPurchase.mockImplementation(() => new Promise(() => {}));
+    const arbre = await rendre();
+    await allerALaCarte(arbre, 2);
+    const [cta] = pressablesPortant(arbre, 'Choisir Club 100 · 249,99 €/an');
+    await act(async () => {
+      cta.props.onPress();
+      cta.props.onPress();
+    });
+
+    expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
+  });
+
   it('acheter Équipe demande D\'ABORD quelles equipes couvrir', async () => {
     const arbre = await rendre();
     await appuyerSur(arbre, 'Choisir Équipe · 59,99 €/an');

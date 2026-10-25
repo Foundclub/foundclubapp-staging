@@ -1,6 +1,8 @@
 import {
+  buildAddressFromForm,
   buildClubFormInitialValues,
   CLUB_DETAIL_POPULATE,
+  getClubCity,
 } from './adminClubContentModel';
 
 // La fiche club du superadmin passe par /superadmin/content/:uid/:documentId, qui
@@ -62,5 +64,35 @@ describe('buildClubFormInitialValues', () => {
   it('accepte un club sans logo sans planter', () => {
     const values = buildClubFormInitialValues({ documentId: 'club-doc-2', name: 'AS Sans Logo' });
     expect(values.logo).toBeNull();
+  });
+});
+
+// BH14 (BUGHUNT 24/10/2026) — P2-12, P2-15, P9-18.
+describe('BH14 — ville, code postal et coordonnées du club', () => {
+  const ancien = JSON.stringify({
+    city: 'Lyon', lat: 45.7, lng: 4.8, postcode: '69001',
+  });
+
+  it('P2-12 : un club sans ville ne prend pas son code postal pour ville', () => {
+    expect(getClubCity({ address: { postcode: '69001' } })).toBe('');
+  });
+
+  it('P2-15 : vider les coordonnées les efface', () => {
+    const adresse = buildAddressFromForm({ addressJson: ancien, latitude: '', longitude: '' });
+    expect(adresse.lat).toBeNull();
+    expect(adresse.lng).toBeNull();
+  });
+
+  it('P9-18 : vider la ville et le code postal les efface', () => {
+    const adresse = buildAddressFromForm({ addressJson: ancien, city: '', postcode: '' });
+    expect(adresse.city).toBe('');
+    expect(adresse.postcode).toBe('');
+  });
+
+  it('caractérisé : sans champ du formulaire, l adresse avancée est gardée', () => {
+    const adresse = buildAddressFromForm({ addressJson: ancien });
+    expect(adresse).toMatchObject({
+      city: 'Lyon', lat: 45.7, lng: 4.8, postcode: '69001',
+    });
   });
 });

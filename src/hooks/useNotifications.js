@@ -1227,7 +1227,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.SESSION);
         pushPermissionPrompt.trackEvent('accepted', { reason: nextReason });
         setPendingPushPermissionReason('');
-        await syncTokenIfNeeded(nextReason, { bypassPreprompt: true });
+        // BH01/P2-03 : la synchro différée vient de poser le frein de 30 s ; l'accord le franchit.
+        await syncTokenIfNeeded(nextReason, { bypassPreprompt: true, force: true });
       },
       onDismiss: () => {
         pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.DAY);

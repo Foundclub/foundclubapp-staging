@@ -7,8 +7,8 @@ export const getDeviceLocale = () => {
   const locale = Platform.OS === 'ios'
     ? Settings.get('AppleLocale') || Settings.get('AppleLanguages')?.[0]
     : Intl.DateTimeFormat().resolvedOptions().locale;
-  const separator = Platform.OS === 'ios' ? '_' : '-';
-  return locale?.split(separator);
+  // Le repli AppleLanguages s'ecrit « en-US » : les deux separateurs sont admis.
+  return locale?.split(/[-_]/);
 };
 
 /**
@@ -17,7 +17,9 @@ export const getDeviceLocale = () => {
  */
 export const getDeviceLocaleCountry = () => {
   const locales = getDeviceLocale();
-  return locales?.[1] || 'FR';
+  // Le pays est le premier sous-element de 2 lettres ou 3 chiffres (« zh-Hans-CN » : CN).
+  const country = locales?.slice(1).find((part) => /^([A-Za-z]{2}|\d{3})$/.test(part));
+  return /** @type {import('libphonenumber-js').CountryCode} */ (country) || 'FR';
 };
 
 /**

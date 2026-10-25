@@ -8,6 +8,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
+import { sectionToLeagueGender } from '@/views/team/createSquad/sectionGender';
 import SquadAvailabilitiesStep from '@/views/team/createSquad/steps/SquadAvailabilitiesStep';
 import SquadCategoryStep from '@/views/team/createSquad/steps/SquadCategoryStep';
 import SquadImageStep from '@/views/team/createSquad/steps/SquadImageStep';
@@ -245,11 +246,6 @@ function CreateSquadWizard({ navigation }) {
         Futsal: 'Football à 5',
         'Urban Soccer': 'Football à 5',
       };
-      const genderEnumMap = {
-        female: 'Female',
-        male: 'Male',
-        mixed: 'Mixed',
-      };
       const selectedSourceTeamId = squadData?.sourceTeam?.value || null;
 
       if (isFootball11 && !selectedSourceTeamId) {
@@ -287,7 +283,7 @@ function CreateSquadWizard({ navigation }) {
         category: 'Senior',
         name: squadData.name,
         roster: user?.documentId ? { connect: [{ documentId: user.documentId }] } : [],
-        section: genderEnumMap[squadData.section?.value] || 'Male',
+        section: sectionToLeagueGender(squadData.section),
         sport: sportEnumMap[squadData.sport?.label] || squadData.sport?.label || 'Football à 5', // Fallback
         // level: levelValue, // REMOVED to avoid 400 Invalid Key
         cover: squadData.cover,

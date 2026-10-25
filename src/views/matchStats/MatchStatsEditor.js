@@ -263,12 +263,17 @@ const buildInitialCoachReviews = (/** @type {any[]} */ players, /** @type {any} 
   });
 };
 
-const serializeCoachReview = (/** @type {any} */ review) => {
+export const serializeCoachReview = (/** @type {any} */ review) => {
   if (!review?.comment && (review?.rating === null || review?.rating === undefined)) return null;
   return {
     comment: String(review?.comment || '').trim() || null,
     rating: review?.rating ?? null,
     userDocumentId: review?.userDocumentId || undefined,
+    // BH05 · P10-19 — un joueur ajoute a la main n'a pas de compte : sans son
+    // nom, le serveur ne sait a qui rattacher l'avis et le jette.
+    manualPlayerName: review?.userDocumentId
+      ? undefined
+      : (review?.key || review?.label || undefined),
   };
 };
 

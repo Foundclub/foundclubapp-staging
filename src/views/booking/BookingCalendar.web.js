@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { addDays, addMinutes, format, parse, startOfDay } from 'date-fns';
+import { addDays, addMinutes, format, parse, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useWindowDimensions } from 'react-native';
 
@@ -74,7 +74,7 @@ function BookingCalendar({ navigation, route }) {
   const isTablet = width >= BREAKPOINTS.tablet;
   const { Colors } = useTheme();
   const { t } = useTranslation();
-  const [selectedDate, setSelectedDate] = useState(() => startOfDay(route?.params?.date ? new Date(route.params.date) : new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(route?.params?.date ? parseISO(route.params.date) : new Date()));
   const [selectedFacilityId, setSelectedFacilityId] = useState(() => String(route?.params?.facilityId || '').trim());
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedDuration, setSelectedDuration] = useState(null);
@@ -565,7 +565,11 @@ function BookingCalendar({ navigation, route }) {
                     <input
                       max={Math.max(1, targetPlayers - 1)}
                       min={1}
-                      onChange={(event) => setCurrentPlayers(Math.max(1, Number(event.target.value || 1)))}
+                      // BH16 P13-10 : jamais plus que le total prévu moins un.
+                      onChange={(event) => setCurrentPlayers(Math.max(1, Math.min(
+                        Number(event.target.value || 1),
+                        targetPlayers - 1,
+                      )))}
                       style={fieldStyle}
                       type="number"
                       value={currentPlayers}

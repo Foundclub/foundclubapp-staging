@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useWindowDimensions, View } from 'react-native'
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
@@ -62,6 +63,7 @@ import {
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
 // MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
+import { carteDAnnonce } from '@/domains/complexe/annonceDuCanal';
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
@@ -97,6 +99,8 @@ import {
 import {
   estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+
+import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -112,6 +116,7 @@ import {
 // MSG-SUPPORT (20/10) — l'habillage des fils de la Ville, et de la conversation d'assistance.
 import { useHabillageDuFil } from '@/views/chat/FilDAssistance';
 import LigneAssistance from '@/views/chat/LigneAssistance';
+import CarteAnnonceDuCanal from '@/views/complexe/components/CarteAnnonceDuCanal';
 // MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
 // differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
 import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
@@ -1155,6 +1160,11 @@ function ColonneDesConversations({
             style={{ paddingHorizontal: 14 }}
           />
         )}
+        {/* SUPADM (23/10) — la boîte commune de l'assistance, pour un super-admin. */}
+        {enModeArchivees || getUserRoleKey(userData?.role?.type || userData?.role?.name)
+          !== 'superAdmin' ? null : (
+            <BoiteAssistanceDansMessages navigation={navigation} style={{ paddingHorizontal: 14 }} />
+          )}
         {fils.length === 0 && filsTries.length > 0 ? (
           <p
             style={{
@@ -2094,7 +2104,25 @@ function Conversation({ navigation, route }) {
       messagePaneRef.current.scrollTop = messagePaneRef.current.scrollHeight
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [messages.length])
+    // P6-07 : seul un message plus RÉCENT descend le fil ; une page d'anciens messages non.
+  }, [latestMessageId]);
+
+  // P6-02 : la route garde l'écran monté d'un fil à l'autre ; la saisie du fil quitté
+  // ne doit pas partir dans le suivant, et le fil quitté apprend que la frappe s'arrête.
+  const filPrecedentRef = useRef(chatId);
+  useEffect(() => {
+    const precedent = filPrecedentRef.current;
+    filPrecedentRef.current = chatId;
+    if (!precedent || precedent === chatId) return;
+    sendTypingStop(precedent);
+    setComposerText('');
+    setReplyTarget(null);
+    setProposalDate('');
+    setProposalStartTime('');
+    setProposalEndTime('');
+    setProposalVenue('');
+    setProposalAddress('');
+  }, [chatId, sendTypingStop]);
 
   useEffect(() => {
     if (!chatId) return undefined
@@ -2126,15 +2154,18 @@ function Conversation({ navigation, route }) {
     const date = new Date(chatData.league_match.date)
     if (Number.isNaN(date.getTime())) return
 
+    // P6-01 : les champs se relisent en heure locale à l'envoi ; ils s'écrivent en heure locale.
+    const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
+    const heureLocale = (/** @type {Date} */ d) => `${deux(d.getHours())}:${deux(d.getMinutes())}`;
     if (!proposalDate) {
-      setProposalDate(date.toISOString().slice(0, 10))
+      setProposalDate(`${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}`);
     }
     if (!proposalStartTime) {
-      setProposalStartTime(date.toISOString().slice(11, 16))
+      setProposalStartTime(heureLocale(date));
     }
     if (!proposalEndTime) {
       const endDate = new Date(date.getTime() + (60 * 60 * 1000))
-      setProposalEndTime(endDate.toISOString().slice(11, 16))
+      setProposalEndTime(heureLocale(endDate));
     }
     if (!proposalVenue) {
       setProposalVenue(String(chatData?.league_match?.proposed_venue || chatData?.league_match?.venue || ''))
@@ -2283,6 +2314,7 @@ function Conversation({ navigation, route }) {
 
   const sendChatPayload = useCallback(async (/** @type {any} */ {
     attachments = [],
+    clearComposer = true,
     composition = null,
     event = null,
     message = '',
@@ -2300,7 +2332,7 @@ function Conversation({ navigation, route }) {
 
     if (optimisticMessageId) {
       setReplyTarget(null)
-      if (trimmedMessage) {
+      if (trimmedMessage && clearComposer) {
         setComposerText('')
       }
       return optimisticMessageId
@@ -2317,7 +2349,7 @@ function Conversation({ navigation, route }) {
     })
     await invalidateConversationQueries()
     setReplyTarget(null)
-    if (trimmedMessage) {
+    if (trimmedMessage && clearComposer) {
       setComposerText('')
     }
     // @ts-ignore: FIXME: Baseline TS regression
@@ -2534,6 +2566,8 @@ function Conversation({ navigation, route }) {
         event: getEntityDocumentId(event),
         message: 'Partage',
         replyTo: replyTarget,
+        // P6-14 : le libellé « Partage » n'est pas le brouillon ; le brouillon reste.
+        clearComposer: false,
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
@@ -2722,6 +2756,7 @@ function Conversation({ navigation, route }) {
     // match se cree, les autres propositions sont refusees. La reponse generique ne changeait que
     // l etiquette de la bulle. Accepter est lourd : on confirme d abord.
     const amical = isFriendlyProposal(message?.composition);
+    if (!amical && areSameEntityId(message?.sender?.documentId, userData?.documentId)) return;
     if (amical && status === 'accepted') {
       const confirmation = buildFriendlyProposalConfirmation();
       // eslint-disable-next-line no-alert -- la confirmation native du site, comme « Signaler »
@@ -2770,6 +2805,7 @@ function Conversation({ navigation, route }) {
     queryClient,
     requestWebLeagueLegalAcceptance,
     respondToProposal,
+    userData?.documentId,
   ])
 
   const baseTextColor = Colors?.neutral00 || '#ffffff'
@@ -3080,7 +3116,8 @@ function Conversation({ navigation, route }) {
                   : 'En attente'}
             </span>
           </div>
-          {proposalStatus === 'pending' ? (
+          {/* P6-03 : comme au téléphone, l'auteur ne répond pas à sa propre proposition. */}
+          {proposalStatus === 'pending' && !isMine ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
                 onClick={() => handleProposalResponse(message, 'accepted')}
@@ -3847,6 +3884,20 @@ function Conversation({ navigation, route }) {
     // jamais sur un message ordinaire) : sa phrase, dans le style discret du pack.
     // 🏛️ R17-CANAUX — l'actualité posée par la Ville dans son canal : une notice qui mène à elle
     // (bouton de 44 de haut au moins, nommé pour le lecteur d'écran).
+    // 🏟️ RESA-PARTAGER (A-G32) — l'annonce partagée dans le canal : une carte qui l'ouvre.
+    const carteDuFil = carteDAnnonce(t, message?.systemNotice);
+    if (carteDuFil) {
+      return (
+        <div data-msg1w-id={idMessage} key={idMessage}>
+          <CarteAnnonceDuCanal
+            carte={carteDuFil}
+            onOuvrir={() => navigation.navigate(RouteNames.ReserverAnnonce, {
+              annonceId: carteDuFil.annonceId,
+            })}
+          />
+        </div>
+      );
+    }
     const lienActualite = filDeLaVille.ligneDActualite(message);
     if (lienActualite) {
       return (
@@ -4519,6 +4570,8 @@ function Conversation({ navigation, route }) {
     renderComposition,
     repondreA,
     rolesDuStaff,
+    navigation,
+    t,
     userData?.documentId,
   ])
 

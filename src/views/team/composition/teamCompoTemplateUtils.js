@@ -34,11 +34,17 @@ const ensureList = (/** @type {any} */ value) => (Array.isArray(value) ? value :
  * `positionX`, `positionY` — et JETTE `slotId`. Or `readPlacementsFromPack` ne
  * lit QUE `slotId`. Consequence : une compo type rechargee revenait sans aucun
  * repere, et sa pastille de poste disparaissait.
+ * BH05 · P12-10 — sans `slotId`, l'occupant d'un poste n'etait pas trouve et un
+ * joueur depose dessus s'empilait. On retrouve le repere de la formation du
+ * sport par ses coordonnees, sinon par son libelle quand il est unique.
+ * ponytail: une compo type posee sur une formation du catalogue (autres reperes)
+ * reste sans `slotId` — la sortie est que le serveur garde `slotId`.
  * @param {any[]} placements Les placements deja normalises.
  * @param {any} [pack] Le pack brut rendu par le serveur.
+ * @param {string} [sport]
  * @returns {any[]}
  */
-const withStoredPositions = (placements, pack) => {
+const withStoredPositions = (placements, pack, sport) => {
   /** @type {Map<string, string>} */
   const stored = new Map();
   ensureList(pack?.placements).forEach((/** @type {any} */ placement) => {
@@ -46,13 +52,25 @@ const withStoredPositions = (placements, pack) => {
     const label = String(placement?.position || '').trim();
     if (playerId && label) stored.set(playerId, label);
   });
-  if (stored.size === 0) return placements;
+  const slots = buildFormationSlots(sport);
+  /** @param {any} placement */
+  const findSlotId = (placement) => {
+    const byCoords = slots.find((slot) => (
+      Math.abs(slot.positionX - placement.positionX) < 0.5
+      && Math.abs(slot.positionY - placement.positionY) < 0.5
+    ));
+    if (byCoords) return byCoords.slotId;
+    const byLabel = slots.filter((slot) => slot.label === stored.get(placement.playerId));
+    return byLabel.length === 1 ? byLabel[0].slotId : null;
+  };
 
-  return placements.map((/** @type {any} */ placement) => (
-    stored.has(placement.playerId)
-      ? { ...placement, position: stored.get(placement.playerId) }
-      : placement
-  ));
+  return placements.map((/** @type {any} */ placement) => {
+    const slotId = placement.slotId || findSlotId(placement);
+    const next = slotId === placement.slotId ? placement : { ...placement, slotId };
+    return stored.has(placement.playerId)
+      ? { ...next, position: stored.get(placement.playerId) }
+      : next;
+  });
 };
 
 /**
@@ -121,7 +139,7 @@ export const buildCompoTemplateSources = ({
 } = {}) => {
   const templatePack = defaultComposition?.composition || defaultComposition;
   const templatePlacements = keepPlacementsOfCalledUpPlayers(
-    withStoredPositions(readPlacementsFromPack(templatePack), templatePack),
+    withStoredPositions(readPlacementsFromPack(templatePack), templatePack, sport),
     players,
   );
   const lastPlacements = keepPlacementsOfCalledUpPlayers(

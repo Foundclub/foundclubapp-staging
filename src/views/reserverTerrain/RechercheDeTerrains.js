@@ -109,8 +109,10 @@ const villeDuChoix = (option) => {
  */
 const filtrerLHeure = (carte, heure) => {
   const avant = heure ? HEURES_DE_RECHERCHE[/** @type {'matin'} */ (heure)]?.avant : null;
-  if (!avant) return carte;
-  const creneaux = (Array.isArray(carte?.slots) ? carte.slots : [])
+  // BH16 P13-17 : un complexe sans liste de créneaux en a zéro (l'écran ne plante plus).
+  const tous = Array.isArray(carte?.slots) ? carte.slots : [];
+  if (!avant) return { ...carte, slots: tous };
+  const creneaux = tous
     .filter((/** @type {any} */ creneau) => (minutesDe(creneau?.from) ?? 0) < avant);
   return { ...carte, freeSlotsCount: creneaux.length, slots: creneaux };
 };

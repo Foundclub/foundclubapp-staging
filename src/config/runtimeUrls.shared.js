@@ -288,7 +288,8 @@ export const buildRuntimeEndpoints = ({
     );
   }
 
-  if (resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost) && isDev && !isEmulator) {
+  if (resolvedApiHost && LOOPBACK_HOSTS.has(resolvedApiHost) && isDev && !isEmulator
+    && platformOs !== 'web') {
     errors.push(
       'API_URL points to a loopback host on a physical device. Use a LAN or remote backend URL.',
     );

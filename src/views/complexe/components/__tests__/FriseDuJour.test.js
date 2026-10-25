@@ -108,3 +108,19 @@ describe('RESA-L5A1 E-G02 — la frise du jour', () => {
     expect((await monter({ lignes: [], maintenant: 0 })).toJSON()).toBeNull();
   });
 });
+
+describe('BH16 P13-16 — un créneau qui finit à minuit', () => {
+  it('« 23:00 – 00:00 » dure une heure sur la frise', async () => {
+    const lignes = [{ ...LIGNES[0], creneaux: [{ etat: 'libre', from: '23:00', to: '00:00' }] }];
+    const arbre = await monter({ lignes, maintenant: 0 });
+    const caseMinuit = parRepere(arbre, 'frise-creneau-t-1-23:00');
+    const largeurUneHeure = (await monter({
+      lignes: [{ ...LIGNES[0], creneaux: [{ etat: 'libre', from: '22:00', to: '23:00' }] }],
+      maintenant: 0,
+    }));
+    const style = (noeud) => [noeud.props.style].flat(Infinity).reduce((a, s) => ({ ...a, ...s }), {});
+    expect(style(caseMinuit).width)
+      .toBe(style(parRepere(largeurUneHeure, 'frise-creneau-t-1-22:00')).width);
+    expect(textes(arbre)).toContain('0 h');
+  });
+});

@@ -359,13 +359,7 @@ function ParticipantEventList({ navigation }) {
    */
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
-    onError: (error) => {
-      const message = getParticipationErrorMessage(error, t(
-        'participantEventList.anErrorOccurred',
-        'Une erreur est survenue.',
-      ));
-      Alert.alert(t('common.error', 'Erreur'), message);
-    },
+    // P7-13 : pas d alerte ici, l appelant (`mutateAsync` + catch) dit déjà l erreur.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
@@ -375,13 +369,7 @@ function ParticipantEventList({ navigation }) {
   });
   const joinReservationMutation = useMutation({
     mutationFn: (reservationId) => joinReservation(reservationId),
-    onError: (error) => {
-      const message = getParticipationErrorMessage(error, t(
-        'participantEventList.anErrorOccurred',
-        'Une erreur est survenue.',
-      ));
-      Alert.alert(t('common.error', 'Erreur'), message);
-    },
+    // P7-13 : pas d alerte ici, l appelant (`mutateAsync` + catch) dit déjà l erreur.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });

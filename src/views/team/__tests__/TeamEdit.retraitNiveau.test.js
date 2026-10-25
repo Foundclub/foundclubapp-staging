@@ -440,4 +440,26 @@ describe('FINITIONS14 · « Enregistrer » relit la fiche de l equipe AVANT d y 
       .toBeLessThan(navigation.goBack.mock.invocationCallOrder[0]);
     act(() => arbre.unmount());
   });
+  it('BH12 P12-07 — les donnees du club qui arrivent apres n ecrasent pas la saisie', () => {
+    const arbre = monter();
+    act(() => {
+      setValueDu('level')({ label: 'Departemental', value: 'niveau-1' });
+    });
+    expect(valeurAfficheeDu('level')).toBe('Departemental');
+
+    const clubAvant = ENVELOPPES.club;
+    ENVELOPPES.club = { ...clubAvant, data: { ...CLUB } };
+    act(() => {
+      arbre.update(
+        <TeamEdit
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { teamId: 'equipe-1' } })}
+        />,
+      );
+    });
+    ENVELOPPES.club = clubAvant;
+
+    expect(valeurAfficheeDu('level')).toBe('Departemental');
+    act(() => arbre.unmount());
+  });
 });

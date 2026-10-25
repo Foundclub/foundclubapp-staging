@@ -341,7 +341,7 @@ const buildFallbackTransactionIdentity = (purchaseResult) => {
   const productIdentifier = String(purchaseResult?.productIdentifier || '').trim();
   const match = restoredPurchases.find(
     (/** @type {any} */ entry) => entry.providerProductId === productIdentifier,
-  ) || restoredPurchases[0];
+  );
   if (!match?.providerTransactionId) {
     return null;
   }

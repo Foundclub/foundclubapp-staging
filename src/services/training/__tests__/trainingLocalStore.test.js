@@ -142,7 +142,8 @@ describe('la fusion serveur / local', () => {
 
   it('fait gagner le serveur quand le local a déjà été envoyé', () => {
     putLocalResult(SESSION, ligne({ value: 32.9 }));
-    markResultsSynced(SESSION, [ligne()]);
+    // BH15 P3-22 : on marque envoyée la valeur réellement partie (32.9), pas une autre.
+    markResultsSynced(SESSION, [ligne({ value: 32.9 })]);
 
     const fusion = mergeResults(
       [{
@@ -215,5 +216,28 @@ describe('une sauvegarde locale qui rate ne fait jamais semblant', () => {
     expect(() => putLocalResult('seance-1', {
       attempt: 1, measureKey: 'temps_30m', testDocumentId: 'test-1',
     })).not.toThrow();
+  });
+});
+
+describe('BH15 · P3-01 — ne marquer envoyé que ce qui est vraiment parti', () => {
+  it('P3-22 : une mesure modifiée PENDANT l envoi reste à envoyer', () => {
+    putLocalResult(SESSION, ligne({ value: 30 }));
+    const envoyees = getUnsyncedResults(SESSION);
+    putLocalResult(SESSION, ligne({ value: 35 }));
+
+    markResultsSynced(SESSION, envoyees);
+
+    expect(getUnsyncedResults(SESSION)).toEqual([expect.objectContaining({ value: 35 })]);
+    expect(getPendingSessions()).toContain(SESSION);
+  });
+
+  it('P3-23 : une mesure refusée par le serveur reste à envoyer', () => {
+    putLocalResult(SESSION, ligne());
+    putLocalResult(SESSION, ligne({ measureKey: 'temps' }));
+    const envoyees = getUnsyncedResults(SESSION);
+
+    markResultsSynced(SESSION, envoyees, [{ reason: 'refus', row: envoyees[1] }]);
+
+    expect(getUnsyncedResults(SESSION)).toEqual([expect.objectContaining({ measureKey: 'temps' })]);
   });
 });

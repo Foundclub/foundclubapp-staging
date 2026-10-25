@@ -472,3 +472,12 @@ describe('RESA-FIN-APP (4) E-P01 — la ville choisie est gardée', () => {
     });
   });
 });
+
+describe('BH16 P13-17 — un complexe arrive sans liste de créneaux', () => {
+  it('l’écran ne plante pas', async () => {
+    const { slots: _sans, ...carte } = carteDeRecherche();
+    mockRecherche = { ...mockRecherche, data: { complexes: [carte], date: '2026-10-14' } };
+    const arbre = await monter();
+    expect(arbre.toJSON()).not.toBeNull();
+  });
+});

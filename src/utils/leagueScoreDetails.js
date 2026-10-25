@@ -81,6 +81,12 @@ export const buildPadelScorePayload = (sets) => {
   const normalizedSets = [];
 
   for (let index = 0; index < inputSets.length; index += 1) {
+    // Aucun set ne se joue après qu'un camp a gagné 2 sets (BH09 P3-12).
+    if (scoreA === 2 || scoreB === 2) {
+      return {
+        error: i18next.t('leagueScoreDetails.winnerSets', 'Le vainqueur doit gagner 2 sets.'),
+      };
+    }
     const result = normalizeSet(inputSets[index], index);
     if (result.error) return result;
     normalizedSets.push(result.set);

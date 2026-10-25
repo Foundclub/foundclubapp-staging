@@ -346,7 +346,7 @@ export const normalizeCandidateDates = (value) => {
  * @returns {number} L horodatage, ou NaN si le creneau est illisible.
  */
 export const getCandidateSlotInstant = (slot) => (
-  new Date(`${slot?.date}T${slot?.end || '23:59'}:59.999Z`).getTime()
+  new Date(`${slot?.date}T${slot?.end || '23:59'}:59.999`).getTime()
 );
 
 /**

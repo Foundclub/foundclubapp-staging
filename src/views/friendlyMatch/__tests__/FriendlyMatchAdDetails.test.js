@@ -266,6 +266,26 @@ describe('FriendlyMatchAdDetails — les deux lectures du meme ecran', () => {
     expect(rendered).toContain('Cette annonce a trouvé son adversaire.');
     expect(rendered).not.toContain('Proposer un match');
   });
+
+  it('BH10 P10-04 : une proposition retiree ou refusee ne bloque plus une nouvelle', async () => {
+    mockGetFriendlyMatchAd.mockResolvedValue({
+      ...AD_OPEN,
+      applications: [
+        { documentId: 'app-retiree', status: 'withdrawn', team: MY_TEAM },
+        { documentId: 'app-refusee', status: 'declined', team: MY_TEAM },
+      ],
+    });
+
+    const tree = await renderFor({
+      documentId: 'u-candidat',
+      role: { name: 'Entraineur' },
+      trainedTeams: [MY_TEAM],
+    });
+    const rendered = allText(tree);
+
+    expect(rendered).not.toContain('Ta proposition');
+    expect(rendered).toContain('Proposer un match');
+  });
 });
 
 describe('FriendlyMatchAdDetails — candidater ouvre la conversation (§4.3)', () => {

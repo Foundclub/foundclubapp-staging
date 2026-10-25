@@ -34,6 +34,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useModifierExterieur: () => ({ isPending: false, mutateAsync: mockModifier }),
+  // RESA-PARTAGER : « Partager dans mon canal » (témoin EG05.partager.RESAPARTAGER).
+  usePartagerAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).
   useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useReservationGeree: () => mockFiche,

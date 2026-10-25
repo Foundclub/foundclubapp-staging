@@ -591,3 +591,24 @@ describe('FINITIONS12-STATS · point 8 — la cloture compte comme le compteur d
     expect(liste).not.toContain('Hugo');
   });
 });
+
+// BUGHUNT BH08 (24/10) — P8-18 : identites masquees, la cloture garde le numero de la liste.
+describe('BH08 · P8-18 — numero du participant dans la cloture', () => {
+  test('le jamais-vu en 2e ligne de la feuille reste « 2 » dans la cloture', async () => {
+    const items = [
+      ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Leo', userId: 'u1' }),
+      ligne({ firstname: 'Malo', userId: 'u2' }),
+    ];
+    const arbre = await monter(items);
+    mockAttendance = { data: { ...mockAttendance.data, participantIdentitiesHidden: true } };
+    await act(async () => { arbre.update(<EventAttendanceCall />); });
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).not.toContain('Malo');
+    // La cloture liste les jamais-vus apres « Tu pourras encore corriger jusqu'à … ».
+    const cloture = texte.slice(texte.lastIndexOf('corriger jusqu'));
+    expect(cloture).toContain('Participant·e 2');
+    expect(cloture).not.toContain('Participant·e 1');
+  });
+});

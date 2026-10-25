@@ -287,3 +287,26 @@ describe('AD09 - la couleur de l installation dans l entete de la fiche evenemen
     expect(first).not.toBe(CYAN_OF_TODAY);
   });
 });
+
+// 🐞 BUGHUNT P8-22 (BH06) — sans heure de fin, l entete lisait l heure dans `event.date`,
+// un jour seul (minuit UTC) : « 02:00 » a Paris. L heure de debut saisie est la bonne.
+describe('BH06 P8-22 — l heure sans heure de fin', () => {
+  const textes = (/** @type {any} */ noeud) => {
+    if (!noeud) return [];
+    if (typeof noeud === 'string') return [noeud];
+    if (Array.isArray(noeud)) return noeud.flatMap(textes);
+    return textes(noeud.children);
+  };
+
+  test('date seule + debut 18:30, sans fin : on lit 18:30', () => {
+    const event = {
+      ...makeEvent({ facility: null }),
+      date: '2026-09-12',
+      endTime: null,
+      startTime: '18:30:00',
+    };
+    const lus = textes(renderHeader(event));
+    expect(lus).toContain('18:30');
+    expect(lus).not.toContain('02:00');
+  });
+});
