@@ -37,7 +37,7 @@ jest.mock('@/theme/themeContext', () => {
     default: () => ({
       Alignments: rampe(),
       ApplicationStyle: new Proxy({}, { get: () => s }),
-      Colors: new Proxy({}, { get: () => '#000000' }),
+      Colors: new Proxy({}, { get: () => 'couleur' }),
       Fonts: rampe(),
       Images: new Proxy({}, { get: () => 1 }),
       Spaces: new Proxy({}, { get: () => rampe() }),
