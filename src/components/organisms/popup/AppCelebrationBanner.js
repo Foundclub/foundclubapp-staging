@@ -249,10 +249,10 @@ function AppCelebrationBanner({
 
   return (
     <Animated.View
-      onMoveShouldSetResponder={panResponder.panHandlers.onMoveShouldSetResponder}
-      onResponderMove={panResponder.panHandlers.onResponderMove}
-      onResponderRelease={panResponder.panHandlers.onResponderRelease}
-      onResponderTerminate={panResponder.panHandlers.onResponderTerminate}
+      // 🪤 Q3-17 : TOUS les gestionnaires. Sans `onResponderGrant`, le geste n'était
+      // jamais initialisé, `dx` restait à 0 et glisser ne fermait rien.
+      // eslint-disable-next-line react/jsx-props-no-spreading
+      {...panResponder.panHandlers}
       style={[
         styles.wrapper,
         {
