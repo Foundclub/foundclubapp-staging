@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des phrases entieres et des montages sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 // Q2-05 / Q2-19 (BUGHUNT P2, 25/10) — UNE LISTE SANS FILTRES (fiche d'équipe, AdminEvents).

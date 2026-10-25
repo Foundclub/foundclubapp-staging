@@ -82,7 +82,14 @@ afterEach(() => {
 
 const monter = (/** @type {any} */ props) => {
   act(() => {
-    arbre = renderer.create(<FacilitySelector clubId="club-1" onChange={jest.fn()} {...props} />);
+    arbre = renderer.create(
+      <FacilitySelector
+        clubId="club-1"
+        facilityId={props.facilityId}
+        location={props.location}
+        onChange={props.onChange || jest.fn()}
+      />,
+    );
   });
 };
 const textes = () => arbre.root.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
