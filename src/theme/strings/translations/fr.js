@@ -9471,6 +9471,11 @@ export default {
         message: 'Les équipes sont gardées en brouillon. Personne n’a été prévenu.',
         title: 'Répartition enregistrée',
       },
+      unsaved: {
+        no: 'Non',
+        title: 'Voulez-vous enregistrer ?',
+        yes: 'Oui',
+      },
     },
     squad: {
       actions: {

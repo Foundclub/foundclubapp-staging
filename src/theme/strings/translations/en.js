@@ -8941,6 +8941,11 @@ export default {
         message: 'Teams are kept as a draft. No one has been notified.',
         title: 'Team split saved',
       },
+      unsaved: {
+        no: 'No',
+        title: 'Do you want to save?',
+        yes: 'Yes',
+      },
     },
     squad: {
       actions: {
