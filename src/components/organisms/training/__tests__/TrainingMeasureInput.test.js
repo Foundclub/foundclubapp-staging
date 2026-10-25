@@ -166,6 +166,28 @@ describe('la virgule vaut point decimal', () => {
 
     expect(String(onRecord.mock.calls[0][0].value)).toBe('42');
   });
+
+  it.each([
+    ['3.1.4', 'decimal', '3.14', 3.14],
+    ['3,1,4', 'decimal', '3.14', 3.14],
+    ['12-3', 'decimal', '123', 123],
+    ['-1.5', 'decimal', '-1.5', -1.5],
+    ['12-3', 'integer', '123', 123],
+  ])('🐞 Q3-07 : « %s » (%s) affiche ce qui est enregistre', (frappe, type, affiche, valeur) => {
+    // Le champ gardait « 3.1.4 » a l ecran mais enregistrait VIDE, sans signal :
+    // un seul point, et le signe moins seulement en tete.
+    const onRecord = jest.fn();
+    const arbre = rendre({ max: 1000, min: -10, type }, {}, { onRecord });
+    const champ = () => arbre.root.findAllByType(TextInput)[0];
+
+    // Touche par touche, comme le clavier : chaque frappe repart du texte nettoye.
+    [...frappe].forEach((touche) => {
+      act(() => { champ().props.onChangeText(`${champ().props.value}${touche}`); });
+    });
+
+    expect(champ().props.value).toBe(affiche);
+    expect(onRecord.mock.calls.at(-1)[0].value).toBe(valeur);
+  });
 });
 
 describe('« essai nul » est une bascule, jamais une suppression', () => {

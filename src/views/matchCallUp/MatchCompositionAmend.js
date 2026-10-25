@@ -143,6 +143,8 @@ function MatchCompositionAmend() {
         placements: buildAmendedPlacements({ published, replacements }),
         players,
         requireResponse: published?.requireResponse !== false,
+        // Q4-11 : les reperes deja publies (la compo type choisie), pas ceux du 4-3-3.
+        slots: published?.teams?.[0]?.slots,
         sport: sport || published?.sportContext,
         teamName: resolvedTeamName,
         visibility: published?.visibility,

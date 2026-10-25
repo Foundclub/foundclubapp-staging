@@ -293,8 +293,14 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
   const slotIndex = getSlotIndex(myPlacement?.slotId);
   // BH05 · P6-10 — le libelle publie avec le placement d'abord : avec une
   // formation du catalogue (3-5-2), la table par defaut donne le poste du 4-3-3.
+  // 🪤 Q4-11 : le placement ne porte pas de libelle ; c'est le REPERE publie qui
+  // le porte, retrouve par son `slotId`.
+  const reperePublie = ensureList(published?.teams)
+    .flatMap((/** @type {any} */ team) => ensureList(team?.slots))
+    .find((/** @type {any} */ slot) => myPlacement?.slotId && slot?.slotId === myPlacement.slotId);
   const positionLabel = String(
     myPlacement?.label
+    || reperePublie?.label
     || getMatchPositionLabels(sport)[slotIndex - 1]
     || viewerPlayer?.position
     || '',

@@ -399,6 +399,24 @@ function TrainingTest({ navigation, route }) {
   }, [enregistrerPlusieurs, familles, lignesDeLEssai]);
 
   /**
+   * Bascule « nul » UNE mesure (à noter une fois, résultat de la série) en gardant
+   * sa valeur. 🪤 Q3-01 : la croix envoyait la ligne sans valeur, et le carnet la
+   * remplace entière : le chiffre restait affiché mais partait vide.
+   * @param {Record<string, any>} row la mesure visée (essai, clé, côté)
+   * @returns {void} rien
+   */
+  const basculerMesure = useCallback((row) => {
+    const avant = values[`${row.measureKey}|${row.attempt ?? 1}|${row.side || 'none'}`] || {};
+    const devientNul = avant.isValid !== false;
+    enregistrerPlusieurs([{
+      ...avant,
+      ...row,
+      invalidatedBy: devientNul ? 'terrain' : null,
+      isValid: !devientNul,
+    }]);
+  }, [enregistrerPlusieurs, values]);
+
+  /**
    * Note le motif sur TOUTES les lignes de l'essai : le carnet en garde une par ligne.
    * @param {number} essai le numéro de l'essai
    * @param {string} raison pourquoi il est nul
@@ -720,7 +738,7 @@ function TrainingTest({ navigation, route }) {
                             <TrainingMeasureInput
                               measure={measure}
                               onRecord={record}
-                              onToggleInvalid={record}
+                              onToggleInvalid={basculerMesure}
                               values={valuesFor(measure.key)}
                             />
                           </View>
@@ -761,7 +779,7 @@ function TrainingTest({ navigation, route }) {
                           <TrainingMeasureInput
                             measure={{ ...measure, computed: false }}
                             onRecord={record}
-                            onToggleInvalid={record}
+                            onToggleInvalid={basculerMesure}
                             values={valuesFor(measure.key)}
                           />
                         </View>

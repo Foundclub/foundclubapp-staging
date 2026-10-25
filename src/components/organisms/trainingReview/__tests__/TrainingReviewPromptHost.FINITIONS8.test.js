@@ -307,3 +307,49 @@ describe('FINITIONS8 · point 7 — « Plus tard » se retient par compte, 24 h'
     expect(fenetreOuverte(lendemain)).toBe(true);
   });
 });
+
+describe('🐞 Q3-18 — « Plus tard » sur une seance choisie dans le merci', () => {
+  /**
+   * Une autre seance du meme joueur.
+   * @param {string} id
+   * @param {number} jour
+   * @returns {any}
+   */
+  const seance = (id, jour) => ({
+    ...SEANCE,
+    endedAt: new Date(2026, 8, jour, 17, 0).toISOString(),
+    eventDocumentId: id,
+    key: `training:${id}:review`,
+  });
+  const B = seance('evt-b', 29);
+  const C = seance('evt-c', 24);
+
+  it('ne revient pas au redemarrage : la pause couvre la fenetre qui reviendrait', async () => {
+    // « Plus tard » mettait en pause C (la seance choisie), mais c est B, la
+    // prochaine du serveur, qui revenait : la fenetre se rouvrait avant 24 h.
+    mockPayload = { items: [SEANCE, B, C], nextPrompt: SEANCE, totalPending: 3 };
+    mockEnvoyer.mockResolvedValue({ ok: true });
+    const avant = await demarrer(KARIM);
+    await act(async () => {
+      avant.root.findAll((n) => typeof n.type !== 'string'
+        && n.props.accessibilityRole === 'radio' && typeof n.props.onPress === 'function')[7]
+        .props.onPress();
+    });
+    await act(async () => { appui(avant, 'Envoyer mon avis').props.onPress(); });
+    // Le serveur relu : la seance notee est partie, B est la prochaine.
+    mockPayload = { items: [B, C], nextPrompt: B, totalPending: 2 };
+    await act(async () => { avant.update(lApp()); });
+    const lignes = avant.root.findAll((n) => n.props.testID === 'training-review-next-session'
+      && typeof n.props.onPress === 'function');
+    // La DERNIERE ligne : la seance C (24 sept.), pas B, la prochaine du serveur.
+    await act(async () => { lignes.at(-1).props.onPress(); });
+    expect(texte(avant)).toContain('jeu. 24 sept.');
+    await plusTard(avant);
+    expect(fenetreOuverte(avant)).toBe(false);
+    act(() => { avant.unmount(); });
+
+    const apres = await demarrer(KARIM);
+
+    expect(fenetreOuverte(apres)).toBe(false);
+  });
+});

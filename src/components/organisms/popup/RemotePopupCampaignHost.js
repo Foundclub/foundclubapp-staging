@@ -88,7 +88,9 @@ function RemotePopupCampaignHost({
 
     return {
       allowedRoutes: activeCampaign.allowedRoutes,
-      allowedStartupPhases: ['startup_prompt_window'],
+      // 🪤 Q3-03 : la fenêtre de démarrage dure 2,2 s et ne revient jamais ; une campagne
+      // reçue plus tard (réponse lente, retour au premier plan) doit aussi pouvoir s'ouvrir.
+      allowedStartupPhases: ['startup_prompt_window', 'screen_local_prompts', 'steady_state'],
       blockedRoutes: activeCampaign.blockedRoutes,
       blocking: true,
       id: getPopupId(activeCampaign),

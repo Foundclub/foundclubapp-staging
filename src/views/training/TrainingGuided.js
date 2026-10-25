@@ -105,6 +105,9 @@ function TrainingGuided({ navigation, route }) {
 
   /** @type {[Record<string, Record<string, any>>, Function]} */
   const [values, setValues] = useState({});
+  // 🪤 Q3-08 : la case lit sa valeur UNE fois, à l'ouverture. Ouverte directement
+  // sur un essai, elle s'affichait avant le carnet, donc vide : on attend le carnet.
+  const [chargePour, setChargePour] = useState(/** @type {string|null} */ (null));
 
   useEffect(() => {
     if (!test?.documentId || !sessionId) return;
@@ -118,6 +121,7 @@ function TrainingGuided({ navigation, route }) {
       pourCeTest[`${row.measureKey}|${row.attempt ?? 1}|${row.side || 'none'}`] = row;
     });
     setValues(pourCeTest);
+    setChargePour(test.documentId);
     // `results` est recréé à chaque rendu : le dépendre relancerait la boucle sans fin.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.results, sessionId, test?.documentId]);
@@ -233,8 +237,11 @@ function TrainingGuided({ navigation, route }) {
     const conditions = changer(conditionsEnvoyeesRef.current || {});
     if (!conditions) return;
     conditionsEnvoyeesRef.current = conditions;
-    majSeance.mutate({ payload: { conditions }, sessionDocumentId: session.documentId });
-  }, [majSeance, session?.documentId]);
+    majSeance.mutate({ payload: { conditions }, sessionDocumentId: session.documentId }, {
+      // Q4-08 : un envoi raté n'a rien changé au serveur ; la mémoire recule avec lui.
+      onError: () => { conditionsEnvoyeesRef.current = session?.conditions || {}; },
+    });
+  }, [majSeance, session?.conditions, session?.documentId]);
 
   const franchir = useCallback((cleEtape) => {
     if (!cleEtape) return;
@@ -565,6 +572,7 @@ function TrainingGuided({ navigation, route }) {
                         peut pas remplir fait croire qu'on a raté quelque chose.
                         🧨 Et sur un test à UN essai, ce sont les mesures « une fois »
                         qui portent le chiffre : sans elles la carte est VIDE. */}
+                    {(!sessionId || chargePour === test?.documentId) && (
                     <TrainingAttemptCard
                       enCours
                       essai={courant.essai}
@@ -577,6 +585,7 @@ function TrainingGuided({ navigation, route }) {
                       total={courant.total}
                       valuesFor={valuesFor}
                     />
+                    )}
                     {enAttenteDeVideo > 0 && (
                       <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
                         {t('training.guided.videoLater', { count: enAttenteDeVideo })}
