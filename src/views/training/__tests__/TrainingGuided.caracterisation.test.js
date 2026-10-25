@@ -1,4 +1,4 @@
-import { TouchableOpacity } from 'react-native';
+import { TextInput, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
@@ -171,7 +171,7 @@ const JOURNEE_UN_ESSAI = {
 const montes = [];
 
 const rendre = ({
-  journee = JOURNEE, navigation = {}, seance = SEANCE, step = 'prep',
+  dejaSaisi = {}, journee = JOURNEE, navigation = {}, seance = SEANCE, step = 'prep',
 } = {}) => {
   mockEntrainement = {
     enrollment: { program: { days: [journee] } },
@@ -181,7 +181,7 @@ const rendre = ({
     sessions: [seance],
   };
   mockCarnet = {
-    merge: jest.fn(() => ({})),
+    merge: jest.fn(() => dejaSaisi),
     pendingCount: jest.fn(() => 0),
     record: jest.fn(),
     sync: { isPending: false, mutateAsync: jest.fn() },
@@ -360,6 +360,23 @@ describe('UN ESSAI', () => {
     expect(arbre.root.findAll((n) => n.type === TouchableOpacity
       && n.props.accessibilityRole === 'switch')).toHaveLength(1);
     expect(textes(arbre)).toContain('training.guided.stopHere');
+  });
+
+  it('🐞 Q3-08 : ouvert DIRECTEMENT sur un essai, la case montre la mesure deja enregistree', () => {
+    // La case lisait sa valeur a l ouverture, AVANT que l ecran ait charge le
+    // carnet : elle restait vide alors que la mesure etait enregistree.
+    const arbre = rendre({
+      dejaSaisi: {
+        x: {
+          attempt: 1, measureKey: 'haut', side: 'none', testDocumentId: 'test-b1', value: 12.5,
+        },
+      },
+      step: 'attempt-1',
+    });
+    const champ = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ n) => n.props.accessibilityLabel === 'Hauteur');
+
+    expect(champ.props.value).toBe('12.5');
   });
 });
 
