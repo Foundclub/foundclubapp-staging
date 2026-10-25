@@ -76,3 +76,18 @@ export const getAppliedFilterCount = (filters, excludedKeys = []) => Object.entr
   if (typeof value === 'object') return Boolean(value?.value || value?.label || value?.documentId || value?.id);
   return true;
 }).length;
+
+/**
+ * C04 Q3-15 — le compteur des filtres de la liste des profils. La feuille écrit chaque critère
+ * sous plusieurs clés (`activity`, `activityIds`, `activityNames`…) et pose toujours le rayon :
+ * compter les clés donnait 1 sans rien choisir et 4 pour un seul sport. On compte les 4 critères,
+ * lus comme la recherche les lit.
+ * @param {Record<string, any> | null | undefined} filters
+ * @returns {number}
+ */
+export const getProfileFilterCount = (filters) => getAppliedFilterCount({
+  activity: filters?.activityNames || filters?.activity,
+  category: filters?.sectionIds || filters?.category,
+  geohash: filters?.geohash,
+  position: filters?.positions || filters?.position,
+});
