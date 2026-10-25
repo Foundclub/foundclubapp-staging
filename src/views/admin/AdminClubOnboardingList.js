@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList, RefreshControl, Text, TouchableOpacity, View,
+  Alert, FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -82,10 +82,23 @@ function AdminClubOnboardingList() {
     );
   };
 
+  // C10 / P9-19 : refuser une inscription de club demande la meme confirmation que la fiche
+  // (AdminClaimDetail), avec les memes textes.
   const handleSecondaryAction = (item) => {
-    refuseHelpMutation.mutate(
-      { documentId: item.documentId },
-      { onSuccess: () => refetch() },
+    Alert.alert(
+      t('adminClaimDetail.decline', 'Refuser'),
+      t('adminClaimDetail.confirm.rejectBody', 'Veux-tu rejeter cette demande ?'),
+      [
+        { style: 'cancel', text: t('adminClaimDetail.cancel', 'Annuler') },
+        {
+          onPress: () => refuseHelpMutation.mutate(
+            { documentId: item.documentId },
+            { onSuccess: () => refetch() },
+          ),
+          style: 'destructive',
+          text: t('adminClaimDetail.decline', 'Refuser'),
+        },
+      ],
     );
   };
 
