@@ -291,3 +291,15 @@ describe('RESA-FIN-APP — « demain 18 h » ne se coupe plus', () => {
     expect(titre).toBe(`Annuler ta réservation de demain 18${String.fromCharCode(160)}h ?`);
   });
 });
+
+describe('BH16 P13-18 — une seule réponse part', () => {
+  it('« Je confirme » en route : « J’annule » ne fait rien partir', async () => {
+    mockRepondre.mockImplementationOnce(() => new Promise(() => {}));
+    const arbre = await monter();
+    await appuyer(arbre, 'Je confirme');
+    await appuyer(arbre, 'J’annule');
+    const oui = arbre.root.findAll((/** @type {any} */ n) => n.props?.title === 'Oui, annuler');
+    if (oui.length) await act(async () => { oui[0].props.onPress(); });
+    expect(mockRepondre).toHaveBeenCalledTimes(1);
+  });
+});

@@ -135,3 +135,15 @@ describe('E-P06 — la feuille « Téléphone seulement »', () => {
     expect(arbre.toJSON()).toBeNull();
   });
 });
+
+describe('BH16 P13-19 — pas de presse-papiers', () => {
+  it('« Numéro copié. » ne s’affiche pas quand rien n’a été copié', async () => {
+    mockOrdinateur = true;
+    Object.defineProperty(global.navigator, 'clipboard', { configurable: true, value: undefined });
+    const arbre = await monter();
+    await act(async () => {
+      pressable(arbre, 'Copier le numéro').props.onPress();
+    });
+    expect(lisibles(arbre)).not.toContain('Numéro copié.');
+  });
+});

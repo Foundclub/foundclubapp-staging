@@ -51,7 +51,7 @@ import {
   useValiderRecompense,
 } from '@/services/complexe/complexeQueries';
 
-import { getServerErrorCode } from '@/utils/errors/displayError';
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 import texteInsecable from '@/utils/texteInsecable';
 
 /**
@@ -115,6 +115,7 @@ function FicheReservation({
   const [feuille, setFeuille] = useState(/** @type {FeuilleDeLaFiche} */ (''));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflit, setConflit] = useState('');
+  const [erreurDecision, setErreurDecision] = useState('');
   // RESA-FIN-APP — une demande que le serveur dit déjà traitée ou EXPIRÉE (409 d'état) : plus aucun
   // geste ne passe ; la fiche se relit et ne propose plus ni « Accepter » ni « Refuser » (tournée 2).
   const [close, setClose] = useState(false);
@@ -223,6 +224,7 @@ function FicheReservation({
 
   const accepter = async () => {
     setMessage('');
+    setErreurDecision('');
     try {
       await decider.mutateAsync({ complexeId, decision: 'accepter', reservationId });
       setMessage(t(
@@ -231,6 +233,11 @@ function FicheReservation({
         options,
       ));
     } catch (erreur) {
+      // BH16 P13-14 : seul un vrai conflit (409) retire « Accepter » ; une panne se réessaie.
+      if (getErrorStatus(erreur) !== 409) {
+        setErreurDecision(messageDeRefusResa(t, erreur, repli));
+        return;
+      }
       setConflit(messageDeRefusResa(t, erreur, repli));
       if (getServerErrorCode(erreur) === 'COMPLEXE_RESERVATION_STATE') {
         setClose(true);
@@ -530,6 +537,7 @@ function FicheReservation({
         </View>
         {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
+        {erreurDecision ? <BandeauComplexe texte={erreurDecision} ton="erreur" /> : null}
         <View style={[carte, Spaces.padding[16], { gap: 6 }]}>
           {legende(t('complexeReservations.fiche.quandOu', 'Quand, où'))}
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>

@@ -179,3 +179,11 @@ describe('RESA-FIN-APP — « Tu as rejoint le canal »', () => {
     expect(parRepere(arbre, 'resultat-canal-rejoint')).toBeNull();
   });
 });
+
+describe('BH16 P13-20 — un prix par joueur', () => {
+  it('se dit « par joueur » sur la confirmation', async () => {
+    mockParams = { reservation: maReservation({ price: { amount: 6, unit: 'joueur' } }) };
+    const arbre = await monter();
+    expect(lisibles(arbre).join(' ')).toContain('6 € par joueur, à régler sur place');
+  });
+});

@@ -62,6 +62,7 @@ import {
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import { getZonedDateParts } from '@/utils/parisTime';
 
 const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 
@@ -70,18 +71,18 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 const LARGEUR_ORDINATEUR = 1024;
 
 /**
- * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure du téléphone.
+ * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure de Paris (BH16 P13-11 : le complexe vit
+ * à l'heure de Paris, quel que soit le fuseau du téléphone).
  * @param {Date} instant - L'instant.
  * @returns {{ date: string, minutes: number }} Le jour civil et l'heure.
  */
-const jourEtHeure = (instant) => ({
-  date: [
-    instant.getFullYear(),
-    String(instant.getMonth() + 1).padStart(2, '0'),
-    String(instant.getDate()).padStart(2, '0'),
-  ].join('-'),
-  minutes: instant.getHours() * 60 + instant.getMinutes(),
-});
+export const jourEtHeure = (instant) => {
+  const p = getZonedDateParts(instant);
+  return {
+    date: [p.year, String(p.month).padStart(2, '0'), String(p.day).padStart(2, '0')].join('-'),
+    minutes: (p.hour % 24) * 60 + p.minute,
+  };
+};
 
 /**
  * E-G02 — L'ACCUEIL DU GESTIONNAIRE DE COMPLEXE — RESA-L5A1 (13/10/2026), planche EG02, dans la
