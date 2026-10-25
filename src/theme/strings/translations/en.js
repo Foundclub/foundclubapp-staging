@@ -3418,6 +3418,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Enter an amount above 0, not more than what can be refunded.',
       amountPlaceholder: 'Amount in euros',
       noteOptional: 'Optional note',
       paymentMethod: 'Payment method',
@@ -4459,6 +4460,10 @@ export default {
       noCampaign: {
         message: 'Create at least one campaign before running a backup sync.',
         title: 'No campaign',
+      },
+      rejectPayment: {
+        message: 'The declaration will be refused and the member will have to pay again.',
+        title: 'Reject this payment?',
       },
       resync: {
         message: 'Maintenance operation: missing fees will be attached without duplicating existing records.',
@@ -15799,6 +15804,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Download the receipt',
+      remaining: '{{amount}} left to pay',
       settled: 'settled',
       settledOn: 'settled on {{settledOn}}',
     },

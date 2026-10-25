@@ -96,6 +96,8 @@ function RejectPaymentModal({
             variant="Secondary"
           />
           <Button
+            // BH11 P5-21 : le motif est obligatoire (le serveur le refuse vide).
+            disabled={!reason.trim()}
             isLoading={isLoading}
             onPress={() => onSubmit(reason)}
             style={{ flex: 1 }}

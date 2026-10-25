@@ -3725,6 +3725,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
       amountPlaceholder: 'Montant en euros',
       noteOptional: 'Note optionnelle',
       paymentMethod: 'Moyen de paiement',
@@ -4798,6 +4799,10 @@ export default {
       noCampaign: {
         message: 'Crée au moins une campagne avant de relancer une synchronisation de secours.',
         title: 'Aucune campagne',
+      },
+      rejectPayment: {
+        message: 'La déclaration sera refusée et le membre devra payer à nouveau.',
+        title: 'Rejeter ce paiement ?',
       },
       resync: {
         // eslint-disable-next-line max-len
@@ -16518,6 +16523,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Télécharger le reçu',
+      remaining: 'reste {{amount}} à payer',
       settled: 'soldée',
       settledOn: 'soldée le {{settledOn}}',
     },
