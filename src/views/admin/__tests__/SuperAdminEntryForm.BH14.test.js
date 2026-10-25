@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { buildPayloadFromForm } from '../SuperAdminEntryForm';
 
 jest.mock('@/services/admin/superadminQueries', () => ({}));

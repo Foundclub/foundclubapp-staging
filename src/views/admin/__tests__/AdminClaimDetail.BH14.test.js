@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import renderer, { act } from 'react-test-renderer';
 
 import AdminClaimDetail from '../AdminClaimDetail';

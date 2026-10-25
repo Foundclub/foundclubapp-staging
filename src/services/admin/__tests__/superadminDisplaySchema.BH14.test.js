@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { getEntryCardViewModel, getEntryDetailViewModel, getListRequestConfig } from '../superadminDisplaySchema';
 
 // BH14 (BUGHUNT 24/10/2026) — trois défauts du schéma d'affichage de la console superadmin.

@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { cloneWithoutSystemFields } from '../AdminClubForm';
 
 jest.mock('@/services/client', () => ({ __esModule: true, default: {} }));

@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
