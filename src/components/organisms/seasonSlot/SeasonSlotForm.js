@@ -778,6 +778,12 @@ function SeasonSlotForm({
   const heuresPleines = useMemo(() => (jour && !joursDifferents
     ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jour, slot?.documentId), capacite)
     : []), [capacite, jour, joursDifferents, lecture.data, slot?.documentId]);
+  // DATESDABORD (« 7- B ») — les heures complètes du jour de la date choisie (aussi pour une
+  // répétition sur plusieurs jours : celui de la date).
+  const jourDuModele = isoWeekdayOf(dateDuModele);
+  const pleinesDuJourChoisi = useMemo(() => (avecLeModele
+    ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jourDuModele, slot?.documentId), capacite)
+    : []), [avecLeModele, capacite, jourDuModele, lecture.data, slot?.documentId]);
   const heuresLibres = useMemo(
     () => (jour ? freeRanges(heuresPleines) : []),
     [heuresPleines, jour],
@@ -1944,6 +1950,19 @@ function SeasonSlotForm({
           onRepetition={changerLaRepetition}
           pleines={heuresPleines}
           repetition={repetitionDuModele}
+          // 🗓️ DATESDABORD (25/10, décision d'Adel « 7- B ») — sous la date choisie, les heures déjà
+          // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces de
+          // jours ne reviennent pas.
+          sousLaDate={pleinesDuJourChoisi.length ? (
+            <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="date-complet-du-jour">
+              {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                heures: pleinesDuJourChoisi
+                  .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                  .join(', '),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
           // Le tunnel plein écran est un <Modal> (couche 9999 sur le site) : la feuille « Répéter »
           // passe dessus, comme celle des vacances (porte du site, 390 px, DATESDABORD).
           webZIndex={tunnelPleinEcran ? 10000 : undefined}

@@ -208,12 +208,14 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   pleines?: Array<{ end: number, start: number }>,
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
+ *   sousLaDate?: import('react').ReactNode,
  *   webZIndex?: number,
  * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDate`,
  *   `libelleDebut`, `libelleFin` : les mots de l ecran (« Première date », « Début », « Fin » de
  *   la Ville) ; `finApres` et
  *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
- *   `onRepetition(null)` revient a « Une seule fois » ; `webZIndex` : la couche de la feuille sur
+ *   `onRepetition(null)` revient a « Une seule fois » ; `sousLaDate` : une ligne de l ecran
+ *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `webZIndex` : la couche de la feuille sur
  *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
  * @returns {import('react').ReactElement} Le bloc.
  */
@@ -232,6 +234,7 @@ function DateEtHoraire({
   pleines = undefined,
   repetition = null,
   sansRepetition = false,
+  sousLaDate = null,
   webZIndex = undefined,
 }) {
   const {
@@ -354,6 +357,7 @@ function DateEtHoraire({
         onChange={(/** @type {string} */ text) => onDate(mergeDateInput(text, date))}
         value={toDateInputText(date)}
       />
+      {sousLaDate}
 
       <View style={[Alignments.row, Spaces.gap[12]]}>
         <View style={{ flex: 1 }}>

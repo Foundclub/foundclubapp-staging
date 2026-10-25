@@ -467,6 +467,11 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await choisirLeJour(arbre, 4);
     expect(mockHeureProps.filter((p) => p.label === 'Début').at(-1).pleines).toEqual([{ end: 1170, start: 1080 }]);
     expect(lus(arbre).find((texte) => texte.startsWith('Libre ce jeudi'))).toBe('Libre ce jeudi : 08:00 – 18:00, 19:30 – 22:00.');
+    // DATESDABORD (25/10, décision d'Adel « 7- B ») — sous la date choisie, « complet … » quand ce
+    // jour a déjà des créneaux pleins (les puces de jours ne reviennent pas). ROUGE avant.
+    expect(lus(arbre)).toContain('complet 18:00 – 19:30');
+    await choisirLeJour(arbre, 1);
+    expect(lus(arbre).some((texte) => texte.startsWith('complet '))).toBe(false);
   });
 });
 
