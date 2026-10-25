@@ -43,11 +43,20 @@ const money = (value = 0) => new Intl.NumberFormat(localeDesFormats(), {
   currency: 'EUR',
   style: 'currency',
 }).format((value || 0) / 100);
-const currentSeason = () => `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+// BUGHUNT C03 / Q4-09 — la saison commence en aout, comme dans
+// ClubLicenseCampaignSettings (BH11 P5-02) : de janvier a juillet, c'est celle
+// commencee l'ete d'avant, pas la suivante.
+export const currentSeason = () => {
+  const today = new Date();
+  const startYear = today.getMonth() >= 7 ? today.getFullYear() : today.getFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
+};
 // BH11 P5-03 : espaces et points de milliers retires (« 1 000 », « 1.234,50 »).
 export const euroToCents = (value) => {
   let raw = String(value || '0').replace(/\s/g, '');
   if (raw.includes(',')) raw = raw.replace(/\./g, '').replace(',', '.');
+  // BUGHUNT C03 / Q4-23 : sans virgule, « 1.000 » est un point de milliers.
+  else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g, '');
   return Math.round(Number(raw) * 100);
 };
 
@@ -417,8 +426,13 @@ function CMLicensesDashboard({ navigation, route }) {
       t('cmLicensesDashboard.alerts.bulkCreate.title', 'Créer les campagnes manquantes'),
       t(
         'cmLicensesDashboard.alerts.bulkCreate.message',
-        '{{sectionCount}} section(s) recevront une campagne {{seasonLabel}}.',
-        { seasonLabel, sectionCount: missingSectionIds.length, ...SANS_ECHAPPEMENT },
+        '{{sectionCount}} section(s) recevront une campagne {{seasonLabel}} à {{amount}}.',
+        {
+          amount: money(amountCents),
+          seasonLabel,
+          sectionCount: missingSectionIds.length,
+          ...SANS_ECHAPPEMENT,
+        },
       ),
       [
         { style: 'cancel', text: t('cmLicensesDashboard.alerts.cancel', 'Annuler') },
