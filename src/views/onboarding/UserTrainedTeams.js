@@ -133,7 +133,9 @@ function UserTrainedTeams({ navigation, route }) {
       );
       const failed = results.filter((result) => result.status === 'rejected');
       if (failed.length) {
-        setSelectedTeamIds(teamIds.filter((_teamId, index) => results[index].status === 'rejected'));
+        setSelectedTeamIds(teamIds.filter(
+          (_teamId, index) => results[index].status === 'rejected',
+        ));
         refetchUserData?.();
         throw /** @type {PromiseRejectedResult} */ (failed[0]).reason;
       }

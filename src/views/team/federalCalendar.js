@@ -24,7 +24,8 @@ export function federalMatchDeadlineTs(rawDate, dateTs) {
  * @returns {'V'|'N'|'D'|''}
  */
 export function federalMatchResult(mine, other) {
-  if (mine === null || mine === undefined || mine === '' || other === null || other === undefined || other === '') return '';
+  const absent = (/** @type {unknown} */ score) => score === null || score === undefined || score === '';
+  if (absent(mine) || absent(other)) return '';
   const a = Number(mine);
   const b = Number(other);
   if (!Number.isFinite(a) || !Number.isFinite(b)) return '';

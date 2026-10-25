@@ -2021,7 +2021,7 @@ export default {
     errors: {
       assign: 'Unable to assign the coach to the selected teams.',
       noTeamSelected: 'Select at least one team.',
-      partial: '{{done}} team(s) assigned, {{failed}} failed. Try again for the remaining ones.',
+      partial: '{{done}} assigned, {{failed}} failed: try again for the others.',
       trainerNotFound: 'Unable to find this coach. Please try again.',
     },
     fallbacks: {

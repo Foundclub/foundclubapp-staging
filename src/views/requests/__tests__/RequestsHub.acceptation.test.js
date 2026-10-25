@@ -443,7 +443,10 @@ describe('Y04 — accepter une demande : la fenetre, la vitesse, et l echec', ()
       envois.push(carte.props.onPrimaryPress(carte.props.item));
       envois.push(carte.props.onPrimaryPress(carte.props.item));
     });
-    await act(async () => { liberations.forEach((liberer) => liberer({ ok: true })); await Promise.all(envois); });
+    await act(async () => {
+      liberations.forEach((liberer) => liberer({ ok: true }));
+      await Promise.all(envois);
+    });
 
     expect(acceptTeamMembershipRequest).toHaveBeenCalledTimes(1);
   });

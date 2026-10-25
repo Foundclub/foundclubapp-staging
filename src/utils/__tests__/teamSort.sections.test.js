@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { getSectionSortScore } from '../teamSort';
 
 // BH12 P3-15 : les sections s'appellent « Masculin » / « Féminin », pas « masculine » / « feminine ».

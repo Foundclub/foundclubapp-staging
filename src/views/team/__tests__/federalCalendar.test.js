@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { federalMatchDeadlineTs, federalMatchResult } from '../federalCalendar';
 
 describe('calendrier fédéral (BH12)', () => {

@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 

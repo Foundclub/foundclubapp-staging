@@ -305,7 +305,7 @@ describe('AssignCoachTeams — ce que l ecran fait (fige par D62)', () => {
 });
 
 describe('BH12 P11-12 — echec partiel', () => {
-  it('une equipe rattachee, une en echec : la liste se relit et le message ne dit pas « rien n est fait »', async () => {
+  it('une rattachee, une en echec : la liste se relit, le message n est pas « rien »', async () => {
     const { Alert } = jest.requireActual('react-native');
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockTeamsQuery.data = {

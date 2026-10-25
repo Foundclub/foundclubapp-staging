@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { teamWizardReducer } from '../TeamWizardContext';
 
 // BH12 P12-01 : rouvrir l'assistant depuis un AUTRE club ne doit pas garder le club precedent.

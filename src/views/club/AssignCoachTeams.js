@@ -122,7 +122,8 @@ function AssignCoachTeams({ navigation, route }) {
 
       const rejected = results.filter((result) => result.status === 'rejected');
       if (rejected.length > 0) {
-        const partialError = /** @type {Error & { done?: number, failed?: number }} */ (new Error('Some assignments failed'));
+        /** @type {Error & { done?: number, failed?: number }} */
+        const partialError = new Error('Some assignments failed');
         partialError.done = results.length - rejected.length;
         partialError.failed = rejected.length;
         throw partialError;
@@ -136,7 +137,7 @@ function AssignCoachTeams({ navigation, route }) {
         assignError?.done > 0
           ? t(
             'assignCoachTeams.errors.partial',
-            '{{done}} équipe(s) assignée(s), {{failed}} en échec. Réessaie pour celles qui restent.',
+            '{{done}} assignée(s), {{failed}} en échec : réessaie pour les autres.',
             { done: assignError.done, failed: assignError.failed },
           )
           : t(

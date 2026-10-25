@@ -489,7 +489,9 @@ describe('BH12 P12-15 — le sport choisi survit au chargement de la liste', () 
         null,
         createElement(PriseDeCourant),
         createElement(Lecteur),
-        createElement(TeamWizardActivity, { navigation: /** @type {any} */ ({ getParent: () => null, navigate: jest.fn(), reset: jest.fn() }) }),
+        createElement(TeamWizardActivity, {
+          navigation: /** @type {any} */ ({ getParent: () => null, navigate: jest.fn(), reset: jest.fn() }),
+        }),
       ));
     });
     act(() => {
