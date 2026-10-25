@@ -9303,10 +9303,15 @@ function EventDetails({ navigation, route }) {
           setIsRefuseModalVisible(false);
         }}
       />
+      {/* Q3-10 — la feuille restait ouverte après l'envoi : chaque appui créait un signalement. */}
       <ReportEventModal
+        isLoading={mutations.reportEventMutation.isPending}
         isVisible={isReportModalVisible}
         onClose={() => setIsReportModalVisible(false)}
-        onSubmit={(reason) => mutations.reportEventMutation.mutate({ event: eventId || '', reason })}
+        onSubmit={(reason) => {
+          setIsReportModalVisible(false);
+          mutations.reportEventMutation.mutate({ event: eventId || '', reason });
+        }}
       />
       <ShareEventModal
         event={event ? {
