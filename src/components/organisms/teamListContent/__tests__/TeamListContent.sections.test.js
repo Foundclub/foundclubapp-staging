@@ -894,6 +894,21 @@ describe('EQUIPES — Q7 : la file de validation du dirigeant', () => {
     expect(appels.every((/** @type {any[]} */ appel) => appel[1]?.enabled === false)).toBe(true);
   });
 
+  // C04 Q3-14 (BUGHUNT phase 2, 25/10) — la carte de l equipe A VALIDER disait au dirigeant
+  // « Ta demande pour rejoindre cette equipe » : ce n est pas sa demande. Le badge EN ATTENTE
+  // reste ; le bandeau « Ta demande… » n a rien a faire la (l explication est dessous).
+  it('C04 Q3-14 — la carte a valider ne parle pas de « ta demande »', async () => {
+    mockEnAttenteDeValidation.mockReturnValue({
+      data: [EQUIPE_A_VALIDER], error: null, isLoading: false,
+    });
+
+    const tree = await renderList({ clubId: 'c-1' });
+    const carte = cardTexts(findCard(tree, 'U11 du coach'));
+
+    expect(carte).toContain('EN ATTENTE');
+    expect(carte.join(' | ')).not.toContain('Ta demande');
+  });
+
   it('sans equipe en attente, la section ne change pas d un pouce', async () => {
     const tree = await renderList({ clubId: 'c-1' });
     const textes = collectText(tree.toJSON());

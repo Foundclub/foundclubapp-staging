@@ -202,6 +202,22 @@ describe('A7-UX — sur le site, le choix de l heure aux couleurs de FoundClub',
     expect(rendues).toEqual(['17:30', '09:05', '']);
   });
 
+  // C04 Q1-01 (25/10) : touche par touche, « 1230 » devenait 01:23 (la 3e touche réécrivait).
+  test('🔴 C04 Q1-01 : taper 1230, 2015, 2100 touche par touche écrit la bonne heure', () => {
+    const arbre = monter();
+    const taperTouches = (/** @type {string} */ touches) => {
+      touches.split('').forEach((c) => {
+        act(() => { champ(arbre).props.onChangeText(`${champ(arbre).props.value}${c}`); });
+      });
+      const derniere = rendues[rendues.length - 1];
+      act(() => { champ(arbre).props.onChangeText(''); });
+      return derniere;
+    };
+
+    expect([taperTouches('1230'), taperTouches('12:30'), taperTouches('2015'), taperTouches('2100'),
+      taperTouches('930')]).toEqual(['12:30', '12:30', '20:15', '21:00', '09:30']);
+  });
+
   test('🔴 au clavier : les flèches avancent ou reculent d un quart d heure', () => {
     const arbre = monter({ value: '17:30' });
 

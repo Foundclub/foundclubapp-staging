@@ -278,9 +278,10 @@ const PhoneInput = forwardRef(
      * This also covers Android autofill, which can update the native field
      * without always emitting the usual character-by-character change events.
      * @param {string} rawValue
+     * @param {any} [indicatif] - L'indicatif à appliquer (par défaut, celui affiché).
      * @returns {string}
      */
-    const getInternationalValue = useCallback((rawValue) => {
+    const getInternationalValue = useCallback((rawValue, indicatif = dialCode) => {
       const normalizedRawValue = String(rawValue || '').trim();
       if (!normalizedRawValue) {
         return '';
@@ -289,9 +290,10 @@ const PhoneInput = forwardRef(
       const compactDigits = normalizedRawValue.replace(/[^\d+]/g, '');
       const nationalDigits = compactDigits.replace(/[^\d]/g, '');
       const localDigits = nationalDigits.startsWith('0') ? nationalDigits.slice(1) : nationalDigits;
-      const prefixedDialCodeValue = dialCode?.value
-        ? `${dialCode.value}${localDigits}`
+      const prefixedDialCodeValue = indicatif?.value
+        ? `${indicatif.value}${localDigits}`
         : normalizedRawValue;
+      const paysParDefaut = getDialOptionCountryCode(indicatif).toUpperCase() || 'FR';
 
       const parseCandidates = [
         normalizedRawValue,
@@ -305,7 +307,7 @@ const PhoneInput = forwardRef(
         }
 
         try {
-          const nextPhoneNumber = parsePhoneNumberFromString(candidate, defaultCountryCode);
+          const nextPhoneNumber = parsePhoneNumberFromString(candidate, paysParDefaut);
           return nextPhoneNumber?.number || '';
         } catch (parseError) {
           // Ignore parse errors and continue through normalization fallbacks.
@@ -321,18 +323,27 @@ const PhoneInput = forwardRef(
         return compactDigits;
       }
 
-      if (dialCode?.value && localDigits) {
-        return `${dialCode.value}${localDigits}`;
+      if (indicatif?.value && localDigits) {
+        return `${indicatif.value}${localDigits}`;
       }
 
       return '';
-    }, [defaultCountryCode, dialCode?.value]);
+    }, [dialCode]);
 
     const handleChangeText = useCallback((nextValue) => {
       isEditingRef.current = true;
       setDraftValue(formatPhoneDraftValue(nextValue, defaultCountryCode, setDialCode));
       onChange(getInternationalValue(nextValue));
     }, [defaultCountryCode, getInternationalValue, onChange]);
+
+    // C04 Q2-01 — changer d'indicatif après avoir tapé le numéro réécrit le numéro du formulaire :
+    // le champ affichait « BE +32 » mais le SMS partait vers le numéro en +33.
+    const handleDialCodeChange = useCallback((nextDialCode) => {
+      setDialCode(nextDialCode);
+      if (nextDialCode && String(draftValue || '').trim()) {
+        onChange(getInternationalValue(draftValue, nextDialCode));
+      }
+    }, [draftValue, getInternationalValue, onChange]);
 
     const handleEndEditing = useCallback((event) => {
       const nextValue = String(event?.nativeEvent?.text || '');
@@ -360,7 +371,7 @@ const PhoneInput = forwardRef(
             : undefined}
           searchValue={searchDialCode}
           setSearchValue={setSearchDialCode}
-          setValue={setDialCode}
+          setValue={handleDialCodeChange}
           value={dialCode ? dialCode.value : ''}
           wrapperStyle={{ width: DIALCODE_WIDTH }}
         />

@@ -462,4 +462,25 @@ describe('FINITIONS14 · « Enregistrer » relit la fiche de l equipe AVANT d y 
     expect(valeurAfficheeDu('level')).toBe('Departemental');
     act(() => arbre.unmount());
   });
+
+  // C04 Q1-03 (25/10) — le champ des entraineurs recevait un TEXTE (« Jean X, Marie X ») : le
+  // vrai selecteur n y reconnaissait aucune case, et ouvrir puis valider sans rien toucher
+  // renvoyait `[]` — l equipe etait enregistree sans entraineurs. Il recoit les identifiants.
+  it('C04 Q1-03 — le champ des entraineurs recoit les identifiants', () => {
+    const equipeAvant = ENVELOPPES.equipe;
+    const clubAvant = ENVELOPPES.club;
+    const entraineur = (/** @type {string} */ id, /** @type {string} */ prenom) => ({
+      documentId: id, firstname: prenom, lastname: 'X', role: { name: 'Entraineur' },
+    });
+    const membres = [entraineur('docJ', 'Jean'), entraineur('docM', 'Marie')];
+    const trainers = [{ documentId: 'docJ' }, { documentId: 'docM' }];
+    ENVELOPPES.club = { ...clubAvant, data: { ...CLUB, members: membres } };
+    ENVELOPPES.equipe = { ...equipeAvant, data: { ...EQUIPE, trainers } };
+    const arbre = monter();
+    ENVELOPPES.equipe = equipeAvant;
+    ENVELOPPES.club = clubAvant;
+
+    expect(valeurAfficheeDu('trainers')).toEqual(['docJ', 'docM']);
+    act(() => arbre.unmount());
+  });
 });

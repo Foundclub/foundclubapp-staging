@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { formatBirthdateToDisplay, isExistingBirthdate } from '@/domains/auth/authUseCases';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -60,6 +61,7 @@ function CreateTrainerModal({
     formState: { errors: formErrors },
     handleSubmit,
     reset,
+    setError,
   } = useForm({
     defaultValues,
     mode: 'onBlur',
@@ -90,12 +92,24 @@ function CreateTrainerModal({
 
   const handleFormSubmit = useCallback(
     (/** @type {typeof defaultValues & { clubId?: string }} */ data) => {
+      // C04 Q2-06 — un jour qui n'existe pas (« 31/02/2010 ») est refusé ici, pas par le
+      // schéma : sur le site, la doublure de Joi valide tout.
+      if (data.birthdate && !isExistingBirthdate(data.birthdate)) {
+        setError('birthdate', {
+          message: t(
+            'profile.errors.birthdateIncomplete',
+            'Renseigne une date de naissance valide pour continuer.',
+          ),
+          type: 'date',
+        });
+        return;
+      }
       createTrainerMutation.mutate({
         ...data,
         ...(clubId ? { clubId } : {}),
       });
     },
-    [clubId, createTrainerMutation],
+    [clubId, createTrainerMutation, setError, t],
   );
 
   const handleClose = useCallback(() => {
@@ -214,7 +228,10 @@ function CreateTrainerModal({
               label={t('profile.fields.birthdate.label', 'Date de naissance')}
               maxLength={10}
               onBlur={onBlur}
-              onChangeText={onChange}
+              // C04 Q2-13 — le pavé numérique n'a pas de « / » : la saisie se met en forme seule.
+              onChangeText={(/** @type {string} */ texte) => (
+                onChange(formatBirthdateToDisplay(texte))
+              )}
               placeholder="JJ/MM/AAAA"
               ref={ref}
               value={value}

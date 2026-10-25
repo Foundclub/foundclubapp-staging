@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -13,6 +13,21 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 const ITEM_HEIGHT = 50;
+
+/**
+ * C04 Q1-02 — change le mois et l'année en ramenant le jour au dernier jour du mois visé :
+ * « 31 janvier » puis février donnait le 3 mars.
+ * @param {Date} date
+ * @param {number} mois
+ * @param {number} annee
+ * @returns {Date}
+ */
+const avecMoisEtAnnee = (date, mois, annee) => {
+  const suivante = new Date(date);
+  const dernierJour = new Date(annee, mois + 1, 0).getDate();
+  suivante.setFullYear(annee, mois, Math.min(date.getDate(), dernierJour));
+  return suivante;
+};
 
 /**
  * @typedef {{label?: string, value: number}} WheelObjectItem
@@ -51,6 +66,8 @@ export function WheelPicker({
   const centerOffset = ((visibleItems - 1) * ITEM_HEIGHT) / 2;
   const { Colors, Fonts } = useTheme();
   const scrollRef = useRef(/** @type {ScrollView | null} */ (null));
+  const minuterieRef = useRef(/** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined));
+  useEffect(() => () => clearTimeout(minuterieRef.current), []);
 
   const selectedIndex = data.findIndex((item) => {
     if (typeof item === 'object') return item.value === selectedValue;
@@ -72,7 +89,14 @@ export function WheelPicker({
    * @param {import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>} event
    */
   const handleScrollComplete = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
+    choisirA(event.nativeEvent.contentOffset.y);
+  };
+
+  /**
+   * Choisit l'élément arrêté au centre de la roue.
+   * @param {number} offsetY
+   */
+  function choisirA(offsetY) {
     const index = Math.round(offsetY / ITEM_HEIGHT);
     const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
     const item = data[clampedIndex];
@@ -82,6 +106,17 @@ export function WheelPicker({
     if (newValue !== selectedValue) {
       onValueChange(newValue);
     }
+  }
+
+  /**
+   * C04 Q1-06 — le site n'émet jamais `onMomentumScrollEnd` : la roue s'arrête quand la molette
+   * ne bouge plus depuis 150 ms.
+   * @param {{ nativeEvent: { contentOffset: { y: number } } }} event
+   */
+  const handleScrollWeb = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    clearTimeout(minuterieRef.current);
+    minuterieRef.current = setTimeout(() => choisirA(offsetY), 150);
   };
 
   return (
@@ -104,6 +139,7 @@ export function WheelPicker({
         decelerationRate="fast"
         nestedScrollEnabled
         onMomentumScrollEnd={handleScrollComplete}
+        onScroll={Platform.OS === 'web' ? handleScrollWeb : undefined}
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         snapToAlignment="start"
@@ -261,7 +297,12 @@ function DateTimeSelector({
   ]), []);
 
   const currentYear = new Date().getFullYear();
-  const years = useMemo(() => Array.from({ length: 5 }, (_, index) => currentYear + index), [currentYear]);
+  // C04 Q1-10 — une date d'une année passée garde son année dans la roue.
+  const firstYear = Math.min(currentYear, year);
+  const years = useMemo(
+    () => Array.from({ length: currentYear + 5 - firstYear }, (_, index) => firstYear + index),
+    [currentYear, firstYear],
+  );
   const hours = useMemo(() => Array.from({ length: 24 }, (_, index) => index), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, index) => index * 5), []);
   const isInlineTimeMode = display === 'inline' && mode === 'time';
@@ -334,8 +375,7 @@ function DateTimeSelector({
                   data={months}
                   isOpen={isOpen}
                   onValueChange={(monthValue) => {
-                    const nextDate = new Date(tempDate);
-                    nextDate.setMonth(monthValue);
+                    const nextDate = avecMoisEtAnnee(tempDate, monthValue, tempDate.getFullYear());
                     setTempDate(nextDate);
                     onChange(nextDate);
                   }}
@@ -346,8 +386,7 @@ function DateTimeSelector({
                   data={years}
                   isOpen={isOpen}
                   onValueChange={(yearValue) => {
-                    const nextDate = new Date(tempDate);
-                    nextDate.setFullYear(yearValue);
+                    const nextDate = avecMoisEtAnnee(tempDate, tempDate.getMonth(), yearValue);
                     setTempDate(nextDate);
                     onChange(nextDate);
                   }}
@@ -430,8 +469,7 @@ function DateTimeSelector({
                   data={months}
                   isOpen={isOpen}
                   onValueChange={(monthValue) => {
-                    const nextDate = new Date(tempDate);
-                    nextDate.setMonth(monthValue);
+                    const nextDate = avecMoisEtAnnee(tempDate, monthValue, tempDate.getFullYear());
                     setTempDate(nextDate);
                   }}
                   selectedValue={tempDate.getMonth()}
@@ -441,8 +479,7 @@ function DateTimeSelector({
                   data={years}
                   isOpen={isOpen}
                   onValueChange={(yearValue) => {
-                    const nextDate = new Date(tempDate);
-                    nextDate.setFullYear(yearValue);
+                    const nextDate = avecMoisEtAnnee(tempDate, tempDate.getMonth(), yearValue);
                     setTempDate(nextDate);
                   }}
                   selectedValue={tempDate.getFullYear()}

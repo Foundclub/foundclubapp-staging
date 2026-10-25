@@ -606,9 +606,12 @@ function TeamListContent({
 
   const renderTeamCard = useCallback((
     /** @type {Team} */ item,
-    /** @type {'invited' | 'pending' | null} */ stateVariant = null,
+    /** @type {'awaitingApproval' | 'invited' | 'pending' | null} */ stateVariant = null,
   ) => {
-    const isPending = stateVariant === 'pending';
+    // C04 Q3-14 — `awaitingApproval` : l'équipe qu'un entraîneur a créée et que le dirigeant
+    // valide. Même carte EN ATTENTE, sans le bandeau « Ta demande… » (ce n'est pas la sienne).
+    const isAwaitingApproval = stateVariant === 'awaitingApproval';
+    const isPending = stateVariant === 'pending' || isAwaitingApproval;
     const isInvitation = stateVariant === 'invited';
     const pendingBorderColor = Colors.warning500 || Colors.gold500;
     const invitationBorderColor = Colors.gold500 || Colors.primary500;
@@ -744,7 +747,7 @@ function TeamListContent({
       if (isInvitation) {
         noticeKind = 'teamInvite';
       }
-      if (isPending) {
+      if (isPending && !isAwaitingApproval) {
         if (!isClubRequestCard) {
           noticeKind = 'teamJoin';
         } else {
@@ -1189,7 +1192,7 @@ function TeamListContent({
           {/* compris) ; ce qu on ajoute, c est le GESTE, juste en dessous. */}
           {teamsAwaitingApproval.map((/** @type {any} */ team) => (
             <View key={`awaiting-approval-${team.documentId}`} style={[Spaces.marginBottom[16]]}>
-              {renderTeamCard(team, 'pending')}
+              {renderTeamCard(team, 'awaitingApproval')}
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], Spaces.marginBottom[8]]}>
                 {t(
                   'teamList.awaitingApproval.explanation',

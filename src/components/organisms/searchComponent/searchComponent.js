@@ -52,7 +52,8 @@ function SearchComponent({
     previousDefaultValueRef.current = nextDefaultValue;
     lastEmittedValueRef.current = normalizeSearchValue(nextDefaultValue);
 
-    if (search === nextDefaultValue) {
+    // C04 Q3-16 — « a » part comme « » : la liste qui renvoie « » ne doit pas vider la barre.
+    if (normalizeSearchValue(search) === nextDefaultValue) {
       return;
     }
 

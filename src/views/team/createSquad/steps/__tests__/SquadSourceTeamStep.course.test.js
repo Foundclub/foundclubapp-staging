@@ -33,3 +33,25 @@ test('P12-16 : la réponse tardive de la première équipe n écrase pas la seco
   await act(async () => { mockAttente.a({ name: 'Equipe A' }); await pA; });
   expect(donnees.name).toBe('Equipe B');
 });
+
+// C04 Q4-16 (BUGHUNT phase 2, 25/10) : une equipe de la section « Féminine » (accent) donnait une
+// squad reglee en Masculin, car « féminine » ne contient pas « fem ».
+test.each([
+  ['Féminine', 'female'],
+  ['Feminine', 'female'],
+  ['Femmes', 'female'],
+  ['Mixte', 'mixed'],
+  ['Masculine', 'male'],
+])('C04 Q4-16 : la section « %s » de l equipe source donne %s', async (nom, attendu) => {
+  const donnees = {};
+  const updateData = (cle, valeur) => { donnees[cle] = valeur; };
+  act(() => {
+    renderer.create(createElement(SquadSourceTeamStep, {
+      data: {}, onNext: jest.fn(), onPrev: jest.fn(), updateData, user: { trainedTeams: [] },
+    }));
+  });
+  let p;
+  act(() => { p = mockSetValue({ label: 'S', value: `s-${nom}` }); });
+  await act(async () => { mockAttente[`s-${nom}`]({ name: 'S', section: { name: nom } }); await p; });
+  expect(donnees.section?.value).toBe(attendu);
+});

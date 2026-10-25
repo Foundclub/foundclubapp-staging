@@ -278,6 +278,9 @@ const AutocompleteSelect = forwardRef(
     };
 
     const handleCloseModal = (persistSelection = true) => {
+      // C04 Q1-07 — déjà refermée par le code (« Ajouter « X » ») : la fin de l'animation rappelle
+      // `close()` sans argument, ce qui enregistrait l'adresse cochée et rappelait `onBlur`.
+      if (!areValuesVisible) return;
       // ⛔ Plus rien a annuler ici : l'ouverture n'est plus differee, donc il
       // n'existe plus d'ouverture « en attente » a rattraper a la fermeture.
       //
