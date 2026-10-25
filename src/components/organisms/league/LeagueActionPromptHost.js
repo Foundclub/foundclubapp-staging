@@ -28,6 +28,7 @@ import { shouldMaskOpponentIdentity } from '@/views/league/match/utils/matchStat
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
 import { buildCanonicalLeagueProposalPayload } from '@/views/league/match/utils/proposalPayload';
 
+import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import {
   getCurrentRouteName,
   getCurrentRouteTrail,
@@ -144,6 +145,22 @@ const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
 /**
  * @param {{ skipInitialFetch?: boolean }} [props]
  */
+/**
+ * Ouvre la saisie du score d un match de ligue.
+ *
+ * C07 / Q2-14 : sur telephone, `navigate` rend toujours true, le repli n etait
+ * donc jamais tente ; et l ecran ne vit que dans la pile de la ligue. On passe
+ * directement par ses hotes depuis la racine. Le site garde l adresse directe.
+ * @param {string} matchId
+ * @returns {void}
+ */
+export const openLeagueScoreFlow = (matchId) => {
+  if (!matchId) return;
+  const destination = { params: { matchId }, route: END_MATCH_ROUTE };
+  const cible = Platform.OS === 'web' ? destination : imbriquerDepuisLaRacine(destination);
+  navigate(String(cible?.route), cible?.params);
+};
+
 function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -592,27 +609,6 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     });
   }, [dismissForSession, nextActionMatchId, promptMatchFocusSection]);
 
-  const openLeagueScoreFlow = useCallback(
-    /**
-     * @param {string} matchId
-     */
-    (matchId) => {
-      if (!matchId) return;
-      if (navigate(END_MATCH_ROUTE, { matchId })) {
-        return;
-      }
-
-      navigate(RouteNames.LeagueHomeTab, {
-        params: {
-          params: { matchId },
-          screen: END_MATCH_ROUTE,
-        },
-        screen: RouteNames.LeagueDashboard,
-      });
-    },
-    [],
-  );
-
   const dismissThenOpenLeagueScoreFlow = useCallback(
     /**
      * @param {string} matchId
@@ -625,7 +621,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
         openLeagueScoreFlow(matchId);
       }, 0);
     },
-    [dismissForSession, openLeagueScoreFlow],
+    [dismissForSession],
   );
 
   useEffect(() => {
