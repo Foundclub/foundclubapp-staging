@@ -559,7 +559,7 @@ export const describeBulkOutcome = (summary, t) => {
   }
 
   const codes = Array.from(new Set((summary?.failures || []).map((failure) => failure.code)));
-  if (codes.length === 1 && codes[0] === WINDOW_CLOSED_CODE) {
+  if (codes.length === 1 && codes[0] === WINDOW_CLOSED_CODE && marked === 0) {
     return t(
       'eventDetails.attendanceCall.bulk.windowClosed',
       "Personne n'a été pointé : l'appel n'est pas ouvert en ce moment.",

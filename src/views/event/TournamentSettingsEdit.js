@@ -154,8 +154,15 @@ function TournamentSettingsEdit({ navigation, route }) {
   const qualifiedPerGroup = useMemo(() => parseOptionalInteger(qualifiedPerGroupText) || 1, [qualifiedPerGroupText]);
   const bestThirdPlacesCount = useMemo(() => Number.parseInt(String(bestThirdPlacesText || '0'), 10) || 0, [bestThirdPlacesText]);
   const knockoutSize = useMemo(() => Number.parseInt(String(knockoutSizeText || '0'), 10) || 0, [knockoutSizeText]);
-  const pointsWin = useMemo(() => Number.parseInt(String(pointsWinText || '3'), 10) || 3, [pointsWinText]);
-  const pointsDraw = useMemo(() => Number.parseInt(String(pointsDrawText || '1'), 10) || 1, [pointsDrawText]);
+  // BH08 · P8-13 : 0 point est un choix ; on ne revient au defaut que sur une saisie illisible.
+  const pointsWin = useMemo(() => {
+    const valeur = Number.parseInt(String(pointsWinText || '3'), 10);
+    return Number.isNaN(valeur) ? 3 : valeur;
+  }, [pointsWinText]);
+  const pointsDraw = useMemo(() => {
+    const valeur = Number.parseInt(String(pointsDrawText || '1'), 10);
+    return Number.isNaN(valeur) ? 1 : valeur;
+  }, [pointsDrawText]);
   const pointsLoss = useMemo(() => Number.parseInt(String(pointsLossText || '0'), 10) || 0, [pointsLossText]);
   const pointsForfeit = useMemo(() => Number.parseInt(String(pointsForfeitText || '0'), 10) || 0, [pointsForfeitText]);
   const isRosterRangeInvalid = Boolean(minRosterSize && maxRosterSize && minRosterSize > maxRosterSize);

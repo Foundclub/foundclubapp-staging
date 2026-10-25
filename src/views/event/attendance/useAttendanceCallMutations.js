@@ -122,7 +122,9 @@ export const useAttendanceCallMutations = (eventId) => {
    * elle-meme tombe (reseau, 403), cas ou `items` n existe pas.
    */
   const bulkMutation = useMutation({
-    mutationFn: async (/** @type {any} */ { note, userIds }) => {
+    mutationFn: async (/** @type {any} */ {
+      arrivedAt, lateMinutes, note, userIds,
+    }) => {
       const chunks = chunkUserIds(userIds);
       const summaries = [];
       // Sequentiel, et c est voulu : ces paquets ecrivent tous la meme
@@ -130,7 +132,9 @@ export const useAttendanceCallMutations = (eventId) => {
       // memes lignes pour gagner quelques centaines de millisecondes.
       for (let index = 0; index < chunks.length; index += 1) {
         // eslint-disable-next-line no-await-in-loop
-        const response = await markCoachArrivalBulk(eventId, { note, userIds: chunks[index] });
+        const response = await markCoachArrivalBulk(eventId, {
+          arrivedAt, lateMinutes, note, userIds: chunks[index],
+        });
         summaries.push(summarizeBulkOutcome(response));
       }
       return summaries.reduce((total, summary) => ({
