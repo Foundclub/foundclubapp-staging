@@ -11,6 +11,8 @@ import EventMessageBubble from '../EventMessageBubble';
 
 const mockNavigate = jest.fn();
 const mockEvenementComplet = jest.fn();
+/** @type {any} */
+let mockMoi = { documentId: 'moi', role: { name: 'Joueur' } };
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
@@ -72,7 +74,7 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: { documentId: 'moi', role: { name: 'Joueur' } } }),
+  default: () => ({ userData: mockMoi }),
 }));
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
@@ -246,5 +248,36 @@ describe('EventMessageBubble — l evenement partage du fil (pack MSG1A)', () =>
     const arbre = rendre();
     expect(textes(arbre)).toContain('Apercu');
     expect(parId(arbre, 'evenement-ouvrir').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Q1-12 — match amical partagé, vu par l équipe invitée', () => {
+  afterEach(() => {
+    mockMoi = { documentId: 'moi', role: { name: 'Joueur' } };
+  });
+
+  test('l invitée lit l équipe qui reçoit en adversaire, pas son propre nom', () => {
+    mockMoi = { documentId: 'moi', myTeams: [{ documentId: 'val' }], role: { name: 'Joueur' } };
+    mockEvenementComplet.mockReturnValue(evenement({
+      invitedTeams: [{ documentId: 'val', name: 'Valbrune U13' }],
+      name: 'Match vs Valbrune U13',
+      opponentName: 'Valbrune U13',
+      team: { documentId: 'host', name: 'Club Hôte U13', players: [] },
+      type: { name: 'Match amical' },
+    }));
+    const texte = textes(rendre());
+    expect(texte).toContain('VS Club Hôte U13');
+    expect(texte).not.toContain('VS Valbrune U13');
+  });
+
+  test('l équipe qui reçoit garde « VS Valbrune U13 »', () => {
+    mockMoi = { documentId: 'moi', myTeams: [{ documentId: 'host' }], role: { name: 'Joueur' } };
+    mockEvenementComplet.mockReturnValue(evenement({
+      invitedTeams: [{ documentId: 'val', name: 'Valbrune U13' }],
+      opponentName: 'Valbrune U13',
+      team: { documentId: 'host', name: 'Club Hôte U13', players: [] },
+      type: { name: 'Match amical' },
+    }));
+    expect(textes(rendre())).toContain('VS Valbrune U13');
   });
 });
