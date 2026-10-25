@@ -514,10 +514,16 @@ describe('BUGHUNT C03 — recapitulatif du tour guide', () => {
   it('Q1-04 — l achat Équipe ne coche pas une équipe que le club paie déjà', async () => {
     const auth = authValue();
     auth.subscriptionSummary = {
-      teamSlotSummary: { coveredTeamDocumentIds: [], coveredTeams: [{ reason: 'club', teamDocumentId: 'A' }] },
+      teamSlotSummary: {
+        coveredTeamDocumentIds: [],
+        coveredTeams: [{ reason: 'club', teamDocumentId: 'A' }],
+      },
     };
     auth.userData.myTeams = [];
-    auth.userData.trainedTeams = [{ documentId: 'A', name: 'A U13' }, { documentId: 'B', name: 'B U15' }];
+    auth.userData.trainedTeams = [
+      { documentId: 'A', name: 'A U13' },
+      { documentId: 'B', name: 'B U15' },
+    ];
     const tree = renderRecap(auth);
 
     await act(async () => { findByText(tree, 'Débloquer Équipe · 59,99 €/an').props.onPress(); });
@@ -531,7 +537,8 @@ describe('BUGHUNT C03 — recapitulatif du tour guide', () => {
 
     await act(async () => { findByText(tree, 'Débloquer Équipe · 59,99 €/an').props.onPress(); });
 
-    expect(mockTrackFunnelEvent.mock.calls.map((appel) => appel[0])).not.toContain('recap_unlock_succeeded');
+    const evenements = mockTrackFunnelEvent.mock.calls.map((appel) => appel[0]);
+    expect(evenements).not.toContain('recap_unlock_succeeded');
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -717,13 +717,13 @@ function SubscriptionPaywallSheet({
         offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
         pendingActivation: renewal.pendingActivation,
         renewalDateLabel: renewal.renewalDateLabel,
-        // BUGHUNT C03 / Q1-08 — un CHANGEMENT que le magasin n'a pas encaisse ne
-        // prend effet qu'a l'echeance (meme regle que SubscriptionOffers).
-        takesEffectAtRenewal: Boolean(storeChangeTarget) && isDeferredStorePlanChange(result),
         resumeCtaLabel: sellingSheet?.successCtaLabel || t(
           'subscriptionPaywallSheet.resumeCta',
           'Reprendre',
         ),
+        // BUGHUNT C03 / Q1-08 — un CHANGEMENT que le magasin n'a pas encaisse ne
+        // prend effet qu'a l'echeance (meme regle que SubscriptionOffers).
+        takesEffectAtRenewal: Boolean(storeChangeTarget) && isDeferredStorePlanChange(result),
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('paywall_purchase_failed', {

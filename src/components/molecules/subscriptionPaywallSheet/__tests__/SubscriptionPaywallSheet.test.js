@@ -978,7 +978,7 @@ describe('BUGHUNT C03 — feuille de vente', () => {
     expect(mockPerformPurchase.mock.calls[0][0].teamDocumentIds).toEqual(['C']);
   });
 
-  it('Q1-05 — un passage vers Stripe n est ni compté ni présenté comme un achat réussi', async () => {
+  it('Q1-05 — un passage vers Stripe n est ni compté ni présenté comme réussi', async () => {
     mockPerformPurchase.mockResolvedValue({ checkoutRedirect: true, sessionId: 'cs_1' });
     const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
 
@@ -991,7 +991,7 @@ describe('BUGHUNT C03 — feuille de vente', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('Q1-08 — un changement d offre que le magasin n encaisse pas prend effet à l échéance', async () => {
+  it('Q1-08 — un changement non encaissé par le magasin prend effet à l échéance', async () => {
     mockRail = 'revenuecat';
     // Ce que rend le rail quand Apple n'a fait que noter une preference de
     // renouvellement : la reponse du serveur, et l'achat sans transaction.
@@ -1049,7 +1049,9 @@ describe('BUGHUNT C03 — feuille de vente', () => {
     });
 
     // Les prix RevenueCat arrivent : le catalogue change de reference.
-    mockCatalogQueryState = { data: { data: [...CATALOG_ENTRIES] }, isError: false, isLoading: false };
+    mockCatalogQueryState = {
+      data: { data: [...CATALOG_ENTRIES] }, isError: false, isLoading: false,
+    };
     act(() => {
       tree.update(
         <SubscriptionPaywallSheet

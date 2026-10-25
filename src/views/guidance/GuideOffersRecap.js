@@ -508,9 +508,9 @@ function GuideOffersRecap({ navigation }) {
         pendingActivation: renewal.pendingActivation,
         renewalDateLabel: renewal.renewalDateLabel,
         resumeCtaLabel: t('guideOffersRecap.success.resumeCta', "C'est parti !"),
+        resumeMode: 'home',
         // BUGHUNT C03 / Q1-08 — changement non encaisse par le magasin.
         takesEffectAtRenewal: Boolean(storeChangeTarget) && isDeferredStorePlanChange(result),
-        resumeMode: 'home',
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('recap_unlock_failed', {
