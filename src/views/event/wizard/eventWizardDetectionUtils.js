@@ -266,20 +266,19 @@ export const getDefaultSessionStatusForEventType = (typeName = '') => {
 export const getEventWizardStepRoutes = (state = {}) => {
   const routes = [RouteNames.EventWizardType, RouteNames.EventWizardTeam];
 
+  // 🗓️ DATESDABORD (25/10, décision d'Adel « 6- B ») — LE LIEU D'ABORD : l'installation choisie,
+  // l'étape « Date & horaire » dit à chaque horaire si le créneau est libre ou déjà pris pour
+  // elle. Le stage garde son programme (dates et lieux par jour) avant le lieu.
   if (isStageEventType(state?.type?.name)) {
-    routes.push(RouteNames.EventWizardStageProgram);
+    routes.push(RouteNames.EventWizardStageProgram, RouteNames.EventWizardLocation);
   } else {
-    routes.push(RouteNames.EventWizardLogistics);
+    routes.push(RouteNames.EventWizardLocation, RouteNames.EventWizardLogistics);
   }
 
-  // Y02 — « Contre qui ? », UNIQUEMENT pour un match. Elle est placee juste
-  // apres l'equipe et la date parce que c'est la qu'on pense a l'adversaire,
-  // et avant le lieu : savoir qui l'on recoit aide a choisir ou l'on joue.
+  // Y02 — « Contre qui ? », UNIQUEMENT pour un match, juste apres l'equipe, le lieu et la date.
   if (isMatchEventType(state?.type?.name)) {
     routes.push(RouteNames.EventWizardOpponent);
   }
-
-  routes.push(RouteNames.EventWizardLocation);
 
   if (isTournamentEventType(state?.type?.name)) {
     routes.push(

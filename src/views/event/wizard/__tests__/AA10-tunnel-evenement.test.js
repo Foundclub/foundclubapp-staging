@@ -504,6 +504,7 @@ describe('AA10 ② — les invitations, a leur place, pour un match', () => {
   // participants, parce que c'est la qu'on pense « qui vient ». Le cadre d'Adel
   // du 25/08 va au bout de la meme idee : ce n'est plus une etape VOISINE, c'est
   // la MEME. Le constat ② reste donc satisfait — par une etape de moins.
+  // DATESDABORD (25/10, « 6- B ») : le lieu d'abord, puis la date, puis « Contre qui ? ».
   test('temoin 7 — les invitations sont DANS l etape Participants du match', () => {
     const chaineDuMatch = getEventWizardStepRoutes({
       sessionStatus: 'closed',
@@ -513,9 +514,9 @@ describe('AA10 ② — les invitations, a leur place, pour un match', () => {
     expect(chaineDuMatch).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLocation,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardOpponent,
-      RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,

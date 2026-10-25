@@ -68,6 +68,11 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// DATESDABORD (25/10, « 6- B ») : l'étape juge l'installation choisie (JugementDuCreneau) ; ici,
+// aucune installation n'est choisie, la lecture de place n'est jamais montée.
+jest.mock('@/services/facility/facilityQueries', () => ({ useGetFacilityOccupancy: () => ({}) }));
+jest.mock('../useMairieDecideALaCreation', () => ({ __esModule: true, default: () => ({}) }));
+
 jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function GabaritMock(
   /** @type {any} */ props,
 ) {

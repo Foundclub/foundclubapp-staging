@@ -1,6 +1,8 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -38,6 +40,7 @@ import {
   getEventWizardStepCount,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
+import JugementDuCreneau from './JugementDuCreneau';
 
 // DATESDABORD (23/10) — les deux regles vivent avec le bloc partage ; leur temoin les lit ici.
 export { debutDeRepetitionSuivant, joursDeRepetitionSuivants };
@@ -499,9 +502,11 @@ function EventWizardLogistics({ navigation, route }) {
         type: 'SET_LOGISTICS',
       });
 
-      navigation.navigate(
-        getEventWizardExitRoute(RouteNames.EventWizardLocation, route?.params),
-      );
+      // DATESDABORD (25/10, « 6- B ») : le lieu est choisi AVANT ; le tournoi va à l'étape suivante.
+      navigation.navigate(getEventWizardExitRoute(
+        getEventWizardNextRoute(RouteNames.EventWizardLogistics, projectedWizardState),
+        route?.params,
+      ));
       return;
     }
 
@@ -598,10 +603,21 @@ function EventWizardLogistics({ navigation, route }) {
   };
 
   const showSingleDateTimeFields = !(isTournament && isMultiDayTournament);
+  // 🗓️ DATESDABORD (25/10, décision d'Adel « 6- B ») — le lieu est choisi AVANT : sous les heures,
+  // l'installation dit à chaque horaire si le créneau est libre ou déjà pris ; une fermeture de la
+  // Ville, ou une place pas encore lue, retient « Suivant ». Une adresse extérieure ne se juge pas.
+  const [jugement, setJugement] = useState({ attente: false, bloque: false });
+  const recevoirLeJugement = useCallback(
+    (/** @type {{ attente: boolean, bloque: boolean }} */ suite) => setJugement(suite),
+    [],
+  );
+  const avecJugement = Boolean(state.facility) && showSingleDateTimeFields;
+  const suivantRetenu = avecJugement && (jugement.attente || jugement.bloque);
 
   return (
     <WizardStepLayout
       headerVariant="focus"
+      isNextDisabled={suivantRetenu}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(projectedWizardState)}
@@ -641,6 +657,19 @@ function EventWizardLogistics({ navigation, route }) {
               jours: recurrenceDays,
             }}
             sansRepetition={isTournament}
+          />
+        ) : null}
+        {avecJugement ? (
+          <JugementDuCreneau
+            date={date}
+            debut={startTime}
+            etat={{
+              ...state,
+              isRecurrent,
+              recurrenceEndDate,
+            }}
+            fin={endTime}
+            onEtat={recevoirLeJugement}
           />
         ) : null}
 

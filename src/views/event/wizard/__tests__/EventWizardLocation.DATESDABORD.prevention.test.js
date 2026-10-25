@@ -15,6 +15,10 @@ import preventionDuCreneau from '../preventionDuCreneau';
 // ROUGE avant le lot : la ligne « libre » n'existait pas, la ligne « pris » ne nommait ni le
 // gestionnaire ni le type.
 
+// DATESDABORD (25/10, décision d'Adel « 6- B ») : le lieu passe AVANT « Date & horaire » ; l'étape
+// « Lieu » ne juge le créneau (place, fermeture, mairie) que quand le jour est connu : au retour
+// du récapitulatif (ici), ou pour un stage. À l'aller, c'est « Date & horaire » qui juge
+// (EventWizardLogistics.DATESDABORD.prevention.test.js).
 const mockSelecteurs = [];
 let mockDecision = {
   complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
@@ -159,7 +163,7 @@ const afficherLEcran = (/** @type {string} */ typeName = 'Entraînement') => {
   act(() => { arbre = renderer.create(rendre(null)); });
   act(() => semer({ payload: { team: EQUIPE, type: { name: typeName } }, type: 'SET_META' }));
   act(() => {
-    arbre.update(rendre(createElement(EventWizardLocation, { navigation, route: { params: {} } })));
+    arbre.update(rendre(createElement(EventWizardLocation, { navigation, route: { params: { returnTo: 'EventWizardRecap' } } })));
   });
 };
 const dernierSelecteur = () => mockSelecteurs[mockSelecteurs.length - 1];

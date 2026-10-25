@@ -37,6 +37,8 @@ import EventWizardType from '../EventWizardType';
 // projet, du code devenu inatteignable.
 //
 // ETAT DU 2026-08-06, APRES D08.
+// INVERSÉ PAR DATESDABORD (25/10/2026, décision d'Adel « 6- B ») : le LIEU passe avant « Date &
+// horaire » (sauf le stage, qui garde son programme avant le lieu) ; « Contre qui ? » suit la date.
 //
 // Methode : le VRAI `EventWizardProvider` reste monte pendant toute la marche
 // et seul l'ecran affiche change (`arbre.update`). L'etat du tunnel s'accumule
@@ -584,8 +586,8 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
@@ -602,9 +604,9 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLocation,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardOpponent,
-      RouteNames.EventWizardLocation,
       // 🚚 S10-B — les invitations SONT cette etape : elle porte desormais
       // « inviter une equipe de mon club ».
       RouteNames.EventWizardParticipants,
@@ -640,8 +642,8 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardTournamentSettings,
       RouteNames.EventWizardTournamentStructure,
       RouteNames.EventWizardParticipants,
@@ -666,8 +668,8 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardParticipants,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
@@ -689,8 +691,8 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
     expect(chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
@@ -746,8 +748,8 @@ describe('D58 — chaque type traverse son parcours, et annonce son compte', () 
     expect(marcherDansLeTunnel({ nomDuType: 'Autre' }).chaine).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardParticipants,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,

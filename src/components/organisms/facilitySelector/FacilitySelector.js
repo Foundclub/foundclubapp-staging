@@ -239,6 +239,8 @@ function FacilitySelector({
 
     onChange({
       facilityId: selectedId,
+      // DATESDABORD (25/10) : l'installation du club multisport (l'étape « Date & horaire » la nomme).
+      isShared: Boolean(selectedFacility.isShared),
       location: {
         label: getAddressText(selectedFacility.address),
         value: '',

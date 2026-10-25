@@ -846,15 +846,16 @@ describe('AC04 — le compteur d etapes ne bouge pas', () => {
   // « Participants », 10 → 9. Ce que le temoin garde reste le meme — la FORME
   // exacte de la chaine, et le fait qu'AC04 (convocation + adversaire) n'a rien
   // ajoute ni retire de son cote.
+  // DATESDABORD (25/10, « 6- B ») : le lieu d'abord, puis la date, puis « Contre qui ? ».
   test('temoin 7 — la chaine du match, 9 etapes depuis S10-B', () => {
     const etat = { sessionStatus: 'closed', type: TYPE_MATCH };
 
     expect(getEventWizardStepRoutes(etat)).toEqual([
       RouteNames.EventWizardType,
       RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLocation,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardOpponent,
-      RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
