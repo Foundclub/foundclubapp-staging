@@ -658,7 +658,8 @@ export const stopRecording = async () => {
 export const cancelRecording = async () => {
   const recorder = getRecorder();
   if (!recorder) return;
-  if (!recordingSession.isRecording && !recordingSession.filePath && !recordingSession.isBusy) return;
+  const { filePath, isBusy, isRecording } = recordingSession;
+  if (!isRecording && !filePath && !isBusy) return;
 
   const pendingPath = String(recordingSession.filePath || '').trim();
   recordingSession.isBusy = true;

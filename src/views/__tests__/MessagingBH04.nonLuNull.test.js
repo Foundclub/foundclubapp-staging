@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin BH04 : entrées du rapport gardées sur une ligne */
 // BH04 / P6-09 — copie du harnais MSG2 : un compteur serveur `null` ne doit pas masquer un non-lu local.
 import renderer, { act } from 'react-test-renderer';
 
@@ -169,7 +170,9 @@ const CHATS = [
   {
     documentId: 'chat-1',
     groupName: 'Les U13',
-    messages: [{ createdAt: '2026-09-15T10:00:00.000Z', documentId: 'm1', message: 'Salut', sender: { documentId: 'marc' } }],
+    messages: [{
+      createdAt: '2026-09-15T10:00:00.000Z', documentId: 'm1', message: 'Salut', sender: { documentId: 'marc' },
+    }],
     participants: [],
     type: 'group',
     unreadCount: null,
@@ -211,8 +214,6 @@ const monter = async () => {
   });
   return arbre;
 };
-
-const dernieresProps = () => mockListProps[mockListProps.length - 1];
 
 beforeEach(() => {
   mockListProps.length = 0;

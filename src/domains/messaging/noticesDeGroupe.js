@@ -180,7 +180,9 @@ export const texteDeLaNotice = (notice, meId, t, repli = '') => {
   const moi = String(meId || '');
   const cEstMoi = Boolean(moi) && String(notice.actor?.documentId || '') === moi;
   const cibles = Array.isArray(notice.targets) ? notice.targets : [];
-  const seulementMoi = Boolean(moi) && cibles.length === 1 && String(cibles[0]?.documentId || '') === moi;
+  const seulementMoi = Boolean(moi)
+    && cibles.length === 1
+    && String(cibles[0]?.documentId || '') === moi;
   const valeurs = {
     group: String(notice.groupName || ''),
     name: nomDe(notice.actor, t),

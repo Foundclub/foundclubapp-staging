@@ -33,6 +33,7 @@ describe('BH04 / P3-13 — légende « Pièce jointe » générée', () => {
   test('la phrase générée avec accent est reconnue', () => {
     // eslint-disable-next-line global-require
     const { isGeneratedDocumentFallbackText } = require('./documentAttachment');
-    expect(isGeneratedDocumentFallbackText('Pièce jointe : contrat.pdf', [{ name: 'contrat.pdf', mime: 'application/pdf' }])).toBe(true);
+    const piece = [{ mime: 'application/pdf', name: 'contrat.pdf' }];
+    expect(isGeneratedDocumentFallbackText('Pièce jointe : contrat.pdf', piece)).toBe(true);
   });
 });

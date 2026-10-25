@@ -332,11 +332,17 @@ describe('BH04 / P6-15 — sondage encore en synchronisation', () => {
     const ancienne = window.alert;
     window.alert = alerte;
     mockChatQuery.data = { participants: PARTICIPANTS };
-    mockMessagesQuery.data = { pages: [{ data: [{ composition: buildPoll(), documentId: 'temp-1' }] }] };
-    mockUseAuth.mockReturnValue({ userData: { documentId: 'user-1', firstname: 'Adel', lastname: 'F' } });
+    const enAttente = { composition: buildPoll(), documentId: 'temp-1' };
+    mockMessagesQuery.data = { pages: [{ data: [enAttente] }] };
+    mockUseAuth.mockReturnValue({
+      userData: { documentId: 'user-1', firstname: 'Adel', lastname: 'F' },
+    });
     act(() => {
       mounted = renderer.create(
-        <PollDetailsWeb navigation={{ goBack: jest.fn() }} route={{ params: { chatId: CHAT_ID, messageId: 'temp-1' } }} />,
+        <PollDetailsWeb
+          navigation={{ goBack: jest.fn() }}
+          route={{ params: { chatId: CHAT_ID, messageId: 'temp-1' } }}
+        />,
       );
     });
     await click(mounted.root, 'Voter');

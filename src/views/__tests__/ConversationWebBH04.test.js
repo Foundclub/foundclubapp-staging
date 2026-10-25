@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin BH04 : entrées du rapport gardées sur une ligne */
 import { QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
@@ -219,10 +220,6 @@ let queryClient;
 /** @type {any[]} */
 const montes = [];
 
-const parTestId = (/** @type {any} */ arbre, /** @type {string} */ testId) => arbre.root.findAll(
-  (/** @type {any} */ n) => typeof n.type === 'string' && n.props?.['data-testid'] === testId,
-);
-
 /**
  * Monte la messagerie du site.
  * @param {Record<string, unknown>} [params] - Les parametres de route.
@@ -280,7 +277,6 @@ afterEach(() => {
   queryClient.clear();
 });
 
-
 const texteDe = (/** @type {any} */ noeud) => {
   const morceaux = [];
   const parcourir = (/** @type {any} */ n) => {
@@ -314,7 +310,9 @@ const filDeLigue = (/** @type {Record<string, any>} */ plus = {}) => ({
   ...plus,
 });
 const proposition = (/** @type {any} */ auteur) => ({
-  composition: { date: '2025-06-12T16:00:00.000Z', matchId: 'match-1', status: 'pending', type: 'proposal' },
+  composition: {
+    date: '2025-06-12T16:00:00.000Z', matchId: 'match-1', status: 'pending', type: 'proposal',
+  },
   createdAt: '2026-10-07T08:00:00.000Z',
   documentId: `prop-${auteur.documentId}`,
   message: 'Proposition',
@@ -391,10 +389,12 @@ describe('BH04 — messagerie du site', () => {
     await act(async () => { arbre = renderer.create(ecran(), options); });
     montes.push(arbre);
     await act(async () => { await new Promise((r) => { setTimeout(r, 30); }); });
-    noeuds.forEach((n) => { n.scrollTop = 5; });
+    noeuds.forEach((n) => { Object.assign(n, { scrollTop: 5 }); });
     mockMessagesDuFil = [
       ...mockMessagesDuFil,
-      { createdAt: '2026-10-01T08:00:00.000Z', documentId: 'vieux', message: 'Ancien', sender: BRUNO },
+      {
+        createdAt: '2026-10-01T08:00:00.000Z', documentId: 'vieux', message: 'Ancien', sender: BRUNO,
+      },
     ];
     await act(async () => { arbre.update(ecran()); });
     await act(async () => { await new Promise((r) => { setTimeout(r, 30); }); });

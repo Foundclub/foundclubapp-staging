@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin BH04 : entrées du rapport gardées sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 // BH04 / P6-06 — le type s écrit « Réservation » (accent) côté serveur :

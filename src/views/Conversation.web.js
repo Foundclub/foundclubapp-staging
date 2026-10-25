@@ -2105,24 +2105,24 @@ function Conversation({ navigation, route }) {
     })
     return () => window.cancelAnimationFrame(frame)
     // P6-07 : seul un message plus RÉCENT descend le fil ; une page d'anciens messages non.
-  }, [latestMessageId])
+  }, [latestMessageId]);
 
   // P6-02 : la route garde l'écran monté d'un fil à l'autre ; la saisie du fil quitté
   // ne doit pas partir dans le suivant, et le fil quitté apprend que la frappe s'arrête.
-  const filPrecedentRef = useRef(chatId)
+  const filPrecedentRef = useRef(chatId);
   useEffect(() => {
-    const precedent = filPrecedentRef.current
-    filPrecedentRef.current = chatId
-    if (!precedent || precedent === chatId) return
-    sendTypingStop(precedent)
-    setComposerText('')
-    setReplyTarget(null)
-    setProposalDate('')
-    setProposalStartTime('')
-    setProposalEndTime('')
-    setProposalVenue('')
-    setProposalAddress('')
-  }, [chatId, sendTypingStop])
+    const precedent = filPrecedentRef.current;
+    filPrecedentRef.current = chatId;
+    if (!precedent || precedent === chatId) return;
+    sendTypingStop(precedent);
+    setComposerText('');
+    setReplyTarget(null);
+    setProposalDate('');
+    setProposalStartTime('');
+    setProposalEndTime('');
+    setProposalVenue('');
+    setProposalAddress('');
+  }, [chatId, sendTypingStop]);
 
   useEffect(() => {
     if (!chatId) return undefined
@@ -2154,18 +2154,18 @@ function Conversation({ navigation, route }) {
     const date = new Date(chatData.league_match.date)
     if (Number.isNaN(date.getTime())) return
 
-    // P6-01 : les champs se relisent en heure locale à l'envoi ; ils s'écrivent donc en heure locale.
-    const deux = (/** @type {number} */ n) => String(n).padStart(2, '0')
-    const heureLocale = (/** @type {Date} */ d) => `${deux(d.getHours())}:${deux(d.getMinutes())}`
+    // P6-01 : les champs se relisent en heure locale à l'envoi ; ils s'écrivent en heure locale.
+    const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
+    const heureLocale = (/** @type {Date} */ d) => `${deux(d.getHours())}:${deux(d.getMinutes())}`;
     if (!proposalDate) {
-      setProposalDate(`${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}`)
+      setProposalDate(`${date.getFullYear()}-${deux(date.getMonth() + 1)}-${deux(date.getDate())}`);
     }
     if (!proposalStartTime) {
-      setProposalStartTime(heureLocale(date))
+      setProposalStartTime(heureLocale(date));
     }
     if (!proposalEndTime) {
       const endDate = new Date(date.getTime() + (60 * 60 * 1000))
-      setProposalEndTime(heureLocale(endDate))
+      setProposalEndTime(heureLocale(endDate));
     }
     if (!proposalVenue) {
       setProposalVenue(String(chatData?.league_match?.proposed_venue || chatData?.league_match?.venue || ''))
@@ -2314,11 +2314,11 @@ function Conversation({ navigation, route }) {
 
   const sendChatPayload = useCallback(async (/** @type {any} */ {
     attachments = [],
+    clearComposer = true,
     composition = null,
     event = null,
     message = '',
     replyTo = null,
-    clearComposer = true,
   }) => {
     const trimmedMessage = String(message || '').trim()
     const replyPayload = replyTo?.documentId ? { documentId: replyTo.documentId } : null
@@ -2756,7 +2756,7 @@ function Conversation({ navigation, route }) {
     // match se cree, les autres propositions sont refusees. La reponse generique ne changeait que
     // l etiquette de la bulle. Accepter est lourd : on confirme d abord.
     const amical = isFriendlyProposal(message?.composition);
-    if (!amical && areSameEntityId(message?.sender?.documentId, userData?.documentId)) return
+    if (!amical && areSameEntityId(message?.sender?.documentId, userData?.documentId)) return;
     if (amical && status === 'accepted') {
       const confirmation = buildFriendlyProposalConfirmation();
       // eslint-disable-next-line no-alert -- la confirmation native du site, comme « Signaler »

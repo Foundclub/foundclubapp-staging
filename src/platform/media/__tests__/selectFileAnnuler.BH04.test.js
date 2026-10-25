@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin BH04 : entrées du rapport gardées sur une ligne */
 // BH04 / P3-04 — annuler le sélecteur de fichiers du navigateur rend `null` au lieu de bloquer.
 import { pickDocument } from '../media.web';
 

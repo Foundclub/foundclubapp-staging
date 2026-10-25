@@ -3046,7 +3046,10 @@ function Conversation({ navigation, route }) {
       composition,
       sender: userData,
     })) {
-      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      showErrorBanner(t(
+        'conversation.poll.errors.sendUnavailable',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+      ));
       return;
     }
     setSelectedLocationOption(undefined);
@@ -3071,7 +3074,10 @@ function Conversation({ navigation, route }) {
       composition,
       sender: userData,
     })) {
-      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      showErrorBanner(t(
+        'conversation.poll.errors.sendUnavailable',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+      ));
       return;
     }
     setSelectedContactId('');
@@ -3152,7 +3158,10 @@ function Conversation({ navigation, route }) {
       event: eventDocumentId,
       sender: userData,
     })) {
-      showErrorBanner(t('conversation.poll.errors.sendUnavailable', 'Connexion messagerie indisponible. Réessaie dans quelques secondes.'));
+      showErrorBanner(t(
+        'conversation.poll.errors.sendUnavailable',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+      ));
       return;
     }
     if (closeModal) {
@@ -3853,7 +3862,7 @@ function Conversation({ navigation, route }) {
       await invalidatePendingLeagueActionQueries();
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      // P6-04 : la bulle avait été passée « acceptée / refusée » d'avance ; on relit le vrai statut.
+      // P6-04 : la bulle était passée « acceptée / refusée » d'avance ; on relit le statut.
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       showErrorBanner(i18n.t(
         'conversation.proposal.replyError',
@@ -4244,8 +4253,8 @@ function Conversation({ navigation, route }) {
             ? String(userData?.documentId || '')
             : senderEntityId,
           // P6-05 : un adversaire anonymisé ne montre ni sa photo ni son profil.
-          avatar: expediteurAnonyme ? undefined : avatarUrl,
           anonymized: expediteurAnonyme,
+          avatar: expediteurAnonyme ? undefined : avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
           name: nomAffiche,
           // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil

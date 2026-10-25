@@ -437,6 +437,7 @@ describe('MSGLIVE — « untel est en train d\'écrire » dans une conversation'
     const { QueryClientProvider } = require('@tanstack/react-query');
     // eslint-disable-next-line global-require
     const { createElement } = require('react');
+
     // eslint-disable-next-line global-require
     const { creerQueryClientDeTest } = require('@/testSupport/queryClientDeTest');
     // eslint-disable-next-line global-require

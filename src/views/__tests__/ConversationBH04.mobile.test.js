@@ -1,3 +1,4 @@
+/* eslint-disable max-len, jsdoc/require-param-type -- témoin BH04 : entrées du rapport gardées sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 // BH04 — P6-04, P6-05, P6-08 : copie du banc MSG1 (vrai écran, GiftedChat doublé).
@@ -173,11 +174,11 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
   // MSGREACT — les reactions emoji du fil. Aucune par defaut : les temoins de
   // cet ecran ne parlent pas de reactions, et une rangee vide ne se dessine pas.
-  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatById: () => ({
     data: mockChat,
     isLoading: false,
   }),
+  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatMessages: () => ({
     data: { pages: [{ data: mockMessagesDuFil, meta: { pagination: { page: 1, pageCount: 1, total: 0 } } }] },
     fetchNextPage: jest.fn(),
@@ -244,6 +245,7 @@ const dernieresProps = () => mockGiftedRenders[mockGiftedRenders.length - 1];
 
 /**
  * Monte le vrai ecran Conversation.
+ * @param params
  * @returns {{ arbre: any }} L'arbre monte.
  */
 const monterConversation = (/** @type {Record<string, any>} */ params = {}) => {
@@ -274,24 +276,6 @@ const monterConversation = (/** @type {Record<string, any>} */ params = {}) => {
   return { arbre };
 };
 
-/**
- * Tape un texte dans le champ, comme le clavier le ferait.
- * @param {string} texte - Ce que l'utilisateur a tape jusqu'ici.
- * @returns {void}
- */
-const taper = (texte) => {
-  act(() => { dernieresProps().onInputTextChanged(texte); });
-};
-
-/**
- * Appuie sur Envoyer, exactement comme GiftedChat le fait.
- * @param {string} texte - Le texte du message envoye.
- * @returns {void}
- */
-const appuyerSurEnvoyer = (texte) => {
-  act(() => { dernieresProps().onSend([{ text: texte }]); });
-};
-
 beforeEach(() => {
   mockChat = FIL_ORDINAIRE;
   mockGiftedRenders.length = 0;
@@ -303,7 +287,6 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockMessagesDuFil = [];
 });
-
 
 const FIL_DE_LIGUE = {
   documentId: 'chat-1',
@@ -335,7 +318,7 @@ describe('BH04 — messagerie du téléphone', () => {
     act(() => { rendu = renderer.create(bulle); });
     // eslint-disable-next-line global-require
     const Proposition = require('@/components/molecules/proposalMessageBubble/ProposalMessageBubble');
-    const props = rendu.root.findByType(Proposition.default || Proposition).props;
+    const { props } = rendu.root.findByType(Proposition.default || Proposition);
     espion.mockClear();
     await act(async () => { await props.onDecline(); });
     expect(espion).toHaveBeenCalledWith({ queryKey: ['chat-messages', 'chat-1'] });
@@ -349,7 +332,9 @@ describe('BH04 — messagerie du téléphone', () => {
       documentId: 'm1',
       id: 'm1',
       message: 'Salut',
-      sender: { avatar: { url: 'https://cdn.example/vraie-photo.jpg' }, documentId: 'adverse', firstname: 'Vrai', lastname: 'Nom' },
+      sender: {
+        avatar: { url: 'https://cdn.example/vraie-photo.jpg' }, documentId: 'adverse', firstname: 'Vrai', lastname: 'Nom',
+      },
     }];
     monterConversation();
     const message = dernieresProps().messages.find((/** @type {any} */ m) => m.text === 'Salut');

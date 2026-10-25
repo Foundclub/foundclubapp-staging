@@ -1,3 +1,4 @@
+/* eslint-disable max-len, jsdoc/require-description, jsdoc/require-returns -- témoin BH04 : entrées du rapport gardées sur une ligne */
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
@@ -16,7 +17,6 @@ let mockMessaging;
 let mockChats = [];
 const mockDeleteMessage = jest.fn();
 const mockGetChatMessages = jest.fn();
-const mockMountedProbes = new Set();
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -69,7 +69,6 @@ jest.mock('@/store/appContext', () => ({
   useAppContext: () => [{ auth: { token: 'jwt' } }, jest.fn()],
 }));
 
-
 const CLEF_MESSAGES = buildNormalizedQueryKey(['chat-messages', 'chat-1'], {
   pageSize: undefined,
   payload: 'light',
@@ -78,6 +77,9 @@ const CLEF_MESSAGES = buildNormalizedQueryKey(['chat-messages', 'chat-1'], {
 const monter = (clientRequetes) => {
   // eslint-disable-next-line global-require
   const useMessaging = require('@/domains/messaging/useMessaging').default;
+  /**
+   *
+   */
   function Sonde() {
     mockMessaging = useMessaging('chat-1');
     return null;
@@ -105,8 +107,12 @@ describe('BH04 — useMessaging', () => {
 
   test('P1-10 : la discussion du club n’est pas une discussion d’équipe du même club', async () => {
     mockChats = [
-      { club: { documentId: 'c1' }, documentId: 'equipe', participants: [], type: 'team' },
-      { club: { documentId: 'c1' }, documentId: 'leclub', participants: [], type: 'club' },
+      {
+        club: { documentId: 'c1' }, documentId: 'equipe', participants: [], type: 'team',
+      },
+      {
+        club: { documentId: 'c1' }, documentId: 'leclub', participants: [], type: 'club',
+      },
     ];
     let chat;
     await act(async () => { chat = await mockMessaging.startClubChat('c1'); });
@@ -127,8 +133,13 @@ describe('BH04 — useMessaging', () => {
       pageParams: [1],
       pages: [{
         data: [{
-          chat: { documentId: 'chat-1' }, createdAt: new Date().toISOString(), documentId: 'm1', id: 'm1',
-          message: 'Salut', readBy: [], sender: { documentId: 'moi' },
+          chat: { documentId: 'chat-1' },
+          createdAt: new Date().toISOString(),
+          documentId: 'm1',
+          id: 'm1',
+          message: 'Salut',
+          readBy: [],
+          sender: { documentId: 'moi' },
         }],
       }],
     });

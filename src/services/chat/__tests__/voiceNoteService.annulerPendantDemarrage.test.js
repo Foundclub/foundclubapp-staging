@@ -1,3 +1,4 @@
+/* eslint-disable max-len, jsdoc/require-description -- témoin BH04 : entrées du rapport gardées sur une ligne */
 // BH04 / P1-08 — annuler pendant que le micro démarre : le micro doit s'éteindre.
 
 const mockMicro = {
