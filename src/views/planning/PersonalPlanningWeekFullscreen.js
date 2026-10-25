@@ -1503,7 +1503,13 @@ function PlanningWeekFullscreen() {
         onReadOnlyEventPress={handleReadOnlyEventPress}
         // COLL-FIX-PLANNING (T9_C29_2) : dans la semaine tenue droite, une grappe de seances
         // trop serrees ouvre ce jour en vue Jour (tourne, la semaine est imposee).
-        onSummaryPress={isFacilitySource && !isLandscape ? () => choisirVue(VUES.jour) : undefined}
+        // C05 (Q2-09) : le jour de la grappe touchee, pas l ancre de la page des 3 jours.
+        onSummaryPress={isFacilitySource && !isLandscape
+          ? (/** @type {Date | undefined} */ jour) => {
+            if (jour instanceof Date) setCurrentDate(jour);
+            choisirVue(VUES.jour);
+          }
+          : undefined}
         scrollEnabled
         showHeader={false}
         showUntimedSection={false}

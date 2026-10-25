@@ -685,7 +685,8 @@ function PlanningWeekTimelineView({
   const handleNextPage = () => handleDateUpdate(addDays(currentDate, pageDays));
   const handleOverflowPress = (date) => {
     handleDateUpdate(date);
-    onSummaryPress?.();
+    // C05 (Q2-09) : le jour touche, que l ecran ouvre (en 3 jours, `onDateChange` lit une ancre).
+    onSummaryPress?.(date);
   };
 
   const renderOverflowCard = (event, left, width) => (

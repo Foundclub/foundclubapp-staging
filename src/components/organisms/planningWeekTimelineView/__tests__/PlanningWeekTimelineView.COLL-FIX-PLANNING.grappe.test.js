@@ -204,7 +204,8 @@ describe('COLL-FIX-PLANNING 3 — la semaine tenue droite ne pose plus des blocs
     ))[0];
     await act(async () => { appui.props.onPress(); });
     expect(onDateChange).toHaveBeenCalledWith(new Date(2026, 9, 8));
-    expect(onSummaryPress).toHaveBeenCalled();
+    // C05 (Q2-09) : le jour touche, aussi : en 3 jours, la date recue n est qu une ancre.
+    expect(onSummaryPress).toHaveBeenCalledWith(new Date(2026, 9, 8));
   });
 
   it('telephone tourne (860 points) : cote a cote, comme avant', async () => {
