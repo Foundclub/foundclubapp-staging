@@ -186,10 +186,11 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
     : null,
   clubMembershipRequestIds: normalizeIdList(
     user?.clubMembershipRequests?.map(
-      (/** @type {any} */ request) => normalizeString(request?.documentId),
+      (/** @type {any} */ request) => `${normalizeString(request?.documentId)}|${normalizeString(request?.state)}`,
     ),
   ),
   documentId: normalizeString(user?.documentId),
+  email: normalizeString(user?.email),
   firstname: normalizeString(user?.firstname),
   geohash: normalizeString(user?.geohash),
   height: user?.height ?? null,
@@ -216,13 +217,16 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   parentalDeclarantUserDocumentId: normalizeString(user?.parentalDeclarantUserDocumentId),
   parentalDeclarationAccepted: user?.parentalDeclarationAccepted === true,
   parentalDeclarationAcceptedAt: normalizeString(user?.parentalDeclarationAcceptedAt),
+  phoneNumber: normalizeString(user?.phoneNumber),
   position: normalizeString(user?.position),
   preferredSport: normalizeString(user?.preferredSport),
   roleId: normalizeString(user?.role?.documentId) || normalizeString(user?.role?.name),
   sectionId: normalizeString(user?.section?.documentId),
   sportsHistory: normalizeString(user?.sportsHistory),
   teamMembershipRequestIds: normalizeIdList(
-    user?.teamMembershipRequests?.map((/** @type {any} */ request) => normalizeString(request?.documentId)),
+    user?.teamMembershipRequests?.map((/** @type {any} */ request) => [
+      request?.documentId, request?.state, request?.direction, request?.team?.documentId,
+    ].map(normalizeString).join('|')),
   ),
   trainedTeamIds: normalizeIdList(
     user?.trainedTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),

@@ -164,7 +164,11 @@ function PrivateNavigator() {
   }, [initialRouteName]);
 
   useEffect(() => {
-    if (!userData?.documentId || userDataLoading || userDataError) return undefined;
+    // P3-05 : l'invitation attend la fin du parcours d'inscription (age, declaration parentale).
+    if (
+      !userData?.documentId || userDataLoading || userDataError
+      || villeEnLecture || complexeEnLecture || firstPendingOnboardingRoute
+    ) return undefined;
 
     const pendingInvite = readPendingSquadInviteLink();
     if (!pendingInvite?.teamId) return undefined;
@@ -193,7 +197,10 @@ function PrivateNavigator() {
     return () => {
       if (retryTimeout) clearTimeout(retryTimeout);
     };
-  }, [userData?.documentId, userDataError, userDataLoading]);
+  }, [
+    complexeEnLecture, firstPendingOnboardingRoute, userData?.documentId, userDataError,
+    userDataLoading, villeEnLecture,
+  ]);
 
   useEffect(() => {
     if (!userData?.documentId || userDataLoading || userDataError || !firstPendingOnboardingRoute) {

@@ -594,7 +594,7 @@ const createClubStaff = async (userData, kind) => {
     // Parser la date DD/MM/YYYY manuellement car new Date() peut échouer
     const [day, month, year] = userData.birthdate.split('/');
     if (day && month && year) {
-      const dateObject = new Date(`${year}-${month}-${day}`);
+      const dateObject = new Date(Number(year), Number(month) - 1, Number(day));
       if (!isNaN(dateObject.getTime())) {
         userDataCopy.birthdate = format(dateObject, 'yyyy-MM-dd');
       } else {
@@ -603,9 +603,9 @@ const createClubStaff = async (userData, kind) => {
     } else {
       // Format peut-être déjà YYYY-MM-DD ou invalide ?
       // On essaie de l'utiliser tel quel si valide, sinon on supprime
-      const fallbackDate = new Date(userData.birthdate);
-      if (!isNaN(fallbackDate.getTime())) {
-        userDataCopy.birthdate = format(fallbackDate, 'yyyy-MM-dd');
+      const fallbackDate = normalizeBirthdateToIso(userData.birthdate);
+      if (fallbackDate) {
+        userDataCopy.birthdate = fallbackDate;
       } else {
         delete userDataCopy.birthdate;
       }
@@ -898,6 +898,10 @@ const normalizeBirthdateToIso = (value) => {
     const trimmed = value.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
       return trimmed;
+    }
+    // Minuit UTC = le jour voulu ; format() le ramenerait a la veille a l'ouest d'UTC.
+    if (/^\d{4}-\d{2}-\d{2}T00:00:00(\.0+)?Z$/.test(trimmed)) {
+      return trimmed.slice(0, 10);
     }
     const parsedDate = new Date(trimmed);
     if (!Number.isNaN(parsedDate.getTime())) {

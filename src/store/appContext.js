@@ -79,10 +79,11 @@ const MAX_PERSISTED_STRING_LENGTH = 250000;
 
 /**
  * Safely stringify values before persisting to storage.
- * Returns undefined when serialization fails or becomes suspiciously large.
+ * Returns null when serialization fails or becomes suspiciously large (the stored
+ * value is then kept), undefined when there is nothing to store.
  * @param {string} key
  * @param {unknown} value
- * @returns {string | undefined}
+ * @returns {string | null | undefined}
  */
 const safeJsonStringify = (key, value) => {
   try {
@@ -95,7 +96,7 @@ const safeJsonStringify = (key, value) => {
         key,
         length: serialized.length,
       });
-      return undefined;
+      return null;
     }
     return serialized;
   } catch (error) {
@@ -103,7 +104,7 @@ const safeJsonStringify = (key, value) => {
       error: error?.message || 'unknown',
       key,
     });
-    return undefined;
+    return null;
   }
 };
 
@@ -297,6 +298,8 @@ const readInitialStore = () => {
  * @param {any} newValue - The value to set in local storage.
  */
 const setPersistantState = (key, newValue) => {
+  // P2-07 : un echec d'ecriture garde l'ancienne valeur au lieu de l'effacer.
+  if (newValue === null) return;
   if (typeof newValue === 'string' && newValue.trim().length > 0 && newValue !== 'undefined') {
     storage.set(key, newValue);
   } else {
