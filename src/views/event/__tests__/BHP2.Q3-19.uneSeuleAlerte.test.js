@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- chemins et phrases comparees sur une ligne */
 import fs from 'fs';
 import path from 'path';
 

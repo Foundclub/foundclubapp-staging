@@ -1,4 +1,3 @@
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // Lot N1 — LES QUATRE PETITS BLOCS QUI SE TAISENT OU QUI TROMPENT.
@@ -377,12 +376,6 @@ const TEAM_ID = 'team-1';
 const COACH = 'coach-1';
 const JOUEUR = 'joueur-1';
 
-// Trois personnes qui ne sont PAS de l'equipe : c'est ce qui en fait des
-// « participants externes » au sens de l'ecran (l. 1878).
-const EXT_UN = 'externe-1';
-const EXT_DEUX = 'externe-2';
-const EXT_TROIS = 'externe-3';
-
 const buildEvent = (/** @type {any} */ overrides = {}) => ({
   capacity: 0,
   club: { documentId: CLUB_ID },
@@ -403,29 +396,6 @@ const buildEvent = (/** @type {any} */ overrides = {}) => ({
     players: [{ documentId: JOUEUR }],
     trainers: [{ documentId: COACH }],
   },
-  type: { name: 'Entrainement' },
-  ...overrides,
-});
-
-/**
- * Un entrainement ouvert, avec 2 places prises et 1 demande en attente.
- * @param {any} overrides - Ce qui change d'un cas a l'autre.
- * @returns {any} L'evenement.
- */
-const entrainementOuvert = (overrides = {}) => buildEvent({
-  externalParticipantLimit: 8,
-  externalParticipantValidationMode: 'manual',
-  participationRequests: [{
-    documentId: 'req-1',
-    isActive: true,
-    participationStatus: 'pending',
-    user: { documentId: EXT_TROIS, firstname: 'Sam' },
-  }],
-  participations: [
-    { documentId: EXT_UN, firstname: 'Ana' },
-    { documentId: EXT_DEUX, firstname: 'Bilal' },
-  ],
-  sessionStatus: 'open',
   type: { name: 'Entrainement' },
   ...overrides,
 });
@@ -490,32 +460,6 @@ afterEach(() => {
   demonter();
 });
 
-const texteDe = (/** @type {any} */ node) => {
-  const morceaux = /** @type {string[]} */ ([]);
-  const parcourir = (/** @type {any} */ enfant) => {
-    if (enfant === null || enfant === undefined || enfant === false) return;
-    if (typeof enfant === 'string' || typeof enfant === 'number') {
-      morceaux.push(String(enfant));
-      return;
-    }
-    const enfants = enfant?.props?.children;
-    if (Array.isArray(enfants)) enfants.forEach(parcourir);
-    else parcourir(enfants);
-  };
-  parcourir(node);
-  return morceaux.join(' ').replace(/\s+/g, ' ').trim();
-};
-
-const textesVisibles = (/** @type {any} */ racine) => racine
-  .findAllByType(Text)
-  .map((/** @type {any} */ noeud) => texteDe(noeud))
-  .filter(Boolean);
-
-const contient = (
-  /** @type {any} */ racine,
-  /** @type {string} */ extrait,
-) => textesVisibles(racine).join(' | ').includes(extrait);
-
 // ⋯ N7 item 4 (vague P, 23/08) — la bascule « Ouvrir / Fermer l'entraînement »
 // vit desormais dans la feuille du menu ⋯, qui s'ouvre depuis l'EN-TETE de
 // navigation. On va la chercher la ou elle est (motif L4MenuTroisPoints).
@@ -536,26 +480,6 @@ const chercherDansElements = (
   return chercherDansElements(element.props?.children, predicat);
 };
 
-const ouvrirLeMenu = () => {
-  const appels = mockSetOptions.mock.calls.filter(
-    (/** @type {any} */ appel) => appel[0]?.headerRight,
-  );
-  const entete = appels.length ? appels[appels.length - 1][0].headerRight() : null;
-  const bouton = chercherDansElements(
-    entete,
-    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
-  );
-  if (!bouton) throw new Error('Aucun bouton trois-points dans l en-tete de navigation');
-  act(() => {
-    bouton.props.onPress();
-  });
-};
-
-const parTestID = (
-  /** @type {any} */ racine,
-  /** @type {string} */ id,
-) => racine.findAll((/** @type {any} */ noeud) => noeud.props?.testID === id, { deep: false });
-
 // AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
 // double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
 // tomber la suite ENTIERE avant le premier temoin.
@@ -563,9 +487,9 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: null }),
 }));
 
-
 const appuyerSurLeDrapeau = () => {
-  const appels = mockSetOptions.mock.calls.filter((/** @type {any} */ appel) => appel[0]?.headerRight);
+  const appels = mockSetOptions.mock.calls
+    .filter((/** @type {any} */ appel) => appel[0]?.headerRight);
   const entete = appels[appels.length - 1][0].headerRight();
   const drapeau = chercherDansElements(entete, (/** @type {any} */ n) => n?.props?.icon === 'flag');
   act(() => { drapeau.props.onPress(); });
