@@ -102,6 +102,8 @@ function TournamentMatchDetails({ navigation, route }) {
   const [scoreBText, setScoreBText] = useState('');
   const [winnerTeamId, setWinnerTeamId] = useState('');
   const [notesText, setNotesText] = useState('');
+  // PETITSCHOIX/13 : l equipe declaree forfait, en attente d enregistrement ('' = match joue).
+  const [forfeitTeamId, setForfeitTeamId] = useState('');
 
   useEffect(() => {
     if (!match) return;
@@ -117,6 +119,7 @@ function TournamentMatchDetails({ navigation, route }) {
     setScoreBText(scoreSaisi(match?.scoreB));
     setWinnerTeamId(match?.winner?.documentId || '');
     setNotesText(match?.notes || '');
+    setForfeitTeamId('');
   }, [match]);
 
   const invalidate = async () => {
@@ -176,6 +179,12 @@ function TournamentMatchDetails({ navigation, route }) {
   const isKnockoutLike = ['knockout', 'placement'].includes(normalizeTournamentText(match?.phase?.type));
   const scoresNeedWinner = scoresAreValid && scoreA === scoreB && isKnockoutLike;
   const canSubmitScore = scoresAreValid && (!scoresNeedWinner || Boolean(winnerTeamId));
+  const teamAId = match?.teamA?.documentId || '';
+  const teamBId = match?.teamB?.documentId || '';
+  const forfeitIsTeamA = Boolean(forfeitTeamId) && forfeitTeamId === teamAId;
+  const forfeitTeamName = forfeitIsTeamA
+    ? match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A')
+    : match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B');
   const matchStatusMeta = getTournamentMatchStatusMeta(match?.status, Colors);
   const currentFacilityName = match?.facility?.name || facilities.find((facility) => facility?.documentId === selectedFacilityId)?.name || t('tournamentMatchDetails.noFacility', 'Aucune installation');
 
@@ -196,20 +205,55 @@ function TournamentMatchDetails({ navigation, route }) {
     });
   };
 
-  const handleReportScore = (options = {}) => {
-    if (!canSubmitScore && options.status !== 'forfeit') {
+  // PETITSCHOIX/13 (Adel 25/10 « 13- B ») : « Forfait <équipe> » pré-remplit 3-0 pour l'autre équipe,
+  // sans écraser ce que le coach a déjà tapé, et n'envoie rien : le score reste modifiable.
+  const handleDeclareForfeit = (/** @type {string} */ teamId) => {
+    if (!teamId) return;
+    const forfeitOfTeamA = teamId === teamAId;
+    setForfeitTeamId(teamId);
+    setScoreAText((current) => (current.trim() ? current : (forfeitOfTeamA ? '0' : '3')));
+    setScoreBText((current) => (current.trim() ? current : (forfeitOfTeamA ? '3' : '0')));
+  };
+
+  const handleReportScore = () => {
+    if (forfeitTeamId) {
+      if (!scoresAreValid) {
+        Alert.alert(t('tournamentMatchDetails.incompleteScore', 'Score incomplet'), t('tournamentMatchDetails.enterTwoValidScoresFor', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.'));
+        return;
+      }
+      // Même règle que le serveur (reportMatchScore) : l'équipe forfait ne gagne pas et ne fait pas nul.
+      if ((forfeitIsTeamA ? scoreA >= scoreB : scoreB >= scoreA)) {
+        Alert.alert(
+          t('tournamentMatchDetails.forfeitScoreRefusedTitle', 'Score refusé'),
+          t('tournamentMatchDetails.forfeitScoreRefused', 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.', {
+            teamName: forfeitTeamName,
+            ...SANS_ECHAPPEMENT,
+          }),
+        );
+        return;
+      }
+      reportScoreMutation.mutate({
+        notes: notesText.trim(),
+        resultMeta: { forfeitTeamId },
+        scoreA,
+        scoreB,
+        status: 'forfeit',
+        winnerTeamId: (forfeitIsTeamA ? teamBId : teamAId) || undefined,
+      });
+      return;
+    }
+
+    if (!canSubmitScore) {
       Alert.alert(t('tournamentMatchDetails.incompleteScore', 'Score incomplet'), t('tournamentMatchDetails.enterTwoValidScoresFor', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.'));
       return;
     }
 
     reportScoreMutation.mutate({
       notes: notesText.trim(),
-      resultMeta: options.resultMeta,
       scoreA,
       scoreB,
-      status: options.status,
       // BH08 · P8-11 : le vainqueur choisi ne vaut que pour un nul qui en demande un.
-      winnerTeamId: options.winnerTeamId || (scoresNeedWinner ? winnerTeamId : '') || undefined,
+      winnerTeamId: (scoresNeedWinner ? winnerTeamId : '') || undefined,
     });
   };
 
@@ -377,7 +421,7 @@ function TournamentMatchDetails({ navigation, route }) {
                 </View>
               </View>
 
-              {scoresNeedWinner ? (
+              {scoresNeedWinner && !forfeitTeamId ? (
                 <View style={Spaces.gap[8]}>
                   <Text style={[Fonts.p3Bold, Fonts.warning500]}>
                     {t('tournamentMatchDetails.chooseTheWinner', 'Choisir le vainqueur')}
@@ -429,46 +473,56 @@ function TournamentMatchDetails({ navigation, route }) {
                 />
               </View>
 
+              {forfeitTeamId ? (
+                <Text style={[Fonts.p3, Fonts.warning500]}>
+                  {t('tournamentMatchDetails.forfeitNotice', 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.', {
+                    teamName: forfeitTeamName,
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+              ) : null}
+
               <Button
-                disabled={!canSubmitScore}
+                disabled={forfeitTeamId ? !scoresAreValid : !canSubmitScore}
                 isLoading={reportScoreMutation.isPending}
-                onPress={() => handleReportScore()}
-                title={t('tournamentMatchDetails.saveTheScore', 'Enregistrer le score')}
+                onPress={handleReportScore}
+                title={forfeitTeamId
+                  ? t('tournamentMatchDetails.saveTheForfeit', 'Enregistrer le forfait')
+                  : t('tournamentMatchDetails.saveTheScore', 'Enregistrer le score')}
                 variant="Primary"
               />
 
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <Button
-                  isLoading={reportScoreMutation.isPending}
-                  onPress={() => handleReportScore({
-                    resultMeta: { forfeitTeamId: match?.teamB?.documentId || null },
-                    status: 'forfeit',
-                    winnerTeamId: match?.teamA?.documentId || undefined,
-                  })}
+                  onPress={() => handleDeclareForfeit(teamBId)}
                   size="sm"
                   style={{ flex: 1 }}
                   title={t('tournamentMatchDetails.forfeitOf', 'Forfait {{teamName}}', {
                     teamName: match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B'),
                     ...SANS_ECHAPPEMENT,
                   })}
-                  variant="Secondary"
+                  variant={forfeitTeamId && forfeitTeamId === teamBId ? 'Primary' : 'Secondary'}
                 />
                 <Button
-                  isLoading={reportScoreMutation.isPending}
-                  onPress={() => handleReportScore({
-                    resultMeta: { forfeitTeamId: match?.teamA?.documentId || null },
-                    status: 'forfeit',
-                    winnerTeamId: match?.teamB?.documentId || undefined,
-                  })}
+                  onPress={() => handleDeclareForfeit(teamAId)}
                   size="sm"
                   style={{ flex: 1 }}
                   title={t('tournamentMatchDetails.forfeitOf', 'Forfait {{teamName}}', {
                     teamName: match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A'),
                     ...SANS_ECHAPPEMENT,
                   })}
-                  variant="Secondary"
+                  variant={forfeitIsTeamA ? 'Primary' : 'Secondary'}
                 />
               </View>
+
+              {forfeitTeamId ? (
+                <Button
+                  onPress={() => setForfeitTeamId('')}
+                  size="sm"
+                  title={t('tournamentMatchDetails.cancelForfeit', 'Annuler le forfait')}
+                  variant="Secondary"
+                />
+              ) : null}
 
               {['forfeit', 'played_pending_validation'].includes(normalizeTournamentText(match?.status)) ? (
                 <Button
