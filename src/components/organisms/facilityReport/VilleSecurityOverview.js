@@ -90,6 +90,7 @@ function VilleSecurityOverview({
     );
   }
 
+  /** @type {Record<string, string>} */
   const tons = {
     a_surveiller: Colors.warning500,
     en_retard: Colors.error500,
@@ -145,7 +146,7 @@ function VilleSecurityOverview({
     </View>
   ) : null);
 
-  const lignesSignalements = ouverts.map((report) => ({
+  const lignesSignalements = ouverts.map((/** @type {any} */ report) => ({
     cle: `signalement-${report.documentId}`,
     detail: [
       String(t(`facilityReports.statuts.${report.status}`, report.status)),
