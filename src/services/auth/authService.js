@@ -595,7 +595,10 @@ const createClubStaff = async (userData, kind) => {
     const [day, month, year] = userData.birthdate.split('/');
     if (day && month && year) {
       const dateObject = new Date(Number(year), Number(month) - 1, Number(day));
-      if (!isNaN(dateObject.getTime())) {
+      // C04 Q2-06 — « 31/02/2010 » débordait sur le 3 mars : un jour qui n'existe pas est retiré.
+      const jourExiste = dateObject.getDate() === Number(day)
+        && dateObject.getMonth() === Number(month) - 1;
+      if (!isNaN(dateObject.getTime()) && jourExiste) {
         userDataCopy.birthdate = format(dateObject, 'yyyy-MM-dd');
       } else {
         delete userDataCopy.birthdate; // Date invalide

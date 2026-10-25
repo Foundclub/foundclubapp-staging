@@ -1286,6 +1286,20 @@ export const formatBirthdateToDisplay = (value) => {
 };
 
 /**
+ * C04 Q2-06 — « JJ/MM/AAAA » désigne-t-il un jour qui existe ? `new Date(2010, 1, 31)` déborde
+ * sans erreur sur le 3 mars 2010.
+ * @param {string} value - La date tapée, « JJ/MM/AAAA ».
+ * @returns {boolean} Vrai si le jour existe dans le calendrier.
+ */
+export const isExistingBirthdate = (value) => {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || '').trim());
+  if (!match) return false;
+  const [jour, mois, annee] = match.slice(1).map(Number);
+  const date = new Date(annee, mois - 1, jour);
+  return date.getFullYear() === annee && date.getMonth() === mois - 1 && date.getDate() === jour;
+};
+
+/**
  * Format date string from DD/MM/YYYY to YYYY-MM-DD
  * @param {string} value - The input value to format
  * @returns {string} - The formatted date string
