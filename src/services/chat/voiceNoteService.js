@@ -503,8 +503,11 @@ export const startRecording = async (params = {}) => {
     recorderStartErrors: [],
     recorderStartMs: 0,
   };
+  // P1-08 : une annulation remplace la session ; on la reconnaît après chaque attente.
+  const session = recordingSession;
 
   const hasPermission = await ensureRecordPermission();
+  if (recordingSession !== session) throw new Error('VOICE_CANCELLED');
   if (!hasPermission) {
     resetSession();
     throw new Error('VOICE_PERMISSION_DENIED');
@@ -516,10 +519,7 @@ export const startRecording = async (params = {}) => {
     throw new Error('VOICE_CACHE_DIR_UNAVAILABLE');
   }
 
-  recordingSession = {
-    ...recordingSession,
-    filePath,
-  };
+  recordingSession.filePath = filePath;
 
   recorder.removeRecordBackListener?.();
   recorder.addRecordBackListener?.((recordEvent) => {
@@ -537,6 +537,12 @@ export const startRecording = async (params = {}) => {
 
   try {
     const { essai, refus } = await demarrerAvecMesure(recorder, filePath, buildAudioSet());
+    if (recordingSession !== session) {
+      // Annulé pendant le démarrage : le micro vient de s'allumer, on l'éteint.
+      try { await recorder.stopRecorder(); } catch (_error) { /* best effort */ }
+      await deleteVoiceNoteFile(filePath);
+      throw new Error('VOICE_CANCELLED');
+    }
     recordingSession.recorderStartMs = Math.max(0, Date.now() - debut);
     recordingSession.recorderStart = essai;
     recordingSession.recorderStartError = String(refus[0]?.erreur?.message || '')
@@ -550,6 +556,7 @@ export const startRecording = async (params = {}) => {
     recordingSession.isBusy = false;
     return { filePath };
   } catch (error) {
+    if (/** @type {any} */ (error)?.message === 'VOICE_CANCELLED') throw error;
     recorder.removeRecordBackListener?.();
     resetSession();
     reportVoiceNativeError(error, 'start');
@@ -651,7 +658,8 @@ export const stopRecording = async () => {
 export const cancelRecording = async () => {
   const recorder = getRecorder();
   if (!recorder) return;
-  if (!recordingSession.isRecording && !recordingSession.filePath) return;
+  const { filePath, isBusy, isRecording } = recordingSession;
+  if (!isRecording && !filePath && !isBusy) return;
 
   const pendingPath = String(recordingSession.filePath || '').trim();
   recordingSession.isBusy = true;
