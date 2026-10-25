@@ -1,4 +1,4 @@
-import { getAdminReports } from '@/services/admin/adminService';
+import { getAdminReports, markAdminReportTreated } from '@/services/admin/adminService';
 
 // I18N-3 : les textes passent par i18next.t, qui rend undefined sans initialisation.
 // Le double lit le vrai fr.js, puis le repli, et remplit les {{jetons}} : le temoin
@@ -48,6 +48,7 @@ jest.mock('i18next', () => {
  */
 
 const mockGet = jest.fn();
+const mockPut = jest.fn();
 
 // `react-native-device-info` reclame un module natif des l import : sans ce double,
 // la SUITE ENTIERE meurt avant le premier temoin (« new NativeEventEmitter() »).
@@ -66,7 +67,7 @@ jest.mock('@/services/client', () => ({
   default: {
     get: (...args) => mockGet(...args),
     post: jest.fn(),
-    put: jest.fn(),
+    put: (...args) => mockPut(...args),
   },
 }));
 
@@ -144,4 +145,54 @@ test('SIGNALEMENTS/3 — un message signale montre son texte et le nom de son au
   expect(data[0].message).toBe('texte signale par un joueur');
   expect(data[0].authorLabel).toBe('Ada Lovelace');
   expect(data[0].targetLabel).toBe('Conversation avec Bob Martin');
+});
+
+// ---------------------------------------------------------------------------
+// SIGNALTRAITE (25/10) — « À traiter / Traités », « Marquer traité »
+// ---------------------------------------------------------------------------
+
+test('SIGNALTRAITE/1 — « À traiter » : les lignes sans statut ou en attente', async () => {
+  await getAdminReports({ treated: false });
+  const attendu = { $or: [{ status: { $null: true } }, { status: { $eq: 'pending' } }] };
+  expect(parametresDe('/event-reports').filters).toEqual(attendu);
+  expect(parametresDe('/chat-message-reports').filters).toEqual(attendu);
+});
+
+test('SIGNALTRAITE/2 — « Traités » : les signalements traités, et qui les a traités', async () => {
+  await getAdminReports({ treated: true });
+  expect(parametresDe('/event-reports').filters).toEqual({ status: { $eq: 'resolved' } });
+  expect(parametresDe('/chat-message-reports').filters).toEqual({ status: { $eq: 'resolved' } });
+  ['/event-reports', '/chat-message-reports'].forEach((adresse) => {
+    expect(parametresDe(adresse).populate).toEqual(expect.arrayContaining(['treatedBy']));
+  });
+});
+
+test('SIGNALTRAITE/3 — un signalement traité dit quand, et par qui', async () => {
+  mockGet.mockImplementation((adresse) => Promise.resolve({
+    data: {
+      data: adresse === '/event-reports' ? [{
+        documentId: 'rep-1',
+        reason: 'horaire faux',
+        status: 'resolved',
+        treatedAt: '2026-10-24T09:30:00.000Z',
+        treatedBy: { firstname: 'Adel', lastname: 'F.' },
+      }] : [],
+    },
+  }));
+  const { data } = await getAdminReports({ treated: true });
+  expect(data[0]).toEqual(expect.objectContaining({
+    status: 'resolved',
+    treatedAt: '2026-10-24T09:30:00.000Z',
+    treatedByLabel: 'Adel F.',
+  }));
+});
+
+test('SIGNALTRAITE/4 — « Marquer traité » appelle la route SuperAdmin de SA source', async () => {
+  mockPut.mockResolvedValue({ data: { data: { status: 'resolved' } } });
+  await markAdminReportTreated({ documentId: 'rep-msg', source: 'message' });
+  await markAdminReportTreated({ documentId: 'rep-evt', source: 'event' });
+  expect(mockPut.mock.calls.map(([adresse]) => adresse)).toEqual([
+    '/chat-message-reports/rep-msg/treat',
+    '/event-reports/rep-evt/treat',
+  ]);
 });

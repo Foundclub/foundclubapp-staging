@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   FlatList,
   RefreshControl,
   Text,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -20,7 +22,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetAdminReports } from '@/services/admin/adminQueries';
+import { useGetAdminReports, useMarkReportTreated } from '@/services/admin/adminQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -40,30 +42,20 @@ const SOURCE_FILTERS = [
   { label: 'Messages', value: 'message' },
 ];
 
+// SIGNALTRAITE (25/10) — deux listes, que le SERVEUR filtre : « À traiter » (ce que compte la
+// pastille) et « Traités ». « Refusés » n'existait que dans l'écran : le serveur n'a aucun refus.
 const STATUS_FILTERS = [
   {
     get label() {
-      return i18next.t('adminReports.filters.all', 'Tous');
-    },
-    value: 'all',
-  },
-  {
-    get label() {
-      return i18next.t('adminReports.status.pending', 'En attente');
+      return i18next.t('adminReports.filters.toTreat', 'À traiter');
     },
     value: 'pending',
   },
   {
     get label() {
-      return i18next.t('adminReports.filters.resolved', 'Résolus');
+      return i18next.t('adminReports.filters.treated', 'Traités');
     },
     value: 'resolved',
-  },
-  {
-    get label() {
-      return i18next.t('adminReports.filters.rejected', 'Refusés');
-    },
-    value: 'rejected',
   },
 ];
 
@@ -85,15 +77,9 @@ const formatDate = (value) => {
   }
 };
 
-const getStatusLabel = (value) => {
-  if (value === 'resolved') {
-    return i18next.t('adminReports.status.resolved', 'Resolu');
-  }
-  if (value === 'rejected') {
-    return i18next.t('adminReports.status.rejected', 'Refusé');
-  }
-  return i18next.t('adminReports.status.pending', 'En attente');
-};
+const getStatusLabel = (value) => (value === 'resolved'
+  ? i18next.t('adminReports.status.treated', 'Traité')
+  : i18next.t('adminReports.status.toTreat', 'À traiter'));
 
 const getSourceLabel = (value) => (value === 'message' ? 'Message' : i18next.t(
   'adminReports.source.event',
@@ -115,22 +101,21 @@ function AdminReports() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const [sourceFilter, setSourceFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
 
   const {
     data,
     error,
     isLoading,
     refetch,
-  } = useGetAdminReports();
+  } = useGetAdminReports({ treated: statusFilter === 'resolved' });
+  const markTreated = useMarkReportTreated();
 
   const reports = useMemo(() => (Array.isArray(data?.data) ? data.data : []), [data?.data]);
 
-  const filteredReports = useMemo(() => reports.filter((item) => {
-    if (sourceFilter !== 'all' && item?.source !== sourceFilter) return false;
-    if (statusFilter !== 'all' && item?.status !== statusFilter) return false;
-    return true;
-  }), [reports, sourceFilter, statusFilter]);
+  const filteredReports = useMemo(() => reports.filter(
+    (item) => sourceFilter === 'all' || item?.source === sourceFilter,
+  ), [reports, sourceFilter]);
 
   if (isLoading && !reports.length) {
     return (
@@ -167,6 +152,20 @@ function AdminReports() {
 
     if (item?.targetKind === 'conversation' && item?.targetDocumentId) {
       navigation.navigate(RouteNames.Conversation, { chatId: item.targetDocumentId });
+    }
+  };
+
+  const handleMarkTreated = async (item) => {
+    try {
+      await markTreated.mutateAsync({ documentId: item.documentId, source: item.source });
+    } catch (markError) {
+      Alert.alert(
+        t('adminReports.markTreatedErrorTitle', 'Action impossible'),
+        getErrorMessage(markError, 'generic') || t(
+          'adminReports.markTreatedError',
+          'Impossible de marquer ce signalement traité.',
+        ),
+      );
     }
   };
 
@@ -231,6 +230,29 @@ function AdminReports() {
         {' '}
         {item?.authorLabel || t('adminReports.unknownUser', 'Utilisateur inconnu')}
       </Text>
+
+      {item?.status === 'resolved' ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {item?.treatedByLabel
+            ? t('adminReports.treatedOnBy', 'Traité le {{date}} par {{name}}', {
+              date: formatDate(item?.treatedAt),
+              name: item.treatedByLabel,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('adminReports.treatedOn', 'Traité le {{date}}', {
+              date: formatDate(item?.treatedAt),
+              ...SANS_ECHAPPEMENT,
+            })}
+        </Text>
+      ) : (
+        <Button
+          disabled={markTreated.isPending}
+          onPress={() => handleMarkTreated(item)}
+          size="small"
+          title={t('adminReports.markTreated', 'Marquer traité')}
+          variant="Secondary"
+        />
+      )}
 
       {item?.targetDocumentId ? (
         <Button
