@@ -1123,6 +1123,13 @@ export default {
       pauseError: 'Pausing failed',
       publishError: 'Publishing failed',
     },
+    confirm: {
+      archiveBody: 'This is final: it can no longer be published, only duplicated.',
+      archiveTitle: 'Archive this campaign?',
+      cancel: 'Cancel',
+      publishBody: 'The popup will be shown to the targeted users.',
+      publishTitle: 'Publish this campaign?',
+    },
     content: {
       noEyebrow: 'No eyebrow',
       title: 'Content',

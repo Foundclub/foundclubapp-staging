@@ -1181,6 +1181,13 @@ export default {
       pauseError: 'Pause impossible',
       publishError: 'Publication impossible',
     },
+    confirm: {
+      archiveBody: 'C’est définitif : elle ne pourra plus être publiée, seulement dupliquée.',
+      archiveTitle: 'Archiver cette campagne ?',
+      cancel: 'Annuler',
+      publishBody: 'La popup sera montrée aux utilisateurs ciblés.',
+      publishTitle: 'Publier cette campagne ?',
+    },
     content: {
       noEyebrow: 'Sans eyebrow',
       title: 'Contenu',
