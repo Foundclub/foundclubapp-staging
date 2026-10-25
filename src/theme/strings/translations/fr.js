@@ -5778,10 +5778,13 @@ export default {
       ongletFoundClub: 'Par FoundClub ({{nombre}})',
       // VOIE 3 (« collectivité A », 07/10) : les pistes « Prévenir ma mairie », pour les agents.
       ongletPistes: 'Pistes ({{nombre}})',
+      ongletPistesNonLues: 'Pistes',
       ongletRattachements: 'Rattachements ({{nombre}})',
       pisteCommune: 'Mairie à contacter : {{commune}}',
       pisteLe: 'Signalée par un dirigeant le {{date}}',
       pisteRattache: 'Rattaché depuis à une collectivité : rien à faire.',
+      pistesChargement: 'Lecture des pistes…',
+      pistesIndisponibles: 'Pistes indisponibles pour l’instant.',
       pourVille: 'Pour {{ville}} · le {{date}}',
       rattacheA: 'Rattaché à {{ville}}',
       rattacher: 'Rattacher à {{ville}}',
