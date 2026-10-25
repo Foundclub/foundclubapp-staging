@@ -96,3 +96,37 @@ describe('BH14 — ville, code postal et coordonnées du club', () => {
     });
   });
 });
+
+// C10 / Q4-22 (BUGHUNT 25/10, RÉGRESSION de P2-15 / P9-18) — un club sans ville ni coordonnées :
+// le SuperAdmin les écrit dans « Adresse JSON avancée », les champs simples restent vides… et
+// l'enregistrement les effaçait, puisqu'un champ simple vide « efface ». Le formulaire part ici
+// de ses VRAIES valeurs initiales (buildClubFormInitialValues).
+describe('C10 · Q4-22 — l adresse JSON avancée saisie à la main n est plus écrasée', () => {
+  it('club sans ville : ville et coordonnées écrites dans le JSON avancé sont gardées', () => {
+    const formulaire = {
+      ...buildClubFormInitialValues({ name: 'AS Test' }),
+      addressJson: '{"city":"Lyon","lat":45.76,"lng":4.83,"postcode":"69001"}',
+    };
+    expect(buildAddressFromForm(formulaire)).toMatchObject({
+      city: 'Lyon', lat: 45.76, lng: 4.83, postcode: '69001',
+    });
+  });
+
+  it('non-régression P9-18 : JSON non modifié, ville vidée dans le champ simple : effacée', () => {
+    const formulaire = {
+      ...buildClubFormInitialValues({
+        address: {
+          city: 'Paris', lat: 48.85, lng: 2.35, postcode: '75001',
+        },
+        name: 'AS Test',
+      }),
+      city: '',
+      latitude: '',
+      postcode: '',
+    };
+    const adresse = buildAddressFromForm(formulaire);
+    expect(adresse.city).toBe('');
+    expect(adresse.postcode).toBe('');
+    expect(adresse.lat).toBeNull();
+  });
+});
