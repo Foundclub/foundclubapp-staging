@@ -45,6 +45,7 @@ import {
   getPlanningItemDate,
   getPlanningRange,
   normalizePlanningItems,
+  toPlanningApiDate,
 } from '@/utils/planning/planningSlots';
 
 import useVueInitiale from '@/hooks/useVueInitiale';
@@ -142,6 +143,35 @@ function CMPlanningContent({
     [planningData?.data],
   );
 
+  // C05 (BUGHUNT P2, Q2-15) : « Événements à partir du » choisi hors de la plage du planning lit
+  // sa propre semaine (même requête, même clé : un passage de la grille sur cette semaine la
+  // retrouve) ; dans la plage, rien de plus n'est lu.
+  const listRange = useMemo(() => getPlanningRange(listStartDate, 'week'), [listStartDate]);
+  const jourDeLaListe = toPlanningApiDate(listStartDate);
+  const listeHorsPlage = jourDeLaListe < planningRange.from || jourDeLaListe > planningRange.to;
+  const { data: listData } = useQuery({
+    enabled: !!cmId && listeHorsPlage,
+    queryFn: () => getCMPlanning(cmId, {
+      from: listRange.from,
+      installationId: selectedFacilityId || undefined,
+      sectionId: selectedSectionId || undefined,
+      to: listRange.to,
+    }),
+    queryKey: [
+      'cm-planning',
+      cmId,
+      listRange.from,
+      listRange.to,
+      'week',
+      selectedSectionId,
+      selectedFacilityId,
+    ],
+  });
+  const listEvents = useMemo(
+    () => (listeHorsPlage ? normalizePlanningItems(listData?.data || []) : events),
+    [events, listData?.data, listeHorsPlage],
+  );
+
   // 🗓️ R17-VUE (19/10, REC17-010) — a l arrivee, la semaine vide mais un evenement plus tard ⇒
   // le mois de ce prochain evenement (UNE lecture bornee, la meme source que la page) ; un choix
   // fait a la main l emporte.
@@ -177,7 +207,7 @@ function CMPlanningContent({
   const sortedListEvents = useMemo(() => {
     const compareDate = startOfDay(listStartDate);
 
-    return [...events]
+    return [...listEvents]
       .filter((event) => {
         const eventDate = getPlanningItemDate(event);
         if (!eventDate) return false;
@@ -197,7 +227,7 @@ function CMPlanningContent({
         const rightStart = String(right?.startTime || '');
         return leftStart.localeCompare(rightStart, 'fr');
       });
-  }, [events, listStartDate]);
+  }, [listEvents, listStartDate]);
 
   const viewOptions = useMemo(() => ([
     { label: t('planning.mode.weekShort', 'Semaine'), value: 'week' },

@@ -6,6 +6,7 @@ import { enGB, fr } from 'date-fns/locale';
 import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 
+import { LEAGUE_TIMEZONE, toUtcFromZonedLocal } from '@/utils/parisTime';
 import { getPlanningItemWindow, normalizePlanningItems } from '@/utils/planning/planningSlots';
 
 /**
@@ -327,9 +328,18 @@ export const blocsDesEvenements = (evenements, plage) => {
     while (isValid(jour) && format(jour, 'yyyy-MM-dd') <= dernier) {
       const iso = format(jour, 'yyyy-MM-dd');
       if (iso >= debut && iso <= fin) {
+        // C05 (Q2-08) : l'heure de l'événement est celle de Paris, que le planning relit comme
+        // telle ; construite à l'heure de l'appareil, elle glissait hors du fuseau de Paris.
         const instant = (/** @type {string} */ heure) => {
           const [h, m] = String(heure).split(':').map(Number);
-          return new Date(jour.getFullYear(), jour.getMonth(), jour.getDate(), h, m).toISOString();
+          return toUtcFromZonedLocal({
+            day: jour.getDate(),
+            hour: h,
+            minute: m,
+            month: jour.getMonth() + 1,
+            second: 0,
+            year: jour.getFullYear(),
+          }, LEAGUE_TIMEZONE).toISOString();
         };
         blocs.push({
           documentId: null,

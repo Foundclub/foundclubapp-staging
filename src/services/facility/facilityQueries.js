@@ -223,10 +223,11 @@ export const useClubCollectiviteFacilities = (clubId) => useQuery({
  * @param {string} collectiviteId - La Ville.
  * @param {string} requestId - La demande tranchée.
  * @param {'delai' | 'reseau' | 'dejaTranchee'} raison - Pourquoi relire.
+ * @param {'approved' | 'refused'} statutAttendu - La décision prise ici.
  * @param {number} [essai] - La relecture en cours (0 : la première).
  * @returns {Promise<boolean>} Vrai si la décision est passée.
  */
-const laDecisionEstPassee = async (collectiviteId, requestId, raison, essai = 0) => {
+const laDecisionEstPassee = async (collectiviteId, requestId, raison, statutAttendu, essai = 0) => {
   const attentes = raison === 'delai' ? RELECTURES_APRES_DELAI_MS : [0];
   const pause = attentes[essai] - (essai ? attentes[essai - 1] : 0);
   if (pause > 0) await new Promise((resolve) => { setTimeout(resolve, pause); });
@@ -237,9 +238,22 @@ const laDecisionEstPassee = async (collectiviteId, requestId, raison, essai = 0)
   } catch {
     return false;
   }
-  if (!estEncoreEnAttente(file, requestId)) return true;
+  if (!estEncoreEnAttente(file, requestId)) {
+    // C05 (BUGHUNT P2, P2-08) : sortie de la file, mais tranchée DANS L AUTRE SENS (un collègue a
+    // refusé ce que j accepte) : ce n est pas ma décision, l erreur d origine reste.
+    // ponytail: une demande absente des « traitées » (série repliée, liste bornée) se croit
+    // encore, comme avant ; la sortie serait une route qui lit une demande par son id.
+    try {
+      const tranchees = await getCollectiviteRequests(String(collectiviteId), 'decided');
+      const lue = (Array.isArray(tranchees?.data) ? tranchees.data : [])
+        .find((/** @type {any} */ demande) => demande?.documentId === requestId);
+      return !lue?.status || lue.status === statutAttendu;
+    } catch {
+      return false;
+    }
+  }
   return essai + 1 < attentes.length
-    && laDecisionEstPassee(collectiviteId, requestId, raison, essai + 1);
+    && laDecisionEstPassee(collectiviteId, requestId, raison, statutAttendu, essai + 1);
 };
 
 /**
@@ -247,16 +261,20 @@ const laDecisionEstPassee = async (collectiviteId, requestId, raison, essai = 0)
  * ou revient « plus en attente », la relecture de la file AVANT de rejeter : une décision passée
  * réussit (les listes se relisent, la fenêtre se ferme) ; sinon, l'erreur d'origine.
  * @param {() => Promise<any>} decider - L'appel de la route.
- * @param {{ collectiviteId?: string | null, requestId?: string }} cible - La Ville et la demande.
+ * @param {{ collectiviteId?: string | null, requestId?: string,
+ *   statutAttendu: 'approved' | 'refused' }} cible - La Ville, la demande et la décision prise.
  * @returns {Promise<any>} La réponse, ou `{ data: null, relue: true }` pour une décision relue.
  */
-const deciderOuRelire = async (decider, { collectiviteId = null, requestId = '' }) => {
+const deciderOuRelire = async (
+  decider,
+  { collectiviteId = null, requestId = '', statutAttendu },
+) => {
   try {
     return await decider();
   } catch (error) {
     const raison = raisonDeRelireLaDecision(error);
     const relue = Boolean(collectiviteId && requestId && raison)
-      && await laDecisionEstPassee(collectiviteId, requestId, raison);
+      && await laDecisionEstPassee(collectiviteId, requestId, raison, statutAttendu);
     if (relue) return { data: null, relue: true };
     throw error;
   }
@@ -272,7 +290,7 @@ export const useApproveFacilityOverrideRequest = (options = {}) => {
       collectiviteId = null, dates = null, decisionReason, requestId, series = false,
     }) => deciderOuRelire(
       () => approveFacilityOverrideRequest(requestId, decisionReason, series, dates),
-      { collectiviteId, requestId },
+      { collectiviteId, requestId, statutAttendu: 'approved' },
     ),
     onSuccess: async () => {
       await Promise.all([
@@ -296,7 +314,7 @@ export const useRefuseFacilityOverrideRequest = (options = {}) => {
       collectiviteId = null, decisionReason, requestId, series = false,
     }) => deciderOuRelire(
       () => refuseFacilityOverrideRequest(requestId, decisionReason, series),
-      { collectiviteId, requestId },
+      { collectiviteId, requestId, statutAttendu: 'refused' },
     ),
     onSuccess: async () => {
       await Promise.all([

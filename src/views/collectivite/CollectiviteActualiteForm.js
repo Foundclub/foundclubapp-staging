@@ -623,7 +623,29 @@ function CollectiviteActualiteForm() {
   );
 
   let corps;
-  if (!prete) {
+  if (!prete && !existante && !actualites.isLoading) {
+    // C05 (BUGHUNT P2, P12-13) : l'actualité supprimée, introuvable ou illisible ne laisse plus
+    // un chargement sans fin : une phrase et « Réessayer » (la croix ferme toujours l'écran).
+    corps = (
+      <View accessibilityRole="alert" style={{ gap: 12 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t(
+            'collectiviteActualites.form.introuvable',
+            'Cette actualité n’a pas pu être lue : elle a peut-être été supprimée.',
+          )}
+        </Text>
+        <Button
+          isOption
+          onPress={() => actualites.refetch?.()}
+          size="sm"
+          style={{ alignSelf: 'flex-start' }}
+          testID="actualite-form-introuvable-reessayer"
+          title={t('collectiviteActualites.reessayer', 'Réessayer')}
+          variant="SecondaryLight"
+        />
+      </View>
+    );
+  } else if (!prete) {
     corps = <Loader />;
   } else if (isDesktop) {
     // COLL-C4A3 — tout l'écran reçoit un fichier lâché (le formulaire ET l'aperçu) : lâché à

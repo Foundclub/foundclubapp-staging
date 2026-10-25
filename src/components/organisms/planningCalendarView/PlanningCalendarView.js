@@ -597,10 +597,12 @@ function PlanningCalendarView({
       </View>
 
       <Calendar
-        current={selectedDate}
         dayComponent={renderDayComponent}
         enableSwipeMonths
         firstDay={1}
+        // C05 (Q2-18) : `current` n est lu qu au montage (react-native-calendars 1.1313) ;
+        // la grille suit la date choisie (« Aujourd hui », un autre ecran) par `initialDate`.
+        initialDate={selectedDate}
         markingType="custom"
         onDayPress={(day) => handleDateChange(day.dateString)}
         onMonthChange={(month) => handleDateChange(month.dateString)}

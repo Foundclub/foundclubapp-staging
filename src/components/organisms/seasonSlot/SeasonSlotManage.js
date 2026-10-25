@@ -29,6 +29,7 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import { useSeasonSlot, useWithdrawSeasonSlot } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { getParisNowAsDeviceDate, toDeviceDateFromParisInstant } from '@/utils/parisTime';
 
 /**
  * 📐 COLL-C2B (02/10) — GERER un creneau de saison (design HY521H1, P4v2-creneaux, ecrans 4 et
@@ -72,8 +73,10 @@ function SeasonSlotManage({
     /** @type {'detail' | 'retirer' | 'retirerDate'} */ (etapeInitiale),
   );
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
+  // C05 (Q3-11) : le jour de PARIS (celui du serveur), calcule une fois, pas celui de l appareil.
+  const aujourdhuiParis = getParisNowAsDeviceDate();
   // COLL-C2B-BIS — la date d effet du retrait, saisie « JJ/MM/AAAA ».
-  const [aPartirDu, setAPartirDu] = useState(format(new Date(), 'dd/MM/yyyy'));
+  const [aPartirDu, setAPartirDu] = useState(format(aujourdhuiParis, 'dd/MM/yyyy'));
   const dateDuRetrait = parse(aPartirDu, 'dd/MM/yyyy', new Date());
   const retraitLisible = isValid(dateDuRetrait);
   // FINITIONS15 point 4 (T14, C15b) : la fin d'un créneau RETIRÉ est la veille du retrait
@@ -91,7 +94,7 @@ function SeasonSlotManage({
   // d'avant) ; « Retirer le mer. 21 oct. seulement » retire UNE date (`skipDate`).
   const forme = slotShape(slot);
   const enSerie = forme.recurrence === 'dates' || forme.everyWeeks > 1;
-  const aujourdhui = format(new Date(), 'yyyy-MM-dd');
+  const aujourdhui = format(aujourdhuiParis, 'yyyy-MM-dd');
   const [prochaine] = slotOccurrences(slot, { from: aujourdhui });
   const [dateARetirer, setDateARetirer] = useState(
     prochaine ? format(parseISO(prochaine), 'dd/MM/yyyy') : '',
@@ -159,7 +162,7 @@ function SeasonSlotManage({
         <DatePickerInput
           label={t('collectiviteCreneaux.gerer.quelleDate', 'Quelle date ?')}
           maximumDate={finDuCreneau}
-          minimumDate={new Date()}
+          minimumDate={aujourdhuiParis}
           onChange={(/** @type {string} */ valeur) => {
             setDateARetirer(valeur);
             setErreur(null);
@@ -227,7 +230,10 @@ function SeasonSlotManage({
               ? '{{qui}} perd {{rythme}}, {{installation}}, à partir du {{date}}.'
               : '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
             {
-              date: formatDay(retraitLisible ? dateDuRetrait : new Date(), { withYear: false }),
+              date: formatDay(
+                retraitLisible ? dateDuRetrait : aujourdhuiParis,
+                { withYear: false },
+              ),
               heures,
               installation: installationName || slot?.facility?.name || '',
               jour: jour.toLocaleLowerCase(),
@@ -240,7 +246,7 @@ function SeasonSlotManage({
         <DatePickerInput
           label={t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')}
           maximumDate={finDuCreneau}
-          minimumDate={new Date()}
+          minimumDate={aujourdhuiParis}
           onChange={(/** @type {string} */ valeur) => {
             setAPartirDu(valeur);
             setErreur(null);
@@ -327,7 +333,11 @@ function SeasonSlotManage({
         ) : null}
         {slot?.attributedAt ? rangee(
           t('collectiviteCreneaux.gerer.attribueLe', 'Attribué le'),
-          formatDay(String(slot.attributedAt).slice(0, 10)),
+          // C05 (Q3-11) : un instant UTC coupe tombait la veille entre minuit et 2 h a Paris.
+          formatDay(format(
+            toDeviceDateFromParisInstant(slot.attributedAt) || new Date(slot.attributedAt),
+            'yyyy-MM-dd',
+          )),
         ) : null}
         {slot?.plateau?.name ? rangee(
           t('collectiviteCreneaux.gerer.plateau', 'Plateau'),

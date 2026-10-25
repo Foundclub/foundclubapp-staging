@@ -38,6 +38,7 @@ import {
   useOccupationDesLieux,
 } from '@/services/collectivite/collectiviteEvenementQueries';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import MediaPlatform from '@/platform/media';
@@ -653,8 +654,10 @@ function EvenementDeLaVilleForm({
         {t('collectiviteEvenement.panne.titre', 'L’événement n’a pas été publié.')}
       </Text>
       <Text style={[Fonts.p3, Fonts.neutral100]}>
-        {envoi.panne?.response
-          ? String(envoi.panne?.response?.data?.error?.message || '')
+        {/* C05 (Q2-11) : les intercepteurs HTTP rejettent `response.data.error` ({ status,
+            message }) : un statut du serveur est un refus, qui dit sa raison. */}
+        {Number(getErrorStatus(envoi.panne)) > 0
+          ? String(envoi.panne?.message || envoi.panne?.response?.data?.error?.message || '')
           : t(
             'collectiviteEvenement.panne.connexion',
             'La connexion a été perdue. Ce que vous avez saisi est gardé.',

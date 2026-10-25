@@ -512,6 +512,12 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
           testID="signalement-feuille-mot"
           value={mot}
         />
+        {/* C05 (Q2-20) : l alerte globale est coupee ; le refus se lit dans la feuille ouverte. */}
+        {erreur ? (
+          <Text style={[Fonts.p3Bold, Fonts.error500]} testID="signalement-feuille-refus">
+            {erreur}
+          </Text>
+        ) : null}
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
             'facilityReports.ville.previentAuteur',

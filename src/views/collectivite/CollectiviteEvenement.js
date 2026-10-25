@@ -6,6 +6,7 @@ import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisp
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import EvenementDeLaVilleForm from '@/components/organisms/evenementVille/EvenementVilleForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -71,6 +72,30 @@ function CollectiviteEvenement() {
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
         <Loader />
+      </ScreenContainer>
+    );
+  }
+  // C05 (BUGHUNT P2, Q2-03) : « Modifier » sans l'événement lu (réseau, 403, 404) n'ouvre pas un
+  // formulaire vide, dont « Publier » écraserait l'événement : une phrase et « Réessayer ».
+  if (evenementId && !existant.data) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+        <View accessibilityRole="alert" style={{ gap: 12, padding: 24 }}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t(
+              'collectiviteEvenement.illisible',
+              'Cet événement n’a pas pu être lu : il ne peut pas être modifié pour l’instant.',
+            )}
+          </Text>
+          <Button
+            isOption
+            onPress={() => existant.refetch?.()}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteEvenement.panne.reessayer', 'Réessayer')}
+            variant="SecondaryLight"
+          />
+        </View>
       </ScreenContainer>
     );
   }

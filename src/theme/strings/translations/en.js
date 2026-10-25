@@ -5127,6 +5127,7 @@ export default {
       glisser: 'or drop a file here',
       header: 'New post',
       headerModifier: 'Edit the post',
+      introuvable: 'This news item could not be loaded: it may have been deleted.',
       photoJointe: 'Attached photo',
       photos: 'Photos',
       pieceEchec: 'The attachment could not be sent. Try again.',
@@ -6209,6 +6210,7 @@ export default {
       voirActualite: 'See the news',
     },
     horsVille: 'This space is for the town.',
+    illisible: 'This event could not be loaded, so it cannot be edited for now.',
     lieu: {
       aCote: '{{installation}} · next to it',
       toute: '{{installation}} · whole facility',
