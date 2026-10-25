@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin C06 : fils et attentes gardés sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 import ShareCardModal from '@/components/organisms/shareCardModal/ShareCardModal';
@@ -104,7 +105,13 @@ const filsProposes = (Fenetre, props) => {
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <Fenetre isVisible onClose={jest.fn()} onSelectChat={jest.fn()} {...props} />,
+      <Fenetre
+        composition={props.composition}
+        event={props.event}
+        isVisible
+        onClose={jest.fn()}
+        onSelectChat={jest.fn()}
+      />,
     );
   });
   const ids = arbre.root

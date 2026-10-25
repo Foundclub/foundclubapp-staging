@@ -503,7 +503,7 @@ describe('MSG-SUPPORT — la conversation d\'assistance sur le téléphone', () 
     expect(mockRepondants).not.toHaveBeenCalled();
   });
 
-  it('Q4-15 : en console, la réponse d un collègue n est ni à moi, ni ouvrable, et porte son nom', async () => {
+  it('Q4-15 : en console, la réponse d un collègue n est pas à moi et porte son nom', async () => {
     mockUserData = SUPER_ADMIN;
     mockRepondants.mockImplementationOnce(async () => ({
       'm-reponse': { firstname: 'Sophie', lastname: 'Admin' },
@@ -529,14 +529,19 @@ describe('MSG-SUPPORT — la conversation d\'assistance sur le téléphone', () 
     let bulle;
     act(() => {
       bulle = renderer.create(dernier.renderBubble({
-        currentMessage: marc, nextMessage: {}, position: 'right', previousMessage: messages['m-reponse'],
+        currentMessage: marc,
+        nextMessage: {},
+        position: 'right',
+        previousMessage: messages['m-reponse'],
       }));
     });
     expect(textes(bulle).join(' ')).toContain('Assistance FoundClub · Marc D.');
     act(() => { bulle.unmount(); });
     // Le menu du message : pas de « Modifier », pas de profil à ouvrir.
     await act(async () => { dernier.onLongPress(null, marc); });
-    const menu = arbre.root.find((/** @type {any} */ n) => n.props && 'canEdit' in n.props && 'canCopy' in n.props);
+    const menu = arbre.root.find((/** @type {any} */ n) => (
+      n.props && 'canEdit' in n.props && 'canCopy' in n.props
+    ));
     expect(menu.props.canEdit).toBe(false);
     expect(marc.user.anonymized).toBe(true);
     expect(navigation.navigate).not.toHaveBeenCalled();

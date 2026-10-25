@@ -249,7 +249,7 @@ describe('VOCAL — état 1 · au repos', () => {
     expect(mockMicro.ouvert).toBe(false);
   });
 
-  it('Q3-04 quitter la conversation pendant que le micro démarre : il ne reste pas allumé', async () => {
+  it('Q3-04 quitter la conversation pendant que le micro démarre : il reste éteint', async () => {
     mockMicro.differer = true;
     const { arbre } = monter();
     const { appui } = gestes(arbre);

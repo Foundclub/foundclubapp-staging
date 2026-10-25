@@ -2634,11 +2634,12 @@ function Conversation({ navigation, route }) {
     if (!messageId || !optionId) return
     // Q4-20 (P6-15) : même garde que PollDetails, le serveur ne connaît pas encore un `temp-`.
     if (messageId.startsWith('temp-')) {
+      // eslint-disable-next-line no-alert -- même retour que l'échec de vote juste en dessous
       window.alert(i18next.t(
         'conversation.poll.details.syncInProgress',
         'Le sondage est en cours de synchronisation.',
-      ))
-      return
+      ));
+      return;
     }
 
     queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, (oldData) => {

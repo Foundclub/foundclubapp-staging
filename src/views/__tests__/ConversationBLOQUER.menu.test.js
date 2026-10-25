@@ -451,10 +451,13 @@ describe('Q4-24 — canal d un complexe : le menu se referme en ouvrant la page 
       ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
     };
     const { ecran } = monterLaConversation();
-    const boutonMenu = ecran.root.find((/** @type {any} */ n) => n.props?.testID === 'conversation-menu' && typeof n.props?.onPress === 'function');
+    const boutonMenu = ecran.root.find((/** @type {any} */ n) => (
+      n.props?.testID === 'conversation-menu' && typeof n.props?.onPress === 'function'
+    ));
     act(() => { boutonMenu.props.onPress(); });
     expect(mockMenus[mockMenus.length - 1].visible).toBe(true);
-    const infos = mockMenus[mockMenus.length - 1].entrees.find((/** @type {any} */ e) => e.cle === 'infos-du-groupe');
+    const infos = mockMenus[mockMenus.length - 1].entrees
+      .find((/** @type {any} */ e) => e.cle === 'infos-du-groupe');
     act(() => { infos.onPress(); });
     expect(mockMenus[mockMenus.length - 1].visible).toBe(false);
   });

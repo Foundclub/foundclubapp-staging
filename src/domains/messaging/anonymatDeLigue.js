@@ -15,7 +15,7 @@ import { isLeagueCaptain } from '@/utils/league/captains';
  * @returns {{ anonyme: boolean, nom: string }} Le nom à afficher, et s'il est masqué.
  */
 const identiteDansLeFil = ({
-  chat, moiId = '', personne, maintenant = new Date(),
+  chat, maintenant = new Date(), moiId = '', personne,
 }) => {
   const vraiNom = `${personne?.firstname || ''} ${personne?.lastname || ''}`;
   if (chat?.type !== 'league_match') return { anonyme: false, nom: vraiNom };

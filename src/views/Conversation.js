@@ -5285,7 +5285,8 @@ function Conversation({ navigation, route }) {
   ), []);
 
   const isMessageOwnedByCurrentUser = useCallback((message) => (
-    String(message?.user?.auteurReel || message?.user?._id || '') === String(userData?.documentId || '')
+    String(message?.user?.auteurReel || message?.user?._id || '')
+      === String(userData?.documentId || '')
   ), [userData?.documentId]);
 
   const isMessageEditable = useCallback((message) => {

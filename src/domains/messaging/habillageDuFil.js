@@ -74,8 +74,8 @@ export const couleurDuNom = (Colors, identifiant) => (
  * @param {any} message - Un message au format GiftedChat.
  * @returns {string} L'identifiant de son auteur.
  */
-// eslint-disable-next-line no-underscore-dangle -- le format de GiftedChat
 // Q4-15 — `auteurReel` : en console d'assistance, `_id` est le mien pour toute l'équipe.
+// eslint-disable-next-line no-underscore-dangle -- le format de GiftedChat
 const auteurDe = (message) => String(message?.user?.auteurReel ?? message?.user?._id ?? '');
 
 /**

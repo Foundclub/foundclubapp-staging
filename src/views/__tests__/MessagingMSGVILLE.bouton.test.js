@@ -232,7 +232,7 @@ describe('MSG-VILLE-NOUVELLE — le bouton « Nouvelle conversation » de la Vil
     expect(mockNavigate).toHaveBeenCalledWith('NewConversation', { chatScope: 'classic' });
   });
 
-  test('Q4-17 — le rôle réel du serveur s écrit « Entraineur » (sans accent) : le bouton est là', async () => {
+  test('Q4-17 — le rôle réel du serveur s écrit « Entraineur » : le bouton est là', async () => {
     mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
     expect(bouton(await monter({ chatScope: 'classic' }))).toHaveLength(1);
   });
