@@ -12,7 +12,9 @@ jest.mock('@/components/templates/ScreenContainer', () => ({ children }) => chil
 jest.mock('@/services/client', () => ({}));
 jest.mock('@/services/facility/facilityQueries', () => ({
   useCreateBooking: () => ({ isPending: false, mutateAsync: jest.fn() }),
-  useGetBookableFacilities: () => ({ data: [{ documentId: 'f-1', name: 'Five' }], isLoading: false }),
+  useGetBookableFacilities: () => ({
+    data: [{ documentId: 'f-1', name: 'Five' }], isLoading: false,
+  }),
   useGetFacility: () => ({ data: { documentId: 'f-1', name: 'Five' }, isLoading: false }),
   useGetFacilityAvailability: () => ({ data: null, isLoading: false }),
 }));
@@ -44,7 +46,8 @@ it('P13-10 — en partagé, pas plus de joueurs confirmés que le total prévu m
   expect(champ().props.value).toBe(9);
 });
 
-it('P13-09 — « 2026-10-14 » dans l’adresse = le 14/10, même à l’ouest d’UTC (lancer aussi avec TZ=America/New_York)', async () => {
+// Rouge avant le correctif sous PowerShell : $env:TZ='America/New_York' puis jest.
+it('P13-09 — « 2026-10-14 » dans l’adresse = le 14/10, même à l’ouest d’UTC', async () => {
   const arbre = await monter();
   const textes = arbre.root.findAll((n) => n.type === 'strong').map((n) => n.children.join(''));
   expect(textes).toContain('14/10/2026');
