@@ -102,15 +102,25 @@ describe('getTeams — le filtre de la requete (filet E6, lot U03)', () => {
     // n'a jamais lieu. Mesure : 1 appel, pas 2. Ce filet fige le comportement
     // REEL ; reparer le repli sortirait du perimetre U03 (§1 bis : ce chemin
     // sert le DIRIGEANT, qu'on a interdiction de toucher).
-    it('ne retente PAS avec l identifiant numerique — le repli est du code mort', async () => {
+    // BH12 P1-21 (24/10) : le `.empty(...)` est retire ; une liste vide reste une liste,
+    // et le repli « identifiant numerique » part enfin (comme sur le site, T19R).
+    it('retente avec l identifiant numerique quand la page est vide', async () => {
       mockGet
         .mockResolvedValueOnce(reponse([]))
         .mockResolvedValueOnce(reponse([EQUIPE]));
 
       const resultat = await getTeams({ clubId: '42' });
 
-      expect(mockGet).toHaveBeenCalledTimes(1);
-      expect(resultat.data).toBeUndefined();
+      expect(mockGet).toHaveBeenCalledTimes(2);
+      expect(resultat.data).toHaveLength(1);
+    });
+
+    it('BH12 P1-21 — une liste vide reste une liste vide', async () => {
+      mockGet.mockResolvedValue(reponse([]));
+
+      const resultat = await getTeams({ clubId: 'club-1' });
+
+      expect(resultat.data).toEqual([]);
     });
 
     it('garde les filtres de recherche existants (nom, categorie, niveau)', async () => {

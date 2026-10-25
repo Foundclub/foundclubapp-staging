@@ -57,6 +57,7 @@ import EventListContent from '@/components/organisms/eventListContent/EventListC
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
+import { federalMatchDeadlineTs, federalMatchResult } from '@/views/team/federalCalendar';
 import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
 import TeamAttendancePanel, {
   TeamAttendanceSheetSummary,
@@ -3875,7 +3876,8 @@ function TeamDetails({ navigation, route }) {
                                     && match?.awayScore !== null && match?.awayScore !== undefined
                     );
                     const isPlayed = Boolean(match?.played) || hasScore;
-                    const isUpcoming = !isPlayed && (dateTs === null || dateTs >= nowTs);
+                    const deadlineTs = federalMatchDeadlineTs(match?.date, dateTs);
+                    const isUpcoming = !isPlayed && (deadlineTs === null || deadlineTs >= nowTs);
                     const roundLabel = (
                       match?.round !== null && match?.round !== undefined && match?.round !== ''
                     ) ? String(match.round) : null;
@@ -4302,12 +4304,11 @@ function TeamDetails({ navigation, route }) {
                                     _isPlayed: isGroupMatchPlayed,
                                   } = groupMatch || {};
                                   if (!isGroupMatchPlayed || (!isHome && !isAway)) return;
-                                  const mine = Number(isHome ? groupMatch.homeScore : groupMatch.awayScore);
-                                  const other = Number(isHome ? groupMatch.awayScore : groupMatch.homeScore);
-                                  if (!Number.isFinite(mine) || !Number.isFinite(other)) return;
-                                  if (mine > other) tally.V += 1;
-                                  else if (mine < other) tally.D += 1;
-                                  else tally.N += 1;
+                                  const result = federalMatchResult(
+                                    isHome ? groupMatch.homeScore : groupMatch.awayScore,
+                                    isHome ? groupMatch.awayScore : groupMatch.homeScore,
+                                  );
+                                  if (result) tally[result] += 1;
                                 });
                                 const bilan = ['V', 'N', 'D']
                                   .filter((key) => tally[/** @type {'V' | 'N' | 'D'} */ (key)] > 0)
@@ -4330,13 +4331,10 @@ function TeamDetails({ navigation, route }) {
                               // Chip resultat V/N/D pour mon equipe (handoff 9d) — sinon statut neutre.
                               let myResult = '';
                               if (isPlayedMatch && (isMyHomeTeam || isMyAwayTeam)) {
-                                const myScore = Number(isMyHomeTeam ? match.homeScore : match.awayScore);
-                                const otherScore = Number(isMyHomeTeam ? match.awayScore : match.homeScore);
-                                if (Number.isFinite(myScore) && Number.isFinite(otherScore)) {
-                                  if (myScore > otherScore) myResult = 'V';
-                                  else if (myScore < otherScore) myResult = 'D';
-                                  else myResult = 'N';
-                                }
+                                myResult = federalMatchResult(
+                                  isMyHomeTeam ? match.homeScore : match.awayScore,
+                                  isMyHomeTeam ? match.awayScore : match.homeScore,
+                                );
                               }
                               let resultChipColor = Colors.neutral300;
                               if (myResult === 'V') resultChipColor = Colors.success500;
@@ -4434,7 +4432,7 @@ function TeamDetails({ navigation, route }) {
                                     <View style={[Alignments.alignCenter, { width: 90 }]}>
                                       {match._isPlayed ? (
                                         <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                                          {`${match.homeScore} - ${match.awayScore}`}
+                                          {`${match.homeScore ?? '?'} - ${match.awayScore ?? '?'}`}
                                         </Text>
                                       ) : (
                                         <Text style={[Fonts.p2Bold, Fonts.primary100]}>VS</Text>
@@ -4884,7 +4882,7 @@ function TeamDetails({ navigation, route }) {
                     last: true,
                     lock: isTeamOfferUnlocked ? null : 'team',
                     onPress: isTeamOfferUnlocked
-                      ? () => navigation.navigate(RouteNames.ClubLicenses)
+                      ? () => navigation.navigate(RouteNames.ClubLicenses, { clubId: team?.club?.documentId })
                       : openTeamOfferUnlockSheet,
                   })}
                 </View>

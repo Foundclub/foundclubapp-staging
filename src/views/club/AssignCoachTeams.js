@@ -122,16 +122,28 @@ function AssignCoachTeams({ navigation, route }) {
 
       const rejected = results.filter((result) => result.status === 'rejected');
       if (rejected.length > 0) {
-        throw new Error('Some assignments failed');
+        /** @type {Error & { done?: number, failed?: number }} */
+        const partialError = new Error('Some assignments failed');
+        partialError.done = results.length - rejected.length;
+        partialError.failed = rejected.length;
+        throw partialError;
       }
     },
-    onError: () => {
+    // P11-12 : un echec partiel se dit comme tel, et la liste se relit (equipes deja rattachees).
+    onError: (/** @type {any} */ assignError) => {
+      refetch();
       Alert.alert(
         t('common.error', 'Erreur'),
-        t(
-          'assignCoachTeams.errors.assign',
-          "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
-        ),
+        assignError?.done > 0
+          ? t(
+            'assignCoachTeams.errors.partial',
+            '{{done}} assignée(s), {{failed}} en échec : réessaie pour les autres.',
+            { done: assignError.done, failed: assignError.failed },
+          )
+          : t(
+            'assignCoachTeams.errors.assign',
+            "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
+          ),
       );
     },
     onSuccess: () => {
