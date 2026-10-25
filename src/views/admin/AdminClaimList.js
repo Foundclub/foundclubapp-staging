@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList, RefreshControl, Text, TouchableOpacity, View,
+  Alert, FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -80,7 +80,7 @@ function AdminClaimList() {
     );
   }
 
-  const handlePrimaryAction = (item) => {
+  const runPrimaryAction = (item) => {
     if (item?.__isAffiliationHelp) {
       processHelpMutation.mutate(
         { documentId: item.documentId },
@@ -94,7 +94,7 @@ function AdminClaimList() {
     });
   };
 
-  const handleSecondaryAction = (item) => {
+  const runSecondaryAction = (item) => {
     if (item?.__isAffiliationHelp) {
       refuseHelpMutation.mutate(
         { documentId: item.documentId },
@@ -122,6 +122,50 @@ function AdminClaimList() {
                 && refuseHelpMutation.variables?.documentId === item.documentId;
     }
     return refuseClaimMutation.isPending && refuseClaimMutation.variables === item.documentId;
+  };
+
+  // C10 / P9-16 : tant que l une des deux actions part sur une demande, aucune autre ne part.
+  const isItemBusy = (item) => isPrimaryLoading(item) || isSecondaryLoading(item);
+
+  // C10 / P9-09 : accepter rend le demandeur proprietaire du club ; la liste demande donc
+  // la meme confirmation que la fiche (AdminClaimDetail), avec les memes textes.
+  const handlePrimaryAction = (item) => {
+    if (isItemBusy(item)) return;
+    const isAffiliationHelp = Boolean(item?.__isAffiliationHelp);
+    Alert.alert(
+      t('adminClaimDetail.confirm.title', 'Confirmer'),
+      isAffiliationHelp
+        ? t('adminClaimDetail.confirm.processBody', 'Traiter cette demande superadmin ?')
+        : t(
+          'adminClaimDetail.confirm.acceptBody',
+          "Veux-tu vraiment accepter cette demande ? L'utilisateur deviendra propriétaire du club.",
+        ),
+      [
+        { style: 'cancel', text: t('adminClaimDetail.cancel', 'Annuler') },
+        {
+          onPress: () => runPrimaryAction(item),
+          text: isAffiliationHelp
+            ? t('adminClaimDetail.process', 'Traiter')
+            : t('adminClaimDetail.accept', 'Accepter'),
+        },
+      ],
+    );
+  };
+
+  const handleSecondaryAction = (item) => {
+    if (isItemBusy(item)) return;
+    Alert.alert(
+      t('adminClaimDetail.decline', 'Refuser'),
+      t('adminClaimDetail.confirm.rejectBody', 'Veux-tu rejeter cette demande ?'),
+      [
+        { style: 'cancel', text: t('adminClaimDetail.cancel', 'Annuler') },
+        {
+          onPress: () => runSecondaryAction(item),
+          style: 'destructive',
+          text: t('adminClaimDetail.decline', 'Refuser'),
+        },
+      ],
+    );
   };
 
   // S02 — « N personnes intéressées par ce club ».
@@ -308,6 +352,7 @@ function AdminClaimList() {
         <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[16]]}>
           <View style={{ flex: 1 }}>
             <Button
+              disabled={isItemBusy(item)}
               isLoading={isSecondaryLoading(item)}
               onPress={() => handleSecondaryAction(item)}
               size="small"
@@ -319,6 +364,7 @@ function AdminClaimList() {
           </View>
           <View style={{ flex: 1 }}>
             <Button
+              disabled={isItemBusy(item)}
               isLoading={isPrimaryLoading(item)}
               onPress={() => handlePrimaryAction(item)}
               size="small"
