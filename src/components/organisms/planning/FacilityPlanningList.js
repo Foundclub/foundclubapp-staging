@@ -10,6 +10,7 @@ import {
   closureBandLabel,
   closureHoursLabel,
   closureOfDay,
+  closureRangesOfDay,
   motDuBlocTouche,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
@@ -108,25 +109,20 @@ function FacilityPlanningList({
           .map(minutesDuBloc);
         const confirmes = duJour.filter((bloc) => bloc?.raw?.pending !== true);
         const complet = fullRanges(confirmes.map(minutesDuBloc), capacite)[0];
-        // COLL-C4B-BIS : la fermeture du jour. Toute la journee : aucune place. Un blocage : sa
-        // plage s ajoute a ce qui est pris.
-        const fermetureDuJour = closureOfDay(fermetures, format(jour, 'yyyy-MM-dd'));
-        const journeeFermee = Boolean(fermetureDuJour) && fermetureDuJour.kind !== 'block';
-        const plageBloquee = fermetureDuJour?.kind === 'block'
-          ? {
-            end: toMinutes(fermetureDuJour.endTime) ?? finDuJour,
-            start: toMinutes(fermetureDuJour.startTime) ?? debutDuJour,
-          }
-          : null;
-        const libres = journeeFermee ? [] : freeRanges(
+        // COLL-C4B-BIS : la fermeture du jour, lue en tete. C05 (Q2-02) : TOUTES les fermetures
+        // du jour retirent leurs heures du libre ; le jour n est ferme que s il ne reste rien.
+        const iso = format(jour, 'yyyy-MM-dd');
+        const fermetureDuJour = closureOfDay(fermetures, iso);
+        const libres = freeRanges(
           [
             ...confirmes.map(minutesDuBloc),
             ...prisParLaVille,
-            ...(plageBloquee ? [plageBloquee] : []),
+            ...closureRangesOfDay(fermetures, iso, { closing: finDuJour, opening: debutDuJour }),
           ],
           debutDuJour,
           finDuJour,
         );
+        const journeeFermee = Boolean(fermetureDuJour) && libres.length === 0;
         const toutLibre = duJour.length === 0 && !fermetureDuJour && !prisParLaVille.length;
         const titre = [
           capitalize(format(jour, 'EEEE d', { locale })),

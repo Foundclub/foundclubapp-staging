@@ -392,6 +392,39 @@ export const closureTouchesBlock = (bloc, fermeture) => {
 };
 
 /**
+ * Les heures qu UNE fermeture prend sur un jour qu elle couvre, en minutes. CRFERM (13/10) : une
+ * fermeture en plage prend son premier jour dès son heure, son dernier jusqu a la sienne ; un
+ * blocage, ses heures ; sinon la journee d ouverture.
+ * @param {any} fermeture - Une fermeture qui couvre `jour`.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @param {{ opening: number, closing: number }} heures - Ouverture et fermeture (minutes).
+ * @returns {{ start: number, end: number }} La plage prise.
+ */
+const closureMinutesOnDay = (fermeture, jour, heures) => {
+  const bloc = fermeture.kind === 'block';
+  return {
+    end: (bloc || jour === fermeture.endDate ? minutesDe(fermeture.endTime) : null)
+      ?? heures.closing,
+    start: (bloc || jour === fermeture.startDate ? minutesDe(fermeture.startTime) : null)
+      ?? heures.opening,
+  };
+};
+
+/**
+ * C05 (BUGHUNT P2, Q2-02) — les plages que TOUTES les fermetures d un jour prennent (vue Liste) :
+ * une fermeture partielle ne ferme pas toute la journee, un 2e blocage compte aussi.
+ * @param {any[]} fermetures - `meta.closures` du planning.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @param {{ opening: number, closing: number }} heures - Ouverture et fermeture (minutes).
+ * @returns {{ start: number, end: number }[]} Les plages prises, en minutes.
+ */
+export const closureRangesOfDay = (fermetures, jour, heures) => (
+  Array.isArray(fermetures) ? fermetures : []
+)
+  .filter((fermeture) => closureCoversDay(fermeture, jour))
+  .map((fermeture) => closureMinutesOnDay(fermeture, jour, heures));
+
+/**
  * LES PLAGES HACHUREES DU PLANNING (planche P4v3-fermer-tel ecran 4) : une plage par jour de la
  * fenetre que la fermeture couvre, des heures d ouverture a la fermeture (journee entiere) ou sur
  * la plage bloquee. Ce sont des elements du planning a part (`raw.closureBand`) : jamais comptes
@@ -411,14 +444,8 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
   return (Array.isArray(fermetures) ? fermetures : []).flatMap((fermeture) => jours
     .filter((jour) => closureCoversDay(fermeture, format(jour, 'yyyy-MM-dd')))
     .map((jour) => {
-      const bloc = fermeture.kind === 'block';
-      // CRFERM (13/10) : une fermeture en plage hachure son premier jour dès son heure, son dernier
-      // jusqu a la sienne.
       const iso = format(jour, 'yyyy-MM-dd');
-      const de = (bloc || iso === fermeture.startDate ? minutesDe(fermeture.startTime) : null)
-        ?? heures.opening;
-      const a = (bloc || iso === fermeture.endDate ? minutesDe(fermeture.endTime) : null)
-        ?? heures.closing;
+      const { end: a, start: de } = closureMinutesOnDay(fermeture, iso, heures);
       const instant = (/** @type {number} */ minutes) => new Date(
         jour.getFullYear(),
         jour.getMonth(),
