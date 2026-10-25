@@ -3966,8 +3966,10 @@ function ClubDetails({ navigation, route }) {
                     ) : null}
                   </View>
                 ) : null}
-              {/* president */}
-              {showsClubSection('staff') && (owners?.length || canEdit) ? (
+              {/* president — PETITSCHOIX/12 (Adel 25/10 « 12- A ») : masques comme les coachs, */}
+              {/* sans compte ou quand le club masque ses membres. */}
+              {showsClubSection('staff') && showsPrivateClubDetails && !areClubMembersHidden
+                && (owners?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
