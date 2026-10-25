@@ -118,10 +118,17 @@ function AdminNotificationsHealth() {
     setFeedback('');
     try {
       const result = await action();
-      setFeedback(`${label} : OK${result?.ok === false ? t(
-        'adminNotificationsHealth.withWarning',
-        ' avec avertissement',
-      ) : ''}`);
+      // C10 / P9-15 : cote serveur, `ok: false` veut dire que RIEN n est parti (push coupe,
+      // aucun jeton, ou aucun envoi reussi) : c est un echec, avec la raison du serveur.
+      if (result?.ok === false) {
+        const reason = result?.result?.reason ? ` (${result.result.reason})` : '';
+        setFeedback(`${label} : ${t(
+          'adminNotificationsHealth.notSent',
+          'échec, rien n’a été envoyé',
+        )}${reason}`);
+      } else {
+        setFeedback(`${label} : OK`);
+      }
       refetch();
     } catch (actionError) {
       setFeedback(`${label} : ${actionError?.message || 'echec'}`);

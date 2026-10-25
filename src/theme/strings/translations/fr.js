@@ -1136,6 +1136,7 @@ export default {
       subscriptions: 'Abonnements',
     },
     no: 'Non',
+    notSent: 'échec, rien n’a été envoyé',
     runtime: {
       cronActive: 'Cron actif',
       cronLeader: 'Leader cron',
@@ -1162,7 +1163,6 @@ export default {
       // eslint-disable-next-line max-len
       unsubscribedLocal: 'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.',
     },
-    withWarning: ' avec avertissement',
     yes: 'Oui',
   },
   adminPopupCampaignDetail: {

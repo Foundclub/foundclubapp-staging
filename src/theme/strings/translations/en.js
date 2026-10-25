@@ -1079,6 +1079,7 @@ export default {
       subscriptions: 'Subscriptions',
     },
     no: 'No',
+    notSent: 'failed, nothing was sent',
     runtime: {
       cronActive: 'Cron active',
       cronLeader: 'Cron leader',
@@ -1104,7 +1105,6 @@ export default {
       subscriptionsCount: 'subscription(s)',
       unsubscribedLocal: 'logged-in local account(s) not yet subscribed on this device.',
     },
-    withWarning: ' with warning',
     yes: 'Yes',
   },
   adminPopupCampaignDetail: {
