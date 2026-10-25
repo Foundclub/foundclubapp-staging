@@ -36,7 +36,6 @@ import {
   getRequestedPosition,
 } from '@/domains/detection/detectionSplit';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
-import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -57,6 +56,8 @@ import { useGetEventTeamComposition } from '@/services/event/eventQueries';
 import { saveEventCompositionDraft } from '@/services/event/eventService';
 
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
+
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 
 /**
  * C-E — ECRAN 17 du pack composition : « Rotation + chasuble ».

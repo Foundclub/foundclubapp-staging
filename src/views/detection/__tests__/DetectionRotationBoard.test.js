@@ -29,16 +29,16 @@ let mockCompositionQuery = { data: null };
 
 // PETITSCHOIX/16 — la navigation retient ses ecouteurs (`beforeRemove`) et ceux de la barre
 // d'onglets (`tabPress`) : le test les declenche lui-meme, comme le ferait un retour ou un onglet.
-/** @type {Record<string, any>} */
-const mockEcouteurs = {};
-/** @type {Record<string, any>} */
-const mockEcouteursOnglets = {};
-const mockEcouter = (/** @type {Record<string, any>} */ registre) => (
+/** @type {Map<string, any>} */
+const mockEcouteurs = new Map();
+/** @type {Map<string, any>} */
+const mockEcouteursOnglets = new Map();
+const mockEcouter = (/** @type {Map<string, any>} */ registre) => (
   /** @type {string} */ nom,
   /** @type {any} */ rappel,
 ) => {
-  registre[nom] = rappel;
-  return () => { if (registre[nom] === rappel) delete registre[nom]; };
+  registre.set(nom, rappel);
+  return () => { if (registre.get(nom) === rappel) registre.delete(nom); };
 };
 const mockOnglets = {
   addListener: mockEcouter(mockEcouteursOnglets),
@@ -542,7 +542,7 @@ describe('PETITSCHOIX/16 — enregistrer avant de quitter', () => {
   const ACTION = { type: 'GO_BACK' };
   const quitter = () => {
     const evenement = { data: { action: ACTION }, preventDefault: jest.fn() };
-    act(() => { mockEcouteurs.beforeRemove?.(evenement); });
+    act(() => { mockEcouteurs.get('beforeRemove')?.(evenement); });
     return evenement;
   };
   const boutons = () => /** @type {any} */ (Alert.alert).mock.calls
@@ -629,14 +629,19 @@ describe('PETITSCHOIX/16 — enregistrer avant de quitter', () => {
     await appuyerSur('Oui');
 
     expect(mockNavigation.dispatch).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'Impossible d’enregistrer cette répartition.');
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Erreur',
+      'Impossible d’enregistrer cette répartition.',
+    );
   });
 
   test('ecran 16 · après « Enregistrer », on quitte sans question', async () => {
     const racine = monter(DetectionTeamsBoard, ecran16());
     lacherDehors(gestePour(racine, 'Un'));
     const enregistrer = racine.findAll((/** @type {any} */ noeud) => (
-      typeof noeud.type !== 'string' && noeud.props?.onPress && texteDe(noeud).includes('Enregistrer')
+      typeof noeud.type !== 'string'
+      && noeud.props?.onPress
+      && texteDe(noeud).includes('Enregistrer')
     ))[0];
     await act(async () => { await enregistrer.props.onPress(); });
 
@@ -644,12 +649,12 @@ describe('PETITSCHOIX/16 — enregistrer avant de quitter', () => {
     expect(evenement.preventDefault).not.toHaveBeenCalled();
   });
 
-  test('ecran 16 modifié · un autre onglet : la question est posée, Non ouvre l onglet', async () => {
+  test('ecran 16 modifié · autre onglet : la question est posée, Non ouvre l onglet', async () => {
     const racine = monter(DetectionTeamsBoard, ecran16());
     lacherDehors(gestePour(racine, 'Un'));
 
     const evenement = { preventDefault: jest.fn(), target: 'onglet-accueil' };
-    act(() => { mockEcouteursOnglets.tabPress?.(evenement); });
+    act(() => { mockEcouteursOnglets.get('tabPress')?.(evenement); });
     expect(evenement.preventDefault).toHaveBeenCalled();
     await appuyerSur('Non');
 

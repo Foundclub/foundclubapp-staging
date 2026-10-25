@@ -14,7 +14,9 @@ import { Alert } from 'react-native';
  *   actif: boolean,
  *   enregistrer?: () => Promise<boolean>,
  *   retenir?: () => ({ message: string, titre: string } | null),
- *   textes: { enregistrer?: string, message: string, quitter: string, rester: string, titre: string },
+ *   textes: {
+ *     enregistrer?: string, message: string, quitter: string, rester: string, titre: string,
+ *   },
  * }} options - `actif` : la saisie est modifiée ; `retenir`, lu au moment du Retour : une
  *   sortie IMPOSSIBLE (un envoi en cours), dite sans proposer de quitter.
  *   `enregistrer` (PETITSCHOIX/16, détection) : la question devient « Non / Oui » — `quitter`
@@ -77,7 +79,8 @@ export default function useGardeDeSortie(navigation, {
     while (onglets && onglets.getState?.()?.type !== 'tab') onglets = onglets.getParent?.();
     return onglets?.addListener?.('tabPress', (/** @type {any} */ evenement) => {
       if (!actif || sortieLibre.current || !navigation.isFocused?.()) return;
-      const cible = onglets.getState().routes.find((/** @type {any} */ r) => r.key === evenement.target);
+      const cible = onglets.getState().routes
+        .find((/** @type {any} */ r) => r.key === evenement.target);
       if (!cible) return;
       evenement.preventDefault();
       demander(() => {

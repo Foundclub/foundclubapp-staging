@@ -205,30 +205,42 @@ function TournamentMatchDetails({ navigation, route }) {
     });
   };
 
-  // PETITSCHOIX/13 (Adel 25/10 « 13- B ») : « Forfait <équipe> » pré-remplit 3-0 pour l'autre équipe,
-  // sans écraser ce que le coach a déjà tapé, et n'envoie rien : le score reste modifiable.
+  // PETITSCHOIX/13 (Adel 25/10 « 13- B ») : « Forfait <équipe> » pré-remplit 3-0 pour
+  // l'autre équipe, sans écraser ce que le coach a déjà tapé, et n'envoie rien : le score
+  // reste modifiable.
   const handleDeclareForfeit = (/** @type {string} */ teamId) => {
     if (!teamId) return;
-    const forfeitOfTeamA = teamId === teamAId;
+    const [prefillA, prefillB] = teamId === teamAId ? ['0', '3'] : ['3', '0'];
     setForfeitTeamId(teamId);
-    setScoreAText((current) => (current.trim() ? current : (forfeitOfTeamA ? '0' : '3')));
-    setScoreBText((current) => (current.trim() ? current : (forfeitOfTeamA ? '3' : '0')));
+    setScoreAText((current) => (current.trim() ? current : prefillA));
+    setScoreBText((current) => (current.trim() ? current : prefillB));
   };
+
+  const alertIncompleteScore = () => Alert.alert(
+    t('tournamentMatchDetails.incompleteScore', 'Score incomplet'),
+    t(
+      'tournamentMatchDetails.enterTwoValidScoresFor',
+      'Renseigne deux scores valides. Pour un match nul en phase finale, '
+        + 'indique aussi le vainqueur.',
+    ),
+  );
 
   const handleReportScore = () => {
     if (forfeitTeamId) {
       if (!scoresAreValid) {
-        Alert.alert(t('tournamentMatchDetails.incompleteScore', 'Score incomplet'), t('tournamentMatchDetails.enterTwoValidScoresFor', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.'));
+        alertIncompleteScore();
         return;
       }
-      // Même règle que le serveur (reportMatchScore) : l'équipe forfait ne gagne pas et ne fait pas nul.
+      // La règle du serveur (reportMatchScore) : l'équipe forfait ne gagne pas, ne fait pas nul.
       if ((forfeitIsTeamA ? scoreA >= scoreB : scoreB >= scoreA)) {
         Alert.alert(
           t('tournamentMatchDetails.forfeitScoreRefusedTitle', 'Score refusé'),
-          t('tournamentMatchDetails.forfeitScoreRefused', 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.', {
-            teamName: forfeitTeamName,
-            ...SANS_ECHAPPEMENT,
-          }),
+          t(
+            'tournamentMatchDetails.forfeitScoreRefused',
+            'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. '
+              + 'Corrige le score.',
+            { teamName: forfeitTeamName, ...SANS_ECHAPPEMENT },
+          ),
         );
         return;
       }
@@ -244,7 +256,7 @@ function TournamentMatchDetails({ navigation, route }) {
     }
 
     if (!canSubmitScore) {
-      Alert.alert(t('tournamentMatchDetails.incompleteScore', 'Score incomplet'), t('tournamentMatchDetails.enterTwoValidScoresFor', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.'));
+      alertIncompleteScore();
       return;
     }
 
@@ -475,10 +487,12 @@ function TournamentMatchDetails({ navigation, route }) {
 
               {forfeitTeamId ? (
                 <Text style={[Fonts.p3, Fonts.warning500]}>
-                  {t('tournamentMatchDetails.forfeitNotice', 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.', {
-                    teamName: forfeitTeamName,
-                    ...SANS_ECHAPPEMENT,
-                  })}
+                  {t(
+                    'tournamentMatchDetails.forfeitNotice',
+                    'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, '
+                      + 'modifiable.',
+                    { teamName: forfeitTeamName, ...SANS_ECHAPPEMENT },
+                  )}
                 </Text>
               ) : null}
 
