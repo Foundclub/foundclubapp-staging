@@ -68,7 +68,9 @@ function AdminPopupCampaignList() {
 
   const campaigns = Array.isArray(data?.data) ? data.data : [];
 
-  if (isLoading) {
+  // C10 / P9-14 : le chargement plein ecran seulement tant qu aucune liste n est arrivee,
+  // pour que le champ de recherche reste a l ecran (et garde le clavier) pendant la frappe.
+  if (isLoading && !data) {
     return (
       <AdminStateView
         description={t(
