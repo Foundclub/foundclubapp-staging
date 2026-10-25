@@ -47,6 +47,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { carteDAnnonce, NOTICE_ANNONCE_COMPLEXE } from '@/domains/complexe/annonceDuCanal';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
+import identiteDansLeFil from '@/domains/messaging/anonymatDeLigue';
 import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
@@ -4100,42 +4101,14 @@ function Conversation({ navigation, route }) {
     type: chatData?.type,
   });
 
-  // Anonymization helper for league_match chats
-  const getAnonymizedName = useCallback((/** @type {User} */ sender) => {
-    // If not a league match chat, show real name
-    if (chatData?.type !== 'league_match') {
-      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
-    }
-
-    // Check if the sender is the current user
-    if (sender?.documentId === userData?.documentId) {
-      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
-    }
-
-    // For league match chats, check if event has passed
-    const eventDate = chatData?.league_match?.date;
-    const hasEventPassed = eventDate && new Date(eventDate) < new Date();
-
-    if (hasEventPassed) {
-      // Event passed, reveal real names
-      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
-    }
-
-    // Get my team's members to determine if sender is opponent
-    const myTeamMembers = chatData?.myTeamMembers || [];
-    const isMyTeamMember = myTeamMembers.some((/** @type {any} */ m) => m.documentId === sender?.documentId);
-
-    if (isMyTeamMember) {
-      // Show real name for teammates
-      return `${sender?.firstname || ''} ${sender?.lastname || ''}`;
-    }
-
-    // This is an opponent - anonymize
-    const isCaptain = isLeagueCaptain(chatData?.league_match?.team_a, sender)
-      || isLeagueCaptain(chatData?.league_match?.team_b, sender);
-
-    return isCaptain ? 'Capitaine Adverse' : 'Joueur Adverse';
-  }, [chatData, userData?.documentId]);
+  // Q4-06 — la règle d'anonymat d'un fil de ligue (bulle, frappe, votants, citations).
+  const identiteDe = useCallback((/** @type {any} */ personne) => identiteDansLeFil({
+    chat: chatData, moiId: userData?.documentId, personne,
+  }), [chatData, userData?.documentId]);
+  const getAnonymizedName = useCallback(
+    (/** @type {User} */ sender) => identiteDe(sender).nom,
+    [identiteDe],
+  );
 
   const voterNameDirectory = useMemo(() => {
     /** @type {Map<string, string>} */
@@ -4152,14 +4125,28 @@ function Conversation({ navigation, route }) {
       const prenom = String(user?.firstname || '').trim();
       const nom = String(user?.lastname || '').trim();
       const repli = String(user?.username || user?.email || '').trim();
-      directory.set(userId, `${prenom} ${nom}`.trim() || repli || 'Membre');
+      const identite = identiteDe({ ...user, documentId: userId });
+      directory.set(userId, identite.anonyme
+        ? identite.nom
+        : `${prenom} ${nom}`.trim() || repli || 'Membre');
     });
     return directory;
-  }, [chatData?.participants, messagesPages?.pages, userData]);
+  }, [chatData?.participants, identiteDe, messagesPages?.pages, userData]);
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
     if (!voterId) return 'Membre';
     return voterNameDirectory.get(String(voterId)) || 'Membre';
+  };
+
+  /**
+   * Q4-06 — l'auteur d'un message cité : « Joueur Adverse » pour un adversaire anonymisé.
+   * @param {any} message - Le message cité (brut du serveur, ou de GiftedChat).
+   * @returns {{ identifiant: string, nom: string }} L'auteur.
+   */
+  const auteurCiteDansLeFil = (message) => {
+    const auteur = auteurDuMessageCite(message, userData?.documentId || '', t);
+    const identite = message?.sender ? identiteDe(message.sender) : null;
+    return identite?.anonyme ? { ...auteur, nom: identite.nom } : auteur;
   };
 
   /** @type {any[]} */
@@ -4200,8 +4187,7 @@ function Conversation({ navigation, route }) {
       const senderEntityId = getEntityDocumentId(msg.sender);
       const nomDuFil = filDeLaVille.nomDeLExpediteur(msg) || nomDansLeCanal(chatData);
       const nomAffiche = nomDuFil || getAnonymizedName(msg.sender);
-      const expediteurAnonyme = !nomDuFil
-        && (nomAffiche === 'Joueur Adverse' || nomAffiche === 'Capitaine Adverse');
+      const expediteurAnonyme = !nomDuFil && identiteDe(msg.sender).anonyme;
       const stableMessageId = String(
         msg?.documentId
         || msg?.id
@@ -4281,6 +4267,7 @@ function Conversation({ navigation, route }) {
     filDeLaVille,
     messagesPages,
     getAnonymizedName,
+    identiteDe,
     getPrimaryImageUriFromMessage,
     isImageAttachmentMessage,
     logAttachmentDebug,
@@ -6202,7 +6189,7 @@ function Conversation({ navigation, route }) {
     // couleur de l'auteur cite (« Vous » si c'est moi), extrait d'une ligne avec l'icone du
     // contenu. Un appui remonte au message cite, comme avant.
     const auteurCite = currentMessage.replyTo
-      ? auteurDuMessageCite(currentMessage.replyTo, userData?.documentId || '', t)
+      ? auteurCiteDansLeFil(currentMessage.replyTo)
       : null;
     const extraitCite = currentMessage.replyTo
       ? extraitDuMessageCite(currentMessage.replyTo, t)
@@ -6472,6 +6459,8 @@ function Conversation({ navigation, route }) {
         String(participant?.documentId || participant?.id || '') === String(voterId || '')
       ))
       : null;
+    // Q4-06 — un adversaire anonymisé ne montre pas sa photo.
+    if (membre && identiteDe(membre).anonyme) return '';
     return resolveMediaUri(membre?.avatar?.url) || '';
   };
 
@@ -6739,7 +6728,7 @@ function Conversation({ navigation, route }) {
 
         {/* 💬 MSG1A (§3.3) — la barre « reponse en cours » du pack, au-dessus de la saisie. */}
         {hasReplyPreview ? (() => {
-          const auteur = auteurDuMessageCite(replyingTo, userData?.documentId || '', t);
+          const auteur = auteurCiteDansLeFil(replyingTo);
           const extrait = extraitDuMessageCite(replyingTo, t);
           return (
             <BarreDeReponse
@@ -6777,11 +6766,17 @@ function Conversation({ navigation, route }) {
           String(membre?.documentId || '') === String(Array.from(typingUsers)[0] || '')
         ))
         : null;
+      // Q4-06 — ni la photo ni le nom d'un adversaire anonymisé.
+      const qui = premierQuiEcrit ? identiteDe(premierQuiEcrit) : null;
       const avatarQuiEcrit = premierQuiEcrit && !estUnTeteATete(chatData?.type) ? (
         <ProfileAvatar
           enablePreview={false}
-          imageUrl={resolveMediaUri(premierQuiEcrit?.avatar?.url) || undefined}
-          name={[premierQuiEcrit?.firstname, premierQuiEcrit?.lastname].filter(Boolean).join(' ')}
+          imageUrl={qui?.anonyme
+            ? undefined
+            : resolveMediaUri(premierQuiEcrit?.avatar?.url) || undefined}
+          name={qui?.anonyme
+            ? qui.nom
+            : [premierQuiEcrit?.firstname, premierQuiEcrit?.lastname].filter(Boolean).join(' ')}
           size={28}
         />
       ) : null;
