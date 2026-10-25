@@ -240,7 +240,8 @@ const roleSchema = Joi.object({
  */
 const otpPhoneNumberByConfirmation = new WeakMap();
 
-const normalizeOtpPhoneNumber = (/** @type {unknown} */ value) => String(value || '').replace(/[\s.-]/g, '');
+const normalizeOtpPhoneNumber = (/** @type {unknown} */ value) => String(value || '')
+  .replace(/[\s.-]/g, '');
 
 /**
  * Sign in with phone number
@@ -382,9 +383,10 @@ export const login = async ({ code, confirm }) => {
   // requested for: otherwise the code is never checked and the previous Firebase
   // user is logged in instead (C11).
   const currentUser = getCurrentUser();
+  const requestedPhoneNumber = confirm ? otpPhoneNumberByConfirmation.get(confirm) : undefined;
   const isCurrentUserTheRequestedOne = !confirm || (
     Boolean(currentUser?.phoneNumber)
-    && normalizeOtpPhoneNumber(currentUser?.phoneNumber) === otpPhoneNumberByConfirmation.get(confirm)
+    && normalizeOtpPhoneNumber(currentUser?.phoneNumber) === requestedPhoneNumber
   );
 
   let firebaseResult;

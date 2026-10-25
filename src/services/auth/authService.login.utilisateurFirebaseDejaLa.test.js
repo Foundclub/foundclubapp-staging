@@ -64,7 +64,7 @@ const utilisateurFirebase = (phoneNumber, idToken) => ({
   phoneNumber,
 });
 
-describe('C11 — login ne réutilise l’utilisateur Firebase présent que pour le numéro demandé', () => {
+describe('C11 — login : l’utilisateur Firebase présent, seulement pour le numéro demandé', () => {
   beforeEach(() => {
     resetOtpSendThrottle();
     mockSendOtp.mockReset();
@@ -74,7 +74,7 @@ describe('C11 — login ne réutilise l’utilisateur Firebase présent que pour
     mockPost.mockResolvedValue({ data: { data: { documentId: 'user' }, jwt: 'jwt' } });
   });
 
-  test('A est encore connecté à Firebase, le SMS est demandé pour B : le code de B est vérifié', async () => {
+  test('A encore connecté à Firebase, SMS demandé pour B : le code de B est vérifié', async () => {
     const confirmation = { verificationId: 'vid-B' };
     mockSendOtp.mockResolvedValue(confirmation);
     mockGetCurrentUser.mockReturnValue(utilisateurFirebase(NUMERO_A, 'jeton-A'));
@@ -87,7 +87,7 @@ describe('C11 — login ne réutilise l’utilisateur Firebase présent que pour
     expect(mockPost).toHaveBeenCalledWith('/firebase-auth/login', { idToken: 'jeton-B' });
   });
 
-  test('vérification automatique d’Android : Firebase a déjà connecté le numéro demandé', async () => {
+  test('vérification automatique d’Android : le numéro demandé est déjà connecté', async () => {
     mockSendOtp.mockResolvedValue({ verificationId: 'vid-B' });
     mockGetCurrentUser.mockReturnValue(utilisateurFirebase(NUMERO_B, 'jeton-B'));
 
@@ -98,7 +98,7 @@ describe('C11 — login ne réutilise l’utilisateur Firebase présent que pour
     expect(mockPost).toHaveBeenCalledWith('/firebase-auth/login', { idToken: 'jeton-B' });
   });
 
-  test('reprise de session sans code (SessionManager) : l’utilisateur Firebase présent sert', async () => {
+  test('reprise de session sans code (SessionManager) : l’utilisateur présent sert', async () => {
     mockGetCurrentUser.mockReturnValue(utilisateurFirebase(NUMERO_A, 'jeton-A'));
 
     await login({});
