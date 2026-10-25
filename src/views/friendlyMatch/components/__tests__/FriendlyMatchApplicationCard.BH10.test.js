@@ -101,3 +101,28 @@ test('P10-25 : aucune autre proposition en attente, aucun avertissement', async 
   expect(alerte).toHaveBeenCalledTimes(1);
   expect(alerte.mock.calls[0][1]).not.toMatch(/autres? propositions?/);
 });
+
+// C07 / Q4-07 — le jour choisi (`chosenDate`, minuit UTC) se lit comme un JOUR :
+// outre-mer, le relire en heure locale affichait la veille.
+test('Q4-07 : le jour choisi par le candidat reste ce jour-la', async () => {
+  let tree;
+  await act(async () => {
+    tree = renderer.create(
+      <FriendlyMatchApplicationCard
+        ad={{ documentId: 'annonce-1' }}
+        application={{
+          chosenDate: '2099-05-12T00:00:00.000Z',
+          documentId: 'proposition-2',
+          status: 'pending',
+          team: { name: 'US Test' },
+        }}
+        onOpenConversation={() => {}}
+        onResponded={() => {}}
+      />,
+    );
+  });
+  const textes = tree.root.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string')
+    .map((/** @type {any} */ n) => n.props.children).join(' ');
+  expect(textes).toMatch(/12 mai/);
+  expect(textes).not.toMatch(/11 mai/);
+});

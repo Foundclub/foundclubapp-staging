@@ -85,10 +85,14 @@ function FriendlyMatchTermsSheet({
   useEffect(() => {
     if (!visible) return;
     const agreed = application?.agreedTerms || {};
-    const fallbackDate = String(agreed.date || application?.chosenDate || '');
-    setDay(toLocalIsoDay(fallbackDate));
-    setTime(/^\d{4}-\d{2}-\d{2}T/.test(fallbackDate)
-      ? new Date(fallbackDate).toTimeString().slice(0, 5)
+    const agreedDate = String(agreed.date || '');
+    // Q4-07 : `chosenDate` est un JOUR (garde en datetime, donc minuit UTC) :
+    // le relire comme un instant pre-remplissait 02:00, ou la veille outre-mer.
+    setDay(agreedDate
+      ? toLocalIsoDay(agreedDate)
+      : String(application?.chosenDate || '').slice(0, 10));
+    setTime(/^\d{4}-\d{2}-\d{2}T/.test(agreedDate)
+      ? new Date(agreedDate).toTimeString().slice(0, 5)
       : '');
     setVenue(String(agreed.venue || application?.proposedVenue || ''));
     setErrorMessage('');
