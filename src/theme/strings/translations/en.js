@@ -10978,7 +10978,6 @@ export default {
         pendingValidationHint: 'Slot full at this time — the event will be sent to the club as a pending request.',
         prevention: {
           autorise: 'Careful, this slot is already taken: {{gestionnaire}} allows it anyway, no request needed.',
-          // eslint-disable-next-line max-len
           demande: 'Careful, this slot is already taken: you will have to send a request to {{gestionnaire}} to hold {{pour}}. It will be sent when you create the event.',
           libre: 'This slot is free.',
           pour: {

@@ -45,11 +45,15 @@ const preventionDuCreneau = (t, {
 }) => {
   if (!occupation || mairie) return null;
   if (!occupation.saturated) {
-    return { pris: false, texte: t('eventWizard.steps.location.prevention.libre', 'Ce créneau est libre.') };
+    return {
+      pris: false,
+      texte: t('eventWizard.steps.location.prevention.libre', 'Ce créneau est libre.'),
+    };
   }
   if (occupation.allowsImmediateConfirmation) {
     return {
       pris: true,
+      // eslint-disable-next-line max-len
       texte: t('eventWizard.steps.location.prevention.autorise', 'Attention, ce créneau est déjà pris : {{gestionnaire}} l’autorise quand même, sans demande.', {
         gestionnaire, ...SANS_ECHAPPEMENT,
       }),

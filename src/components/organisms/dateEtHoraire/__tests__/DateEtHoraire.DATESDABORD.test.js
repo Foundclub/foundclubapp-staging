@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des dates et des appels entiers, comparés tels quels */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 

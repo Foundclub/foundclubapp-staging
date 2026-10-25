@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des dates et des appels entiers, comparés tels quels */
 import { quandDeLaRepetition } from '../seasonSlotWhen';
 
 // 🗓️ DATESDABORD (23/10/2026, recette iPhone d'Adel, point 9) — « ATTRIBUER UN CRÉNEAU » PREND LE

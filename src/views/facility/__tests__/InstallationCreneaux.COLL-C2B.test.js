@@ -293,7 +293,9 @@ const appuyer = async (/** @type {any} */ noeud) => {
 // d'événement) : le jour se choisit par une date, ici le prochain mercredi, sur la même étape que
 // les heures ; un « Suivant » mène au récapitulatif.
 const choisirMercredi = async (/** @type {any} */ arbre) => {
-  const modele = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onRepetition === 'function')[0];
+  const modele = arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+  )[0];
   const mercredi = new Date();
   mercredi.setHours(12, 0, 0, 0);
   mercredi.setDate(mercredi.getDate() + ((3 - mercredi.getDay() + 7) % 7));

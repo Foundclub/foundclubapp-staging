@@ -592,7 +592,9 @@ function SeasonSlotForm({
   // « Répéter » ; par défaut, toutes les semaines jusqu'à la fin de saison (le « toute la saison »
   // d'avant, dit avec les mots de l'événement). Chaque geste réécrit la forme du « Quand ? »
   // (`quandDeLaRepetition`) : l'aperçu, les vacances, les fermetures et l'envoi la lisent.
-  const [dateDuModele, setDateDuModele] = useState(() => prochainJour(jour || isoWeekdayOf(new Date())));
+  const [dateDuModele, setDateDuModele] = useState(
+    () => prochainJour(jour || isoWeekdayOf(new Date())),
+  );
   const [repetitionDuModele, setRepetitionDuModele] = useState(() => ({
     actif: true,
     au: parseISO(saisonDuJour(format(new Date(), 'yyyy-MM-dd'))?.validUntil || ''),
@@ -782,7 +784,10 @@ function SeasonSlotForm({
   // répétition sur plusieurs jours : celui de la date).
   const jourDuModele = isoWeekdayOf(dateDuModele);
   const pleinesDuJourChoisi = useMemo(() => (avecLeModele
-    ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jourDuModele, slot?.documentId), capacite)
+    ? fullRangesOfSlots(
+      creneauxDuJour(lecture.data?.data, jourDuModele, slot?.documentId),
+      capacite,
+    )
     : []), [avecLeModele, capacite, jourDuModele, lecture.data, slot?.documentId]);
   const heuresLibres = useMemo(
     () => (jour ? freeRanges(heuresPleines) : []),
@@ -1950,9 +1955,9 @@ function SeasonSlotForm({
           onRepetition={changerLaRepetition}
           pleines={heuresPleines}
           repetition={repetitionDuModele}
-          // 🗓️ DATESDABORD (25/10, décision d'Adel « 7- B ») — sous la date choisie, les heures déjà
-          // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces de
-          // jours ne reviennent pas.
+          // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
+          // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
+          // de jours ne reviennent pas.
           sousLaDate={pleinesDuJourChoisi.length ? (
             <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="date-complet-du-jour">
               {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {

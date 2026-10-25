@@ -8,8 +8,9 @@ import useJugementDuCreneau from './useJugementDuCreneau';
 
 /**
  * 🗓️ DATESDABORD (25/10/2026, « 6- B ») — SOUS « DATE & HORAIRE », CE QUE DIT L'INSTALLATION
- * CHOISIE À L'ÉTAPE « LIEU », pour le jour et les heures en cours : « Ce créneau est libre » (vert),
- * « Attention, ce créneau est déjà pris : … » (orange), la fermeture de la Ville (orange, bloque),
+ * CHOISIE À L'ÉTAPE « LIEU », pour le jour et les heures en cours : « Ce créneau est libre »
+ * (vert), « Attention, ce créneau est déjà pris : … » (orange), la fermeture de la Ville (orange,
+ * bloque),
  * la mairie qui décidera (orange), ou la lecture en cours / en panne. Monté seulement quand une
  * installation est choisie (une adresse extérieure ne se juge pas). Il dit à l'étape ce qui bloque
  * « Suivant » (`onEtat`).
@@ -61,7 +62,10 @@ function JugementDuCreneau({
       ) : null}
       {jugement.enLecture && !jugement.enPanne ? (
         <Text style={[Fonts.p3, Fonts.warning500]}>
-          {t('eventWizard.steps.location.checkingAvailability', 'Vérification de la disponibilité…')}
+          {t(
+            'eventWizard.steps.location.checkingAvailability',
+            'Vérification de la disponibilité…',
+          )}
         </Text>
       ) : null}
       {jugement.enPanne ? (

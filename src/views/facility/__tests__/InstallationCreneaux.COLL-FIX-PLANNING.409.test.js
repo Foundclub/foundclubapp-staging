@@ -295,7 +295,9 @@ const appuyer = async (/** @type {any} */ noeud) => {
 // d'événement) : le jour se choisit par une date, ici le prochain mercredi, sur la même étape que
 // les heures ; un « Suivant » mène au récapitulatif.
 const choisirMercredi = async (/** @type {any} */ arbre) => {
-  const modele = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onRepetition === 'function')[0];
+  const modele = arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+  )[0];
   const mercredi = new Date();
   mercredi.setHours(12, 0, 0, 0);
   mercredi.setDate(mercredi.getDate() + ((3 - mercredi.getDay() + 7) % 7));
@@ -420,8 +422,9 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    // COLL-R-A7 (COL-005) : « Période » était sautée. DATESDABORD (23/10) : « Quand ? » est sur
-    // l'étape « Date & horaire », déjà répondue (toute la saison) : un « Suivant » au récapitulatif.
+    // COLL-R-A7 (COL-005) : « Période » était sautée. DATESDABORD (23/10) : « Quand ? » est
+    // sur l'étape « Date & horaire », déjà répondue (toute la saison) : un « Suivant » au
+    // récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
 

@@ -11646,6 +11646,7 @@ export default {
         // DATESDABORD (23/10, point 4 d'Adel) — la phrase de l'étape « Lieu », dès que
         // l'installation est cochée (preventionDuCreneau.js).
         prevention: {
+          // eslint-disable-next-line max-len
           autorise: 'Attention, ce créneau est déjà pris : {{gestionnaire}} l’autorise quand même, sans demande.',
           // eslint-disable-next-line max-len
           demande: 'Attention, ce créneau est déjà pris : tu vas devoir envoyer une demande à {{gestionnaire}} pour faire {{pour}}. Elle partira quand tu créeras l’événement.',

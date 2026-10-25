@@ -215,7 +215,8 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   la Ville) ; `finApres` et
  *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
  *   `onRepetition(null)` revient a « Une seule fois » ; `sousLaDate` : une ligne de l ecran
- *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `webZIndex` : la couche de la feuille sur
+ *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `webZIndex` : la couche
+ *   de la feuille sur
  *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
  * @returns {import('react').ReactElement} Le bloc.
  */
