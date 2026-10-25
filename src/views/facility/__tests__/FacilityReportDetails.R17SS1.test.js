@@ -225,6 +225,19 @@ describe('R17SS1 — la fiche d un signalement', () => {
     expect(mockStatut.mutateAsync).toHaveBeenCalledWith({ reportId: 'sig-1', status: 'resolu' });
   });
 
+  it('C05 (Q2-20) : le refus du serveur se lit DANS la feuille ouverte, pas derrière', async () => {
+    mockStatut.mutateAsync = jest.fn(() => Promise.reject(Object.assign(new Error('Ce signalement est déjà clos.'), { status: 409 })));
+    const arbre = monter();
+    await presser(arbre, 'signalement-plus');
+    await presser(arbre, 'signalement-resolu');
+    await presser(arbre, 'feuille-resolu');
+    const [feuille] = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'feuille' && typeof n.type === 'string');
+    expect(feuille).toBeDefined();
+    const refus = feuille.findAll((/** @type {any} */ n) => n.props.testID === 'signalement-feuille-refus' && typeof n.type === 'string');
+    expect(refus).toHaveLength(1);
+    expect([].concat(refus[0].props.children).join('')).not.toBe('');
+  });
+
   it('Q4 A, étape 4 : la fermeture liée est finie, l écran propose « Résolu »', () => {
     mockFiche.data.data = {
       ...SIGNALEMENT,
