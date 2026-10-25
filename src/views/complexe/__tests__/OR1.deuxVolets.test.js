@@ -68,11 +68,19 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   }),
 }));
 
-// La fiche elle-même a son témoin (EG05) : ici, on regarde seulement QUELLE fiche le volet montre.
+// La fiche elle-même a son témoin (EG05) : ici, on regarde seulement QUELLE fiche le volet montre,
+// et pour quelle ligne elle a été montée (son état : bandeau de conflit, feuille ouverte…).
 jest.mock('@/views/complexe/components/FicheReservation', () => {
   const { Text: Texte } = jest.requireActual('react-native');
+  const { useState } = jest.requireActual('react');
   return function FausseFiche(/** @type {any} */ { reservationId }) {
-    return <Texte>{`Fiche ${reservationId}`}</Texte>;
+    const [montee] = useState(reservationId);
+    return (
+      <>
+        <Texte>{`Fiche ${reservationId}`}</Texte>
+        <Texte>{`Montée pour ${montee}`}</Texte>
+      </>
+    );
   };
 });
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
@@ -173,5 +181,26 @@ describe('RESA-L5A2 OR1 — E-G06 en deux volets', () => {
     const arbre = await monter(ComplexeDemandes);
     expect(parRepere(arbre, 'volet-fiche')).toBeNull();
     expect(parRepere(arbre, 'demande-accepter-d-1')).not.toBeNull();
+  });
+});
+
+// BUGHUNT C02 (25/10/2026) — Q4-14 : sur ordinateur, la fiche du volet n'était pas remontée quand
+// on choisissait une autre ligne : après un conflit sur A, B s'affichait avec le bandeau de A et
+// sans ses boutons. Chaque ligne a sa propre fiche.
+describe('BUGHUNT C02 Q4-14 — une autre ligne, une fiche neuve', () => {
+  it('demandes : B ne garde pas l’état de A', async () => {
+    const arbre = await monter(ComplexeDemandes);
+    await act(async () => {
+      parRepere(arbre, 'demande-d-2').props.onPress();
+    });
+    expect(lisibles(arbre)).toContain('Montée pour d-2');
+  });
+
+  it('réservations : B ne garde pas l’état de A', async () => {
+    const arbre = await monter(ComplexeReservations);
+    await act(async () => {
+      parRepere(arbre, 'reservation-r-2').props.onPress();
+    });
+    expect(lisibles(arbre)).toContain('Montée pour r-2');
   });
 });

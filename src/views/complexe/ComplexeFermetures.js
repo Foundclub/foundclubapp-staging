@@ -124,10 +124,12 @@ function ComplexeFermetures() {
     /** @type {string} */ libelle,
     /** @type {boolean} */ coche,
     /** @type {() => void} */ onPress,
+    verrouille = false,
   ) => (
     <TouchableOpacity
       accessibilityRole="checkbox"
       accessibilityState={{ checked: coche }}
+      disabled={verrouille}
       key={cle}
       onPress={onPress}
       style={[
@@ -178,7 +180,8 @@ function ComplexeFermetures() {
     try {
       const bilan = await modifier.mutateAsync({
         fermeture: {
-          ...dates, ...choix.corps(t), ...avecMot, ...motEfface,
+          // BUGHUNT C02 Q4-03 : un motif sans nom (Travaux, Autre) efface l'ancien (« Férié »).
+          ...dates, label: null, ...choix.corps(t), ...avecMot, ...motEfface,
         },
         fermetureIds: enEdition.ids,
       });
@@ -279,12 +282,20 @@ function ComplexeFermetures() {
     if (!aRouvrir) return;
     setErreur('');
     try {
-      await rouvrir.mutateAsync(aRouvrir.ids);
+      const bilan = await rouvrir.mutateAsync(aRouvrir.ids);
+      setARouvrir(null);
+      // BUGHUNT C02 Q4-04 (jumeau de P13-15) : un terrain resté fermé ⇒ pas de « Rouvert ».
+      if (bilan?.echecs?.length) {
+        setErreur(t(
+          'complexeReservations.fermetures.erreurRouvrir',
+          'La fermeture n’a pas pu être rouverte.',
+        ));
+        return;
+      }
       setMessage(t(
         'complexeReservations.fermetures.rouvert',
         'Rouvert : les créneaux sont libres.',
       ));
-      setARouvrir(null);
     } catch (refus) {
       setErreur(messageDeRefusResa(t, refus, t(
         'complexeReservations.fermetures.erreurRouvrir',
@@ -503,6 +514,8 @@ function ComplexeFermetures() {
             t('complexeReservations.fermetures.tous', 'Tous'),
             tousCoches,
             () => setChoisis(tousCoches ? [] : tousLesIds),
+            // BUGHUNT C02 Q4-03 : une modification garde ses terrains (jours, motif, mot seuls).
+            Boolean(enEdition),
           )}
           {terrains.map((terrain) => {
             const id = String(terrain.documentId);
@@ -512,6 +525,7 @@ function ComplexeFermetures() {
               String(terrain.name || ''),
               coche,
               () => setChoisis(coche ? choisis.filter((autre) => autre !== id) : [...choisis, id]),
+              Boolean(enEdition),
             );
           })}
         </View>

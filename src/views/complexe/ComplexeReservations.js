@@ -411,8 +411,10 @@ function ComplexeReservations() {
   }
 
   const volet = ouverte ? (
+    // BUGHUNT C02 Q4-14 : une autre ligne, une fiche neuve (sans le bandeau de la précédente).
     <FicheReservation
       complexeId={complexeId}
+      key={ouverte}
       onVoirClient={(joueurId) => navigation.navigate(RouteNames.ComplexeClient, {
         complexeId, joueurId,
       })}
