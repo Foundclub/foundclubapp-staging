@@ -893,7 +893,7 @@ function TeamEdit({ navigation, route }) {
                   setValue={(/** @type {Option[] | null} */ options) => onChange(
                     options?.map((opt) => opt.value) || [],
                   )}
-                  value={value?.map((v) => trainerOptions.find((opt) => opt.value === v)?.label).join(', ')}
+                  value={value}
                 />
               )}
             />
