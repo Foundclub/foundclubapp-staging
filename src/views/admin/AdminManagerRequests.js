@@ -76,6 +76,9 @@ function AdminManagerRequests() {
 
   const [onglet, setOnglet] = useState(/** @type {'pending' | 'decided'} */ ('pending'));
   const [ouverteId, setOuverteId] = useState(/** @type {string | null} */ (null));
+  // C10 / P9-13 : la collectivité dont l'admin a quitté la demande par « Retour à la file ».
+  // Le paramètre de route reste ; sans cette mémoire, la même demande se rouvrait d'office.
+  const [fileRendueA, setFileRendueA] = useState(/** @type {string | null} */ (null));
   const [decision, setDecision] = useState(/** @type {Decision | null} */ (null));
   const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0, {
     android: false,
@@ -102,6 +105,7 @@ function AdminManagerRequests() {
 
   // « Ouvrir dans la file » : la demande de CETTE collectivité, s'il y en a une.
   const parDefaut = onglet === 'pending' && params?.collectiviteId
+    && params.collectiviteId !== fileRendueA
     ? demandes.find((demande) => demande?.collectivite?.documentId === params.collectiviteId)
     : null;
   const ouverte = demandes.find((demande) => demande?.documentId === ouverteId)
@@ -414,7 +418,10 @@ function AdminManagerRequests() {
         {enColonnes ? null : (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => setOuverteId(null)}
+            onPress={() => {
+              setOuverteId(null);
+              setFileRendueA(params?.collectiviteId || null);
+            }}
             style={{ justifyContent: 'center', minHeight: 44 }}
             testID="gestionnaire-retour-file"
           >
