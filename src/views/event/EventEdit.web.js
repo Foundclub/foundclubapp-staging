@@ -213,6 +213,9 @@ function EventEditForm({ navigation, route }) {
         event?.locationDetails
           ? (() => {
             const parsed = safeJsonParse(event.locationDetails, null);
+            // Q4-01 — l'app enregistre `{ address: "<texte>" }` : sans cette lecture, le champ
+            // s'ouvrait vide et la garde P7-10 effacait l'adresse et le GPS.
+            if (typeof parsed?.address === 'string') return parsed.address;
             return parsed?.address?.description || parsed?.address?.label || parsed?.address?.address || '';
           })()
           : event?.location?.label || '',

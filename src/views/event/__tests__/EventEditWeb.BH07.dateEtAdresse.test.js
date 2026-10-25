@@ -182,3 +182,18 @@ test('P7-10 — vider l adresse l efface', async () => {
   expect(charge.location).toBeNull();
   expect(charge.locationDetails).toBeNull();
 });
+
+test('Q4-01 — une adresse enregistree par l app (texte nu) s ouvre et n est pas effacee', async () => {
+  eventService.getEventByIdForEdit.mockResolvedValue({
+    ...SEANCE,
+    locationDetails: JSON.stringify({ address: '12 rue de la Paix, 75002 Paris' }),
+  });
+  await monter();
+  const champs = arbre.root.findAll((/** @type {any} */ n) => n.type === 'input'
+    && n.props.value === '12 rue de la Paix, 75002 Paris');
+  expect(champs).toHaveLength(1);
+  await envoyer();
+  const charge = eventService.updateEvent.mock.calls[0][0].eventData;
+  expect(charge.location).not.toBeNull();
+  expect(charge.locationDetails).not.toBeNull();
+});
