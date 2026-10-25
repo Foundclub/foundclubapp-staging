@@ -20,7 +20,8 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+// Q3-12 — la règle du domaine, plus de copie locale (section omnisport, ligue, assistance).
+import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -48,7 +49,7 @@ function ShareCardModal({
     Alignments, Colors, Fonts, Images,
   } = useTheme();
   const { t } = useTranslation();
-  const { allMyTeams, userData } = useAuth();
+  const { allMyTeams, hasClubAccess, userData } = useAuth();
   const { getConversationName } = useMessaging();
 
   const {
@@ -72,32 +73,16 @@ function ShareCardModal({
       club: 1, group: 2.5, multisport: 0, team: 2, whisper: 3,
     };
 
-    const canWriteInChat = (chat) => {
-      if (!chat || !userData) return false;
-      // D92 — le fil d un match amical s ecrit comme un fil d equipe (le serveur
-      // l autorise) : il doit donc pouvoir recevoir un partage, sinon il reste
-      // a moitie muet.
-      if (
-        chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group'
-        || isFriendlyMatchChat(chat)
-      ) return true;
-      if (chat.type === 'club') {
-        return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
-      }
-      if (chat.type === 'multisport') {
-        const admins = chat.multisportClub?.admins || [];
-        return admins.some((admin) => admin.documentId === userData.documentId);
-      }
-      return false;
-    };
 
-    return chats.filter(canWriteInChat).sort((a, b) => {
+    return chats.filter(
+      (chat) => canWriteInChat({ chat, hasClubAccess, user: userData }),
+    ).sort((a, b) => {
       const pA = priority[a.type] ?? 99;
       const pB = priority[b.type] ?? 99;
       if (pA !== pB) return pA - pB;
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [chatsData?.pages, userData]);
+  }, [chatsData?.pages, hasClubAccess, userData]);
 
   const getChatTypeAccent = (type) => {
     switch (type) {

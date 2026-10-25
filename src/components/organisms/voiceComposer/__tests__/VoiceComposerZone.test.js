@@ -249,6 +249,18 @@ describe('VOCAL — état 1 · au repos', () => {
     expect(mockMicro.ouvert).toBe(false);
   });
 
+  it('Q3-04 quitter la conversation pendant que le micro démarre : il reste éteint', async () => {
+    mockMicro.differer = true;
+    const { arbre } = monter();
+    const { appui } = gestes(arbre);
+    await act(async () => { appui.rappels.onBegin(); });
+    // L'écran se ferme AVANT que le micro ait fini de s'ouvrir.
+    act(() => { arbre.unmount(); });
+    await act(async () => { mockMicro.liberer(); });
+    await laisserFiler();
+    expect(mockMicro.ouvert).toBe(false);
+  });
+
   it('1.4 une lettre tapée : le micro s\'efface (fondu de 120 ms) et ne capte plus le doigt', () => {
     const { arbre } = monter({ visible: false });
     const place = arbre.root.findAll(

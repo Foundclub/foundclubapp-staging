@@ -317,15 +317,18 @@ export default function useVoiceRecorder({
   }, []);
 
   // En quittant la conversation : ni micro ouvert, ni brouillon oublié dans le cache.
+  // Q3-04 — l'annulation passe dans la FILE : un démarrage encore en cours ouvre le micro
+  // après le démontage, et la tâche suivante le referme.
   useEffect(() => () => {
-    if (enregistreRef.current) {
+    enchainer(async () => {
+      if (!enregistreRef.current) return;
       enregistreRef.current = false;
-      cancelRecording().catch(() => {});
-    }
+      await cancelRecording();
+    });
     const brouillon = draftRef.current;
     draftRef.current = null;
     if (brouillon?.uri) deleteVoiceNoteFile(brouillon.uri).catch(() => {});
-  }, []);
+  }, [enchainer]);
 
   return useMemo(() => ({
     abortArming,

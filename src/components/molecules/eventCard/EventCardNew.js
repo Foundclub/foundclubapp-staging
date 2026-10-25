@@ -267,7 +267,7 @@ const resolveTeamFocusedPrimaryTitle = ({
  * @param {any} userData - Utilisateur connecte.
  * @returns {any} L equipe invitee qui est la mienne, ou null.
  */
-const resolveMyGuestTeam = (item, userData) => {
+export const resolveMyGuestTeam = (item, userData) => {
   const myTeamIds = new Set([...(userData?.myTeams || []), ...(userData?.trainedTeams || [])]
     .map((team) => String(team?.documentId || '').trim())
     .filter(Boolean));
@@ -285,7 +285,7 @@ const resolveMyGuestTeam = (item, userData) => {
  * @param {any} team - Equipe organisatrice.
  * @returns {string} - Le libelle, vide si rien n est connu.
  */
-const hostTeamLabel = (team) => {
+export const hostTeamLabel = (team) => {
   const club = String(team?.club?.name || '').trim();
   const name = String(team?.name || '').trim();
   if (!club || normalizeComparableText(name).includes(normalizeComparableText(club))) {

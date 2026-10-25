@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+// Q3-12 — la règle du domaine, plus de copie locale (section omnisport, ligue, assistance).
+import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import useMessaging from '@/domains/messaging/useMessaging';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -48,7 +49,7 @@ function ShareCompositionModal({
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { allMyTeams, userData } = useAuth();
+  const { allMyTeams, hasClubAccess, userData } = useAuth();
   const { getConversationName } = useMessaging();
 
   const {
@@ -76,32 +77,11 @@ function ShareCompositionModal({
       whisper: 3,
     };
 
-    const canWriteInChat = (chat) => {
-      if (!chat || !userData) return false;
-
-      // Whisper and Team chats: All participants can write
-      // D92 — voir ShareCardModal : le fil d un match amical accepte l ecriture.
-      if (
-        chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group'
-        || isFriendlyMatchChat(chat)
-      ) return true;
-
-      // Club Chat: Only Club Admins can write
-      if (chat.type === 'club') {
-        return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
-      }
-
-      // Multisport Chat: Only Multisport Admins can write
-      if (chat.type === 'multisport') {
-        const admins = chat.multisportClub?.admins || [];
-        return admins.some((admin) => admin.documentId === userData.documentId);
-      }
-
-      return false;
-    };
 
     // Filter chats where user can write
-    const writableChats = chats.filter(canWriteInChat);
+    const writableChats = chats.filter(
+      (chat) => canWriteInChat({ chat, hasClubAccess, user: userData }),
+    );
 
     return writableChats.sort((a, b) => {
       const pA = priority[a.type] ?? 99;
@@ -109,7 +89,7 @@ function ShareCompositionModal({
       if (pA !== pB) return pA - pB;
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [chatsData?.pages, userData]);
+  }, [chatsData?.pages, hasClubAccess, userData]);
 
   const handleNativeShare = async () => {
     if (!composition || !event) return;

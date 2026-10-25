@@ -14,7 +14,7 @@ import {
   resumeDesAutorisations,
 } from '@/domains/messaging/autorisationsDuGroupe';
 import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
-import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
+import { clefDuRole, libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import { estUneRouteAbsente } from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -377,13 +377,13 @@ function NewConversation({ navigation, route }) {
     };
 
     filtered.forEach((/** @type {User} */ u) => {
-      const userRoleName = u.role?.name;
-      // Map API roles to Display Sections
-      if (userRoleName === 'Dirigeant' || userRoleName === 'President' || userRoleName === 'ClubAdmin') {
+      // Q4-17 — mêmes familles que `clefDuRole`, qui ignore les accents (« Entraineur »).
+      const clef = clefDuRole(u.role?.name);
+      if (clef === 'dirigeant') {
         sectionsObj.Dirigeant.push(u);
-      } else if (userRoleName === 'Entraîneur' || userRoleName === 'Coach') {
+      } else if (clef === 'entraineur') {
         sectionsObj.Entraineur.push(u);
-      } else if (userRoleName === 'Joueur' || userRoleName === 'Player') {
+      } else if (clef === 'joueur') {
         sectionsObj.Joueur.push(u);
       } else {
         sectionsObj.Autre.push(u);

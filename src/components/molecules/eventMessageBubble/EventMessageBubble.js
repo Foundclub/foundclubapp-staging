@@ -23,6 +23,8 @@ import {
   getBackgroundImage,
   getHeaderTitle,
   getTypeAccentColor,
+  hostTeamLabel,
+  resolveMyGuestTeam,
 } from '@/components/molecules/eventCard/EventCardNew';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
@@ -115,7 +117,12 @@ function EventMessageBubble({
   const estUnStage = String(evenement?.eventFormat || '').toLowerCase().startsWith('stage');
   const estUnMatch = typeName.toLowerCase().includes('match');
   const couleurDuType = getTypeAccentColor(typeName, estUnStage, Colors);
-  const titre = (estUnMatch && resolveExternalMatchDisplay(evenement)?.title)
+  // Q1-12 — même retournement que la carte (AMIC-68) : l'invitée lit l'équipe qui reçoit.
+  const adversaireDeLInvitee = estUnMatch && resolveMyGuestTeam(evenement, userData)
+    ? hostTeamLabel(evenement?.team)
+    : '';
+  const titre = (adversaireDeLInvitee && `VS ${adversaireDeLInvitee}`)
+    || (estUnMatch && resolveExternalMatchDisplay(evenement)?.title)
     || evenement?.name
     || t('conversation.eventBubble.untitled', 'Événement');
   const quand = [formatEventDateLabel(evenement?.date), heureDeLEvenement(evenement)]

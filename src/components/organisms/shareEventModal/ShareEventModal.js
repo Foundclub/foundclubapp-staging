@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+// Q3-12 — la règle du domaine, plus de copie locale (section omnisport, ligue, assistance).
+import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -41,7 +42,7 @@ function ShareEventModal({
     Alignments, Colors, Fonts, Images,
   } = useTheme();
   const { t } = useTranslation();
-  const { allMyTeams, userData } = useAuth();
+  const { allMyTeams, hasClubAccess, userData } = useAuth();
   const { getConversationName } = useMessaging();
 
   const {
@@ -69,38 +70,11 @@ function ShareEventModal({
       whisper: 3,
     };
 
-    const canWriteInChat = (chat) => {
-      if (!chat || !userData) return false;
-
-      // Whisper and Team chats: All participants can write
-      // D92 — voir ShareCardModal. Partager LE match dans le fil qui l a negocie
-      // est precisement l usage attendu.
-      if (
-        chat.type === 'whisper' || chat.type === 'team' || chat.type === 'group'
-        || isFriendlyMatchChat(chat)
-      ) return true;
-
-      // Club Chat: Only Club Admins can write
-      if (chat.type === 'club') {
-        // Check if user is admin of this club
-        // Note: chat.club is the club object of the chat
-        // userData.role?.type should be checked against 'dirigeant'
-        // And ensure it's the SAME club
-        return userData.role?.type === 'dirigeant' && userData.club?.documentId === chat.club?.documentId;
-      }
-
-      // Multisport Chat: Only Multisport Admins can write
-      if (chat.type === 'multisport') {
-        // Check if user is in admins list of multisport club
-        const admins = chat.multisportClub?.admins || [];
-        return admins.some((admin) => admin.documentId === userData.documentId);
-      }
-
-      return false;
-    };
 
     // Filter chats where user can write
-    const writableChats = chats.filter(canWriteInChat);
+    const writableChats = chats.filter(
+      (chat) => canWriteInChat({ chat, hasClubAccess, user: userData }),
+    );
 
     return writableChats.sort((a, b) => {
       const pA = priority[a.type] ?? 99;
@@ -108,7 +82,7 @@ function ShareEventModal({
       if (pA !== pB) return pA - pB;
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }, [chatsData?.pages, userData]);
+  }, [chatsData?.pages, hasClubAccess, userData]);
 
   const getChatTypeAccent = (type) => {
     switch (type) {
