@@ -65,3 +65,27 @@ test('handleConfirmOpponentScore est gardé', () => {
 test.each(['getFinalRecapForCurrentTeam', 'buildFinalPosterPayload'])('%s suit scoreTeamSide', (name) => {
   expect(bodyOf(name)).not.toContain('isCaptainB');
 });
+
+// C07 / Q4-18 — notre ANCIENNE saisie, deja identique avant l envoi, ne prouve
+// pas que le nouvel envoi (avec litige et photo) est passe : l ecran annoncait
+// « Litige ouvert, score enregistré » alors que rien n etait parti.
+describe('wasScorePersistedDespiteError — saisie inchangee (Q4-18)', () => {
+  it('refuse une saisie qui etait deja la meme avant l envoi', () => {
+    const before = {
+      status: 'pending_validation',
+      submitted_score_team_a: { dispute: false, score_a: 2, score_b: 1 },
+    };
+    const refreshed = JSON.parse(JSON.stringify(before));
+    expect(wasScorePersistedDespiteError(before, refreshed, 2, 1, 'a')).toBe(false);
+  });
+
+  it('accepte encore une saisie apparue pendant l envoi', () => {
+    expect(wasScorePersistedDespiteError(
+      { status: 'scheduled' },
+      { status: 'pending_validation', submitted_score_team_a: { score_a: 2, score_b: 1 } },
+      2,
+      1,
+      'a',
+    )).toBe(true);
+  });
+});

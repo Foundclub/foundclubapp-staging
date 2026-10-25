@@ -40,6 +40,7 @@ import {
 } from '@/views/league/match/utils/leagueNavigation';
 import buildWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
 import {
+  getMaskedLeagueSide,
   getMatchDerivedPhase,
   getMatchStatusBadgeConfig,
   isVenueBookedForMatch,
@@ -301,17 +302,35 @@ function LeagueMatchDetails({ navigation, route }) {
   const normalizedStatus = useMemo(() => normalizeMatchStatus(match?.status), [match?.status]);
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
+  // C07 / P10-05 : le camp masque est celui de l ADVERSAIRE du lecteur.
+  const maskedSide = useMemo(() => getMaskedLeagueSide(match, teamSide), [match, teamSide]);
   const matchLegalLabel = useMemo(() => {
-    const left = match?.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A');
-    const right = isAnonymous ? t(
-      'leagueMatchDetails.opponentFallback',
-      'Adversaire',
-    ) : (match?.team_b?.name || t(
-      'leagueMatchDetails.teamBFallback',
-      'Équipe B',
-    ));
+    const opponent = t('leagueMatchDetails.opponentFallback', 'Adversaire');
+    const left = maskedSide === 'a'
+      ? opponent
+      : (match?.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A'));
+    const right = maskedSide === 'b'
+      ? opponent
+      : (match?.team_b?.name || t('leagueMatchDetails.teamBFallback', 'Équipe B'));
     return `${left} VS ${right}`;
-  }, [isAnonymous, match?.team_a?.name, match?.team_b?.name, t]);
+  }, [maskedSide, match?.team_a?.name, match?.team_b?.name, t]);
+  /**
+   * Le blason et le nom de l adversaire masque, dans l en-tete du match.
+   * @returns {import('react').ReactElement}
+   */
+  const renderMysteryHeroTeam = () => (
+    <>
+      <View style={styles.heroGhostShield}>
+        <Text style={[Fonts.h2, { color: Colors.primary500 }]}>?</Text>
+      </View>
+      <Text
+        numberOfLines={2}
+        style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral200, fontStyle: 'italic' }]}
+      >
+        {t('leagueMatchDetails.mysteryOpponent', 'Adversaire mystere')}
+      </Text>
+    </>
+  );
   const scoreFlow = useMemo(
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB, teamSide }),
     [isCaptainA, isCaptainB, match, teamSide],
@@ -2264,15 +2283,19 @@ function LeagueMatchDetails({ navigation, route }) {
 
             <View style={styles.heroMatchupRow}>
               <View style={styles.heroTeamBlock}>
-                <TeamShield
-                  imageUrl={match.team_a?.crest?.url}
-                  initials={String(match.team_a?.initials || match.team_a?.name || '?')}
-                  isGold
-                  size={68}
-                />
-                <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
-                  {match.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A')}
-                </Text>
+                {maskedSide === 'a' ? renderMysteryHeroTeam() : (
+                  <>
+                    <TeamShield
+                      imageUrl={match.team_a?.crest?.url}
+                      initials={String(match.team_a?.initials || match.team_a?.name || '?')}
+                      isGold
+                      size={68}
+                    />
+                    <Text numberOfLines={2} style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral00 }]}>
+                      {match.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A')}
+                    </Text>
+                  </>
+                )}
               </View>
 
               <View
@@ -2301,19 +2324,7 @@ function LeagueMatchDetails({ navigation, route }) {
               </View>
 
               <View style={styles.heroTeamBlock}>
-                {isAnonymous ? (
-                  <>
-                    <View style={styles.heroGhostShield}>
-                      <Text style={[Fonts.h2, { color: Colors.primary500 }]}>?</Text>
-                    </View>
-                    <Text
-                      numberOfLines={2}
-                      style={[Fonts.h4, styles.heroTeamName, { color: Colors.neutral200, fontStyle: 'italic' }]}
-                    >
-                      {t('leagueMatchDetails.mysteryOpponent', 'Adversaire mystere')}
-                    </Text>
-                  </>
-                ) : (
+                {maskedSide === 'b' ? renderMysteryHeroTeam() : (
                   <>
                     <TeamShield
                       imageUrl={match.team_b?.crest?.url}
@@ -2616,7 +2627,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{match.team_a?.name}</Text>
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{maskedSide === 'a' ? '???' : match.team_a?.name}</Text>
                         <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
                           +
                           {eloPrediction.winA}
@@ -2634,7 +2645,7 @@ function LeagueMatchDetails({ navigation, route }) {
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{isAnonymous ? '???' : match.team_b?.name}</Text>
+                        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{maskedSide === 'b' ? '???' : match.team_b?.name}</Text>
                         <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
                           +
                           {eloPrediction.winB}
@@ -3070,19 +3081,31 @@ function LeagueMatchDetails({ navigation, route }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>{match.team_a?.name}</Text>
-                  {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
-                    <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
-                      <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
-                      <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
-                      {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
-                    </View>
-                  ))}
-                  {(!match.participations_a || match.participations_a.length === 0) ? (
+                  <Text style={[Fonts.label, { color: Colors.gold500, marginBottom: 12 }]}>
+                    {maskedSide === 'a'
+                      ? t('leagueMatchDetails.opponentFallback', 'Adversaire')
+                      : match.team_a?.name}
+                  </Text>
+                  {maskedSide === 'a' ? (
                     <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>
-                      {t('leagueMatchDetails.lineups.noPlayers', 'Aucun joueur')}
+                      {t('leagueMatchDetails.lineups.hidden', 'Masque')}
                     </Text>
-                  ) : null}
+                  ) : (
+                    <>
+                      {(match.participations_a || []).map((/** @type {User} */ p, /** @type {number} */ i) => (
+                        <View key={`${getEntityDocumentId(p) || i}-a`} style={styles.playerRow}>
+                          <View style={[styles.dot, { backgroundColor: Colors.gold500 }]} />
+                          <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>{getParticipantDisplayName(p)}</Text>
+                          {p.isCaptain ? <Text style={{ color: Colors.gold500, fontSize: 10, marginLeft: 4 }}>C</Text> : null}
+                        </View>
+                      ))}
+                      {(!match.participations_a || match.participations_a.length === 0) ? (
+                        <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>
+                          {t('leagueMatchDetails.lineups.noPlayers', 'Aucun joueur')}
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
                 </View>
 
                 <View
@@ -3095,12 +3118,12 @@ function LeagueMatchDetails({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.label, { color: leagueCardTextColor, marginBottom: 12 }]}>
-                    {isAnonymous ? t(
+                    {maskedSide === 'b' ? t(
                       'leagueMatchDetails.opponentFallback',
                       'Adversaire',
                     ) : match.team_b?.name}
                   </Text>
-                  {isAnonymous ? (
+                  {maskedSide === 'b' ? (
                     <Text style={[Fonts.p2, { color: leagueCardTextColor, fontStyle: 'italic' }]}>
                       {t('leagueMatchDetails.lineups.hidden', 'Masque')}
                     </Text>
@@ -3531,9 +3554,12 @@ function LeagueMatchDetails({ navigation, route }) {
                 {t('leagueMatchDetails.postSlotSheet.matchConcerned', 'Match concerne')}
               </Text>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                {match?.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A')}
+                {maskedSide === 'a' ? t(
+                  'leagueMatchDetails.opponentFallback',
+                  'Adversaire',
+                ) : match?.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A')}
                 {' VS '}
-                {isAnonymous ? t(
+                {maskedSide === 'b' ? t(
                   'leagueMatchDetails.opponentFallback',
                   'Adversaire',
                 ) : match?.team_b?.name || t(

@@ -121,6 +121,8 @@ function FriendlyMatchListContent({
   const [filters, setFilters] = useState(/** @type {any} */ (EMPTY_FRIENDLY_MATCH_FILTERS));
   const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const perfSignatureRef = useRef('');
+  // C07 / Q2-16 : seule la DERNIERE recherche lancee a le droit d ecrire la liste.
+  const adsRequestRef = useRef(0);
 
   const filtersCount = useMemo(() => countFriendlyMatchFilters(filters), [filters]);
   // La position du lecteur sert la distance affichee et le filtre de rayon.
@@ -141,6 +143,8 @@ function FriendlyMatchListContent({
   const fetchAds = useCallback(async (nextPage = 1, append = false, isRefresh = false) => {
     if (nextPage === 1 && !isRefresh) setLoading(true);
     else if (nextPage > 1) setLoadingMore(true);
+    if (nextPage === 1) adsRequestRef.current += 1;
+    const requestId = adsRequestRef.current;
 
     try {
       const response = await getFriendlyMatchAds({
@@ -148,6 +152,7 @@ function FriendlyMatchListContent({
         pageSize: PAGE_SIZE,
         search: searchValue.trim(),
       });
+      if (requestId !== adsRequestRef.current) return;
       const received = response.data || [];
 
       setAds((previous) => {
@@ -162,8 +167,8 @@ function FriendlyMatchListContent({
     } catch (error) {
       logger.error('Erreur de chargement des annonces', { error });
     } finally {
-      if (nextPage === 1 && !isRefresh) setLoading(false);
-      else if (nextPage > 1) setLoadingMore(false);
+      if (nextPage > 1) setLoadingMore(false);
+      else if (!isRefresh && requestId === adsRequestRef.current) setLoading(false);
     }
   }, [searchValue]);
 
@@ -482,33 +487,33 @@ function FriendlyMatchListContent({
         </View>
       ) : null}
 
-      {loading ? <Loader /> : (
-        <FlatList
-          contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[128], { flexGrow: 1 }]}
-          data={data}
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(item, index) => getAdKey(item) || String(index)}
-          ListEmptyComponent={emptyState}
-          ListHeaderComponent={listHeader}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.4}
-          onRefresh={handleRefresh}
-          refreshing={refreshing}
-          renderItem={({ item }) => (
-            <FriendlyMatchAdCard
-              ad={item}
-              canApply={canApply}
-              distanceKm={item.distanceKm}
-              isOwner={activeTab === 'mes-annonces'}
-              myApplicationStatus={item.applicationStatus || null}
-              onApply={handleApplyPress}
-              onPress={handleAdPress}
-            />
-          )}
-          showsVerticalScrollIndicator={false}
-          style={{ flex: 1 }}
-        />
-      )}
+      {/* C07 / Q2-16 : la liste reste montee pendant le chargement, sinon son
+          en-tete (le champ de recherche) se demonte et le clavier se ferme. */}
+      <FlatList
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[128], { flexGrow: 1 }]}
+        data={loading ? [] : data}
+        keyboardShouldPersistTaps="handled"
+        keyExtractor={(item, index) => getAdKey(item) || String(index)}
+        ListEmptyComponent={loading ? <Loader /> : emptyState}
+        ListHeaderComponent={listHeader}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        renderItem={({ item }) => (
+          <FriendlyMatchAdCard
+            ad={item}
+            canApply={canApply}
+            distanceKm={item.distanceKm}
+            isOwner={activeTab === 'mes-annonces'}
+            myApplicationStatus={item.applicationStatus || null}
+            onApply={handleApplyPress}
+            onPress={handleAdPress}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      />
 
       <FriendlyMatchFiltersSheet
         filters={filters}

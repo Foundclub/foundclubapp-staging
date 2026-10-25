@@ -224,6 +224,20 @@ export const shouldMaskOpponentIdentity = (match, event = null) => {
 };
 
 /**
+ * Le camp a masquer en ligue anonyme : celui de l ADVERSAIRE du lecteur.
+ * C07 / P10-05 : l ecran masquait toujours l equipe B, donc un joueur de B
+ * voyait l identite de A et sa propre equipe masquee. Un tiers garde B masque.
+ * @param {LeagueMatch | null} match
+ * @param {'a' | 'b' | null} teamSide - Le camp du lecteur.
+ * @param {Record<string, any> | null} [event]
+ * @returns {'a' | 'b' | null} Le camp masque, ou null si rien n est masque.
+ */
+export const getMaskedLeagueSide = (match, teamSide, event = null) => {
+  if (!shouldMaskOpponentIdentity(match, event)) return null;
+  return teamSide === 'b' ? 'a' : 'b';
+};
+
+/**
  * @param {{match: LeagueMatch | null, event?: Record<string, any> | null, isCaptain?: boolean, now?: Date}} param0
  * @returns {boolean}
  */

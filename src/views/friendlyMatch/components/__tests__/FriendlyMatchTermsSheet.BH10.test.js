@@ -101,3 +101,39 @@ test('P10-16 : rouvrir la feuille garde le jour local de l accord', async () => 
   )[0];
   expect(selecteur.props.selectedValue).toBe('2099-05-16');
 });
+
+// C07 / Q4-07 — `chosenDate` est un JOUR (le creneau coche par le candidat)
+// que le serveur garde en datetime : il revient a minuit UTC. Le relire comme
+// un instant pre-remplissait 02:00 a Paris, et la veille a 21:00 outre-mer.
+test('Q4-07 : sans accord, le jour choisi reste ce jour-la, sans heure', async () => {
+  const client = jest.requireMock('@/services/client').default;
+  client.post.mockResolvedValue({ data: { data: {} } });
+  let tree;
+  await act(async () => {
+    tree = renderer.create(
+      <FriendlyMatchTermsSheet
+        ad={{
+          candidateDates: [{ date: '2099-05-11' }, { date: '2099-05-12' }],
+          documentId: 'annonce-1',
+        }}
+        application={{ chosenDate: '2099-05-12T00:00:00.000Z', documentId: 'proposition-2' }}
+        onClose={() => {}}
+        onSaved={() => {}}
+        visible
+      />,
+    );
+  });
+  const selecteur = tree.root.findAll(
+    (/** @type {any} */ node) => node.props && 'selectedValue' in node.props,
+  )[0];
+  expect(selecteur.props.selectedValue).toBe('2099-05-12');
+
+  const bouton = tree.root.findAll(
+    (/** @type {any} */ node) => typeof node.props?.testID === 'string'
+      && node.props.testID.startsWith('bouton-') && typeof node.props.onPress === 'function',
+  ).pop();
+  await act(async () => { await bouton.props.onPress(); });
+  // Sans heure convenue : midi LOCAL du 12 (toAgreedInstant), pas 02:00.
+  expect(client.post.mock.calls[0][1].agreedTerms.date)
+    .toBe(new Date(2099, 4, 12, 12, 0).toISOString());
+});

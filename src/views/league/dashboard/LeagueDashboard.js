@@ -377,6 +377,10 @@ function LeagueDashboard() {
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
   const lastDashboardFocusLoadAtRef = useRef(0);
+  // C07 / P10-22 : seul le DERNIER chargement lance a le droit d ecrire
+  // l equipe, l historique et le classement (changer de squad pendant un
+  // chargement laissait la reponse en retard ecraser la plus recente).
+  const dashboardRequestRef = useRef(0);
   const pendingLeagueActionTeamId = activeSquadId || getEntityDocumentId(userTeam) || undefined;
   const {
     data: pendingLeagueActionPayload,
@@ -390,7 +394,11 @@ function LeagueDashboard() {
     borderColor: 'rgba(1, 179, 244, 0.22)',
   };
 
-  const hydrateSquadDashboard = useCallback(async (/** @type {Team | null} */ team) => {
+  const hydrateSquadDashboard = useCallback(async (
+    /** @type {Team | null} */ team,
+    /** @type {number} */ requestId = dashboardRequestRef.current + 1,
+  ) => {
+    dashboardRequestRef.current = requestId;
     setUserTeam(team);
     setMatchHistory([]);
     setRankingData([]);
@@ -403,10 +411,12 @@ function LeagueDashboard() {
         teamId ? getMatchHistory(teamId, 5) : Promise.resolve([]),
         getRanking(clampLeagueDivision(team?.division)),
       ]);
+      if (requestId !== dashboardRequestRef.current) return;
       setMatchHistory(Array.isArray(history) ? history : []);
       setRankingData(Array.isArray(rankings) ? rankings : []);
     } catch (historyErr) {
       console.log('Data fetch error:', historyErr);
+      if (requestId !== dashboardRequestRef.current) return;
       setMatchHistory([]);
       setRankingData([]);
     }
@@ -414,11 +424,14 @@ function LeagueDashboard() {
 
   const loadDashboard = useCallback(async () => {
     if (!userData) return;
+    dashboardRequestRef.current += 1;
+    const requestId = dashboardRequestRef.current;
     setLoading(true);
     setLoadError('');
     try {
       const userId = getEntityDocumentId(userData);
       const context = await loadLeagueTeamContextWithCache(queryClient, userId);
+      if (requestId !== dashboardRequestRef.current) return;
       const squads = Array.isArray(context?.squads) ? context.squads : [];
       setAllSquads(squads);
       setInvitedSquads(Array.isArray(context?.invitedSquads) ? context.invitedSquads : []);
@@ -432,13 +445,17 @@ function LeagueDashboard() {
         : null;
       const team = selectedSquad || defaultSquad || squads[0] || null;
       const teamId = getEntityDocumentId(team);
-      if (teamId && !activeSquadId) {
+      // C07 / P10-22 : une squad active disparue du contexte (squad quittee)
+      // cede la place a celle qu on affiche, sinon les actions en attente
+      // restent lues pour l ancienne.
+      if (teamId && !areSameEntityId(teamId, activeSquadId)) {
         setActiveSquadId(teamId);
       }
 
-      await hydrateSquadDashboard(team);
+      await hydrateSquadDashboard(team, requestId);
     } catch (error) {
       console.error('Dashboard Load Error:', error);
+      if (requestId !== dashboardRequestRef.current) return;
       setAllSquads([]);
       setInvitedSquads([]);
       setPendingSquads([]);
@@ -450,7 +467,7 @@ function LeagueDashboard() {
         'Impossible de charger le dashboard League pour le moment.',
       ));
     } finally {
-      setLoading(false);
+      if (requestId === dashboardRequestRef.current) setLoading(false);
     }
   }, [activeSquadId, hydrateSquadDashboard, queryClient, t, userData]);
 

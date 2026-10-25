@@ -20,7 +20,6 @@ import Input from '@/components/molecules/input/Input';
 
 import {
   getParisNowAsDeviceDate,
-  toDeviceDateFromParisInstant,
   toParisIsoFromLocalSelection,
   toParisUtcDateFromLocalSelection,
 } from '@/utils/parisTime';
@@ -72,6 +71,34 @@ const safeDate = (value, fallback = getParisNowAsDeviceDate()) => {
   }
 
   return parsed;
+};
+
+/**
+ * Les valeurs initiales de la fenetre, a l heure AFFICHEE.
+ *
+ * C07 / Q3-05 : les quatre appelants passent `proposalDefaults` (utils de la
+ * ligue), deja construits a l heure de l appareil (20:00 = 20:00 a l ecran).
+ * Les relire comme un instant de Paris les decalait hors du fuseau de Paris
+ * (« dim. 00:00 » a Cayenne, 10:00 a Noumea).
+ * @param {{ durationMinutes: number, initialDate?: any, initialEndTime?: any,
+ *   initialStartTime?: any }} params
+ * @returns {{ baseDate: Date, nextEnd: Date, nextStart: Date }}
+ */
+export const readInitialProposalTimes = ({
+  durationMinutes, initialDate, initialEndTime, initialStartTime,
+}) => {
+  const asShown = (/** @type {any} */ value) => (value ? new Date(value) : null);
+  const initialShownDate = asShown(initialDate || initialStartTime);
+  const initialShownStart = asShown(initialStartTime);
+  const initialShownEnd = asShown(initialEndTime);
+  const baseDate = safeDate(initialShownDate || getParisNowAsDeviceDate());
+  const nextStart = initialShownStart
+    ? safeDate(initialShownStart, baseDate)
+    : buildDefaultStartTime(baseDate);
+  const nextEnd = initialShownEnd
+    ? safeDate(initialShownEnd, nextStart)
+    : new Date(nextStart.getTime() + (durationMinutes * 60 * 1000));
+  return { baseDate, nextEnd, nextStart };
 };
 
 /**
@@ -308,16 +335,9 @@ function VenueProposalModal({
 
     if (hasHydratedInitialValuesRef.current) return;
 
-    const initialParisDate = toDeviceDateFromParisInstant(initialDate || initialStartTime || null);
-    const initialParisStart = toDeviceDateFromParisInstant(initialStartTime || null);
-    const initialParisEnd = toDeviceDateFromParisInstant(initialEndTime || null);
-    const baseDate = safeDate(initialParisDate || getParisNowAsDeviceDate());
-    const nextStart = initialParisStart
-      ? safeDate(initialParisStart, baseDate)
-      : buildDefaultStartTime(baseDate);
-    const nextEnd = initialParisEnd
-      ? safeDate(initialParisEnd, nextStart)
-      : new Date(nextStart.getTime() + (durationMinutes * 60 * 1000));
+    const { baseDate, nextEnd, nextStart } = readInitialProposalTimes({
+      durationMinutes, initialDate, initialEndTime, initialStartTime,
+    });
 
     setVenueInput('');
     setDate(baseDate);

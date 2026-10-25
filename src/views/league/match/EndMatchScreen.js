@@ -119,7 +119,15 @@ export const wasScorePersistedDespiteError = (
     && parseScore(ownSubmission.score_b) === expectedB,
   );
 
-  return hasMatchingFinalScore || hasMatchingSubmission;
+  // C07 / Q4-18 : une saisie deja identique AVANT l envoi ne prouve rien (le
+  // litige et la photo du nouvel envoi ont pu se perdre).
+  let previousSubmission = null;
+  if (teamSide === 'a') previousSubmission = previousMatch?.submitted_score_team_a;
+  if (teamSide === 'b') previousSubmission = previousMatch?.submitted_score_team_b;
+  const isUnchanged = Boolean(previousSubmission)
+    && JSON.stringify(previousSubmission) === JSON.stringify(ownSubmission);
+
+  return hasMatchingFinalScore || (hasMatchingSubmission && !isUnchanged);
 };
 
 const disputeTypes = () => [
