@@ -127,12 +127,12 @@ const monter = async (/** @type {any} */ props = {}) => {
       <QueryClientProvider client={client}>
         <SeasonSlotManage
           canManage
-          etapeInitiale="retirer"
+          etapeInitiale={props.etape || 'retirer'}
           installationName="Gymnase des Tilleuls"
           onClose={props.onClose || jest.fn()}
           onModify={jest.fn()}
           onWithdrawn={props.onWithdrawn || jest.fn()}
-          slot={CRENEAU}
+          slot={props.slot || CRENEAU}
         />
       </QueryClientProvider>,
     );
@@ -226,5 +226,28 @@ describe('FINITIONS12-COLL point 10 — un seul point après une date abrégée'
     const arbre = await monter();
     expect(phrase(arbre)).toMatch(/[^.]\.$|[^.]$/);
     expect(phrase(arbre)).not.toMatch(/\.\.$/);
+  });
+});
+
+// C05 (BUGHUNT P2, Q3-11, 25/10/2026) — le JOUR DE PARIS, pas celui de l appareil ni d un instant
+// UTC coupe. Lancer aussi hors de Paris : `$env:TZ='America/New_York'` (PowerShell).
+describe('Q3-11 — le retrait et « Attribué le » lisent le jour de Paris', () => {
+  afterEach(() => { jest.useRealTimers(); });
+
+  it('dimanche 25/10 23:30 UTC = lundi 26/10 00:30 à Paris : « À partir du » propose le 26/10', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask'], now: new Date('2026-10-25T23:30:00.000Z') });
+    await monter({ slot: { ...CRENEAU, validFrom: '2026-09-01', validUntil: '2027-06-30' } });
+    expect(champ()?.value).toBe('26/10/2026');
+  });
+
+  it('attribué à 00:30 heure de Paris le 25/10 : « Attribué le » dit le 25/10, pas la veille', async () => {
+    const arbre = await monter({
+      etape: 'detail',
+      slot: {
+        ...CRENEAU, attributedAt: '2026-10-24T22:30:00.000Z', validFrom: '2026-09-01', validUntil: '2027-06-30',
+      },
+    });
+    expect(textes(arbre)).toContain(formatDay('2026-10-25'));
+    expect(textes(arbre)).not.toContain(formatDay('2026-10-24'));
   });
 });
