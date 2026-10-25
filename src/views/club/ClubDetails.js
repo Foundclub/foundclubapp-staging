@@ -891,6 +891,8 @@ function ClubDetails({ navigation, route }) {
    * c'est lui qui n'a pas de compte.
    */
   const showsPrivateClubDetails = isAuthenticated;
+  // PETITSCHOIX/12 (Adel 25/10 « 12- A ») : les presidents, masques comme les coachs.
+  const showsOwners = showsPrivateClubDetails && !areClubMembersHidden;
   // Club sans dirigeant visible : l'affiliation coach est instantanee cote serveur,
   // le bouton doit donc dire « C'est mon club ! » plutot que « Demander a rejoindre ».
   const isClubWithoutVisibleOwner = owners.length === 0 && !areClubMembersHidden;
@@ -3966,8 +3968,8 @@ function ClubDetails({ navigation, route }) {
                     ) : null}
                   </View>
                 ) : null}
-              {/* president */}
-              {showsClubSection('staff') && (owners?.length || canEdit) ? (
+              {/* president — sans compte ou membres masques : rien (PETITSCHOIX/12) */}
+              {showsClubSection('staff') && showsOwners && (owners?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}

@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { saveEventCompositionDraft } from '@/services/event/eventService';
@@ -27,7 +27,34 @@ let mockRouteParams = {};
 /** @type {any} */
 let mockCompositionQuery = { data: null };
 
-const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate };
+// PETITSCHOIX/16 — la navigation retient ses ecouteurs (`beforeRemove`) et ceux de la barre
+// d'onglets (`tabPress`) : le test les declenche lui-meme, comme le ferait un retour ou un onglet.
+/** @type {Map<string, any>} */
+const mockEcouteurs = new Map();
+/** @type {Map<string, any>} */
+const mockEcouteursOnglets = new Map();
+const mockEcouter = (/** @type {Map<string, any>} */ registre) => (
+  /** @type {string} */ nom,
+  /** @type {any} */ rappel,
+) => {
+  registre.set(nom, rappel);
+  return () => { if (registre.get(nom) === rappel) registre.delete(nom); };
+};
+const mockOnglets = {
+  addListener: mockEcouter(mockEcouteursOnglets),
+  getParent: () => undefined,
+  getState: () => ({ routes: [{ key: 'onglet-accueil', name: 'HomeTab' }], type: 'tab' }),
+  navigate: jest.fn(),
+};
+const mockNavigation = {
+  addListener: mockEcouter(mockEcouteurs),
+  dispatch: jest.fn(),
+  getParent: () => mockOnglets,
+  getState: () => ({ type: 'stack' }),
+  goBack: mockGoBack,
+  isFocused: () => true,
+  navigate: mockNavigate,
+};
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -500,5 +527,157 @@ describe('ECRAN 17 — rotation, chasuble et temps de jeu', () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('DetectionTeamsBoard', expect.any(Object));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PETITSCHOIX/16 (decision d Adel du 25/10) — « Voulez-vous enregistrer ? » Oui / Non en quittant
+// l ecran 16 ou 17 avec des modifications non enregistrees (retour, geste ou onglet).
+//   · Oui : enregistrer, puis quitter (on reste si l enregistrement echoue) ;
+//   · Non : quitter sans enregistrer ;
+//   · rien de modifie : on quitte sans question.
+// ---------------------------------------------------------------------------
+
+describe('PETITSCHOIX/16 — enregistrer avant de quitter', () => {
+  const ACTION = { type: 'GO_BACK' };
+  const quitter = () => {
+    const evenement = { data: { action: ACTION }, preventDefault: jest.fn() };
+    act(() => { mockEcouteurs.get('beforeRemove')?.(evenement); });
+    return evenement;
+  };
+  const boutons = () => /** @type {any} */ (Alert.alert).mock.calls
+    .find((/** @type {any} */ appel) => appel[0] === 'Voulez-vous enregistrer ?')?.[2] || [];
+  const appuyerSur = async (/** @type {string} */ libelle) => {
+    const bouton = boutons().find((/** @type {any} */ b) => b.text === libelle);
+    await act(async () => { await bouton.onPress(); });
+  };
+  const ecran16 = () => ({
+    eventId: 'event-1', players: JOUEURS, sport: 'football', teamId: 'team-1',
+  });
+  const ecran17 = () => ({
+    detectionSplit: { rounds: [], teamCount: 2, teams: equipes() },
+    eventId: 'event-1',
+    players: JOUEURS,
+    sport: 'football',
+    teamId: 'team-1',
+    teamIndex: 0,
+  });
+
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    saveEventCompositionDraft.mockResolvedValue({});
+    mockCompositionQuery = {
+      data: {
+        detectionSplit: {
+          rounds: [], splitBy: 'requested_position', teamCount: 2, teams: equipes(),
+        },
+        draft: { schemaVersion: 3 },
+        eligiblePlayers: JOUEURS,
+      },
+    };
+  });
+
+  afterEach(() => {
+    /** @type {any} */ (Alert.alert).mockRestore?.();
+  });
+
+  test('ecran 16 sans modification : on quitte sans question', () => {
+    monter(DetectionTeamsBoard, ecran16());
+
+    const evenement = quitter();
+    expect(evenement.preventDefault).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  test('ecran 16 modifié : « Voulez-vous enregistrer ? » avec Non et Oui', () => {
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+
+    const evenement = quitter();
+    expect(evenement.preventDefault).toHaveBeenCalled();
+    expect(boutons().map((/** @type {any} */ b) => b.text)).toEqual(['Non', 'Oui']);
+    expect(mockNavigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  test('ecran 16 · Oui : la répartition modifiée est enregistrée, puis on quitte', async () => {
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    quitter();
+    await appuyerSur('Oui');
+
+    expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+    const equipesEnvoyees = saveEventCompositionDraft.mock.calls[0][1].draft.detectionSplit.teams;
+    expect(equipesEnvoyees[0].players).toEqual(['p2', 'p3']);
+    expect(mockNavigation.dispatch).toHaveBeenCalledWith(ACTION);
+  });
+
+  test('ecran 16 · Non : on quitte sans enregistrer', async () => {
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    quitter();
+    await appuyerSur('Non');
+
+    expect(saveEventCompositionDraft).not.toHaveBeenCalled();
+    expect(mockNavigation.dispatch).toHaveBeenCalledWith(ACTION);
+  });
+
+  test('ecran 16 · Oui mais l enregistrement échoue : on reste, l erreur est dite', async () => {
+    saveEventCompositionDraft.mockRejectedValue(new Error('panne'));
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    quitter();
+    await appuyerSur('Oui');
+
+    expect(mockNavigation.dispatch).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Erreur',
+      'Impossible d’enregistrer cette répartition.',
+    );
+  });
+
+  test('ecran 16 · après « Enregistrer », on quitte sans question', async () => {
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    const enregistrer = racine.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.type !== 'string'
+      && noeud.props?.onPress
+      && texteDe(noeud).includes('Enregistrer')
+    ))[0];
+    await act(async () => { await enregistrer.props.onPress(); });
+
+    const evenement = quitter();
+    expect(evenement.preventDefault).not.toHaveBeenCalled();
+  });
+
+  test('ecran 16 modifié · autre onglet : la question est posée, Non ouvre l onglet', async () => {
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+
+    const evenement = { preventDefault: jest.fn(), target: 'onglet-accueil' };
+    act(() => { mockEcouteursOnglets.get('tabPress')?.(evenement); });
+    expect(evenement.preventDefault).toHaveBeenCalled();
+    await appuyerSur('Non');
+
+    expect(saveEventCompositionDraft).not.toHaveBeenCalled();
+    expect(mockOnglets.navigate).toHaveBeenCalledWith('HomeTab');
+  });
+
+  test('ecran 17 modifié · Oui : la rotation est enregistrée, puis on quitte', async () => {
+    const racine = monter(DetectionRotationBoard, ecran17());
+    lacherDehors(gestePour(racine, 'Un'));
+    quitter();
+    await appuyerSur('Oui');
+
+    expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+    const charge = saveEventCompositionDraft.mock.calls[0][1].draft.detectionSplit;
+    expect(charge.teams[0].rotation).toEqual(expect.arrayContaining(['p1', 'p3']));
+    expect(charge.rounds).toHaveLength(0);
+    expect(mockNavigation.dispatch).toHaveBeenCalledWith(ACTION);
+  });
+
+  test('ecran 17 sans modification : on quitte sans question', () => {
+    monter(DetectionRotationBoard, ecran17());
+
+    expect(quitter().preventDefault).not.toHaveBeenCalled();
   });
 });

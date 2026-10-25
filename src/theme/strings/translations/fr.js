@@ -9487,6 +9487,11 @@ export default {
         message: 'Les équipes sont gardées en brouillon. Personne n’a été prévenu.',
         title: 'Répartition enregistrée',
       },
+      unsaved: {
+        no: 'Non',
+        title: 'Voulez-vous enregistrer ?',
+        yes: 'Oui',
+      },
     },
     squad: {
       actions: {
@@ -24563,12 +24568,16 @@ export default {
     addressUnavailable: 'Adresse indisponible',
     approveTheScore: 'Valider le score',
     backToTheTournament: 'Retour au tournoi',
+    cancelForfeit: 'Annuler le forfait',
     chooseTheWinner: 'Choisir le vainqueur',
     endTime: 'Heure de fin',
     // eslint-disable-next-line max-len
     enterTwoValidScoresFor: 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.',
     facility: 'Installation',
+    forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.',
     forfeitOf: 'Forfait {{teamName}}',
+    forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.',
+    forfeitScoreRefusedTitle: 'Score refusé',
     groupLabel: 'Poule {{label}}',
     incompleteScore: 'Score incomplet',
     incompleteSlot: 'Créneau incomplet',
@@ -24578,6 +24587,7 @@ export default {
     noFacility: 'Aucune installation',
     noFacilityAvailableForThis: 'Aucune installation disponible pour ce club.',
     refereeCommentsMatchContextForfeit: 'Commentaires arbitre, contexte du match, forfait...',
+    saveTheForfeit: 'Enregistrer le forfait',
     saveTheScore: 'Enregistrer le score',
     saveTheSlot: 'Enregistrer le créneau',
     scheduleTheMatch: 'Programmer le match',

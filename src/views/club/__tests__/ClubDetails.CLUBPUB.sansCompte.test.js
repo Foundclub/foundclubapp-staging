@@ -552,3 +552,42 @@ describe('CLUBPUB · T4 — avec un compte, le contact reste visible', () => {
     expect(texteDe(monter().root)).toContain('president.dupont@gmail.com');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 🔒 T5 — PETITSCHOIX/12 (decision d Adel du 25/10 « 12- A ») : LES PRESIDENTS
+// SUIVENT LA REGLE DES COACHS. Sans compte, ou quand le club masque ses
+// membres, aucun president n est nomme. Le serveur ne les envoie deja pas
+// (temoin admin SECU-CHAMPS PETITSCHOIX/12) : l ecran tient la seconde ceinture.
+// ---------------------------------------------------------------------------
+
+const CLUB_AVEC_PRESIDENT = {
+  ...CLUB_SANS_EQUIPE,
+  members: [
+    {
+      documentId: 'm-2', firstname: 'Solene', lastname: 'Pradel', role: { name: 'president' },
+    },
+  ],
+};
+
+describe('PETITSCHOIX · T5 — les presidents masques comme les coachs', () => {
+  it('sans compte, le nom du president n apparait nulle part', () => {
+    devenirVisiteur();
+    mockClubQuery.data = CLUB_AVEC_PRESIDENT;
+
+    const texte = texteDe(monter().root);
+    expect(texte).not.toContain('Solene');
+    expect(texte).not.toContain('Pradel');
+  });
+
+  it('club qui masque ses membres : un joueur connecte ne voit pas le president', () => {
+    mockClubQuery.data = { ...CLUB_AVEC_PRESIDENT, membersAreHidden: true, membersCount: 1 };
+
+    expect(texteDe(monter().root)).not.toContain('Pradel');
+  });
+
+  it('NON-REGRESSION : un joueur connecte voit le president d un club ouvert', () => {
+    mockClubQuery.data = CLUB_AVEC_PRESIDENT;
+
+    expect(texteDe(monter().root)).toContain('Solene Pradel');
+  });
+});

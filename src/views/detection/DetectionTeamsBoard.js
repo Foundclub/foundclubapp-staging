@@ -70,6 +70,8 @@ import {
 
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
+
 /**
  * C-E — ECRAN 16 du pack composition : « Terrains multi-equipes ».
  *
@@ -193,6 +195,8 @@ function DetectionTeamsBoard() {
   });
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
   const [isBusy, setIsBusy] = useState(false);
+  // PETITSCHOIX/16 : une affectation bougée et pas encore enregistrée.
+  const [isDirty, setIsDirty] = useState(false);
   const [activeDragPlayer, setActiveDragPlayer] = useState(/** @type {any} */ (null));
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(
     /** @type {any} */ (null),
@@ -289,11 +293,13 @@ function DetectionTeamsBoard() {
     // c'est le temoin 3 du lot qui le tient.
     if (droppedOnField) {
       setTeams((current) => movePlayerToTeam(current, playerId, activeTeamIndex));
+      setIsDirty(true);
       return;
     }
 
     if (source !== SOURCE_UNASSIGNED) {
       setTeams((current) => movePlayerToTeam(current, playerId, null));
+      setIsDirty(true);
     }
   }, [activeTeamIndex]);
 
@@ -396,6 +402,7 @@ function DetectionTeamsBoard() {
     setIsBusy(true);
     try {
       await persist();
+      setIsDirty(false);
       Alert.alert(t('detection.alerts.saved.title'), t('detection.alerts.saved.message'));
     } catch (error) {
       handleActionError(error, 'detection.alerts.error.save');
@@ -404,6 +411,32 @@ function DetectionTeamsBoard() {
     }
   }, [eventId, handleActionError, isBusy, persist, t, teamId]);
 
+  const saveBeforeLeaving = useCallback(async () => {
+    if (!eventId || !teamId) return false;
+    try {
+      await persist();
+      setIsDirty(false);
+      return true;
+    } catch (error) {
+      handleActionError(error, 'detection.alerts.error.save');
+      return false;
+    }
+  }, [eventId, handleActionError, persist, teamId]);
+
+  // PETITSCHOIX/16 (Adel 25/10) : quitter avec des modifications non enregistrées (retour, geste,
+  // onglet) demande « Voulez-vous enregistrer ? » — Oui enregistre puis quitte, Non quitte.
+  useGardeDeSortie(navigation, {
+    actif: isDirty,
+    enregistrer: saveBeforeLeaving,
+    textes: {
+      enregistrer: t('detection.alerts.unsaved.yes'),
+      message: '',
+      quitter: t('detection.alerts.unsaved.no'),
+      rester: '',
+      titre: t('detection.alerts.unsaved.title'),
+    },
+  });
+
   const handlePublish = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
@@ -411,6 +444,7 @@ function DetectionTeamsBoard() {
       // La repartition part TOUJOURS avant la publication : publier ce qui n'a
       // pas ete enregistre publierait l'etat precedent.
       await persist();
+      setIsDirty(false);
       await publishEventConvocation(eventId, { teamId });
       Alert.alert(
         t('detection.alerts.published.title'),
@@ -547,7 +581,10 @@ function DetectionTeamsBoard() {
             <TouchableOpacity
               accessibilityRole="button"
               activeOpacity={0.8}
-              onPress={() => setTeams((current) => addTeam(current))}
+              onPress={() => {
+                setTeams((current) => addTeam(current));
+                setIsDirty(true);
+              }}
               style={[styles.addTeam, { borderColor: withAlpha(Colors.primary500, 0.6) }]}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
