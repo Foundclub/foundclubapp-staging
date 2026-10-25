@@ -14766,6 +14766,7 @@ export default {
   matchCenterScreen: {
     alerts: {
       addSlotError: "Impossible d'ajouter le créneau.",
+      addSlotsPartialError: 'Ces créneaux n’ont pas été ajoutés : {{slots}}. Les autres sont enregistrés.',
       cancelledByOther: "Ton match a été annulé par l'adversaire ou le système.",
       cancelSearchError: "Impossible d'annuler la recherche pour le moment.",
       invalidLocationBody: 'Impossible de lire les coordonnées de ton localisation.',
@@ -20435,6 +20436,7 @@ export default {
       editTitle: 'Modifier le créneau',
       joinHint: 'Rejoins la squad pour participer aux créneaux.',
       multipleAdded: '{{count}} créneaux ajoutés',
+      partialSaveError: 'Ces créneaux n’ont pas été ajoutés : {{slots}}. Les autres sont enregistrés.',
       saveError: 'Impossible de sauvegarder le créneau',
       statusError: 'Impossible de modifier ton statut.',
       updated: 'Créneau modifié',
