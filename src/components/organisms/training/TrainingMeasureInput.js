@@ -42,9 +42,13 @@ const KEYBOARDS = {
  * @returns {string} la saisie débarrassée des caractères impossibles, virgule devenue point
  */
 const sanitize = (raw, type) => {
-  const text = String(raw ?? '').replace(',', '.');
-  if (type === 'integer') return text.replace(/[^\d-]/g, '');
-  return text.replace(/[^\d.-]/g, '');
+  // 🪤 Q3-07 : « 3.1.4 » ou « 12-3 » restaient affichés mais s'enregistraient VIDES.
+  // Le moins n'a de sens qu'en tête, le point qu'une fois.
+  const text = String(raw ?? '').replace(/,/g, '.');
+  const signe = text.trim().startsWith('-') ? '-' : '';
+  if (type === 'integer') return signe + text.replace(/\D/g, '');
+  const [entier, ...decimales] = text.replace(/[^\d.]/g, '').split('.');
+  return signe + entier + (decimales.length ? `.${decimales.join('')}` : '');
 };
 
 /**
