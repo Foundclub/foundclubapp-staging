@@ -3306,6 +3306,8 @@ function Conversation({ navigation, route }) {
   // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
     if (!isGroupChat) return;
+    // Q4-24 — le menu se ferme d'abord, aussi quand on part vers la page du complexe.
+    setIsMenuVisible(false);
     // RESA-FIN-APP (22/10) — le canal d'un complexe, vu d'un membre : son en-tête ouvre la page du
     // complexe (E-P12 ⇒ E-P02) ; le gérant garde les infos du groupe.
     const slugDuComplexe = pageDuCanal(chatData);
@@ -3313,7 +3315,6 @@ function Conversation({ navigation, route }) {
       navigation.navigate(RouteNames.ReserverComplexe, { slug: slugDuComplexe });
       return;
     }
-    setIsMenuVisible(false);
     setIsGroupManagementVisible(true);
   };
 

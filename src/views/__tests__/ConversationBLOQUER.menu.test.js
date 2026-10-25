@@ -327,6 +327,7 @@ const monterLaConversation = () => {
   const boutons = [...entrees, ...mockBoutons];
   return {
     boutons,
+    ecran,
     messages: propsGifted?.messages || [],
     titres: boutons.map((/** @type {any} */ props) => props?.title).filter(Boolean),
   };
@@ -427,5 +428,34 @@ describe('BLOQUER — le menu de la conversation', () => {
 
     expect(messages.map((/** @type {any} */ message) => message?.text))
       .toContain('de la personne');
+  });
+});
+
+describe('Q4-24 — canal d un complexe : le menu se referme en ouvrant la page du complexe', () => {
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockBoutons.length = 0;
+    mockMenus.length = 0;
+    mockMessagesPage = PAGE_VIDE;
+    mockBlockedRows = [];
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('« Infos du groupe » d un membre : le menu ne reste pas ouvert par-dessus la page', () => {
+    mockChatData = {
+      ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
+    };
+    const { ecran } = monterLaConversation();
+    const boutonMenu = ecran.root.find((/** @type {any} */ n) => n.props?.testID === 'conversation-menu' && typeof n.props?.onPress === 'function');
+    act(() => { boutonMenu.props.onPress(); });
+    expect(mockMenus[mockMenus.length - 1].visible).toBe(true);
+    const infos = mockMenus[mockMenus.length - 1].entrees.find((/** @type {any} */ e) => e.cle === 'infos-du-groupe');
+    act(() => { infos.onPress(); });
+    expect(mockMenus[mockMenus.length - 1].visible).toBe(false);
   });
 });
