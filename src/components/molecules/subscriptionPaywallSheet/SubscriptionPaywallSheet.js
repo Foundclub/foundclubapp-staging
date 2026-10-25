@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Linking, Platform, Text, TouchableOpacity, View,
@@ -30,6 +32,7 @@ import {
   getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionPreselectedSlotCount,
   getSubscriptionTierAbBucket,
+  isDeferredStorePlanChange,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
   resolveStorePlanChangeTarget,
@@ -307,10 +310,19 @@ function SubscriptionPaywallSheet({
   // Palier preselectionne a chaque ouverture (2e equipe -> palier 2 ; offre Club ->
   // le palier le moins cher qui debloque), borne au catalogue, et retour a la
   // periode annuelle recommandee. Si le test A/B est actif, le bucket prime (handoff 13).
+  // BUGHUNT C03 / Q1-09 — UNE FOIS par ouverture : les prix du magasin arrivent
+  // apres l'ouverture et changent la reference du catalogue ; relancer ici
+  // effacait le choix en cours (mensuel palier 3 redevenait annuel palier 2).
+  const hasPreselectedRef = useRef(false);
   useEffect(() => {
-    if (!isVisible || !sellingSheet || yearlyTierOptions.length === 0) {
+    if (!isVisible) {
+      hasPreselectedRef.current = false;
       return;
     }
+    if (hasPreselectedRef.current || !sellingSheet || yearlyTierOptions.length === 0) {
+      return;
+    }
+    hasPreselectedRef.current = true;
     setBillingPeriod('yearly');
     // Chaque ouverture repart des paliers : le mode au licencie se choisit, il
     // ne se souvient pas d'un mur payant a l'autre.
@@ -628,6 +640,7 @@ function SubscriptionPaywallSheet({
       slotCount,
     });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
+    const teamSlotSummary = getSubscriptionTeamSlotSummary(subscriptionSummary);
 
     try {
       const result = await purchaseMutation.mutateAsync({
@@ -641,8 +654,10 @@ function SubscriptionPaywallSheet({
         // Une offre Club couvre tout le club : elle n'occupe aucun slot d'equipe.
         teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
           availableTeams,
-          coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
-            .coveredTeamDocumentIds,
+          // BUGHUNT C03 / Q1-04 — comme SubscriptionOffers (CLUBEQ / C3) : jamais
+          // une equipe que le club paie deja.
+          clubCoveredTeamDocumentIds: teamSlotSummary.clubCoveredTeamDocumentIds,
+          coveredTeamDocumentIds: teamSlotSummary.coveredTeamDocumentIds,
           slotCount,
         }),
       });
@@ -662,6 +677,14 @@ function SubscriptionPaywallSheet({
           t('subscriptionPaywallSheet.alerts.subscriptionError.title', 'Erreur abonnement'),
           String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
         );
+        return;
+      }
+
+      // BUGHUNT C03 / Q1-05 — la page Stripe est seulement DEMANDEE : rien n'est
+      // paye. Ni evenement « succeeded », ni ecran de succes (la suite se joue
+      // au retour, sur /subscription/web-success).
+      if (result?.checkoutRedirect === true) {
+        close();
         return;
       }
 
@@ -698,6 +721,9 @@ function SubscriptionPaywallSheet({
           'subscriptionPaywallSheet.resumeCta',
           'Reprendre',
         ),
+        // BUGHUNT C03 / Q1-08 — un CHANGEMENT que le magasin n'a pas encaisse ne
+        // prend effet qu'a l'echeance (meme regle que SubscriptionOffers).
+        takesEffectAtRenewal: Boolean(storeChangeTarget) && isDeferredStorePlanChange(result),
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('paywall_purchase_failed', {

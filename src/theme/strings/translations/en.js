@@ -4450,7 +4450,7 @@ export default {
       },
       bulkCreate: {
         confirm: 'Create',
-        message: '{{sectionCount}} section(s) will receive a {{seasonLabel}} campaign.',
+        message: '{{sectionCount}} section(s) will receive a {{seasonLabel}} campaign at {{amount}}.',
         title: 'Create the missing campaigns',
       },
       bulkCreated: {

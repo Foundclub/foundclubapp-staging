@@ -10,7 +10,9 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 export const isoDateFromEventValue = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  // BUGHUNT C03 / Q4-13 : seul un jour SEUL se garde tel quel ; un datetime UTC
+  // (00:30 a Paris = 22:30Z la veille) passe par les champs locaux ci-dessous.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return '';
   // BH11 P5-14 : champs LOCAUX, toISOString passerait en UTC (veille a minuit).

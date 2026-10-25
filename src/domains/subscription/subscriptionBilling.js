@@ -1556,3 +1556,16 @@ export const readSubscriptionRenewalAnnouncement = (result) => {
     renewalDateLabel: format(serverDate, 'd MMMM yyyy', { locale: frLocale }),
   };
 };
+
+/**
+ * ABOFIX2/T3 — LE MAGASIN A-T-IL ENCAISSE ?
+ *
+ * Vers une offre egale ou moins chere, Apple n'encaisse rien : il note une
+ * preference de renouvellement, sans transaction. Le rail rend alors l'achat
+ * du magasin (`purchase`) avec un `transactionIdentifier` vide. Ne vaut que
+ * pour un CHANGEMENT d'offre : c'est a l'appelant de le savoir.
+ * @param {any} result - Ce que rend le rail de changement d'offre.
+ * @returns {boolean} Vrai si le changement ne prend effet qu'a l'echeance.
+ */
+export const isDeferredStorePlanChange = (result) => Boolean(result?.purchase)
+  && !String(result?.purchase?.transactionIdentifier || '').trim();

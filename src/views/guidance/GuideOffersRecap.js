@@ -22,6 +22,7 @@ import {
   getStoreSubscriptionConflict,
   getStoreSubscriptionConflictNotice,
   getSubscriptionBillingErrorMessage,
+  isDeferredStorePlanChange,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
   resolveStorePlanChangeTarget,
@@ -435,6 +436,7 @@ function GuideOffersRecap({ navigation }) {
       source: selectedOffer,
     });
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
+    const teamSlotSummary = getSubscriptionTeamSlotSummary(subscriptionSummary);
 
     try {
       const result = await purchaseMutation.mutateAsync({
@@ -447,8 +449,9 @@ function GuideOffersRecap({ navigation }) {
         payerUserDocumentId: String(userData?.documentId || '').trim(),
         teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
           availableTeams,
-          coveredTeamDocumentIds: getSubscriptionTeamSlotSummary(subscriptionSummary)
-            .coveredTeamDocumentIds,
+          // BUGHUNT C03 / Q1-04 — jamais une equipe que le club paie deja.
+          clubCoveredTeamDocumentIds: teamSlotSummary.clubCoveredTeamDocumentIds,
+          coveredTeamDocumentIds: teamSlotSummary.coveredTeamDocumentIds,
           slotCount,
         }),
       });
@@ -468,6 +471,12 @@ function GuideOffersRecap({ navigation }) {
           t('guideOffersRecap.alerts.subscriptionError.title', 'Erreur abonnement'),
           String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
         );
+        return;
+      }
+
+      // BUGHUNT C03 / Q1-05 — la page Stripe est seulement demandee : rien n'est
+      // paye, donc ni « succeeded » ni ecran de succes.
+      if (result?.checkoutRedirect === true) {
         return;
       }
 
@@ -500,6 +509,8 @@ function GuideOffersRecap({ navigation }) {
         renewalDateLabel: renewal.renewalDateLabel,
         resumeCtaLabel: t('guideOffersRecap.success.resumeCta', "C'est parti !"),
         resumeMode: 'home',
+        // BUGHUNT C03 / Q1-08 — changement non encaisse par le magasin.
+        takesEffectAtRenewal: Boolean(storeChangeTarget) && isDeferredStorePlanChange(result),
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('recap_unlock_failed', {
