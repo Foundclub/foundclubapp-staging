@@ -117,7 +117,8 @@ const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || ''
 const getRecruitmentEventTimestamp = (/** @type {any} */ ad) => {
   const rawDate = ad?.event?.date;
   if (!rawDate) return 0;
-  // BH15 P2-05 : une date nue « AAAA-MM-JJ » se lit en heure locale, à l'heure de début, sinon en fin de journée.
+  // BH15 P2-05 : une date nue « AAAA-MM-JJ » se lit en heure locale, à l'heure de début, sinon en
+  // fin de journée.
   const startTime = String(ad?.event?.startTime || '').slice(0, 8);
   const timestamp = /^\d{4}-\d{2}-\d{2}$/.test(String(rawDate))
     ? new Date(`${rawDate}T${/^\d{2}:\d{2}/.test(startTime) ? startTime : '23:59:59.999'}`).getTime()

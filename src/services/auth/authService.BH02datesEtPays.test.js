@@ -91,7 +91,8 @@ afterEach(() => {
 
 describe('BH02 P1-18 — date de naissance sans glissement de fuseau', () => {
   it('createTrainer garde le 15/01/2000', async () => {
-    await expect(createTrainer({ birthdate: '15/01/2000', firstname: 'A', phoneNumber: '0600000000' })).rejects.toBeTruthy();
+    await expect(createTrainer({ birthdate: '15/01/2000', firstname: 'A', phoneNumber: '0600000000' }))
+      .rejects.toBeTruthy();
     expect(mockPost.mock.calls[0][1].champs.birthdate).toBe('2000-01-15');
   });
 
@@ -103,7 +104,8 @@ describe('BH02 P1-18 — date de naissance sans glissement de fuseau', () => {
 
 describe('BH02 P1-18 — repli ISO de createTrainer', () => {
   it('garde 2000-01-15', async () => {
-    await expect(createTrainer({ birthdate: '2000-01-15', firstname: 'A', phoneNumber: '0600000000' })).rejects.toBeTruthy();
+    await expect(createTrainer({ birthdate: '2000-01-15', firstname: 'A', phoneNumber: '0600000000' }))
+      .rejects.toBeTruthy();
     expect(mockPost.mock.calls[0][1].champs.birthdate).toBe('2000-01-15');
   });
 });

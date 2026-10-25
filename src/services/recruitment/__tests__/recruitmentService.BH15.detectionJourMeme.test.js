@@ -9,15 +9,18 @@ const annonce = (/** @type {any} */ event) => ({
 
 describe('isExpiredDetectionRecruitmentAd', () => {
   it("n'expire pas le jour même d'une date sans heure", () => {
-    expect(isExpiredDetectionRecruitmentAd(annonce({ date: '2026-09-10' }), new Date(2026, 8, 10, 8, 0))).toBe(false);
+    const jour = annonce({ date: '2026-09-10' });
+    expect(isExpiredDetectionRecruitmentAd(jour, new Date(2026, 8, 10, 8, 0))).toBe(false);
   });
 
   it('expire le lendemain', () => {
-    expect(isExpiredDetectionRecruitmentAd(annonce({ date: '2026-09-10' }), new Date(2026, 8, 11, 0, 1))).toBe(true);
+    const jour = annonce({ date: '2026-09-10' });
+    expect(isExpiredDetectionRecruitmentAd(jour, new Date(2026, 8, 11, 0, 1))).toBe(true);
   });
 
   it("tient compte de l'heure de début quand elle existe", () => {
-    expect(isExpiredDetectionRecruitmentAd(annonce({ date: '2026-09-10', startTime: '18:00:00.000' }), new Date(2026, 8, 10, 17, 0))).toBe(false);
-    expect(isExpiredDetectionRecruitmentAd(annonce({ date: '2026-09-10', startTime: '18:00:00.000' }), new Date(2026, 8, 10, 19, 0))).toBe(true);
+    const soir = annonce({ date: '2026-09-10', startTime: '18:00:00.000' });
+    expect(isExpiredDetectionRecruitmentAd(soir, new Date(2026, 8, 10, 17, 0))).toBe(false);
+    expect(isExpiredDetectionRecruitmentAd(soir, new Date(2026, 8, 10, 19, 0))).toBe(true);
   });
 });

@@ -730,7 +730,8 @@ export const createReccurrentEventPayload = (event) => {
         if (event.recurrenceFrequency === 'week') {
           currentDate.setDate(currentDate.getDate() + (7 * interval));
         } else if (event.recurrenceFrequency === 'month') {
-          // P1-04 : chaque mois depuis la date de départ, borné au dernier jour (31/01 → 28/02 → 31/03).
+          // P1-04 : chaque mois depuis la date de départ, borné au dernier jour (31/01 → 28/02 →
+          // 31/03).
           occurrence += 1;
           const monthIndex = startDate.getMonth() + (occurrence * interval);
           const lastDay = new Date(startDate.getFullYear(), monthIndex + 1, 0).getDate();

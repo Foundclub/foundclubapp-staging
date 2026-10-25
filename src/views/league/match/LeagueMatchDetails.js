@@ -1871,13 +1871,19 @@ function LeagueMatchDetails({ navigation, route }) {
         <View style={styles.bottomCaptainButtonsStack}>
           <Button
             disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'reschedule',
+              outcome: 'not_played',
+            })}
             title={t('leagueMatchDetails.postSlot.reschedule', 'Replanifier ce match')}
             variant="Primary"
           />
           <Button
             disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'cancel',
+              outcome: 'not_played',
+            })}
             title={t('leagueMatchDetails.postSlot.cancelMatch', 'Annuler le match')}
             variant="Secondary"
           />
@@ -1896,7 +1902,10 @@ function LeagueMatchDetails({ navigation, route }) {
         <View style={styles.bottomCaptainButtonsStack}>
           <Button
             disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'reschedule',
+              outcome: 'not_played',
+            })}
             title={t(
               'leagueMatchDetails.postSlot.confirmReschedule',
               'Confirmer la replanification',
@@ -1918,7 +1927,10 @@ function LeagueMatchDetails({ navigation, route }) {
         <View style={styles.bottomCaptainButtonsStack}>
           <Button
             disabled={actionLoading}
-            onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
+            onPress={() => handleSubmitPostSlotResolution({
+              nextAction: 'cancel',
+              outcome: 'not_played',
+            })}
             title={t('leagueMatchDetails.postSlot.confirmCancel', 'Confirmer l annulation')}
             variant="Primary"
           />

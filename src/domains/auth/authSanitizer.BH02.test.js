@@ -1,4 +1,5 @@
-// BH02 (BUGHUNT 24/10) : témoin P1-05 / P1-25, la signature voit téléphone, e-mail et l'état des demandes.
+// BH02 (BUGHUNT 24/10) : témoin P1-05 / P1-25, la signature voit téléphone, e-mail et l'état des
+// demandes.
 import { haveSameSanitizedUser } from './authSanitizer';
 
 describe('authSanitizer - BH02 P1-05', () => {

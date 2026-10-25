@@ -253,7 +253,8 @@ export const buildAddressFromForm = (form = {}) => {
   return {
     ...advanced,
     address: normalizeText(typedForm.addressLabel) || advanced.address,
-    // BH14 P9-18 / P2-15 : un champ présent mais vidé efface la valeur ; absent, l'adresse avancée reste.
+    // BH14 P9-18 / P2-15 : un champ présent mais vidé efface la valeur ; absent, l'adresse avancée
+    // reste.
     city: typedForm.city !== undefined ? normalizeText(typedForm.city) : advanced.city,
     description: normalizeText(typedForm.addressLabel) || advanced.description,
     label: normalizeText(typedForm.addressLabel) || advanced.label,

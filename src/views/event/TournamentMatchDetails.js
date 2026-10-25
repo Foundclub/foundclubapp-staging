@@ -110,8 +110,11 @@ function TournamentMatchDetails({ navigation, route }) {
     setEndTime(formatTimeValue(match?.endAt));
     setSelectedFacilityId(match?.facility?.documentId || '');
     // BH08 · P8-19 : Number(null) vaut 0, donc « null » s affichait dans le champ.
-    setScoreAText(match?.scoreA != null && Number.isFinite(Number(match.scoreA)) ? String(match.scoreA) : '');
-    setScoreBText(match?.scoreB != null && Number.isFinite(Number(match.scoreB)) ? String(match.scoreB) : '');
+    const scoreSaisi = (/** @type {any} */ score) => (
+      score != null && Number.isFinite(Number(score)) ? String(score) : ''
+    );
+    setScoreAText(scoreSaisi(match?.scoreA));
+    setScoreBText(scoreSaisi(match?.scoreB));
     setWinnerTeamId(match?.winner?.documentId || '');
     setNotesText(match?.notes || '');
   }, [match]);

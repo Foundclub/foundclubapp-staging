@@ -103,7 +103,8 @@ function ReserverVeille() {
   }, [fin, navigation, reservationId]);
 
   const envoyer = async (/** @type {'confirme' | 'annule'} */ reponse) => {
-    // BH16 P13-18 : une réponse à la fois ; « Je confirme » et « J'annule » ne partent pas tous deux.
+    // BH16 P13-18 : une réponse à la fois ; « Je confirme » et « J'annule » ne partent pas tous
+    // deux.
     if (enVol.current) return;
     enVol.current = true;
     setConfirmation(false);

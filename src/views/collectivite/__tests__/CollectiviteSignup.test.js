@@ -271,7 +271,8 @@ describe('COLL-ACCUEIL — planche 5 : « Vous » (étape 2 sur 2) et l envoi', 
     });
   });
 
-  // BH13 P12-14 : pendant la mise à jour du nom, un deuxième appui n envoie pas une deuxième demande.
+  // BH13 P12-14 : pendant la mise à jour du nom, un deuxième appui n envoie pas une deuxième
+  // demande.
   it('BH13/P12-14 deux appuis pendant la mise à jour du nom : un seul envoi', async () => {
     const arbre = await allerAVous();
     await saisir(arbre, 'collectivite-inscription-firstname', 'Agnès');

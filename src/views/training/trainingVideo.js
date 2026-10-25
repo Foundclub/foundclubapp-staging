@@ -89,7 +89,9 @@ export const fileDesRelevés = (sessions, journees) => {
       if (!essaisFaits[code]) essaisFaits[code] = new Set();
       essaisFaits[code].add(essai);
       // BH15 P13-03 : une mesure declaree illisible (isValid false) est traitee, elle aussi.
-      if (row.value != null || row.textValue || row.isValid === false) dejaReleve.add(`${code}|${row.measureKey}|${essai}`);
+      if (row.value != null || row.textValue || row.isValid === false) {
+        dejaReleve.add(`${code}|${row.measureKey}|${essai}`);
+      }
     });
 
     const tests = (Array.isArray(jour.tests) ? jour.tests : [])

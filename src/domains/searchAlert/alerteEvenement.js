@@ -108,8 +108,11 @@ export const resumeDeLAlerte = (alerte, sports, tousLesSports) => {
  * @returns {string} Le nom, numéroté s'il est déjà pris.
  */
 export function libelleUnique(base, alertesExistantes) {
-  // P3-14 : chercher un nom LIBRE, pas compter les doublons (« Lyon », « Lyon (3) » ⇒ « Lyon (2) »).
-  const pris = new Set((alertesExistantes || []).map((existante) => String(existante?.label || '')));
+  // P3-14 : chercher un nom LIBRE, pas compter les doublons
+  // (« Lyon », « Lyon (3) » ⇒ « Lyon (2) »).
+  const pris = new Set(
+    (alertesExistantes || []).map((existante) => String(existante?.label || '')),
+  );
   if (!pris.has(base)) return base;
   let numero = 2;
   while (pris.has(`${base} (${String(numero)})`)) numero += 1;
