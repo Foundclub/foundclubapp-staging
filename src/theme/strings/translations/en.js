@@ -5127,6 +5127,7 @@ export default {
       glisser: 'or drop a file here',
       header: 'New post',
       headerModifier: 'Edit the post',
+      introuvable: 'This news item could not be loaded: it may have been deleted.',
       photoJointe: 'Attached photo',
       photos: 'Photos',
       pieceEchec: 'The attachment could not be sent. Try again.',

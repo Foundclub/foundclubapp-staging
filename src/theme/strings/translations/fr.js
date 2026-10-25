@@ -5503,6 +5503,7 @@ export default {
       glisser: 'ou glissez un fichier ici',
       header: 'Nouvelle actualité',
       headerModifier: 'Modifier l’actualité',
+      introuvable: 'Cette actualité n’a pas pu être lue : elle a peut-être été supprimée.',
       photoJointe: 'Photo jointe',
       photos: 'Photos',
       pieceEchec: 'La pièce jointe n’a pas pu être envoyée. Réessayez.',
