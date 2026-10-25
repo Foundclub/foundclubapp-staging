@@ -413,6 +413,8 @@ function MatchCenterScreen() {
     () => getLeagueMatchTeamSide(currentMatch, mySquad),
     [currentMatch, mySquad],
   );
+  // Fallback when opponentDetails is missing: the side that is not mine.
+  const opponentTeam = matchTeamSide === 'b' ? currentMatch?.team_a : currentMatch?.team_b;
   const matchLastProposalSide = React.useMemo(
     () => getLastLeagueProposalSide(currentMatch),
     [currentMatch],
@@ -582,6 +584,7 @@ function MatchCenterScreen() {
   }, [homeBase]);
 
   const lastMatchRef = useRef(/** @type {LeagueMatch | null} */ (null));
+  const fetchMatchDataTokenRef = useRef(0);
   const cancellationLikeStatuses = React.useMemo(
     () => new Set(['negotiating', 'provisionary', 'scheduled']),
     [],
@@ -611,19 +614,26 @@ function MatchCenterScreen() {
   const fetchMatchData = useCallback(async (
     /** @type {Team} */ squad,
   ) => {
+    // Only the latest call may write: a slow answer for a squad left behind is dropped.
+    fetchMatchDataTokenRef.current += 1;
+    const fetchToken = fetchMatchDataTokenRef.current;
+    const isStale = () => fetchToken !== fetchMatchDataTokenRef.current;
     setMySquad(squad);
     setLoading(true);
     try {
       try {
         const history = await getMatchHistory(getEntityDocumentId(squad), 5);
+        if (isStale()) return;
         setRecentMatches(Array.isArray(history) ? history : []);
       } catch (historyError) {
+        if (isStale()) return;
         console.error('Fetch match history error:', historyError);
         setRecentMatches([]);
       }
 
       // B. Check Active Matchmaking Request for THIS squad
       const activeReq = await MatchmakingService.getActiveRequest(getEntityDocumentId(squad));
+      if (isStale()) return;
       setMatchmakingServerNow(activeReq?.serverNow || null);
       const effectiveLegacyState = activeReq?.legacyState || activeReq?.state;
 
@@ -655,9 +665,12 @@ function MatchCenterScreen() {
           }
         }
       } else {
-        // No active request/match
+        // No active request/match: nothing from a previous squad or search may stay on screen.
         setMatchmakingServerNow(null);
         setSoftSuggestion(null);
+        setMatchRequest(null);
+        setCurrentMatch(null);
+        setOpponentDetails(null);
         if (lastMatchRef.current) {
           // Only show cancellation if previous status was in cancellable pre-result phases.
           const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
@@ -671,11 +684,11 @@ function MatchCenterScreen() {
             );
           }
           lastMatchRef.current = null;
-          setCurrentMatch(null);
         }
 
         // C. Check Next Available Slot
         const slots = await getAvailableSlots(getEntityDocumentId(squad));
+        if (isStale()) return;
         // Sort by participant count descending so the most filled slot shows first
         const sortedSlots = Array.isArray(slots) && slots.length > 0
           ? [...slots].sort((a, b) => (b.rsvp_count || 0) - (a.rsvp_count || 0))
@@ -692,6 +705,7 @@ function MatchCenterScreen() {
         }
       }
     } catch (error) {
+      if (isStale()) return;
       console.error('Fetch Match Data Error:', error);
       setLoadError(t(
         'matchCenterScreen.errors.sync',
@@ -699,7 +713,7 @@ function MatchCenterScreen() {
       ));
       setViewState('connection_error');
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
   }, [cancellationLikeStatuses, openInitialProposalModal, t]);
 
@@ -831,6 +845,8 @@ function MatchCenterScreen() {
     setIsSquadSelectorVisible(false);
     const squadId = getEntityDocumentId(squad);
     if (!areSameEntityId(squadId, getEntityDocumentId(mySquad))) {
+      // The previous squad's match is not this squad's: it must not read as cancelled.
+      lastMatchRef.current = null;
       navigation.setParams?.({
         activeSquadId: squadId,
         squadSwitchToken: String(Date.now()),
@@ -926,6 +942,7 @@ function MatchCenterScreen() {
           setCurrentMatch(matchedMatch);
           setOpponentDetails(matchedResult.opponentDetails || matchedResult.opponent || null);
           setSoftSuggestion(null);
+          lastMatchRef.current = matchedMatch;
           openInitialProposalModal(matchedMatch);
           setViewState('match_found');
         } else {
@@ -994,6 +1011,7 @@ function MatchCenterScreen() {
     setSoftSuggestion(null);
     setOpponentDetails(statusData?.opponentDetails || null);
     setViewState('match_found');
+    lastMatchRef.current = nextMatch;
     if (shouldAlert) {
       openInitialProposalModal(nextMatch);
     }
@@ -1013,6 +1031,7 @@ function MatchCenterScreen() {
         setSoftSuggestion(null);
         setOpponentDetails(result?.opponentDetails || null);
         setViewState('match_found');
+        lastMatchRef.current = matchedMatch;
         openInitialProposalModal(matchedMatch);
         return;
       }
@@ -1054,8 +1073,9 @@ function MatchCenterScreen() {
   }, [openInitialProposalModal, softSuggestion, suggestionActionLoading, t]);
 
   const handleRecoverFromBackground = useCallback(() => {
-    setViewState('radar');
-  }, []);
+    // Reload and let the server state pick the view: a search may no longer exist.
+    loadMatchCenter();
+  }, [loadMatchCenter]);
   const isScreenActive = useIsFocused();
 
   const { searchStatus, serverNow: pollingServerNow } = useMatchmakingStateMachine({
@@ -1124,7 +1144,9 @@ function MatchCenterScreen() {
       const teamId = getEntityDocumentId(mySquad);
       const previousSlotIds = new Set(toDocumentIdList(squadSlots));
 
-      await Promise.all(
+      // allSettled: a partial failure must still refresh the list,
+      // or a retry duplicates the slots already saved.
+      const results = await Promise.allSettled(
         slotsToCreate.map((slotData) => {
           const payload = {
             end_hour: `${slotData.endTime}:00`,
@@ -1136,6 +1158,9 @@ function MatchCenterScreen() {
           };
           return createTeamSlot(payload);
         }),
+      );
+      const failedSlots = slotsToCreate.filter(
+        (slotData, index) => results[index].status === 'rejected',
       );
 
       const refreshedSlots = await getAvailableSlots(teamId);
@@ -1149,7 +1174,29 @@ function MatchCenterScreen() {
         setSelectedSlotIds((prev) => Array.from(new Set([...newSlotIds, ...prev])));
       }
 
+      if (failedSlots.length === slotsToCreate.length) {
+        throw results.find((result) => result.status === 'rejected')?.reason;
+      }
+
       setIsAddingSearchSlot(false);
+      if (failedSlots.length > 0) {
+        // Only the failed slots are named; the form closes,
+        // so a retry cannot re-create the saved ones.
+        Alert.alert(
+          t('matchCenterScreen.errorTitle', 'Erreur'),
+          t(
+            'matchCenterScreen.alerts.addSlotsPartialError',
+            'Ces créneaux n’ont pas été ajoutés : {{slots}}. Les autres sont enregistrés.',
+            {
+              slots: failedSlots
+                .map((slotData) => `${DAY_MAP[slotData.day] || slotData.day} ${slotData.startTime}`)
+                .join(', '),
+              ...SANS_ECHAPPEMENT,
+            },
+          ),
+        );
+        return;
+      }
       Alert.alert(
         t('matchCenterScreen.alerts.successTitle', 'Succès'),
         slotsToCreate.length > 1 ? t(
@@ -1194,9 +1241,8 @@ function MatchCenterScreen() {
       setMatchRequest(null);
       setSoftSuggestion(null);
       setMatchmakingServerNow(null);
-      // Refresh data to ensure consistent state
+      // Refresh data; the refreshed state picks the view (a match may have been found meanwhile).
       await loadMatchCenter();
-      setViewState('locker_room');
     } catch (error) {
       console.error('Cancel Error:', error);
       const cancelError = /** @type {any} */ (error);
@@ -1681,7 +1727,7 @@ function MatchCenterScreen() {
           <View>
             <Button
               onPress={() => {
-                setViewState('radar');
+                loadMatchCenter();
               }}
               title="REESSAYER"
               variant="Primary"
@@ -1975,8 +2021,8 @@ function MatchCenterScreen() {
                   <SvgIcon color={Colors.neutral00} height={36} name="shield-question" width={36} />
                 ) : (
                   <TeamShield
-                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}
-                    initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
+                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(opponentTeam)}
+                    initials={getSquadShieldInitials(opponentDetails?.name || opponentTeam?.name)}
                     isGold
                     size={56}
                   />
@@ -2010,7 +2056,7 @@ function MatchCenterScreen() {
                   {isOpponentAnonymous ? t(
                     'matchCenterScreen.found.opposingTeam',
                     'Équipe adverse',
-                  ) : (opponentDetails?.name || currentMatch?.team_b?.name || t(
+                  ) : (opponentDetails?.name || opponentTeam?.name || t(
                     'matchCenterScreen.found.opposingTeam',
                     'Équipe adverse',
                   ))}
@@ -2477,8 +2523,8 @@ function MatchCenterScreen() {
                   <SvgIcon color={Colors.neutral00} height={36} name="shield-question" width={36} />
                 ) : (
                   <TeamShield
-                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}
-                    initials={getSquadShieldInitials(opponentDetails?.name || currentMatch?.team_b?.name)}
+                    imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(opponentTeam)}
+                    initials={getSquadShieldInitials(opponentDetails?.name || opponentTeam?.name)}
                     isGold
                     size={52}
                   />
@@ -2509,7 +2555,7 @@ function MatchCenterScreen() {
                 {isOpponentAnonymous ? t(
                   'matchCenterScreen.found.opposingTeam',
                   'Équipe adverse',
-                ) : (opponentDetails?.name || currentMatch?.team_b?.name || t(
+                ) : (opponentDetails?.name || opponentTeam?.name || t(
                   'matchCenterScreen.found.opposingTeam',
                   'Équipe adverse',
                 ))}
@@ -2960,7 +3006,9 @@ function MatchCenterScreen() {
                 <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
                   {t('matchCenterScreen.slots.missingPrefix', 'Il manque')}
                   {' '}
-                  <Text style={{ color: Colors.gold500 }}>{5 - (activeSlot.rsvp_count || 0)}</Text>
+                  <Text style={{ color: Colors.gold500 }}>
+                    {Math.max(0, squadRequiredPlayers - (activeSlot.rsvp_count || 0))}
+                  </Text>
                   {' '}
                   {t('matchCenterScreen.slots.missingSuffix', 'joueurs pour être au complet.')}
                 </Text>

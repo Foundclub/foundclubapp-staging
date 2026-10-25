@@ -13919,6 +13919,7 @@ export default {
   matchCenterScreen: {
     alerts: {
       addSlotError: 'Unable to add the time slot.',
+      addSlotsPartialError: 'These time slots were not added: {{slots}}. The others are saved.',
       cancelledByOther: 'Your match was cancelled by the opponent or the system.',
       cancelSearchError: 'Unable to cancel the search right now.',
       invalidLocationBody: 'Unable to read your location coordinates.',
@@ -19729,6 +19730,7 @@ export default {
       editTitle: 'Edit the slot',
       joinHint: 'Join the squad to take part in the slots.',
       multipleAdded: '{{count}} slots added',
+      partialSaveError: 'These slots were not added: {{slots}}. The others are saved.',
       saveError: "Can't save the slot",
       statusError: "Can't change your status.",
       updated: 'Slot updated',
