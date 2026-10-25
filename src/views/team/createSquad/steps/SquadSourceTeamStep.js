@@ -11,7 +11,12 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import { getTeamById } from '@/services/team/teamService';
 
 const mapSectionOption = (section) => {
-  const value = String(section?.name || section?.label || section?.value || '').trim().toLowerCase();
+  // C04 Q4-16 — sans accents : « Féminine » ne contenait pas « fem » et devenait Masculin.
+  const value = String(section?.name || section?.label || section?.value || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
   if (value.includes('mix')) {
     return { label: i18next.t('squadSourceTeamStep.sections.mixed', 'Mixte'), value: 'mixed' };
   }
