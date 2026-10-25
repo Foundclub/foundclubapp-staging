@@ -28,7 +28,10 @@ describe('authService bypass gating', () => {
     expect(isFirebaseBypassEnabled(env)).toBe(false);
   });
 
-  test('defaults to bypass enabled in local when the flag is missing', () => {
-    expect(isFirebaseBypassEnabled({ APP_ENV: 'local' })).toBe(true);
+  // C11 (25/10/2026) : sans le drapeau, le contournement reste FERMÉ, même en local.
+  // Un oubli de configuration ne doit pas ouvrir la connexion sans code.
+  test('defaults to bypass disabled in local when the flag is missing', () => {
+    expect(isFirebaseBypassEnabled({ APP_ENV: 'local' })).toBe(false);
+    expect(isFirebaseBypassEnabled({ APP_ENV: 'local', BYPASS_FIREBASE_AUTH: '' })).toBe(false);
   });
 });
