@@ -62,8 +62,24 @@ describe('R17CTRL — affichage du carnet des contrôles', () => {
   it('le prochain proposé : un an après ; refait, le même écart que la fois précédente', () => {
     expect(proposedNextDue('2026-03-12')).toBe('2027-03-12');
     expect(proposedNextDue('2028-02-29')).toBe('2029-02-28');
-    expect(proposedNextDue('2026-10-19', { doneOn: '2024-10-01', nextDue: '2026-10-01' })).toBe('2028-10-18');
+    // C05 (Q2-17) : deux ans pile se gardent en mois (2028-10-19, plus 2028-10-18) : voir plus bas.
     expect(proposedNextDue('')).toBe('');
+  });
+
+  it('C05 (Q2-17) : un écart en mois entiers se garde en mois, même après une année bissextile', () => {
+    expect(proposedNextDue('2028-03-01', { doneOn: '2027-03-01', nextDue: '2028-03-01' })).toBe('2029-03-01');
+    let precedent = { doneOn: '2026-03-01', nextDue: '2027-03-01' };
+    const suite = [];
+    for (let i = 0; i < 4; i += 1) {
+      const suivant = proposedNextDue(precedent.nextDue, precedent);
+      suite.push(suivant);
+      precedent = { doneOn: precedent.nextDue, nextDue: suivant };
+    }
+    expect(suite).toEqual(['2028-03-01', '2029-03-01', '2030-03-01', '2031-03-01']);
+    // Deux ans pile (01/10/2024 → 01/10/2026), refait le 19/10/2026 : deux ans plus tard.
+    expect(proposedNextDue('2026-10-19', { doneOn: '2024-10-01', nextDue: '2026-10-01' })).toBe('2028-10-19');
+    // Un écart qui n'est pas en mois entiers reste compté en jours.
+    expect(proposedNextDue('2026-10-19', { doneOn: '2026-01-10', nextDue: '2026-04-20' })).toBe('2027-01-27');
   });
 
   it('les dates : la saisie « 12/03/2026 » et la base « 2026-03-12 », dans les deux sens ; les mots', () => {

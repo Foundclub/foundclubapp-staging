@@ -1,5 +1,13 @@
 import {
-  addDays, addYears, differenceInCalendarDays, format, isValid, parse, parseISO,
+  addDays,
+  addMonths,
+  addYears,
+  differenceInCalendarDays,
+  differenceInCalendarMonths,
+  format,
+  isValid,
+  parse,
+  parseISO,
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
@@ -124,7 +132,13 @@ export const proposedNextDue = (doneOn, previous = null) => {
   if (!doneOn) return '';
   const fait = jour(doneOn);
   if (previous?.doneOn && previous?.nextDue) {
-    const ecart = differenceInCalendarDays(jour(previous.nextDue), jour(previous.doneOn));
+    // C05 (Q2-17) : un écart en mois entiers (même jour du mois) se garde en mois ; compté en
+    // jours, un contrôle annuel glissait d'un jour après une année bissextile.
+    const avant = jour(previous.doneOn);
+    const apres = jour(previous.nextDue);
+    const mois = differenceInCalendarMonths(apres, avant);
+    if (mois > 0 && apres.getDate() === avant.getDate()) return format(addMonths(fait, mois), ISO);
+    const ecart = differenceInCalendarDays(apres, avant);
     if (ecart > 0) return format(addDays(fait, ecart), ISO);
   }
   return format(addYears(fait, 1), ISO);
