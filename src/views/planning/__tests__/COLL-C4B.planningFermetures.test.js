@@ -444,13 +444,14 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     // récapitulatif). ROUGE avant : une feuille du bas, « Attribuer pour la saison ».
     expect(arbre.root.findByType(Modal).props.presentationStyle).toBe('fullScreen');
     expect(parTexte(arbre, 'Attribuer le créneau')).toBeUndefined();
-    expect(textes(arbre)).toContain('Étape 1/3');
+    // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une étape : 3 → 2 étapes.
+    expect(textes(arbre)).toContain('Étape 1/2');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
     await act(async () => { club.props.onPress(); });
     await attendre();
-    for (let etape = 1; etape <= 2; etape += 1) {
-      expect(textes(arbre)).toContain(`Étape ${etape}/3`);
+    for (let etape = 1; etape <= 1; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/2`);
       expect(attributeSeasonSlot).not.toHaveBeenCalled();
       const suivant = parTexte(arbre, 'Suivant');
       expect(suivant).toBeDefined();
@@ -460,7 +461,7 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
       // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
       await attendre();
     }
-    expect(textes(arbre)).toContain('Étape 3/3');
+    expect(textes(arbre)).toContain('Étape 2/2');
     expect(parTexte(arbre, 'Attribuer le créneau')).toBeDefined();
     await act(async () => { parTexte(arbre, 'Bloquer pour la Ville').props.onPress(); });
     expect(attributeSeasonSlot).not.toHaveBeenCalled();

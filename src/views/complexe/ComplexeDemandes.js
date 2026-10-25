@@ -1,11 +1,12 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
+  demandeExpiree,
   expireDans,
   jourCourt,
   libelleDemandeTraitee,
@@ -38,6 +39,8 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 
+import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
+
 import { useIsDesktop } from '@/responsive';
 
 const ATTENTE = 'attente';
@@ -68,7 +71,9 @@ function ComplexeDemandes() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
+  const params = /** @type {{ complexeId?: string, refuser?: string } | undefined} */ (
+    route?.params
+  );
   const { complexe, complexeId } = useComplexeChoisi(params?.complexeId);
   const [onglet, setOnglet] = useState(ATTENTE);
   const attente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
@@ -82,7 +87,9 @@ function ComplexeDemandes() {
   const [refus, setRefus] = useState(/** @type {any} */ (null));
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [conflits, setConflits] = useState(/** @type {Record<string, string>} */ ({}));
+  const [closes, setCloses] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [message, setMessage] = useState('');
+  const [erreurDecision, setErreurDecision] = useState('');
   const [enCours, setEnCours] = useState('');
   const surOrdinateur = useIsDesktop();
   const [choisie, setChoisie] = useState('');
@@ -120,6 +127,7 @@ function ComplexeDemandes() {
 
   const accepter = async (/** @type {any} */ demande) => {
     setMessage('');
+    setErreurDecision('');
     setEnCours(demande.documentId);
     try {
       await decider.mutateAsync({
@@ -132,7 +140,18 @@ function ComplexeDemandes() {
       ));
     } catch (erreur) {
       const texte = messageDeRefusResa(t, erreur, repli);
+      // BH16 P13-14 : seul un vrai conflit (409) retire « Accepter » ; une panne se réessaie.
+      if (getErrorStatus(erreur) !== 409) {
+        setErreurDecision(texte);
+        return;
+      }
       setConflits((avant) => ({ ...avant, [demande.documentId]: texte }));
+      // RESA-FIN-APP (20/10) — déjà traitée ou EXPIRÉE (409 d'état) : aucun geste ne passe plus
+      // (« Refuser avec un mot » échouait aussi, tournée 2) ; la liste se relit.
+      if (getServerErrorCode(erreur) === 'COMPLEXE_RESERVATION_STATE') {
+        setCloses((avant) => ({ ...avant, [demande.documentId]: true }));
+        lecture.refetch?.();
+      }
     } finally {
       setEnCours('');
     }
@@ -142,6 +161,17 @@ function ComplexeDemandes() {
     setErreurFeuille('');
     setRefus(demande);
   };
+  // RESA-FIN-APP-2 (plan E-G19 §3.4) : « Refuser » dans la cloche ⇒ la feuille du motif de CETTE
+  // demande, une fois par adresse, dès qu'elle est dans la liste.
+  const refusOuvert = useRef('');
+  const aRefuser = params?.refuser && refusOuvert.current !== params.refuser
+    ? lignesDesPages(attente.data).find((ligne) => ligne.documentId === params.refuser)
+    : null;
+  useEffect(() => {
+    if (!aRefuser) return;
+    refusOuvert.current = aRefuser.documentId;
+    ouvrirLeRefus(aRefuser);
+  });
 
   const refuser = async (/** @type {string} */ motif) => {
     if (!refus) return;
@@ -169,6 +199,8 @@ function ComplexeDemandes() {
   const carteEnAttente = (/** @type {any} */ demande) => {
     const conflit = conflits[demande.documentId] || '';
     const echeance = expireDans(t, demande.expiresAt, maintenant);
+    // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : délai passé, la demande ne se tranche plus.
+    const expiree = demandeExpiree(demande.expiresAt, maintenant);
     return (
       <TouchableOpacity
         accessibilityRole="button"
@@ -189,7 +221,15 @@ function ComplexeDemandes() {
           <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>{echeance}</Text>
         ) : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
-        {surOrdinateur ? null : (
+        {expiree ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {t(
+              'complexeReservations.demandes.delaiPasse',
+              'Délai de réponse passé : la demande expire sans réponse.',
+            )}
+          </Text>
+        ) : null}
+        {surOrdinateur || expiree || closes[demande.documentId] ? null : (
           <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
             <View
               style={{ flexBasis: 120, flexGrow: 1 }}
@@ -399,6 +439,7 @@ function ComplexeDemandes() {
             value={onglet}
           />
           {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
+          {erreurDecision ? <BandeauComplexe texte={erreurDecision} ton="erreur" /> : null}
           {corps}
         </ScrollView>
       </DeuxVolets>

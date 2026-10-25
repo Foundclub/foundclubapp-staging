@@ -323,3 +323,13 @@ describe('6 — le squelette de chargement garde la FORME de l ecran', () => {
     expect(vus).not.toContain('training.plan.empty.action');
   });
 });
+
+describe('BH15 · P13-07 — la date de fin est la PLUS TARDIVE, pas la derniere de la liste', () => {
+  it('une seance reportee apres la derniere journee repousse la fin', () => {
+    const { formatSessionDate } = jest.requireActual('@/components/organisms/training/TrainingSessionRow');
+    const reportee = [{ ...SEANCES[0], plannedDate: '2099-12-25' }, SEANCES[1], SEANCES[2]];
+    const fin = textes(rendre({ ...INSCRIT, sessions: reportee })).find((v) => v.startsWith('training.plan.endsOn'));
+
+    expect(fin).toContain(JSON.stringify(formatSessionDate('2099-12-25')).slice(1, -1));
+  });
+});

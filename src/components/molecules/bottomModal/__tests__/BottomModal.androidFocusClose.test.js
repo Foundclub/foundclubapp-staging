@@ -42,6 +42,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     }),
     BottomSheetScrollView: NativeView,
     BottomSheetView: NativeView,
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 jest.mock('@/theme/themeContext', () => {

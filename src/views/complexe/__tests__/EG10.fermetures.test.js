@@ -28,6 +28,7 @@ let mockApercu = /** @type {any} */ ({});
 const mockApercusLus = [];
 const mockFermer = jest.fn();
 const mockRouvrir = jest.fn();
+const mockModifier = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useApercuFermeture: (/** @type {any[]} */ ...args) => {
     mockApercusLus.push(args);
@@ -40,6 +41,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   }),
   useFermerTerrains: () => ({ isPending: false, mutateAsync: mockFermer }),
   useFermetures: () => mockFermetures,
+  useModifierFermetures: () => ({ isPending: false, mutateAsync: mockModifier }),
   useRouvrirFermetures: () => ({ isPending: false, mutateAsync: mockRouvrir }),
   useTerrains: () => ({
     data: [
@@ -198,6 +200,7 @@ beforeEach(() => {
   mockApercu = { data: undefined, isLoading: false };
   mockFermer.mockResolvedValue({ annulees: 4, echecs: [], faits: 3 });
   mockRouvrir.mockResolvedValue({ echecs: [], faits: 2 });
+  mockModifier.mockResolvedValue({ annulees: 0, echecs: [], faits: 2 });
 });
 
 describe('RESA-L5A2 E-G10 — la liste à venir (états 1, 4, 7)', () => {
@@ -392,5 +395,101 @@ describe('RESA-L5A2 E-G10 — un terrain d’E-G07', () => {
     expect(etat('t-2')).toEqual({ checked: true });
     expect(etat('t-1')).toEqual({ checked: false });
     expect(terrainDeTemoin().name).toBe('Terrain 1');
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 1 : « 1 réservation est touchée. Elles seront annulées… »
+// (la 2e phrase restait au pluriel). Elle suit le nombre, comme la 1re.
+describe('RESA-FIN-APP (3) E-G10 — la phrase de l’aperçu suit le nombre', () => {
+  it('une seule réservation touchée : « Elle sera annulée… »', async () => {
+    mockApercu = {
+      data: {
+        count: 1,
+        items: [{
+          date: '2026-10-25', documentId: 'r-1', from: '19:00', label: 'Julien M.', terrainId: 't-1', to: '20:00',
+        }],
+      },
+      isLoading: false,
+    };
+    const arbre = await monter();
+    await remplir(arbre);
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      '1 réservation est touchée.',
+      'Elle sera annulée et les joueurs prévenus.',
+    ]));
+    expect(lisibles(arbre)).not.toContain('Elles seront annulées et les joueurs prévenus.');
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G10, tournée 2 : une fermeture rouverte DISPARAISSAIT de la
+// liste, et aucune fermeture ne se modifiait. Plan E-G10 §4-5 : « modifier une fermeture ⇒ même
+// formulaire » ; états « à venir / en cours / passée / rouverte ».
+describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
+  const TRAVAUX = '2026-10-25|2026-10-26|travaux|';
+
+  it('une rouverte reste dans la liste, « Rouverte », sans Rouvrir ni Modifier', async () => {
+    mockFermetures = {
+      ...mockFermetures,
+      data: [fermeture({
+        documentId: 'f-9',
+        endDate: '2026-10-30',
+        startDate: '2026-10-29',
+        status: 'reopened',
+        terrainId: 't-1',
+      })],
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      '29/10 – 30/10 · Travaux', 'Rouverte',
+    ]));
+    const cle = '2026-10-29|2026-10-30|travaux||rouverte';
+    expect(parRepere(arbre, `fermeture-rouvrir-${cle}`)).toBeNull();
+    expect(parRepere(arbre, `fermeture-modifier-${cle}`)).toBeNull();
+  });
+
+  it('« Modifier » remplit le formulaire ; « Enregistrer » modifie tout le geste', async () => {
+    const arbre = await monter();
+    await toucher(arbre, `fermeture-modifier-${TRAVAUX}`);
+    expect(lisibles(arbre)).toContain('Modifier la fermeture');
+    const valeur = (/** @type {string} */ libelle) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.accessibilityLabel === libelle
+        && typeof n.props?.onChangeText === 'function',
+    )[0].props.value;
+    expect([valeur('Du'), valeur('Au')]).toEqual(['25/10/2026', '26/10/2026']);
+    await ecrire(arbre, 'Au', '27/10/2026');
+    await toucher(arbre, 'fermeture-fermer');
+    expect(mockFermer).not.toHaveBeenCalled();
+    expect(mockModifier).toHaveBeenCalledWith({
+      fermeture: { endDate: '2026-10-27', reason: 'travaux', startDate: '2026-10-25' },
+      fermetureIds: ['f-1', 'f-2'],
+    });
+    expect(lisibles(arbre)).toContain('Modifié : 25/10 – 27/10.');
+  });
+});
+
+describe('BH16 P13-15 — échec partiel ou total d’une fermeture', () => {
+  const champDu = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.props?.onChangeText === 'function' && n.props.accessibilityLabel === 'Du'))[0];
+
+  it('échec total : pas de « Fermé », le formulaire reste rempli', async () => {
+    mockFermer.mockResolvedValue({
+      annulees: 0, echecs: [{ id: 't-1' }, { id: 't-2' }, { id: 't-3' }], faits: 0,
+    });
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-fermer');
+    expect(lisibles(arbre).some((texte) => texte.startsWith('Fermé'))).toBe(false);
+    expect(champDu(arbre).props.value).toBe('25/10/2026');
+  });
+
+  it('échec partiel : « Fermé » pour les autres, le formulaire garde les terrains à refaire', async () => {
+    mockFermer.mockResolvedValue({ annulees: 0, echecs: [{ id: 't-2' }], faits: 2 });
+    const arbre = await monter();
+    await remplir(arbre);
+    await toucher(arbre, 'fermeture-fermer');
+    expect(champDu(arbre).props.value).toBe('25/10/2026');
+    mockFermer.mockClear();
+    await toucher(arbre, 'fermeture-fermer');
+    expect(mockFermer.mock.calls[0][0].terrainIds).toEqual(['t-2']);
   });
 });

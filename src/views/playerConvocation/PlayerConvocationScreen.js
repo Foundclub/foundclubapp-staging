@@ -152,7 +152,10 @@ function PlayerConvocationScreen() {
     [convocation, viewerId],
   );
 
+  // BH05 · P6-17 — `isSuccess` : un corps vide (null) est une reponse arrivee,
+  // pas un chargement ; sans lui, le rond tournait sans fin.
   const isSettled = convocationQuery.isError
+    || convocationQuery.isSuccess
     || (!convocationQuery.isLoading && Boolean(convocation));
 
   // 🔒 Le garde-fou, cote navigation. On ne redirige QUE quand la reponse du

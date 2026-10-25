@@ -21,6 +21,8 @@ const selectFile = (accept, options = {}) => new Promise((resolve, reject) => {
     const [file] = Array.from(input.files || []);
     resolve(file || null);
   }, { once: true });
+  // P3-04 : fenêtre fermée sans choix, l'attente se termine.
+  input.addEventListener('cancel', () => resolve(null), { once: true });
 
   input.click();
 });

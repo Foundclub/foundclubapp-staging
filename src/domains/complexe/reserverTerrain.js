@@ -803,7 +803,7 @@ const texteDeLAge = (t, age, rejoindre) => (rejoindre
  * @param {{ collecte?: { collectDeadline?: string | null, presents?: number, quorum?: number },
  *   complexe?: string | null, debut?: string | null, erreur?: any, fermeture?: string | null,
  *   motif?: string | null, rejoindre?: boolean, reserveur?: string | null,
- *   telephone?: string | null }} [contexte] - Ce que l'écran sait ;
+ *   telephone?: string | null, terrain?: string | null }} [contexte] - Ce que l'écran sait ;
  *   RESA-L6B-2 : `rejoindre` (le refus vient d'une partie qu'on rejoint : lien, annonce,
  *   présence), `collecte` (`{ collectDeadline, presents, quorum }`), `reserveur` (« Julien M. ») et
  *   `debut` (ISO) d'une partie annulée par son réserveur.
@@ -894,6 +894,18 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
           'Le complexe est prévenu : le créneau est de nouveau libre.',
         ),
         titre: t('reserverTerrain.echec.annuleeParToi', 'Ta réservation est annulée'),
+      };
+    // RESA-FIN-APP (20/10) — après le retrait d'une DEMANDE : il n'y avait pas de réservation.
+    case 'demandeRetiree':
+      return {
+        ...base,
+        actions: ['ailleurs'],
+        icone: 'coche',
+        texte: t(
+          'reserverTerrain.echec.annuleeParToiTexte',
+          'Le complexe est prévenu : le créneau est de nouveau libre.',
+        ),
+        titre: t('reserverTerrain.echec.demandeRetiree', 'Ta demande est retirée'),
       };
     case 'banni':
       return {
@@ -1047,7 +1059,13 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
             'reserverTerrain.echec.fermetureSansDate',
             'Une fermeture du complexe a annulé ta réservation.',
           ),
-        titre: t('reserverTerrain.echec.fermeture', 'Le complexe sera fermé'),
+        // RESA-FIN-APP-2 (T12, Adel « 1- A » 23/10) : la fermeture touche UN terrain, il est nommé.
+        titre: String(contexte?.terrain || '').trim()
+          ? t('reserverTerrain.echec.fermetureDuTerrain', '{{terrain}} sera fermé', {
+            terrain: String(contexte?.terrain).trim(),
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('reserverTerrain.echec.fermeture', 'Le complexe sera fermé'),
         ton: 'orange',
       };
     }

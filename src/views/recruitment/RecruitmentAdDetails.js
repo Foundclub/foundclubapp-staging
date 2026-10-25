@@ -1255,6 +1255,26 @@ function RecruitmentAdDetails() {
             </Text>
           </View>
         ) : null}
+        {/* BH15 P13-08 : une panne n'est pas « aucune candidature » ; même bloc que la détection. */}
+        {ownerApplicationsQuery.error && !ownerApplications.length ? (
+          <View style={styles.emptyCandidatesBox}>
+            <Text style={[Fonts.p1Bold, { color: Colors.error500, marginBottom: 8 }]}>
+              {t('recruitmentAdDetails.candidates.loadErrorTitle', 'Chargement impossible')}
+            </Text>
+            <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 12, textAlign: 'center' }]}>
+              {t(
+                'recruitmentAdDetails.candidates.loadErrorBody',
+                'Impossible de charger les candidatures pour le moment.',
+              )}
+            </Text>
+            <Button
+              onPress={() => ownerApplicationsQuery.refetch()}
+              size="sm"
+              title={t('recruitmentAdDetails.candidates.reload', 'Recharger')}
+              variant="Primary"
+            />
+          </View>
+        ) : null}
         {ownerApplications.length > 0 ? (
           <View>
             <View style={{ marginBottom: 12 }}>
@@ -1497,7 +1517,7 @@ function RecruitmentAdDetails() {
               })}
             </View>
           </View>
-        ) : (
+        ) : !ownerApplicationsQuery.error && (
           <View style={styles.emptyCandidatesBox}>
             <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
               {t('recruitmentAdDetails.candidates.empty', 'Aucune candidature pour le moment.')}

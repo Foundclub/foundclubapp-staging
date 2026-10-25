@@ -15,7 +15,11 @@ const WEEKDAY_PREFIX_FR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 export const formatDateWithDayPrefix = (value, options) => {
   if (!value) return options?.fallback ?? '';
 
-  const date = typeof value === 'string' ? new Date(value) : value;
+  // P3-07 : un jour seul (« YYYY-MM-DD ») se lit en heure LOCALE, pas comme minuit UTC.
+  const isDayOnly = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = typeof value === 'string'
+    ? new Date(isDayOnly ? `${value}T00:00:00` : value)
+    : value;
 
   if (Number.isNaN(date.getTime())) {
     return options?.fallback ?? '';

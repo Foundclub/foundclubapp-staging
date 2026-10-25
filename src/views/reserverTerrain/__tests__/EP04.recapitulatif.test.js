@@ -1,3 +1,4 @@
+import { ScrollView } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ReserverRecapitulatif from '@/views/reserverTerrain/ReserverRecapitulatif';
@@ -212,6 +213,9 @@ describe('E-P04 — réserver', () => {
     });
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, {
       reservation: maReservation(),
+      // RESA-FIN-SITE : l'identifiant, pour que le site relise la réservation après un
+      // rechargement.
+      reservationId: maReservation().documentId,
     });
   });
 
@@ -270,5 +274,28 @@ describe('E-P04 — réserver', () => {
         variante: 'age',
       }),
     );
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : le compteur « Combien de joueurs ? » était une barre GRIS CLAIR
+// au milieu d'un écran sombre (ton « surface » du compteur, fait pour les fiches claires) ; et « Réserver » /
+// « Envoyer la demande » était au BAS de la page (il fallait défiler), pas en pied fixe comme la planche.
+// Le compteur prend le ton sombre du parcours (« tunnel », le même que les tunnels de l'app) ; le bouton
+// sort du défilement et reste en bas de l'écran.
+describe('RESA-FIN-APP (2) E-P04 — le compteur sombre, le bouton en pied fixe', () => {
+  it('« Combien de joueurs ? » au ton du parcours ; « Réserver » hors du défilement', async () => {
+    const arbre = await monter();
+    const [compteur] = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onIncrement === 'function' && 'tone' in n.props
+    ));
+    expect(compteur?.props.tone).toBe('tunnel');
+    const [defilement] = arbre.root.findAllByType(ScrollView);
+    const dansLeDefilement = defilement.findAll((/** @type {any} */ n) => (
+      n.props?.title === 'Réserver' && typeof n.props?.onPress === 'function'
+    ));
+    expect(dansLeDefilement).toHaveLength(0);
+    expect(arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.title === 'Réserver' && typeof n.props?.onPress === 'function'
+    )).length).toBeGreaterThan(0);
   });
 });

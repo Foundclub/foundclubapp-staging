@@ -39,8 +39,10 @@ import {
   marquerNonHonoree,
   modifierComplexeGere,
   modifierExterieur,
+  modifierFermetures,
   modifierTerrain,
   noterExterieur,
+  partagerAnnonce,
   reglerFidelite,
   retirerTerrain,
   rouvrirFermetures,
@@ -357,6 +359,15 @@ export const useFermerTerrains = () => useGeste(
 );
 
 /**
+ * RESA-FIN-APP-2 — « Modifier » une fermeture (E-G10) : les mêmes jours, motif et mot pour chacune.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ fermeture, fermetureIds })`.
+ */
+export const useModifierFermetures = () => useGeste(
+  ({ fermeture, fermetureIds }) => modifierFermetures(fermetureIds, fermeture),
+);
+
+/**
  * « Rouvrir » (E-G10) ou « Débloquer » (E-G03) : un ÉTAT, jamais une suppression.
  * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
  *   `mutateAsync(fermetureIds)`.
@@ -396,6 +407,15 @@ export const useMarquerNonHonoree = () => useGeste(
  */
 export const useAnnulerNonHonoree = () => useGeste(
   ({ complexeId, reservationId }) => annulerNonHonoree(complexeId, reservationId),
+);
+
+/**
+ * RESA-PARTAGER (A-G32) — « Partager dans mon canal » (E-G05) et « Partager une annonce » (E-G12).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ complexeId, reservationId })` rend `{ data: { dejaPartagee } }`.
+ */
+export const usePartagerAnnonce = () => useGeste(
+  ({ complexeId, reservationId }) => partagerAnnonce(complexeId, reservationId),
 );
 
 /**

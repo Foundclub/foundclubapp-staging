@@ -927,6 +927,33 @@ describe('P7 - la fiche candidat, en feuille', () => {
 
     expect(contient(root, 'Impossible de lire le retour pour le moment.')).toBe(true);
   });
+
+  // 🐞 BUGHUNT P7-12 (BH06) — la réponse EN RETARD d'une première fiche écrasait la seconde.
+  test('P7 · temoin 17 bis — une lecture en retard n écrit pas sur la fiche suivante', async () => {
+    /** @type {(valeur: any) => void} La réponse de la première lecture, rendue à la main. */
+    let libererLaPremiere = () => {};
+    mockLireLesCandidatures
+      .mockImplementationOnce(() => new Promise((resolve) => { libererLaPremiere = resolve; }))
+      .mockResolvedValueOnce([
+        { documentId: 'candidature-alix', reviewNote: 'Note d Alix', user: GARDIEN_1 },
+      ]);
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+    taperSurUnCandidat(root, {
+      participation: { ...DEMANDE_GARDIEN, documentId: 'part-alix', user: GARDIEN_1 },
+      user: GARDIEN_1,
+    });
+    await act(async () => {});
+    await act(async () => {
+      libererLaPremiere([
+        { documentId: 'candidature-bahia', reviewNote: 'Note de Bahia', user: GARDIEN_2 },
+      ]);
+    });
+
+    expect(contient(root, 'Note de Bahia')).toBe(false);
+    expect(contient(root, 'Note d Alix')).toBe(true);
+  });
 });
 
 describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P10)', () => {

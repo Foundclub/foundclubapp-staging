@@ -1,6 +1,10 @@
 import client from '@/services/client';
 
-const unwrapResponse = (response) => response?.data?.data || response?.data;
+const unwrapResponse = (response) => (
+  response?.data && typeof response.data === 'object' && 'data' in response.data
+    ? response.data.data
+    : response?.data
+);
 
 /**
  * @typedef {object} MatchStatsPayload

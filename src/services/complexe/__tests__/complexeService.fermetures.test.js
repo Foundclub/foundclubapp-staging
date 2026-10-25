@@ -31,7 +31,8 @@ describe('RESA-L5A2 — les fermetures du complexe', () => {
       data: [{ documentId: `f-${terrainId}` }],
     }));
     const liste = await lireFermetures(['t-1', 't-2']);
-    expect(mockListe).toHaveBeenCalledWith('t-1', { status: 'active' });
+    // RESA-FIN-APP-2 : les rouvertes aussi (plan E-G10 §5, « rouverte »).
+    expect(mockListe).toHaveBeenCalledWith('t-1', { status: 'all' });
     expect(liste).toEqual([
       { documentId: 'f-t-1', terrainId: 't-1' },
       { documentId: 'f-t-2', terrainId: 't-2' },

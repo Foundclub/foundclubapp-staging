@@ -68,7 +68,7 @@ export const estArchivePourMoi = (chat, meId) => {
  */
 export const estEpinglePourMoi = (chat, meId) => {
   const epinglePar = chat?.pinnedBy;
-  return Array.isArray(epinglePar)
+  return Boolean(meId) && Array.isArray(epinglePar)
     && epinglePar.some((/** @type {any} */ u) => u?.documentId === meId);
 };
 

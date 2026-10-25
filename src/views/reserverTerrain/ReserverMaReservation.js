@@ -50,6 +50,8 @@ import {
   useRepondreALaPartie,
 } from '@/services/complexe/complexeJoueurQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { openExternalMap } from '@/platform/maps/externalMap';
 import { useIsDesktop } from '@/responsive';
 
@@ -233,6 +235,15 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const jusquA = momentLisible(reservation.cancellableUntil);
   const echeance = momentLisible(reservation.expiresAt);
   const creation = momentLisible(reservation.createdAt);
+  // RESA-FIN-APP (20/10) — l'historique dit aussi « Confirmée la veille » et « Marquée non
+  // honorée » (plan E-P07 §3.7 ; tournées 1 et 2 : seul « Réservée le … » y était).
+  const confirmeeLaVeille = momentLisible(reservation.dayBeforeConfirmedAt);
+  const marqueeNonHonoree = momentLisible(reservation.noShowAt);
+  // RESA-FIN-APP-2 (plan N-17, « 1 sur 3 ») : le rang et le seuil du serveur (RESAFINSRV2) ;
+  // lecture tolérante, rien sans seuil.
+  const rang = Number(reservation.noShowCount);
+  const seuil = Number(reservation.noShowThreshold);
+  const rangDeNonHonoree = rang > 0 && seuil > 0 ? { rang, seuil } : null;
   const commence = new Date(String(reservation.startsAt)).getTime() <= Date.now();
   const adresse = complexePublic?.address?.label ? String(complexePublic.address.label) : '';
   const partieEnCours = !varianteDEnTete && PARTIE_EN_COURS.includes(etat) && !commence;
@@ -265,7 +276,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           slug,
           telephone,
           terrain: reservation.terrain,
-          variante: enCollecte ? 'collecteArretee' : 'annuleeParToi',
+          // RESA-FIN-APP : retirer une DEMANDE n'annule aucune réservation (tournée 2).
+          variante: (enCollecte && 'collecteArretee')
+            || (demande && 'demandeRetiree')
+            || 'annuleeParToi',
         }),
       );
     } catch (erreur) {
@@ -369,6 +383,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     motif: reservation.reason,
     reserveur: reservation.bookerLabel,
     telephone,
+    terrain: reservation.terrain?.name,
   }) : null;
   const enTeteDEchec = contenuDEnTete ? (
     <View style={carte}>
@@ -479,7 +494,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               isLoading={Boolean(ouvrirUnFil?.isPending)}
               onPress={() => ouvrirLeFil('complexe')}
               size="sm"
-              title={t('reserverTerrain.maReservation.ecrireAuComplexe', 'Écrire au complexe')}
+              title={texteInsecable(t(
+                'reserverTerrain.maReservation.ecrireAuComplexe',
+                'Écrire au complexe',
+              ))}
               variant="Secondary"
             />
           ) : null}
@@ -691,7 +709,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     );
   }
 
-  const historique = creation || reservation.note ? (
+  const historique = creation || reservation.note || confirmeeLaVeille || marqueeNonHonoree ? (
     <View style={{ gap: 4 }}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {t('reserverTerrain.maReservation.historique', 'Historique')}
@@ -705,6 +723,33 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           })}
         </Text>
       ) : null}
+      {confirmeeLaVeille ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('reserverTerrain.maReservation.confirmeeLaVeille', {
+            defaultValue: 'Confirmée la veille, le {{jour}} à {{heure}}',
+            heure: confirmeeLaVeille.heure,
+            jour: confirmeeLaVeille.jour,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {marqueeNonHonoree ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {rangDeNonHonoree
+            ? t('reserverTerrain.maReservation.marqueeNonHonoreeRang', {
+              defaultValue:
+                'Marquée non honorée par le complexe le {{jour}} ({{rang}} sur {{seuil}})',
+              jour: marqueeNonHonoree.jour,
+              ...rangDeNonHonoree,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('reserverTerrain.maReservation.marqueeNonHonoree', {
+              defaultValue: 'Marquée non honorée par le complexe le {{jour}}',
+              jour: marqueeNonHonoree.jour,
+              ...SANS_ECHAPPEMENT,
+            })}
+        </Text>
+      ) : null}
       {reservation.note ? (
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t('reserverTerrain.maReservation.petitMot', 'Ton petit mot : « {{mot}} »', {
@@ -716,9 +761,10 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     </View>
   ) : null;
 
+  // RESA-FIN-APP (22/10) — l'heure en un seul mot (même défaut que la veille, « 17 / h »).
   const quand = debut
     ? t('reserverTerrain.maReservation.jourAHeure', '{{jour}} à {{heure}}', {
-      heure: debut.heure,
+      heure: texteInsecable(debut.heure),
       jour: debut.jour,
       ...SANS_ECHAPPEMENT,
     })
@@ -833,6 +879,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               if (annonce?.documentId) {
                 navigation.navigate(RouteNames.ReserverAnnonce, {
                   annonceId: annonce.documentId,
+                  // RESA-FIN-APP (22/10) — le nombre de favoris prévenus (`favoritesNotified`,
+                  // RESA-FIN-SERVEUR), s'il est rendu.
+                  favorisPrevenus: Number.isFinite(annonce?.favoritesNotified)
+                    ? annonce.favoritesNotified
+                    : undefined,
                   publiee: true,
                   reservationId: reservation.documentId,
                 });

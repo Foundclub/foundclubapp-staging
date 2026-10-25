@@ -45,6 +45,7 @@ import {
 } from '@/services/complexe/complexeQueries';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 /** « Jusqu'au » : un jour à venir, dans les 5 ans (la borne du serveur, `BAN_DAYS_MAX`). */
 const CINQ_ANS_EN_MS = 5 * 365 * 24 * 60 * 60 * 1000;
@@ -83,16 +84,28 @@ const nombre = (valeur) => (Number.isFinite(Number(valeur)) ? Number(valeur) : 0
  * réservation, RESA-L3). La liste elle-même : `ComplexeClients`.
  * Paramètres de route : `complexeId` et `joueurId`, ou `reservationId`. Caché par
  * `COMPLEXES_GERANT`.
+ * @param {object} [props] - Les propriétés (seulement dans le volet de la liste, sur ordinateur).
+ * @param {string | null} [props.complexeId] - Le complexe.
+ * @param {boolean} [props.dansUnVolet] - Dans le volet de droite de E-G15.
+ * @param {string | null} [props.joueurId] - Le client.
  * @returns {import('react').ReactElement} L'écran.
  */
-function ComplexeClient() {
+function ComplexeClient({
+  complexeId: complexeDuVolet = null,
+  dansUnVolet = false,
+  joueurId: joueurDuVolet = null,
+} = {}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {ParamsDuClient | undefined} */ (route?.params);
+  // RESA-FIN-APP (20/10) — sur ordinateur, la fiche s'ouvre DANS LE VOLET de droite de la liste
+  // (plan :279, :1007 ; reste de RESA-L5B-2) : ses paramètres viennent alors de la liste.
+  const params = /** @type {ParamsDuClient | undefined} */ (dansUnVolet
+    ? { complexeId: complexeDuVolet || undefined, joueurId: joueurDuVolet || undefined }
+    : route?.params);
   // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
   const { complexeId } = useComplexeChoisi(params?.complexeId);
   // N-12 ne porte que la réservation : le joueur est lu dans sa fiche (rien n'est lu sinon).
@@ -226,11 +239,20 @@ function ComplexeClient() {
           complexeId, reservationId: aEcrire.documentId,
         });
         const chatId = reponse?.data?.chat;
-        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId });
+        // RESA-FIN-APP-3 : `espace: 'complexe'` — sur le site, la conversation garde la barre du
+        // gérant (comme le canal, ComplexeCanal), au lieu des onglets du joueur (tournée 3).
+        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId, espace: 'complexe' });
       } catch (erreur) {
         setErreurEcrire(messageDeRefusResa(t, erreur, repli));
       }
     };
+    // RESA-FIN-APP-3 — `noShowsSinceLift` (RESA-FIN-SERVEUR 9/11) : moins que le total = un ban
+    // levé.
+    const depuisLaLevee = Number.isInteger(client.noShowsSinceLift)
+      ? client.noShowsSinceLift
+      : null;
+    const leveeDuBan = depuisLaLevee !== null && depuisLaLevee < nombre(client.noShows);
+    /** @type {Array<{ cle: string, depuis?: string | null, libelle: string, valeur: any }>} */
     const chiffres = [
       ...(parties === null ? [] : [{
         cle: 'parties',
@@ -243,6 +265,13 @@ function ComplexeClient() {
       }]),
       {
         cle: 'non-honorees',
+        // RESA-FIN-APP-3 (23/10/2026) — le compte depuis la levée du dernier ban, quand il diffère
+        // du total : c'est lui que le ban automatique regarde (tournée 3).
+        depuis: leveeDuBan
+          ? t('complexeClients.chiffres.depuisLaLevee', '{{nombre}} depuis la levée du ban', {
+            nombre: depuisLaLevee,
+          })
+          : null,
         libelle: t('complexeClients.chiffres.nonHonorees', 'non honorée', {
           count: nombre(client.noShows),
           defaultValue_one: 'non honorée',
@@ -362,6 +391,9 @@ function ComplexeClient() {
             >
               <Text style={[Fonts.h3Black, Fonts.neutral00]}>{String(chiffre.valeur)}</Text>
               <Text style={[Fonts.p3, Fonts.neutral100]}>{chiffre.libelle}</Text>
+              {chiffre.depuis ? (
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{chiffre.depuis}</Text>
+              ) : null}
             </View>
           ))}
         </View>
@@ -384,7 +416,7 @@ function ComplexeClient() {
                   }]}
                   testID={`client-historique-${reservation.documentId}`}
                 >
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.texte}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>{texteInsecable(ligne.texte)}</Text>
                   <PastillesReservation statut={ligne.etat} />
                 </TouchableOpacity>
               );
@@ -431,6 +463,15 @@ function ComplexeClient() {
                   defaultValue_other: 'Bannissement automatique au bout de {{count}} non honorées.',
                   ...SANS_ECHAPPEMENT,
                 },
+              )}
+            </Text>
+          ) : null}
+          {!banni && leveeDuBan && Number.isInteger(seuil) && seuil > 0 ? (
+            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+              {t(
+                'complexeClients.ban.repartDeLaLevee',
+                'Le compteur repart de la levée du ban : {{nombre}} sur {{seuil}}.',
+                { nombre: depuisLaLevee, seuil },
               )}
             </Text>
           ) : null}
@@ -519,12 +560,20 @@ function ComplexeClient() {
     />
   );
 
-  return (
+  const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (dansUnVolet ? (
+    <View style={[Alignments.fill]}>{contenu}</View>
+  ) : (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[12], Spaces.paddingBottom[16], Alignments.fill]}
     >
+      {contenu}
+    </ScreenContainer>
+  ));
+
+  return enveloppe(
+    <>
       <ScrollView
         // Sur ordinateur, une colonne de 720 px au plus, centrée (comme E-G09).
         contentContainerStyle={{
@@ -629,7 +678,7 @@ function ComplexeClient() {
           {boutonsDeLaFeuille('feuille-debannir-confirmer', boutonDebannir)}
         </View>
       </BottomModal>
-    </ScreenContainer>
+    </>,
   );
 }
 

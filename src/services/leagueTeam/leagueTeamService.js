@@ -315,16 +315,28 @@ export const getLeagueTeamById = async (id) => {
 export const getRanking = async (division = 5) => {
   const normalizedDivision = clampLeagueDivision(division);
   try {
-    const response = await client.get('/league-teams', {
-      params: {
-        filters: {
-          division: { $eq: normalizedDivision },
+    // BH10 P10-15 : sans pagination, Strapi s arrete a 25 equipes ; on lit
+    // toutes les pages (pageSize 100, sous le maxLimit serveur de 1000).
+    const ranking = [];
+    let page = 1;
+    let pageCount = 1;
+    do {
+      // eslint-disable-next-line no-await-in-loop
+      const response = await client.get('/league-teams', {
+        params: {
+          filters: {
+            division: { $eq: normalizedDivision },
+          },
+          pagination: { page, pageSize: 100 },
+          populate: ['crest'],
+          sort: ['division_points:desc', 'season_points:desc', 'wins:desc', 'elo:desc'],
         },
-        populate: ['crest'],
-        sort: ['division_points:desc', 'season_points:desc', 'wins:desc', 'elo:desc'],
-      },
-    });
-    return response.data?.data || [];
+      });
+      ranking.push(...(response.data?.data || []));
+      pageCount = Number(response.data?.meta?.pagination?.pageCount) || 1;
+      page += 1;
+    } while (page <= pageCount);
+    return ranking;
   } catch (error) {
     console.error('Error fetching ranking:', error);
     throw error;
@@ -703,7 +715,8 @@ export const searchSquads = async (filters) => {
         if (!teamSport) return false;
 
         if (requestedSportToken === SPORT_KEYS.football5) {
-          return teamSport.includes('football') || teamSport.includes('futsal');
+          return (teamSport.includes('football') && !teamSport.includes('11'))
+            || teamSport.includes('futsal');
         }
 
         if (requestedSportToken === SPORT_KEYS.football11) {

@@ -749,6 +749,8 @@ const useMessaging = (currentChatId) => {
         if (foundMessage?.createdAt) {
           cutoffTime = new Date(foundMessage.createdAt).getTime();
         }
+        // P1-15 : message lu inconnu ici, on ne devine pas jusqu'où l'autre a lu.
+        if (cutoffTime === null) return oldData;
       }
 
       return {
@@ -1557,6 +1559,8 @@ const useMessaging = (currentChatId) => {
       if (Array.isArray(chatsData)) {
         const existingChat = chatsData.find((/** @type {any} */ chat) => {
           if (!chat?.participants || !Array.isArray(chat.participants)) return false;
+          // P1-12 : une équipe, un club ou un groupe aux mêmes membres n'est pas un fil privé.
+          if ((chat.type && chat.type !== 'whisper') || chat.team || chat.club) return false;
 
           const chatParticipants = chat.participants
             .filter((/** @type {any} */ p) => p && (p.documentId || p)) // Filter out nulls
@@ -1652,7 +1656,7 @@ const useMessaging = (currentChatId) => {
 
       if (Array.isArray(chatsData)) {
         const existingChat = chatsData.find(
-          (/** @type {any} */ chat) => chat.club?.documentId === clubId,
+          (/** @type {any} */ chat) => chat.type === 'club' && chat.club?.documentId === clubId,
         );
         if (existingChat) return existingChat;
       }

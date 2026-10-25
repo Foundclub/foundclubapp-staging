@@ -43,6 +43,20 @@ export const toPickerDay = (isoDay) => {
 };
 
 /**
+ * Le jour « yyyy-MM-dd » d une valeur. BH10 P10-16 / P10-24 : une valeur ISO
+ * COMPLETE (avec heure, en UTC) est un instant, son jour se lit en heure
+ * LOCALE — la couper aux 10 premiers caracteres donne la veille pres de minuit.
+ * @param {any} value
+ * @returns {string}
+ */
+export const toLocalIsoDay = (value) => {
+  const text = String(value || '');
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(text)) return text.slice(0, 10);
+  const instant = new Date(text);
+  return isValid(instant) ? formatDate(instant, ISO_DAY_FORMAT) : text.slice(0, 10);
+};
+
+/**
  * « 2099-05-12 » -> « mardi 12 mai ». Une valeur ISO complete (avec heure) est
  * coupee au jour. Une valeur illisible est rendue telle quelle plutot que vide :
  * afficher la donnee brute vaut mieux qu afficher un trou.
@@ -50,7 +64,7 @@ export const toPickerDay = (isoDay) => {
  * @returns {string}
  */
 export const toReadableDay = (value) => {
-  const parsed = parse(String(value || '').slice(0, 10), ISO_DAY_FORMAT, new Date());
+  const parsed = parse(toLocalIsoDay(value), ISO_DAY_FORMAT, new Date());
   return isValid(parsed) ? formatDate(parsed, 'EEEE d MMMM', { locale: fr }) : String(value || '');
 };
 

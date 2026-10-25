@@ -9,6 +9,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 const PICTO = 72;
 
 /**
@@ -107,7 +109,7 @@ function BlocDEchec({ children = null, contenu, onAction }) {
                 icon={action === 'appeler' ? 'phone' : undefined}
                 key={action}
                 onPress={() => onAction(action)}
-                title={libelles[action]}
+                title={texteInsecable(libelles[action])}
                 variant={rang === 0 ? 'Primary' : 'Secondary'}
               />
             ))}

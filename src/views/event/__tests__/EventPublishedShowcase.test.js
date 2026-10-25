@@ -641,6 +641,17 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
     expect(findPressable(tree, 'Fermer').props.disabled).toBeFalsy();
   });
 
+  // 🐞 BUGHUNT P7-14 (BH06) — l aperçu a ÉCHOUÉ : la story et l A4 sont d autres images,
+  // fabriquées à part. Les griser fermait la seule porte qui pouvait encore marcher.
+  it('P7-14 — apercu en echec : story et A4 restent appuyables, partager reste grise', async () => {
+    mockFetchRenderBase64.mockRejectedValue(new Error('HTTP 500'));
+    const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
+    expect(findPressable(tree, 'Version story 9:16').props.disabled).toBeFalsy();
+    expect(findPressable(tree, 'Affiche A4 à imprimer').props.disabled).toBeFalsy();
+    expect(findPressable(tree, 'Partager l’affiche').props.disabled).toBe(true);
+  });
+
   it('chaque bouton dit ce qu on obtient, et que l image est enregistrable', async () => {
     const tree = await renderScreen(clubParams());
     await ouvrirAutresFormats(tree);

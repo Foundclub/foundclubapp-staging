@@ -7,6 +7,7 @@ import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 import PastilleMode from '@/views/complexe/components/PastilleMode';
 
 import {
+  enUnMot,
   parRepere,
   PLAN_OUVERT,
   pressable,
@@ -59,11 +60,15 @@ describe('RESA-L5A1 P00 — on voit que c’est un complexe (A-G05)', () => {
 });
 
 describe('RESA-L5A1 P00 — le mode d’un terrain (D2)', () => {
-  it('trois pastilles, une par mode', async () => {
+  // RESA-FIN-APP (20/10/2026) — tournée 2 (Android 16) : la pastille du Terrain 2 s'affichait
+  // « Validation » (le dernier mot passait sur une ligne invisible). Une pastille épouse son texte :
+  // ses espaces deviennent insécables (`texteInsecable`), le texte se comporte comme un mot seul.
+  it('trois pastilles, une par mode, dessinées en un seul mot', async () => {
     expect(textes(await monter(<PastilleMode mode="automatique" />))).toEqual(['Automatique']);
-    expect(textes(await monter(<PastilleMode mode="manuel" />))).toEqual(['Validation manuelle']);
+    expect(textes(await monter(<PastilleMode mode="manuel" />)))
+      .toEqual([enUnMot('Validation manuelle')]);
     expect(textes(await monter(<PastilleMode mode="telephone" />)))
-      .toEqual(['Téléphone seulement']);
+      .toEqual([enUnMot('Téléphone seulement')]);
   });
 
   it('un mode inconnu ne dessine rien', async () => {
@@ -105,7 +110,7 @@ describe('RESA-L5A1 P00 — la carte d’un terrain (E-G07, P00 bloc 5)', () => 
     expect(textes(arbre)).toEqual([
       'Padel A',
       'Foot à 5 · Extérieur · 10 joueurs',
-      'Téléphone seulement',
+      enUnMot('Téléphone seulement'),
       'Aucun créneau ouvert',
       'Pas réservable',
     ]);

@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeReservations from '@/views/complexe/ComplexeReservations';
@@ -233,5 +234,30 @@ describe('RESA-L5B-1 E-G04 — « Confirmée la veille » (état 1, RG-VEILLE)',
     });
     expect(parRepere(dans(parRepere(arbre, 'reservation-r-9')), 'pastille-veille')).not.toBeNull();
     expect(lisibles(arbre)).toContain('Confirmée la veille');
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G04, tournée 2 : à 17 h, le créneau de 15 h 30 commencé restait
+// dans « Aujourd'hui » sans bouton : il n'y avait que l'onglet « Passées ». RG-NONHONOREE dit
+// « créneau commencé » et le serveur le juge (`canMarkNoShow`) : le bouton suit le serveur partout.
+describe('RESA-FIN-APP-2 E-G04 — « Non honorée » sur un créneau commencé aujourd’hui', () => {
+  it('onglet « Aujourd’hui » : le bouton là où le serveur le permet, et seulement là', async () => {
+    mockVues.aujourdhui = pages([
+      ligne({
+        canMarkNoShow: true, date: '2026-10-14', documentId: 'r-5', from: '08:30',
+      }),
+      ligne({ date: '2026-10-14', documentId: 'r-6', from: '20:00' }),
+    ]);
+    const arbre = await monter();
+    const [onglet] = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'tab'
+      && typeof n.props?.onPress === 'function'
+      && n.findAllByType(Text).some((/** @type {any} */ x) => String(x.props.children)
+        .startsWith('Aujourd'))));
+    await act(async () => {
+      onglet.props.onPress();
+    });
+    expect(parRepere(arbre, 'non-honoree-r-5')).not.toBeNull();
+    expect(parRepere(arbre, 'non-honoree-r-6')).toBeNull();
   });
 });

@@ -7,6 +7,8 @@ import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * @typedef {{ couleur: string, encre?: string, icone: string, mot: string, pleine?: boolean,
  *   pointillee?: boolean }} Apparence
@@ -135,7 +137,7 @@ function PastilleEtat({ compte = null, etat }) {
       testID={`pastille-etat-${etat}`}
     >
       {icone}
-      <Text style={[Fonts.p3Bold, { color: encre }]}>{choisi.mot}</Text>
+      <Text style={[Fonts.p3Bold, { color: encre }]}>{texteInsecable(choisi.mot)}</Text>
     </View>
   );
 }

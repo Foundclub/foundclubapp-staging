@@ -1,5 +1,6 @@
 import {
   BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView, BottomSheetView,
+  useBottomSheetInternal,
 } from '@gorhom/bottom-sheet';
 import { BlurView } from '@sbaiahmed1/react-native-blur';
 import {
@@ -27,6 +28,41 @@ import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 // que la reprise de présentation ci-dessous (260 ms), avec de la marge.
 const STALE_DISMISS_WINDOW_MS = 400;
 
+// ⌨️ CLAVREGLE (23/10) — LA RÈGLE DU CLAVIER, POUR TOUTES LES FEUILLES : un champ touché se place
+// au-dessus du clavier. `@gorhom/bottom-sheet` 5.2.4 ne suit le clavier que si un champ est
+// DÉCLARÉ (`animatedKeyboardState.target`) : sinon l'annonce du clavier est mise de côté, jamais
+// appliquée (hooks/useAnimatedKeyboard). Seul son `BottomSheetTextInput` se déclare, à son focus ;
+// nos feuilles portent des `TextInput` simples (le champ commun ne prend celui de la bibliothèque
+// qu'avec `useBottomSheetInput`, et sur Android seulement). Sur iPhone, AUCUNE feuille ne remontait
+// (VU par Adel, 2.6.80, « Nommer l'adversaire », malgré CLAVADV). Le focus d'un TextInput remonte
+// l'arbre : la feuille déclare elle-même tout champ qu'elle contient, en-tête et pied compris,
+// comme le fait `BottomSheetTextInput`. Témoin : __tests__/BottomModalCLAVREGLE.clavier.test.js.
+/**
+ * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
+ * @param {object} props
+ * @param {React.ReactNode} props.children
+ * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
+ * @returns {React.ReactElement}
+ */
+function ChampsSuivisParLeClavier({ children, style }) {
+  const interne = useBottomSheetInternal(true);
+  const declarer = useCallback((/** @type {any} */ event) => {
+    const target = event?.nativeEvent?.target;
+    if (!interne || !target) return;
+    interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target }));
+  }, [interne]);
+  const oublier = useCallback((/** @type {any} */ event) => {
+    const target = event?.nativeEvent?.target;
+    if (!interne || !target || interne.animatedKeyboardState.get().target !== target) return;
+    interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target: undefined }));
+  }, [interne]);
+  return (
+    <View onBlurCapture={oublier} onFocusCapture={declarer} style={style}>
+      {children}
+    </View>
+  );
+}
+
 /**
  * Bottom modal component using @gorhom/bottom-sheet.
  * @param {object} props - Component props
@@ -40,6 +76,8 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @param {boolean} [props.hideCloseButton] - Whether to hide the close button
  * @param {boolean} props.isVisible - Whether the modal is visible
  * @param {() => void} [props.onDismissed] - Optional callback fired when modal is fully dismissed
+ * @param {() => void} [props.onOpened] - Une fois par ouverture, quand la feuille est ARRIVEE
+ * (fin de son animation). Le moment pour donner le clavier a un champ (CLAV-ADVERSAIRE).
  * @param {boolean} [props.preventStartupPresentation] - Prevent presenting until startup is stable
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
  * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
@@ -85,6 +123,7 @@ function BottomModal({
   // actions tombaient sous le pli (constat de recette de la 2.6.26).
   maxContentHeightRatio = 0.7,
   onDismissed,
+  onOpened,
   preventStartupPresentation = false,
   scrollable = true,
   scrollViewProps,
@@ -106,6 +145,7 @@ function BottomModal({
   // doit être propagée — d'où une borne de temps plutôt qu'un drapeau, qui
   // resterait armé si la bibliothèque n'émettait jamais la fermeture périmée.
   const staleDismissUntilRef = useRef(0);
+  const arriveeAnnonceeRef = useRef(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [shouldRender, setShouldRender] = useState(Boolean(isVisible));
   const insets = useSafeAreaInsets();
@@ -141,6 +181,7 @@ function BottomModal({
         staleDismissUntilRef.current = Date.now() + STALE_DISMISS_WINDOW_MS;
       }
       visibilityRef.current = true;
+      arriveeAnnonceeRef.current = false;
       sheetStateRef.current = 'presenting';
       modalRef.current.present();
       if (presentRecoveryTimerRef.current) {
@@ -235,6 +276,18 @@ function BottomModal({
     close?.();
     onDismissed?.();
   }, [close, onDismissed]);
+
+  // ⌨️ CLAV-ADVERSAIRE (23/10) — un champ en `autoFocus` ouvre le clavier PENDANT l'animation
+  // d'ouverture : `@gorhom/bottom-sheet` 5.2.4 relance alors l'animation vers le cran, sans le
+  // clavier, et le clavier recouvre le champ (VU par Adel sur iPhone, « Nommer l'adversaire »).
+  // Son `onChange` ne part qu'a la FIN de l'animation : l'appelant y donne le clavier, la
+  // feuille remonte alors comme toutes les autres. Une fois par ouverture : un cran rendu par
+  // le clavier ne redonne pas le clavier. Temoin : __tests__/BottomModalCLAVADV.clavier.test.js.
+  const handleChange = useCallback((/** @type {number} */ index) => {
+    if (index < 0 || arriveeAnnonceeRef.current) return;
+    arriveeAnnonceeRef.current = true;
+    onOpened?.();
+  }, [onOpened]);
 
   // renders
   const renderBackdrop = useCallback(
@@ -335,6 +388,7 @@ function BottomModal({
       index={0}
       keyboardBehavior={keyboardBehaviorForPlatform}
       keyboardBlurBehavior="restore"
+      onChange={onOpened ? handleChange : undefined}
       onDismiss={handleDismiss}
       ref={modalRef}
       snapPoints={snapPoints}
@@ -362,7 +416,7 @@ function BottomModal({
           />
         </TouchableOpacity>
       )}
-      <View style={[snapPoints ? Alignments.fill : undefined]}>
+      <ChampsSuivisParLeClavier style={[snapPoints ? Alignments.fill : undefined]}>
         {/* Fixed Header */}
         {headerComponent && (
           <View
@@ -431,7 +485,7 @@ function BottomModal({
             {footerComponent}
           </View>
         )}
-      </View>
+      </ChampsSuivisParLeClavier>
     </BottomSheetModal>
   );
 }

@@ -178,7 +178,8 @@ function EventWizardParticipants({ navigation, route }) {
   // « A-t-on deja touche a la liste ? » — sans ce marqueur, une convocation
   // videe a la main serait recochee en entier au rendu suivant.
   const [hasTouchedCallUp, setHasTouchedCallUp] = useState(
-    Array.isArray(state.matchCallUpPlayerIds) && state.matchCallUpPlayerIds.length > 0,
+    state.matchCallUpTouched === true
+      || (Array.isArray(state.matchCallUpPlayerIds) && state.matchCallUpPlayerIds.length > 0),
   );
 
   // L'effectif de base EST la convocation de depart : on decoche les absents.
@@ -445,7 +446,9 @@ function EventWizardParticipants({ navigation, route }) {
 
     // AC04 — le choix de convocation, garde en memoire jusqu'a la creation.
     // ⛔ Meme garde que les postes : on n'ecrit que si la section etait offerte.
-    if (shouldOfferCallUp) {
+    // BH07 / P8-04 — pendant le vol de l'equipe, `squadPlayers` est vide : ecrire
+    // ici effacerait la convocation deja choisie.
+    if (shouldOfferCallUp && !isLoadingSquad) {
       dispatch({
         payload: squadPlayers
           .map(getCompositionPlayerId)

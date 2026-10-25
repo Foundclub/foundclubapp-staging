@@ -945,3 +945,19 @@ describe('PAR-L5L6 E09 — vider un champ l efface', () => {
     expect(texte).not.toContain('Vider un champ');
   });
 });
+
+// BH02 (BUGHUNT 24/10) — P11-15 : une date à moitié saisie ne part pas en silence.
+test('BH02 P11-15 MODIFIER avec jour et mois sans année : rien ne part, et l\'écran le dit', async () => {
+  mockParams = { childDocumentId: 'enfant-1' };
+  mockEnfants = [{
+    age: 9, documentId: 'enfant-1', firstname: 'Léa', lastname: 'Martin', number: null, position: null,
+  }];
+
+  const arbre = await rendre();
+  await saisir(arbre, 'child-day', '12');
+  await saisir(arbre, 'child-month', '05');
+  await enregistrer(arbre);
+
+  expect(mockModifier).not.toHaveBeenCalled();
+  expect(texteVisible(arbre)).toContain('Cette date n’existe pas.');
+});

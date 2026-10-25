@@ -3,6 +3,8 @@ import { Text, TouchableOpacity } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 const HAUTEUR = 44;
 
 /**
@@ -41,7 +43,9 @@ function PuceChoix({
       ]}
       testID={testID}
     >
-      <Text style={[Fonts.p2Bold, choisie ? Fonts.primary900 : Fonts.primary200]}>{libelle}</Text>
+      <Text style={[Fonts.p2Bold, choisie ? Fonts.primary900 : Fonts.primary200]}>
+        {texteInsecable(libelle)}
+      </Text>
     </TouchableOpacity>
   );
 }

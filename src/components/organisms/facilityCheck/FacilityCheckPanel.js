@@ -116,7 +116,15 @@ function FacilityCheckPanel({
               }}
             />
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{pickerFromIso(ligne.doneOn)}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {ligne.result
+                  ? t('facilityReports.controles.histoDateResultat', {
+                    ...SANS_ECHAPPEMENT,
+                    date: pickerFromIso(ligne.doneOn),
+                    resultat: String(t(`facilityReports.controles.resultats.${ligne.result}`)),
+                  })
+                  : pickerFromIso(ligne.doneOn)}
+              </Text>
               {ligne.doneBy || ligne.document ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {[

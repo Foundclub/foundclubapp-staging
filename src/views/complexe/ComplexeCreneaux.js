@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -42,6 +42,8 @@ import {
   useEnregistrerCreneaux,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 const JOURS = [1, 2, 3, 4, 5, 6, 7];
 const DUREES = [60, 90, 120];
@@ -118,6 +120,7 @@ function ComplexeCreneaux() {
   const terrainId = params?.terrainId || null;
   const terrainsLus = useTerrains(complexeId);
   const apercu = useApercuCreneaux();
+  const apercuEnVol = useRef(false);
   const enregistrer = useEnregistrerCreneaux();
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
   const terrain = terrains.find((candidat) => candidat?.documentId === terrainId) || null;
@@ -179,6 +182,9 @@ function ComplexeCreneaux() {
    * @returns {Promise<boolean>} Vrai s'il est accepté.
    */
   const jugerEtGarder = async (candidat, direLeRefus) => {
+    // BH16 P13-13 : un seul apercu à la fois ; sinon deux retraits partis du même plan s'écrasent.
+    if (apercuEnVol.current) return false;
+    apercuEnVol.current = true;
     direLeRefus('');
     setEnregistre(null);
     try {
@@ -197,6 +203,8 @@ function ComplexeCreneaux() {
         ),
       ));
       return false;
+    } finally {
+      apercuEnVol.current = false;
     }
   };
 
@@ -485,7 +493,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('plage')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterPlage', 'Ajouter une plage')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterPlage', 'Ajouter une plage'))}
             variant="Secondary"
           />
         </View>
@@ -513,7 +521,12 @@ function ComplexeCreneaux() {
         {plan.rates.map((rate, rang) => ligne(
           `tarif-${rang}`,
           joursTexte(rate.days),
-          [resumeTarif(t, rate), formatEuros(rate.price)],
+          // RESA-FIN-APP : un terrain au prix PAR JOUEUR le dit sur la ligne (« 7 € » seul, tournée 2).
+          [resumeTarif(t, rate), terrain?.priceUnit === 'joueur'
+            ? t('complexeGerant.prix.parJoueur', '{{prix}} par joueur', {
+              prix: formatEuros(rate.price), ...SANS_ECHAPPEMENT,
+            })
+            : formatEuros(rate.price)],
           () => retirer('rates', rang),
         ))}
         <View style={{ alignSelf: 'flex-start' }}>
@@ -521,7 +534,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('tarif')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterTarif', 'Ajouter un tarif')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterTarif', 'Ajouter un tarif'))}
             variant="Secondary"
           />
         </View>
@@ -537,41 +550,44 @@ function ComplexeCreneaux() {
   const titreSemaine = t('complexeGerant.creneaux.semaine', 'Les prix de la semaine');
   const blocSemaine = semaine.length ? groupe(
     titreSemaine, (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ gap: 6 }} testID="complexe-creneaux-semaine">
-          <View style={[Alignments.row, { gap: 4 }]}>
-            <View style={{ width: 96 }} />
-            {JOURS.map((jour) => (
+      // RESA-FIN-APP (20/10) — les SEPT jours dans la largeur, sans glisser (tournée 1 : sam. et dim.
+      // étaient hors de l'écran, rien ne l'indiquait ; 96 + 7 × 48 = 432 px dans ~308). Colonnes
+      // souples (`flex: 1`) ; l'heure prend la largeur de son texte.
+      <View style={{ gap: 6 }} testID="complexe-creneaux-semaine">
+        <View style={[Alignments.row, { gap: 2 }]}>
+          <View style={{ width: 64 }} />
+          {JOURS.map((jour) => (
+            <Text
+              key={jour}
+              style={[Fonts.p4Bold, Fonts.primary200, Fonts.textCenter, { flex: 1 }]}
+            >
+              {nomDuJour(jour).slice(0, 3)}
+            </Text>
+          ))}
+        </View>
+        {semaine.map((tranche) => (
+          <View key={`${tranche.de}-${tranche.a}`} style={[Alignments.row, { gap: 2 }]}>
+            <Text style={[Fonts.p4, Fonts.neutral200, { width: 64 }]}>
+              {`${texteHeure(tranche.de)} – ${texteHeure(tranche.a)}`}
+            </Text>
+            {tranche.prix.map((valeur, index) => (
               <Text
-                key={jour}
-                style={[Fonts.p4Bold, Fonts.primary200, Fonts.textCenter, { width: 44 }]}
+                adjustsFontSizeToFit
+                key={JOURS[index]}
+                numberOfLines={1}
+                style={[
+                  Fonts.p4Bold,
+                  valeur === null ? Fonts.neutral300 : Fonts.neutral00,
+                  Fonts.textCenter,
+                  { flex: 1 },
+                ]}
               >
-                {nomDuJour(jour).slice(0, 3)}
+                {valeur === null ? '—' : formatEuros(valeur)}
               </Text>
             ))}
           </View>
-          {semaine.map((tranche) => (
-            <View key={`${tranche.de}-${tranche.a}`} style={[Alignments.row, { gap: 4 }]}>
-              <Text style={[Fonts.p4, Fonts.neutral200, { width: 96 }]}>
-                {`${texteHeure(tranche.de)} – ${texteHeure(tranche.a)}`}
-              </Text>
-              {tranche.prix.map((valeur, index) => (
-                <Text
-                  key={JOURS[index]}
-                  style={[
-                    Fonts.p4Bold,
-                    valeur === null ? Fonts.neutral300 : Fonts.neutral00,
-                    Fonts.textCenter,
-                    { width: 44 },
-                  ]}
-                >
-                  {valeur === null ? '—' : formatEuros(valeur)}
-                </Text>
-              ))}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        ))}
+      </View>
     ),
   ) : null;
 
@@ -643,7 +659,7 @@ function ComplexeCreneaux() {
             icon="plus"
             onPress={() => setFeuille('ponctuel')}
             size="sm"
-            title={t('complexeGerant.creneaux.ajouterPonctuel', 'Ajouter un créneau ponctuel')}
+            title={texteInsecable(t('complexeGerant.creneaux.ajouterPonctuel', 'Ajouter un créneau ponctuel'))}
             variant="Secondary"
           />
         </View>

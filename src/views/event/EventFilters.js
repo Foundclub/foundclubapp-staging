@@ -142,7 +142,8 @@ function EventFilters({ navigation }) {
       };
     }
     return {
-      activity: eventFilters?.activities || [],
+      // P8-14 : le filtre s'écrit sous `activity` (singulier), il se relit sous ce nom.
+      activity: eventFilters?.activity || [],
       category: eventFilters?.category || [],
       city: eventFilters?.city || { label: '', value: '' },
       club: eventFilters?.club || null,
@@ -293,7 +294,8 @@ function EventFilters({ navigation }) {
   const { data: allTypes } = useGetEventTypes();
   const { data: teamPages } = useGetTeams(
     { clubId: selectedClub || eventFilters?.club?.value || undefined },
-    { enabled: !!selectedClub },
+    // P8-15 : un club déjà appliqué charge aussi ses équipes.
+    { enabled: !!(selectedClub || eventFilters?.club?.value) },
   );
 
   const categories = useMemo(() => {

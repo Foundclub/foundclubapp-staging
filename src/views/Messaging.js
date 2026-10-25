@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
@@ -59,6 +60,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
 // IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
+import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
 import LigneAssistance from '@/views/chat/LigneAssistance';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 
@@ -91,6 +93,9 @@ function Messaging({ navigation, route }) {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
+  // SUPADM (23/10) — un super-admin lit aussi la boîte commune de l'assistance, ici.
+  const estSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name)
+    === 'superAdmin';
   const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
   // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que SES
   // fils : depuis R17-CANAUX (19/10), son canal des dirigeants y est une ligne comme les autres,
@@ -734,7 +739,8 @@ function Messaging({ navigation, route }) {
     // AE06 — le serveur sait combien de MESSAGES sont non lus (il relit le
     // curseur de lecture). Quand il le dit, il gagne sur le « lu » garde en
     // local, qui ne connait que le dernier message.
-    const serverUnreadCount = Number(chat?.unreadCount);
+    // P6-09 : `Number(null)` vaut 0 ; un compteur absent laisse décider le « lu » local.
+    const serverUnreadCount = chat?.unreadCount == null ? NaN : Number(chat.unreadCount);
     const hasServerUnreadCount = Number.isFinite(serverUnreadCount);
     const unreadBadge = formatThreadUnreadBadge(serverUnreadCount);
     const hasUnread = hasServerUnreadCount
@@ -1025,6 +1031,9 @@ function Messaging({ navigation, route }) {
                           navigation={navigation}
                           onFilCree={() => { refetch(); }}
                         />
+                      )}
+                      {enModeArchivees || espaceVille || !estSuperAdmin ? null : (
+                        <BoiteAssistanceDansMessages navigation={navigation} />
                       )}
                     </>
                   )}

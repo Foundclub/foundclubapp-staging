@@ -20,7 +20,9 @@ function SuperAdminLeagueDivisions() {
   const { Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const divisionsQuery = useGetSuperadminLeagueDivisions();
-  const divisions = divisionsQuery.data?.data || [];
+  const divisions = Array.isArray(divisionsQuery.data)
+    ? divisionsQuery.data
+    : (divisionsQuery.data?.data || []);
 
   if (divisionsQuery.isLoading && !divisions.length) {
     return (

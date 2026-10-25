@@ -147,6 +147,9 @@ function CreateSectionScreen({ navigation, route }) {
     onSuccess: async (result) => {
       await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ['multisport-club', resolvedCmId] }),
+        // BH03 · P14-10 : les listes du tableau de bord multisport.
+        queryClient.invalidateQueries({ queryKey: ['cm-clubs', resolvedCmId] }),
+        queryClient.invalidateQueries({ queryKey: ['cm-teams', resolvedCmId] }),
         queryClient.invalidateQueries({ queryKey: ['get-me'] }),
       ]);
       await Promise.allSettled([

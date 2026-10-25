@@ -98,6 +98,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
       null,
       props.children,
     ),
+    useBottomSheetInternal: () => null, // CLAVREGLE : lu par BottomModal
   };
 });
 

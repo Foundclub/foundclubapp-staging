@@ -32,6 +32,7 @@ import {
   selectHomeAlerts,
   selectModerationTotal,
   selectMyApplicationsStatus,
+  selectTriageTarget,
 } from '@/domains/home/homeCounters';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab, getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
@@ -70,7 +71,12 @@ import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
-import { peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
+import {
+  libelleDeLaCarte,
+  pastilleDeLaCarte,
+  peutAvoirDesEnfants,
+} from '@/views/profile/parent/mesEnfantsEnBref';
+import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
@@ -155,6 +161,18 @@ const CARTES_MASQUEES_A_TOUS = new Set(CARTES_ACCUEIL_MASQUEES);
  */
 const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
 
+// SUPADM (recette du 23/10) — l'écran de chaque ligne « À traiter » du SuperAdmin, les mêmes que
+// ceux du bandeau (`headBanner`) : la carte « À traiter » ouvre celui de sa première ligne non vide.
+/** @type {Record<string, string>} */
+const ECRANS_A_TRAITER = {
+  aLaUne: RouteNames.FeaturedRequestsList,
+  clubsAOnboarder: RouteNames.AdminClubOnboardingList,
+  demandesGestionnaire: RouteNames.AdminManagerRequests,
+  mairiesAActiver: RouteNames.AdminCollectiviteList,
+  revendications: RouteNames.AdminClaimList,
+  signalements: RouteNames.AdminReports,
+};
+
 /**
  * @typedef {{
  *  id: string;
@@ -174,6 +192,9 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  title: any;
  *  subtitle: any;
  *  onPress: () => void;
+ *  accessibilityLabel?: string;
+ *  titleCount?: number;
+ *  footer?: import('react').ReactNode;
  *  disabled?: boolean;
  *  icon?: any;
  *  accentColor?: string;
@@ -254,9 +275,11 @@ function HomeSection({
           const body = (
             <HomeActionCard
               accentColor={card.accentColor}
+              accessibilityLabel={card.accessibilityLabel}
               badgeCount={card.badgeCount}
               disabled={card.disabled}
               emphasis={card.emphasis}
+              footer={card.footer}
               hasAlert={card.hasAlert}
               highlighted={card.highlighted}
               icon={card.icon}
@@ -268,6 +291,7 @@ function HomeSection({
               subtitle={card.subtitle}
               subtitleLines={card.subtitleLines}
               title={card.title}
+              titleCount={card.titleCount}
               tone={card.tone}
               tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
             />
@@ -2148,15 +2172,19 @@ function HomeHubContent({ auth, navigation, route }) {
           accentColor: Colors.primary500,
           // ⚠️ SEULE CARTE DU LOT A PORTER UN CHIFFRE, et la seule dont la
           // destination soit un choix par defaut : l'ecran « A traiter » qui
-          // agrege les 4 files N'EXISTE PAS. On ouvre donc la plus grosse,
-          // les signalements. Les 4 lignes du bandeau, elles, visent chacune
-          // leur ecran reel.
-          badgeCount: selectModerationTotal(homeCounters),
+          // agrege les files N'EXISTE PAS. Les lignes du bandeau, elles, visent
+          // chacune leur ecran reel.
+          // SUPADM (recette du 23/10) — la carte disait 4 quand le bandeau disait 5,
+          // et ouvrait toujours « Signalements », vide ce jour-la. Elle additionne
+          // les memes lignes que le bandeau et ouvre la premiere non vide.
+          badgeCount: selectModerationTotal(homeCounters, collectivitesATraiter),
           emphasis: 'primary',
           icon: 'bell',
           key: 'admin-triage',
           layout: 'full',
-          onPress: openAdminScreen(RouteNames.AdminReports),
+          onPress: openAdminScreen(
+            ECRANS_A_TRAITER[selectTriageTarget(homeCounters, collectivitesATraiter)],
+          ),
           subtitle: t(
             'homeHub.cards.admin.triage.subtitle',
             'Signalements, revendications, à la une, clubs à onboarder.',
@@ -2199,6 +2227,7 @@ function HomeHubContent({ auth, navigation, route }) {
     addAdLock,
     addEventLock,
     clubCardPremiumScope,
+    collectivitesATraiter,
     Colors.gold500,
     homeAlerts,
     homeCounters,
@@ -2468,21 +2497,40 @@ function HomeHubContent({ auth, navigation, route }) {
     // (meme raison que « Mes reponses », posee par D57).
     // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
     // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
+    // REC17-001-B (choix d'Adel « carte B » du 22/10, planche 14 du parcours parent) — la même
+    // porte dit l'essentiel : le nombre d'enfants dans un rond et UNE pastille, la plus urgente
+    // (`pastilleDeLaCarte`, règle de « Mes enfants ») ; sans enfant, « Ajoute ton enfant ».
+    // Toujours aucun prénom. Tant que les lectures n'ont pas répondu, la phrase d'avant.
+    const enfantsConnus = mesEnfants.connu === true;
+    const pastilleDesEnfants = enfantsConnus ? pastilleDeLaCarte(mesEnfants, t) : null;
+    let sousTitreDesEnfants = t(
+      'homeHub.cards.search.myChildren.subtitle',
+      'Declare-les, corrige leur fiche, cherche-leur un club.',
+    );
+    if (enfantsConnus && mesEnfants.total === 0) {
+      sousTitreDesEnfants = t('homeHub.cards.search.myChildren.empty', 'Ajoute ton enfant');
+    }
     const carteMesEnfants = /** @type {any} */ ({
       accentColor: Colors.primary500,
+      accessibilityLabel: libelleDeLaCarte(mesEnfants, t),
       emphasis: 'primary',
+      footer: pastilleDesEnfants ? (
+        <PastilleDEtat
+          testID="carte-mes-enfants-pastille"
+          texte={pastilleDesEnfants.texte}
+          ton={pastilleDesEnfants.ton}
+        />
+      ) : null,
       icon: 'users',
       key: 'search-my-children',
       layout: 'full',
       onPress: () => navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.MyChildren,
       }),
-      subtitle: t(
-        'homeHub.cards.search.myChildren.subtitle',
-        'Declare-les, corrige leur fiche, cherche-leur un club.',
-      ),
+      subtitle: pastilleDesEnfants ? '' : sousTitreDesEnfants,
       subtitleLines: 2,
       title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+      titleCount: enfantsConnus ? mesEnfants.total : undefined,
     });
 
     if (isParent) {

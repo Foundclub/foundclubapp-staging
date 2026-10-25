@@ -60,10 +60,13 @@ const lireLaSaisie = (texte) => {
  * @param {string} [props.testID] - Repère du champ (témoins)
  * @param {string | null} [props.apres] - A7-UX : sur le site, rien ne se choisit jusqu'à cette
  *   heure incluse (la Fin après le Début).
+ * @param {Array<{ end: number, start: number }>} [props.pleines] - A7-UX-2 : sur le site, les
+ *   plages pleines du jour (minutes) que la grille dit « complet ».
  * @returns {import('react').ReactElement} Le champ, et sa roue ou sa grille.
  */
 function TimePickerInput({
-  apres = null, error, label, onChange, placeholder = 'HH:mm', testID = undefined, value,
+  apres = null, error, label, onChange, placeholder = 'HH:mm', pleines = undefined,
+  testID = undefined, value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -251,6 +254,7 @@ function TimePickerInput({
             <GrilleDesHeures
               apres={apres}
               onChoisir={choisir}
+              pleines={pleines}
               suggestion={HEURE_HHMM.test(String(placeholder || '')) ? placeholder : null}
               valeur={value}
             />

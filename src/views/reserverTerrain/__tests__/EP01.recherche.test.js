@@ -4,7 +4,9 @@ import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import {
+  lisibles, parRepere, pressable, textes,
+} from '@/testSupport/temoinComplexe';
 import { carteDeRecherche } from '@/testSupport/temoinReserver';
 
 // RESA-L6A (14/10/2026) — E-P01 « Réserver un terrain : la recherche » (planches EP01, RA1 ; plan
@@ -63,6 +65,13 @@ jest.mock('@/platform/maps/searchMapGeolocation', () => ({
 }));
 
 let mockVilleChoisie = /** @type {any} */ (null);
+// RESA-FIN-APP : le stockage local du téléphone (la ville retenue), doublé par une table.
+const mockStockage = new Map();
+jest.mock('@/platform/storage', () => ({
+  getItem: (/** @type {string} */ cle) => mockStockage.get(cle),
+  removeItem: (/** @type {string} */ cle) => mockStockage.delete(cle),
+  setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => mockStockage.set(cle, valeur),
+}));
 jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressInput', () => (
   function FausseVille(/** @type {any} */ { placeholder, setAddress }) {
     const { Text: Texte, TouchableOpacity: Touche } = jest.requireActual('react-native');
@@ -151,6 +160,7 @@ beforeEach(() => {
   mockAppels.length = 0;
   mockVilles = [];
   mockVilleChoisie = null;
+  mockStockage.clear();
   mockPositionAccordee = { lat: 48.83, lng: 1.48 };
   mockPositionDemandee = null;
   mockRecherche = {
@@ -328,6 +338,22 @@ describe('E-P01 — le champ et les filtres (RA1 état 4, EP01 état 4)', () => 
     expect(vus).toContain('10 h');
     expect(vus).not.toContain('19 h');
   });
+
+  // RESA-FIN-APP-2 (22/10/2026) — E-P01, tournée 2 : après « Avant 12 h », la puce « Filtrer » ne
+  // montrait rien ; on lisait « Aucun terrain libre avec ces filtres. » sans voir lequel était
+  // actif. La puce dit combien de filtres cachés sont actifs, et passe à l'état choisi.
+  it('« Filtrer » dit qu’un filtre caché est actif (« Filtrer · 1 », choisie)', async () => {
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Filtrer');
+    await appuyer(arbre, 'Filtrer');
+    await appuyer(arbre, 'Avant 12 h');
+    await appuyer(arbre, 'Voir les terrains');
+    expect(lisibles(arbre)).toContain('Filtrer · 1');
+    const puce = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.libelle === 'Filtrer · 1' && n.props?.onPress
+    ))[0];
+    expect(puce.props.choisie).toBe(true);
+  });
 });
 
 describe('E-P01 — les états', () => {
@@ -375,5 +401,83 @@ describe('E-P01 — les états', () => {
       jest.advanceTimersByTime(300);
     });
     expect(lisibles(arbre)).toContain('Aucun terrain pour « squash » autour de toi.');
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : la carte montrait « 17 h » TROIS fois (une puce par terrain,
+// le nom du terrain seulement dans la lecture d'écran). Une heure partagée par plusieurs terrains dit son
+// terrain (« 17 h · Padel A ») ; une heure seule reste courte (plan E-P01 §3.5 : « 18 h », « 19 h »). Et chaque
+// puce est dessinée en un seul mot (Android 16 : un texte gras de plusieurs mots perd son dernier mot).
+describe('RESA-FIN-APP (3) E-P01 — une heure partagée par plusieurs terrains dit son terrain', () => {
+  const aDixSeptHeures = (/** @type {string} */ id, /** @type {string} */ nom) => ({
+    from: '17:00',
+    price: { amount: 60, perPlayer: 6, unit: 'creneau' },
+    startsAt: '2026-10-14T15:00:00.000Z',
+    terrain: { bookingMode: 'automatique', documentId: id, name: nom },
+    to: '18:00',
+  });
+
+  it('« 17 h · Padel A », « 17 h · Terrain 1 », « 17 h · Terrain 2 », puis « 18 h »', async () => {
+    const base = carteDeRecherche();
+    mockRecherche = {
+      ...mockRecherche,
+      data: {
+        complexes: [carteDeRecherche({
+          slots: [
+            aDixSeptHeures('t-padel', 'Padel A'), aDixSeptHeures('t-1', 'Terrain 1'),
+            aDixSeptHeures('t-2', 'Terrain 2'), base.slots[0],
+          ],
+        })],
+        date: '2026-10-14',
+      },
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      '17 h · Padel A', '17 h · Terrain 1', '17 h · Terrain 2', '18 h',
+    ]));
+    expect(lisibles(arbre).filter((texte) => texte === '17 h')).toEqual([]);
+    const puce = textes(arbre)
+      .find((texte) => texte.split(String.fromCharCode(160)).join(' ') === '17 h · Padel A');
+    expect(puce).not.toMatch(/ /);
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : la ville choisie n'était pas gardée d'une visite à l'autre
+// (« Réserver ailleurs » rouvrait la feuille de position 30 min après). Elle est retenue sur le téléphone ; la
+// position, si on l'autorise ensuite, la remplace.
+describe('RESA-FIN-APP (4) E-P01 — la ville choisie est gardée', () => {
+  beforeEach(() => {
+    mockPositionAccordee = null;
+  });
+
+  it('choisir une ville la retient ; la visite suivante cherche autour d’elle, sans redemander', async () => {
+    const premiere = await monter();
+    await appuyer(premiere, 'Choisir une ville');
+    mockVilleChoisie = {
+      city: 'Valbrune', label: 'Valbrune', lat: 48.7, lng: 1.3,
+    };
+    await appuyer(premiere, 'Tape une ville');
+    expect(derniersFiltres()).toEqual({
+      date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
+    });
+    act(() => {
+      premiere.unmount();
+    });
+    mockAppels.length = 0;
+    const seconde = await monter();
+    expect(lisibles(seconde)).not.toContain('Des terrains autour de toi');
+    expect(lisibles(seconde)).toContain('Valbrune');
+    expect(derniersFiltres()).toEqual({
+      date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
+    });
+  });
+});
+
+describe('BH16 P13-17 — un complexe arrive sans liste de créneaux', () => {
+  it('l’écran ne plante pas', async () => {
+    const { slots: _sans, ...carte } = carteDeRecherche();
+    mockRecherche = { ...mockRecherche, data: { complexes: [carte], date: '2026-10-14' } };
+    const arbre = await monter();
+    expect(arbre.toJSON()).not.toBeNull();
   });
 });

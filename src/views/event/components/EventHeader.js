@@ -350,9 +350,10 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                   style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
                 />
                 <Text style={[Fonts.p2, Fonts.primary100]}>
+                  {/* P8-22 : sans fin, l heure de début saisie (`date` = un jour seul). */}
                   {event?.startTime && event?.endTime
                     ? `${event.startTime.substring(0, 5)} - ${event.endTime.substring(0, 5)}`
-                    : format(new Date(event.date), 'HH:mm')}
+                    : (event?.startTime?.substring(0, 5) || format(new Date(event.date), 'HH:mm'))}
                 </Text>
               </View>
             </View>

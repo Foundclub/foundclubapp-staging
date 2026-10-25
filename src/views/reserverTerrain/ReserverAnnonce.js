@@ -61,7 +61,10 @@ function ReserverAnnonce() {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ annonceId?: string, publiee?: boolean, reservationId?: string }} */
+  /**
+   * @type {{ annonceId?: string, favorisPrevenus?: number, publiee?: boolean,
+   *   reservationId?: string }}
+   */
   const params = /** @type {any} */ (route?.params) || {};
   const surOrdinateur = useIsDesktop();
   const { userData } = useAuth();
@@ -292,6 +295,18 @@ function ReserverAnnonce() {
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {t('reserverTerrain.annonce.publiee', 'Annonce publiée.')}
               </Text>
+              {/* RESA-FIN-APP (22/10, Adel « 1- A ») — « 38 favoris prévenus ». À 0 (case
+                  décochée, heures calmes 22 h – 8 h, débit atteint : l'app ne sait pas lequel),
+                  rien plutôt qu'une phrase fausse ; champ absent : rien. */}
+              {Number(params.favorisPrevenus) > 0 ? (
+                <Text style={[Fonts.p2, Fonts.neutral100]} testID="annonce-favoris-prevenus">
+                  {t('reserverTerrain.annonce.favorisPrevenus', {
+                    count: Number(params.favorisPrevenus),
+                    defaultValue_one: '{{count}} favori prévenu',
+                    defaultValue_other: '{{count}} favoris prévenus',
+                  })}
+                </Text>
+              ) : null}
             </View>
           ) : null}
           <View style={carte}>

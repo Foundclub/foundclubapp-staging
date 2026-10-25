@@ -105,7 +105,9 @@ describe('RESA-INSCRIPTION — un compte « complexe seul » arrive sur son comp
 describe('RESA-L5A2 RB état 4 — la notification du complexe, en mode joueur', () => {
   it('l’espace, une fois ouvert (par une notification aussi), repasse en mode complexe', () => {
     const source = lire('ComplexeTabNavigator.js');
-    expect(source).toContain('ecrireModeComplexe(userData?.documentId, true)');
+    // RESA-FIN-APP : toujours — sauf pour un complexe RETIRÉ (rouvrirSurLeComplexe, son témoin).
+    expect(source).toContain('ecrireModeComplexe(userData?.documentId, rouvrir)');
+    expect(source).toContain('rouvrirSurLeComplexe(complexe)');
   });
 
   it('la liste des notifications porte la pastille « Mode complexe »', () => {

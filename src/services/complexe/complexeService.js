@@ -455,6 +455,22 @@ export const lireCanal = async (complexeId) => corps(
 );
 
 /**
+ * RESA-PARTAGER (A-G32, E-G05 / E-G12) — « Partager dans mon canal » : l'annonce OUVERTE « Il me
+ * manque des joueurs » d'une réservation de SON complexe, posée en carte dans son canal. Deux fois
+ * de suite : rien n'est doublé (`dejaPartagee`) ; sans annonce ouverte : 409
+ * COMPLEXE_RESERVATION_STATE ; complexe qui n'est pas actif : 409 COMPLEXE_CANAL_INACTIF.
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat, dejaPartagee, message } }`.
+ */
+export const partagerAnnonce = async (complexeId, reservationId) => corps(
+  client().post(
+    `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/annonce/partager`,
+    {},
+  ),
+);
+
+/**
  * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
  * par le gérant (la même que celle du réserveur ; RESA-L3).
  * @param {string} complexeId - documentId du complexe.
@@ -501,13 +517,14 @@ const unParUn = async (ids, geste) => {
 };
 
 /**
- * Les fermetures à venir (actives) de ces terrains, chacune avec son terrain.
+ * Les fermetures à venir de ces terrains, chacune avec son terrain. RESA-FIN-APP-2 : les rouvertes
+ * aussi (`status=all`, réservé au gestionnaire : plan E-G10 §5, « rouverte »).
  * @param {string[]} terrainIds - Les terrains.
  * @returns {Promise<any[]>} Les fermetures (`terrainId` ajouté).
  */
 export const lireFermetures = async (terrainIds) => {
   const listes = await Promise.all(terrainIds.map(async (terrainId) => {
-    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'active' });
+    const reponse = await fermetures().listFacilityClosures(terrainId, { status: 'all' });
     return (Array.isArray(reponse?.data) ? reponse.data : [])
       .map((/** @type {any} */ fermeture) => ({ ...fermeture, terrainId }));
   }));
@@ -552,6 +569,31 @@ export const fermerTerrains = async (terrainIds, fermeture) => {
     terrainId,
     { ...fermeture, kind: 'closure', publishActualite: false },
   ));
+  return {
+    annulees: reponses.reduce(
+      (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),
+      0,
+    ),
+    echecs,
+    faits: reponses.length,
+  };
+};
+
+/**
+ * RESA-FIN-APP-2 (E-G10) — « Modifier » une fermeture : chacune du geste (une par terrain) prend
+ * les mêmes jours, motif et mot. Le serveur annule et prévient ce que la fermeture touche
+ * maintenant.
+ * @param {string[]} fermetureIds - Les fermetures du geste.
+ * @param {{ endDate: string, label?: string | null, message?: string | null, reason: string,
+ *   startDate: string }} fermeture - Les jours, le motif, le mot aux joueurs.
+ * @returns {Promise<{ annulees: number, echecs: Array<{ erreur: any, id: string }>,
+ *   faits: number }>} Le bilan.
+ */
+export const modifierFermetures = async (fermetureIds, fermeture) => {
+  const { echecs, reponses } = await unParUn(
+    fermetureIds,
+    (fermetureId) => fermetures().modifyFacilityClosure(fermetureId, fermeture),
+  );
   return {
     annulees: reponses.reduce(
       (somme, reponse) => somme + (Number(reponse?.data?.reservations?.annulees) || 0),

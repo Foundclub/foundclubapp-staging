@@ -24,7 +24,7 @@
  * @returns {number|null} Le numéro, ou `null`.
  */
 const toJerseyNumber = (value) => {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || String(value).trim() === '') return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) ? parsed : null;
 };
@@ -116,7 +116,10 @@ export const buildChildCardPayload = (champs = {}, affiche = {}) => {
 
   const maillot = toJerseyNumber(champs?.number);
   if (maillot !== null) payload.number = maillot;
-  else if (toJerseyNumber(affiche?.number) !== null) payload.number = null;
+  // Seul un champ vide efface : une saisie invalide (« abc ») laisse le numero affiche.
+  else if (String(champs?.number ?? '').trim() === '' && toJerseyNumber(affiche?.number) !== null) {
+    payload.number = null;
+  }
 
   CHAMPS_TEXTE_DE_LA_CARTE.forEach((cle) => {
     const valeur = String(champs?.[cle] ?? '').trim();

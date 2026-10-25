@@ -596,6 +596,7 @@ function SubscriptionOffers({ navigation, route }) {
     await invalidateSubscriptionState(queryClient);
   }, [queryClient]);
 
+  const purchaseInFlightRef = useRef(false);
   const subscriptionMutation = useMutation({
     mutationFn: async (/** @type {{ action: string; input: Record<string, any> }} */ { action, input }) => (
       action === 'change'
@@ -696,6 +697,12 @@ function SubscriptionOffers({ navigation, route }) {
    * @returns {Promise<any>}
    */
   const commitSubscriptionMutation = useCallback(async (params) => {
+    // BH01/P11-10 : un seul achat a la fois, rafraichissement d'apres-achat compris
+    // (`isPending` ne se met a jour qu'au rendu suivant : deux appuis passaient).
+    if (purchaseInFlightRef.current) {
+      return null;
+    }
+    purchaseInFlightRef.current = true;
     const { action, catalogEntry, input } = params;
     setActiveActionPlanCode(String(catalogEntry?.planCode || '').trim());
 
@@ -766,6 +773,7 @@ function SubscriptionOffers({ navigation, route }) {
       ), getSubscriptionBillingErrorMessage(error));
       return null;
     } finally {
+      purchaseInFlightRef.current = false;
       setActiveActionPlanCode('');
     }
   }, [
@@ -1805,7 +1813,7 @@ function SubscriptionOffers({ navigation, route }) {
           ]}
         >
           <Button
-            disabled={activeCta.disabled}
+            disabled={activeCta.disabled || subscriptionMutation.isPending}
             isLoading={subscriptionMutation.isPending
               && activeActionPlanCode === String(activeCta.entry?.planCode || '')}
             onPress={() => (activeCta.mode === CLUB_PRICING_MODES.LICENSEE

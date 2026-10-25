@@ -73,6 +73,25 @@ export const telephoneAPreRemplir = (compte) => {
 const chiffresDuSiret = (siret) => String(siret || '').replace(/\s+/g, '');
 
 /**
+ * RESA-FIN-APP-2 (22/10/2026) — E-G01 : les champs obligatoires qui manquent encore, dans
+ * l'ordre de l'étape (plan E-G01 §4 : « l'erreur s'écrit sous le champ »). Le SIRET,
+ * facultatif, a sa règle.
+ * @param {{ adresse?: any, nom?: string, sports?: string[], telephone?: string }} fiche - La fiche.
+ * @returns {Array<'adresse' | 'nom' | 'sports' | 'telephone'>} Les champs manquants.
+ */
+export const champsManquants = (fiche) => {
+  /** @type {Array<'adresse' | 'nom' | 'sports' | 'telephone'>} */
+  const manquants = [];
+  if (String(fiche?.nom || '').trim().length < NOM_MIN) manquants.push('nom');
+  if (!Number.isFinite(fiche?.adresse?.lat) || !Number.isFinite(fiche?.adresse?.lng)) {
+    manquants.push('adresse');
+  }
+  if (!String(fiche?.telephone || '').trim()) manquants.push('telephone');
+  if (!Array.isArray(fiche?.sports) || !fiche.sports.length) manquants.push('sports');
+  return manquants;
+};
+
+/**
  * L'étape 1 est-elle complète ? Nom, adresse AVEC sa position (le complexe se trouve sur une
  * carte), téléphone, au moins un sport ; le SIRET est facultatif, mais 14 chiffres s'il est donné.
  * @param {{ adresse?: any, nom?: string, siret?: string, sports?: string[],
@@ -216,7 +235,9 @@ export const CASES_GERER = Object.freeze([
   // RESA-L5B-2 (20/10/2026) : le canal du complexe (E-G12, serveur RESA-L4).
   { cle: 'canal', icone: 'envelope', route: RouteNames.ComplexeCanal },
   // RESA-L5B-2 (20/10/2026) : les affiches du complexe (E-G13, serveur RESA-L4).
-  { cle: 'affiches', icone: 'share2', route: RouteNames.ComplexeAffiches },
+  // RESA-FIN-APP : `share2` est une tuile PLEINE (fond cyan) : teintée, elle devenait un carré plein ;
+  // `share` est le pictogramme seul, il se teint comme les autres cases.
+  { cle: 'affiches', icone: 'share', route: RouteNames.ComplexeAffiches },
   // RESA-L5B-2 (20/10/2026) : la fidélité (E-G14, serveur RESA-L4).
   { cle: 'fidelite', icone: 'trophy', route: RouteNames.ComplexeFidelite },
   // RESA-L5B-2 (20/10/2026) : la liste des clients (E-G15, serveur RESA-L4).
@@ -225,6 +246,16 @@ export const CASES_GERER = Object.freeze([
   { cle: 'statistiques', icone: 'chart', route: RouteNames.ComplexeStatistiques },
   { cle: 'reglages', icone: 'edit', route: RouteNames.ComplexeReglages },
 ]);
+
+/**
+ * RESA-FIN-APP (20/10/2026) — les complexes que la bascule peut proposer : jamais un complexe RETIRÉ
+ * (tranché : il sort de la bascule ; le serveur ne le rendra plus, RESA-FIN-SERVEUR — ici, même si
+ * une ancienne réponse le contient encore). « Mon compte » garde son entrée (« Écrire à FoundClub »).
+ * @param {unknown} liste - « Mes complexes ».
+ * @returns {any[]} Les complexes proposables.
+ */
+export const complexesOuvrables = (liste) => (Array.isArray(liste) ? liste : [])
+  .filter((complexe) => complexe?.status !== 'retire');
 
 /**
  * Le complexe que l'accueil montre : celui de l'adresse s'il est parmi ceux du compte (sinon

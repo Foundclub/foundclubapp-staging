@@ -201,7 +201,11 @@ export const isTime = (valeur) => typeof valeur === 'string' && HEURE.test(valeu
  * @returns {boolean} Vrai si elle a bougé.
  */
 export const seanceDeplacee = (seance, saisie) => {
-  const jourEnregistre = seance?.date ? format(new Date(seance.date), 'yyyy-MM-dd') : '';
+  const brute = seance?.date;
+  // Un jour seul (« 2026-10-05 ») se lit en heure locale : new Date le lirait
+  // minuit UTC (la veille à l'ouest).
+  const lue = JOUR_CIVIL.test(String(brute)) ? parseISO(String(brute)) : new Date(brute);
+  const jourEnregistre = brute ? format(lue, 'yyyy-MM-dd') : '';
   return (saisie?.facilityId || null) !== (seance?.facility?.documentId || null)
     || saisie?.jour !== jourEnregistre
     || saisie?.debut !== String(seance?.startTime || '').slice(0, 5)
@@ -405,7 +409,7 @@ export const fullRanges = (intervalles, capacite) => {
  */
 export const fullRangesOfSlots = (creneaux, capacite) => {
   const du = (/** @type {any} */ c) => String(c?.validFrom || '0000-01-01').slice(0, 10);
-  const au = (/** @type {any} */ c) => String(c?.validUntil || '9999-12-31').slice(0, 10);
+  const au = (/** @type {any} */ c) => String(finDuCreneau(c) || '9999-12-31').slice(0, 10);
   const simple = (/** @type {any} */ c) => {
     const forme = slotShape(c);
     return !forme.dates && forme.everyWeeks === 1

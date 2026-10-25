@@ -86,13 +86,21 @@ const FALLBACK_GLOW_RINGS = [
  *   (17/10) : une carte est UNE seule zone touchable ; les lignes par enfant de la carte
  *   « Mes enfants » (PAR-L7 E01) sont retirées, elle ouvre « Mes enfants ».
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
+ * @param {string} [props.accessibilityLabel] - REC17-001-B : ce que dit la carte au lecteur
+ *   d'écran, quand le titre seul ne suffit pas (« Mes enfants, 2 enfants, 1 demande en attente »).
+ * @param {number} [props.titleCount] - REC17-001-B : un nombre dans un rond, à droite du titre
+ *   (« Mes enfants 2 »). Rien à 0.
+ * @param {import('react').ReactNode} [props.footer] - REC17-001-B : ce qui remplace le
+ *   sous-titre (la pastille de la carte « Mes enfants »).
  * @returns {import('react').ReactElement}
  */
 function HomeActionCard({
   accentColor,
+  accessibilityLabel,
   badgeCount,
   disabled = false,
   emphasis = 'default',
+  footer = null,
   hasAlert = false,
   highlighted = false,
   icon = 'search',
@@ -104,6 +112,7 @@ function HomeActionCard({
   subtitle,
   subtitleLines = 2,
   title,
+  titleCount,
   tone = 'default',
   tutorialTargetRef,
 }) {
@@ -157,8 +166,8 @@ function HomeActionCard({
 
   return (
     <Pressable
-      accessibilityHint={subtitle}
-      accessibilityLabel={title}
+      accessibilityHint={subtitle || undefined}
+      accessibilityLabel={accessibilityLabel || title}
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
@@ -326,22 +335,48 @@ function HomeActionCard({
               <PremiumBadge scope={premiumScope} />
             </View>
           ) : null}
-          <Text
-            numberOfLines={2}
-            style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 13.5, lineHeight: 20 }]}
-          >
-            {title}
-          </Text>
-          <Text
-            numberOfLines={subtitleLines}
-            style={[
-              Fonts.small,
-              Fonts.neutral200,
-              subtitleLines === 2 && { minHeight: 32 },
-            ]}
-          >
-            {subtitle}
-          </Text>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <Text
+              numberOfLines={2}
+              style={[
+                Fonts.p2Bold,
+                Fonts.neutral00,
+                { flexShrink: 1, fontSize: 13.5, lineHeight: 20 },
+              ]}
+            >
+              {title}
+            </Text>
+            {typeof titleCount === 'number' && titleCount > 0 ? (
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: resolvedAccentColor,
+                  borderRadius: 12,
+                  height: 24,
+                  justifyContent: 'center',
+                  minWidth: 24,
+                  paddingHorizontal: 7,
+                }}
+                testID="home-card-title-count"
+              >
+                <Text style={[Fonts.small, Fonts.primary900, { fontWeight: '900' }]}>
+                  {String(titleCount)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          {footer || (
+            <Text
+              numberOfLines={subtitleLines}
+              style={[
+                Fonts.small,
+                Fonts.neutral200,
+                subtitleLines === 2 && { minHeight: 32 },
+              ]}
+            >
+              {subtitle}
+            </Text>
+          )}
         </View>
       </View>
     </Pressable>

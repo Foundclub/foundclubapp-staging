@@ -87,7 +87,8 @@ function AdminUserDetail() {
                   blocked: isBlocked,
                   role: selectedRole,
                 },
-                documentId: viewedUserDocumentId,
+                // BH14 P9-02 : PUT /users/:id veut le NUMÉRO, pas le documentId.
+                documentId: user?.id ?? userId,
               },
               {
                 onError: (err) => {

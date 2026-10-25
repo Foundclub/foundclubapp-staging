@@ -285,3 +285,21 @@ describe('RESA-L5A2 E-G04 — les terrains du filtre', () => {
     ]));
   });
 });
+
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — « Aujourd'hui (2) » comptait une réservation
+// annulée quand la tuile de l'accueil disait 1 : seules les Confirmées et les demandes En attente
+// comptent (la règle de « À venir », RESA-FIN-SERVEUR). La liste, elle, montre toujours l'annulée.
+describe('RESA-FIN-APP-3 E-G04 — le nombre de « Aujourd’hui »', () => {
+  it('une confirmée, une en attente, une annulée, une refusée : « Aujourd’hui (2) »', async () => {
+    mockParams = { complexeId: 'cx-five', vue: 'aujourdhui' };
+    mockVues.aujourdhui = pages([
+      ligne({ date: '2026-10-14', documentId: 'r-0' }),
+      ligne({ date: '2026-10-14', documentId: 'r-a', status: 'en_attente' }),
+      ligne({ date: '2026-10-14', documentId: 'r-b', status: 'annulee' }),
+      ligne({ date: '2026-10-14', documentId: 'r-c', status: 'refusee' }),
+    ]);
+    const vus = lisibles(await monter());
+    expect(vus).toContain('Aujourd’hui (2)');
+    expect(vus).not.toContain('Aujourd’hui (4)');
+  });
+});

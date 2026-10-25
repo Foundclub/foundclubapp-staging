@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, ScrollView, Text, TouchableOpacity, View,
@@ -49,6 +49,8 @@ import {
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 import { televerserPhoto } from '@/services/complexe/complexeService';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 import MediaPlatform from '@/platform/media';
 
@@ -242,11 +244,18 @@ function ComplexeTerrain() {
     return notes;
   };
 
+  // RESA-FIN-APP-2 (E-G08) : l'erreur d'un champ du haut se lit sous ce champ ; la fiche y remonte.
+  const fiche = useRef(/** @type {ScrollView | null} */ (null));
   const enregistrerLaFiche = async () => {
     setTente(true);
     setEnregistre(false);
     setAvertissements([]);
-    if (Object.keys(erreurs).length) return;
+    if (Object.keys(erreurs).length) {
+      if (Object.keys(erreurs).some((champ) => champ !== 'prix')) {
+        fiche.current?.scrollTo({ animated: true, y: 0 });
+      }
+      return;
+    }
     setRefus('');
     try {
       const corps = await enregistrer.mutateAsync({
@@ -507,7 +516,7 @@ function ComplexeTerrain() {
                 isLoading={envoiPhoto}
                 onPress={ajouterUnePhoto}
                 size="sm"
-                title={t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo')}
+                title={texteInsecable(t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo'))}
                 variant="Secondary"
               />
             </View>
@@ -662,6 +671,7 @@ function ComplexeTerrain() {
           width: '100%',
         }}
         keyboardShouldPersistTaps="handled"
+        ref={fiche}
         showsVerticalScrollIndicator={false}
       >
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>

@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ReserverVeille from '@/views/reserverTerrain/ReserverVeille';
@@ -275,5 +276,30 @@ describe('E-P14 — les états', () => {
     expect(lisibles(enPanne)).toContain('Impossible de charger ta réservation.');
     await appuyer(enPanne, 'Réessayer');
     expect(mockRelire).toHaveBeenCalled();
+  });
+});
+
+// RESA-FIN-APP (22/10) — tournée des notifications (Android 16) : le titre de la
+// feuille se coupait en « … demain 17 / h ? ». L'heure y est dessinée en un seul mot (espaces insécables, `texteInsecable`).
+describe('RESA-FIN-APP — « demain 18 h » ne se coupe plus', () => {
+  it('l’heure du titre de la feuille, sans espace ordinaire', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'J’annule');
+    const [titre] = arbre.root.findAllByType(Text)
+      .map((/** @type {any} */ n) => [].concat(n.props.children).join(''))
+      .filter((texte) => texte.startsWith('Annuler ta réservation de demain'));
+    expect(titre).toBe(`Annuler ta réservation de demain 18${String.fromCharCode(160)}h ?`);
+  });
+});
+
+describe('BH16 P13-18 — une seule réponse part', () => {
+  it('« Je confirme » en route : « J’annule » ne fait rien partir', async () => {
+    mockRepondre.mockImplementationOnce(() => new Promise(() => {}));
+    const arbre = await monter();
+    await appuyer(arbre, 'Je confirme');
+    await appuyer(arbre, 'J’annule');
+    const oui = arbre.root.findAll((/** @type {any} */ n) => n.props?.title === 'Oui, annuler');
+    if (oui.length) await act(async () => { oui[0].props.onPress(); });
+    expect(mockRepondre).toHaveBeenCalledTimes(1);
   });
 });

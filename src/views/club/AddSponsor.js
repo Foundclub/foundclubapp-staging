@@ -118,6 +118,8 @@ function AddSponsor({ navigation, route }) {
       );
     },
     onSuccess: () => {
+      // BH03 · P11-13 : meme cle que le tableau de bord multisport, qui ne se relisait pas.
+      if (!routeClubId) refetchMultisport();
       navigation.goBack();
     },
   });

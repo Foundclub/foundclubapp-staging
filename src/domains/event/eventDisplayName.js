@@ -122,7 +122,8 @@ export const resolveEventOpponentName = (eventLike) => {
 
   const invitees = Array.isArray(eventLike?.invitedTeams) ? eventLike.invitedTeams : [];
   const invitee = invitees.find((equipe) => {
-    const nom = texte(equipe?.name);
+    // P1-16 : un libellé générique (« Adversaire ») ne compte pas comme un adversaire trouvé.
+    const nom = normalizeOpponentName(equipe?.name);
     if (!nom) return false;
     if (estDuClubOrganisateur(equipe, eventLike)) return false;
     const cle = cleEntite(equipe);

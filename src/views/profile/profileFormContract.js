@@ -49,7 +49,7 @@ export const profileSchema = Joi.object({
   jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
   lastname: Joi.string().required(),
   nationality: Joi.string().allow(null, '').optional(),
-  phoneNumber: Joi.string(),
+  phoneNumber: Joi.string().allow(null, '').optional(),
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
   section: Joi.string().allow(null, '').optional(),

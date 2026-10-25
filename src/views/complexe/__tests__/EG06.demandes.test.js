@@ -19,9 +19,10 @@ import {
 // l'erreur. Doublures : le contrat d'API L2A (`GET /complexes/:id/reservations?vue=demandes`).
 
 const mockNavigate = jest.fn();
+let mockParams = /** @type {Record<string, any>} */ ({ complexeId: 'cx-five' });
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
-  useRoute: () => ({ params: { complexeId: 'cx-five' } }),
+  useRoute: () => ({ params: mockParams }),
 }));
 
 let mockAttente = /** @type {any} */ ({});
@@ -35,6 +36,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
     mes: { isLoading: false },
   }),
   useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
+  // RESA-FIN-APP-3 : « Écrire au réserveur » dans la fiche (E-G05).
+  useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationsDuComplexe: (/** @type {any} */ _id, /** @type {any} */ filtres) => (
     filtres.vue === 'demandes' ? mockAttente : mockTraitees
   ),
@@ -397,5 +400,51 @@ describe('RESA-L5A2 E-G06 — les états vides, le chargement, l’erreur', () =
     const arbre = await monter();
     await appuyer(arbre, 'Voir plus');
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : une demande EXPIRÉE (« Cette demande a expiré. », 409 d'état) proposait
+// « Refuser avec un mot », qui échouait à son tour (409) : la demande restait coincée, aucun geste ne passait. Le
+// refus du serveur se dit sur la carte, la liste se relit, et aucun geste voué à l'échec n'est proposé. Le cas
+// « créneau pris » (témoin juste au-dessus) garde « Refuser avec un mot ».
+describe('RESA-FIN-APP (5) E-G06 — une demande expirée ne propose plus de geste voué à l’échec', () => {
+  it('« Cette demande a expiré. » : le message, la liste relue, ni « Accepter » ni « Refuser »', async () => {
+    mockDecider.mockRejectedValueOnce({
+      details: { code: 'COMPLEXE_RESERVATION_STATE' }, message: 'Cette demande a expiré.', status: 409,
+    });
+    const arbre = await monter();
+    await appuyerDans(arbre, 'demande-accepter-r-1');
+    expect(lisibles(arbre)).toContain('Cette demande a expiré.');
+    expect(mockAttente.refetch).toHaveBeenCalled();
+    expect(parRepere(arbre, 'demande-accepter-r-1')).toBeNull();
+    expect(parRepere(arbre, 'demande-refuser-r-1')).toBeNull();
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — plan E-G19 §3.4 : « Refuser » dans la cloche ⇒ la feuille du motif.
+// La cloche ouvre « Demandes » avec `refuser` : la feuille s'ouvre sur cette demande, une fois.
+describe('RESA-FIN-APP-2 E-G06 — ouvert depuis la cloche avec « refuser »', () => {
+  afterEach(() => {
+    mockParams = { complexeId: 'cx-five' };
+  });
+
+  it('la feuille du motif s’ouvre sur la demande nommée', async () => {
+    mockParams = { complexeId: 'cx-five', refuser: 'r-1' };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'feuille-motif')).not.toBeNull();
+  });
+
+  it('sans « refuser », aucune feuille ne s’ouvre seule', async () => {
+    const arbre = await monter();
+    expect(parRepere(arbre, 'feuille-motif')).toBeNull();
+  });
+});
+
+describe('BH16 P13-14 — une panne n’est pas un conflit', () => {
+  it('« Accepter » échoue (500) : le bouton reste, on peut réessayer', async () => {
+    mockDecider.mockRejectedValueOnce({ message: 'panne', status: 500 });
+    const arbre = await monter();
+    await appuyerDans(arbre, 'demande-accepter-r-1');
+    expect(parRepere(arbre, 'demande-accepter-r-1')).not.toBeNull();
   });
 });

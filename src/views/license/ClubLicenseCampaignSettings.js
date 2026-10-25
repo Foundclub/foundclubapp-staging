@@ -2112,8 +2112,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [nameAutoManaged, setNameAutoManaged] = useState(!initialCampaignName);
   const [type, setType] = useState(campaign?.type || eventCampaignDefaults?.type || 'license');
   const [description, setDescription] = useState(campaign?.description || eventCampaignDefaults?.description || '');
-  const [startDate, setStartDate] = useState(campaign?.startDate || eventCampaignDefaults?.startDate || todayIsoDateValue);
-  const [endDate, setEndDate] = useState(campaign?.endDate || eventCampaignDefaults?.endDate || todayIsoDateValue);
+  // BH11 P5-02 : une campagne neuve, sans evenement, part sur la saison en cours
+  // (le choix « Saison » affiche par defaut), pas du jour J au jour J.
+  const [startDate, setStartDate] = useState(campaign?.startDate || eventCampaignDefaults?.startDate
+    || (campaignId ? todayIsoDateValue : getCurrentSeasonRange().startDate));
+  const [endDate, setEndDate] = useState(campaign?.endDate || eventCampaignDefaults?.endDate
+    || (campaignId ? todayIsoDateValue : getCurrentSeasonRange().endDate));
   const [internalNote, setInternalNote] = useState(campaign?.internalNote || '');
   const [currency, setCurrency] = useState(String(campaign?.currency || 'EUR').toUpperCase());
   const [amount, setAmount] = useState(campaign?.defaultAmountCents ? centsToEuro(campaign.defaultAmountCents) : (eventCampaignDefaults?.amount || centsToEuro(0)));
@@ -2186,6 +2190,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       setEndDate(eventCampaignDefaults.endDate || todayIsoDateValue);
       setAmount(eventCampaignDefaults.amount || centsToEuro(0));
       setTargetConfig(eventCampaignDefaults.targetConfig);
+      // BH11 P5-13 : les dates de l evenement sont des dates libres.
+      setPeriodMode('custom');
       return;
     }
     const automation = normalizeReminderAutomation(campaign);
@@ -2200,6 +2206,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setSeasonLabelManuallyEdited(Boolean(campaign.seasonLabel));
     setStartDate(campaign.startDate || todayIsoDateValue);
     setEndDate(campaign.endDate || todayIsoDateValue);
+    // BH11 P5-13 : la campagne arrive souvent APRES le premier rendu.
+    setPeriodMode(campaign.startDate === currentSeason.startDate
+      && campaign.endDate === currentSeason.endDate ? 'season' : 'custom');
     setInternalNote(campaign.internalNote || '');
     setCurrency(String(campaign.currency || 'EUR').toUpperCase());
     setAmount(centsToEuro(campaign.defaultAmountCents || 0));
@@ -2233,7 +2242,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setReminderOnDueDate(automation.onDueDate);
     setReminderStartDate(automation.startDate);
     setReminderTargetStatuses(automation.targetStatuses);
-  }, [campaign, eventCampaignDefaults, todayIsoDateValue]);
+  }, [campaign, currentSeason, eventCampaignDefaults, todayIsoDateValue]);
 
   const updateDocumentRequest = useCallback((localId, patch) => {
     setDocumentRequests((currentItems) => currentItems.map((item) => (
@@ -3312,6 +3321,18 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return String(nextCount);
     });
   }, [amount, installmentFrequency, startDate]);
+  // BH11 P5-01 : changer le montant regenere l echeancier, dont la somme suivait
+  // l ancien montant (100 EUR en 3 fois, puis 200 EUR : 3 x 33,33).
+  const handleAmountChange = useCallback((nextAmount) => {
+    setAmount(nextAmount);
+    if (!allowInstallments) return;
+    setInstallmentSchedule(generateInstallmentSchedule({
+      count: installmentCount,
+      frequency: installmentFrequency,
+      startDate,
+      totalCents: euroToCents(nextAmount),
+    }));
+  }, [allowInstallments, installmentCount, installmentFrequency, startDate]);
   const handleInstallmentFrequencyChange = useCallback((nextFrequency) => {
     setInstallmentFrequency(nextFrequency);
     setInstallmentSchedule(generateInstallmentSchedule({
@@ -3611,7 +3632,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           <AmountField
             amount={amount}
             currency={currency}
-            onAmountChange={setAmount}
+            onAmountChange={handleAmountChange}
             onCurrencyChange={setCurrency}
           />
         </View>

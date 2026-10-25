@@ -48,11 +48,12 @@ export const creerApercuAffiche = async (complexeId, choix) => {
  * @param {{ dialogTitle?: string }} [options] - Le titre du sélecteur d'application (Android).
  * @returns {Promise<any>} Ce que rend le transport (l'issue du partage, ou l'adresse du fichier).
  */
-export const partagerAffiche = async (complexeId, choix, { dialogTitle } = {}) => (
+export const partagerAffiche = async (complexeId, choix, { dialogTitle, message } = {}) => (
   downloadAndShareRender({
     body: corpsDeLAffiche({ ...choix, apercu: false }),
     dialogTitle,
     format: choix.format,
+    message,
     path: cheminDeLAffiche(complexeId),
     subjectId: complexeId,
     template: 'affiche-complexe',

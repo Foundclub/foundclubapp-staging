@@ -51,6 +51,7 @@ function ReserverEchec() {
     fermeture: params.fermeture,
     motif: params.motif,
     telephone: params.telephone,
+    terrain: params.terrain,
   });
 
   const retour = () => {

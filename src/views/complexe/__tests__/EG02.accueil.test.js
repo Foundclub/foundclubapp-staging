@@ -214,10 +214,12 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
       'AUJOURD’HUI · MERCREDI 14 OCTOBRE',
       'Terrain 1',
       'Padel A',
-      'réservations aujourd’hui',
+      // RESA-FIN-APP (tournées 1 et 2 : « 1 demandes en attente ») : les libellés s’accordent au nombre
+      // (ici 0 : singulier en français, comme i18next).
+      'réservation aujourd’hui',
       'd’occupation cette semaine',
-      'demandes en attente',
-      'nouveaux favoris cette semaine',
+      'demande en attente',
+      'nouveau favori cette semaine',
       'Prochaines réservations',
       'Aucune réservation à venir. Fais connaître ta page.',
       'Gérer',
@@ -232,7 +234,7 @@ describe('RESA-L5A1 E-G02 — une journée normale (état 1)', () => {
   it('sans réservation, les chiffres sont à 0', async () => {
     const arbre = await monter();
     expect(parRepere(arbre, 'complexe-accueil-chiffre-reservations')?.props.accessibilityLabel)
-      .toBe('0 réservations aujourd’hui');
+      .toBe('0 réservation aujourd’hui');
     expect(parRepere(arbre, 'complexe-accueil-chiffre-occupation')?.props.accessibilityLabel)
       .toBe('0 % d’occupation cette semaine');
   });
@@ -331,6 +333,29 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     await monter();
     expect(annonce).toHaveBeenCalledWith('Mode complexe. Tu gères Le Five de Montrivage.');
     expect(prendreLAnnonceDArrivee()).toBe(false);
+    annonce.mockRestore();
+  });
+
+  // RESA-FIN-APP-2 (22/10/2026, relayé par le chef depuis RESA-FIN-SITE) — la minuterie de
+  // 1,2 s qui pose le curseur sur le nom n'était jamais annulée : l'écran démonté, elle partait
+  // quand même (« findNodeHandle is not a function » dans le témoin suivant). Démonter l'écran
+  // l'annule.
+  it('RB-3 5b · démonté avant 1,2 s : la minuterie du curseur est annulée', async () => {
+    const annonce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+      .mockImplementation(() => {});
+    const poser = jest.spyOn(global, 'setTimeout');
+    const annuler = jest.spyOn(global, 'clearTimeout');
+    demanderLAnnonceDArrivee();
+    const arbre = await monter();
+    const appel = poser.mock.calls.findIndex((args) => args[1] === 1200);
+    expect(appel).toBeGreaterThan(-1);
+    const minuterie = poser.mock.results[appel].value;
+    await act(async () => {
+      arbre.unmount();
+    });
+    expect(annuler).toHaveBeenCalledWith(minuterie);
+    poser.mockRestore();
+    annuler.mockRestore();
     annonce.mockRestore();
   });
 
@@ -514,8 +539,9 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     await act(async () => {
       parRepere(arbre, 'frise-creneau-t-1-19:00').props.onPress();
     });
+    // RESA-FIN-APP-2 : la case libre positionne le planning sur SON créneau (plan E-G02 §4).
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexePlanning, {
-      complexeId: 'cx-five', date: '2026-10-14', terrainId: 't-1',
+      complexeId: 'cx-five', creneau: '19:00', date: '2026-10-14', terrainId: 't-1',
     });
   });
 
@@ -524,7 +550,7 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     const libelle = (/** @type {string} */ cle) => (
       parRepere(arbre, `complexe-accueil-chiffre-${cle}`)?.props.accessibilityLabel
     );
-    expect(libelle('reservations')).toBe('1 réservations aujourd’hui');
+    expect(libelle('reservations')).toBe('1 réservation aujourd’hui');
     expect(libelle('occupation')).toBe('75 % d’occupation cette semaine');
     expect(libelle('demandes')).toBe('2 demandes en attente');
     await act(async () => {
@@ -564,5 +590,16 @@ describe('RESA-L5A2 E-G02 — l’accueil branché sur le serveur RESA-L2A', () 
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeReservations, {
       complexeId: 'cx-five', vue: 'passees',
     });
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : « 1 demandes en attente », « 0 demandes en attente ». Les
+// quatre chiffres de l'accueil s'accordent au nombre (i18next : 0 et 1 au singulier en français).
+describe('RESA-FIN-APP (3) E-G02 — « 1 demande en attente », « 2 demandes en attente »', () => {
+  it('le libellé de chaque chiffre suit son nombre', async () => {
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining(['demande en attente', 'réservation aujourd’hui']));
+    expect(lus).not.toContain('demandes en attente');
   });
 });

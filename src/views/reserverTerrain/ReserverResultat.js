@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, ScrollView, Text, TouchableOpacity, View,
@@ -24,7 +24,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useMaReservation } from '@/services/complexe/complexeJoueurQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -60,17 +63,35 @@ function ReserverResultat() {
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ collecte?: any, equipe?: any, reservation?: any }} */
+  /** @type {{ collecte?: any, equipe?: any, reservation?: any, reservationId?: string }} */
   const params = /** @type {any} */ (route?.params) || {};
-  const reservation = params.reservation || null;
+  // RESA-FIN-SITE (21/10/2026, tournée connectée du 22/10) — la réservation arrive en paramètre ;
+  // sans elle (page du site rechargée), l'écran la relit par son identifiant au lieu de dire
+  // « Cette réservation n'existe plus. ».
+  const relue = useMaReservation(params.reservation ? null : (params.reservationId || null));
+  const reservation = params.reservation || relue?.data || null;
+  const enRelecture = !params.reservation
+    && Boolean(params.reservationId)
+    && Boolean(relue?.isLoading);
   const collecte = params.collecte || null;
   const equipe = params.equipe || null;
   const surOrdinateur = useIsDesktop();
   const { userData } = useAuth();
   const [inviter, setInviter] = useState(false);
 
-  const versLAccueil = () => navigation.popToTop?.();
-  const versLaFiche = (/** @type {Record<string, any>} */ autres = {}) => navigation.navigate(
+  // RESA-FIN-APP (20/10) — « l'accueil », c'est la racine de l'onglet Accueil (`popToTop` ramenait
+  // au HomeTab tel qu'on l'avait laissé : sur la recherche, tournée 2). Plan E-P05 §4 : « retour ⇒
+  // accueil (pas de retour au récapitulatif) » : le retour arrière y mène aussi.
+  const versLAccueil = () => allerDansLOnglet(navigation, RouteNames.SearchHome);
+  useEffect(() => navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
+    const geste = evenement?.data?.action?.type;
+    if (geste !== 'GO_BACK' && geste !== 'POP') return;
+    evenement.preventDefault();
+    allerDansLOnglet(navigation, RouteNames.SearchHome);
+  }), [navigation]);
+  // La fiche REMPLACE le résultat : après une annulation faite depuis la fiche, rien de périmé
+  // (« C'est réservé ! · Confirmée ») ne reste derrière elle (tournée 1).
+  const versLaFiche = (/** @type {Record<string, any>} */ autres = {}) => navigation.replace(
     RouteNames.ReserverMaReservation,
     { reservationId: reservation.documentId, ...autres },
   );
@@ -86,8 +107,10 @@ function ReserverResultat() {
     .filter(Boolean)
     .join(' ');
 
-  let corps;
-  if (!reservation) {
+  let corps = null;
+  if (enRelecture) {
+    corps = null;
+  } else if (!reservation) {
     corps = (
       <View style={{ alignItems: 'center', gap: 16 }}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
@@ -99,7 +122,13 @@ function ReserverResultat() {
     const complexe = String(reservation?.complexe?.name || '');
     const prix = Number.isFinite(Number(reservation?.price?.amount))
       ? t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
-        prix: formatEuros(Number(reservation.price.amount)),
+        // BH16 P13-20 : un prix par joueur le dit (même texte que le récapitulatif, prixSurPlace).
+        prix: reservation.price.unit === 'joueur'
+          ? t('reserverTerrain.prix.parJoueur', '{{prix}} par joueur', {
+            prix: formatEuros(Number(reservation.price.amount)),
+            ...SANS_ECHAPPEMENT,
+          })
+          : formatEuros(Number(reservation.price.amount)),
         ...SANS_ECHAPPEMENT,
       })
       : '';
@@ -184,6 +213,21 @@ function ReserverResultat() {
         </Text>
         {phrase ? (
           <Text style={[Fonts.p1, Fonts.neutral100, Fonts.textCenter]}>{phrase}</Text>
+        ) : null}
+        {/* RESA-FIN-APP (22/10, Adel « 1- A ») — RG-CANAL : « Tu as rejoint le canal de … » quand
+            CETTE réservation fait entrer le joueur dans le canal (`joinedChannel`,
+            RESA-FIN-SERVEUR) ; lecture tolérante : rien si le serveur ne le dit pas. */}
+        {reservation?.joinedChannel === true ? (
+          <Text
+            style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}
+            testID="resultat-canal-rejoint"
+          >
+            {t('reserverTerrain.resultat.canalRejoint', {
+              complexe: String(reservation?.complexe?.name || ''),
+              defaultValue: 'Tu as rejoint le canal de {{complexe}}.',
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
         ) : null}
         <View
           style={{

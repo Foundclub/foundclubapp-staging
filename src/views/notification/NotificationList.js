@@ -15,12 +15,16 @@ import {
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { estNotificationDuComplexe } from '@/domains/complexe/notificationsDuComplexe';
+import {
+  demandeATrancher,
+  estNotificationDuComplexe,
+} from '@/domains/complexe/notificationsDuComplexe';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -213,7 +217,8 @@ function NotificationList() {
         notificationId: payload.notificationId,
         source: 'in_app',
       });
-      await markAsRead(String(notification.documentId || notification.id || ''));
+      // BH01/P5-18 : réponse enregistrée ; l'échec de « marquer lu » ne doit pas dire le contraire.
+      await markAsRead(String(notification.documentId || notification.id || '')).catch(() => {});
       refreshNotifications();
 
       const successMessage = answer === 'present'
@@ -343,6 +348,18 @@ function NotificationList() {
     }
 
     const notification = item.data;
+    // RESA-FIN-APP (20/10) — la réservation d'un terrain : une annulation (par le complexe, ou par
+    // une fermeture) n'est pas un refus ; la pastille rouge dit ce qui est arrivé (mots de E-P10).
+    const libelleDuRefus = (/** @type {NotificationItem} */ ligne) => {
+      const change = String(/** @type {any} */ (ligne)?.data?.change || '');
+      if (ligne?.type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
+        if (change === 'annulee' || change === 'fermeture') {
+          return t('reserverTerrain.etat.annuleeParLeComplexe', 'Annulée par le complexe');
+        }
+        if (change === 'sans-reponse') return t('reserverTerrain.etat.sansReponse', 'Sans réponse');
+      }
+      return t('collectiviteDemandes.notification.refusee', 'Refusée');
+    };
     // COLL-C3B-BIS (planche 35) : une icône par famille ; acceptée en vert, refusée en rouge.
     const icon = getNotificationIcon(notification.type, notification.data);
     const ton = getNotificationTone(notification.type, notification.data);
@@ -398,8 +415,9 @@ function NotificationList() {
 
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  {/* RESA-FIN-APP-2 (T13) : deux lignes avant de couper. */}
                   <Text
-                    numberOfLines={1}
+                    numberOfLines={2}
                     style={[
                       notification.read ? Fonts.p2 : Fonts.p2Bold,
                       { color: Colors.neutral00, flex: 1 },
@@ -434,7 +452,7 @@ function NotificationList() {
                 ) : null}
                 {ton === 'refus' ? (
                   <Text style={[Fonts.p3Bold, { color: Colors.error500, marginTop: 8 }]}>
-                    {t('collectiviteDemandes.notification.refusee', 'Refusée')}
+                    {libelleDuRefus(notification)}
                   </Text>
                 ) : null}
               </View>
@@ -454,6 +472,14 @@ function NotificationList() {
               ) : null}
             </TouchableOpacity>
 
+            {/* RESA-FIN-APP-2 (plan E-G19 §3.3) : Accepter / Refuser, demande en attente. */}
+            {demandeATrancher(notification.type, notification.data) ? (
+              <ActionsDeDemandeDansLaCloche
+                data={/** @type {Record<string, any>} */ (notification.data)}
+                relire={refreshNotifications}
+                testID={String(notification.documentId || notification.id)}
+              />
+            ) : null}
             {isRsvpReminder ? (
               <View
                 style={{
@@ -494,7 +520,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
+  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

@@ -41,7 +41,10 @@ const toInt = (value) => {
  */
 export const computeAge = (birthdate, now = new Date()) => {
   if (!birthdate) return null;
-  const dob = birthdate instanceof Date ? birthdate : new Date(birthdate);
+  // Une date nue YYYY-MM-DD se lit en heure locale (sinon minuit UTC = la veille outre-mer).
+  const jour = typeof birthdate === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthdate);
+  let dob = birthdate instanceof Date ? birthdate : new Date(birthdate);
+  if (jour) dob = new Date(Number(jour[1]), Number(jour[2]) - 1, Number(jour[3]));
   if (Number.isNaN(dob.getTime())) return null;
   let age = now.getFullYear() - dob.getFullYear();
   const m = now.getMonth() - dob.getMonth();

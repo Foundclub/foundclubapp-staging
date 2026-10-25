@@ -73,7 +73,11 @@ describe('WHATSAPP — le catalogue derriere le « + »', () => {
     const drapeaux = EMOJI_CATALOG.find((categorie) => categorie.key === 'drapeaux');
 
     expect(drapeaux).toBeDefined();
-    expect(drapeaux.emojis).toHaveLength(258);
+    expect(drapeaux.emojis).toHaveLength(251);
+    // BH04 / P1-24 — 7 paires sans drapeau RGI : elles s affichent en deux lettres.
+    ['🇩🇾', '🇭🇻', '🇳🇭', '🇷🇭', '🇻🇩', '🇾🇩', '🇿🇿'].forEach((faux) => {
+      expect(drapeaux.emojis).not.toContain(faux);
+    });
 
     drapeaux.emojis.forEach((drapeau) => {
       const points = Array.from(drapeau).map((c) => c.codePointAt(0));

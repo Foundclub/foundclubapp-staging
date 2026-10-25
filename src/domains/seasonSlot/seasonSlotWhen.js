@@ -181,20 +181,24 @@ export const quandDuCreneau = (creneau, saison) => {
  * d'un club, « Tes créneaux de la Ville », planning). Courte : « chaque semaine »,
  * « 1 sem. sur 2 », « 3 dates ». Longue : « chaque mardi », « un mercredi sur deux »,
  * « sam. 7 nov. · mar. 17 nov. ». R17-QUAND-2 : un créneau « sauf vacances scolaires » le dit
- * (« chaque mardi, sauf vacances »).
+ * (« chaque mardi, sauf vacances »). R17-QUAND-2-BIS : avec `heures`, elles passent AVANT les
+ * vacances (« chaque mardi, 17:30 – 19:00, sauf vacances », planche P11-quand-ou-ca-vit).
  * @param {Function} t - La traduction.
  * @param {any} creneau - Le créneau (serveur).
- * @param {{ court?: boolean }} [options] - Courte : pour une pastille.
+ * @param {{ court?: boolean, heures?: string }} [options] - Courte (une pastille) ; les heures.
  * @returns {string} La forme.
  */
-export const formeEnMots = (t, creneau, { court = false } = {}) => {
+export const formeEnMots = (t, creneau, { court = false, heures = '' } = {}) => {
   const forme = slotShape(creneau);
   const base = formeSansVacances(t, forme, court);
-  return forme.exceptHolidays && !forme.dates
+  const saufVacances = forme.exceptHolidays && !forme.dates;
+  let avecHeures = base;
+  if (heures) avecHeures = saufVacances ? `${base}, ${heures}` : `${base} ${heures}`;
+  return saufVacances
     ? t('collectiviteCreneaux.quand.vacances.forme', '{{forme}}, sauf vacances', {
-      forme: base, interpolation: { escapeValue: false },
+      forme: avecHeures, interpolation: { escapeValue: false },
     })
-    : base;
+    : avecHeures;
 };
 
 /**

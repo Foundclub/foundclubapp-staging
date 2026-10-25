@@ -124,6 +124,20 @@ export const nonHonoreesLisibles = (t, nombre, seuil) => {
 };
 
 /**
+ * RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expire au début du créneau moins le délai
+ * minimum (`expiresAt`, posé par le serveur). Passé ce moment, le gérant ne la tranche plus, même
+ * si la tâche qui la passe « Sans réponse » n'est pas encore passée.
+ * @param {unknown} expiresAt - L'échéance (ISO).
+ * @param {Date} [maintenant] - L'instant de référence.
+ * @returns {boolean} L'échéance est passée.
+ */
+export const demandeExpiree = (expiresAt, maintenant = new Date()) => {
+  if (!expiresAt) return false;
+  const echeance = new Date(String(expiresAt)).getTime();
+  return Number.isFinite(echeance) && echeance <= maintenant.getTime();
+};
+
+/**
  * « Expire dans 5 h » (E-G06) : en minutes sous l'heure, en heures sous le jour, en jours au-delà.
  * @param {Traduire} t - Traduction.
  * @param {unknown} expiresAt - L'échéance (ISO).
@@ -283,6 +297,24 @@ export const lignesDesPages = (donnees) => (Array.isArray(donnees?.pages) ? donn
 export const totalDesPages = (donnees) => {
   const total = Number(donnees?.pages?.[0]?.pagination?.total);
   return Number.isFinite(total) ? total : null;
+};
+
+/**
+ * RESA-FIN-APP-3 (23/10/2026) — le nombre d'un onglet : seules les réservations Confirmées et les
+ * demandes En attente comptent (STATUTS_ACTIFS, la règle de la tuile de l'accueil et de « À
+ * venir ») ; la liste, elle, montre aussi les annulées, refusées et sans réponse du jour.
+ * ponytail: le serveur compte TOUTES les lignes de la vue ; on retire celles qu'on a lues hors de
+ * la règle. Exact quand toutes les pages sont lues (le cas d'une journée : < 20 lignes) ;
+ * au-delà, un majorant. Sortie : un total « actives » rendu par le serveur.
+ * @param {any} donnees - `data` de la lecture.
+ * @returns {number | null} Le nombre, ou null avant la 1re page.
+ */
+export const totalQuiCompte = (donnees) => {
+  const total = totalDesPages(donnees);
+  if (total === null) return null;
+  const horsRegle = lignesDesPages(donnees)
+    .filter((ligne) => !STATUTS_ACTIFS.includes(ligne?.status)).length;
+  return Math.max(0, total - horsRegle);
 };
 
 /**
@@ -747,24 +779,56 @@ export const joursLisibles = (debut, fin) => {
 };
 
 /**
+ * RESA-FIN-APP-2 (E-G10, « Modifier ») — « AAAA-MM-JJ » en saisie « JJ/MM/AAAA », l'inverse de
+ * `versJourIso`.
+ * @param {string | null | undefined} jour - Le jour.
+ * @returns {string} La saisie, ou ''.
+ */
+export const depuisJourIso = (jour) => {
+  const morceaux = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(jour || '').slice(0, 10));
+  return morceaux ? `${morceaux[3]}/${morceaux[2]}/${morceaux[1]}` : '';
+};
+
+/**
+ * RESA-FIN-APP-2 (E-G10, « Modifier ») — la puce de motif d'une fermeture lue (son `reason` et son
+ * `label`), l'inverse de `MOTIFS_DE_FERMETURE[].corps`.
+ * @param {Traduire} t - Traduction.
+ * @param {{ label?: string | null, reason?: string | null }} fermeture - La fermeture.
+ * @returns {string} La clé de la puce (« autre » à défaut).
+ */
+export const motifDeLaFermeture = (t, fermeture) => {
+  const option = MOTIFS_DE_FERMETURE.find((candidat) => {
+    const corps = /** @type {{ label?: string, reason: string }} */ (candidat.corps(t));
+    return corps.reason === fermeture?.reason
+      && String(corps.label || '') === String(fermeture?.label || '');
+  });
+  return option ? option.cle : 'autre';
+};
+
+/**
  * Les fermetures à venir d'un complexe, regroupées : une fermeture PAR terrain côté serveur, une
  * ligne par geste à l'écran (« 25/10 – 26/10 · Travaux · Terrain 1, Terrain 2 »). Les blocages
- * (une plage d'heures) vivent dans le planning, pas ici.
+ * (une plage d'heures) vivent dans le planning, pas ici. RESA-FIN-APP-2 : une fermeture ROUVERTE
+ * reste, sur sa ligne à elle (`rouverte`, plan E-G10 §5) ; une ligne garde de quoi la modifier.
  * @param {Traduire} t - Traduction.
  * @param {any[]} fermetures - Les fermetures (`terrainId` ajouté par le service).
  * @param {any[]} terrains - Les terrains (leurs noms).
  * @param {string} aujourdhui - « AAAA-MM-JJ ».
  * @returns {Array<{ cle: string, debut: string, enCours: boolean, fin: string, ids: string[],
- *   motif: string, terrains: string[] }>} Les lignes, la plus proche d'abord.
+ *   label: string | null, message: string | null, motif: string, reason: string | null,
+ *   rouverte: boolean, terrainIds: string[], terrains: string[] }>} Les lignes, la plus proche
+ *   d'abord.
  */
 export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
   /** @type {Map<string, any>} */
   const groupes = new Map();
   fermetures
-    .filter((fermeture) => fermeture?.kind === 'closure' && fermeture?.status !== 'reopened')
+    .filter((fermeture) => fermeture?.kind === 'closure')
     .forEach((fermeture) => {
+      const rouverte = fermeture.status === 'reopened';
       const cle = [
         fermeture.startDate, fermeture.endDate, fermeture.reason, fermeture.label || '',
+        ...(rouverte ? ['rouverte'] : []),
       ].join('|');
       const nom = terrains.find((terrain) => terrain.documentId === fermeture.terrainId)?.name;
       const groupe = groupes.get(cle) || {
@@ -773,15 +837,23 @@ export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
         enCours: fermeture.startDate <= aujourdhui,
         fin: fermeture.endDate,
         ids: [],
+        label: fermeture.label || null,
+        message: fermeture.message || null,
         motif: majuscule(motifDeFermeture(t, fermeture))
           || t('complexeReservations.motifs.autre', 'Autre'),
+        reason: fermeture.reason || null,
+        rouverte,
+        terrainIds: [],
         terrains: [],
       };
       groupe.ids.push(fermeture.documentId);
+      if (fermeture.terrainId) groupe.terrainIds.push(String(fermeture.terrainId));
       if (nom) groupe.terrains.push(String(nom));
       groupes.set(cle, groupe);
     });
-  return [...groupes.values()].sort((a, b) => a.debut.localeCompare(b.debut));
+  return [...groupes.values()].sort((a, b) => (
+    a.debut.localeCompare(b.debut) || Number(a.rouverte) - Number(b.rouverte)
+  ));
 };
 
 /**

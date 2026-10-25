@@ -124,10 +124,11 @@ function PublicLicensePayment({ route }) {
     .filter((item) => paymentModes[item.mode] || item.value)
     .filter((item) => item.value);
   const isCampaignPaused = payment?.campaignStatus === 'paused';
-  const canDeclareOfflinePayment = offlinePaymentMethods.length > 0
-    && Number(payment?.remainingCents || 0) > 0
-    && !isCampaignPaused
+  // BH11 P5-05 : la meme regle pour payer en ligne et pour declarer hors app.
+  const hasSomethingToPay = Number(payment?.remainingCents || 0) > 0
     && !['cancelled', 'paid', 'waived'].includes(payment?.status);
+  const canPayOnline = !isCampaignPaused && hasSomethingToPay;
+  const canDeclareOfflinePayment = offlinePaymentMethods.length > 0 && canPayOnline;
   const tone = getLicenseStatusTone(Colors, payment?.status);
   const currency = payment?.currency || 'EUR';
 
@@ -143,6 +144,7 @@ function PublicLicensePayment({ route }) {
       ));
       return;
     }
+    if (!hasSomethingToPay || checkoutMutation.isPending) return;
     checkoutMutation.mutate(provider, {
       onError: (error) => Alert.alert(i18next.t(
         'publicLicensePayment.unavailable.title',
@@ -157,7 +159,7 @@ function PublicLicensePayment({ route }) {
         }
       },
     });
-  }, [checkoutMutation, isCampaignPaused]);
+  }, [checkoutMutation, hasSomethingToPay, isCampaignPaused]);
 
   const declareOfflinePayment = useCallback((method) => {
     declareMutation.mutate(method, {
@@ -343,14 +345,14 @@ function PublicLicensePayment({ route }) {
           )}
           title={t('publicLicensePayment.pay.title', 'Regler')}
         />
-        {!isCampaignPaused && paymentModes.helloasso ? (
+        {canPayOnline && paymentModes.helloasso ? (
           <Button
             isLoading={checkoutMutation.isPending}
             onPress={() => openCheckout('helloasso')}
             title={t('publicLicensePayment.pay.helloAsso', 'Payer avec HelloAsso')}
           />
         ) : null}
-        {!isCampaignPaused && paymentModes.external_link ? (
+        {canPayOnline && paymentModes.external_link ? (
           <Button
             isLoading={checkoutMutation.isPending}
             onPress={() => openCheckout('external')}

@@ -53,8 +53,12 @@ export const gesteDeLaVille = (demandes, clubId, codeDeRefus = '') => {
   if (codeDeRefus === 'COLLECTIVITE_CLUB_WITHOUT_LEADER') return 'sansDirigeant';
   const lignes = (Array.isArray(demandes) ? demandes : [])
     .filter((demande) => demande?.club?.documentId === clubId);
-  const proposition = lignes.find((demande) => demande?.kind === 'proposal');
-  const demandeDuClub = lignes.find((demande) => demande?.kind === 'attach_request');
+  // P2-11 : la ligne en attente d'abord, puis la refusée, puis n'importe laquelle.
+  const parEtat = (kind) => ['pending', 'refused']
+    .map((state) => lignes.find((d) => d?.kind === kind && d?.state === state))
+    .find(Boolean) || lignes.find((d) => d?.kind === kind);
+  const proposition = parEtat('proposal');
+  const demandeDuClub = parEtat('attach_request');
   if (lignes.some((demande) => demande?.state === 'attached')) return 'rattache';
   if (lignes.some((demande) => demande?.attachedElsewhere === true)) return 'ailleurs';
   if (demandeDuClub?.state === 'pending') return 'aRepondre';

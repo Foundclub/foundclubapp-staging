@@ -8,6 +8,8 @@ import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * LE MODE D'UN TERRAIN — RESA-L5A1 (13/10/2026), planche P00 bloc 5 : « le mode est une
  * configuration, pas un état » ⇒ toujours la pastille cyan, avec son icône (coche, sablier,
@@ -51,7 +53,7 @@ function PastilleMode({ joueur = false, mode }) {
       testID={`pastille-mode-${mode}`}
     >
       {icone}
-      <Text style={[Fonts.p3Bold, Fonts.primary200]}>{libelle}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>{texteInsecable(libelle)}</Text>
     </View>
   );
 }

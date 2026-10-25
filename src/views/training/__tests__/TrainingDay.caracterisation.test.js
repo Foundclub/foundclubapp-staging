@@ -479,6 +479,18 @@ describe('les reperes se COCHENT, et la coche survit', () => {
     });
   });
 
+  it('BH15 · P13-04 — deux coches rapides, avant la reponse du serveur : les DEUX partent', () => {
+    const mutate = jest.fn();
+    const arbre = rendre({ miseAJour: { mutate } });
+
+    act(() => { reperes(arbre)[0].props.onPress(); });
+    act(() => { reperes(arbre)[1].props.onPress(); });
+
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      payload: { conditions: { prepared: ['Sommeil', 'Cafe'] } },
+    }));
+  });
+
   it('affiche COCHE ce que la seance dit deja prepare', () => {
     const arbre = rendre({
       etat: avec(JOURNEE, { ...SEANCE, conditions: { prepared: ['Cafe'] } }),

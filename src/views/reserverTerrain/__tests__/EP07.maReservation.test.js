@@ -245,7 +245,7 @@ describe('E-P07 — les autres états', () => {
     mockParams = { change: 'fermeture', fermeture: 'le 25/10 (travaux)', reservationId: 'r-1' };
     mockLecture = lue({ canCancel: false, cancelledBy: 'complexe', status: 'annulee' });
     expect(lisibles(await monter())).toEqual(expect.arrayContaining([
-      'Le complexe sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
+      'Terrain 1 sera fermé', 'Fermé le 25/10 (travaux) : ta réservation est annulée.',
     ]));
   });
 
@@ -287,5 +287,60 @@ describe('E-P07 — les autres états', () => {
     expect(lisibles(arbre)).toContain('Impossible de charger ta réservation.');
     await appuyer(arbre, 'Réessayer');
     expect(mockRelire).toHaveBeenCalled();
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 : après avoir RETIRÉ une demande (« Annuler la demande » ⇒ « Oui,
+// retirer »), l'écran disait « Ta réservation est annulée » — il n'y avait pas de réservation, seulement une
+// demande. L'écran d'après le dit : « Ta demande est retirée ».
+describe('RESA-FIN-APP (2) E-P07 — retirer une demande n’annonce pas une réservation annulée', () => {
+  it('en attente ⇒ « Oui, retirer » ⇒ la variante « demande retirée »', async () => {
+    mockLecture = lue({ expiresAt: '2026-10-16T14:00:00.000Z', status: 'en_attente' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Annuler la demande');
+    await appuyer(arbre, 'Oui, retirer');
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverEchec, expect.objectContaining({
+      variante: 'demandeRetiree',
+    }));
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées 1 et 2 : une réservation « Non honorée » n'avait dans son historique que
+// « Réservée le … ». Plan E-P07 §3.7 : « Réservée le 12/10 · Confirmée la veille · … ». Les deux moments sont
+// déjà dans la réponse du serveur (`dayBeforeConfirmedAt`, `noShowAt`). (« 1 sur 3 » : le compte n'y est pas.)
+describe('RESA-FIN-APP (4) E-P07 — l’historique dit « Confirmée la veille » et « Marquée non honorée »', () => {
+  it('les deux lignes, après « Réservée le … »', async () => {
+    mockLecture = lue({
+      dayBeforeConfirmedAt: '2026-10-15T16:12:00.000Z',
+      noShowAt: '2026-10-16T16:30:00.000Z',
+    });
+    const arbre = await monter();
+    const lus = lisibles(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Confirmée la veille, le 15/10 à 18 h 12',
+      'Marquée non honorée par le complexe le 16/10',
+    ]));
+    expect(lus.indexOf('Marquée non honorée par le complexe le 16/10'))
+      .toBeGreaterThan(lus.findIndex((texte) => texte.startsWith('Réservée le')));
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026) — E-P07 « 1 sur 3 » (plan N-17) : le serveur RESA-FIN-SERVEUR-2
+// (RESAFINSRV2 64efe693) rend `noShowCount` et `noShowThreshold`. Lecture tolérante : sans seuil,
+// « non honorée » sans « sur x » ; sans les champs, la ligne d'avant.
+describe('RESA-FIN-APP-2 E-P07 — « (1 sur 3) » dans l’historique', () => {
+  const NON_HONOREE = { noShowAt: '2026-10-16T16:30:00.000Z' };
+
+  it('rang et seuil : « … le 16/10 (1 sur 3) »', async () => {
+    mockLecture = lue({ ...NON_HONOREE, noShowCount: 1, noShowThreshold: 3 });
+    expect(lisibles(await monter()))
+      .toContain('Marquée non honorée par le complexe le 16/10 (1 sur 3)');
+  });
+
+  it('sans seuil, ou sans les champs : la ligne sans « sur x »', async () => {
+    mockLecture = lue({ ...NON_HONOREE, noShowCount: 2, noShowThreshold: null });
+    expect(lisibles(await monter())).toContain('Marquée non honorée par le complexe le 16/10');
+    mockLecture = lue(NON_HONOREE);
+    expect(lisibles(await monter())).toContain('Marquée non honorée par le complexe le 16/10');
   });
 });

@@ -256,3 +256,21 @@ describe('FINITIONS3 — aucun libellé du bandeau n épouse sa largeur mesurée
     expect(StyleSheet.flatten(libelleDuBouton.props.style).textAlign).toBe('center');
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2 (RB-02) : « Tes droits de entraîneur sont intacts. » — l'élision manquait
+// devant une voyelle. « d’entraîneur », « de dirigeant ». (Texte de l'app existante, hors complexes.)
+describe('RESA-FIN-APP (3) — « Tes droits d’entraîneur », « Tes droits de dirigeant »', () => {
+  it('entraîneur en mode joueur : « d’entraîneur »', () => {
+    const arbre = monter({ accountRoleKey: 'coach', canUsePlayerMode: true, displayMode: 'player' });
+    expect(textes(arbre)).toContain(
+      'Tu vois l\'app comme un joueur de ton équipe. Tes droits d’entraîneur sont intacts.',
+    );
+  });
+
+  it('dirigeant en mode joueur : « de dirigeant »', () => {
+    const arbre = monter({ accountRoleKey: 'president', canUsePlayerMode: true, displayMode: 'player' });
+    expect(textes(arbre)).toContain(
+      'Tu vois l\'app comme un joueur de ton équipe. Tes droits de dirigeant sont intacts.',
+    );
+  });
+});

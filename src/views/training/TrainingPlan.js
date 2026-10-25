@@ -112,7 +112,16 @@ function TrainingPlan({ navigation }) {
     const liste = Array.isArray(sessions) ? sessions : [];
     // La date de fin se calcule SUR LE TELEPHONE : c'est la derniere date prevue,
     // deja chargee. Rien a demander au serveur.
-    const derniere = liste.length ? liste[liste.length - 1]?.plannedDate : null;
+    // BH15 P13-07 : une seance reportee peut finir apres la derniere journee ; on prend la plus
+    // tardive.
+    const derniere = liste.reduce(
+      (/** @type {string|null} */ max, session) => (
+        session?.plannedDate && (!max || String(session.plannedDate) > max)
+          ? String(session.plannedDate)
+          : max
+      ),
+      null,
+    );
     const mesures = liste.reduce(
       (total, session) => total + (Array.isArray(session.results) ? session.results.length : 0),
       0,

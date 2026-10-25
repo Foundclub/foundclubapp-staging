@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,6 +11,10 @@ import {
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+/** Les feuilles ouvertes, de la plus ancienne à celle du dessus (Échap ferme la dernière). */
+/** @type {Array<() => void>} */
+const FEUILLES_OUVERTES = [];
 
 /**
  * Web replacement for the mobile bottom sheet.
@@ -26,6 +31,9 @@ import useTheme from '@/theme/themeContext';
  * @param {(string|number)[]} [props.snapPoints]
  * @param {import('react-native').ViewStyle} [props.style]
  * @param {'sheet' | 'dialog'} [props.webPresentation]
+ * @param {number} [props.webZIndex] - R17-QUAND-2-BIS : la couche de la feuille (1100 par defaut,
+ *   sous les toasts et les invites). Une feuille ouverte DEPUIS un <Modal> de react-native-web
+ *   (couche 9999, ex. le tunnel plein ecran) doit passer au-dessus de lui.
  * @returns {import('react').ReactElement | null}
  */
 function BottomModal({
@@ -41,6 +49,7 @@ function BottomModal({
   snapPoints,
   style,
   webPresentation = 'sheet',
+  webZIndex = 1100,
 }) {
   const {
     Alignments,
@@ -50,6 +59,57 @@ function BottomModal({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+
+  // RESA-FIN-SITE (21/10/2026, décision du chef du 22/10) — au clavier, Échap ferme la feuille :
+  // sans croix (`hideCloseButton` par défaut), on ne pouvait pas en sortir. Comme le fond : une
+  // feuille que l'appelant garde ouverte (`closeOnBackdropPress={false}`) le reste. Deux feuilles
+  // l'une sur l'autre : seule celle du dessus se ferme. Écoutée à la DESCENTE : un TextInput de
+  // react-native-web arrête la touche avant le document (piège du 08/10).
+  const fermerRef = useRef(close);
+  useEffect(() => {
+    fermerRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    if (!closeOnBackdropPress || !isVisible || typeof document === 'undefined') return undefined;
+    const fermer = () => fermerRef.current?.();
+    FEUILLES_OUVERTES.push(fermer);
+    const surTouche = (/** @type {KeyboardEvent} */ evenement) => {
+      const dessus = FEUILLES_OUVERTES[FEUILLES_OUVERTES.length - 1];
+      if (evenement.key !== 'Escape' || dessus !== fermer) return;
+      evenement.stopPropagation();
+      fermer();
+    };
+    document.addEventListener('keydown', surTouche, true);
+    return () => {
+      document.removeEventListener('keydown', surTouche, true);
+      const rang = FEUILLES_OUVERTES.indexOf(fermer);
+      if (rang >= 0) FEUILLES_OUVERTES.splice(rang, 1);
+    };
+  }, [closeOnBackdropPress, isVisible]);
+
+  // ⌨️ CLAVREGLE (23/10) — un champ touché reste au-dessus du clavier, comme dans l'app
+  // (BottomModal.js). La feuille est fixée au bas de la PAGE ; sur un téléphone, le clavier ne
+  // réduit que la zone VISIBLE (`visualViewport`) : la feuille restait dessous. Elle se pose au bas
+  // de la zone visible. Un zoom au doigt réduit aussi cette zone : on ne suit qu'à l'échelle 1.
+  // Témoin : __tests__/BottomModalWebCLAVREGLE.clavier.test.js.
+  const [hauteurDuClavier, setHauteurDuClavier] = useState(0);
+  useEffect(() => {
+    const zoneVisible = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!isVisible || !zoneVisible) return undefined;
+    const mesurer = () => {
+      const recouvert = window.innerHeight - zoneVisible.height - zoneVisible.offsetTop;
+      const aLEchelleUn = Math.abs(zoneVisible.scale - 1) < 0.01;
+      setHauteurDuClavier(aLEchelleUn ? Math.max(0, Math.round(recouvert)) : 0);
+    };
+    mesurer();
+    zoneVisible.addEventListener('resize', mesurer);
+    zoneVisible.addEventListener('scroll', mesurer);
+    return () => {
+      zoneVisible.removeEventListener('resize', mesurer);
+      zoneVisible.removeEventListener('scroll', mesurer);
+      setHauteurDuClavier(0);
+    };
+  }, [isVisible]);
 
   if (!isVisible) {
     return null;
@@ -106,12 +166,12 @@ function BottomModal({
         isDialog ? Alignments.justifyCenter : Alignments.justifyEnd,
         isDialog ? Alignments.alignCenter : null,
         {
-          bottom: 0,
+          bottom: hauteurDuClavier,
           left: 0,
           position: 'fixed',
           right: 0,
           top: 0,
-          zIndex: 1100,
+          zIndex: webZIndex,
         },
       ]}
     >

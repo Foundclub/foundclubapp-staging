@@ -56,15 +56,17 @@ function UserPosition({ navigation, route }) {
   const positions = useMemo(() => getPositionsForSport(userSport), [userSport]);
 
   useEffect(() => {
+    // BH03 · P5-25 : un poste d'un autre sport serait coche, invisible, et renvoye.
+    const sportPositionValues = new Set(positions.map((position) => position.value));
     const currentPositions = String(userData?.position || '')
       .split(',')
       .map((item) => item.trim())
-      .filter(Boolean);
+      .filter((item) => sportPositionValues.has(item));
 
     if (currentPositions.length) {
       setSelectedPositions(currentPositions);
     }
-  }, [userData?.position]);
+  }, [positions, userData?.position]);
 
   // D23 - L'ECRAN SE RETIRE LUI-MEME QUAND IL N'A RIEN A MONTRER.
   // Deux cas : sport sans postes (comportement d'origine), et AUCUN sport -

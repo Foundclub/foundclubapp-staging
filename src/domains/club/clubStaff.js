@@ -20,7 +20,7 @@ import { isDeletedAccount } from '@/domains/user/deletedAccount';
 export const countClubTrainers = ({ coachs, teams }) => {
   const ids = new Set();
   (Array.isArray(coachs) ? coachs : []).forEach((coach) => {
-    if (coach?.documentId) ids.add(coach.documentId);
+    if (coach?.documentId && !isDeletedAccount(coach)) ids.add(coach.documentId);
   });
   (Array.isArray(teams) ? teams : []).forEach((team) => {
     (Array.isArray(team?.trainers) ? team.trainers : []).forEach((trainer) => {

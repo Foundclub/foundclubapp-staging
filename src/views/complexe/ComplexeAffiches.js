@@ -25,10 +25,13 @@ import DeuxVolets from '@/views/complexe/components/DeuxVolets';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
+
 import { partagerAffiche, useApercuAffiche } from '@/services/complexe/complexeAfficheService';
 import { useComplexeChoisi, useFideliteDuComplexe } from '@/services/complexe/complexeQueries';
 
 import { useIsDesktop } from '@/responsive';
+import { buildPublicWebUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
 /** Le temps de laisser finir la saisie du prix ou du texte avant de redemander l'aperçu. */
 const ATTENTE_DE_SAISIE_MS = 600;
@@ -88,6 +91,7 @@ function ComplexeAffiches() {
   const [fidelite, setFidelite] = useState(true);
   const [occupe, setOccupe] = useState('');
   const [erreur, setErreur] = useState('');
+  const [enregistree, setEnregistree] = useState('');
 
   const phrase = textePromotion(prixDe(prix));
   const textePromotionAffiche = texteModifie ? textePromo : phrase;
@@ -167,11 +171,39 @@ function ComplexeAffiches() {
   const partager = async (/** @type {'a4' | 'post' | 'story'} */ format) => {
     if (!complexeId || occupe) return;
     setErreur('');
+    setEnregistree('');
     setOccupe(format);
     try {
-      await partagerAffiche(complexeId, { ...choix, format }, {
-        dialogTitle: t('complexeAffiches.partager', 'Partager l’affiche'),
+      // RESA-FIN-APP (20/10) — le texte du partage : le complexe et le lien de sa page (celui du QR).
+      // Sur Android il part dans le presse-papiers (l'affiche part par « ouvrir avec »).
+      const lien = complexe?.slug
+        // RESA-FIN-APP-2 : l'adresse publique avec sa barre finale, comme le serveur (65eb5cda).
+        ? buildPublicWebUrl({ path: `/annuaire/complexes/${complexe.slug}/?depuis=affiche` })
+        : null;
+      const message = buildShareMessageWithUrl({
+        intro: t('complexeAffiches.texteDuPartage', 'Réserve ton terrain chez {{nom}} sur FoundClub.', {
+          nom: String(complexe?.name || ''), ...SANS_ECHAPPEMENT,
+        }),
+        url: lien,
       });
+      const resultat = await partagerAffiche(complexeId, {
+        // BH16 P13-12 : le partage prend la saisie du moment, pas celle retardée de l'aperçu.
+        ...choix, format, prix, textePromo: textePromotionAffiche,
+      }, {
+        dialogTitle: t('complexeAffiches.partager', 'Partager l’affiche'),
+        message,
+      });
+      // RESA-FIN-APP — tournée 2 : sur Android l'affiche est RANGÉE (Photos, Téléchargements) ; un
+      // fichier rangé sans un mot est indiscernable d'un échec : l'écran dit où (mots de l'affiche
+      // d'un événement). Feuille de partage (iPhone), téléchargement (site) : rien de plus.
+      const copie = resultat?.messageCopied
+        ? ` ${t('showcase.messageCopied', 'Le texte est copié : colle-le avec l’image.')}`
+        : '';
+      if (resultat?.outcome === FILE_SHARE_OUTCOMES.GALLERY) {
+        setEnregistree(`${t('showcase.savedGallery', 'C’est enregistré dans ta galerie photo.')}${copie}`);
+      } else if (resultat?.outcome === FILE_SHARE_OUTCOMES.DOWNLOADS) {
+        setEnregistree(`${t('showcase.savedDownloads', 'C’est enregistré dans tes téléchargements.')}${copie}`);
+      }
     } catch (_e) {
       setErreur(t('complexeAffiches.erreur', 'L’affiche n’a pas pu être créée.'));
     } finally {
@@ -338,6 +370,9 @@ function ComplexeAffiches() {
           </Text>
         </TouchableOpacity>
       )}
+      {enregistree ? (
+        <BandeauComplexe testID="affiche-enregistree" texte={enregistree} ton="ok" />
+      ) : null}
       {erreur ? (
         <BandeauComplexe testID="affiche-erreur-partage" texte={erreur} ton="erreur" />
       ) : null}

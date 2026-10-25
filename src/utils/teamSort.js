@@ -20,8 +20,8 @@ function getSectionSortScore(sectionLabel) {
   const normalized = normalizeSortText(sectionLabel);
 
   if (!normalized) return 99;
-  if (normalized.includes('masculine')) return 0;
-  if (normalized.includes('feminine')) return 1;
+  if (normalized.includes('masculin')) return 0;
+  if (normalized.includes('feminin')) return 1;
   if (normalized.includes('mixte')) return 2;
 
   return 3;

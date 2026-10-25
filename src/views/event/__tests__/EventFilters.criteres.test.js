@@ -148,6 +148,7 @@ jest.mock('@/domains/places/usePlaces', () => ({
 
 const mockDispatch = jest.fn();
 let mockEventFilters = /** @type {any} */ ({});
+const mockUseGetTeams = jest.fn();
 
 jest.mock('@/store/appContext', () => ({
   useAppContext: () => [{ eventFilters: mockEventFilters }, mockDispatch],
@@ -169,7 +170,10 @@ jest.mock('@/services/club/clubQueries', () => ({
   useGetClubs: () => ({ data: { pages: [{ data: [{ documentId: 'cl-1', name: 'OM' }] }] } }),
 }));
 jest.mock('@/services/team/teamQueries', () => ({
-  useGetTeams: () => ({ data: { pages: [{ data: [{ documentId: 'eq-1', name: 'U13 A' }] }] } }),
+  useGetTeams: (/** @type {any[]} */ ...args) => {
+    mockUseGetTeams(...args);
+    return { data: { pages: [{ data: [{ documentId: 'eq-1', name: 'U13 A' }] }] } };
+  },
 }));
 jest.mock('@/services/searchAlert/searchAlertService', () => ({
   createSearchAlert: jest.fn(),
@@ -441,15 +445,33 @@ describe('EventFilters (ecran plein) — ce qui part a la recherche', () => {
     expect(mockDispatch.mock.calls[0][0].payload.q).toBeUndefined();
   });
 
-  it('LE DEFAUT CONSTATE : le sport applique ne revient pas quand on rouvre l ecran', async () => {
-    // L'ecran ECRIT `activity` mais RELIT `eventFilters.activities` (au
-    // pluriel) : le sport choisi n'est jamais reaffiche.
+  it('DEFAUT CORRIGE (BUGHUNT P8-14) : le sport applique revient a la reouverture', async () => {
+    // L'ecran ECRIVAIT `activity` mais RELISAIT `eventFilters.activities` (au
+    // pluriel) : le sport choisi n'etait jamais reaffiche. Il se relit sous son nom.
     mockEventFilters = { activity: ['a-1'] };
     const tree = await rendre();
 
-    // (A09 : le sport se lit désormais dans le choix commun — « Tous les sports » reste coché,
-    // Football non.)
-    expect(lignesDeSport(tree)[0]).toBe('Tous les sports');
+    // (A09 : le sport se lit dans le choix commun — Football, choisi, passe en tête.)
+    expect(lignesDeSport(tree)[0]).toBe('Football');
+  });
+
+  // 🐞 BUGHUNT P8-14 (BH06) — le défaut ci-dessus, corrigé : le sport appliqué revient, et
+  // « Appliquer » sans rien toucher le garde au lieu de l'effacer.
+  it('P8-14 — rouvrir puis appliquer garde le sport choisi', async () => {
+    mockEventFilters = { activity: ['a-1'] };
+    const tree = await rendre();
+
+    await appuyerSur(tree, 'Appliquer les filtres');
+
+    expect(mockDispatch.mock.calls[0][0].payload.activity).toEqual(['a-1']);
+  });
+
+  // 🐞 BUGHUNT P8-15 (BH06) — un club DÉJÀ appliqué : la liste des équipes doit se charger.
+  it('P8-15 — club déjà appliqué : les équipes de ce club sont demandées', async () => {
+    mockEventFilters = { club: { label: 'FC Test', value: 'club-1' } };
+    await rendre();
+
+    expect(mockUseGetTeams).toHaveBeenLastCalledWith({ clubId: 'club-1' }, { enabled: true });
   });
 });
 

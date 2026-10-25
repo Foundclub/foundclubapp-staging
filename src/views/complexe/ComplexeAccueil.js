@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
@@ -62,6 +62,7 @@ import {
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import { getZonedDateParts } from '@/utils/parisTime';
 
 const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 
@@ -70,18 +71,18 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 const LARGEUR_ORDINATEUR = 1024;
 
 /**
- * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure du téléphone.
+ * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure de Paris (BH16 P13-11 : le complexe vit
+ * à l'heure de Paris, quel que soit le fuseau du téléphone).
  * @param {Date} instant - L'instant.
  * @returns {{ date: string, minutes: number }} Le jour civil et l'heure.
  */
-const jourEtHeure = (instant) => ({
-  date: [
-    instant.getFullYear(),
-    String(instant.getMonth() + 1).padStart(2, '0'),
-    String(instant.getDate()).padStart(2, '0'),
-  ].join('-'),
-  minutes: instant.getHours() * 60 + instant.getMinutes(),
-});
+export const jourEtHeure = (instant) => {
+  const p = getZonedDateParts(instant);
+  return {
+    date: [p.year, String(p.month).padStart(2, '0'), String(p.day).padStart(2, '0')].join('-'),
+    minutes: (p.hour % 24) * 60 + p.minute,
+  };
+};
 
 /**
  * E-G02 — L'ACCUEIL DU GESTIONNAIRE DE COMPLEXE — RESA-L5A1 (13/10/2026), planche EG02, dans la
@@ -127,6 +128,23 @@ function ComplexeAccueil() {
     roleDuCompte: String(accountRoleKey || ''),
   });
   const nomDuComplexeRef = useRef(/** @type {any} */ (null));
+  // RESA-FIN-SITE (21/10/2026, planche RB-3 5b) — sur le SITE, le curseur se pose sur le nom du
+  // complexe à l'arrivée dans l'espace, une fois (le téléphone le fait après l'annonce de la
+  // bascule, plus bas). Le titre n'est pas un arrêt de Tab (tabIndex -1).
+  const curseurPose = useRef(false);
+  // RESA-FIN-APP-2 — la minuterie du curseur (plus bas) s'annule quand l'écran se démonte.
+  const minuterieDuCurseur = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+  useEffect(() => () => {
+    if (minuterieDuCurseur.current) clearTimeout(minuterieDuCurseur.current);
+  }, []);
+  const nomCharge = Boolean(complexe?.name);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !nomCharge || curseurPose.current) return;
+    curseurPose.current = true;
+    const titre = nomDuComplexeRef.current;
+    titre?.setAttribute?.('tabindex', '-1');
+    titre?.focus?.();
+  }, [nomCharge]);
   // RESA-L5A2 (14/10/2026) — la semaine (et hier, un lundi) au planning, les listes du serveur.
   const lundi = joursDeLaSemaine(date)[0];
   const hier = enJours(date, -1);
@@ -253,7 +271,7 @@ function ComplexeAccueil() {
   const poserLeCurseurSurLeNom = () => {
     if (Platform.OS === 'web') return;
     // Après l'annonce « Mode complexe. Tu gères … » : un changement de curseur l'interromprait.
-    setTimeout(() => {
+    minuterieDuCurseur.current = setTimeout(() => {
       const noeud = findNodeHandle(nomDuComplexeRef.current);
       if (noeud) AccessibilityInfo.setAccessibilityFocus(noeud);
     }, 1200);
@@ -383,7 +401,8 @@ function ComplexeAccueil() {
     if (creneau.reservationId) {
       ouvrir(RouteNames.ComplexeReservation, { reservationId: creneau.reservationId });
     } else {
-      ouvrir(RouteNames.ComplexePlanning, { date, terrainId: ligne.cle });
+      // RESA-FIN-APP-2 (plan E-G02 §4) : positionné sur ce créneau.
+      ouvrir(RouteNames.ComplexePlanning, { creneau: creneau.from, date, terrainId: ligne.cle });
     }
   };
   const jour = instant.toLocaleDateString(localeDesFormats(), {
@@ -408,13 +427,21 @@ function ComplexeAccueil() {
 
   // ── Les 4 chiffres ─────────────────────────────────────────────────────────────────────
   const chiffresDeLaSemaine = chiffresDuPlanning(planning.data, date);
+  const demandesEnAttente = totalDesPages(enAttente.data) || 0;
+  const nouveauxFavoris = chiffresDuServeur.data?.favoris?.nouveaux || 0;
+  // RESA-FIN-APP (20/10) — chaque libellé s'accorde à son nombre (« 1 demandes en attente »,
+  // tournées 1 et 2 ; i18next : 0 et 1 au singulier en français).
   /**
    * @type {Array<{ cle: string, jauge?: number, libelle: string, onPress?: () => void,
       valeur: string }>} */
   const tuiles = [
     {
       cle: 'reservations',
-      libelle: t('complexeGerant.accueil.reservationsDuJour', 'réservations aujourd’hui'),
+      libelle: t('complexeGerant.accueil.reservationsDuJour', {
+        count: chiffresDeLaSemaine.reservations,
+        defaultValue_one: 'réservation aujourd’hui',
+        defaultValue_other: 'réservations aujourd’hui',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeReservations, { vue: 'aujourdhui' }),
       valeur: String(chiffresDeLaSemaine.reservations),
     },
@@ -427,15 +454,23 @@ function ComplexeAccueil() {
     },
     {
       cle: 'demandes',
-      libelle: t('complexeGerant.accueil.demandes', 'demandes en attente'),
+      libelle: t('complexeGerant.accueil.demandes', {
+        count: demandesEnAttente,
+        defaultValue_one: 'demande en attente',
+        defaultValue_other: 'demandes en attente',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeDemandes),
-      valeur: String(totalDesPages(enAttente.data) || 0),
+      valeur: String(demandesEnAttente),
     },
     {
       cle: 'favoris',
-      libelle: t('complexeGerant.accueil.favoris', 'nouveaux favoris cette semaine'),
+      libelle: t('complexeGerant.accueil.favoris', {
+        count: nouveauxFavoris,
+        defaultValue_one: 'nouveau favori cette semaine',
+        defaultValue_other: 'nouveaux favoris cette semaine',
+      }),
       onPress: () => ouvrir(RouteNames.ComplexeStatistiques),
-      valeur: String(chiffresDuServeur.data?.favoris?.nouveaux || 0),
+      valeur: String(nouveauxFavoris),
     },
   ];
   const chiffres = (

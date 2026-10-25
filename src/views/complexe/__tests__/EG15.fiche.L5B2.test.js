@@ -4,7 +4,9 @@ import ComplexeClient from '@/views/complexe/ComplexeClient';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import {
+  lisibles, parRepere, pressable, textes,
+} from '@/testSupport/temoinComplexe';
 
 // RESA-L5B-2 (20/10/2026) — E-G15, CE QUE LA FICHE D'UN CLIENT ATTENDAIT DE RESA-L4 (planche EG15
 // état 2 ; plan :970-1010) : « Client depuis le 02/09 », les parties jouées et la fidélité « 8/10 »
@@ -26,6 +28,8 @@ let mockListe = /** @type {any} */ ({});
 /** @type {any[]} */
 const mockRecherches = [];
 const mockEcrire = jest.fn();
+/** RESA-FIN-APP-3 : ce que le serveur ajoute (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). */
+let mockClientEnPlus = /** @type {Record<string, any>} */ ({});
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useBannir: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useClientDuComplexe: () => ({
@@ -37,6 +41,7 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
       lateCancellations: 0,
       noShows: 1,
       upcoming: 1,
+      ...mockClientEnPlus,
     },
     isLoading: false,
   }),
@@ -49,7 +54,10 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useDebannir: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: mockEcrire }),
   useHistoriqueClient: () => mockHistorique,
+  // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).
+  useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useReservationGeree: () => ({ data: null, isLoading: false }),
+  useValiderRecompense: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
@@ -84,6 +92,7 @@ const monter = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRecherches.length = 0;
+  mockClientEnPlus = {};
   mockParams = { complexeId: 'cx-five', joueurId: 'u-julien' };
   mockHistorique = {
     data: {
@@ -179,12 +188,49 @@ describe('E-G15 — la fiche d’un client, avec RESA-L4', () => {
       pressable(arbre, 'Écrire').props.onPress();
     });
     expect(mockEcrire).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-demain' });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'chat-r-demain' });
+    // RESA-FIN-APP-3 : la conversation garde l'espace du complexe (barre du gérant, tournée 3).
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Conversation, {
+      chatId: 'chat-r-demain', espace: 'complexe',
+    });
   });
 
   it('sans réservation à venir, pas de « Écrire » (AT-04)', async () => {
     mockHistorique.data.reservations = mockHistorique.data.reservations.slice(1);
     const arbre = await monter();
     expect(() => pressable(arbre, 'Écrire')).toThrow();
+  });
+});
+
+// RESA-FIN-APP (20/10/2026) — tournées de recette 1 et 2 (Android 16) : « jeu. 22/10 · 20 h · Terrain 2 »
+// s'affichait « … · Terrain » (le dernier mot passe sur une ligne invisible). La ligne de
+// l'historique est dessinée en un seul « mot » (espaces insécables, `texteInsecable`).
+describe('RESA-FIN-APP (1) E-G15 — les lignes de l’historique ne perdent plus leur terrain', () => {
+  it('chaque ligne « jour · heure · terrain » est dessinée sans espace ordinaire', async () => {
+    const arbre = await monter();
+    const lignes = textes(arbre).filter((texte) => /\d\d\/\d\d/.test(texte) && /Terrain/.test(texte));
+    expect(lignes).toHaveLength(3);
+    lignes.forEach((ligne) => expect(ligne).not.toMatch(/ /));
+  });
+});
+
+// RESA-FIN-APP-3 (23/10/2026, tournée 3 du site) — « 3 non honorées · Non banni · ban
+// automatique au bout de 3 » était trompeur : le compteur du ban automatique repart de la levée
+// du dernier ban (`noShowsSinceLift`, RESA-FIN-SERVEUR 9/11). L'écran dit le total ET le compte
+// depuis la levée.
+describe('RESA-FIN-APP-3 E-G15 — les non honorées depuis la levée du ban', () => {
+  it('3 au total, 0 depuis la levée : les deux ; le ban auto repart de la levée', async () => {
+    mockClientEnPlus = { noShows: 3, noShowsSinceLift: 0 };
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      '3', 'non honorées', '0 depuis la levée du ban',
+      'Bannissement automatique au bout de 3 non honorées.',
+      'Le compteur repart de la levée du ban : 0 sur 3.',
+    ]));
+  });
+
+  it('jamais banni (autant depuis la levée qu’au total) : rien de plus', async () => {
+    mockClientEnPlus = { noShows: 1, noShowsSinceLift: 1 };
+    const vus = lisibles(await monter());
+    expect(vus.some((texte) => /depuis la levée|repart de la levée/.test(texte))).toBe(false);
   });
 });

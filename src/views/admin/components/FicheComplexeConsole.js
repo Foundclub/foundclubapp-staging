@@ -24,6 +24,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useComplexeDeLaConsole, useGesteDeLaConsole } from '@/services/complexe/complexeQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 /** Le compte d'un gérant dans l'explorateur du SuperAdmin (suspension de compte, Q1). */
@@ -212,6 +214,11 @@ function FicheComplexeConsole({ complexeId }) {
             t(`complexeConsole.fiche.journalLignes.${ligne.cle}`, {
               date: jourCourt(ligne.quand), ...SANS_ECHAPPEMENT,
             }),
+            ligne.auteur
+              ? t('complexeConsole.fiche.journalPar', 'par {{nom}}', {
+                nom: ligne.auteur, ...SANS_ECHAPPEMENT,
+              })
+              : '',
             ligne.motif ? `« ${ligne.motif} »` : '',
           ].filter(Boolean).join(' · ')}
         </Text>
@@ -350,7 +357,9 @@ function FicheComplexeConsole({ complexeId }) {
 
   const gerants = Array.isArray(fiche.gerants) ? fiche.gerants : [];
   return (
-    <View style={{ gap: 12 }} testID="console-fiche">
+    // RESA-FIN-APP : même vue que le squelette (« busy ») ; Android garde l'état si la propriété
+    // disparaît (fiche lue « occupée », tournée 1) : elle le dit.
+    <View accessibilityState={{ busy: false }} style={{ gap: 12 }} testID="console-fiche">
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
         <LogoComplexe logo={complexe.logo || null} nom={nom} taille={48} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -385,7 +394,7 @@ function FicheComplexeConsole({ complexeId }) {
                 style={[Alignments.justifyCenter, { minHeight: 44 }]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('complexeConsole.fiche.voirLeCompte', 'voir le compte')}
+                  {texteInsecable(t('complexeConsole.fiche.voirLeCompte', 'voir le compte'))}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -416,7 +425,7 @@ function FicheComplexeConsole({ complexeId }) {
             style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
           >
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('complexeConsole.fiche.voirLaPage', 'Voir la page')}
+              {texteInsecable(t('complexeConsole.fiche.voirLaPage', 'Voir la page'))}
             </Text>
           </TouchableOpacity>
         ) : null}

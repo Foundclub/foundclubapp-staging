@@ -27,6 +27,7 @@ import {
   telephoneLisible,
   titreDuJour,
   totalDesPages,
+  totalQuiCompte,
   versJourIso,
 } from '@/domains/complexe/complexeReservation';
 
@@ -95,6 +96,21 @@ describe('RESA-L5A2 — les jours et les heures', () => {
     expect(totalDesPages(donnees)).toBe(21);
     expect(lignesDesPages(undefined)).toEqual([]);
     expect(totalDesPages(undefined)).toBeNull();
+  });
+
+  // RESA-FIN-APP-3 (23/10/2026) — « Aujourd'hui (n) » : seules les Confirmées et les demandes En
+  // attente comptent (la tuile de l'accueil, « À venir ») ; la liste montre aussi les annulées.
+  it('le nombre qui compte : le total moins les lignes lues qui ne tiennent pas le créneau', () => {
+    const page = (/** @type {string[]} */ statuts, total = statuts.length) => ({
+      items: statuts.map((status, i) => ({ documentId: `r-${i}`, status })),
+      pagination: { page: 1, pageSize: 20, total },
+    });
+    expect(totalQuiCompte({
+      pages: [page(['confirmee', 'en_attente', 'annulee', 'refusee', 'sans_reponse'])],
+    })).toBe(2);
+    expect(totalQuiCompte({ pages: [page(['confirmee', 'annulee'], 30)] })).toBe(29);
+    expect(totalQuiCompte({ pages: [page([])] })).toBe(0);
+    expect(totalQuiCompte(undefined)).toBeNull();
   });
 
   it('une liste groupée par jour, dans l’ordre reçu', () => {
@@ -313,9 +329,13 @@ describe('RESA-L5A2 — les fermetures (E-G10)', () => {
         terrainId: 't-3',
       }),
     ], terrains, '2026-10-14');
-    expect(lignes.map((ligne) => [ligne.motif, ligne.terrains, ligne.ids, ligne.enCours])).toEqual([
-      ['Météo', ['Padel A'], ['f-4'], true],
-      ['Travaux', ['Terrain 1', 'Terrain 2'], ['f-1', 'f-2'], false],
+    // RESA-FIN-APP-2 : la rouverte reste, à part (« Rouverte », plan E-G10 §5).
+    expect(lignes.map((ligne) => [
+      ligne.motif, ligne.terrains, ligne.ids, ligne.enCours, ligne.rouverte,
+    ])).toEqual([
+      ['Météo', ['Padel A'], ['f-4'], true, false],
+      ['Travaux', ['Terrain 1', 'Terrain 2'], ['f-1', 'f-2'], false, false],
+      ['Travaux', ['Padel A'], ['f-5'], false, true],
     ]);
   });
 });

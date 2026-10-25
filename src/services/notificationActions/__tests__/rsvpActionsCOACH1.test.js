@@ -36,6 +36,9 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 }));
 
 // eslint-disable-next-line import/first
+import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
+
+// eslint-disable-next-line import/first
 import { EVENT_RSVP_ACTION_ABSENT, EVENT_RSVP_ACTION_PRESENT } from '../constants';
 // eslint-disable-next-line import/first
 import {
@@ -94,4 +97,19 @@ test('COACH1/N3 — « Absent » aussi', async () => {
 test('COACH1/N4 🔒 — une autre notification que le rappel n a PAS de boutons', () => {
   const autre = { ...rappelRecuParUnEntraineur(), type: 'eventPublished' };
   expect(isEventRsvpActionablePayload(autre)).toBe(false);
+});
+
+test('BH01/P2-01 🔒 — sans session pour le compte vise, la presence ne part PAS', async () => {
+  activateSessionForNotificationPayload.mockResolvedValueOnce({
+    activated: false,
+    reason: 'session_not_found',
+  });
+
+  const result = await handleEventRsvpActionPress({
+    notificationData: rappelRecuParUnEntraineur(),
+    pressActionId: EVENT_RSVP_ACTION_PRESENT,
+  });
+
+  expect(mockPost).not.toHaveBeenCalled();
+  expect(result).toMatchObject({ handled: true, success: false });
 });

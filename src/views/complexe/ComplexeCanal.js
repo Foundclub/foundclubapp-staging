@@ -13,6 +13,8 @@ import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import FeuillePartagerAnnonce from '@/views/complexe/components/FeuillePartagerAnnonce';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -67,6 +69,10 @@ function ComplexeCanal() {
   const { complexe, complexeId } = useComplexeChoisi(params?.complexeId);
   const lecture = useCanalDuComplexe(complexeId);
   const [saisie, setSaisie] = useState('');
+  // RESA-PARTAGER (A-G32, plan E-G12 :848) — « Partager une annonce » : la feuille, puis le
+  // message « Annonce partagée dans ton canal. ».
+  const [partageOuvert, setPartageOuvert] = useState(false);
+  const [message, setMessage] = useState('');
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -82,8 +88,11 @@ function ComplexeCanal() {
   const affiches = cherche
     ? membres.filter((/** @type {any} */ membre) => comparable(membre?.nom).includes(cherche))
     : membres;
+  // RESA-FIN-SITE (21/10/2026) : `espace: 'complexe'` — sur le site, la conversation garde le menu
+  // du complexe (AppShell, menuDuComplexe.ts) ; ailleurs, le paramètre ne change rien.
   const ecrire = () => {
-    if (canal?.chatId) navigation.navigate(RouteNames.Conversation, { chatId: canal.chatId });
+    if (!canal?.chatId) return;
+    navigation.navigate(RouteNames.Conversation, { chatId: canal.chatId, espace: 'complexe' });
   };
 
   const origineDe = (/** @type {any} */ membre) => {
@@ -167,6 +176,18 @@ function ComplexeCanal() {
             onPress={ecrire}
             title={t('complexeCanal.ecrire', 'Écrire aux membres')}
           />
+          <View testID="canal-partager-annonce">
+            <Button
+              icon="share"
+              iconPosition="before"
+              onPress={() => {
+                setMessage('');
+                setPartageOuvert(true);
+              }}
+              title={t('complexeCanal.partager.titre', 'Partager une annonce')}
+              variant="Secondary"
+            />
+          </View>
         </View>
         {membres.length ? (
           <View style={{ gap: 8 }} testID="canal-membres">
@@ -265,8 +286,19 @@ function ComplexeCanal() {
             ) : null}
           </View>
         </View>
+        {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
         {corps}
       </ScrollView>
+      {partageOuvert ? (
+        <FeuillePartagerAnnonce
+          complexeId={complexeId}
+          onFait={(texte) => {
+            setPartageOuvert(false);
+            setMessage(texte);
+          }}
+          onFermer={() => setPartageOuvert(false)}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }

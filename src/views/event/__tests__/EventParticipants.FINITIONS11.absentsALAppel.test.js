@@ -280,6 +280,28 @@ describe('FINITIONS11 · point 3 — l absent pointé à l appel, chez l entraî
     )).length).toBeGreaterThan(0);
   });
 
+  // 🐞 BUGHUNT P7-06 (BH06) — la section « Participants externes » ne passait pas par le rangement.
+  test('8 · 🔴 P7-06 — participants externes : Hugo pointé absent quitte « Présent·e·s »', async () => {
+    const arbre = await monter(proprietes({
+      externalParticipationSection: {
+        ...SECTION_U15,
+        isExternal: true,
+        key: 'external-participants',
+        teamName: 'Participants externes',
+      },
+      participationsByStatus: undefined,
+    }));
+
+    expect(ordre(arbre)).toEqual([
+      'titre:participating',
+      'rangee:present',
+      'titre:missing · 3',
+      'rangee:absent-declare',
+      'rangee:absent-appel',
+      'rangee:sans-reponse-pointe',
+    ]);
+  });
+
   test('5 · 🔒 personne pointé absent : les groupes gardent leur titre d avant (pas de « · N » sur un groupe vide)', async () => {
     const arbre = await monter(proprietes({
       attendanceByUserId: { [KYLIAN.documentId]: PRESENCES[KYLIAN.documentId] },

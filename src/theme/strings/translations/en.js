@@ -2021,6 +2021,7 @@ export default {
     errors: {
       assign: 'Unable to assign the coach to the selected teams.',
       noTeamSelected: 'Select at least one team.',
+      partial: '{{done}} assigned, {{failed}} failed: try again for the others.',
       trainerNotFound: 'Unable to find this coach. Please try again.',
     },
     fallbacks: {
@@ -2077,6 +2078,11 @@ export default {
       indice: 'Opens your conversation with the FoundClub team',
       invitation: 'A question? Write to us.',
       invitationVous: 'A question? Write to us.',
+    },
+    messages: {
+      titre: 'Support inbox',
+      tout_one: 'See the whole inbox ({{count}})',
+      tout_other: 'See the whole inbox ({{count}})',
     },
     placeholder: 'Write your message to the team',
     placeholderVous: 'Write your message to the team',
@@ -3413,6 +3419,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Enter an amount above 0, not more than what can be refunded.',
       amountPlaceholder: 'Amount in euros',
       noteOptional: 'Optional note',
       paymentMethod: 'Payment method',
@@ -4454,6 +4461,10 @@ export default {
       noCampaign: {
         message: 'Create at least one campaign before running a backup sync.',
         title: 'No campaign',
+      },
+      rejectPayment: {
+        message: 'The declaration will be refused and the member will have to pay again.',
+        title: 'Reject this payment?',
       },
       resync: {
         message: 'Maintenance operation: missing fees will be attached without duplicating existing records.',
@@ -5568,9 +5579,9 @@ export default {
       avecCreneaux: '{{count}} with your town slots',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — a slot over part of the season (board 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Whole club',
     },
     fiche: {
@@ -5919,6 +5930,8 @@ export default {
       modifie: 'Slot updated',
       modifierLaLigne: '{{cle}}: {{valeur}}. Edit',
       pourLeClub: 'For {{club}}',
+      // ⏰ A7-UX-2 (22/10): club and team on a single step.
+      pourQui: 'For whom?',
       recapClub: 'Club · team',
       recapHeures: 'Day and times',
       relisezAttribuez: 'Review, then assign. The club is notified.',
@@ -6549,6 +6562,7 @@ export default {
       placePrise: 'This place is no longer free. Pick another one.',
       placePriseVille: 'This place is no longer free. Pick another one.',
       propositionClose: 'This proposal is no longer waiting for an answer.',
+      propositionDeclinee: 'The City’s proposal has been declined: pick another spot.',
       titre: 'The session hasn’t moved',
       titreVille: 'Nothing was sent',
       tropTard: 'The session has already started.',
@@ -6973,10 +6987,20 @@ export default {
       promotionDit: 'A booking slot at a price you set.',
       titre: 'The text',
     },
+    texteDuPartage: 'Book your pitch at {{nom}} on FoundClub.',
     titre: 'Your venue poster is ready',
   },
   // RESA-L5B-2 (20/10/2026) — the venue's channel, manager side (E-G12, RESA-L4 server).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — the "Players wanted" post shared in the channel: its
+    // card (manager and players). Same keys as fr.js.
+    annonce: {
+      places_one: '{{count}} spot',
+      places_other: '{{count}} spots',
+      titre: 'Players wanted',
+      voir: 'See the post',
+      voirLibelle: 'See the post: {{quand}}, {{places}}',
+    },
     ecrire: 'Write to members',
     erreur: 'Your channel could not be loaded.',
     membres: {
@@ -6988,6 +7012,18 @@ export default {
     },
     nombre_one: '{{count}} member',
     nombre_other: '{{count}} members',
+    // RESA-PARTAGER (23/10/2026, A-G32) — "Share in my channel" (E-G05) and "Share a post"
+    // (E-G12). Same keys as fr.js.
+    partager: {
+      aucune: 'No game to fill right now. When a player posts "Players wanted" on a booking at '
+        + 'your venue, it shows up here.',
+      choisir: 'Pick the game to fill: it lands as a card in your channel.',
+      dansMonCanal: 'Share in my channel',
+      deja: 'Post already shared in your channel.',
+      erreur: 'Your bookings could not be loaded.',
+      fait: 'Post shared in your channel.',
+      titre: 'Share a post',
+    },
     pause: 'Your venue is suspended: its channel is paused.',
     regle: 'All members will be notified.',
     titre: 'Channel · {{nom}}',
@@ -7009,6 +7045,8 @@ export default {
       jusqua: 'Banned until {{jusqua}} · private reason: {{raison}}',
       nePeutPlus: '{{nom}} can no longer book with you.',
       peutANouveau: '{{nom}} can book again.',
+      // RESA-FIN-APP-3 (23/10/2026) — the automatic ban counts since the last lifted ban.
+      repartDeLaLevee: 'The count restarts when the ban was lifted: {{nombre}} of {{seuil}}.',
       titre: 'Ban',
     },
     bannir: {
@@ -7023,6 +7061,8 @@ export default {
     chiffres: {
       aVenir_one: 'upcoming booking',
       aVenir_other: 'upcoming bookings',
+      // RESA-FIN-APP-3 (23/10/2026) — no-shows since the last lifted ban (`noShowsSinceLift`).
+      depuisLaLevee: '{{nombre}} since the ban was lifted',
       // RESA-L5B-2 (20/10/2026) — loyalty and games played (RESA-L4 server).
       fidelite: 'loyalty',
       horsDelai_one: 'late cancellation',
@@ -7101,6 +7141,8 @@ export default {
         suspendu: 'Suspended on {{date}}',
         verifie: 'Marked verified on {{date}}',
       },
+      // RESA-FIN-APP-3 (23/10/2026) — who did a log entry (`auteurNom`).
+      journalPar: 'by {{nom}}',
       parAuteur: 'By {{nom}} · {{jour}} at {{heure}}',
       reservations_one: '{{count}} booking',
       reservations_other: '{{count}} bookings',
@@ -7218,10 +7260,14 @@ export default {
       aujourdhui: 'Today · {{jour}}',
       creerAffiche: 'Create a poster',
       demandes: 'pending requests',
+      demandes_one: 'pending request',
+      demandes_other: 'pending requests',
       ecrireFoundClub: 'Write to FoundClub',
       enLigne: '{{nom}} is online. Add your first court.',
       erreur: 'Your day could not be loaded.',
       favoris: 'new favourites this week',
+      favoris_one: 'new favourite this week',
+      favoris_other: 'new favourites this week',
       occupation: 'occupancy this week',
       ouvrirCreneaux: 'Open slots',
       premierTerrain: 'Add your first court to receive bookings.',
@@ -7229,6 +7275,8 @@ export default {
       reessayer: 'Try again',
       refus: 'You no longer manage this venue.',
       reservationsDuJour: 'bookings today',
+      reservationsDuJour_one: 'booking today',
+      reservationsDuJour_other: 'bookings today',
       revenirJoueur: 'Back to player mode',
       sansCreneaux: '{{terrain}} has no slots yet.',
       suspendu: 'Your venue has been suspended by FoundClub: it no longer appears in the app.',
@@ -7268,6 +7316,10 @@ export default {
       fermer: 'Close',
       garde: 'You keep your teams, your bookings and your player messages.',
       heures: '{{heures}} h',
+      manqueAdresse: 'Pick the address from the list.',
+      manqueNom: 'Give the facility a name.',
+      manqueSports: 'Pick at least one sport.',
+      manqueTelephone: 'Add the phone number shown to players.',
       nom: 'Name',
       nomExemple: 'E.g. Le Five de Montrivage',
       nonContinuer: 'No, continue',
@@ -7564,6 +7616,7 @@ export default {
     partenaires: {
       aide: 'It will appear on your page and on your card in search.',
       lien: 'Link to the partner\'s website (optional)',
+      lienExemple: 'https://www.example.com',
       supprimer: 'Delete {{nom}}',
     },
     pasVerifie: '"Verified" will be added once FoundClub has checked it.',
@@ -7597,6 +7650,8 @@ export default {
       acceptee: 'Request accepted. {{nom}} has been notified.',
       accepter: 'Accept',
       changer: 'Change',
+      // RESA-FIN-SITE (21/10/2026) — RG-DELAIS: an expired request can no longer be decided.
+      delaiPasse: 'Reply deadline passed: the request expires without an answer.',
       demandeLe: 'requests',
       erreur: 'The requests could not be loaded.',
       erreurDecision: 'The request could not be decided.',
@@ -7623,14 +7678,17 @@ export default {
       videTraitees: 'No handled request.',
     },
     fermetures: {
+      annulerModification: 'Cancel changes',
       au: 'To',
       aucuneTouchee: 'No booking affected.',
       aVenir: 'Upcoming',
       aVenirTitre: 'Upcoming',
       du: 'From',
       enCours: 'Ongoing',
+      enregistrerModification: 'Save',
       erreur: 'The closures could not be loaded.',
       erreurFermer: 'The closure could not be set.',
+      erreurModifier: 'The closure could not be changed.',
       erreurRouvrir: 'The closure could not be reopened.',
       etDautres: 'and others…',
       exterieurAppeler: 'A booking noted outside the app has nobody to notify in the app: call the client.',
@@ -7641,6 +7699,12 @@ export default {
       fermer: 'Close',
       fermerEtPrevenir: 'Close and notify',
       meteo: 'Weather',
+      modifie: 'Changed: {{jours}}.',
+      modifieEtPrevenu: 'Changed: {{jours}}. {{count}} players notified.',
+      modifieEtPrevenu_one: 'Changed: {{jours}}. {{count}} player notified.',
+      modifieEtPrevenu_other: 'Changed: {{jours}}. {{count}} players notified.',
+      modifier: 'Edit',
+      modifierTitre: 'Edit the closure',
       mot: 'Note to players (optional)',
       motExemple: 'E.g.: turf renovation',
       motif: 'Reason',
@@ -7651,6 +7715,7 @@ export default {
       pasFerme: 'Not closed: {{terrains}}. Try again for them.',
       personne: 'Nobody to notify.',
       rouvert: 'Reopened: the slots are free.',
+      rouverte: 'Reopened',
       rouvrir: 'Reopen',
       rouvrirDit: 'The slots become free again. Cancelled bookings do not come back.',
       rouvrirQuestion: 'Reopen {{terrains}}: {{jours}}?',
@@ -7659,6 +7724,8 @@ export default {
       touchees_one: '{{count}} booking is affected.',
       touchees_other: '{{count}} bookings are affected.',
       toucheesDit: 'They will be cancelled and the players notified.',
+      toucheesDit_one: 'It will be cancelled and the players notified.',
+      toucheesDit_other: 'They will be cancelled and the players notified.',
       tous: 'All',
       travaux: 'Works',
       vide: 'No closure planned.',
@@ -7674,6 +7741,8 @@ export default {
       appeler: 'Call',
       auNomDe: 'In the name of: {{nom}}',
       auNomDeChamp: 'In the name of',
+      // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, the booking's conversation.
+      ecrireAuReserveur: 'Message the booker',
       enregistrer: 'Save',
       erreur: 'The booking could not be loaded.',
       erreurGeste: 'This could not be done.',
@@ -7689,6 +7758,7 @@ export default {
       prixJoueur: '{{montant}} per player, to be paid on site',
       quandOu: 'When, where',
       qui: 'Who',
+      recompense: 'Reward available: {{recompense}}',
       reservationsIci_one: '{{count}} booking here',
       reservationsIci_other: '{{count}} bookings here',
       seraPrevenu: '{{nom}} will be notified.',
@@ -7697,6 +7767,7 @@ export default {
       supprimerDit: 'The slot becomes free again.',
       supprimerQuestion: 'Delete {{nom}}\'s booking?',
       titre: 'Booking',
+      validerRecompense: 'Validate the free game',
       voirClientIndice: 'Opens their client page',
       voirPlanning: 'See in the schedule',
     },
@@ -7819,6 +7890,7 @@ export default {
       erreur: 'The court could not be removed.',
       fait_one: '{{nom}} is removed. {{count}} booking cancelled, the player is notified.',
       fait_other: '{{nom}} is removed. {{count}} bookings cancelled, the players are notified.',
+      faitSansReservation: '{{nom}} is removed. No booking to cancel.',
       retirer: 'Remove',
       titre: 'Remove {{nom}}?',
     },
@@ -11567,6 +11639,10 @@ export default {
       annuler: 'Cancel',
       aRefaire: 'Due before {{date}}',
       avantLe: 'Before {{date}}',
+      choix: {
+        conforme: 'Compliant',
+        non_conforme: 'Non-compliant',
+      },
       dansMois_one: 'In {{count}} month',
       dansMois_other: 'In {{count}} months',
       dernier: 'Last: {{dernier}}.',
@@ -11577,6 +11653,7 @@ export default {
         envoi: 'The inspection was not saved.',
         label: 'Name the inspection.',
         nextDue: 'The next inspection comes after this one.',
+        result: 'Say whether the inspection is compliant.',
       },
       etat: {
         a_jour: 'Up to date',
@@ -11587,22 +11664,30 @@ export default {
       fermer: 'Close the inspection',
       formTitre: 'Record an inspection',
       histoCourt: '{{date}} · {{par}}',
+      histoDateResultat: '{{date}} · {{resultat}}',
       histoDetail: '{{date}} · {{par}} · next: {{prochain}}',
       histoDetailSansPar: '{{date}} · next: {{prochain}}',
       historique: 'History',
       histoTitre: 'Inspection: {{label}}',
+      histoTitreResultat: 'Inspection: {{label}} · {{resultat}}',
       joindre: 'Attach the report (PDF, optional)',
       ouvrir: 'Open the inspection {{label}}',
       par: 'By',
       parPlaceholder: 'Company, body',
       prochain: 'Next: {{date}}',
       prochainChamp: 'Next inspection',
+      prochainNonConforme: 'Next: {{date}} · non-compliant',
       propose: 'Suggested: one year later. Can be changed.',
       proposeEcart: 'Suggested: the same gap as last time. Can be changed.',
       quel: 'Which inspection?',
       quelPlaceholder: 'Goals and baskets, fire extinguishers…',
       rappel: 'A reminder arrives 30 days before each due date.',
       rapportJoint: 'report attached',
+      resultat: 'Result',
+      resultats: {
+        conforme: 'compliant',
+        non_conforme: 'non-compliant',
+      },
       retirerRapport: 'Remove the report',
       titre: 'Mandatory inspections',
       videTexte:
@@ -11700,6 +11785,9 @@ export default {
       etatEnService: 'No open report, no closure in progress.',
       etatFermee: 'From {{debut}} to {{fin}}',
       etatFermeeMotif: 'From {{debut}} to {{fin}} · {{motif}}',
+      etatNonConforme: 'Non-compliant inspection: {{label}}; the facility stays open.',
+      etatNonConformes_one: '{{count}} non-compliant inspection; the facility stays open.',
+      etatNonConformes_other: '{{count}} non-compliant inspections; the facility stays open.',
       fermer: 'Close the facility…',
       fermerPanneau: 'Close the report',
       feuilleResolu: 'Mark as resolved',
@@ -12559,6 +12647,14 @@ export default {
           unseen_other: '{{count}} new replies',
         },
         myChildren: {
+          allInTeam: 'All in a team',
+          count_one: '{{count}} child',
+          count_other: '{{count}} children',
+          empty: 'Add your child',
+          noTeam_one: '{{count}} without a team',
+          noTeam_other: '{{count}} without a team',
+          pending_one: '{{count}} request pending',
+          pending_other: '{{count}} requests pending',
           subtitle: 'Add them, edit their profile, find them a club.',
           title: 'My children',
         },
@@ -15734,6 +15830,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Download the receipt',
+      remaining: '{{amount}} left to pay',
       settled: 'settled',
       settledOn: 'settled on {{settledOn}}',
     },
@@ -15872,6 +15969,10 @@ export default {
     },
   },
   notificationList: {
+    complexe: {
+      dejaTranchee: 'This request has already been decided.',
+      demandeAcceptee: 'Request accepted.',
+    },
     delete: {
       cancel: 'Cancel',
       confirm: 'Delete this notification?',
@@ -16613,6 +16714,7 @@ export default {
     },
   },
   personalPlanningWeekFullscreen: {
+    absenceVacances: '{{club}} does not attend during school holidays ({{zone}}).',
     backToTheCurrentWeek: 'Back to the current week',
     backToToday: 'Back to today',
     blockSheet: {
@@ -16627,12 +16729,15 @@ export default {
     closeTheFullScreenPlanning: 'Close the full-screen planning',
     events_one: '{{count}} event',
     events_other: '{{count}} events',
+    finVacances: 'No further session is scheduled for this slot.',
+    libreVacances: '{{heures}} · free ({{equipe}}: except school holidays)',
     nextDay: 'Next day',
     nextWeek: 'Next week',
     noSlotThisWeek: 'No slot this week',
     peak: 'Busiest moment: {{peak}} of {{max}}',
     previousDay: 'Previous day',
     previousWeek: 'Previous week',
+    retourVacances: 'Back on {{jour}}.',
     rotateForWeek: 'Phone sideways: the whole week.',
     slots_one: '{{count}} team at a time',
     slots_other: '{{count}} teams at a time',
@@ -17045,7 +17150,7 @@ export default {
   },
   playerMode: {
     active: {
-      description: 'You see the app as a player of your team. Your {{staff}} rights are intact.',
+      description: 'You see the app as a player of your team. Your {{staffDe}} rights are intact.',
       exit: 'Back to {{staff}} mode',
       title: 'Player mode',
     },
@@ -17060,7 +17165,7 @@ export default {
     parent: {
       and: 'and',
       back: 'Back to parent mode',
-      description: 'You see the app as a parent. Your {{staff}} rights are intact.',
+      description: 'You see the app as a parent. Your {{staffDe}} rights are intact.',
       enter: 'Switch to parent mode',
       title: 'Parent mode',
       waiting_one: '{{prenoms}} is waiting for you in parent mode.',
@@ -17088,6 +17193,10 @@ export default {
       title: 'Do you play a sport too?',
     },
     staff: {
+      coach: 'coach',
+      president: 'manager',
+    },
+    staffDe: {
       coach: 'coach',
       president: 'manager',
     },
@@ -18491,6 +18600,8 @@ export default {
       favoris: 'Notify players who have this venue as a favourite',
       favorisAge: 'Only those who meet the venue\'s minimum age ({{age}}) are notified.',
       favorisAgeSansChiffre: 'Only those who meet the venue\'s minimum age are notified.',
+      favorisPrevenus_one: '{{count}} favourite notified',
+      favorisPrevenus_other: '{{count}} favourites notified',
       fermee: 'Closed',
       fermeeTexte: 'This ad is closed.',
       fermer: 'Close the ad',
@@ -18608,9 +18719,11 @@ export default {
       dateDeNaissance: 'Add your date of birth to book.',
       dateDeNaissanceTexte: 'Each venue sets a minimum age.',
       delaiAnnulation: 'The deadline has passed: call the venue.',
+      demandeRetiree: 'Your request is withdrawn',
       equipe: 'Only an adult coach can book for their team.',
       ferme: 'This slot is closed by the venue.',
       fermeture: 'The venue will be closed',
+      fermetureDuTerrain: '{{terrain}} will be closed',
       fermetureSansDate: 'A venue closure cancelled your booking.',
       fermetureTexte: 'Closed {{fermeture}}: your booking is cancelled.',
       introuvable: 'This booking no longer exists.',
@@ -18726,6 +18839,7 @@ export default {
       annulerTexte: 'The venue will be told. It is free until {{jour}} at {{heure}}.',
       arreterLaCollecte: 'Stop gathering players',
       arreterQuestion: 'Stop gathering players for {{quand}}?',
+      confirmeeLaVeille: 'Confirmed the day before, on {{jour}} at {{heure}}',
       dateLimite: 'Deadline: {{echeance}} · the slot stays free until then',
       discussion: 'Group chat',
       ecrireAuComplexe: 'Message the venue',
@@ -18737,6 +18851,8 @@ export default {
       inscritsPrevenus_one: 'The player who signed up will be notified.',
       inscritsPrevenus_other: 'The {{count}} players who signed up will be notified.',
       jourAHeure: '{{jour}} at {{heure}}',
+      marqueeNonHonoree: 'Marked as a no-show by the venue on {{jour}}',
+      marqueeNonHonoreeRang: 'Marked as a no-show by the venue on {{jour}} ({{rang}} of {{seuil}})',
       ouiAnnuler: 'Yes, cancel',
       ouiArreter: 'Yes, stop',
       ouiRetirer: 'Yes, withdraw',
@@ -18868,6 +18984,7 @@ export default {
       erreurTexte: 'Check your connection and try again.',
       exterieur: 'Outdoor',
       filtrer: 'Filter',
+      filtrerActifs: 'Filter · {{count}}',
       filtrerLeSport: 'Filter {{sport}} pitches',
       filtres: 'Filters',
       heure: 'Time',
@@ -18908,6 +19025,7 @@ export default {
     },
     resultat: {
       auNomDe: 'in the name of {{nom}}',
+      canalRejoint: 'You joined the {{complexe}} channel.',
       collecteLancee: 'Player call started: {{presents}}/{{quorum}}',
       collecteTexte: 'Nothing is booked until {{quorum}} players have said yes. The slot stays '
         + 'free: someone may take it before you.',
@@ -19278,6 +19396,8 @@ export default {
       tap: 'Tap a marker',
       updating: 'Updating markers...',
       visible: '{{total}} visible markers',
+      visible_one: '{{count}} visible marker',
+      visible_other: '{{count}} visible markers',
       zoomToSeeAll: 'Zoom in to see everything',
     },
     recenter: 'Recenter',
@@ -23221,6 +23341,9 @@ export default {
     autreHeure: 'Another hour',
     autresHeures: 'Other hours',
     cancel: 'Cancel',
+    // A7-UX-2 (22/10) : les heures pleines du jour dans la grille du site.
+    complet: 'full',
+    enPartie: 'partly full',
     heure: '{{heure}}h',
   },
   tomTomSearchMapNative: {

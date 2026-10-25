@@ -175,3 +175,61 @@ describe('E-G13 — les affiches du complexe', () => {
     expect(arbre.root.findAllByType(TextInput)).toHaveLength(0);
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2, E-G13 : « Partager » et « Imprimer en A4 » fabriquaient bien l'affiche,
+// rangée dans les Photos / Téléchargements du téléphone (Android l'enregistre puis propose « ouvrir avec »),
+// mais RIEN ne disait où elle était partie : un fichier rangé sans un mot est indiscernable d'un échec. L'écran
+// le dit, comme l'affiche d'un événement (`EventPublishedShowcase`, mêmes phrases). Et (reste de RESA-L5B-2)
+// le partage porte un TEXTE : le nom du complexe et le lien de sa page (celui du QR, `?depuis=affiche`) — sur
+// Android il part dans le presse-papiers, et l'écran le dit aussi.
+describe('RESA-FIN-APP (2) (4) E-G13 — où est l’affiche, et le texte du partage', () => {
+  it('Partager (Android) : « C’est enregistré dans ta galerie photo. Le texte est copié… »', async () => {
+    mockPartager.mockResolvedValue({ messageCopied: true, opened: false, outcome: 'gallery' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Partager l’affiche');
+    expect(lisibles(arbre)).toContain(
+      'C’est enregistré dans ta galerie photo. Le texte est copié : colle-le avec l’image.',
+    );
+  });
+
+  it('Imprimer en A4 (Android) : « C’est enregistré dans tes téléchargements. »', async () => {
+    mockPartager.mockResolvedValue({ messageCopied: false, opened: true, outcome: 'downloads' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Imprimer en A4');
+    expect(lisibles(arbre)).toContain('C’est enregistré dans tes téléchargements.');
+  });
+
+  it('feuille de partage (iPhone) ou téléchargement (site) : pas un mot de plus', async () => {
+    mockPartager.mockResolvedValue({ outcome: 'shared' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Partager l’affiche');
+    expect(lisibles(arbre).some((texte) => texte.startsWith('C’est enregistré'))).toBe(false);
+  });
+
+  it('le texte du partage nomme le complexe et porte le lien de sa page', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Partager l’affiche');
+    const { message } = mockPartager.mock.calls.at(-1)[2];
+    expect(message).toContain('Le Five de Montrivage');
+    // RESA-FIN-APP-2 : l'adresse publique avec la barre finale (serveur RESAFINSRV2 65eb5cda).
+    expect(message).toMatch(/\/annuaire\/complexes\/le-five\/\?depuis=affiche$/);
+  });
+});
+
+describe('BH16 P13-12 — partager juste après la saisie du prix', () => {
+  it('l’affiche partagée porte le prix qui vient d’être tapé, sans attendre', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Promotion');
+    const prix = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityLabel === 'Prix de la place' && n.props?.onChangeText
+    ))[0];
+    await act(async () => {
+      prix.props.onChangeText('8');
+    });
+    await appuyer(arbre, 'Partager l’affiche');
+    expect(mockPartager.mock.calls.at(-1)[1]).toMatchObject({
+      prix: '8',
+      textePromo: expect.stringContaining('8 €'),
+    });
+  });
+});

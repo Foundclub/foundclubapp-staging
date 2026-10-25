@@ -92,3 +92,10 @@ describe('texteDeLaNotice (§3.17)', () => {
     expect(texteDeLaNotice(null, 'moi', t, 'Phrase du serveur.')).toBe('Phrase du serveur.');
   });
 });
+
+describe('BH04 / P1-22 — lecteur encore inconnu (meId vide)', () => {
+  test('une cible sans identifiant n est pas « vous »', () => {
+    const ajout = notice('admin_inherited', { targets: [{ firstname: 'Léa', lastname: 'Morel' }] });
+    expect(texteDeLaNotice(ajout, '', t)).toBe('Léa Morel devient admin du groupe.');
+  });
+});

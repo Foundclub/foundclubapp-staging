@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { format as formatDate } from 'date-fns';
 import {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -10,12 +11,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Dimensions,
   Image,
   Linking,
   Platform,
-  RefreshControl, Text, TouchableOpacity, View,
+  RefreshControl, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -1162,6 +1165,18 @@ function Profile({ navigation, route }) {
   );
 
   // ----- Bascule de compte (modal / panneau web) : logique inchangée -----
+  // SUPADM (recette iPhone d'Adel du 23/10, capture 03) — avec 7 comptes, la feuille montait
+  // presque en haut, mais la liste s'arrêtait à 70 % de l'écran (le plafond par défaut de la zone
+  // qui défile) : une bande vide dessous, « Ajouter un compte » coupé. La bibliothèque règle la
+  // hauteur de la feuille sur le CONTENU, plafonné à l'écran moins sa marge du haut (BottomModal :
+  // `topInset={insets.top + 20}`) ; la zone qui défile reçoit le même plafond, et la remplit.
+  // Contexte lu sans exiger son fournisseur : 0 de marge s'il manque (témoins).
+  const margesDeLEcran = useContext(SafeAreaInsetsContext);
+  const { height: hauteurDeLaFenetre } = useWindowDimensions();
+  const plafondDeLaFeuilleDesComptes = Math.max(
+    0.7,
+    (hauteurDeLaFenetre - (margesDeLEcran?.top || 0) - 20) / Dimensions.get('screen').height,
+  );
   const accountSwitcherContent = (
     <View style={[Spaces.gap[12], Spaces.paddingVertical[16]]}>
       {!hasMultipleConnectedAccounts ? (
@@ -1398,6 +1413,7 @@ function Profile({ navigation, route }) {
             contentContainerStyle={{ paddingBottom: 8 }}
             hideCloseButton
             isVisible={isAccountModalVisible}
+            maxContentHeightRatio={plafondDeLaFeuilleDesComptes}
             useSafeAreaBottomInset={false}
           >
             {isAccountSwitcherTutorial ? (

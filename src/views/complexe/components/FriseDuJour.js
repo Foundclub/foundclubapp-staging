@@ -54,24 +54,27 @@ function FriseDuJour({
   const creneaux = lignes.flatMap((ligne) => ligne.creneaux);
   if (!creneaux.length) return null;
   const debuts = creneaux.map((creneau) => Number(minutesDe(creneau.from)));
-  const fins = creneaux.map((creneau) => Number(minutesDe(creneau.to)));
+  // BH16 P13-16 : une fin à minuit (ou avant le début) tombe le lendemain.
+  const finDe = (/** @type {CreneauDeLaFrise} */ creneau) => {
+    const de = Number(minutesDe(creneau.from));
+    const a = Number(minutesDe(creneau.to));
+    return a <= de ? a + 24 * 60 : a;
+  };
+  const fins = creneaux.map(finDe);
   const debut = Math.floor(Math.min(...debuts) / 60) * 60;
   const fin = Math.ceil(Math.max(...fins) / 60) * 60;
   const largeur = (fin - debut) * PAR_MINUTE;
   const heures = Array.from({ length: (fin - debut) / 60 + 1 }, (_v, index) => debut + index * 60);
 
   const libelleDe = (/** @type {EtatDuCreneau} */ etat) => libelleDeLEtat(t, etat);
-  const styleDe = (/** @type {EtatDuCreneau} */ etat, /** @type {string} */ couleur) => (
-    styleDuCreneau(Colors, etat, couleur)
-  );
+  const styleDe = (/** @type {EtatDuCreneau} */ etat) => styleDuCreneau(Colors, etat);
 
   const caseDuCreneau = (
     /** @type {LigneDeLaFrise} */ ligne,
     /** @type {CreneauDeLaFrise} */ creneau,
   ) => {
     const de = Number(minutesDe(creneau.from));
-    const a = Number(minutesDe(creneau.to));
-    const couleur = ligne.couleur || Colors.primary500;
+    const a = finDe(creneau);
     const libelle = creneau.libelle || libelleDe(creneau.etat);
     const Case = onToucher ? TouchableOpacity : View;
     return (
@@ -103,7 +106,7 @@ function FriseDuJour({
             top: 4,
             width: Math.max(8, (a - de) * PAR_MINUTE - 2),
           },
-          styleDe(creneau.etat, couleur),
+          styleDe(creneau.etat),
         ]}
         testID={`frise-creneau-${ligne.cle}-${creneau.from}`}
       >
@@ -149,7 +152,7 @@ function FriseDuJour({
                     { left: (minutes - debut) * PAR_MINUTE, position: 'absolute' },
                   ]}
                 >
-                  {texteHeure(heureDe(minutes))}
+                  {texteHeure(heureDe(minutes % (24 * 60)))}
                 </Text>
               ))}
             </View>
@@ -182,7 +185,7 @@ function FriseDuJour({
                   {
                     borderRadius: 4, borderWidth: 1, height: 14, width: 22,
                   },
-                  styleDe(etat, Colors.primary500),
+                  styleDe(etat),
                 ]}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>{libelleDe(etat)}</Text>

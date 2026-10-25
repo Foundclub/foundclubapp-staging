@@ -218,7 +218,8 @@ function PartenairesDuComplexe({ complexeId }) {
             keyboardType="url"
             label={libelleLien}
             onChangeText={(valeur) => setLien(String(valeur))}
-            placeholder={t('addSponsor.fields.link.placeholder', 'https://www.nike.com')}
+            // RESA-FIN-APP : un exemple neutre, jamais une vraie marque (tournées 1 et 2).
+            placeholder={t('complexeMaPage.partenaires.lienExemple', 'https://www.exemple.fr')}
             value={lien}
           />
           <Text style={[Fonts.p3, Fonts.neutral200]}>

@@ -2205,6 +2205,7 @@ export default {
     errors: {
       assign: "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
       noTeamSelected: 'Sélectionne au moins une équipe.',
+      partial: '{{done}} assignée(s), {{failed}} en échec : réessaie pour les autres.',
       trainerNotFound: 'Impossible de retrouver cet entraîneur. Merci de réessayer.',
     },
     fallbacks: {
@@ -2263,6 +2264,11 @@ export default {
       indice: 'Ouvre ta conversation avec l’équipe FoundClub',
       invitation: 'Une question ? Écris-nous.',
       invitationVous: 'Une question ? Écrivez-nous.',
+    },
+    messages: {
+      titre: 'Boîte de l’assistance',
+      tout_one: 'Voir toute la boîte ({{count}})',
+      tout_other: 'Voir toute la boîte ({{count}})',
     },
     placeholder: 'Écris ton message à l’équipe',
     placeholderVous: 'Écrivez votre message à l’équipe',
@@ -3720,6 +3726,7 @@ export default {
   },
   clubLicenseMemberDetail: {
     actionModal: {
+      amountInvalid: 'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
       amountPlaceholder: 'Montant en euros',
       noteOptional: 'Note optionnelle',
       paymentMethod: 'Moyen de paiement',
@@ -4793,6 +4800,10 @@ export default {
       noCampaign: {
         message: 'Crée au moins une campagne avant de relancer une synchronisation de secours.',
         title: 'Aucune campagne',
+      },
+      rejectPayment: {
+        message: 'La déclaration sera refusée et le membre devra payer à nouveau.',
+        title: 'Rejeter ce paiement ?',
       },
       resync: {
         // eslint-disable-next-line max-len
@@ -6095,9 +6106,9 @@ export default {
       avecCreneaux: '{{count}} avec tes créneaux de la Ville',
     },
     creneau: {
-      ligne: '{{team}} · {{rythme}} {{hours}}',
+      ligne: '{{team}} · {{quand}}',
       // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
-      lignePeriode: '{{team}} · {{rythme}} {{hours}} · {{periode}}',
+      lignePeriode: '{{team}} · {{quand}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -6461,6 +6472,8 @@ export default {
       modifie: 'Créneau modifié',
       modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
       pourLeClub: 'Pour {{club}}',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur une seule étape.
+      pourQui: 'Pour qui ?',
       recapClub: 'Club · équipe',
       recapHeures: 'Jour et heures',
       relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',
@@ -7119,6 +7132,7 @@ export default {
       placePrise: 'Cette place n’est plus libre. Choisis-en une autre.',
       placePriseVille: 'Cette place n’est plus libre. Choisissez-en une autre.',
       propositionClose: 'Cette proposition n’attend plus de réponse.',
+      propositionDeclinee: 'La proposition de la Ville a été déclinée : choisis une autre place.',
       titre: 'La séance n’a pas bougé',
       titreVille: 'Rien n’a été envoyé',
       tropTard: 'La séance a déjà commencé.',
@@ -7447,10 +7461,20 @@ export default {
       promotionDit: 'Une place de réservation à un prix que tu fixes.',
       titre: 'Le texte',
     },
+    texteDuPartage: 'Réserve ton terrain chez {{nom}} sur FoundClub.',
     titre: 'Ton affiche complexe est prête',
   },
   // RESA-L5B-2 (20/10/2026) — le canal du complexe, côté gérant (E-G12, serveur RESA-L4).
   complexeCanal: {
+    // RESA-PARTAGER (23/10/2026, A-G32) — l'annonce « Il me manque des joueurs » partagée dans le
+    // canal : sa carte (gérant et joueurs).
+    annonce: {
+      places_one: '{{count}} place',
+      places_other: '{{count}} places',
+      titre: 'Partie à compléter',
+      voir: 'Voir l’annonce',
+      voirLibelle: 'Voir l’annonce : {{quand}}, {{places}}',
+    },
     ecrire: 'Écrire aux membres',
     erreur: 'Impossible de charger ton canal.',
     membres: {
@@ -7462,6 +7486,18 @@ export default {
     },
     nombre_one: '{{count}} membre',
     nombre_other: '{{count}} membres',
+    // RESA-PARTAGER (23/10/2026, A-G32) — « Partager dans mon canal » (E-G05) et « Partager une
+    // annonce » (E-G12).
+    partager: {
+      aucune: 'Aucune partie à compléter en ce moment. Quand un joueur publie « Il me manque des '
+        + 'joueurs » sur une réservation chez toi, elle apparaît ici.',
+      choisir: 'Choisis la partie à compléter : elle arrive en carte dans ton canal.',
+      dansMonCanal: 'Partager dans mon canal',
+      deja: 'Annonce déjà partagée dans ton canal.',
+      erreur: 'Impossible de charger tes réservations.',
+      fait: 'Annonce partagée dans ton canal.',
+      titre: 'Partager une annonce',
+    },
     pause: 'Ton complexe est suspendu : son canal est en pause.',
     regle: 'Tous les membres seront prévenus.',
     titre: 'Canal · {{nom}}',
@@ -7483,6 +7519,8 @@ export default {
       jusqua: 'Banni jusqu’au {{jusqua}} · raison privée : {{raison}}',
       nePeutPlus: '{{nom}} ne peut plus réserver chez toi.',
       peutANouveau: '{{nom}} peut à nouveau réserver.',
+      // RESA-FIN-APP-3 (23/10/2026) — le ban automatique compte depuis la levée du dernier ban.
+      repartDeLaLevee: 'Le compteur repart de la levée du ban : {{nombre}} sur {{seuil}}.',
       titre: 'Bannissement',
     },
     bannir: {
@@ -7497,6 +7535,8 @@ export default {
     chiffres: {
       aVenir_one: 'réservation à venir',
       aVenir_other: 'réservations à venir',
+      // RESA-FIN-APP-3 (23/10/2026) — les non honorées depuis la levée du dernier ban (`noShowsSinceLift`).
+      depuisLaLevee: '{{nombre}} depuis la levée du ban',
       // RESA-L5B-2 (20/10/2026) — la fidélité et les parties jouées (serveur RESA-L4).
       fidelite: 'fidélité',
       horsDelai_one: 'annulation hors délai',
@@ -7576,6 +7616,8 @@ export default {
         suspendu: 'Suspendu le {{date}}',
         verifie: 'Marqué vérifié le {{date}}',
       },
+      // RESA-FIN-APP-3 (23/10/2026) — l'auteur d'une ligne du journal (`auteurNom`).
+      journalPar: 'par {{nom}}',
       parAuteur: 'Par {{nom}} · {{jour}} à {{heure}}',
       reservations_one: '{{count}} réservation',
       reservations_other: '{{count}} réservations',
@@ -7696,10 +7738,14 @@ export default {
       aujourdhui: 'Aujourd’hui · {{jour}}',
       creerAffiche: 'Créer une affiche',
       demandes: 'demandes en attente',
+      demandes_one: 'demande en attente',
+      demandes_other: 'demandes en attente',
       ecrireFoundClub: 'Écrire à FoundClub',
       enLigne: '{{nom}} est en ligne. Ajoute ton premier terrain.',
       erreur: 'Impossible de charger ta journée.',
       favoris: 'nouveaux favoris cette semaine',
+      favoris_one: 'nouveau favori cette semaine',
+      favoris_other: 'nouveaux favoris cette semaine',
       occupation: 'd’occupation cette semaine',
       ouvrirCreneaux: 'Ouvrir des créneaux',
       premierTerrain: 'Ajoute ton premier terrain pour recevoir des réservations.',
@@ -7707,6 +7753,8 @@ export default {
       reessayer: 'Réessayer',
       refus: 'Tu ne gères plus ce complexe.',
       reservationsDuJour: 'réservations aujourd’hui',
+      reservationsDuJour_one: 'réservation aujourd’hui',
+      reservationsDuJour_other: 'réservations aujourd’hui',
       revenirJoueur: 'Revenir en mode joueur',
       sansCreneaux: '{{terrain}} n’a pas encore de créneaux.',
       suspendu: 'Ton complexe est suspendu par FoundClub : il n’apparaît plus dans l’app.',
@@ -7748,6 +7796,10 @@ export default {
       fermer: 'Fermer',
       garde: 'Tu gardes tes équipes, tes réservations et tes messages de joueur.',
       heures: '{{heures}} h',
+      manqueAdresse: 'Choisis l’adresse dans la liste.',
+      manqueNom: 'Donne un nom au complexe.',
+      manqueSports: 'Choisis au moins un sport.',
+      manqueTelephone: 'Ajoute le téléphone montré aux joueurs.',
       nom: 'Nom',
       nomExemple: 'Ex. : Le Five de Montrivage',
       nonContinuer: 'Non, continuer',
@@ -8053,6 +8105,7 @@ export default {
     partenaires: {
       aide: 'Il apparaîtra sur ta page et sur ta carte dans la recherche.',
       lien: 'Lien vers le site du partenaire (facultatif)',
+      lienExemple: 'https://www.exemple.fr',
       supprimer: 'Supprimer {{nom}}',
     },
     pasVerifie: '« Vérifié » s’ajoutera quand FoundClub l’aura vérifié.',
@@ -8086,6 +8139,8 @@ export default {
       acceptee: 'Demande acceptée. {{nom}} est prévenu.',
       accepter: 'Accepter',
       changer: 'Changer',
+      // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : une demande expirée ne se tranche plus.
+      delaiPasse: 'Délai de réponse passé : la demande expire sans réponse.',
       demandeLe: 'demande le',
       erreur: 'Les demandes n’ont pas pu être lues.',
       erreurDecision: 'La demande n’a pas pu être tranchée.',
@@ -8112,14 +8167,17 @@ export default {
       videTraitees: 'Aucune demande traitée.',
     },
     fermetures: {
+      annulerModification: 'Annuler la modification',
       au: 'Au',
       aucuneTouchee: 'Aucune réservation touchée.',
       aVenir: 'À venir',
       aVenirTitre: 'À venir',
       du: 'Du',
       enCours: 'En cours',
+      enregistrerModification: 'Enregistrer',
       erreur: 'Impossible de charger les fermetures.',
       erreurFermer: 'La fermeture n’a pas pu être posée.',
+      erreurModifier: 'La fermeture n’a pas pu être modifiée.',
       erreurRouvrir: 'La fermeture n’a pas pu être rouverte.',
       etDautres: 'et d’autres…',
       // eslint-disable-next-line max-len
@@ -8131,6 +8189,12 @@ export default {
       fermer: 'Fermer',
       fermerEtPrevenir: 'Fermer et prévenir',
       meteo: 'Météo',
+      modifie: 'Modifié : {{jours}}.',
+      modifieEtPrevenu: 'Modifié : {{jours}}. {{count}} joueurs prévenus.',
+      modifieEtPrevenu_one: 'Modifié : {{jours}}. {{count}} joueur prévenu.',
+      modifieEtPrevenu_other: 'Modifié : {{jours}}. {{count}} joueurs prévenus.',
+      modifier: 'Modifier',
+      modifierTitre: 'Modifier la fermeture',
       mot: 'Mot aux joueurs (facultatif)',
       motExemple: 'Ex. : réfection du gazon',
       motif: 'Motif',
@@ -8141,6 +8205,7 @@ export default {
       pasFerme: 'Pas fermé : {{terrains}}. Réessaie pour eux.',
       personne: 'Personne à prévenir.',
       rouvert: 'Rouvert : les créneaux sont libres.',
+      rouverte: 'Rouverte',
       rouvrir: 'Rouvrir',
       rouvrirDit: 'Les créneaux redeviennent libres. Les réservations annulées ne reviennent pas.',
       rouvrirQuestion: 'Rouvrir {{terrains}} : {{jours}} ?',
@@ -8149,6 +8214,8 @@ export default {
       touchees_one: '{{count}} réservation est touchée.',
       touchees_other: '{{count}} réservations sont touchées.',
       toucheesDit: 'Elles seront annulées et les joueurs prévenus.',
+      toucheesDit_one: 'Elle sera annulée et les joueurs prévenus.',
+      toucheesDit_other: 'Elles seront annulées et les joueurs prévenus.',
       tous: 'Tous',
       travaux: 'Travaux',
       vide: 'Aucune fermeture prévue.',
@@ -8164,6 +8231,8 @@ export default {
       appeler: 'Appeler',
       auNomDe: 'Au nom de : {{nom}}',
       auNomDeChamp: 'Au nom de',
+      // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, la conversation de la réservation.
+      ecrireAuReserveur: 'Écrire au réserveur',
       enregistrer: 'Enregistrer',
       erreur: 'Impossible de charger la réservation.',
       erreurGeste: 'Le geste n’a pas pu être fait.',
@@ -8179,6 +8248,7 @@ export default {
       prixJoueur: '{{montant}} par joueur, à régler sur place',
       quandOu: 'Quand, où',
       qui: 'Qui',
+      recompense: 'Récompense disponible : {{recompense}}',
       reservationsIci_one: '{{count}} réservation ici',
       reservationsIci_other: '{{count}} réservations ici',
       seraPrevenu: '{{nom}} sera prévenu.',
@@ -8187,6 +8257,7 @@ export default {
       supprimerDit: 'Le créneau redevient libre.',
       supprimerQuestion: 'Supprimer la réservation de {{nom}} ?',
       titre: 'Réservation',
+      validerRecompense: 'Valider la partie offerte',
       voirClientIndice: 'Ouvre sa fiche client',
       voirPlanning: 'Voir dans le planning',
     },
@@ -8309,6 +8380,7 @@ export default {
       erreur: 'Le terrain n’a pas pu être retiré.',
       fait_one: '{{nom}} est retiré. {{count}} réservation annulée, le joueur est prévenu.',
       fait_other: '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',
+      faitSansReservation: '{{nom}} est retiré. Aucune réservation à annuler.',
       retirer: 'Retirer',
       titre: 'Retirer {{nom}} ?',
     },
@@ -12281,6 +12353,10 @@ export default {
       annuler: 'Annuler',
       aRefaire: 'À refaire avant le {{date}}',
       avantLe: 'Avant le {{date}}',
+      choix: {
+        conforme: 'Conforme',
+        non_conforme: 'Non conforme',
+      },
       dansMois_one: 'Dans {{count}} mois',
       dansMois_other: 'Dans {{count}} mois',
       dernier: 'Dernier : {{dernier}}.',
@@ -12291,6 +12367,7 @@ export default {
         envoi: 'Le contrôle n’a pas été enregistré.',
         label: 'Nommez le contrôle.',
         nextDue: 'Le prochain contrôle vient après celui-ci.',
+        result: 'Dites si le contrôle est conforme.',
       },
       etat: {
         a_jour: 'À jour',
@@ -12301,22 +12378,30 @@ export default {
       fermer: 'Fermer le contrôle',
       formTitre: 'Noter un contrôle',
       histoCourt: '{{date}} · {{par}}',
+      histoDateResultat: '{{date}} · {{resultat}}',
       histoDetail: '{{date}} · {{par}} · prochain : {{prochain}}',
       histoDetailSansPar: '{{date}} · prochain : {{prochain}}',
       historique: 'Historique',
       histoTitre: 'Contrôle : {{label}}',
+      histoTitreResultat: 'Contrôle : {{label}} · {{resultat}}',
       joindre: 'Joindre le rapport (PDF, facultatif)',
       ouvrir: 'Ouvrir le contrôle {{label}}',
       par: 'Par',
       parPlaceholder: 'Société, organisme',
       prochain: 'Prochain : {{date}}',
       prochainChamp: 'Prochain contrôle',
+      prochainNonConforme: 'Prochain : {{date}} · non conforme',
       propose: 'Proposé : un an après. Modifiable.',
       proposeEcart: 'Proposé : le même écart que la fois précédente. Modifiable.',
       quel: 'Quel contrôle ?',
       quelPlaceholder: 'Buts et paniers, extincteurs…',
       rappel: 'Un rappel arrive 30 jours avant chaque échéance.',
       rapportJoint: 'rapport joint',
+      resultat: 'Résultat',
+      resultats: {
+        conforme: 'conforme',
+        non_conforme: 'non conforme',
+      },
       retirerRapport: 'Retirer le rapport',
       titre: 'Contrôles obligatoires',
       videTexte:
@@ -12418,6 +12503,9 @@ export default {
       etatEnService: 'Aucun signalement ouvert, aucune fermeture en cours.',
       etatFermee: 'Du {{debut}} au {{fin}}',
       etatFermeeMotif: 'Du {{debut}} au {{fin}} · {{motif}}',
+      etatNonConforme: 'Contrôle non conforme : {{label}} ; l’installation reste ouverte.',
+      etatNonConformes_one: '{{count}} contrôle non conforme ; l’installation reste ouverte.',
+      etatNonConformes_other: '{{count}} contrôles non conformes ; l’installation reste ouverte.',
       fermer: 'Fermer l’installation…',
       fermerPanneau: 'Fermer le signalement',
       feuilleResolu: 'Marquer résolu',
@@ -13322,6 +13410,15 @@ export default {
         },
         // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
         myChildren: {
+          // REC17-001-B (carte B, 22/10) : le nombre et UNE pastille, la plus urgente.
+          allInTeam: 'Tous en équipe',
+          count_one: '{{count}} enfant',
+          count_other: '{{count}} enfants',
+          empty: 'Ajoute ton enfant',
+          noTeam_one: '{{count}} sans équipe',
+          noTeam_other: '{{count}} sans équipe',
+          pending_one: '{{count}} demande en attente',
+          pending_other: '{{count}} demandes en attente',
           subtitle: 'Déclare-les, corrige leur fiche, cherche-leur un club.',
           title: 'Mes enfants',
         },
@@ -16452,6 +16549,7 @@ export default {
     },
     row: {
       downloadReceipt: 'Télécharger le reçu',
+      remaining: 'reste {{amount}} à payer',
       settled: 'soldée',
       settledOn: 'soldée le {{settledOn}}',
     },
@@ -16591,6 +16689,10 @@ export default {
     },
   },
   notificationList: {
+    complexe: {
+      dejaTranchee: 'Cette demande est déjà tranchée.',
+      demandeAcceptee: 'Demande acceptée.',
+    },
     delete: {
       cancel: 'Annuler',
       confirm: 'Supprimer cette notification ?',
@@ -17184,6 +17286,7 @@ export default {
     },
   },
   personalPlanningWeekFullscreen: {
+    absenceVacances: '{{club}} ne vient pas pendant les vacances scolaires ({{zone}}).',
     backToTheCurrentWeek: 'Revenir à la semaine actuelle',
     backToToday: 'Revenir à aujourd’hui',
     blockSheet: {
@@ -17198,12 +17301,15 @@ export default {
     closeTheFullScreenPlanning: 'Fermer le planning plein écran',
     events_one: '{{count}} événement',
     events_other: '{{count}} événements',
+    finVacances: 'Aucune autre séance prévue sur ce créneau.',
+    libreVacances: '{{heures}} · libre ({{equipe}} : sauf vacances)',
     nextDay: 'Jour suivant',
     nextWeek: 'Semaine suivante',
     noSlotThisWeek: 'Aucun créneau cette semaine',
     peak: 'Au plus chargé : {{peak}} sur {{max}}',
     previousDay: 'Jour précédent',
     previousWeek: 'Semaine précédente',
+    retourVacances: 'Retour le {{jour}}.',
     rotateForWeek: 'Téléphone à l’horizontale : toute la semaine.',
     slots_one: '{{count}} équipe à la fois',
     slots_other: '{{count}} équipes à la fois',
@@ -17659,7 +17765,7 @@ export default {
   playerMode: {
     active: {
       // eslint-disable-next-line max-len
-      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits de {{staff}} sont intacts.",
+      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits {{staffDe}} sont intacts.",
       exit: 'Revenir en mode {{staff}}',
       title: 'Mode joueur',
     },
@@ -17677,7 +17783,7 @@ export default {
     parent: {
       and: 'et',
       back: 'Revenir en mode parent',
-      description: 'Tu vois l’app comme un parent. Tes droits de {{staff}} sont intacts.',
+      description: 'Tu vois l’app comme un parent. Tes droits {{staffDe}} sont intacts.',
       enter: 'Basculer en mode parent',
       title: 'Mode parent',
       waiting_one: '{{prenoms}} t’attend dans le mode parent.',
@@ -17707,6 +17813,11 @@ export default {
     staff: {
       coach: 'entraîneur',
       president: 'dirigeant',
+    },
+    // RESA-FIN-APP : « Tes droits d’entraîneur » (l'élision manquait : « de entraîneur »).
+    staffDe: {
+      coach: 'd’entraîneur',
+      president: 'de dirigeant',
     },
   },
   pollCreationModal: {
@@ -19123,6 +19234,8 @@ export default {
       favoris: 'Prévenir les joueurs qui ont ce complexe en favori',
       favorisAge: 'Seuls ceux qui ont l’âge minimum du complexe ({{age}} ans) sont prévenus.',
       favorisAgeSansChiffre: 'Seuls ceux qui ont l’âge minimum du complexe sont prévenus.',
+      favorisPrevenus_one: '{{count}} favori prévenu',
+      favorisPrevenus_other: '{{count}} favoris prévenus',
       fermee: 'Fermée',
       fermeeTexte: 'Cette annonce est fermée.',
       fermer: 'Fermer l’annonce',
@@ -19244,9 +19357,11 @@ export default {
       dateDeNaissance: 'Ajoute ta date de naissance pour réserver.',
       dateDeNaissanceTexte: 'Chaque complexe fixe un âge minimum.',
       delaiAnnulation: 'Le délai est passé : appelle le complexe.',
+      demandeRetiree: 'Ta demande est retirée',
       equipe: 'Seul un encadrant majeur réserve pour son équipe.',
       ferme: 'Ce créneau est fermé par le complexe.',
       fermeture: 'Le complexe sera fermé',
+      fermetureDuTerrain: '{{terrain}} sera fermé',
       fermetureSansDate: 'Une fermeture du complexe a annulé ta réservation.',
       fermetureTexte: 'Fermé {{fermeture}} : ta réservation est annulée.',
       introuvable: 'Cette réservation n’existe plus.',
@@ -19362,6 +19477,7 @@ export default {
       annulerTexte: 'Le complexe sera prévenu. C’est gratuit jusqu’au {{jour}} à {{heure}}.',
       arreterLaCollecte: 'Arrêter la collecte',
       arreterQuestion: 'Arrêter la collecte du {{quand}} ?',
+      confirmeeLaVeille: 'Confirmée la veille, le {{jour}} à {{heure}}',
       dateLimite: 'Date limite : {{echeance}} · le créneau reste libre jusque-là',
       discussion: 'Discussion du groupe',
       ecrireAuComplexe: 'Écrire au complexe',
@@ -19373,6 +19489,9 @@ export default {
       inscritsPrevenus_one: 'L’inscrit sera prévenu.',
       inscritsPrevenus_other: 'Les {{count}} inscrits seront prévenus.',
       jourAHeure: '{{jour}} à {{heure}}',
+      marqueeNonHonoree: 'Marquée non honorée par le complexe le {{jour}}',
+      // eslint-disable-next-line max-len
+      marqueeNonHonoreeRang: 'Marquée non honorée par le complexe le {{jour}} ({{rang}} sur {{seuil}})',
       ouiAnnuler: 'Oui, annuler',
       ouiArreter: 'Oui, arrêter',
       ouiRetirer: 'Oui, retirer',
@@ -19505,6 +19624,7 @@ export default {
       erreurTexte: 'Vérifie ta connexion et réessaie.',
       exterieur: 'Extérieur',
       filtrer: 'Filtrer',
+      filtrerActifs: 'Filtrer · {{count}}',
       filtrerLeSport: 'Filtrer les terrains de {{sport}}',
       filtres: 'Filtres',
       heure: 'Heure',
@@ -19548,6 +19668,7 @@ export default {
     },
     resultat: {
       auNomDe: 'au nom de {{nom}}',
+      canalRejoint: 'Tu as rejoint le canal de {{complexe}}.',
       collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
       collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
         + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
@@ -19949,6 +20070,8 @@ export default {
       tap: 'Touche un repère',
       updating: 'Mise à jour des repères...',
       visible: '{{total}} repères visibles',
+      visible_one: '{{count}} repère visible',
+      visible_other: '{{count}} repères visibles',
       zoomToSeeAll: 'Zoome pour tout voir',
     },
     recenter: 'Recentrer',
@@ -24182,6 +24305,9 @@ export default {
     autreHeure: 'Autre heure',
     autresHeures: 'Autres heures',
     cancel: 'Annuler',
+    // A7-UX-2 (22/10) : les heures pleines du jour dans la grille du site.
+    complet: 'complet',
+    enPartie: 'en partie',
     heure: '{{heure}} h',
   },
   tomTomSearchMapNative: {

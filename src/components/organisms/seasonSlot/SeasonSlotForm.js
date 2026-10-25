@@ -43,6 +43,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
@@ -486,8 +487,9 @@ function SeasonSlotForm({
     ? ['jour', 'horaires', 'quand', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
-      ...(fixedClubId ? [] : ['club']),
-      'equipe',
+      // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») — le club et l'équipe sur UNE étape (« Pour qui ? ») ;
+      // un club fixé (fiche d'un club) garde l'étape « Pour quelle équipe ? » seule.
+      fixedClubId ? 'equipe' : 'club',
       ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
       ...(compact && !quandOuvert ? [] : ['quand']),
       'recap',
@@ -495,7 +497,8 @@ function SeasonSlotForm({
   const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
-  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
+  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ
+    || (champ === 'equipe' && etapeCourante === 'club');
   const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
   const tunnelPleinEcran = pleinEcran && parcoursGuide;
   // Aller a une etape par son nom ; « Jour » et « Horaires » sautes (planning) se rouvrent.
@@ -751,13 +754,14 @@ function SeasonSlotForm({
   // ponytail: ouverture 08:00 – 22:00 (defaut de `freeRanges`) : la liste des creneaux ne dit pas
   // les horaires de l installation, et leur retrait est decide (VILLE-INSTALLATION). Le serveur
   // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
-  const heuresLibres = useMemo(() => {
-    if (!jour) return [];
-    return freeRanges(fullRangesOfSlots(
-      creneauxDuJour(lecture.data?.data, jour, slot?.documentId),
-      capacite,
-    ));
-  }, [capacite, jour, lecture.data, slot?.documentId]);
+  // A7-UX-2 (22/10, Adel « P4 oui ») : les moments complets, aussi passés à la grille du Début.
+  const heuresPleines = useMemo(() => (jour && !joursDifferents
+    ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jour, slot?.documentId), capacite)
+    : []), [capacite, jour, joursDifferents, lecture.data, slot?.documentId]);
+  const heuresLibres = useMemo(
+    () => (jour ? freeRanges(heuresPleines) : []),
+    [heuresPleines, jour],
+  );
 
   const nomDuClub = slot?.club?.name
     || clubs.find((ligne) => ligne.documentId === club)?.name
@@ -1238,8 +1242,9 @@ function SeasonSlotForm({
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
   );
   // COLL-R-A7 — en plein ecran, le titre de l etape pose deja la question : pas de libelle.
+  // A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose aussi la question : pareil.
   const libelleDuChamp = (/** @type {string} */ texte) => (
-    tunnelPleinEcran ? null : titreDuChamp(texte)
+    parcoursGuide ? null : titreDuChamp(texte)
   );
   // A7-UX (20/10) — `flex-start` : une puce suivie de « complet … » étirait toutes ses voisines
   // en ovales (capture du banc, « Quel jour ? », panneau du site).
@@ -1325,7 +1330,8 @@ function SeasonSlotForm({
   const suivantBloque = envoiEnCours || (() => {
     if (etapeCourante === 'installation') return !facilityId;
     if (etapeCourante === 'club') {
-      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error);
+      return !club || Boolean(lectureDesClubs?.isLoading || lectureDesClubs?.error)
+        || equipes.isLoading || Boolean(equipes.error);
     }
     if (etapeCourante === 'equipe') return !club || equipes.isLoading || Boolean(equipes.error);
     if (etapeCourante === 'jour') {
@@ -1387,7 +1393,7 @@ function SeasonSlotForm({
     : [nomDuClub, nomEquipe].filter(Boolean).join(' · ');
   /** @type {Record<string, string>} */
   const titres = {
-    club: t('collectiviteCreneaux.tunnel.club', 'Pour quel club ?'),
+    club: t('collectiviteCreneaux.tunnel.pourQui', 'Pour qui ?'),
     equipe: t('collectiviteCreneaux.tunnel.equipe', 'Pour quelle équipe ?'),
     horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
     installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
@@ -1502,7 +1508,8 @@ function SeasonSlotForm({
   );
 
   // Planche P4v4-attribuer, 4/5 : les heures libres du jour se lisent sous les selecteurs.
-  const libresDuJour = tunnelPleinEcran && visible('horaires') && !voirLibres && jour
+  // A7-UX-2 (22/10, Adel « P4 oui ») : aussi au panneau du site (avant : plein écran seulement).
+  const libresDuJour = parcoursGuide && visible('horaires') && !voirLibres && jour
     && !joursDifferents
     && !lecture.isLoading && !lecture.error
     && !heuresFigees && !repartition ? (
@@ -1638,6 +1645,13 @@ function SeasonSlotForm({
             }}
             />
           </View>
+          {/* A7-UX-2 (22/10, Adel « P6 oui ») — le panneau du site pose la question de l'étape en
+              titre, comme le téléphone (le récapitulatif a déjà le sien, plus bas). */}
+          {etapeCourante === 'recap' ? null : (
+            <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {titres[etapeCourante]}
+            </Text>
+          )}
         </View>
       ) : null}
       {compact || tunnelPleinEcran ? null : (
@@ -1735,7 +1749,11 @@ function SeasonSlotForm({
 
       {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
-          {libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
+          {/* A7-UX-2 : sur l'étape « Pour qui ? », la liste des équipes suit celle des clubs ; elle
+              garde son titre, même en plein écran. */}
+          {parcoursGuide && etapeCourante === 'club'
+            ? titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))
+            : libelleDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
           {(() => {
             if (equipes.error) {
               return <LectureEnErreur erreur={equipes.error} onRetry={equipes.refetch} />;
@@ -1833,6 +1851,7 @@ function SeasonSlotForm({
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
               onChange={changerLeDebut}
               placeholder="17:30"
+              pleines={heuresPleines}
               value={debut}
             />
           </View>
@@ -2056,62 +2075,80 @@ function SeasonSlotForm({
             </TouchableOpacity>
           ) : null}
 
-          {avecVacances && vacancesDepliees ? (
-            <View style={{ gap: 4 }} testID="quand-vacances-liste">
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t(
-                  'collectiviteCreneaux.quand.vacances.titreListe',
-                  'Vacances retirées · {{zone}}',
-                  { zone: vacances.label, ...SANS_ECHAPPEMENT },
-                )}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'collectiviteCreneaux.quand.vacances.calendrierOfficiel',
-                  'Calendrier officiel {{annees}}',
-                  { annees: anneesScolaires, ...SANS_ECHAPPEMENT },
-                )}
-              </Text>
-              {vacancesDeLaForme.parPeriode.map(({ gardee, jours, periode }) => (
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'collectiviteCreneaux.quand.vacances.periode',
-                    '{{nom}} : retirer ces séances',
-                    { nom: periode.name, ...SANS_ECHAPPEMENT },
+          {/* R17-QUAND-2-BIS (planches P11-quand-v2-tel / -ordi) — les dates retirees dans une
+              FEUILLE DU BAS, au telephone comme sur le site. */}
+          {avecVacances ? (
+            <BottomModal
+              close={() => setVacancesDepliees(false)}
+              footerComponent={(
+                <Button
+                  onPress={() => setVacancesDepliees(false)}
+                  title={t('common.close', 'Fermer')}
+                  variant="Secondary"
+                />
+              )}
+              isVisible={vacancesDepliees}
+              webPresentation="sheet"
+              // Le tunnel plein ecran est un <Modal> (couche 9999 sur le site) : la feuille
+              // passe dessus. `webZIndex` n'existe que sur le site (BottomModal.web.js).
+              {.../** @type {any} */ ({ webZIndex: tunnelPleinEcran ? 10000 : undefined })}
+            >
+              <View style={{ gap: 4 }} testID="quand-vacances-liste">
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t(
+                    'collectiviteCreneaux.quand.vacances.titreListe',
+                    'Vacances retirées · {{zone}}',
+                    { zone: vacances.label, ...SANS_ECHAPPEMENT },
                   )}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: !gardee }}
-                  key={periode.key}
-                  onPress={() => basculerLaPeriode(periode.key)}
-                  style={[Alignments.row, Alignments.alignCenter, {
-                    borderBottomColor: withAlpha(Colors.neutral00, 0.08),
-                    borderBottomWidth: 1,
-                    gap: 8,
-                    minHeight: 48,
-                    paddingVertical: 8,
-                  }]}
-                  testID={`vacances-${periode.key}`}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{periode.name}</Text>
-                    <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {t(
-                        'collectiviteCreneaux.quand.vacances.ligne',
-                        '{{du}} – {{au}} · {{jours}}',
-                        {
-                          au: formatDayMonth(periode.end),
-                          du: formatDayMonth(periode.start),
-                          jours: listeDeDates(jours, 6),
-                          ...SANS_ECHAPPEMENT,
-                        },
-                      )}
-                    </Text>
-                  </View>
-                  {coche(!gardee)}
-                </TouchableOpacity>
-              ))}
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{origineDesVacances}</Text>
-            </View>
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'collectiviteCreneaux.quand.vacances.calendrierOfficiel',
+                    'Calendrier officiel {{annees}}',
+                    { annees: anneesScolaires, ...SANS_ECHAPPEMENT },
+                  )}
+                </Text>
+                {vacancesDeLaForme.parPeriode.map(({ gardee, jours, periode }) => (
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'collectiviteCreneaux.quand.vacances.periode',
+                      '{{nom}} : retirer ces séances',
+                      { nom: periode.name, ...SANS_ECHAPPEMENT },
+                    )}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: !gardee }}
+                    key={periode.key}
+                    onPress={() => basculerLaPeriode(periode.key)}
+                    style={[Alignments.row, Alignments.alignCenter, {
+                      borderBottomColor: withAlpha(Colors.neutral00, 0.08),
+                      borderBottomWidth: 1,
+                      gap: 8,
+                      minHeight: 48,
+                      paddingVertical: 8,
+                    }]}
+                    testID={`vacances-${periode.key}`}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{periode.name}</Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {t(
+                          'collectiviteCreneaux.quand.vacances.ligne',
+                          '{{du}} – {{au}} · {{jours}}',
+                          {
+                            au: formatDayMonth(periode.end),
+                            du: formatDayMonth(periode.start),
+                            jours: listeDeDates(jours, 6),
+                            ...SANS_ECHAPPEMENT,
+                          },
+                        )}
+                      </Text>
+                    </View>
+                    {coche(!gardee)}
+                  </TouchableOpacity>
+                ))}
+                <Text style={[Fonts.p3, Fonts.neutral300]}>{origineDesVacances}</Text>
+              </View>
+            </BottomModal>
           ) : null}
 
           {erreurDuQuand ? (
@@ -2144,11 +2181,9 @@ function SeasonSlotForm({
               ) : null}
               {avecVacances && vacancesDeLaForme.parPeriode.length ? (
                 <Button
-                  onPress={() => setVacancesDepliees((avant) => !avant)}
+                  onPress={() => setVacancesDepliees(true)}
                   style={{ alignSelf: 'flex-start', minHeight: 44 }}
-                  title={vacancesDepliees
-                    ? t('collectiviteCreneaux.quand.vacances.masquer', 'Masquer les dates retirées')
-                    : t('collectiviteCreneaux.quand.vacances.voir', 'Voir les dates retirées')}
+                  title={t('collectiviteCreneaux.quand.vacances.voir', 'Voir les dates retirées')}
                   variant="Ghost"
                 />
               ) : null}

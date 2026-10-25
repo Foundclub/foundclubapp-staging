@@ -25,7 +25,9 @@ const mockNavigate = jest.fn();
 const mockPopToTop = jest.fn();
 let mockParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate, popToTop: mockPopToTop }),
+  // RESA-FIN-APP : la fiche REMPLACE le résultat (rien de périmé derrière elle) ; `replace` est ici
+  // le même espion que `navigate` : le témoin lit la destination, pas la manière.
+  useNavigation: () => ({ navigate: mockNavigate, popToTop: mockPopToTop, replace: mockNavigate }),
   useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -35,6 +37,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
 const mockLien = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
+  // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en
+  // paramètre.
+  useMaReservation: () => ({ data: null, isLoading: false }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {

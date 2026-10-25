@@ -154,7 +154,7 @@ const nomDe = (personne, t) => `${personne?.firstname || ''} ${personne?.lastnam
  * @returns {string}
  */
 const listeDesCibles = (cibles, meId, t) => {
-  const noms = cibles.map((cible) => (String(cible?.documentId || '') === meId
+  const noms = cibles.map((cible) => (Boolean(meId) && String(cible?.documentId || '') === meId
     ? t('conversation.notice.youLower', 'vous')
     : nomDe(cible, t)));
   if (noms.length <= 1) return noms[0] || t('conversation.notice.someoneLower', 'un membre');
@@ -180,7 +180,9 @@ export const texteDeLaNotice = (notice, meId, t, repli = '') => {
   const moi = String(meId || '');
   const cEstMoi = Boolean(moi) && String(notice.actor?.documentId || '') === moi;
   const cibles = Array.isArray(notice.targets) ? notice.targets : [];
-  const seulementMoi = cibles.length === 1 && String(cibles[0]?.documentId || '') === moi;
+  const seulementMoi = Boolean(moi)
+    && cibles.length === 1
+    && String(cibles[0]?.documentId || '') === moi;
   const valeurs = {
     group: String(notice.groupName || ''),
     name: nomDe(notice.actor, t),

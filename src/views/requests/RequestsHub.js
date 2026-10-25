@@ -234,6 +234,8 @@ function RequestsHub({ navigation, route }) {
     }
   };
   const [processingItemId, setProcessingItemId] = useState('');
+  // P5-17 : une seule action reseau a la fois, meme sur deux appuis du meme rendu.
+  const actionInFlightRef = useRef(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [subscriptionPaywallClubId, setSubscriptionPaywallClubId] = useState('');
   // Y04 — les demandes deja tranchees SUR CET APPAREIL, retirees de la liste
@@ -590,6 +592,8 @@ function RequestsHub({ navigation, route }) {
         return;
       }
 
+      if (actionInFlightRef.current) return;
+      actionInFlightRef.current = true;
       try {
         setProcessingItemId(itemId);
         if (!requestId) throw new Error('Missing club interest request identifier');
@@ -620,6 +624,7 @@ function RequestsHub({ navigation, route }) {
             || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
         );
       } finally {
+        actionInFlightRef.current = false;
         setProcessingItemId('');
       }
       return;
@@ -646,6 +651,8 @@ function RequestsHub({ navigation, route }) {
       return;
     }
 
+    if (actionInFlightRef.current) return;
+    actionInFlightRef.current = true;
     try {
       setProcessingItemId(itemId);
 
@@ -730,6 +737,7 @@ function RequestsHub({ navigation, route }) {
         actionError?.message || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
       );
     } finally {
+      actionInFlightRef.current = false;
       setProcessingItemId('');
     }
   }, [celebrateAcceptance, closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequestsInBackground, navigation, openSubscriptionPaywall, t]);

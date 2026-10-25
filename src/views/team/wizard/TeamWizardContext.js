@@ -54,9 +54,13 @@ const loadPersistedState = () => {
  * @param {{ type: string; payload?: any }} action
  * @returns {ReturnType<typeof createInitialState>}
  */
-function teamWizardReducer(state, action) {
+export function teamWizardReducer(state, action) {
   switch (action.type) {
     case 'INIT_FROM_PARAMS': {
+      // P12-01 : un autre club que celui en memoire = un autre assistant.
+      if (action.payload?.clubId && state.clubId && action.payload.clubId !== state.clubId) {
+        return teamWizardReducer(createInitialState(), action);
+      }
       const nextClubId = action.payload?.clubId || state.clubId || '';
       const nextPreselectedTrainerId = action.payload?.preselectedTrainerId || state.preselectedTrainerId || '';
       const nextTrainers = Array.isArray(state.trainers) ? [...state.trainers] : [];

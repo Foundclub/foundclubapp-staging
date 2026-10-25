@@ -116,7 +116,7 @@ const normalizeCategories = (payload) => {
  * @param {HistoryWizardAction} action
  * @returns {HistoryWizardState}
  */
-function historyWizardReducer(state, action) {
+export function historyWizardReducer(state, action) {
   switch (action.type) {
     case 'CLEAR_CLUB_SELECTION':
       return {
@@ -141,7 +141,14 @@ function historyWizardReducer(state, action) {
         useCustomClub: false,
       };
     case 'SET_CURRENTLY_ACTIVE':
-      return { ...state, isCurrentlyActive: action.payload };
+      // BH03 · P14-09 : l'annee de debut a pu avancer pendant que l'interrupteur etait actif.
+      return {
+        ...state,
+        endYear: action.payload || !state.startYear
+          ? state.endYear
+          : Math.max(Number(state.endYear || 0), Number(state.startYear)),
+        isCurrentlyActive: action.payload,
+      };
     case 'SET_CUSTOM_CLUB':
       return {
         ...state,

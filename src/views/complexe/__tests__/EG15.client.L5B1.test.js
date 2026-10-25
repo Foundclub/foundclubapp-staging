@@ -39,7 +39,10 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   // La lecture du gérant (`toManagedView`) range les règles sous `rules`.
   useComplexeGere: () => ({ data: { rules: { autoBanNoShows: 3 } } }),
   useDebannir: () => ({ isPending: false, mutateAsync: mockDebannir }),
+  // RESA-FIN-APP : la fidélité du complexe (« Valider la partie offerte » depuis la fiche).
+  useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useReservationGeree: (/** @type {any[]} */ ...args) => {
+  useValiderRecompense: () => ({ isPending: false, mutateAsync: jest.fn() }),
     mockLecturesReservation.push(args);
     return mockViaReservation;
   },

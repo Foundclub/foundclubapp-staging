@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { messageDeRefus } from '@/domains/complexe/complexeGerant';
+import { libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
   corpsDeLaPage,
   DESCRIPTION_MAX,
@@ -39,6 +40,8 @@ import {
   useModifierComplexe,
 } from '@/services/complexe/complexeQueries';
 import { televerserPhoto } from '@/services/complexe/complexeService';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import MediaPlatform from '@/platform/media';
@@ -498,7 +501,9 @@ function ComplexeMaPage() {
                   paddingVertical: 6,
                 }}
               >
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{sport.name}</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {texteInsecable(libelleSport(sport))}
+                </Text>
               </View>
             ))}
           </View>
@@ -601,13 +606,16 @@ function ComplexeMaPage() {
             {COMPLEXES_JOUEUR && enregistre?.slug ? (
               <TouchableOpacity
                 accessibilityRole="link"
+                // RESA-FIN-APP : la page s'ouvre EN APERÇU (bandeau « Aperçu : c'est ce que voient
+                // les joueurs. Quitter », plan E-G11 :809-810 ; absent, tournée 2).
                 onPress={() => navigation.navigate(RouteNames.ReserverComplexe, {
+                  apercu: true,
                   slug: enregistre.slug,
                 })}
                 style={[Alignments.justifyCenter, { minHeight: 44 }]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('complexeMaPage.voirMaPage', 'Voir ma page')}
+                  {texteInsecable(t('complexeMaPage.voirMaPage', 'Voir ma page'))}
                 </Text>
               </TouchableOpacity>
             ) : null}

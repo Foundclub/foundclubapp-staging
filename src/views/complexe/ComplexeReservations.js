@@ -15,7 +15,7 @@ import {
   quandCourt,
   STATUTS,
   titreDuJour,
-  totalDesPages,
+  totalQuiCompte,
 } from '@/domains/complexe/complexeReservation';
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -42,6 +42,8 @@ import {
   useReservationsDuComplexe,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -144,7 +146,8 @@ function ComplexeReservations() {
   };
 
   const avecNombre = (/** @type {string} */ libelle, /** @type {any} */ donnees) => {
-    const total = totalDesPages(donnees);
+    // RESA-FIN-APP-3 : une annulée du jour ne compte pas dans « Aujourd'hui (n) » (tournée 3).
+    const total = totalQuiCompte(donnees);
     return total === null ? libelle : `${libelle} (${total})`;
   };
 
@@ -265,7 +268,9 @@ function ComplexeReservations() {
   const carteDe = (/** @type {any} */ ligne) => {
     const exterieur = ligne.source === 'exterieur';
     // Planche EG04 état 2 : le bouton n'existe que si le serveur dit la réservation marquable.
-    const marquable = vue === 'passees' && ligne.canMarkNoShow === true;
+    // RESA-FIN-APP-2 (RG-NONHONOREE, « créneau commencé ») : le serveur juge ; un créneau commencé
+    // aujourd'hui se marque depuis « Aujourd'hui », pas seulement depuis « Passées ».
+    const marquable = ligne.canMarkNoShow === true;
     const noteExterieure = vue === 'passees' && exterieur && ligne.status === STATUTS.confirmee;
     return (
       <View
@@ -320,7 +325,7 @@ function ComplexeReservations() {
                   iconPosition="before"
                   onPress={() => ouvrirLeMarquage(ligne)}
                   size="sm"
-                  title={t('complexeReservations.nonHonoree.bouton', 'Non honorée')}
+                  title={texteInsecable(t('complexeReservations.nonHonoree.bouton', 'Non honorée'))}
                   variant="Secondary"
                 />
               </View>

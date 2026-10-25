@@ -15,12 +15,30 @@ import { maReservation } from '@/testSupport/temoinReserver';
 // la réservation d'équipe et « Tu as rejoint le canal » (serveurs L3 / L4, puis L6b).
 
 const mockNavigate = jest.fn();
-const mockPopToTop = jest.fn();
+const mockReplace = jest.fn();
+/** @type {Record<string, (evenement: any) => void>} */
+const mockEcoutes = {};
 let mockParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate, popToTop: mockPopToTop }),
+  useNavigation: () => ({
+    addListener: (/** @type {string} */ nom, /** @type {any} */ ecoute) => {
+      mockEcoutes[nom] = ecoute;
+      return () => { delete mockEcoutes[nom]; };
+    },
+    navigate: mockNavigate,
+    replace: mockReplace,
+  }),
   useRoute: () => ({ params: mockParams }),
 }));
+
+// RESA-FIN-APP (20/10/2026) — « l'accueil », c'est la racine de l'onglet Accueil (SearchHome), par le
+// chemin imbriqué de `allerDansLOnglet` (avec `pop` : la pile de tâche est retirée, l'onglet revient à
+// sa racine). `popToTop` ramenait au HomeTab tel qu'on l'avait laissé : sur la RECHERCHE (tournée 2).
+const VERS_L_ACCUEIL = [
+  RouteNames.HomeTab,
+  { params: { params: undefined, pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search },
+  { pop: true },
+];
 
 // RESA-L6B-2 : l'écran lit le compte (« au nom de ») et ouvre la feuille du lien.
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -29,6 +47,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en
+  // paramètre.
+  useMaReservation: () => ({ data: null, isLoading: false }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {
@@ -83,18 +104,39 @@ describe('E-P05 — le résultat', () => {
     expect(parRepere(arbre, 'pastille-etat-confirmee')).not.toBeNull();
   });
 
-  it('« Voir ma réservation » ouvre sa fiche ; « Retour à l’accueil » remonte', async () => {
+  // RESA-FIN-APP — tournées 1 et 2 : « Retour à l'accueil » ramenait à la RECHERCHE ; et après une
+  // annulation faite depuis la fiche, le retour arrière remontrait l'ancien « C'est réservé ! ·
+  // Confirmée ». La fiche REMPLACE le résultat : il ne reste rien de périmé derrière elle.
+  it('« Voir ma réservation » remplace le résultat par sa fiche ; « Retour à l’accueil » : l’accueil', async () => {
     const arbre = await monter();
     await act(async () => {
       pressable(arbre, 'Voir ma réservation').props.onPress();
     });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverMaReservation, {
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverMaReservation, {
       reservationId: 'r-1',
     });
+    expect(mockNavigate).not.toHaveBeenCalledWith(RouteNames.ReserverMaReservation, expect.anything());
     await act(async () => {
       pressable(arbre, 'Retour à l’accueil').props.onPress();
     });
-    expect(mockPopToTop).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenLastCalledWith(...VERS_L_ACCUEIL);
+  });
+
+  // RESA-FIN-APP — tournée 2 : le retour arrière ramenait au choix du créneau (E-P03). Plan E-P05 §4 :
+  // « retour ⇒ accueil (pas de retour au récapitulatif) ».
+  it('le retour arrière (bouton du téléphone, flèche) mène à l’accueil', async () => {
+    await monter();
+    expect(typeof mockEcoutes.beforeRemove).toBe('function');
+    const preventDefault = jest.fn();
+    await act(async () => {
+      mockEcoutes.beforeRemove({ data: { action: { type: 'GO_BACK' } }, preventDefault });
+    });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenLastCalledWith(...VERS_L_ACCUEIL);
+    // Une sortie voulue par l'écran (vers l'accueil, vers la fiche) n'est pas retenue.
+    const laisser = jest.fn();
+    mockEcoutes.beforeRemove({ data: { action: { type: 'NAVIGATE' } }, preventDefault: laisser });
+    expect(laisser).not.toHaveBeenCalled();
   });
 
   it('sur demande : « Demande envoyée », l’échéance, le créneau gardé (AT-08)', async () => {
@@ -117,6 +159,31 @@ describe('E-P05 — le résultat', () => {
     await act(async () => {
       pressable(arbre, 'Retour à l’accueil').props.onPress();
     });
-    expect(mockPopToTop).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenLastCalledWith(...VERS_L_ACCUEIL);
+  });
+});
+
+// RESA-FIN-APP (22/10, Adel « 1- A ») — RG-CANAL : « Tu as rejoint le canal de … » quand CETTE réservation fait
+// entrer le joueur dans le canal (`joinedChannel`, RESA-FIN-SERVEUR). Lecture tolérante : champ absent ou faux,
+// rien n'est dit.
+describe('RESA-FIN-APP — « Tu as rejoint le canal »', () => {
+  it('joinedChannel vrai : la phrase, avec le nom du complexe', async () => {
+    mockParams = { reservation: maReservation({ joinedChannel: true }) };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Tu as rejoint le canal de Le Five de Montrivage.');
+  });
+
+  it.each([[false], [undefined]])('joinedChannel %s : rien', async (valeur) => {
+    mockParams = { reservation: maReservation({ joinedChannel: valeur }) };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'resultat-canal-rejoint')).toBeNull();
+  });
+});
+
+describe('BH16 P13-20 — un prix par joueur', () => {
+  it('se dit « par joueur » sur la confirmation', async () => {
+    mockParams = { reservation: maReservation({ price: { amount: 6, unit: 'joueur' } }) };
+    const arbre = await monter();
+    expect(lisibles(arbre).join(' ')).toContain('6 € par joueur, à régler sur place');
   });
 });

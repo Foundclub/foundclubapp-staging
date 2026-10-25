@@ -31,6 +31,12 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   }),
 }));
 
+// RESA-PARTAGER : la feuille « Partager une annonce » (témoin EG12.partager.RESAPARTAGER).
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
+  function FausseFeuille(/** @type {any} */ { children, isVisible }) {
+    return isVisible ? children : null;
+  }
+));
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;
@@ -94,7 +100,13 @@ describe('E-G12 — le canal du complexe, côté gérant', () => {
       pressable(arbre, 'Écrire aux membres').props.onPress();
     });
     expect(mockNavigate)
-      .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'chat-canal-five' });
+      // RESA-FIN-SITE (21/10) : `espace: 'complexe'` — sur le site, le menu du complexe reste
+      // (tournée
+      // connectée du 22/10 : la barre du bas passait aux onglets du joueur).
+      .toHaveBeenCalledWith(RouteNames.Conversation, {
+        chatId: 'chat-canal-five',
+        espace: 'complexe',
+      });
   });
 
   it('la recherche filtre les membres par leur nom', async () => {

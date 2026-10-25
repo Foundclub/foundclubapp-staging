@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { format } from 'date-fns';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
@@ -24,14 +25,15 @@ function AdminEvents() {
   const navigation = useNavigation();
 
   // Default to today
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Generate date options (e.g., last 7 days + next 7 days)
   const dateOptions = [];
   for (let i = -7; i <= 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    // BH14 P9-10 : le jour LOCAL (toISOString donnait la veille juste après minuit).
+    const dateStr = format(d, 'yyyy-MM-dd');
     const label = i === 0 ? t('adminEvents.today', "Aujourd'hui") : d.toLocaleDateString();
     dateOptions.push({ label, value: dateStr });
   }
@@ -59,8 +61,8 @@ function AdminEvents() {
       <View style={[Alignments.fill]}>
         <EventListContent
           additionalFilters={{
-            startDateAfter: new Date(selectedDate),
-            startDateBefore: new Date(new Date(selectedDate).setHours(23, 59, 59, 999)),
+            startDateAfter: new Date(`${selectedDate}T00:00:00`),
+            startDateBefore: new Date(`${selectedDate}T23:59:59.999`),
           }}
           hideFilters
         />

@@ -83,3 +83,30 @@ describe('RESA-CARTE — la barre d’outils de la carte de recherche', () => {
     expect(racine.props.pointerEvents).toBe('box-none');
   });
 });
+
+// RESA-FIN-APP (20/10/2026) — tournée 2, vue Carte de E-P01 : « 1 complexe · 1 repères visibles ». Le nombre
+// de repères s'accorde (« 1 repère visible », « 2 repères visibles »), comme le titre (« 1 complexe »).
+describe('RESA-FIN-APP (3) — « 1 repère visible » au singulier', () => {
+  it.each([[1, '1 repère visible'], [2, '2 repères visibles']])('%i repère(s) : « %s »', async (nombre, attendu) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <SearchMapHud
+          geolocatableCount={nombre}
+          onLocateMe={gestes.onLocateMe}
+          onRecenter={gestes.onRecenter}
+          onZoomIn={gestes.onZoomIn}
+          onZoomOut={gestes.onZoomOut}
+          renderStats={{ clusterCount: 0, markerCount: nombre }}
+          scope="complexes"
+          totalCount={nombre}
+        />,
+      );
+    });
+    const textes = arbre.root.findAllByType(Text).map((/** @type {any} */ noeud) => (
+      [].concat(noeud.props.children).join('')
+    ));
+    expect(textes).toContain(attendu);
+  });
+});

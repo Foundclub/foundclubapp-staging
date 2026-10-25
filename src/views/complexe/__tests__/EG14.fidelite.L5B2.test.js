@@ -225,3 +225,29 @@ describe('E-G14 — la fidélité du complexe', () => {
     expect(mockLecture.refetch).toHaveBeenCalled();
   });
 });
+
+// RESA-FIN-APP-2 (22/10/2026) — E-G14, tournée 2 : « Enregistrer » répondait 200 mais rien ne se
+// voyait : « Programme enregistré. » s'écrivait tout en haut, loin du bouton, hors de la vue. Le
+// bilan d'un enregistrement s'écrit SOUS le bouton.
+describe('RESA-FIN-APP-2 E-G14 — le bilan d’« Enregistrer » se lit là où l’on a appuyé', () => {
+  it('« Programme enregistré. » juste sous « Enregistrer »', async () => {
+    mockRegler.mockResolvedValue({ data: { programme: PROGRAMME } });
+    const arbre = await monter();
+    await appuyer(arbre, 'Enregistrer');
+    const lus = lisibles(arbre);
+    expect(lus.indexOf('Programme enregistré.')).toBe(lus.indexOf('Enregistrer') + 1);
+  });
+});
+
+// RESA-FIN-APP-2 (22/10/2026, 8.7 rendu par RESA-FIN-SITE) — tournées : le compteur « − 10 + »
+// de la fidélité était une barre GRIS CLAIR sur l'écran sombre (le ton « surface », fait pour les
+// fiches claires). Il prend le ton sombre, comme le récapitulatif (E-P04).
+describe('RESA-FIN-APP-2 E-G14 — le compteur « Au bout de » sur le ton sombre', () => {
+  it('le compteur « Au bout de » : ton « tunnel »', async () => {
+    const arbre = await monter();
+    const [compteur] = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onIncrement === 'function' && n.props?.label === 'Au bout de'
+    ));
+    expect(compteur.props.tone).toBe('tunnel');
+  });
+});

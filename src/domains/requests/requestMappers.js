@@ -801,7 +801,7 @@ export const mapEventTeamInvitationToHubItem = (audience = {}) => {
 export const sortRequestHubItems = (items = []) => (
   [...items].sort((a, b) => {
     const diff = toStableTime(b?.createdAt) - toStableTime(a?.createdAt);
-    if (diff !== 0) return diff;
+    if (diff !== 0 && !Number.isNaN(diff)) return diff;
     const aFallback = `${a?.type || ''}:${a?.id || ''}`;
     const bFallback = `${b?.type || ''}:${b?.id || ''}`;
     return aFallback.localeCompare(bFallback);

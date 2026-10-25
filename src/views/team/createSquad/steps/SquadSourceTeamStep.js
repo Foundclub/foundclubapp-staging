@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -31,6 +31,8 @@ function SquadSourceTeamStep({
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
+  // P12-16 : seule la derniere equipe choisie a le droit d'importer.
+  const lastRequestRef = useRef(0);
 
   const options = useMemo(
     () => (Array.isArray(user?.trainedTeams)
@@ -47,12 +49,15 @@ function SquadSourceTeamStep({
 
   const handleSelectTeam = async (item) => {
     updateData('sourceTeam', item || null);
+    lastRequestRef.current += 1;
+    const requestId = lastRequestRef.current;
     if (!item?.value) return;
 
     setIsLoading(true);
     setLoadError('');
     try {
       const team = await getTeamById(item.value);
+      if (requestId !== lastRequestRef.current) return;
       updateData('sourceTeamDetails', team || null);
       if (team?.name) updateData('name', team.name);
       if (team?.section) updateData('section', mapSectionOption(team.section));
@@ -61,13 +66,14 @@ function SquadSourceTeamStep({
         updateData('address', team.address);
       }
     } catch (error) {
+      if (requestId !== lastRequestRef.current) return;
       console.error('Error importing source team:', error);
       setLoadError(t(
         'squadSourceTeamStep.importError',
         "Impossible d'importer cette équipe pour le moment.",
       ));
     } finally {
-      setIsLoading(false);
+      if (requestId === lastRequestRef.current) setIsLoading(false);
     }
   };
 
