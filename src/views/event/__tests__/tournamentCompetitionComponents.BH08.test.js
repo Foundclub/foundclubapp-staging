@@ -51,7 +51,9 @@ describe('BH08 · P8-02 — le tableau à élimination directe', () => {
             label: 'Finale',
             matches: [
               { documentId: 'm-1', teamA: { name: 'Lyon' }, teamB: { name: 'Nice' } },
-              { documentId: 'm-2', sourceMatchA: { documentId: 'm-1' }, teamA: null, teamB: null },
+              {
+                documentId: 'm-2', sourceMatchA: { documentId: 'm-1' }, teamA: null, teamB: null,
+              },
             ],
           }]}
         />,

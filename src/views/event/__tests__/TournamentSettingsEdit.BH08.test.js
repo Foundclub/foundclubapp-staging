@@ -48,7 +48,9 @@ jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => () => nu
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/services/event/eventQueries', () => ({
-  useGetEvent: () => ({ data: mockEvent, error: null, isLoading: false, refetch: jest.fn() }),
+  useGetEvent: () => ({
+    data: mockEvent, error: null, isLoading: false, refetch: jest.fn(),
+  }),
 }));
 jest.mock('@/services/event/eventService', () => ({
   updateEvent: (/** @type {any} */ ...args) => mockUpdateEvent(...args),
@@ -66,7 +68,9 @@ describe('BH08 · P8-13 — barème de points du tournoi', () => {
   test('0 point pour la victoire et le nul part tel quel au serveur', async () => {
     mockEvent = {
       documentId: 'evt-1',
-      tournamentConfig: { formatMode: 'round_robin', pointsDraw: 0, pointsLoss: 0, pointsWin: 0 },
+      tournamentConfig: {
+        formatMode: 'round_robin', pointsDraw: 0, pointsLoss: 0, pointsWin: 0,
+      },
     };
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } });
     /** @type {any} */

@@ -72,7 +72,9 @@ jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { 
 jest.mock('@/services/event/eventQueries', () => ({ useGetEvent: () => ({ data: { documentId: 'evt-1' } }) }));
 jest.mock('@/services/facility/facilityQueries', () => ({ useGetFacilities: () => ({ data: { data: [] } }) }));
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
-  useGetTournamentMatch: () => ({ data: mockMatch, error: null, isLoading: false, refetch: jest.fn() }),
+  useGetTournamentMatch: () => ({
+    data: mockMatch, error: null, isLoading: false, refetch: jest.fn(),
+  }),
 }));
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionService', () => ({
   reportTournamentMatchScore: (/** @type {any} */ ...args) => mockReport(...args),

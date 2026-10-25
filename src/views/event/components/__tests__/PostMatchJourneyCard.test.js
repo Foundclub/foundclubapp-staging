@@ -422,7 +422,9 @@ describe('N4/D6 — une porte fermee dit POURQUOI', () => {
 // BUGHUNT BH08 (24/10) — P8-24 : personne n'etait attendu, le parcours ne reste pas bloque.
 describe('BH08 · P8-24 — aucune reponse attendue', () => {
   test('score + stats faits, 0 attendu : le parcours est complet', () => {
-    const root = monter({ reponsesAttendues: 0, reponsesRecues: 0, scoreDisponible: true, statsFinalisees: true });
+    const root = monter({
+      reponsesAttendues: 0, reponsesRecues: 0, scoreDisponible: true, statsFinalisees: true,
+    });
     expect(textes(root).join(' ')).toContain('c’est complet');
   });
 });
