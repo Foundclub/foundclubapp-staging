@@ -9,6 +9,7 @@ const mockSendMessage = jest.fn();
 const mockSendTypingStart = jest.fn();
 const mockSendTypingStop = jest.fn();
 const mockRepondre = jest.fn();
+const mockVoter = jest.fn(() => Promise.resolve({}));
 const mockNavigate = jest.fn();
 let mockMessagesDuFil = /** @type {any[]} */ ([]);
 // FINITIONS12-COLL : le fil doublé se règle (un fil de la Ville pour le témoin du canal vide).
@@ -168,6 +169,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
     sendTypingStop: (/** @type {any[]} */ ...args) => mockSendTypingStop(...args),
     socket: { emit: jest.fn(), off: jest.fn(), on: jest.fn() },
     typingUsers: [],
+    votePoll: (/** @type {any[]} */ ...args) => mockVoter(...args),
   }),
 }));
 
@@ -354,5 +356,28 @@ describe('BH04 — messagerie du téléphone', () => {
     monterConversation({ sharedEventFromPicker: { documentId: 'evt-9', name: 'Tournoi' } });
     expect(mockSendMessage).toHaveBeenCalled();
     expect(mockBanners.some((/** @type {any} */ b) => b.tone === 'error')).toBe(true);
+  });
+
+  it('Q4-20 (P6-15) : voter sur un sondage pas encore confirmé (temp-) n appelle pas le serveur', async () => {
+    mockVoter.mockClear();
+    monterConversation();
+    const bulle = dernieresProps().renderBubble({
+      currentMessage: {
+        _id: 'temp-123',
+        composition: { options: [{ id: 'o1', text: 'Oui', votes: [] }], question: 'On joue ?', type: 'poll' },
+        createdAt: new Date(),
+        documentId: 'temp-123',
+        user: { _id: 'moi' },
+      },
+      position: 'right',
+    });
+    let rendu;
+    act(() => { rendu = renderer.create(bulle); });
+    // eslint-disable-next-line global-require
+    const Sondage = require('@/components/molecules/pollMessageBubble/PollMessageBubble');
+    const { props } = rendu.root.findByType(Sondage.default || Sondage);
+    await act(async () => { await props.onVote('o1'); });
+    expect(mockVoter).not.toHaveBeenCalled();
+    expect(mockBanners.some((/** @type {any} */ b) => JSON.stringify(b).includes('en cours de synchronisation'))).toBe(true);
   });
 });

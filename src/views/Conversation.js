@@ -5191,6 +5191,14 @@ function Conversation({ navigation, route }) {
     const composition = message?.composition;
 
     if (!chatId || !currentUserId || !messageId || !optionId || composition?.type !== 'poll') return;
+    // Q4-20 (P6-15) : même garde que PollDetails, le serveur ne connaît pas encore un `temp-`.
+    if (String(messageId).startsWith('temp-')) {
+      showErrorBanner(
+        t('conversation.poll.details.syncInProgress', 'Le sondage est en cours de synchronisation.'),
+        t('conversation.poll.details.syncTitle', 'Information'),
+      );
+      return;
+    }
 
     const { changed, nextComposition } = applyOptimisticPollVote({
       currentUserId,
