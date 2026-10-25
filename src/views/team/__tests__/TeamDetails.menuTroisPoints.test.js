@@ -792,7 +792,12 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
     appuyerSurLaRangee(racine, "Cotisation de l'équipe");
     expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
     // BH12 P12-06 : les cotisations du club DE L'EQUIPE, pas du club actif.
-    expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses', { clubId: CLUB.documentId });
+    // 🐞 Q4-21 : ClubLicenses vit dans la pile du CLUB ; naviguer vers lui depuis la pile
+    // de l'EQUIPE n'ouvrait rien au telephone. On passe par ClubStack, comme l'accueil.
+    expect(navigation.navigate).toHaveBeenCalledWith('ClubStack', {
+      params: { clubId: CLUB.documentId },
+      screen: 'ClubLicenses',
+    });
   });
 
   test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille', () => {
