@@ -28,6 +28,7 @@ import { RENDEZ_VOUS_LIEU_MAX } from './convocationWizardUtils';
  * @param {boolean} props.askResponses
  * @param {number} props.benchCount
  * @param {string} props.infos
+ * @param {boolean} [props.isList] CONVLISTE : « N convoqués », sans terrain ni banc.
  * @param {string} props.meetingPlace
  * @param {boolean} [props.meetingPlaceRefused] - Le lieu porte un telephone, un courriel, un lien.
  * @param {string} props.meetingTime - `HH:mm`, ou vide.
@@ -44,6 +45,7 @@ function ConvocationDetailsStep({
   askResponses,
   benchCount,
   infos,
+  isList = false,
   meetingPlace,
   meetingPlaceRefused = false,
   meetingTime,
@@ -150,7 +152,9 @@ function ConvocationDetailsStep({
       </View>
 
       <Text style={[Fonts.p3, styles.summary, { color: withAlpha(Colors.neutral00, 0.7) }]}>
-        {t('conversationConvocation.details.summary', { bench: benchCount, pitch: pitchCount })}
+        {isList
+          ? t('conversationConvocation.players.calledUp', { count: benchCount + pitchCount })
+          : t('conversationConvocation.details.summary', { bench: benchCount, pitch: pitchCount })}
       </Text>
       <Text style={[Fonts.p3, styles.posted, { color: withAlpha(Colors.neutral00, 0.55) }]}>
         {t('conversationConvocation.details.postedHint')}
