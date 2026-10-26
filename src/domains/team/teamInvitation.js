@@ -122,6 +122,17 @@ export const describeTeamInvitationRefusal = (error) => {
 export const readPersonId = (person) => String(person?.documentId || '').trim();
 
 /**
+ * Le prenom et le nom d'une personne, sans espace en trop autour ni entre les parties
+ * (RECETTEWEB 26/10 : « Adel  FERCHICHI » quand un prenom est enregistre avec une espace).
+ * @param {any} person - un utilisateur.
+ * @returns {string} - « Prenom Nom », ou une chaine vide.
+ */
+export const joinPersonName = (person) => [person?.firstname, person?.lastname]
+  .map((part) => String(part || '').replace(/\s+/g, ' ').trim())
+  .filter(Boolean)
+  .join(' ');
+
+/**
  * Le nom affichable d'une personne, sans jamais rendre une chaine vide.
  * @param {any} person - un utilisateur.
  * @param {string} [fallback] - ce qu'on ecrit quand on ne sait pas.
@@ -131,7 +142,7 @@ export const describePersonName = (person, fallback = i18next.t(
   'teamInvitation.thisPerson',
   'Cette personne',
 )) => (
-  [person?.firstname, person?.lastname].filter(Boolean).join(' ').trim()
+  joinPersonName(person)
   || String(person?.username || '').trim()
   || fallback
 );

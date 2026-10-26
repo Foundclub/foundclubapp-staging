@@ -33,6 +33,7 @@ import {
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
 import { isExternalCompetitionEligibleTeam } from '@/domains/team/externalCompetitionEligibility';
+import { describePersonName, joinPersonName } from '@/domains/team/teamInvitation';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -1439,7 +1440,7 @@ function TeamDetails({ navigation, route }) {
       .filter((/** @type {any} */ member) => member?.documentId
         && (member.role?.name === USER_ROLES.coach || member.role?.name === USER_ROLES.president))
       .map((/** @type {any} */ member) => ({
-        label: `${member.firstname || ''} ${member.lastname || ''}`.trim()
+        label: joinPersonName(member)
           || member.phoneNumber
           || i18next.t('teamDetails.trainerPicker.userFallback', 'Utilisateur'),
         value: member.documentId || '',
@@ -3267,6 +3268,7 @@ function TeamDetails({ navigation, route }) {
                             <ProfileAvatar
                               imageStyle={{ borderRadius: 40 }}
                               imageUrl={trainer?.avatar?.url}
+                              name={joinPersonName(trainer)}
                               size={40}
                               style={[
                                 ApplicationStyle.borderWidth1,
@@ -3275,7 +3277,7 @@ function TeamDetails({ navigation, route }) {
                               ]}
                             />
                             <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                              {`${trainer.firstname} ${trainer.lastname}`}
+                              {describePersonName(trainer)}
                             </Text>
                           </View>
                           {team?.club?.documentId && canEditClub(team?.club?.documentId)
@@ -3360,6 +3362,7 @@ function TeamDetails({ navigation, route }) {
                             <ProfileAvatar
                               imageStyle={{ borderRadius: 40 }}
                               imageUrl={player?.avatar?.url}
+                              name={joinPersonName(player)}
                               size={40}
                               style={[
                                 ApplicationStyle.borderWidth1,
@@ -3368,7 +3371,7 @@ function TeamDetails({ navigation, route }) {
                               ]}
                             />
                             <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                              {`${player.firstname} ${player.lastname}`}
+                              {describePersonName(player)}
                             </Text>
                           </TouchableOpacity>
                           {canManageTeam && (
@@ -3399,7 +3402,7 @@ function TeamDetails({ navigation, route }) {
                             enablePreview={false}
                             imageStyle={{ borderRadius: 40 }}
                             imageUrl={child?.avatar?.url}
-                            name={[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                            name={joinPersonName(child)}
                             size={40}
                             style={[
                               ApplicationStyle.borderWidth1,
@@ -3411,7 +3414,7 @@ function TeamDetails({ navigation, route }) {
                             numberOfLines={2}
                             style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}
                           >
-                            {[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                            {joinPersonName(child)}
                           </Text>
                         </View>
                       ))}

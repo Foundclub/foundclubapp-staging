@@ -38,6 +38,7 @@ import QRCode from 'react-native-qrcode-svg';
 import {
   describePersonName,
   describeTeamInvitationRefusal,
+  joinPersonName,
 } from '@/domains/team/teamInvitation';
 import {
   describeSentInviteState,
@@ -585,6 +586,7 @@ function TeamInviteSheetBody({
                   <ProfileAvatar
                     imageStyle={{ borderRadius: 36 }}
                     imageUrl={candidate?.avatar?.url}
+                    name={joinPersonName(candidate)}
                     size={36}
                   />
                   <View style={[Alignments.fill]}>
