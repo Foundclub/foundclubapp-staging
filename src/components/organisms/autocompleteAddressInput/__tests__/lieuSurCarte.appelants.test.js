@@ -55,6 +55,9 @@ const LIEU_PUBLIC = [
 const JAMAIS = [
   'views/Conversation.js',
   'views/onboarding/UserAddress.js',
+  // CARTECODE-PARCOURS (26/10) : 36 — « Ta ville » du parcours « Compléter ma carte », la ville
+  // du joueur (son adresse personnelle, comme le profil) : sans le lien.
+  'views/profile/CardCompletionFlow.js',
   'views/profile/ProfileEdit.js',
   'views/profile/ProfileEdit.web.js',
   'views/profile/SelfProfilePlayerCoach.js',
@@ -99,8 +102,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (35 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(35);
+  it('la carte des appelants tient toujours (36 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(36);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {
