@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import { getAppliedFilterCount } from '@/domains/search/recruitmentFlow';
+import { getProfileFilterCount } from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -62,10 +62,7 @@ function RecruitmentProfilesList({
     setSearchValue(String(mercatoFilters?.q || ''));
   }, [mercatoFilters?.q]);
 
-  const filtersCount = useMemo(
-    () => getAppliedFilterCount(mercatoFilters, ['alertDocumentId', 'isActive', 'label', 'q', 'type']),
-    [mercatoFilters],
-  );
+  const filtersCount = useMemo(() => getProfileFilterCount(mercatoFilters), [mercatoFilters]);
 
   const profileSearchParams = useMemo(() => {
     const trimmedSearch = String(searchValue || '').trim();

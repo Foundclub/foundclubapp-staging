@@ -234,6 +234,16 @@ const roleSchema = Joi.object({
 }).required();
 
 /**
+ * Numéro pour lequel chaque SMS de connexion a été demandé (C11) : `login` ne
+ * réutilise l'utilisateur Firebase déjà connecté que s'il porte ce numéro.
+ * @type {WeakMap<object, string>}
+ */
+const otpPhoneNumberByConfirmation = new WeakMap();
+
+const normalizeOtpPhoneNumber = (/** @type {unknown} */ value) => String(value || '')
+  .replace(/[\s.-]/g, '');
+
+/**
  * Sign in with phone number
  * @param {string} phoneNumber - The phone number
  * @returns {Promise<import('@react-native-firebase/auth')
@@ -267,6 +277,9 @@ export const signInWithPhoneNumber = async (phoneNumber) => {
 
   try {
     const result = await sendOtp(phoneNumber);
+    if (result && typeof result === 'object') {
+      otpPhoneNumberByConfirmation.set(result, normalizeOtpPhoneNumber(phoneNumber));
+    }
     return Promise.resolve(result);
   } catch (e) {
     if (shouldFallbackToLocalBypass(e)) {
@@ -365,11 +378,19 @@ export const login = async ({ code, confirm }) => {
   }
 
   // NORMAL MODE: Use Firebase Auth
-  // Check if user is already authenticated (auto-verification case)
+  // Check if user is already authenticated (auto-verification case, or session
+  // restore without code). With a confirmation, only for the number the SMS was
+  // requested for: otherwise the code is never checked and the previous Firebase
+  // user is logged in instead (C11).
   const currentUser = getCurrentUser();
+  const requestedPhoneNumber = confirm ? otpPhoneNumberByConfirmation.get(confirm) : undefined;
+  const isCurrentUserTheRequestedOne = !confirm || (
+    Boolean(currentUser?.phoneNumber)
+    && normalizeOtpPhoneNumber(currentUser?.phoneNumber) === requestedPhoneNumber
+  );
 
   let firebaseResult;
-  if (currentUser) {
+  if (currentUser && isCurrentUserTheRequestedOne) {
     firebaseResult = { user: currentUser };
   } else {
     firebaseResult = await confirmOtp({ code, confirmation: confirm });
@@ -595,7 +616,10 @@ const createClubStaff = async (userData, kind) => {
     const [day, month, year] = userData.birthdate.split('/');
     if (day && month && year) {
       const dateObject = new Date(Number(year), Number(month) - 1, Number(day));
-      if (!isNaN(dateObject.getTime())) {
+      // C04 Q2-06 — « 31/02/2010 » débordait sur le 3 mars : un jour qui n'existe pas est retiré.
+      const jourExiste = dateObject.getDate() === Number(day)
+        && dateObject.getMonth() === Number(month) - 1;
+      if (!isNaN(dateObject.getTime()) && jourExiste) {
         userDataCopy.birthdate = format(dateObject, 'yyyy-MM-dd');
       } else {
         delete userDataCopy.birthdate; // Date invalide

@@ -7,16 +7,14 @@ import {
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
 
+import { memoizeUntilFailure } from './memoizeUntilFailure';
+
 const SERVICE_WORKER_URL = '/firebase-messaging-sw.js';
 const NOTIFICATION_PAYLOAD_QUERY_KEY = 'fc_notification_payload';
 const SERVICE_WORKER_CLICK_EVENT = 'fc-notification-click';
 
 const foregroundSubscribers = new Set();
 
-let bootstrapPromise = null;
-let serviceWorkerRegistrationPromise = null;
-let messagingModulePromise = null;
-let messagingRuntimePromise = null;
 let hasAttachedServiceWorkerBridge = false;
 let hasAttachedForegroundSubscription = false;
 let hasLoggedMissingConfig = false;
@@ -113,38 +111,31 @@ const getFirebaseApp = () => {
   return initializeApp(getFirebaseConfig());
 };
 
-const getMessagingModule = async () => {
-  if (!messagingModulePromise) {
-    messagingModulePromise = import('firebase/messaging');
+// BUGHUNT C03 / P3-08 — les caches ci-dessous ne gardent plus un echec : un
+// service worker refuse une fois ou un module qui ne charge pas desactivaient
+// les notifications jusqu'au rechargement de la page.
+const getMessagingModule = memoizeUntilFailure(() => import('firebase/messaging'));
+
+const getServiceWorkerRegistration = memoizeUntilFailure(async () => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return null;
   }
 
-  return messagingModulePromise;
-};
+  if (!('serviceWorker' in navigator)) {
+    logWarn('Service worker indisponible dans ce navigateur.');
+    return null;
+  }
+
+  return navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: '/' });
+});
 
 const registerServiceWorker = async () => {
-  if (serviceWorkerRegistrationPromise) {
-    return serviceWorkerRegistrationPromise;
+  try {
+    return await getServiceWorkerRegistration();
+  } catch (error) {
+    logWarn('Impossible d enregistrer le service worker des notifications.', error?.message || error);
+    return null;
   }
-
-  serviceWorkerRegistrationPromise = (async () => {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-      return null;
-    }
-
-    if (!('serviceWorker' in navigator)) {
-      logWarn('Service worker indisponible dans ce navigateur.');
-      return null;
-    }
-
-    try {
-      return await navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: '/' });
-    } catch (error) {
-      logWarn('Impossible d enregistrer le service worker des notifications.', error?.message || error);
-      return null;
-    }
-  })();
-
-  return serviceWorkerRegistrationPromise;
 };
 
 const navigateToPath = (path) => {
@@ -204,85 +195,71 @@ const attachServiceWorkerBridge = () => {
   hasAttachedServiceWorkerBridge = true;
 };
 
-const ensureMessagingRuntime = async () => {
-  if (messagingRuntimePromise) {
-    return messagingRuntimePromise;
+// Un runtime sans service worker est reessaye : l'enregistrement a pu echouer
+// pour une raison passagere.
+const ensureMessagingRuntime = memoizeUntilFailure(async () => {
+  if (!isFirebaseConfigured()) {
+    if (!hasLoggedMissingConfig) {
+      hasLoggedMissingConfig = true;
+      logWarn('Notifications web désactivées: configuration Firebase Web incomplète.');
+    }
+    return null;
   }
 
-  messagingRuntimePromise = (async () => {
-    if (!isFirebaseConfigured()) {
-      if (!hasLoggedMissingConfig) {
-        hasLoggedMissingConfig = true;
-        logWarn('Notifications web désactivées: configuration Firebase Web incomplète.');
-      }
-      return null;
-    }
+  const [messagingModule, serviceWorkerRegistration] = await Promise.all([
+    getMessagingModule(),
+    registerServiceWorker(),
+  ]);
 
-    const [messagingModule, serviceWorkerRegistration] = await Promise.all([
-      getMessagingModule(),
-      registerServiceWorker(),
-    ]);
-
-    const supported = await messagingModule.isSupported().catch(() => false);
-    if (!supported) {
-      logWarn('Firebase Messaging n est pas pris en charge dans ce navigateur.');
-      return null;
-    }
-
-    let messaging = null;
-    try {
-      messaging = messagingModule.getMessaging(getFirebaseApp());
-    } catch (error) {
-      logWarn('Firebase Messaging n est pas disponible dans ce navigateur.', error?.message || error);
-      return null;
-    }
-
-    if (!hasAttachedForegroundSubscription && messaging) {
-      messagingModule.onMessage(messaging, (payload) => {
-        emitForegroundPayload(payload);
-      });
-      hasAttachedForegroundSubscription = true;
-    }
-
-    return {
-      getTokenFromFirebase: messagingModule.getToken,
-      messaging,
-      serviceWorkerRegistration,
-    };
-  })();
-
-  return messagingRuntimePromise;
-};
-
-export const bootstrap = async () => {
-  if (bootstrapPromise) {
-    return bootstrapPromise;
+  const supported = await messagingModule.isSupported().catch(() => false);
+  if (!supported) {
+    logWarn('Firebase Messaging n est pas pris en charge dans ce navigateur.');
+    return null;
   }
 
-  bootstrapPromise = (async () => {
-    attachServiceWorkerBridge();
+  let messaging = null;
+  try {
+    messaging = messagingModule.getMessaging(getFirebaseApp());
+  } catch (error) {
+    logWarn('Firebase Messaging n est pas disponible dans ce navigateur.', error?.message || error);
+    return null;
+  }
 
-    const queryPayload = readPayloadFromQueryString();
-    if (queryPayload) {
-      await openFromPayload(queryPayload);
-    }
+  if (!hasAttachedForegroundSubscription && messaging) {
+    messagingModule.onMessage(messaging, (payload) => {
+      emitForegroundPayload(payload);
+    });
+    hasAttachedForegroundSubscription = true;
+  }
 
-    if (notificationsBootstrapDisabled) {
-      logInfo('Bootstrap notifications web explicitement désactive.');
-      return { status: 'disabled' };
-    }
+  return {
+    getTokenFromFirebase: messagingModule.getToken,
+    messaging,
+    serviceWorkerRegistration,
+  };
+}, (runtime) => Boolean(runtime) && !runtime.serviceWorkerRegistration);
 
-    if (!pushNotificationsEnabled) {
-      logInfo('Bootstrap notifications web inactif tant que FC_ENABLE_PUSH_NOTIFICATIONS est faux.');
-      return { status: 'disabled' };
-    }
+export const bootstrap = memoizeUntilFailure(async () => {
+  attachServiceWorkerBridge();
 
-    await ensureMessagingRuntime();
-    return { status: 'ready' };
-  })();
+  const queryPayload = readPayloadFromQueryString();
+  if (queryPayload) {
+    await openFromPayload(queryPayload);
+  }
 
-  return bootstrapPromise;
-};
+  if (notificationsBootstrapDisabled) {
+    logInfo('Bootstrap notifications web explicitement désactive.');
+    return { status: 'disabled' };
+  }
+
+  if (!pushNotificationsEnabled) {
+    logInfo('Bootstrap notifications web inactif tant que FC_ENABLE_PUSH_NOTIFICATIONS est faux.');
+    return { status: 'disabled' };
+  }
+
+  await ensureMessagingRuntime();
+  return { status: 'ready' };
+});
 
 export const getToken = async () => {
   const hasPermission = await requestPermission();

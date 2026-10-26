@@ -249,6 +249,10 @@ function LegacySearchMapNative({
     scope,
     totalResults,
   }), [items.length, refreshStrategy, scope, totalResults]);
+  // Q3-20 : le cycle de la carte ne redémarre que sur un vrai rechargement, pas quand le nombre
+  // de résultats change (MAP_READY ne reviendrait jamais et la carte tomberait en erreur).
+  const logContextRef = useRef(logContext);
+  logContextRef.current = logContext;
 
   const fitToResults = useCallback((animated = true) => {
     if (!items.length) {
@@ -287,10 +291,10 @@ function LegacySearchMapNative({
     mapLoadStartedAtRef.current = Date.now();
     setMapStatus('loading');
     searchMapLogger.info('map cycle started', {
-      ...logContext,
+      ...logContextRef.current,
       retryCycle: mapRenderKey,
     });
-  }, [logContext, mapRenderKey]);
+  }, [mapRenderKey]);
 
   useEffect(() => {
     if (selectedItemId !== undefined) {

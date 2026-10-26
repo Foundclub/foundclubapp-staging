@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { SectionList, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import NewConversation from '../NewConversation';
@@ -355,5 +355,21 @@ describe('N — le dessin du pack', () => {
     expect(texteDe(arbre.root)).toContain('Déjà dans le groupe');
     const ligne = touchable(arbre, 'Karim Benali');
     expect(ligne.props.disabled).toBe(true);
+  });
+});
+
+describe('Q4-17 — le rôle réel du serveur s écrit « Entraineur » (sans accent)', () => {
+  test('un entraîneur est rangé dans « Coachs / Profs », pas dans « Autres »', async () => {
+    const karim = MEMBRES[0];
+    const roleDAvant = karim.role;
+    karim.role = { name: 'Entraineur' };
+    try {
+      const arbre = await monter();
+      const { sections } = arbre.root.findByType(SectionList).props;
+      const coachs = sections.find((/** @type {any} */ s) => s.title === 'Coachs / Profs');
+      expect((coachs?.data || []).map((/** @type {any} */ u) => u.documentId)).toEqual(['karim']);
+    } finally {
+      karim.role = roleDAvant;
+    }
   });
 });

@@ -351,6 +351,22 @@ describe('COLL-FIX-PLANNING 3 — la grappe de la semaine ouvre la vue Jour', ()
     expect(grille().mode).toBe('week');
     expect(grille().onSummaryPress).toBeUndefined();
   });
+
+  it('C05 (Q2-09) : vue 3 jours, la grappe du mercredi ouvre le mercredi, pas le lendemain', async () => {
+    mockVueRetenue = '3days';
+    await rendre();
+    expect(grille().mode).toBe('3days');
+    // La grille (PlanningWeekTimelineViewV2) : la date de la colonne touchee, puis la grappe.
+    const premierJour = grille().currentDate;
+    const mercredi = new Date(premierJour.getFullYear(), premierJour.getMonth(), premierJour.getDate() + 1);
+    await act(async () => {
+      grille().onDateChange(mercredi);
+      grille().onSummaryPress(mercredi);
+    });
+    await attendre();
+    expect(grille().mode).toBe('day');
+    expect(grille().currentDate.toDateString()).toBe(mercredi.toDateString());
+  });
 });
 
 jest.mock(

@@ -4882,7 +4882,11 @@ function TeamDetails({ navigation, route }) {
                     last: true,
                     lock: isTeamOfferUnlocked ? null : 'team',
                     onPress: isTeamOfferUnlocked
-                      ? () => navigation.navigate(RouteNames.ClubLicenses, { clubId: team?.club?.documentId })
+                      // Q4-21 : ClubLicenses vit dans la pile du club, pas dans celle de l'équipe.
+                      ? () => navigation.navigate(RouteNames.ClubStack, {
+                        params: { clubId: team?.club?.documentId },
+                        screen: RouteNames.ClubLicenses,
+                      })
                       : openTeamOfferUnlockSheet,
                   })}
                 </View>

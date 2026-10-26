@@ -160,3 +160,50 @@ describe('VINV voie 3 · la console lit les pistes « Prévenir ma mairie »', (
     expect(textes(arbre.root)).toContain('Aucune piste « Prévenir ma mairie » pour l’instant.');
   });
 });
+
+// C10 / P9-20 (BUGHUNT 25/10) — pendant la lecture des pistes, ou si elle échoue, l'onglet
+// affichait « Pistes (0) » et « Aucune piste… » : un faux « rien à faire ». Il dit ce qu'il sait.
+describe('C10 · P9-20 — pistes en cours de lecture ou indisponibles', () => {
+  const monterSansAttendre = async () => {
+    const client = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { gcTime: 0, retry: false } },
+    });
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}><AdminCollectiviteInvitations /></QueryClientProvider>,
+      );
+    });
+    await attendre(() => textes(arbre.root).some((texte) => texte.startsWith('Pistes')));
+    return arbre;
+  };
+
+  it('P3 lecture en cours : ni « (0) », ni « aucune piste »', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ route) => {
+      if (route === '/superadmin/collectivite-invitations') return { data: { data: [] } };
+      return new Promise(() => {});
+    });
+    const arbre = await monterSansAttendre();
+    const lus = textes(arbre.root);
+    expect(lus).not.toContain('Pistes (0)');
+    expect(lus).not.toContain('Aucune piste « Prévenir ma mairie » pour l’instant.');
+    expect(lus).toContain('Lecture des pistes…');
+  });
+
+  it('P4 lecture en échec : on dit qu’elles sont indisponibles, et on peut réessayer', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ route) => {
+      if (route === '/superadmin/collectivite-invitations') return { data: { data: [] } };
+      throw new Error('réseau');
+    });
+    const arbre = await monterSansAttendre();
+    await attendre(() => textes(arbre.root).includes('Pistes indisponibles pour l’instant.'));
+    const lus = textes(arbre.root);
+    expect(lus).not.toContain('Pistes (0)');
+    expect(lus).not.toContain('Aucune piste « Prévenir ma mairie » pour l’instant.');
+    expect(lus).toContain('Pistes indisponibles pour l’instant.');
+    const reessayer = arbre.root.findAll((/** @type {any} */ n) => n.props?.title === 'Réessayer'
+      && typeof n.props?.onPress === 'function');
+    expect(reessayer.length).toBeGreaterThan(0);
+  });
+});

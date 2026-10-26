@@ -250,17 +250,34 @@ const coordonneeOuNull = (/** @type {any} */ value) => (
 export const buildAddressFromForm = (form = {}) => {
   const typedForm = /** @type {AdminClubRecord} */ (form);
   const advanced = parseJsonObject(typedForm.addressJson, {});
+  // C10 / Q4-22 : l'adresse JSON avancée a-t-elle été réécrite depuis le chargement du club ?
+  // (`addressJsonInitial` est posé par buildClubFormInitialValues ; absent = jamais modifiée.)
+  const jsonReecrit = typedForm.addressJsonInitial !== undefined
+    && JSON.stringify(advanced)
+      !== JSON.stringify(parseJsonObject(typedForm.addressJsonInitial, {}));
+  // BH14 P9-18 / P2-15 : un champ présent mais vidé efface la valeur ; absent, l'adresse avancée
+  // reste. C10 / Q4-22 : sauf si le champ simple est vide et que l'adresse avancée a été
+  // réécrite à la main : c'est elle que l'admin vient de saisir.
+  // ponytail: champ simple vidé ET JSON réécrit sur une autre clé : le JSON gagne (il montre
+  // encore l'ancienne valeur) ; pour effacer dans ce cas, l'effacer aussi dans le JSON.
+  const lire = (
+    /** @type {string} */ champ,
+    /** @type {any} */ valeurAvancee,
+    /** @type {(valeur: any) => any} */ convertir,
+  ) => {
+    if (typedForm[champ] === undefined) return valeurAvancee;
+    if (jsonReecrit && !normalizeText(typedForm[champ])) return valeurAvancee;
+    return convertir(typedForm[champ]);
+  };
   return {
     ...advanced,
     address: normalizeText(typedForm.addressLabel) || advanced.address,
-    // BH14 P9-18 / P2-15 : un champ présent mais vidé efface la valeur ; absent, l'adresse avancée
-    // reste.
-    city: typedForm.city !== undefined ? normalizeText(typedForm.city) : advanced.city,
+    city: lire('city', advanced.city, normalizeText),
     description: normalizeText(typedForm.addressLabel) || advanced.description,
     label: normalizeText(typedForm.addressLabel) || advanced.label,
-    lat: typedForm.latitude !== undefined ? coordonneeOuNull(typedForm.latitude) : advanced.lat,
-    lng: typedForm.longitude !== undefined ? coordonneeOuNull(typedForm.longitude) : advanced.lng,
-    postcode: typedForm.postcode !== undefined ? normalizeText(typedForm.postcode) : advanced.postcode,
+    lat: lire('latitude', advanced.lat, coordonneeOuNull),
+    lng: lire('longitude', advanced.lng, coordonneeOuNull),
+    postcode: lire('postcode', advanced.postcode, normalizeText),
   };
 };
 
@@ -301,6 +318,8 @@ export const buildClubFormInitialValues = (club = {}) => {
     activites: getClubActivities(club),
     addressDetails: normalizeText(typedClub?.addressDetails),
     addressJson: stringifyJson(address),
+    // C10 / Q4-22 : l'adresse avancée telle que chargée, pour savoir si l'admin l'a réécrite.
+    addressJsonInitial: stringifyJson(address),
     addressLabel: getClubAddressLabel(club),
     city: getClubCity(club),
     clubPartner: typedClub?.clubPartner === true || typedClub?.isCustomer === true,

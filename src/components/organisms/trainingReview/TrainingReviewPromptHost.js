@@ -180,7 +180,9 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
     POPUP_IDS.TRAINING_REVIEW_PROMPT,
     shouldShowPrompt,
     {
-      cooldownKey: buildAccountCooldownKey(accountDocumentId, activePrompt?.key),
+      // 🪤 Q3-18 : la pause vise la fenêtre qui REVIENDRAIT (la prochaine du serveur),
+      // pas la séance choisie dans le merci ; sinon la prochaine se rouvre avant 24 h.
+      cooldownKey: buildAccountCooldownKey(accountDocumentId, nextPrompt?.key || activePrompt?.key),
       dismissScope: POPUP_DISMISS_SCOPES.DAY,
     },
   );

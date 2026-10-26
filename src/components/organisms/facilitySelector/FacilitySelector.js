@@ -79,7 +79,10 @@ function FacilitySelector({
     Images,
     Spaces,
   } = useTheme();
-  const [mode, setMode] = useState('club');
+  // Q2-10 — une adresse sans installation, c'est le mode « Extérieur » : sinon « Modifier »
+  // masquait l'adresse de la séance.
+  const lieuExterieur = !facilityId && Boolean(location?.label);
+  const [mode, setMode] = useState(lieuExterieur ? 'external' : 'club');
   const locationModes = useMemo(
     () => [
       {
@@ -217,12 +220,18 @@ function FacilitySelector({
   }, [facilityId]);
 
   useEffect(() => {
+    if (lieuExterieur) setMode('external');
+  }, [lieuExterieur]);
+
+  useEffect(() => {
     if (!isFocused || mode !== 'club') return;
     if (clubId) refetchClubFacilities();
     if (cmId) refetchCmFacilities();
   }, [clubId, cmId, isFocused, mode, refetchClubFacilities, refetchCmFacilities]);
 
   const handleModeChange = (newMode) => {
+    // Q2-10 — toucher le mode déjà actif effaçait le lieu choisi.
+    if (newMode === mode) return;
     setMode(newMode);
     onChange({ facilityId: null, location: null });
   };

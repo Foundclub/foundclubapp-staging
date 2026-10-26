@@ -776,6 +776,7 @@ export const getBoardCounters = ({
  * @param {any[]} [input.placements]
  * @param {any[]} [input.players] Les convoques.
  * @param {boolean} [input.requireResponse]
+ * @param {any[]} [input.slots] Les reperes du terrain (compo type choisie) ; sinon ceux du sport.
  * @param {string} [input.sport]
  * @param {string} [input.teamName]
  * @param {string} [input.visibility]
@@ -787,6 +788,7 @@ export const buildMatchCompositionPack = ({
   placements = [],
   players = [],
   requireResponse = true,
+  slots = [],
   sport,
   teamName = '',
   visibility = 'team',
@@ -824,7 +826,9 @@ export const buildMatchCompositionPack = ({
       })).filter((placement) => Boolean(placement.playerId)),
       presetKey: basePack?.teams?.[0]?.presetKey || null,
       presetLabel: basePack?.teams?.[0]?.presetLabel || null,
-      slots: buildFormationSlots(sport, teamEntryId),
+      // 🪤 Q4-11 : les reperes de la compo type CHOISIE. Publier toujours ceux du 4-3-3
+      // faisait lire au joueur le poste du 4-3-3, quelle que soit la formation.
+      slots: Array.isArray(slots) && slots.length ? slots : buildFormationSlots(sport, teamEntryId),
     }],
     visibility: visibility === 'called_only' ? 'called_only' : 'team',
   };

@@ -57,6 +57,8 @@ import { saveEventCompositionDraft } from '@/services/event/eventService';
 
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
+
 /**
  * C-E — ECRAN 17 du pack composition : « Rotation + chasuble ».
  *
@@ -149,6 +151,8 @@ function DetectionRotationBoard() {
     () => splitFromRoute || teamComposition?.detectionSplit || { rounds: [], teams: [] },
   );
   const [isBusy, setIsBusy] = useState(false);
+  // PETITSCHOIX/16 : une entrée ou une sortie de terrain pas encore enregistrée.
+  const [isDirty, setIsDirty] = useState(false);
   const [activeDragPlayer, setActiveDragPlayer] = useState(/** @type {any} */ (null));
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(
     /** @type {any} */ (null),
@@ -259,6 +263,7 @@ function DetectionRotationBoard() {
         )),
       };
     });
+    setIsDirty(true);
   }, [teamIndex]);
 
   const endDrag = useCallback((
@@ -364,6 +369,7 @@ function DetectionRotationBoard() {
         teamId,
       });
       setSplit(nextSplit);
+      setIsDirty(false);
     } catch (error) {
       handleActionError(error, 'detection.alerts.error.save');
     } finally {
@@ -373,6 +379,37 @@ function DetectionRotationBoard() {
     currentRound?.startedAt, eventId, handleActionError, isBusy, lineup.placedIds,
     split, teamComposition?.draft, teamId,
   ]);
+
+  // Enregistrer la repartition telle quelle, sans ouvrir de manche : le brouillon part entier
+  // (meme raison que `handleNextRound`).
+  const saveBeforeLeaving = useCallback(async () => {
+    if (!eventId || !teamId) return false;
+    try {
+      await saveEventCompositionDraft(eventId, {
+        draft: buildDraftPayloadWithSplit(teamComposition?.draft, split),
+        teamId,
+      });
+      setIsDirty(false);
+      return true;
+    } catch (error) {
+      handleActionError(error, 'detection.alerts.error.save');
+      return false;
+    }
+  }, [eventId, handleActionError, split, teamComposition?.draft, teamId]);
+
+  // PETITSCHOIX/16 (Adel 25/10) : quitter avec des modifications non enregistrées (retour, geste,
+  // onglet) demande « Voulez-vous enregistrer ? » — Oui enregistre puis quitte, Non quitte.
+  useGardeDeSortie(navigation, {
+    actif: isDirty,
+    enregistrer: saveBeforeLeaving,
+    textes: {
+      enregistrer: t('detection.alerts.unsaved.yes'),
+      message: '',
+      quitter: t('detection.alerts.unsaved.no'),
+      rester: '',
+      titre: t('detection.alerts.unsaved.title'),
+    },
+  });
 
   const renderChip = (
     /** @type {string} */ label,

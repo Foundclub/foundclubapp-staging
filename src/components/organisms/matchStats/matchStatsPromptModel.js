@@ -150,7 +150,10 @@ export const describeDraftRemaining = (response) => {
  */
 export const resolveCoachStep = (prompt) => {
   if (prompt?.reviewRequired || prompt?.state === 'review_required') return 'review';
-  if (prompt?.actionType === 'score_entry' || !prompt?.score?.available) return 'score';
+  // C07 / Q2-12 : en ligue, le score se saisit par la fin de match de la ligue
+  // (le rappel n a pas d `eventId`, « Enregistrer » ne faisait rien).
+  if (prompt?.actionType === 'score_entry') return 'score';
+  if (prompt?.sourceType !== 'league' && !prompt?.score?.available) return 'score';
   if (prompt?.reportStatus === 'draft' || prompt?.state === 'draft') return 'draft';
   return 'sheet';
 };

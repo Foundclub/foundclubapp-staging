@@ -463,12 +463,13 @@ const buildEventMapViewportQuery = (/** @type {SearchFilters} */ filters, /** @t
     centerLon: normalizedViewport.lng,
     club: filters?.club?.value || filters?.club,
     east: normalizedViewport.east,
-    excludeType: filters?.excludeType,
+    // BUGHUNT C02 P14-08 : les deux règles de la liste (`eventConfig`), sur la carte aussi.
+    excludeType: 'Réservation',
     level: filters?.level,
     north: normalizedViewport.north,
     pageSize: view === 'map' ? MAP_EVENT_VIEWPORT_PAGE_SIZE : 30,
     q: q.length >= 2 ? q : undefined,
-    sessionStatus: filters?.sessionStatus,
+    sessionStatus: 'open',
     south: normalizedViewport.south,
     startDateAfter: filters?.startDateAfter,
     startDateBefore: filters?.startDateBefore,
@@ -2768,3 +2769,6 @@ const styles = StyleSheet.create({
 });
 
 export default SearchMapScreen;
+
+// BUGHUNT C02 (25/10/2026) : exposée pour son témoin (P14-08).
+export { buildEventMapViewportQuery };

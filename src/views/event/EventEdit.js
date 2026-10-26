@@ -563,7 +563,8 @@ function EventEditForm({ navigation, route }) {
       ) || [],
       location: {
         label: getEventLocationLabel(event?.locationDetails),
-        value: `${event?.location?.lat}|${event?.location?.lng}`,
+        // Q4-02 — `lng|lat`, comme buildLocationPayload
+        value: `${event?.location?.lng}|${event?.location?.lat}`,
       },
       participantIdentityVisibility: event?.participantIdentityVisibility || 'VISIBLE',
       pricePerPerson: event?.pricePerPerson,
@@ -861,7 +862,8 @@ function EventEditForm({ navigation, route }) {
         ) || [],
         location: {
           label: getEventLocationLabel(event?.locationDetails),
-          value: `${event?.location?.lat}|${event?.location?.lng}`,
+          // Q4-02 — `lng|lat`, comme buildLocationPayload
+          value: `${event?.location?.lng}|${event?.location?.lat}`,
         },
         participantIdentityVisibility: event?.participantIdentityVisibility || 'VISIBLE',
         pricePerPerson: event?.pricePerPerson,

@@ -164,8 +164,9 @@ function TimePickerInput({
     }
     const lue = lireLaSaisie(texte);
     if (!lue) return;
-    // Lisible : le champ se remet en forme (« 1830 » devient « 18:30 »).
-    setSaisie(lue);
+    // Lisible : le champ se remet en forme (« 1830 » devient « 18:30 »). À 3 chiffres, pas encore :
+    // « 123 » réécrit en « 01:23 » mangeait la 4e touche (C04 Q1-01, « 1230 » donnait 01:23).
+    if (String(texte).replace(/\D/g, '').length > 3) setSaisie(lue);
     if (lue !== value) onChange(lue);
   };
   // Les flèches avancent ou reculent d'un quart d'heure ; Entrée referme la grille.

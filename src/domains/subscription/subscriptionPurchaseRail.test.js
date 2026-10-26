@@ -804,7 +804,12 @@ describe('subscriptionPurchaseRail', () => {
         nextPlanCode: 'fc_club_tier_2_yearly',
         subscriptionDocumentId: 'sub-1',
       }));
-      expect(result).toEqual({ changed: true });
+      // BUGHUNT C03 / Q1-08 — l'achat du magasin voyage avec la reponse : c'est
+      // lui qui dit a l'ecran si le changement a ete encaisse.
+      expect(result).toEqual({
+        changed: true,
+        purchase: expect.objectContaining({ transactionIdentifier: 'GPA.1234' }),
+      });
     });
 
     it('rail RevenueCat, planCode vide des deux cotes : passe par l achat store', async () => {

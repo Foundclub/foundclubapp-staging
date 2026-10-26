@@ -1149,6 +1149,16 @@ function SquadDetailsScreen({ navigation, route }) {
     }
   };
 
+  // A closed window forgets the slot it showed: the next « Ajouter » must create, not update.
+  const closeSlotModal = () => {
+    setIsSlotModalVisible(false);
+    setEditingSlot(null);
+  };
+  const openNewSlotModal = () => {
+    setEditingSlot(null);
+    setIsSlotModalVisible(true);
+  };
+
   const handleSaveSlot = async (
     /** @type {{ day: string, startTime: string, endTime: string } | { day: string, startTime: string, endTime: string }[]} */ slotInput,
   ) => {
@@ -1185,7 +1195,9 @@ function SquadDetailsScreen({ navigation, route }) {
           t('squadDetails.slots.updated', 'Créneau modifié'),
         );
       } else {
-        await Promise.all(
+        // allSettled: a partial failure must still refresh the team,
+        // or a retry duplicates the slots already saved.
+        const results = await Promise.allSettled(
           slotsToSave.map((slotData) => {
             const payload = {
               end_hour: `${slotData.endTime}:00`,
@@ -1198,6 +1210,33 @@ function SquadDetailsScreen({ navigation, route }) {
             return createTeamSlot(payload);
           }),
         );
+        const failedSlots = slotsToSave.filter(
+          (slotData, index) => results[index].status === 'rejected',
+        );
+        if (failedSlots.length === slotsToSave.length) {
+          throw results.find((result) => result.status === 'rejected')?.reason;
+        }
+        if (failedSlots.length > 0) {
+          await refetch();
+          closeSlotModal();
+          setIsUpdating(false);
+          // Only the failed slots are named; the window closes,
+          // so a retry cannot re-create the saved ones.
+          Alert.alert(
+            t('common.error', 'Erreur'),
+            t(
+              'squadDetails.slots.partialSaveError',
+              'Ces créneaux n’ont pas été ajoutés : {{slots}}. Les autres sont enregistrés.',
+              {
+                slots: failedSlots
+                  .map(({ day, startTime }) => `${slotDayLabels()[day] || day} ${startTime}`)
+                  .join(', '),
+                ...SANS_ECHAPPEMENT,
+              },
+            ),
+          );
+          return;
+        }
 
         Alert.alert(
           t('common.success', 'Succès'),
@@ -1715,7 +1754,7 @@ function SquadDetailsScreen({ navigation, route }) {
       );
       const primaryPress = slotCount > 0
         ? () => handleScrollToSection('slots')
-        : () => setIsSlotModalVisible(true);
+        : openNewSlotModal;
       const secondaryLabel = pendingRequestsCount > 0 ? t(
         'squadDetailsScreen.actionCard.captain.viewRequests',
         'Voir les demandes',
@@ -3132,7 +3171,7 @@ function SquadDetailsScreen({ navigation, route }) {
               isCaptain={isCaptain}
               isMember={Boolean(isMember)}
               layout="list"
-              onAddSlot={() => setIsSlotModalVisible(true)}
+              onAddSlot={openNewSlotModal}
               onCheckIn={handleCheckIn}
               onSlotPress={handleSlotPress}
               requiredPlayers={requiredPlayers}
@@ -3409,7 +3448,7 @@ function SquadDetailsScreen({ navigation, route }) {
         </View>
       </BottomModal>
       <BottomModal
-        close={() => setIsSlotModalVisible(false)}
+        close={closeSlotModal}
         headerComponent={(
           <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
             {editingSlot
@@ -3428,7 +3467,7 @@ function SquadDetailsScreen({ navigation, route }) {
             startTime: /** @type {any} */ (editingSlot)?.start_hour?.substring(0, 5),
           } : null}
           onAdd={handleSaveSlot}
-          onCancel={() => setIsSlotModalVisible(false)}
+          onCancel={closeSlotModal}
           onDelete={() => {
             // Fix for "Alert not attached to Activity" on Android
             setTimeout(() => {

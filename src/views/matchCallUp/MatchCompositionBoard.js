@@ -620,6 +620,7 @@ function MatchCompositionBoard() {
     placements,
     players: selectedPlayers,
     requireResponse,
+    slots,
     sport,
     teamName,
   }), [
@@ -627,6 +628,7 @@ function MatchCompositionBoard() {
     placements,
     requireResponse,
     selectedPlayers,
+    slots,
     sport,
     teamComposition,
     teamName,

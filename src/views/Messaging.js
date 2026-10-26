@@ -167,9 +167,9 @@ function Messaging({ navigation, route }) {
   // la Ville, le bouton rond ouvre « Nouvelle conversation » AU NOM DE LA VILLE (ses contacts :
   // membres majeurs de ses clubs et autres gestionnaires), quel que soit le rôle du compte ;
   // ailleurs, la règle d’avant (entraîneur, dirigeant, super-admin).
-  const roleQuiOuvreUneConversation = userData?.role?.name === 'Entraîneur'
-    || userData?.role?.name === 'Dirigeant'
-    || userData?.role?.name === 'SuperAdmin';
+  // Q4-17 — le rôle du serveur s'écrit « Entraineur » : la clef ignore accents et casse.
+  const roleQuiOuvreUneConversation = ['coach', 'president', 'superAdmin']
+    .includes(getUserRoleKey(userData?.role?.name));
   const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
   const floatingButtonBottom = floatingActionBottomOffset;
   const chatListBottomInset = canCreateConversation

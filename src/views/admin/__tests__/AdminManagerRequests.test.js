@@ -452,3 +452,20 @@ describe('VT18E — la personne gère déjà une autre collectivité', () => {
     expect(lire('gestionnaire-gere-deja-fiche')).toEqual([deja]);
   });
 });
+
+// C10 / P9-13 (BUGHUNT 25/10) — sur téléphone, « Retour à la file » rouvrait la même demande
+// quand l'écran était arrivé par « Ouvrir dans la file » : le paramètre `collectiviteId`
+// restait, et la demande de cette Ville revenait d'office. Le retour rend la FILE.
+describe('C10 · P9-13 — « Retour à la file » après « Ouvrir dans la file »', () => {
+  it('rend la file au téléphone, sans rouvrir la demande de la Ville', async () => {
+    mockParams = { collectiviteId: 'ville-montrivage' };
+    const arbre = await monter(<AdminManagerRequests />);
+    expect(textes(arbre)).toContain('Fonction : Service des sports');
+
+    await appuyer(arbre, 'gestionnaire-retour-file');
+
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'gestionnaire-fiche'))
+      .toHaveLength(0);
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Agnès Mairie', 'Paul Valfleuri']));
+  });
+});

@@ -260,6 +260,29 @@ describe('FINITIONS12-COLL point 1 — une réponse lente ou perdue n’est pas 
     expect(textes(arbre).join(' | ')).not.toMatch(/no longer pending/i);
   });
 
+  // C05 (BUGHUNT P2, P2-08) : un collègue a REFUSÉ entre-temps ; « Accepter » ne se dit pas réussi.
+  it('« plus en attente », mais REFUSÉE par un collègue : pas de fausse confirmation', async () => {
+    mockFile = [EN_ATTENTE];
+    mockPost.mockImplementation(async () => {
+      mockFile = [];
+      mockTraitees = [{ ...TRAITEE, status: 'refused' }];
+      // eslint-disable-next-line prefer-promise-reject-errors -- la forme que rejette le client
+      return Promise.reject({
+        details: {},
+        message: 'This facility override request is no longer pending',
+        name: 'BadRequestError',
+        status: 400,
+      });
+    });
+    const arbre = await monter();
+    await appuyer(arbre, 'bouton-Accepter');
+    await appuyer(arbre, 'bouton-Accepter', 1);
+    await attendre(() => lecturesDe('decided') > 0, 3000);
+    await attendre(() => false, 300);
+    expect(lecturesDe('decided')).toBeGreaterThan(0);
+    expect(fenetreOuverte(arbre)).toBe(true);
+  });
+
   // eslint-disable-next-line max-len
   it('délai dépassé et la demande est toujours en attente : l’erreur reste, la fenêtre aussi', async () => {
     mockPost.mockRejectedValue(DELAI_DEPASSE);

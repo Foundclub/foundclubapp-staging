@@ -947,3 +947,22 @@ describe('POINTAGE — les deux options de presence se modifient', () => {
     alerte.mockRestore();
   });
 });
+
+// Q4-02 (BUGHUNT P2, 25/10) — l'ecran ecrivait `lat|lng`, alors que tout le reste lit `lng|lat` :
+// chaque enregistrement inversait la latitude et la longitude.
+describe('Q4-02 — le GPS repart tel qu il est arrive', () => {
+  test('Paris reste a Paris apres un simple enregistrement', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const racine = await monterSur(evenementRempli({
+      location: { lat: 48.8566, lng: 2.3522 },
+      locationDetails: JSON.stringify({ address: '1 place de l Hotel de Ville, Paris' }),
+    }));
+    await act(async () => {
+      await boutonEnregistrer(racine).props.onPress();
+    });
+
+    const [charge] = eventService.updateEvent.mock.calls[0];
+    expect(charge.eventData.location).toEqual({ lat: 48.8566, lng: 2.3522 });
+    alerte.mockRestore();
+  });
+});

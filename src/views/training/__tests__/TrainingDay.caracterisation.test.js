@@ -8,6 +8,9 @@ import TrainingProgressBar from '@/components/organisms/training/TrainingProgres
 
 import TrainingDay from '../TrainingDay';
 
+/** Q4-08 : chaque envoi porte un retour en arriere si le serveur le refuse. */
+const ENVOI_AVEC_RETOUR = expect.objectContaining({ onError: expect.any(Function) });
+
 /**
  * « LA FICHE D UNE JOURNEE » — LE FILET.
  *
@@ -476,7 +479,7 @@ describe('les reperes se COCHENT, et la coche survit', () => {
     expect(mutate).toHaveBeenCalledWith({
       payload: { conditions: { prepared: ['Sommeil'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('BH15 · P13-04 — deux coches rapides, avant la reponse du serveur : les DEUX partent', () => {
@@ -488,7 +491,24 @@ describe('les reperes se COCHENT, et la coche survit', () => {
 
     expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
       payload: { conditions: { prepared: ['Sommeil', 'Cafe'] } },
-    }));
+    }), ENVOI_AVEC_RETOUR);
+  });
+
+  it('🐞 Q4-08 : apres un envoi RATE, recocher la case la coche (au lieu de la decocher)', () => {
+    // La memoire des envois avancait avant la reponse et ne reculait jamais :
+    // la case restait decochee a l ecran, mais la toucher envoyait « decoche ».
+    let echoue = true;
+    const mutate = jest.fn((/** @type {any} */ _v, /** @type {any} */ options) => {
+      if (echoue) { echoue = false; options?.onError?.(); }
+    });
+    const arbre = rendre({ miseAJour: { mutate } });
+
+    act(() => { reperes(arbre)[0].props.onPress(); });
+    act(() => { reperes(arbre)[0].props.onPress(); });
+
+    expect(mutate).toHaveBeenLastCalledWith(expect.objectContaining({
+      payload: { conditions: { prepared: ['Sommeil'] } },
+    }), expect.anything());
   });
 
   it('affiche COCHE ce que la seance dit deja prepare', () => {
@@ -513,7 +533,7 @@ describe('les reperes se COCHENT, et la coche survit', () => {
     expect(mutate).toHaveBeenCalledWith({
       payload: { conditions: { prepared: [] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 
   it('garde le reste de `conditions` intact : on n ecrase pas ce qu on ne lit pas', () => {
@@ -528,7 +548,7 @@ describe('les reperes se COCHENT, et la coche survit', () => {
     expect(mutate).toHaveBeenCalledWith({
       payload: { conditions: { meteo: 'pluie', prepared: ['Sommeil'] } },
       sessionDocumentId: 'seance-9',
-    });
+    }, ENVOI_AVEC_RETOUR);
   });
 });
 

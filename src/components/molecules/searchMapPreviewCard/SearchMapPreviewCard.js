@@ -23,9 +23,10 @@ const getInitial = (value) => {
 
 /**
  * @param {string[]} entries
+ * @param {number} [max]
  * @returns {string[]}
  */
-const compactEntries = (entries = []) => entries.filter(Boolean).slice(0, 2);
+const compactEntries = (entries = [], max = 2) => entries.filter(Boolean).slice(0, max);
 
 /**
  * @param {object} props
@@ -69,7 +70,8 @@ function SearchMapPreviewCard({
     item.timeLabel,
     scope === 'reservations' ? item.priceLabel : '',
     item.distanceLabel,
-  ]);
+    // Q1-14 : une réservation garde sa 3e pastille, le prix ; les autres cartes restent à deux.
+  ], scope === 'reservations' ? 3 : 2);
   const secondaryActionLabel = onDismiss ? t('searchMapPreviewCard.hide', 'Masquer') : t(
     'searchMapPreviewCard.showList',
     'Voir la liste',

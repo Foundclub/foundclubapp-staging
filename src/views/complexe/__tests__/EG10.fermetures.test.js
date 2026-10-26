@@ -460,7 +460,9 @@ describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
     await toucher(arbre, 'fermeture-fermer');
     expect(mockFermer).not.toHaveBeenCalled();
     expect(mockModifier).toHaveBeenCalledWith({
-      fermeture: { endDate: '2026-10-27', reason: 'travaux', startDate: '2026-10-25' },
+      fermeture: {
+        endDate: '2026-10-27', label: null, reason: 'travaux', startDate: '2026-10-25',
+      },
       fermetureIds: ['f-1', 'f-2'],
     });
     expect(lisibles(arbre)).toContain('Modifié : 25/10 – 27/10.');
@@ -491,5 +493,52 @@ describe('BH16 P13-15 — échec partiel ou total d’une fermeture', () => {
     mockFermer.mockClear();
     await toucher(arbre, 'fermeture-fermer');
     expect(mockFermer.mock.calls[0][0].terrainIds).toEqual(['t-2']);
+  });
+});
+
+// BUGHUNT C02 (25/10/2026) — Q4-03 : « Modifier » envoyait les fermetures d'origine et ignorait
+// les terrains cochés ou décochés (l'écran disait « Modifié ») ; le motif changé gardait l'ancien
+// nom (« Jour férié » ⇒ « Travaux » restait « Jour férié »). Les terrains sont verrouillés pendant
+// une modification, et le nom du motif est effacé quand le nouveau motif n'en a pas.
+// Q4-04 : « Rouvrir » annonçait « Rouvert » alors qu'un terrain restait fermé.
+describe('BUGHUNT C02 — modifier et rouvrir une fermeture', () => {
+  const TRAVAUX = '2026-10-25|2026-10-26|travaux|';
+
+  it('Q4-03 (a) : en modification, les terrains ne se cochent plus', async () => {
+    const arbre = await monter();
+    await toucher(arbre, `fermeture-modifier-${TRAVAUX}`);
+    const cases = ['fermeture-terrain-tous', 'fermeture-terrain-t-1', 'fermeture-terrain-t-3'];
+    cases.forEach((cle) => {
+      expect(parRepere(arbre, cle).props.disabled).toBe(true);
+    });
+    await act(async () => {
+      pressable(arbre, 'Annuler la modification').props.onPress();
+    });
+    expect(parRepere(arbre, 'fermeture-terrain-t-3').props.disabled).toBe(false);
+  });
+
+  it('Q4-03 (b) : de « Jour férié » à « Travaux », le nom « Jour férié » s’efface', async () => {
+    mockFermetures = {
+      ...mockFermetures,
+      data: [fermeture({
+        documentId: 'f-7', label: 'Jour férié', reason: 'autre', terrainId: 't-1',
+      })],
+    };
+    const arbre = await monter();
+    await toucher(arbre, 'fermeture-modifier-2026-10-25|2026-10-26|autre|Jour férié');
+    await toucher(arbre, 'fermeture-motif-travaux');
+    await toucher(arbre, 'fermeture-fermer');
+    expect(mockModifier.mock.calls[0][0].fermeture).toEqual(expect.objectContaining({
+      label: null, reason: 'travaux',
+    }));
+  });
+
+  it('Q4-04 : un terrain pas rouvert ⇒ pas de « Rouvert », une erreur', async () => {
+    mockRouvrir.mockResolvedValue({ echecs: [{ id: 'f-2' }], faits: 1 });
+    const arbre = await monter();
+    await toucher(arbre, `fermeture-rouvrir-${TRAVAUX}`);
+    await toucher(arbre, 'fermeture-confirmer-rouvrir');
+    expect(lisibles(arbre)).not.toContain('Rouvert : les créneaux sont libres.');
+    expect(lisibles(arbre)).toContain('La fermeture n’a pas pu être rouverte.');
   });
 });

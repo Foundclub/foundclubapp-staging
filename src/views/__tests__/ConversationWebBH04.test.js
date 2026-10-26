@@ -18,6 +18,7 @@ let mockFil = null;
 /** @type {any} */
 let mockSocket = null;
 const mockStopFrappe = jest.fn();
+const mockVoter = jest.fn(() => Promise.resolve({}));
 
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -81,7 +82,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
     sendTypingStart: jest.fn(),
     sendTypingStop: mockStopFrappe,
     socket: mockSocket,
-    votePoll: jest.fn(),
+    votePoll: (/** @type {any[]} */ ...args) => mockVoter(...args),
   }),
 }));
 
@@ -399,5 +400,34 @@ describe('BH04 — messagerie du site', () => {
     await act(async () => { arbre.update(ecran()); });
     await act(async () => { await new Promise((r) => { setTimeout(r, 30); }); });
     expect(noeuds.filter((n) => n.scrollTop === 1000)).toHaveLength(0);
+  });
+
+  test('Q4-12 (P6-06) : les événements à partager excluent le type « Réservation » (accent)', async () => {
+    // eslint-disable-next-line global-require
+    const { getEvents } = require('@/services/event/eventService');
+    getEvents.mockClear();
+    await monter();
+    await act(async () => { await new Promise((r) => { setTimeout(r, 10); }); });
+    const filtres = getEvents.mock.calls.map((/** @type {any[]} */ c) => c[0]).filter((/** @type {any} */ f) => f?.myTeams);
+    expect(filtres.length).toBeGreaterThan(0);
+    filtres.forEach((/** @type {any} */ f) => expect(f.excludeType).toBe('Réservation'));
+  });
+
+  test('Q4-20 (P6-15) : voter sur un sondage pas encore confirmé (temp-) n appelle pas le serveur', async () => {
+    const alerte = jest.fn();
+    global.window.alert = alerte;
+    mockVoter.mockClear();
+    mockMessagesDuFil = [{
+      composition: { options: [{ id: 'o1', text: 'Oui', votes: [] }], question: 'On joue ?', type: 'poll' },
+      createdAt: '2026-10-07T08:00:00.000Z',
+      documentId: 'temp-123',
+      id: 'temp-123',
+      sender: MOI,
+    }];
+    const { arbre } = await monter();
+    const bulle = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onVote === 'function')[0];
+    await act(async () => { await bulle.props.onVote('o1'); });
+    expect(mockVoter).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith('Le sondage est en cours de synchronisation.');
   });
 });

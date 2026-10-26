@@ -421,8 +421,11 @@ function TrainingDay({ navigation, route }) {
     updateSession.mutate({
       payload: { conditions: { ...(session.conditions || {}), prepared: [...apres] } },
       sessionDocumentId: session.documentId,
+    }, {
+      // Q4-08 : un envoi raté n'a rien changé au serveur ; la mémoire recule avec lui.
+      onError: () => { preparesEnvoyesRef.current = prepares; },
     });
-  }, [session, updateSession]);
+  }, [prepares, session, updateSession]);
 
   const start = useCallback(async () => {
     if (!session?.documentId) return;

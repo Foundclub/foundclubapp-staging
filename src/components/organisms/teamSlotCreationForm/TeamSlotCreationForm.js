@@ -70,6 +70,11 @@ const LOCATION_MODES = [
  * @typedef {{ day: string, startTime: string, endTime: string, locationMode?: string | null }} TeamSlotDraft
  */
 
+// C04 Q3-06 — les heures se comparent dans la journée : un début à 23 h poussait la fin au
+// lendemain, et « 18:00 → 10:00 » était ensuite accepté.
+const DERNIERE_MINUTE = (23 * 60) + 55;
+const minutesDuJour = (/** @type {Date} */ date) => (date.getHours() * 60) + date.getMinutes();
+
 /**
  * @param {object} props
  * @param {(slotOrSlots: TeamSlotDraft | TeamSlotDraft[]) => void} props.onAdd
@@ -145,10 +150,9 @@ function TeamSlotCreationForm({
     if (type === 'minute') newStart.setMinutes(value);
     setStartTimeDate(newStart);
 
-    const minEnd = new Date(newStart);
-    minEnd.setHours(minEnd.getHours() + 1);
-
-    if (endTimeDate <= newStart) {
+    if (minutesDuJour(endTimeDate) <= minutesDuJour(newStart)) {
+      const minEnd = new Date(newStart);
+      minEnd.setHours(0, Math.min(minutesDuJour(newStart) + 60, DERNIERE_MINUTE), 0, 0);
       setEndTimeDate(minEnd);
     }
   };
@@ -174,7 +178,10 @@ function TeamSlotCreationForm({
       .filter((day) => typeof day === 'string' && day.length > 0);
   }, [isEditMode, selectedDay, selectedDays]);
 
-  const hasValidTimeRange = useMemo(() => endTimeDate > startTimeDate, [endTimeDate, startTimeDate]);
+  const hasValidTimeRange = useMemo(
+    () => minutesDuJour(endTimeDate) > minutesDuJour(startTimeDate),
+    [endTimeDate, startTimeDate],
+  );
 
   const slotsDraft = useMemo(() => {
     if (!hasValidTimeRange || selectedDayValues.length === 0) return [];

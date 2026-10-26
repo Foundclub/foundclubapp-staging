@@ -14,6 +14,7 @@ import client from '../client';
  *   activity?: string;
  *   geohash?: string;
  *   maxPricePerPerson?: number;
+ *   maxPrice?: number | string;
  *   needsPlayers?: boolean;
  *   startTime?: string;
  *   startDateAfter?: string;
@@ -27,7 +28,10 @@ export const getReservations = async (filters = {}) => {
       activity,
       club,
       geohash,
-      maxPricePerPerson,
+      // BUGHUNT C02 Q2-07 : la feuille de filtres écrit `maxPrice` (seule la recherche
+      // par texte le lisait) ; sans texte tapé, le prix maximum n'avait aucun effet.
+      maxPrice,
+      maxPricePerPerson = maxPrice,
       needsPlayers = false,
       page = 1,
       pageSize = 15,

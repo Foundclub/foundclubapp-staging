@@ -90,7 +90,8 @@ function FriendlyMatchApplicationCard({
 
   const isPending = application?.status === 'pending';
   const isAccepted = application?.status === 'accepted';
-  const chosenDayLabel = toReadableDay(application?.chosenDate);
+  // Q4-07 : `chosenDate` est un JOUR garde a minuit UTC, pas un instant.
+  const chosenDayLabel = toReadableDay(String(application?.chosenDate || '').slice(0, 10));
 
   // Ce qui est convenu (§4.4) prime sur ce que le candidat avait coche : c est
   // cette date-la qui deviendra celle du match a l acceptation.

@@ -415,6 +415,10 @@ function TomTomSearchMapNative({
     }),
     [items.length, refreshStrategy, renderModel.stats.aggregated, scope, totalResults],
   );
+  // Q3-20 : le cycle de la carte ne redémarre que sur un vrai rechargement, pas quand le nombre
+  // de résultats change (MAP_READY ne reviendrait jamais et la carte tomberait en erreur).
+  const logContextRef = useRef(logContext);
+  logContextRef.current = logContext;
   const emptyMessage = totalResults > 0 && items.length === 0
     ? getSearchMapNoCoordinatesMessage(scope, totalResults)
     : getSearchMapEmptyMessage(scope);
@@ -487,10 +491,10 @@ function TomTomSearchMapNative({
     setMapErrorReason(tomTomApiKey ? '' : 'missing_api_key');
     setProviderRenderStats(null);
     searchMapLogger.info('map cycle started', {
-      ...logContext,
+      ...logContextRef.current,
       retryCycle: mapRenderKey,
     });
-  }, [logContext, mapRenderKey, tomTomApiKey]);
+  }, [mapRenderKey, tomTomApiKey]);
 
   useEffect(() => {
     if (!__DEV__ || !tomTomApiKey) {

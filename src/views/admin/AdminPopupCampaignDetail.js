@@ -103,7 +103,16 @@ function AdminPopupCampaignDetail() {
     );
   }
 
-  const handlePublish = async () => {
+  // C10 / P9-21 : publier (la popup part chez les utilisateurs) et archiver (definitif)
+  // demandent une confirmation ; « Dupliquer » et « Mettre en pause » restent directs.
+  const confirmerPuis = (titre, message, libelle, action) => {
+    Alert.alert(titre, message, [
+      { style: 'cancel', text: t('adminPopupCampaignDetail.confirm.cancel', 'Annuler') },
+      { onPress: action, style: 'destructive', text: libelle },
+    ]);
+  };
+
+  const publier = async () => {
     try {
       await publishMutation.mutateAsync({ documentId: campaign.documentId });
       campaignQuery.refetch();
@@ -129,7 +138,17 @@ function AdminPopupCampaignDetail() {
     }
   };
 
-  const handleArchive = async () => {
+  const handlePublish = () => confirmerPuis(
+    t('adminPopupCampaignDetail.confirm.publishTitle', 'Publier cette campagne ?'),
+    t(
+      'adminPopupCampaignDetail.confirm.publishBody',
+      'La popup sera montrée aux utilisateurs ciblés.',
+    ),
+    t('adminPopupCampaignDetail.actions.publish', 'Publier'),
+    publier,
+  );
+
+  const archiver = async () => {
     try {
       await archiveMutation.mutateAsync({ documentId: campaign.documentId });
       campaignQuery.refetch();
@@ -141,6 +160,16 @@ function AdminPopupCampaignDetail() {
       ), getErrorMessage(error, 'generic'));
     }
   };
+
+  const handleArchive = () => confirmerPuis(
+    t('adminPopupCampaignDetail.confirm.archiveTitle', 'Archiver cette campagne ?'),
+    t(
+      'adminPopupCampaignDetail.confirm.archiveBody',
+      'C’est définitif : elle ne pourra plus être publiée, seulement dupliquée.',
+    ),
+    t('adminPopupCampaignDetail.actions.archive', 'Archiver'),
+    archiver,
+  );
 
   const handleDuplicate = async () => {
     try {
