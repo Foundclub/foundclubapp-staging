@@ -3317,6 +3317,13 @@ function Conversation({ navigation, route }) {
     }
     setIsGroupManagementVisible(true);
   };
+  // CHOIX3 (« 9- A », 26/10, Q4-24) — le ⋮ ouvre les infos pour TOUT membre, canal d'un complexe
+  // compris, comme sur le site : « Quitter le canal » y devient atteignable.
+  const handleOpenGroupInfoFromMenu = () => {
+    if (!isGroupChat) return;
+    setIsMenuVisible(false);
+    setIsGroupManagementVisible(true);
+  };
 
   const handleSaveGroupName = async (/** @type {string} */ nom) => {
     const nextGroupName = String(nom || '').trim();
@@ -7462,7 +7469,7 @@ function Conversation({ navigation, route }) {
               cle: 'infos-du-groupe',
               icone: 'users',
               libelle: t('conversation.groupInfo.title', 'Infos du groupe'),
-              onPress: handleOpenGroupManagement,
+              onPress: handleOpenGroupInfoFromMenu,
             }] : []),
             ...(showCancelButton ? [{
               cle: 'annuler-le-match',
