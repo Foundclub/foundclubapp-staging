@@ -455,13 +455,14 @@ describe('RecruitmentAdDetails — AFFICHEJOUEUR : coordonnees masquees d un can
     const coordonnees = textes.filter((texte) => /^\+?\d{6,}$|@/.test(texte.trim()));
     expect(coordonnees).toEqual(['+33600000022', 'karim@banc.test']);
 
-    // Le bloc du mineur : son nom et « Voir le profil », et RIEN d autre (pas de ligne vide).
+    // Le bloc du mineur : son nom, son statut et « Voir le profil », et RIEN d autre (pas de ligne vide).
+    // Récolte du 27/10 : RECETTEWEB (retour 4) range le badge de statut sous le nom, dans ce bloc.
     let bloc = tree.root.find(
       (/** @type {any} */ n) => n.type === 'Text' && n.props.children === 'Hugo Lemaire',
     );
     while (bloc.parent && bloc.type !== 'View') bloc = bloc.parent;
     const textesDuBloc = bloc.findAll((/** @type {any} */ n) => n.type === 'Text')
       .map((/** @type {any} */ n) => n.props.children);
-    expect(textesDuBloc).toEqual(['Hugo Lemaire', 'Voir le profil']);
+    expect(textesDuBloc).toEqual(['Hugo Lemaire', 'En attente', 'Voir le profil']);
   });
 });
