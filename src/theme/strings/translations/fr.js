@@ -11552,6 +11552,8 @@ export default {
       ready: 'Prêt à créer',
       recurrenceCount: '{{count}} occurrence(s) prévues',
       reservationMode: 'Mode de réservation: {{value}}',
+      saufVacances_one: 'Sauf vacances scolaires : {{count}} séance retirée',
+      saufVacances_other: 'Sauf vacances scolaires : {{count}} séances retirées',
       sections: {
         description: 'Description',
         location: 'Lieu',

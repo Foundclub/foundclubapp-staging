@@ -10907,6 +10907,8 @@ export default {
       ready: 'Ready to create',
       recurrenceCount: '{{count}} occurrence(s) planned',
       reservationMode: 'Booking mode: {{value}}',
+      saufVacances_one: 'Except school holidays: {{count}} session removed',
+      saufVacances_other: 'Except school holidays: {{count}} sessions removed',
       sections: {
         description: 'Description',
         location: 'Location',

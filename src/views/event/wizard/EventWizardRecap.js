@@ -260,6 +260,10 @@ const buildWizardFormData = (wizardState) => {
     invitedTeams: Array.isArray(wizardState.invitedTeams) ? wizardState.invitedTeams : [],
     isMultiDayTournament: wizardState.isMultiDayTournament === true,
     isRecurrent: Boolean(wizardState.isRecurrent),
+    // 🗓️ DATESDABORD (26/10) — « Sauf vacances scolaires » et les périodes de la zone (étape
+    // « Date & horaire ») : la série se déplie sans les séances des vacances.
+    exceptHolidays: Boolean(wizardState.exceptHolidays),
+    holidayPeriods: Array.isArray(wizardState.holidayPeriods) ? wizardState.holidayPeriods : [],
     location: wizardState.location,
     // Y02 : l'adversaire part au serveur. `null` plutot que `''` quand il est
     // inconnu — le lifecycle range les deux au meme endroit, mais `null` dit
@@ -430,6 +434,14 @@ function EventWizardRecap({ navigation }) {
   );
 
   const recurrencePreviewCount = plannedPayloads.length;
+  // DATESDABORD (26/10, « Q2 B » du chef) — les séances que « Sauf vacances scolaires » retire.
+  const seancesRetireesEnVacances = useMemo(
+    () => (!isMultiDayProgram && wizardFormData.isRecurrent && wizardFormData.exceptHolidays
+      ? createReccurrentEventPayload({ ...wizardFormData, exceptHolidays: false }).length
+        - plannedPayloads.length
+      : 0),
+    [createReccurrentEventPayload, isMultiDayProgram, plannedPayloads.length, wizardFormData],
+  );
   // SERIE-ANNONCE (06/10, décision du chef « serie A ») — une SÉRIE (plusieurs dates d'un même
   // `recurrenceGroupId`) s'annonce UNE fois aux équipes, après le lot : chaque date part
   // « j'annoncerai », puis `announceEventSeries` (`finalizeSuccess`). Une date seule
@@ -1409,6 +1421,15 @@ function EventWizardRecap({ navigation }) {
               {state.isRecurrent ? (
                 <Text style={[Fonts.p3Bold, Fonts.gold500]}>
                   {t('eventWizard.recap.recurrenceCount', { count: recurrencePreviewCount })}
+                </Text>
+              ) : null}
+              {state.isRecurrent && wizardFormData.exceptHolidays ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]} testID="recap-sauf-vacances">
+                  {t('eventWizard.recap.saufVacances', {
+                    count: seancesRetireesEnVacances,
+                    defaultValue_one: 'Sauf vacances scolaires : {{count}} séance retirée',
+                    defaultValue_other: 'Sauf vacances scolaires : {{count}} séances retirées',
+                  })}
                 </Text>
               ) : null}
             </View>
