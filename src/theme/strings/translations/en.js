@@ -17405,7 +17405,8 @@ export default {
         placeholder: 'Luc',
       },
       height: {
-        invalid: 'Between 100 and 250 cm (e.g. 182)',
+        invalid: 'Between 100 and 230 cm (e.g. 182)',
+        invalidMinor: 'Between 50 and 230 cm (e.g. 140)',
         label: 'Height (cm)',
         placeholder: 'e.g. 180',
       },
@@ -17455,6 +17456,8 @@ export default {
         president: 'Club manager',
       },
       weight: {
+        invalid: 'Between 25 and 200 kg (e.g. 75)',
+        invalidMinor: 'Between 10 and 200 kg (e.g. 40)',
         label: 'Weight (kg)',
         placeholder: '80',
       },

@@ -12,7 +12,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { computeAge } from '@/domains/playerCard/cardModel';
 import useTheme from '@/theme/themeContext';
+import { erreurPhysique } from '@/utils/heightCentimeters';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
@@ -30,6 +32,8 @@ import { updateMe } from '@/services/auth/authService';
 function UserPhysique({ navigation }) {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
+  // CHOIX3 (« 11- A », P5-24) — la borne depassee, dite sous son champ.
+  const [erreurs, setErreurs] = useState(/** @type {{ height?: string, weight?: string }} */ ({}));
 
   const {
     getNextOnboardingRoute,
@@ -98,12 +102,32 @@ function UserPhysique({ navigation }) {
 
   const handleNext = () => {
     if ((height || weight) && userData) {
+      const age = computeAge(userData?.birthdate);
+      const taille = erreurPhysique('height', height, age);
+      const poids = erreurPhysique('weight', weight, age);
+      const prochainesErreurs = {
+        ...(taille.cle ? { height: taille.cle } : {}),
+        ...(poids.cle ? { weight: poids.cle } : {}),
+      };
+      setErreurs(prochainesErreurs);
+      if (taille.cle || poids.cle) return;
       const data = {};
-      if (height) data.height = height;
-      if (weight) data.weight = weight;
+      if (height) data.height = taille.valeur;
+      if (weight) data.weight = poids.valeur;
       updateUserMutation.mutate(data);
     }
   };
+
+  /**
+   * Le message d'une borne depassee, ou rien.
+   * @param {'height' | 'weight'} champ
+   * @returns {import('react').ReactElement | null}
+   */
+  const renderErreur = (champ) => (erreurs[champ] ? (
+    <Text accessibilityRole="alert" style={[Fonts.p2, { color: Colors.error500 }]}>
+      {t(erreurs[champ])}
+    </Text>
+  ) : null);
 
   const handleSkip = () => {
     navigation.navigate(getNextOnboardingRoute(RouteNames.UserPhysique) || getPostOnboardingHomeRoute());
@@ -174,6 +198,7 @@ function UserPhysique({ navigation }) {
                 ]}
                 value={height}
               />
+              {renderErreur('height')}
             </View>
 
             <View style={[Spaces.gap[8]]}>
@@ -200,6 +225,7 @@ function UserPhysique({ navigation }) {
                 ]}
                 value={weight}
               />
+              {renderErreur('weight')}
             </View>
 
             {/*
