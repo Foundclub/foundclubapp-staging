@@ -9508,6 +9508,11 @@ export default {
         save: 'Impossible d’enregistrer cette répartition.',
         title: 'Erreur',
       },
+      // DETECTION2 P14-07 : un joueur lâché sur un terrain déjà complet.
+      fieldFull: {
+        message: 'Sors d’abord un joueur du terrain pour en faire entrer un autre.',
+        title: 'Terrain complet',
+      },
       ok: 'OK',
       published: {
         // ⚠️ Le mot « convocation » est interdit en détection (règle du pack §6),

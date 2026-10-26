@@ -2,6 +2,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -145,9 +146,10 @@ function DetectionTeamsBoard() {
     teamId,
   } = params;
 
-  const { data: teamComposition } = useGetEventTeamComposition(eventId, teamId, {
-    enabled: Boolean(eventId),
-  });
+  const {
+    data: teamComposition,
+    refetch: refetchComposition,
+  } = useGetEventTeamComposition(eventId, teamId, { enabled: Boolean(eventId) });
 
   const allPlayers = useMemo(() => {
     const fromServer = teamComposition?.eligiblePlayers;
@@ -201,6 +203,16 @@ function DetectionTeamsBoard() {
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(
     /** @type {any} */ (null),
   );
+
+  // DETECTION2 P14-01 : sans cache (lien web, rechargement), la repartition rangee arrive
+  // apres le premier affichage ; on la reprend UNE fois, si le coach n'a encore rien touche.
+  const teamsSettledRef = useRef(Array.isArray(storedSplit?.teams) && storedSplit.teams.length > 0);
+  useEffect(() => {
+    const stored = storedSplit?.teams;
+    if (teamsSettledRef.current || !Array.isArray(stored) || !stored.length) return;
+    teamsSettledRef.current = true;
+    setTeams(stored);
+  }, [storedSplit?.teams]);
 
   const activeTeam = teams[activeTeamIndex] || null;
   const lineup = useMemo(
@@ -292,16 +304,24 @@ function DetectionTeamsBoard() {
     // equipes avant d'ajouter. Le doublon est impossible par construction, et
     // c'est le temoin 3 du lot qui le tient.
     if (droppedOnField) {
+      // DETECTION2 P14-07 : un terrain complet refuse le joueur. Sinon il passait en rotation,
+      // que ce tableau n'affiche pas : il disparaissait de l'ecran.
+      if (!lineup.placedIds.includes(playerId) && lineup.placedIds.length >= slotCount) {
+        Alert.alert(t('detection.alerts.fieldFull.title'), t('detection.alerts.fieldFull.message'));
+        return;
+      }
+      teamsSettledRef.current = true;
       setTeams((current) => movePlayerToTeam(current, playerId, activeTeamIndex));
       setIsDirty(true);
       return;
     }
 
     if (source !== SOURCE_UNASSIGNED) {
+      teamsSettledRef.current = true;
       setTeams((current) => movePlayerToTeam(current, playerId, null));
       setIsDirty(true);
     }
-  }, [activeTeamIndex]);
+  }, [activeTeamIndex, lineup.placedIds, slotCount, t]);
 
   const createDragGesture = useCallback((
     /** @type {any} */ player,
@@ -395,7 +415,9 @@ function DetectionTeamsBoard() {
       draft: buildDraftPayloadWithSplit(teamComposition?.draft, buildPayload()),
       teamId,
     });
-  }, [buildPayload, eventId, teamComposition?.draft, teamId]);
+    // DETECTION2 P14-05 : l'ecran suivant relit la composition qui vient d'etre ecrite.
+    await refetchComposition?.();
+  }, [buildPayload, eventId, refetchComposition, teamComposition?.draft, teamId]);
 
   const handleSave = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
@@ -436,6 +458,31 @@ function DetectionTeamsBoard() {
       titre: t('detection.alerts.unsaved.title'),
     },
   });
+
+  // DETECTION2 (signale par PETITSCHOIX) : au retour de la rotation, le tableau RELIT la
+  // repartition rangee. Sinon son « Enregistrer » ecrasait la rotation qu'on venait d'y
+  // enregistrer. Une modification non enregistree d'ici a suivi en rotation, qui a pose la
+  // question : on relit donc toujours apres elle. Ailleurs, on ne relit que sans modification.
+  const leftForRotationRef = useRef(false);
+  const hasLeftRef = useRef(false);
+  useEffect(() => {
+    const stopBlur = navigation.addListener('blur', () => { hasLeftRef.current = true; });
+    const stopFocus = navigation.addListener('focus', async () => {
+      if (!hasLeftRef.current || (isDirty && !leftForRotationRef.current)) return;
+      hasLeftRef.current = false;
+      leftForRotationRef.current = false;
+      const result = await refetchComposition?.();
+      const stored = result?.data?.detectionSplit?.teams;
+      if (!Array.isArray(stored) || !stored.length) return;
+      teamsSettledRef.current = true;
+      setTeams(stored);
+      setIsDirty(false);
+    });
+    return () => {
+      stopBlur?.();
+      stopFocus?.();
+    };
+  }, [isDirty, navigation, refetchComposition]);
 
   const handlePublish = useCallback(async () => {
     if (!eventId || !teamId || isBusy) return;
@@ -582,6 +629,7 @@ function DetectionTeamsBoard() {
               accessibilityRole="button"
               activeOpacity={0.8}
               onPress={() => {
+                teamsSettledRef.current = true;
                 setTeams((current) => addTeam(current));
                 setIsDirty(true);
               }}
@@ -714,10 +762,13 @@ function DetectionTeamsBoard() {
             accessibilityRole="button"
             activeOpacity={0.8}
             onPress={() => {
+              leftForRotationRef.current = true;
               // @ts-ignore — `navigate` est bien la sur un ecran de pile.
               navigation.navigate(RouteNames.DetectionRotation, {
                 ...params,
                 detectionSplit: buildPayload(),
+                // DETECTION2 : ce qui n'est pas enregistre ici le reste la-bas, qui demandera.
+                repartitionNonEnregistree: isDirty,
                 teamIndex: activeTeamIndex,
               });
             }}

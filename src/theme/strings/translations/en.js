@@ -8981,6 +8981,11 @@ export default {
         save: "Couldn't save this split.",
         title: 'Error',
       },
+      // DETECTION2 P14-07: a player dropped on a field that is already full.
+      fieldFull: {
+        message: 'Take a player off the field first to bring another one on.',
+        title: 'Field full',
+      },
       ok: 'OK',
       published: {
         message: 'Every player is notified of their team.',

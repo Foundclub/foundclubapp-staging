@@ -1,6 +1,8 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -58,6 +60,11 @@ const EMPTY_LIST = [];
 
 const getPlayerId = (/** @type {any} */ player) => String(player?.documentId || player?.id || '');
 
+const readStoredTeamCount = (/** @type {any} */ storedSplit) => {
+  const stored = Number(storedSplit?.teamCount);
+  return Number.isFinite(stored) && stored >= 2 ? Math.min(stored, MAX_DETECTION_TEAMS) : 2;
+};
+
 function DetectionTeamsAuto() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -77,9 +84,10 @@ function DetectionTeamsAuto() {
     teamId,
   } = params;
 
-  const { data: teamComposition } = useGetEventTeamComposition(eventId, teamId, {
-    enabled: Boolean(eventId),
-  });
+  const {
+    data: teamComposition,
+    refetch: refetchComposition,
+  } = useGetEventTeamComposition(eventId, teamId, { enabled: Boolean(eventId) });
 
   const players = useMemo(() => {
     const fromServer = teamComposition?.eligiblePlayers;
@@ -88,13 +96,27 @@ function DetectionTeamsAuto() {
 
   const storedSplit = teamComposition?.detectionSplit || null;
 
-  const [teamCount, setTeamCount] = useState(() => {
-    const stored = Number(storedSplit?.teamCount);
-    return Number.isFinite(stored) && stored >= 2 ? Math.min(stored, MAX_DETECTION_TEAMS) : 2;
-  });
+  const [teamCount, setTeamCount] = useState(() => readStoredTeamCount(storedSplit));
   const [splitByPosition, setSplitByPosition] = useState(
     () => storedSplit?.splitBy === SPLIT_BY.REQUESTED_POSITION,
   );
+  // DETECTION2 P14-01 : sans cache, les reglages ranges arrivent apres le premier affichage ;
+  // on les reprend UNE fois, si le coach n'a encore rien touche.
+  const settingsSettledRef = useRef(Boolean(storedSplit));
+  useEffect(() => {
+    if (settingsSettledRef.current || !storedSplit) return;
+    settingsSettledRef.current = true;
+    setTeamCount(readStoredTeamCount(storedSplit));
+    setSplitByPosition(storedSplit.splitBy === SPLIT_BY.REQUESTED_POSITION);
+  }, [storedSplit]);
+  const changeTeamCount = useCallback((/** @type {number} */ step) => {
+    settingsSettledRef.current = true;
+    setTeamCount((current) => Math.min(MAX_DETECTION_TEAMS, Math.max(2, current + step)));
+  }, []);
+  const changeSplitByPosition = useCallback((/** @type {boolean} */ value) => {
+    settingsSettledRef.current = true;
+    setSplitByPosition(value);
+  }, []);
   const [isBusy, setIsBusy] = useState(false);
 
   const splitBy = splitByPosition ? SPLIT_BY.REQUESTED_POSITION : SPLIT_BY.NONE;
@@ -137,6 +159,8 @@ function DetectionTeamsAuto() {
         draft: buildDraftPayloadWithSplit(teamComposition?.draft, detectionSplit),
         teamId,
       });
+      // DETECTION2 P14-05 : le terrain (ecran 16) s'ouvre sur la repartition ecrite.
+      await refetchComposition?.();
       Alert.alert(
         t('detection.alerts.saved.title'),
         t('detection.alerts.saved.message'),
@@ -159,7 +183,8 @@ function DetectionTeamsAuto() {
     }
   }, [
     checkInFirst, eventId, isBusy, memberMode, navigation, params, players, presentIds,
-    preview.teams, splitBy, storedSplit?.rounds, t, teamComposition?.draft, teamCount, teamId,
+    preview.teams, refetchComposition, splitBy, storedSplit?.rounds, t, teamComposition?.draft,
+    teamCount, teamId,
   ]);
 
   const renderPositionRow = (/** @type {any} */ row) => (
@@ -237,7 +262,7 @@ function DetectionTeamsAuto() {
               accessibilityLabel="-"
               accessibilityRole="button"
               activeOpacity={0.8}
-              onPress={() => setTeamCount((current) => Math.max(2, current - 1))}
+              onPress={() => changeTeamCount(-1)}
               style={[styles.counterButton, { borderColor: Colors.primary500 }]}
             >
               <Text style={[Fonts.h3Bold, { color: Colors.primary500 }]}>-</Text>
@@ -252,7 +277,7 @@ function DetectionTeamsAuto() {
               accessibilityLabel="+"
               accessibilityRole="button"
               activeOpacity={0.8}
-              onPress={() => setTeamCount((current) => Math.min(MAX_DETECTION_TEAMS, current + 1))}
+              onPress={() => changeTeamCount(1)}
               style={[
                 styles.counterButton,
                 { backgroundColor: Colors.primary500, borderColor: Colors.primary500 },
@@ -282,7 +307,7 @@ function DetectionTeamsAuto() {
           </View>
           <Switch
             accessibilityLabel={t('detection.teams.auto.splitBy.title')}
-            onValueChange={setSplitByPosition}
+            onValueChange={changeSplitByPosition}
             thumbColor={Colors.neutral00}
             trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
             value={splitByPosition}
