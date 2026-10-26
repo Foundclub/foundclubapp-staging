@@ -749,6 +749,57 @@ function StatCard({
   );
 }
 
+// LICRESTECODE (26/10, planche LICRESTE validee « 5- ok ») : ce que compte le « Reste » du hub.
+// Archivees hors du total (decision 15), brouillons et programmees aussi : rien n'est encore
+// demande aux membres (« 1c-A »). Une terminee compte, et sa part du reste est dite (« 1a-A »).
+const STATUTS_COMPTES_AU_HUB = ['active', 'paused', 'closed'];
+// Le hub ne montre que les 5 premieres campagnes de la liste (`slice(0, 5)` plus bas).
+const CARTES_DE_CAMPAGNE_DU_HUB = 5;
+
+/**
+ * Regroupe les totaux des campagnes du hub : une ligne par devise (on n'additionne jamais
+ * deux monnaies), la devise qui attend le plus d'argent d'abord ; les retards en un seul
+ * total, parce que ce sont des personnes.
+ * @param {any[]} campagnes - La liste servie par le serveur, dans son ordre.
+ * @returns {{archivedCount: number, hiddenCount: number, lignes: any[], overdueCount: number}}
+ */
+const resumerLeHub = (campagnes = []) => {
+  const parDevise = new Map();
+  const resume = {
+    archivedCount: 0, hiddenCount: 0, lignes: [], overdueCount: 0,
+  };
+  campagnes.forEach((item, index) => {
+    const statut = String(item?.status || '');
+    if (statut === 'archived') {
+      resume.archivedCount += 1;
+      return;
+    }
+    if (!STATUTS_COMPTES_AU_HUB.includes(statut)) return;
+    const totaux = item?.totals || {};
+    const devise = String(item?.currency || 'EUR').toUpperCase();
+    const ligne = parDevise.get(devise) || {
+      closedRemainingCents: 0, currency: devise, expectedCents: 0, paidCents: 0, remainingCents: 0,
+    };
+    ligne.expectedCents += totaux.expectedCents || 0;
+    ligne.paidCents += totaux.paidCents || 0;
+    ligne.remainingCents += totaux.remainingCents || 0;
+    if (statut === 'closed') ligne.closedRemainingCents += totaux.remainingCents || 0;
+    parDevise.set(devise, ligne);
+    resume.overdueCount += totaux.overdueCount || 0;
+    // E3 : une campagne comptee mais sans carte visible doit etre annoncee.
+    if (index >= CARTES_DE_CAMPAGNE_DU_HUB) resume.hiddenCount += 1;
+  });
+  resume.lignes = [...parDevise.values()].sort((gauche, droite) => (
+    (droite.expectedCents - gauche.expectedCents) || gauche.currency.localeCompare(droite.currency)
+  ));
+  if (!resume.lignes.length) {
+    resume.lignes = [{
+      closedRemainingCents: 0, currency: 'EUR', expectedCents: 0, paidCents: 0, remainingCents: 0,
+    }];
+  }
+  return resume;
+};
+
 /**
  * Bloc de synthese du hub : une seule carte a la place des 4 cartes de
  * statistiques de 4 couleurs. Elle repond a la seule question que le dirigeant
@@ -757,31 +808,32 @@ function StatCard({
  *
  * Le rouge n'apparait QUE s'il y a un retard : ici, une couleur est une
  * information, jamais une decoration.
+ *
+ * LICRESTECODE : une ligne et une barre par devise ; avec une seule devise, la
+ * carte garde sa forme d'avant. Les mentions du bas disent ce qui n'est pas
+ * compte (archivees) et ce qui l'est sans se voir (E3).
  * @param {object} props
- * @param {string} [props.currency] - Devise ISO de la campagne.
- * @param {number} [props.expectedCents] - Montant total attendu, en centimes.
+ * @param {number} [props.archivedCount] - Campagnes archivees, hors du total.
+ * @param {number} [props.hiddenCount] - Campagnes comptees sans carte visible.
+ * @param {any[]} props.lignes - Une ligne par devise (voir `resumerLeHub`).
+ * @param {number} [props.loadedCount] - Campagnes recues du serveur.
  * @param {number} [props.overdueCount] - Nombre de dossiers en retard.
- * @param {number} [props.paidCents] - Montant deja encaisse, en centimes.
- * @param {number} [props.remainingCents] - Reste a encaisser, en centimes.
+ * @param {number} [props.serverTotal] - Campagnes du club selon le serveur.
  * @returns {import('react').ReactElement}
  */
 function CampaignSummary({
-  currency = 'EUR',
-  expectedCents = 0,
+  archivedCount = 0,
+  hiddenCount = 0,
+  lignes,
+  loadedCount = 0,
   overdueCount = 0,
-  paidCents = 0,
-  remainingCents = 0,
+  serverTotal = 0,
 }) {
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  const attendu = Math.max(expectedCents || 0, 0);
-  const encaisse = Math.max(paidCents || 0, 0);
-  // Rien d'attendu = barre a zero, jamais a 100 % : une campagne vide n'est pas
-  // une campagne soldee. Et la part est bornee, un trop-percu ne deborde pas.
-  const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
-  const pourcentage = Math.round(partEncaissee * 100);
+  const plusieursDevises = lignes.length > 1;
   const retards = Math.max(overdueCount || 0, 0);
   const libelleRetards = retards === 0 ? t(
     'clubLicenses.summary.noOverdue',
@@ -791,67 +843,145 @@ function CampaignSummary({
     defaultValue_one: '{{count}} retard',
     defaultValue_other: '{{count}} retards',
   });
+  const texteRetards = (
+    <Text style={[Fonts.p2Bold, { color: retards === 0 ? Colors.success500 : Colors.error500 }]}>
+      {libelleRetards}
+    </Text>
+  );
+  const styleMention = [Fonts.p3, Fonts.neutral300];
+  const mentionArchivees = archivedCount > 0 ? t('clubLicenses.summary.excludedArchived', {
+    count: archivedCount,
+    defaultValue_one: 'Hors {{count}} campagne archivée',
+    defaultValue_other: 'Hors {{count}} campagnes archivées',
+  }) : '';
+  const separateur = { borderTopColor: withAlpha(Colors.primary500, 0.18), borderTopWidth: 1 };
+  const styleRangee = {
+    flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between',
+  };
 
   return (
-    <View style={[ApplicationStyle.card, Spaces.gap[12], {
-      backgroundColor: Colors.primary800,
-      borderColor: withAlpha(Colors.primary500, 0.33),
-      borderRadius: licenseRadius.card,
-      borderWidth: 1,
-      paddingHorizontal: licenseSpacing.cardPadding,
-      paddingVertical: licenseSpacing.cardPadding,
-    }]}
+    <View
+      style={[ApplicationStyle.card, Spaces.gap[12], {
+        backgroundColor: Colors.primary800,
+        borderColor: withAlpha(Colors.primary500, 0.33),
+        borderRadius: licenseRadius.card,
+        borderWidth: 1,
+        paddingHorizontal: licenseSpacing.cardPadding,
+        paddingVertical: licenseSpacing.cardPadding,
+      }]}
+      testID="club-licenses-summary"
     >
-      <Text style={Fonts.p2}>
-        <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, currency)}</Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t('clubLicenses.summary.collectedOf', ' encaissés sur ')}
-          {money(attendu, currency)}
-          {t('clubLicenses.summary.expected', ' attendus')}
-        </Text>
-      </Text>
+      {lignes.map((ligne, index) => {
+        const attendu = Math.max(ligne.expectedCents || 0, 0);
+        const encaisse = Math.max(ligne.paidCents || 0, 0);
+        // Rien d'attendu = barre a zero, jamais a 100 % : une campagne vide n'est pas
+        // une campagne soldee. Et la part est bornee, un trop-percu ne deborde pas.
+        const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
+        const pourcentage = Math.round(partEncaissee * 100);
+        return (
+          <View
+            key={ligne.currency}
+            style={[Spaces.gap[12], index > 0 ? { ...separateur, paddingTop: 12 } : null]}
+          >
+            {plusieursDevises ? (
+              <Text style={[Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }]}>
+                {ligne.currency}
+              </Text>
+            ) : null}
+            <Text style={Fonts.p2}>
+              <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, ligne.currency)}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                {t('clubLicenses.summary.collectedOf', ' encaissés sur ')}
+                {money(attendu, ligne.currency)}
+                {t('clubLicenses.summary.expected', ' attendus')}
+              </Text>
+            </Text>
 
-      <View
-        accessibilityLabel={t(
-          'clubLicenses.summary.progressLabel',
-          'Progression des encaissements',
-        )}
-        accessibilityRole="progressbar"
-        accessibilityValue={{
-          max: 100,
-          min: 0,
-          now: pourcentage,
-          text: t(
-            'clubLicenses.summary.progressValue',
-            '{{percent}} % encaissés',
-            { percent: pourcentage, ...SANS_ECHAPPEMENT },
-          ),
-        }}
-        style={{
-          backgroundColor: withAlpha(Colors.primary500, 0.18),
-          borderRadius: licenseRadius.pill,
-          height: 8,
-          overflow: 'hidden',
-        }}
-      >
-        <View style={{
-          backgroundColor: Colors.primary500,
-          borderRadius: licenseRadius.pill,
-          height: 8,
-          width: `${pourcentage}%`,
-        }}
-        />
-      </View>
+            <View
+              accessibilityLabel={t(
+                'clubLicenses.summary.progressLabel',
+                'Progression des encaissements',
+              )}
+              accessibilityRole="progressbar"
+              accessibilityValue={{
+                max: 100,
+                min: 0,
+                now: pourcentage,
+                text: t(
+                  'clubLicenses.summary.progressValue',
+                  '{{percent}} % encaissés',
+                  { percent: pourcentage, ...SANS_ECHAPPEMENT },
+                ),
+              }}
+              style={{
+                backgroundColor: withAlpha(Colors.primary500, 0.18),
+                borderRadius: licenseRadius.pill,
+                height: 8,
+                overflow: 'hidden',
+              }}
+            >
+              <View style={{
+                backgroundColor: Colors.primary500,
+                borderRadius: licenseRadius.pill,
+                height: 8,
+                width: `${pourcentage}%`,
+              }}
+              />
+            </View>
 
-      <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between' }}>
-        <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
-          {t('clubLicenses.summary.remaining', 'Reste ')}
-          {money(Math.max(remainingCents || 0, 0), currency)}
+            <View style={styleRangee}>
+              <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
+                {t('clubLicenses.summary.remaining', 'Reste ')}
+                {money(Math.max(ligne.remainingCents || 0, 0), ligne.currency)}
+              </Text>
+              {plusieursDevises ? null : texteRetards}
+            </View>
+            {ligne.closedRemainingCents > 0 ? (
+              <Text style={styleMention}>
+                {t(
+                  'clubLicenses.summary.closedShare',
+                  'dont {{amount}} sur des campagnes terminées',
+                  {
+                    amount: money(ligne.closedRemainingCents, ligne.currency),
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+      {plusieursDevises ? (
+        <View style={[separateur, styleRangee, { paddingTop: 10 }]}>
+          <Text style={[styleMention, { flex: 1 }]}>{mentionArchivees}</Text>
+          {texteRetards}
+        </View>
+      ) : null}
+      {!plusieursDevises && mentionArchivees ? (
+        <Text style={styleMention}>{mentionArchivees}</Text>
+      ) : null}
+      {hiddenCount > 0 ? (
+        <Text style={styleMention}>
+          {t('clubLicenses.summary.hiddenCampaigns', {
+            count: hiddenCount,
+            defaultValue_one: 'Compte aussi {{count}} campagne non affichée ci-dessous',
+            defaultValue_other: 'Compte aussi {{count}} campagnes non affichées ci-dessous',
+          })}
         </Text>
-        <Text style={[Fonts.p2Bold, { color: retards === 0 ? Colors.success500 : Colors.error500 }]}>
-          {libelleRetards}
+      ) : null}
+      {serverTotal > loadedCount ? (
+        // ponytail: le serveur sert 50 campagnes par page ; au-dela, le total le dit au lieu de
+        // charger les pages suivantes. Sortie : un total par devise calcule par le serveur.
+        <Text style={styleMention}>
+          {t('clubLicenses.summary.partialList', {
+            count: loadedCount,
+            defaultValue_one: 'Calculé sur {{count}} campagne sur {{total}}',
+            defaultValue_other: 'Calculé sur {{count}} campagnes sur {{total}}',
+            total: serverTotal,
+            ...SANS_ECHAPPEMENT,
+          })}
         </Text>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -1598,23 +1728,10 @@ function ClubLicenses({ navigation, route }) {
     });
   }, [helloAssoMutation, t]);
 
-  const overviewTotals = useMemo(() => campaigns.reduce((accumulator, item) => {
-    const itemTotals = item?.totals || {};
-    return {
-      expectedCents: accumulator.expectedCents + (itemTotals.expectedCents || 0),
-      manualReviewCount: accumulator.manualReviewCount + (itemTotals.manualReviewCount || 0),
-      overdueCount: accumulator.overdueCount + (itemTotals.overdueCount || 0),
-      paidCents: accumulator.paidCents + (itemTotals.paidCents || 0),
-      remainingCents: accumulator.remainingCents + (itemTotals.remainingCents || 0),
-    };
-  }, {
-    expectedCents: 0,
-    manualReviewCount: 0,
-    overdueCount: 0,
-    paidCents: 0,
-    remainingCents: 0,
-  }), [campaigns]);
-  const totals = isFocusedCampaignView ? (dashboardQuery.data?.totals || {}) : overviewTotals;
+  // LICRESTECODE : sur le hub, seule la carte de synthese lit les totaux, par `resumerLeHub`.
+  const hubSummary = useMemo(() => resumerLeHub(campaigns), [campaigns]);
+  const campaignsServerTotal = campaignsQuery.data?.meta?.pagination?.total || 0;
+  const totals = isFocusedCampaignView ? (dashboardQuery.data?.totals || {}) : {};
   const scope = dashboardQuery.data?.scope;
   const canManageLicenses = roleKey !== 'coach' && scope !== 'coach';
   const assignments = useMemo(
@@ -2482,7 +2599,17 @@ function ClubLicenses({ navigation, route }) {
     const copy = copyByAction[lifecycle.action];
     const nom = item?.name || t('clubLicenses.lifecycle.nameFallback', 'Cette campagne');
     const identifiantCampagne = item.documentId || item.id;
-    Alert.alert(copy.title, copy.description, [
+    // LICRESTECODE « 1b-A » : archiver sort la campagne du « Reste » du hub ; si de l'argent
+    // y est encore du, la confirmation le dit avant, pas apres.
+    const resteDu = Math.max(Number(item?.totals?.remainingCents) || 0, 0);
+    const description = lifecycle.action === 'archive' && resteDu > 0
+      ? `${t(
+        'clubLicenses.lifecycle.archive.remainingWarning',
+        'Il reste {{amount}} non encaissés. Ils ne compteront plus dans le Reste.',
+        { amount: money(resteDu, item?.currency || 'EUR'), ...SANS_ECHAPPEMENT },
+      )}\n\n${copy.description}`
+      : copy.description;
+    Alert.alert(copy.title, description, [
       { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
       {
         onPress: () => {
@@ -2845,11 +2972,12 @@ function ClubLicenses({ navigation, route }) {
         </>
       ) : (
         <CampaignSummary
-          currency={campaign?.currency || 'EUR'}
-          expectedCents={totals.expectedCents}
-          overdueCount={totals.overdueCount}
-          paidCents={totals.paidCents}
-          remainingCents={totals.remainingCents}
+          archivedCount={hubSummary.archivedCount}
+          hiddenCount={hubSummary.hiddenCount}
+          lignes={hubSummary.lignes}
+          loadedCount={campaigns.length}
+          overdueCount={hubSummary.overdueCount}
+          serverTotal={campaignsServerTotal}
         />
       )}
       {(() => {
