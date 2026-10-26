@@ -20,6 +20,7 @@ import '@/theme/strings';
 import {
   describePersonName,
   describeTeamInvitationRefusal,
+  joinPersonName,
   resolveTeamInvitationRefusalCause,
   selectInvitableCandidates,
   TEAM_INVITATION_FALLBACK_MESSAGE,
@@ -126,5 +127,19 @@ describe('INVIT — qui reste-t-il a inviter', () => {
     expect(describePersonName({ firstname: 'Ada', lastname: 'L' })).toBe('Ada L');
     expect(describePersonName({ username: 'ada33' })).toBe('ada33');
     expect(describePersonName({})).toBe('Cette personne');
+  });
+
+  // RECETTEWEB retour 2 (b) (26/10) : « Adel  FERCHICHI » sur la fiche d equipe — un prenom ou un
+  // nom enregistre avec une espace en trop.
+  test('temoin 12 — une espace en trop autour du prénom ou du nom ne double pas l espace', () => {
+    expect(describePersonName({ firstname: 'Adel ', lastname: 'FERCHICHI' }))
+      .toBe('Adel FERCHICHI');
+    expect(describePersonName({ firstname: 'Olivier', lastname: ' Ferré' })).toBe('Olivier Ferré');
+    expect(describePersonName({ firstname: ' Yanis ', lastname: 'Ben  Bairouk ' }))
+      .toBe('Yanis Ben Bairouk');
+    expect(describePersonName({ firstname: '  ', lastname: 'Seul' })).toBe('Seul');
+    expect(describePersonName({ firstname: ' ', lastname: ' ', username: 'ada33' })).toBe('ada33');
+    expect(joinPersonName({ firstname: 'Adel ', lastname: null })).toBe('Adel');
+    expect(joinPersonName({})).toBe('');
   });
 });
