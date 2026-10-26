@@ -14,7 +14,9 @@ import { useWindowDimensions, View } from 'react-native'
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
-import { personneDansLeFil } from '@/domains/messaging/anonymatDeLigue';
+import {
+  contactsPartageables, personneDansLeFil, prenomDansLeFil,
+} from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
@@ -1184,7 +1186,7 @@ function ColonneDesConversations({
           const ouvert = id === chatId;
           const epingle = estEpinglePourMoi(fil, meId);
           const prenom = !deMoi && fil?.type !== 'whisper'
-            ? String(dernier?.sender?.firstname || '').trim()
+            ? prenomDansLeFil({ chat: fil, moiId: meId, personne: dernier?.sender })
             : '';
           return (
             <div className="ARCH-ligne" key={`ligne-${id}`} style={{ position: 'relative' }}>
@@ -2019,10 +2021,9 @@ function Conversation({ navigation, route }) {
   const shareableContacts = useMemo(() => {
     // @ts-ignore: FIXME: Baseline TS regression
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : []
-    return participants.filter((participant) => (
-      participant?.documentId && participant.documentId !== userData?.documentId
-    ))
-  }, [chatData?.participants, userData?.documentId])
+    // ANONSERVEUR — un fil de ligue avant le match : pas de carte de contact d'un adversaire.
+    return contactsPartageables({ chat: chatData, moiId: userData?.documentId, personnes: participants })
+  }, [chatData, userData?.documentId])
 
   const conversationName = useMemo(() => filDeLaVille.titre || getConversationName({
     chatClub: chatData?.club,

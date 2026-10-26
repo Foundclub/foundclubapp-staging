@@ -19,6 +19,8 @@ let mockMessagesDuFil = [];
 let mockFil = null;
 /** @type {any} */
 let mockSocket = null;
+/** @type {any[]} */
+let mockFilsDeLaColonne = [];
 const mockStopFrappe = jest.fn();
 const mockVoter = jest.fn(() => Promise.resolve({}));
 
@@ -102,7 +104,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetChats: () => ({ data: { pages: [{ data: [] }] }, isLoading: false }),
+  useGetChats: () => ({ data: { pages: [{ data: mockFilsDeLaColonne }] }, isLoading: false }),
 }));
 
 jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
@@ -398,5 +400,75 @@ describe('ANONSITE — fil de ligue sur le site : l adversaire reste anonyme ava
       String(n.props?.accessibilityLabel || '').startsWith('Oui')
     ))[0];
     expect(option.props.accessibilityLabel).toBe('Oui, 1 vote, Bruno Dupont');
+  });
+});
+
+/**
+ * Le texte rendu sous un noeud (les chaînes de ses enfants).
+ * @param {any} noeud - Une instance du rendu.
+ * @returns {string} Le texte.
+ */
+const texteDe = (noeud) => {
+  /** @type {string[]} */
+  const morceaux = [];
+  const parcourir = (/** @type {any} */ n) => {
+    if (n === null || n === undefined || n === false) return;
+    if (typeof n === 'string' || typeof n === 'number') { morceaux.push(String(n)); return; }
+    (n.children || []).forEach(parcourir);
+  };
+  parcourir(noeud);
+  return morceaux.join(' ');
+};
+const bouton = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll(
+  (/** @type {any} */ n) => n.type === 'button' && texteDe(n).trim() === libelle,
+)[0];
+
+describe('ANONSERVEUR — la colonne « Messages » et « Partager un contact » du site', () => {
+  afterEach(() => { mockFilsDeLaColonne = []; });
+
+  test('la colonne : l aperçu d un message adverse dit « Joueur Adverse », jamais son prénom', async () => {
+    mockFil = filDeLigue(AVANT_LE_MATCH);
+    mockFilsDeLaColonne = [{
+      ...filDeLigue(AVANT_LE_MATCH),
+      messages: [{ createdAt: '2026-10-07T08:00:00.000Z', documentId: 'm-b', message: 'On vous attend', sender: BRUNO }],
+    }];
+    const { arbre } = await monter();
+    const ligne = arbre.root.findByProps({ 'data-testid': `MSG1W-ligne-${CHAT_ID}` });
+    const texte = texteDe(ligne);
+    expect(texte).not.toMatch(/Bruno/);
+    expect(texte).toContain('Joueur Adverse');
+  });
+
+  test('la colonne : un nom déjà masqué par le serveur (« Capitaine Adverse ») est gardé', async () => {
+    mockFil = filDeLigue(AVANT_LE_MATCH);
+    mockFilsDeLaColonne = [{
+      ...filDeLigue(AVANT_LE_MATCH),
+      messages: [{
+        createdAt: '2026-10-07T08:00:00.000Z',
+        documentId: 'm-b',
+        message: 'On vous attend',
+        sender: { anonyme: true, avatar: null, documentId: 'bruno', firstname: 'Capitaine Adverse', lastname: '' },
+      }],
+    }];
+    const { arbre } = await monter();
+    const ligne = arbre.root.findByProps({ 'data-testid': `MSG1W-ligne-${CHAT_ID}` });
+    expect(texteDe(ligne)).toContain('Capitaine Adverse');
+  });
+
+  test('« Partager un contact » : l adversaire n est pas proposé avant le match, ma coéquipière oui', async () => {
+    // Le menu « + » écoute le clavier et la souris du document (banc sans navigateur, cf. ConversationWebBH04).
+    global.document = /** @type {any} */ ({ addEventListener: jest.fn(), removeEventListener: jest.fn() });
+    mockFil = filDeLigue(AVANT_LE_MATCH);
+    const { arbre } = await monter();
+    await act(async () => { bouton(arbre, 'Ajouter').props.onClick(); });
+    await act(async () => { bouton(arbre, 'Contact').props.onClick(); });
+    const choix = arbre.root.findAll((/** @type {any} */ n) => n.type === 'input' && n.props.name === 'msg1w-contact');
+    const fenetre = arbre.root.findByProps({ role: 'radiogroup' });
+    expect(choix).toHaveLength(1);
+    expect(texteDe(fenetre)).not.toMatch(/Bruno|Dupont/);
+    expect(texteDe(fenetre)).toContain('Léa');
+    act(() => { montes.splice(0).forEach((a) => a.unmount()); });
+    // @ts-ignore — le banc n a pas de document
+    delete global.document;
   });
 });

@@ -47,7 +47,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { carteDAnnonce, NOTICE_ANNONCE_COMPLEXE } from '@/domains/complexe/annonceDuCanal';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
-import identiteDansLeFil from '@/domains/messaging/anonymatDeLigue';
+import identiteDansLeFil, { contactsPartageables } from '@/domains/messaging/anonymatDeLigue';
 import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
@@ -1281,8 +1281,8 @@ function Conversation({ navigation, route }) {
 
   const shareableContacts = useMemo(() => {
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : [];
-    return participants
-      .filter((/** @type {any} */ participant) => participant?.documentId && participant.documentId !== userData?.documentId)
+    // ANONSERVEUR — un fil de ligue avant le match : pas de carte de contact d'un adversaire.
+    return contactsPartageables({ chat: chatData, moiId: userData?.documentId, personnes: participants })
       .map((/** @type {any} */ participant) => ({
         avatar: participant?.avatar,
         documentId: participant?.documentId,
@@ -1290,7 +1290,7 @@ function Conversation({ navigation, route }) {
         lastname: participant?.lastname || '',
         role: participant?.role?.name || participant?.role?.type || '',
       }));
-  }, [chatData?.participants, userData?.documentId]);
+  }, [chatData, userData?.documentId]);
 
   const canRecordVoiceNote = useMemo(() => {
     if (!isVoiceNotesEnabled) return false;

@@ -19,6 +19,10 @@ const identiteDansLeFil = ({
 }) => {
   const vraiNom = `${personne?.firstname || ''} ${personne?.lastname || ''}`;
   if (chat?.type !== 'league_match') return { anonyme: false, nom: vraiNom };
+  // ANONSERVEUR — le serveur a déjà masqué cette personne pour moi (drapeau, pas un texte
+  // comparé) : son nom masqué fait foi, « Capitaine Adverse » compris, que la liste des fils
+  // (sans les équipes du match) ne saurait pas recalculer.
+  if (personne?.anonyme === true) return { anonyme: true, nom: vraiNom.trim() };
   if (personne?.documentId === moiId) return { anonyme: false, nom: vraiNom };
   const dateDuMatch = chat?.league_match?.date;
   if (dateDuMatch && new Date(dateDuMatch) < maintenant) return { anonyme: false, nom: vraiNom };
@@ -32,6 +36,33 @@ const identiteDansLeFil = ({
 };
 
 export default identiteDansLeFil;
+
+/**
+ * ANONSERVEUR — le prénom devant l'aperçu d'un fil (« Prénom : dernier message »), colonne
+ * « Messages » et aperçu du fil : un adversaire avant le match y reste « Joueur Adverse ».
+ * @param {{ chat: any, moiId?: string, personne: any, maintenant?: Date }} faits - Comme
+ *   {@link identiteDansLeFil}.
+ * @returns {string} Le prénom à écrire.
+ */
+export const prenomDansLeFil = (faits) => {
+  const identite = identiteDansLeFil(faits);
+  return identite.anonyme ? identite.nom : String(faits.personne?.firstname || '').trim();
+};
+
+/**
+ * ANONSERVEUR — « Partager un contact » : les membres du fil, sauf moi et les adversaires
+ * masqués. Une carte de contact porte l'identifiant de la personne : elle ouvrirait son profil.
+ * @param {{ chat: any, moiId?: string, personnes: any[] }} faits - Le fil, mon identifiant et
+ *   ses membres.
+ * @returns {any[]} Les personnes que je peux partager.
+ */
+export const contactsPartageables = ({ chat, moiId = '', personnes }) => (
+  Array.isArray(personnes) ? personnes : []
+).filter((/** @type {any} */ personne) => (
+  personne?.documentId
+  && personne.documentId !== moiId
+  && !identiteDansLeFil({ chat, moiId, personne }).anonyme
+));
 
 /**
  * ANONSITE — LA PERSONNE À DESSINER dans un fil de ligue : elle-même, ou, pour un adversaire

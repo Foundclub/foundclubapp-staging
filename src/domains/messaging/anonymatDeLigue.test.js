@@ -1,4 +1,6 @@
-import identiteDansLeFil, { personneDansLeFil } from './anonymatDeLigue';
+import identiteDansLeFil, {
+  contactsPartageables, personneDansLeFil, prenomDansLeFil,
+} from './anonymatDeLigue';
 
 const KARIM = { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' };
 const filDeLigue = (/** @type {Record<string, any>} */ plus = {}) => ({
@@ -48,5 +50,33 @@ describe('personneDansLeFil — la personne à dessiner (ANONSITE)', () => {
   test('un coéquipier : la personne telle quelle', () => {
     const lea = { documentId: 'lea', firstname: 'Léa' };
     expect(personneDansLeFil({ chat: filDeLigue(), moiId: 'moi', personne: lea })).toBe(lea);
+  });
+});
+
+describe('ANONSERVEUR — le serveur masque aussi ; l aperçu et le partage de contact', () => {
+  test('une personne déjà masquée par le serveur (drapeau) garde le nom qu il a donné', () => {
+    const masque = {
+      anonyme: true, avatar: null, documentId: 'cap', firstname: 'Capitaine Adverse', lastname: '',
+    };
+    // Une liste de fils ne porte pas les équipes du match : seul le drapeau dit « capitaine ».
+    const filDeLaListe = { league_match: { date: '2099-06-10T16:00:00.000Z' }, type: 'league_match' };
+    expect(identiteDansLeFil({ chat: filDeLaListe, moiId: 'moi', personne: masque }))
+      .toEqual({ anonyme: true, nom: 'Capitaine Adverse' });
+  });
+
+  test('prenomDansLeFil : « Joueur Adverse » pour l adversaire, le prénom sinon', () => {
+    expect(prenomDansLeFil({ chat: filDeLigue(), moiId: 'moi', personne: KARIM })).toBe('Joueur Adverse');
+    expect(prenomDansLeFil({ chat: filDeLigue({ myTeamMembers: [KARIM] }), moiId: 'moi', personne: KARIM }))
+      .toBe('Karim');
+    expect(prenomDansLeFil({ chat: { type: 'group' }, moiId: 'moi', personne: KARIM })).toBe('Karim');
+  });
+
+  test('contactsPartageables : ni moi, ni un adversaire masqué', () => {
+    const lea = { documentId: 'lea', firstname: 'Léa' };
+    const moi = { documentId: 'moi', firstname: 'Adel' };
+    expect(contactsPartageables({ chat: filDeLigue(), moiId: 'moi', personnes: [moi, KARIM, lea] }))
+      .toEqual([lea]);
+    expect(contactsPartageables({ chat: { type: 'group' }, moiId: 'moi', personnes: [moi, KARIM, lea] }))
+      .toEqual([KARIM, lea]);
   });
 });

@@ -289,6 +289,22 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
     },
   );
 
+  test('ANONSERVEUR — fil de ligue avant le match : l adversaire est « Joueur Adverse : », le coéquipier garde son prénom', async () => {
+    const filDeLigue = (/** @type {any} */ sender) => ({
+      ...CHATS[0],
+      league_match: { date: '2099-06-10T16:00:00.000Z', documentId: 'match-1' },
+      messages: [{ createdAt: '2026-10-07T10:00:00.000Z', message: 'On vous attend', sender }],
+      myTeamMembers: [{ documentId: 'lea' }],
+      type: 'league_match',
+    });
+    const adverse = await monterAvec([filDeLigue({ documentId: 'karim', firstname: 'Karim' })]);
+    expect(toutLeTexte(adverse)).not.toContain('Karim');
+    expect(toutLeTexte(adverse)).toMatch(/Joueur Adverse\s:/);
+
+    const coequipiere = await monterAvec([filDeLigue({ documentId: 'lea', firstname: 'Léa' })]);
+    expect(toutLeTexte(coequipiere)).toMatch(/Léa\s:/);
+  });
+
   test('LI3 — tête-à-tête : jamais de « Prénom : »', async () => {
     const arbre = await monterAvec([
       {
