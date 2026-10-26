@@ -597,10 +597,15 @@ function PlanningCalendarView({
       </View>
 
       <Calendar
+        // C05 (Q2-18) + MOISGRILLE : la grille suit la date choisie (« Aujourd hui », l ouverture
+        // sur le mois du prochain evenement). Au telephone, react-native-calendars 1.1313 ne lit
+        // `current` qu au montage et suit `initialDate` ; le site (web/src/shims) ne suit que
+        // `current`. Les deux, pour les deux.
         current={selectedDate}
         dayComponent={renderDayComponent}
         enableSwipeMonths
         firstDay={1}
+        initialDate={selectedDate}
         markingType="custom"
         onDayPress={(day) => handleDateChange(day.dateString)}
         onMonthChange={(month) => handleDateChange(month.dateString)}

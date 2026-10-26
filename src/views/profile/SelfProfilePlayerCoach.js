@@ -54,6 +54,7 @@ import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
   buildProfileSaveConfirmation,
   listChangedProfileFields,
+  listClearedProfileFields,
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
@@ -477,10 +478,16 @@ function SelfProfilePlayerCoach({ navigation }) {
     // charges. C'est la seule facon de NOMMER ce qui a change sur un ecran qui
     // reposte tout le formulaire a chaque enregistrement (fige par
     // `ProfileEdit.caracterisation.test.js`, premier temoin).
+    const loadedValues = {
+      ...buildProfileFormValues(userData, formatBirthdateToDisplay),
+      avatar: userData?.avatar,
+    };
     pendingChangedFieldsRef.current = listChangedProfileFields(
-      { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+      loadedValues,
       { ...payload, birthdate: data.birthdate },
     );
+    // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
+    payload.clearFields = listClearedProfileFields(loadedValues, payload);
     updateUserMutation.mutate(payload);
   };
 

@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -38,7 +38,10 @@ import CollectivitesATraiter from '@/views/admin/components/CollectivitesATraite
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
+import {
+  useAdminCollectivites,
+  useAdminCollectivitesRecherche,
+} from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -82,6 +85,18 @@ function AdminCollectiviteList() {
   const collectivites = useAdminCollectivites();
   const [filtre, setFiltre] = useState(/** @type {Filtre} */ ('all'));
   const [recherche, setRecherche] = useState('');
+  // C10BIS · P9-12 — liste TRONQUEE (plus d'une page) : la recherche part aussi au serveur, et
+  // ses résultats s'ajoutent à la page chargée. La recherche locale reste (sans casse ni accent).
+  // ponytail: le serveur ($containsi) ne gomme pas les accents : hors de la page chargée,
+  // « departement » ne trouve pas « Département ». Sortie : un champ normalisé côté serveur.
+  const [rechercheServeur, setRechercheServeur] = useState('');
+  useEffect(() => {
+    const minuterie = setTimeout(() => setRechercheServeur(recherche.trim()), 250);
+    return () => clearTimeout(minuterie);
+  }, [recherche]);
+  const chargees = Array.isArray(collectivites.data?.data) ? collectivites.data.data : [];
+  const tronquee = Number(collectivites.data?.meta?.pagination?.total) > chargees.length;
+  const trouvees = useAdminCollectivitesRecherche(rechercheServeur, { enabled: tronquee });
 
   const ouvrirFiche = (/** @type {Ligne} */ ligne) => navigation.navigate(
     RouteNames.AdminCollectiviteDetail,
@@ -152,11 +167,19 @@ function AdminCollectiviteList() {
     );
   }
 
-  const toutes = (Array.isArray(collectivites.data?.data) ? collectivites.data.data : [])
-    .map(toAdminCollectiviteRow);
+  const toutes = chargees.map(toAdminCollectiviteRow);
   const total = Number(collectivites.data?.meta?.pagination?.total) || toutes.length;
   const nombres = countAdminCollectivitesByFilter(toutes);
-  const lignes = filterAdminCollectivites(toutes, { filter: filtre, query: recherche });
+  const horsPage = (tronquee && recherche.trim() && Array.isArray(trouvees.data?.data)
+    ? trouvees.data.data : [])
+    .map(toAdminCollectiviteRow)
+    .filter((/** @type {Ligne} */ ligne) => !toutes.some(
+      (connue) => connue.documentId === ligne.documentId,
+    ));
+  const lignes = [
+    ...filterAdminCollectivites(toutes, { filter: filtre, query: recherche }),
+    ...filterAdminCollectivites(horsPage, { filter: filtre, query: '' }),
+  ];
   const clubsDe = (/** @type {Ligne} */ ligne) => t('collectiviteConsole.liste.clubs', {
     count: ligne.clubsCount,
     defaultValue_one: '{{count}} club rattaché',

@@ -1,6 +1,6 @@
 import { Joi } from '@/theme/strings';
 
-import { parseHeightCm } from '@/utils/heightCentimeters';
+import { erreurPhysique, parseHeightCm } from '@/utils/heightCentimeters';
 
 // D39 — le contrat du formulaire de profil, extrait de `ProfileEdit.js` pour
 // que la page « Mon profil » du joueur et de l'entraineur s'en serve SANS le
@@ -29,57 +29,6 @@ export const defaultValues = {
   section: '',
   weight: '',
 };
-
-export const profileSchema = Joi.object({
-  address: Joi.object().allow(null).optional(),
-  bestLevel: Joi.string().allow(null, '').optional(),
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
-  category: Joi.string().allow(null, '').optional(),
-  documentId: Joi.string().allow(null, '').optional(),
-  email: Joi.string().allow(null, '').optional(),
-  firstname: Joi.string().required(),
-  // FINITIONS8 (point 4) : des centimetres, entre 100 et 250 ; ce qui part est toujours en cm.
-  height: Joi.string().allow(null, '').optional().custom((value, helpers) => {
-    const centimeters = parseHeightCm(value);
-    return centimeters === null
-      ? helpers.message('profile.fields.height.invalid')
-      : String(centimeters);
-  }),
-  isLookingForClub: Joi.boolean().optional(),
-  jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
-  lastname: Joi.string().required(),
-  nationality: Joi.string().allow(null, '').optional(),
-  phoneNumber: Joi.string().allow(null, '').optional(),
-  position: Joi.string().allow(null, '').optional(),
-  preferredSport: Joi.string().allow(null, '').optional(),
-  section: Joi.string().allow(null, '').optional(),
-  weight: Joi.string().allow(null, '').optional(),
-}).unknown(true);
-
-/**
- * Precharge le formulaire avec les VRAIES valeurs du profil.
- * « Placeholder n'est pas une valeur » : une donnee qui existe s'affiche dans
- * son champ, jamais en gris d'exemple.
- * @param {any} userData
- * @param {(value: string) => string} formatBirthdateToDisplay
- * @returns {any}
- */
-export const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
-  ...defaultValues,
-  ...userData,
-  address: userData?.address || null,
-  bestLevel: userData?.bestLevel || '',
-  birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
-  category: userData?.category || '',
-  // FINITIONS8 (point 4) : une ancienne valeur en metres se pre-remplit en centimetres ;
-  // une valeur illisible reste telle quelle, pour que la personne la voie et la corrige.
-  height: userData?.height ? String(parseHeightCm(userData.height) ?? userData.height) : '',
-  jerseyNumber: userData?.jerseyNumber != null ? String(userData.jerseyNumber) : '',
-  nationality: userData?.nationality || '',
-  preferredSport: userData?.preferredSport || '',
-  section: userData?.section?.documentId || '',
-  weight: userData?.weight ? String(userData.weight) : '',
-});
 
 /**
  * L'age derive de la date de naissance affichee (JJ/MM/AAAA).
@@ -112,6 +61,65 @@ export const getAgeFromDisplayedBirthdate = (displayedBirthdate) => {
 
   return age >= 0 && age < 130 ? age : null;
 };
+
+/**
+ * CHOIX3 (« 11- A », P5-24) — la taille ou le poids, bornes selon l'age lu dans la date de
+ * naissance du MEME formulaire (JJ/MM/AAAA) ; ce qui part est en cm, ou en kg avec un point.
+ * @param {'height' | 'weight'} champ
+ * @returns {(value: any, helpers: any) => any}
+ */
+const bornePhysique = (champ) => (value, helpers) => {
+  const age = getAgeFromDisplayedBirthdate(helpers.state.ancestors?.[0]?.birthdate);
+  const { cle, valeur } = erreurPhysique(champ, value, age);
+  return cle ? helpers.message(cle) : valeur;
+};
+
+export const profileSchema = Joi.object({
+  address: Joi.object().allow(null).optional(),
+  bestLevel: Joi.string().allow(null, '').optional(),
+  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
+  category: Joi.string().allow(null, '').optional(),
+  documentId: Joi.string().allow(null, '').optional(),
+  email: Joi.string().allow(null, '').optional(),
+  firstname: Joi.string().required(),
+  // FINITIONS8 (point 4) : des centimetres ; ce qui part est toujours en cm.
+  // CHOIX3 : bornes selon l'age (adulte 100-230, mineur 50-230).
+  height: Joi.string().allow(null, '').optional().custom(bornePhysique('height')),
+  isLookingForClub: Joi.boolean().optional(),
+  jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
+  lastname: Joi.string().required(),
+  nationality: Joi.string().allow(null, '').optional(),
+  phoneNumber: Joi.string().allow(null, '').optional(),
+  position: Joi.string().allow(null, '').optional(),
+  preferredSport: Joi.string().allow(null, '').optional(),
+  section: Joi.string().allow(null, '').optional(),
+  weight: Joi.string().allow(null, '').optional().custom(bornePhysique('weight')),
+}).unknown(true);
+
+/**
+ * Precharge le formulaire avec les VRAIES valeurs du profil.
+ * « Placeholder n'est pas une valeur » : une donnee qui existe s'affiche dans
+ * son champ, jamais en gris d'exemple.
+ * @param {any} userData
+ * @param {(value: string) => string} formatBirthdateToDisplay
+ * @returns {any}
+ */
+export const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
+  ...defaultValues,
+  ...userData,
+  address: userData?.address || null,
+  bestLevel: userData?.bestLevel || '',
+  birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
+  category: userData?.category || '',
+  // FINITIONS8 (point 4) : une ancienne valeur en metres se pre-remplit en centimetres ;
+  // une valeur illisible reste telle quelle, pour que la personne la voie et la corrige.
+  height: userData?.height ? String(parseHeightCm(userData.height) ?? userData.height) : '',
+  jerseyNumber: userData?.jerseyNumber != null ? String(userData.jerseyNumber) : '',
+  nationality: userData?.nationality || '',
+  preferredSport: userData?.preferredSport || '',
+  section: userData?.section?.documentId || '',
+  weight: userData?.weight ? String(userData.weight) : '',
+});
 
 // AC03 — « la categorie et le sport se CHERCHENT et se CHOISISSENT ».
 // Les trois ecrans d'edition du profil (`ProfileEdit`, `ProfileEdit.web` et

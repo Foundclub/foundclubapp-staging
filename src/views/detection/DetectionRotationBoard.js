@@ -2,6 +2,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -122,14 +123,16 @@ function DetectionRotationBoard() {
     detectionSplit: splitFromRoute = null,
     eventId,
     players: fallbackPlayers = EMPTY_LIST,
+    repartitionNonEnregistree = false,
     sport = 'football',
     teamId,
     teamIndex = 0,
   } = params;
 
-  const { data: teamComposition } = useGetEventTeamComposition(eventId, teamId, {
-    enabled: Boolean(eventId),
-  });
+  const {
+    data: teamComposition,
+    refetch: refetchComposition,
+  } = useGetEventTeamComposition(eventId, teamId, { enabled: Boolean(eventId) });
 
   const players = useMemo(() => {
     const fromServer = teamComposition?.eligiblePlayers;
@@ -150,9 +153,19 @@ function DetectionRotationBoard() {
   const [split, setSplit] = useState(
     () => splitFromRoute || teamComposition?.detectionSplit || { rounds: [], teams: [] },
   );
+  // DETECTION2 P14-01 : ouvert sans repartition et sans cache, celle du serveur arrive apres
+  // le premier affichage ; on la reprend UNE fois, si le coach n'a encore rien touche.
+  const splitSettledRef = useRef(Boolean(splitFromRoute || teamComposition?.detectionSplit));
+  useEffect(() => {
+    const stored = teamComposition?.detectionSplit;
+    if (splitSettledRef.current || !stored) return;
+    splitSettledRef.current = true;
+    setSplit(stored);
+  }, [teamComposition?.detectionSplit]);
   const [isBusy, setIsBusy] = useState(false);
   // PETITSCHOIX/16 : une entrée ou une sortie de terrain pas encore enregistrée.
-  const [isDirty, setIsDirty] = useState(false);
+  // DETECTION2 : la repartition non enregistree du tableau (ecran 16) compte aussi.
+  const [isDirty, setIsDirty] = useState(Boolean(repartitionNonEnregistree));
   const [activeDragPlayer, setActiveDragPlayer] = useState(/** @type {any} */ (null));
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(
     /** @type {any} */ (null),
@@ -246,6 +259,7 @@ function DetectionRotationBoard() {
     /** @type {string} */ playerId,
     /** @type {boolean} */ shouldPlay,
   ) => {
+    splitSettledRef.current = true;
     setSplit((/** @type {any} */ current) => {
       const currentTeams = Array.isArray(current?.teams) ? current.teams : [];
       const target = currentTeams[teamIndex];
@@ -370,6 +384,8 @@ function DetectionRotationBoard() {
       });
       setSplit(nextSplit);
       setIsDirty(false);
+      // DETECTION2 P14-05 : le tableau et les autres ecrans relisent ce qui vient d'etre ecrit.
+      await refetchComposition?.();
     } catch (error) {
       handleActionError(error, 'detection.alerts.error.save');
     } finally {
@@ -377,7 +393,7 @@ function DetectionRotationBoard() {
     }
   }, [
     currentRound?.startedAt, eventId, handleActionError, isBusy, lineup.placedIds,
-    split, teamComposition?.draft, teamId,
+    refetchComposition, split, teamComposition?.draft, teamId,
   ]);
 
   // Enregistrer la repartition telle quelle, sans ouvrir de manche : le brouillon part entier
@@ -390,12 +406,13 @@ function DetectionRotationBoard() {
         teamId,
       });
       setIsDirty(false);
+      await refetchComposition?.();
       return true;
     } catch (error) {
       handleActionError(error, 'detection.alerts.error.save');
       return false;
     }
-  }, [eventId, handleActionError, split, teamComposition?.draft, teamId]);
+  }, [eventId, handleActionError, refetchComposition, split, teamComposition?.draft, teamId]);
 
   // PETITSCHOIX/16 (Adel 25/10) : quitter avec des modifications non enregistrées (retour, geste,
   // onglet) demande « Voulez-vous enregistrer ? » — Oui enregistre puis quitte, Non quitte.

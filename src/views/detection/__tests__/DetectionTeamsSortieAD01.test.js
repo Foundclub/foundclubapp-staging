@@ -329,3 +329,32 @@ describe('BH15 · P14-01 — la repartition rangee arrive APRES le premier affic
     expect(detectionSplit.teams[1]).toMatchObject({ bibColor: 'rouge', players: ['p1', 'p2'] });
   });
 });
+
+describe('DETECTION2 · P14-01 / P14-05 — écran 15, équipes automatiques', () => {
+  test('P14-01 : nombre d équipes et tri rangés, arrivés après l affichage, repris', async () => {
+    /** @type {any} */ (mockCompositionQuery).refetch = jest.fn(async () => ({}));
+    const racine = monter(DetectionTeamsAuto);
+    /** @type {any} */ (mockCompositionQuery).data = {
+      detectionSplit: { splitBy: 'requested_position', teamCount: 3, teams: [] },
+      draft: {},
+    };
+    act(() => { monte.update(<DetectionTeamsAuto />); });
+
+    appuyer(racine, 'detection.teams.auto.actions.generate');
+    await attendreLAlerte();
+
+    const { detectionSplit } = jest.mocked(saveEventCompositionDraft).mock.calls[0][1].draft;
+    expect(detectionSplit).toMatchObject({ splitBy: 'requested_position', teamCount: 3 });
+  });
+
+  test('P14-05 : après « Générer », la composition est relue avant le terrain', async () => {
+    const refetch = jest.fn(async () => ({}));
+    /** @type {any} */ (mockCompositionQuery).refetch = refetch;
+    const racine = monter(DetectionTeamsAuto);
+
+    appuyer(racine, 'detection.teams.auto.actions.generate');
+    await attendreLAlerte();
+
+    expect(refetch).toHaveBeenCalled();
+  });
+});

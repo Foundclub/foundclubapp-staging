@@ -24,6 +24,8 @@ let mockChampsFormulaire;
 const mockUpdateMe = jest.fn();
 const mockGoBack = jest.fn();
 
+/** @type {any} */
+let mockAvatar = null;
 jest.mock('react-native-gesture-handler', () => {
   const { ScrollView } = jest.requireActual('react-native');
   return { ScrollView };
@@ -149,7 +151,10 @@ jest.mock('@/components/molecules/selectAvatar/SelectAvatar', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: () => <TexteRN>CHOIX AVATAR</TexteRN>,
+    default: (/** @type {any} */ proprietes) => {
+      mockAvatar = proprietes;
+      return <TexteRN>CHOIX AVATAR</TexteRN>;
+    },
   };
 });
 
@@ -416,5 +421,42 @@ describe('ProfileEdit — le DIRIGEANT voit et corrige sa date (AGE-OBLIGATOIRE-
     });
 
     expect(texteVisible(arbre)).toContain('DECLARATION PARENTALE');
+  });
+});
+
+// C10BIS · P11-01 / P11-05 — ce que la personne VIDE est nomme, et seulement cela.
+describe('ProfileEdit — effacer un champ ou la photo (C10BIS)', () => {
+  it('vider la nationalite la nomme dans clearFields', async () => {
+    const arbre = await rendre(joueurComplet);
+
+    await act(async () => {
+      mockChampsFormulaire['Nationalité'].onChangeText('');
+    });
+    await appuyerSur(arbre, 'Continuer');
+
+    expect(mockUpdateMe).toHaveBeenCalledTimes(1);
+    expect(mockUpdateMe.mock.calls[0][0].clearFields).toEqual(['nationality']);
+  });
+
+  it('ne rien vider ne nomme rien', async () => {
+    const arbre = await rendre(joueurComplet);
+
+    await act(async () => {
+      mockChampsFormulaire.Prénom.onChangeText('Lucien');
+    });
+    await appuyerSur(arbre, 'Continuer');
+
+    expect(mockUpdateMe.mock.calls[0][0].clearFields).toEqual([]);
+  });
+
+  it('supprimer la photo la nomme dans clearFields', async () => {
+    const arbre = await rendre({ ...joueurComplet, avatar: { url: '/uploads/a.jpg' } });
+
+    await act(async () => {
+      mockAvatar.onDelete();
+    });
+    await appuyerSur(arbre, 'Continuer');
+
+    expect(mockUpdateMe.mock.calls[0][0].clearFields).toEqual(['avatar']);
   });
 });

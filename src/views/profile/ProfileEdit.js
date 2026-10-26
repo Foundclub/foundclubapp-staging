@@ -38,6 +38,7 @@ import { useGetLevels } from '@/services/level/levelQueries';
 import {
   buildProfileSaveConfirmation,
   listChangedProfileFields,
+  listClearedProfileFields,
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
@@ -242,16 +243,19 @@ function ProfileEdit({ navigation, route }) {
       // etaient charges : c'est la seule facon de NOMMER ce qui a change sur un
       // formulaire qui reposte TOUT a chaque enregistrement (fige par
       // `ProfileEdit.caracterisation.test.js`, premier temoin).
-      pendingChangedFieldsRef.current = listChangedProfileFields(
-        { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
-        { ...data, avatar },
-      );
+      const loadedValues = {
+        ...buildProfileFormValues(userData, formatBirthdateToDisplay),
+        avatar: userData?.avatar,
+      };
+      pendingChangedFieldsRef.current = listChangedProfileFields(loadedValues, { ...data, avatar });
       updateUserMutation.mutate({
         address: data.address,
         avatar,
         bestLevel: data.bestLevel,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
         category: data.category,
+        // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
+        clearFields: listClearedProfileFields(loadedValues, { ...data, avatar }),
         firstname: data.firstname,
         geohash,
         height: data.height,

@@ -32,6 +32,7 @@ import {
   extractSubscriptionDecisionFromError,
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
+import { isExternalCompetitionEligibleTeam } from '@/domains/team/externalCompetitionEligibility';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -1337,9 +1338,12 @@ function TeamDetails({ navigation, route }) {
       ), calendarStrategy),
     ].filter(Boolean).join('  •  ') || null;
   }, [externalSyncProviderMetadata]);
+  // C10BIS · P12-05 — lue aussi sur l'equipe affichee : un dirigeant hors de l'equipe n'a
+  // pas de resume dans ses equipes, et le serveur l'autorise pourtant a configurer.
   const externalCompetitionEligible = useMemo(
-    () => Boolean(currentUserTeamSummary?.externalCompetitionEligible),
-    [currentUserTeamSummary?.externalCompetitionEligible],
+    () => Boolean(currentUserTeamSummary?.externalCompetitionEligible)
+      || isExternalCompetitionEligibleTeam(team),
+    [currentUserTeamSummary?.externalCompetitionEligible, team],
   );
   const externalConfigUpdatedLabel = useMemo(
     () => formatExternalSyncDate(team?.externalConfigUpdatedAt),
@@ -1941,7 +1945,8 @@ function TeamDetails({ navigation, route }) {
     && isMyClub
     && (isMyTeam || (team?.club?.documentId ? canEditClub(team.club.documentId) : false));
   const showTeamChatAction = canManageTeam && allMembers?.length > 1 && isMyTeam;
-  const showDefaultCompositionAction = canManageTeam;
+  // CHOIX3 (« 10- A », P12-17) — seulement sur une équipe de SON club.
+  const showDefaultCompositionAction = canManageTeam && isMyClub;
   const showLeaveAction = isMyTeam;
   const showContactTrainersAction = canContactViewedTeamTrainers;
   const showJoinAction = !isAuthenticated || canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
@@ -4860,14 +4865,14 @@ function TeamDetails({ navigation, route }) {
                   onActionPress: openTeamOfferUnlockSheet,
                 })}
                 <View style={teamActionsListStyle}>
-                  {renderTeamActionRow({
+                  {showDefaultCompositionAction ? renderTeamActionRow({
                     icon: 'users',
                     label: t('teamDetails.actions.defaultComposition', 'Composition type'),
                     lock: isTeamOfferUnlocked ? null : 'team',
                     onPress: isTeamOfferUnlocked
                       ? handleManageDefaultComposition
                       : openTeamOfferUnlockSheet,
-                  })}
+                  }) : null}
                   {renderTeamActionRow({
                     icon: 'send',
                     label: t('teamDetails.actions.convocations', 'Convocations'),

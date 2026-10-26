@@ -1226,8 +1226,9 @@ function ClubDetails({ navigation, route }) {
   };
 
   const handleLeaveClub = useCallback(() => {
-    leaveClubMutation.mutate();
-  }, [leaveClubMutation]);
+    // C10BIS · P11-02 — on quitte le club AFFICHE, pas le club actif.
+    leaveClubMutation.mutate(club?.documentId || clubId);
+  }, [club?.documentId, clubId, leaveClubMutation]);
 
   const handleAskToLeaveClub = useCallback(() => {
     Alert.alert(

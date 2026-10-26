@@ -497,11 +497,30 @@ export const adminCollectiviteQueryKey = (collectiviteId) => [
  * @returns {any} Le resultat react-query.
  */
 export const useAdminCollectivites = (options = {}) => useQuery({
-  queryFn: getAdminCollectivites,
+  // Pas `queryFn: getAdminCollectivites` : react-query passerait son contexte en guise de `q`.
+  queryFn: () => getAdminCollectivites(),
   queryKey: ADMIN_COLLECTIVITES_QUERY_KEY,
   staleTime: 0,
   ...options,
 });
+
+/**
+ * C10BIS · P9-12 — la recherche des collectivites faite PAR LE SERVEUR, sous la clef de la liste
+ * (un geste qui l invalide relit aussi la recherche). Eteinte sans texte.
+ * @param {string} q - Le texte cherche.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query (`data` : `{ data, meta }`).
+ */
+export const useAdminCollectivitesRecherche = (q, options = {}) => {
+  const recherche = String(q || '').trim();
+  return useQuery({
+    queryFn: () => getAdminCollectivites(recherche),
+    queryKey: [...ADMIN_COLLECTIVITES_QUERY_KEY, 'recherche', recherche],
+    staleTime: 0,
+    ...options,
+    enabled: Boolean(recherche) && options?.enabled !== false,
+  });
+};
 
 /**
  * Une collectivite, avec ses clubs, ses gestionnaires et ses installations.

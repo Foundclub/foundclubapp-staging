@@ -332,6 +332,46 @@ describe('D61 — écran 1 : la liste des collectivités (planche P2-liste)', ()
     expect(textes(arbre.root)).toContain('3 affichées sur 140. Cherche par le nom pour trouver les autres.');
   });
 
+  // C10BIS · P9-12 — la liste tronquee : la recherche part AU SERVEUR, et trouve une
+  // collectivite hors de la page chargee (le message invitait a chercher, en vain).
+  // eslint-disable-next-line max-len
+  it('liste tronquée : la recherche part au serveur et trouve une collectivité hors de la page', async () => {
+    const ARLES = {
+      clubs: [], documentId: 'ville-arles', isActive: true, name: 'Ville d’Arles', type: 'commune',
+    };
+    mockPost.mockImplementation(async (route, charge) => (charge?.q
+      ? { data: { data: [ARLES], meta: { pagination: { total: 1 } } } }
+      : { data: { ...reponseListe().data, meta: { pagination: { total: 140 } } } }));
+    const arbre = await monter();
+    expect(carte(arbre, 'ville-arles')).toBeUndefined();
+
+    // eslint-disable-next-line max-len
+    const champ = arbre.root.findAllByType(TextInput).find((n) => n.props.testID === 'collectivites-recherche');
+    await act(async () => { champ.props.onChangeText('Arles'); });
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 400); }); });
+    await attendre(() => Boolean(carte(arbre, 'ville-arles')));
+
+    expect(mockPost).toHaveBeenCalledWith(
+      ROUTE_LISTE,
+      { ...ADMIN_COLLECTIVITES_LIST_PAYLOAD, q: 'Arles' },
+    );
+    expect(carte(arbre, 'ville-arles')).toBeDefined();
+    expect(carte(arbre, 'dep-var')).toBeUndefined();
+  });
+
+  // eslint-disable-next-line max-len
+  it('liste complète : la recherche reste locale (sans casse ni accent), rien ne repart', async () => {
+    const arbre = await monter();
+    const appels = mockPost.mock.calls.length;
+    // eslint-disable-next-line max-len
+    const champ = arbre.root.findAllByType(TextInput).find((n) => n.props.testID === 'collectivites-recherche');
+    await act(async () => { champ.props.onChangeText('departement'); });
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 400); }); });
+
+    expect(mockPost.mock.calls.length).toBe(appels);
+    expect(carte(arbre, 'dep-var')).toBeDefined();
+  });
+
   it('sur le site (large) : un vrai tableau — Collectivité, État, Clubs rattachés', async () => {
     mockLargeur = 1280;
     const arbre = await monter();

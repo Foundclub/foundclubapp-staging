@@ -215,7 +215,12 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/components/atoms/button/Button', () => () => null);
 jest.mock('@/components/atoms/errorWrapper/ErrorWrapper', () => () => null);
 jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => () => null);
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => () => null);
+/** @type {any[]} */
+const mockFeuilles = [];
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => (/** @type {any} */ props) => {
+  mockFeuilles.push(props);
+  return null;
+});
 jest.mock(
   '@/components/molecules/compositionMessageBubble/CompositionMessageBubble',
   () => () => null,
@@ -404,6 +409,33 @@ describe('BH04 — messagerie du téléphone', () => {
       expect(props.resolveVoterName('adverse')).toBe('Joueur Adverse');
       expect(props.resolveVoterAvatar('adverse')).toBe('');
       expect(props.resolveVoterName('moi')).toContain('Adel');
+      // ANONSITE — la bulle lit les votants au serveur, qui donne le vrai nom : le masque passe devant.
+      expect(props.nomMasqueDuVotant('adverse')).toBe('Joueur Adverse');
+      expect(props.nomMasqueDuVotant('moi')).toBe('');
+    });
+
+    it('ANONSERVEUR — « Partager un contact » ne propose pas l adversaire avant le match', () => {
+      mockChat = {
+        ...filAvecAdversaire(),
+        myTeamMembers: [{ documentId: 'lea' }],
+        participants: [{ documentId: 'moi', firstname: 'Adel' }, ADVERSE, { documentId: 'lea', firstname: 'Léa' }],
+      };
+      mockFeuilles.length = 0;
+      monterConversation();
+      /** @type {any} */
+      let rendu;
+      const textes = [...mockFeuilles].reverse().map((/** @type {any} */ p) => {
+        // eslint-disable-next-line global-require
+        const { createElement, Fragment } = require('react');
+        act(() => { rendu = renderer.create(createElement(Fragment, null, p.children)); });
+        const t = JSON.stringify(rendu.toJSON());
+        act(() => { rendu.unmount(); });
+        return t;
+      });
+      const texte = textes.find((t) => t.includes('Partager un contact') || t.includes('shareContact.title'));
+      expect(texte).toBeDefined();
+      expect(texte).not.toMatch(/Karim|Benali/);
+      expect(texte).toContain('Léa');
     });
 
     it('citation d un message de l adversaire : son nom ne sort pas', () => {

@@ -17,6 +17,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
@@ -757,7 +758,7 @@ function Messaging({ navigation, route }) {
     // n'en est plus un second, imbrique).
     const extrait = lastMessage ? extraitDuMessageCite(lastMessage, t) : { icone: '', texte: '' };
     const auteurDuDernier = lastMessage && !isMyMessage && !estUnTeteATete(chat?.type)
-      ? String(lastMessage?.sender?.firstname || '').trim()
+      ? prenomDansLeFil({ chat, moiId: userData?.documentId, personne: lastMessage?.sender })
       : '';
     const sourdine = withAlpha(Colors.neutral00, 0.58);
     const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({

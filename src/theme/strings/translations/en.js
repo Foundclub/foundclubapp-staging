@@ -3932,6 +3932,7 @@ export default {
         doneTitle: 'Campaign archived',
         failedTitle: 'Archiving failed',
         pending: 'Archiving...',
+        remainingWarning: '{{amount}} is still uncollected. It will no longer count in Remaining.',
         title: 'Archive the campaign',
       },
       close: {
@@ -4168,11 +4169,18 @@ export default {
       waived: 'Waived',
     },
     summary: {
+      closedShare: 'including {{amount}} on ended campaigns',
       collectedOf: ' collected out of ',
+      excludedArchived_one: 'Excluding {{count}} archived campaign',
+      excludedArchived_other: 'Excluding {{count}} archived campaigns',
       expected: ' expected',
+      hiddenCampaigns_one: 'Also counts {{count}} campaign not shown below',
+      hiddenCampaigns_other: 'Also counts {{count}} campaigns not shown below',
       noOverdue: 'No overdue payment',
       overdueCount_one: '{{count}} overdue payment',
       overdueCount_other: '{{count}} overdue payments',
+      partialList_one: 'Based on {{count}} campaign out of {{total}}',
+      partialList_other: 'Based on {{count}} campaigns out of {{total}}',
       progressLabel: 'Collection progress',
       progressValue: '{{percent}}% collected',
       remaining: 'Remaining ',
@@ -8981,6 +8989,11 @@ export default {
         publish: "Couldn't publish this split.",
         save: "Couldn't save this split.",
         title: 'Error',
+      },
+      // DETECTION2 P14-07: a player dropped on a field that is already full.
+      fieldFull: {
+        message: 'Take a player off the field first to bring another one on.',
+        title: 'Field full',
       },
       ok: 'OK',
       published: {
@@ -17432,7 +17445,8 @@ export default {
         placeholder: 'Luc',
       },
       height: {
-        invalid: 'Between 100 and 250 cm (e.g. 182)',
+        invalid: 'Between 100 and 230 cm (e.g. 182)',
+        invalidMinor: 'Between 50 and 230 cm (e.g. 140)',
         label: 'Height (cm)',
         placeholder: 'e.g. 180',
       },
@@ -17482,6 +17496,8 @@ export default {
         president: 'Club manager',
       },
       weight: {
+        invalid: 'Between 25 and 200 kg (e.g. 75)',
+        invalidMinor: 'Between 10 and 200 kg (e.g. 40)',
         label: 'Weight (kg)',
         placeholder: '80',
       },

@@ -29,6 +29,7 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   buildChoiceOptions,
+  getAgeFromDisplayedBirthdate,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 
@@ -40,10 +41,11 @@ import { useGetLevels } from '@/services/level/levelQueries';
 import {
   buildProfileSaveConfirmation,
   listChangedProfileFields,
+  listClearedProfileFields,
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
-import { parseHeightCm } from '@/utils/heightCentimeters';
+import { erreurPhysique, parseHeightCm } from '@/utils/heightCentimeters';
 
 import {
   buildMinorParentalDeclarationPayload,
@@ -96,7 +98,7 @@ const isBirthdateDisplayValid = (value) => {
  * @param {typeof defaultValues} values
  * @returns {Record<string, string>}
  */
-const validateValues = (values) => {
+export const validateValues = (values) => {
   /** @type {Record<string, string>} */
   const nextErrors = {};
 
@@ -113,13 +115,13 @@ const validateValues = (values) => {
     );
   }
 
-  // FINITIONS8 (point 4) : la taille, en centimetres, entre 100 et 250.
-  if (String(values?.height || '').trim() && parseHeightCm(values.height) === null) {
-    nextErrors.height = i18next.t(
-      'profile.fields.height.invalid',
-      'Entre 100 et 250 cm (ex : 182)',
-    );
-  }
+  // FINITIONS8 (point 4) : la taille, en centimetres. CHOIX3 (P5-24) : taille et poids bornes
+  // selon l'age (meme regle que `profileFormContract`, que le Joi du site ne fait pas tourner).
+  const age = getAgeFromDisplayedBirthdate(values?.birthdate);
+  ['height', 'weight'].forEach((champ) => {
+    const { cle } = erreurPhysique(/** @type {'height' | 'weight'} */ (champ), values?.[champ], age);
+    if (cle) nextErrors[champ] = i18next.t(cle);
+  });
 
   return nextErrors;
 };
@@ -162,6 +164,9 @@ function ProfileEditWeb({ navigation, route }) {
   const [categorySearch, setCategorySearch] = useState('');
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
+  // C10BIS · P11-16 — « formulaire modifie » : un profil relu ne reecrase pas la saisie en
+  // cours (meme garde que `isDirty` sur telephone) ; un changement de compte, si.
+  const formModifieRef = useRef(false);
   const inputRefs = useRef({});
 
   const sectionOptions = sections?.map((section) => ({
@@ -214,12 +219,14 @@ function ProfileEditWeb({ navigation, route }) {
       return;
     }
 
+    const switchedUser = hydratedUserKeyRef.current !== nextUserKey;
+    if (!switchedUser && formModifieRef.current) {
+      return;
+    }
+
     const nextValues = buildProfileFormValues(userData, formatBirthdateToDisplay);
     const nextSignature = JSON.stringify(nextValues);
-    if (
-      hydratedUserKeyRef.current === nextUserKey
-      && hydratedSignatureRef.current === nextSignature
-    ) {
+    if (!switchedUser && hydratedSignatureRef.current === nextSignature) {
       return;
     }
 
@@ -230,6 +237,7 @@ function ProfileEditWeb({ navigation, route }) {
     setAvatar(userData?.avatar?.url ? { url: userData.avatar.url } : undefined);
     hydratedUserKeyRef.current = nextUserKey;
     hydratedSignatureRef.current = nextSignature;
+    formModifieRef.current = false;
   }, [formatBirthdateToDisplay, userData]);
 
   useEffect(() => {
@@ -249,6 +257,7 @@ function ProfileEditWeb({ navigation, route }) {
   const { preferredSport } = formValues;
 
   const setFieldValue = (fieldName, value) => {
+    formModifieRef.current = true;
     setFormValues((currentValues) => ({
       ...currentValues,
       [fieldName]: value,
@@ -299,8 +308,12 @@ function ProfileEditWeb({ navigation, route }) {
     // AA11 — la charge qui PART, comparee aux memes champs tels qu'ils etaient
     // charges : c'est ce qui permet de NOMMER ce qui a change sur un
     // formulaire qui reposte tout.
+    const loadedValues = {
+      ...buildProfileFormValues(userData, formatBirthdateToDisplay),
+      avatar: userData?.avatar,
+    };
     pendingChangedFieldsRef.current = listChangedProfileFields(
-      { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+      loadedValues,
       { ...formValues, avatar },
     );
     updateUserMutation.mutate({
@@ -309,6 +322,8 @@ function ProfileEditWeb({ navigation, route }) {
       bestLevel: formValues.bestLevel,
       birthdate: formatBirthdateToSend(formValues.birthdate || ''),
       category: formValues.category,
+      // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
+      clearFields: listClearedProfileFields(loadedValues, { ...formValues, avatar }),
       firstname: formValues.firstname,
       geohash,
       height: formValues.height ? String(parseHeightCm(formValues.height)) : formValues.height,
@@ -382,8 +397,14 @@ function ProfileEditWeb({ navigation, route }) {
                 <View style={[Alignments.row, Spaces.marginVertical[24]]}>
                   <SelectAvatar
                     currentAvatar={avatar}
-                    onAvatarSelected={setAvatar}
-                    onDelete={() => setAvatar(undefined)}
+                    onAvatarSelected={(/** @type {any} */ choisi) => {
+                      formModifieRef.current = true;
+                      setAvatar(choisi);
+                    }}
+                    onDelete={() => {
+                      formModifieRef.current = true;
+                      setAvatar(undefined);
+                    }}
                     size={110}
                   />
                 </View>
