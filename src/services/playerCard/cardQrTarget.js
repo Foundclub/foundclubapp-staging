@@ -61,7 +61,8 @@ export const buildCardQrTarget = ({
   // CARTECODE (registre des mineurs lignes 23, 39, 46) — moins de 13 ans : aucun code QR.
   // 13-17 ans, compte privé, ou âge inconnu (chemin le plus sûr) : FoundClub, sans
   // l'identifiant du compte. Seul un adulte au compte public mène à son profil.
-  const age = computeAge(user?.birthdate, now);
+  // Un profil public rend l'âge, jamais la date : on le lit aussi.
+  const age = computeAge(user?.birthdate, now) ?? (Number.isInteger(user?.age) ? user.age : null);
   if (age !== null && age < 13) return { kind: 'none', url: '' };
   if (age === null || age < 18 || user?.isProfileVisible === false) {
     return resolveCardQrTarget({ installUrl: buildInstallLandingUrl({ source: 'card' }) });
@@ -75,7 +76,8 @@ export const buildCardQrTarget = ({
   const publicUrl = isProfilePublic && publicPath
     ? buildPublicWebUrl({ path: publicPath })
     : null;
-  return resolveCardQrTarget({ installUrl, isProfilePublic, publicUrl });
+  // `personal` : le code mène au compte (l'écran « ce qui part » le dit).
+  return { ...resolveCardQrTarget({ installUrl, isProfilePublic, publicUrl }), personal: true };
 };
 
 export default buildCardQrTarget;

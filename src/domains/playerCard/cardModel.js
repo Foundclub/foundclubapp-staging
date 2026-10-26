@@ -359,7 +359,8 @@ export const buildPlayerCardModel = ({
   audience = 'player', histories = [], matchCount = 0, now = new Date(), qrUrl = '', user = {},
 } = {}) => {
   const topHistory = pickTopHistory(histories, 3);
-  const age = computeAge(user.birthdate, now);
+  // Un profil public rend l'âge, jamais la date (SECU-2 porte 1) : la vignette le lit.
+  const age = computeAge(user.birthdate, now) ?? (Number.isInteger(user.age) ? user.age : null);
   const fill = countCardFill(user);
   const historyClubCount = countHistoryClubs(histories);
   const rarityInfo = computeCardRarity({
@@ -383,6 +384,7 @@ export const buildPlayerCardModel = ({
   return {
     age,
     audience,
+    category: String(user.category || '').trim(),
     city,
     club,
     clubName,
@@ -393,6 +395,7 @@ export const buildPlayerCardModel = ({
     hasClub: Boolean(clubName),
     hasCustomNumber: number !== null,
     hasPhoto: showPhoto,
+    height: user.height ?? null,
     // `history` (3 lignes brutes) nourrit la rarete et la completude, inchangees.
     // La carte AFFICHE `historyGroups` et compte `historyClubCount` (PAR-L14).
     history: topHistory,
@@ -401,6 +404,7 @@ export const buildPlayerCardModel = ({
     isAvailable: Boolean(user.isLookingForClub),
     isPrivate: user.isProfileVisible === false,
     lastname: String(user.lastname || '').trim().toUpperCase(),
+    level: String(user.bestLevel || '').trim(),
     nationality: String(user.nationality || '').trim(),
     number,
     photoUrl: showPhoto ? (user.avatar?.url || user.avatarUrl) : null,
@@ -408,7 +412,9 @@ export const buildPlayerCardModel = ({
     qrUrl,
     rarity: rarityInfo.rarity,
     rarityScore: rarityInfo.score,
+    section: String(user.section?.name || '').trim(),
     sport: String(user.preferredSport || '').trim(),
+    weight: user.weight ?? null,
   };
 };
 
@@ -431,16 +437,14 @@ export const buildPlayerCardModel = ({
  */
 export const buildDeclaredChildCardProps = ({ enfant = {}, libelles = {}, saisie = null } = {}) => {
   const lire = (cle) => String((saisie && cle in saisie ? saisie[cle] : enfant[cle]) ?? '').trim();
-  const equipe = [enfant.team?.name, enfant.club?.name]
-    .map((nom) => String(nom || '').trim())
-    .filter(Boolean)
-    .join(' · ');
   const team = enfant.team || {};
   return {
     age: typeof enfant.age === 'number' ? `${enfant.age} ${libelles.years || 'ANS'}` : '',
     // CARTECODE Q7 B — les cases qu'apporte son équipe ; ni taille ni poids, aucun champ neuf.
     categorie: String(team.category || '').trim(),
-    equipe: equipe || libelles.noTeam || '',
+    // Q3 A : la bande du club, l'équipe dessous.
+    club: String(enfant.club?.name || '').trim(),
+    equipe: String(team.name || '').trim() || libelles.noTeam || '',
     nationalite: lire('nationality'),
     niveau: String(team.level || '').trim(),
     nom: String(enfant.lastname || '').trim().toUpperCase(),

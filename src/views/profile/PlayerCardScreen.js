@@ -23,14 +23,17 @@ import { ScrollView } from 'react-native-gesture-handler';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { getCardConsentState } from '@/domains/playerCard/cardConsent';
-import { buildCardShareMessage } from '@/domains/playerCard/cardMessages';
+import { buildCardDisclosure, buildCardShareMessage } from '@/domains/playerCard/cardMessages';
 import { buildPlayerCardModel } from '@/domains/playerCard/cardModel';
+import { buildPlayerCardProps } from '@/domains/playerCard/cardProps';
 import useShareCard from '@/domains/playerCard/useShareCard';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
-import PlayerCard, { CARD_EXPORT_WIDTH } from '@/components/organisms/playerCard/PlayerCard';
+import CardDisclosureSheet from '@/components/organisms/playerCard/CardDisclosureSheet';
+import CardSheen from '@/components/organisms/playerCard/CardSheen';
+import PlayerCard, { CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH } from '@/components/organisms/playerCard/PlayerCard';
 import ShareCardModal from '@/components/organisms/shareCardModal/ShareCardModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -44,24 +47,6 @@ import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 import { getImageUrl } from '@/utils/imageUrl';
 
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
-
-/**
- * CARTECODE Q5 B — 4 raretés (commune, rare, épique, légendaire), calculées par le modèle.
- * Le légendaire prend le dessin le plus haut de la carte (nacre, jamais l'or de la League).
- */
-const CARD_RARITY = {
-  common: 'COMMON', epic: 'EPIC', legendary: 'MOST_RARE', rare: 'RARE',
-};
-
-/**
- * Periode "2023–AUJ." / "2019–2023" pour l'historique de la carte.
- * @param entry
- * @param nowLabel
- */
-const formatHistoryPeriod = (entry, nowLabel) => {
-  const end = entry.isCurrentlyActive ? nowLabel : (entry.endYear || '');
-  return [entry.startYear, end].filter(Boolean).join('–');
-};
 
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -86,6 +71,8 @@ function PlayerCardScreen({ navigation, route }) {
   } = useShareCard();
 
   const [isShareVisible, setIsShareVisible] = useState(false);
+  // CARTECODE (ligne 41) : « ce qui part » s'ouvre AVANT le partage, pour tout le monde.
+  const [isDisclosureVisible, setIsDisclosureVisible] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   const isCelebration = Boolean(route?.params?.celebration);
@@ -108,34 +95,18 @@ function PlayerCardScreen({ navigation, route }) {
     user: userData || {},
   }), [userData, histories, matchCount, qrTarget.url, audience]);
 
-  // Mapping modele pur -> props de la carte collectible (design final).
-  const cardProps = useMemo(() => ({
-    age: model.age != null ? `${model.age} ${t('playerCard.field.yearsUnit', 'ANS')}` : '—',
-    club: model.hasClub ? model.clubName : t('playerCard.noClub', 'SANS CLUB'),
-    // PAR-L14 : une ligne par club et par saison, niveau puis categories reunies
-    // (« Régional 1 · Seniors, U20 ») ; le compteur compte les clubs.
-    historique: model.historyGroups.map((entry) => ({
-      categorie: [entry.levels.join(', '), entry.categories.join(', ')].filter(Boolean).join(' · '),
-      club: entry.clubName,
-      periode: formatHistoryPeriod(entry, t('playerCard.nowShort', 'AUJ.')),
-    })),
-    historiqueEmptyLabel: t('playerCard.historyEmpty', 'Parcours à compléter'),
-    historiqueTotal: model.historyClubCount,
+  const cardProps = useMemo(() => buildPlayerCardProps({
+    imageUrl: getImageUrl,
+    labels: {
+      now: t('playerCard.nowShort', 'AUJ.'),
+      qrProfile: t('playerCard.qrProfile', 'mon profil'),
+      yearsUnit: t('playerCard.field.yearsUnit', 'ans'),
+    },
     locked: consent.isLockedPreview,
-    nationalite: model.nationality || '—',
-    nom: model.lastname || '—',
-    // CARTECODE : plus de numéro fabriqué ; vide tant qu'il n'est pas saisi.
-    numero: model.number === null ? '' : String(model.number),
-    photo: model.photoUrl ? { uri: getImageUrl(model.photoUrl) } : undefined,
-    poste: model.position || '—',
-    prenom: model.firstname || '',
-    qrValue: model.qrUrl,
-    rarity: CARD_RARITY[model.rarity] || 'COMMON',
-    // Sport vide -> pill masquee par le composant (pas de moignon « — »).
-    sport: model.sport || '',
-    statut: model.isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE',
-    ville: model.city || '—',
-  }), [model, consent.isLockedPreview, t]);
+    model,
+    qr: qrTarget,
+  }), [model, consent.isLockedPreview, qrTarget, t]);
+  const disclosure = useMemo(() => buildCardDisclosure({ model, qr: qrTarget }), [model, qrTarget]);
 
   const shareLabels = useMemo(() => ({
     availableSuffix: t('playerCard.shareAvailableSuffix', 'Je cherche un club !'),
@@ -275,6 +246,11 @@ function PlayerCardScreen({ navigation, route }) {
       navigation.navigate(RouteNames.ProfileEdit, { focus: 'birthdate', source: 'player_card' });
       return;
     }
+    setIsDisclosureVisible(true);
+  };
+
+  const confirmDisclosure = () => {
+    setIsDisclosureVisible(false);
     setIsShareVisible(true);
   };
 
@@ -294,8 +270,8 @@ function PlayerCardScreen({ navigation, route }) {
           ) : null}
           <Text style={[Fonts.h2Black, Fonts.neutral00, { textAlign: 'center' }]}>
             {isCelebration
-              ? t('playerCard.revealTitle', 'Voici ta carte de collection')
-              : t('playerCard.screenTitle', 'Ma carte de collection')}
+              ? t('playerCard.revealTitle', 'Voici ta carte joueur')
+              : t('playerCard.screenTitle', 'Ma carte joueur')}
           </Text>
           {/* PAR-L14 (E31) : dans l'etat NORMAL, l'accroche et « Modifier mes
               infos » quittent le haut de l'ecran — sur un iPhone SE, ils
@@ -324,27 +300,14 @@ function PlayerCardScreen({ navigation, route }) {
 
         {/* Carte (visible) */}
         <View style={[Alignments.alignCenter, isCelebration ? styles.tilted : null, styles.cardSlot]}>
-          <PlayerCard
-            age={cardProps.age}
-            bottomPanel="historique"
-            club={cardProps.club}
-            historique={cardProps.historique}
-            historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
-            historiqueTotal={cardProps.historiqueTotal}
-            locked={cardProps.locked}
-            nationalite={cardProps.nationalite}
-            nom={cardProps.nom}
-            numero={cardProps.numero}
-            photo={cardProps.photo}
-            poste={cardProps.poste}
-            prenom={cardProps.prenom}
-            qrValue={cardProps.qrValue}
-            rarity={cardProps.rarity}
-            sport={cardProps.sport}
-            statut={cardProps.statut}
-            ville={cardProps.ville}
+          {/* Q10 B : le reflet glisse sous le doigt (écran seulement). */}
+          <CardSheen
+            height={visibleCardWidth * (CARD_EXPORT_HEIGHT / CARD_EXPORT_WIDTH)}
             width={visibleCardWidth}
-          />
+          >
+            {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+            <PlayerCard {...cardProps} mode="ecran" width={visibleCardWidth} />
+          </CardSheen>
         </View>
 
         {/* PAR-L14 (E31) : les deux gestes, cote a cote, JUSTE SOUS la carte :
@@ -440,29 +403,22 @@ function PlayerCardScreen({ navigation, route }) {
       {/* Rendu HORS-ECRAN dedie a la capture (992×1262 a l'export, jamais voile) */}
       <View collapsable={false} pointerEvents="none" style={styles.offscreen}>
         <View collapsable={false} ref={cardRef}>
-          <PlayerCard
-            age={cardProps.age}
-            bottomPanel="historique"
-            club={cardProps.club}
-            historique={cardProps.historique}
-            historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
-            historiqueTotal={cardProps.historiqueTotal}
-            locked={false}
-            nationalite={cardProps.nationalite}
-            nom={cardProps.nom}
-            numero={cardProps.numero}
-            photo={cardProps.photo}
-            poste={cardProps.poste}
-            prenom={cardProps.prenom}
-            qrValue={cardProps.qrValue}
-            rarity={cardProps.rarity}
-            sport={cardProps.sport}
-            statut={cardProps.statut}
-            ville={cardProps.ville}
-            width={CARD_EXPORT_WIDTH / 2}
-          />
+          {/* L'image partagée : ce qui manque disparaît, le reflet est au repos. */}
+          {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+          <PlayerCard {...cardProps} locked={false} mode="image" width={CARD_EXPORT_WIDTH / 2} />
         </View>
       </View>
+
+      <CardDisclosureSheet
+        disclosure={disclosure}
+        isVisible={isDisclosureVisible}
+        onClose={() => setIsDisclosureVisible(false)}
+        onConfirm={confirmDisclosure}
+        onEdit={() => {
+          setIsDisclosureVisible(false);
+          handleEditCard();
+        }}
+      />
 
       <ShareCardModal
         canShare={consent.canShare}

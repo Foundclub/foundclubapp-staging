@@ -17437,7 +17437,27 @@ export default {
     thisPeriodSEventsAre: 'Les événements de cette période sont uniquement dans la section « Sans horaire ».',
   },
   playerCard: {
+    addNumber: '+ N°',
+    addPhoto: '+ PHOTO',
     editCardCta: 'Modifier mes infos',
+    // CARTECODE (registre des mineurs ligne 41) : avant chaque partage, ce qui part.
+    disclosure: {
+      age: 'Ton âge ({{age}} ans), jamais ta date',
+      available: 'Ton statut : disponible',
+      body: 'Ta taille et ton poids',
+      city: 'Ta ville : {{city}}',
+      edit: 'Modifier ma carte',
+      message: 'Le message « Voici ma carte FoundClub. »',
+      messageLooking: 'Le message « Voici ma carte FoundClub. Je cherche un club ! »',
+      name: 'Ton prénom et ton nom',
+      never: 'Téléphone, e-mail, adresse, date de naissance',
+      neverTitle: 'Ne part jamais',
+      photoAndName: 'Ta photo, ton prénom et ton nom',
+      qrNeutral: 'Un code QR vers foundclub.app, pas vers ton profil',
+      qrProfile: 'Un code QR vers ton profil',
+      title: 'Ce qui part avec ta carte',
+      unavailable: 'Ton statut : indisponible',
+    },
     generating: 'Génération de l\'image…',
     history: {
       clubCount: '{{total}} CLUBS',
@@ -17449,12 +17469,17 @@ export default {
     },
     info: {
       age: 'ÂGE',
+      category: 'CATÉGORIE',
       city: 'VILLE',
       club: 'CLUB',
+      height: 'TAILLE',
+      level: 'NIVEAU',
       nationality: 'NATIONALITÉ',
+      nationalityShort: 'NATION.',
       position: 'POSTE',
       // PAR-L13 — la carte d'un enfant déclaré porte son équipe.
       team: 'ÉQUIPE',
+      weight: 'POIDS',
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
@@ -17465,7 +17490,7 @@ export default {
     saveError: 'Impossible d\'enregistrer l\'image pour le moment.',
     saveErrorPermission: 'Autorise l\'accès aux photos pour enregistrer ta carte.',
     screenSubtitle: 'Partage ta carte, gagne en visibilité et fais-toi détecter.',
-    screenTitle: 'Ma carte de collection',
+    screenTitle: 'Ma carte joueur',
     shareCta: 'Partager ma carte',
     // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
     shareShortCta: 'Partager',
@@ -17486,6 +17511,7 @@ export default {
     noClub: 'SANS CLUB',
     nowShort: 'Auj.',
     previewChip: 'APERÇU',
+    qrProfile: 'mon profil',
     rarity: {
       common: 'COMMUNE',
       epic: 'ÉPIQUE',
@@ -17497,16 +17523,18 @@ export default {
     rarityA11y: 'Rareté',
     tagAvailable: 'DISPONIBLE',
     tagAvailableA11y: 'Disponible',
+    tagUnavailable: 'INDISPONIBLE',
     // Formats d'export
     formatFeed: 'Feed',
     formatStory: 'Story',
     // Reveal fin d'onboarding
     revealContinue: 'Plus tard, continuer',
     revealEyebrow: 'Bienvenue',
-    revealTitle: 'Voici ta carte de collection',
+    revealTitle: 'Voici ta carte joueur',
     // Garde-fou mineurs
     minorGuardDescription: 'Ce profil concerne un mineur. La publication de la carte nécessite l\'accord d\'un parent ou représentant légal.',
     minorGuardTitle: 'Accord parental requis',
+    missing: '+ à compléter',
     requestConsent: 'Demander l\'accord parental',
     // Partage (message natif)
     sentDescription: 'Ta carte a bien été partagée. Ouvrir la conversation ?',

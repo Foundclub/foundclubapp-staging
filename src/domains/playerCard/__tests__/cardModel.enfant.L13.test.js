@@ -28,7 +28,9 @@ describe('PAR-L13 — buildDeclaredChildCardProps', () => {
       age: '11 ANS',
       // CARTECODE Q7 B : les cases de son equipe (vides : la fiche du test n en porte pas).
       categorie: '',
-      equipe: 'U11 Filles · FoundClub',
+      // CARTECODE Q3 A : la bande du club, l equipe dessous.
+      club: 'FoundClub',
+      equipe: 'U11 Filles',
       nationalite: 'Française',
       niveau: '',
       nom: 'DUBELLOY',

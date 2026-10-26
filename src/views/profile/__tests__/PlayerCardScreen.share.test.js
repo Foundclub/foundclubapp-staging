@@ -72,6 +72,21 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
+jest.mock(
+  '@/components/organisms/playerCard/CardSheen',
+  () => function CardSheenMock({ children }) {
+    return children;
+  },
+);
+jest.mock(
+  '@/components/organisms/playerCard/CardDisclosureSheet',
+  () => function CardDisclosureSheetMock(props) {
+    global.mockDisclosureProps = props;
+    return null;
+  },
+);
+
 // CARTECODE : la rarete lit le nombre de matchs (statistiques personnelles).
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetPersonalStats: () => ({ data: null }),
@@ -293,9 +308,12 @@ describe('CARTECODE Q6 B — âge inconnu : « Partager » demande d abord la da
     expect(modale.isVisible).toBe(false);
   });
 
-  it('avec une date : le partage s ouvre comme avant', async () => {
+  it('avec une date : « ce qui part » s ouvre d abord (ligne 41), puis le partage', async () => {
     const { modale, navigate } = await appuyerSurPartager(ADULTE);
     expect(navigate).not.toHaveBeenCalled();
-    expect(modale.isVisible).toBe(true);
+    expect(modale.isVisible).toBe(false);
+    expect(global.mockDisclosureProps.isVisible).toBe(true);
+    await act(async () => { global.mockDisclosureProps.onConfirm(); });
+    expect(mockShareModalProps[mockShareModalProps.length - 1].isVisible).toBe(true);
   });
 });

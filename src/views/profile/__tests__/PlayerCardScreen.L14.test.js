@@ -64,6 +64,21 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
+jest.mock(
+  '@/components/organisms/playerCard/CardSheen',
+  () => function CardSheenMock({ children }) {
+    return children;
+  },
+);
+jest.mock(
+  '@/components/organisms/playerCard/CardDisclosureSheet',
+  () => function CardDisclosureSheetMock(props) {
+    global.mockDisclosureProps = props;
+    return null;
+  },
+);
+
 // CARTECODE : la rarete lit le nombre de matchs (statistiques personnelles).
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetPersonalStats: () => ({ data: null }),
@@ -198,17 +213,18 @@ describe('PAR-L14 point 3 — une ligne par club et par saison, categories reuni
 
     monter();
 
-    const { historique, historiqueTotal } = carteMontree();
+    // CARTECODE Q4 A : la carte v2 montre le club, son logo et ses années (le détail des
+    // niveaux et catégories reste dans le profil).
+    const { historique } = carteMontree();
     expect(historique.map((l) => l.club)).toEqual([
       'Stade Marseillais Université Club', 'Sporting Club Montredon Bonneveine',
     ]);
-    expect(historique[1]).toMatchObject({
-      categorie: 'Régional 1 · Seniors, U20', periode: '2020–2022',
+    expect(historique[1]).toEqual({
+      club: 'Sporting Club Montredon Bonneveine', logoUrl: null, periode: '2020–2022',
     });
-    expect(historiqueTotal).toBe(2);
   });
 
-  it('le meme club sur deux saisons : deux lignes, mais UN club au compteur', () => {
+  it('le meme club sur deux saisons : deux lignes', () => {
     mockHistories = [
       { club: SPORTING, endYear: 2019, startYear: 2018 },
       { club: SPORTING, endYear: 2022, startYear: 2020 },
@@ -216,19 +232,18 @@ describe('PAR-L14 point 3 — une ligne par club et par saison, categories reuni
 
     monter();
 
-    const { historique, historiqueTotal } = carteMontree();
+    const { historique } = carteMontree();
     expect(historique.map((l) => l.periode)).toEqual(['2020–2022', '2018–2019']);
-    expect(historiqueTotal).toBe(1);
   });
 
-  it('le compteur compte TOUS les clubs, pas seulement les 3 lignes montrees', () => {
+  it('CARTECODE Q4 A : au plus 3 clubs sur la carte, les plus récents', () => {
     mockHistories = ['A', 'B', 'C', 'D'].map((nom, i) => ({
       club: { name: `Club ${nom}` }, endYear: 2010 + 2 * i + 1, startYear: 2010 + 2 * i,
     }));
 
     monter();
 
-    expect(carteMontree().historiqueTotal).toBe(4);
+    expect(carteMontree().historique.map((l) => l.club)).toEqual(['Club D', 'Club C', 'Club B']);
   });
 });
 
@@ -270,6 +285,8 @@ describe('PAR-L14 point 5 — partager et modifier, cote a cote, juste sous la c
     const { arbre, navigation } = monter();
 
     act(() => geste(arbre, 'Partager ma carte').props.onPress());
+    // CARTECODE (ligne 41) : « ce qui part » d'abord, puis la feuille de partage.
+    act(() => global.mockDisclosureProps.onConfirm());
     expect(mockShareModalProps[mockShareModalProps.length - 1].isVisible).toBe(true);
     act(() => geste(arbre, 'Modifier mes infos').props.onPress());
     expect(navigation.navigate)
