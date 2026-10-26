@@ -5,13 +5,12 @@
  * gesture-handler, déjà installés : aucune dépendance neuve. Sans mouvement réduit demandé
  * par le système : sinon la carte reste telle quelle.
  */
-import { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -26,7 +25,15 @@ import Animated, {
 function CardSheen({
   children, height, width,
 }) {
-  const reduceMotion = useReducedMotion();
+  // « Réduire les animations » du système : la carte reste telle quelle.
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let actif = true;
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then((valeur) => { if (actif) setReduceMotion(Boolean(valeur)); })
+      .catch(() => {});
+    return () => { actif = false; };
+  }, []);
   const position = useSharedValue(0);
   const visible = useSharedValue(0);
 
