@@ -657,19 +657,20 @@ function EventWizardLogistics({ navigation, route }) {
               jours: recurrenceDays,
             }}
             sansRepetition={isTournament}
-          />
-        ) : null}
-        {avecJugement ? (
-          <JugementDuCreneau
-            date={date}
-            debut={startTime}
-            etat={{
-              ...state,
-              isRecurrent,
-              recurrenceEndDate,
-            }}
-            fin={endTime}
-            onEtat={recevoirLeJugement}
+            // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.
+            sousLesHeures={avecJugement ? (
+              <JugementDuCreneau
+                date={date}
+                debut={startTime}
+                etat={{
+                  ...state,
+                  isRecurrent,
+                  recurrenceEndDate,
+                }}
+                fin={endTime}
+                onEtat={recevoirLeJugement}
+              />
+            ) : null}
           />
         ) : null}
 

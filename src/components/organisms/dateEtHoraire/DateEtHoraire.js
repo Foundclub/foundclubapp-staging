@@ -222,14 +222,16 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   sansRepetition?: boolean,
  *   titreRepeter?: string | null,
  *   sousLaDate?: import('react').ReactNode,
+ *   sousLesHeures?: import('react').ReactNode,
  *   webZIndex?: number,
  * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDate`,
  *   `libelleDebut`, `libelleFin` : les mots de l ecran (« Première date », « Début », « Fin » de
  *   la Ville) ; `finApres` et
  *   `pleines` : les memes reglages que `TimePickerInput` (A7-UX) ;
  *   `onRepetition(null)` revient a « Une seule fois » ; `sousLaDate` : une ligne de l ecran
- *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `webZIndex` : la couche
- *   de la feuille sur
+ *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `sousLesHeures` : ce que
+ *   l ecran dit de l horaire, juste sous les heures (« Ce créneau est libre », 6- B) ;
+ *   `webZIndex` : la couche de la feuille sur
  *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
  * @returns {import('react').ReactElement} Le bloc.
  */
@@ -249,6 +251,7 @@ function DateEtHoraire({
   repetition = null,
   sansRepetition = false,
   sousLaDate = null,
+  sousLesHeures = null,
   titreRepeter = null,
   webZIndex = undefined,
 }) {
@@ -483,6 +486,7 @@ function DateEtHoraire({
             value={fin ? toTimeInputText(fin) : ''}
           />
         </View>
+        {sousLesHeures}
       </View>
 
       {/* D09 — « Repeter » est une RANGEE-VALEUR a chevron, pas un
@@ -518,7 +522,12 @@ function DateEtHoraire({
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {t('eventWizard.steps.logistics.repeter.lesJours', 'Les jours')}
               </Text>
-              <View style={[Alignments.row, { flexWrap: 'wrap', gap: 6 }]}>
+              {/* Les sept pastilles sur une ligne dès 340 px de large (44 px chacune). */}
+              <View
+                style={[Alignments.row, {
+                  flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6,
+                }]}
+              >
                 {JOURS_DE_LA_SEMAINE.map((jour) => {
                   const choisi = joursRetenus.includes(jour);
                   const celuiDeLaDate = jour === date.getDay();
