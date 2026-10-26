@@ -154,6 +154,8 @@ export const RouteNames = /** @type {const} */ ({
   PlayerCard: 'PlayerCard',
   PlayerMatchResponse: 'PlayerMatchResponse',
   PollDetails: 'PollDetails',
+  // CARTECODE Q1 C — « Compte privé » (isProfileVisible), séparé de « Ouvert au recrutement ».
+  PrivacySettings: 'PrivacySettings',
   Profile: 'Profile',
   ProfileEdit: 'ProfileEdit',
   PublicAuthStack: 'PublicAuthStack',

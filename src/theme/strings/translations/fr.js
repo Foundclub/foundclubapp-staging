@@ -18075,11 +18075,11 @@ export default {
       },
       isLookingForClub: {
         helper: 'Ton profil apparaît dans la recherche des clubs et des coachs.',
-        label: 'Profil visible',
+        label: 'Ouvert au recrutement',
       },
       jerseyNumber: {
         label: 'Numéro de maillot',
-        placeholder: 'Ex. 10 (vide = automatique)',
+        placeholder: 'Ex. 10',
       },
       lastname: {
         label: 'Nom',
@@ -18169,6 +18169,11 @@ export default {
     // bien enregistree ») : « ton » ou « ta » devant un libelle oblige a
     // connaitre son genre, et « ton date de naissance » serait faux.
     // Table des champs : `services/profile/profileSaveConfirmation.js`.
+    privacy: {
+      privateHelper: 'Les autres membres ne voient plus ton profil et ne te trouvent plus en recherche. Le code QR de ta carte mène simplement à FoundClub.',
+      privateLabel: 'Compte privé',
+      title: 'Confidentialité',
+    },
     saveConfirmation: {
       eyebrow: 'PROFIL',
       many: '{{count}} informations de ton profil sont bien enregistrées.',

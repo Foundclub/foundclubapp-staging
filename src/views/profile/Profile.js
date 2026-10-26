@@ -1085,6 +1085,13 @@ function Profile({ navigation, route }) {
       label: t('userBlock.screen.title', 'Personnes bloquées'),
       onPress: () => navigation.navigate(RouteNames.BlockedUsers),
     },
+    // CARTECODE Q1 C — « Compte privé », séparé de « Ouvert au recrutement » (profil).
+    {
+      icon: Images.shield,
+      key: 'privacy',
+      label: t('profile.privacy.title', 'Confidentialité'),
+      onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.PrivacySettings),
+    },
     // R24 — Apple 1.5 exige un moyen FACILE de joindre l'editeur DANS l'app.
     // Le seul bouton nomme « Nous contacter » ouvrait jusqu'ici la fenetre
     // « je ne trouve pas mon club » du tunnel d'affiliation : une demande aux

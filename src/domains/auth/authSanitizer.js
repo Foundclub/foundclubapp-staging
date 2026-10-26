@@ -198,6 +198,8 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   isLookingForClub: typeof user?.isLookingForClub === 'boolean'
     ? user.isLookingForClub
     : null,
+  isProfileVisible: user?.isProfileVisible !== false,
+  jerseyNumber: user?.jerseyNumber ?? null,
   lastname: normalizeString(user?.lastname),
   multisportAdminIds: normalizeIdList(
     user?.multisportClubs?.flatMap(
@@ -210,6 +212,7 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   myTeamIds: normalizeIdList(
     user?.myTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
   ),
+  nationality: normalizeString(user?.nationality),
   nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
     user?.nonPartnerCoachPublishingAccess,
   ),
@@ -259,6 +262,8 @@ export const sanitizeUser = (user) => {
     avatar: sanitizeImageSummary(user?.avatar),
     bestLevel: normalizeString(user?.bestLevel),
     birthdate: normalizeString(user?.birthdate),
+    // CARTECODE : la carte lit ces champs ; la copie les perdait (numéro « fabriqué »).
+    cardConsentAcceptedAt: normalizeString(user?.cardConsentAcceptedAt),
     category: normalizeString(user?.category),
     club: sanitizeClubSummary(user?.club),
     clubMembershipRequests: Array.isArray(user?.clubMembershipRequests)
@@ -274,6 +279,9 @@ export const sanitizeUser = (user) => {
     isLookingForClub: typeof user?.isLookingForClub === 'boolean'
       ? user.isLookingForClub
       : null,
+    // Le serveur rend `true` par défaut (sanitizeBootUserProfile) : seul un `false` explicite est privé.
+    isProfileVisible: user?.isProfileVisible !== false,
+    jerseyNumber: user?.jerseyNumber ?? null,
     lastname: normalizeString(user?.lastname),
     multisportClubs: Array.isArray(user?.multisportClubs)
       ? user.multisportClubs.map(sanitizeMultisportClubSummary).filter(Boolean)
@@ -281,6 +289,7 @@ export const sanitizeUser = (user) => {
     myTeams: Array.isArray(user?.myTeams)
       ? user.myTeams.map(sanitizeTeamSummary).filter(Boolean)
       : [],
+    nationality: normalizeString(user?.nationality),
     nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
       user?.nonPartnerCoachPublishingAccess,
     ),

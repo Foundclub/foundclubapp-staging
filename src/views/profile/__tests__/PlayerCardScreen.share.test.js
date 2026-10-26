@@ -22,6 +22,9 @@ import PlayerCardScreen from '../PlayerCardScreen';
 let mockShareCard;
 /** @type {any[]} */
 const mockShareModalProps = [];
+// CARTECODE Q6 : le compte lu par l'ecran (un adulte ne en 1990, sauf temoin « sans date »).
+/** @type {any} */
+let mockUserData;
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -46,15 +49,17 @@ jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     getPostOnboardingHomeRoute: () => 'Home',
-    userData: {
-      birthDate: '1990-01-01',
-      firstname: 'Zinedine',
-      id: 7,
-      lastname: 'Zidane',
-      role: { type: 'joueur' },
-    },
+    userData: mockUserData,
   }),
 }));
+
+const ADULTE = {
+  birthdate: '1990-01-01',
+  firstname: 'Zinedine',
+  id: 7,
+  lastname: 'Zidane',
+  role: { type: 'joueur' },
+};
 
 jest.mock('@/domains/messaging/useMessaging', () => ({
   __esModule: true,
@@ -66,6 +71,11 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 }));
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
+
+// CARTECODE : la rarete lit le nombre de matchs (statistiques personnelles).
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetPersonalStats: () => ({ data: null }),
+}));
 
 // Le VRAI theme, sans le contexte React qui le porte : un mock en Proxy rend les
 // echecs Jest illisibles (constat du lot paywall), et un objet invente
@@ -167,6 +177,7 @@ const partager = async () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUserData = ADULTE;
   mockShareModalProps.length = 0;
   mockShareCard = jest.fn().mockResolvedValue({
     fileUri: 'file:///data/cache/carte.png',
@@ -256,5 +267,31 @@ describe('L27 — l ecran encaisse le nouveau contrat de partage', () => {
         title: 'Zinedine ZIDANE',
       }),
     );
+  });
+});
+
+describe('CARTECODE Q6 B — âge inconnu : « Partager » demande d abord la date', () => {
+  const appuyerSurPartager = async (userData) => {
+    mockUserData = userData;
+    const navigate = jest.fn();
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<PlayerCardScreen navigation={{ navigate }} route={{ params: {} }} />);
+    });
+    const bouton = arbre.root.findAll((n) => n.props.onPress && n.findAll((t) => t.props.children === 'Partager').length)[0];
+    await act(async () => { bouton.props.onPress(); });
+    return { modale: mockShareModalProps[mockShareModalProps.length - 1], navigate };
+  };
+
+  it('sans date de naissance : l ecran de la date s ouvre, pas le partage', async () => {
+    const { modale, navigate } = await appuyerSurPartager({ ...ADULTE, birthdate: null });
+    expect(navigate).toHaveBeenCalledWith('ProfileEdit', expect.objectContaining({ focus: 'birthdate' }));
+    expect(modale.isVisible).toBe(false);
+  });
+
+  it('avec une date : le partage s ouvre comme avant', async () => {
+    const { modale, navigate } = await appuyerSurPartager(ADULTE);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(modale.isVisible).toBe(true);
   });
 });

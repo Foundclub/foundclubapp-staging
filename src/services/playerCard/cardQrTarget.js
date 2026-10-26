@@ -11,6 +11,8 @@
  * La DECISION (quelle URL choisir) est isolee dans `resolveCardQrTarget` (PUR,
  * teste). La resolution reelle des URLs delegue a app/src/utils/shareLinks.js.
  */
+import { computeAge } from '@/domains/playerCard/cardModel';
+
 import {
   buildInstallLandingUrl,
   buildPublicWebUrl,
@@ -46,14 +48,24 @@ export const resolveCardQrTarget = ({
  * @param {'player'|'coach'|'team'} [params.audience]
  * @param {boolean} [params.isProfilePublic] v2 : true quand la page web existera
  * @param {string} [params.publicPath] v2 : ex. `/joueurs/<id>/<slug>`
+ * @param {Date} [params.now]
  * @returns {{ url: string, kind: 'public'|'install'|'none' }}
  */
 export const buildCardQrTarget = ({
   audience = 'player',
   isProfilePublic = false,
+  now = new Date(),
   publicPath = null,
   user = {},
 } = {}) => {
+  // CARTECODE (registre des mineurs lignes 23, 39, 46) — moins de 13 ans : aucun code QR.
+  // 13-17 ans, compte privé, ou âge inconnu (chemin le plus sûr) : FoundClub, sans
+  // l'identifiant du compte. Seul un adulte au compte public mène à son profil.
+  const age = computeAge(user?.birthdate, now);
+  if (age !== null && age < 13) return { kind: 'none', url: '' };
+  if (age === null || age < 18 || user?.isProfileVisible === false) {
+    return resolveCardQrTarget({ installUrl: buildInstallLandingUrl({ source: 'card' }) });
+  }
   const id = user?.documentId || user?.id || '';
   const installUrl = buildInstallLandingUrl({
     id: String(id),

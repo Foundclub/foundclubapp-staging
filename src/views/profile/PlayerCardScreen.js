@@ -36,6 +36,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import { buildCardQrTarget } from '@/services/playerCard/cardQrTarget';
 import { uploadCardImage } from '@/services/playerCard/uploadCardImage';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
@@ -45,18 +46,11 @@ import { getImageUrl } from '@/utils/imageUrl';
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
 
 /**
- * Rarete 5 niveaux du design final a partir du score deterministe (0..100).
- * Prolonge les paliers historiques de computeRarity (>=85 legendary) en
- * scindant le haut du spectre : >=95 MOST_RARE, >=85 ULTRA_RARE.
- * @param {number} score
- * @returns {'MOST_RARE'|'ULTRA_RARE'|'EPIC'|'RARE'|'COMMON'}
+ * CARTECODE Q5 B — 4 raretés (commune, rare, épique, légendaire), calculées par le modèle.
+ * Le légendaire prend le dessin le plus haut de la carte (nacre, jamais l'or de la League).
  */
-const mapScoreToCardRarity = (score) => {
-  if (score >= 95) return 'MOST_RARE';
-  if (score >= 85) return 'ULTRA_RARE';
-  if (score >= 65) return 'EPIC';
-  if (score >= 40) return 'RARE';
-  return 'COMMON';
+const CARD_RARITY = {
+  common: 'COMMON', epic: 'EPIC', legendary: 'MOST_RARE', rare: 'RARE',
 };
 
 /**
@@ -83,6 +77,9 @@ function PlayerCardScreen({ navigation, route }) {
   } = useAuth();
   const { sendMessage } = useMessaging();
   const { data: histories = [] } = useGetMyHistories();
+  // CARTECODE Q5 B — « vie dans FoundClub » : le nombre de matchs joués, jamais présences ni notes.
+  const userId = userData?.documentId || userData?.id;
+  const { data: personalStats } = useGetPersonalStats(userId, { enabled: Boolean(userId) });
 
   const {
     captureToFile, cardRef, isBusy, saveCardToGallery, shareCard,
@@ -101,13 +98,15 @@ function PlayerCardScreen({ navigation, route }) {
   const isNormal = !isCelebration && !consent.isLockedPreview;
 
   const qrTarget = useMemo(() => buildCardQrTarget({ audience, user: userData || {} }), [userData, audience]);
+  const matchCount = Number(personalStats?.overall?.matches || 0);
 
   const model = useMemo(() => buildPlayerCardModel({
     audience,
     histories,
+    matchCount,
     qrUrl: qrTarget.url,
     user: userData || {},
-  }), [userData, histories, qrTarget.url, audience]);
+  }), [userData, histories, matchCount, qrTarget.url, audience]);
 
   // Mapping modele pur -> props de la carte collectible (design final).
   const cardProps = useMemo(() => ({
@@ -125,12 +124,13 @@ function PlayerCardScreen({ navigation, route }) {
     locked: consent.isLockedPreview,
     nationalite: model.nationality || '—',
     nom: model.lastname || '—',
-    numero: String(model.number),
+    // CARTECODE : plus de numéro fabriqué ; vide tant qu'il n'est pas saisi.
+    numero: model.number === null ? '' : String(model.number),
     photo: model.photoUrl ? { uri: getImageUrl(model.photoUrl) } : undefined,
     poste: model.position || '—',
     prenom: model.firstname || '',
     qrValue: model.qrUrl,
-    rarity: mapScoreToCardRarity(model.rarityScore),
+    rarity: CARD_RARITY[model.rarity] || 'COMMON',
     // Sport vide -> pill masquee par le composant (pas de moignon « — »).
     sport: model.sport || '',
     statut: model.isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE',
@@ -270,6 +270,11 @@ function PlayerCardScreen({ navigation, route }) {
 
   const openShare = () => {
     if (!consent.canShare) return;
+    // CARTECODE Q6 B — âge inconnu : la date d'abord, puis la règle de son âge.
+    if (consent.mustAskBirthdate) {
+      navigation.navigate(RouteNames.ProfileEdit, { focus: 'birthdate', source: 'player_card' });
+      return;
+    }
     setIsShareVisible(true);
   };
 

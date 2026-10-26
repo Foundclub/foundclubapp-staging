@@ -68,6 +68,23 @@ export const extractCity = (address) => {
 };
 
 /**
+ * CARTECODE (registre des mineurs ligne 42) — la ville de la carte, avec son code postal
+ * (« Aix-en-Provence 13090 ») ; jamais l'adresse.
+ * @param {any} address
+ * @returns {string}
+ */
+export const extractCityWithPostcode = (address) => {
+  const city = extractCity(address);
+  if (!city) return '';
+  let raw = address;
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch (_e) { return city; }
+  }
+  const postcode = String(raw?.postcode || raw?.zipCode || '').trim();
+  return [city, postcode].filter(Boolean).join(' ');
+};
+
+/**
  * Selectionne au plus N experiences les plus recentes (actives d'abord, puis
  * annee de debut decroissante). Reproduit le tri de UserHistorySection.
  * @param {Array<object>} histories
@@ -87,6 +104,8 @@ export const pickTopHistory = (histories, limit = 3) => {
   });
   return sorted.slice(0, limit).map((h) => ({
     category: h?.category?.name || '',
+    // CARTECODE Q4 A — le serveur joint le logo ; un club tapé à la main n'en a jamais.
+    clubLogoUrl: h?.club?.logo?.url || h?.multisport_club?.logo?.url || null,
     clubName: h?.club?.name || h?.multisport_club?.name || h?.customClubName || '',
     endYear: toInt(h?.endYear),
     isCurrentlyActive: Boolean(h?.isCurrentlyActive),
@@ -117,6 +136,7 @@ export const groupHistory = (histories) => {
     const cle = [club, h.startYear, fin].join('|');
     const groupe = groupes.get(cle) || {
       categories: [],
+      clubLogoUrl: h.clubLogoUrl,
       clubName: h.clubName,
       endYear: h.endYear,
       isCurrentlyActive: h.isCurrentlyActive,
@@ -224,6 +244,81 @@ export const computeRarity = ({ bestLevel = '', completeness = 0, topHistory = [
   return { completeness, rarity, score };
 };
 
+const RARITY_FLOORS = [[85, RARITY.LEGENDARY], [65, RARITY.EPIC], [40, RARITY.RARE]];
+
+// ponytail: copie de SPORTS_WITH_POSITIONS (constants/positions.js) — ce module reste SANS
+// dependance projet, le serveur le charge tel quel (SECUEVENT-verifications-age). Sortie : un
+// temoin compare les deux listes (cardModel.CARTECODE.test.js).
+export const CARD_SPORTS_WITH_POSITIONS = ['football', 'basketball', 'handball', 'volleyball', 'rugby'];
+const sportHasPositions = (sport) => CARD_SPORTS_WITH_POSITIONS.includes(String(sport || '').toLowerCase());
+
+/** CARTECODE Q5 B — les 13 cases de la carte. */
+export const CARD_FILL_TOTAL = 13;
+
+const isJersey = (value) => {
+  const n = toInt(value);
+  return n !== null && n >= 0 && n <= 99;
+};
+
+/**
+ * CARTECODE Q5 B — combien des 13 cases de la carte sont remplies : photo, nom, âge, section,
+ * poids, taille, niveau, catégorie, sport, poste, nationalité, numéro, ville.
+ * Un sport sans poste (tennis…) compte la case du poste comme remplie.
+ * @param {object} user
+ * @returns {number} 0..13
+ */
+export const countCardFill = (user = {}) => [
+  user.avatar?.url || user.avatarUrl,
+  user.firstname && user.lastname,
+  user.birthdate,
+  user.section?.name || user.section?.documentId || (typeof user.section === 'string' && user.section),
+  user.weight,
+  user.height,
+  user.bestLevel,
+  user.category,
+  user.preferredSport,
+  user.position || (user.preferredSport && !sportHasPositions(user.preferredSport)),
+  user.nationality,
+  isJersey(user.jerseyNumber),
+  extractCity(user.address),
+].filter(Boolean).length;
+
+/**
+ * CARTECODE Q5 B — la rareté de la carte joueur : remplissage 50, parcours 15 (5 par club
+ * déclaré, jusqu'à 3), vie dans FoundClub 35 (membre d'une équipe 10, 5 matchs 10, 20 matchs
+ * 15 de plus). Jamais les présences, les notes ni les avis. Paliers : < 40 commune,
+ * 40-64 rare, 65-84 épique, ≥ 85 légendaire.
+ * @param {{ clubCount?: number, fill?: number, isTeamMember?: boolean, matchCount?: number }} args
+ * @returns {{ rarity: string, score: number }}
+ */
+export const computeCardRarity = ({
+  clubCount = 0, fill = 0, isTeamMember = false, matchCount = 0,
+} = {}) => {
+  const score = Math.round((Math.min(fill, CARD_FILL_TOTAL) / CARD_FILL_TOTAL) * 50)
+    + (Math.min(clubCount, 3) * 5)
+    + (isTeamMember ? 10 : 0)
+    + (matchCount >= 5 ? 10 : 0)
+    + (matchCount >= 20 ? 15 : 0);
+  const palier = RARITY_FLOORS.find(([seuil]) => score >= seuil);
+  return { rarity: palier ? palier[1] : RARITY.COMMON, score };
+};
+
+/**
+ * CARTECODE Q3 A — la bande du club : le club du compte, sinon celui de son équipe principale ;
+ * l'équipe dessous. Le logo, s'il existe (sinon le dessin pose le shield aux initiales).
+ * @param {object} user
+ * @returns {{ logoUrl: string|null, name: string, teamName: string } | null}
+ */
+export const resolveCardClub = (user = {}) => {
+  const teams = Array.isArray(user.myTeams) ? user.myTeams : [];
+  const clubId = user.club?.documentId;
+  const team = (clubId && teams.find((t) => t?.club?.documentId === clubId)) || teams[0] || null;
+  const club = user.club?.name ? user.club : team?.club;
+  const name = String(club?.name || '').trim();
+  if (!name) return null;
+  return { logoUrl: club?.logo?.url || null, name, teamName: String(team?.name || '').trim() };
+};
+
 /**
  * Garde-fou mineurs.
  * @param {object} user
@@ -246,70 +341,61 @@ export const evaluateMinorGuard = (user = {}, now = new Date()) => {
 };
 
 /**
- * Numero affiche sur la carte. Utilise user.jerseyNumber si present (champ a
- * ajouter cote schema, cf. diff), sinon derive un numero deterministe 1..99
- * a partir du documentId (stable, jamais aleatoire) pour ne jamais afficher vide.
- * @param {object} user
- * @returns {number}
- */
-export const resolveJerseyNumber = (user = {}) => {
-  const explicit = toInt(user.jerseyNumber);
-  if (explicit !== null && explicit >= 0 && explicit <= 99) return explicit;
-  const seed = String(user.documentId || user.username || user.firstname || 'FC');
-  let hash = 0;
-  // eslint-disable-next-line no-bitwise
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return (hash % 99) + 1; // 1..99
-};
-
-/**
  * Construit le modele d'affichage complet consomme par le composant RN PlayerCard.
  * @param {object} params
  * @param {object} params.user  userData Strapi (voir user schema)
  * @param {Array<object>} [params.histories]  user-histories brutes
  * @param {string} params.qrUrl  URL encodee dans le QR (profil public si visible, sinon install landing tracke)
  * @param {'coach'|'player'} [params.audience]
+ * @param {number} [params.matchCount] matchs joués (rareté, vie dans FoundClub)
  * @param {Date} [params.now]
  * @returns {object} modele pret a rendre
  */
 export const buildPlayerCardModel = ({
-  audience = 'player', histories = [], now = new Date(), qrUrl = '', user = {},
+  audience = 'player', histories = [], matchCount = 0, now = new Date(), qrUrl = '', user = {},
 } = {}) => {
   const topHistory = pickTopHistory(histories, 3);
   const age = computeAge(user.birthdate, now);
-  const completeness = computeCompleteness(user, topHistory);
-  const rarityInfo = computeRarity({ bestLevel: user.bestLevel, completeness, topHistory });
+  const fill = countCardFill(user);
+  const historyClubCount = countHistoryClubs(histories);
+  const rarityInfo = computeCardRarity({
+    clubCount: historyClubCount,
+    fill,
+    isTeamMember: Array.isArray(user.myTeams) && user.myTeams.length > 0,
+    matchCount,
+  });
   const guard = evaluateMinorGuard(user, now);
-  const city = extractCity(user.address);
+  const city = extractCityWithPostcode(user.address);
   const hasPhoto = Boolean(user.avatar?.url || user.avatarUrl);
-  const clubName = user.club?.name || '';
+  const club = resolveCardClub(user);
+  const clubName = club?.name || '';
   // Un mineur sans consentement de publication ne montre jamais sa photo :
   // fallback dos floque impose (aligne garde-fou + defaut mineurs, cf. 00-PLAN Sec.8).
   const photoAllowed = guard.canPublish;
   const showPhoto = hasPhoto && photoAllowed;
-  // Numero de maillot : toujours un chiffre (jerseyNumber saisi sinon derive
-  // deterministe 1..99). Modifiable par l'utilisateur (bouton carte).
-  const explicitNumber = toInt(user.jerseyNumber);
-  const hasExplicitNumber = explicitNumber !== null && explicitNumber >= 0 && explicitNumber <= 99;
-  const number = resolveJerseyNumber(user);
+  // CARTECODE — le numéro saisi, sinon AUCUN : il n'est plus jamais fabriqué (le « 52 »).
+  const number = isJersey(user.jerseyNumber) ? toInt(user.jerseyNumber) : null;
 
   return {
     age,
     audience,
     city,
+    club,
     clubName,
-    completeness,
+    completeness: Math.round((fill / CARD_FILL_TOTAL) * 100),
+    fill,
     firstname: String(user.firstname || '').trim(),
     guard, // { age, isMinor, requiresConsent, hasConsent, canPublish }
     hasClub: Boolean(clubName),
-    hasCustomNumber: hasExplicitNumber,
+    hasCustomNumber: number !== null,
     hasPhoto: showPhoto,
     // `history` (3 lignes brutes) nourrit la rarete et la completude, inchangees.
     // La carte AFFICHE `historyGroups` et compte `historyClubCount` (PAR-L14).
     history: topHistory,
-    historyClubCount: countHistoryClubs(histories),
+    historyClubCount,
     historyGroups: groupHistory(histories),
     isAvailable: Boolean(user.isLookingForClub),
+    isPrivate: user.isProfileVisible === false,
     lastname: String(user.lastname || '').trim().toUpperCase(),
     nationality: String(user.nationality || '').trim(),
     number,
@@ -345,9 +431,15 @@ export const buildDeclaredChildCardProps = ({ enfant = {}, libelles = {}, saisie
     .map((nom) => String(nom || '').trim())
     .filter(Boolean)
     .join(' · ');
+  const team = enfant.team || {};
   return {
     age: typeof enfant.age === 'number' ? `${enfant.age} ${libelles.years || 'ANS'}` : '',
+    // CARTECODE Q7 B — les cases qu'apporte son équipe ; ni taille ni poids, aucun champ neuf.
+    categorie: String(team.category || '').trim(),
     equipe: equipe || libelles.noTeam || '',
+    niveau: String(team.level || '').trim(),
+    section: String(team.section || '').trim(),
+    sport: String(team.sport || '').trim(),
     nationalite: lire('nationality'),
     nom: String(enfant.lastname || '').trim().toUpperCase(),
     numero: lire('number') || '?',

@@ -61,6 +61,11 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE : la rarete lit le nombre de matchs (statistiques personnelles).
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetPersonalStats: () => ({ data: null }),
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;

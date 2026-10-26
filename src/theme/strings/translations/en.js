@@ -17425,11 +17425,11 @@ export default {
       },
       isLookingForClub: {
         helper: 'Your profile appears in club and coach searches.',
-        label: 'Visible profile',
+        label: 'Open to recruitment',
       },
       jerseyNumber: {
         label: 'Shirt number',
-        placeholder: 'E.g. 10 (blank = automatic)',
+        placeholder: 'E.g. 10',
       },
       lastname: {
         label: 'Last name',
@@ -17507,6 +17507,11 @@ export default {
       auto: 'Phone language',
       en: 'English',
       fr: 'Français',
+    },
+    privacy: {
+      privateHelper: "Other members no longer see your profile or find you in search. Your card's QR code simply leads to FoundClub.",
+      privateLabel: 'Private account',
+      title: 'Privacy',
     },
     saveConfirmation: {
       eyebrow: 'PROFILE',
