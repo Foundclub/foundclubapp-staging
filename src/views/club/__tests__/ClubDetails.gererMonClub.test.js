@@ -622,12 +622,21 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
     expect(pressableAvecTexte(monter(), 'Quitter le club')).toBeUndefined();
   });
 
-  // BH03 · P11-02 — le serveur fait quitter le club ACTIF (`POST /me/leave-club` sans
-  // clubId) : sur la fiche d un AUTRE club, le bouton ferait quitter le mauvais club.
-  it('ne l offre PAS sur la fiche d un club qui n est pas le club actif', () => {
+  // BH03-GARDE · P11-02 — le serveur (admin 969a42e3, en production le 26/10) suit le
+  // clubId envoye : sur la fiche d un AUTRE club que le club actif, on peut le quitter, et
+  // c est bien ce club-la qui part.
+  it('l offre aussi sur la fiche d un club qui n est pas le club actif, et quitte CE club', () => {
     mockUserData = { ...mockUserData, club: { documentId: 'club-actif' } };
+    const arbre = monter();
 
-    expect(pressableAvecTexte(monter(), 'Quitter le club')).toBeUndefined();
+    act(() => {
+      pressableAvecTexte(arbre, 'Quitter le club').props.onPress();
+    });
+    act(() => {
+      boutonDeConfirmation().onPress();
+    });
+
+    expect(/** @type {any} */ (leaveClub).mock.calls[0][0]).toBe('club-1');
   });
 
   it('demande confirmation avant de quitter, et ne part sur le reseau qu apres', () => {

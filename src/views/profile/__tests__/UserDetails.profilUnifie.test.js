@@ -783,7 +783,8 @@ describe('D06 · la structure du pack', () => {
   it('porte un interrupteur « Profil visible » avec sa phrase d\'aide', async () => {
     const arbre = await rendre(dirigeant);
 
-    expect(texteVisible(arbre)).toContain('Profil visible');
+    // CARTECODE Q1 C : renommé « Ouvert au recrutement » (le compte privé a son écran).
+    expect(texteVisible(arbre)).toContain('Ouvert au recrutement');
     expect(arbre.root.findAllByType(Switch)).toHaveLength(1);
     expect(texteVisible(arbre)).toContain('recherche');
   });

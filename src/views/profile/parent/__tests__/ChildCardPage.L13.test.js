@@ -310,7 +310,11 @@ describe('PAR-L13 E29 — la carte complète, depuis sa fiche', () => {
     expect(texte).not.toContain('Nouveau');
     expect(arbre.root.findAllByType(TextInput)).toHaveLength(0);
     expect(derniereCarte()).toMatchObject({
-      equipe: 'U11 Filles · FoundClub', nationalite: 'Française', numero: '7', ville: 'Marseille',
+      club: 'FoundClub',
+      equipe: 'U11 Filles',
+      nationalite: 'Française',
+      numero: '7',
+      ville: 'Marseille',
     });
     expect(mockCartes.every((carte) => carte.qrValue === undefined)).toBe(true);
   });

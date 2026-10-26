@@ -654,6 +654,27 @@ function ClubLicenseMemberDetail({ route }) {
     }
   }, [fileUrlOf, t]);
 
+  // RECUPDF (26/10, T3) — le club telecharge le recu d un membre. Un recu PASSE,
+  // emis sans fichier, est d abord fabrique (`generateReceipt`, via le paiement
+  // qui le porte), puis telecharge. Reserve aux gestes sensibles : l entraineur
+  // ne recoit pas le fichier (le serveur le retire de sa fiche).
+  const downloadReceipt = useCallback(async (/** @type {any} */ receipt) => {
+    let current = receipt;
+    if (!current?.pdfFile?.url) {
+      const key = (/** @type {any} */ value) => value?.documentId || value?.id;
+      const payment = (assignment?.payments || [])
+        .find((item) => item?.receipt && key(item.receipt) === key(receipt));
+      current = payment
+        ? await receiptMutation.mutateAsync(payment.documentId || payment.id).catch(() => null)
+        : null;
+      if (current) query.refetch();
+    }
+    await downloadDocument(
+      { file: current?.pdfFile },
+      `recu-${current?.receiptNumber || receipt?.receiptNumber || ''}`,
+    );
+  }, [assignment?.payments, downloadDocument, query, receiptMutation]);
+
   const submitOfficialLicenseFile = useCallback(async (picked) => {
     if (!canUseSensitiveActions || !assignmentId) return;
     const file = Array.isArray(picked) ? picked[0] : picked;
@@ -1262,6 +1283,13 @@ function ClubLicenseMemberDetail({ route }) {
                     },
                   ]}
                 />
+                {canUseSensitiveActions ? (
+                  <Button
+                    onPress={() => downloadReceipt(receipt)}
+                    title={t('clubLicenseMemberDetail.receipts.download', 'Télécharger le reçu')}
+                    variant="Secondary"
+                  />
+                ) : null}
               </LicenseCard>
             ))}
           </View>

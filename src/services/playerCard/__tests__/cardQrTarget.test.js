@@ -28,8 +28,10 @@ describe('cardQrTarget', () => {
   });
 
   describe('buildCardQrTarget (integration mockee)', () => {
+    // CARTECODE : seul un ADULTE au compte public porte son identifiant (cardQrTarget.CARTECODE).
+    const ADULTE = { birthdate: '1990-01-01', documentId: 'u1' };
     test('v1 : install landing tracke type player', () => {
-      const r = buildCardQrTarget({ audience: 'player', user: { documentId: 'u1' } });
+      const r = buildCardQrTarget({ audience: 'player', user: ADULTE });
       expect(r.kind).toBe('install');
       expect(r.url).toContain('type=player');
       expect(r.url).toContain('id=u1');
@@ -40,7 +42,7 @@ describe('cardQrTarget', () => {
         audience: 'player',
         isProfilePublic: true,
         publicPath: '/joueurs/u1/sofia-martin',
-        user: { documentId: 'u1' },
+        user: ADULTE,
       });
       expect(r.kind).toBe('public');
       expect(r.url).toBe('https://foundclub.app/joueurs/u1/sofia-martin');

@@ -108,6 +108,12 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.ParentLinkInvite]:
     'TODO(web) ParentLinkInvite screen is built and mounted in the app;'
     + ' waiting for its entry in web/src/routes/screenRegistry.tsx',
+  // CARTECODE (26/10) — meme sequencement : l ecran « Confidentialite » est monte cote app, le
+  // registre web (autre depot) ne le declare pas encore ; la ligne du profil passe par
+  // navigateOrExplainOnWeb.
+  [RouteNames.PrivacySettings]:
+    'TODO(web) PrivacySettings screen (Compte prive) is built and mounted in the app;'
+    + ' waiting for its entry in web/src/routes/screenRegistry.tsx',
 
   // TODO(web) PERF « Entrainement perso » (2026-09-06) — les six ecrans de la
   // section Entrainement sont exemptes par SEQUENCEMENT, comme les quatre
