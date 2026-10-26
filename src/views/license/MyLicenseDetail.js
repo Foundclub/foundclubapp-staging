@@ -348,6 +348,23 @@ function MyLicenseDetail({ navigation, route }) {
     }
   }, [fileUrlOf]);
 
+  // RECUPDF (26/10) — « TELECHARGER LE RECU » TELECHARGE LE VRAI FICHIER.
+  // Le serveur fabrique le PDF au paiement. Un recu PASSE, emis avant, n a pas
+  // de fichier : le meme bouton le fait fabriquer (`generateReceipt`), puis
+  // telecharge ce que le serveur rend. Sans fichier au bout (ou en cas d echec),
+  // `downloadDocument` repond « Document indisponible », comme avant.
+  const downloadReceipt = useCallback(async (payment) => {
+    let receipt = payment?.receipt || null;
+    if (!receipt?.pdfFile?.url) {
+      receipt = await receiptMutation.mutateAsync(licenseKeyOf(payment)).catch(() => null);
+      if (receipt) refreshCurrent();
+    }
+    await downloadDocument(
+      { file: receipt?.pdfFile },
+      `recu-${receipt?.receiptNumber || payment?.receipt?.receiptNumber || ''}`,
+    );
+  }, [downloadDocument, receiptMutation, refreshCurrent]);
+
   // T03 — le MODELE que le club met a disposition. Il vient de la DEMANDE
   // (`templateFile`), pas d un depot : c est le meme fichier pour tout le club.
   const downloadTemplate = useCallback(async (request) => {
@@ -608,13 +625,10 @@ function MyLicenseDetail({ navigation, route }) {
   // Le pied de la carte de montant : UNE seule ligne, celle qui compte.
   let cardFooter = null;
   if (status === 'paid') {
-    const lastReceipt = payments.find((payment) => payment?.receipt)?.receipt;
-    cardFooter = lastReceipt ? (
+    const receiptPayment = payments.find((payment) => payment?.receipt);
+    cardFooter = receiptPayment ? (
       <Button
-        onPress={() => downloadDocument(
-          { file: lastReceipt?.pdfFile },
-          `recu-${lastReceipt?.receiptNumber || ''}`,
-        )}
+        onPress={() => downloadReceipt(receiptPayment)}
         title={t('myLicenseDetail.receipt.download', 'Télécharger le reçu')}
         variant="Secondary"
       />
@@ -1127,15 +1141,13 @@ function MyLicenseDetail({ navigation, route }) {
               // JSX dans une prop serait un composant recree a chaque passage,
               // et React detruirait la ligne au lieu de la mettre a jour.
               let receiptAction = null;
-              if (receipt?.pdfFile?.url) {
+              // RECUPDF — un recu SANS fichier garde son bouton : le geste le fait fabriquer.
+              if (receipt) {
                 receiptAction = (
                   <MemberRowAction
                     glyph="arrowDownToBracket"
                     label={t('myLicenseDetail.receipt.download', 'Télécharger le reçu')}
-                    onPress={() => downloadDocument(
-                      { file: receipt.pdfFile },
-                      `recu-${receipt.receiptNumber || ''}`,
-                    )}
+                    onPress={() => downloadReceipt(payment)}
                   />
                 );
               } else if (canGenerate) {
@@ -1162,6 +1174,14 @@ function MyLicenseDetail({ navigation, route }) {
                   />
                 );
               }
+              // RECUPDF T2 — le recu est fige a l emission : la ligne dit le remboursement.
+              const refundState = {
+                partially_refunded: t(
+                  'myLicenseDetail.payments.partiallyRefunded',
+                  'remboursé en partie',
+                ),
+                refunded: t('myLicenseDetail.payments.refunded', 'remboursé'),
+              }[payment?.status] || null;
               return (
                 <MemberRow
                   amount={formatLicenseMoney(payment.amountCents, payment.currency || currency)}
@@ -1182,6 +1202,7 @@ function MyLicenseDetail({ navigation, route }) {
                       'myLicenseDetail.payments.receiptPending',
                       'reçu en attente du club',
                     ) : null,
+                    refundState,
                   ].filter(Boolean).join(' · ')}
                   title={formatMemberDate(paymentDate(payment)) || t(
                     'myLicenseDetail.payments.titleFallback',

@@ -3916,6 +3916,7 @@ export default {
     },
     receipts: {
       amount: 'Montant',
+      download: 'Télécharger le reçu',
       emptyDescription: 'Les reçus apparaîtront ici après validation des paiements.',
       emptyTitle: 'Aucun reçu',
       issued: 'Emission',
@@ -16519,8 +16520,10 @@ export default {
       title: 'Campagne temporairement suspendue',
     },
     payments: {
+      partiallyRefunded: 'remboursé en partie',
       receiptNumber: 'reçu {{receiptNumber}}',
       receiptPending: 'reçu en attente du club',
+      refunded: 'remboursé',
       receiptsAvailable: '{{receiptCount}} reçus disponibles sur cette cotisation.',
       title: 'Paiements',
       titleFallback: 'Paiement',
