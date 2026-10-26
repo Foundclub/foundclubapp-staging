@@ -522,10 +522,10 @@ function DateEtHoraire({
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {t('eventWizard.steps.logistics.repeter.lesJours', 'Les jours')}
               </Text>
-              {/* Les sept pastilles sur une ligne dès 340 px de large (44 px chacune). */}
+              {/* Les sept pastilles sur une ligne dès 340 px de large (44 px chacune), groupées sur grand écran. */}
               <View
                 style={[Alignments.row, {
-                  flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6,
+                  flexWrap: 'wrap', justifyContent: 'space-between', maxWidth: 360, rowGap: 6,
                 }]}
               >
                 {JOURS_DE_LA_SEMAINE.map((jour) => {
