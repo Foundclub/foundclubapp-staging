@@ -188,13 +188,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  // Sur ordinateur (le site), la feuille garde une largeur de telephone, centree.
   sheet: {
+    alignSelf: 'center',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 1,
     gap: 12,
+    maxWidth: 560,
     paddingHorizontal: 16,
     paddingTop: 10,
+    width: '100%',
   },
   title: {
     flex: 1,
