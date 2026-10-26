@@ -808,6 +808,8 @@ function ShowcaseAction({
  * de style, et additionnée aux retraits système (`insets`) au rendu.
  */
 const SCREEN_PADDING = 20;
+// AA08 — la croix de sortie ; AFFICHEJOUEUR (26/10) : le titre lui laisse sa place.
+const CLOSE_BTN_SIZE = 36;
 
 const makeStyles = (Colors) => StyleSheet.create({
   actions: { gap: 10 },
@@ -820,11 +822,11 @@ const makeStyles = (Colors) => StyleSheet.create({
   closeBtn: {
     alignItems: 'center',
     backgroundColor: Colors.primary800,
-    borderRadius: 18,
-    height: 36,
+    borderRadius: CLOSE_BTN_SIZE / 2,
+    height: CLOSE_BTN_SIZE,
     justifyContent: 'center',
     position: 'absolute',
-    width: 36,
+    width: CLOSE_BTN_SIZE,
     zIndex: 2,
   },
   // neutral00 sur primary800 : ~14:1 (AAA). Hauteur de ligne alignée sur la
@@ -1000,7 +1002,11 @@ const makeStyles = (Colors) => StyleSheet.create({
     backgroundColor: Colors.primary700, borderRadius: 6, height: 16, width: '52%',
   },
   subtitle: { color: Colors.neutral300, fontSize: 15 },
-  title: { color: Colors.neutral00, fontSize: 24, fontWeight: '800' },
+  // AFFICHEJOUEUR (26/10, constat d'Adel) : la croix est posée PAR-DESSUS le défilement ;
+  // sans ce retrait, un long titre (« Ton avis de recherche est prêt ») passait dessous.
+  title: {
+    color: Colors.neutral00, fontSize: 24, fontWeight: '800', paddingRight: CLOSE_BTN_SIZE + 8,
+  },
   variantChip: {
     borderColor: Colors.neutral700,
     borderRadius: 999,

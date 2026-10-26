@@ -405,3 +405,63 @@ describe('BH15 · P13-08 — candidatures injoignables : l auteur le voit, et pe
     expect(findButton(tree, 'Recharger')).toBeDefined();
   });
 });
+
+// AFFICHEJOUEUR (26/10, decision d'Adel « 1- A ») — le serveur rend `null` le telephone et l'e-mail
+// d'un candidat mineur OU d'age inconnu (admin `toReviewerPayload`). La carte garde le nom, sans
+// ligne vide ; un majeur garde ses coordonnees.
+describe('RecruitmentAdDetails — AFFICHEJOUEUR : coordonnees masquees d un candidat mineur', () => {
+  it('le mineur : son nom, sans coordonnees ni ligne vide ; le majeur : inchange', async () => {
+    mockGetRecruitmentApplications.mockResolvedValue([
+      {
+        applicant: {
+          documentId: 'u-mineur',
+          email: null,
+          firstname: 'Hugo',
+          id: 21,
+          lastname: 'Lemaire',
+          phoneNumber: null,
+        },
+        documentId: 'cand-mineur',
+        emailSnapshot: null,
+        phoneSnapshot: null,
+        status: 'pending',
+      },
+      {
+        applicant: {
+          documentId: 'u-majeur',
+          email: 'karim@banc.test',
+          firstname: 'Karim',
+          id: 22,
+          lastname: 'Benali',
+          phoneNumber: '+33600000022',
+        },
+        documentId: 'cand-majeur',
+        emailSnapshot: 'karim@banc.test',
+        phoneSnapshot: '+33600000022',
+        status: 'pending',
+      },
+    ]);
+    const tree = await renderFor(ENTRAINEUR_DE_L_EQUIPE);
+    for (let i = 0; i < 20 && !allText(tree).includes('Hugo Lemaire'); i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => { await new Promise((r) => { setTimeout(r, 10); }); });
+    }
+
+    const textes = collectText(tree.toJSON());
+    expect(allText(tree)).toContain('Candidatures (2)');
+    expect(textes).toContain('Hugo Lemaire');
+    expect(textes).toContain('+33600000022');
+    expect(textes).toContain('karim@banc.test');
+    const coordonnees = textes.filter((texte) => /^\+?\d{6,}$|@/.test(texte.trim()));
+    expect(coordonnees).toEqual(['+33600000022', 'karim@banc.test']);
+
+    // Le bloc du mineur : son nom et « Voir le profil », et RIEN d autre (pas de ligne vide).
+    let bloc = tree.root.find(
+      (/** @type {any} */ n) => n.type === 'Text' && n.props.children === 'Hugo Lemaire',
+    );
+    while (bloc.parent && bloc.type !== 'View') bloc = bloc.parent;
+    const textesDuBloc = bloc.findAll((/** @type {any} */ n) => n.type === 'Text')
+      .map((/** @type {any} */ n) => n.props.children);
+    expect(textesDuBloc).toEqual(['Hugo Lemaire', 'Voir le profil']);
+  });
+});
