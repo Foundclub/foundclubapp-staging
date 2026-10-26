@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import {
   couleurDuNom, estUnTeteATete, extraitDuMessageCite,
 } from '@/domains/messaging/habillageDuFil';
@@ -183,7 +184,7 @@ function ApercuDuFil({
               const estAMoi = auteur === meId;
               const { icone, texte } = extraitDuMessageCite(message, t);
               const nom = montreLesNoms && !estAMoi
-                ? String(message?.sender?.firstname || '').trim()
+                ? prenomDansLeFil({ chat, moiId: meId, personne: message?.sender })
                 : '';
               return (
                 <View

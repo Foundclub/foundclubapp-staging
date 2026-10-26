@@ -115,14 +115,16 @@ const aDemonter = [];
  * @param {any} poll - Le sondage.
  * @param {any[]} [autresMessages] - T19R : d'autres messages chargés, après le sondage.
  * @param {any} [moi] - T19R : le compte connecté.
+ * @param {any} [fil] - ANONSITE : le fil (un fil de club par défaut).
  * @returns {Promise<any>} La racine du rendu, une fois la lecture des noms aboutie.
  */
 const monter = async (
   poll,
   autresMessages = [],
   moi = { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+  fil = { documentId: 'chat-club', participants: [], type: 'club' },
 ) => {
-  mockChat.data = { documentId: 'chat-club', participants: [], type: 'club' };
+  mockChat.data = fil;
   mockPages.data = {
     pages: [{
       data: [
@@ -267,5 +269,23 @@ describe('T19R — « Créé par » nomme l auteur sous son nom d aujourd hui', 
     const rendu = textes(root);
     expect(rendu).toContain('Karim Benali');
     expect(rendu).not.toContain('mouri nio');
+  });
+});
+
+// ANONSITE (26/10) — « Voir les votes » d'un fil de ligue avant le match : le serveur nomme
+// l'adversaire qui a voté (Léo) ; l'écran le dit « Joueur Adverse », comme la bulle du fil.
+describe('ANONSITE — le détail d un sondage de ligue garde l adversaire anonyme', () => {
+  test('avant le match : « Joueur Adverse », jamais « Leo Martin »', async () => {
+    const root = await monter(buildPoll(), [], undefined, {
+      documentId: 'chat-club',
+      league_match: { date: '2099-06-10T16:00:00.000Z', team_a: {}, team_b: {} },
+      myTeamMembers: [KARIM],
+      participants: [],
+      type: 'league_match',
+    });
+
+    const rendu = textes(root);
+    expect(rendu).toContain('Joueur Adverse');
+    expect(rendu).not.toContain('Leo');
   });
 });

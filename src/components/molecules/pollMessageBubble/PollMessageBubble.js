@@ -148,6 +148,9 @@ const styles = StyleSheet.create({
  *   lit ELLE-MÊME les noms des votants au serveur : dans le fil, GiftedChat ne la redessine pas
  *   quand l'écran apprend un nom après coup (piège de FINITIONS15).
  * @param {import('react').ReactNode} [props.meta] - L'heure (et les coches), avant le pied.
+ * @param {(voterId: string) => string} [props.nomMasqueDuVotant] - ANONSITE : le nom qui
+ *   REMPLACE celui du serveur (« Joueur Adverse » d'un fil de ligue avant le match), sans photo ;
+ *   '' quand la personne n'est pas masquée.
  * @param {() => void} [props.onOpenDetails]
  * @param {(optionId: string) => Promise<void> | void} [props.onVote]
  * @param {object | null | undefined} props.poll
@@ -164,6 +167,7 @@ function PollMessageBubble({
   isMe = false,
   messageId = undefined,
   meta = null,
+  nomMasqueDuVotant,
   onOpenDetails,
   onVote,
   poll,
@@ -198,7 +202,11 @@ function PollMessageBubble({
     }
   };
 
+  const nomMasque = (/** @type {string} */ voterId) => String(
+    nomMasqueDuVotant?.(voterId) || '',
+  ).trim();
   const nomDuVotant = (/** @type {string} */ voterId) => {
+    if (nomMasque(voterId)) return nomMasque(voterId);
     // SONDAGE-NOMS — le nom lu au serveur d'abord (un fil de club n'a pas de participants, et
     // seul le serveur sait qu'un compte est supprime), la resolution de l'ecran ensuite.
     const nomDuServeur = nameOfPollVoter(voterProfiles.get(voterId));
@@ -275,7 +283,9 @@ function PollMessageBubble({
                           >
                             <ProfileAvatar
                               enablePreview={false}
-                              imageUrl={resolveVoterAvatar?.(voterId) || undefined}
+                              imageUrl={nomMasque(voterId)
+                                ? undefined
+                                : resolveVoterAvatar?.(voterId) || undefined}
                               name={nomDuVotant(voterId)}
                               size={18}
                             />

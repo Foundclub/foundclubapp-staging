@@ -96,6 +96,8 @@ function PollDetails({ navigation, route }) {
     // participants, mon compte, puis les messages du plus récent au plus ancien). Avant, le nom
     // figé dans le PLUS VIEUX message gagnait (« Créé par mouri nio »).
     annuaireDesMembres({
+      // ANONSITE — l'anonymat d'un fil de ligue (anonymatDeLigue.js).
+      chat: chatData,
       messages: flattenMessages(messagesPages?.pages),
       participants: chatData?.participants,
       userData,
@@ -107,7 +109,7 @@ function PollDetails({ navigation, route }) {
       });
     });
     return map;
-  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
+  }, [chatData, messagesPages?.pages, pollVoterProfiles, userData]);
 
   const resolveVoterProfile = useCallback((voterId) => {
     return voterDirectory.get(String(voterId || '').trim()) || {

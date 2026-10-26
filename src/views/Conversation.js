@@ -47,7 +47,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { carteDAnnonce, NOTICE_ANNONCE_COMPLEXE } from '@/domains/complexe/annonceDuCanal';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
-import identiteDansLeFil from '@/domains/messaging/anonymatDeLigue';
+import identiteDansLeFil, { contactsPartageables } from '@/domains/messaging/anonymatDeLigue';
 import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
@@ -1281,8 +1281,8 @@ function Conversation({ navigation, route }) {
 
   const shareableContacts = useMemo(() => {
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : [];
-    return participants
-      .filter((/** @type {any} */ participant) => participant?.documentId && participant.documentId !== userData?.documentId)
+    // ANONSERVEUR — un fil de ligue avant le match : pas de carte de contact d'un adversaire.
+    return contactsPartageables({ chat: chatData, moiId: userData?.documentId, personnes: participants })
       .map((/** @type {any} */ participant) => ({
         avatar: participant?.avatar,
         documentId: participant?.documentId,
@@ -1290,7 +1290,7 @@ function Conversation({ navigation, route }) {
         lastname: participant?.lastname || '',
         role: participant?.role?.name || participant?.role?.type || '',
       }));
-  }, [chatData?.participants, userData?.documentId]);
+  }, [chatData, userData?.documentId]);
 
   const canRecordVoiceNote = useMemo(() => {
     if (!isVoiceNotesEnabled) return false;
@@ -4139,6 +4139,12 @@ function Conversation({ navigation, route }) {
     return voterNameDirectory.get(String(voterId)) || 'Membre';
   };
 
+  // ANONSITE — la bulle lit les votants au serveur, qui les nomme : le masque passe devant.
+  const nomMasqueDuVotant = (/** @type {string} */ voterId) => {
+    const identite = identiteDe({ documentId: String(voterId || '') });
+    return identite.anonyme ? identite.nom : '';
+  };
+
   /**
    * Q4-06 — l'auteur d'un message cité : « Joueur Adverse » pour un adversaire anonymisé.
    * @param {any} message - Le message cité (brut du serveur, ou de GiftedChat).
@@ -5978,6 +5984,7 @@ function Conversation({ navigation, route }) {
                       heure={heureDuMessage(currentMessage.createdAt)}
                     />
                   )}
+                  nomMasqueDuVotant={nomMasqueDuVotant}
                   onOpenDetails={() => handleOpenPollDetails(currentMessage)}
                   onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
                   poll={currentMessage.composition}

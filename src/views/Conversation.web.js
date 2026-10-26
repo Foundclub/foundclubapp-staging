@@ -14,6 +14,9 @@ import { useWindowDimensions, View } from 'react-native'
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
+import {
+  contactsPartageables, personneDansLeFil, prenomDansLeFil,
+} from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
@@ -1183,7 +1186,7 @@ function ColonneDesConversations({
           const ouvert = id === chatId;
           const epingle = estEpinglePourMoi(fil, meId);
           const prenom = !deMoi && fil?.type !== 'whisper'
-            ? String(dernier?.sender?.firstname || '').trim()
+            ? prenomDansLeFil({ chat: fil, moiId: meId, personne: dernier?.sender })
             : '';
           return (
             <div className="ARCH-ligne" key={`ligne-${id}`} style={{ position: 'relative' }}>
@@ -1907,6 +1910,11 @@ function Conversation({ navigation, route }) {
     isLoading: isChatLoading,
     refetch: refetchChat,
   } = useGetChatById(chatId)
+  // ANONSITE — la règle du téléphone (Q4-06) : dans un fil de ligue avant le match, un
+  // adversaire se dessine « Joueur Adverse », sans photo (bulle, frappe, citations, votants).
+  const montrer = useCallback((/** @type {any} */ personne) => (personne ? personneDansLeFil({
+    chat: chatData, moiId: String(userData?.documentId || ''), personne,
+  }) : personne), [chatData, userData?.documentId]);
   const {
     data: messagesPages,
     error: messagesError,
@@ -2013,10 +2021,11 @@ function Conversation({ navigation, route }) {
   const shareableContacts = useMemo(() => {
     // @ts-ignore: FIXME: Baseline TS regression
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : []
-    return participants.filter((participant) => (
-      participant?.documentId && participant.documentId !== userData?.documentId
-    ))
-  }, [chatData?.participants, userData?.documentId])
+    // ANONSERVEUR — un fil de ligue avant le match : pas de carte de contact d'un adversaire.
+    return contactsPartageables({
+      chat: chatData, moiId: userData?.documentId, personnes: participants,
+    })
+  }, [chatData, userData?.documentId])
 
   const conversationName = useMemo(() => filDeLaVille.titre || getConversationName({
     chatClub: chatData?.club,
@@ -2200,7 +2209,7 @@ function Conversation({ navigation, route }) {
       // @ts-ignore: FIXME: Baseline TS regression
       const participant = (Array.isArray(chatData?.participants) ? chatData.participants : [])
         .find((/** @type {any} */ personne) => areSameEntityId(personne?.documentId, id));
-      return String(participant?.firstname || '').trim();
+      return String((participant ? montrer(participant) : null)?.firstname || '').trim();
     }).filter(Boolean);
     if (!prenoms.length) return t('conversation.typing.someone', "Quelqu'un écrit...");
     return t('conversation.typing.named', {
@@ -2210,7 +2219,7 @@ function Conversation({ navigation, route }) {
       names: prenoms.slice(0, 2).join(', '),
       ...SANS_ECHAPPEMENT,
     });
-  }, [chatData?.participants, quiEcrit, t]);
+  }, [chatData?.participants, montrer, quiEcrit, t]);
 
   // MSG1W §3.11 — qui peut ecrire ici : la regle du telephone (canWriteInChat.js). Un canal de
   // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
@@ -3004,16 +3013,22 @@ function Conversation({ navigation, route }) {
   const annuaireDesVotants = useMemo(() => {
     const annuaire = new Map();
     annuaireDesMembres({
+      chat: chatData,
       messages,
       participants: chatData?.participants,
       userData,
     }).forEach((personne, id) => annuaire.set(id, getDisplayName(personne)));
     return annuaire;
-  }, [chatData?.participants, messages, userData]);
+  }, [chatData, messages, userData]);
   const resolveVoterName = useCallback(
     (/** @type {string} */ id) => annuaireDesVotants.get(String(id)) || 'Membre',
     [annuaireDesVotants],
   );
+  // ANONSITE — la bulle lit les votants au serveur, qui les nomme : le masque passe devant.
+  const nomMasqueDuVotant = useCallback((/** @type {string} */ id) => {
+    const personne = montrer({ documentId: String(id) });
+    return personne?.anonyme ? personne.firstname : '';
+  }, [montrer]);
 
   // MSG1W « convocation site B » (decision d Adel, 07/10) — la convocation depuis le groupe
   // d equipe, comme le telephone (MESSAGERIE-1C) : qui peut convoquer (entraineur de l equipe du
@@ -3059,6 +3074,7 @@ function Conversation({ navigation, route }) {
             // T19-RESTES — donné, la bulle lit elle-même les noms des votants au serveur
             // (`poll-voters`), comme au téléphone : le site ne les demandait jamais.
             messageId={getMessageId(message)}
+            nomMasqueDuVotant={nomMasqueDuVotant}
             onVote={(/** @type {string} */ optionId) => handleVoteOnPoll(message, optionId)}
             poll={composition}
             resolveVoterName={resolveVoterName}
@@ -3313,6 +3329,7 @@ function Conversation({ navigation, route }) {
     handleVoteOnPoll,
     mutedTextColor,
     navigation,
+    nomMasqueDuVotant,
     ouvrirLesVotes,
     ouvrirModificationConvocation,
     peutConvoquer,
@@ -3972,7 +3989,7 @@ function Conversation({ navigation, route }) {
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
     const senderName = filDeLaVille.nomDeLExpediteur(message)
       || nomDansLeCanal(chatData)
-      || getDisplayName(message?.sender);
+      || getDisplayName(montrer(message?.sender));
     // MSG-SUPPORT — en console, les réponses de l'équipe sont à droite.
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
       || Boolean(filDeLaVille.estDeMonCote?.(message))
@@ -4028,7 +4045,7 @@ function Conversation({ navigation, route }) {
       (somme, reaction) => somme + (Number(reaction?.count) || 0),
       0,
     );
-    const auteurCite = replyPreview?.sender;
+    const auteurCite = replyPreview?.sender ? montrer(replyPreview.sender) : null;
     const meta = (
       <MetaDuMessage
         heure={formatTime(message?.createdAt)}
@@ -4056,7 +4073,7 @@ function Conversation({ navigation, route }) {
         {!isMine && estAPlusieurs ? (
           <span style={{ flexShrink: 0, width: 28 }}>
             {montrerAvatar ? (
-              <AvatarDuGroupe idMessage={idMessage} personne={message?.sender} />
+              <AvatarDuGroupe idMessage={idMessage} personne={montrer(message?.sender)} />
             ) : null}
           </span>
         ) : null}
@@ -4253,6 +4270,7 @@ function Conversation({ navigation, route }) {
                 }}
                 title={messageReactions
                   .flatMap((reaction) => (Array.isArray(reaction?.users) ? reaction.users : []))
+                  .map((user) => montrer(user))
                   .map((user) => [user?.firstname, user?.lastname].filter(Boolean).join(' '))
                   .filter(Boolean)
                   .join(', ')}
@@ -4565,6 +4583,7 @@ function Conversation({ navigation, route }) {
     handleRetryFailedMessage,
     handleToggleReaction,
     isDesktop,
+    montrer,
     panelBackground,
     reactionBarAnchor,
     reactionBarMessageId,
@@ -5410,7 +5429,7 @@ function Conversation({ navigation, route }) {
                         fontSize: 12.5,
                       }}
                     >
-                      {getDisplayName(replyTarget?.sender)}
+                      {getDisplayName(montrer(replyTarget?.sender))}
                     </span>
                     <span
                       style={{

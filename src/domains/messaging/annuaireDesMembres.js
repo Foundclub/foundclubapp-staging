@@ -1,3 +1,5 @@
+import { personneDansLeFil } from '@/domains/messaging/anonymatDeLigue';
+
 /**
  * 🧭 T19-RESTES (08/10) — QUI PORTE QUEL NOM DANS UN FIL : UNE seule règle pour les quatre
  * endroits qui nomment un membre d'après son identifiant (la bulle et le détail d'un sondage, sur
@@ -19,13 +21,15 @@
  *      sans date (envoi en cours) compte comme le plus récent.
  * L'avatar suit la même règle : la première source qui en a un.
  * Le repli (« Membre ») reste à chaque écran : ici, une personne inconnue n'a pas d'entrée.
- * @param {{ messages?: any[] | null, participants?: any[] | null, userData?: any,
+ * ANONSITE : donné, `chat` applique l'anonymat d'un fil de ligue (anonymatDeLigue.js) : avant
+ * le match, un adversaire est « Joueur Adverse », sans photo, même si le serveur le nomme.
+ * @param {{ chat?: any, messages?: any[] | null, participants?: any[] | null, userData?: any,
  *   votants?: Iterable<any> | Map<string, any> | null }} [sources] Les sources de l'écran.
  * @returns {Map<string, any>} La personne retenue (`firstname`, `lastname`, `avatar`…), par
  *   identifiant (`documentId`, sinon `id`).
  */
 export default function annuaireDesMembres({
-  messages = [], participants = [], userData = null, votants = [],
+  chat = null, messages = [], participants = [], userData = null, votants = [],
 } = {}) {
   const identifiantDe = (/** @type {any} */ personne) => String(
     personne?.documentId || personne?.id || '',
@@ -63,8 +67,11 @@ export default function annuaireDesMembres({
     if (!deja.avatar && personne?.avatar?.url) deja.avatar = personne.avatar;
   });
 
-  return new Map([...retenus].map(([id, { avatar, personne }]) => [
-    id,
-    { ...personne, avatar: avatar || personne?.avatar || null },
-  ]));
+  return new Map([...retenus].map(([id, { avatar, personne }]) => {
+    const retenu = { ...personne, avatar: avatar || personne?.avatar || null };
+    const montre = personneDansLeFil({
+      chat, moiId: String(userData?.documentId || ''), personne: { ...retenu, documentId: id },
+    });
+    return [id, montre?.anonyme ? montre : retenu];
+  }));
 }

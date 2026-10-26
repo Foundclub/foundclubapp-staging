@@ -85,6 +85,7 @@ const rendre = (props) => {
     arbre = renderer.create(
       <PollMessageBubble
         currentUserId="moi"
+        nomMasqueDuVotant={props.nomMasqueDuVotant}
         onOpenDetails={props.onOpenDetails}
         onVote={props.onVote}
         poll={props.poll ?? SONDAGE}
@@ -226,6 +227,25 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
     )[0];
     expect(option.props.accessibilityLabel).toContain('Leo Martin');
     expect(option.props.accessibilityLabel).not.toContain('Membre');
+  });
+
+  // ANONSITE — un fil de ligue avant le match : le serveur nomme l'adversaire qui a vote, mais
+  // le masque de l'ecran passe devant (pastille et etiquette), et sa photo ne sort pas.
+  test('P12 — le masque de l ecran passe devant le nom du serveur', () => {
+    mockProfils = new Map([['a', { documentId: 'a', firstname: 'Leo', lastname: 'Martin' }]]);
+    const arbre = rendre({
+      nomMasqueDuVotant: (/** @type {string} */ id) => (id === 'a' ? 'Joueur Adverse' : ''),
+      onVote: jest.fn(),
+    });
+    mockProfils = new Map();
+
+    expect(arbre.root.findAll((n) => n.props?.testID === 'avatar-Leo Martin')).toHaveLength(0);
+    const option = arbre.root.findAll(
+      (n) => n.props?.testID === 'sondage-option-o1'
+        && typeof n.props?.accessibilityLabel === 'string',
+    )[0];
+    expect(option.props.accessibilityLabel)
+      .toBe('Mardi 19h, conversation.poll.bubble.votes, Joueur Adverse, Lea Morel');
   });
 
   // MSG1A x SECU-SONDAGE-ANONYME — un sondage anonyme du serveur neuf ne porte que des
