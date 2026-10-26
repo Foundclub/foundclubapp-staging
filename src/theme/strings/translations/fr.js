@@ -4248,6 +4248,8 @@ export default {
         doneTitle: 'Campagne archivée',
         failedTitle: 'Archivage impossible',
         pending: 'Archivage en cours...',
+        remainingWarning: 'Il reste {{amount}} non encaissés. '
+          + 'Ils ne compteront plus dans le Reste.',
         title: 'Archiver la campagne',
       },
       close: {
@@ -4496,11 +4498,18 @@ export default {
       waived: 'Exemptee',
     },
     summary: {
+      closedShare: 'dont {{amount}} sur des campagnes terminées',
       collectedOf: ' encaissés sur ',
+      excludedArchived_one: 'Hors {{count}} campagne archivée',
+      excludedArchived_other: 'Hors {{count}} campagnes archivées',
       expected: ' attendus',
+      hiddenCampaigns_one: 'Compte aussi {{count}} campagne non affichée ci-dessous',
+      hiddenCampaigns_other: 'Compte aussi {{count}} campagnes non affichées ci-dessous',
       noOverdue: 'Aucun retard',
       overdueCount_one: '{{count}} retard',
       overdueCount_other: '{{count}} retards',
+      partialList_one: 'Calculé sur {{count}} campagne sur {{total}}',
+      partialList_other: 'Calculé sur {{count}} campagnes sur {{total}}',
       progressLabel: 'Progression des encaissements',
       progressValue: '{{percent}} % encaissés',
       remaining: 'Reste ',
