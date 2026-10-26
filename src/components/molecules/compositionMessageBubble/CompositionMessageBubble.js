@@ -18,6 +18,7 @@ import {
   applyCurrentIdentities,
   buildConvocationFieldTokens,
   buildPublishedBoardTarget,
+  estUneConvocationEnListe,
   formatConvocationDay,
   formatConvocationTime,
   getPersonName,
@@ -287,9 +288,19 @@ function CompositionMessageBubble({
     ? `${t('compositionMessageBubble.rendezVous', 'RDV')} ${rendezVousTexte}`
     : '';
 
-  const kicker = type === 'lineup_share'
-    ? t('compositionMessageBubble.published', 'Composition publiée')
-    : t('compositionMessageBubble.matchLineUp', 'Composition du match');
+  // 📋 CONVLISTE (26/10, planche B4) — UNE CONVOCATION EN LISTE : des convoques, aucun joueur
+  // place. Ni mini-terrain (il serait vide), ni « Sur le banc » : « Convocation » et « Convoqués ».
+  const enListe = type === 'lineup_share' && estUneConvocationEnListe({
+    placements,
+    reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+    teams,
+  });
+
+  let kicker = t('compositionMessageBubble.matchLineUp', 'Composition du match');
+  if (enListe) kicker = t('compositionMessageBubble.convocation', 'Convocation');
+  else if (type === 'lineup_share') {
+    kicker = t('compositionMessageBubble.published', 'Composition publiée');
+  }
 
   // 🎒 COMPOMODIF (M1) — LE PACK QUE LA CARTE EMPORTE, ASSEMBLE UNE SEULE FOIS.
   //
@@ -472,7 +483,9 @@ function CompositionMessageBubble({
   const starterNames = starters.map((token) => getPersonName(token.player)).filter(Boolean);
   const benchNames = benchPlayers.map((player) => getPersonName(player));
   const pitchTitle = t('compositionMessageBubble.onThePitch', 'Sur le terrain');
-  const benchTitle = t('compositionMessageBubble.onTheBench', 'Sur le banc');
+  const benchTitle = enListe
+    ? t('compositionMessageBubble.convokedTitle', 'Convoqués')
+    : t('compositionMessageBubble.onTheBench', 'Sur le banc');
 
   // 🗂️ MSG1A (§3.7) — QUI PEUT MODIFIER, c'est l'appelant qui le dit (contrat avec MSG1C) :
   // avec `onEdit`, deux boutons ; sans, un seul « Ouvrir la composition ».
@@ -597,51 +610,54 @@ function CompositionMessageBubble({
       {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au plein ecran.
           ⚖️ MSG1A — le pack le dessine COUCHE (276 x 132) ; il reste DEBOUT, dans les
           proportions de son sport (decision COMPOMSG du 23/09, capture d'Adel). */}
-      <TouchableOpacity
-        accessibilityLabel={t(
-          'compositionMessageBubble.openFullScreen',
-          'Voir la composition en plein écran',
-        )}
-        accessibilityRole="button"
-        activeOpacity={0.85}
-        onPress={toucherLeTerrain}
-        style={styles.fieldTouch}
-      >
-        <RenderedTacticalField
-          sport={sport}
-          style={[
-            styles.miniField,
-            { aspectRatio: 1 / getTacticalFieldAspectRatio(sportContext || sport) },
-          ]}
+      {/* CONVLISTE — une convocation en liste n'a pas de terrain. */}
+      {enListe ? null : (
+        <TouchableOpacity
+          accessibilityLabel={t(
+            'compositionMessageBubble.openFullScreen',
+            'Voir la composition en plein écran',
+          )}
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          onPress={toucherLeTerrain}
+          style={styles.fieldTouch}
         >
-          {starters.map(({ placement, player }) => (
-            <View
-              key={`${placement?.playerId}-${placement?.positionX}-${placement?.positionY}`}
-              style={[
-                styles.tokenSlot,
-                {
-                  left: `${placement?.positionX || 0}%`,
-                  top: `${placement?.positionY || 0}%`,
-                },
-              ]}
-            >
-              <PlayerHeadToken player={player} size={MINI_TOKEN_SIZE} />
-            </View>
-          ))}
-        </RenderedTacticalField>
-        <View
-          style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.6) }]}
-        >
-          {peutModifierIci ? (
-            <GlyphIcon color={Colors.neutral00} name="penSquare" size={13} />
-          ) : null}
-          <Text style={[styles.pilule, { color: Colors.neutral00 }]}>
-            {peutModifierIci
-              ? t('compositionMessageBubble.editPlacement', 'Modifier le placement')
-              : t('compositionMessageBubble.expand', 'Agrandir')}
-          </Text>
-        </View>
-      </TouchableOpacity>
+          <RenderedTacticalField
+            sport={sport}
+            style={[
+              styles.miniField,
+              { aspectRatio: 1 / getTacticalFieldAspectRatio(sportContext || sport) },
+            ]}
+          >
+            {starters.map(({ placement, player }) => (
+              <View
+                key={`${placement?.playerId}-${placement?.positionX}-${placement?.positionY}`}
+                style={[
+                  styles.tokenSlot,
+                  {
+                    left: `${placement?.positionX || 0}%`,
+                    top: `${placement?.positionY || 0}%`,
+                  },
+                ]}
+              >
+                <PlayerHeadToken player={player} size={MINI_TOKEN_SIZE} />
+              </View>
+            ))}
+          </RenderedTacticalField>
+          <View
+            style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.6) }]}
+          >
+            {peutModifierIci ? (
+              <GlyphIcon color={Colors.neutral00} name="penSquare" size={13} />
+            ) : null}
+            <Text style={[styles.pilule, { color: Colors.neutral00 }]}>
+              {peutModifierIci
+                ? t('compositionMessageBubble.editPlacement', 'Modifier le placement')
+                : t('compositionMessageBubble.expand', 'Agrandir')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* 🧾 R6 — QUI EST CONVOQUE (memes mots que l'onglet « Convocation »), deux lignes au
           plus par groupe (le pack). Masque aux lecteurs d'ecran : la carte le dit deja. */}

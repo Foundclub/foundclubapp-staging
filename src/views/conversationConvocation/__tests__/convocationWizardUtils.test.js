@@ -344,6 +344,8 @@ describe('MESSAGERIE-1C · notice « Composition modifiee »', () => {
     expect(buildLineupUpdateNotice({ composition: v3.composition, messages: [v2, v3] })).toEqual({
       added: 1,
       entering: 'Rayan Delmaure',
+      // CONVLISTE — le mode n a pas change.
+      formatChange: '',
       kind: 'replaced',
       leaving: 'Sami Diallo',
       removed: 1,

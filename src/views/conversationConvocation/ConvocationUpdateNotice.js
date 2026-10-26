@@ -35,6 +35,8 @@ function ConvocationUpdateNotice({ composition, messages = [] }) {
     });
   } else if (notice.kind === 'changed') {
     const changes = [
+      // CONVLISTE (planche C4) — « passee en composition » / « passee en liste », en tete.
+      notice.formatChange ? t(`conversationConvocation.notice.${notice.formatChange}`) : '',
       notice.added ? t('conversationConvocation.notice.added', { count: notice.added }) : '',
       notice.removed ? t('conversationConvocation.notice.removed', { count: notice.removed }) : '',
     ].filter(Boolean).join(', ');

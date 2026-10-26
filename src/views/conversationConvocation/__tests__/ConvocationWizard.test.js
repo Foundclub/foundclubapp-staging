@@ -239,6 +239,9 @@ const ouvrir = (props = {}) => {
       />,
     );
   });
+  // CONVLISTE (26/10) — une creation s'ouvre sur « Comment veux-tu convoquer ? » : ces temoins
+  // suivent le tunnel « En composition », celui d'avant (la liste : ConvocationWizardCONVLISTE).
+  if (props.mode !== 'edit') appuyer(arbre, 'convocation-mode-pitch');
   return { arbre, onClose };
 };
 

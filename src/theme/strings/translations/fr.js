@@ -8486,6 +8486,9 @@ export default {
     // COMPOMSG — la carte compte les convoqués (terrain + banc), plus « 1 equipe(s) ».
     calledUp_one: '{{count}} convoqué',
     calledUp_other: '{{count}} convoqués',
+    // CONVLISTE (26/10) — la carte d'une convocation en liste : ni terrain, ni banc.
+    convocation: 'Convocation',
+    convokedTitle: 'Convoqués',
     edit: 'Modifier',
     editPlacement: 'Modifier le placement',
     expand: 'Agrandir',
@@ -9337,6 +9340,26 @@ export default {
       selected: 'Événement choisi',
     },
     longPressEdit: 'Modifier la composition',
+    // CONVLISTE (26/10) — convoquer en liste ou en composition (planche SadoTSP5SJfA7h2qRAxPHv).
+    mode: {
+      close: 'Fermer',
+      keepPitch: 'Garder la composition',
+      lastChoice: 'DERNIER CHOIX',
+      later: 'Tu pourras passer de l’un à l’autre plus tard, sans perdre tes joueurs.',
+      list: 'En liste',
+      listHint: 'Tu coches les joueurs, c’est tout. 3 étapes.',
+      pitch: 'En composition',
+      pitchHint: 'Tu places les joueurs sur le terrain et sur le banc. 4 étapes.',
+      question: 'Comment veux-tu convoquer ?',
+      toList: 'Passer en liste',
+      // eslint-disable-next-line max-len
+      toListMessage: 'Tes joueurs restent convoqués et leurs réponses sont gardées. Le placement sur le terrain et le choix Terrain / Banc seront effacés.',
+      toListTitle: 'Passer en liste ?',
+      toPitch: 'Passer en composition',
+      toPitchDone_one: 'Ton joueur est gardé, sur le terrain : mets-le au banc ou place-le.',
+      // eslint-disable-next-line max-len
+      toPitchDone_other: 'Tes {{count}} joueurs sont gardés, tous sur le terrain : choisis qui va au banc, puis place-les.',
+    },
     next: 'Suivant',
     notice: {
       added_one: '{{count}} joueur ajouté',
@@ -9345,6 +9368,8 @@ export default {
       removed_one: '{{count}} joueur retiré',
       removed_other: '{{count}} joueurs retirés',
       replaced: 'Composition modifiée (v{{version}}) : {{entering}} remplace {{leaving}}',
+      toList: 'passée en liste',
+      toPitch: 'passée en composition',
       updated: 'Composition mise à jour (v{{version}})',
     },
     placement: {
@@ -9373,6 +9398,8 @@ export default {
       cancel: 'Annuler',
       confirmAdd: 'Ajouter',
       counts: '{{pitch}} TERRAIN · {{bench}} BANC',
+      countsList_one: '{{count}} CONVOQUÉ',
+      countsList_other: '{{count}} CONVOQUÉS',
       // eslint-disable-next-line max-len
       editHint: 'Les réponses déjà données sont gardées. Un joueur ajouté reçoit la convocation.',
       empty: 'Aucun joueur dans l’effectif de cette équipe.',
@@ -9396,7 +9423,7 @@ export default {
       title: 'RÉPONSES',
     },
     send: 'Envoyer la convocation',
-    stepOf: 'Étape {{step}} sur 4 · {{name}}',
+    stepOf: 'Étape {{step}} sur {{total}} · {{name}}',
     steps: {
       details: 'Détails',
       event: 'Événement',
@@ -10870,6 +10897,7 @@ export default {
     yourActualArrivalHasBeen: 'Ton arrivée réelle a bien été enregistrée.',
     // eslint-disable-next-line max-len
     yourAnswerIsAboutYour: 'Ta réponse concerne ton équipe tournoi, pas le RSVP classique de l’événement.',
+    youReCalledUp: 'Tu es convoqué',
     youReCalledUpStarter: 'Tu es convoqué · Titulaire',
     youReCalledUpSubstitute: 'Tu es convoqué · Remplaçant',
     youReMarkedAbsent: 'Tu es signalé absent',
@@ -17638,6 +17666,8 @@ export default {
     },
     reserve: {
       title: 'Remplaçants',
+      // CONVLISTE — une convocation en liste : les convoqués, sans banc.
+      titleList: 'Convoqués',
     },
     // CONVOC (demande d'Adel du 26/09) — qui a répondu, sur la compo : la marque de
     // chaque joueur et sa légende. Présent·e / Absent·e comme l'écran du coach ;
@@ -17648,6 +17678,7 @@ export default {
       present: 'Présent·e',
     },
     roles: {
+      calledUp: 'Convoqué',
       starter: 'Titulaire',
       substitute: 'Remplaçant',
     },

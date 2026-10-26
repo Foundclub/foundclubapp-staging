@@ -92,6 +92,7 @@ function SideToggle({ name, onChange, value }) {
  * liste ». En modification, la reponse deja donnee s'affiche sous le nom.
  * @param {object} props
  * @param {any[]} props.bench Les lignes convoquees au banc.
+ * @param {boolean} [props.isList] CONVLISTE : convocation en liste, sans Terrain / Banc.
  * @param {boolean} [props.isLoading]
  * @param {boolean} [props.isUpdate] Une convocation est deja publiee pour cet evenement.
  * @param {(player: any) => void} props.onAddManualPlayer
@@ -105,6 +106,7 @@ function SideToggle({ name, onChange, value }) {
  */
 function ConvocationPlayersStep({
   bench,
+  isList = false,
   isLoading = false,
   isUpdate = false,
   onAddManualPlayer,
@@ -150,9 +152,13 @@ function ConvocationPlayersStep({
     <View testID="convocation-step-players">
       <View style={styles.listHeader}>
         <Text style={caps}>
-          {t('conversationConvocation.players.counts', {
-            bench: bench.length, pitch: pitch.length,
-          })}
+          {isList
+            ? t('conversationConvocation.players.countsList', {
+              count: bench.length + pitch.length,
+            })
+            : t('conversationConvocation.players.counts', {
+              bench: bench.length, pitch: pitch.length,
+            })}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
@@ -318,7 +324,7 @@ function ConvocationPlayersStep({
                   </Text>
                 </View>
               </TouchableOpacity>
-              {isChecked ? (
+              {isChecked && !isList ? (
                 <SideToggle
                   name={name}
                   onChange={(next) => onSelectionChange({ ...selection, [row.id]: next })}

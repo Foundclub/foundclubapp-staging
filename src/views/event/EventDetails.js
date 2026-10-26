@@ -98,6 +98,7 @@ import {
   buildConvocationFieldTokens,
   buildConvocationReserveList,
   buildConvocationStaffList,
+  CONVOCATION_ROLE_CALLED_UP,
   CONVOCATION_ROLE_STARTER,
   getConvocationPersonId,
   getPersonName,
@@ -4283,6 +4284,10 @@ function EventDetails({ navigation, route }) {
         'eventDetails.youReCalledUpStarter',
         'Tu es convoqué · Titulaire',
       );
+    }
+    // CONVLISTE — convoque « en liste » : ni titulaire, ni remplacant.
+    if (viewerConvocationRole === CONVOCATION_ROLE_CALLED_UP) {
+      return t('eventDetails.youReCalledUp', 'Tu es convoqué');
     }
     if (viewerConvocationRole) {
       return t(

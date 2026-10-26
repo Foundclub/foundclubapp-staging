@@ -7994,6 +7994,8 @@ export default {
   compositionMessageBubble: {
     calledUp_one: '{{count}} called up',
     calledUp_other: '{{count}} called up',
+    convocation: 'Call-up',
+    convokedTitle: 'Called up',
     edit: 'Edit',
     editPlacement: 'Edit positions',
     expand: 'Enlarge',
@@ -8815,6 +8817,23 @@ export default {
       selected: 'Selected event',
     },
     longPressEdit: 'Edit the lineup',
+    mode: {
+      close: 'Close',
+      keepPitch: 'Keep the lineup',
+      lastChoice: 'LAST CHOICE',
+      later: 'You can switch from one to the other later without losing your players.',
+      list: 'As a list',
+      listHint: 'You tick the players, that’s all. 3 steps.',
+      pitch: 'As a lineup',
+      pitchHint: 'You place the players on the pitch and on the bench. 4 steps.',
+      question: 'How do you want to call up?',
+      toList: 'Switch to a list',
+      toListMessage: 'Your players stay called up and their answers are kept. The pitch positions and the Pitch / Bench choice will be cleared.',
+      toListTitle: 'Switch to a list?',
+      toPitch: 'Switch to a lineup',
+      toPitchDone_one: 'Your player is kept, on the pitch: bench or place them.',
+      toPitchDone_other: 'Your {{count}} players are kept, all on the pitch: choose who goes on the bench, then place them.',
+    },
     next: 'Next',
     notice: {
       added_one: '{{count}} player added',
@@ -8823,6 +8842,8 @@ export default {
       removed_one: '{{count}} player removed',
       removed_other: '{{count}} players removed',
       replaced: 'Lineup changed (v{{version}}): {{entering}} replaces {{leaving}}',
+      toList: 'switched to a list',
+      toPitch: 'switched to a lineup',
       updated: 'Lineup updated (v{{version}})',
     },
     placement: {
@@ -8850,6 +8871,8 @@ export default {
       cancel: 'Cancel',
       confirmAdd: 'Add',
       counts: '{{pitch}} PITCH · {{bench}} BENCH',
+      countsList_one: '{{count}} CALLED UP',
+      countsList_other: '{{count}} CALLED UP',
       editHint: 'Answers already given are kept. An added player receives the call-up.',
       empty: 'No player in this team’s squad.',
       firstname: 'First name',
@@ -8872,7 +8895,7 @@ export default {
       title: 'ANSWERS',
     },
     send: 'Send the call-up',
-    stepOf: 'Step {{step}} of 4 · {{name}}',
+    stepOf: 'Step {{step}} of {{total}} · {{name}}',
     steps: {
       details: 'Details',
       event: 'Event',
@@ -10275,6 +10298,7 @@ export default {
     youHaveMinLeftTo: 'You have {{minutesLeft}} min left to report your arrival or your delay.',
     yourActualArrivalHasBeen: 'Your actual arrival has been recorded.',
     yourAnswerIsAboutYour: 'Your answer is about your tournament team, not the event’s usual RSVP.',
+    youReCalledUp: 'You’re called up',
     youReCalledUpStarter: 'You’re called up · Starter',
     youReCalledUpSubstitute: 'You’re called up · Substitute',
     youReMarkedAbsent: 'You’re marked absent',
@@ -17033,6 +17057,7 @@ export default {
     },
     reserve: {
       title: 'Substitutes',
+      titleList: 'Called up',
     },
     responses: {
       absent: 'Absent',
@@ -17040,6 +17065,7 @@ export default {
       present: 'Present',
     },
     roles: {
+      calledUp: 'Called up',
       starter: 'Starter',
       substitute: 'Substitute',
     },

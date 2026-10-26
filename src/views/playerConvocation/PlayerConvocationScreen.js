@@ -318,6 +318,10 @@ function PlayerConvocationScreen() {
     present: Colors.success500,
   })[String(response)] || Colors.neutral300;
   const hasResponses = Object.keys(view.responsesByPlayerId).length > 0;
+  // CONVLISTE — en liste, ni titulaire ni remplacant : « Convoqué ».
+  let roleLabel = t('playerConvocation.roles.substitute');
+  if (view.isList) roleLabel = t('playerConvocation.roles.calledUp');
+  else if (view.role === CONVOCATION_ROLE_STARTER) roleLabel = t('playerConvocation.roles.starter');
 
   const identityLine = [
     view.positionLabel
@@ -367,9 +371,7 @@ function PlayerConvocationScreen() {
           ]}
         >
           <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-            {view.role === CONVOCATION_ROLE_STARTER
-              ? t('playerConvocation.roles.starter')
-              : t('playerConvocation.roles.substitute')}
+            {roleLabel}
           </Text>
         </View>
       </View>
@@ -453,83 +455,94 @@ function PlayerConvocationScreen() {
           ) : null}
         </View>
 
-        <View style={styles.sectionRow}>
-          <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
-            {t('playerConvocation.compositionTitle').toUpperCase()}
-          </Text>
-          {/* COMPOMSG — une compo modifiee le dit, avec le meme mot que la carte
-              du fil ; la premiere publication n'affiche rien de technique. */}
-          {versionNumber > 1 ? (
-            <View
-              style={[styles.versionChip, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
-            >
-              {/* FINITIONS (recette Android 16 du 28/09) — « Version » sans son
-                  numéro : une pastille épouse son texte, et un texte gras de
-                  plusieurs mots y perdait son dernier mot. Espaces insécables. */}
-              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                {texteInsecable(t('playerConvocation.version', { version: versionNumber }))}
+        {/* CONVLISTE — une convocation en liste n'a pas de terrain (planche B6). */}
+        {view.isList ? null : (
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+                {t('playerConvocation.compositionTitle').toUpperCase()}
               </Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* 🔎 COMPOMSG — TOUCHER LE TERRAIN OUVRE LE PLEIN ECRAN, en lecture
-            seule, avec les photos et les prenoms. La pastille « Agrandir » le
-            dit. */}
-        <TouchableOpacity
-          accessibilityLabel={t('playerConvocation.field.openFullScreen')}
-          accessibilityRole="button"
-          activeOpacity={0.85}
-          disabled={!fullScreenTarget}
-          onPress={openFullScreen}
-          style={styles.fieldTouch}
-        >
-          <RenderedTacticalField
-            sport={view.sport}
-            style={[styles.field, { aspectRatio: 1 / getTacticalFieldAspectRatio(view.sport) }]}
-          >
-            {fieldTokens.map((/** @type {any} */ { placement, player }) => {
-              const isMine = String(placement?.playerId || '') === view.playerId;
-              const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
-              const response = getConvocationPlayerResponse(view, placement?.playerId);
-              return (
+              {/* COMPOMSG — une compo modifiee le dit, avec le meme mot que la carte
+                  du fil ; la premiere publication n'affiche rien de technique. */}
+              {versionNumber > 1 ? (
                 <View
-                  key={placement.playerId}
+                  style={[styles.versionChip, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
+                >
+                  {/* FINITIONS (recette Android 16 du 28/09) — « Version » sans son
+                      numéro : une pastille épouse son texte, et un texte gras de
+                      plusieurs mots y perdait son dernier mot. Espaces insécables. */}
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                    {texteInsecable(t('playerConvocation.version', { version: versionNumber }))}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* 🔎 COMPOMSG — TOUCHER LE TERRAIN OUVRE LE PLEIN ECRAN, en lecture
+                seule, avec les photos et les prenoms. La pastille « Agrandir » le
+                dit. */}
+            <TouchableOpacity
+              accessibilityLabel={t('playerConvocation.field.openFullScreen')}
+              accessibilityRole="button"
+              activeOpacity={0.85}
+              disabled={!fullScreenTarget}
+              onPress={openFullScreen}
+              style={styles.fieldTouch}
+            >
+              <RenderedTacticalField
+                sport={view.sport}
+                style={[styles.field, { aspectRatio: 1 / getTacticalFieldAspectRatio(view.sport) }]}
+              >
+                {fieldTokens.map((/** @type {any} */ { placement, player }) => {
+                  const isMine = String(placement?.playerId || '') === view.playerId;
+                  const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
+                  const response = getConvocationPlayerResponse(view, placement?.playerId);
+                  return (
+                    <View
+                      key={placement.playerId}
+                      style={[
+                        styles.token,
+                        {
+                          left: `${placement.positionX}%`,
+                          marginLeft: -(size / 2),
+                          marginTop: -(size / 2),
+                          top: `${placement.positionY}%`,
+                        },
+                      ]}
+                    >
+                      <PlayerHeadToken isHighlighted={isMine} player={player} size={size} />
+                      {response ? (
+                        <View
+                          accessibilityLabel={t(`playerConvocation.responses.${response}`)}
+                          style={[
+                            styles.responseDot,
+                            {
+                              backgroundColor: responseTone(response),
+                              borderColor: Colors.neutral900,
+                            },
+                          ]}
+                          testID={`reponse-${placement.playerId}`}
+                        />
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </RenderedTacticalField>
+              {fullScreenTarget ? (
+                <View
                   style={[
-                    styles.token,
-                    {
-                      left: `${placement.positionX}%`,
-                      marginLeft: -(size / 2),
-                      marginTop: -(size / 2),
-                      top: `${placement.positionY}%`,
-                    },
+                    styles.expandPill,
+                    { backgroundColor: withAlpha(Colors.neutral900, 0.72) },
                   ]}
                 >
-                  <PlayerHeadToken isHighlighted={isMine} player={player} size={size} />
-                  {response ? (
-                    <View
-                      accessibilityLabel={t(`playerConvocation.responses.${response}`)}
-                      style={[
-                        styles.responseDot,
-                        { backgroundColor: responseTone(response), borderColor: Colors.neutral900 },
-                      ]}
-                      testID={`reponse-${placement.playerId}`}
-                    />
-                  ) : null}
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {t('playerConvocation.field.expand')}
+                  </Text>
                 </View>
-              );
-            })}
-          </RenderedTacticalField>
-          {fullScreenTarget ? (
-            <View
-              style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                {t('playerConvocation.field.expand')}
-              </Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
+              ) : null}
+            </TouchableOpacity>
+          </>
+        )}
 
         {hasResponses ? (
           <View style={styles.legend}>
@@ -551,7 +564,9 @@ function PlayerConvocationScreen() {
         {view.reservePlayers.length ? (
           <>
             <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
-              {t('playerConvocation.reserve.title').toUpperCase()}
+              {t(view.isList
+                ? 'playerConvocation.reserve.titleList'
+                : 'playerConvocation.reserve.title').toUpperCase()}
             </Text>
             <View style={styles.reserveList}>
               {view.reservePlayers.map((/** @type {any} */ { id, player }) => {
