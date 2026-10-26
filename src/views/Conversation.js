@@ -4139,6 +4139,12 @@ function Conversation({ navigation, route }) {
     return voterNameDirectory.get(String(voterId)) || 'Membre';
   };
 
+  // ANONSITE — la bulle lit les votants au serveur, qui les nomme : le masque passe devant.
+  const nomMasqueDuVotant = (/** @type {string} */ voterId) => {
+    const identite = identiteDe({ documentId: String(voterId || '') });
+    return identite.anonyme ? identite.nom : '';
+  };
+
   /**
    * Q4-06 — l'auteur d'un message cité : « Joueur Adverse » pour un adversaire anonymisé.
    * @param {any} message - Le message cité (brut du serveur, ou de GiftedChat).
@@ -5978,6 +5984,7 @@ function Conversation({ navigation, route }) {
                       heure={heureDuMessage(currentMessage.createdAt)}
                     />
                   )}
+                  nomMasqueDuVotant={nomMasqueDuVotant}
                   onOpenDetails={() => handleOpenPollDetails(currentMessage)}
                   onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
                   poll={currentMessage.composition}

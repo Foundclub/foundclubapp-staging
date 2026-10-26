@@ -404,6 +404,9 @@ describe('BH04 — messagerie du téléphone', () => {
       expect(props.resolveVoterName('adverse')).toBe('Joueur Adverse');
       expect(props.resolveVoterAvatar('adverse')).toBe('');
       expect(props.resolveVoterName('moi')).toContain('Adel');
+      // ANONSITE — la bulle lit les votants au serveur, qui donne le vrai nom : le masque passe devant.
+      expect(props.nomMasqueDuVotant('adverse')).toBe('Joueur Adverse');
+      expect(props.nomMasqueDuVotant('moi')).toBe('');
     });
 
     it('citation d un message de l adversaire : son nom ne sort pas', () => {

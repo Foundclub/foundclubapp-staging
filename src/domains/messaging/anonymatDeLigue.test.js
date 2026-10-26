@@ -1,4 +1,4 @@
-import identiteDansLeFil from './anonymatDeLigue';
+import identiteDansLeFil, { personneDansLeFil } from './anonymatDeLigue';
 
 const KARIM = { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' };
 const filDeLigue = (/** @type {Record<string, any>} */ plus = {}) => ({
@@ -34,5 +34,19 @@ describe('identiteDansLeFil — anonymat d un fil de ligue (Q4-06)', () => {
     })).toEqual(vrai);
     expect(identiteDansLeFil({ chat: { type: 'team' }, moiId: 'moi', personne: KARIM }))
       .toEqual(vrai);
+  });
+});
+
+describe('personneDansLeFil — la personne à dessiner (ANONSITE)', () => {
+  test('un adversaire avant le match : ni nom ni photo', () => {
+    const karim = { ...KARIM, avatar: { url: '/karim.png' } };
+    expect(personneDansLeFil({ chat: filDeLigue(), moiId: 'moi', personne: karim })).toEqual({
+      anonyme: true, avatar: null, documentId: 'karim', firstname: 'Joueur Adverse', lastname: '',
+    });
+  });
+
+  test('un coéquipier : la personne telle quelle', () => {
+    const lea = { documentId: 'lea', firstname: 'Léa' };
+    expect(personneDansLeFil({ chat: filDeLigue(), moiId: 'moi', personne: lea })).toBe(lea);
   });
 });

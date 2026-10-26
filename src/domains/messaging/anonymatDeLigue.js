@@ -32,3 +32,24 @@ const identiteDansLeFil = ({
 };
 
 export default identiteDansLeFil;
+
+/**
+ * ANONSITE — LA PERSONNE À DESSINER dans un fil de ligue : elle-même, ou, pour un adversaire
+ * avant le match, une personne sans photo dont le prénom est « Joueur Adverse » (ou « Capitaine
+ * Adverse »). Les écrans qui lisent `firstname`, `lastname` et `avatar` (bulle, initiales,
+ * frappe, votants, citations) n'ont rien d'autre à changer.
+ * @param {{ chat: any, moiId?: string, personne: any, maintenant?: Date }} faits - Comme
+ *   {@link identiteDansLeFil}.
+ * @returns {any} La personne à montrer (`anonyme: true` quand elle est masquée).
+ */
+export const personneDansLeFil = (faits) => {
+  const identite = identiteDansLeFil(faits);
+  if (!identite.anonyme) return faits.personne;
+  return {
+    anonyme: true,
+    avatar: null,
+    documentId: faits.personne?.documentId,
+    firstname: identite.nom,
+    lastname: '',
+  };
+};

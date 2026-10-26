@@ -278,3 +278,36 @@ describe('T19R — « Créé par » nomme l auteur sous son nom d aujourd hui (s
     expect(rendu).not.toContain('mouri nio');
   });
 });
+
+// ANONSITE (26/10) — « Voir les votes » d'un fil de ligue avant le match, sur le site : le
+// serveur nomme l'adversaire qui a voté (Léo) ; l'écran le dit « Joueur Adverse », sans photo.
+describe('ANONSITE — le détail du site garde l adversaire anonyme avant le match', () => {
+  test('« Joueur Adverse », ni le nom ni la photo de Léo', async () => {
+    mockChat.data = {
+      documentId: 'chat-club',
+      league_match: { date: '2099-06-10T16:00:00.000Z', team_a: {}, team_b: {} },
+      myTeamMembers: [KARIM],
+      participants: [],
+      type: 'league_match',
+    };
+    act(() => {
+      mounted = renderer.create(createElement(
+        QueryClientProvider,
+        { client },
+        createElement(PollDetailsWeb, {
+          navigation: { goBack: jest.fn() },
+          route: { params: { chatId: 'chat-club', messageId: MESSAGE_ID } },
+        }),
+      ));
+    });
+    await act(async () => {
+      await new Promise((fini) => { setTimeout(fini, 20); });
+    });
+
+    const rendu = textOf(mounted.root);
+    expect(rendu).toContain('Joueur Adverse');
+    expect(rendu).not.toContain('Leo');
+    expect(mounted.root.findAllByType('img')
+      .filter((/** @type {any} */ n) => String(n.props.src || '').includes('leo'))).toHaveLength(0);
+  });
+});

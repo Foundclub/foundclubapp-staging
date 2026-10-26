@@ -9,6 +9,8 @@
  * et fait rougir toutes les suites d'une copie de travail sans `.env`.
  */
 
+import { personneDansLeFil } from '@/domains/messaging/anonymatDeLigue';
+
 import {
   getDocumentDisplayName,
   isDocumentAttachment,
@@ -173,6 +175,8 @@ export const pageDuCanal = (chat) => (estUnCanalDeComplexe(chat)
  * « 0 participants » (SMF, T20).
  * RESA-L6B-2 : le canal d'un complexe dit son NOMBRE de membres (`canal`, la phrase), jamais les
  * prenoms de la liste reduite que le serveur joint a un membre (plan E-P12).
+ * ANONSITE : dans un fil de ligue avant le match, un adversaire y est « Joueur Adverse »
+ * (une seule fois), jamais son prenom.
  * @param {{ canal?: (nombre: number) => string, chat: any, meId?: string | null,
  *   vous: string }} params - Le fil, moi, « Vous », la phrase du canal.
  * @returns {string} La ligne, ou '' s'il n'y a rien a dire.
@@ -188,6 +192,13 @@ export const sousTitreDesMembres = ({
     .filter((/** @type {any} */ membre) => (
       String(membre?.documentId || '') !== String(meId || '')
     ))
+    .map((/** @type {any} */ membre) => personneDansLeFil({
+      chat, moiId: String(meId || ''), personne: membre,
+    }))
+    // ANONSITE — « Joueur Adverse » une seule fois.
+    .filter((/** @type {any} */ membre, rang, tous) => !membre?.anonyme || tous.findIndex(
+      (/** @type {any} */ autre) => autre?.firstname === membre.firstname,
+    ) === rang)
     .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
     .filter(Boolean)
     .slice(0, 30);
