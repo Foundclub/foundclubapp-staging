@@ -9,9 +9,10 @@ import PlanningCalendarView from '../PlanningCalendarView';
 // `react-native-calendars` (1.1313) n est pas transforme par la config jest du projet : la doublure
 // recopie son calendar/index.js l. 24-49 (`current` lu au montage seulement, `initialDate` suivi,
 // `onMonthChange` a chaque mois). Preuve avec la vraie bibliotheque : journal du lot C05.
-// MOISGRILLE (26/10/2026) — le SITE remplace la bibliotheque par web/src/shims/react-native-calendars.tsx,
-// qui ne suit QUE `current` (l. 110-115) : avec `initialDate` seul, le planning omnisport ou club
-// ouvert sur novembre (R17-VUE) gardait la grille d octobre. La doublure « site » le recopie.
+// MOISGRILLE (26/10/2026) — le SITE remplace la bibliotheque par
+// web/src/shims/react-native-calendars.tsx, qui ne suit QUE `current` (l. 110-115) : avec
+// `initialDate` seul, le planning omnisport ou club ouvert sur novembre (R17-VUE) gardait la
+// grille d octobre. La doublure « site » le recopie.
 /** @type {'telephone' | 'site'} */
 let mockDoublure = 'telephone';
 
@@ -124,12 +125,20 @@ describe('Q2-18 — la grille du mois suit « Aujourd hui »', () => {
     let arbre;
     await act(async () => {
       arbre = renderer.create(
-        <PlanningCalendarView currentDate={new Date(2026, 9, 21)} events={[]} onDateSelect={() => {}} />,
+        <PlanningCalendarView
+          currentDate={new Date(2026, 9, 21)}
+          events={[]}
+          onDateSelect={() => {}}
+        />,
       );
     });
     await act(async () => {
       arbre.update(
-        <PlanningCalendarView currentDate={new Date(2026, 10, 12)} events={[]} onDateSelect={() => {}} />,
+        <PlanningCalendarView
+          currentDate={new Date(2026, 10, 12)}
+          events={[]}
+          onDateSelect={() => {}}
+        />,
       );
     });
     const titre = arbre.root
