@@ -17,8 +17,8 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
-import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
+import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,

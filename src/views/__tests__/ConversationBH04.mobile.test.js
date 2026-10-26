@@ -425,7 +425,9 @@ describe('BH04 — messagerie du téléphone', () => {
       /** @type {any} */
       let rendu;
       const textes = [...mockFeuilles].reverse().map((/** @type {any} */ p) => {
-        act(() => { rendu = renderer.create(<>{p.children}</>); });
+        // eslint-disable-next-line global-require
+        const { createElement, Fragment } = require('react');
+        act(() => { rendu = renderer.create(createElement(Fragment, null, p.children)); });
         const t = JSON.stringify(rendu.toJSON());
         act(() => { rendu.unmount(); });
         return t;

@@ -2022,7 +2022,9 @@ function Conversation({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     const participants = Array.isArray(chatData?.participants) ? chatData.participants : []
     // ANONSERVEUR — un fil de ligue avant le match : pas de carte de contact d'un adversaire.
-    return contactsPartageables({ chat: chatData, moiId: userData?.documentId, personnes: participants })
+    return contactsPartageables({
+      chat: chatData, moiId: userData?.documentId, personnes: participants,
+    })
   }, [chatData, userData?.documentId])
 
   const conversationName = useMemo(() => filDeLaVille.titre || getConversationName({

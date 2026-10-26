@@ -59,24 +59,29 @@ describe('ANONSERVEUR — le serveur masque aussi ; l aperçu et le partage de c
       anonyme: true, avatar: null, documentId: 'cap', firstname: 'Capitaine Adverse', lastname: '',
     };
     // Une liste de fils ne porte pas les équipes du match : seul le drapeau dit « capitaine ».
-    const filDeLaListe = { league_match: { date: '2099-06-10T16:00:00.000Z' }, type: 'league_match' };
+    const filDeLaListe = {
+      league_match: { date: '2099-06-10T16:00:00.000Z' }, type: 'league_match',
+    };
     expect(identiteDansLeFil({ chat: filDeLaListe, moiId: 'moi', personne: masque }))
       .toEqual({ anonyme: true, nom: 'Capitaine Adverse' });
   });
 
   test('prenomDansLeFil : « Joueur Adverse » pour l adversaire, le prénom sinon', () => {
-    expect(prenomDansLeFil({ chat: filDeLigue(), moiId: 'moi', personne: KARIM })).toBe('Joueur Adverse');
-    expect(prenomDansLeFil({ chat: filDeLigue({ myTeamMembers: [KARIM] }), moiId: 'moi', personne: KARIM }))
-      .toBe('Karim');
-    expect(prenomDansLeFil({ chat: { type: 'group' }, moiId: 'moi', personne: KARIM })).toBe('Karim');
+    const prenom = (/** @type {any} */ chat) => prenomDansLeFil({
+      chat, moiId: 'moi', personne: KARIM,
+    });
+    expect(prenom(filDeLigue())).toBe('Joueur Adverse');
+    expect(prenom(filDeLigue({ myTeamMembers: [KARIM] }))).toBe('Karim');
+    expect(prenom({ type: 'group' })).toBe('Karim');
   });
 
   test('contactsPartageables : ni moi, ni un adversaire masqué', () => {
     const lea = { documentId: 'lea', firstname: 'Léa' };
     const moi = { documentId: 'moi', firstname: 'Adel' };
-    expect(contactsPartageables({ chat: filDeLigue(), moiId: 'moi', personnes: [moi, KARIM, lea] }))
-      .toEqual([lea]);
-    expect(contactsPartageables({ chat: { type: 'group' }, moiId: 'moi', personnes: [moi, KARIM, lea] }))
-      .toEqual([KARIM, lea]);
+    const partageables = (/** @type {any} */ chat) => contactsPartageables({
+      chat, moiId: 'moi', personnes: [moi, KARIM, lea],
+    });
+    expect(partageables(filDeLigue())).toEqual([lea]);
+    expect(partageables({ type: 'group' })).toEqual([KARIM, lea]);
   });
 });

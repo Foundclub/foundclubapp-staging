@@ -289,7 +289,7 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
     },
   );
 
-  test('ANONSERVEUR — fil de ligue avant le match : l adversaire est « Joueur Adverse : », le coéquipier garde son prénom', async () => {
+  test('ANONSERVEUR — ligue : « Joueur Adverse : », le coéquipier par son prénom', async () => {
     const filDeLigue = (/** @type {any} */ sender) => ({
       ...CHATS[0],
       league_match: { date: '2099-06-10T16:00:00.000Z', documentId: 'match-1' },

@@ -430,7 +430,9 @@ describe('ANONSERVEUR — la colonne « Messages » et « Partager un contact »
     mockFil = filDeLigue(AVANT_LE_MATCH);
     mockFilsDeLaColonne = [{
       ...filDeLigue(AVANT_LE_MATCH),
-      messages: [{ createdAt: '2026-10-07T08:00:00.000Z', documentId: 'm-b', message: 'On vous attend', sender: BRUNO }],
+      messages: [{
+        createdAt: '2026-10-07T08:00:00.000Z', documentId: 'm-b', message: 'On vous attend', sender: BRUNO,
+      }],
     }];
     const { arbre } = await monter();
     const ligne = arbre.root.findByProps({ 'data-testid': `MSG1W-ligne-${CHAT_ID}` });
@@ -447,7 +449,9 @@ describe('ANONSERVEUR — la colonne « Messages » et « Partager un contact »
         createdAt: '2026-10-07T08:00:00.000Z',
         documentId: 'm-b',
         message: 'On vous attend',
-        sender: { anonyme: true, avatar: null, documentId: 'bruno', firstname: 'Capitaine Adverse', lastname: '' },
+        sender: {
+          anonyme: true, avatar: null, documentId: 'bruno', firstname: 'Capitaine Adverse', lastname: '',
+        },
       }],
     }];
     const { arbre } = await monter();
