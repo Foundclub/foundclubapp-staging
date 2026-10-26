@@ -29,6 +29,7 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   buildChoiceOptions,
+  getAgeFromDisplayedBirthdate,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 
@@ -44,7 +45,7 @@ import {
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
-import { parseHeightCm } from '@/utils/heightCentimeters';
+import { erreurPhysique, parseHeightCm } from '@/utils/heightCentimeters';
 
 import {
   buildMinorParentalDeclarationPayload,
@@ -97,7 +98,7 @@ const isBirthdateDisplayValid = (value) => {
  * @param {typeof defaultValues} values
  * @returns {Record<string, string>}
  */
-const validateValues = (values) => {
+export const validateValues = (values) => {
   /** @type {Record<string, string>} */
   const nextErrors = {};
 
@@ -114,13 +115,13 @@ const validateValues = (values) => {
     );
   }
 
-  // FINITIONS8 (point 4) : la taille, en centimetres, entre 100 et 250.
-  if (String(values?.height || '').trim() && parseHeightCm(values.height) === null) {
-    nextErrors.height = i18next.t(
-      'profile.fields.height.invalid',
-      'Entre 100 et 250 cm (ex : 182)',
-    );
-  }
+  // FINITIONS8 (point 4) : la taille, en centimetres. CHOIX3 (P5-24) : taille et poids bornes
+  // selon l'age (meme regle que `profileFormContract`, que le Joi du site ne fait pas tourner).
+  const age = getAgeFromDisplayedBirthdate(values?.birthdate);
+  ['height', 'weight'].forEach((champ) => {
+    const { cle } = erreurPhysique(/** @type {'height' | 'weight'} */ (champ), values?.[champ], age);
+    if (cle) nextErrors[champ] = i18next.t(cle);
+  });
 
   return nextErrors;
 };

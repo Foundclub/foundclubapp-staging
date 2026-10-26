@@ -461,4 +461,48 @@ describe('Q4-24 — canal d un complexe : le menu se referme en ouvrant la page 
     act(() => { infos.onPress(); });
     expect(mockMenus[mockMenus.length - 1].visible).toBe(false);
   });
+
+  // CHOIX3 (« 9- A », 26/10) — le ⋮ ouvre les infos du canal pour TOUT LE MONDE, comme sur le
+  // site : « Quitter le canal » y est. Seul le titre du fil mène encore à la page du complexe.
+  test('« Infos du groupe » d un membre ouvre les infos (Quitter), pas la page du complexe', () => {
+    mockChatData = {
+      ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
+    };
+    const { ecran } = monterLaConversation();
+    const { navigation } = ecran.root.find((/** @type {any} */ n) => (
+      n.props?.navigation && n.props?.route
+    )).props;
+    const infosDuGroupe = () => ecran.root.find((/** @type {any} */ n) => (
+      typeof n.props?.onQuitter === 'function' && 'visible' in n.props
+    ));
+    expect(infosDuGroupe().props.visible).toBe(false);
+    const boutonMenu = ecran.root.find((/** @type {any} */ n) => (
+      n.props?.testID === 'conversation-menu' && typeof n.props?.onPress === 'function'
+    ));
+    act(() => { boutonMenu.props.onPress(); });
+    const infos = mockMenus[mockMenus.length - 1].entrees
+      .find((/** @type {any} */ e) => e.cle === 'infos-du-groupe');
+    act(() => { infos.onPress(); });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(infosDuGroupe().props.visible).toBe(true);
+  });
+
+  test('le titre du fil, lui, mène toujours un membre à la page du complexe', () => {
+    mockChatData = {
+      ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
+    };
+    const { ecran } = monterLaConversation();
+    const { navigation } = ecran.root.find((/** @type {any} */ n) => (
+      n.props?.navigation && n.props?.route
+    )).props;
+    const [titre] = ecran.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityHint === 'Ouvre les infos du groupe'
+      && typeof n.props?.onPress === 'function'
+    ));
+    act(() => { titre.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      expect.anything(),
+      { slug: 'five-paris' },
+    );
+  });
 });

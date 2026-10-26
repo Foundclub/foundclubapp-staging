@@ -18068,7 +18068,8 @@ export default {
         placeholder: 'Luc',
       },
       height: {
-        invalid: 'Entre 100 et 250 cm (ex : 182)',
+        invalid: 'Entre 100 et 230 cm (ex : 182)',
+        invalidMinor: 'Entre 50 et 230 cm (ex : 140)',
         label: 'Taille (cm)',
         placeholder: 'Ex : 180',
       },
@@ -18118,6 +18119,8 @@ export default {
         president: 'Dirigeant·e',
       },
       weight: {
+        invalid: 'Entre 25 et 200 kg (ex : 75)',
+        invalidMinor: 'Entre 10 et 200 kg (ex : 40)',
         label: 'Poids (kg)',
         placeholder: '80',
       },

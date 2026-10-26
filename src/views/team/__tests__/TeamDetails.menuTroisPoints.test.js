@@ -684,6 +684,31 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
 // ABOPARCLUB (2026-09-29) — l'offre Club se juge au club de CETTE equipe
 // (`getSubscriptionAccessLevelForClub`), pas au club affiche. Decor : le club de
 // l'equipe (`club-1`) est couvert par une offre Club, le club affiche ne l'est pas.
+// CHOIX3 (« 10- A », 26/10, P12-17) — « Composition type » ne s'affiche que sur les équipes du
+// club de l'utilisateur : un dirigeant qui regarde l'équipe d'un AUTRE club ne la voit plus.
+describe('CHOIX3 — « Composition type » seulement sur une équipe de son club', () => {
+  test('équipe de son club : la rangée est là', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    expect(estDansLaFeuille(racine, 'Composition type')).toBe(true);
+  });
+
+  test('équipe d un autre club : pas de « Composition type »', () => {
+    mockAuthCourant = {
+      ...AUTH_DIRIGEANT,
+      userData: { ...UTILISATEUR, club: { documentId: 'club-2', name: 'Autre' }, myTeams: [] },
+    };
+    mockEstMonEquipe = false;
+    const racine = monterLaFiche();
+    // Sans « Composition type », il ne reste aucune action : le ⋮ lui-même disparaît.
+    if (noeudParId(racine, ID_BOUTON_TROIS_POINTS)) ouvrirLeMenu(racine);
+
+    expect(estDansLaFeuille(racine, 'Composition type')).toBe(false);
+    expect(estDansLaFeuille(racine, 'Convocations')).toBe(false);
+  });
+});
+
 describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () => {
   const LIBELLE_VOIR_L_OFFRE_CLUB = "Voir l'offre";
 

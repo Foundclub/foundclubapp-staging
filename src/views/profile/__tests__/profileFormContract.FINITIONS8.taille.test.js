@@ -23,7 +23,8 @@ describe('FINITIONS8 · point 4 — la taille se saisit en centimetres, bornee',
 
     expect(error?.details?.map((detail) => detail.path.join('.'))).toEqual(['height']);
     expect(error?.details?.[0]?.message).toBe('profile.fields.height.invalid');
-    expect(fr.profile.fields.height.invalid).toBe('Entre 100 et 250 cm (ex : 182)');
+    // CHOIX3 (26/10) : le plafond adulte passe a 230 cm.
+    expect(fr.profile.fields.height.invalid).toBe('Entre 100 et 230 cm (ex : 182)');
   });
 
   test.each(['50', '0', 'grand', '2,9 m'])('🚨 « %s » est refusee', (saisie) => {

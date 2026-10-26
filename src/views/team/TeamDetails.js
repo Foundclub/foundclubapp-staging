@@ -1945,7 +1945,8 @@ function TeamDetails({ navigation, route }) {
     && isMyClub
     && (isMyTeam || (team?.club?.documentId ? canEditClub(team.club.documentId) : false));
   const showTeamChatAction = canManageTeam && allMembers?.length > 1 && isMyTeam;
-  const showDefaultCompositionAction = canManageTeam;
+  // CHOIX3 (« 10- A », P12-17) — seulement sur une équipe de SON club.
+  const showDefaultCompositionAction = canManageTeam && isMyClub;
   const showLeaveAction = isMyTeam;
   const showContactTrainersAction = canContactViewedTeamTrainers;
   const showJoinAction = !isAuthenticated || canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
@@ -4864,14 +4865,14 @@ function TeamDetails({ navigation, route }) {
                   onActionPress: openTeamOfferUnlockSheet,
                 })}
                 <View style={teamActionsListStyle}>
-                  {renderTeamActionRow({
+                  {showDefaultCompositionAction ? renderTeamActionRow({
                     icon: 'users',
                     label: t('teamDetails.actions.defaultComposition', 'Composition type'),
                     lock: isTeamOfferUnlocked ? null : 'team',
                     onPress: isTeamOfferUnlocked
                       ? handleManageDefaultComposition
                       : openTeamOfferUnlockSheet,
-                  })}
+                  }) : null}
                   {renderTeamActionRow({
                     icon: 'send',
                     label: t('teamDetails.actions.convocations', 'Convocations'),
