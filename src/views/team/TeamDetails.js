@@ -32,6 +32,7 @@ import {
   extractSubscriptionDecisionFromError,
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
+import { isExternalCompetitionEligibleTeam } from '@/domains/team/externalCompetitionEligibility';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -1337,9 +1338,12 @@ function TeamDetails({ navigation, route }) {
       ), calendarStrategy),
     ].filter(Boolean).join('  •  ') || null;
   }, [externalSyncProviderMetadata]);
+  // C10BIS · P12-05 — lue aussi sur l'equipe affichee : un dirigeant hors de l'equipe n'a
+  // pas de resume dans ses equipes, et le serveur l'autorise pourtant a configurer.
   const externalCompetitionEligible = useMemo(
-    () => Boolean(currentUserTeamSummary?.externalCompetitionEligible),
-    [currentUserTeamSummary?.externalCompetitionEligible],
+    () => Boolean(currentUserTeamSummary?.externalCompetitionEligible)
+      || isExternalCompetitionEligibleTeam(team),
+    [currentUserTeamSummary?.externalCompetitionEligible, team],
   );
   const externalConfigUpdatedLabel = useMemo(
     () => formatExternalSyncDate(team?.externalConfigUpdatedAt),
