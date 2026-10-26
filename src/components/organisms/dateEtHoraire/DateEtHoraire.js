@@ -486,8 +486,8 @@ function DateEtHoraire({
             value={fin ? toTimeInputText(fin) : ''}
           />
         </View>
-        {sousLesHeures}
       </View>
+      {sousLesHeures}
 
       {/* D09 — « Repeter » est une RANGEE-VALEUR a chevron, pas un
           interrupteur : un switch qui ouvre une fenetre serait
