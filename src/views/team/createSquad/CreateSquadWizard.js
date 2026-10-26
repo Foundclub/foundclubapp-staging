@@ -1,5 +1,5 @@
 /* global globalThis */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -8,6 +8,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
+import { creerEquipeEtCreneaux } from '@/views/team/createSquad/creerEquipeEtCreneaux';
 import { sectionToLeagueGender } from '@/views/team/createSquad/sectionGender';
 import SquadAvailabilitiesStep from '@/views/team/createSquad/steps/SquadAvailabilitiesStep';
 import SquadCategoryStep from '@/views/team/createSquad/steps/SquadCategoryStep';
@@ -222,6 +223,14 @@ function CreateSquadWizard({ navigation }) {
     });
   };
 
+  // C10BIS · P12-11 — l'equipe et les creneaux deja crees, gardes d'un essai a l'autre.
+  const progresCreationRef = useRef(
+    /** @type {{ creneauxFaits: Set<number>, teamId: string | null }} */ ({
+      creneauxFaits: new Set(),
+      teamId: null,
+    }),
+  );
+
   const handleSubmit = async () => {
     setSubmitError('');
     try {
@@ -309,7 +318,9 @@ function CreateSquadWizard({ navigation }) {
 
       console.log('DEBUG: League Team Payload:', JSON.stringify(leagueTeamPayload, null, 2));
 
-      const legalAcceptance = await requestLeagueLegalAcceptance({
+      const progres = progresCreationRef.current;
+      // L'equipe deja creee a un essai precedent ne redemande pas l'accord.
+      const legalAcceptance = progres.teamId ? null : await requestLeagueLegalAcceptance({
         metadata: {
           teamName: leagueTeamPayload.name,
         },
@@ -318,19 +329,13 @@ function CreateSquadWizard({ navigation }) {
         targetLabel: leagueTeamPayload.name,
         targetType: 'league_team',
       });
-      if (!legalAcceptance) return;
+      if (!progres.teamId && !legalAcceptance) return;
 
       setIsLoading(true);
 
-      // 2. Create League Team
-      const createdTeam = await createLeagueTeam(leagueTeamPayload, { legalAcceptance });
-      const teamId = createdTeam?.documentId || createdTeam?.id;
-
-      if (!teamId) throw new Error('Failed to create league team');
-
-      // 3. Create Slots linked to League Team
-      if (squadData.slots && squadData.slots.length > 0) {
-        const slotPromises = squadData.slots.map((slot) => {
+      // 2. Create League Team (une seule fois), 3. puis les creneaux manquants
+      await creerEquipeEtCreneaux({
+        creerCreneau: (/** @type {any} */ slot, /** @type {string} */ teamId) => {
           /**
            * @param {Date|string} time
            * @returns {string}
@@ -360,11 +365,14 @@ function CreateSquadWizard({ navigation }) {
             start_hour: formatForStrapiTime(slot.startTime),
             status: 'open',
           });
-        });
-        await Promise.all(slotPromises);
-      }
+        },
+        creerEquipe: () => createLeagueTeam(leagueTeamPayload, { legalAcceptance }),
+        creneaux: squadData.slots || [],
+        progres,
+      });
 
       // 4. Navigate to League Squad Tab
+      progresCreationRef.current = { creneauxFaits: new Set(), teamId: null };
       clearPersistedWizardState();
       navigation.navigate(RouteNames.LeagueHomeTab, {
         screen: RouteNames.LeagueSquadTab,
