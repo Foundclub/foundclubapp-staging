@@ -54,6 +54,10 @@ import { doitFermer, opaciteDuFond } from './gesteDeFermeture';
  * ✅ « ENREGISTRER » : meme habit que la croix, en haut a droite. L'image va dans la
  * galerie (`enregistrerLImage`) ; un avis le dit en bas (« Image enregistrée… ») ; un
  * refus d'acces ouvre une alerte qui mene aux reglages du telephone.
+ *
+ * 🐛 IMGNOIR (iPhone, 2.6.80, 26/10) : ecran noir, l'image absente. La racine CENTRE ses
+ * enfants ; le conteneur glissant, sans largeur, prenait celle de son contenu — l'image a
+ * 100 %… de lui-meme : Yoga resout ce cercle a 0 px. Il s'etire donc (`alignSelf: 'stretch'`).
  */
 
 /** Opacite du rond derriere les boutons de l'apercu. */
@@ -176,7 +180,10 @@ function ApercuDImage({
         />
 
         <GestureDetector gesture={geste}>
-          <Animated.View style={[styles.ecran, styleDeLImage]} testID="MSGIMG-image-glissante">
+          <Animated.View
+            style={[styles.zoneDeLImage, styleDeLImage]}
+            testID="MSGIMG-image-glissante"
+          >
             {uri ? (
               <Image
                 onError={onImageError}
@@ -273,6 +280,12 @@ const styles = StyleSheet.create({
     left: 16,
     position: 'absolute',
     width: 44,
+  },
+  zoneDeLImage: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    flex: 1,
+    justifyContent: 'center',
   },
 });
 
