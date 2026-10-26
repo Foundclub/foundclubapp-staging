@@ -15,7 +15,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={280}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={180}
@@ -25,7 +25,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={110}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={60}
@@ -37,20 +37,20 @@ const COURTS = {
         cy={70}
         fill="none"
         r={30}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
       <Path
         d="M22 -40 V40 a80 80 0 0 0 156 0 V-40"
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -65,7 +65,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={280}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={180}
@@ -74,7 +74,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -87,14 +87,14 @@ const COURTS = {
         cy={100}
         fill="none"
         r={32}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
       <Rect
         fill="none"
         height={70}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={90}
@@ -104,14 +104,14 @@ const COURTS = {
       <Path
         d="M75 30 a28 28 0 0 0 50 0"
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
       <Rect
         fill="none"
         height={70}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={90}
@@ -125,7 +125,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={260}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={170}
@@ -134,7 +134,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={15}
@@ -147,7 +147,7 @@ const COURTS = {
         cy={100}
         fill="none"
         r={24}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
@@ -158,7 +158,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={280}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={180}
@@ -167,7 +167,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -178,14 +178,14 @@ const COURTS = {
       <Path
         d="M30 -40 V0 a70 70 0 0 0 140 0 V-40"
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
       />
       <Path
         d="M45 200 a55 55 0 0 1 110 0"
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeDasharray="6 6"
         strokeOpacity={0.3}
         strokeWidth={w}
@@ -197,7 +197,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={260}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={160}
@@ -206,7 +206,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={40}
@@ -216,7 +216,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={160}
@@ -226,7 +226,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={40}
@@ -236,7 +236,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={100}
@@ -246,7 +246,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={40}
@@ -256,7 +256,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w * 1.5}
         x1={10}
@@ -271,7 +271,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={280}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={180}
@@ -280,7 +280,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -290,7 +290,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeDasharray="8 6"
         strokeOpacity={0.3}
         strokeWidth={w}
@@ -301,7 +301,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeDasharray="8 6"
         strokeOpacity={0.3}
         strokeWidth={w}
@@ -312,7 +312,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -322,7 +322,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={10}
@@ -337,7 +337,7 @@ const COURTS = {
       <Rect
         fill="none"
         height={240}
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         width={150}
@@ -346,7 +346,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w * 1.5}
         x1={10}
@@ -356,7 +356,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={25}
@@ -366,7 +366,7 @@ const COURTS = {
       />
       <Line
         fill="none"
-        stroke="#ffffff"
+        stroke="white"
         strokeOpacity={0.3}
         strokeWidth={w}
         x1={25}

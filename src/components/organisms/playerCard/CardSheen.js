@@ -19,12 +19,12 @@ import Animated, {
 /**
  * Le reflet qui suit le doigt, posé sur la carte.
  * @param {{
- *   accent?: string, children: import('react').ReactNode, height: number, width: number,
+ *   children: import('react').ReactNode, height: number, width: number,
  * }} props
  * @returns {import('react').ReactElement}
  */
 function CardSheen({
-  accent = '#66d2f9', children, height, width,
+  children, height, width,
 }) {
   const reduceMotion = useReducedMotion();
   const position = useSharedValue(0);
@@ -79,7 +79,7 @@ function CardSheen({
               colors={[
                 'rgba(255,255,255,0)',
                 'rgba(255,255,255,0.22)',
-                `${accent}44`,
+                'rgba(102,210,249,0.27)',
                 'rgba(255,255,255,0)',
               ]}
               end={{ x: 1, y: 0.5 }}
