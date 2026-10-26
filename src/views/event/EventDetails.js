@@ -98,7 +98,9 @@ import {
   buildConvocationFieldTokens,
   buildConvocationReserveList,
   buildConvocationStaffList,
+  CONVOCATION_ROLE_CALLED_UP,
   CONVOCATION_ROLE_STARTER,
+  convocationsToutesEnListe,
   getConvocationPersonId,
   getPersonName,
   getViewerConvocationRole,
@@ -4147,11 +4149,13 @@ function EventDetails({ navigation, route }) {
         defaultValue_one: '{{count}} convocation',
         defaultValue_other: '{{count}} convocations',
       }) : '',
-      publishedCompositionReserveCount > 0 ? t('eventDetails.substitutesCount', {
-        count: publishedCompositionReserveCount,
-        defaultValue_one: '{{count}} remplaçant',
-        defaultValue_other: '{{count}} remplaçants',
-      }) : '',
+      publishedCompositionReserveCount > 0 ? t(
+        // CONVLISTE-FIN — une convocation en liste n'a pas de remplacants : des convoques.
+        convocationsToutesEnListe(convocationBranches)
+          ? 'eventDetails.calledUpCount'
+          : 'eventDetails.substitutesCount',
+        { count: publishedCompositionReserveCount },
+      ) : '',
     ].filter(Boolean).join(' · '),
     teams: publishedCompositionTeamCount > 0 ? t('eventDetails.teamSPublished', {
       count: publishedCompositionTeamCount,
@@ -4159,7 +4163,7 @@ function EventDetails({ navigation, route }) {
       defaultValue_other: '{{count}} équipes publiées',
     }) : t('eventDetails.lineUpPublished', 'Composition publiée'),
   }), [
-    convocationBranches.length,
+    convocationBranches,
     publishedCompositionReserveCount,
     publishedCompositionTeamCount,
     t,
@@ -4283,6 +4287,10 @@ function EventDetails({ navigation, route }) {
         'eventDetails.youReCalledUpStarter',
         'Tu es convoqué · Titulaire',
       );
+    }
+    // CONVLISTE — convoque « en liste » : ni titulaire, ni remplacant.
+    if (viewerConvocationRole === CONVOCATION_ROLE_CALLED_UP) {
+      return t('eventDetails.youReCalledUp', 'Tu es convoqué');
     }
     if (viewerConvocationRole) {
       return t(

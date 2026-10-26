@@ -663,6 +663,20 @@ describe('FINITIONS 2 — l onglet Convocation parle comme un dirigeant', () => 
     expect(texte).not.toContain('branche');
   });
 
+  // CONVLISTE-FIN (chef 26/10, « 2- A ») — une convocation EN LISTE (aucun joueur place) n a
+  // pas de remplacants : ses convoques se comptent « N convoqués ».
+  test('CONVLISTE : une convocation en liste dit « 2 convoqués », jamais « remplaçants »', () => {
+    const liste = brancheAvec(1, 2);
+    liste.published.teams = liste.published.teams
+      .map((/** @type {any} */ team) => ({ ...team, placements: [] }));
+    const root = monter({ convocationData: convocation([liste]) });
+    allerSurLOnglet(root, 'callUp');
+    const texte = toutLeTexte(root);
+
+    expect(texte).toContain('2 convoqués');
+    expect(texte).not.toMatch(/\d+ rempla/);
+  });
+
   test('une seule convocation ne se compte pas ; deux se disent « 2 convocations »', () => {
     const une = monter();
     allerSurLOnglet(une, 'callUp');

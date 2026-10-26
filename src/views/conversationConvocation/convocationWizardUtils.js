@@ -32,6 +32,7 @@ import {
 } from '@/views/matchCallUp/matchConvocationUtils';
 import { getMatchFormations } from '@/views/matchCallUp/matchFormationCatalog';
 import {
+  estUneConvocationEnListe,
   formatConvocationDay,
   formatConvocationTime,
   lireRendezVous,
@@ -46,6 +47,13 @@ import { getShortAddress } from '@/utils/location';
 
 /** Les 4 etapes de l'assistant, dans l'ordre du pack. */
 export const CONVOCATION_STEPS = ['event', 'players', 'placement', 'details'];
+
+/** CONVLISTE (26/10, « 2- A » d'Adel) — en liste, le terrain saute : 3 etapes. */
+export const CONVOCATION_STEPS_LIST = ['event', 'players', 'details'];
+
+/** CONVLISTE — les deux facons de convoquer. */
+export const FORMAT_LIST = 'list';
+export const FORMAT_PITCH = 'pitch';
 
 /** Le joueur coche joue sur le terrain. */
 export const SIDE_PITCH = 'pitch';
@@ -345,6 +353,31 @@ export const findLastPublishedManualPlayers = ({
 };
 
 /**
+ * CONVLISTE — le mode d'une carte `lineup_share` : la regle « aucun joueur place = liste ».
+ * @param {any} composition
+ * @returns {'list' | 'pitch'}
+ */
+const readLineupFormat = (composition) => (
+  estUneConvocationEnListe(readPackFromLineupMessage(composition)) ? FORMAT_LIST : FORMAT_PITCH
+);
+
+/**
+ * 📋 CONVLISTE (planche A1) — LE DERNIER CHOIX DE L'EQUIPE : le mode de sa derniere convocation
+ * publiee, lu sur les cartes DEJA chargees du fil (aucune requete).
+ * @param {object} input
+ * @param {any[]} [input.messages] Les messages bruts deja charges du fil.
+ * @param {string} [input.teamId]
+ * @returns {'list' | 'pitch' | ''} Vide quand le fil n'a aucune convocation de l'equipe.
+ */
+export const findLastConvocationFormat = ({ messages = [], teamId = '' } = {}) => {
+  const [last] = readLineupCompositions(messages, { teamId })
+    .filter((composition) => !teamId || toId(composition?.teamId) === toId(teamId))
+    .sort((left, right) => publicationStamp(right) - publicationStamp(left)
+      || (Number(right?.publishedVersion) || 0) - (Number(left?.publishedVersion) || 0));
+  return last ? readLineupFormat(last) : '';
+};
+
+/**
  * Qui est deja convoque, et ou, dans un pack publie.
  * @param {any} [pack]
  * @returns {Record<string, string>} identifiant -> `pitch` | `bench`.
@@ -641,6 +674,7 @@ export const splitSelection = (rows, selection) => ({
  * @param {object} input
  * @param {any} [input.basePack] Le pack deja publie (il garde l'identite de son equipe).
  * @param {string} [input.category] La categorie de l'equipe (format du football).
+ * @param {string} [input.format] CONVLISTE : `list` (aucun placement) ou `pitch`.
  * @param {any[]} [input.placements] Les placements du terrain.
  * @param {boolean} [input.requireResponse] L'interrupteur Demander Present / Absent.
  * @param {Array<{ id: string, isManual: boolean, player: any }>} [input.rows]
@@ -652,6 +686,7 @@ export const splitSelection = (rows, selection) => ({
 export const buildConvocationPack = ({
   basePack = null,
   category = '',
+  format = FORMAT_PITCH,
   placements = [],
   requireResponse = true,
   rows = [],
@@ -661,11 +696,14 @@ export const buildConvocationPack = ({
 }) => {
   const { bench, pitch } = splitSelection(rows, selection);
   const convoked = [...pitch, ...bench];
+  // CONVLISTE — en liste, AUCUN placement : le serveur range chaque convoque au banc
+  // (`reservePlayerIds`), et c'est ce que lit la regle « aucun joueur place = liste ».
+  const isList = format === FORMAT_LIST;
 
   return buildMatchCompositionPack({
     basePack,
     manualPlayers: convoked.filter((row) => row.isManual).map((row) => row.player),
-    placements: buildPitchPlacements({
+    placements: isList ? [] : buildPitchPlacements({
       category, placements, sport, starterIds: pitch.map((row) => row.id),
     }),
     players: convoked.map((row) => row.player),
@@ -733,6 +771,7 @@ const readConvokedIds = (composition) => readCalledUpIdsFromPack(
  * @returns {null | {
  *   added: number,
  *   entering: string,
+ *   formatChange: '' | 'toList' | 'toPitch',
  *   kind: 'replaced' | 'changed' | 'updated',
  *   leaving: string,
  *   removed: number,
@@ -753,10 +792,17 @@ export const buildLineupUpdateNotice = ({ composition, messages = [] }) => {
     .filter((other) => (Number(other?.publishedVersion) || 0) < version)
     .sort((left, right) => (Number(right?.publishedVersion) || 0)
       - (Number(left?.publishedVersion) || 0))[0];
+  /** @type {'' | 'toList' | 'toPitch'} */
+  let formatChange = '';
+  if (previous && readLineupFormat(previous) !== readLineupFormat(composition)) {
+    // CONVLISTE (planche C4) — « passee en composition » / « passee en liste ».
+    formatChange = readLineupFormat(composition) === FORMAT_LIST ? 'toList' : 'toPitch';
+  }
   const empty = {
     added: 0,
     entering: '',
-    kind: /** @type {'updated'} */ ('updated'),
+    formatChange,
+    kind: /** @type {'updated' | 'changed'} */ (formatChange ? 'changed' : 'updated'),
     leaving: '',
     removed: 0,
     version,
@@ -775,10 +821,11 @@ export const buildLineupUpdateNotice = ({ composition, messages = [] }) => {
   ]);
   const nameOf = (/** @type {string} */ playerId) => getCompositionPlayerLabel(index.get(playerId));
 
-  if (leavingIds.length === 1 && enteringIds.length === 1) {
+  if (!formatChange && leavingIds.length === 1 && enteringIds.length === 1) {
     return {
       added: 1,
       entering: nameOf(enteringIds[0]),
+      formatChange,
       kind: 'replaced',
       leaving: nameOf(leavingIds[0]),
       removed: 1,
@@ -788,6 +835,7 @@ export const buildLineupUpdateNotice = ({ composition, messages = [] }) => {
   return {
     added: enteringIds.length,
     entering: '',
+    formatChange,
     kind: 'changed',
     leaving: '',
     removed: leavingIds.length,

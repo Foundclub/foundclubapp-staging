@@ -30,6 +30,7 @@ import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import { readPlacementsFromPack } from '@/views/matchCallUp/matchCompositionUtils';
 import {
+  estUneConvocationEnListe,
   ligneDeRendezVous,
   lireRendezVous,
 } from '@/views/playerConvocation/playerConvocationUtils';
@@ -42,8 +43,11 @@ import { publishEventConvocation, saveEventCompositionDraft } from '@/services/e
 import ConvocationDetailsStep from './ConvocationDetailsStep';
 import ConvocationEventRecap from './ConvocationEventRecap';
 import ConvocationEventStep from './ConvocationEventStep';
+import ConvocationModeRow from './ConvocationModeRow';
+import ConvocationModeSheet from './ConvocationModeSheet';
 import ConvocationPlacementStep from './ConvocationPlacementStep';
 import ConvocationPlayersStep from './ConvocationPlayersStep';
+import ConvocationToListSheet from './ConvocationToListSheet';
 import {
   buildConvocationPack,
   buildConvocationRows,
@@ -53,12 +57,17 @@ import {
   buildSelectionFromPack,
   construireRendezVous,
   CONVOCATION_STEPS,
+  CONVOCATION_STEPS_LIST,
   exempleHeureDeRendezVous,
   filterTeamEvents,
+  findLastConvocationFormat,
   findLastPublishedManualPlayers,
+  FORMAT_LIST,
+  FORMAT_PITCH,
   isConvocableEvent,
   lieuPorteUneDonneePersonnelle,
   RENDEZ_VOUS_LIEU_MAX,
+  SIDE_PITCH,
   splitSelection,
 } from './convocationWizardUtils';
 // Aucune position ne satisfait les deux règles d'ordre (perfectionist veut les voisins `./`
@@ -149,6 +158,14 @@ function ConvocationWizard({
   const [askResponses, setAskResponses] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
   const [paywallDecision, setPaywallDecision] = useState(/** @type {any} */ (null));
+  // 📋 CONVLISTE (26/10) — `list` ou `pitch`. Vide en creation tant que la feuille « Comment
+  // veux-tu convoquer ? » n'a pas repondu ; en modification, lu sur la convocation publiee.
+  const [format, setFormat] = useState(/** @type {'' | 'list' | 'pitch'} */ (''));
+  const [keptCount, setKeptCount] = useState(0);
+  const [isConfirmingList, setIsConfirmingList] = useState(false);
+  const isList = format === FORMAT_LIST;
+  const steps = isList ? CONVOCATION_STEPS_LIST : CONVOCATION_STEPS;
+  const isChoosingFormat = !isEditMode && !format;
 
   // --- Les evenements de l'equipe (etape 1). Deux lectures, fusionnees : celle de la feuille
   // « Evenement » du fil (memes parametres, donc meme cache) attrape les matchs ou l'equipe est
@@ -195,6 +212,10 @@ function ConvocationWizard({
   // --- Les messages DEJA charges du fil (aucune requete : `enabled: false`).
   const { data: messagesPages } = useGetChatMessages({ chatId }, { enabled: false });
   const loadedMessages = useMemo(() => flattenPages(messagesPages), [messagesPages]);
+  const lastFormat = useMemo(
+    () => findLastConvocationFormat({ messages: loadedMessages, teamId }),
+    [loadedMessages, teamId],
+  );
 
   const reproposedManualPlayers = useMemo(() => findLastPublishedManualPlayers({
     bootstrap: payload?.bootstrap, messages: loadedMessages, teamId,
@@ -234,6 +255,12 @@ function ConvocationWizard({
     setSelection(buildSelectionFromPack(published));
     setPlacements(readPlacementsFromPack(published));
     setAskResponses(published ? published.requireResponse !== false : true);
+    // CONVLISTE — publiee en liste, elle se rouvre en liste (3 etapes, jamais le terrain).
+    if (isEditMode) {
+      const publieeEnListe = estUneConvocationEnListe(published);
+      setFormat(publieeEnListe ? FORMAT_LIST : FORMAT_PITCH);
+      if (publieeEnListe) setStep((current) => Math.min(current, 2));
+    }
     // CONVOC-RDV — le rendez-vous deja publie revient dans les champs ; sinon, le lieu de
     // l'evenement.
     const rendezVousPublie = lireRendezVous(published?.rendezVous);
@@ -242,7 +269,7 @@ function ConvocationWizard({
       ? rendezVousPublie.place
       : lieuDeLEvenement.slice(0, RENDEZ_VOUS_LIEU_MAX));
     setRendezVousTouche(false);
-  }, [eventId, initializedFor, isPayloadReady, lieuDeLEvenement, published]);
+  }, [eventId, initializedFor, isEditMode, isPayloadReady, lieuDeLEvenement, published]);
 
   const { bench, pitch } = splitSelection(rows, selection);
   const calledUpCount = pitch.length + bench.length;
@@ -258,24 +285,52 @@ function ConvocationWizard({
     setPlacements((current) => buildPitchPlacements({
       category, placements: current, sport, starterIds: starterKey ? starterKey.split('|') : [],
     }));
-  }, [category, isInitialized, sport, starterKey]);
+    // CONVLISTE — `format` : revenir en composition reposte les pastilles effacees par la liste.
+  }, [category, format, isInitialized, sport, starterKey]);
 
-  const stepKey = CONVOCATION_STEPS[step - 1];
+  const stepKey = steps[step - 1];
+  const isLastStep = step === steps.length;
   const stepName = t(`conversationConvocation.steps.${stepKey}`);
   const isEventReady = Boolean(eventId) && isPayloadReady && !isCompositionError;
   let canGoNext = true;
-  if (step === 1) canGoNext = isEventReady;
-  else if (step === 2) canGoNext = isEventReady && calledUpCount > 0;
+  if (stepKey === 'event') canGoNext = isEventReady;
+  else if (stepKey === 'players') canGoNext = isEventReady && calledUpCount > 0;
   else canGoNext = isEventReady && calledUpCount > 0 && !lieuRefuse;
 
   const handleBack = useCallback(() => {
     if (isPublishing) return;
+    setKeptCount(0);
     if (step > minStep) {
       setStep(step - 1);
       return;
     }
     onClose();
   }, [isPublishing, minStep, onClose, step]);
+
+  /**
+   * 📋 CONVLISTE (planches C1 a C3) — passer d'un mode a l'autre, depuis les etapes 1 et 2.
+   * Liste → composition : chaque convoque reste coche et part sur le terrain (la regle du
+   * « cocher »). Composition → liste : apres confirmation, le placement est efface. Les reponses
+   * deja donnees ne bougent pas : le serveur les range hors du pack.
+   */
+  const handleSwitchFormat = useCallback(() => {
+    if (isList) {
+      const ids = Object.keys(selection);
+      setSelection(Object.fromEntries(ids.map((id) => [id, SIDE_PITCH])));
+      setFormat(FORMAT_PITCH);
+      setKeptCount(ids.length);
+      return;
+    }
+    // CONVLISTE-FIN (planche C3) — la feuille dessinee, posee par-dessus le tunnel.
+    setIsConfirmingList(true);
+  }, [isList, selection]);
+
+  const confirmToList = useCallback(() => {
+    setIsConfirmingList(false);
+    setPlacements(EMPTY_LIST);
+    setFormat(FORMAT_LIST);
+    setKeptCount(0);
+  }, []);
 
   const handleSelectEvent = useCallback((/** @type {any} */ event) => {
     const nextId = String(event?.documentId || '');
@@ -325,6 +380,7 @@ function ConvocationWizard({
       const pack = buildConvocationPack({
         basePack: published || payload?.draft || null,
         category,
+        format: format || FORMAT_PITCH,
         placements,
         requireResponse: responsesAreOpen && askResponses,
         rows,
@@ -375,7 +431,7 @@ function ConvocationWizard({
       setIsPublishing(false);
     }
   }, [
-    askResponses, calledUpCount, category, eventId, infos, isEventReady, isPublishing,
+    askResponses, calledUpCount, category, eventId, format, infos, isEventReady, isPublishing,
     lieuDeLEvenement, lieuRefuse, meetingPlace, meetingTime, onClose, payload, placements,
     published, queryClient, rendezVousTouche, responsesAreOpen, rows, selection,
     sendDetailsMessage, sport, t, teamId, teamName,
@@ -383,12 +439,13 @@ function ConvocationWizard({
 
   const handleNext = useCallback(() => {
     if (!canGoNext || isPublishing) return;
-    if (step < CONVOCATION_STEPS.length) {
+    setKeptCount(0);
+    if (!isLastStep) {
       setStep(step + 1);
       return;
     }
     handlePublish();
-  }, [canGoNext, handlePublish, isPublishing, step]);
+  }, [canGoNext, handlePublish, isLastStep, isPublishing, step]);
 
   // Le mur payant ouvre l'offre : l'assistant se referme d'abord, sinon il la masquerait.
   const paywallNavigation = useMemo(() => ({
@@ -404,17 +461,17 @@ function ConvocationWizard({
     ? t('conversationConvocation.titleEdit')
     : t('conversationConvocation.titleNew');
   const subtitle = t('conversationConvocation.stepOf', {
-    name: stepName, step, ...SANS_ECHAPPEMENT,
+    name: stepName, step, total: steps.length, ...SANS_ECHAPPEMENT,
   });
 
   let primaryLabel = t('conversationConvocation.next');
-  if (step === CONVOCATION_STEPS.length) {
+  if (isLastStep) {
     primaryLabel = isUpdate
       ? t('conversationConvocation.updateSend')
       : t('conversationConvocation.send');
   }
-  const showCounter = step === 2 && !isUpdate;
-  const showUpdate = isUpdate && step < CONVOCATION_STEPS.length;
+  const showCounter = stepKey === 'players' && !isUpdate;
+  const showUpdate = isUpdate && !isLastStep;
 
   const recap = step > 1 ? (
     <View style={styles.recap}>
@@ -424,9 +481,18 @@ function ConvocationWizard({
       />
     </View>
   ) : null;
+  // CONVLISTE — le mode et son passage, aux etapes Evenement et Joueurs seulement : passer d'un
+  // mode a l'autre plus loin changerait l'etape sous les pieds de l'entraineur.
+  const modeRow = format && (stepKey === 'event' || stepKey === 'players') ? (
+    <ConvocationModeRow
+      format={format}
+      keptCount={keptCount}
+      onSwitch={handleSwitchFormat}
+    />
+  ) : null;
 
   let body = null;
-  if (step === 1) {
+  if (stepKey === 'event') {
     body = (
       <ConvocationEventStep
         events={events}
@@ -435,10 +501,11 @@ function ConvocationWizard({
         selectedEventId={eventId}
       />
     );
-  } else if (step === 2) {
+  } else if (stepKey === 'players') {
     body = (
       <ConvocationPlayersStep
         bench={bench}
+        isList={isList}
         isLoading={!isPayloadReady}
         isUpdate={isUpdate}
         onAddManualPlayer={(player) => {
@@ -462,7 +529,7 @@ function ConvocationWizard({
         selection={selection}
       />
     );
-  } else if (step === 3) {
+  } else if (stepKey === 'placement') {
     body = (
       <ConvocationPlacementStep
         bench={bench}
@@ -478,6 +545,7 @@ function ConvocationWizard({
         askResponses={responsesAreOpen && askResponses}
         benchCount={bench.length}
         infos={infos}
+        isList={isList}
         meetingPlace={meetingPlace}
         meetingPlaceRefused={lieuRefuse}
         meetingTime={meetingTime}
@@ -494,187 +562,212 @@ function ConvocationWizard({
 
   const showLoadError = step > 1 && isCompositionError && !isLoadingComposition;
 
+  // 📋 CONVLISTE (planche A1) — la fenetre est TRANSPARENTE : la feuille « Comment veux-tu
+  // convoquer ? » glisse par-dessus le fil ; le tunnel, lui, peint tout l'ecran comme avant. Une
+  // seule fenetre : enchainer deux Modal fait echouer la seconde sur iPhone.
   return (
     <Modal
       animationType="slide"
-      onRequestClose={handleBack}
-      presentationStyle="fullScreen"
+      onRequestClose={() => {
+        // Retour Android : il referme d'abord la feuille « Passer en liste ? ».
+        if (isConfirmingList) setIsConfirmingList(false);
+        else if (isChoosingFormat) onClose();
+        else handleBack();
+      }}
       statusBarTranslucent
-      transparent={false}
+      transparent
       visible={visible}
     >
-      <View
-        style={[
-          styles.root,
-          { backgroundColor: Colors.primary900, paddingBottom: retraitDuClavier },
-        ]}
-        testID="convocation-wizard"
-      >
+      {isChoosingFormat ? (
+        <ConvocationModeSheet
+          bottomInset={insets.bottom}
+          lastChoice={lastFormat}
+          onClose={() => onClose()}
+          onPick={setFormat}
+          title={title}
+        />
+      ) : (
         <View
           style={[
-            styles.header,
-            {
-              borderBottomColor: withAlpha(Colors.neutral00, 0.06),
-              paddingTop: insets.top + 10,
-            },
+            styles.root,
+            { backgroundColor: Colors.primary900, paddingBottom: retraitDuClavier },
           ]}
+          testID="convocation-wizard"
         >
-          <TouchableOpacity
-            accessibilityLabel={step > minStep
-              ? t('conversationConvocation.back')
-              : t('conversationConvocation.close')}
-            accessibilityRole="button"
-            disabled={isPublishing}
-            onPress={handleBack}
-            style={[styles.backButton, { borderColor: Colors.primary500 }]}
-            testID="convocation-wizard-back"
+          <View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: withAlpha(Colors.neutral00, 0.06),
+                paddingTop: insets.top + 10,
+              },
+            ]}
           >
-            <SvgIcon color={Colors.primary500} height={20} name="arrow-left" width={20} />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text
-              accessibilityRole="header"
-              numberOfLines={1}
-              style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+            <TouchableOpacity
+              accessibilityLabel={step > minStep
+                ? t('conversationConvocation.back')
+                : t('conversationConvocation.close')}
+              accessibilityRole="button"
+              disabled={isPublishing}
+              onPress={handleBack}
+              style={[styles.backButton, { borderColor: Colors.primary500 }]}
+              testID="convocation-wizard-back"
             >
-              {title}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p3, styles.subtitle, { color: withAlpha(Colors.neutral00, 0.6) }]}
-            >
-              {subtitle}
-            </Text>
+              <SvgIcon color={Colors.primary500} height={20} name="arrow-left" width={20} />
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text
+                accessibilityRole="header"
+                numberOfLines={1}
+                style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+              >
+                {title}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p3, styles.subtitle, { color: withAlpha(Colors.neutral00, 0.6) }]}
+              >
+                {subtitle}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View
-          accessibilityLabel={subtitle}
-          accessibilityRole="progressbar"
-          accessibilityValue={{ max: CONVOCATION_STEPS.length, min: 1, now: step }}
-          style={styles.progress}
-        >
-          {CONVOCATION_STEPS.map((key, index) => (
-            <View
-              key={key}
-              style={[
-                styles.progressSegment,
-                {
-                  backgroundColor: index < step
-                    ? Colors.primary500
-                    : withAlpha(Colors.neutral00, 0.15),
-                },
-              ]}
-            />
-          ))}
-        </View>
-
-        {step === 3 ? (
-          <View style={styles.fixedBody}>
-            {recap}
-            {body}
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            style={styles.scroll}
+          <View
+            accessibilityLabel={subtitle}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ max: steps.length, min: 1, now: step }}
+            style={styles.progress}
           >
-            {showLoadError ? (
-              <View style={styles.loadError}>
-                <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
-                  {t('conversationConvocation.alerts.loadError')}
-                </Text>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  onPress={() => refetchComposition()}
-                  style={[styles.retry, { borderColor: Colors.primary500 }]}
-                >
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                    {t('conversationConvocation.alerts.retry')}
+            {steps.map((key, index) => (
+              <View
+                key={key}
+                style={[
+                  styles.progressSegment,
+                  {
+                    backgroundColor: index < step
+                      ? Colors.primary500
+                      : withAlpha(Colors.neutral00, 0.15),
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          {stepKey === 'placement' ? (
+            <View style={styles.fixedBody}>
+              {recap}
+              {body}
+            </View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              style={styles.scroll}
+            >
+              {showLoadError ? (
+                <View style={styles.loadError}>
+                  <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
+                    {t('conversationConvocation.alerts.loadError')}
                   </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                {recap}
-                {body}
-              </>
-            )}
-          </ScrollView>
-        )}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => refetchComposition()}
+                    style={[styles.retry, { borderColor: Colors.primary500 }]}
+                  >
+                    <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                      {t('conversationConvocation.alerts.retry')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  {recap}
+                  {modeRow}
+                  {body}
+                </>
+              )}
+            </ScrollView>
+          )}
 
-        <View
-          style={[
-            styles.footer,
-            {
-              backgroundColor: Colors.primary900,
-              borderTopColor: withAlpha(Colors.neutral00, 0.06),
-              paddingBottom: Math.max(insets.bottom, 12) + 10,
-            },
-          ]}
-        >
-          {showCounter ? (
-            <Text
-              style={[Fonts.p2, styles.counter, { color: withAlpha(Colors.neutral00, 0.75) }]}
-              testID="convocation-wizard-counter"
-            >
-              {t('conversationConvocation.players.calledUp', { count: calledUpCount })}
-            </Text>
-          ) : null}
-          {showUpdate ? (
+          <View
+            style={[
+              styles.footer,
+              {
+                backgroundColor: Colors.primary900,
+                borderTopColor: withAlpha(Colors.neutral00, 0.06),
+                paddingBottom: Math.max(insets.bottom, 12) + 10,
+              },
+            ]}
+          >
+            {showCounter ? (
+              <Text
+                style={[Fonts.p2, styles.counter, { color: withAlpha(Colors.neutral00, 0.75) }]}
+                testID="convocation-wizard-counter"
+              >
+                {t('conversationConvocation.players.calledUp', { count: calledUpCount })}
+              </Text>
+            ) : null}
+            {showUpdate ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canGoNext || isPublishing }}
+                disabled={!canGoNext || isPublishing}
+                onPress={handlePublish}
+                style={[
+                  styles.footerButton,
+                  styles.footerOutline,
+                  { borderColor: Colors.primary500, opacity: canGoNext ? 1 : 0.4 },
+                ]}
+                testID="convocation-wizard-update"
+              >
+                <Text style={[Fonts.p2Bold, styles.footerLabel, { color: Colors.primary500 }]}>
+                  {t('conversationConvocation.update')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityState={{ disabled: !canGoNext || isPublishing }}
+              accessibilityState={{ busy: isPublishing, disabled: !canGoNext || isPublishing }}
               disabled={!canGoNext || isPublishing}
-              onPress={handlePublish}
+              onPress={handleNext}
               style={[
                 styles.footerButton,
-                styles.footerOutline,
-                { borderColor: Colors.primary500, opacity: canGoNext ? 1 : 0.4 },
+                showCounter ? styles.footerButtonCompact : styles.footerButtonWide,
+                { backgroundColor: Colors.primary500, opacity: canGoNext ? 1 : 0.4 },
               ]}
-              testID="convocation-wizard-update"
+              testID="convocation-wizard-next"
             >
-              <Text style={[Fonts.p2Bold, styles.footerLabel, { color: Colors.primary500 }]}>
-                {t('conversationConvocation.update')}
-              </Text>
+              {isPublishing && isLastStep ? (
+                <ActivityIndicator color={Colors.primary900} />
+              ) : (
+                <>
+                  <Text style={[Fonts.p2Bold, styles.footerLabel, { color: Colors.primary900 }]}>
+                    {primaryLabel}
+                  </Text>
+                  {!isLastStep ? (
+                    <SvgIcon color={Colors.primary900} height={16} name="arrow-right" width={16} />
+                  ) : null}
+                </>
+              )}
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityState={{ busy: isPublishing, disabled: !canGoNext || isPublishing }}
-            disabled={!canGoNext || isPublishing}
-            onPress={handleNext}
-            style={[
-              styles.footerButton,
-              showCounter ? styles.footerButtonCompact : styles.footerButtonWide,
-              { backgroundColor: Colors.primary500, opacity: canGoNext ? 1 : 0.4 },
-            ]}
-            testID="convocation-wizard-next"
-          >
-            {isPublishing && step === CONVOCATION_STEPS.length ? (
-              <ActivityIndicator color={Colors.primary900} />
-            ) : (
-              <>
-                <Text style={[Fonts.p2Bold, styles.footerLabel, { color: Colors.primary900 }]}>
-                  {primaryLabel}
-                </Text>
-                {step < CONVOCATION_STEPS.length ? (
-                  <SvgIcon color={Colors.primary900} height={16} name="arrow-right" width={16} />
-                ) : null}
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+          </View>
 
-        <SubscriptionPaywallSheet
-          close={() => setPaywallDecision(null)}
-          clubDocumentId={paywallDecision?.clubDocumentId || null}
-          decision={paywallDecision}
-          isVisible={Boolean(paywallDecision)}
-          navigation={paywallNavigation}
-        />
-      </View>
+          <SubscriptionPaywallSheet
+            close={() => setPaywallDecision(null)}
+            clubDocumentId={paywallDecision?.clubDocumentId || null}
+            decision={paywallDecision}
+            isVisible={Boolean(paywallDecision)}
+            navigation={paywallNavigation}
+          />
+          {isConfirmingList ? (
+            <ConvocationToListSheet
+              bottomInset={insets.bottom}
+              onConfirm={confirmToList}
+              onKeep={() => setIsConfirmingList(false)}
+            />
+          ) : null}
+        </View>
+      )}
     </Modal>
   );
 }

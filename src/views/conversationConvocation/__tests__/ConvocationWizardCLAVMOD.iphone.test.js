@@ -239,6 +239,8 @@ const allerAuxDetails = () => {
       />,
     );
   });
+  // CONVLISTE (26/10) — la creation demande d'abord le mode : le tunnel d'avant.
+  appuyer(arbre, 'convocation-mode-pitch');
   appuyer(arbre, 'convocation-wizard-next');
   appuyer(arbre, 'convocation-check-hugo');
   appuyer(arbre, 'convocation-wizard-next');

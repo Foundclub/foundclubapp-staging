@@ -27,9 +27,40 @@ export const CONVOCATION_ROLE_STARTER = 'starter';
 /** Le joueur est convoque, mais il commence sur le banc. */
 export const CONVOCATION_ROLE_SUBSTITUTE = 'substitute';
 
+/** CONVLISTE — le joueur est convoque « en liste » : ni terrain, ni banc. */
+export const CONVOCATION_ROLE_CALLED_UP = 'calledUp';
+
 const toId = (/** @type {any} */ value) => String(value ?? '').trim();
 
 const ensureList = (/** @type {any} */ value) => (Array.isArray(value) ? value : []);
+
+/**
+ * 📋 CONVLISTE (26/10) — UNE CONVOCATION « EN LISTE » : des convoques, aucun joueur place.
+ *
+ * Le serveur accepte deja une convocation sans placement et range chaque convoque au banc
+ * (`reservePlayerIds`). Une seule regle, partagee par l'assistant, la carte du fil, l'ecran du
+ * joueur et la page de l'evenement.
+ * ponytail: deduite, pas enregistree (Q3 = C, chef d'orchestre 26/10) — une composition
+ * « tout le monde au banc » se lit donc comme une liste. Sortie : un champ `format` dans le
+ * pack (5 retouches de `admin/.../event-composition.ts`, compte rendu CONVLISTE).
+ * @param {any} pack Un pack publie (`teams[].placements`, `reservePlayerIds`).
+ * @returns {boolean}
+ */
+export const estUneConvocationEnListe = (pack) => ensureList(pack?.teams)
+  .every((/** @type {any} */ team) => ensureList(team?.placements).length === 0)
+  && ensureList(pack?.placements).length === 0
+  && [...ensureList(pack?.reservePlayerIds), ...ensureList(pack?.selectedPlayerIds)].length > 0;
+
+/**
+ * CONVLISTE-FIN (« 2- A » du chef, 26/10) — toutes les convocations publiees d'un evenement sont
+ * en liste : la fiche compte alors des « convoqués », plus des « remplaçants ».
+ * @param {any[]} branches Les branches de `GET /events/:id/convocation`.
+ * @returns {boolean}
+ */
+export const convocationsToutesEnListe = (branches) => ensureList(branches).length > 0
+  && ensureList(branches).every((/** @type {any} */ branch) => (
+    estUneConvocationEnListe(branch?.published)
+  ));
 
 /**
  * Tous les placements d'un pack publie, toutes equipes confondues.
@@ -98,12 +129,13 @@ export const resolveViewerConvocationBranch = (convocation, userId = '') => {
  * l'ecran du joueur, la page de l'evenement et la carte du tchat.
  * @param {any} convocation
  * @param {string} [userId]
- * @returns {'starter' | 'substitute' | null} `null` = pas convoque.
+ * @returns {'starter' | 'substitute' | 'calledUp' | null} `null` = pas convoque.
  */
 export const getViewerConvocationRole = (convocation, userId = '') => {
   const viewerId = toId(userId);
   const branch = resolveViewerConvocationBranch(convocation, viewerId);
   if (!branch) return null;
+  if (estUneConvocationEnListe(branch.published)) return CONVOCATION_ROLE_CALLED_UP;
 
   const estPlace = getPackPlacements(branch.published)
     .some((/** @type {any} */ placement) => toId(placement?.playerId) === viewerId);
@@ -240,6 +272,7 @@ export const buildConvocationStaffList = (branch) => ensureList(branch?.staff)
  * @param {any} [input.convocation] Charge de `GET /events/:id/convocation`.
  * @param {string} [input.userId] `documentId` de la personne connectee.
  * @returns {{
+ *   isList: boolean,
  *   jerseyNumber: string,
  *   placements: any[],
  *   playerId: string,
@@ -305,8 +338,13 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     || viewerPlayer?.position
     || '',
   ).trim();
+  const isList = estUneConvocationEnListe(published);
+  let role = myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE;
+  if (isList) role = CONVOCATION_ROLE_CALLED_UP;
 
   return {
+    // CONVLISTE — en liste : ni terrain, ni « Remplacants », la liste des convoques.
+    isList,
     jerseyNumber: viewerPlayer?.number === 0 || viewerPlayer?.number
       ? String(viewerPlayer.number)
       : '',
@@ -319,7 +357,7 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     publishedByName: getPersonName(published?.publishedBy),
     reservePlayers: buildConvocationReserveList(published),
     responsesByPlayerId: byPlayerId && typeof byPlayerId === 'object' ? byPlayerId : {},
-    role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
+    role,
     // BH05 · P6-11 — les joueurs ajoutes a la main sont places comme les autres :
     // sans eux, leur jeton disparaissait du terrain du joueur convoque.
     snapshotPlayers: [
