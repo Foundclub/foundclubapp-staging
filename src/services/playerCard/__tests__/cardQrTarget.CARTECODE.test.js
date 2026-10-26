@@ -10,7 +10,9 @@ jest.mock('@/utils/shareLinks', () => ({
 import { buildCardQrTarget } from '../cardQrTarget';
 
 const NOW = new Date('2026-10-26T12:00:00');
-const qr = (user) => buildCardQrTarget({ audience: 'player', now: NOW, user: { documentId: 'u1', ...user } });
+const qr = (user) => buildCardQrTarget({
+  audience: 'player', now: NOW, user: { documentId: 'u1', ...user },
+});
 
 describe('CARTECODE — où mène le code QR de la carte', () => {
   test('adulte, compte public : son profil (avec l’identifiant)', () => {

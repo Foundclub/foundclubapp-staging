@@ -553,7 +553,8 @@ describe('D39 · la page est EDITABLE — la fusion des deux onglets', () => {
     // Ce test FIGE l'etat honnete — il devra passer a 2 le jour ou le champ
     // serveur existe.
     expect(arbre.root.findAllByType(Switch)).toHaveLength(1);
-    // CARTECODE Q1 C : l'interrupteur s'appelle « Ouvert au recrutement » (le compte privé a son écran).
+    // CARTECODE Q1 C : l'interrupteur s'appelle « Ouvert au recrutement »
+    // (le compte privé a son écran).
     expect(texteVisible(arbre)).toContain('Ouvert au recrutement');
   });
 });

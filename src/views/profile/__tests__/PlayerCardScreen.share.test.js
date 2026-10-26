@@ -276,16 +276,20 @@ describe('CARTECODE Q6 B — âge inconnu : « Partager » demande d abord la da
     const navigate = jest.fn();
     let arbre;
     await act(async () => {
-      arbre = renderer.create(<PlayerCardScreen navigation={{ navigate }} route={{ params: {} }} />);
+      arbre = renderer.create(
+        <PlayerCardScreen navigation={{ navigate }} route={{ params: {} }} />,
+      );
     });
-    const bouton = arbre.root.findAll((n) => n.props.onPress && n.findAll((t) => t.props.children === 'Partager').length)[0];
+    const porteLeTexte = (n) => n.findAll((t) => t.props.children === 'Partager').length > 0;
+    const bouton = arbre.root.findAll((n) => n.props.onPress && porteLeTexte(n))[0];
     await act(async () => { bouton.props.onPress(); });
     return { modale: mockShareModalProps[mockShareModalProps.length - 1], navigate };
   };
 
   it('sans date de naissance : l ecran de la date s ouvre, pas le partage', async () => {
     const { modale, navigate } = await appuyerSurPartager({ ...ADULTE, birthdate: null });
-    expect(navigate).toHaveBeenCalledWith('ProfileEdit', expect.objectContaining({ focus: 'birthdate' }));
+    expect(navigate)
+      .toHaveBeenCalledWith('ProfileEdit', expect.objectContaining({ focus: 'birthdate' }));
     expect(modale.isVisible).toBe(false);
   });
 

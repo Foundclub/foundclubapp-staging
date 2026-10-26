@@ -33,7 +33,7 @@ function PrivacySettings() {
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        t('profile.updateError', 'Impossible d\'enregistrer ton profil pour le moment. Vérifie ta connexion et réessaie.'),
+        t('profile.updateError'),
       );
     },
     onSuccess: async (updatedUser) => {
@@ -44,12 +44,18 @@ function PrivacySettings() {
         (previous) => (previous ? { ...previous, ...updatedUser } : updatedUser),
       );
       await queryClient.invalidateQueries({
-        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'app-bootstrap',
+        predicate: (query) => (
+          Array.isArray(query.queryKey) && query.queryKey[0] === 'app-bootstrap'
+        ),
       });
     },
   });
 
-  const isPrivate = (mutation.isPending ? mutation.variables?.isProfileVisible : userData?.isProfileVisible) === false;
+  // Pendant l'enregistrement, l'interrupteur montre déjà la valeur demandée.
+  const visible = mutation.isPending
+    ? mutation.variables?.isProfileVisible
+    : userData?.isProfileVisible;
+  const isPrivate = visible === false;
 
   return (
     <ScreenContainer bottomInsetMode="screen">
@@ -63,10 +69,7 @@ function PrivacySettings() {
               {t('profile.privacy.privateLabel', 'Compte privé')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'profile.privacy.privateHelper',
-                'Les autres membres ne voient plus ton profil et ne te trouvent plus en recherche. Le code QR de ta carte mène simplement à FoundClub.',
-              )}
+              {t('profile.privacy.privateHelper')}
             </Text>
           </View>
           <Switch
@@ -84,7 +87,12 @@ function PrivacySettings() {
 
 const styles = StyleSheet.create({
   row: {
-    alignItems: 'center', borderRadius: 12, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 16,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
   },
   texts: { flex: 1, gap: 4 },
 });

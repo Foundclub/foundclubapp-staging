@@ -249,8 +249,11 @@ const RARITY_FLOORS = [[85, RARITY.LEGENDARY], [65, RARITY.EPIC], [40, RARITY.RA
 // ponytail: copie de SPORTS_WITH_POSITIONS (constants/positions.js) — ce module reste SANS
 // dependance projet, le serveur le charge tel quel (SECUEVENT-verifications-age). Sortie : un
 // temoin compare les deux listes (cardModel.CARTECODE.test.js).
-export const CARD_SPORTS_WITH_POSITIONS = ['football', 'basketball', 'handball', 'volleyball', 'rugby'];
-const sportHasPositions = (sport) => CARD_SPORTS_WITH_POSITIONS.includes(String(sport || '').toLowerCase());
+export const CARD_SPORTS_WITH_POSITIONS = [
+  'football', 'basketball', 'handball', 'volleyball', 'rugby',
+];
+const sportHasPositions = (sport) => CARD_SPORTS_WITH_POSITIONS
+  .includes(String(sport || '').toLowerCase());
 
 /** CARTECODE Q5 B — les 13 cases de la carte. */
 export const CARD_FILL_TOTAL = 13;
@@ -271,7 +274,8 @@ export const countCardFill = (user = {}) => [
   user.avatar?.url || user.avatarUrl,
   user.firstname && user.lastname,
   user.birthdate,
-  user.section?.name || user.section?.documentId || (typeof user.section === 'string' && user.section),
+  user.section?.name || user.section?.documentId
+    || (typeof user.section === 'string' && user.section),
   user.weight,
   user.height,
   user.bestLevel,
@@ -437,16 +441,16 @@ export const buildDeclaredChildCardProps = ({ enfant = {}, libelles = {}, saisie
     // CARTECODE Q7 B — les cases qu'apporte son équipe ; ni taille ni poids, aucun champ neuf.
     categorie: String(team.category || '').trim(),
     equipe: equipe || libelles.noTeam || '',
-    niveau: String(team.level || '').trim(),
-    section: String(team.section || '').trim(),
-    sport: String(team.sport || '').trim(),
     nationalite: lire('nationality'),
+    niveau: String(team.level || '').trim(),
     nom: String(enfant.lastname || '').trim().toUpperCase(),
     numero: lire('number') || '?',
     photoUrl: enfant.photo?.url || null,
     poste: lire('position'),
     prenom: String(enfant.firstname || '').trim(),
     rarity: 'COMMON',
+    section: String(team.section || '').trim(),
+    sport: String(team.sport || '').trim(),
     statut: null,
     ville: lire('city'),
   };

@@ -18170,7 +18170,9 @@ export default {
     // connaitre son genre, et « ton date de naissance » serait faux.
     // Table des champs : `services/profile/profileSaveConfirmation.js`.
     privacy: {
-      privateHelper: 'Les autres membres ne voient plus ton profil et ne te trouvent plus en recherche. Le code QR de ta carte mène simplement à FoundClub.',
+      privateHelper: 'Les autres membres ne voient plus ton profil'
+        + ' et ne te trouvent plus en recherche.'
+        + ' Le code QR de ta carte mène simplement à FoundClub.',
       privateLabel: 'Compte privé',
       title: 'Confidentialité',
     },

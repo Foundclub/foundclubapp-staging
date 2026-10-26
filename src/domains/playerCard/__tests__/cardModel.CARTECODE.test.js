@@ -1,12 +1,10 @@
 // CARTECODE (26/10/2026) — les règles de la carte joueur v2 (planche validée par Adel le 26/10,
 // « 4- ok pour tout »), une par une, rouges avant le code.
-import { SPORTS_WITH_POSITIONS } from '@/constants/positions';
-
+import { canShowCardOnProfile, getCardConsentState } from '../cardConsent';
 import {
   buildDeclaredChildCardProps, buildPlayerCardModel, CARD_FILL_TOTAL, CARD_SPORTS_WITH_POSITIONS,
   computeCardRarity, countCardFill,
 } from '../cardModel';
-import { canShowCardOnProfile, getCardConsentState } from '../cardConsent';
 
 const NOW = new Date('2026-10-26T12:00:00');
 const COMPLET = {
@@ -29,7 +27,8 @@ const COMPLET = {
 
 describe('CARTECODE — le numéro n’est plus jamais fabriqué', () => {
   test('sans numéro enregistré, la carte n’en porte aucun', () => {
-    const model = buildPlayerCardModel({ now: NOW, user: { documentId: 'u1', firstname: 'Samir' } });
+    const user = { documentId: 'u1', firstname: 'Samir' };
+    const model = buildPlayerCardModel({ now: NOW, user });
     expect(model.number).toBeNull();
     expect(model.hasCustomNumber).toBe(false);
   });
@@ -50,7 +49,8 @@ describe('CARTECODE Q3 A — la bande du club', () => {
   });
   test('club vide : pris de l’équipe principale', () => {
     const user = { myTeams: [{ club: { logo: null, name: 'FC Fuveau' }, name: 'U17' }] };
-    expect(buildPlayerCardModel({ now: NOW, user }).club).toEqual({ logoUrl: null, name: 'FC Fuveau', teamName: 'U17' });
+    expect(buildPlayerCardModel({ now: NOW, user }).club)
+      .toEqual({ logoUrl: null, name: 'FC Fuveau', teamName: 'U17' });
   });
   test('ni club ni équipe : pas de bande', () => {
     expect(buildPlayerCardModel({ now: NOW, user: {} }).club).toBeNull();
@@ -61,11 +61,15 @@ describe('CARTECODE Q4 A — l’historique garde les logos', () => {
   test('un club enregistré garde son logo ; un club tapé à la main n’en a pas', () => {
     const histories = [
       {
-        club: { logo: { url: '/smuc.png' }, name: 'SMUC' }, isCurrentlyActive: true, startYear: 2024,
+        club: { logo: { url: '/smuc.png' }, name: 'SMUC' },
+        isCurrentlyActive: true,
+        startYear: 2024,
       },
       { customClubName: 'SC Montredon', endYear: 2022, startYear: 2020 },
       {
-        endYear: 2019, multisport_club: { logo: { url: '/fuv.png' }, name: 'FC Fuveau' }, startYear: 2009,
+        endYear: 2019,
+        multisport_club: { logo: { url: '/fuv.png' }, name: 'FC Fuveau' },
+        startYear: 2009,
       },
     ];
     const groupes = buildPlayerCardModel({ histories, now: NOW, user: {} }).historyGroups;
@@ -80,7 +84,8 @@ describe('CARTECODE Q5 B — la rareté', () => {
     expect(countCardFill({})).toBe(0);
   });
   test('la liste des sports à postes de la carte est celle de l’app', () => {
-    expect(CARD_SPORTS_WITH_POSITIONS).toEqual(SPORTS_WITH_POSITIONS);
+    expect(CARD_SPORTS_WITH_POSITIONS)
+      .toEqual(jest.requireActual('@/constants/positions').SPORTS_WITH_POSITIONS);
   });
   test('un sport sans poste compte la case du poste comme remplie', () => {
     const tennis = { ...COMPLET, position: '', preferredSport: 'Tennis' };
@@ -124,16 +129,15 @@ describe('CARTECODE Q6 B — âge inconnu : la date d’abord', () => {
 
 describe('CARTECODE Q2 B — la carte sur le profil d’un autre', () => {
   const lecteur = { documentId: 'moi' };
+  const voit = (profile, viewer = lecteur) => canShowCardOnProfile({ profile, viewer });
   test('majeur, compte non privé, membre connecté : oui', () => {
-    expect(canShowCardOnProfile({ profile: { age: 26, documentId: 'x' }, viewer: lecteur })).toBe(true);
+    expect(voit({ age: 26, documentId: 'x' })).toBe(true);
   });
   test('jamais pour un mineur, un âge inconnu, un compte privé ou sans connexion', () => {
-    expect(canShowCardOnProfile({ profile: { age: 17, documentId: 'x' }, viewer: lecteur })).toBe(false);
-    expect(canShowCardOnProfile({ profile: { age: null, documentId: 'x' }, viewer: lecteur })).toBe(false);
-    expect(canShowCardOnProfile({
-      profile: { age: 26, documentId: 'x', isProfileVisible: false }, viewer: lecteur,
-    })).toBe(false);
-    expect(canShowCardOnProfile({ profile: { age: 26, documentId: 'x' }, viewer: null })).toBe(false);
+    expect(voit({ age: 17, documentId: 'x' })).toBe(false);
+    expect(voit({ age: null, documentId: 'x' })).toBe(false);
+    expect(voit({ age: 26, documentId: 'x', isProfileVisible: false })).toBe(false);
+    expect(voit({ age: 26, documentId: 'x' }, null)).toBe(false);
   });
 });
 
@@ -144,7 +148,11 @@ describe('CARTECODE Q7 B — la carte d’un enfant reçoit les cases de son éq
         age: 10,
         firstname: 'Lina',
         team: {
-          category: 'U11', level: 'Départemental', name: 'U11 F', section: 'Féminine', sport: 'Football',
+          category: 'U11',
+          level: 'Départemental',
+          name: 'U11 F',
+          section: 'Féminine',
+          sport: 'Football',
         },
       },
     });

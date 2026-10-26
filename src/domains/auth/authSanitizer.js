@@ -279,7 +279,8 @@ export const sanitizeUser = (user) => {
     isLookingForClub: typeof user?.isLookingForClub === 'boolean'
       ? user.isLookingForClub
       : null,
-    // Le serveur rend `true` par défaut (sanitizeBootUserProfile) : seul un `false` explicite est privé.
+    // Le serveur rend `true` par défaut (sanitizeBootUserProfile) : seul un `false`
+    // explicite est privé.
     isProfileVisible: user?.isProfileVisible !== false,
     jerseyNumber: user?.jerseyNumber ?? null,
     lastname: normalizeString(user?.lastname),
