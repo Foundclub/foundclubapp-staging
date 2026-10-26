@@ -213,19 +213,21 @@ const allerAuxHeures = async () => {
 };
 
 describe('A7-UX-2 — le parcours guidé du panneau', () => {
-  it('🔴 P2 : club et équipe sur la même étape, cinq étapes au lieu de six', async () => {
+  // DATESDABORD (23/10) : jour, heures et « Quand ? » sur une étape ensuite (5 → 3).
+  it('🔴 P2 : club et équipe sur la même étape, trois étapes au lieu de six', async () => {
     const arbre = await monter({ guided: true });
     const lus = textes(arbre);
-    expect(lus).toContain('Étape 1/5');
+    expect(lus).toContain('Étape 1/3');
     expect(lus).toContain('Montrivage Basket');
     expect(lus).toContain('Tout le club');
   });
 
-  it('🔴 P6 : le panneau pose la question de l étape en titre (« Pour qui ? », puis « Quel jour ? »)', async () => {
+  // DATESDABORD (23/10) : la 2e étape est « Date & horaire » (le modèle de l'événement).
+  it('🔴 P6 : le panneau pose la question de l étape en titre (« Pour qui ? », puis « Date & horaire »)', async () => {
     const arbre = await monter({ guided: true });
     expect(textes(arbre)).toContain('Pour qui ?');
     await suivant();
-    expect(textes(arbre)).toContain('Quel jour ?');
+    expect(textes(arbre)).toContain('Date & horaire');
   });
 
   it('🔴 P4 : « Libre ce mardi : … » s écrit au panneau, à l étape des heures', async () => {

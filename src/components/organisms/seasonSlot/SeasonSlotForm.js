@@ -32,6 +32,7 @@ import {
   corpsDuQuand,
   creneauDuQuand,
   fermeturesTouchees,
+  quandDeLaRepetition,
   quandDuCreneau,
   saisonDuJour,
   seancesDuQuand,
@@ -48,6 +49,10 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import DateEtHoraire, {
+  debutDeRepetitionSuivant,
+  joursDeRepetitionSuivants,
+} from '@/components/organisms/dateEtHoraire/DateEtHoraire';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 import SeasonSlotDatesCalendar from '@/components/organisms/seasonSlot/SeasonSlotDatesCalendar';
 
@@ -478,38 +483,40 @@ function SeasonSlotForm({
   // 🗓️ R17-QUAND-1, point 4 (planche P10-quand-tel, état 0) — l'étape « Quand ? » vient APRÈS le
   // jour et l'heure (5 → 6 étapes) ; « Modifier » : « Période » devient « Quand ? ». Depuis une
   // case du planning (compact), pas d'étape de plus : la ligne « Quand » du récapitulatif la
-  // rouvre.
-  const [quandRouvert, setQuandRouvert] = useState(false);
-  const etapesDu = (
-    /** @type {boolean} */ rouvertes,
-    /** @type {boolean} */ quandOuvert = quandRouvert,
-  ) => (modification
+  // rouvre. DATESDABORD (23/10) : à la création, « Jour », « Horaires » et « Quand ? » ne font
+  // plus qu'une étape (« Date & horaire ») ; « Modifier » garde les siennes.
+  const etapesDu = (/** @type {boolean} */ rouvertes) => (modification
     ? ['jour', 'horaires', 'quand', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
       // ⏰ A7-UX-2 (22/10, Adel « P2 oui ») — le club et l'équipe sur UNE étape (« Pour qui ? ») ;
       // un club fixé (fiche d'un club) garde l'étape « Pour quelle équipe ? » seule.
       fixedClubId ? 'equipe' : 'club',
-      ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
-      ...(compact && !quandOuvert ? [] : ['quand']),
+      // DATESDABORD — depuis une case du planning, l'étape se rouvre (« Changer l'heure », la
+      // ligne « Quand » du récapitulatif) ; sinon elle suit « Pour qui ? ».
+      ...(compact && !rouvertes ? [] : ['dateHoraire']),
       'recap',
     ]);
   const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
+  // 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? »
+  // et « Quand ? » deviennent UNE étape « Date & horaire », le modèle de la création d'événement
+  // (le bloc partagé `DateEtHoraire`) ; ce qui les entourait (heures libres, carte de place,
+  // plateau, vacances, séances) y reste. « Modifier » et la répartition ne changent pas.
+  const avecLeModele = !modification && !repartition;
   const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ
-    || (champ === 'equipe' && etapeCourante === 'club');
+    || (champ === 'equipe' && etapeCourante === 'club')
+    || (etapeCourante === 'dateHoraire' && ['horaires', 'jour', 'quand'].includes(champ));
   const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
   const tunnelPleinEcran = pleinEcran && parcoursGuide;
   // Aller a une etape par son nom ; « Jour » et « Horaires » sautes (planning) se rouvrent.
-  const allerA = (/** @type {string} */ nom) => {
+  const allerA = (/** @type {string} */ demande) => {
+    const nom = avecLeModele && ['horaires', 'jour', 'quand'].includes(demande)
+      ? 'dateHoraire'
+      : demande;
     if (etapes.includes(nom)) {
       setEtape(etapes.indexOf(nom));
-      return;
-    }
-    if (nom === 'quand') {
-      setQuandRouvert(true);
-      setEtape(etapesDu(heuresRouvertes, true).indexOf(nom));
       return;
     }
     setHeuresRouvertes(true);
@@ -581,6 +588,21 @@ function SeasonSlotForm({
     /** @type {string[]} */ (quandDeDepart?.dates || []),
   );
   const formeChoisie = joursDifferents ? 'dates' : forme;
+  // 🗓️ DATESDABORD — le modèle de l'événement : une date (le 1er jour, celui du jour retenu), et
+  // « Répéter » ; par défaut, toutes les semaines jusqu'à la fin de saison (le « toute la saison »
+  // d'avant, dit avec les mots de l'événement). Chaque geste réécrit la forme du « Quand ? »
+  // (`quandDeLaRepetition`) : l'aperçu, les vacances, les fermetures et l'envoi la lisent.
+  const [dateDuModele, setDateDuModele] = useState(
+    () => prochainJour(jour || isoWeekdayOf(new Date())),
+  );
+  const [repetitionDuModele, setRepetitionDuModele] = useState(() => ({
+    actif: true,
+    au: parseISO(saisonDuJour(format(new Date(), 'yyyy-MM-dd'))?.validUntil || ''),
+    du: null,
+    frequence: 'week',
+    intervalleTexte: '1',
+    jours: /** @type {any[]} */ ([]),
+  }));
   // 🌴 R17-QUAND-2 (REC17-007 Q3, planches P11-quand-v2-tel / -ordi) — « Sauf vacances scolaires »
   // (zone et dates : le serveur, calendrier officiel) ; les périodes gardées malgré tout
   // (décochées : un stage pendant les vacances ; `null` = pas touchées) ; la liste des dates
@@ -758,6 +780,15 @@ function SeasonSlotForm({
   const heuresPleines = useMemo(() => (jour && !joursDifferents
     ? fullRangesOfSlots(creneauxDuJour(lecture.data?.data, jour, slot?.documentId), capacite)
     : []), [capacite, jour, joursDifferents, lecture.data, slot?.documentId]);
+  // DATESDABORD (« 7- B ») — les heures complètes du jour de la date choisie (aussi pour une
+  // répétition sur plusieurs jours : celui de la date).
+  const jourDuModele = isoWeekdayOf(dateDuModele);
+  const pleinesDuJourChoisi = useMemo(() => (avecLeModele
+    ? fullRangesOfSlots(
+      creneauxDuJour(lecture.data?.data, jourDuModele, slot?.documentId),
+      capacite,
+    )
+    : []), [avecLeModele, capacite, jourDuModele, lecture.data, slot?.documentId]);
   const heuresLibres = useMemo(
     () => (jour ? freeRanges(heuresPleines) : []),
     [heuresPleines, jour],
@@ -786,6 +817,59 @@ function SeasonSlotForm({
   const toucherLaSaisie = () => {
     setConflit(null);
     setErreur(null);
+  };
+
+  // 🗓️ DATESDABORD — la date et « Répéter » du modèle deviennent le jour et la forme du créneau.
+  const appliquerLeModele = (/** @type {Date} */ date, /** @type {any} */ repetition) => {
+    const jourCivil = (/** @type {any} */ valeur) => (
+      valeur && isValid(valeur) ? format(valeur, 'yyyy-MM-dd') : null
+    );
+    const lue = quandDeLaRepetition({
+      aujourdhui,
+      date: format(date, 'yyyy-MM-dd'),
+      finDeSaison: finDeSaison || saisonDuJour(aujourdhui)?.validUntil || '',
+      repetition: { ...repetition, au: jourCivil(repetition.au), du: jourCivil(repetition.du) },
+    });
+    setJour(lue.jour);
+    setJoursDifferents(lue.joursDifferents);
+    if (lue.forme === 'dates') setDatesChoisies(lue.dates || []);
+    if (lue.forme === 'periode') {
+      setForme('periode');
+      setPeriodeDu(versSaisie(lue.periodeDu));
+      setPeriodeAu(versSaisie(lue.periodeAu));
+    }
+    if (lue.forme === 'deuxSemaines') {
+      setForme('deuxSemaines');
+      setDeuxDu(versSaisie(lue.deuxDu));
+      setDeuxJusqua(lue.deuxAu ? 'date' : 'fin');
+      setDeuxAu(versSaisie(lue.deuxAu));
+    }
+    toucherLaSaisie();
+  };
+  const changerLaDateDuModele = (/** @type {Date} */ nouvelle) => {
+    const suite = {
+      ...repetitionDuModele,
+      du: repetitionDuModele.du
+        ? debutDeRepetitionSuivant(repetitionDuModele.du, dateDuModele, nouvelle)
+        : null,
+      jours: joursDeRepetitionSuivants(repetitionDuModele.jours, dateDuModele, nouvelle),
+    };
+    setDateDuModele(nouvelle);
+    setRepetitionDuModele(suite);
+    appliquerLeModele(nouvelle, suite);
+  };
+  const changerLaRepetition = (/** @type {any} */ suite) => {
+    const repetition = suite ? { ...suite, actif: true } : { ...repetitionDuModele, actif: false };
+    setRepetitionDuModele(repetition);
+    appliquerLeModele(dateDuModele, repetition);
+  };
+  // Une heure « HH:MM » posée sur la date du modèle (null tant qu'elle n'est pas choisie).
+  const heureDuModele = (/** @type {string} */ heure) => {
+    if (!isTime(heure)) return null;
+    const [heures, minutes] = heure.split(':').map(Number);
+    const date = new Date(dateDuModele);
+    date.setHours(heures, minutes, 0, 0);
+    return date;
   };
 
   // VILLE-T18A — une heure libre choisie d un appui : son debut, et la duree deja saisie
@@ -1340,6 +1424,11 @@ function SeasonSlotForm({
     if (etapeCourante === 'horaires') {
       return !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur);
     }
+    // DATESDABORD — l'étape réunit les trois : un jour, des heures dans l'ordre, une séance.
+    if (etapeCourante === 'dateHoraire') {
+      return (!jour && !joursDifferents) || lecture.isLoading || Boolean(lecture.error)
+        || !ordreJuste || disponibilitesEnCours || Boolean(disponibilitesEnErreur) || !quandJuste;
+    }
     const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
     // R17-QUAND-1 — « Suivant » reste grisé tant que la forme n'a pas au moins une date.
     if (etapeCourante === 'quand' && !quandJuste) return true;
@@ -1394,6 +1483,7 @@ function SeasonSlotForm({
   /** @type {Record<string, string>} */
   const titres = {
     club: t('collectiviteCreneaux.tunnel.pourQui', 'Pour qui ?'),
+    dateHoraire: t('eventWizard.steps.logistics.focusTitle', 'Date & horaire'),
     equipe: t('collectiviteCreneaux.tunnel.equipe', 'Pour quelle équipe ?'),
     horaires: t('collectiviteCreneaux.tunnel.horaires', 'À quelle heure ?'),
     installation: t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?'),
@@ -1409,6 +1499,7 @@ function SeasonSlotForm({
       ? [`${weekdayName(Number(jour))} ${lesHeures}`, installation?.name]
       : [installation?.name, installation ? capaciteLue : null]
     ).filter(Boolean).join(' · '),
+    dateHoraire: [quiEtEquipe, installation?.name].filter(Boolean).join(' · '),
     equipe: t('collectiviteCreneaux.tunnel.equipeFacultative', '{{club}} · facultatif', {
       club: nomDuClub, ...SANS_ECHAPPEMENT,
     }),
@@ -1781,7 +1872,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {!visible('jour') || heuresFigees || repartition ? null : (
+      {!visible('jour') || heuresFigees || repartition || avecLeModele ? null : (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
           {(() => {
@@ -1844,7 +1935,57 @@ function SeasonSlotForm({
       {/* VILLE-T18A (T18 G29a, G32a) — les heures se CHOISISSENT : le sélecteur d heure de la
           création d événement (décision d Adel du 07/10, « réutiliser ce qu on a déjà ») ; elles
           se tapaient au clavier. Même valeur « HH:MM ». */}
-      {!visible('horaires') || heuresFigees || repartition ? null : (
+      {/* 🗓️ DATESDABORD (point 9 d'Adel) — LE MÊME MODÈLE que l'étape « Date & horaire » de la
+          création d'événement : le bloc partagé, avec les heures pleines de l'installation. */}
+      {avecLeModele && visible('horaires') && !heuresFigees ? (
+        <DateEtHoraire
+          date={dateDuModele}
+          debut={heureDuModele(debut)}
+          fin={heureDuModele(fin)}
+          finApres={debutLisible ? debut : null}
+          libelleDate={t('collectiviteCreneaux.quand.premiereDate', 'Première date')}
+          libelleDebut={t('collectiviteCreneaux.attribuer.debut', 'Début')}
+          libelleFin={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
+          onDate={changerLaDateDuModele}
+          onDebut={(/** @type {Date} */ valeur) => changerLeDebut(format(valeur, 'HH:mm'))}
+          onFin={(/** @type {Date} */ valeur) => {
+            setFin(format(valeur, 'HH:mm'));
+            toucherLaSaisie();
+          }}
+          onRepetition={changerLaRepetition}
+          pleines={heuresPleines}
+          repetition={repetitionDuModele}
+          titreRepeter={t('collectiviteCreneaux.quand.repeterLeCreneau', 'Répéter le créneau')}
+          // DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case R17-QUAND-2,
+          // dans « Répéter » (le même modèle que l'événement).
+          vacances={vacances ? {
+            actif: saufVacances,
+            onBasculer: () => {
+              setSaufVacances((avant) => !avant);
+              toucherLaSaisie();
+            },
+            testID: 'quand-sauf-vacances',
+            zone: zoneDesVacances,
+          } : null}
+          // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
+          // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
+          // de jours ne reviennent pas.
+          sousLaDate={pleinesDuJourChoisi.length ? (
+            <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="date-complet-du-jour">
+              {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                heures: pleinesDuJourChoisi
+                  .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                  .join(', '),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
+          // Le tunnel plein écran est un <Modal> (couche 9999 sur le site) : la feuille « Répéter »
+          // passe dessus, comme celle des vacances (porte du site, 390 px, DATESDABORD).
+          webZIndex={tunnelPleinEcran ? 10000 : undefined}
+        />
+      ) : null}
+      {!visible('horaires') || heuresFigees || repartition || avecLeModele ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
             <TimePickerInput
@@ -1880,8 +2021,9 @@ function SeasonSlotForm({
           changement d'heure). */}
       {visible('quand') && !repartition ? (
         <View style={{ gap: 12 }} testID="season-slot-quand">
-          {libelleDuChamp(titres.quand)}
-          {joursDifferents ? (
+          {avecLeModele ? null : libelleDuChamp(titres.quand)}
+          {/* DATESDABORD — à la création, la forme se choisit dans « Répéter » (au-dessus). */}
+          {!avecLeModele && joursDifferents ? (
             <Button
               icon="arrowLeft"
               iconColor={Colors.primary200}
@@ -1892,9 +2034,10 @@ function SeasonSlotForm({
               title={t('collectiviteCreneaux.quand.unJourFixe', 'Un jour fixe chaque semaine')}
               variant="Ghost"
             />
-          ) : listeDeChoix(formesProposees)}
+          ) : null}
+          {!avecLeModele && !joursDifferents ? listeDeChoix(formesProposees) : null}
 
-          {formeChoisie === 'periode' ? (
+          {formeChoisie === 'periode' && !avecLeModele ? (
             <View style={{ gap: 8 }}>
               {dejaCommence ? (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
@@ -1927,7 +2070,7 @@ function SeasonSlotForm({
             </View>
           ) : null}
 
-          {formeChoisie === 'deuxSemaines' ? (
+          {formeChoisie === 'deuxSemaines' && !avecLeModele ? (
             <View style={{ gap: 8 }}>
               {modification && dejaCommence ? null : (
                 <DatePickerInput
@@ -2016,7 +2159,7 @@ function SeasonSlotForm({
             </View>
           ) : null}
 
-          {formeChoisie === 'dates' ? (
+          {formeChoisie === 'dates' && !avecLeModele ? (
             <SeasonSlotDatesCalendar
               completDe={completLe}
               dates={datesChoisies}
@@ -2044,7 +2187,8 @@ function SeasonSlotForm({
             />
           ) : null}
 
-          {vacances ? (
+          {/* DATESDABORD (26/10) : à la création, la case est dans « Répéter » (au-dessus). */}
+          {vacances && !avecLeModele ? (
             <TouchableOpacity
               accessibilityRole="checkbox"
               accessibilityState={{ checked: saufVacances }}

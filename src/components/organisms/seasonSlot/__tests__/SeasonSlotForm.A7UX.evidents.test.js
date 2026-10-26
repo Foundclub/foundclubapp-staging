@@ -208,8 +208,14 @@ describe('A7-UX — correctifs évidents du tunnel', () => {
     expect(aplatirStyle(arbre.root.findByType(TouchableOpacity).props.style).minHeight).toBe(44);
   });
 
+  // DATESDABORD (23/10) : à la création, le jour se choisit par une date (le modèle de l'événement) ;
+  // la rangée des jours reste celle de « Modifier ».
   it('🔴 la rangée des jours garde chaque puce à sa hauteur (« complet … » n étire plus ses voisines)', async () => {
-    const arbre = await monter();
+    const arbre = await monter({
+      slot: {
+        club: { documentId: 'basket', name: 'Montrivage Basket' }, documentId: 'c1', endTime: '19:00', startTime: '17:30', validFrom: '2026-09-01', validUntil: '2027-06-30', weekday: 2,
+      },
+    });
     const rangee = arbre.root.findAll((/** @type {any} */ n) => n.type === View
       && n.findAll((/** @type {any} */ e) => e.props?.testID === 'jour-1', { deep: true }).length > 0
       && n.findAll((/** @type {any} */ e) => e.props?.testID === 'jour-7', { deep: true }).length > 0).pop();

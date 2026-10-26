@@ -16,6 +16,10 @@ import EventWizardLocation from '../EventWizardLocation';
 // touche pas.
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
+// DATESDABORD (25/10, décision d'Adel « 6- B ») : le lieu passe AVANT « Date & horaire » ; l'étape
+// « Lieu » ne juge le créneau (place, fermeture, mairie) que quand le jour est connu : au retour
+// du récapitulatif (ici), ou pour un stage. À l'aller, c'est « Date & horaire » qui juge
+// (EventWizardLogistics.DATESDABORD.prevention.test.js).
 const mockGabarits = [];
 /** Proprietes recues par le selecteur d'installation. */
 const mockSelecteurs = [];
@@ -133,7 +137,7 @@ const afficherLEcran = () => {
     arbre = renderer.create(createElement(
       EventWizardProvider,
       null,
-      createElement(EventWizardLocation, { navigation, route: { params: {} } }),
+      createElement(EventWizardLocation, { navigation, route: { params: { returnTo: 'EventWizardRecap' } } }),
     ));
   });
 
@@ -212,10 +216,10 @@ describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {
       saturated: true,
     }));
 
-    // D58 — copy du pack §2.4, mot pour mot. L'ancienne phrase disait la meme
-    // chose en deux fois plus long, et melangeait cause et consequence.
-    expect(textesSous(arbre.root)).toContain(
-      "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+    // D58 — une ligne qui dit la CONSEQUENCE. INVERSE PAR DATESDABORD (23/10, point 4 d'Adel) :
+    // elle nomme le gestionnaire et le type (EventWizardLocation.DATESDABORD.prevention.test.js).
+    expect(textesSous(arbre.root).join(' | ')).toMatch(
+      /Attention, ce créneau est déjà pris : tu vas devoir envoyer une demande/,
     );
   });
 
@@ -230,8 +234,8 @@ describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {
       saturated: true,
     }));
 
-    expect(textesSous(arbre.root)).toContain(
-      "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
+    expect(textesSous(arbre.root).join(' | ')).toMatch(
+      /Attention, ce créneau est déjà pris : .* l’autorise quand même, sans demande\./,
     );
   });
 });

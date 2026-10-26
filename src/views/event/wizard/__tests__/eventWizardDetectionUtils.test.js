@@ -224,12 +224,14 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
 });
 
 describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
+  // INVERSÉ PAR DATESDABORD (25/10, décision d'Adel « 6- B ») — motif : le lieu d'abord, la date
+  // ensuite (elle dit si le créneau est libre pour l'installation choisie).
   test('l evenement simple traverse 8 ecrans, dans cet ordre', () => {
     expect(getEventWizardStepRoutes({ type: typeEntrainement })).toEqual([
       'EventWizardType',
       'EventWizardTeam',
-      'EventWizardLogistics',
       'EventWizardLocation',
+      'EventWizardLogistics',
       'EventWizardParticipants',
       'EventWizardAccess',
       'EventWizardDescription',
@@ -237,15 +239,15 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
     ]);
   });
 
-  // Y02 : le match, c'est le meme parcours PLUS un ecran, glisse entre la date
-  // et le lieu. Savoir qui l'on recoit aide a choisir ou l'on joue.
+  // Y02 : le match, c'est le meme parcours PLUS un ecran. DATESDABORD (25/10, « 6- B ») : il suit
+  // le lieu et la date (le lieu d'abord).
   test('un match traverse 9 ecrans : « Contre qui ? » en plus, S10-B en moins', () => {
     expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
       'EventWizardType',
       'EventWizardTeam',
+      'EventWizardLocation',
       'EventWizardLogistics',
       'EventWizardOpponent',
-      'EventWizardLocation',
       // S10-B : « qui vient » se repond ICI, et nulle part ailleurs.
       'EventWizardParticipants',
       'EventWizardAccess',
@@ -310,16 +312,17 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     description: {
       detection: 7, match: 8, stage: 7, standard: 7, tournoi: 9,
     },
+    // DATESDABORD (25/10, « 6- B ») : le lieu (3) avant la date (4), sauf pour le stage.
     location: {
-      detection: 4, match: 5, stage: 4, standard: 4, tournoi: 4,
+      detection: 3, match: 3, stage: 4, standard: 3, tournoi: 3,
     },
     logistics: {
       // 0 pour le stage, et c'est un progres : avant D08 cette fonction rendait
       // 4 pour un stage, alors que le stage n'a jamais eu d'etape Logistique.
-      detection: 3, match: 3, stage: 0, standard: 3, tournoi: 3,
+      detection: 4, match: 4, stage: 0, standard: 4, tournoi: 4,
     },
     opponent: {
-      detection: 0, match: 4, stage: 0, standard: 0, tournoi: 0,
+      detection: 0, match: 5, stage: 0, standard: 0, tournoi: 0,
     },
     participants: {
       detection: 5, match: 6, stage: 5, standard: 5, tournoi: 7,
@@ -362,8 +365,9 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   test('une detection est desormais alignee sur le parcours standard', () => {
     // D58 — l'etape « creneaux » n'existe plus : plus rien ne s'insere, donc
     // plus rien ne decale. Une detection et un match ont la MEME numerotation.
-    expect(getEventWizardLogisticsStepIndex(etatDetectionAvecCreneaux)).toBe(3);
-    expect(getEventWizardLocationStepIndex(etatDetectionAvecCreneaux)).toBe(4);
+    // DATESDABORD (25/10, « 6- B ») : le lieu d'abord.
+    expect(getEventWizardLogisticsStepIndex(etatDetectionAvecCreneaux)).toBe(4);
+    expect(getEventWizardLocationStepIndex(etatDetectionAvecCreneaux)).toBe(3);
     expect(getEventWizardParticipantsStepIndex(etatDetectionAvecCreneaux)).toBe(5);
     expect(getEventWizardAccessStepIndex(etatDetectionAvecCreneaux)).toBe(6);
   });

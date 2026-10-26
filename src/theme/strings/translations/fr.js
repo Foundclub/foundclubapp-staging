@@ -6453,6 +6453,7 @@ export default {
       recapHeures: 'Heures',
       recapPeriode: 'Une période · {{du}} – {{au}}',
       recapSaison: 'Toute la saison · {{du}} – {{au}}',
+      repeterLeCreneau: 'Répéter le créneau',
       rythmeDates: 'Dates choisies · {{suite}}',
       rythmeDeux: 'Un {{jour}} sur deux · {{suite}}',
       saison: 'Toute la saison',
@@ -11551,6 +11552,8 @@ export default {
       ready: 'Prêt à créer',
       recurrenceCount: '{{count}} occurrence(s) prévues',
       reservationMode: 'Mode de réservation: {{value}}',
+      saufVacances_one: 'Sauf vacances scolaires : {{count}} séance retirée',
+      saufVacances_other: 'Sauf vacances scolaires : {{count}} séances retirées',
       sections: {
         description: 'Description',
         location: 'Lieu',
@@ -11712,6 +11715,24 @@ export default {
         pendingValidationConflict: "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'à validation d'un dirigeant.",
         // eslint-disable-next-line max-len
         pendingValidationHint: "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+        // DATESDABORD (23/10, point 4 d'Adel) — la phrase de l'étape « Lieu », dès que
+        // l'installation est cochée (preventionDuCreneau.js).
+        prevention: {
+          // eslint-disable-next-line max-len
+          autorise: 'Attention, ce créneau est déjà pris : {{gestionnaire}} l’autorise quand même, sans demande.',
+          // eslint-disable-next-line max-len
+          demande: 'Attention, ce créneau est déjà pris : tu vas devoir envoyer une demande à {{gestionnaire}} pour faire {{pour}}. Elle partira quand tu créeras l’événement.',
+          libre: 'Ce créneau est libre.',
+          pour: {
+            detection: 'ta détection',
+            entrainement: 'ton entraînement',
+            evenement: 'ton événement',
+            match: 'ton match',
+            stage: 'ton stage',
+            tournoi: 'ton tournoi',
+          },
+          tonClub: 'ton club',
+        },
         remaining_one: '{{count}} restante',
         remaining_other: '{{count}} restantes',
         subtitle: 'Le lieu est obligatoire pour continuer.',
@@ -11738,6 +11759,20 @@ export default {
         repeatRowLabel: 'Répéter',
         repeatRowOnce: 'Une seule fois',
         repeatSheetTitle: "Répéter l'événement",
+        // DATESDABORD (26/10) — « Répéter » mis en avant sur l'étape (DateEtHoraire.js).
+        repeter: {
+          au: 'Au',
+          chaqueSemaine: 'Chaque semaine',
+          chaqueSemaineMinuscule: 'chaque semaine',
+          du: 'Du',
+          jourDeLaDate: 'Le jour de la date est toujours compris.',
+          lesJours: 'Les jours',
+          plusOptions: 'Plus d’options',
+          resume: 'Répéter {{rythme}} : {{jours}}{{heures}}, du {{du}} au {{au}}',
+          resumeMois: 'Répéter {{rythme}}{{heures}}, du {{du}} au {{au}}',
+          resumeSaufVacances: '{{resume}}, sauf vacances scolaires',
+          titre: 'RÉPÉTER',
+        },
         reservationMode: 'Mode de réservation',
         reservationTitle: 'Paramêtres réservation',
         subtitle: "Configure date, horaires et règles d'accès.",

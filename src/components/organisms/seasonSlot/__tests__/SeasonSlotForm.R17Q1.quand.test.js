@@ -207,30 +207,48 @@ const ligneDuRecap = (/** @type {any} */ arbre, /** @type {string} */ cle) => ar
   (/** @type {any} */ n) => n.props.testID === `recap-${cle}`,
 )[0];
 
-// Club et équipe (tout le club), mercredi, 17:30 – 19:00, puis « Quand ? ».
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? » et
+// « Quand ? » ne font plus qu'une étape, « Date & horaire » : le modèle de la création d'événement
+// (une date, des heures, « Répéter »). Les quatre formes restent celles du serveur ; elles se
+// choisissent par « Répéter » (seasonSlotWhen.DATESDABORD.test.js) ; les corps envoyés et les
+// séances comptées ci-dessous sont ceux d'avant. Le calendrier libre reste à « Modifier ».
+const modele = (/** @type {any} */ arbre) => arbre.root.findAll(
+  (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+)[0];
+// Le mercredi 21 octobre 2026 (on est le lundi 19).
+const MERCREDI = new Date(2026, 9, 21, 12, 0, 0);
+const repeter = (/** @type {any} */ arbre, /** @type {any} */ suite) => appeler(
+  () => modele(arbre).props.onRepetition({
+    au: new Date(2027, 5, 30), du: null, frequence: 'week', intervalleTexte: '1', jours: [3], ...suite,
+  }),
+);
+
+// Club et équipe (tout le club), mercredi, 17:30 – 19:00 : l'étape « Date & horaire ».
 // A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur UNE étape, un « Suivant » de moins.
-const jusquAuQuand = async (/** @type {any} */ arbre, { jour = 'Mercredi' } = {}) => {
+const jusquAuQuand = async (/** @type {any} */ arbre, { jour = MERCREDI } = {}) => {
   await choisir(arbre, 'Montrivage Basket');
   await avancer(arbre);
-  await choisir(arbre, jour);
-  await avancer(arbre);
+  await appeler(() => modele(arbre).props.onDate(jour));
   await choisirHeure('Début', '17:30');
   await choisirHeure('Fin', '19:00');
-  await avancer(arbre);
 };
 
 describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure', () => {
   // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 5/6 → 4/5.
-  test('1. l’étape 4/5, déjà répondue « Toute la saison » : 37 mercredis, 2 dans « Vacances de Noël »', async () => {
+  // INVERSÉ PAR DATESDABORD (23/10) — motif : « Date & horaire » réunit jour, heures et « Quand ? »
+  // (4/5 → 2/3) ; « Répéter » dit « Toutes les semaines » (jusqu'à la fin de saison) au lieu des
+  // quatre puces.
+  test('1. l’étape 2/3, déjà répondue « Toutes les semaines » : 37 mercredis, 2 dans « Vacances de Noël »', async () => {
     const arbre = await monter();
     await jusquAuQuand(arbre);
     expect(etape(arbre)).toEqual({
-      stepCount: 5, stepIndex: 4, subtitle: 'Mercredi 17:30 – 19:00 · T18 Salle essai', title: 'Quand ?',
+      stepCount: 3, stepIndex: 2, subtitle: 'Montrivage Basket · Tout le club · T18 Salle essai', title: 'Date & horaire',
     });
-    expect(['Toute la saison', 'Une période', 'Toutes les 2 semaines', 'Des dates choisies'].map((libelle) => choix(arbre, libelle)?.props.accessibilityState))
-      .toEqual([{ checked: true }, { checked: false }, { checked: false }, { checked: false }]);
+    expect(choix(arbre, 'Toute la saison')).toBeUndefined();
     expect(lus(arbre)).toEqual(expect.arrayContaining([
-      'Chaque mercredi, du 21 oct. au 30 juin',
+      // DATESDABORD (26/10) : « RÉPÉTER » sur l'écran, « Chaque semaine » choisi.
+      'RÉPÉTER',
+      'Chaque semaine',
       '37 mercredis',
       '2 tombent dans « Vacances de Noël » (23 déc., 30 déc.) : le club y verra « fermé », comme aujourd’hui.',
     ]));
@@ -246,9 +264,8 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
   test('2. toutes les 2 semaines : à partir du 1er mercredi, jusqu’à la fin de saison ; les prochaines dates s’écrivent', async () => {
     const arbre = await monter();
     await jusquAuQuand(arbre);
-    await choisir(arbre, 'Toutes les 2 semaines');
-    expect(mockDateProps.filter((p) => p.label === 'À partir du').at(-1).value).toBe('21/10/2026');
-    expect(lus(arbre)).toEqual(expect.arrayContaining(['19 mercredis', 'Fin\u00a0de\u00a0saison', 'Une\u00a0date', '21 oct.', '4 nov.', '18 nov.']));
+    await repeter(arbre, { intervalleTexte: '2' });
+    expect(lus(arbre)).toEqual(expect.arrayContaining(['Toutes les 2 semaines', '19 mercredis']));
     await avancer(arbre);
     expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
     await appeler(() => tunnel(arbre).onNext());
@@ -262,14 +279,10 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
   test('3. une période : « Du » / « Au » ; « Au » avant « Du » se dit et bloque', async () => {
     const arbre = await monter();
     await jusquAuQuand(arbre);
-    await choisir(arbre, 'Une période');
-    expect(tunnel(arbre).isNextDisabled).toBe(true);
-    await appeler(() => mockDateProps.filter((p) => p.label === 'Du').at(-1).onChange('18/12/2026'));
-    await appeler(() => mockDateProps.filter((p) => p.label === 'Au').at(-1).onChange('21/10/2026'));
+    await repeter(arbre, { au: new Date(2026, 9, 21), du: new Date(2026, 11, 18) });
     expect(lus(arbre)).toContain('« Au » doit venir après « Du ».');
     expect(tunnel(arbre).isNextDisabled).toBe(true);
-    await appeler(() => mockDateProps.filter((p) => p.label === 'Du').at(-1).onChange('21/10/2026'));
-    await appeler(() => mockDateProps.filter((p) => p.label === 'Au').at(-1).onChange('18/12/2026'));
+    await repeter(arbre, { au: new Date(2026, 11, 18), du: new Date(2026, 9, 21) });
     expect(lus(arbre)).toEqual(expect.arrayContaining(['9 mercredis', 'Aucune ne tombe dans une fermeture.']));
     await avancer(arbre);
     await appeler(() => tunnel(arbre).onNext());
@@ -278,27 +291,12 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
 });
 
 describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre', () => {
-  test('4. trois dates, deux jours différents : « Quelles dates ? », rien avant la 1re coche, la liste part sans jour', async () => {
+  // INVERSÉ PAR DATESDABORD (23/10) — motif : les jours différents se disent par « Répéter »
+  // (plusieurs jours de la semaine, du … au …), comme pour un événement ; la liste part pareil.
+  test('4. trois dates, deux jours différents : « Répéter » mercredi, samedi et mardi, la liste part sans jour', async () => {
     const arbre = await monter();
-    await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre); // A7-UX-2 : club et équipe sur une étape
-    await choisir(arbre, 'Des jours différents');
-    await avancer(arbre);
-    expect(tunnel(arbre).subtitle).toBe('Dates choisies · T18 Salle essai');
-    await choisirHeure('Début', '17:30');
-    await choisirHeure('Fin', '19:00');
-    await avancer(arbre);
-    expect(etape(arbre)).toEqual({
-      stepCount: 5, stepIndex: 4, subtitle: '17:30 – 19:00 · T18 Salle essai', title: 'Quelles dates ?',
-    });
-    expect(choix(arbre, 'Toute la saison')).toBeUndefined();
-    expect(lus(arbre)).toContain('Aucune date cochée.');
-    expect(tunnel(arbre).isNextDisabled).toBe(true);
-    await appeler(() => jourDuCalendrier(arbre, '2026-10-24').props.onPress());
-    await appeler(() => jourDuCalendrier(arbre, '2026-10-21').props.onPress());
-    await appeler(() => jourDuCalendrier(arbre, '2026-10-27').props.onPress());
-    expect(jourDuCalendrier(arbre, '2026-10-21').props.accessibilityState).toEqual({ disabled: false, selected: true });
-    expect(jourDuCalendrier(arbre, '2026-10-16').props.accessibilityState.disabled).toBe(true);
+    await jusquAuQuand(arbre);
+    await repeter(arbre, { au: new Date(2026, 9, 27), jours: [3, 6, 2] });
     expect(lus(arbre)).toEqual(expect.arrayContaining(['3 dates choisies', 'mer. 21 oct. · sam. 24 oct. · mar. 27 oct.']));
     await avancer(arbre);
     expect(lus(arbre)).toEqual(expect.arrayContaining(['Heures', '17:30 – 19:00', '3 dates choisies']));
@@ -308,17 +306,17 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
     });
   });
 
+  // DATESDABORD (23/10) : le calendrier libre n'est plus à la création ; il reste à « Modifier »
+  // un créneau à dates choisies (sa 3e étape, « Quelles dates ? »).
   test('5. une date dans une fermeture ne se coche pas, et le dit', async () => {
-    const arbre = await monter();
-    await choisir(arbre, 'Montrivage Basket');
-    await avancer(arbre); // A7-UX-2 : club et équipe sur une étape
-    await choisir(arbre, 'Mercredi');
+    const arbre = await monter({
+      slot: {
+        club: { documentId: 'basket', name: 'Montrivage Basket' }, dates: ['2026-10-21'], documentId: 'c-dates', endTime: '19:00', recurrence: 'dates', startTime: '17:30', validFrom: '2026-10-21', validUntil: '2026-10-21', weekday: null,
+      },
+    });
     await avancer(arbre);
-    await choisirHeure('Début', '17:30');
-    await choisirHeure('Fin', '19:00');
     await avancer(arbre);
-    await choisir(arbre, 'Des dates choisies');
-    await appeler(() => jourDuCalendrier(arbre, '2026-10-21').props.onPress());
+    expect(tunnel(arbre).title).toBe('Quelles dates ?');
     // Le mois de décembre, où tombe « Vacances de Noël » (aperçu : fermetures de la saison).
     for (let mois = 0; mois < 2; mois += 1) {
       // eslint-disable-next-line no-await-in-loop
@@ -339,8 +337,9 @@ describe('R17Q1-4 — la ligne « Quand » du récapitulatif se touche', () => {
     await avancer(arbre);
     expect(tunnel(arbre).title).toBe('Récapitulatif');
     await appeler(() => ligneDuRecap(arbre, 'quand').props.onPress());
-    expect([tunnel(arbre).title, tunnel(arbre).stepIndex, tunnel(arbre).stepCount]).toEqual(['Quand ?', 2, 3]);
-    await choisir(arbre, 'Toutes les 2 semaines');
+    // DATESDABORD (23/10) : la ligne rouvre « Date & horaire » ; la forme se choisit par « Répéter ».
+    expect([tunnel(arbre).title, tunnel(arbre).stepIndex, tunnel(arbre).stepCount]).toEqual(['Date & horaire', 2, 3]);
+    await repeter(arbre, { intervalleTexte: '2' });
     await avancer(arbre);
     expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
   });

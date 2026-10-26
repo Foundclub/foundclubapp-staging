@@ -288,6 +288,20 @@ const appuyer = async (/** @type {any} */ noeud) => {
   await act(async () => { noeud.props.onPress(); });
   await attendre();
 };
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? »
+// et « Quand ? » ne font plus qu'une étape, « Date & horaire » (le bloc de la création
+// d'événement) : le jour se choisit par une date, ici le prochain mercredi, sur la même étape que
+// les heures ; un « Suivant » mène au récapitulatif.
+const choisirMercredi = async (/** @type {any} */ arbre) => {
+  const modele = arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+  )[0];
+  const mercredi = new Date();
+  mercredi.setHours(12, 0, 0, 0);
+  mercredi.setDate(mercredi.getDate() + ((3 - mercredi.getDay() + 7) % 7));
+  await act(async () => { modele.props.onDate(mercredi); });
+  await attendre();
+};
 const champ = (/** @type {string} */ libelle) => mockInputProps
   .filter((props) => props.label === libelle).pop();
 const saisir = async (/** @type {string} */ libelle, /** @type {string} */ valeur) => {
@@ -413,13 +427,11 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     // A7-UX-2 (22/10, Adel « P2 oui ») : l'équipe se choisit sur l'étape du club.
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTestID(arbre, 'jour-3'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     // COLL-R-A7 (COL-005) : « Période » était sautée, écrite au récapitulatif.
-    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // DATESDABORD (23/10) : « Quand ? » est sur l'étape « Date & horaire » (toute la saison).
     await appuyer(parTexte(arbre, 'Suivant'));
   };
 
@@ -456,7 +468,7 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
       headerVariant: 'focus',
       // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6). A7-UX-2 (22/10, Adel « P2 oui ») :
       // le club et l'équipe sur une étape, « Pour qui ? » (6 → 5).
-      stepCount: 5,
+      stepCount: 3, // DATESDABORD (23/10) : jour, heures et « Quand ? » sur une étape (5 → 3).
       subtitle: 'Gymnase des Tilleuls · 2 équipes à la fois',
       title: 'Pour qui ?',
     }));
@@ -611,15 +623,12 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
     await appuyer(parTexte(arbre, 'Suivant')); // A7-UX-2 : club et équipe sur une étape
-    await appuyer(parTestID(arbre, 'jour-3'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     expect(textes(arbre)).toContain('Plateau');
     expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
-    await appuyer(parTexte(arbre, 'Suivant'));
-    // R17-QUAND-1 (19/10) : l'étape « Quand ? » (toute la saison par défaut) suit les heures.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({
@@ -657,8 +666,7 @@ describe('COLL-C2B planche 3 — 7. aucun nom de personne a la mairie', () => {
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
     await appuyer(parTexte(arbre, 'Suivant')); // A7-UX-2 : club et équipe sur une étape
-    await appuyer(parTestID(arbre, 'jour-3'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     vus.push(...textes(arbre));

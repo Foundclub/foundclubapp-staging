@@ -290,6 +290,20 @@ const appuyer = async (/** @type {any} */ noeud) => {
   await act(async () => { noeud.props.onPress(); });
   await attendre();
 };
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) — à la création, « Quel jour ? », « À quelle heure ? »
+// et « Quand ? » ne font plus qu'une étape, « Date & horaire » (le bloc de la création
+// d'événement) : le jour se choisit par une date, ici le prochain mercredi, sur la même étape que
+// les heures ; un « Suivant » mène au récapitulatif.
+const choisirMercredi = async (/** @type {any} */ arbre) => {
+  const modele = arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onRepetition === 'function',
+  )[0];
+  const mercredi = new Date();
+  mercredi.setHours(12, 0, 0, 0);
+  mercredi.setDate(mercredi.getDate() + ((3 - mercredi.getDay() + 7) % 7));
+  await act(async () => { modele.props.onDate(mercredi); });
+  await attendre();
+};
 const champ = (/** @type {string} */ libelle) => mockInputProps
   .filter((props) => props.label === libelle).pop();
 const saisir = async (/** @type {string} */ libelle, /** @type {string} */ valeur) => {
@@ -405,13 +419,12 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     // A7-UX-2 (22/10, Adel « P2 oui ») : l'équipe se choisit sur l'étape du club.
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
-    await appuyer(parTestID(arbre, 'jour-3'));
-    await appuyer(parTexte(arbre, 'Suivant'));
+    await choisirMercredi(arbre);
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    // COLL-R-A7 (COL-005) : « Période » était sautée. R17-QUAND-1 (19/10) : l'étape « Quand ? »,
-    // déjà répondue (toute la saison), vient après les heures : un « Suivant » de plus.
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // COLL-R-A7 (COL-005) : « Période » était sautée. DATESDABORD (23/10) : « Quand ? » est
+    // sur l'étape « Date & horaire », déjà répondue (toute la saison) : un « Suivant » au
+    // récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
 

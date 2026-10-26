@@ -225,6 +225,9 @@ function eventWizardReducer(state, action) {
       return {
         ...state,
         facility: action.payload.facility,
+        // DATESDABORD (25/10, « 6- B ») : l'installation du club multisport, nommée par « Date &
+        // horaire » dans sa phrase de prévention.
+        facilityShared: Boolean(action.payload.facilityShared),
         location: action.payload.location,
       };
     case 'SET_LOGISTICS':

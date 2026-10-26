@@ -14,6 +14,10 @@ import EventWizardLocation from '../EventWizardLocation';
 //     mairie, place libre ou non).
 // ROUGE avant le lot.
 
+// DATESDABORD (25/10, décision d'Adel « 6- B ») : le lieu passe AVANT « Date & horaire » ; l'étape
+// « Lieu » ne juge le créneau (place, fermeture, mairie) que quand le jour est connu : au retour
+// du récapitulatif (ici), ou pour un stage. À l'aller, c'est « Date & horaire » qui juge
+// (EventWizardLogistics.DATESDABORD.prevention.test.js).
 const mockSelecteurs = [];
 const mockGabarits = [];
 /** @type {any[][]} */
@@ -118,7 +122,7 @@ const afficherLEcran = () => {
   act(() => { arbre = renderer.create(rendre(null)); });
   act(() => semer({ payload: { team: EQUIPE }, type: 'SET_META' }));
   act(() => {
-    arbre.update(rendre(createElement(EventWizardLocation, { navigation, route: { params: {} } })));
+    arbre.update(rendre(createElement(EventWizardLocation, { navigation, route: { params: { returnTo: 'EventWizardRecap' } } })));
   });
 };
 const dernierSelecteur = () => mockSelecteurs[mockSelecteurs.length - 1];
@@ -155,14 +159,18 @@ describe('COLL-R-APP-CREATION — l étape « Lieu » demande au serveur si la m
     expect(textesSous(arbre.root).join(' | ')).not.toMatch(/demande de validation au club/);
     act(() => dernierSelecteur().onOccupancyResolved({ allowsImmediateConfirmation: true, saturated: true }));
     expect(textesSous(arbre.root).join(' | ')).not.toMatch(/le club l'autorise quand même/);
+    // DATESDABORD (23/10) : ni la phrase « déjà pris » qui l a remplacée.
+    expect(textesSous(arbre.root).join(' | ')).not.toMatch(/déjà pris/);
   });
 
-  test('une installation du club : les deux phrases d avant restent', () => {
+  // INVERSÉ PAR DATESDABORD (23/10, point 4 d'Adel) : la phrase nomme maintenant le gestionnaire et
+  // le type (témoin : EventWizardLocation.DATESDABORD.prevention.test.js) ; elle reste là.
+  test('une installation du club : la phrase « déjà pris » reste', () => {
     afficherLEcran();
     act(() => dernierSelecteur().onChange({ facilityId: 'salle', location: null }));
     act(() => dernierSelecteur().onOccupancyResolved({ requiresApproval: true, saturated: true }));
-    expect(textesSous(arbre.root)).toContain(
-      "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+    expect(textesSous(arbre.root).join(' | ')).toMatch(
+      /Attention, ce créneau est déjà pris : tu vas devoir envoyer une demande/,
     );
   });
 });

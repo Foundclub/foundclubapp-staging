@@ -180,40 +180,42 @@ const puce = async (arbre, libelle) => {
 };
 const suivant = (arbre) => presser(arbre, 'Suivant');
 const textesLus = (arbre) => arbre.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
-// A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur UNE étape : deux « Suivant » jusqu'aux heures.
-const versHeures = async (arbre) => { await suivant(arbre); await suivant(arbre); };
-// 📐 COLL-R-A7 (13/10, COL-005, D4 A) : « Période » n'avait rien à choisir ⇒ sautée.
-// 🗓️ R17-QUAND-1 (19/10, planche P10-quand-tel validée) : l'étape « Quand ? » vient après les
-// heures, déjà répondue (« Toute la saison ») : des horaires au récapitulatif, DEUX « Suivant ».
-const versRecap = async (arbre) => { await suivant(arbre); await suivant(arbre); };
+// A7-UX-2 (22/10, Adel « P2 oui ») : le club et l'équipe sur UNE étape.
+// 🗓️ DATESDABORD (23/10, point 9 d'Adel) : « Quel jour ? », « À quelle heure ? » et « Quand ? »
+// ne font plus qu'une étape, « Date & horaire » (le modèle de l'événement), déjà répondue
+// (« toutes les semaines jusqu'à la fin de saison ») : UN « Suivant » jusqu'aux heures, UN
+// jusqu'au récapitulatif.
+const versHeures = async (arbre) => { await suivant(arbre); };
+const versRecap = async (arbre) => { await suivant(arbre); };
+const dateDuModele = (arbre) => arbre.root.findAll((n) => typeof n.props?.onRepetition === 'function')[0]?.props.date;
 
 describe('IPH09 FC-002 — tunnel local, mêmes contrats serveur', () => {
   // INVERSÉ PAR A7-UX-2 (22/10) — motif : club et équipe sur une étape (Adel « P2 oui ») : 6 → 5
   // étapes ; l'équipe se choisit sur l'étape 1 et se retrouve au retour depuis l'étape 2.
-  test('cinq étapes (« Quand ? » après les heures), valeurs conservées au retour, équipe facultative et confirmation unique', async () => {
+  // INVERSÉ PAR DATESDABORD (23/10) — motif : jour, heures et « Quand ? » sur une étape : 5 → 3.
+  test('trois étapes (« Date & horaire » après « Pour qui ? »), valeurs conservées au retour, équipe facultative et confirmation unique', async () => {
     const onDone = jest.fn();
     const arbre = await monter({ onDone });
-    expect(etape(arbre)).toBe('Étape 1/5');
+    expect(etape(arbre)).toBe('Étape 1/3');
     expect(champ(arbre, 'Début')).toBeUndefined();
     await puce(arbre, 'U13');
     await suivant(arbre);
     await presser(arbre, 'Retour');
-    expect(etape(arbre)).toBe('Étape 1/5');
+    expect(etape(arbre)).toBe('Étape 1/3');
     expect(arbre.root.findAll((n) => n.props.libelle === 'U13')[0].props.actif).toBe(true);
     await puce(arbre, 'Tout le club');
     await suivant(arbre);
-    expect(jourChoisi(arbre)).toEqual([`jour-${isoWeekdayOf(new Date())}`]);
-    await suivant(arbre);
+    expect(etape(arbre)).toBe('Étape 2/3');
+    expect(isoWeekdayOf(dateDuModele(arbre))).toBe(isoWeekdayOf(new Date()));
     await choisirHeure(arbre, 'Début', '17:30');
     await choisirHeure(arbre, 'Fin', '19:00');
     await suivant(arbre);
-    // R17-QUAND-1 : l'étape « Quand ? », toute la saison par défaut.
-    expect(etape(arbre)).toBe('Étape 4/5');
+    expect(etape(arbre)).toBe('Étape 3/3');
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
     await presser(arbre, 'Retour');
     expect(champ(arbre, 'Début').props.value).toBe('17:30');
     await versRecap(arbre);
-    expect(etape(arbre)).toBe('Étape 5/5');
+    expect(etape(arbre)).toBe('Étape 3/3');
     // « Toute la saison · <1re séance à venir> – <dernière, en juin> » (elles suivent le jour du test).
     expect(textesLus(arbre).some((texte) => /^Toute la saison · .+ – \d+ juin$/.test(texte))).toBe(true);
     expect(champ(arbre, 'Début')).toBeUndefined();
@@ -310,7 +312,8 @@ test('IPH09 : changement de club efface l’équipe, choix de l’installation d
   });
   // A7-UX-2 (22/10, Adel « P2 oui ») : club et équipe sur la même étape : 7 → 6 étapes, et le
   // changement de club se voit sur place (l'équipe revient à « Tout le club »).
-  expect(etape(arbre)).toBe('Étape 1/6');
+  // DATESDABORD (23/10) : jour, heures et « Quand ? » sur une étape : 6 → 4.
+  expect(etape(arbre)).toBe('Étape 1/4');
   expect(bouton(arbre, 'Suivant').props.disabled).toBe(true);
   await puce(arbre, 'Salle');
   await suivant(arbre);
@@ -376,9 +379,10 @@ describe('COLL-R-A6 — COL-018 : ouvert depuis une case, le jour et les heures 
   const DE_LA_CASE = { endTime: '18:30', startTime: '17:00', weekday: 3 };
 
   // A7-UX-2 : l'étape 1 porte le club ET l'équipe ; l'étape 2 est le jour.
+  // DATESDABORD (23/10) : l'étape 2 est « Date & horaire » (jour, heures, « Quand ? ») : 5 → 3.
   test('étape 1 (club et équipe) puis étape 2 (le jour) : « Mercredi · 17:00 – 18:30 »', async () => {
     const arbre = await monter({ initial: DE_LA_CASE });
-    expect(etape(arbre)).toBe('Étape 1/5');
+    expect(etape(arbre)).toBe('Étape 1/3');
     expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
     await suivant(arbre);
     expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
@@ -402,19 +406,20 @@ describe('COLL-R-A7 — COL-005 : les étapes sans choix sont sautées', () => {
   ];
 
   // R17-QUAND-1 (19/10) : + l'étape « Quand ? » (5 → 6, 4 → 5).
-  test('fiche d’un club (3 installations) : 6 étapes, sans « Club » ; l’équipe suit l’installation', async () => {
+  // DATESDABORD (23/10) : jour, heures et « Quand ? » sur une étape (6 → 4, 5 → 3).
+  test('fiche d’un club (3 installations) : 4 étapes, sans « Club » ; l’équipe suit l’installation', async () => {
     const arbre = await monter({ facilities: INSTALLATIONS, fixedClubId: 'basket' });
-    expect(etape(arbre)).toBe('Étape 1/6');
+    expect(etape(arbre)).toBe('Étape 1/4');
     await puce(arbre, 'Salle');
     await suivant(arbre);
-    expect(etape(arbre)).toBe('Étape 2/6');
+    expect(etape(arbre)).toBe('Étape 2/4');
     expect(arbre.root.findAll((n) => n.props.libelle === 'Tout le club')[0].props.actif).toBe(true);
     expect(arbre.root.findAll((n) => n.props.libelle === 'Montrivage Basket')).toHaveLength(0);
   });
 
-  test('fiche d’un club, Ville à une installation : 5 étapes', async () => {
+  test('fiche d’un club, Ville à une installation : 3 étapes', async () => {
     const arbre = await monter({ facilities: [INSTALLATIONS[0]], fixedClubId: 'basket' });
-    expect(etape(arbre)).toBe('Étape 1/5');
+    expect(etape(arbre)).toBe('Étape 1/3');
   });
 
   test('planning, complet : « Changer l’heure » rouvre Jour et Horaires, les heures de la case gardées', async () => {
@@ -427,10 +432,10 @@ describe('COLL-R-A7 — COL-005 : les étapes sans choix sont sautées', () => {
     await suivant(arbre); // A7-UX-2 : club et équipe sur une étape
     expect(etape(arbre)).toBe('Étape 2/2');
     await presser(arbre, 'Changer l’heure');
-    expect(etape(arbre)).toBe('Étape 3/4');
+    // DATESDABORD (23/10) : « Changer l'heure » rouvre « Date & horaire », sur un mercredi.
+    expect(etape(arbre)).toBe('Étape 2/3');
     expect(champ(arbre, 'Début').props.value).toBe('18:00');
-    await presser(arbre, 'Retour');
-    expect(jourChoisi(arbre)).toEqual(['jour-3']);
+    expect(isoWeekdayOf(dateDuModele(arbre))).toBe(3);
   });
 });
 

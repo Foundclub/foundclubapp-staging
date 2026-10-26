@@ -15,6 +15,10 @@ import EventWizardLocation from '../EventWizardLocation';
 // flèche Retour, nommé) ; un serveur d AVANT (sans `closure`) garde une phrase au « tu ».
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
+// DATESDABORD (25/10, décision d'Adel « 6- B ») : le lieu passe AVANT « Date & horaire » ; l'étape
+// « Lieu » ne juge le créneau (place, fermeture, mairie) que quand le jour est connu : au retour
+// du récapitulatif (ici), ou pour un stage. À l'aller, c'est « Date & horaire » qui juge
+// (EventWizardLogistics.DATESDABORD.prevention.test.js).
 const mockGabarits = [];
 /** Proprietes recues par le selecteur d'installation. */
 const mockSelecteurs = [];
@@ -136,7 +140,7 @@ const afficherLEcran = () => {
     arbre = renderer.create(createElement(
       EventWizardProvider,
       null,
-      createElement(EventWizardLocation, { navigation, route: { params: {} } }),
+      createElement(EventWizardLocation, { navigation, route: { params: { returnTo: 'EventWizardRecap' } } }),
     ));
   });
 
