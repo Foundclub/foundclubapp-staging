@@ -290,7 +290,7 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
   // INVERSE PAR DATESDABORD (26/10/2026, Adel sur la planche : « il faut mieux le mettre en
   // avant ») — motif : « RÉPÉTER » est sur l'ecran (« Une seule fois » / « Chaque semaine », les
   // jours, du … au …) ; la rangee a chevron devient « Plus d'options ». Le defaut reste unique.
-  test('la recurrence est sur l ecran, « Une seule fois » par defaut, et « Plus d options » ouvre la feuille', () => {
+  test('la recurrence est sur l ecran, « Une seule fois » par defaut ; « Plus d options »', () => {
     const { textes } = afficherLEcran();
 
     expect(textes).toContain('RÉPÉTER');
