@@ -3606,6 +3606,7 @@ export default {
     },
     receipts: {
       amount: 'Amount',
+      download: 'Download the receipt',
       emptyDescription: 'Receipts will appear here once payments are approved.',
       emptyTitle: 'No receipts',
       issued: 'Issued',
@@ -15830,8 +15831,10 @@ export default {
       title: 'Campaign temporarily suspended',
     },
     payments: {
+      partiallyRefunded: 'partly refunded',
       receiptNumber: 'receipt {{receiptNumber}}',
       receiptPending: 'receipt pending from the club',
+      refunded: 'refunded',
       receiptsAvailable: '{{receiptCount}} receipts available for this fee.',
       title: 'Payments',
       titleFallback: 'Payment',
