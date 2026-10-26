@@ -681,7 +681,7 @@ export const createReccurrentEventPayload = (event) => {
     const interval = event.recurrenceInterval || 1;
     // 🗓️ DATESDABORD (26/10/2026, Adel : « sauf vacances » sur la récurrence) — les séances qui
     // tombent dans une période de vacances de la zone (le planning de l'installation, serveur) ne
-    // partent pas ; sans période connue, rien n'est retiré. Même règle que les créneaux de la Ville.
+    // partent pas ; sans période connue, rien n'est retiré. La règle des créneaux de la Ville.
     const periodesDeVacances = event.exceptHolidays && Array.isArray(event.holidayPeriods)
       ? event.holidayPeriods
       : [];

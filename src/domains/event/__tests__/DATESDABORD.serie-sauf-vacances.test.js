@@ -61,7 +61,7 @@ describe('DATESDABORD — une série « chaque jeudi et vendredi » à travers l
     });
   });
 
-  test('cochée sans périodes connues : rien n est retiré (jamais une séance perdue en silence)', () => {
+  test('cochée sans périodes connues : rien n est retiré (pas de séance perdue en silence)', () => {
     expect(seancesDe({ exceptHolidays: true, holidayPeriods: [] })).toHaveLength(12);
   });
 });

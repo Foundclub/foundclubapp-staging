@@ -620,7 +620,7 @@ function EventWizardLogistics({ navigation, route }) {
     }),
   );
   const recevoirLeJugement = useCallback(
-    (/** @type {{ attente: boolean, bloque: boolean, vacances: any }} */ suite) => setJugement(suite),
+    (/** @type {any} */ suite) => setJugement(suite),
     [],
   );
   // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case, quand la zone
