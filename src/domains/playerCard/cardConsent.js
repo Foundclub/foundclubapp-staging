@@ -25,6 +25,7 @@ export { evaluateMinorGuard, MINOR_CARD_PUBLISH_AGE };
  *   canShare: boolean,
  *   canDownload: boolean,
  *   isLockedPreview: boolean,
+ *   mustAskBirthdate: boolean,
  *   mustRequestConsent: boolean,
  * }}
  */
@@ -37,9 +38,26 @@ export const getCardConsentState = (user = {}, now = new Date()) => {
     guard,
     // Aperçu verrouille = mineur sous le seuil sans consentement.
     isLockedPreview: !canShare,
+    // CARTECODE Q6 B (registre des mineurs ligne 43) — âge inconnu : « Partager » demande
+    // d'abord la date, puis la règle de son âge s'applique. Personne n'est bloqué.
+    mustAskBirthdate: guard.age === null,
     mustRequestConsent: guard.requiresConsent && !guard.hasConsent,
   };
 };
+
+/**
+ * CARTECODE Q2 B (registre des mineurs ligne 44) — la carte d'un AUTRE joueur sur son profil :
+ * seulement s'il est majeur (âge connu), que son compte n'est pas privé, et pour un membre
+ * connecté. Jamais pour un mineur.
+ * @param {{ profile?: object, viewer?: object | null }} params
+ * @returns {boolean}
+ */
+export const canShowCardOnProfile = ({ profile, viewer } = {}) => Boolean(
+  viewer?.documentId
+  && typeof profile?.age === 'number'
+  && profile.age >= 18
+  && profile.isProfileVisible !== false,
+);
 
 /**
  * Construit le payload de declaration parentale specifique carte, en reutilisant

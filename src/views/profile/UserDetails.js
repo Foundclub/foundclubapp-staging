@@ -50,6 +50,7 @@ import {
 import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
 import BlocMesEnfants from '@/views/profile/parent/BlocMesEnfants';
 import ChildIdentityCard, { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
+import ProfileCardThumb from '@/views/profile/ProfileCardThumb';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 import MyStatsPage from '@/views/profile/stats/MyStatsPage';
@@ -1257,6 +1258,14 @@ function UserDetails({ navigation, route }) {
           {/* ST-RETOURS2 · point 3 (planche 22, etat 2) — la fiche de SON enfant : la carte
               CENTREE de la planche (l avatar, le nom, « 14 ans · U15 · AS Montrivage », « Mon
               enfant »). Tout autre lecteur garde la carte de tout profil. */}
+          {/* CARTECODE Q2 B — la carte d'un AUTRE joueur majeur, au compte non privé. */}
+          {!isSelfProfile ? (
+            <ProfileCardThumb
+              profile={{ ...user, age: profileAge }}
+              viewer={currentUserId ? { documentId: currentUserId } : null}
+              width={Math.min(screenWidth * 0.62, 260)}
+            />
+          ) : null}
           {isParentOfMinorViewer ? (
             <ChildIdentityCard
               avatarUrl={user?.avatar?.url}

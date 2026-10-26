@@ -2,7 +2,7 @@
 // A executer dans le projet app : `yarn jest cardModel`.
 import {
   buildPlayerCardModel, computeAge, computeCompleteness, computeRarity, countHistoryClubs,
-  evaluateMinorGuard, extractCity, groupHistory, pickTopHistory, RARITY, resolveJerseyNumber,
+  evaluateMinorGuard, extractCity, groupHistory, pickTopHistory, RARITY,
 } from '../cardModel';
 
 const NOW = new Date('2026-07-11T12:00:00Z');
@@ -78,13 +78,8 @@ describe('cardModel - logique pure carte joueur', () => {
     expect(teen.canPublish).toBe(true);
   });
 
-  test('resolveJerseyNumber deterministe + explicite', () => {
-    const n1 = resolveJerseyNumber({ documentId: 'abc123' });
-    expect(n1).toBe(resolveJerseyNumber({ documentId: 'abc123' }));
-    expect(n1).toBeGreaterThanOrEqual(1);
-    expect(n1).toBeLessThanOrEqual(99);
-    expect(resolveJerseyNumber({ jerseyNumber: 10 })).toBe(10);
-  });
+  // CARTECODE (26/10) : resolveJerseyNumber, qui fabriquait un numero, est retire (le « 52 »).
+  // Temoin du comportement neuf : cardModel.CARTECODE.test.js.
 
   test('buildPlayerCardModel SANS CLUB + dispo', () => {
     const model = buildPlayerCardModel({
@@ -167,6 +162,7 @@ describe('cardModel - historique regroupe (PAR-L14)', () => {
     expect(groupes).toEqual([
       {
         categories: ['Seniors', 'U20'],
+        clubLogoUrl: null, // CARTECODE Q4 : le logo du club suit la ligne
         clubName: 'Sporting Club Montredon Bonneveine',
         endYear: 2022,
         isCurrentlyActive: false,

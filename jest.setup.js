@@ -227,3 +227,16 @@ afterAll(async () => {
   mockArbresOuverts.clear();
   await laisserPasserUnTour();
 });
+
+// CARTECODE (26/10) — la carte joueur s'affiche désormais AUSSI dans le profil d'un autre
+// (vignette, Q2 B) : un témoin de profil importe alors la vraie carte. Ces deux modules sont
+// livrés non transpilés (hors de transformIgnorePatterns) : une doublure neutre ici, qu'un
+// `jest.mock` local remplace toujours.
+jest.mock('react-native-linear-gradient', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return ({ children }) => reactActuel.createElement(VueRN, null, children);
+});
+jest.mock('react-native-qrcode-svg', () => function QRCodeDoublure() {
+  return null;
+});

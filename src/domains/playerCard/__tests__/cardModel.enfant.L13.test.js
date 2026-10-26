@@ -26,14 +26,21 @@ describe('PAR-L13 — buildDeclaredChildCardProps', () => {
   test('🔴 une fiche complete donne la carte de la maquette (E29)', () => {
     expect(buildDeclaredChildCardProps({ enfant: ANISSA, libelles: LIBELLES })).toEqual({
       age: '11 ANS',
-      equipe: 'U11 Filles · FoundClub',
+      // CARTECODE Q7 B : les cases de son equipe (vides : la fiche du test n en porte pas).
+      categorie: '',
+      // CARTECODE Q3 A : la bande du club, l equipe dessous.
+      club: 'FoundClub',
+      equipe: 'U11 Filles',
       nationalite: 'Française',
+      niveau: '',
       nom: 'DUBELLOY',
       numero: '7',
       photoUrl: '/uploads/anissa.jpg',
       poste: 'Meneuse',
       prenom: 'Anissa',
       rarity: 'COMMON',
+      section: '',
+      sport: '',
       statut: null,
       ville: 'Marseille',
     });

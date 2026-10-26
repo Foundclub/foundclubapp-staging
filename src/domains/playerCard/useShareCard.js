@@ -32,7 +32,8 @@ import { shareLocalFile } from '@/platform/share/shareLocalFile';
 const GALLERY_ALBUM = 'FoundClub';
 
 /** Nom sous lequel l'utilisateur retrouve sa carte dans sa galerie (Android). */
-export const CARD_SHARE_FILE_NAME = 'foundclub-carte-joueur.png';
+// CARTECODE (planche v2, partie 4) : JPEG 0,9 — dégradés et reflets grossissaient un PNG.
+export const CARD_SHARE_FILE_NAME = 'foundclub-carte-joueur.jpg';
 
 /**
  * Android <= 9 (API < 29) : l'ecriture MediaStore exige encore WRITE_EXTERNAL_STORAGE.
@@ -67,9 +68,9 @@ export default function useShareCard() {
   const captureToFile = useCallback(async (format = 'square') => {
     const fmt = CARD_FORMATS[format] || CARD_FORMATS.square;
     return captureRef(cardRef, {
-      format: 'png',
+      format: 'jpg',
       height: fmt.height,
-      quality: 1,
+      quality: 0.9,
       result: 'tmpfile',
       width: fmt.width,
     });
@@ -88,7 +89,7 @@ export default function useShareCard() {
         fileName: CARD_SHARE_FILE_NAME,
         fileUri,
         message,
-        mimeType: 'image/png',
+        mimeType: 'image/jpeg',
         title,
       });
       return { fileUri, opened, outcome };

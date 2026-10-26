@@ -138,13 +138,25 @@ describe('L27 — sur Android, la carte est ENREGISTREE au lieu d etre perdue', 
     Platform.OS = 'android';
   });
 
+  it('CARTECODE : l image est capturee en JPEG 0,9 (planche v2, partie 4)', async () => {
+    const { shareCard } = monterHook();
+
+    await executer(() => shareCard(CHARGE));
+
+    expect(captureRef).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ format: 'jpg', quality: 0.9 }),
+    );
+    expect(CARD_SHARE_FILE_NAME).toMatch(/.jpg$/);
+  });
+
   it('l image capturee part dans la galerie du telephone', async () => {
     const { shareCard } = monterHook();
 
     const { resultat } = await executer(() => shareCard(CHARGE));
 
     expect(ReactNativeBlobUtil.MediaCollection.copyToMediaStore).toHaveBeenCalledWith(
-      { mimeType: 'image/png', name: CARD_SHARE_FILE_NAME, parentFolder: 'FoundClub' },
+      { mimeType: 'image/jpeg', name: CARD_SHARE_FILE_NAME, parentFolder: 'FoundClub' },
       'Image',
       CHEMIN_NU,
     );
@@ -158,7 +170,7 @@ describe('L27 — sur Android, la carte est ENREGISTREE au lieu d etre perdue', 
 
     expect(ReactNativeBlobUtil.android.actionViewIntent).toHaveBeenCalledWith(
       CHEMIN_NU,
-      'image/png',
+      'image/jpeg',
       CHARGE.dialogTitle,
     );
     expect(resultat).toMatchObject({ opened: true });

@@ -26,7 +26,7 @@ import { getApiBaseUrl } from '@/config/runtimeUrls';
  * @param {string} [params.fileName]
  * @returns {Promise<Array<object>>} media items Strapi (id, documentId, url, mime...)
  */
-export const uploadCardImage = async ({ fileName = `carte-foundclub-${Date.now()}.png`, fileUri }) => {
+export const uploadCardImage = async ({ fileName = `carte-foundclub-${Date.now()}.jpg`, fileUri }) => {
   if (!fileUri) return [];
 
   const normalizedUri = Platform.OS === 'android' && !fileUri.startsWith('file://')
@@ -36,7 +36,7 @@ export const uploadCardImage = async ({ fileName = `carte-foundclub-${Date.now()
   const formData = new FormData();
   formData.append('files', /** @type {any} */ ({
     name: fileName,
-    type: 'image/png',
+    type: 'image/jpeg',
     uri: normalizedUri,
   }));
 

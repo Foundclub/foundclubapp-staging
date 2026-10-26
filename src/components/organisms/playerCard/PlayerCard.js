@@ -1,26 +1,22 @@
 // @ts-nocheck
 /**
- * PlayerCard — carte joueur collectible FoundClub (design final Claude design).
+ * PlayerCard — « Ma carte joueur », direction C « Terrain » (CARTECODE, planche v2 validée par
+ * Adel le 26/10/2026, Q9 C) : un billet à encoches, la photo posée sur les lignes du terrain de
+ * SON sport, le grand numéro en contour derrière le joueur, le liseré et le reflet de la rareté.
  *
- * Reproduction exacte de la maquette 992×1262 : toutes les valeurs px sont a la
- * base 992 et multipliees par scale = width / 992. Tout le contenu vient des
- * props ; seuls le wordmark FOUNDCLUB et les labels de lignes sont en dur.
+ * Toutes les mesures sont à la base 992 x 1262 (l'image partagée) et multipliées par
+ * s = width / 992. react-native-svg et react-native-linear-gradient seulement : aucune
+ * dépendance neuve. Aucun or (#f5b301 est réservé à la League) : le légendaire est nacré.
  *
- * Contraintes techniques respectees :
- *  - degrades/eclats/terrain : react-native-svg + react-native-linear-gradient
- *    (deja lies, AUCUNE dependance native nouvelle) ;
- *  - pas de backdrop-filter en RN -> panneaux opaques #041c26 (PAR-L14) ;
- *  - italique : l'APK n'embarque que Montserrat Regular/Bold/Black -> faux
- *    italique via skewX(-8deg) (ajouter Montserrat-BlackItalic.ttf + rebuild
- *    pour la vraie italique) ; weight 800 rendu en Montserrat-Black ;
- *  - composant pur, memoise, sans etat (hors mesure du badge hexagonal) ;
- *  - capture export : react-native-view-shot a 992×1262 (cf. CARD_FORMATS).
- *
- * Extensions hors maquette (exigences produit existantes, sans impact visuel
- * sur les rendus normaux) : prop `locked` (garde-fou mineurs : voile + QR
- * masque) et fallback dos floque si `photo` absent (jamais de carte vide).
+ * Deux usages (`mode`) :
+ *  - « ecran » : ce qui manque se voit (« + à compléter », « + N° », « + PHOTO ») ;
+ *  - « image » (défaut, l'image partagée) : ce qui manque disparaît, rien n'est inventé.
+ * Une case n'existe que si sa prop est fournie : la carte d'un enfant ne reçoit ni taille ni
+ * poids (Q7 B), elle n'a donc pas ces cases.
+ * `locked` (mineur de moins de 15 ans sans accord) : dos de maillot à la place de la photo,
+ * aucun code QR.
  */
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, Text, View,
@@ -28,1068 +24,846 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import Svg, {
-  Circle, Defs, Ellipse, G, Line, Polygon,
-  RadialGradient, Rect, Stop, LinearGradient as SvgLinearGradient, Text as SvgText,
+  ClipPath,
+  Defs,
+  G,
+  Line,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
+  Svg as SvgNested,
+  Text as SvgText,
 } from 'react-native-svg';
 
 import BackJerseyFallback from './BackJerseyFallback';
+import { CourtLines } from './courts';
 
-// Fond dynamique de l'app (meme asset que theme/images.js bg2).
-// eslint-disable-next-line global-require
-const BG_IMAGE = require('../../../assets/pictures/bg-2.png');
-// Logo officiel FoundClub (wordmark horizontal 1103×121, fond transparent).
-// eslint-disable-next-line global-require
+// Logo officiel FoundClub (wordmark horizontal 1103 x 121) et shield de l'app (TeamShield).
+const SHIELD_IMAGE = require('../../../assets/icons/shield.png');
 const LOGO_IMAGE = require('../../../assets/pictures/logo.png');
 
 const LOGO_RATIO = 1103 / 121;
 
-/** Dimensions natives de la maquette (et de l'export view-shot). */
+/** Dimensions natives de la carte (et de l'image partagée). */
 export const CARD_EXPORT_WIDTH = 992;
 export const CARD_EXPORT_HEIGHT = 1262;
 
-/** Preset de capture (consomme par useShareCard). */
+/** Preset de capture (consommé par useShareCard). */
 export const CARD_FORMATS = Object.freeze({
   square: { height: CARD_EXPORT_HEIGHT, key: 'square', width: CARD_EXPORT_WIDTH },
 });
 
-/** LEGACY — encore consomme par TeamCard (v1.1, non cable). */
+/** LEGACY — encore consommé par TeamCard (non branchée). Plus d'or : le légendaire est nacré. */
 export const RARITY_THEME = {
-  common: { accent: '#7f8c99', glow: 'rgba(127,140,153,0.25)', label: 'COMMUNE' },
-  epic: { accent: '#a855f7', glow: 'rgba(168,85,247,0.40)', label: 'ÉPIQUE' },
-  legendary: { accent: '#f5b301', glow: 'rgba(245,179,1,0.45)', label: 'LÉGENDAIRE' },
-  rare: { accent: '#01b3f4', glow: 'rgba(1,179,244,0.35)', label: 'RARE' },
+  common: { accent: '#9aa6b1', glow: 'rgba(127,140,153,0.28)', label: 'COMMUNE' },
+  epic: { accent: '#8567ff', glow: 'rgba(133,103,255,0.48)', label: 'ÉPIQUE' },
+  legendary: { accent: '#b3ecff', glow: 'rgba(179,236,255,0.55)', label: 'LÉGENDAIRE' },
+  rare: { accent: '#01b3f4', glow: 'rgba(1,179,244,0.42)', label: 'RARE' },
 };
 
+const W = CARD_EXPORT_WIDTH;
+const H = CARD_EXPORT_HEIGHT;
+const LISERE = 11;
+const NOTCH_Y = Math.round(H * 0.82);
+const STAGE_H = 555;
+const PAD = 43;
 const CYAN = '#01b3f4';
-const INK = '#001218';
+const CYAN_HI = '#66d2f9';
+const DIM = '#9fb3ba';
+const TXT = '#eaf7fd';
+const PANEL = 'rgba(4,28,38,0.85)';
 
 /**
- * PAR-L14 — la mise en page, en unites de dessin (base 992 x 1262).
- * Aucune police sous 32 unites : la carte est reduite a la largeur de l'ecran, et
- * 32 unites font 10,5 pt sur un iPhone SE (carte de 327 pt, x0,33) et 10,1 dp sur
- * un Android de 360 dp (312, x0,31). Elle en avait de 15 a 21 (5 a 7 pt).
- * Hauteurs de ligne explicites : la place de l'historique se CALCULE
- * (planHistorique), la carte a hauteur fixe ne rogne jamais rien.
- * Le portrait garde 404 x 404 (son ancienne largeur) : le dos de maillot floque
- * de la carte verrouillee ne retrecit pas. Le code QR passe a cote du tableau :
- * le pied, qui repetait le logo de l'en-tete, rend sa place a l'historique.
+ * Liseré (stops du dégradé du contour), couleur d'accent et reflet, par rareté.
+ * Métal brossé, verre cyan, holographique, nacre irisée (planche v2, partie 3).
  */
-const LAYOUT = Object.freeze({
-  clubLine: 40,
-  entryPadV: 5,
-  hairline: 4, // un trait de 1 pt d'ecran vaut au plus 4 unites (echelle >= 0,25)
-  headerH: 56,
-  histGap: 14,
-  histListGap: 4,
-  histPadV: 14,
-  histTitleH: 38,
-  identityGap: 12,
-  identityH: 404,
-  infoGap: 16,
-  infoPadV: 4,
-  metaLine: 38,
-  padBottom: 28,
-  padH: 44,
-  padTop: 28,
-  portraitW: 404,
-  qrBox: 118,
-  qrGap: 16,
-  rowH: 52,
-});
-const INTERIOR_H = CARD_EXPORT_HEIGHT - 6;
-
-/**
- * Combien de lignes d'historique tiennent sous un tableau de `rangees` rangees.
- * D'abord le plus de clubs possible (3 au plus), puis le nom du club sur 2 lignes,
- * puis « saison · niveau · categories » sur 2 lignes. Le compteur de l'en-tete
- * compte TOUS les clubs.
- * @param {number} rangees rangees du tableau (STATUT compris)
- * @param {number} disponibles lignes d'historique a montrer
- * @returns {{ lignes: number, lignesClub: 1|2, lignesMeta: 1|2 }}
- */
-export const planHistorique = (rangees, disponibles) => {
-  const L = LAYOUT;
-  const tableau = 2 * L.infoPadV + rangees * L.rowH + L.hairline * (rangees + 1);
-  const fixe = L.padTop + L.padBottom + L.headerH + L.identityGap + L.identityH
-    + L.infoGap + Math.max(tableau, L.qrBox)
-    + L.histGap + 2 * L.histPadV + L.histTitleH + L.histListGap + 2 * L.hairline;
-  const place = INTERIOR_H - fixe;
-  const hauteur = (club, meta) => 2 * L.entryPadV + club * L.clubLine + meta * L.metaLine;
-  for (let n = Math.min(3, disponibles); n > 0; n -= 1) {
-    const forme = [[2, 2], [2, 1], [1, 1]].find(([club, meta]) => n * hauteur(club, meta) <= place);
-    if (forme) return { lignes: n, lignesClub: forme[0], lignesMeta: forme[1] };
-  }
-  return { lignes: 0, lignesClub: 1, lignesMeta: 1 };
-};
-
-/**
- * Style d'un texte de la carte : taille et hauteur de ligne a l'echelle.
- * @param {number} s echelle (largeur / 992)
- * @param {number} size taille en unites de dessin
- * @param {number} line hauteur de ligne en unites de dessin
- * @returns {{ fontSize: number, includeFontPadding: boolean, lineHeight: number }}
- */
-const font = (s, size, line) => ({
-  fontSize: size * s, includeFontPadding: false, lineHeight: line * s,
-});
-
-// Extremites de degrades pour les angles CSS utilises (155/165/115 deg).
-const ANGLES = {
-  115: {
-    x1: '4.7%', x2: '95.3%', y1: '28.9%', y2: '71.1%',
-  },
-  155: {
-    x1: '28.9%', x2: '71.1%', y1: '4.7%', y2: '95.3%',
-  },
-  165: {
-    x1: '37.1%', x2: '62.9%', y1: '1.7%', y2: '98.3%',
-  },
-};
-
-// NB react-native-svg : l'alpha d'un rgba() dans stopColor est ignore ->
-// toujours stopColor hex + stopOpacity ([offset, hex, opacity]).
-const RARITY_STYLES = {
+export const RARITY_LOOKS = {
   COMMON: {
-    borderAngle: 155,
-    borderStops: [[0, '#01b3f4', 0.32], [1, '#01b3f4', 0.32]],
-    crystal: false,
-    few: false,
-    glowCyan: 0,
-    glowViolet: 0,
-    many: false,
+    accent: '#9aa6b1',
+    lisere: [
+      [0, '#e2e7eb'],
+      [0.22, '#8a96a1'],
+      [0.45, '#4b5560'],
+      [0.62, '#cfd6dc'],
+      [0.82, '#6b7682'],
+      [1, '#b9c2ca'],
+    ],
+    reflet: [
+      [0.4, '#ffffff', 0],
+      [0.5, '#ffffff', 0.1],
+      [0.6, '#ffffff', 0],
+    ],
   },
   EPIC: {
-    borderAngle: 165,
-    borderStops: [[0, '#66d2f9', 1], [0.45, '#01b3f4', 1], [1, '#0a5a7d', 1]],
-    crystal: false,
-    few: true,
-    glowCyan: 0.26,
-    glowViolet: 0,
-    many: false,
-  },
-  MOST_RARE: {
-    borderAngle: 155,
-    borderStops: [
-      [0, '#d8f4ff', 1], [0.14, '#66d2f9', 1], [0.32, '#01b3f4', 1],
-      [0.52, '#12608a', 1], [0.72, '#8567ff', 1], [1, '#99e1fb', 1],
+    accent: '#8567ff',
+    lisere: [
+      [0, '#efe9ff'],
+      [0.28, '#8567ff'],
+      [0.52, '#3b2a99'],
+      [0.72, '#a991ff'],
+      [1, '#66d2f9'],
     ],
-    crystal: true,
-    few: true,
-    glowCyan: 0.45,
-    glowViolet: 0.22,
-    many: true,
+    reflet: [
+      [0.24, '#66d2f9', 0],
+      [0.36, '#66d2f9', 0.16],
+      [0.46, '#8567ff', 0.24],
+      [0.51, '#ffffff', 0.2],
+      [0.58, '#66d2f9', 0.16],
+      [0.72, '#66d2f9', 0],
+    ],
+  },
+  LEGENDARY: {
+    accent: '#b3ecff',
+    lisere: [
+      [0, '#ffffff'],
+      [0.17, '#b3ecff'],
+      [0.33, '#66d2f9'],
+      [0.5, '#8567ff'],
+      [0.67, '#f0e9ff'],
+      [0.83, '#99e1fb'],
+      [1, '#ffffff'],
+    ],
+    reflet: [
+      [0.18, '#b3ecff', 0],
+      [0.32, '#b3ecff', 0.22],
+      [0.44, '#8567ff', 0.28],
+      [0.5, '#ffffff', 0.3],
+      [0.58, '#99e1fb', 0.24],
+      [0.66, '#8567ff', 0.2],
+      [0.8, '#8567ff', 0],
+    ],
   },
   RARE: {
-    borderAngle: 155,
-    borderStops: [[0, '#01b3f4', 0.75], [1, '#01b3f4', 0.75]],
-    crystal: false,
-    few: false,
-    glowCyan: 0.15,
-    glowViolet: 0,
-    many: false,
-  },
-  ULTRA_RARE: {
-    borderAngle: 155,
-    borderStops: [
-      [0, '#b3ecff', 1], [0.22, '#66d2f9', 1], [0.48, '#01b3f4', 1],
-      [0.72, '#0096d1', 1], [1, '#66d2f9', 1],
+    accent: '#01b3f4',
+    lisere: [
+      [0, '#d8f4ff'],
+      [0.22, '#66d2f9'],
+      [0.45, '#01b3f4'],
+      [0.7, '#0a5a7d'],
+      [1, '#66d2f9'],
     ],
-    crystal: false,
-    few: true,
-    glowCyan: 0.38,
-    glowViolet: 0,
-    many: true,
+    reflet: [
+      [0.36, '#ffffff', 0],
+      [0.45, '#ffffff', 0.16],
+      [0.5, '#66d2f9', 0.14],
+      [0.58, '#66d2f9', 0],
+    ],
   },
 };
 
+/**
+ * Les raretés d'avant (5 niveaux) retombent sur les 4 de la planche.
+ * @param {string} rarity
+ * @returns {string} COMMON, RARE, EPIC ou LEGENDARY
+ */
+export const normalizeRarity = (rarity) => {
+  const r = String(rarity || '').toUpperCase();
+  if (r === 'MOST_RARE' || r === 'ULTRA_RARE' || r === 'LEGENDARY') return 'LEGENDARY';
+  return RARITY_LOOKS[r] ? r : 'COMMON';
+};
+
+/**
+ * Le contour d'un billet à encoches : rectangle arrondi, deux demi-cercles creusés à 82 %.
+ * @param {number} inset retrait depuis le bord de la carte
+ * @param {number} radius rayon des coins
+ * @param {number} notch rayon des encoches (centrées SUR le bord extérieur de la carte)
+ * @returns {string} le chemin SVG
+ */
+export const ticketPath = (inset, radius, notch) => {
+  const x0 = inset;
+  const y0 = inset;
+  const x1 = W - inset;
+  const y1 = H - inset;
+  const dy = Math.sqrt(Math.max(notch * notch - inset * inset, 0));
+  return [
+    `M${x0 + radius},${y0}`,
+    `H${x1 - radius}`,
+    `A${radius},${radius} 0 0 1 ${x1},${y0 + radius}`,
+    `V${NOTCH_Y - dy}`,
+    `A${notch},${notch} 0 0 0 ${x1},${NOTCH_Y + dy}`,
+    `V${y1 - radius}`,
+    `A${radius},${radius} 0 0 1 ${x1 - radius},${y1}`,
+    `H${x0 + radius}`,
+    `A${radius},${radius} 0 0 1 ${x0},${y1 - radius}`,
+    `V${NOTCH_Y + dy}`,
+    `A${notch},${notch} 0 0 0 ${x0},${NOTCH_Y - dy}`,
+    `V${y0 + radius}`,
+    `A${radius},${radius} 0 0 1 ${x0 + radius},${y0}`,
+    'Z',
+  ].join(' ');
+};
+
+const OUTER = ticketPath(0, 44, 34);
+const INNER = ticketPath(LISERE, 33, 45);
+
 const up = (value) => String(value ?? '').toUpperCase();
-const estVide = (value) => ['', '-', '—'].includes(String(value ?? '').trim());
+const estVide = (value) => ['', '-', '—', 'null', 'undefined'].includes(String(value ?? '').trim());
+const font = (s, size, line = size * 1.2) => ({
+  fontSize: size * s,
+  includeFontPadding: false,
+  lineHeight: line * s,
+});
+const initiales = (nom) => String(nom || '')
+  .split(/[\s-]+/)
+  .filter(Boolean)
+  .slice(0, 3)
+  .map((mot) => mot[0])
+  .join('')
+  .toUpperCase();
 
 /**
- * Wordmark FOUNDCLUB — logo officiel de l'app (demande Adel : pas de texte).
- * @param root0
- * @param root0.size hauteur logique du logo (base 992)
- * @param root0.s
+ * Logo : l'image du club sur une plaque blanche, sinon le shield FoundClub aux initiales
+ * (règle de ClubLogoMark / TeamShield, Q3 A).
+ * @param {{ accent: string, name: string, s: number, size: number, uri?: string|null }} props
+ * @returns {import('react').ReactElement}
  */
-function Wordmark({ s, size }) {
-  const h = size * s;
-  return (
-    <Image
-      resizeMode="contain"
-      source={LOGO_IMAGE}
-      style={{ height: h, width: h * LOGO_RATIO }}
-    />
-  );
-}
-
-/**
- * Badge hexagonal de rarete (contour degrade + gemme + libelle).
- * @param root0
- * @param root0.label
- * @param root0.s
- */
-function RarityBadge({ label, s }) {
-  const [size, setSize] = useState(null);
-  const cut = 0.09;
+export function CardLogo({
+  accent, name, s, size, uri,
+}) {
+  const cote = size * s;
+  if (uri) {
+    return (
+      <View
+        style={[
+          styles.plaque,
+          {
+            borderColor: accent,
+            borderRadius: 16 * s,
+            borderWidth: 3.5 * s,
+            height: cote,
+            width: cote,
+          },
+        ]}
+      >
+        <Image
+          resizeMode="contain"
+          source={{ uri }}
+          style={{ height: cote * 0.72, width: cote * 0.72 }}
+        />
+      </View>
+    );
+  }
   return (
     <View
-      onLayout={(e) => setSize({
-        h: e.nativeEvent.layout.height, w: e.nativeEvent.layout.width,
-      })}
-      style={[styles.row, { paddingHorizontal: 28 * s, paddingVertical: 9 * s }]}
+      style={{
+        alignItems: 'center',
+        height: cote,
+        justifyContent: 'center',
+        width: cote,
+      }}
     >
-      {size ? (
-        <Svg height={size.h} pointerEvents="none" style={StyleSheet.absoluteFill} width={size.w}>
-          <Defs>
-            <SvgLinearGradient id="badgeStroke" x1="0%" x2="100%" y1="0%" y2="100%">
-              <Stop offset="0" stopColor="#99e1fb" />
-              <Stop offset="0.45" stopColor="#01b3f4" />
-              <Stop offset="1" stopColor="#8567ff" />
-            </SvgLinearGradient>
-            <SvgLinearGradient id="badgeFill" x1="0%" x2="0%" y1="0%" y2="100%">
-              <Stop offset="0" stopColor="#062836" />
-              <Stop offset="1" stopColor="#021620" />
-            </SvgLinearGradient>
-          </Defs>
-          {/* Halo cyan (drop-shadow de la maquette) : hexagones concentriques */}
-          <Polygon
-            fill="none"
-            points={`${cut * size.w},1 ${(1 - cut) * size.w},1 ${size.w - 1},${size.h / 2} ${(1 - cut) * size.w},${size.h - 1} ${cut * size.w},${size.h - 1} 1,${size.h / 2}`}
-            stroke={CYAN}
-            strokeOpacity={0.14}
-            strokeWidth={9 * s}
-          />
-          <Polygon
-            fill="none"
-            points={`${cut * size.w},1 ${(1 - cut) * size.w},1 ${size.w - 1},${size.h / 2} ${(1 - cut) * size.w},${size.h - 1} ${cut * size.w},${size.h - 1} 1,${size.h / 2}`}
-            stroke={CYAN}
-            strokeOpacity={0.3}
-            strokeWidth={5 * s}
-          />
-          <Polygon
-            fill="url(#badgeFill)"
-            points={`${cut * size.w},1 ${(1 - cut) * size.w},1 ${size.w - 1},${size.h / 2} ${(1 - cut) * size.w},${size.h - 1} ${cut * size.w},${size.h - 1} 1,${size.h / 2}`}
-            stroke="url(#badgeStroke)"
-            strokeWidth={2.5 * s}
-          />
-        </Svg>
-      ) : null}
-      <Svg height={24 * s} viewBox="0 0 17 17" width={24 * s}>
-        <Defs>
-          <SvgLinearGradient id="gem" x1="0%" x2="100%" y1="0%" y2="100%">
-            <Stop offset="0" stopColor="#d8f4ff" />
-            <Stop offset="0.35" stopColor="#66d2f9" />
-            <Stop offset="0.7" stopColor="#01b3f4" />
-            <Stop offset="1" stopColor="#8567ff" />
-          </SvgLinearGradient>
-        </Defs>
-        <Polygon fill="url(#gem)" points="8.5,0 17,8.5 8.5,17 0,8.5" />
-        <Polygon fill="rgba(255,255,255,0.55)" points="8.5,2.4 12,5.9 8.5,7.6 5,5.9" />
-      </Svg>
+      <Image
+        resizeMode="contain"
+        source={SHIELD_IMAGE}
+        style={[StyleSheet.absoluteFill, { tintColor: '#99e1fb' }]}
+      />
       <Text
         allowFontScaling={false}
+        numberOfLines={1}
         style={{
-          color: '#eaf7fd',
+          color: '#173844',
           fontFamily: 'Montserrat-Black',
-          ...font(s, 32, 38),
-          letterSpacing: 2 * s,
-          marginLeft: 12 * s,
+          ...font(s, size * 0.29),
+          marginTop: -4 * s,
         }}
       >
-        {up(label)}
+        {initiales(name)}
       </Text>
     </View>
   );
 }
 
 /**
- * Eclats decoratifs (few / many / voile cristal) — SVG plein cadre.
- * @param root0
- * @param root0.crystal
- * @param root0.few
- * @param root0.h
- * @param root0.many
- * @param root0.s
- * @param root0.w
+ * Une case de la carte : son libellé et sa valeur, ou « + à compléter ».
+ * @param {{ label: string, s: number, value?: string, manquant: string }} props
+ * @returns {import('react').ReactElement}
  */
-function Shards({
-  crystal, few, h, many, s, w,
+function Case({
+  label, manquant, s, value,
 }) {
-  if (!few && !many && !crystal) return null;
-  return (
-    <Svg height={h} pointerEvents="none" style={StyleSheet.absoluteFill} width={w}>
-      <Defs>
-        <SvgLinearGradient id="shardA" x1="0%" x2="100%" y1="0%" y2="100%">
-          <Stop offset="0" stopColor="#66d2f9" stopOpacity={0.2} />
-          <Stop offset="1" stopColor="#66d2f9" stopOpacity={0} />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="shardB" x1="100%" x2="0%" y1="0%" y2="100%">
-          <Stop offset="0" stopColor="#01b3f4" stopOpacity={0.14} />
-          <Stop offset="1" stopColor="#01b3f4" stopOpacity={0} />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="liseret" x1="0%" x2="100%" y1="0%" y2="0%">
-          <Stop offset="0" stopColor="#ffffff" stopOpacity={0} />
-          <Stop offset="0.5" stopColor="#ffffff" stopOpacity={0.55} />
-          <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="veil" x1={ANGLES[115].x1} x2={ANGLES[115].x2} y1={ANGLES[115].y1} y2={ANGLES[115].y2}>
-          <Stop offset="0" stopColor="#ffffff" stopOpacity={0} />
-          <Stop offset="0.45" stopColor="#ffffff" stopOpacity={0.11} />
-          <Stop offset="0.55" stopColor="#8567ff" stopOpacity={0.07} />
-          <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
-        </SvgLinearGradient>
-      </Defs>
-
-      {few ? (
-        <>
-          {/* Polygones diagonaux translucides, coins haut-droit et gauche */}
-          <Polygon fill="url(#shardA)" points={`${w - 300 * s},0 ${w},0 ${w},${260 * s}`} />
-          <Polygon fill="url(#shardB)" points={`0,${120 * s} 0,${420 * s} ${260 * s},${170 * s}`} />
-          {/* Trait lumineux incline 24° */}
-          <Rect
-            fill="rgba(216,244,255,0.35)"
-            height={430 * s}
-            transform={`rotate(24 ${w * 0.62} ${60 * s})`}
-            width={2 * s}
-            x={w * 0.62}
-            y={-40 * s}
-          />
-        </>
-      ) : null}
-
-      {many ? (
-        <>
-          <Rect
-            fill="rgba(216,244,255,0.30)"
-            height={380 * s}
-            transform={`rotate(-18 ${w * 0.88} ${140 * s})`}
-            width={2 * s}
-            x={w * 0.88}
-            y={80 * s}
-          />
-          <Polygon fill="url(#shardB)" points={`0,${h} 0,${h - 300 * s} ${240 * s},${h}`} />
-          {/* Petits losanges brillants */}
-          <Polygon
-            fill="rgba(216,244,255,0.5)"
-            points={`${w * 0.18},${190 * s} ${w * 0.18 + 9 * s},${199 * s} ${w * 0.18},${208 * s} ${w * 0.18 - 9 * s},${199 * s}`}
-          />
-          <Polygon
-            fill="rgba(216,244,255,0.4)"
-            points={`${w * 0.82},${h - 260 * s} ${w * 0.82 + 7 * s},${h - 253 * s} ${w * 0.82},${h - 246 * s} ${w * 0.82 - 7 * s},${h - 253 * s}`}
-          />
-          {/* Lisere blanc haut de carte */}
-          <Rect fill="url(#liseret)" height={2 * s} width={w * 0.7} x={w * 0.15} y={0} />
-        </>
-      ) : null}
-
-      {crystal ? (
-        <>
-          <Rect fill="url(#veil)" height={h} width={w} x={0} y={0} />
-          <Polygon fill="rgba(133,103,255,0.18)" points={`0,0 ${300 * s},0 0,${260 * s}`} />
-          <Polygon
-            fill="rgba(196,181,255,0.5)"
-            points={`${w * 0.3},${h - 200 * s} ${w * 0.3 + 8 * s},${h - 192 * s} ${w * 0.3},${h - 184 * s} ${w * 0.3 - 8 * s},${h - 192 * s}`}
-          />
-        </>
-      ) : null}
-    </Svg>
-  );
-}
-
-/**
- * Mini-terrain SVG horizontal 4-2-3-1 (panneau bas variante tactique).
- * @param root0
- * @param root0.numero
- * @param root0.pitchWidth
- * @param root0.posteIndex
- */
-function TacticalPitch({ numero, pitchWidth, posteIndex }) {
-  // 10 joueurs (sans gardien), de la defense vers l'attaque.
-  const players = [
-    { x: 120, y: 22 }, { x: 120, y: 66 }, { x: 120, y: 110 }, { x: 120, y: 154 },
-    { x: 330, y: 58 }, { x: 330, y: 118 },
-    { x: 550, y: 30 }, { x: 550, y: 88 }, { x: 550, y: 146 },
-    { x: 740, y: 88 },
-  ];
-  const line = 'rgba(153,225,251,0.38)';
-  return (
-    <Svg
-      height={pitchWidth * (176 / 840)}
-      style={{ alignSelf: 'center', marginTop: pitchWidth * 0.017 }}
-      viewBox="0 0 840 176"
-      width={pitchWidth}
-    >
-      <Rect fill="rgba(2,36,48,0.45)" height="173" rx="8" stroke={line} strokeWidth="1.5" width="837" x="1.5" y="1.5" />
-      <Line stroke={line} strokeWidth="1.5" x1="420" x2="420" y1="1.5" y2="174.5" />
-      <Circle cx="420" cy="88" fill="none" r="26" stroke={line} strokeWidth="1.5" />
-      {/* Surfaces + 6m */}
-      <Rect fill="none" height="104" stroke={line} strokeWidth="1.5" width="92" x="1.5" y="36" />
-      <Rect fill="none" height="56" stroke={line} strokeWidth="1.5" width="40" x="1.5" y="60" />
-      <Rect fill="none" height="104" stroke={line} strokeWidth="1.5" width="92" x="746.5" y="36" />
-      <Rect fill="none" height="56" stroke={line} strokeWidth="1.5" width="40" x="798.5" y="60" />
-      {players.map((p, i) => (i === posteIndex ? (
-        <G key={`p-${p.x}-${p.y}`}>
-          <Circle cx={p.x} cy={p.y} fill="none" r="28" stroke="rgba(1,179,244,0.3)" strokeWidth="1.5" />
-          <Circle cx={p.x} cy={p.y} fill="none" r="22" stroke="rgba(1,179,244,0.5)" strokeWidth="1.5" />
-          <Circle cx={p.x} cy={p.y} fill={CYAN} r="16" stroke="#ffffff" strokeWidth="2" />
-          <SvgText
-            fill={INK}
-            fontFamily="Montserrat-Black"
-            fontSize="15"
-            fontWeight="900"
-            textAnchor="middle"
-            x={p.x}
-            y={p.y + 5.5}
-          >
-            {up(numero)}
-          </SvgText>
-        </G>
-      ) : (
-        <Circle cx={p.x} cy={p.y} fill="#0d2f3d" key={`p-${p.x}-${p.y}`} r="11" stroke="rgba(102,210,249,0.75)" strokeWidth="1.5" />
-      )))}
-    </Svg>
-  );
-}
-
-/**
- * Ligne label/valeur du panneau infos.
- * @param root0
- * @param root0.isLast
- * @param root0.label
- * @param root0.s
- * @param root0.value
- */
-function InfoRow({
-  isLast, label, s, value,
-}) {
+  const vide = estVide(value);
   return (
     <View
-      style={[styles.row, {
-        borderBottomColor: 'rgba(255,255,255,0.07)',
-        borderBottomWidth: isLast ? 0 : 1,
-        height: LAYOUT.rowH * s,
-        justifyContent: 'space-between',
-      }]}
+      style={[
+        styles.case,
+        {
+          borderRadius: 18 * s,
+          paddingHorizontal: 19 * s,
+          paddingVertical: 13 * s,
+          ...(vide
+            ? { borderColor: 'rgba(102,210,249,0.55)', borderStyle: 'dashed', borderWidth: 3.5 * s }
+            : { backgroundColor: PANEL }),
+        },
+      ]}
     >
       <Text
         allowFontScaling={false}
-        style={{
-          color: '#adb1b2',
-          flexShrink: 0,
-          fontFamily: 'Montserrat-Bold',
-          ...font(s, 32, 38),
-          letterSpacing: 2 * s,
-        }}
+        style={[styles.label, font(s, 22), { letterSpacing: 2.2 * s }]}
       >
         {label}
       </Text>
-      {/* PAR-L14 : la valeur prend toute la place que le libelle laisse (plus de
-          plafond a 62 %) ; a 34 unites, un nom de club de 25 a 30 lettres tient. */}
-      {typeof value === 'string' ? (
-        <Text
-          allowFontScaling={false}
-          numberOfLines={1}
-          style={{
-            color: '#ffffff',
-            flexShrink: 1,
-            fontFamily: 'Montserrat-Black',
-            ...font(s, 34, 42),
-            marginLeft: 24 * s,
-            textAlign: 'right',
-          }}
-        >
-          {value}
-        </Text>
-      ) : value}
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          vide
+            ? { color: CYAN_HI, fontFamily: 'Montserrat-Bold', ...font(s, 27, 40) }
+            : { color: TXT, fontFamily: 'Montserrat-Black', ...font(s, 34, 40) }
+        }
+      >
+        {vide ? manquant : up(value)}
+      </Text>
     </View>
   );
 }
 
 /**
- * Carte joueur collectible (voir en-tete du fichier pour l'API complete).
+ * La carte, dessinée à la largeur demandée.
  * @param {object} props
- * @param {number} props.width largeur rendue ; scale = width / 992
- * @param props.age
- * @param props.backgroundVisible
- * @param props.bottomPanel
- * @param props.club
- * @param props.disposition
- * @param {string} [props.equipe] PAR-L13 : la rangee ÉQUIPE (carte d'un enfant declare)
- * @param props.historique
- * @param {string} [props.historiqueEmptyLabel]
- * @param {number} [props.historiqueTotal] clubs distincts (PAR-L14), sinon le nombre de lignes
- * @param props.locked
- * @param props.nationalite
- * @param props.nom
- * @param props.numero
- * @param props.photo
- * @param props.poste
- * @param props.posteIndex
- * @param props.prenom
- * @param props.qrValue
- * @param props.rarity
- * @param props.rarityLabel
- * @param props.sport
- * @param {string|null} [props.statut] `null` : aucune rangee STATUT (PAR-L13, fiche d'enfant)
- * @param props.ville
+ * @param {any} props.age
+ * @param {any} props.categorie
+ * @param {any} props.club
+ * @param {any} props.clubLogoUrl
+ * @param {any} props.equipe
+ * @param {any} props.historique
+ * @param {any} props.locked
+ * @param {any} props.mode
+ * @param {any} props.nationalite
+ * @param {any} props.niveau
+ * @param {any} props.nom
+ * @param {any} props.numero
+ * @param {any} props.photo
+ * @param {any} props.poids
+ * @param {any} props.poste
+ * @param {any} props.prenom
+ * @param {any} props.qrLabel
+ * @param {any} props.qrValue
+ * @param {any} props.rarity
+ * @param {any} props.section
+ * @param {any} props.sport
+ * @param {any} props.statut
+ * @param {any} props.taille
+ * @param {any} props.ville
+ * @param {any} props.width
+ * @returns {import('react').ReactElement}
  */
 function PlayerCardBase({
   age,
-  backgroundVisible = true,
-  bottomPanel = 'historique',
+  categorie,
   club,
-  disposition,
-  equipe = undefined,
+  clubLogoUrl = null,
+  equipe,
   historique = [],
-  historiqueEmptyLabel = undefined,
-  historiqueTotal = undefined,
   locked = false,
+  mode = 'image',
   nationalite,
+  niveau,
   nom,
   numero,
   photo,
+  poids,
   poste,
-  posteIndex = 0,
   prenom,
+  qrLabel,
   qrValue,
   rarity = 'COMMON',
-  rarityLabel,
+  section,
   sport,
   statut = 'DISPONIBLE',
+  taille,
   ville,
   width,
 }) {
   const { t } = useTranslation();
-  /** Libelles par defaut du badge (surchargables via prop rarityLabel). */
-  const RARITY_LABELS = {
+  const s = width / W;
+  const h = width * (H / W);
+  const ecran = mode === 'ecran';
+  const rarete = normalizeRarity(rarity);
+  const look = RARITY_LOOKS[rarete];
+  const manquant = t('playerCard.missing', '+ à compléter');
+  const rarityLabel = {
     COMMON: t('playerCard.rarity.common', 'COMMUNE'),
     EPIC: t('playerCard.rarity.epic', 'ÉPIQUE'),
-    MOST_RARE: t('playerCard.rarity.mostRare', 'MOST RARE'),
+    LEGENDARY: t('playerCard.rarity.legendary', 'LÉGENDAIRE'),
     RARE: t('playerCard.rarity.rare', 'RARE'),
-    ULTRA_RARE: t('playerCard.rarity.ultraRare', 'ULTRA RARE'),
-  };
-  const s = width / CARD_EXPORT_WIDTH;
-  const h = width * (CARD_EXPORT_HEIGHT / CARD_EXPORT_WIDTH);
-  const theme = RARITY_STYLES[rarity] || RARITY_STYLES.COMMON;
-  const angle = ANGLES[theme.borderAngle] || ANGLES[155];
-  const isAvailable = up(statut) === 'DISPONIBLE';
-  const statusColor = isAvailable ? '#27d6a3' : '#ff284f';
-  // PAR-L14 : une rangee « — » (ou vide) n'apprend rien. On la retire, et la place
-  // rendue va a l'historique. STATUT est toujours la, en dernier.
-  const rangees = [
-    [t('playerCard.info.position', 'POSTE'), poste],
+  }[rarete];
+
+  const cases = [
     [t('playerCard.info.age', 'ÂGE'), age],
-    [t('playerCard.info.nationality', 'NATIONALITÉ'), nationalite],
-    [t('playerCard.info.club', 'CLUB'), club],
-    [t('playerCard.info.team'), equipe],
-    [t('playerCard.info.city', 'VILLE'), ville],
-  ].filter(([, valeur]) => !estVide(valeur));
-  // PAR-L13 : une fiche d'enfant n'a pas de statut (« disponible » n'existe pas pour elle).
-  const afficherStatut = statut !== null;
-  const plan = planHistorique(rangees.length + (afficherStatut ? 1 : 0), historique.length);
+    [t('playerCard.info.height', 'TAILLE'), taille],
+    [t('playerCard.info.weight', 'POIDS'), poids],
+    [t('playerCard.info.level', 'NIVEAU'), niveau],
+    [t('playerCard.info.category', 'CATÉGORIE'), categorie],
+    [t('playerCard.info.nationalityShort', 'NATION.'), nationalite],
+  ].filter(([, v]) => v !== undefined && (ecran || !estVide(v)));
+  const numeroVide = estVide(numero);
+  const sportPoste = [sport, poste].filter((v) => !estVide(v)).join(' · ');
+  const montrerVille = ville !== undefined && (ecran || !estVide(ville));
+  const disponible = up(statut) === 'DISPONIBLE';
+  const parcours = historique.slice(0, 3);
 
   return (
     <View collapsable={false} style={{ height: h, width }}>
-      {/* 1. Lueur externe (déborde volontairement de la carte) */}
-      {theme.glowCyan > 0 || theme.glowViolet > 0 ? (
-        <Svg
-          height={h + 320 * s}
-          pointerEvents="none"
-          style={{
-            left: -160 * s, position: 'absolute', top: -160 * s,
-          }}
-          width={width + 320 * s}
-        >
-          <Defs>
-            <RadialGradient cx="50%" cy="50%" id="glowCyan" r="50%">
-              <Stop offset="0.55" stopColor="#01b3f4" stopOpacity={theme.glowCyan} />
-              <Stop offset="1" stopColor="#01b3f4" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient cx="50%" cy="50%" id="glowViolet" r="50%">
-              <Stop offset="0.4" stopColor="#8567ff" stopOpacity={theme.glowViolet} />
-              <Stop offset="1" stopColor="#8567ff" stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          {theme.glowViolet > 0 ? (
-            <Ellipse cx="50%" cy="50%" fill="url(#glowViolet)" rx="50%" ry="50%" />
-          ) : null}
-          <Ellipse cx="50%" cy="50%" fill="url(#glowCyan)" rx="46%" ry="46%" />
-        </Svg>
-      ) : null}
-
-      {/* 2. Bordure cristal */}
-      <Svg height={h} style={StyleSheet.absoluteFill} width={width}>
+      <Svg height={h} style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} width={width}>
         <Defs>
-          <SvgLinearGradient id="border" x1={angle.x1} x2={angle.x2} y1={angle.y1} y2={angle.y2}>
-            {theme.borderStops.map(([offset, color, opacity]) => (
-              <Stop key={`${offset}-${color}`} offset={String(offset)} stopColor={color} stopOpacity={opacity} />
+          <SvgLinearGradient id="lisere" x1="0" x2="1" y1="0" y2="1">
+            {look.lisere.map(([o, c]) => (
+              <Stop key={o} offset={o} stopColor={c} />
             ))}
           </SvgLinearGradient>
+          <SvgLinearGradient id="fond" x1="0.3" x2="0.7" y1="0" y2="1">
+            <Stop offset={0} stopColor="#062836" />
+            <Stop offset={0.7} stopColor="#021620" />
+          </SvgLinearGradient>
+          <SvgLinearGradient id="scene" x1="0" x2="0" y1="0" y2="1">
+            <Stop offset={0} stopColor="#0e4258" />
+            <Stop offset={1} stopColor="#052231" />
+          </SvgLinearGradient>
+          <RadialGradient cx="62%" cy="42%" id="halo" r="55%">
+            <Stop offset={0} stopColor={look.accent} stopOpacity={0.45} />
+            <Stop offset={1} stopColor={look.accent} stopOpacity={0} />
+          </RadialGradient>
+          <SvgLinearGradient id="reflet" x1="0" x2="1" y1="0.15" y2="0.85">
+            {look.reflet.map(([o, c, a]) => (
+              <Stop key={o} offset={o} stopColor={c} stopOpacity={a} />
+            ))}
+          </SvgLinearGradient>
+          <ClipPath id="interieur">
+            <Path d={INNER} />
+          </ClipPath>
         </Defs>
-        <Rect fill="url(#border)" height={h} rx={36 * s} width={width} x="0" y="0" />
+        <Path d={OUTER} fill="url(#lisere)" />
+        <G clipPath="url(#interieur)">
+          <Rect fill="url(#fond)" height={H} width={W} x={0} y={0} />
+          <Rect fill="url(#scene)" height={STAGE_H} width={W} x={0} y={LISERE} />
+          <Rect fill="url(#halo)" height={STAGE_H} width={W} x={0} y={LISERE} />
+          <SvgNested
+            height={STAGE_H}
+            preserveAspectRatio="none"
+            viewBox="0 0 200 200"
+            width={W - 2 * LISERE}
+            x={LISERE}
+            y={LISERE}
+          >
+            <CourtLines sport={sport} strokeWidth={1.6} />
+          </SvgNested>
+          {!numeroVide ? (
+            <SvgText
+              fill="none"
+              fontFamily="Montserrat-Black"
+              fontSize={400}
+              opacity={0.75}
+              stroke={look.accent}
+              strokeWidth={4.5}
+              transform="skewX(-8)"
+              x={LISERE + 80}
+              y={LISERE + 360}
+            >
+              {String(numero)}
+            </SvgText>
+          ) : null}
+          <Rect fill="url(#lisere)" height={5} width={W} x={0} y={LISERE + STAGE_H - 5} />
+          <Rect fill="url(#reflet)" height={H} width={W} x={0} y={0} />
+        </G>
+        <Line
+          stroke={DIM}
+          strokeDasharray="14 12"
+          strokeOpacity={0.45}
+          strokeWidth={4}
+          x1={60}
+          x2={W - 60}
+          y1={NOTCH_Y}
+          y2={NOTCH_Y}
+        />
       </Svg>
 
-      {/* 3. Intérieur */}
+      {/* La photo, à droite de la scène, fondue en bas */}
       <View
         style={{
-          backgroundColor: '#032430',
-          borderRadius: 33 * s,
-          bottom: 3 * s,
-          left: 3 * s,
+          height: 516 * s,
+          left: 396 * s,
           overflow: 'hidden',
           position: 'absolute',
-          right: 3 * s,
-          top: 3 * s,
+          top: (LISERE + STAGE_H - 516) * s,
+          width: 555 * s,
         }}
       >
-        {/* 4. Fond dynamique */}
-        {backgroundVisible ? (
-          <>
-            <Image
-              resizeMode="cover"
-              source={BG_IMAGE}
-              style={[StyleSheet.absoluteFill, { height: '100%', opacity: 0.5, width: '100%' }]}
-            />
-            <LinearGradient
-              colors={['rgba(0,18,24,0.5)', 'rgba(0,18,24,0.14)', 'rgba(1,22,30,0.72)']}
-              locations={[0, 0.4, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-          </>
+        {photo && !locked ? (
+          <Image resizeMode="cover" source={photo} style={StyleSheet.absoluteFill} />
         ) : null}
-
-        {/* 5. Éclats décoratifs */}
-        <Shards
-          crystal={theme.crystal}
-          few={theme.few}
-          h={h - 6 * s}
-          many={theme.many}
-          s={s}
-          w={width - 6 * s}
+        {!photo && ecran && !locked ? (
+          <View
+            style={[
+              styles.ajoutPhoto,
+              {
+                borderRadius: 24 * s,
+                borderWidth: 4 * s,
+                bottom: 40 * s,
+                left: 100 * s,
+                right: 60 * s,
+                top: 100 * s,
+              },
+            ]}
+          >
+            <Text
+              allowFontScaling={false}
+              style={{
+                color: CYAN_HI,
+                fontFamily: 'Montserrat-Black',
+                ...font(s, 28),
+                letterSpacing: 2.8 * s,
+              }}
+            >
+              {t('playerCard.addPhoto', '+ PHOTO')}
+            </Text>
+          </View>
+        ) : null}
+        {(!photo && !ecran) || locked ? (
+          <View
+            style={{
+              bottom: 0,
+              left: 120 * s,
+              position: 'absolute',
+              right: 40 * s,
+              top: 90 * s,
+            }}
+          >
+            <BackJerseyFallback accent={CYAN} name={nom} number={numeroVide ? '' : numero} />
+          </View>
+        ) : null}
+        <LinearGradient
+          colors={['rgba(5,34,49,0)', 'rgba(5,34,49,1)']}
+          style={[styles.fondu, { height: 200 * s }]}
         />
+      </View>
 
-        {/* 6. Contenu */}
+      {/* En haut : le logo FoundClub et la rareté */}
+      <View
+        style={[
+          styles.rangee,
+          {
+            left: PAD * s,
+            position: 'absolute',
+            right: PAD * s,
+            top: 40 * s,
+          },
+        ]}
+      >
+        <Image
+          resizeMode="contain"
+          source={LOGO_IMAGE}
+          style={{ height: 44 * s, width: 44 * s * LOGO_RATIO }}
+        />
         <View
+          style={[
+            styles.rangee,
+            {
+              backgroundColor: 'rgba(0,18,24,0.55)',
+              borderColor: look.accent,
+              borderRadius: 100 * s,
+              borderWidth: 3.5 * s,
+              gap: 11 * s,
+              paddingHorizontal: 24 * s,
+              paddingVertical: 9 * s,
+            },
+          ]}
+        >
+          <View
+            style={{
+              backgroundColor: look.accent,
+              height: 17 * s,
+              transform: [{ rotate: '45deg' }],
+              width: 17 * s,
+            }}
+          />
+          <Text
+            allowFontScaling={false}
+            style={{
+              color: TXT,
+              fontFamily: 'Montserrat-Black',
+              ...font(s, 27),
+              letterSpacing: 3.2 * s,
+            }}
+          >
+            {rarityLabel}
+          </Text>
+        </View>
+      </View>
+
+      {/* Le nom, sur un fondu, en bas de la scène */}
+      <LinearGradient
+        colors={['rgba(2,22,32,0)', 'rgba(2,22,32,0.92)']}
+        locations={[0, 0.55]}
+        style={{
+          left: PAD * s,
+          paddingBottom: 24 * s,
+          paddingTop: 80 * s,
+          position: 'absolute',
+          right: PAD * s,
+          top: (LISERE + STAGE_H) * s - 300 * s,
+        }}
+      >
+        {numeroVide && ecran ? (
+          <Text
+            allowFontScaling={false}
+            style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 56, 62) }}
+          >
+            {t('playerCard.addNumber', '+ N°')}
+          </Text>
+        ) : null}
+        <Text
+          allowFontScaling={false}
+          numberOfLines={1}
           style={{
-            flex: 1,
-            paddingBottom: LAYOUT.padBottom * s,
-            paddingHorizontal: LAYOUT.padH * s,
-            paddingTop: LAYOUT.padTop * s,
+            color: TXT,
+            fontFamily: 'Montserrat-Bold',
+            ...font(s, 33, 40),
+            letterSpacing: 10 * s,
           }}
         >
-          {/* En-tête */}
-          <View style={[styles.row, { height: LAYOUT.headerH * s, justifyContent: 'space-between' }]}>
-            <Wordmark s={s} size={30} />
-            <RarityBadge label={rarityLabel || RARITY_LABELS[rarity] || rarity} s={s} />
-          </View>
+          {up(prenom)}
+        </Text>
+        <Text
+          adjustsFontSizeToFit
+          allowFontScaling={false}
+          numberOfLines={1}
+          style={{ color: TXT, fontFamily: 'Montserrat-Black', ...font(s, 68, 72) }}
+        >
+          {up(nom)}
+        </Text>
+        {sportPoste ? (
+          <Text
+            allowFontScaling={false}
+            numberOfLines={1}
+            style={{
+              color: CYAN_HI,
+              fontFamily: 'Montserrat-Black',
+              ...font(s, 30, 38),
+              letterSpacing: 1.8 * s,
+            }}
+          >
+            {up(sportPoste)}
+          </Text>
+        ) : null}
+        {!estVide(section) ? (
+          <Text
+            allowFontScaling={false}
+            style={{
+              color: DIM,
+              fontFamily: 'Montserrat-Bold',
+              ...font(s, 25, 30),
+              letterSpacing: s,
+            }}
+          >
+            {section}
+          </Text>
+        ) : null}
+      </LinearGradient>
 
-          {/* Bloc identité */}
-          <View style={{ height: LAYOUT.identityH * s, marginTop: LAYOUT.identityGap * s }}>
-            {/* Halo derrière le portrait */}
-            <Svg
-              height={640 * s}
-              pointerEvents="none"
-              style={{ position: 'absolute', right: -160 * s, top: -120 * s }}
-              width={640 * s}
-            >
-              <Defs>
-                <RadialGradient cx="50%" cy="50%" id="portraitHalo" r="50%">
-                  <Stop offset="0" stopColor="#01b3f4" stopOpacity={0.2} />
-                  <Stop offset="1" stopColor="#01b3f4" stopOpacity={0} />
-                </RadialGradient>
-              </Defs>
-              <Ellipse cx="50%" cy="50%" fill="url(#portraitHalo)" rx="50%" ry="50%" />
-            </Svg>
-
-            {/* Colonne gauche */}
-            <View style={{ width: 470 * s }}>
+      {/* Le corps : club, cases, parcours */}
+      <View
+        style={{
+          gap: 15 * s,
+          left: PAD * s,
+          position: 'absolute',
+          right: PAD * s,
+          top: (LISERE + STAGE_H + 16) * s,
+        }}
+      >
+        {!estVide(club) ? (
+          <View
+            style={[
+              styles.rangee,
+              {
+                backgroundColor: PANEL,
+                borderRadius: 24 * s,
+                gap: 24 * s,
+                justifyContent: 'flex-start',
+                paddingHorizontal: 24 * s,
+                paddingVertical: 14 * s,
+              },
+            ]}
+          >
+            <CardLogo accent={look.accent} name={club} s={s} size={80} uri={clubLogoUrl} />
+            <View style={{ flex: 1 }}>
               <Text
                 allowFontScaling={false}
                 numberOfLines={1}
-                style={{
-                  color: CYAN,
-                  fontFamily: 'Montserrat-Black',
-                  ...font(s, 184, 166),
-                  letterSpacing: -8 * s,
-                  textShadowColor: 'rgba(1,179,244,0.55)',
-                  textShadowRadius: 54 * s,
-                  transform: [{ skewX: '-8deg' }],
-                }}
+                style={{ color: TXT, fontFamily: 'Montserrat-Black', ...font(s, 33, 40) }}
               >
-                {up(numero)}
+                {up(club)}
               </Text>
-              <Text
-                allowFontScaling={false}
-                numberOfLines={1}
-                style={{
-                  color: '#eaf7fd',
-                  fontFamily: 'Montserrat-Bold',
-                  ...font(s, 32, 38),
-                  letterSpacing: 8 * s,
-                  marginTop: 16 * s,
-                }}
-              >
-                {up(prenom)}
-              </Text>
-              <Text
-                allowFontScaling={false}
-                numberOfLines={1}
-                style={{
-                  color: '#ffffff',
-                  fontFamily: 'Montserrat-Black',
-                  ...font(s, 64, 64),
-                  marginTop: 4 * s,
-                }}
-              >
-                {up(nom)}
-              </Text>
-              {/* Pill sport : masquee si le sport n'est pas renseigne (un
-                  moignon « — » chevauchait le panneau infos). */}
-              {sport && up(sport) !== '—' ? (
-                <View
-                  style={{
-                    alignSelf: 'flex-start',
-                    backgroundColor: 'rgba(1,179,244,0.12)',
-                    borderColor: 'rgba(1,179,244,0.55)',
-                    borderRadius: 999,
-                    borderWidth: 1.5 * s,
-                    marginTop: 12 * s,
-                    paddingHorizontal: 22 * s,
-                    paddingVertical: 8 * s,
-                  }}
-                >
-                  <Text
-                    allowFontScaling={false}
-                    numberOfLines={1}
-                    style={{
-                      color: CYAN,
-                      fontFamily: 'Montserrat-Black',
-                      ...font(s, 32, 38),
-                      letterSpacing: 3 * s,
-                      textShadowColor: 'rgba(1,179,244,0.4)',
-                      textShadowRadius: 8 * s,
-                    }}
-                  >
-                    {up(sport)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            {/* Portrait — PAR-L14 : contenu dans le bloc identite. Il etait pose en
-                debord (442 de haut dans un bloc de 372, 12 au-dessus) pour un portrait
-                detoure ; une vraie photo, opaque, descendait sur la rangee POSTE. */}
-            <View
-              style={{
-                backgroundColor: 'rgba(3,26,35,0.45)',
-                borderColor: 'rgba(1,179,244,0.25)',
-                borderRadius: 26 * s,
-                borderWidth: 1,
-                height: LAYOUT.identityH * s,
-                padding: 6 * s,
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                width: LAYOUT.portraitW * s,
-              }}
-            >
-              {photo ? (
-                <Image
-                  resizeMode="cover"
-                  source={photo}
-                  style={{ borderRadius: 20 * s, height: '100%', width: '100%' }}
-                />
-              ) : (
-                <View style={{ borderRadius: 20 * s, flex: 1, overflow: 'hidden' }}>
-                  <BackJerseyFallback accent={CYAN} name={nom} number={numero} />
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Panneau infos et code QR, cote a cote (PAR-L14 : le QR etait dans un
-              pied qui repetait le logo de l'en-tete) */}
-          <View style={[styles.row, { marginTop: LAYOUT.infoGap * s }]}>
-            <View style={[styles.glass, {
-              borderRadius: 20 * s,
-              flex: 1,
-              paddingHorizontal: 30 * s,
-              paddingVertical: LAYOUT.infoPadV * s,
-            }]}
-            >
-              {rangees.map(([label, valeur], rang) => (
-                <InfoRow
-                  isLast={!afficherStatut && rang === rangees.length - 1}
-                  key={label}
-                  label={label}
-                  s={s}
-                  value={up(valeur)}
-                />
-              ))}
-              {afficherStatut ? (
-                <InfoRow
-                  isLast
-                  label="STATUT"
-                  s={s}
-                  value={(
-                    <View style={styles.row}>
-                      <View
-                        style={{
-                          backgroundColor: statusColor,
-                          borderRadius: 7 * s,
-                          height: 14 * s,
-                          marginRight: 12 * s,
-                          width: 14 * s,
-                        }}
-                      />
-                      <Text
-                        allowFontScaling={false}
-                        style={{
-                          color: statusColor,
-                          fontFamily: 'Montserrat-Black',
-                          ...font(s, 36, 44),
-                          textShadowColor: statusColor,
-                          textShadowRadius: 9 * s,
-                        }}
-                      >
-                        {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
-                      </Text>
-                    </View>
-                  )}
-                />
-              ) : null}
-            </View>
-            <View
-              style={{
-                alignItems: 'center',
-                backgroundColor: '#03222e',
-                borderColor: 'rgba(1,179,244,0.55)',
-                borderRadius: 16 * s,
-                borderWidth: 1.5 * s,
-                height: LAYOUT.qrBox * s,
-                justifyContent: 'center',
-                marginLeft: LAYOUT.qrGap * s,
-                width: LAYOUT.qrBox * s,
-              }}
-            >
-              {/* PAR-L14 : le « FC » ne se pose plus SUR le code (a 32 unites il
-                  en cacherait le tiers et le code ne se lirait plus) ; il reste
-                  dans la case vide de la carte verrouillee. */}
-              {qrValue && !locked ? (
-                <QRCode
-                  backgroundColor="transparent"
-                  color="#eaf7fd"
-                  ecl="H"
-                  size={92 * s}
-                  value={qrValue}
-                />
-              ) : (
+              {!estVide(equipe) ? (
                 <Text
                   allowFontScaling={false}
-                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
+                  numberOfLines={1}
+                  style={{ color: DIM, fontFamily: 'Montserrat-Bold', ...font(s, 26, 32) }}
                 >
-                  FC
+                  {equipe}
                 </Text>
-              )}
-            </View>
-          </View>
-
-          {/* Panneau bas */}
-          <View style={[styles.glass, {
-            borderRadius: 20 * s,
-            flexGrow: 1,
-            marginTop: LAYOUT.histGap * s,
-            paddingHorizontal: 30 * s,
-            paddingVertical: LAYOUT.histPadV * s,
-          }]}
-          >
-            {bottomPanel === 'tactique' ? (
-              <>
-                <View style={[styles.row, { justifyContent: 'space-between' }]}>
-                  <Text
-                    allowFontScaling={false}
-                    style={{
-                      color: '#eaf7fd',
-                      fontFamily: 'Montserrat-Black',
-                      ...font(s, 32, 38),
-                      letterSpacing: 2 * s,
-                    }}
-                  >
-                    {t('playerCard.preferredFormation', 'DISPOSITION PRÉFÉRÉE')}
-                  </Text>
-                  <Text
-                    allowFontScaling={false}
-                    style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 36, 44) }}
-                  >
-                    {up(disposition)}
-                  </Text>
-                </View>
-                <View style={[styles.center, { flexGrow: 1 }]}>
-                  <TacticalPitch
-                    numero={numero}
-                    pitchWidth={width - (44 * 2 + 30 * 2 + 6) * s}
-                    posteIndex={posteIndex}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <View
-                  style={[styles.row, { height: LAYOUT.histTitleH * s, justifyContent: 'space-between' }]}
-                >
-                  <Text
-                    allowFontScaling={false}
-                    style={{
-                      color: '#eaf7fd',
-                      fontFamily: 'Montserrat-Black',
-                      ...font(s, 32, 38),
-                      letterSpacing: 2 * s,
-                    }}
-                  >
-                    {t('playerCard.history.title', 'HISTORIQUE SPORTIF')}
-                  </Text>
-                  {historique.length ? (
-                    <Text
-                      allowFontScaling={false}
-                      style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
-                    >
-                      {t('playerCard.history.clubCount', {
-                        count: historiqueTotal ?? historique.length,
-                        defaultValue: '{{count}} CLUBS',
-                      })}
-                    </Text>
-                  ) : null}
-                </View>
-                {/* PAR-L14 : un club par ligne, nom sur 2 lignes si la place le
-                    permet, saison et niveau DESSOUS (la colonne niveau ecrasait le
-                    nom). Les lignes se centrent dans le panneau : plus de grand
-                    vide sous l'historique. */}
-                {!historique.length ? (
-                  <View style={[styles.center, { flexGrow: 1 }]}>
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: '#5f7c89',
-                        fontFamily: 'Montserrat-Bold',
-                        ...font(s, 32, 38),
-                        letterSpacing: 2 * s,
-                      }}
-                    >
-                      {up(historiqueEmptyLabel ?? t(
-                        'playerCard.history.empty',
-                        'PARCOURS À COMPLÉTER',
-                      ))}
-                    </Text>
-                  </View>
-                ) : (
-                  <View
-                    style={{ flexGrow: 1, justifyContent: 'center', marginTop: LAYOUT.histListGap * s }}
-                  >
-                    {historique.slice(0, plan.lignes).map((entry, index) => (
-                      <View
-                        key={`${entry.periode}-${entry.club}`}
-                        style={[styles.row, {
-                          alignItems: 'flex-start', paddingVertical: LAYOUT.entryPadV * s,
-                        }]}
-                      >
-                        <View
-                          style={{
-                            backgroundColor: CYAN,
-                            borderRadius: 6 * s,
-                            height: 12 * s,
-                            marginRight: 18 * s,
-                            marginTop: ((LAYOUT.clubLine - 12) / 2) * s,
-                            opacity: [1, 0.55, 0.35][index] || 0.35,
-                            width: 12 * s,
-                          }}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            allowFontScaling={false}
-                            numberOfLines={plan.lignesClub}
-                            style={{
-                              color: '#ffffff',
-                              fontFamily: 'Montserrat-Black',
-                              ...font(s, 34, LAYOUT.clubLine),
-                            }}
-                          >
-                            {up(entry.club)}
-                          </Text>
-                          <Text
-                            allowFontScaling={false}
-                            numberOfLines={plan.lignesMeta}
-                            style={{
-                              color: CYAN,
-                              fontFamily: 'Montserrat-Bold',
-                              ...font(s, 32, LAYOUT.metaLine),
-                            }}
-                          >
-                            {[entry.periode, entry.categorie].filter(Boolean).join(' · ')}
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* Garde-fou mineurs : aperçu verrouillé (extension produit, hors maquette) */}
-        {locked ? (
-          <View
-            style={[StyleSheet.absoluteFill, {
-              alignItems: 'center',
-              backgroundColor: 'rgba(2,24,32,0.55)',
-              justifyContent: 'flex-end',
-              // En bas du panneau d'historique, comme avant le retrait du pied (PAR-L14).
-              paddingBottom: (LAYOUT.padBottom + LAYOUT.histPadV) * s,
-              paddingHorizontal: 30 * s,
-            }]}
-          >
-            <View
-              style={{
-                backgroundColor: 'rgba(2,24,32,0.9)',
-                borderColor: 'rgba(1,179,244,0.45)',
-                borderRadius: 14 * s,
-                borderWidth: 1,
-                paddingHorizontal: 24 * s,
-                paddingVertical: 12 * s,
-              }}
-            >
-              <Text
-                allowFontScaling={false}
-                style={{
-                  color: '#eaf7fd',
-                  fontFamily: 'Montserrat-Black',
-                  ...font(s, 32, 38),
-                  letterSpacing: 1.5 * s,
-                  textAlign: 'center',
-                }}
-              >
-                {t('playerCard.parentalConsentPreview', 'APERÇU — ACCORD PARENTAL REQUIS')}
-              </Text>
+              ) : null}
             </View>
           </View>
         ) : null}
+        {cases.length ? (
+          <View style={[styles.grille, { gap: 13 * s }]}>
+            {cases.map(([label, valeur]) => (
+              <View key={label} style={{ width: ((W - 2 * PAD - 26) / 3) * s }}>
+                <Case label={label} manquant={manquant} s={s} value={valeur} />
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {parcours.length ? (
+          <View style={[styles.rangee, { gap: 22 * s, justifyContent: 'flex-start' }]}>
+            <Text
+              allowFontScaling={false}
+              style={[styles.label, font(s, 22), { letterSpacing: 2.6 * s }]}
+            >
+              {t('playerCard.historyTitle', 'PARCOURS')}
+            </Text>
+            {parcours.map((etape, rang) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <View key={`${etape.club}-${rang}`} style={[styles.rangee, { gap: 11 * s }]}>
+                <CardLogo
+                  accent={look.accent}
+                  name={etape.club}
+                  s={s}
+                  size={64}
+                  uri={etape.logoUrl}
+                />
+                <Text
+                  allowFontScaling={false}
+                  style={{ color: TXT, fontFamily: 'Montserrat-Bold', ...font(s, 23, 26) }}
+                >
+                  {etape.periode}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {/* Le pied, sous la ligne de découpe : ville, statut, code QR */}
+      <View
+        style={[
+          styles.rangee,
+          {
+            alignItems: 'flex-end',
+            bottom: 40 * s,
+            left: PAD * s,
+            position: 'absolute',
+            right: PAD * s,
+          },
+        ]}
+      >
+        <View style={{ flex: 1, gap: 12 * s }}>
+          {montrerVille ? (
+            <View>
+              <Text
+                allowFontScaling={false}
+                style={[styles.label, font(s, 22), { letterSpacing: 2.6 * s }]}
+              >
+                {t('playerCard.info.city', 'VILLE')}
+              </Text>
+              <Text
+                allowFontScaling={false}
+                numberOfLines={1}
+                style={
+                  estVide(ville)
+                    ? { color: CYAN_HI, fontFamily: 'Montserrat-Bold', ...font(s, 27, 40) }
+                    : { color: TXT, fontFamily: 'Montserrat-Black', ...font(s, 33, 40) }
+                }
+              >
+                {estVide(ville) ? manquant : ville}
+              </Text>
+            </View>
+          ) : null}
+          {statut !== null && statut !== undefined ? (
+            <View style={[styles.rangee, { gap: 12 * s, justifyContent: 'flex-start' }]}>
+              <View
+                style={{
+                  backgroundColor: disponible ? '#27d6a3' : '#ff284f',
+                  borderRadius: 10 * s,
+                  height: 19 * s,
+                  width: 19 * s,
+                }}
+              />
+              <Text
+                allowFontScaling={false}
+                style={{
+                  color: disponible ? '#27d6a3' : '#ff284f',
+                  fontFamily: 'Montserrat-Black',
+                  ...font(s, 29),
+                  letterSpacing: 2.3 * s,
+                }}
+              >
+                {disponible
+                  ? t('playerCard.tagAvailable', 'DISPONIBLE')
+                  : t('playerCard.tagUnavailable', 'INDISPONIBLE')}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        {qrValue && !locked ? (
+          <View style={{ alignItems: 'center', gap: 7 * s }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 13 * s, padding: 9 * s }}>
+              <QRCode
+                backgroundColor="#ffffff"
+                color="#001218"
+                ecl="M"
+                size={107 * s}
+                value={qrValue}
+              />
+            </View>
+            {qrLabel ? (
+              <Text
+                allowFontScaling={false}
+                style={{ color: DIM, fontFamily: 'Montserrat-Bold', ...font(s, 19) }}
+              >
+                {qrLabel}
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <View style={[styles.fc, { borderRadius: 13 * s, height: 125 * s, width: 125 * s }]}>
+            <Text
+              allowFontScaling={false}
+              style={{ color: '#001218', fontFamily: 'Montserrat-Black', ...font(s, 44) }}
+            >
+              FC
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
 }
 
 const PlayerCard = memo(PlayerCardBase);
-PlayerCard.displayName = 'PlayerCard';
 
 export default PlayerCard;
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center' },
-  // PAR-L14 : opaque (il etait transparent a 15 % : le fond et la photo passaient dessous).
-  glass: {
-    backgroundColor: '#041c26',
-    borderColor: 'rgba(1,179,244,0.35)',
-    borderWidth: 1,
+  ajoutPhoto: {
+    alignItems: 'center',
+    borderColor: 'rgba(102,210,249,0.6)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    position: 'absolute',
   },
-  row: { alignItems: 'center', flexDirection: 'row' },
+  case: { minWidth: 0 },
+  fc: { alignItems: 'center', backgroundColor: CYAN, justifyContent: 'center' },
+  fondu: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+  },
+  grille: { flexDirection: 'row', flexWrap: 'wrap' },
+  label: { color: DIM, fontFamily: 'Montserrat-Bold' },
+  plaque: { alignItems: 'center', backgroundColor: '#ffffff', justifyContent: 'center' },
+  rangee: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
 });

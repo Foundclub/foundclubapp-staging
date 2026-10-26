@@ -285,7 +285,8 @@ describe('E6 — « Mon compte » : ce qui ne bouge pas', () => {
 // avec les MÊMES règles de rôle qu'à l'accueil : pas d'historique ni de
 // cotisation pour le parent (P0), pas de cotisation pour le super admin (D72).
 describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandonne', () => {
-  const COMPTE = ['Changer de compte', 'Personnes bloquées', 'Nous contacter'];
+  // CARTECODE Q1 C : « Confidentialité » (compte privé) suit « Personnes bloquées ».
+  const COMPTE = ['Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Nous contacter'];
 
   it.each([
     ['player', [

@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * PAR-L14 (E6) — ce que l'ecran « Ma carte de collection » fait dans ses TROIS
+ * PAR-L14 (E6) — ce que l'ecran « Ma carte joueur » fait dans ses TROIS
  * etats, fige AVANT sa reparation :
  *  - normal (adulte, depuis le profil) ;
  *  - verrouille (13-14 ans sans accord parental) ;
@@ -60,6 +60,26 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 }));
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
+
+// CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
+jest.mock(
+  '@/components/organisms/playerCard/CardSheen',
+  () => function CardSheenMock({ children }) {
+    return children;
+  },
+);
+jest.mock(
+  '@/components/organisms/playerCard/CardDisclosureSheet',
+  () => function CardDisclosureSheetMock(props) {
+    global.mockDisclosureProps = props;
+    return null;
+  },
+);
+
+// CARTECODE : la rarete lit le nombre de matchs (statistiques personnelles).
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetPersonalStats: () => ({ data: null }),
+}));
 
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
@@ -187,7 +207,7 @@ describe('PAR-L14 — etat NORMAL : les gestes qui doivent survivre au redessin'
   it('le titre, puis la carte montree ET la carte d export, toutes deux deverrouillees', () => {
     const { arbre } = monter();
 
-    expect(textes(arbre)).toContain('Ma carte de collection');
+    expect(textes(arbre)).toContain('Ma carte joueur'); // CARTECODE : le nom décidé le 25/10
     expect(mockCardProps.length).toBeGreaterThanOrEqual(2);
     const derniers = mockCardProps.slice(-2);
     expect(derniers.map((p) => p.locked)).toEqual([false, false]);
@@ -200,6 +220,8 @@ describe('PAR-L14 — etat NORMAL : les gestes qui doivent survivre au redessin'
     const partager = gestes(arbre, 'Partager ma carte');
     expect(partager).toHaveLength(1);
     act(() => partager[0].props.onPress());
+    // CARTECODE (ligne 41) : « ce qui part » d abord, puis la feuille de partage.
+    act(() => global.mockDisclosureProps.onConfirm());
     expect(mockShareModalProps[mockShareModalProps.length - 1].isVisible).toBe(true);
   });
 
@@ -240,7 +262,7 @@ describe('PAR-L14 — etat NORMAL : les gestes qui doivent survivre au redessin'
     const { historique } = mockCardProps[mockCardProps.length - 1];
     expect(historique).toHaveLength(1);
     expect(historique[0]).toMatchObject({ club: 'Aix-Perd en Buvette', periode: '2024–Auj.' });
-    expect(historique[0].categorie).toContain('Départemental 2');
+    expect(historique[0].logoUrl).toBeNull(); // CARTECODE Q4 A : le logo, sinon le shield
   });
 });
 
@@ -281,7 +303,7 @@ describe('PAR-L14 — etat VERROUILLE (13-14 ans sans accord) : inchange', () =>
     const lus = textes(monter().arbre);
 
     expect(lus).toEqual(expect.arrayContaining([
-      'Ma carte de collection',
+      'Ma carte joueur',
       'Partage ta carte, gagne en visibilité et fais-toi détecter.',
       'Complète ton profil et ton parcours pour monter en rareté.',
     ]));
@@ -294,7 +316,7 @@ describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange', () => {
 
     expect(lus).toEqual(expect.arrayContaining([
       'Bienvenue',
-      'Voici ta carte de collection',
+      'Voici ta carte joueur',
       'Partage ta carte, gagne en visibilité et fais-toi détecter.',
     ]));
   });

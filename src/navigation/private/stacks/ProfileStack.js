@@ -9,6 +9,7 @@ import MyChildren from '@/views/profile/MyChildren';
 import MyParentLink from '@/views/profile/MyParentLink';
 import ParentLinkInvite from '@/views/profile/ParentLinkInvite';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
+import PrivacySettings from '@/views/profile/PrivacySettings';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
 import SubscriptionCompare from '@/views/profile/SubscriptionCompare';
@@ -85,6 +86,15 @@ function ProfileStack() {
         <Stack.Screen
           component={BlockedUsers}
           name={RouteNames.BlockedUsers}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        {/* CARTECODE Q1 C — « Compte privé ». */}
+        <Stack.Screen
+          component={PrivacySettings}
+          name={RouteNames.PrivacySettings}
           options={{
             ...commonOptions,
             headerTitle: '',
