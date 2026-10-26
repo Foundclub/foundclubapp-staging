@@ -109,7 +109,6 @@ function EventWizardTeamCard({
       club={team?.club}
       logoStyle={logoFrameStyle}
       name={team?.club?.name || team?.name}
-      safeInsetRatio={0.1}
       size={logoFrameSize}
     />
   );

@@ -138,7 +138,6 @@ function AdWizardInfo({ navigation }) {
         borderWidth: 1.5,
       }}
       name={state.team?.club?.name || state.team?.name}
-      safeInsetRatio={0.1}
       size={56}
     />
   );

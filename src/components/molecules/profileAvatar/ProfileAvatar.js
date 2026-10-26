@@ -73,8 +73,6 @@ function ProfileAvatar({
     ? Math.min(Math.max(rawInsetRatio, 0), 0.3)
     : defaultInsetRatio;
   const effectiveInsetRatio = isLogoVariant ? sanitizedInsetRatio : 0;
-  const innerWidth = resolvedWidth * (1 - (2 * effectiveInsetRatio));
-  const innerHeight = resolvedHeight * (1 - (2 * effectiveInsetRatio));
   const resolvedFitMode = fitMode || (isLogoVariant ? 'contain' : 'cover');
   const isCircular = Math.abs(resolvedWidth - resolvedHeight) < 1;
   const resolvedShape = shape === 'auto'
@@ -97,6 +95,13 @@ function ProfileAvatar({
     && isCircular
     && hasCircleBorder
     && isWhiteLikeBorder;
+  // RECETTEWEB (26/10) : le contenu tient DANS le liseré. À la taille du cadre entier, il
+  // débordait de deux fois le liseré et partait du coin haut-gauche : logo décalé, pas centré.
+  const borderInset = hasCircleBorder && !shouldSuppressCircleBorder ? flattenedStyle.borderWidth : 0;
+  const contentWidth = Math.max(resolvedWidth - (2 * borderInset), 0);
+  const contentHeight = Math.max(resolvedHeight - (2 * borderInset), 0);
+  const innerWidth = contentWidth * (1 - (2 * effectiveInsetRatio));
+  const innerHeight = contentHeight * (1 - (2 * effectiveInsetRatio));
   let resolvedRadius = 0;
   if (resolvedShape === 'circle' && isCircular) {
     resolvedRadius = resolvedWidth / 2;
@@ -146,8 +151,8 @@ function ProfileAvatar({
           Alignments.alignCenter,
           Alignments.justifyCenter,
           {
-            height: resolvedHeight,
-            width: resolvedWidth,
+            height: contentHeight,
+            width: contentWidth,
           },
         ]}
         >
@@ -159,8 +164,8 @@ function ProfileAvatar({
                 {
                   backgroundColor: withAlpha(Colors.primary500, 0.16),
                   borderRadius: resolvedRadius,
-                  height: resolvedHeight,
-                  width: resolvedWidth,
+                  height: contentHeight,
+                  width: contentWidth,
                 },
                 imageStyle,
               ]}
@@ -185,8 +190,8 @@ function ProfileAvatar({
                 {
                   backgroundColor: isLogoVariant ? (Colors?.neutral00 || '#FFFFFF') : 'transparent',
                   borderRadius: isLogoVariant ? 0 : resolvedRadius,
-                  height: isLogoVariant ? innerHeight : resolvedHeight,
-                  width: isLogoVariant ? innerWidth : resolvedWidth,
+                  height: isLogoVariant ? innerHeight : contentHeight,
+                  width: isLogoVariant ? innerWidth : contentWidth,
                 },
                 shouldSuppressCircleBorder && {
                   borderColor: 'transparent',
