@@ -374,4 +374,23 @@ describe('AA08 — ④ on peut TOUJOURS quitter la page', () => {
     );
     expect(croix).toHaveLength(1);
   });
+
+  it('🔒 AFFICHEJOUEUR — le titre laisse la place a la croix, il ne passe pas dessous', async () => {
+    // Constat d Adel (26/10, iPhone) : « Ton avis de recherche est pr… » coupe, SOUS la croix.
+    // La croix est en absolu par-dessus le defilement ; le titre doit s arreter avant elle.
+    const tree = await renderScreen({
+      subjectId: 'annonce-256', subjectType: 'recruitment-ad', template: 'avis-de-recherche',
+    });
+    const croix = StyleSheet.flatten(findPressable(tree, 'Fermer').props.style) || {};
+    const defilement = tree.root.findByType(ScrollView);
+    const marge = StyleSheet.flatten(defilement.props.contentContainerStyle) || {};
+    const titre = tree.root.find(
+      (/** @type {any} */ node) => node.props.children === 'Ton avis de recherche est prêt'
+        && typeof node.type !== 'string',
+    );
+    const style = StyleSheet.flatten(titre.props.style) || {};
+    // Bord droit du titre (depuis le bord de l ecran) : marge du contenu + son retrait a droite.
+    const bordDroitDuTitre = (marge.paddingRight ?? marge.padding ?? 0) + (style.paddingRight ?? 0);
+    expect(bordDroitDuTitre).toBeGreaterThanOrEqual(croix.right + croix.width);
+  });
 });
