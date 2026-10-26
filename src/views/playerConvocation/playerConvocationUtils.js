@@ -52,6 +52,17 @@ export const estUneConvocationEnListe = (pack) => ensureList(pack?.teams)
   && [...ensureList(pack?.reservePlayerIds), ...ensureList(pack?.selectedPlayerIds)].length > 0;
 
 /**
+ * CONVLISTE-FIN (« 2- A » du chef, 26/10) — toutes les convocations publiees d'un evenement sont
+ * en liste : la fiche compte alors des « convoqués », plus des « remplaçants ».
+ * @param {any[]} branches Les branches de `GET /events/:id/convocation`.
+ * @returns {boolean}
+ */
+export const convocationsToutesEnListe = (branches) => ensureList(branches).length > 0
+  && ensureList(branches).every((/** @type {any} */ branch) => (
+    estUneConvocationEnListe(branch?.published)
+  ));
+
+/**
  * Tous les placements d'un pack publie, toutes equipes confondues.
  * @param {any} published
  * @returns {any[]}

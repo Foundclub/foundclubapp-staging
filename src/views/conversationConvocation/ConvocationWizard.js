@@ -47,6 +47,7 @@ import ConvocationModeRow from './ConvocationModeRow';
 import ConvocationModeSheet from './ConvocationModeSheet';
 import ConvocationPlacementStep from './ConvocationPlacementStep';
 import ConvocationPlayersStep from './ConvocationPlayersStep';
+import ConvocationToListSheet from './ConvocationToListSheet';
 import {
   buildConvocationPack,
   buildConvocationRows,
@@ -161,6 +162,7 @@ function ConvocationWizard({
   // veux-tu convoquer ? » n'a pas repondu ; en modification, lu sur la convocation publiee.
   const [format, setFormat] = useState(/** @type {'' | 'list' | 'pitch'} */ (''));
   const [keptCount, setKeptCount] = useState(0);
+  const [isConfirmingList, setIsConfirmingList] = useState(false);
   const isList = format === FORMAT_LIST;
   const steps = isList ? CONVOCATION_STEPS_LIST : CONVOCATION_STEPS;
   const isChoosingFormat = !isEditMode && !format;
@@ -319,22 +321,16 @@ function ConvocationWizard({
       setKeptCount(ids.length);
       return;
     }
-    Alert.alert(
-      t('conversationConvocation.mode.toListTitle'),
-      t('conversationConvocation.mode.toListMessage'),
-      [
-        { style: 'cancel', text: t('conversationConvocation.mode.keepPitch') },
-        {
-          onPress: () => {
-            setPlacements(EMPTY_LIST);
-            setFormat(FORMAT_LIST);
-            setKeptCount(0);
-          },
-          text: t('conversationConvocation.mode.toList'),
-        },
-      ],
-    );
-  }, [isList, selection, t]);
+    // CONVLISTE-FIN (planche C3) — la feuille dessinee, posee par-dessus le tunnel.
+    setIsConfirmingList(true);
+  }, [isList, selection]);
+
+  const confirmToList = useCallback(() => {
+    setIsConfirmingList(false);
+    setPlacements(EMPTY_LIST);
+    setFormat(FORMAT_LIST);
+    setKeptCount(0);
+  }, []);
 
   const handleSelectEvent = useCallback((/** @type {any} */ event) => {
     const nextId = String(event?.documentId || '');
@@ -572,7 +568,12 @@ function ConvocationWizard({
   return (
     <Modal
       animationType="slide"
-      onRequestClose={isChoosingFormat ? () => onClose() : handleBack}
+      onRequestClose={() => {
+        // Retour Android : il referme d'abord la feuille « Passer en liste ? ».
+        if (isConfirmingList) setIsConfirmingList(false);
+        else if (isChoosingFormat) onClose();
+        else handleBack();
+      }}
       statusBarTranslucent
       transparent
       visible={visible}
@@ -758,6 +759,13 @@ function ConvocationWizard({
             isVisible={Boolean(paywallDecision)}
             navigation={paywallNavigation}
           />
+          {isConfirmingList ? (
+            <ConvocationToListSheet
+              bottomInset={insets.bottom}
+              onConfirm={confirmToList}
+              onKeep={() => setIsConfirmingList(false)}
+            />
+          ) : null}
         </View>
       )}
     </Modal>

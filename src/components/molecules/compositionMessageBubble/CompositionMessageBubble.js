@@ -452,6 +452,9 @@ function CompositionMessageBubble({
     && Boolean(eventId)
     && matchAVenir
     && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
+  // 📋 CONVLISTE-FIN (planche B5) — en liste, le joueur convoque le lit sur la carte.
+  const montreTuEsConvoque = enListe
+    && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
 
   // 🎨 MSG1A (§3.7) — dans le fil, la carte se pose DANS la bulle commune (`BulleDuFil`) :
   // pas de fond ni de liseré propres, 276 de large (SPECS.md §3). Ailleurs (le site), elle
@@ -658,6 +661,23 @@ function CompositionMessageBubble({
           </View>
         </TouchableOpacity>
       )}
+
+      {montreTuEsConvoque ? (
+        <View
+          style={[
+            styles.tuEsConvoque,
+            // Dans la bulle, le contenu va au bord (comme la liste des noms) ; ailleurs, retrait.
+            dansLaBulle ? null : styles.tuEsConvoqueHorsBulle,
+            { backgroundColor: withAlpha(Colors.success500, 0.14) },
+          ]}
+          testID="composition-tu-es-convoque"
+        >
+          <GlyphIcon color={Colors.success500} name="check" size={18} />
+          <Text style={[styles.tuEsConvoqueTexte, { color: Colors.success200 }]}>
+            {t('compositionMessageBubble.youReCalledUp', 'Tu es convoqué')}
+          </Text>
+        </View>
+      ) : null}
 
       {/* 🧾 R6 — QUI EST CONVOQUE (memes mots que l'onglet « Convocation »), deux lignes au
           plus par groupe (le pack). Masque aux lecteurs d'ecran : la carte le dit deja. */}
@@ -974,6 +994,23 @@ const styles = StyleSheet.create({
     marginLeft: -(MINI_TOKEN_SIZE / 2),
     marginTop: -(MINI_TOKEN_SIZE / 2),
     position: 'absolute',
+  },
+  tuEsConvoque: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  tuEsConvoqueHorsBulle: {
+    marginHorizontal: 14,
+  },
+  tuEsConvoqueTexte: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 14,
+    lineHeight: 18,
   },
   version: {
     fontFamily: REGULIER_FAMILLE,

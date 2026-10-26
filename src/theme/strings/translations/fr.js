@@ -8513,6 +8513,8 @@ export default {
     teamLineUpPublished: "Composition d'équipes publiée",
     // COMPOMSG — « v2 » ne disait rien à un joueur. Affiché seulement à partir de 2.
     version: 'Version {{version}}',
+    // CONVLISTE-FIN (planche B5) — l'encart du joueur convoqué, sur une carte en liste.
+    youReCalledUp: 'Tu es convoqué',
   },
   // C-C — ECRAN 11 du pack composition : la compo type d'une équipe.
   compoTemplate: {
@@ -10121,6 +10123,9 @@ export default {
       label: 'Fil d’Ariane',
       planning: 'Planning',
     },
+    // CONVLISTE-FIN — une convocation en liste se compte en convoqués, pas en remplaçants.
+    calledUpCount_one: '{{count}} convoqué',
+    calledUpCount_other: '{{count}} convoqués',
     campaignAlreadyLinked: 'Campagne déjà liée',
     cancel: 'Annuler',
     cancelling: 'Annulation...',

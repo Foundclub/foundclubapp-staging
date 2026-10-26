@@ -52,7 +52,11 @@ import {
   isTournamentTeamNonCompliant,
   normalizeTournamentText,
 } from '@/views/event/tournamentUtils';
-import { buildPublishedBoardTarget, getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
+import {
+  buildPublishedBoardTarget,
+  convocationsToutesEnListe,
+  getViewerConvocationRole,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -1220,11 +1224,13 @@ function EventDetails({ navigation, route }) {
       defaultValue_one: '{{count}} convocation',
       defaultValue_other: '{{count}} convocations',
     }) : '',
-    publishedCompositionReserveCount > 0 ? t('eventDetails.substitutesCount', {
-      count: publishedCompositionReserveCount,
-      defaultValue_one: '{{count}} remplaçant',
-      defaultValue_other: '{{count}} remplaçants',
-    }) : '',
+    publishedCompositionReserveCount > 0 ? t(
+      // CONVLISTE-FIN — une convocation en liste n'a pas de remplacants : des convoques.
+      convocationsToutesEnListe(convocationBranches)
+        ? 'eventDetails.calledUpCount'
+        : 'eventDetails.substitutesCount',
+      { count: publishedCompositionReserveCount },
+    ) : '',
   ].filter(Boolean);
 
   useEffect(() => {

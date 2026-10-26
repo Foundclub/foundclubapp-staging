@@ -402,21 +402,31 @@ describe('CONVLISTE · C1-C3 — passer d un mode a l autre', () => {
     expect(vus.some((texte) => texte.startsWith('Tes 2 joueurs sont gardés'))).toBe(true);
   });
 
-  test('composition → liste : confirmation, placement efface, joueurs gardes', async () => {
+  // CONVLISTE-FIN (chef 26/10, planche C3) — la confirmation est la FEUILLE dessinee de la
+  // planche, plus la fenetre systeme (Alert, `window.confirm` au site).
+  test('composition → liste : la feuille de la planche, placement efface', async () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const { arbre } = ouvrirEn('pitch');
     appuyer(arbre, 'convocation-wizard-next');
     appuyer(arbre, 'convocation-check-hugo');
     appuyer(arbre, 'convocation-mode-switch');
 
-    expect(alerte).toHaveBeenCalledTimes(1);
-    const [titre, , boutons] = alerte.mock.calls[0];
-    expect(titre).toBe('Passer en liste ?');
-    // Tant que rien n est confirme, rien ne bouge.
+    expect(alerte).not.toHaveBeenCalled();
+    const feuille = arbre.root.findByProps({ testID: 'convocation-tolist-sheet' });
+    expect(feuille.findAllByType(Text)
+      .map((/** @type {any} */ n) => [].concat(n.props.children).join(''))).toEqual(
+      expect.arrayContaining([
+        'Passer en liste ?', 'Passer en liste', 'Garder la composition',
+      ]),
+    );
+    // « Garder la composition » referme la feuille, rien ne bouge.
+    appuyer(arbre, 'convocation-tolist-keep');
+    expect(contient(arbre, 'convocation-tolist-sheet')).toBe(false);
     expect(textes(arbre)).toContain('Étape 2 sur 4 · Joueurs');
 
-    const confirmer = /** @type {any[]} */ (boutons).find((b) => b.text === 'Passer en liste');
-    act(() => { confirmer.onPress(); });
+    appuyer(arbre, 'convocation-mode-switch');
+    appuyer(arbre, 'convocation-tolist-confirm');
+    expect(contient(arbre, 'convocation-tolist-sheet')).toBe(false);
     expect(textes(arbre)).toContain('Étape 2 sur 3 · Joueurs');
     expect(estCoche(arbre, 'hugo')).toBe(true);
     expect(textes(arbre)).toContain('1 CONVOQUÉ');

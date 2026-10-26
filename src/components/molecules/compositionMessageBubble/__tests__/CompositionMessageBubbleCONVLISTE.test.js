@@ -18,7 +18,9 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
-jest.mock('@/store/authRuntime', () => ({ getAuthRuntimeSnapshot: () => ({ auth: undefined }) }));
+/** @type {any} */
+let mockAuth;
+jest.mock('@/store/authRuntime', () => ({ getAuthRuntimeSnapshot: () => ({ auth: mockAuth }) }));
 jest.mock('@/components/tactical/RenderedTacticalField', () => {
   const { View } = jest.requireActual('react-native');
   return {
@@ -85,8 +87,25 @@ const aUnTerrain = (/** @type {any} */ arbre) => arbre.root
   .findAll((/** @type {any} */ n) => n.props.testID === 'mini-terrain').length > 0;
 
 afterEach(() => {
+  mockAuth = undefined;
   act(() => {
     montes.splice(0).forEach((arbre) => arbre.unmount());
+  });
+});
+
+// CONVLISTE-FIN (chef 26/10, planche B5) — le joueur convoque lit « Tu es convoqué » sur la carte.
+describe('CONVLISTE · l encart « Tu es convoqué », cote joueur', () => {
+  test('🥇 un joueur de la liste le voit ; l entraineur, non', () => {
+    mockAuth = { user: { documentId: 'hugo' } };
+    expect(textes(monter(EN_LISTE))).toContain('Tu es convoqué');
+
+    mockAuth = { user: { documentId: 'coach-1' } };
+    expect(textes(monter(EN_LISTE))).not.toContain('Tu es convoqué');
+  });
+
+  test('🔒 une composition ne le montre pas (la planche ne le prevoit qu en liste)', () => {
+    mockAuth = { user: { documentId: 'hugo' } };
+    expect(textes(monter(EN_COMPOSITION))).not.toContain('Tu es convoqué');
   });
 });
 

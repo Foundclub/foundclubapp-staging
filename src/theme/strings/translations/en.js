@@ -8017,6 +8017,7 @@ export default {
     team: 'Team',
     teamLineUpPublished: 'Team line-up published',
     version: 'Version {{version}}',
+    youReCalledUp: 'You’re called up',
   },
   compositionPaywall: {
     actions: {
@@ -9566,6 +9567,8 @@ export default {
       label: 'Breadcrumb',
       planning: 'Schedule',
     },
+    calledUpCount_one: '{{count}} called up',
+    calledUpCount_other: '{{count}} called up',
     campaignAlreadyLinked: 'Campaign already linked',
     cancel: 'Cancel',
     cancelling: 'Cancelling...',
