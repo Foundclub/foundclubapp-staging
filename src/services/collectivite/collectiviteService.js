@@ -243,10 +243,16 @@ const collectiviteRoute = (/** @type {unknown} */ collectiviteId) => (
 
 /**
  * Toutes les collectivites, pour la liste de la console.
+ * C10BIS · P9-12 — `q` : la recherche faite PAR LE SERVEUR (toutes les pages, pas
+ * la seule chargee).
+ * @param {string} [q] - Le texte cherche ; vide = la premiere page entiere.
  * @returns {Promise<any>} `{ data: [{ documentId, name, type, isActive, clubs }], meta }`.
  */
-export const getAdminCollectivites = async () => (
-  listSuperadminEntries(COLLECTIVITE_UID, ADMIN_COLLECTIVITES_LIST_PAYLOAD)
+export const getAdminCollectivites = async (q = '') => (
+  listSuperadminEntries(
+    COLLECTIVITE_UID,
+    q ? { ...ADMIN_COLLECTIVITES_LIST_PAYLOAD, q } : ADMIN_COLLECTIVITES_LIST_PAYLOAD,
+  )
 );
 
 /**
