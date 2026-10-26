@@ -62,6 +62,25 @@ function UserClubSearch({ navigation }) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
+  // CARTECODE-PARCOURS (planche, partie 9 ; chef d'orchestre 27/10, option A) : la carte arrive a
+  // la fin de l'inscription, carte modele puis la sienne. Elle garde l'etape suivante, que
+  // « Plus tard, continuer » reprend. Sans etape suivante (tunnel deja fini ici) : comme avant.
+  const continuerLeTunnel = async () => {
+    const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
+    if (!nextRoute) {
+      markOnboardingComplete(userData?.documentId);
+      // Invalidate get-me to trigger PrivateNavigator re-evaluation
+      // This will update onboardingViews -> canShowHome -> render HomeTab
+      // And unmount this screen (UserClubSearch) as it's removed from valid views
+      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
+      return;
+    }
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { celebration: true, nextRoute },
+      screen: RouteNames.PlayerCard,
+    });
+  };
+
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
@@ -70,18 +89,7 @@ function UserClubSearch({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: async () => {
-      const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
-      if (!nextRoute) {
-        markOnboardingComplete(userData?.documentId);
-        // Invalidate get-me to trigger PrivateNavigator re-evaluation
-        // This will update onboardingViews -> canShowHome -> render HomeTab
-        // And unmount this screen (UserClubSearch) as it's removed from valid views
-        await queryClient.invalidateQueries({ queryKey: ['get-me'] });
-      } else {
-        navigation.navigate(nextRoute);
-      }
-    },
+    onSuccess: continuerLeTunnel,
   });
 
   useEffect(() => {
@@ -125,15 +133,7 @@ function UserClubSearch({ navigation }) {
     }
   };
 
-  const handleSkip = async () => {
-    const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
-    if (!nextRoute) {
-      markOnboardingComplete(userData?.documentId);
-      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
-    } else {
-      navigation.navigate(nextRoute);
-    }
-  };
+  const handleSkip = continuerLeTunnel;
 
   return (
     <FormScreenContainer

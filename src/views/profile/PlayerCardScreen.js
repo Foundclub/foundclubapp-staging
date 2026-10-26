@@ -9,7 +9,8 @@
  * Deux modes :
  *  - normal (depuis Profil) : titre + carte + actions.
  *  - reveal (params.celebration=true, fin d'onboarding) : eyebrow "Bienvenue",
- *    carte inclinee, bouton "Plus tard, continuer" -> home.
+ *    carte modele EXEMPLE puis la sienne, "Plus tard, continuer" -> params.nextRoute
+ *    (etape suivante du tunnel, posee par UserClubSearch), sinon home.
  *
  * Export image : capture hors-ecran a 992×1262 (taille native de la maquette).
  */
@@ -241,7 +242,9 @@ function PlayerCardScreen({ navigation, route }) {
   };
 
   const handleContinueOnboarding = () => {
-    navigation.navigate(getPostOnboardingHomeRoute());
+    // CARTECODE-PARCOURS : venue du tunnel (« Ouvert au recrutement ? »), la carte rend la main
+    // a l'etape suivante ; sinon, l'accueil.
+    navigation.navigate(route?.params?.nextRoute || getPostOnboardingHomeRoute());
   };
 
   const handleRequestParentalConsent = () => {

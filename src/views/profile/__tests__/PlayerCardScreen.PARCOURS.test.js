@@ -399,6 +399,29 @@ describe('CARTECODE-PARCOURS 4 — fin d inscription : la carte modèle, puis la
     ]));
     expect(textes(arbre)).not.toContain('EXEMPLE');
   });
+
+  // Chef d'orchestre 27/10, option A : la carte vient de « Ouvert au recrutement ? »
+  // (UserClubSearch.test.js, mêmes paramètres) ; « Plus tard, continuer » reprend le tunnel.
+  it('depuis le tunnel : EXEMPLE, puis sa carte, puis l étape suivante du tunnel', async () => {
+    const { arbre, navigation } = await monter({
+      celebration: true, nextRoute: 'UserAffiliationGuide',
+    });
+    expect(textes(arbre)).toContain('EXEMPLE');
+    await toucher(arbre, 'Découvrir ma carte');
+    expect(derniereCarteMontree().prenom).toBe('Samir');
+
+    await toucher(arbre, 'Plus tard, continuer');
+
+    expect(navigation.navigate).toHaveBeenCalledWith('UserAffiliationGuide');
+    expect(navigation.navigate).not.toHaveBeenCalledWith('Home');
+  });
+
+  it('sans étape suivante (tunnel fini) : « Plus tard, continuer » mène à l accueil', async () => {
+    const { arbre, navigation } = await monter({ celebration: true });
+    await toucher(arbre, 'Découvrir ma carte');
+    await toucher(arbre, 'Plus tard, continuer');
+    expect(navigation.navigate).toHaveBeenCalledWith('Home');
+  });
 });
 
 // Le geste « toucher la carte » n'est pas un bouton de plus entre la carte et ses gestes.

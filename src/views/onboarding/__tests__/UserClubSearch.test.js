@@ -242,6 +242,44 @@ describe('UserClubSearch — ce que l etape enregistre n a pas bouge (D56)', () 
     await act(async () => { continuer.props.onPress(); });
 
     expect(mockUpdateMe).toHaveBeenCalledWith({ isLookingForClub: true });
-    expect(navigation.navigate).toHaveBeenCalledWith('UserAffiliationGuide');
+    // CARTECODE-PARCOURS : la carte d'abord, la suite du tunnel ensuite (dernier bloc).
+    expect(navigation.navigate).toHaveBeenCalledWith('ProfileStack', expect.objectContaining({
+      params: expect.objectContaining({ nextRoute: 'UserAffiliationGuide' }),
+    }));
+  });
+});
+
+// CARTECODE-PARCOURS (planche, partie 9 ; chef d'orchestre 27/10, option A) — la carte arrive à
+// la fin de l'inscription : après « Ouvert au recrutement ? », Continuer comme Passer ouvrent la
+// carte (EXEMPLE, puis la sienne) et lui confient l'étape suivante, que « Plus tard, continuer »
+// reprend (PlayerCardScreen.PARCOURS.test.js, même paramètres).
+const VERS_LA_CARTE = [
+  'ProfileStack',
+  { params: { celebration: true, nextRoute: 'UserAffiliationGuide' }, screen: 'PlayerCard' },
+];
+
+describe('CARTECODE-PARCOURS — la carte arrive à la fin de l inscription', () => {
+  it('Continuer : la carte, avec la suite du tunnel en main', async () => {
+    const { navigation, tree } = rendre();
+    await act(async () => { piluleIntitulee(tree, 'Oui, ouvert').props.onPress(); });
+    const continuer = tree.root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ node) => node.findAllByType(Text)
+        .map((/** @type {any} */ noeud) => noeud.props.children)
+        .flat()
+        .includes('Continuer'));
+    await act(async () => { continuer.props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith(...VERS_LA_CARTE);
+    expect(navigation.navigate).not.toHaveBeenCalledWith('UserAffiliationGuide');
+  });
+
+  it('Passer : la carte aussi', async () => {
+    const { navigation, tree } = rendre();
+    const passer = tree.root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ node) => node.findAllByType(Text)
+        .some((/** @type {any} */ t) => t.props.children === 'Passer cette étape'));
+    await act(async () => { passer.props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith(...VERS_LA_CARTE);
   });
 });
