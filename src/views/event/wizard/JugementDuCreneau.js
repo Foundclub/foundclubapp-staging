@@ -52,6 +52,14 @@ function JugementDuCreneau({
           </Text>
         </View>
       ) : null}
+      {jugement.creneau ? (
+        <Text
+          style={[Fonts.p3, jugement.creneau.dedans ? Fonts.primary200 : Fonts.warning500]}
+          testID={jugement.creneau.dedans ? 'date-dans-le-creneau' : 'date-hors-creneau'}
+        >
+          {jugement.creneau.texte}
+        </Text>
+      ) : null}
       {jugement.prevention ? (
         <Text
           style={[Fonts.p3, jugement.prevention.pris ? Fonts.warning500 : Fonts.success500]}

@@ -18,7 +18,9 @@ const mockFeuilles = [];
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    // DATESDABORD (26/10) : le double INTERPOLE ({{jours}}, {{du}}…) : la phrase du rythme se compare.
+    t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => String(typeof repli === 'string' ? repli : cle)
+      .replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ tout, /** @type {string} */ nom) => (valeurs && valeurs[nom] !== undefined ? String(valeurs[nom]) : tout)),
   }),
 }));
 jest.mock('@/theme/themeContext', () => {
@@ -60,7 +62,7 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => function Feuil
 ) {
   mockFeuilles.push(props);
   const { createElement: creer, Fragment } = jest.requireActual('react');
-  return props.isVisible ? creer(Fragment, null, props.children, props.footerComponent) : null;
+  return props.isVisible ? creer(Fragment, null, props.headerComponent, props.children, props.footerComponent) : null;
 });
 jest.mock('@/components/atoms/button/Button', () => {
   const { createElement: creer } = jest.requireActual('react');
@@ -121,8 +123,61 @@ describe('DATESDABORD — le bloc « Date et horaire » partagé', () => {
     expect(mockDates[0].value).toBe('03/11/2026');
     expect(mockHeures.map((p) => p.value)).toEqual(['17:30', '19:00']);
     const textes = textesRendus();
-    expect(textes).toContain('Répéter');
+    expect(textes).toContain('RÉPÉTER');
     expect(textes).toContain('Une seule fois');
+    expect(arbre.root.findByProps({ testID: 'date-et-horaire-une-fois' }).props.accessibilityState).toEqual({ checked: true });
+  });
+
+  // 🗓️ DATESDABORD (26/10, Adel sur la planche : « il faut mieux le mettre en avant ») — sur l'écran,
+  // sans feuille : « Chaque semaine », les jours en pastilles, « Du » / « Au », une phrase qui dit le
+  // rythme. ROUGE avant : « Répéter » n'était qu'une rangée qui ouvrait une feuille.
+  test('« Chaque semaine » se choisit sur l écran : le jour de la date, du jour même à une semaine', () => {
+    const appels = monter();
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-chaque-semaine' }).props.onPress());
+    expect(appels.repetition[0]).toMatchObject({ frequence: 'week', intervalleTexte: '1', jours: [MARDI.getDay()] });
+    expect(appels.repetition[0].du.toDateString()).toBe(MARDI.toDateString());
+    expect(mockFeuilles.some((p) => p.isVisible)).toBe(false);
+  });
+
+  test('chaque semaine : les pastilles des jours, Du et Au, et la phrase du rythme', () => {
+    const appels = monter({
+      repetition: {
+        actif: true, au: new Date(2026, 11, 15), du: MARDI, frequence: 'week', intervalleTexte: '1', jours: [2],
+      },
+    });
+    // Mardi (celui de la date) est pris et ne se retire pas ; jeudi s'ajoute d'un appui.
+    expect(arbre.root.findByProps({ testID: 'date-et-horaire-jour-2' }).props.accessibilityState).toEqual({ checked: true, disabled: true });
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-jour-4' }).props.onPress());
+    expect(appels.repetition.at(-1).jours).toEqual([2, 4]);
+    expect(mockDates.map((p) => p.label)).toEqual(expect.arrayContaining(['Du', 'Au']));
+    expect(arbre.root.findByProps({ testID: 'date-et-horaire-resume' }).props.children)
+      .toBe('Répéter chaque semaine : mardi, 17:30 – 19:00, du 3 nov. au 15 déc.');
+  });
+
+  test('plusieurs jours : la phrase les nomme dans l ordre de la semaine', () => {
+    monter({
+      repetition: {
+        actif: true, au: new Date(2026, 11, 15), du: MARDI, frequence: 'week', intervalleTexte: '1', jours: [5, 2, 4],
+      },
+    });
+    expect(arbre.root.findByProps({ testID: 'date-et-horaire-resume' }).props.children)
+      .toBe('Répéter chaque semaine : mardi, jeudi, vendredi, 17:30 – 19:00, du 3 nov. au 15 déc.');
+  });
+
+  test('« Une seule fois » éteint la répétition, d un appui', () => {
+    const appels = monter({
+      repetition: {
+        actif: true, au: null, du: null, frequence: 'week', intervalleTexte: '1', jours: [2],
+      },
+    });
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-une-fois' }).props.onPress());
+    expect(appels.repetition).toEqual([null]);
+  });
+
+  test('le titre de la feuille se règle (« Répéter le créneau » à la Ville)', () => {
+    monter({ titreRepeter: 'Répéter le créneau' });
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());
+    expect(textesRendus()).toContain('Répéter le créneau');
   });
 
   test('il renvoie des dates : la date choisie, les heures posées sur leur jour', () => {
@@ -153,7 +208,7 @@ describe('DATESDABORD — le bloc « Date et horaire » partagé', () => {
         actif: true, au: null, du: null, frequence: 'month', intervalleTexte: '2', jours: [],
       },
     });
-    expect(textesRendus()).toContain('Tous les {{count}} mois');
+    expect(textesRendus()).toContain('Tous les 2 mois');
     act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());
     const neRienRepeter = arbre.root.findAll((/** @type {any} */ n) => (
       n.props?.accessibilityRole === 'button' && typeof n.props.onPress === 'function'

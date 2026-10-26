@@ -246,8 +246,9 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
     });
     expect(choix(arbre, 'Toute la saison')).toBeUndefined();
     expect(lus(arbre)).toEqual(expect.arrayContaining([
-      'Répéter',
-      'Toutes les semaines',
+      // DATESDABORD (26/10) : « RÉPÉTER » sur l'écran, « Chaque semaine » choisi.
+      'RÉPÉTER',
+      'Chaque semaine',
       '37 mercredis',
       '2 tombent dans « Vacances de Noël » (23 déc., 30 déc.) : le club y verra « fermé », comme aujourd’hui.',
     ]));

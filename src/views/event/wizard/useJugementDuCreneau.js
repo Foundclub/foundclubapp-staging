@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
 import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { clubSlotParts, creneauDeLaSeance } from '@/domains/seasonSlot/clubInstallations';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
-import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
+import {
+  useGetClubVilleFacilitiesWithSlots,
+  useGetFacilityOccupancy,
+} from '@/services/facility/facilityQueries';
 
 import preventionDuCreneau from './preventionDuCreneau';
 import useMairieDecideALaCreation from './useMairieDecideALaCreation';
@@ -42,7 +47,8 @@ export const fenetreDeLaSeance = (jour, debut, fin) => {
  * @param {{ date: any, debut: any, fin: any, actif?: boolean }} seance - Le jour et les heures
  *   en cours de saisie ; `actif` faux : rien n'est lu (un tournoi sur plusieurs jours).
  * @returns {{
- *   bloque: boolean, enLecture: boolean, enPanne: boolean, fermeture: string | null,
+ *   bloque: boolean, creneau: { dedans: boolean, texte: string } | null, enLecture: boolean,
+ *   enPanne: boolean, fermeture: string | null,
  *   mairie: string | null, prevention: { pris: boolean, texte: string } | null,
  *   relire: () => any,
  * }} Ce que l'étape dit et ce qui bloque « Suivant ».
@@ -63,6 +69,51 @@ const useJugementDuCreneau = (etat, {
     },
     installation,
   );
+  // DATESDABORD (26/10, reco b du chef) — sur un gymnase de la Ville où le club a des créneaux :
+  // « Dans ton créneau … » ou « Hors de tes créneaux de la Ville à cette heure », les phrases que
+  // l'étape « Lieu » disait quand la date venait avant (FacilitySelector, COLL-C2C).
+  const villeDuClub = useGetClubVilleFacilitiesWithSlots(
+    installation ? (etat?.team?.club?.documentId || null) : null,
+  );
+  const gymnaseDeLaVille = (Array.isArray(villeDuClub.data) ? villeDuClub.data : [])
+    .find((/** @type {any} */ ligne) => ligne?.documentId === installation) || null;
+  const creneauDuClub = gymnaseDeLaVille && fenetre.start
+    ? creneauDeLaSeance(gymnaseDeLaVille.clubSeasonSlots, {
+      start: fenetre.start,
+      teamId: etat?.team?.documentId || null,
+    })
+    : null;
+  let creneau = null;
+  if (gymnaseDeLaVille && fenetre.start && !decision.mairie) {
+    if (creneauDuClub) {
+      const morceaux = clubSlotParts(creneauDuClub, t);
+      creneau = {
+        dedans: true,
+        texte: t(
+          'clubInstallations.lieu.dansLeCreneau',
+          // eslint-disable-next-line max-len
+          'Dans ton créneau {{creneau}} : la séance est validée directement. Si ton club y est déjà au complet à cette heure, ton dirigeant décide.',
+          {
+            creneau: t('clubInstallations.creneau.ligne', '{{team}} · {{quand}}', {
+              quand: morceaux.quand,
+              team: morceaux.team || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
+              ...SANS_ECHAPPEMENT,
+            }),
+            ...SANS_ECHAPPEMENT,
+          },
+        ),
+      };
+    } else {
+      creneau = {
+        dedans: false,
+        texte: t(
+          'clubInstallations.lieu.horsCreneau',
+          'Hors de tes créneaux de la Ville à cette heure.',
+        ),
+      };
+    }
+  }
+
   const lue = place.data?.data || null;
   const bloque = Boolean(installation && lue?.blocked);
   const enPanne = Boolean(installation && place.isError);
@@ -105,6 +156,7 @@ const useJugementDuCreneau = (etat, {
 
   return {
     bloque,
+    creneau,
     enLecture,
     enPanne,
     fermeture: bloque ? closureRefusalText(t, lue?.closure || null, lue?.facility?.name) : null,

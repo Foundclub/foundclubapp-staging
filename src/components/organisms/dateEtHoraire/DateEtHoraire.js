@@ -1,4 +1,5 @@
 import { format, isValid, parse } from 'date-fns';
+import { enGB, fr } from 'date-fns/locale';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,6 +7,8 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -17,6 +20,15 @@ import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerIn
 const DATE_INPUT_FORMAT = 'dd/MM/yyyy';
 const TIME_INPUT_FORMAT = 'HH:mm';
 const MIN_RECURRENCE_INTERVAL = 1;
+// Les jours dans l'ordre d'une semaine française (0 = dimanche, comme `Date.getDay`).
+const JOURS_DE_LA_SEMAINE = [1, 2, 3, 4, 5, 6, 0];
+const localeDuBloc = () => (localeDesFormats() === 'en-GB' ? enGB : fr);
+// Un lundi (le 1er janvier 2024) : le nom d'un jour se lit sur la date du même rang.
+const nomDuJour = (/** @type {number} */ jour, /** @type {string} */ motif = 'EEEE') => format(
+  new Date(2024, 0, 1 + ((jour + 6) % 7)),
+  motif,
+  { locale: localeDuBloc() },
+);
 
 /**
  * 🧨 LA HAUTEUR DE LA FEUILLE « REPETER », ET POURQUOI ELLE EST OBLIGATOIRE.
@@ -208,6 +220,7 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   pleines?: Array<{ end: number, start: number }>,
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
+ *   titreRepeter?: string | null,
  *   sousLaDate?: import('react').ReactNode,
  *   webZIndex?: number,
  * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDate`,
@@ -236,6 +249,7 @@ function DateEtHoraire({
   repetition = null,
   sansRepetition = false,
   sousLaDate = null,
+  titreRepeter = null,
   webZIndex = undefined,
 }) {
   const {
@@ -340,6 +354,98 @@ function DateEtHoraire({
     setIsRecurrenceSheetOpen(false);
   };
 
+  // 🗓️ DATESDABORD (26/10/2026, Adel sur la planche : « il faut mieux le mettre en avant ») —
+  // « RÉPÉTER » SUR L'ÉCRAN, PLUS AU FOND D'UNE FEUILLE : « Une seule fois » ou « Chaque semaine »,
+  // les jours en pastilles, « Du » et « Au » à côté, et une phrase qui dit le rythme. La feuille
+  // reste pour le reste (toutes les N semaines, chaque mois) : « Plus d'options ». Les valeurs
+  // partent à l'écran à chaque geste (plus de brouillon ici : tout se voit).
+  const repetitionEnCours = () => ({
+    au: repetition?.au || buildDefaultRecurrenceEndDate(
+      repetition?.du ? new Date(repetition.du) : new Date(date),
+      recurrenceFrequency,
+      recurrenceInterval,
+    ),
+    du: repetition?.du || new Date(date),
+    frequence: recurrenceFrequency,
+    intervalleTexte: repetition?.intervalleTexte || '1',
+    jours: Array.isArray(repetition?.jours) && repetition.jours.length
+      ? repetition.jours
+      : [date.getDay()],
+  });
+  const choisirChaqueSemaine = () => onRepetition(repetitionEnCours());
+  const basculerLeJour = (/** @type {number} */ jour) => {
+    const suite = repetitionEnCours();
+    const jours = suite.jours.map(Number);
+    onRepetition({
+      ...suite,
+      jours: jours.includes(jour) ? jours.filter((autre) => autre !== jour) : [...jours, jour],
+    });
+  };
+  const joursRetenus = (Array.isArray(repetition?.jours) ? repetition.jours : [])
+    .map(Number)
+    .concat(date.getDay());
+  const joursDuResume = JOURS_DE_LA_SEMAINE.filter((jour) => joursRetenus.includes(jour))
+    .map((jour) => nomDuJour(jour))
+    .join(', ');
+  const rythme = recurrenceFrequency === 'week' && recurrenceInterval === 1
+    ? t('eventWizard.steps.logistics.repeter.chaqueSemaineMinuscule', 'chaque semaine')
+    : recurrenceIntervalLabel.toLocaleLowerCase();
+  const jourCourt = (/** @type {any} */ valeur) => (valeur && isValid(new Date(valeur))
+    ? format(new Date(valeur), 'd MMM', { locale: localeDuBloc() })
+    : '');
+  const heures = debut && fin ? `${toTimeInputText(debut)} – ${toTimeInputText(fin)}` : '';
+  const resume = recurrenceFrequency === 'week'
+    ? t(
+      'eventWizard.steps.logistics.repeter.resume',
+      'Répéter {{rythme}} : {{jours}}{{heures}}, du {{du}} au {{au}}',
+      {
+        au: jourCourt(repetitionEnCours().au),
+        du: jourCourt(repetition?.du || date),
+        heures: heures ? `, ${heures}` : '',
+        jours: joursDuResume,
+        rythme,
+        ...SANS_ECHAPPEMENT,
+      },
+    )
+    : t(
+      'eventWizard.steps.logistics.repeter.resumeMois',
+      'Répéter {{rythme}}{{heures}}, du {{du}} au {{au}}',
+      {
+        au: jourCourt(repetitionEnCours().au),
+        du: jourCourt(repetition?.du || date),
+        heures: heures ? `, ${heures}` : '',
+        rythme,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
+  const puceDuRythme = (
+    /** @type {string} */ cle,
+    /** @type {string} */ libelle,
+    /** @type {boolean} */ actif,
+    /** @type {() => void} */ onPress,
+  ) => (
+    <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ checked: actif }}
+      key={cle}
+      onPress={onPress}
+      style={[
+        Spaces.paddingHorizontal[16],
+        {
+          backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.04),
+          borderColor: actif ? Colors.primary500 : chipBorder,
+          borderRadius: 999,
+          borderWidth: 1,
+          justifyContent: 'center',
+          minHeight: 44,
+        },
+      ]}
+      testID={`date-et-horaire-${cle}`}
+    >
+      <Text style={[Fonts.p2Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>{libelle}</Text>
+    </TouchableOpacity>
+  );
+
   /** Revient a « une seule fois ». Les valeurs saisies restent, elles ne servent plus. */
   const handleClearRecurrence = () => {
     onRepetition(null);
@@ -384,6 +490,107 @@ function DateEtHoraire({
           incoherent. La valeur reste lisible sans ouvrir la feuille, et
           le defaut est « Une seule fois ». */}
       {!sansRepetition ? (
+        <View style={[Spaces.gap[12]]} testID="date-et-horaire-repeter-en-avant">
+          <Text style={intertitreStyle}>
+            {t('eventWizard.steps.logistics.repeter.titre', 'RÉPÉTER')}
+          </Text>
+          <View
+            accessibilityRole="radiogroup"
+            style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
+          >
+            {puceDuRythme(
+              'une-fois',
+              t('eventWizard.steps.logistics.repeatRowOnce', 'Une seule fois'),
+              !isRecurrent,
+              () => onRepetition(null),
+            )}
+            {puceDuRythme(
+              'chaque-semaine',
+              isRecurrent && !(recurrenceFrequency === 'week' && recurrenceInterval === 1)
+                ? recurrenceIntervalLabel
+                : t('eventWizard.steps.logistics.repeter.chaqueSemaine', 'Chaque semaine'),
+              isRecurrent,
+              choisirChaqueSemaine,
+            )}
+          </View>
+          {isRecurrent && recurrenceFrequency === 'week' ? (
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventWizard.steps.logistics.repeter.lesJours', 'Les jours')}
+              </Text>
+              <View style={[Alignments.row, { flexWrap: 'wrap', gap: 6 }]}>
+                {JOURS_DE_LA_SEMAINE.map((jour) => {
+                  const choisi = joursRetenus.includes(jour);
+                  const celuiDeLaDate = jour === date.getDay();
+                  return (
+                    <TouchableOpacity
+                      accessibilityLabel={nomDuJour(jour)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: choisi, disabled: celuiDeLaDate }}
+                      disabled={celuiDeLaDate}
+                      key={jour}
+                      onPress={() => basculerLeJour(jour)}
+                      style={{
+                        alignItems: 'center',
+                        backgroundColor: choisi ? Colors.primary500 : 'transparent',
+                        borderColor: choisi ? Colors.primary500 : chipBorder,
+                        borderRadius: 22,
+                        borderWidth: 1,
+                        height: 44,
+                        justifyContent: 'center',
+                        width: 44,
+                      }}
+                      testID={`date-et-horaire-jour-${jour}`}
+                    >
+                      <Text style={[Fonts.p2Bold, choisi ? Fonts.primary900 : Fonts.neutral100]}>
+                        {nomDuJour(jour, 'EEEEE').toLocaleUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'eventWizard.steps.logistics.repeter.jourDeLaDate',
+                  'Le jour de la date est toujours compris.',
+                )}
+              </Text>
+            </View>
+          ) : null}
+          {isRecurrent ? (
+            <View style={[Alignments.row, { flexWrap: 'wrap', gap: 12 }]}>
+              <View style={{ flexBasis: 140, flexGrow: 1 }}>
+                <DatePickerInput
+                  label={t('eventWizard.steps.logistics.repeter.du', 'Du')}
+                  minimumDate={new Date()}
+                  onChange={(/** @type {string} */ text) => onRepetition({
+                    ...repetitionEnCours(),
+                    du: mergeDateInput(text, new Date(repetition?.du || date)),
+                  })}
+                  value={toDateInputText(new Date(repetition?.du || date))}
+                />
+              </View>
+              <View style={{ flexBasis: 140, flexGrow: 1 }}>
+                <DatePickerInput
+                  label={t('eventWizard.steps.logistics.repeter.au', 'Au')}
+                  minimumDate={new Date()}
+                  onChange={(/** @type {string} */ text) => onRepetition({
+                    ...repetitionEnCours(),
+                    au: mergeDateInput(text, new Date(repetitionEnCours().au)),
+                  })}
+                  value={toDateInputText(new Date(repetitionEnCours().au))}
+                />
+              </View>
+            </View>
+          ) : null}
+          {isRecurrent ? (
+            <Text style={[Fonts.p2Bold, Fonts.primary200]} testID="date-et-horaire-resume">
+              {resume}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      {!sansRepetition ? (
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityState={{ expanded: isRecurrenceSheetOpen }}
@@ -404,8 +611,8 @@ function DateEtHoraire({
           ]}
           testID="date-et-horaire-repeter"
         >
-          <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-            {t('eventWizard.steps.logistics.repeatRowLabel', 'Répéter')}
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {t('eventWizard.steps.logistics.repeter.plusOptions', 'Plus d’options')}
           </Text>
           <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
             {isRecurrent
@@ -450,7 +657,8 @@ function DateEtHoraire({
           )}
           headerComponent={(
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              {t('eventWizard.steps.logistics.repeatSheetTitle', "Répéter l'événement")}
+              {titreRepeter
+                || t('eventWizard.steps.logistics.repeatSheetTitle', "Répéter l'événement")}
             </Text>
           )}
           isVisible={isRecurrenceSheetOpen}

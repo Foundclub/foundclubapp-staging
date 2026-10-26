@@ -248,8 +248,9 @@ const presserLeTexte = (libelle) => {
 // La feuille est-elle ouverte, d'apres son dernier rendu ?
 const feuilleOuverte = () => Boolean(mockFeuilles[mockFeuilles.length - 1]?.isVisible);
 
-// Ouvre la feuille en touchant la rangee « Repeter ».
-const ouvrirLaFeuille = () => act(() => presserLeTexte('Répéter'));
+// Ouvre la feuille en touchant la rangee « Plus d'options » (DATESDABORD 26/10 : « Répéter » est
+// sur l'ecran ; la feuille garde le reste — toutes les N semaines, chaque mois).
+const ouvrirLaFeuille = () => act(() => presserLeTexte('Plus d’options'));
 
 // Ferme la feuille par le fond, sans rien enregistrer.
 const fermerLaFeuille = () => mockFeuilles[mockFeuilles.length - 1].close();
@@ -286,11 +287,16 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
   // INVERSE PAR D09 — motif : le pack replie la recurrence dans une feuille du
   // bas et laisse une RANGEE-VALEUR a chevron. Un interrupteur qui ouvre une
   // fenetre serait incoherent ; la valeur reste lisible sans rien ouvrir.
-  test('la recurrence est une rangee « Répéter », dont la valeur par defaut est unique', () => {
+  // INVERSE PAR DATESDABORD (26/10/2026, Adel sur la planche : « il faut mieux le mettre en
+  // avant ») — motif : « RÉPÉTER » est sur l'ecran (« Une seule fois » / « Chaque semaine », les
+  // jours, du … au …) ; la rangee a chevron devient « Plus d'options ». Le defaut reste unique.
+  test('la recurrence est sur l ecran, « Une seule fois » par defaut, et « Plus d options » ouvre la feuille', () => {
     const { textes } = afficherLEcran();
 
-    expect(textes).toContain('Répéter');
+    expect(textes).toContain('RÉPÉTER');
     expect(textes).toContain('Une seule fois');
+    expect(textes).toContain('Chaque semaine');
+    expect(textes).toContain('Plus d’options');
     // L'interrupteur a disparu, et avec lui le panneau qui allongeait la page.
     expect(textes).not.toContain('eventWizard.steps.logistics.isRecurrent');
     expect(textes).not.toContain('eventWizard.steps.logistics.recurrenceInterval');
@@ -381,7 +387,9 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
 
     const textes = textesCourants();
     expect(textes).toContain('Toutes les 2 semaines');
-    expect(textes).not.toContain('Une seule fois');
+    // DATESDABORD (26/10) : « Une seule fois » reste un choix à l'écran ; il n'est plus coché.
+    expect(arbre.root.findByProps({ testID: 'date-et-horaire-une-fois' }).props.accessibilityState)
+      .toEqual({ checked: false });
     expect(feuilleOuverte()).toBe(false);
   });
 

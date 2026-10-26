@@ -1955,6 +1955,7 @@ function SeasonSlotForm({
           onRepetition={changerLaRepetition}
           pleines={heuresPleines}
           repetition={repetitionDuModele}
+          titreRepeter={t('collectiviteCreneaux.quand.repeterLeCreneau', 'Répéter le créneau')}
           // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
           // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
           // de jours ne reviennent pas.

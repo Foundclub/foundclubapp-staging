@@ -19,11 +19,13 @@ const mockGabarits = [];
 /** @type {any[]} */
 const mockHeures = [];
 let mockPlace = (/** @type {any} */ fenetre) => ({ data: { blocked: false, saturated: false }, fenetre });
+let mockVille = /** @type {any[]} */ ([]);
 let mockDecision = {
   complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
 };
 
 jest.mock('@/services/facility/facilityQueries', () => ({
+  useGetClubVilleFacilitiesWithSlots: (/** @type {any} */ club) => ({ data: club ? mockVille : [] }),
   useGetFacilityOccupancy: (/** @type {any} */ installation, /** @type {any} */ fenetre) => {
     if (installation) mockFenetres.push({ installation, ...fenetre });
     return {
@@ -147,6 +149,7 @@ const dernierGabarit = () => mockGabarits[mockGabarits.length - 1];
 const debut = () => mockHeures.filter((p) => /début/i.test(String(p.label))).at(-1);
 
 afterEach(() => {
+  mockVille = [];
   mockPlace = () => ({ data: { blocked: false, saturated: false } });
   mockDecision = {
     complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
@@ -199,6 +202,33 @@ describe('DATESDABORD 6- B — « Date & horaire » prévient à chaque horaire,
     expect(textes).toContain('la mairie décidera');
     expect(textes).not.toContain(LIBRE);
     expect(textes).not.toContain('déjà pris');
+  });
+
+  // DATESDABORD (26/10, reco b du chef) — sur un gymnase de la Ville, les deux phrases que l'étape
+  // « Lieu » disait quand la date venait avant. ROUGE avant : l'étape date ne les disait pas.
+  test('un gymnase de la Ville, dans le créneau du club : « Dans ton créneau … »', () => {
+    // Un créneau du club chaque jour, toute la journée : la séance tombe dedans, quel que soit le jour.
+    mockVille = [{
+      clubSeasonSlots: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+        documentId: `cr-${weekday}`, endTime: '23:59', startTime: '00:00', validFrom: '2026-01-01', validUntil: '2099-06-30', weekday,
+      })),
+      documentId: 'gym-ville',
+      isVilleSlot: true,
+    }];
+    mockDecision = {
+      complet: false, deLaVille: true, mairie: false, tuAcceptes: false, ville: 'Ville de Montrivage',
+    };
+    afficherLEcran({ facility: 'gym-ville', location: null });
+    expect(textesSous(arbre.root).join(' ')).toMatch(/^.*Dans ton créneau .* : la séance est validée directement\./);
+  });
+
+  test('un gymnase de la Ville, hors des créneaux du club : « Hors de tes créneaux de la Ville à cette heure. »', () => {
+    mockVille = [{ clubSeasonSlots: [], documentId: 'gym-ville', isVilleSlot: true }];
+    mockDecision = {
+      complet: false, deLaVille: true, mairie: false, tuAcceptes: false, ville: 'Ville de Montrivage',
+    };
+    afficherLEcran({ facility: 'gym-ville', location: null });
+    expect(textesSous(arbre.root)).toContain('Hors de tes créneaux de la Ville à cette heure.');
   });
 
   test('une adresse extérieure : rien à juger, aucune lecture', () => {
