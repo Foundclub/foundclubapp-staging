@@ -126,7 +126,8 @@ function ClubLogoMark({
     // qui dépasse de l'image se voit comme un cadre blanc. Trois sources, toutes
     // retirées ici plutôt qu'écran par écran :
     //  1. la marge intérieure de 4 % de ProfileAvatar → 0, sauf si l'écran en
-    //     demande une (pastilles cerclées des assistants) ;
+    //     demande une (plus aucun écran depuis RECETTEWEB 26/10 : les pastilles des
+    //     assistants laissaient un anneau blanc, le logo remplit désormais son rond) ;
     //  2. les bandes d'un logo non carré en « contain » → le cadre prend la forme
     //     du logo DANS la place prévue (size × size) : la mise en page ne bouge
     //     pas, le logo est au pire un peu plus étroit ;

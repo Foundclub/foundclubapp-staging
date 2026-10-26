@@ -1172,13 +1172,29 @@ function RecruitmentAdDetails() {
                         <Text numberOfLines={2} style={[Fonts.p1Bold, { color: Colors.neutral100 }]}>
                           {requesterName}
                         </Text>
+                        <View
+                          style={[
+                            styles.candidateStatusBadge,
+                            {
+                              backgroundColor: statusMeta.backgroundColor,
+                              borderColor: statusMeta.borderColor,
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+                            {statusMeta.label}
+                          </Text>
+                        </View>
                         {sourceTeamName ? (
                           <Text style={[Fonts.p4, { color: Colors.primary500, marginTop: 4 }]}>
                             {sourceTeamName}
                           </Text>
                         ) : null}
                         {requesterPhone ? (
-                          <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}>
+                          <Text
+                            numberOfLines={1}
+                            style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}
+                          >
                             {requesterPhone}
                           </Text>
                         ) : null}
@@ -1189,29 +1205,16 @@ function RecruitmentAdDetails() {
                         ) : null}
                       </View>
                     </Pressable>
-
-                    <View
-                      style={[
-                        styles.candidateStatusBadge,
-                        {
-                          backgroundColor: statusMeta.backgroundColor,
-                          borderColor: statusMeta.borderColor,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
-                        {statusMeta.label}
-                      </Text>
-                    </View>
                   </View>
 
                   {isPending ? (
-                    <View style={[Alignments.row, Alignments.justifyEnd, Spaces.gap[8], { marginTop: 12 }]}>
+                    <View style={styles.candidateActions}>
                       <Button
                         disabled={isProcessing}
                         isLoading={isAcceptLoading}
                         onPress={() => handleAcceptParticipation(participationId)}
                         size="sm"
+                        style={styles.candidateAction}
                         title={t('recruitmentAdDetails.candidates.accept', 'Accepter')}
                         variant="Primary"
                       />
@@ -1220,6 +1223,7 @@ function RecruitmentAdDetails() {
                         isLoading={isDeclineLoading}
                         onPress={() => handleDeclineParticipation(participationId)}
                         size="sm"
+                        style={styles.candidateAction}
                         title={t('recruitmentAdDetails.candidates.decline', 'Refuser')}
                         variant="Secondary"
                       />
@@ -1372,13 +1376,32 @@ function RecruitmentAdDetails() {
                           <Text numberOfLines={2} style={[Fonts.p1Bold, { color: Colors.neutral100 }]}>
                             {candidateName}
                           </Text>
+                          <View
+                            style={[
+                              styles.candidateStatusBadge,
+                              {
+                                backgroundColor: statusMeta.backgroundColor,
+                                borderColor: statusMeta.borderColor,
+                              },
+                            ]}
+                          >
+                            <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
+                              {statusMeta.label}
+                            </Text>
+                          </View>
                           {candidatePhone ? (
-                            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}>
+                            <Text
+                              numberOfLines={1}
+                              style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}
+                            >
                               {candidatePhone}
                             </Text>
                           ) : null}
                           {candidateEmail ? (
-                            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}>
+                            <Text
+                              numberOfLines={1}
+                              style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4 }]}
+                            >
                               {candidateEmail}
                             </Text>
                           ) : null}
@@ -1389,20 +1412,6 @@ function RecruitmentAdDetails() {
                           ) : null}
                         </View>
                       </Pressable>
-
-                      <View
-                        style={[
-                          styles.candidateStatusBadge,
-                          {
-                            backgroundColor: statusMeta.backgroundColor,
-                            borderColor: statusMeta.borderColor,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>
-                          {statusMeta.label}
-                        </Text>
-                      </View>
                     </View>
 
                     {candidateMessage ? (
@@ -1473,21 +1482,7 @@ function RecruitmentAdDetails() {
                     ) : null}
 
                     {isPendingApplication ? (
-                      <View style={[Alignments.row, Alignments.justifyEnd, Spaces.gap[8], { marginTop: 12 }]}>
-                        <Button
-                          disabled={!canInviteCandidate || isAlreadyInvited || inviteApplicantMutation.isPending}
-                          isLoading={isInviteLoading}
-                          onPress={() => inviteApplicantMutation.mutate({
-                            applicationId: application.documentId,
-                            candidateId: invitation.candidateId,
-                            teamId: adTeamDocumentId,
-                          })}
-                          size="sm"
-                          title={isAlreadyInvited
-                            ? t('recruitment.invite.sent', 'Invitation envoyée')
-                            : t('recruitment.invite.action', 'Inviter dans l\'équipe')}
-                          variant="Secondary"
-                        />
+                      <View style={styles.candidateActions}>
                         <Button
                           disabled={updateApplicationStatusMutation.isPending}
                           isLoading={isAcceptLoading}
@@ -1496,6 +1491,7 @@ function RecruitmentAdDetails() {
                             status: 'accepted',
                           })}
                           size="sm"
+                          style={styles.candidateAction}
                           title={t('recruitmentAdDetails.candidates.accept', 'Accepter')}
                           variant="Primary"
                         />
@@ -1507,7 +1503,23 @@ function RecruitmentAdDetails() {
                             status: 'declined',
                           })}
                           size="sm"
+                          style={styles.candidateAction}
                           title={t('recruitmentAdDetails.candidates.decline', 'Refuser')}
+                          variant="Secondary"
+                        />
+                        <Button
+                          disabled={!canInviteCandidate || isAlreadyInvited || inviteApplicantMutation.isPending}
+                          isLoading={isInviteLoading}
+                          onPress={() => inviteApplicantMutation.mutate({
+                            applicationId: application.documentId,
+                            candidateId: invitation.candidateId,
+                            teamId: adTeamDocumentId,
+                          })}
+                          size="sm"
+                          style={styles.candidateActionWide}
+                          title={isAlreadyInvited
+                            ? t('recruitment.invite.sent', 'Invitation envoyée')
+                            : t('recruitment.invite.action', 'Inviter dans l\'équipe')}
                           variant="Secondary"
                         />
                       </View>
@@ -2012,9 +2024,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
   },
+  // RECETTEWEB retour 4 (26/10) : trois boutons sur une ligne sortaient de la carte a 390 px.
+  // Deux par ligne au plus ; « Inviter dans l'equipe » prend toute la sienne.
+  candidateAction: {
+    flexBasis: '40%',
+    flexGrow: 1,
+  },
+  candidateActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  candidateActionWide: {
+    flexBasis: '100%',
+  },
+  // Sous le nom, a sa taille : il ne prend plus de colonne au texte.
   candidateStatusBadge: {
+    alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
+    marginTop: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
