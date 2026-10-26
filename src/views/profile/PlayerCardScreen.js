@@ -13,15 +13,16 @@
  *
  * Export image : capture hors-ecran a 992×1262 (taille native de la maquette).
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
+  Alert, Pressable, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { CARD_COMPLETION_STEP, listMissingCardSteps } from '@/domains/playerCard/cardCompletion';
 import { getCardConsentState } from '@/domains/playerCard/cardConsent';
 import { buildCardDisclosure, buildCardShareMessage } from '@/domains/playerCard/cardMessages';
 import { buildPlayerCardModel } from '@/domains/playerCard/cardModel';
@@ -36,6 +37,7 @@ import CardSheen from '@/components/organisms/playerCard/CardSheen';
 import PlayerCard, { CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH } from '@/components/organisms/playerCard/PlayerCard';
 import ShareCardModal from '@/components/organisms/shareCardModal/ShareCardModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CardCompletionFlow from '@/views/profile/CardCompletionFlow';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -44,6 +46,7 @@ import { buildCardQrTarget } from '@/services/playerCard/cardQrTarget';
 import { uploadCardImage } from '@/services/playerCard/uploadCardImage';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 
+import { formatHeight } from '@/utils/heightCentimeters';
 import { getImageUrl } from '@/utils/imageUrl';
 
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
@@ -58,7 +61,7 @@ function PlayerCardScreen({ navigation, route }) {
   const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const {
-    getPostOnboardingHomeRoute, userData,
+    getPostOnboardingHomeRoute, refetchUserData, userData,
   } = useAuth();
   const { sendMessage } = useMessaging();
   const { data: histories = [] } = useGetMyHistories();
@@ -74,6 +77,15 @@ function PlayerCardScreen({ navigation, route }) {
   // CARTECODE (ligne 41) : « ce qui part » s'ouvre AVANT le partage, pour tout le monde.
   const [isDisclosureVisible, setIsDisclosureVisible] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  // CARTECODE-PARCOURS — « Compléter ma carte » : ses étapes, et ce que la personne a répondu
+  // (le brouillon remplit la carte en direct, avant même que le profil soit relu).
+  const [parcours, setParcours] = useState(
+    /** @type {{ done?: boolean, mode: 'full' | 'share', steps: string[] } | null} */ (null),
+  );
+  const [draft, setDraft] = useState({});
+  const draftRef = useRef({});
+  // Fin d'inscription (planche, partie 9) : d'abord la carte modèle, puis la sienne.
+  const [hasSeenExample, setHasSeenExample] = useState(false);
 
   const isCelebration = Boolean(route?.params?.celebration);
   // Audience explicite via params, sinon deduite du role (coach = entraineur).
@@ -81,6 +93,8 @@ function PlayerCardScreen({ navigation, route }) {
     || (userData?.role?.type === 'entraineur' ? 'coach' : 'player');
 
   const consent = useMemo(() => getCardConsentState(userData || {}), [userData]);
+  const cardUser = useMemo(() => ({ ...(userData || {}), ...draft }), [userData, draft]);
+  const missingSteps = useMemo(() => listMissingCardSteps(cardUser), [cardUser]);
   // L'etat redessine par PAR-L14 (E31) : ni verrouille, ni celebration.
   const isNormal = !isCelebration && !consent.isLockedPreview;
 
@@ -92,8 +106,8 @@ function PlayerCardScreen({ navigation, route }) {
     histories,
     matchCount,
     qrUrl: qrTarget.url,
-    user: userData || {},
-  }), [userData, histories, matchCount, qrTarget.url, audience]);
+    user: cardUser,
+  }), [cardUser, histories, matchCount, qrTarget.url, audience]);
 
   const cardProps = useMemo(() => buildPlayerCardProps({
     imageUrl: getImageUrl,
@@ -241,12 +255,35 @@ function PlayerCardScreen({ navigation, route }) {
 
   const openShare = () => {
     if (!consent.canShare) return;
-    // CARTECODE Q6 B — âge inconnu : la date d'abord, puis la règle de son âge.
-    if (consent.mustAskBirthdate) {
-      navigation.navigate(RouteNames.ProfileEdit, { focus: 'birthdate', source: 'player_card' });
+    // CARTECODE Q6 B — âge inconnu : l'étape « date » du parcours d'abord, puis la règle de
+    // son âge.
+    if (getCardConsentState(cardUser).mustAskBirthdate) {
+      setParcours({ mode: 'share', steps: [CARD_COMPLETION_STEP.BIRTHDATE] });
       return;
     }
+    setParcours(null);
     setIsDisclosureVisible(true);
+  };
+
+  const openCompletion = () => {
+    if (missingSteps.length) setParcours({ mode: 'full', steps: missingSteps });
+  };
+
+  const handleDraft = (patch) => {
+    draftRef.current = { ...draftRef.current, ...patch };
+    setDraft(draftRef.current);
+  };
+
+  const handleCompletionFinish = () => {
+    if (parcours?.mode !== 'share') {
+      setParcours({ ...parcours, done: true });
+      return;
+    }
+    // Date donnée ou passée : personne n'est bloqué, la règle de l'âge (connu ou non) s'applique.
+    setParcours(null);
+    if (getCardConsentState({ ...(userData || {}), ...draftRef.current }).canShare) {
+      setIsDisclosureVisible(true);
+    }
   };
 
   const confirmDisclosure = () => {
@@ -257,6 +294,155 @@ function PlayerCardScreen({ navigation, route }) {
   // Carte visible : pleine largeur ecran moins les marges. Les glows debordent
   // volontairement -> marge laterale genereuse.
   const visibleCardWidth = Math.min(windowWidth - 48, 560);
+  const cardHeight = (width) => width * (CARD_EXPORT_HEIGHT / CARD_EXPORT_WIDTH);
+  const miniCard = (
+    <View style={[Alignments.alignCenter]}>
+      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+      <PlayerCard {...cardProps} mode="ecran" width={visibleCardWidth * 0.5} />
+    </View>
+  );
+
+  const missingNames = missingSteps.map((step) => t(`playerCard.completion.items.${step}`));
+  const missingBanner = missingSteps.length && !consent.isLockedPreview ? (
+    <View style={[styles.banner, Spaces.gap[8], { borderColor: Colors.primary500 }]}>
+      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+        {t('playerCard.completion.bannerTitle', {
+          count: missingSteps.length,
+          defaultValue: 'Il manque {{count}} informations à ta carte',
+        })}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {`${missingNames.join(', ').replace(/^./, (c) => c.toUpperCase())}.`}
+      </Text>
+      <Button
+        onPress={openCompletion}
+        title={t('playerCard.completion.cta', 'Compléter ma carte')}
+        variant="Secondary"
+      />
+    </View>
+  ) : null;
+
+  // ponytail: carte modèle FICTIVE (aucun compte derrière) ; ses mots passent par la traduction,
+  // les noms propres restent. Sortie : la tirer du serveur si un jour elle doit changer seule.
+  const exampleCardProps = {
+    age: `22 ${t('playerCard.field.yearsUnit', 'ans')}`,
+    categorie: t('playerCard.example.category', 'Seniors'),
+    club: t('playerCard.example.club', 'Basket Club Exemple'),
+    equipe: t('playerCard.example.team', 'Seniors filles'),
+    historique: [],
+    nationalite: t('playerCard.example.nationality', 'Française'),
+    niveau: t('playerCard.example.level', 'Régional'),
+    nom: 'MARTIN',
+    numero: '7',
+    poids: '62 kg',
+    poste: t('playerCard.example.position', 'Meneuse'),
+    prenom: 'Léa',
+    qrLabel: 'foundclub.app',
+    qrValue: '',
+    rarity: 'EPIC',
+    section: '',
+    sport: 'basketball',
+    statut: 'DISPONIBLE',
+    taille: formatHeight(172),
+    ville: 'Lyon 69007',
+  };
+  const showExample = isCelebration && !hasSeenExample && !parcours;
+
+  if (parcours) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="screen" keyboardAvoiding>
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {parcours.done ? (
+            <View style={[Spaces.gap[16]]}>
+              <Text style={[Fonts.h2Black, Fonts.neutral00, styles.centre]}>
+                {missingSteps.length
+                  ? t('playerCard.completion.done.partialTitle', 'Ta carte est à jour')
+                  : t('playerCard.completion.done.title', 'Ta carte est complète')}
+              </Text>
+              {miniCard}
+              {missingSteps.length ? (
+                <Text style={[Fonts.p2, Fonts.neutral300, styles.centre]}>
+                  {t(
+                    'playerCard.completion.done.partialHint',
+                    'Tu pourras ajouter le reste quand tu veux.',
+                  )}
+                </Text>
+              ) : null}
+              {consent.canShare ? (
+                <Button
+                  icon="share"
+                  onPress={openShare}
+                  title={t('playerCard.shareCta', 'Partager ma carte')}
+                  variant="Primary"
+                />
+              ) : null}
+              <Button
+                onPress={() => setParcours(null)}
+                title={t('playerCard.completion.done.later', 'Plus tard')}
+                variant="Ghost"
+              />
+            </View>
+          ) : (
+            <CardCompletionFlow
+              card={miniCard}
+              onDraft={handleDraft}
+              onFinish={handleCompletionFinish}
+              onSaved={() => refetchUserData?.()}
+              steps={parcours.steps}
+              user={userData || {}}
+            />
+          )}
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
+  if (showExample) {
+    const exampleWidth = Math.min(windowWidth - 96, 420);
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[Spaces.gap[8], Alignments.alignCenter]}>
+            <Text style={[Fonts.h2Black, Fonts.neutral00, styles.centre]}>
+              {t('playerCard.example.title', 'Voici une carte FoundClub')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200, styles.centre, styles.accroche]}>
+              {t(
+                'playerCard.example.subtitle',
+                'Photo, poste, niveau, club, parcours : plus elle est remplie, plus elle est rare.',
+              )}
+            </Text>
+          </View>
+          <View style={[Alignments.alignCenter]}>
+            <View style={{ height: cardHeight(exampleWidth), width: exampleWidth }}>
+              {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+              <PlayerCard {...exampleCardProps} mode="image" width={exampleWidth} />
+              <View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, Alignments.alignCenter, styles.filigraneBloc]}
+              >
+                <Text style={[Fonts.h1Black, styles.filigrane, { color: Colors.neutral00 }]}>
+                  {t('playerCard.example.watermark', 'EXEMPLE')}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Button
+            onPress={() => setHasSeenExample(true)}
+            title={t('playerCard.example.cta', 'Découvrir ma carte')}
+            variant="Primary"
+          />
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
@@ -302,11 +488,21 @@ function PlayerCardScreen({ navigation, route }) {
         <View style={[Alignments.alignCenter, isCelebration ? styles.tilted : null, styles.cardSlot]}>
           {/* Q10 B : le reflet glisse sous le doigt (écran seulement). */}
           <CardSheen
-            height={visibleCardWidth * (CARD_EXPORT_HEIGHT / CARD_EXPORT_WIDTH)}
+            height={cardHeight(visibleCardWidth)}
             width={visibleCardWidth}
           >
-            {/* eslint-disable-next-line react/jsx-props-no-spreading */}
-            <PlayerCard {...cardProps} mode="ecran" width={visibleCardWidth} />
+            {/* CARTECODE-PARCOURS : il manque des infos ? toucher sa carte ouvre le parcours. */}
+            <Pressable
+              accessibilityLabel={missingBanner
+                ? t('playerCard.completion.cta', 'Compléter ma carte')
+                : undefined}
+              accessibilityRole={missingBanner ? 'button' : undefined}
+              disabled={!missingBanner}
+              onPress={openCompletion}
+            >
+              {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+              <PlayerCard {...cardProps} mode="ecran" width={visibleCardWidth} />
+            </Pressable>
           </CardSheen>
         </View>
 
@@ -334,6 +530,8 @@ function PlayerCardScreen({ navigation, route }) {
             />
           </View>
         ) : null}
+
+        {missingBanner}
 
         {/* Jauge de rarete (double usage : incite a completer le profil) */}
         <View style={[Spaces.gap[8]]}>
@@ -433,7 +631,14 @@ function PlayerCardScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  accroche: { maxWidth: 320 },
+  banner: { borderRadius: 16, borderWidth: 1, padding: 16 },
   cardSlot: { paddingVertical: 8 },
+  centre: { textAlign: 'center' },
+  filigrane: {
+    fontSize: 44, letterSpacing: 8, opacity: 0.22, transform: [{ rotate: '-24deg' }],
+  },
+  filigraneBloc: { justifyContent: 'center' },
   gaugeFill: { borderRadius: 999, height: 8 },
   gaugeTrack: {
     backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 8, overflow: 'hidden', width: '100%',

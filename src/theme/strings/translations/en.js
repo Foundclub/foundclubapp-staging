@@ -16203,12 +16203,13 @@ export default {
     },
     clubSearch: {
       editableLater: 'Editable any time from My profile.',
-      privateHelp: "Your profile won't appear in any search — only your teammates can see you.",
-      privateLabel: 'Private profile',
-      subtitle: 'Can clubs and coaches find you?',
-      title: 'Your profile visibility',
-      visibleHelp: 'Clubs and coaches can find you and contact you to recruit you.',
-      visibleLabel: 'Visible profile',
+      privateHelp: "You don't appear in clubs' and coaches' search. "
+        + 'Other members can still see your profile.',
+      privateLabel: 'Not right now',
+      subtitle: 'Can clubs and coaches offer you a place?',
+      title: 'Open to recruitment?',
+      visibleHelp: "Your profile appears in clubs' and coaches' search.",
+      visibleLabel: 'Yes, open',
     },
     history: {
       subtitle: 'Tell us briefly about your past experience (clubs, levels, positions...)',
@@ -16895,6 +16896,66 @@ export default {
     addPhoto: '+ PHOTO',
     coachChip: 'COACH',
     editCardCta: 'Edit my info',
+    // CARTECODE-PARCOURS (board v2, part 8): "Complete my card", one question per screen.
+    completion: {
+      bannerTitle_one: 'Your card is missing {{count}} detail',
+      bannerTitle_other: 'Your card is missing {{count}} details',
+      birthdate: {
+        hint: 'Only your age shows on your card. Your date of birth stays private.',
+        invalid: 'Enter a real date: DD/MM/YYYY.',
+        title: 'Your date of birth',
+      },
+      city: {
+        hint: 'Never your address.',
+        label: 'City or postcode',
+        title: 'Your city',
+      },
+      cta: 'Complete my card',
+      done: {
+        later: 'Later',
+        partialHint: 'You can add the rest whenever you like.',
+        partialTitle: 'Your card is up to date',
+        title: 'Your card is complete',
+      },
+      finish: 'Finish',
+      items: {
+        birthdate: 'age',
+        city: 'city',
+        number: 'number',
+        physique: 'height and weight',
+        position: 'position',
+      },
+      next: 'Next',
+      number: {
+        label: 'Number',
+        title: 'Your shirt number',
+      },
+      physique: {
+        hint: 'You can remove them whenever you like.',
+        title: 'Your height and weight',
+      },
+      position: {
+        title: 'Your position',
+      },
+      saveError: "Can't save right now. Check your connection, or skip this step.",
+      skip: 'Skip',
+      step: 'STEP {{current}} OF {{total}}',
+      under13: 'Under 13, a FoundClub account is created with a parent. You can skip this step.',
+    },
+    // CARTECODE-PARCOURS (board v2, part 9): the sample card at the end of sign-up.
+    example: {
+      category: 'Seniors',
+      club: 'Example Basketball Club',
+      cta: 'Discover my card',
+      level: 'Regional',
+      nationality: 'French',
+      position: 'Point guard',
+      subtitle: 'Photo, position, level, club, history: '
+        + 'the more complete it is, the rarer it gets.',
+      team: 'Women seniors',
+      title: 'This is a FoundClub card',
+      watermark: 'SAMPLE',
+    },
     // CARTECODE (minors register line 41): before every share, what goes out.
     disclosure: {
       age: 'Your age ({{age}}), never your date of birth',

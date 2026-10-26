@@ -158,42 +158,47 @@ beforeEach(() => {
   mockGetNextOnboardingRoute.mockReturnValue('UserAffiliationGuide');
 });
 
+const VISIBLE_AIDE = 'apparaît dans la recherche des clubs et des coachs';
+
 describe('UserClubSearch — visibilite en PILULES (D56, trou n3)', () => {
-  it('deux pilules, « Profil visible » et « Profil prive »', () => {
+  it('CARTECODE-PARCOURS : « Ouvert au recrutement ? », deux pilules', () => {
     const { tree } = rendre();
 
     expect(pilules(tree)).toHaveLength(2);
-    expect(textes(tree)).toEqual(expect.arrayContaining(['Profil visible', 'Profil privé']));
+    expect(textes(tree)).toContain('Ouvert au recrutement ?');
+    expect(textes(tree).join(' ')).not.toMatch(/Profil (visible|privé)/);
+    expect(textes(tree)).toEqual(expect.arrayContaining(['Oui, ouvert', 'Pas pour l\'instant']));
   });
 
   it('l explication SUIT la pilule choisie', async () => {
     const { tree } = rendre();
 
     // Rien de choisi : aucune des deux explications n'est affichee.
-    expect(textes(tree).join(' ')).not.toContain('peuvent te trouver et te contacter');
+    expect(textes(tree).join(' ')).not.toContain(VISIBLE_AIDE);
 
-    await act(async () => { piluleIntitulee(tree, 'Profil visible').props.onPress(); });
-    expect(textes(tree).join(' ')).toContain('peuvent te trouver et te contacter');
+    await act(async () => { piluleIntitulee(tree, 'Oui, ouvert').props.onPress(); });
+    expect(textes(tree).join(' ')).toContain(VISIBLE_AIDE);
 
-    await act(async () => { piluleIntitulee(tree, 'Profil privé').props.onPress(); });
+    await act(async () => { piluleIntitulee(tree, 'Pas pour l\'instant').props.onPress(); });
     const apres = textes(tree).join(' ');
-    expect(apres).toContain('n\'apparaît dans aucune recherche');
-    expect(apres).not.toContain('peuvent te trouver et te contacter');
+    expect(apres).toContain('n\'apparais pas dans la recherche');
+    expect(apres).not.toContain(VISIBLE_AIDE);
   });
 
   it('la pilule choisie s annonce comme cochee, l autre non', async () => {
     const { tree } = rendre();
 
-    await act(async () => { piluleIntitulee(tree, 'Profil privé').props.onPress(); });
+    await act(async () => { piluleIntitulee(tree, 'Pas pour l\'instant').props.onPress(); });
 
-    expect(piluleIntitulee(tree, 'Profil privé').props.accessibilityState.checked).toBe(true);
-    expect(piluleIntitulee(tree, 'Profil visible').props.accessibilityState.checked).toBe(false);
+    expect(piluleIntitulee(tree, 'Pas pour l\'instant').props.accessibilityState.checked)
+      .toBe(true);
+    expect(piluleIntitulee(tree, 'Oui, ouvert').props.accessibilityState.checked).toBe(false);
   });
 
   it('⛔ aucun pictogramme et aucun jargon de transfert a l ecran', async () => {
     const { tree } = rendre();
 
-    await act(async () => { piluleIntitulee(tree, 'Profil privé').props.onPress(); });
+    await act(async () => { piluleIntitulee(tree, 'Pas pour l\'instant').props.onPress(); });
 
     const rendu = textes(tree).join(' ');
     expect(rendu.toLowerCase()).not.toContain('mercato');
@@ -227,7 +232,7 @@ describe('UserClubSearch — ce que l etape enregistre n a pas bouge (D56)', () 
   it('valider enregistre `isLookingForClub`, et rien d autre', async () => {
     const { navigation, tree } = rendre();
 
-    await act(async () => { piluleIntitulee(tree, 'Profil visible').props.onPress(); });
+    await act(async () => { piluleIntitulee(tree, 'Oui, ouvert').props.onPress(); });
 
     const continuer = tree.root.findAllByType(TouchableOpacity)
       .find((/** @type {any} */ node) => node.findAllByType(Text)

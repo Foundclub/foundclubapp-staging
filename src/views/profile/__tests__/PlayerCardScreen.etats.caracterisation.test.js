@@ -61,6 +61,12 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE-PARCOURS : le parcours « Compléter ma carte » a son propre témoin
+// (PlayerCardScreen.PARCOURS.test.js) ; ici il n'est qu'une présence.
+jest.mock('@/views/profile/CardCompletionFlow', () => function CardCompletionFlowMock() {
+  return null;
+});
+
 // CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
 jest.mock(
   '@/components/organisms/playerCard/CardSheen',
@@ -310,9 +316,17 @@ describe('PAR-L14 — etat VERROUILLE (13-14 ans sans accord) : inchange', () =>
   });
 });
 
-describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange', () => {
+// CARTECODE-PARCOURS (planche, partie 9) : la carte modèle « EXEMPLE » passe d'abord ;
+// « Découvrir ma carte » rend l'état d'avant, inchangé.
+const monterCelebration = () => {
+  const monte = monter({ celebration: true });
+  act(() => gestes(monte.arbre, 'Découvrir ma carte')[0].props.onPress());
+  return monte;
+};
+
+describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange apres la carte modele', () => {
   it('l accueil, le titre de revelation et la phrase d accroche', () => {
-    const lus = textes(monter({ celebration: true }).arbre);
+    const lus = textes(monterCelebration().arbre);
 
     expect(lus).toEqual(expect.arrayContaining([
       'Bienvenue',
@@ -322,7 +336,7 @@ describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange', () => {
   });
 
   it('les gestes d avant : modifier, partager ma carte, enregistrer, plus tard', () => {
-    const { arbre, navigation } = monter({ celebration: true });
+    const { arbre, navigation } = monterCelebration();
     const lus = textes(arbre);
 
     expect(lus).toEqual(expect.arrayContaining([

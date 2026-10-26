@@ -16933,14 +16933,15 @@ export default {
     },
     clubSearch: {
       editableLater: 'Modifiable à tout moment depuis Mon profil.',
-      privateHelp: 'Ton profil n\'apparaît dans aucune recherche '
-        + '— seuls tes coéquipiers te voient.',
-      privateLabel: 'Profil privé',
-      subtitle: 'Les clubs et entraîneurs peuvent-ils te trouver ?',
-      title: 'Visibilité de ton profil',
-      visibleHelp: 'Les clubs et entraîneurs peuvent te trouver '
-        + 'et te contacter pour te recruter.',
-      visibleLabel: 'Profil visible',
+      // CARTECODE-PARCOURS : l'étape règle `isLookingForClub`, comme « Ouvert au recrutement »
+      // dans le profil (Q1 C) ; « Compte privé » est un autre réglage (Confidentialité).
+      privateHelp: 'Tu n\'apparais pas dans la recherche des clubs et des coachs. '
+        + 'Ton profil reste visible des autres membres.',
+      privateLabel: 'Pas pour l\'instant',
+      subtitle: 'Les clubs et entraîneurs peuvent-ils te proposer de les rejoindre ?',
+      title: 'Ouvert au recrutement ?',
+      visibleHelp: 'Ton profil apparaît dans la recherche des clubs et des coachs.',
+      visibleLabel: 'Oui, ouvert',
     },
     history: {
       subtitle: 'Raconte-nous brièvement tes expériences passées (Clubs, niveaux, postes...)',
@@ -17478,6 +17479,68 @@ export default {
     addNumber: '+ N°',
     addPhoto: '+ PHOTO',
     editCardCta: 'Modifier mes infos',
+    // CARTECODE-PARCOURS (planche v2, partie 8) : « Compléter ma carte », une question par
+    // écran.
+    completion: {
+      bannerTitle_one: 'Il manque {{count}} information à ta carte',
+      bannerTitle_other: 'Il manque {{count}} informations à ta carte',
+      birthdate: {
+        hint: 'Seul ton âge apparaît sur ta carte. Ta date reste privée.',
+        invalid: 'Écris une date qui existe : JJ/MM/AAAA.',
+        title: 'Ta date de naissance',
+      },
+      city: {
+        hint: 'Jamais ton adresse.',
+        label: 'Ville ou code postal',
+        title: 'Ta ville',
+      },
+      cta: 'Compléter ma carte',
+      done: {
+        later: 'Plus tard',
+        partialHint: 'Tu pourras ajouter le reste quand tu veux.',
+        partialTitle: 'Ta carte est à jour',
+        title: 'Ta carte est complète',
+      },
+      finish: 'Terminer',
+      items: {
+        birthdate: 'âge',
+        city: 'ville',
+        number: 'numéro',
+        physique: 'taille et poids',
+        position: 'poste',
+      },
+      next: 'Suivant',
+      number: {
+        label: 'Numéro',
+        title: 'Ton numéro de maillot',
+      },
+      physique: {
+        hint: 'Tu peux les effacer quand tu veux.',
+        title: 'Ta taille et ton poids',
+      },
+      position: {
+        title: 'Ton poste',
+      },
+      saveError: 'Impossible d\'enregistrer pour le moment. '
+        + 'Vérifie ta connexion, ou passe cette étape.',
+      skip: 'Passer',
+      step: 'ÉTAPE {{current}} SUR {{total}}',
+      under13: 'Avant 13 ans, un compte FoundClub se crée avec un parent. '
+        + 'Tu peux passer cette étape.',
+    },
+    // CARTECODE-PARCOURS (planche v2, partie 9) : la carte modèle de la fin d'inscription.
+    example: {
+      category: 'Seniors',
+      club: 'Basket Club Exemple',
+      cta: 'Découvrir ma carte',
+      level: 'Régional',
+      nationality: 'Française',
+      position: 'Meneuse',
+      subtitle: 'Photo, poste, niveau, club, parcours : plus elle est remplie, plus elle est rare.',
+      team: 'Seniors filles',
+      title: 'Voici une carte FoundClub',
+      watermark: 'EXEMPLE',
+    },
     // CARTECODE (registre des mineurs ligne 41) : avant chaque partage, ce qui part.
     disclosure: {
       age: 'Ton âge ({{age}} ans), jamais ta date',

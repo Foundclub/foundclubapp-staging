@@ -21,18 +21,21 @@ import { updateMe } from '@/services/auth/authService';
 
 // D56 — les deux pilules du pack, dans l'ordre de la maquette. La copy vit
 // dans `fr.js` ; le repli garde l'ecran lisible si la cle disparait.
+// CARTECODE-PARCOURS : l'etape s'appelle « Ouvert au recrutement ? » (elle ecrit
+// `isLookingForClub`).
 const VISIBILITY_OPTIONS = [
   {
-    helpFallback: 'Les clubs et entraîneurs peuvent te trouver et te contacter pour te recruter.',
+    helpFallback: 'Ton profil apparaît dans la recherche des clubs et des coachs.',
     helpKey: 'onboarding.clubSearch.visibleHelp',
-    labelFallback: 'Profil visible',
+    labelFallback: 'Oui, ouvert',
     labelKey: 'onboarding.clubSearch.visibleLabel',
     value: true,
   },
   {
-    helpFallback: 'Ton profil n\'apparaît dans aucune recherche — seuls tes coéquipiers te voient.',
+    helpFallback: 'Tu n\'apparais pas dans la recherche des clubs et des coachs. '
+      + 'Ton profil reste visible des autres membres.',
     helpKey: 'onboarding.clubSearch.privateHelp',
-    labelFallback: 'Profil privé',
+    labelFallback: 'Pas pour l\'instant',
     labelKey: 'onboarding.clubSearch.privateLabel',
     value: false,
   },
@@ -151,12 +154,12 @@ function UserClubSearch({ navigation }) {
       <View style={[Spaces.gap[40]]}>
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('onboarding.clubSearch.title', 'Visibilité de ton profil')}
+            {t('onboarding.clubSearch.title', 'Ouvert au recrutement ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {t(
               'onboarding.clubSearch.subtitle',
-              'Les clubs et entraîneurs peuvent-ils te trouver ?',
+              'Les clubs et entraîneurs peuvent-ils te proposer de les rejoindre ?',
             )}
           </Text>
         </View>

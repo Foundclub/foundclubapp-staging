@@ -72,6 +72,12 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE-PARCOURS : le parcours « Compléter ma carte » a son propre témoin
+// (PlayerCardScreen.PARCOURS.test.js) ; ici il n'est qu'une présence.
+jest.mock('@/views/profile/CardCompletionFlow', () => function CardCompletionFlowMock() {
+  return null;
+});
+
 // CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
 jest.mock(
   '@/components/organisms/playerCard/CardSheen',
@@ -301,11 +307,13 @@ describe('CARTECODE Q6 B — âge inconnu : « Partager » demande d abord la da
     return { modale: mockShareModalProps[mockShareModalProps.length - 1], navigate };
   };
 
-  it('sans date de naissance : l ecran de la date s ouvre, pas le partage', async () => {
+  // CARTECODE-PARCOURS : la date se demande dans l'étape « date » du parcours, plus dans
+  // l'éditeur de profil (le témoin complet : PlayerCardScreen.PARCOURS.test.js).
+  it('sans date de naissance : l etape date du parcours s ouvre, pas le partage', async () => {
     const { modale, navigate } = await appuyerSurPartager({ ...ADULTE, birthdate: null });
-    expect(navigate)
-      .toHaveBeenCalledWith('ProfileEdit', expect.objectContaining({ focus: 'birthdate' }));
+    expect(navigate).not.toHaveBeenCalled();
     expect(modale.isVisible).toBe(false);
+    expect(global.mockDisclosureProps.isVisible).toBe(false);
   });
 
   it('avec une date : « ce qui part » s ouvre d abord (ligne 41), puis le partage', async () => {

@@ -64,6 +64,12 @@ jest.mock('@/services/userHistory/userHistoryQueries', () => ({
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
 
+// CARTECODE-PARCOURS : le parcours « Compléter ma carte » a son propre témoin
+// (PlayerCardScreen.PARCOURS.test.js) ; ici il n'est qu'une présence.
+jest.mock('@/views/profile/CardCompletionFlow', () => function CardCompletionFlowMock() {
+  return null;
+});
+
 // CARTECODE étape 2 : le reflet (gestes, reanimated) et la feuille « ce qui part ».
 jest.mock(
   '@/components/organisms/playerCard/CardSheen',
