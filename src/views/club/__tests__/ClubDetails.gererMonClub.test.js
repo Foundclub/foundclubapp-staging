@@ -645,6 +645,8 @@ describe('ClubDetails — l espace club du dirigeant (fige avant la refonte D34)
     });
 
     expect(leaveClub).toHaveBeenCalled();
+    // C10BIS · P11-02 — le club AFFICHE est nomme : le serveur ne prend plus le club actif.
+    expect(/** @type {any} */ (leaveClub).mock.calls[0][0]).toBe('club-1');
   });
 
   it('demande confirmation avant de retirer un partenaire, et ne l envoie qu apres', () => {
