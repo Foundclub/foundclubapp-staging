@@ -681,3 +681,201 @@ describe('PETITSCHOIX/16 — enregistrer avant de quitter', () => {
     expect(quitter().preventDefault).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// DETECTION2 (BUGHUNT P3, 26/10) — les restes de la détection sur les écrans 16 et 17 :
+//   · P14-01 : la répartition rangée qui arrive APRÈS le premier affichage est reprise ;
+//   · P14-05 : après un enregistrement, la composition est relue ;
+//   · P14-07 : un joueur lâché sur un terrain complet est refusé (« Terrain complet ») ;
+//   · retour de la rotation (« Voir les N équipes ») : le tableau relit la répartition.
+// ---------------------------------------------------------------------------
+
+describe('DETECTION2 — écrans 16 et 17', () => {
+  const ecran16 = () => ({
+    eventId: 'event-1', players: JOUEURS, sport: 'football', teamId: 'team-1',
+  });
+  const serveur = (/** @type {any} */ teams, /** @type {any[]} */ rounds = []) => ({
+    detectionSplit: {
+      rounds, splitBy: 'requested_position', teamCount: teams.length, teams,
+    },
+    draft: { schemaVersion: 3 },
+    eligiblePlayers: JOUEURS,
+  });
+  const bouton = (/** @type {any} */ racine, /** @type {string} */ libelle) => racine.findAll(
+    (/** @type {any} */ noeud) => (
+      typeof noeud.type !== 'string' && noeud.props?.onPress && texteDe(noeud).includes(libelle)
+    ),
+  )[0];
+  const enregistrer = async (/** @type {any} */ racine) => {
+    await act(async () => { await bouton(racine, 'Enregistrer').props.onPress(); });
+  };
+
+  // Le terrain est mesuré pour de vrai : (0,0) → (1000,1000). Lâcher en (50,50) = DEDANS.
+  // 🧨 La `View` du préréglage jest n'a pas `measureInWindow` : on la pose sur le terrain.
+  const monterMesure = (/** @type {any} */ Ecran, /** @type {any} */ parametres) => {
+    const racine = monter(Ecran, parametres);
+    const terrain = racine.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.onLayout && noeud.instance,
+    )[0];
+    terrain.instance.measureInWindow = (/** @type {any} */ rappel) => rappel(0, 0, 1000, 1000);
+    return racine;
+  };
+  const lacherDedans = (/** @type {any} */ geste) => {
+    act(() => {
+      geste.rappels.onStart({ absoluteX: 10, absoluteY: 10 });
+      geste.rappels.onEnd({ absoluteX: 50, absoluteY: 50 });
+      geste.rappels.onFinalize();
+    });
+  };
+
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    saveEventCompositionDraft.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    /** @type {any} */ (Alert.alert).mockRestore?.();
+  });
+
+  test('P14-01 · écran 16 : la répartition arrivée après l affichage est reprise', () => {
+    mockCompositionQuery = { data: null, refetch: jest.fn(async () => ({})) };
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    mockCompositionQuery = { data: serveur(equipes()), refetch: jest.fn(async () => ({})) };
+    act(() => { monte.update(<DetectionTeamsBoard />); });
+
+    const texte = toutLeTexte(racine);
+    expect(texte).toContain('Jaune · 3');
+    expect(texte).toContain('Rouge · 1');
+    expect(texte).toContain('NON AFFECTÉS · 1');
+  });
+
+  test('P14-01 · écran 16 : une répartition touchée par le coach n est pas écrasée', () => {
+    mockCompositionQuery = { data: serveur(equipes()), refetch: jest.fn(async () => ({})) };
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    mockCompositionQuery = { ...mockCompositionQuery, data: serveur(equipes()) };
+    act(() => { monte.update(<DetectionTeamsBoard />); });
+
+    expect(toutLeTexte(racine)).toContain('NON AFFECTÉS · 2');
+  });
+
+  test('P14-05 · écran 16 : après « Enregistrer », la composition est relue', async () => {
+    const refetch = jest.fn(async () => ({}));
+    mockCompositionQuery = { data: serveur(equipes()), refetch };
+    const racine = monter(DetectionTeamsBoard, ecran16());
+
+    await enregistrer(racine);
+
+    expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  describe('P14-07 · terrain complet', () => {
+    const ONZE = Array.from({ length: 11 }, (_v, index) => ({
+      documentId: `f${index + 1}`, firstname: 'J', lastname: `N${index + 1}`,
+    }));
+    const DOUZIEME = { documentId: 'f12', firstname: 'J', lastname: 'Douze' };
+    const avec = (/** @type {any[]} */ places) => {
+      const joueurs = [...places, DOUZIEME];
+      mockCompositionQuery = {
+        data: {
+          ...serveur([{
+            bibColor: 'jaune',
+            name: 'Jaune',
+            players: places.map((joueur) => joueur.documentId),
+            rotation: [],
+          }]),
+          eligiblePlayers: joueurs,
+        },
+        refetch: jest.fn(async () => ({})),
+      };
+      return monterMesure(DetectionTeamsBoard, { ...ecran16(), players: joueurs });
+    };
+
+    test('lâcher un non affecté sur un terrain de 11 est refusé : « Terrain complet »', () => {
+      const racine = avec(ONZE);
+
+      lacherDedans(gestePour(racine, 'Douze'));
+
+      expect(Alert.alert).toHaveBeenCalledWith('Terrain complet', expect.any(String));
+      const texte = toutLeTexte(racine);
+      expect(texte).toContain('NON AFFECTÉS · 1');
+      expect(texte.split('JETON:Douze')).toHaveLength(2);
+      expect(texte).toContain('Jaune · 11');
+    });
+
+    test('avec une place libre, le joueur entre (témoin de contrôle)', () => {
+      const racine = avec(ONZE.slice(0, 10));
+
+      lacherDedans(gestePour(racine, 'Douze'));
+
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(toutLeTexte(racine)).toContain('Jaune · 11');
+      expect(toutLeTexte(racine)).not.toContain('NON AFFECTÉS · 1');
+    });
+  });
+
+  test('retour de rotation : le tableau relit, « Enregistrer » n écrase plus', async () => {
+    const apresRotation = serveur([
+      { ...equipes()[0], rotation: ['p1', 'p3'] },
+      equipes()[1],
+    ], [{ index: 1, playtimeByPlayer: {}, startedAt: '2026-10-26T10:00:00.000Z' }]);
+    /** @type {any} */
+    const refetch = jest.fn(async () => {
+      mockCompositionQuery = { data: apresRotation, refetch };
+      return { data: apresRotation };
+    });
+    mockCompositionQuery = { data: serveur(equipes()), refetch };
+    const racine = monter(DetectionTeamsBoard, ecran16());
+
+    // Le coach part en rotation, y enregistre, puis revient par « Voir les N équipes ».
+    act(() => { bouton(racine, 'Faire tourner').props.onPress(); });
+    act(() => { mockEcouteurs.get('blur')?.(); });
+    await act(async () => { await mockEcouteurs.get('focus')?.(); });
+
+    await enregistrer(racine);
+
+    const charge = saveEventCompositionDraft.mock.calls[0][1].draft.detectionSplit;
+    expect(charge.teams[0].rotation).toEqual(['p1', 'p3']);
+    expect(charge.rounds).toHaveLength(1);
+  });
+
+  test('tableau non enregistré emmené en rotation : elle demande d enregistrer', () => {
+    mockCompositionQuery = { data: serveur(equipes()), refetch: jest.fn(async () => ({})) };
+    const racine = monter(DetectionTeamsBoard, ecran16());
+    lacherDehors(gestePour(racine, 'Un'));
+    act(() => { bouton(racine, 'Faire tourner').props.onPress(); });
+    const versRotation = mockNavigate.mock.calls[0][1];
+    act(() => { monte.unmount(); });
+
+    monter(DetectionRotationBoard, versRotation);
+    const evenement = { data: { action: { type: 'GO_BACK' } }, preventDefault: jest.fn() };
+    act(() => { mockEcouteurs.get('beforeRemove')?.(evenement); });
+
+    expect(evenement.preventDefault).toHaveBeenCalled();
+  });
+
+  test('P14-01 · écran 17 sans répartition : celle du serveur, arrivée après, est reprise', () => {
+    mockCompositionQuery = { data: null, refetch: jest.fn(async () => ({})) };
+    const racine = monter(DetectionRotationBoard, { ...ecran16(), teamIndex: 0 });
+    mockCompositionQuery = { data: serveur(equipes()), refetch: jest.fn(async () => ({})) };
+    act(() => { monte.update(<DetectionRotationBoard />); });
+
+    const texte = toutLeTexte(racine);
+    expect(texte).toContain('ROTATION · 1');
+    expect(texte).toContain('2 sur le terrain');
+  });
+
+  test('P14-05 · écran 17 : après « Lancer la manche », la composition est relue', async () => {
+    const refetch = jest.fn(async () => ({}));
+    mockCompositionQuery = { data: serveur(equipes()), refetch };
+    const racine = monter(DetectionRotationBoard, {
+      ...ecran16(), detectionSplit: { rounds: [], teamCount: 2, teams: equipes() }, teamIndex: 0,
+    });
+
+    await act(async () => { await bouton(racine, 'Lancer la manche').props.onPress(); });
+
+    expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalled();
+  });
+});
