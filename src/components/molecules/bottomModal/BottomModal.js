@@ -355,6 +355,20 @@ function BottomModal({
     : keyboardHeight;
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
+  // RECETTEWEB retour 5 (26/10) — EN HAUTEUR AUTOMATIQUE (sans snapPoints), `@gorhom/bottom-sheet`
+  // 5.2.4 donne a la feuille la hauteur de la zone qu'il MESURE : le contenu de la zone qui defile
+  // (ou de la vue fixe), jamais l'en-tete pose au-dessus. Une feuille a en-tete etait trop
+  // courte de la hauteur de son titre, sa derniere rangee sortait de l'ecran (IPH09, « Ajouter »,
+  // 09/10 ; d'ou ses 70 % fixes, et le grand vide sous les icones vu par Adel le 26/10). L'en-tete
+  // entre donc dans la zone mesuree ; avec des snapPoints, rien ne change (fixe, au-dessus).
+  // Temoin : __tests__/BottomModal.RECETTEWEB.enTeteMesure.test.js.
+  const enTeteDansLaMesure = Boolean(headerComponent) && !snapPoints;
+  const ecartDuContenu = Number(StyleSheet.flatten(contentContainerStyle)?.gap) || 0;
+  const enTeteMesure = enTeteDansLaMesure ? (
+    <View style={[Spaces.paddingTop[24], { paddingBottom: Math.max(0, 16 - ecartDuContenu) }]}>
+      {headerComponent}
+    </View>
+  ) : null;
   const contentBottomPadding = useMemo(
     () => {
       if (Number.isFinite(contentBottomPaddingOverride)) {
@@ -418,7 +432,7 @@ function BottomModal({
       )}
       <ChampsSuivisParLeClavier style={[snapPoints ? Alignments.fill : undefined]}>
         {/* Fixed Header */}
-        {headerComponent && (
+        {headerComponent && !enTeteDansLaMesure && (
           <View
             style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}
           >
@@ -453,6 +467,7 @@ function BottomModal({
             // eslint-disable-next-line react/jsx-props-no-spreading
             {...scrollViewProps}
           >
+            {enTeteMesure}
             {children}
           </BottomSheetScrollView>
         ) : (
@@ -465,6 +480,7 @@ function BottomModal({
             { paddingBottom: footerComponent ? contentBottomPadding : systemBottomInset },
           ])}
           >
+            {enTeteMesure}
             {children}
           </BottomSheetView>
         )}

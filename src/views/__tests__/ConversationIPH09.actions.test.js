@@ -415,7 +415,10 @@ describe('IPH09 — actions du vrai écran de conversation', () => {
     expect(last(mockOverlays).visible).toBe(true);
   });
 
-  test('Ajouter utilise une feuille bornée et une zone défilante', () => {
+  // RECETTEWEB retour 5 (26/10, « réduis le panneau Ajouter ») : plus de 70 % fixes. La feuille se
+  // dimensionne sur son contenu, titre compris (BottomModal le place dans la zone mesurée), bornée
+  // par le plafond de la zone qui défile. Témoin de la règle : BottomModal.RECETTEWEB.enTeteMesure.
+  test('Ajouter se dimensionne sur son contenu, bornée, et défile au-delà', () => {
     bulleDeLEvenement(futureEvent());
     const sheet = mockSheets.find((props) => props.onDismissed);
     // Monter le vrai composant avec les props que le vrai écran lui a passées.
@@ -428,13 +431,12 @@ describe('IPH09 — actions du vrai écran de conversation', () => {
       tree = renderer.create(createElement(BottomModal, { ...sheet, isVisible: true }));
     });
     aDemonter.push(() => { act(() => tree.unmount()); });
+    expect(sheet.snapPoints).toBeUndefined();
     const scroll = tree.root.findAllByProps({ testID: 'iph09-scroll' }).pop();
-    expect(StyleSheet.flatten(scroll.props.style).flex).toBe(1);
-    expect(StyleSheet.flatten(scroll.props.style).maxHeight).toBeUndefined();
-    expect(StyleSheet.flatten(scroll.parent.props.style).flex).toBe(1);
+    expect(StyleSheet.flatten(scroll.props.style).maxHeight).toBeGreaterThan(0);
     expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBeGreaterThanOrEqual(34);
     expect(tree.root.findAllByProps({ testID: 'iph09-sheet' }).pop().props.topInset).toBeGreaterThanOrEqual(47);
-    expect(scroll.findAll((node) => node.props.children === 'Ajouter')).toEqual([]);
+    expect(scroll.findAll((node) => node.props.children === 'Ajouter').length).toBeGreaterThan(0);
     expect(sheet.keyboardBehavior).toBe('interactive');
   });
 });
