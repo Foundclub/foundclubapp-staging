@@ -469,9 +469,9 @@ describe('Q4-24 — canal d un complexe : le menu se referme en ouvrant la page 
       ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
     };
     const { ecran } = monterLaConversation();
-    const navigation = ecran.root.find((/** @type {any} */ n) => (
+    const { navigation } = ecran.root.find((/** @type {any} */ n) => (
       n.props?.navigation && n.props?.route
-    )).props.navigation;
+    )).props;
     const infosDuGroupe = () => ecran.root.find((/** @type {any} */ n) => (
       typeof n.props?.onQuitter === 'function' && 'visible' in n.props
     ));
@@ -492,9 +492,9 @@ describe('Q4-24 — canal d un complexe : le menu se referme en ouvrant la page 
       ...FIL_DE_GROUPE, complexe: { slug: 'five-paris' }, participantsCount: 12,
     };
     const { ecran } = monterLaConversation();
-    const navigation = ecran.root.find((/** @type {any} */ n) => (
+    const { navigation } = ecran.root.find((/** @type {any} */ n) => (
       n.props?.navigation && n.props?.route
-    )).props.navigation;
+    )).props;
     const [titre] = ecran.root.findAll((/** @type {any} */ n) => (
       n.props?.accessibilityHint === 'Ouvre les infos du groupe'
       && typeof n.props?.onPress === 'function'

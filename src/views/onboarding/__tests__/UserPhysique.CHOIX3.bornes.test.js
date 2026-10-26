@@ -10,7 +10,6 @@ import UserPhysique from '../UserPhysique';
 // Adulte : 100 a 230 cm, 25 a 200 kg ; mineur : 50 a 230 cm, 10 a 200 kg ; age inconnu = adulte.
 // E6 : les deux premiers tests decrivent le comportement d'AVANT (verts avant et apres).
 
-
 const mockGetNextOnboardingRoute = jest.fn();
 const mockUserData = { current: /** @type {any} */ ({ documentId: 'user-d23' }) };
 

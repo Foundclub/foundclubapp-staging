@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuth from '@/domains/auth/useAuth';
 import { computeAge } from '@/domains/playerCard/cardModel';
 import useTheme from '@/theme/themeContext';
-import { erreurPhysique } from '@/utils/heightCentimeters';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
@@ -24,6 +23,8 @@ import OnboardingStateView from '@/views/onboarding/components/OnboardingStateVi
 import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
+
+import { erreurPhysique } from '@/utils/heightCentimeters';
 
 /**
  * User physique (height/weight) screen
