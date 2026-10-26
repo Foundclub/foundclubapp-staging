@@ -40,6 +40,7 @@ import { useGetLevels } from '@/services/level/levelQueries';
 import {
   buildProfileSaveConfirmation,
   listChangedProfileFields,
+  listClearedProfileFields,
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
@@ -299,8 +300,12 @@ function ProfileEditWeb({ navigation, route }) {
     // AA11 — la charge qui PART, comparee aux memes champs tels qu'ils etaient
     // charges : c'est ce qui permet de NOMMER ce qui a change sur un
     // formulaire qui reposte tout.
+    const loadedValues = {
+      ...buildProfileFormValues(userData, formatBirthdateToDisplay),
+      avatar: userData?.avatar,
+    };
     pendingChangedFieldsRef.current = listChangedProfileFields(
-      { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+      loadedValues,
       { ...formValues, avatar },
     );
     updateUserMutation.mutate({
@@ -309,6 +314,8 @@ function ProfileEditWeb({ navigation, route }) {
       bestLevel: formValues.bestLevel,
       birthdate: formatBirthdateToSend(formValues.birthdate || ''),
       category: formValues.category,
+      // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
+      clearFields: listClearedProfileFields(loadedValues, { ...formValues, avatar }),
       firstname: formValues.firstname,
       geohash,
       height: formValues.height ? String(parseHeightCm(formValues.height)) : formValues.height,

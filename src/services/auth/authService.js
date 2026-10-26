@@ -477,6 +477,10 @@ export const getMe = async () => {
 export const updateMe = async (userData) => {
   try {
     const formData = new FormData();
+    // C10BIS · P11-01 / P11-05 — les champs que la personne a VIDES, nommes par l ecran :
+    // eux seuls partent en `''` (le serveur les efface). Les autres vides restent retires,
+    // car plusieurs ecrans renvoient `null` ou `''` pour un champ qu on n a pas touche.
+    const clearFields = Array.isArray(userData?.clearFields) ? userData.clearFields : [];
 
     // Create a copy to avoid modifying the parameter directly
     const userDataCopy = {
@@ -487,9 +491,17 @@ export const updateMe = async (userData) => {
       role: userData.role?.documentId || userData?.role,
       section: userData.section?.documentId || userData?.section,
     };
+    delete userDataCopy.clearFields;
 
     // Remove empty properties (undefined, null, or empty string)
     Object.keys(userDataCopy).forEach((key) => {
+      // @ts-expect-error because keys are defined just above
+      const value = userDataCopy?.[key];
+      if (key !== 'avatar' && clearFields.includes(key) && (value == null || value === '')) {
+        // @ts-expect-error because keys are defined just above
+        userDataCopy[key] = '';
+        return;
+      }
       // @ts-expect-error because keys are defined just above
       if (userDataCopy?.[key] === undefined || userDataCopy?.[key] === null || userDataCopy?.[key] === '') {
         // @ts-expect-error because keys are defined just above
@@ -524,6 +536,9 @@ export const updateMe = async (userData) => {
 
       // @ts-expect-error because of react native image type
       formData.append('avatar', fileToUpload);
+    } else if (clearFields.includes('avatar')) {
+      // C10BIS · P11-05 — supprimer la photo : `avatar: ''` sans fichier.
+      formData.append('avatar', '');
     }
     delete userDataCopy.avatar;
 
@@ -730,11 +745,17 @@ export const removeManagerFromClub = async (id) => {
 };
 
 /**
- * Leave my current club
+ * Leave a club — C10BIS · P11-02 : le club AFFICHE (`clubId`) ; sans lui, le serveur
+ * prend le club actif.
+ * @param {string} [clubId] - documentId du club qu on quitte.
  * @returns {Promise<object>} The API response
  */
-export const leaveClub = async () => {
-  const result = await client.post('/firebase-auth/me/leave-club');
+export const leaveClub = async (clubId) => {
+  const normalizedClubId = String(clubId || '').trim();
+  const result = await client.post(
+    '/firebase-auth/me/leave-club',
+    normalizedClubId ? { clubId: normalizedClubId } : {},
+  );
   return result.data;
 };
 

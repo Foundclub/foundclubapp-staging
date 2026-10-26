@@ -107,6 +107,28 @@ export const listChangedProfileFields = (before, after) => {
 };
 
 /**
+ * C10BIS · P11-01 / P11-05 — les champs que le serveur sait EFFACER (`''` => `null`).
+ * Ni le nom, ni l'e-mail, ni l'adresse : vides, ils ne s'effacent pas.
+ */
+const CLEARABLE_FIELDS = new Set([
+  'avatar', 'bestLevel', 'category', 'height', 'jerseyNumber', 'nationality',
+  'position', 'preferredSport', 'section', 'sportsHistory', 'weight',
+]);
+
+/**
+ * Les champs que la personne a VIDES : changes depuis le chargement ET vides a l'envoi.
+ * Un champ deja vide au chargement n'est jamais nomme : un profil pas encore charge
+ * (tout y vaut `''`) n'efface donc rien. `updateMe` les envoie en `''` (`clearFields`).
+ * @param {Record<string, any> | null | undefined} before L'etat charge.
+ * @param {Record<string, any> | null | undefined} after Ce qui part au serveur.
+ * @returns {string[]}
+ */
+export const listClearedProfileFields = (before, after) => listChangedProfileFields(before, after)
+  .filter((field) => (
+    CLEARABLE_FIELDS.has(field) && normalizeFieldValue(field, after?.[field]) === ''
+  ));
+
+/**
  * Le titre et le texte a annoncer apres un enregistrement REUSSI.
  * Rend `null` quand il n'y a rien a dire — aucun champ n'a bouge. Une
  * confirmation qui apparait alors qu'on n'a rien fait n'informe de rien.
