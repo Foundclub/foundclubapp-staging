@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 
 import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -6,6 +7,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import {
   useGetClubVilleFacilitiesWithSlots,
+  useGetFacilityHolidays,
   useGetFacilityOccupancy,
 } from '@/services/facility/facilityQueries';
 
@@ -50,7 +52,7 @@ export const fenetreDeLaSeance = (jour, debut, fin) => {
  *   bloque: boolean, creneau: { dedans: boolean, texte: string } | null, enLecture: boolean,
  *   enPanne: boolean, fermeture: string | null,
  *   mairie: string | null, prevention: { pris: boolean, texte: string } | null,
- *   relire: () => any,
+ *   relire: () => any, vacances: { label?: string, periods: any[] } | null,
  * }} Ce que l'étape dit et ce qui bloque « Suivant ».
  */
 const useJugementDuCreneau = (etat, {
@@ -114,6 +116,21 @@ const useJugementDuCreneau = (etat, {
     }
   }
 
+  // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — les vacances de la zone
+  // de l'installation (le planning, `meta.holidays`, comme la Ville) sur la période répétée.
+  // Le serveur ne les connaît que pour une installation d'une collectivité : ailleurs, rien.
+  const periode = etat?.isRecurrent && date
+    ? {
+      from: format(new Date(date), 'yyyy-MM-dd'),
+      to: format(new Date(etat?.recurrenceEndDate || date), 'yyyy-MM-dd'),
+    }
+    : null;
+  const lesVacances = useGetFacilityHolidays(installation, periode).data;
+  const vacances = installation && periode && Array.isArray(lesVacances?.periods)
+    && lesVacances.periods.length
+    ? lesVacances
+    : null;
+
   const lue = place.data?.data || null;
   const bloque = Boolean(installation && lue?.blocked);
   const enPanne = Boolean(installation && place.isError);
@@ -163,6 +180,7 @@ const useJugementDuCreneau = (etat, {
     mairie,
     prevention,
     relire: () => place.refetch(),
+    vacances,
   };
 };
 

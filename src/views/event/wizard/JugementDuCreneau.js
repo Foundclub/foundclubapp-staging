@@ -16,7 +16,7 @@ import useJugementDuCreneau from './useJugementDuCreneau';
  * « Suivant » (`onEtat`).
  * @param {{
  *   actif?: boolean, date: any, debut: any, etat: any, fin: any,
- *   onEtat: (jugement: { attente: boolean, bloque: boolean }) => void,
+ *   onEtat: (jugement: { attente: boolean, bloque: boolean, vacances: any }) => void,
  * }} props - Le tunnel, la séance en cours de saisie, le rappel vers l'étape.
  * @returns {import('react').ReactElement} Les lignes.
  */
@@ -31,8 +31,8 @@ function JugementDuCreneau({
   const attente = jugement.enLecture || jugement.enPanne;
 
   useEffect(() => {
-    onEtat({ attente, bloque: jugement.bloque });
-  }, [attente, jugement.bloque, onEtat]);
+    onEtat({ attente, bloque: jugement.bloque, vacances: jugement.vacances });
+  }, [attente, jugement.bloque, jugement.vacances, onEtat]);
 
   return (
     <View style={[Spaces.gap[8]]} testID="date-jugement-du-creneau">

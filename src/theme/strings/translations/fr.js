@@ -11768,6 +11768,7 @@ export default {
           plusOptions: 'Plus d’options',
           resume: 'Répéter {{rythme}} : {{jours}}{{heures}}, du {{du}} au {{au}}',
           resumeMois: 'Répéter {{rythme}}{{heures}}, du {{du}} au {{au}}',
+          resumeSaufVacances: '{{resume}}, sauf vacances scolaires',
           titre: 'RÉPÉTER',
         },
         reservationMode: 'Mode de réservation',

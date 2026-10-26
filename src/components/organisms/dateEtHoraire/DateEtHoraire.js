@@ -12,6 +12,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
@@ -221,6 +222,7 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
  *   titreRepeter?: string | null,
+ *   vacances?: { actif: boolean, onBasculer: () => void, testID?: string, zone: string } | null,
  *   sousLaDate?: import('react').ReactNode,
  *   sousLesHeures?: import('react').ReactNode,
  *   webZIndex?: number,
@@ -231,7 +233,9 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   `onRepetition(null)` revient a « Une seule fois » ; `sousLaDate` : une ligne de l ecran
  *   juste sous la date (« complet … » de la Ville, DATESDABORD 7- B) ; `sousLesHeures` : ce que
  *   l ecran dit de l horaire, juste sous les heures (« Ce créneau est libre », 6- B) ;
- *   `webZIndex` : la couche de la feuille sur
+ *   `vacances` : la case « Sauf vacances scolaires » de la répétition, quand la zone est connue
+ *   (DATESDABORD 26/10, la Ville et l installation choisie) ; `webZIndex` : la couche de la
+ *   feuille sur
  *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
  * @returns {import('react').ReactElement} Le bloc.
  */
@@ -253,6 +257,7 @@ function DateEtHoraire({
   sousLaDate = null,
   sousLesHeures = null,
   titreRepeter = null,
+  vacances = null,
   webZIndex = undefined,
 }) {
   const {
@@ -592,9 +597,58 @@ function DateEtHoraire({
               </View>
             </View>
           ) : null}
+          {/* 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case de la
+              Ville (R17-QUAND-2), dans « Répéter », quand la zone des vacances est connue. */}
+          {isRecurrent && vacances ? (
+            <TouchableOpacity
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: vacances.actif }}
+              onPress={vacances.onBasculer}
+              style={[Alignments.row, {
+                alignItems: 'center',
+                backgroundColor: withAlpha(Colors.primary500, 0.08),
+                borderColor: vacances.actif ? Colors.primary500 : chipBorder,
+                borderRadius: 12,
+                borderWidth: 1,
+                gap: 12,
+                minHeight: 48,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }]}
+              testID={vacances.testID || 'date-et-horaire-sauf-vacances'}
+            >
+              {/* La coche de la Ville (SeasonSlotForm, R17-QUAND-2). */}
+              <View
+                style={[Alignments.center, {
+                  backgroundColor: vacances.actif ? Colors.primary500 : 'transparent',
+                  borderColor: vacances.actif ? Colors.primary500 : Colors.primary200,
+                  borderRadius: 6,
+                  borderWidth: 2,
+                  height: 24,
+                  width: 24,
+                }]}
+              >
+                {vacances.actif ? (
+                  <SvgIcon color={Colors.primary900} height={14} name="check" width={14} />
+                ) : null}
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{vacances.zone}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
           {isRecurrent ? (
             <Text style={[Fonts.p2Bold, Fonts.primary200]} testID="date-et-horaire-resume">
-              {resume}
+              {vacances?.actif
+                ? t(
+                  'eventWizard.steps.logistics.repeter.resumeSaufVacances',
+                  '{{resume}}, sauf vacances scolaires',
+                  { resume, ...SANS_ECHAPPEMENT },
+                )
+                : resume}
             </Text>
           ) : null}
         </View>

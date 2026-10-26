@@ -1956,6 +1956,17 @@ function SeasonSlotForm({
           pleines={heuresPleines}
           repetition={repetitionDuModele}
           titreRepeter={t('collectiviteCreneaux.quand.repeterLeCreneau', 'Répéter le créneau')}
+          // DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case R17-QUAND-2,
+          // dans « Répéter » (le même modèle que l'événement).
+          vacances={vacances ? {
+            actif: saufVacances,
+            onBasculer: () => {
+              setSaufVacances((avant) => !avant);
+              toucherLaSaisie();
+            },
+            testID: 'quand-sauf-vacances',
+            zone: zoneDesVacances,
+          } : null}
           // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
           // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
           // de jours ne reviennent pas.
@@ -2176,7 +2187,8 @@ function SeasonSlotForm({
             />
           ) : null}
 
-          {vacances ? (
+          {/* DATESDABORD (26/10) : à la création, la case est dans « Répéter » (au-dessus). */}
+          {vacances && !avecLeModele ? (
             <TouchableOpacity
               accessibilityRole="checkbox"
               accessibilityState={{ checked: saufVacances }}

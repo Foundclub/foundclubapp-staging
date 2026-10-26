@@ -18,6 +18,7 @@ import {
   getCollectiviteRequests,
   getFacilities,
   getFacility,
+  getFacilityPlanning,
   getOccupancy,
   getPendingFacilityOverrideRequests,
   getSentFacilityOverrideRequests,
@@ -102,6 +103,23 @@ export const useGetClubVilleFacilitiesWithSlots = (clubId, options = {}) => useQ
   queryFn: () => getClubVilleFacilitiesWithSlots(clubId),
   queryKey: ['facilities-ville-creneaux', clubId],
   ...options,
+});
+
+/**
+ * 🗓️ DATESDABORD (26/10) — les vacances scolaires de la zone d'une installation sur une période (le
+ * planning, `meta.holidays`, R17-QUAND-2) : la case « Sauf vacances scolaires » d'une série.
+ * Lecture tolérante : une panne ne coûte que la case.
+ * @param {string | null} facilityId - L'installation.
+ * @param {{ from: string, to: string } | null} periode - AAAA-MM-JJ.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
+ */
+export const useGetFacilityHolidays = (facilityId, periode) => useQuery({
+  enabled: Boolean(facilityId && periode?.from && periode?.to),
+  queryFn: () => getFacilityPlanning(String(facilityId), /** @type {any} */ (periode)),
+  queryKey: ['planning', 'vacances', facilityId, periode?.from, periode?.to],
+  retry: false,
+  select: (reponse) => reponse?.meta?.holidays || null,
+  staleTime: 300_000,
 });
 
 /**

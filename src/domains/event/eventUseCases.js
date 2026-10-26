@@ -6,6 +6,7 @@ import i18next from 'i18next';
 import i18n from '@/theme/strings';
 
 import { USER_ROLES } from '../auth/authUseCases';
+import { vacancesDesSeances } from '../seasonSlot/seasonSlotHolidays';
 
 export const SESSIONS_STATUS_OPTIONS = [
   {
@@ -473,6 +474,9 @@ export const createEventPayload = (event) => {
   delete formattedData.recurrenceInterval;
   delete formattedData.recurrenceDays;
   delete formattedData.isRecurrent;
+  // DATESDABORD (26/10) : « Sauf vacances scolaires » ne sert qu'à déplier la série dans l'app.
+  delete formattedData.exceptHolidays;
+  delete formattedData.holidayPeriods;
   delete formattedData.isMultiDayTournament;
   delete formattedData.requestFeatured; // Ne pas envoyer à Strapi
   delete formattedData.stageDefaultEndTime;
@@ -675,6 +679,14 @@ export const createReccurrentEventPayload = (event) => {
     // Parse recurrence days (ensure they are numbers)
     const recurrenceDays = (event.recurrenceDays || []).map(Number);
     const interval = event.recurrenceInterval || 1;
+    // 🗓️ DATESDABORD (26/10/2026, Adel : « sauf vacances » sur la récurrence) — les séances qui
+    // tombent dans une période de vacances de la zone (le planning de l'installation, serveur) ne
+    // partent pas ; sans période connue, rien n'est retiré. Même règle que les créneaux de la Ville.
+    const periodesDeVacances = event.exceptHolidays && Array.isArray(event.holidayPeriods)
+      ? event.holidayPeriods
+      : [];
+    const horsVacances = (/** @type {Date} */ jour) => !periodesDeVacances.length
+      || !vacancesDesSeances([format(jour, 'yyyy-MM-dd')], periodesDeVacances, []).retirees.length;
 
     // If frequency is week and we have specific days
     if (event.recurrenceFrequency === 'week' && recurrenceDays.length > 0) {
@@ -700,7 +712,7 @@ export const createReccurrentEventPayload = (event) => {
 
           // Check if eventDate is within range [startDate, endDate]
           // We must check startDate because we aligned to Monday, which might be before startDate
-          if (eventDate >= startDate && eventDate <= endDate) {
+          if (eventDate >= startDate && eventDate <= endDate && horsVacances(eventDate)) {
             const formattedEvent = {
               ...event,
               date: format(eventDate, 'dd/MM/yyyy'),
@@ -725,7 +737,7 @@ export const createReccurrentEventPayload = (event) => {
           location: event.location,
           recurrenceGroupId,
         };
-        events.push(createEventPayload(formattedEvent));
+        if (horsVacances(currentDate)) events.push(createEventPayload(formattedEvent));
 
         if (event.recurrenceFrequency === 'week') {
           currentDate.setDate(currentDate.getDate() + (7 * interval));

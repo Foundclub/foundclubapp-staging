@@ -20,12 +20,16 @@ const mockGabarits = [];
 const mockHeures = [];
 let mockPlace = (/** @type {any} */ fenetre) => ({ data: { blocked: false, saturated: false }, fenetre });
 let mockVille = /** @type {any[]} */ ([]);
+let mockVacances = /** @type {any} */ (null);
 let mockDecision = {
   complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
 };
 
 jest.mock('@/services/facility/facilityQueries', () => ({
   useGetClubVilleFacilitiesWithSlots: (/** @type {any} */ club) => ({ data: club ? mockVille : [] }),
+  useGetFacilityHolidays: (/** @type {any} */ installation, /** @type {any} */ periode) => ({
+    data: installation && periode ? mockVacances : null,
+  }),
   useGetFacilityOccupancy: (/** @type {any} */ installation, /** @type {any} */ fenetre) => {
     if (installation) mockFenetres.push({ installation, ...fenetre });
     return {
@@ -124,12 +128,16 @@ const PRIS = 'Attention, ce créneau est déjà pris : tu vas devoir envoyer une
 /** @type {any} */
 let arbre;
 let semer = (/** @type {any} */ action) => action;
+/** @type {any} */
+let etatDuTunnel = null;
 /**
  * Sonde : le `dispatch` du tunnel, pour semer l'équipe, le type et le lieu.
  * @returns {null} Rien.
  */
 function PriseDeCourant() {
-  semer = useEventWizard().dispatch;
+  const tunnel = useEventWizard();
+  semer = tunnel.dispatch;
+  etatDuTunnel = tunnel.state;
   return null;
 }
 const afficherLEcran = (/** @type {any} */ lieu = { facility: 'gym', location: null }) => {
@@ -149,6 +157,7 @@ const dernierGabarit = () => mockGabarits[mockGabarits.length - 1];
 const debut = () => mockHeures.filter((p) => /début/i.test(String(p.label))).at(-1);
 
 afterEach(() => {
+  mockVacances = null;
   mockVille = [];
   mockPlace = () => ({ data: { blocked: false, saturated: false } });
   mockDecision = {
@@ -229,6 +238,39 @@ describe('DATESDABORD 6- B — « Date & horaire » prévient à chaque horaire,
     };
     afficherLEcran({ facility: 'gym-ville', location: null });
     expect(textesSous(arbre.root)).toContain('Hors de tes créneaux de la Ville à cette heure.');
+  });
+
+  // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case dans « Répéter »,
+  // quand la zone de l'installation est connue (le planning, `meta.holidays`) ; « Suivant » la passe
+  // au tunnel avec ses périodes, et la série se déplie sans elles (DATESDABORD.serie-sauf-vacances).
+  // ROUGE avant : aucune case pour un événement.
+  test('chaque semaine, zone connue : « Sauf vacances scolaires » se coche et part avec ses périodes', () => {
+    mockVacances = {
+      label: 'Zone B',
+      periods: [{
+        end: '2026-11-01', key: '2026-2027:toussaint', name: 'Toussaint', start: '2026-10-17',
+      }],
+      zone: 'B',
+    };
+    afficherLEcran();
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-chaque-semaine' }).props.onPress());
+    const laCase = () => arbre.root.findByProps({ testID: 'date-et-horaire-sauf-vacances' });
+    expect(laCase().props.accessibilityState).toEqual({ checked: false });
+    act(() => laCase().props.onPress());
+    expect(laCase().props.accessibilityState).toEqual({ checked: true });
+    expect(String(arbre.root.findByProps({ testID: 'date-et-horaire-resume' }).props.children))
+      .toMatch(/, sauf vacances scolaires$/);
+    act(() => dernierGabarit().onNext());
+    expect(etatDuTunnel.exceptHolidays).toBe(true);
+    expect(etatDuTunnel.holidayPeriods).toHaveLength(1);
+  });
+
+  test('zone inconnue (gymnase du club) : pas de case, rien ne part', () => {
+    afficherLEcran();
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-chaque-semaine' }).props.onPress());
+    expect(arbre.root.findAllByProps({ testID: 'date-et-horaire-sauf-vacances' })).toHaveLength(0);
+    act(() => dernierGabarit().onNext());
+    expect(etatDuTunnel.exceptHolidays).toBe(false);
   });
 
   test('une adresse extérieure : rien à juger, aucune lecture', () => {

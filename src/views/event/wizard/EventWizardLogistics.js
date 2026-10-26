@@ -45,6 +45,9 @@ import JugementDuCreneau from './JugementDuCreneau';
 // DATESDABORD (23/10) — les deux regles vivent avec le bloc partage ; leur temoin les lit ici.
 export { debutDeRepetitionSuivant, joursDeRepetitionSuivants };
 
+// DATESDABORD (26/10) : une installation est choisie (une adresse extérieure ne se juge pas).
+const avecJugementPossible = (/** @type {any} */ etat) => Boolean(etat?.facility);
+
 const parseInteger = (rawValue) => {
   if (!rawValue || String(rawValue).trim() === '') return null;
   const parsed = Number.parseInt(String(rawValue), 10);
@@ -574,6 +577,11 @@ function EventWizardLogistics({ navigation, route }) {
       endTime: fullEndDate,
       isMultiDayTournament: isTournament ? isMultiDayTournament : false,
       isRecurrent: effectiveIsRecurrent,
+      // DATESDABORD (26/10) : « Sauf vacances scolaires », et les périodes de la zone lues.
+      exceptHolidays: Boolean(effectiveIsRecurrent && saufVacances && vacancesDeLaZone),
+      holidayPeriods: effectiveIsRecurrent && saufVacances && vacancesDeLaZone
+        ? vacancesDeLaZone.periods
+        : [],
       pricePerPerson: isReservation ? parseDecimal(pricePerPersonText) : null,
       recurrenceDays: effectiveIsRecurrent && recurrenceFrequency === 'week' ? recurrenceDays : [],
       recurrenceEndDate: normalizedRecurrenceEndDate,
@@ -606,11 +614,20 @@ function EventWizardLogistics({ navigation, route }) {
   // 🗓️ DATESDABORD (25/10, décision d'Adel « 6- B ») — le lieu est choisi AVANT : sous les heures,
   // l'installation dit à chaque horaire si le créneau est libre ou déjà pris ; une fermeture de la
   // Ville, ou une place pas encore lue, retient « Suivant ». Une adresse extérieure ne se juge pas.
-  const [jugement, setJugement] = useState({ attente: false, bloque: false });
+  const [jugement, setJugement] = useState(
+    /** @type {{ attente: boolean, bloque: boolean, vacances: any }} */ ({
+      attente: false, bloque: false, vacances: null,
+    }),
+  );
   const recevoirLeJugement = useCallback(
-    (/** @type {{ attente: boolean, bloque: boolean }} */ suite) => setJugement(suite),
+    (/** @type {{ attente: boolean, bloque: boolean, vacances: any }} */ suite) => setJugement(suite),
     [],
   );
+  // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case, quand la zone
+  // de l'installation choisie est connue ; les séances des vacances ne partent pas (la série se
+  // déplie dans l'app : `createReccurrentEventPayload`).
+  const [saufVacances, setSaufVacances] = useState(Boolean(state.exceptHolidays));
+  const vacancesDeLaZone = avecJugementPossible(state) ? jugement.vacances : null;
   const avecJugement = Boolean(state.facility) && showSingleDateTimeFields;
   const suivantRetenu = avecJugement && (jugement.attente || jugement.bloque);
 
@@ -657,6 +674,11 @@ function EventWizardLogistics({ navigation, route }) {
               jours: recurrenceDays,
             }}
             sansRepetition={isTournament}
+            vacances={vacancesDeLaZone ? {
+              actif: saufVacances,
+              onBasculer: () => setSaufVacances((avant) => !avant),
+              zone: vacancesDeLaZone.label || '',
+            } : null}
             // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.
             sousLesHeures={avecJugement ? (
               <JugementDuCreneau

@@ -11094,6 +11094,7 @@ export default {
           plusOptions: 'More options',
           resume: 'Repeat {{rythme}}: {{jours}}{{heures}}, from {{du}} to {{au}}',
           resumeMois: 'Repeat {{rythme}}{{heures}}, from {{du}} to {{au}}',
+          resumeSaufVacances: '{{resume}}, except school holidays',
           titre: 'REPEAT',
         },
         reservationMode: 'Booking mode',
