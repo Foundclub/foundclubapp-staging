@@ -22,6 +22,7 @@ const mockEventQuery = { data: null };
 const mockCreateEventReport = jest.fn(() => Promise.resolve({ data: { id: 1 } }));
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 const mockDecideRelocation = jest.fn(() => Promise.resolve({ documentId: 'prop-1', status: 'accepted' }));
+const mockInvalidateQueries = jest.fn();
 
 // La mutation APPELLE sa fonction : c'est l'envoi du signalement qu'on veut voir partir.
 // 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
@@ -46,7 +47,7 @@ jest.mock('@tanstack/react-query', () => ({
     mutateAsync: jest.fn(),
   }),
   useQueryClient: () => ({
-    invalidateQueries: jest.fn(),
+    invalidateQueries: mockInvalidateQueries,
     setQueryData: jest.fn(),
   }),
 }));
@@ -285,6 +286,14 @@ describe('CRFERM · la fiche du site dit la fermeture', () => {
     await act(async () => { geste(root, 'Annuler l’entraînement').props.onPress(); });
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(mockCancelEvent).toHaveBeenCalledWith({ documentId: 'event-1' });
+  });
+
+  // PLANMODIF2 (27/10) — la séance annulée quitte AUSSI le planning (onglet et plein écran) :
+  // ['planning'] couvre ['planning','personal'] et ['planning','fullscreen',…].
+  test('PLANMODIF2 — « Annuler l’entraînement » relit le planning', async () => {
+    const root = mountScreen({ event: touchee() });
+    await act(async () => { geste(root, 'Annuler l’entraînement').props.onPress(); });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['planning'] });
   });
 
   test('CRFERM-5/8 B — une confirmation refusée n annule rien', async () => {
