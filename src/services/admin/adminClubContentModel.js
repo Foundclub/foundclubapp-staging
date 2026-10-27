@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 
+import { getShortClubAcronym } from '@/domains/club/clubUseCase';
+
 export const CLUB_UID = 'api::club.club';
 
 export const CLUB_LIST_FIELDS = [
@@ -173,6 +175,8 @@ export const getClubInitials = (club = {}) => {
   const typedClub = /** @type {AdminClubRecord} */ (club);
   const name = normalizeText(typedClub?.name);
   if (!name) return 'FC';
+  const acronym = getShortClubAcronym(name);
+  if (acronym) return acronym;
 
   const words = name.split(/\s+/).filter(Boolean);
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();

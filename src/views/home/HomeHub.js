@@ -2140,7 +2140,9 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'euroCircle',
           key: 'manage-licenses',
           onPress: handleOpenClubLicenses,
-          premiumScope: clubCardPremiumScope,
+          // Décision d'Adel « 5- offre équipe » (27/10) : la cotisation de l'équipe est dans
+          // l'offre Équipe, comme le récapitulatif des offres et la fiche d'équipe.
+          premiumScope: teamCardPremiumScope,
           subtitle: t('homeHub.cards.manage.licenses.teamsSubtitle', 'Suis les paiements de tes équipes.'),
           subtitleLines: 2,
           title: t('homeHub.cards.manage.licenses.teamsTitle', 'Cotisations de mes équipes'),
