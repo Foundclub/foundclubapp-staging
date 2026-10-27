@@ -24731,7 +24731,7 @@ export default {
       'm4-back': 'Ta séance est en ligne. Dernière mission : retourne à l’accueil.',
       'm4-card': 'Il te manque un·e joueur·se ? Les profils ouverts au recrutement sont ici.',
       'm4-frc': 'À toi : crée ton annonce de match amical.',
-      'm4-read': 'Voici les profils. Pour trouver le bon, utilise les filtres, puis ouvre une carte.',
+      'm4-read': 'Fais défiler pour voir les profils. Pour trouver le bon, utilise les filtres, puis ouvre une carte.',
       'm4-tab-club': 'Les événements. Ouvre maintenant « Club ».',
       'm4-tab-ev': 'Rechercher, ce n’est pas que des profils. Ouvre « Événement ».',
       'm4-tab-fr': 'Les clubs. Dernier onglet : « Matchs amicaux ».',

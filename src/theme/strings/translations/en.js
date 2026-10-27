@@ -23748,7 +23748,7 @@ export default {
       'm4-back': 'Your session is live. Last mission: go back to the home screen.',
       'm4-card': 'Missing a player? Profiles open to recruitment are here.',
       'm4-frc': 'Your turn: create your friendly match ad.',
-      'm4-read': 'Here are the profiles. To find the right one, use the filters, then open a card.',
+      'm4-read': 'Scroll down to see the profiles. To find the right one, use the filters, then open a card.',
       'm4-tab-club': 'Those were events. Now open "Club".',
       'm4-tab-ev': "Search isn't just profiles. Open \"Event\".",
       'm4-tab-fr': 'Those were clubs. Last tab: "Friendly matches".',

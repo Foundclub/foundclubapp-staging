@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { emitGuidanceRouteVisit, resetGuidanceRuntimeForTests } from '@/domains/guidance/guidanceRuntime';
@@ -324,5 +325,27 @@ describe('Club à retrouver : le champ de recherche reste utilisable', () => {
     const tree = await renderLayer();
     expect(framesOf(tree)).toHaveLength(1);
     expect(blockersOf(tree)).toHaveLength(0);
+  });
+});
+
+// FINITIONS-GUIDE (27/10, décision du chef sur TUTOE-CALIBRAGE-2, option B) :
+// texte agrandi 1,3 sur Pixel 9, la bulle « en haut » du tunnel passait de
+// 175 à 210 pt et recouvrait le haut du champ (m3-place 90 px, m3-when 31 px,
+// m3-access 93 px). Sa police ne suit plus le réglage du téléphone.
+describe('Texte agrandi : la police de la bulle ne grandit pas', () => {
+  it('chaque texte de la bulle (titre, consigne, boutons) ignore l’agrandissement', async () => {
+    mountTarget('teamWizard.field', {
+      height: 500, width: 358, x: 16, y: 300,
+    });
+    mockTour = {
+      ...activeTour(COACH_GUIDE.steps.find((step) => step.id === 'm3-place')),
+      missionPosition: { index: 1, isBonus: true, total: 2 },
+    };
+    const tree = await renderLayer();
+    const [bubble] = tree.root.findAll((node) => node.props.testID === 'tour.bubble');
+    const texts = bubble.findAll((node) => node.type === Text);
+    // Titre de mission, consigne, « Passer ce bonus », « Suivant ».
+    expect(texts.length).toBeGreaterThanOrEqual(4);
+    texts.forEach((node) => expect(node.props.allowFontScaling).toBe(false));
   });
 });
