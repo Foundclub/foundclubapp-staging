@@ -16,7 +16,9 @@ import { createElement } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import PlayerCard, { CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH, CardLogo } from '../PlayerCard';
+import PlayerCard, {
+  CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH, CardLogo, RARITY_LOOKS,
+} from '../PlayerCard';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (...args) => jest.requireActual('i18next').t(...args) }),
@@ -106,7 +108,7 @@ describe('CARTEAFF 1 et 4 — le shield d’un club sans logo', () => {
     let arbre;
     act(() => {
       arbre = renderer.create(createElement(CardLogo, {
-        accent: '#8567ff', name: 'SCM', s: 0.5, size: 64,
+        accent: RARITY_LOOKS.EPIC.accent, name: 'SCM', s: 0.5, size: 64,
       }));
     });
     const image = arbre.root.findByType(Image);
@@ -123,7 +125,7 @@ describe('CARTEAFF 1 et 4 — le shield d’un club sans logo', () => {
       let arbre;
       act(() => {
         arbre = renderer.create(createElement(CardLogo, {
-          accent: '#8567ff', name, s: 0.5, size: 64,
+          accent: RARITY_LOOKS.EPIC.accent, name, s: 0.5, size: 64,
         }));
       });
       return textes(arbre)[0];
