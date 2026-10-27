@@ -312,3 +312,17 @@ describe('B1 « Ouvre ta séance » : découpe sur la carte du planning (décisi
     expect(styleOf(frame)).toMatchObject({ top: 320 + STATUS_BAR - 6 });
   });
 });
+
+// TUTOE-CALIBRAGE-2 (compte sans club, émulateur) : « Tape le nom de ton club »
+// alors que le champ de recherche était sous le voile (seul le 1er club ouvert).
+describe('Club à retrouver : le champ de recherche reste utilisable', () => {
+  it('le 1er club est encadré, rien n’est bloqué', async () => {
+    mountTarget('search.result.0', {
+      height: 200, width: 358, x: 16, y: 440,
+    });
+    mockTour = activeTour(COACH_GUIDE.steps.find((step) => step.id === 'm1-csearch'));
+    const tree = await renderLayer();
+    expect(framesOf(tree)).toHaveLength(1);
+    expect(blockersOf(tree)).toHaveLength(0);
+  });
+});

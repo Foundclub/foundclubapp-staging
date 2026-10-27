@@ -203,6 +203,8 @@ const STEPS = [
     resumeFrom: 'm1-dock',
     targets: ['search.result.0'],
     get text() { return t('m1-csearch', 'Tape le nom de ton club, puis ouvre sa fiche.'); },
+    // Taper le nom puis ouvrir la fiche : le champ doit rester libre (CALIBRAGE-2).
+    veil: false,
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
   },
   {
