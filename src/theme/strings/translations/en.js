@@ -6245,7 +6245,7 @@ export default {
       prevenus: 'Everyone who was notified is told about the cancellation.',
       // VILLEEVT-CODE (2B, 27/10) : one date of a series.
       serie: 'Cancel this date and the following ones',
-      serieAide: 'This date is part of a series: {{regle}}.',
+      serieAide: 'This date is part of a series: {{regle}}',
       titre: 'Cancel “{{nom}}”?',
       uneDate: 'Cancel this date only',
     },

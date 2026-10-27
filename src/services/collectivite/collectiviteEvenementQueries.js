@@ -135,10 +135,13 @@ export const useGestesEvenementDeLaVille = (collectiviteId) => {
   };
   return {
     annuler: useMutation({
-      mutationFn: (/** @type {string} */ evenementId) => annulerEvenement({
-        collectiviteId: String(collectiviteId),
-        evenementId,
-      }),
+      // VILLEEVT-CODE (2B) : un id (cette date), ou `{ evenementId, serie: true }` (et les suivantes).
+      mutationFn: (/** @type {string | { evenementId: string, serie: boolean }} */ cible) => (
+        annulerEvenement({
+          collectiviteId: String(collectiviteId),
+          ...(typeof cible === 'string' ? { evenementId: cible } : cible),
+        })
+      ),
       onSuccess: relire,
     }),
     modifier: useMutation({

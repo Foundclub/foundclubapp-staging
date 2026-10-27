@@ -62,10 +62,11 @@ export const modifierEvenement = async ({ collectiviteId, data, evenementId }) =
  * @param {{ collectiviteId: string, evenementId: string }} params - Lequel.
  * @returns {Promise<any>} `{ data: vue }`.
  */
-export const annulerEvenement = async ({ collectiviteId, evenementId }) => {
+export const annulerEvenement = async ({ collectiviteId, evenementId, serie = false }) => {
   const http = await client();
-  return (await http.post(`/collectivites/${collectiviteId}/evenements/${evenementId}/annuler`))
-    .data;
+  // VILLEEVT-CODE (2B) : `{ serie: true }` annule aussi les dates suivantes de sa série.
+  const chemin = `/collectivites/${collectiviteId}/evenements/${evenementId}/annuler`;
+  return (await (serie ? http.post(chemin, { serie: true }) : http.post(chemin))).data;
 };
 
 /**

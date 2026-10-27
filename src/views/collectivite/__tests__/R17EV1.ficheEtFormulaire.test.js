@@ -45,6 +45,12 @@ const mockOuvrirLaCarte = jest.fn(async () => true);
 jest.mock('@/platform/maps/externalMap', () => ({
   openExternalMap: (/** @type {any} */ lieu) => mockOuvrirLaCarte(lieu),
 }));
+// VILLEEVT-CODE (4B) : le partage de la vitrine.
+const mockPartager = jest.fn(async () => undefined);
+jest.mock('@/platform/share', () => ({
+  __esModule: true,
+  default: { share: (/** @type {any} */ contenu) => mockPartager(contenu) },
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
@@ -384,10 +390,10 @@ describe('R17-EVT-1 — la fiche d’un événement de la Ville', () => {
 });
 
 describe('R17-EVT-1 — l’écran du formulaire', () => {
-  it('téléphone : le tunnel ; publié, la fiche REMPLACE le formulaire', async () => {
+  it('téléphone : le tunnel ; publié, la vitrine puis la fiche REMPLACENT le formulaire', async () => {
     mockParams = { collectiviteId: 'ville-montrivage' };
     mockFiche = { data: null, isLoading: false };
-    await monter(<CollectiviteEvenement />);
+    const arbre = await monter(<CollectiviteEvenement />);
     expect(mockFormulaireProps.presentation).toBe('tunnel');
     expect(mockFormulaireProps.collectiviteNom).toBe('Ville de Montrivage');
     // R17-EVT-1-BIS (e) : la commune de la Ville, d où part la carte de « Ailleurs ».
@@ -396,6 +402,9 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
       await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
     });
     expect(mockPublier).toHaveBeenCalledWith({ name: 'Fête du sport' });
+    // VILLEEVT-CODE (4B) : une création publiée montre d'abord la vitrine ; « Voir la fiche » la remplace.
+    expect(mockNavigation.replace).not.toHaveBeenCalled();
+    await touche(arbre, 'bouton:Voir la fiche');
     expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', {
       evenementId: 'evt-neuf',
     });
@@ -441,5 +450,78 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
       arbre.root.findByProps({ testID: 'bouton:Réessayer' }).props.onPress();
     });
     expect(relire).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 🏛️ VILLEEVT-CODE (27/10/2026, décisions d'Adel du 25/10 « 9- 2B 3B 4B ») — la vitrine après la
+// publication (4B), la série et les places sur la fiche (2B, 3B), « Annuler cette date et les
+// suivantes ».
+const SERIE = {
+  dates: ['2026-10-24', '2026-10-31', '2026-11-07', '2026-11-14'],
+  id: 'serie-1',
+  regle: {
+    au: '2026-11-14', frequence: 'week', intervalle: 1, jours: [6], saufVacances: false,
+  },
+  retirees: [],
+};
+
+describe('VILLEEVT-CODE — la vitrine après la publication (4B)', () => {
+  it('🔴 l’événement mis en avant, « Partager » (texte et lien), puis « Voir la fiche »', async () => {
+    mockParams = { collectiviteId: 'ville-montrivage' };
+    mockFiche = { data: null, isLoading: false };
+    mockPublier.mockImplementationOnce(async () => ({
+      data: { ...VUE_DE_LA_VILLE, capacity: 200, documentId: 'evt-neuf', serie: SERIE },
+    }));
+    mockPartager.mockClear();
+    const arbre = await monter(<CollectiviteEvenement />);
+    await act(async () => {
+      await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
+    });
+    const lus = textes(arbre);
+    expect(lus).toContain('C’est publié');
+    expect(lus).toContain('Fête du sport');
+    expect(lus).toContain('Chaque semaine (samedi) jusqu’au sam. 14 nov.');
+    expect(lus).toContain('4 dates');
+    expect(lus).toContain('200 places');
+    await touche(arbre, 'bouton:Partager');
+    const partage = mockPartager.mock.calls[0][0];
+    expect(partage.message).toContain('Fête du sport');
+    expect(partage.message).toContain('200 places');
+    expect(partage.url).toMatch(/\/evenements-de-la-ville\/evt-neuf$/);
+    expect(textes(arbre)).toContain('C’est prêt à être collé où vous voulez.');
+  });
+
+  it('🔴 « Modifier » : pas de vitrine, la fiche directement', async () => {
+    mockParams = { collectiviteId: 'ville-montrivage', evenementId: 'evt-1' };
+    mockFiche = { data: VUE_DE_LA_VILLE, isLoading: false };
+    await monter(<CollectiviteEvenement />);
+    await act(async () => {
+      await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
+    });
+    expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-1' });
+  });
+});
+
+describe('VILLEEVT-CODE — la fiche d’une date de série, ses places (2B, 3B)', () => {
+  it('🔴 « Se répète : … », « 200 places » ; « Annuler cette date et les suivantes »', async () => {
+    mockFiche = { data: { ...VUE_DE_LA_VILLE, capacity: 200, serie: SERIE }, isLoading: false };
+    const arbre = await monter(<EvenementDeLaVille />);
+    const lus = textes(arbre);
+    expect(lus).toContain('Se répète : Chaque semaine (samedi) jusqu’au sam. 14 nov.');
+    expect(lus).toContain('200 places');
+    await touche(arbre, 'bouton:Annuler l’événement');
+    expect(textes(arbre)).toContain(
+      'Cette date fait partie d’une série : Chaque semaine (samedi) jusqu’au sam. 14 nov.',
+    );
+    await touche(arbre, 'bouton:Annuler cette date et les suivantes');
+    expect(mockAnnuler).toHaveBeenCalledWith({ evenementId: 'evt-1', serie: true });
+  });
+
+  it('🔴 « Annuler cette date seulement » : l’id seul, comme avant', async () => {
+    mockFiche = { data: { ...VUE_DE_LA_VILLE, serie: SERIE }, isLoading: false };
+    const arbre = await monter(<EvenementDeLaVille />);
+    await touche(arbre, 'bouton:Annuler l’événement');
+    await touche(arbre, 'bouton:Annuler cette date seulement');
+    expect(mockAnnuler).toHaveBeenCalledWith('evt-1');
   });
 });
