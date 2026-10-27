@@ -470,7 +470,9 @@ describe('VILLEEVT-CODE — la vitrine après la publication (4B)', () => {
     mockParams = { collectiviteId: 'ville-montrivage' };
     mockFiche = { data: null, isLoading: false };
     mockPublier.mockImplementationOnce(async () => ({
-      data: { ...VUE_DE_LA_VILLE, capacity: 200, documentId: 'evt-neuf', serie: SERIE },
+      data: {
+        ...VUE_DE_LA_VILLE, capacity: 200, documentId: 'evt-neuf', serie: SERIE,
+      },
     }));
     mockPartager.mockClear();
     const arbre = await monter(<CollectiviteEvenement />);
