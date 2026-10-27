@@ -44,8 +44,11 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigation = useNavigation();
+  // PLANMODIF (27/10) — le plein ecran (`['planning','fullscreen',…]`) reste monte sous la fiche :
+  // sans sa cle, annuler depuis le plein ecran laissait la case a l ancienne place.
   const invalidatePersonalPlanning = () => {
     queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+    queryClient.invalidateQueries({ queryKey: ['planning', 'fullscreen'] });
   };
   const invalidateEventParticipationState = () => {
     queryClient.invalidateQueries({ queryKey: ['events'] });
