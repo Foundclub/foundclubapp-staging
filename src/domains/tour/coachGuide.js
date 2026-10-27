@@ -142,10 +142,15 @@ const STEPS = [
     // Coach qui a déjà une équipe : « Retrouve ton équipe ».
     advanceOn: { key: RouteNames.TeamDetails, type: 'route' },
     completesMission: true,
+    // Vue de l'accueil (carte pas à l'écran) : on montre l'onglet Équipes.
+    fallback: {
+      targets: ['dock.teams'],
+      get text() { return t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.'); },
+    },
     id: 'm1-find',
     missionId: 'coach_m1',
     navTarget: teamHubTarget,
-    targets: ['teams.card.0'],
+    targets: ['teams.trained.0'],
     get text() { return t('m1-find', 'Ton équipe est déjà là : ouvre-la.'); },
     when: hadTeam,
   },
@@ -329,7 +334,7 @@ const STEPS = [
     id: 'm2-card',
     missionId: 'coach_m2',
     navTarget: teamHubTarget,
-    targets: ['teams.card.0'],
+    targets: ['teams.trained.0'],
     get text() { return t('m2-card', 'Fais entrer tes joueur·se·s : ouvre ton équipe.'); },
   },
   {
@@ -396,7 +401,7 @@ const STEPS = [
     get text() { return t('m3-type', 'Choisis « Entraînement ».'); },
   },
   {
-    advanceOn: { key: RouteNames.EventWizardLogistics, type: 'route' },
+    advanceOn: { key: RouteNames.EventWizardLocation, type: 'route' },
     bubblePlacement: 'top',
     id: 'm3-team',
     missionId: 'coach_m3',
@@ -405,39 +410,8 @@ const STEPS = [
     get text() { return t('m3-team', 'Rattache la séance à ton équipe.'); },
   },
   {
-    // Sélecteurs de date et feuille « Répéter » : rien n'est bloqué (voile coupé).
-    advanceOn: { key: RouteNames.EventWizardLocation, type: 'route' },
-    bubblePlacement: 'top',
-    id: 'm3-when',
-    missionId: 'coach_m3',
-    resumeFrom: 'm3-type',
-    targets: ['eventWizard.when', 'eventWizard.repeat', 'teamWizard.next'],
-    get text() {
-      return t(
-        'm3-when',
-        'Touche la date et les heures pour les choisir. Ta séance revient chaque semaine ? Ouvre '
-          + '« Répéter » et applique. Puis Suivant.',
-      );
-    },
-    // Feuille « Répéter » ouverte : une bulle par zone (pack 02, M3).
-    subGuides: [{
-      anchor: 'repeat.frequency',
-      bubbles: [
-        ['repeat.frequency', () => t('m3-rep-1', 'Fréquence : « Hebdomadaire » pour une séance '
-          + 'chaque semaine, « Mensuel » pour une fois par mois.')],
-        ['repeat.interval', () => t('m3-rep-2', 'Intervalle : 1 = toutes les semaines. Touche + '
-          + 'pour passer à toutes les 2 semaines, et ainsi de suite.')],
-        ['repeat.days', () => t('m3-rep-3', 'Jours : le jour de ta séance est déjà coché. Touche '
-          + 'un autre jour si tu t’entraînes 2 fois par semaine.')],
-        ['repeat.end', () => t('m3-rep-4', 'Date de fin : jusqu’à quand la séance se répète. '
-          + 'Touche pour la changer.')],
-        ['repeat.apply', () => t('m3-rep-5', 'Tout est bon ? Appuie sur Appliquer.')],
-      ],
-    }],
-    veil: false,
-  },
-  {
-    advanceOn: { key: RouteNames.EventWizardAccess, type: 'route' },
+    // DATESDABORD (staging, 25/10) : le lieu vient AVANT « Date & horaire ».
+    advanceOn: { key: RouteNames.EventWizardLogistics, type: 'route' },
     bubblePlacement: 'top',
     bubbles: [
       () => t(
@@ -477,6 +451,38 @@ const STEPS = [
     }],
     targets: WIZARD,
     get text() { return t('m3-place-4', 'Choisis ton lieu, puis Suivant.'); },
+  },
+  {
+    // Sélecteurs de date et feuille « Répéter » : rien n'est bloqué (voile coupé).
+    advanceOn: { key: RouteNames.EventWizardAccess, type: 'route' },
+    bubblePlacement: 'top',
+    id: 'm3-when',
+    missionId: 'coach_m3',
+    resumeFrom: 'm3-type',
+    targets: ['eventWizard.when', 'eventWizard.repeat', 'teamWizard.next'],
+    get text() {
+      return t(
+        'm3-when',
+        'Touche la date et les heures pour les choisir. Ta séance revient chaque semaine ? Ouvre '
+          + '« Répéter » et applique. Puis Suivant.',
+      );
+    },
+    // Feuille « Répéter » ouverte : une bulle par zone (pack 02, M3).
+    subGuides: [{
+      anchor: 'repeat.frequency',
+      bubbles: [
+        ['repeat.frequency', () => t('m3-rep-1', 'Fréquence : « Hebdomadaire » pour une séance '
+          + 'chaque semaine, « Mensuel » pour une fois par mois.')],
+        ['repeat.interval', () => t('m3-rep-2', 'Intervalle : 1 = toutes les semaines. Touche + '
+          + 'pour passer à toutes les 2 semaines, et ainsi de suite.')],
+        ['repeat.days', () => t('m3-rep-3', 'Jours : le jour de ta séance est déjà coché. Touche '
+          + 'un autre jour si tu t’entraînes 2 fois par semaine.')],
+        ['repeat.end', () => t('m3-rep-4', 'Date de fin : jusqu’à quand la séance se répète. '
+          + 'Touche pour la changer.')],
+        ['repeat.apply', () => t('m3-rep-5', 'Tout est bon ? Appuie sur Appliquer.')],
+      ],
+    }],
+    veil: false,
   },
   wizardStep('m3-access', 'coach_m3', RouteNames.EventWizardDescription, 'm3-type', () => t(
     'm3-access',
@@ -754,8 +760,13 @@ export const COACH_GUIDE = Object.freeze({
   buildFlags: ({ userData }) => ({
     firstName: String(userData?.firstname || userData?.firstName || ''),
     hadClub: Boolean(userData?.club?.documentId),
-    hadTeam: (Array.isArray(userData?.trainedTeams) && userData.trainedTeams.length > 0)
-      || (Array.isArray(userData?.myTeams) && userData.myTeams.length > 0),
+    // Seules les équipes qu'il entraîne (décision du chef, 27/10), et dans son
+    // club courant : l'écran Équipes ne montre que celui-là (tournée : Julien
+    // entraîne ailleurs, et « ouvre-la » visait son équipe de JOUEUR).
+    hadTeam: (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [])
+      .some((/** @type {any} */ team) => !userData?.club?.documentId
+        || !team?.club?.documentId
+        || team.club.documentId === userData.club.documentId),
   }),
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
   missions: MISSIONS,

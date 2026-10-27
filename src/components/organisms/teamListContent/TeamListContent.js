@@ -22,7 +22,7 @@ import {
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
-import { getProfileTeamIds, isMyTeam } from '@/domains/team/teamMembership';
+import { firstTrainedTeamId, getProfileTeamIds, isMyTeam } from '@/domains/team/teamMembership';
 import useParentTeams from '@/domains/team/useParentTeams';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
@@ -425,6 +425,7 @@ function TeamListContent({
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
     };
   }, [invitedLeagueData, isLeagueMode, isParentTeamList, isVisibleTeam, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
+  const firstTrainedId = firstTrainedTeamId(myTeams, userData);
 
   const handleEndReached = useCallback(() => {
     // U03 — dans ce mode, « Autres equipes » est structurellement VIDE (le tri
@@ -1231,7 +1232,13 @@ function TeamListContent({
           </Text>
           {myTeams.map((team, index) => (
             <View key={`joined-${team.documentId}`}>
-              <TourTarget id={`teams.card.${index}`}>{renderTeamCard(team)}</TourTarget>
+              {/* Guide (TUTOE) : « ton équipe » = la 1re qu'il ENTRAÎNE, jamais une
+                  équipe où il ne fait que jouer (tournée du 27/10). */}
+              <TourTarget
+                id={team.documentId === firstTrainedId ? 'teams.trained.0' : `teams.card.${index}`}
+              >
+                {renderTeamCard(team)}
+              </TourTarget>
             </View>
           ))}
         </View>
@@ -1249,6 +1256,7 @@ function TeamListContent({
   ), [
     approveTeamMutation,
     filterNumber,
+    firstTrainedId,
     Fonts,
     Spaces,
     handleOpenFilters,

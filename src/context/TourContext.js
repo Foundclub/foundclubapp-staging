@@ -156,6 +156,8 @@ export function TourProvider({ children }) {
           gauge: Number(saved.gauge) || 0,
           missionStatus: saved.missionStatus || {},
           profileKey: saved.profileKey,
+          // Relancement de l'app : un brouillon de tunnel est perdu ⇒ `resumeFrom`.
+          restored: true,
           status: 'paused',
           stepIndex,
           version: GUIDE_VERSION,
@@ -444,12 +446,17 @@ export function TourProvider({ children }) {
     if (!current || current.status !== 'paused') return;
     const profile = getTourProfile(current.profileKey);
     if (isGuideProfile(profile)) {
-      // Une étape au milieu d'un tunnel reprend au début du tunnel (le
-      // brouillon est perdu à la fermeture de l'app) : `resumeFrom`.
+      // Après un relancement de l'app, une étape au milieu d'un tunnel reprend
+      // au début du tunnel (le brouillon est perdu) : `resumeFrom`. Une pause
+      // dans la même séance revient à l'étape en pause (décision du chef, 27/10).
       const step = profile.steps[current.stepIndex];
-      const resumeIndex = step?.resumeFrom ? indexOfStep(profile, step.resumeFrom) : -1;
+      const resumeIndex = current.restored && step?.resumeFrom
+        ? indexOfStep(profile, step.resumeFrom)
+        : -1;
       const index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
-      const nextState = { ...current, status: 'active', stepIndex: index };
+      const nextState = {
+        ...current, restored: false, status: 'active', stepIndex: index,
+      };
       setTourState(nextState);
       persist(nextState);
       navigateToTarget(profile.steps[index]?.navTarget, { userData });

@@ -60,6 +60,7 @@ import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerMode
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourResumePill from '@/components/molecules/tour/TourResumePill';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
@@ -2665,6 +2666,9 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {/* TUTOE-CALIBRAGE (27/10) — guide en pause : « Reprendre le tour » DANS le flux,
+            jamais par-dessus l'écran (ne couvre ni feuille ni bouton). */}
+        <TourResumePill />
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
             actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
         <BandeauActualiteMembre

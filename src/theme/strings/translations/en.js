@@ -23702,6 +23702,7 @@ export default {
       'm1-dock': 'Start with your team. Open the Teams tab.',
       'm1-dock2': 'Go back to Teams to create your team.',
       'm1-find': 'Your team is already here: open it.',
+      'm1-find-dock': 'Your team is already here: open the Teams tab.',
       'm1-gate': "A team always belongs to a club. Start by finding yours. No club? \"I can't find my club\" will help you create it.",
       'm1-mine': 'Is this the one? Say so.',
       'm1-new': 'Tap "New team".',

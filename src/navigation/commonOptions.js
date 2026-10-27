@@ -256,7 +256,7 @@ export const getTabScreenCommonOptions = ({
         );
         // Guide (TUTOE) : ancre invisible de l'onglet ; flex 1 garde la largeur du bouton.
         return tourTargetId
-          ? <TourTarget id={tourTargetId} style={{ flex: 1 }}>{button}</TourTarget>
+          ? <TourTarget focusFromParent id={tourTargetId} style={{ flex: 1 }}>{button}</TourTarget>
           : button;
       },
     tabBarHideOnKeyboard: !isWeb,

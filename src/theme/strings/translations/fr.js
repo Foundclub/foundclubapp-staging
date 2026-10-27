@@ -24685,6 +24685,7 @@ export default {
       'm1-dock': 'Commence par ton équipe. Ouvre l’onglet Équipes.',
       'm1-dock2': 'Retourne dans Équipes pour créer ton équipe.',
       'm1-find': 'Ton équipe est déjà là : ouvre-la.',
+      'm1-find-dock': 'Ton équipe est déjà là : ouvre l’onglet Équipes.',
       'm1-gate': 'Une équipe appartient toujours à un club. Commence par trouver le tien. Pas de club ? « Je ne trouve pas mon club » te guidera pour le créer.',
       'm1-mine': 'C’est bien lui ? Dis-le.',
       'm1-new': 'Touche « Nouvelle équipe ».',

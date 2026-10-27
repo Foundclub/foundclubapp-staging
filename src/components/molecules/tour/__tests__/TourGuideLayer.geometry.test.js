@@ -90,3 +90,17 @@ describe('placeBubble', () => {
     expect(position.left + position.width).toBeLessThanOrEqual(W - 14);
   });
 });
+
+// TUTOE-CALIBRAGE (27/10) — émulateur, M3 sur l'accueil : la hauteur mesurée de
+// la bulle oscillait 103,2 ↔ 103,6 pt selon l'arrondi au pixel de sa position,
+// qui dépend de sa hauteur : boucle de rendus sans fin (2 347 lignes de journal,
+// interface jamais au repos). Une variation de moins d'un point est ignorée.
+describe('stableHeight', () => {
+  it('ignore une variation de moins d’un point, garde une vraie variation', () => {
+    // eslint-disable-next-line global-require
+    const { stableHeight } = require('../tourGuideGeometry');
+    expect(stableHeight(103.2, 103.6)).toBe(103.2);
+    expect(stableHeight(103.6, 103.2)).toBe(103.6);
+    expect(stableHeight(103.2, 130)).toBe(130);
+  });
+});

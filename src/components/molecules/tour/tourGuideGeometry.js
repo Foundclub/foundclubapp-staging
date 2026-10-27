@@ -8,6 +8,41 @@ const BUBBLE_WIDTH = 304;
 const BUBBLE_GAP = 14;
 
 /**
+ * Mesure d'une cible ramenée dans le repère de la couche. Les deux viennent de
+ * `measureInWindow` : sur Android il retire la barre d'état (edge-to-edge),
+ * mais la couche, plein écran, commence à 0 ; retrancher l'origine de la
+ * couche, mesurée de la même façon, annule l'écart quel qu'il soit (barre
+ * d'état, encoche, fenêtre réduite).
+ * @param {{ height: number; width: number; x: number; y: number } | null} rect - Mesure.
+ * @param {{ x: number; y: number }} origin - Origine de la couche, même mesure.
+ * @returns {{ height: number; width: number; x: number; y: number } | null} Mesure.
+ */
+export const toLayerFrame = (rect, origin) => (rect ? {
+  height: rect.height, width: rect.width, x: rect.x - origin.x, y: rect.y - origin.y,
+} : null);
+
+/**
+ * Style absolu d'un rectangle `{ x, y }` : `x`/`y` ne sont PAS des clés de
+ * style (ignorées en silence ⇒ tout s'empile en haut à gauche).
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Rectangle.
+ * @returns {{ height: number; left: number; position: 'absolute'; top: number;
+ *   width: number }} Style.
+ */
+export const toAbsoluteStyle = (rect) => ({
+  height: rect.height, left: rect.x, position: 'absolute', top: rect.y, width: rect.width,
+});
+
+/**
+ * Hauteur de bulle retenue : une variation de moins d'un point (arrondi au
+ * pixel, qui dépend de la position, qui dépend de la hauteur) est ignorée,
+ * sinon la bulle oscille et l'interface ne se pose jamais.
+ * @param {number} previous - Hauteur retenue.
+ * @param {number} next - Hauteur mesurée.
+ * @returns {number} Hauteur à retenir.
+ */
+export const stableHeight = (previous, next) => (Math.abs(next - previous) < 1 ? previous : next);
+
+/**
  * Découpe d'une cible : marge de 6, bornée à 2 du bord de l'écran.
  * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
  * @param {number} screenWidth - Largeur de l'écran.

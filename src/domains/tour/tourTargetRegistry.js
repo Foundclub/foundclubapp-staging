@@ -7,7 +7,7 @@
  * @typedef {(done: (rect: TourRect | null) => void) => void} TourMeasure
  */
 
-/** @type {Map<string, TourMeasure>} */
+/** @type {Map<string, { clipTo?: string; measure: TourMeasure }>} */
 const targets = new Map();
 /** @type {Set<() => void>} */
 const listeners = new Set();
@@ -20,13 +20,16 @@ const notify = () => {
  * Dépose la mesure d’une ancre.
  * @param {string} id
  * @param {TourMeasure} measure
+ * @param {{ clipTo?: string }} [options] - `clipTo` : ancre de la zone visible
+ *   qui la contient (ex. un ScrollView) ; la mesure y est coupée.
  * @returns {() => void} désinscription (ne retire que SA mesure)
  */
-export const registerTourTarget = (id, measure) => {
-  targets.set(id, measure);
+export const registerTourTarget = (id, measure, options = {}) => {
+  const entry = { clipTo: options.clipTo, measure };
+  targets.set(id, entry);
   notify();
   return () => {
-    if (targets.get(id) === measure) {
+    if (targets.get(id) === entry) {
       targets.delete(id);
       notify();
     }
@@ -40,22 +43,51 @@ export const registerTourTarget = (id, measure) => {
 export const notifyTourTargetLayout = () => notify();
 
 /**
- * Mesure une ancre montée (null si absente ou vide).
- * @param {string} id
+ * Mesure brute d'une ancre montée (null si absente ou vide).
+ * @param {string | undefined} id
  * @returns {Promise<TourRect | null>}
  */
-export const measureTourTarget = (id) => new Promise((resolve) => {
-  const measure = targets.get(id);
-  if (!measure) {
+const measureRaw = (id) => new Promise((resolve) => {
+  const entry = id ? targets.get(id) : null;
+  if (!entry) {
     resolve(null);
     return;
   }
   try {
-    measure((rect) => resolve(rect && rect.width > 0 && rect.height > 0 ? rect : null));
+    entry.measure((rect) => resolve(rect && rect.width > 0 && rect.height > 0 ? rect : null));
   } catch (error) {
     resolve(null);
   }
 });
+
+/**
+ * Intersection de deux rectangles (null s'ils ne se touchent pas).
+ * @param {TourRect} rect
+ * @param {TourRect} clip
+ * @returns {TourRect | null}
+ */
+const intersect = (rect, clip) => {
+  const x = Math.max(rect.x, clip.x);
+  const y = Math.max(rect.y, clip.y);
+  const width = Math.min(rect.x + rect.width, clip.x + clip.width) - x;
+  const height = Math.min(rect.y + rect.height, clip.y + clip.height) - y;
+  return width > 0 && height > 0 ? {
+    height, width, x, y,
+  } : null;
+};
+
+/**
+ * Mesure une ancre montée (null si absente ou vide), coupée à la zone visible
+ * de son conteneur `clipTo` quand il est monté.
+ * @param {string} id
+ * @returns {Promise<TourRect | null>}
+ */
+export const measureTourTarget = async (id) => {
+  const rect = /** @type {TourRect | null} */ (await measureRaw(id));
+  const clip = rect ? /** @type {TourRect | null} */ (await measureRaw(targets.get(id)?.clipTo))
+    : null;
+  return rect && clip ? intersect(rect, clip) : rect;
+};
 
 /**
  * Prévient quand une ancre apparaît, part ou bouge.

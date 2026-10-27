@@ -15,6 +15,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { measureTourTarget, subscribeToTourTargets } from '@/domains/tour/tourTargetRegistry';
+import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -22,7 +23,7 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
-  computeBlockers, placeBubble, toCutout,
+  computeBlockers, placeBubble, stableHeight, toAbsoluteStyle, toCutout, toLayerFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
 
 import { useTour } from '@/context/useTour';
@@ -31,8 +32,13 @@ import useReduceMotion from '@/hooks/useReduceMotion';
 /**
  * Couche du guide à missions (TUTOE, pack `04_COUCHE_VISUELLE.md`) : voile et
  * découpes des cibles, cadre pulsé, bulle, jauge (HUD), bandeau de récompense,
- * écrans plein cadre et pastille « Reprendre ». Montée une fois, à côté de
- * `TourBanner`, qui garde les tours v2 (joueur, dirigeant).
+ * écrans plein cadre. Montée une fois, à côté de `TourBanner`, qui garde les
+ * tours v2 (joueur, dirigeant). La pastille « Reprendre » vit dans le flux de
+ * l'accueil (`TourResumePill`), jamais par-dessus l'écran.
+ *
+ * Repère (TUTOE-CALIBRAGE) : cibles ET couche mesurées par `measureInWindow`,
+ * cibles ramenées dans le repère de la couche (`toLayerFrame`) ; taille de la
+ * couche prise sur sa propre mise en page. Aucun décalage par écran.
  *
  * Une étape dont aucune cible n'est montée (écran pas encore ancré, feuille
  * native) n'a ni voile ni blocage : la bulle se place en haut et l'écran reste
@@ -66,8 +72,36 @@ const resolveVariant = (step, rects, windowHeight) => {
   const variant = (step?.variants || [])
     .find((/** @type {any} */ candidate) => rects[candidate.targets?.[0]]);
   if (variant) return { targets: variant.targets, text: variant.text };
+  // Repli : aucune cible de l'étape à l'écran (ex. « équipe déjà là » vue de
+  // l'accueil) ⇒ on montre le chemin (l'onglet) au lieu d'une bulle sans voile.
+  const fallback = step?.fallback;
+  const hasOwnTarget = (step?.targets || []).some((/** @type {string} */ id) => rects[id]);
+  if (!hasOwnTarget && fallback && rects[fallback.targets?.[0]]) {
+    return { targets: fallback.targets, text: fallback.text };
+  }
   return { targets: step?.targets || [], text: step?.text || '' };
 };
+
+/**
+ * Origine de la couche dans le repère de `measureInWindow` (null si démontée).
+ * @param {any} node - Vue racine de la couche.
+ * @returns {Promise<{ x: number; y: number } | null>} Origine.
+ */
+const measureLayerOrigin = (node) => new Promise((resolve) => {
+  if (!node?.measureInWindow) {
+    resolve(null);
+    return;
+  }
+  node.measureInWindow((/** @type {number} */ x, /** @type {number} */ y) => resolve({ x, y }));
+});
+
+/**
+ * Arrondi au dixième pour le journal de calibrage.
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Rectangle.
+ * @returns {number[]} [x, y, largeur, hauteur].
+ */
+const roundRect = (rect) => [rect.x, rect.y, rect.width, rect.height]
+  .map((value) => Math.round(value * 10) / 10);
 
 /**
  * Couche du guide, montée une fois au-dessus du navigateur.
@@ -77,9 +111,20 @@ function TourGuideLayer() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { height, width } = useWindowDimensions();
+  const windowSize = useWindowDimensions();
+  const [layerSize, setLayerSize] = useState(
+    /** @type {{ height: number; width: number } | null} */ (null),
+  );
+  const height = layerSize?.height || windowSize.height;
+  const width = layerSize?.width || windowSize.width;
+  const layerRef = useRef(/** @type {any} */ (null));
+  const originRef = useRef({ x: 0, y: 0 });
   const reduceMotion = useReduceMotion();
   const tour = useTour();
+  // Monté hors du navigateur : sans ce garde, voile et bulle restaient sur
+  // l'écran de connexion (« Ajouter un compte », tournée du 27/10).
+  const [{ auth, isAddingAccount }] = useAppContext();
+  const isPrivateMode = Boolean(auth?.token) && !isAddingAccount;
   const {
     currentMission,
     currentStep,
@@ -99,10 +144,11 @@ function TourGuideLayer() {
   const pulse = useRef(new Animated.Value(0)).current;
   const appear = useRef(new Animated.Value(0)).current;
 
-  const isStepVisible = Boolean(isGuide && isTourActive && tourStatus === 'active'
-    && currentStep && !currentStep.kind);
+  const isStepVisible = Boolean(isPrivateMode && isGuide && isTourActive
+    && tourStatus === 'active' && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
+      ...(currentStep.fallback?.targets || []),
       ...(currentStep.subGuides || []).flatMap((/** @type {any} */ guide) => [
         guide.anchor,
         ...guide.bubbles.map((/** @type {any[]} */ bubble) => bubble[0]),
@@ -124,9 +170,17 @@ function TourGuideLayer() {
     let cancelled = false;
     const ids = targetKey.split('|');
     const measureAll = () => {
-      Promise.all(ids.map(measureTourTarget)).then((measured) => {
-        if (cancelled) return;
-        const next = Object.fromEntries(ids.map((id, index) => [id, measured[index]]));
+      Promise.all([
+        measureLayerOrigin(layerRef.current),
+        ...ids.map(measureTourTarget),
+      ]).then(([origin, ...measured]) => {
+        // Couche pas encore montée : origine inconnue, on attend la mesure suivante.
+        if (cancelled || !origin) return;
+        originRef.current = origin;
+        const next = Object.fromEntries(ids.map((id, index) => [
+          id,
+          toLayerFrame(/** @type {any} */ (measured[index]), origin),
+        ]));
         setRects((previous) => (
           JSON.stringify(previous) === JSON.stringify(next) ? previous : next
         ));
@@ -182,48 +236,49 @@ function TourGuideLayer() {
     return () => loop.stop();
   }, [isStepVisible, pulse, reduceMotion]);
 
-  if (!isGuide || !isTourActive) return null;
+  const measuredTargets = variant.targets.filter((id) => rects[id]);
+  const cutouts = measuredTargets.map((id) => toCutout(rects[id], width, height));
+  const primary = cutouts[0] || null;
+  // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
+  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide;
+  const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
+  const position = placeBubble({
+    bubbleHeight, height, insetTop: insets.top, primary, top: isTop, width,
+  });
 
-  if (tourStatus === 'paused') {
-    return (
-      <View
-        style={{
-          alignItems: 'center',
-          backgroundColor: withAlpha(Colors.chatSheet, 0.97),
-          borderColor: withAlpha(Colors.primary500, 0.35),
-          borderRadius: 999,
-          borderWidth: 1,
-          bottom: Math.max(insets.bottom, 12) + 92,
-          columnGap: 12,
-          elevation: 6,
-          flexDirection: 'row',
-          left: 14,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          position: 'absolute',
-        }}
-      >
-        <TouchableOpacity
-          accessibilityRole="button"
-          hitSlop={8}
-          onPress={tour.resumeTour}
-          style={{ justifyContent: 'center', minHeight: 28 }}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            {t('tourGuide.resume', 'Reprendre le tour')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityLabel={t('tourGuide.quit', 'Arrêter le guide')}
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={tour.exitTour}
-        >
-          <SvgIcon color={Colors.neutral400} height={12} name="close" width={12} />
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  // Journal de calibrage (développement seulement) : une ligne par état de
+  // l'étape, lue par `.local/outils/tutoe-calibrage.py` (cible, trou, bulle,
+  // dans le repère de la couche, en points).
+  const calibrationLine = __DEV__ && isStepVisible
+    ? JSON.stringify({
+      bubble: roundRect({
+        height: bubbleHeight, width: position.width, x: position.left, y: position.top,
+      }),
+      layer: [width, height],
+      origin: [originRef.current.x, originRef.current.y],
+      step: currentStep.id,
+      sub: sheetGuide ? `${sheetGuide.anchor}#${sheetIndex}` : null,
+      targets: measuredTargets.map((id, index) => ({
+        hole: roundRect(cutouts[index]), id, rect: roundRect(rects[id]),
+      })),
+      veil: withVeil,
+    })
+    : '';
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    if (calibrationLine) console.log(`[TUTOE-CALIB] ${calibrationLine}`);
+  }, [calibrationLine]);
+  const stepId = currentStep?.id || null;
+  useEffect(() => {
+    if (!__DEV__ || !isGuide) return;
+    // eslint-disable-next-line no-console
+    console.log(`[TUTOE-CALIB] ${JSON.stringify({ status: tourStatus, step: stepId })}`);
+  }, [isGuide, stepId, tourStatus]);
+
+  if (!isPrivateMode || !isGuide || !isTourActive) return null;
+
+  // En pause : rien par-dessus l'écran (pastille dans l'accueil, TourResumePill).
+  if (tourStatus === 'paused') return null;
 
   if (tourStatus === 'success' && reward) {
     return <RewardBanner insetTop={insets.top} reward={reward} title={currentMission?.title} />;
@@ -235,15 +290,6 @@ function TourGuideLayer() {
 
   if (!isStepVisible) return null;
 
-  const measuredTargets = variant.targets.filter((id) => rects[id]);
-  const cutouts = measuredTargets.map((id) => toCutout(rects[id], width, height));
-  const primary = cutouts[0] || null;
-  // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
-  const withVeil = Boolean(primary) && currentStep.veil !== false && !sheetGuide;
-  const isTop = currentStep.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
-  const position = placeBubble({
-    bubbleHeight, height, insetTop: insets.top, primary, top: isTop, width,
-  });
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
   const hasMoreSheetBubbles = Boolean(sheetGuide)
@@ -263,10 +309,21 @@ function TourGuideLayer() {
 
   return (
     <View
+      collapsable={false}
+      onLayout={(event) => {
+        const { height: layoutHeight, width: layoutWidth } = event.nativeEvent.layout;
+        setLayerSize((previous) => (
+          previous?.height === layoutHeight && previous?.width === layoutWidth
+            ? previous
+            : { height: layoutHeight, width: layoutWidth }
+        ));
+      }}
       pointerEvents="box-none"
+      ref={layerRef}
       style={{
         bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
       }}
+      testID="tour.layer"
     >
       {withVeil ? (
         <>
@@ -318,7 +375,8 @@ function TourGuideLayer() {
               accessible={false}
               key={`${blocker.x}-${blocker.y}`}
               onPress={() => {}}
-              style={{ ...blocker, position: 'absolute' }}
+              style={toAbsoluteStyle(blocker)}
+              testID={__DEV__ ? 'tour.blocker' : undefined}
             />
           ))}
         </>
@@ -339,6 +397,7 @@ function TourGuideLayer() {
             top: cutout.y,
             width: cutout.width,
           }}
+          testID={__DEV__ ? `tour.hole.${index}` : undefined}
         >
           {index === 0 && !reduceMotion ? (
             <Animated.View
@@ -376,7 +435,10 @@ function TourGuideLayer() {
       <Animated.View
         accessibilityLiveRegion="polite"
         accessibilityRole="alert"
-        onLayout={(event) => setBubbleHeight(event.nativeEvent.layout.height)}
+        onLayout={(event) => {
+          const measured = event.nativeEvent.layout.height;
+          setBubbleHeight((previous) => stableHeight(previous, measured));
+        }}
         style={{
           backgroundColor: Colors.neutral50,
           borderRadius: 18,
@@ -399,6 +461,7 @@ function TourGuideLayer() {
           }],
           width: position.width,
         }}
+        testID={__DEV__ ? 'tour.bubble' : undefined}
       >
         {position.arrow !== 'none' ? (
           <View

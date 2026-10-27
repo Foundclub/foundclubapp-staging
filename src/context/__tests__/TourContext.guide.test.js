@@ -130,6 +130,35 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.currentStep.id).toBe('m1-find');
   });
 
+  // TUTOE-CALIBRAGE (27/10, décision du chef) : une équipe où le coach est
+  // JOUEUR ne compte pas ; seules les équipes qu'il entraîne (trainedTeams).
+  it('une équipe où le coach est seulement joueur ne saute pas « Créer ton équipe »', () => {
+    mockUserData = { ...mockUserData, myTeams: [{ documentId: 't-joueur' }], trainedTeams: [] };
+    startAndOpen();
+    expect(tour.currentStep.id).toBe('m1-dock');
+  });
+
+  // Tournée : Julien entraîne U13 et Seniors d'un AUTRE club ; l'écran Équipes
+  // est celui de son club courant, où il n'entraîne rien.
+  it('des équipes entraînées dans un autre club ne sautent pas « Créer ton équipe »', () => {
+    mockUserData = {
+      ...mockUserData,
+      trainedTeams: [{ club: { documentId: 'autre-club' }, documentId: 't-ailleurs' }],
+    };
+    startAndOpen();
+    expect(tour.currentStep.id).toBe('m1-dock');
+  });
+
+  it('une équipe entraînée dans son club : « Retrouve ton équipe » vise une équipe entraînée', () => {
+    mockUserData = {
+      ...mockUserData,
+      trainedTeams: [{ club: { documentId: 'club-1' }, documentId: 't-ici' }],
+    };
+    startAndOpen();
+    expect(tour.currentStep.id).toBe('m1-find');
+    expect(tour.currentStep.targets).toEqual(['teams.trained.0']);
+  });
+
   it('un coach sans club passe par l’écran « Il te faut d’abord un club »', () => {
     mockUserData = { ...mockUserData, club: null };
     startAndOpen();
@@ -184,9 +213,10 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     route(RouteNames.SearchHome);
     route(RouteNames.EventWizardType);
     [
+      // DATESDABORD (staging) : le lieu AVANT « Date & horaire ».
       RouteNames.EventWizardTeam,
-      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
+      RouteNames.EventWizardLogistics,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
@@ -243,6 +273,9 @@ describe('guide Entraîneur — reprise', () => {
     route(RouteNames.SearchHome);
     route(RouteNames.EventWizardType);
     route(RouteNames.EventWizardTeam);
+    // TUTOE-CALIBRAGE : ordre réel du tunnel (DATESDABORD), lieu puis date.
+    route(RouteNames.EventWizardLocation);
+    expect(tour.currentStep.id).toBe('m3-place');
     route(RouteNames.EventWizardLogistics);
     expect(tour.currentStep.id).toBe('m3-when');
 
@@ -260,6 +293,22 @@ describe('guide Entraîneur — reprise', () => {
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
       screen: RouteNames.EventWizardType,
     });
+  });
+
+  // TUTOE-CALIBRAGE (27/10, décision du chef) : une pause PENDANT la séance
+  // reprend à l'étape en pause ; seul un relancement de l'app (brouillon
+  // perdu) repart au début du tunnel (`resumeFrom`, témoin ci-dessus).
+  it('pause puis « Reprendre » dans la même séance : retour à l’étape en pause', () => {
+    mockUserData = { ...mockUserData, club: null };
+    startAndOpen();
+    route(RouteNames.MyTeamList);
+    route(RouteNames.TeamWizardName);
+    interaction('clubGate.search');
+    expect(tour.currentStep.id).toBe('m1-csearch');
+    act(() => { tour.pauseTour(); });
+    act(() => { tour.resumeTour(); });
+    expect(tour.tourStatus).toBe('active');
+    expect(tour.currentStep.id).toBe('m1-csearch');
   });
 
   it('« Quitter » met en pause sans effacer la progression', () => {
