@@ -26,12 +26,13 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { CARD_COMPLETION_STEP, listMissingCardSteps } from '@/domains/playerCard/cardCompletion';
 import { getCardConsentState } from '@/domains/playerCard/cardConsent';
 import { buildCardDisclosure, buildCardShareMessage } from '@/domains/playerCard/cardMessages';
-import { buildPlayerCardModel } from '@/domains/playerCard/cardModel';
+import { buildPlayerCardModel, computeNextRarityStep } from '@/domains/playerCard/cardModel';
 import { buildPlayerCardProps } from '@/domains/playerCard/cardProps';
 import useShareCard from '@/domains/playerCard/useShareCard';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import CardDisclosureSheet from '@/components/organisms/playerCard/CardDisclosureSheet';
 import CardSheen from '@/components/organisms/playerCard/CardSheen';
@@ -51,6 +52,11 @@ import { formatHeight } from '@/utils/heightCentimeters';
 import { getImageUrl } from '@/utils/imageUrl';
 
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
+
+/**
+ * @typedef {{ done?: boolean, mode: 'full' | 'share', startRarity?: string, steps: string[] }}
+ *   ParcoursCarte
+ */
 
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -81,7 +87,7 @@ function PlayerCardScreen({ navigation, route }) {
   // CARTECODE-PARCOURS — « Compléter ma carte » : ses étapes, et ce que la personne a répondu
   // (le brouillon remplit la carte en direct, avant même que le profil soit relu).
   const [parcours, setParcours] = useState(
-    /** @type {{ done?: boolean, mode: 'full' | 'share', steps: string[] } | null} */ (null),
+    /** @type {ParcoursCarte | null} */ (null),
   );
   const [draft, setDraft] = useState({});
   const draftRef = useRef({});
@@ -269,7 +275,9 @@ function PlayerCardScreen({ navigation, route }) {
   };
 
   const openCompletion = () => {
-    if (missingSteps.length) setParcours({ mode: 'full', steps: missingSteps });
+    // CARTEFIN : la rareté du départ, pour dire à la fin « Commune, puis Rare ».
+    if (!missingSteps.length) return;
+    setParcours({ mode: 'full', startRarity: model.rarity, steps: missingSteps });
   };
 
   const handleDraft = (patch) => {
@@ -325,6 +333,57 @@ function PlayerCardScreen({ navigation, route }) {
     </View>
   ) : null;
 
+  // CARTEFIN (planche v2, partie 8, écran 7) — fin du parcours : la rareté gagnée (« Commune »,
+  // chevron, « Rare » : pas de flèche typographique, SANS-EMOJI), puis la marche suivante la
+  // plus simple (barème de computeCardRarity).
+  const nomRarete = (rarity) => t(`playerCard.rarity.${rarity}`).toLowerCase();
+  const capitale = (mot) => mot.replace(/^./, (c) => c.toUpperCase());
+  const marche = parcours?.done ? computeNextRarityStep({
+    clubCount: model.historyClubCount,
+    fill: model.fill,
+    isTeamMember: Array.isArray(cardUser.myTeams) && cardUser.myTeams.length > 0,
+    matchCount,
+  }) : null;
+  const gestes = (marche?.actions || []).map(({ count, kind }) => {
+    if (kind !== 'matches') return t(`playerCard.completion.nextStep.${kind}`, { count });
+    return matchCount > 0
+      ? t('playerCard.completion.nextStep.matchesMore', { count })
+      : t('playerCard.completion.nextStep.matches', { count });
+  });
+  const aMonte = Boolean(marche && parcours.startRarity && parcours.startRarity !== marche.rarity);
+  const et = t('playerCard.completion.nextStep.and');
+  const listeGestes = gestes.length > 1
+    ? `${gestes.slice(0, -1).join(', ')} ${et} ${gestes[gestes.length - 1]}`
+    : gestes[0];
+  const nextStepBanner = marche ? (
+    <View style={[styles.banner, Spaces.gap[8], { borderColor: Colors.primary500 }]}>
+      <View
+        accessibilityLabel={aMonte ? t('playerCard.completion.nextStep.climb', {
+          from: nomRarete(parcours.startRarity), to: nomRarete(marche.rarity),
+        }) : undefined}
+        accessible
+        style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+      >
+        {aMonte ? (
+          <>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {capitale(nomRarete(parcours.startRarity))}
+            </Text>
+            <GlyphIcon color={Colors.primary500} name="chevronRight" size={16} />
+          </>
+        ) : null}
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{capitale(nomRarete(marche.rarity))}</Text>
+      </View>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {marche.next && gestes.length
+          ? t('playerCard.completion.nextStep.goal', {
+            actions: listeGestes, rarity: nomRarete(marche.next),
+          })
+          : t('playerCard.completion.nextStep.top')}
+      </Text>
+    </View>
+  ) : null;
+
   // ponytail: carte modèle FICTIVE (aucun compte derrière) ; ses mots passent par la traduction,
   // les noms propres restent. Sortie : la tirer du serveur si un jour elle doit changer seule.
   const exampleCardProps = {
@@ -367,6 +426,7 @@ function PlayerCardScreen({ navigation, route }) {
                   : t('playerCard.completion.done.title', 'Ta carte est complète')}
               </Text>
               {miniCard}
+              {nextStepBanner}
               {missingSteps.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral300, styles.centre]}>
                   {t(

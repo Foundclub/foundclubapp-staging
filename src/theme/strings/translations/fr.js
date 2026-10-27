@@ -17543,6 +17543,22 @@ export default {
         position: 'poste',
       },
       next: 'Suivant',
+      // CARTEFIN (planche v2, partie 8, écran 7) : la prochaine marche de rareté.
+      nextStep: {
+        and: 'et',
+        climb: 'De {{from}} à {{to}}',
+        clubs_one: 'déclare {{count}} club de plus dans ton parcours',
+        clubs_other: 'déclare {{count}} clubs de plus dans ton parcours',
+        fill_one: 'remplis {{count}} case de plus sur ta carte',
+        fill_other: 'remplis {{count}} cases de plus sur ta carte',
+        goal: 'Pour passer {{rarity}} : {{actions}}.',
+        matches_one: 'joue {{count}} match avec ton équipe',
+        matches_other: 'joue {{count}} matchs avec ton équipe',
+        matchesMore_one: 'joue encore {{count}} match avec ton équipe',
+        matchesMore_other: 'joue encore {{count}} matchs avec ton équipe',
+        team: 'rejoins une équipe',
+        top: 'C\'est la plus haute rareté.',
+      },
       number: {
         label: 'Numéro',
         title: 'Ton numéro de maillot',
@@ -17552,6 +17568,14 @@ export default {
         title: 'Ta taille et ton poids',
       },
       position: {
+        // CARTEFIN : le vrai sport du joueur, une phrase entière par sport (« au basket »).
+        bySport: {
+          basketball: 'Ton poste au basket',
+          football: 'Ton poste au football',
+          handball: 'Ton poste au handball',
+          rugby: 'Ton poste au rugby',
+          volleyball: 'Ton poste au volley',
+        },
         title: 'Ton poste',
       },
       saveError: 'Impossible d\'enregistrer pour le moment. '

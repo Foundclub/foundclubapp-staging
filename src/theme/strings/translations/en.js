@@ -16953,6 +16953,22 @@ export default {
         position: 'position',
       },
       next: 'Next',
+      // CARTEFIN (board v2, part 8, screen 7): the next rarity step.
+      nextStep: {
+        and: 'and',
+        climb: 'From {{from}} to {{to}}',
+        clubs_one: 'add {{count}} more club to your history',
+        clubs_other: 'add {{count}} more clubs to your history',
+        fill_one: 'fill in {{count}} more box on your card',
+        fill_other: 'fill in {{count}} more boxes on your card',
+        goal: 'To reach {{rarity}}: {{actions}}.',
+        matches_one: 'play {{count}} match with your team',
+        matches_other: 'play {{count}} matches with your team',
+        matchesMore_one: 'play {{count}} more match with your team',
+        matchesMore_other: 'play {{count}} more matches with your team',
+        team: 'join a team',
+        top: 'This is the highest rarity.',
+      },
       number: {
         label: 'Number',
         title: 'Your shirt number',
@@ -16962,6 +16978,14 @@ export default {
         title: 'Your height and weight',
       },
       position: {
+        // CARTEFIN: the player's real sport, one full sentence per sport.
+        bySport: {
+          basketball: 'Your position in basketball',
+          football: 'Your position in football',
+          handball: 'Your position in handball',
+          rugby: 'Your position in rugby',
+          volleyball: 'Your position in volleyball',
+        },
         title: 'Your position',
       },
       saveError: "Can't save right now. Check your connection, or skip this step.",

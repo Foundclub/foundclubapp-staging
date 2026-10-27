@@ -187,7 +187,11 @@ function CardCompletionFlow({
     [E.CITY]: t('playerCard.completion.city.title', 'Ta ville'),
     [E.NUMBER]: t('playerCard.completion.number.title', 'Ton numéro de maillot'),
     [E.PHYSIQUE]: t('playerCard.completion.physique.title', 'Ta taille et ton poids'),
-    [E.POSITION]: t('playerCard.completion.position.title', 'Ton poste'),
+    // CARTEFIN : « Ton poste au <son sport> » ; un sport sans phrase garde « Ton poste ».
+    [E.POSITION]: t(
+      `playerCard.completion.position.bySport.${String(user?.preferredSport || '').toLowerCase()}`,
+      { defaultValue: t('playerCard.completion.position.title', 'Ton poste') },
+    ),
   }[step];
 
   const aide = {

@@ -308,6 +308,64 @@ export const computeCardRarity = ({
 };
 
 /**
+ * CARTEFIN (planche v2, partie 8, écran 7) — la prochaine marche : ce qu'il faut faire, au plus
+ * simple, pour passer la rareté suivante. Chaque geste est simulé avec `computeCardRarity` (le
+ * barème reste écrit une fois). D'abord ce que le joueur fait seul et tout de suite (remplir des
+ * cases de la carte, déclarer des clubs du parcours : le moins de gestes, la carte d'abord à
+ * égalité) ; seulement si ça ne suffit pas, rejoindre une équipe, puis jouer 5, puis 20 matchs.
+ * @param {{ clubCount?: number, fill?: number, isTeamMember?: boolean, matchCount?: number }} args
+ * @returns {{ actions: Array<{ kind: 'fill'|'clubs'|'team'|'matches', count: number }>,
+ *   next: string|null, rarity: string, score: number }}
+ */
+export const computeNextRarityStep = ({
+  clubCount = 0, fill = 0, isTeamMember = false, matchCount = 0,
+} = {}) => {
+  const depart = {
+    clubCount: Math.min(clubCount, 3),
+    fill: Math.min(fill, CARD_FILL_TOTAL),
+    isTeamMember,
+    matchCount,
+  };
+  const { rarity, score } = computeCardRarity(depart);
+  const next = RARITY_ORDER[RARITY_ORDER.indexOf(rarity) + 1] || null;
+  const marche = (actions) => ({
+    actions, next, rarity, score,
+  });
+  if (!next) return marche([]);
+  const seuil = RARITY_FLOORS.find(([, palier]) => palier === next)[0];
+
+  // Les étages, du plus simple au plus long : chacun garde tout ce que le précédent permettait.
+  const etages = [
+    { isTeamMember: depart.isTeamMember, matchCount: depart.matchCount },
+    { isTeamMember: true, matchCount: depart.matchCount },
+    { isTeamMember: true, matchCount: Math.max(depart.matchCount, 5) },
+    { isTeamMember: true, matchCount: Math.max(depart.matchCount, 20) },
+  ];
+  // Cases à remplir et clubs à déclarer : le moins de gestes ; à égalité, le moins de clubs.
+  const jusqua = (max) => Array.from({ length: max + 1 }, (_v, n) => n);
+  const combinaisons = jusqua(CARD_FILL_TOTAL - depart.fill)
+    .flatMap((cases) => jusqua(3 - depart.clubCount).map((clubs) => ({ cases, clubs })))
+    .sort((a, b) => (a.cases + a.clubs) - (b.cases + b.clubs) || a.clubs - b.clubs);
+  const trouve = etages
+    .map((etage) => ({
+      etage,
+      gestes: combinaisons.find(({ cases, clubs }) => computeCardRarity({
+        ...etage, clubCount: depart.clubCount + clubs, fill: depart.fill + cases,
+      }).score >= seuil),
+    }))
+    .find(({ gestes }) => gestes);
+  if (!trouve) return marche([]);
+  const { etage, gestes } = trouve;
+  return marche([
+    gestes.cases && { count: gestes.cases, kind: 'fill' },
+    gestes.clubs && { count: gestes.clubs, kind: 'clubs' },
+    etage.isTeamMember && !depart.isTeamMember && { count: 1, kind: 'team' },
+    etage.matchCount > depart.matchCount
+      && { count: etage.matchCount - depart.matchCount, kind: 'matches' },
+  ].filter(Boolean));
+};
+
+/**
  * CARTECODE Q3 A — la bande du club : le club du compte, sinon celui de son équipe principale ;
  * l'équipe dessous. Le logo, s'il existe (sinon le dessin pose le shield aux initiales).
  * @param {object} user
