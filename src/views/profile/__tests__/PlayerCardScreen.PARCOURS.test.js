@@ -22,6 +22,10 @@ const mockParentalCards = [];
 const mockAddressInputs = [];
 const mockUpdateMe = jest.fn();
 const mockRefetch = jest.fn();
+/** @type {any} */
+let mockStats;
+/** @type {any[]} */
+let mockHistories;
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (...args) => jest.requireActual('i18next').t(...args) }),
@@ -61,7 +65,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 }));
 
 jest.mock('@/services/userHistory/userHistoryQueries', () => ({
-  useGetMyHistories: () => ({ data: [] }),
+  useGetMyHistories: () => ({ data: mockHistories }),
 }));
 
 jest.mock('@/services/playerCard/uploadCardImage', () => ({ uploadCardImage: jest.fn() }));
@@ -81,7 +85,7 @@ jest.mock(
 );
 
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
-  useGetPersonalStats: () => ({ data: null }),
+  useGetPersonalStats: () => ({ data: mockStats }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -235,6 +239,8 @@ beforeEach(() => {
   mockParentalCards.length = 0;
   mockAddressInputs.length = 0;
   mockUser = SAMIR;
+  mockStats = null;
+  mockHistories = [];
   global.mockDisclosureProps = null;
   mockUpdateMe.mockImplementation(async (patch) => ({ ...mockUser, ...patch }));
 });
@@ -270,7 +276,7 @@ describe('CARTECODE-PARCOURS 1 — toucher sa carte ouvre « Compléter ma carte
 
     expect(titres).toEqual([
       'Ta date de naissance',
-      'Ton poste',
+      'Ton poste au football',
       'Ta taille et ton poids',
       'Ta ville',
       'Ton numéro de maillot',
@@ -360,7 +366,7 @@ describe('CARTECODE-PARCOURS 2 — une date de 13-14 ans demande la déclaration
     await toucher(arbre, 'Suivant');
 
     expect(mockUpdateMe).toHaveBeenCalledWith({ birthdate: '1998-03-14' });
-    expect(textes(arbre)).toContain('Ton poste');
+    expect(textes(arbre)).toContain('Ton poste au football');
   });
 });
 
@@ -421,6 +427,74 @@ describe('CARTECODE-PARCOURS 4 — fin d inscription : la carte modèle, puis la
     await toucher(arbre, 'Découvrir ma carte');
     await toucher(arbre, 'Plus tard, continuer');
     expect(navigation.navigate).toHaveBeenCalledWith('Home');
+  });
+});
+
+describe('CARTEFIN 1 — l écran du poste dit le vrai sport du joueur', () => {
+  it('basket : « Ton poste au basket », avec les postes du basket', async () => {
+    mockUser = { ...COMPLET, position: '', preferredSport: 'basketball' };
+    const { arbre } = await monter();
+    await toucher(arbre, 'Compléter ma carte');
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Ton poste au basket', 'Meneur']));
+  });
+});
+
+describe('CARTEFIN 2 — la fin du parcours donne la prochaine marche', () => {
+  // 12 cases sur 13 (46 : déjà rare), ni club, ni équipe, ni match. Il manque le numéro.
+  const PRESQUE = {
+    ...COMPLET,
+    avatar: { url: '/a.jpg' },
+    bestLevel: 'Départemental 2',
+    category: 'Sénior',
+    jerseyNumber: null,
+    nationality: 'France',
+    section: { name: 'Masculine' },
+  };
+  const finir = async () => {
+    const { arbre } = await monter();
+    await toucher(arbre, 'Compléter ma carte');
+    await taper(arbre, 'Numéro', '9');
+    await toucher(arbre, 'Terminer');
+    return arbre;
+  };
+
+  it('« Commune », chevron, « Rare », puis la marche la plus simple vers épique', async () => {
+    // 10 cases (38, commune) ; le numéro en fait 11 (42, rare). Épique à 65 : 2 cases + 3 clubs.
+    mockUser = { ...PRESQUE, category: null, section: null };
+    const arbre = await finir();
+    // SANS-EMOJI : pas de flèche typographique ; le lecteur d écran lit la montée en mots.
+    expect(arbre.root.findAll((n) => n.props.accessibilityLabel === 'De commune à rare'))
+      .not.toHaveLength(0);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Commune',
+      'Rare',
+      'Pour passer épique : remplis 2 cases de plus sur ta carte '
+        + 'et déclare 3 clubs de plus dans ton parcours.',
+    ]));
+  });
+
+  it('rareté inchangée : son nom seul ; les matchs comptés depuis ceux déjà joués', async () => {
+    mockUser = { ...PRESQUE, myTeams: [{ club: { name: 'AS Aix' }, name: 'Séniors' }] };
+    mockHistories = [1, 2, 3].map((n) => ({ customClubName: `Club ${n}`, startYear: 2010 + n }));
+    mockStats = { overall: { matches: 2 } };
+    const arbre = await finir();
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Épique',
+      'Pour passer légendaire : joue encore 3 matchs avec ton équipe.',
+    ]));
+    expect(arbre.root.findAll((n) => /^De /.test(n.props.accessibilityLabel || '')))
+      .toHaveLength(0);
+  });
+
+  it('légendaire : plus de marche, l écran le dit', async () => {
+    mockUser = { ...PRESQUE, myTeams: [{ club: { name: 'AS Aix' }, name: 'Séniors' }] };
+    mockHistories = [1, 2, 3].map((n) => ({ customClubName: `Club ${n}`, startYear: 2010 + n }));
+    mockStats = { overall: { matches: 20 } };
+    const arbre = await finir();
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Légendaire', 'C\'est la plus haute rareté.',
+    ]));
+    expect(textes(arbre).join(' ')).not.toMatch(/Pour passer/);
   });
 });
 
