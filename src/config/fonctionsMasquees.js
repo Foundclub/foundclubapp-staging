@@ -27,7 +27,7 @@ export const LEAGUE_SUR_ACCUEIL = false;
  * (`SearchHubScreen.js`) et l'onglet grisé de la recherche restent en place.
  * @type {boolean}
  */
-export const RESERVATIONS_SUR_ACCUEIL = false;
+export const RESERVATIONS_SUR_ACCUEIL = true;
 
 /**
  * RESA-L5A1 (13/10/2026) — l'espace du GÉRANT DE COMPLEXE (chantier Réservation) :
@@ -42,7 +42,7 @@ export const RESERVATIONS_SUR_ACCUEIL = false;
  * relancer les témoins qui l'attendent éteint (RB.bascule.test.js, fonctionsMasquees.test.js).
  * @type {boolean}
  */
-export const COMPLEXES_GERANT = false;
+export const COMPLEXES_GERANT = true;
 
 /**
  * RESA-L6A (14/10/2026) — la RÉSERVATION D'UN TERRAIN, CÔTÉ JOUEUR (chantier Réservation) :
@@ -60,7 +60,7 @@ export const COMPLEXES_GERANT = false;
  * SearchHubScreen).
  * @type {boolean}
  */
-export const COMPLEXES_JOUEUR = false;
+export const COMPLEXES_JOUEUR = true;
 
 /**
  * Les cases de l'accueil que les interrupteurs éteints retirent, par leur clef
