@@ -28,14 +28,17 @@ import Svg, {
   Defs,
   G,
   Line,
+  Mask,
   Path,
   RadialGradient,
   Rect,
   Stop,
+  Image as SvgImage,
   LinearGradient as SvgLinearGradient,
-  Svg as SvgNested,
   Text as SvgText,
 } from 'react-native-svg';
+
+import { getClubInitials } from '@/domains/club/clubUseCase';
 
 import BackJerseyFallback from './BackJerseyFallback';
 import { CourtLines } from './courts';
@@ -74,6 +77,12 @@ const CYAN_HI = '#66d2f9';
 const DIM = '#9fb3ba';
 const TXT = '#eaf7fd';
 const PANEL = 'rgba(4,28,38,0.85)';
+// La photo, à droite de la scène, posée sur sa ligne du bas.
+const PHOTO = {
+  height: 516, width: 555, x: 396, y: LISERE + STAGE_H - 516,
+};
+// Le terrain se dessine dans une boîte 200 x 200, étirée sur la scène.
+const TERRAIN = `translate(${LISERE} ${LISERE}) scale(${(W - 2 * LISERE) / 200} ${STAGE_H / 200})`;
 
 /**
  * Liseré (stops du dégradé du contour), couleur d'accent et reflet, par rareté.
@@ -205,13 +214,15 @@ const font = (s, size, line = size * 1.2) => ({
   includeFontPadding: false,
   lineHeight: line * s,
 });
-const initiales = (nom) => String(nom || '')
-  .split(/[\s-]+/)
-  .filter(Boolean)
-  .slice(0, 3)
-  .map((mot) => mot[0])
-  .join('')
-  .toUpperCase();
+// Règle de ClubLogoMark (sans les mots de liaison), bornée à 3 lettres pour la petite case.
+const initiales = (nom) => {
+  const texte = String(nom || '').trim();
+  return (getClubInitials(texte) || texte.slice(0, 2)).slice(0, 3).toUpperCase();
+};
+// « Sénior (+18 ans) » : la précision d'âge reste au profil, la case garde le nom (planche).
+const sansPrecision = (value) => (
+  typeof value === 'string' ? value.replace(/\s*\([^)]*\)\s*$/, '') : value
+);
 
 /**
  * Logo : l'image du club sur une plaque blanche, sinon le shield FoundClub aux initiales
@@ -233,6 +244,7 @@ export function CardLogo({
             borderRadius: 16 * s,
             borderWidth: 3.5 * s,
             height: cote,
+            overflow: 'hidden',
             width: cote,
           },
         ]}
@@ -245,19 +257,29 @@ export function CardLogo({
       </View>
     );
   }
+  // La taille du shield est écrite en toutes lettres (comme TeamShield) : avec absoluteFill
+  // seul, l'iPhone le dessinait à sa taille native, 361 pt, par-dessus la carte (CARTEAFF).
   return (
     <View
       style={{
         alignItems: 'center',
         height: cote,
         justifyContent: 'center',
+        overflow: 'hidden',
         width: cote,
       }}
     >
       <Image
         resizeMode="contain"
         source={SHIELD_IMAGE}
-        style={[StyleSheet.absoluteFill, { tintColor: '#99e1fb' }]}
+        style={{
+          height: cote,
+          left: 0,
+          position: 'absolute',
+          tintColor: '#99e1fb',
+          top: 0,
+          width: cote,
+        }}
       />
       <Text
         allowFontScaling={false}
@@ -395,17 +417,28 @@ function PlayerCardBase({
     [t('playerCard.info.height', 'TAILLE'), taille],
     [t('playerCard.info.weight', 'POIDS'), poids],
     [t('playerCard.info.level', 'NIVEAU'), niveau],
-    [t('playerCard.info.category', 'CATÉGORIE'), categorie],
+    [t('playerCard.info.category', 'CATÉGORIE'), sansPrecision(categorie)],
     [t('playerCard.info.nationalityShort', 'NATION.'), nationalite],
   ].filter(([, v]) => v !== undefined && (ecran || !estVide(v)));
+  // Rangées de 3 cases souples : des largeurs fixes qui faisaient pile la ligne passaient la
+  // 3ᵉ case à la ligne sur un arrondi (2 colonnes sur l'iPhone, CARTEAFF).
+  const rangees = [];
+  for (let i = 0; i < cases.length; i += 3) rangees.push(cases.slice(i, i + 3));
   const numeroVide = estVide(numero);
   const sportPoste = [sport, poste].filter((v) => !estVide(v)).join(' · ');
   const montrerVille = ville !== undefined && (ecran || !estVide(ville));
   const disponible = up(statut) === 'DISPONIBLE';
   const parcours = historique.slice(0, 3);
 
+  const montrerPhoto = Boolean(photo) && !locked;
+
   return (
-    <View collapsable={false} style={{ height: h, width }}>
+    <View
+      collapsable={false}
+      style={{
+        borderRadius: 44 * s, height: h, overflow: 'hidden', width,
+      }}
+    >
       <Svg height={h} style={StyleSheet.absoluteFill} viewBox={`0 0 ${W} ${H}`} width={width}>
         <Defs>
           <SvgLinearGradient id="lisere" x1="0" x2="1" y1="0" y2="1">
@@ -433,37 +466,95 @@ function PlayerCardBase({
           <ClipPath id="interieur">
             <Path d={INNER} />
           </ClipPath>
+          <ClipPath id="zoneScene">
+            <Rect height={STAGE_H} width={W - 2 * LISERE} x={LISERE} y={LISERE} />
+          </ClipPath>
+          {/* La photo se fond dans la scène : bords gauche et droit, haut, et tout le bas */}
+          <SvgLinearGradient id="degradeCotes" x1="0" x2="1" y1="0" y2="0">
+            <Stop offset={0} stopColor="#ffffff" stopOpacity={0} />
+            <Stop offset={0.3} stopColor="#ffffff" stopOpacity={1} />
+            <Stop offset={0.9} stopColor="#ffffff" stopOpacity={1} />
+            <Stop offset={1} stopColor="#ffffff" stopOpacity={0} />
+          </SvgLinearGradient>
+          <SvgLinearGradient id="degradeBas" x1="0" x2="0" y1="0" y2="1">
+            <Stop offset={0} stopColor="#ffffff" stopOpacity={0} />
+            <Stop offset={0.12} stopColor="#ffffff" stopOpacity={1} />
+            <Stop offset={0.6} stopColor="#ffffff" stopOpacity={1} />
+            <Stop offset={1} stopColor="#ffffff" stopOpacity={0} />
+          </SvgLinearGradient>
+          <Mask
+            height={PHOTO.height}
+            id="fonduPhotoCotes"
+            maskUnits="userSpaceOnUse"
+            width={PHOTO.width}
+            x={PHOTO.x}
+            y={PHOTO.y}
+          >
+            <Rect
+              fill="url(#degradeCotes)"
+              height={PHOTO.height}
+              width={PHOTO.width}
+              x={PHOTO.x}
+              y={PHOTO.y}
+            />
+          </Mask>
+          <Mask
+            height={PHOTO.height}
+            id="fonduPhotoBas"
+            maskUnits="userSpaceOnUse"
+            width={PHOTO.width}
+            x={PHOTO.x}
+            y={PHOTO.y}
+          >
+            <Rect
+              fill="url(#degradeBas)"
+              height={PHOTO.height}
+              width={PHOTO.width}
+              x={PHOTO.x}
+              y={PHOTO.y}
+            />
+          </Mask>
         </Defs>
         <Path d={OUTER} fill="url(#lisere)" />
         <G clipPath="url(#interieur)">
           <Rect fill="url(#fond)" height={H} width={W} x={0} y={0} />
           <Rect fill="url(#scene)" height={STAGE_H} width={W} x={0} y={LISERE} />
           <Rect fill="url(#halo)" height={STAGE_H} width={W} x={0} y={LISERE} />
-          <SvgNested
-            height={STAGE_H}
-            preserveAspectRatio="none"
-            viewBox="0 0 200 200"
-            width={W - 2 * LISERE}
-            x={LISERE}
-            y={LISERE}
-          >
-            <CourtLines sport={sport} strokeWidth={1.6} />
-          </SvgNested>
-          {!numeroVide ? (
-            <SvgText
-              fill="none"
-              fontFamily="Montserrat-Black"
-              fontSize={400}
-              opacity={0.75}
-              stroke={look.accent}
-              strokeWidth={4.5}
-              transform="skewX(-8)"
-              x={LISERE + 80}
-              y={LISERE + 360}
-            >
-              {String(numero)}
-            </SvgText>
-          ) : null}
+          {/* La scène, découpée à son cadre. Le terrain est un groupe mis à l'échelle, pas un
+              <Svg> imbriqué : sur l'iPhone, celui-ci étirait ce qui venait après (CARTEAFF). */}
+          <G clipPath="url(#zoneScene)">
+            <G transform={TERRAIN}>
+              <CourtLines sport={sport} strokeWidth={1.6} />
+            </G>
+            {!numeroVide ? (
+              <SvgText
+                fill="none"
+                fontFamily="Montserrat-Black"
+                fontSize={400}
+                opacity={0.75}
+                stroke={look.accent}
+                strokeWidth={4.5}
+                transform="skewX(-8)"
+                x={LISERE + 80}
+                y={LISERE + 360}
+              >
+                {String(numero)}
+              </SvgText>
+            ) : null}
+            {montrerPhoto ? (
+              <G mask="url(#fonduPhotoBas)">
+                <SvgImage
+                  height={PHOTO.height}
+                  href={photo?.uri || photo}
+                  mask="url(#fonduPhotoCotes)"
+                  preserveAspectRatio="xMidYMid slice"
+                  width={PHOTO.width}
+                  x={PHOTO.x}
+                  y={PHOTO.y}
+                />
+              </G>
+            ) : null}
+          </G>
           <Rect fill="url(#lisere)" height={5} width={W} x={0} y={LISERE + STAGE_H - 5} />
           <Rect fill="url(#reflet)" height={H} width={W} x={0} y={0} />
         </G>
@@ -479,20 +570,17 @@ function PlayerCardBase({
         />
       </Svg>
 
-      {/* La photo, à droite de la scène, fondue en bas */}
+      {/* Sans photo : « + PHOTO » à l'écran, sinon le dos de maillot */}
       <View
         style={{
-          height: 516 * s,
-          left: 396 * s,
+          height: PHOTO.height * s,
+          left: PHOTO.x * s,
           overflow: 'hidden',
           position: 'absolute',
-          top: (LISERE + STAGE_H - 516) * s,
-          width: 555 * s,
+          top: PHOTO.y * s,
+          width: PHOTO.width * s,
         }}
       >
-        {photo && !locked ? (
-          <Image resizeMode="cover" source={photo} style={StyleSheet.absoluteFill} />
-        ) : null}
         {!photo && ecran && !locked ? (
           <View
             style={[
@@ -533,10 +621,6 @@ function PlayerCardBase({
             <BackJerseyFallback accent={CYAN} name={nom} number={numeroVide ? '' : numero} />
           </View>
         ) : null}
-        <LinearGradient
-          colors={['rgba(5,34,49,0)', 'rgba(5,34,49,1)']}
-          style={[styles.fondu, { height: 200 * s }]}
-        />
       </View>
 
       {/* En haut : le logo FoundClub et la rareté */}
@@ -592,17 +676,18 @@ function PlayerCardBase({
         </View>
       </View>
 
-      {/* Le nom, sur un fondu, en bas de la scène */}
+      {/* Le nom, sur un fondu posé SUR le bas de la scène (planche : bottom 0), de bord à bord */}
       <LinearGradient
         colors={['rgba(2,22,32,0)', 'rgba(2,22,32,0.92)']}
         locations={[0, 0.55]}
         style={{
-          left: PAD * s,
+          bottom: h - (LISERE + STAGE_H) * s,
+          left: LISERE * s,
           paddingBottom: 24 * s,
+          paddingHorizontal: (PAD - LISERE) * s,
           paddingTop: 80 * s,
           position: 'absolute',
-          right: PAD * s,
-          top: (LISERE + STAGE_H) * s - 300 * s,
+          right: LISERE * s,
         }}
       >
         {numeroVide && ecran ? (
@@ -707,11 +792,22 @@ function PlayerCardBase({
             </View>
           </View>
         ) : null}
-        {cases.length ? (
-          <View style={[styles.grille, { gap: 13 * s }]}>
-            {cases.map(([label, valeur]) => (
-              <View key={label} style={{ width: ((W - 2 * PAD - 26) / 3) * s }}>
-                <Case label={label} manquant={manquant} s={s} value={valeur} />
+        {rangees.length ? (
+          <View style={{ gap: 13 * s }}>
+            {rangees.map((rangee) => (
+              <View
+                key={rangee[0][0]}
+                style={[styles.grille, { gap: 13 * s }]}
+                testID="carte-grille-rangee"
+              >
+                {rangee.map(([label, valeur]) => (
+                  <View key={label} style={styles.cellule}>
+                    <Case label={label} manquant={manquant} s={s} value={valeur} />
+                  </View>
+                ))}
+                {[0, 1, 2].slice(rangee.length).map((place) => (
+                  <View key={`vide-${place}`} style={styles.cellule} />
+                ))}
               </View>
             ))}
           </View>
@@ -746,18 +842,20 @@ function PlayerCardBase({
         ) : null}
       </View>
 
-      {/* Le pied, sous la ligne de découpe : ville, statut, code QR */}
+      {/* Le pied, sous la ligne de découpe : ville, statut, code QR. Sans ville (image
+          partagée), le statut seul se centre à côté du code QR au lieu de laisser un vide. */}
       <View
         style={[
           styles.rangee,
           {
-            alignItems: 'flex-end',
+            alignItems: montrerVille ? 'flex-end' : 'center',
             bottom: 40 * s,
             left: PAD * s,
             position: 'absolute',
             right: PAD * s,
           },
         ]}
+        testID="carte-pied"
       >
         <View style={{ flex: 1, gap: 12 * s }}>
           {montrerVille ? (
@@ -855,14 +953,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   case: { minWidth: 0 },
+  cellule: { flex: 1, minWidth: 0 },
   fc: { alignItems: 'center', backgroundColor: CYAN, justifyContent: 'center' },
-  fondu: {
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-  },
-  grille: { flexDirection: 'row', flexWrap: 'wrap' },
+  grille: { flexDirection: 'row' },
   label: { color: DIM, fontFamily: 'Montserrat-Bold' },
   plaque: { alignItems: 'center', backgroundColor: '#ffffff', justifyContent: 'center' },
   rangee: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
