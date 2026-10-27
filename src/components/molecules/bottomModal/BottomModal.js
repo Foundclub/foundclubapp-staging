@@ -37,6 +37,12 @@ const STALE_DISMISS_WINDOW_MS = 400;
 // (VU par Adel, 2.6.80, « Nommer l'adversaire », malgré CLAVADV). Le focus d'un TextInput remonte
 // l'arbre : la feuille déclare elle-même tout champ qu'elle contient, en-tête et pied compris,
 // comme le fait `BottomSheetTextInput`. Témoin : __tests__/BottomModalCLAVREGLE.clavier.test.js.
+// ⌨️ CLAVPOP (27/10) — SAUF SUR IPHONE : un champ déclaré lance le suivi `interactive` de la
+// bibliothèque, qui cherche l'index par `detents.indexOf(position + clavier)` (animateToPosition).
+// Feuille bornée en haut (cran < clavier) ou cran qui change clavier ouvert : la position n'est
+// pas un cran ⇒ index -1 ⇒ `onClose` ⇒ la feuille se referme (VU par Adel, 2.6.81/2.6.82,
+// « Adresse du club »). Sur iPhone, la feuille se pose donc elle-même sur le clavier (bottomInset,
+// plus bas). Témoin : __tests__/BottomModalCLAVPOP.clavier.test.js.
 /**
  * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
  * @param {object} props
@@ -48,7 +54,7 @@ function ChampsSuivisParLeClavier({ children, style }) {
   const interne = useBottomSheetInternal(true);
   const declarer = useCallback((/** @type {any} */ event) => {
     const target = event?.nativeEvent?.target;
-    if (!interne || !target) return;
+    if (!interne || !target || Platform.OS === 'ios') return;
     interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target }));
   }, [interne]);
   const oublier = useCallback((/** @type {any} */ event) => {
@@ -223,13 +229,15 @@ function BottomModal({
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
+    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return undefined;
+    // iPhone : `Will`, pour que la feuille parte avec le clavier (CLAVPOP).
+    const moment = Platform.OS === 'ios' ? 'Will' : 'Did';
 
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
+    const keyboardDidShowListener = Keyboard.addListener(`keyboard${moment}Show`, (event) => {
       const nextHeight = event?.endCoordinates?.height || 0;
       setKeyboardHeight(Math.max(0, nextHeight - insets.bottom));
     });
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+    const keyboardDidHideListener = Keyboard.addListener(`keyboard${moment}Hide`, () => {
       setKeyboardHeight(0);
     });
 
@@ -350,7 +358,13 @@ function BottomModal({
     && Platform.Version >= 35
     && modeDuClavierAndroid === 'adjustPan';
   const keyboardBehaviorForPlatform = usesAndroidExtend ? 'extend' : keyboardBehavior;
-  const sheetBottomInset = keyboardBehavior === 'interactive' || usesAndroidExtend
+  // CLAVPOP — iPhone : le bas de la feuille se pose sur le clavier (barre de gestes déduite, elle
+  // reste dans la marge du contenu). La bibliothèque réduit alors le conteneur et recalcule ses
+  // crans : une grande feuille tient sous le haut de l'écran, l'index reste un cran.
+  const remonteeIPhone = Platform.OS === 'ios' ? keyboardHeight : 0;
+  const sheetBottomInset = Platform.OS === 'ios'
+    || keyboardBehavior === 'interactive'
+    || usesAndroidExtend
     ? 0
     : keyboardHeight;
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
@@ -394,7 +408,7 @@ function BottomModal({
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
         style]}
-      bottomInset={sheetBottomInset}
+      bottomInset={sheetBottomInset + remonteeIPhone}
       enableContentPanningGesture={enableContentPanningGesture}
       enableDynamicSizing={!snapPoints}
       enablePanDownToClose={enablePanDownToClose}

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { createElement } from 'react';
-import { Text, TextInput } from 'react-native';
+import { Platform, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import BottomModal from '../BottomModal';
@@ -118,9 +118,16 @@ describe('CLAVREGLE — la règle de @gorhom/bottom-sheet 5.2.4', () => {
   });
 });
 
-describe('CLAVREGLE — toute feuille déclare le champ touché', () => {
+// CLAVPOP (27/10) : la déclaration reste la règle sur ANDROID. Sur iPhone elle refermait les
+// grandes feuilles ; la feuille s'y pose sur le clavier (témoin BottomModalCLAVPOP.clavier).
+describe('CLAVREGLE — toute feuille déclare le champ touché (Android)', () => {
+  const systemeAvant = Platform.OS;
   beforeEach(() => {
+    Platform.OS = 'android';
     mockEtatClavier.target = undefined;
+  });
+  afterEach(() => {
+    Platform.OS = systemeAvant;
   });
 
   const monter = () => {
