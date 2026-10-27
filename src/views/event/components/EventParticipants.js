@@ -19,6 +19,7 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import { resolveEventEndedAt } from '@/views/event/eventMatchClock';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1566,7 +1567,9 @@ function EventParticipants({
                   {libelleSansReponse}
                 </Text>
                 {relanceProposee ? (
-                  <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                  <TourTarget id="event.relance">
+                    <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                  </TourTarget>
                 ) : null}
               </View>
               {relanceProposee ? renderProchaineRelance() : null}

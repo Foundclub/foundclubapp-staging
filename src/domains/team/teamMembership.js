@@ -87,6 +87,32 @@ export const isMyTeam = (team, user) => {
 };
 
 /**
+ * Est-ce que ce compte ENTRAINE cette equipe ? Le profil (`trainedTeams`) ou
+ * l'equipe elle-meme (`team.trainers`, source fraiche) — un joueur, non.
+ * @param {any} team L'equipe.
+ * @param {any} user Le compte connecte (`userData`).
+ * @returns {boolean} true s'il l'entraine.
+ */
+export const isTeamTrainer = (team, user) => {
+  const teamDocumentId = toDocumentId(team);
+  if (!teamDocumentId || !user) return false;
+  if (toDocumentIds(user?.trainedTeams).includes(teamDocumentId)) return true;
+  const userDocumentId = toDocumentId(user);
+  return Boolean(userDocumentId) && toDocumentIds(team?.trainers).includes(userDocumentId);
+};
+
+/**
+ * La premiere equipe de la liste que ce compte entraine (guide TUTOE :
+ * « Ton equipe est deja la » ne vise jamais une equipe ou il ne fait que jouer).
+ * @param {any[]} teams Les equipes affichees, dans l'ordre.
+ * @param {any} user Le compte connecte.
+ * @returns {string | null} Son documentId, ou null.
+ */
+export const firstTrainedTeamId = (teams, user) => toDocumentId(
+  (Array.isArray(teams) ? teams : []).find((team) => isTeamTrainer(team, user)),
+) || null;
+
+/**
  * « Est-ce que je GERE cette equipe ? » — la question de DROIT, a ne pas
  * confondre avec `isMyTeam` juste au-dessus, qui est celle d'APPARTENANCE.
  *
@@ -110,13 +136,8 @@ export const isMyTeam = (team, user) => {
  * @returns {boolean} true si ce compte gere cette equipe.
  */
 export const isTeamManager = (team, user) => {
-  const teamDocumentId = toDocumentId(team);
-  if (!teamDocumentId || !user) return false;
-
-  if (toDocumentIds(user?.trainedTeams).includes(teamDocumentId)) return true;
-
-  const userDocumentId = toDocumentId(user);
-  if (userDocumentId && toDocumentIds(team?.trainers).includes(userDocumentId)) return true;
+  if (!toDocumentId(team) || !user) return false;
+  if (isTeamTrainer(team, user)) return true;
 
   return canUserEditClub(user, toDocumentId(team?.club));
 };

@@ -12,6 +12,7 @@ import AnimatedTabBarButton from '@/components/atoms/animatedTabBarButton/Animat
 import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
 import Header from '@/components/atoms/header/Header';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 export const commonOptions = {
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -180,6 +181,7 @@ export const getFloatingActionContainerStyle = (
  * @param {Function} [props.renderTabBarIcon] - The render tab bar icon function.
  * @param {number} [props.badge] - The badge of the tab.
  * @param {'light' | 'dark'} [props.labelScheme] - The color scheme of the label.
+ * @param {string} [props.tourTargetId] - Ancre du guide (TourTarget) posée sur l'onglet.
  * @param {number} [props.bottomInset] - The bottom inset to account for safe area.
  * @returns {import('@react-navigation/bottom-tabs').BottomTabNavigationOptions}
  */
@@ -192,6 +194,7 @@ export const getTabScreenCommonOptions = ({
   label,
   labelScheme = 'light',
   renderTabBarIcon = undefined,
+  tourTargetId = undefined,
   visualLabel = undefined,
 }) => {
   const isWeb = Platform.OS === 'web';
@@ -232,24 +235,30 @@ export const getTabScreenCommonOptions = ({
         onPress,
         style,
         testID,
-      }) => (
-        <AnimatedTabBarButton
-          accessibilityLabel={tabAccessibilityLabel}
-          accessibilityState={accessibilityState}
-          activeBackgroundColor={withAlpha(resolvedActiveColor, 0.16)}
-          activeBorderColor={withAlpha(resolvedActiveColor, 0.28)}
-          activeColor={resolvedActiveColor}
-          activeGlowColor={withAlpha(resolvedActiveColor, 0.22)}
-          contentMinHeight={isWeb ? undefined : mobileMetrics.contentHeight}
-          isWeb={isWeb}
-          onLongPress={onLongPress}
-          onPress={onPress}
-          style={style}
-          testID={testID}
-        >
-          {children}
-        </AnimatedTabBarButton>
-      ),
+      }) => {
+        const button = (
+          <AnimatedTabBarButton
+            accessibilityLabel={tabAccessibilityLabel}
+            accessibilityState={accessibilityState}
+            activeBackgroundColor={withAlpha(resolvedActiveColor, 0.16)}
+            activeBorderColor={withAlpha(resolvedActiveColor, 0.28)}
+            activeColor={resolvedActiveColor}
+            activeGlowColor={withAlpha(resolvedActiveColor, 0.22)}
+            contentMinHeight={isWeb ? undefined : mobileMetrics.contentHeight}
+            isWeb={isWeb}
+            onLongPress={onLongPress}
+            onPress={onPress}
+            style={style}
+            testID={testID}
+          >
+            {children}
+          </AnimatedTabBarButton>
+        );
+        // Guide (TUTOE) : ancre invisible de l'onglet ; flex 1 garde la largeur du bouton.
+        return tourTargetId
+          ? <TourTarget focusFromParent id={tourTargetId} style={{ flex: 1 }}>{button}</TourTarget>
+          : button;
+      },
     tabBarHideOnKeyboard: !isWeb,
     tabBarIcon: icon && renderTabBarIcon
       /**

@@ -60,6 +60,8 @@ import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerMode
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourResumePill from '@/components/molecules/tour/TourResumePill';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -272,29 +274,32 @@ function HomeSection({
             }
           };
 
+          // Guide (TUTOE) : ancre invisible de chaque carte (ex. « Ajouter un événement »).
           const body = (
-            <HomeActionCard
-              accentColor={card.accentColor}
-              accessibilityLabel={card.accessibilityLabel}
-              badgeCount={card.badgeCount}
-              disabled={card.disabled}
-              emphasis={card.emphasis}
-              footer={card.footer}
-              hasAlert={card.hasAlert}
-              highlighted={card.highlighted}
-              icon={card.icon}
-              illustration={card.illustration || illustrationsParFamille[card.icon]}
-              illustrationPlacement={card.illustrationPlacement}
-              locked={card.locked}
-              onPress={card.onPress}
-              premiumScope={card.premiumScope}
-              subtitle={card.subtitle}
-              subtitleLines={card.subtitleLines}
-              title={card.title}
-              titleCount={card.titleCount}
-              tone={card.tone}
-              tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
-            />
+            <TourTarget id={`home.card.${card.key}`} style={{ flex: 1 }}>
+              <HomeActionCard
+                accentColor={card.accentColor}
+                accessibilityLabel={card.accessibilityLabel}
+                badgeCount={card.badgeCount}
+                disabled={card.disabled}
+                emphasis={card.emphasis}
+                footer={card.footer}
+                hasAlert={card.hasAlert}
+                highlighted={card.highlighted}
+                icon={card.icon}
+                illustration={card.illustration || illustrationsParFamille[card.icon]}
+                illustrationPlacement={card.illustrationPlacement}
+                locked={card.locked}
+                onPress={card.onPress}
+                premiumScope={card.premiumScope}
+                subtitle={card.subtitle}
+                subtitleLines={card.subtitleLines}
+                title={card.title}
+                titleCount={card.titleCount}
+                tone={card.tone}
+                tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
+              />
+            </TourTarget>
           );
 
           if (!card.tutorial) {
@@ -2661,6 +2666,9 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {/* TUTOE-CALIBRAGE (27/10) — guide en pause : « Reprendre le tour » DANS le flux,
+            jamais par-dessus l'écran (ne couvre ni feuille ni bouton). */}
+        <TourResumePill />
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
             actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
         <BandeauActualiteMembre

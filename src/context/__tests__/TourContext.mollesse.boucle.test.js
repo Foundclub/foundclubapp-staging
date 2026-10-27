@@ -242,7 +242,9 @@ describe('MOLLESSE — le tour guide en marche ne doit pas emballer la pile', ()
   it('M7 — le tour va jusqu au bout sans jamais depasser le plafond', () => {
     monter();
     act(() => {
-      tour.startTour('coach');
+      // TUTOE (27/10) : le guide coach (v3) a des missions qu'un bouton ne
+      // valide pas ; le parcours complet à la main se mesure sur le dirigeant (v2).
+      tour.startTour('president');
       jest.advanceTimersByTime(100);
     });
 

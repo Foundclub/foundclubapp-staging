@@ -74,6 +74,7 @@ import {
   MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE,
   PARENTAL_POWER_ENDS_AGE,
 } from '@/constants/parentalDeclaration';
+import { useTour } from '@/context/useTour';
 import { getItem, removeItem, setItem } from '@/platform/storage';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
@@ -164,6 +165,7 @@ function Profile({ navigation, route }) {
   const safeAuthSessions = authSessions || [];
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const { startTour } = useTour();
   const canShowSubscriptionExperience = currentRoleKey === 'coach'
     || currentRoleKey === 'president'
     || currentRoleKey === 'superAdmin';
@@ -1096,6 +1098,14 @@ function Profile({ navigation, route }) {
     // Le seul bouton nomme « Nous contacter » ouvrait jusqu'ici la fenetre
     // « je ne trouve pas mon club » du tunnel d'affiliation : une demande aux
     // superadmins, pas un canal vers nous, et invisible hors onboarding.
+    // Guide Entraîneur (TUTOE, règle 7 du pack) : il se relance d'ici, sur
+    // téléphone seulement (le site ne joue aucun tour).
+    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' ? [{
+      icon: Images.flag,
+      key: 'coachGuide',
+      label: t('profile.actions.coachGuide', 'Guide entraîneur·e'),
+      onPress: () => startTour('coach'),
+    }] : []),
     {
       icon: Images.envelope,
       key: 'contactSupport',

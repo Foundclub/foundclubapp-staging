@@ -29,6 +29,7 @@ import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -1365,12 +1366,15 @@ function FacilityForm() {
               groupe(planningColorFieldLabel, blocCouleur),
             ] : (
               <>
-                {blocNom}
-                {blocTypeDuClub}
-                {blocAdresse}
-                {blocConflit}
-                {blocCapacite}
-                {blocCouleur}
+                {/* TUTOE-2 : ancres invisibles du guide (M3, ajout d'un lieu). */}
+                <TourTarget id="facility.name" style={Spaces.gap[16]}>
+                  {blocNom}
+                  {blocTypeDuClub}
+                </TourTarget>
+                <TourTarget id="facility.address">{blocAdresse}</TourTarget>
+                <TourTarget id="facility.conflict">{blocConflit}</TourTarget>
+                <TourTarget id="facility.capacity">{blocCapacite}</TourTarget>
+                <TourTarget id="facility.color">{blocCouleur}</TourTarget>
               </>
             )}
           </View>
@@ -1379,7 +1383,7 @@ function FacilityForm() {
           {/* et adresse a ete retire. Chaque reglage annonce son propre etat */}
           {/* juste au-dessus ; le redire en bas ne faisait qu'allonger la page. */}
 
-          {isCollectiviteMode ? null : boutons}
+          {isCollectiviteMode ? null : <TourTarget id="facility.create">{boutons}</TourTarget>}
         </ScrollView>
         {/* COLL-C2B — design P4-form : en mairie, « Enregistrer » reste fixe en bas. */}
         {isCollectiviteMode ? (

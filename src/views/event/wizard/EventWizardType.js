@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
@@ -140,6 +141,7 @@ const TYPE_SERVEUR_MATCH_AMICAL = 'match amical';
  * @property {boolean} selected Marqueur de choix courant.
  * @property {string} tag Pilule courte, vide s'il n'y en a pas.
  * @property {string} title Libelle affiche — le nom du SERVEUR, jamais reecrit.
+ * @property {string} [tourTargetId] Ancre du guide Entraîneur (TUTOE), sinon rien.
  */
 
 /**
@@ -264,6 +266,7 @@ function EventWizardType({ navigation, route }) {
           ? t('eventWizard.steps.type.comingSoonTag', 'Bientôt disponible')
           : '',
         title: type?.name,
+        tourTargetId: normalized === 'entrainement' ? 'eventWizard.type.training' : undefined,
       });
       // Une seule porte, meme si le serveur venait a servir deux types
       // normalises en « match » : deux rangees porteraient la meme cle React.
@@ -457,7 +460,9 @@ function EventWizardType({ navigation, route }) {
             title={t('eventWizardType.typeSelection', 'Sélection du type')}
           >
             <View style={[Spaces.gap[8]]}>
-              {buildRows().map(renderRow)}
+              {buildRows().map((row) => (row.tourTargetId ? (
+                <TourTarget id={row.tourTargetId} key={row.key}>{renderRow(row)}</TourTarget>
+              ) : renderRow(row)))}
             </View>
           </OnboardingWrapper>
         ) : null}

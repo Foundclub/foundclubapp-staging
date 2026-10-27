@@ -2,6 +2,8 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import TourGuideLayer from '@/components/molecules/tour/TourGuideLayer';
+
 import SharedAppProviders from './AppProviders.shared';
 
 /**
@@ -19,6 +21,10 @@ function AppProvidersNative({ children, queryClient }) {
           <BottomSheetModalProvider>
             {children}
           </BottomSheetModalProvider>
+          {/* TUTOE-2 : le guide APRÈS les feuilles gorhom (leur hôte de portail
+              est le dernier enfant du fournisseur) ⇒ voile et bulle par-dessus
+              une feuille ouverte, sur iOS comme sur Android. */}
+          <TourGuideLayer />
         </SharedAppProviders>
       </SafeAreaProvider>
     </GestureHandlerRootView>

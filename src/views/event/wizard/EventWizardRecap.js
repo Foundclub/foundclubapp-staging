@@ -31,6 +31,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1419,9 +1420,11 @@ function EventWizardRecap({ navigation }) {
                 </View>
               ) : null}
               {state.isRecurrent ? (
-                <Text style={[Fonts.p3Bold, Fonts.gold500]}>
-                  {t('eventWizard.recap.recurrenceCount', { count: recurrencePreviewCount })}
-                </Text>
+                <TourTarget id="eventWizard.occurrences">
+                  <Text style={[Fonts.p3Bold, Fonts.gold500]}>
+                    {t('eventWizard.recap.recurrenceCount', { count: recurrencePreviewCount })}
+                  </Text>
+                </TourTarget>
               ) : null}
               {state.isRecurrent && wizardFormData.exceptHolidays ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]} testID="recap-sauf-vacances">

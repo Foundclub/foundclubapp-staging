@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { BREAKPOINTS } from '@/responsive/breakpoints';
@@ -357,45 +358,54 @@ function WizardStepLayout({
             ) : null}
           </View>
 
-          <ScrollView
-            automaticallyAdjustKeyboardInsets
-            // D53 — 40 pt ici + 16 pt de marge sur le bloc de boutons faisaient
-            // 56 pt de blanc entre le dernier champ et le CTA. 16 + 16 = 32, le
-            // meme ecart que celui qui separe deja deux sections dans l'app.
-            // Ce n'est pas une reserve de clavier : `automaticallyAdjustKeyboardInsets`
-            // s'en charge, et le CTA est un FRERE de la liste, jamais par-dessus.
-            contentContainerStyle={[Spaces.paddingBottom[16]]}
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            keyboardShouldPersistTaps="handled"
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
+          {/* Guide (TUTOE-CALIBRAGE) : la zone VISIBLE de la liste ; toutes les ancres
+              du contenu y sont coupées (une longue liste dépassait de 239 px). */}
+          <TourTarget clipChildren id="teamWizard.viewport" style={{ flex: 1 }}>
+            <ScrollView
+              automaticallyAdjustKeyboardInsets
+              // D53 — 40 pt ici + 16 pt de marge sur le bloc de boutons faisaient
+              // 56 pt de blanc entre le dernier champ et le CTA. 16 + 16 = 32, le
+              // meme ecart que celui qui separe deja deux sections dans l'app.
+              // Ce n'est pas une reserve de clavier : `automaticallyAdjustKeyboardInsets`
+              // s'en charge, et le CTA est un FRERE de la liste, jamais par-dessus.
+              contentContainerStyle={[Spaces.paddingBottom[16]]}
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              keyboardShouldPersistTaps="handled"
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Guide (TUTOE) : ancres invisibles communes à tous les tunnels. */}
+              <TourTarget id="teamWizard.field">{children}</TourTarget>
+            </ScrollView>
+          </TourTarget>
         </View>
 
         <View style={[Spaces.gap[12], Spaces.marginTop[16]]}>
           {onNext ? (
-            <Button
-              disabled={isNextDisabled}
-              isLoading={isNextLoading}
-              onPress={onNext}
-              submitOnEnter
-              title={nextLabel || t('common.next', 'Suivant')}
-              variant="Primary"
-            />
+            <TourTarget id="teamWizard.next">
+              <Button
+                disabled={isNextDisabled}
+                isLoading={isNextLoading}
+                onPress={onNext}
+                submitOnEnter
+                title={nextLabel || t('common.next', 'Suivant')}
+                variant="Primary"
+              />
+            </TourTarget>
           ) : null}
           {showSkip ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={onSkip}
-              style={[Spaces.paddingVertical[8], { justifyContent: 'center', minHeight: 44 }]}
-            >
-              <Text style={[Fonts.p2Bold, Fonts.neutral300, Fonts.textCenter]}>
-                {skipLabel || t('teamWizard.actions.skipStep', 'Passer cette étape')}
-              </Text>
-            </TouchableOpacity>
+            <TourTarget id="teamWizard.skip">
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={onSkip}
+                style={[Spaces.paddingVertical[8], { justifyContent: 'center', minHeight: 44 }]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.neutral300, Fonts.textCenter]}>
+                  {skipLabel || t('teamWizard.actions.skipStep', 'Passer cette étape')}
+                </Text>
+              </TouchableOpacity>
+            </TourTarget>
           ) : null}
         </View>
       </View>

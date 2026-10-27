@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 
 import { aggregateRemindReports } from '@/domains/event/aggregateRemindReports';
 import { buildRemindMessage, REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
@@ -351,6 +352,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       );
     },
     onSuccess: (report, /** @type {any} */ variables) => {
+      // Guide Entraîneur (TUTOE-2, bonus B1) : la relance est partie.
+      emitGuidanceAction('event.relance.sent');
       if (variables?.presentation === 'sheet') return;
       const message = buildRemindMessage(report);
       Alert.alert(message.title, message.description);

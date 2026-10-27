@@ -8,8 +8,9 @@
  * fichier iPhone réclame déjà `/i/*` (mesuré 200) : l'app s'ouvre directement
  * quand elle est installée, et le code permet de dire QUI invite.
  */
-import { Linking, Platform } from 'react-native';
+import { Linking, Platform, Share } from 'react-native';
 
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
 import { buildTeamInviteShareText } from '@/domains/team/teamInviteSuggestions';
 
@@ -78,13 +79,20 @@ export const shareTeamInviteLink = async ({
   const url = buildTeamInviteUrl({ code, teamId });
   if (!url) return { code, url };
 
-  await SharePlatform.share({
+  const result = await SharePlatform.share({
     message: buildTeamInviteMessage({
       clubName, inviterName, teamName, url,
     }),
     title: String(teamName || ''),
     url,
   }).catch(() => undefined);
+  // Guide Entraîneur (TUTOE, M2) : feuille fermée sans envoi ⇒ on reste à
+  // l'étape « lien ». Android ne distingue pas l'abandon : il compte comme envoi.
+  if (result && result.action !== Share.dismissedAction) {
+    emitGuidanceAction('team.invite.shared', { teamId });
+  } else {
+    emitGuidanceInteraction('team.invite.dismissed');
+  }
 
   return { code, url };
 };

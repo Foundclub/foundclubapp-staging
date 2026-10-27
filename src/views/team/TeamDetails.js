@@ -26,6 +26,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -53,6 +54,7 @@ import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
@@ -2920,7 +2922,10 @@ function TeamDetails({ navigation, route }) {
           accessibilityLabel={t('teamDetails.actions.panelTitle', "Actions d'équipe")}
           accessibilityRole="button"
           activeOpacity={0.7}
-          onPress={() => setIsTeamActionsPanelOpen(true)}
+          onPress={() => {
+            emitGuidanceInteraction('team.actions.open');
+            setIsTeamActionsPanelOpen(true);
+          }}
           style={[
             Alignments.alignCenter,
             Alignments.justifyCenter,
@@ -2936,17 +2941,20 @@ function TeamDetails({ navigation, route }) {
           ]}
           testID="team-actions-menu-button"
         >
-          {['haut', 'milieu', 'bas'].map((rang) => (
-            <View
-              key={`team-actions-dot-${rang}`}
-              style={{
-                backgroundColor: Colors.neutral00,
-                borderRadius: 999,
-                height: 4,
-                width: 4,
-              }}
-            />
-          ))}
+          {/* Guide (TUTOE) : l'ancre reprend l'empilement des 3 points. */}
+          <TourTarget id="team.more" style={[Alignments.alignCenter, Spaces.gap[4]]}>
+            {['haut', 'milieu', 'bas'].map((rang) => (
+              <View
+                key={`team-actions-dot-${rang}`}
+                style={{
+                  backgroundColor: Colors.neutral00,
+                  borderRadius: 999,
+                  height: 4,
+                  width: 4,
+                }}
+              />
+            ))}
+          </TourTarget>
         </TouchableOpacity>
       ) : null}
 
@@ -4836,11 +4844,21 @@ function TeamDetails({ navigation, route }) {
                   label: t('teamDetails.actions.inviteMember', 'Inviter un membre du club'),
                   onPress: handleOpenInviteSheet,
                 }) : null}
-                {canManageTeam ? renderTeamActionRow({
-                  icon: 'share',
-                  label: t('teamDetails.actions.shareInviteLink', 'Partager un lien d\'invitation'),
-                  onPress: handleShareInvitationLink,
-                }) : null}
+                {canManageTeam ? (
+                  <TourTarget id="teamActions.shareLink">
+                    {renderTeamActionRow({
+                      icon: 'share',
+                      label: t(
+                        'teamDetails.actions.shareInviteLink',
+                        'Partager un lien d\'invitation',
+                      ),
+                      onPress: () => {
+                        emitGuidanceInteraction('teamActions.shareLink');
+                        handleShareInvitationLink();
+                      },
+                    })}
+                  </TourTarget>
+                ) : null}
                 {showTeamChatAction ? renderTeamActionRow({
                   icon: 'envelope',
                   label: t('teamDetails.actions.teamChatFull', "Discussion d'équipe"),

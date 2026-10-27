@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import FriendlyMatchAdCard from '@/components/molecules/friendlyMatchAdCard/FriendlyMatchAdCard';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -385,29 +386,31 @@ function FriendlyMatchListContent({
       </View>
 
       {canPublish && activeTab !== 'candidatures' ? (
-        <TouchableOpacity
-          accessibilityLabel={t(
-            'friendlyMatchListContent.createAFriendlyMatch',
-            'Créer un match amical',
-          )}
-          accessibilityRole="button"
-          onPress={handlePublishPress}
-          style={[Spaces.padding[16], {
-            alignItems: 'center',
-            backgroundColor: Colors.primary500,
-            borderRadius: 12,
-            minHeight: 44,
-          }]}
-        >
-          {/*
-            Les mots du pack : sur ce marche on CREE UN MATCH AMICAL et on
-            ENVOIE UNE PROPOSITION. « Annonce » disparait — il designait a la
-            fois l offre de recrutement, le match propose et la candidature.
-          */}
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            {t('friendlyMatchListContent.createAFriendlyMatch2', '+ Créer un match amical')}
-          </Text>
-        </TouchableOpacity>
+        <TourTarget id="friendly.create">
+          <TouchableOpacity
+            accessibilityLabel={t(
+              'friendlyMatchListContent.createAFriendlyMatch',
+              'Créer un match amical',
+            )}
+            accessibilityRole="button"
+            onPress={handlePublishPress}
+            style={[Spaces.padding[16], {
+              alignItems: 'center',
+              backgroundColor: Colors.primary500,
+              borderRadius: 12,
+              minHeight: 44,
+            }]}
+          >
+            {/*
+              Les mots du pack : sur ce marche on CREE UN MATCH AMICAL et on
+              ENVOIE UNE PROPOSITION. « Annonce » disparait — il designait a la
+              fois l offre de recrutement, le match propose et la candidature.
+            */}
+            <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
+              {t('friendlyMatchListContent.createAFriendlyMatch2', '+ Créer un match amical')}
+            </Text>
+          </TouchableOpacity>
+        </TourTarget>
       ) : null}
 
       {activeTab === 'annonces' ? (
