@@ -23716,7 +23716,7 @@ export default {
       'm2-share': 'The easiest way: an invitation link.',
       'm3-access': 'Public: anyone can find it in Search and ask to come. Private: only your team and your guests. For a training session, keep it Private.',
       'm3-card': 'Tap "Add an event".',
-      'm3-create': 'The whole season in one go, until June. Create!',
+      'm3-create': 'Check the summary: a repeating session stops at the end date set in "Repeat". Create!',
       'm3-desc': 'Write a note for your team (e.g. meet 15 min before). Otherwise, skip.',
       'm3-dock': 'Now schedule your session: open the home screen.',
       'm3-fac-1': 'Give the venue a name and choose its type (required).',

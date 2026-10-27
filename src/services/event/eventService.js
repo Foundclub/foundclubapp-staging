@@ -105,6 +105,8 @@ export const createEvent = async (eventData, options = {}) => {
     });
   }
   emitGuidanceAction('event.created', {
+    // Guide Entraîneur (TUTOE, B1) : la carte de cette séance dans le planning.
+    documentId: response?.data?.data?.documentId || response?.data?.documentId || null,
     eventType: eventData?.type || null,
   });
   return response.data;
@@ -407,6 +409,8 @@ export const createEventSeries = async (payloads = [], options = {}) => {
     });
   }
   emitGuidanceAction('event.created', {
+    // Guide Entraîneur (TUTOE, B1) : la 1re séance posée, visée dans le planning.
+    documentId: (Array.isArray(reponse?.data) ? reponse.data[0] : reponse?.data)?.documentId || null,
     eventType: first?.type || null,
     // Guide Entraîneur (TUTOE) : la clôture compte les séances programmées.
     occurrences: payloads.length,

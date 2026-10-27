@@ -34,6 +34,7 @@ export const useTour = () => useContext(TourContext) || {
   skipMission: () => {},
   startTour: () => false,
   stepIndex: 0,
+  stepRoute: null,
   totalSteps: 0,
   tourStatus: null,
 };

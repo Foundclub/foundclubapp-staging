@@ -14,6 +14,7 @@ import Svg, {
   Defs, Mask, Rect,
 } from 'react-native-svg';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { measureTourTarget, subscribeToTourTargets } from '@/domains/tour/tourTargetRegistry';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
@@ -71,9 +72,10 @@ const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
  * @param {number} windowHeight - Hauteur de la fenêtre (feuille fermée = hors écran).
  * Une feuille ou un formulaire ouvert par-dessus l'étape (`subGuides`, ex.
  * « Répéter ») passe avant : ses bulles se suivent avec « Suivant ».
+ * @param {string[]} [stepTargets] - Cibles propres de l'étape (`targetsFor` résolu).
  * @returns {{ sub?: any; targets: string[]; text: string }} Cibles et texte retenus.
  */
-const resolveVariant = (step, rects, windowHeight) => {
+const resolveVariant = (step, rects, windowHeight, stepTargets = step?.targets || []) => {
   const sub = (step?.subGuides || []).find((/** @type {any} */ guide) => {
     const rect = rects[guide.anchor];
     return Boolean(rect) && rect.y < windowHeight && rect.y + rect.height > 0;
@@ -85,11 +87,11 @@ const resolveVariant = (step, rects, windowHeight) => {
   // Repli : aucune cible de l'étape à l'écran (ex. « équipe déjà là » vue de
   // l'accueil) ⇒ on montre le chemin (l'onglet) au lieu d'une bulle sans voile.
   const fallback = step?.fallback;
-  const hasOwnTarget = (step?.targets || []).some((/** @type {string} */ id) => rects[id]);
+  const hasOwnTarget = stepTargets.some((/** @type {string} */ id) => rects[id]);
   if (!hasOwnTarget && fallback && rects[fallback.targets?.[0]]) {
     return { targets: fallback.targets, text: fallback.text };
   }
-  return { targets: step?.targets || [], text: step?.text || '' };
+  return { targets: stepTargets, text: step?.text || '' };
 };
 
 /**
@@ -136,6 +138,7 @@ function TourGuideLayer() {
   const [{ auth, isAddingAccount }] = useAppContext();
   const isPrivateMode = Boolean(auth?.token) && !isAddingAccount;
   const {
+    created,
     currentMission,
     currentStep,
     gauge,
@@ -144,8 +147,21 @@ function TourGuideLayer() {
     isTourActive,
     missionPosition,
     reward,
+    stepRoute,
     tourStatus,
   } = tour;
+  // B1 : cibles qui dépendent de ce que le guide a créé (la séance de M3).
+  const stepTargets = typeof currentStep?.targetsFor === 'function'
+    ? currentStep.targetsFor({ created })
+    : currentStep?.targets || [];
+  // Décision du chef (27/10, 3) : l'écran courant. Retour en arrière dans un
+  // tunnel (l'ancre « Suivant » existe aussi sur l'écran d'avant) : hors de
+  // l'écran qui a ouvert l'étape, le voile tombe pour qu'on puisse corriger.
+  const [route, setRoute] = useState(/** @type {string | null} */ (null));
+  useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+    if (signal?.kind === 'route') setRoute(signal.key);
+  }), []);
+  const isOffStepRoute = Boolean(stepRoute && route && route !== stepRoute);
 
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
   const [bubbleHeight, setBubbleHeight] = useState(110);
@@ -163,7 +179,7 @@ function TourGuideLayer() {
         guide.anchor,
         ...guide.bubbles.map((/** @type {any[]} */ bubble) => bubble[0]),
       ]),
-      ...(currentStep.targets || []),
+      ...stepTargets,
       ...(currentStep.variants || []).flatMap((/** @type {any} */ v) => v.targets || []),
       ...DOCK_IDS,
     ])]
@@ -207,7 +223,7 @@ function TourGuideLayer() {
     };
   }, [targetKey, currentStep?.id]);
 
-  const resolved = resolveVariant(currentStep, rects, height);
+  const resolved = resolveVariant(currentStep, rects, height, stepTargets);
   const sheetGuide = resolved.sub || null;
   const sheetAnchor = sheetGuide?.anchor || null;
   // La feuille s'ouvre ou se ferme : ses bulles repartent de la première.
@@ -264,7 +280,7 @@ function TourGuideLayer() {
   const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
   const primary = cutouts[0] || null;
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
-  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide;
+  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
   const position = placeBubble({
     bubbleHeight, height, insetTop: insets.top, primary, top: isTop, width,

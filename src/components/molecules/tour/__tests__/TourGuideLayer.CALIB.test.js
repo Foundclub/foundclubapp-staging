@@ -1,5 +1,6 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { emitGuidanceRouteVisit, resetGuidanceRuntimeForTests } from '@/domains/guidance/guidanceRuntime';
 import { COACH_GUIDE } from '@/domains/tour/coachGuide';
 import { registerTourTarget, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
 
@@ -138,6 +139,7 @@ const covers = (style, x, y) => typeof style.left === 'number' && typeof style.t
 beforeEach(() => {
   jest.useFakeTimers();
   resetTourTargetsForTests();
+  resetGuidanceRuntimeForTests();
   mockIsAddingAccount = false;
 });
 
@@ -263,5 +265,50 @@ describe('Pastille « Reprendre le tour »', () => {
     mockTour = { ...pausedTour(), isGuide: false };
     act(() => { tree = renderer.create(<TourResumePill />); });
     expect(tree.toJSON()).toBeNull();
+  });
+});
+
+// TUTOE-CALIBRAGE-2 (27/10, décisions du chef 3 et 6).
+describe('Tunnel : hors de la route de l’étape, le voile tombe (décision 3)', () => {
+  const recap = () => ({
+    ...activeTour(COACH_GUIDE.steps.find((step) => step.id === 'm3-create')),
+    stepRoute: 'EventWizardRecap',
+  });
+  const nextButton = () => mountTarget('teamWizard.next', {
+    height: 56, width: 358, x: 16, y: 700,
+  });
+
+  it('sur l’écran de l’étape (« Crée ! ») : voile et bloqueurs', async () => {
+    nextButton();
+    mockTour = recap();
+    const tree = await renderLayer();
+    act(() => { emitGuidanceRouteVisit('EventWizardRecap'); });
+    await flush();
+    expect(blockersOf(tree).length).toBeGreaterThan(0);
+  });
+
+  it('retour en arrière dans le tunnel : plus aucun bloqueur, on peut corriger', async () => {
+    nextButton();
+    mockTour = recap();
+    const tree = await renderLayer();
+    act(() => { emitGuidanceRouteVisit('EventWizardDescription'); });
+    await flush();
+    expect(blockersOf(tree)).toHaveLength(0);
+  });
+});
+
+describe('B1 « Ouvre ta séance » : découpe sur la carte du planning (décision 6)', () => {
+  it('la carte de la séance créée en M3 est encadrée', async () => {
+    mountTarget('planning.event.ev-42', {
+      height: 140, width: 358, x: 16, y: 320,
+    });
+    mockTour = {
+      ...activeTour(COACH_GUIDE.steps.find((step) => step.id === 'b1-card')),
+      created: { 'event.created': { documentId: 'ev-42' } },
+    };
+    const tree = await renderLayer();
+    const [frame] = framesOf(tree);
+    expect(frame).toBeDefined();
+    expect(styleOf(frame)).toMatchObject({ top: 320 + STATUS_BAR - 6 });
   });
 });

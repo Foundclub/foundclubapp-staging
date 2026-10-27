@@ -24699,7 +24699,7 @@ export default {
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Public : tout le monde le trouve dans Rechercher et peut demander à venir. Privé : seulement ton équipe et tes invités. Pour un entraînement, garde Privé.',
       'm3-card': 'Touche « Ajouter un événement ».',
-      'm3-create': 'Toute la saison d’un coup, jusqu’en juin. Crée !',
+      'm3-create': 'Vérifie le récap : si ta séance se répète, elle s’arrête à la date de fin choisie dans « Répéter ». Crée !',
       'm3-desc': 'Écris une consigne pour ton équipe (ex. : rendez-vous 15 min avant). Sinon, passe.',
       'm3-dock': 'Programme maintenant ta séance : ouvre l’accueil.',
       'm3-fac-1': 'Donne un nom à l’installation et choisis son type (obligatoire).',

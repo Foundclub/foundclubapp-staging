@@ -500,7 +500,13 @@ const STEPS = [
     missionId: 'coach_m3',
     resumeFrom: 'm3-type',
     targets: ['eventWizard.occurrences', 'teamWizard.next'],
-    get text() { return t('m3-create', 'Toute la saison d’un coup, jusqu’en juin. Crée !'); },
+    get text() {
+      return t(
+        'm3-create',
+        'Vérifie le récap : si ta séance se répète, elle s’arrête à la date de fin choisie dans '
+          + '« Répéter ». Crée !',
+      );
+    },
   },
   {
     bubblePlacement: 'top',
@@ -661,6 +667,11 @@ const STEPS = [
     id: 'b1-card',
     missionId: 'coach_b1',
     resumeFrom: 'b1-dock',
+    // La carte de LA séance créée en M3 (pack 02, B1) ; inconnue : bulle seule.
+    targetsFor: (/** @type {any} */ context) => {
+      const eventId = context?.created?.['event.created']?.documentId;
+      return eventId ? [`planning.event.${eventId}`] : [];
+    },
     get text() { return t('b1-card', 'Ouvre ta séance.'); },
   },
   {

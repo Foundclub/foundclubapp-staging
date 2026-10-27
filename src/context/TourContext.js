@@ -210,10 +210,13 @@ export function TourProvider({ children }) {
 
   // Guide : entrer dans une étape. Si la personne est déjà là où l'étape veut
   // l'emmener, on applique la sortie tout de suite (sans boucle infinie).
+  // `stepRoute` : l'écran qui a ouvert l'étape (sortie « route » franchie), ou
+  // null ; la couche coupe le voile hors de cet écran (décision du chef 3).
   const enterGuideStep = useCallback((
     /** @type {any} */ base,
     /** @type {number} */ index,
     /** @type {number} */ depth = 0,
+    /** @type {string | null} */ stepRoute = null,
   ) => {
     const profile = getTourProfile(base.profileKey);
     if (!profile || index < 0 || index >= profile.steps.length) {
@@ -221,13 +224,13 @@ export function TourProvider({ children }) {
       return;
     }
     const nextState = {
-      ...base, reward: null, status: 'active', stepIndex: index,
+      ...base, reward: null, status: 'active', stepIndex: index, stepRoute,
     };
     const already = depth < MAX_AUTO_ADVANCE
       ? matchCurrentRoute(profile, index, lastRouteRef.current, guideContext(nextState))
       : null;
     if (already && !already.completes) {
-      enterGuideStep(nextState, already.index, depth + 1);
+      enterGuideStep(nextState, already.index, depth + 1, lastRouteRef.current);
       return;
     }
     setTourState(nextState);
@@ -246,11 +249,12 @@ export function TourProvider({ children }) {
   // récompense + jauge, puis étape suivante.
   const applyGuideMatch = useCallback((
     /** @type {any} */ current,
-    /** @type {{ completes: boolean; index: number }} */ match,
+    /** @type {{ advance?: any; completes: boolean; index: number }} */ match,
   ) => {
     clearSuccessTimer();
+    const stepRoute = match.advance?.type === 'route' ? lastRouteRef.current : null;
     if (!match.completes) {
-      enterGuideStep(current, match.index);
+      enterGuideStep(current, match.index, 0, stepRoute);
       return;
     }
     const profile = getTourProfile(current.profileKey);
@@ -271,7 +275,7 @@ export function TourProvider({ children }) {
     persist(rewarded);
     successTimerRef.current = setTimeout(() => {
       successTimerRef.current = null;
-      enterGuideStep(rewarded, match.index);
+      enterGuideStep(rewarded, match.index, 0, stepRoute);
     }, REWARD_DISPLAY_MS);
   }, [enterGuideStep, persist]);
 
@@ -528,6 +532,7 @@ export function TourProvider({ children }) {
     skipMission,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),
+    stepRoute: tourState?.stepRoute || null,
     totalSteps: profile?.steps?.length || 0,
     tourStatus: tourState?.status || null,
   }), [

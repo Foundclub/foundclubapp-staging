@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import PersonalPlanningContainer from '@/components/organisms/planning/PersonalPlanningContainer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
@@ -709,28 +710,31 @@ function ParticipantEventList({ navigation }) {
     }
     return (
       <View style={[Spaces.marginBottom[16]]}>
-        <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
-          <EventCardNew
-            // 👪 PARENT-PLANNING — pour quel enfant, et en lecture seule si ce n est pas AUSSI
-            // l evenement du parent. L appui ouvre la fiche, ou un compte Parent n a rien a
-            // repondre (FINITIONS13-STATS 6).
-            childLabel={formatViewerChildrenNames(item.viewerChildren, t)}
-            displayProfile="teamFocused"
-            item={item}
-            onDecline={() => handleDeclineEvent(item)}
-            onEditAnswer={() => handleEditAnswer(item)}
-            onJoin={() => handleJoinEvent(item)}
-            onLogin={() => {}}
-            onParticipate={() => handleParticipateToEvent(item)}
-            onPress={() => handleEventPress(item)}
-            readOnly={item.viewerChildrenOnly === true}
-            // 🕐 T2/D5 — SEULE la carte qui attend s éteint. `isPending` est vrai
-            // pour la mutation entière : s en servir tel quel ferait clignoter
-            // la liste complète pour un seul appui.
-            submittingAnswer={submittingEventId === item.documentId ? submittingAnswer : ''}
-            useFacilityAccentColor
-          />
-        </Suspense>
+        {/* Guide Entraîneur (TUTOE, B1) : « Ouvre ta séance » vise cette carte. */}
+        <TourTarget id={`planning.event.${item.documentId}`}>
+          <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
+            <EventCardNew
+              // 👪 PARENT-PLANNING — pour quel enfant, et en lecture seule si ce n est pas AUSSI
+              // l evenement du parent. L appui ouvre la fiche, ou un compte Parent n a rien a
+              // repondre (FINITIONS13-STATS 6).
+              childLabel={formatViewerChildrenNames(item.viewerChildren, t)}
+              displayProfile="teamFocused"
+              item={item}
+              onDecline={() => handleDeclineEvent(item)}
+              onEditAnswer={() => handleEditAnswer(item)}
+              onJoin={() => handleJoinEvent(item)}
+              onLogin={() => {}}
+              onParticipate={() => handleParticipateToEvent(item)}
+              onPress={() => handleEventPress(item)}
+              readOnly={item.viewerChildrenOnly === true}
+              // 🕐 T2/D5 — SEULE la carte qui attend s éteint. `isPending` est vrai
+              // pour la mutation entière : s en servir tel quel ferait clignoter
+              // la liste complète pour un seul appui.
+              submittingAnswer={submittingEventId === item.documentId ? submittingAnswer : ''}
+              useFacilityAccentColor
+            />
+          </Suspense>
+        </TourTarget>
       </View>
     );
   };

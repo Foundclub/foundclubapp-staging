@@ -421,3 +421,33 @@ describe('guide Entraîneur — bonus (TUTOE-2)', () => {
     expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(6);
   });
 });
+
+// TUTOE-CALIBRAGE-2 (27/10, décision du chef 3) : l'étape retient l'écran qui
+// l'a ouverte ; la couche coupe le voile quand on le quitte (retour en arrière).
+it('une étape de tunnel retient la route qui l’a ouverte', () => {
+  startAndOpen();
+  doMission1();
+  reward();
+  route(RouteNames.MyTeamList);
+  route(RouteNames.TeamDetails);
+  interaction('team.actions.open');
+  interaction('teamActions.shareLink');
+  action('team.invite.shared');
+  reward();
+  route(RouteNames.SearchHome);
+  route(RouteNames.EventWizardType);
+  expect(tour.currentStep.id).toBe('m3-type');
+  expect(tour.stepRoute).toBe(RouteNames.EventWizardType);
+  route(RouteNames.EventWizardTeam);
+  expect(tour.stepRoute).toBe(RouteNames.EventWizardTeam);
+  // Un signal qui n'est pas une route : l'étape suivante n'a pas d'écran à elle.
+  route(RouteNames.EventWizardLocation);
+  route(RouteNames.EventWizardLogistics);
+  route(RouteNames.EventWizardAccess);
+  route(RouteNames.EventWizardDescription);
+  route(RouteNames.EventWizardRecap);
+  expect(tour.currentStep.id).toBe('m3-create');
+  expect(tour.stepRoute).toBe(RouteNames.EventWizardRecap);
+  action('event.created', { documentId: 'ev-1' });
+  expect(tour.stepRoute).toBeNull();
+});
