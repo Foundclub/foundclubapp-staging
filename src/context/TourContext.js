@@ -43,7 +43,6 @@ const GUIDE_VERSION = 3;
 // Garde-fou : une suite d'étapes déjà faites ne s'enchaîne pas sans fin.
 const MAX_AUTO_ADVANCE = 20;
 
-
 /**
  * @param {string | null | undefined} userId
  * @returns {string}
@@ -233,7 +232,11 @@ export function TourProvider({ children }) {
     persist(nextState);
     if (already) {
       applyGuideMatch(nextState, already);
+      return;
     }
+    // Étape qui emmène elle-même (B2 : le match d'exemple n'a pas de carte).
+    const step = profile.steps[index];
+    if (step?.navigateOnEnter) navigateToTarget(step.navTarget, guideContext(nextState));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [finishTour, persist]);
 

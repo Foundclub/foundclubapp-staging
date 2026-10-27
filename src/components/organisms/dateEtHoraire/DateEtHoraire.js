@@ -17,6 +17,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 const DATE_INPUT_FORMAT = 'dd/MM/yyyy';
 const TIME_INPUT_FORMAT = 'HH:mm';
@@ -503,159 +504,161 @@ function DateEtHoraire({
           incoherent. La valeur reste lisible sans ouvrir la feuille, et
           le defaut est « Une seule fois ». */}
       {!sansRepetition ? (
-        <View style={[Spaces.gap[12]]} testID="date-et-horaire-repeter-en-avant">
-          <Text style={intertitreStyle}>
-            {t('eventWizard.steps.logistics.repeter.titre', 'RÉPÉTER')}
-          </Text>
-          <View
-            accessibilityRole="radiogroup"
-            style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
-          >
-            {puceDuRythme(
-              'une-fois',
-              t('eventWizard.steps.logistics.repeatRowOnce', 'Une seule fois'),
-              !isRecurrent,
-              () => onRepetition(null),
-            )}
-            {puceDuRythme(
-              'chaque-semaine',
-              isRecurrent && !(recurrenceFrequency === 'week' && recurrenceInterval === 1)
-                ? recurrenceIntervalLabel
-                : t('eventWizard.steps.logistics.repeter.chaqueSemaine', 'Chaque semaine'),
-              isRecurrent,
-              choisirChaqueSemaine,
-            )}
-          </View>
-          {isRecurrent && recurrenceFrequency === 'week' ? (
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('eventWizard.steps.logistics.repeter.lesJours', 'Les jours')}
-              </Text>
-              {/* Les sept pastilles (44 px) sur une ligne dès 340 px, groupées sur grand écran. */}
-              <View
-                style={[Alignments.row, {
-                  flexWrap: 'wrap', justifyContent: 'space-between', maxWidth: 360, rowGap: 6,
-                }]}
-              >
-                {JOURS_DE_LA_SEMAINE.map((jour) => {
-                  const choisi = joursRetenus.includes(jour);
-                  const celuiDeLaDate = jour === date.getDay();
-                  return (
-                    <TouchableOpacity
-                      accessibilityLabel={nomDuJour(jour)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: choisi, disabled: celuiDeLaDate }}
-                      disabled={celuiDeLaDate}
-                      key={jour}
-                      onPress={() => basculerLeJour(jour)}
-                      style={{
-                        alignItems: 'center',
-                        backgroundColor: choisi ? Colors.primary500 : 'transparent',
-                        borderColor: choisi ? Colors.primary500 : chipBorder,
-                        borderRadius: 22,
-                        borderWidth: 1,
-                        height: 44,
-                        justifyContent: 'center',
-                        width: 44,
-                      }}
-                      testID={`date-et-horaire-jour-${jour}`}
-                    >
-                      <Text style={[Fonts.p2Bold, choisi ? Fonts.primary900 : Fonts.neutral100]}>
-                        {nomDuJour(jour, 'EEEEE').toLocaleUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t(
-                  'eventWizard.steps.logistics.repeter.jourDeLaDate',
-                  'Le jour de la date est toujours compris.',
-                )}
-              </Text>
-            </View>
-          ) : null}
-          {isRecurrent ? (
-            <View style={[Alignments.row, { flexWrap: 'wrap', gap: 12 }]}>
-              <View style={{ flexBasis: 140, flexGrow: 1 }}>
-                <DatePickerInput
-                  label={t('eventWizard.steps.logistics.repeter.du', 'Du')}
-                  minimumDate={new Date()}
-                  onChange={(/** @type {string} */ text) => onRepetition({
-                    ...repetitionEnCours(),
-                    du: mergeDateInput(text, new Date(repetition?.du || date)),
-                  })}
-                  value={toDateInputText(new Date(repetition?.du || date))}
-                />
-              </View>
-              <View style={{ flexBasis: 140, flexGrow: 1 }}>
-                <DatePickerInput
-                  label={t('eventWizard.steps.logistics.repeter.au', 'Au')}
-                  minimumDate={new Date()}
-                  onChange={(/** @type {string} */ text) => onRepetition({
-                    ...repetitionEnCours(),
-                    au: mergeDateInput(text, new Date(repetitionEnCours().au)),
-                  })}
-                  value={toDateInputText(new Date(repetitionEnCours().au))}
-                />
-              </View>
-            </View>
-          ) : null}
-          {/* 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case de la
-              Ville (R17-QUAND-2), dans « Répéter », quand la zone des vacances est connue. */}
-          {isRecurrent && vacances ? (
-            <TouchableOpacity
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: vacances.actif }}
-              onPress={vacances.onBasculer}
-              style={[Alignments.row, {
-                alignItems: 'center',
-                backgroundColor: withAlpha(Colors.primary500, 0.08),
-                borderColor: vacances.actif ? Colors.primary500 : chipBorder,
-                borderRadius: 12,
-                borderWidth: 1,
-                gap: 12,
-                minHeight: 48,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              }]}
-              testID={vacances.testID || 'date-et-horaire-sauf-vacances'}
-            >
-              {/* La coche de la Ville (SeasonSlotForm, R17-QUAND-2). */}
-              <View
-                style={[Alignments.center, {
-                  backgroundColor: vacances.actif ? Colors.primary500 : 'transparent',
-                  borderColor: vacances.actif ? Colors.primary500 : Colors.primary200,
-                  borderRadius: 6,
-                  borderWidth: 2,
-                  height: 24,
-                  width: 24,
-                }]}
-              >
-                {vacances.actif ? (
-                  <SvgIcon color={Colors.primary900} height={14} name="check" width={14} />
-                ) : null}
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{vacances.zone}</Text>
-              </View>
-            </TouchableOpacity>
-          ) : null}
-          {isRecurrent ? (
-            <Text style={[Fonts.p2Bold, Fonts.primary200]} testID="date-et-horaire-resume">
-              {vacances?.actif
-                ? t(
-                  'eventWizard.steps.logistics.repeter.resumeSaufVacances',
-                  '{{resume}}, sauf vacances scolaires',
-                  { resume, ...SANS_ECHAPPEMENT },
-                )
-                : resume}
+        <TourTarget id="eventWizard.repeat">
+          <View style={[Spaces.gap[12]]} testID="date-et-horaire-repeter-en-avant">
+            <Text style={intertitreStyle}>
+              {t('eventWizard.steps.logistics.repeter.titre', 'RÉPÉTER')}
             </Text>
-          ) : null}
-        </View>
+            <View
+              accessibilityRole="radiogroup"
+              style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
+            >
+              {puceDuRythme(
+                'une-fois',
+                t('eventWizard.steps.logistics.repeatRowOnce', 'Une seule fois'),
+                !isRecurrent,
+                () => onRepetition(null),
+              )}
+              {puceDuRythme(
+                'chaque-semaine',
+                isRecurrent && !(recurrenceFrequency === 'week' && recurrenceInterval === 1)
+                  ? recurrenceIntervalLabel
+                  : t('eventWizard.steps.logistics.repeter.chaqueSemaine', 'Chaque semaine'),
+                isRecurrent,
+                choisirChaqueSemaine,
+              )}
+            </View>
+            {isRecurrent && recurrenceFrequency === 'week' ? (
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizard.steps.logistics.repeter.lesJours', 'Les jours')}
+                </Text>
+                {/* Les sept pastilles (44 px) sur une ligne dès 340 px, groupées sur grand écran. */}
+                <View
+                  style={[Alignments.row, {
+                    flexWrap: 'wrap', justifyContent: 'space-between', maxWidth: 360, rowGap: 6,
+                  }]}
+                >
+                  {JOURS_DE_LA_SEMAINE.map((jour) => {
+                    const choisi = joursRetenus.includes(jour);
+                    const celuiDeLaDate = jour === date.getDay();
+                    return (
+                      <TouchableOpacity
+                        accessibilityLabel={nomDuJour(jour)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: choisi, disabled: celuiDeLaDate }}
+                        disabled={celuiDeLaDate}
+                        key={jour}
+                        onPress={() => basculerLeJour(jour)}
+                        style={{
+                          alignItems: 'center',
+                          backgroundColor: choisi ? Colors.primary500 : 'transparent',
+                          borderColor: choisi ? Colors.primary500 : chipBorder,
+                          borderRadius: 22,
+                          borderWidth: 1,
+                          height: 44,
+                          justifyContent: 'center',
+                          width: 44,
+                        }}
+                        testID={`date-et-horaire-jour-${jour}`}
+                      >
+                        <Text style={[Fonts.p2Bold, choisi ? Fonts.primary900 : Fonts.neutral100]}>
+                          {nomDuJour(jour, 'EEEEE').toLocaleUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'eventWizard.steps.logistics.repeter.jourDeLaDate',
+                    'Le jour de la date est toujours compris.',
+                  )}
+                </Text>
+              </View>
+            ) : null}
+            {isRecurrent ? (
+              <View style={[Alignments.row, { flexWrap: 'wrap', gap: 12 }]}>
+                <View style={{ flexBasis: 140, flexGrow: 1 }}>
+                  <DatePickerInput
+                    label={t('eventWizard.steps.logistics.repeter.du', 'Du')}
+                    minimumDate={new Date()}
+                    onChange={(/** @type {string} */ text) => onRepetition({
+                      ...repetitionEnCours(),
+                      du: mergeDateInput(text, new Date(repetition?.du || date)),
+                    })}
+                    value={toDateInputText(new Date(repetition?.du || date))}
+                  />
+                </View>
+                <View style={{ flexBasis: 140, flexGrow: 1 }}>
+                  <DatePickerInput
+                    label={t('eventWizard.steps.logistics.repeter.au', 'Au')}
+                    minimumDate={new Date()}
+                    onChange={(/** @type {string} */ text) => onRepetition({
+                      ...repetitionEnCours(),
+                      au: mergeDateInput(text, new Date(repetitionEnCours().au)),
+                    })}
+                    value={toDateInputText(new Date(repetitionEnCours().au))}
+                  />
+                </View>
+              </View>
+            ) : null}
+            {/* 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case de la
+                Ville (R17-QUAND-2), dans « Répéter », quand la zone des vacances est connue. */}
+            {isRecurrent && vacances ? (
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: vacances.actif }}
+                onPress={vacances.onBasculer}
+                style={[Alignments.row, {
+                  alignItems: 'center',
+                  backgroundColor: withAlpha(Colors.primary500, 0.08),
+                  borderColor: vacances.actif ? Colors.primary500 : chipBorder,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  gap: 12,
+                  minHeight: 48,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                }]}
+                testID={vacances.testID || 'date-et-horaire-sauf-vacances'}
+              >
+                {/* La coche de la Ville (SeasonSlotForm, R17-QUAND-2). */}
+                <View
+                  style={[Alignments.center, {
+                    backgroundColor: vacances.actif ? Colors.primary500 : 'transparent',
+                    borderColor: vacances.actif ? Colors.primary500 : Colors.primary200,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    height: 24,
+                    width: 24,
+                  }]}
+                >
+                  {vacances.actif ? (
+                    <SvgIcon color={Colors.primary900} height={14} name="check" width={14} />
+                  ) : null}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{vacances.zone}</Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
+            {isRecurrent ? (
+              <Text style={[Fonts.p2Bold, Fonts.primary200]} testID="date-et-horaire-resume">
+                {vacances?.actif
+                  ? t(
+                    'eventWizard.steps.logistics.repeter.resumeSaufVacances',
+                    '{{resume}}, sauf vacances scolaires',
+                    { resume, ...SANS_ECHAPPEMENT },
+                  )
+                  : resume}
+              </Text>
+            ) : null}
+          </View>
+        </TourTarget>
       ) : null}
       {!sansRepetition ? (
         <TouchableOpacity
@@ -706,11 +709,13 @@ function DateEtHoraire({
           close={() => setIsRecurrenceSheetOpen(false)}
           footerComponent={(
             <View style={[Spaces.gap[8]]}>
-              <Button
-                onPress={handleApplyRecurrence}
-                title={t('eventWizard.steps.logistics.repeatApply', 'Appliquer')}
-                variant="Primary"
-              />
+              <TourTarget id="repeat.apply">
+                <Button
+                  onPress={handleApplyRecurrence}
+                  title={t('eventWizard.steps.logistics.repeatApply', 'Appliquer')}
+                  variant="Primary"
+                />
+              </TourTarget>
               <TouchableOpacity
                 accessibilityRole="button"
                 onPress={handleClearRecurrence}
@@ -734,110 +739,116 @@ function DateEtHoraire({
           {.../** @type {any} */ ({ webZIndex })}
         >
           <View style={[Spaces.gap[16]]}>
-            <View style={[Spaces.gap[8]]}>
-              <Text style={intertitreStyle}>
-                {t('eventEdit.fields.recurrenceFrequency.label')}
-              </Text>
-              <View style={[Alignments.row, Spaces.gap[12]]}>
-                {['week', 'month'].map((value) => {
-                  const selected = recurrenceDraft.frequency === value;
-                  return (
-                    <TouchableOpacity
-                      key={value}
-                      onPress={() => patchRecurrenceDraft({ frequency: value })}
-                      style={[
-                        ApplicationStyle.card,
-                        Spaces.paddingVertical[8],
-                        Spaces.paddingHorizontal[16],
-                        {
-                          backgroundColor: selected
-                            ? withAlpha(Colors.primary500, 0.16)
-                            : chipSurface,
-                          borderColor: selected ? Colors.primary500 : chipBorder,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p2Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>
-                        {value === 'week'
-                          ? t('eventEdit.fields.recurrenceFrequency.options.week')
-                          : t('eventEdit.fields.recurrenceFrequency.options.month')}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={[Spaces.gap[8]]}>
-              <Text style={intertitreStyle}>
-                {t('eventWizard.steps.logistics.recurrenceInterval')}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.padding[12],
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Alignments.justifySpaceBetween,
-                  { backgroundColor: intervalControlSurface, borderColor: fieldBorder },
-                ]}
-              >
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'eventWizard.steps.logistics.recurrenceIntervalDecrement',
-                    "Reduire l'intervalle de récurrence",
-                  )}
-                  disabled={!canDecreaseRecurrenceInterval}
-                  onPress={handleDecreaseRecurrenceInterval}
-                  style={intervalAdjustButtonStyle(canDecreaseRecurrenceInterval)}
-                >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
-                </TouchableOpacity>
-
-                <View style={[
-                  Alignments.alignCenter,
-                  Spaces.gap[4],
-                  { flex: 1 },
-                  Spaces.paddingHorizontal[12],
-                ]}
-                >
-                  <Text style={[Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
-                    {draftInterval}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
-                    {draftIntervalLabel}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'eventWizard.steps.logistics.recurrenceIntervalIncrement',
-                    "Augmenter l'intervalle de récurrence",
-                  )}
-                  onPress={handleIncreaseRecurrenceInterval}
-                  style={intervalAdjustButtonStyle(true)}
-                >
-                  <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {recurrenceDraft.frequency === 'week' ? (
+            <TourTarget id="repeat.frequency">
               <View style={[Spaces.gap[8]]}>
                 <Text style={intertitreStyle}>
-                  {t('eventWizard.steps.logistics.recurrenceDays')}
+                  {t('eventEdit.fields.recurrenceFrequency.label')}
                 </Text>
-                <DayPicker
-                  onChange={(/** @type {any[]} */ days) => patchRecurrenceDraft({ days })}
-                  selectedDays={recurrenceDraft.days}
-                />
-                <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {t(
-                    'eventWizard.steps.logistics.recurrenceBaseDayHint',
-                    "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
-                  )}
-                </Text>
+                <View style={[Alignments.row, Spaces.gap[12]]}>
+                  {['week', 'month'].map((value) => {
+                    const selected = recurrenceDraft.frequency === value;
+                    return (
+                      <TouchableOpacity
+                        key={value}
+                        onPress={() => patchRecurrenceDraft({ frequency: value })}
+                        style={[
+                          ApplicationStyle.card,
+                          Spaces.paddingVertical[8],
+                          Spaces.paddingHorizontal[16],
+                          {
+                            backgroundColor: selected
+                              ? withAlpha(Colors.primary500, 0.16)
+                              : chipSurface,
+                            borderColor: selected ? Colors.primary500 : chipBorder,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p2Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>
+                          {value === 'week'
+                            ? t('eventEdit.fields.recurrenceFrequency.options.week')
+                            : t('eventEdit.fields.recurrenceFrequency.options.month')}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
+            </TourTarget>
+
+            <TourTarget id="repeat.interval">
+              <View style={[Spaces.gap[8]]}>
+                <Text style={intertitreStyle}>
+                  {t('eventWizard.steps.logistics.recurrenceInterval')}
+                </Text>
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    Spaces.padding[12],
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Alignments.justifySpaceBetween,
+                    { backgroundColor: intervalControlSurface, borderColor: fieldBorder },
+                  ]}
+                >
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.logistics.recurrenceIntervalDecrement',
+                      "Reduire l'intervalle de récurrence",
+                    )}
+                    disabled={!canDecreaseRecurrenceInterval}
+                    onPress={handleDecreaseRecurrenceInterval}
+                    style={intervalAdjustButtonStyle(canDecreaseRecurrenceInterval)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>-</Text>
+                  </TouchableOpacity>
+
+                  <View style={[
+                    Alignments.alignCenter,
+                    Spaces.gap[4],
+                    { flex: 1 },
+                    Spaces.paddingHorizontal[12],
+                  ]}
+                  >
+                    <Text style={[Fonts.h2, Fonts.neutral00, { textAlign: 'center' }]}>
+                      {draftInterval}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
+                      {draftIntervalLabel}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'eventWizard.steps.logistics.recurrenceIntervalIncrement',
+                      "Augmenter l'intervalle de récurrence",
+                    )}
+                    onPress={handleIncreaseRecurrenceInterval}
+                    style={intervalAdjustButtonStyle(true)}
+                  >
+                    <Text style={[Fonts.h3, Fonts.primary500]}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TourTarget>
+
+            {recurrenceDraft.frequency === 'week' ? (
+              <TourTarget id="repeat.days">
+                <View style={[Spaces.gap[8]]}>
+                  <Text style={intertitreStyle}>
+                    {t('eventWizard.steps.logistics.recurrenceDays')}
+                  </Text>
+                  <DayPicker
+                    onChange={(/** @type {any[]} */ days) => patchRecurrenceDraft({ days })}
+                    selectedDays={recurrenceDraft.days}
+                  />
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {t(
+                      'eventWizard.steps.logistics.recurrenceBaseDayHint',
+                      "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
+                    )}
+                  </Text>
+                </View>
+              </TourTarget>
             ) : null}
 
             {/* ⚠️ Le pack ne montre que « Jusqu'au ». La date de DEBUT est
@@ -851,13 +862,15 @@ function DateEtHoraire({
               })}
               value={toDateInputText(recurrenceDraft.startDate || new Date())}
             />
-            <DatePickerInput
-              label={t('eventEdit.fields.recurrenceEndDate.label')}
-              onChange={(/** @type {string} */ text) => patchRecurrenceDraft({
-                endDate: mergeDateInput(text, recurrenceDraft.endDate || new Date()),
-              })}
-              value={toDateInputText(recurrenceDraft.endDate || new Date())}
-            />
+            <TourTarget id="repeat.end">
+              <DatePickerInput
+                label={t('eventEdit.fields.recurrenceEndDate.label')}
+                onChange={(/** @type {string} */ text) => patchRecurrenceDraft({
+                  endDate: mergeDateInput(text, recurrenceDraft.endDate || new Date()),
+                })}
+                value={toDateInputText(recurrenceDraft.endDate || new Date())}
+              />
+            </TourTarget>
           </View>
         </BottomModal>
       ) : null}

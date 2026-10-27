@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { canManageCompositionForClub } from '@/domains/subscription/subscriptionDecision';
+import { isTourExample } from '@/domains/tour/tourExamples';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -189,7 +190,9 @@ function MatchCallUpSelection() {
   // ♻️ La garde est celle d'EventDetails (`canManageCompositionForClub`), le mur est le
   // sien (memes phrases, meme destination) ; le refus du serveur ne change pas.
   // ⛔ Niveau pas encore connu : on se tait (meme garde-fou que le bandeau de la fiche).
-  const isCompositionOutOfOffer = Boolean(auth?.subscriptionAccessLevel)
+  // TUTOE-2 (bonus B2) : le match d'exemple du guide n'a pas de mur payant.
+  const isCompositionOutOfOffer = !isTourExample(params)
+    && Boolean(auth?.subscriptionAccessLevel)
     && !canManageCompositionForClub(auth, clubId);
   const openSubscriptionOffers = useCallback(() => {
     // @ts-ignore — meme navigation que `openSubscriptionOverview` (EventDetails.js).

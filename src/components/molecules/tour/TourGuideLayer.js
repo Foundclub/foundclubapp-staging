@@ -52,10 +52,19 @@ const MEASURE_INTERVAL_MS = 400;
  * Variante de l'étape dont la 1ʳᵉ cible est montée (ex. feuille de choix ouverte).
  * @param {any} step - Étape.
  * @param {Record<string, any>} rects - Mesures par id.
- * @returns {{ targets: string[]; text: string }} Cibles et texte retenus.
+ * @param {number} windowHeight - Hauteur de la fenêtre (feuille fermée = hors écran).
+ * Une feuille ou un formulaire ouvert par-dessus l'étape (`subGuides`, ex.
+ * « Répéter ») passe avant : ses bulles se suivent avec « Suivant ».
+ * @returns {{ sub?: any; targets: string[]; text: string }} Cibles et texte retenus.
  */
-const resolveVariant = (step, rects) => {
-  const variant = (step?.variants || []).find((candidate) => rects[candidate.targets?.[0]]);
+const resolveVariant = (step, rects, windowHeight) => {
+  const sub = (step?.subGuides || []).find((/** @type {any} */ guide) => {
+    const rect = rects[guide.anchor];
+    return Boolean(rect) && rect.y < windowHeight && rect.y + rect.height > 0;
+  });
+  if (sub) return { sub, targets: [], text: '' };
+  const variant = (step?.variants || [])
+    .find((/** @type {any} */ candidate) => rects[candidate.targets?.[0]]);
   if (variant) return { targets: variant.targets, text: variant.text };
   return { targets: step?.targets || [], text: step?.text || '' };
 };
@@ -86,6 +95,7 @@ function TourGuideLayer() {
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
   const [bubbleHeight, setBubbleHeight] = useState(110);
   const [subIndex, setSubIndex] = useState(0);
+  const [sheetIndex, setSheetIndex] = useState(0);
   const pulse = useRef(new Animated.Value(0)).current;
   const appear = useRef(new Animated.Value(0)).current;
 
@@ -93,6 +103,10 @@ function TourGuideLayer() {
     && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
+      ...(currentStep.subGuides || []).flatMap((/** @type {any} */ guide) => [
+        guide.anchor,
+        ...guide.bubbles.map((/** @type {any[]} */ bubble) => bubble[0]),
+      ]),
       ...(currentStep.targets || []),
       ...(currentStep.variants || []).flatMap((/** @type {any} */ v) => v.targets || []),
     ])]
@@ -128,8 +142,20 @@ function TourGuideLayer() {
     };
   }, [targetKey, currentStep?.id]);
 
-  const variant = resolveVariant(currentStep, rects);
-  const bubbleTexts = Array.isArray(currentStep?.bubbles) ? currentStep.bubbles : null;
+  const resolved = resolveVariant(currentStep, rects, height);
+  const sheetGuide = resolved.sub || null;
+  const sheetAnchor = sheetGuide?.anchor || null;
+  // La feuille s'ouvre ou se ferme : ses bulles repartent de la première.
+  useEffect(() => { setSheetIndex(0); }, [sheetAnchor]);
+  const sheetBubble = sheetGuide
+    ? sheetGuide.bubbles[Math.min(sheetIndex, sheetGuide.bubbles.length - 1)]
+    : null;
+  const variant = sheetBubble
+    ? { targets: [sheetBubble[0]], text: sheetBubble[1]() }
+    : resolved;
+  const bubbleTexts = !sheetGuide && Array.isArray(currentStep?.bubbles)
+    ? currentStep.bubbles
+    : null;
   const text = bubbleTexts
     ? bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]()
     : variant.text;
@@ -212,14 +238,18 @@ function TourGuideLayer() {
   const measuredTargets = variant.targets.filter((id) => rects[id]);
   const cutouts = measuredTargets.map((id) => toCutout(rects[id], width, height));
   const primary = cutouts[0] || null;
-  const withVeil = Boolean(primary) && currentStep.veil !== false;
-  const isTop = currentStep.bubblePlacement === 'top' || !primary;
+  // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
+  const withVeil = Boolean(primary) && currentStep.veil !== false && !sheetGuide;
+  const isTop = currentStep.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
   const position = placeBubble({
     bubbleHeight, height, insetTop: insets.top, primary, top: isTop, width,
   });
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
-  const hasMoreBubbles = Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1;
+  const hasMoreSheetBubbles = Boolean(sheetGuide)
+    && sheetIndex < sheetGuide.bubbles.length - 1;
+  const hasMoreBubbles = hasMoreSheetBubbles
+    || (Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1);
   const buttonLabel = hasMoreBubbles
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
@@ -435,9 +465,11 @@ function TourGuideLayer() {
             {buttonLabel ? (
               <TouchableOpacity
                 accessibilityRole="button"
-                onPress={() => (hasMoreBubbles
-                  ? setSubIndex((value) => value + 1)
-                  : tour.completeCurrentStep())}
+                onPress={() => {
+                  if (hasMoreSheetBubbles) setSheetIndex((value) => value + 1);
+                  else if (hasMoreBubbles) setSubIndex((value) => value + 1);
+                  else tour.completeCurrentStep();
+                }}
                 style={{
                   backgroundColor: Colors.primary500,
                   borderRadius: 999,

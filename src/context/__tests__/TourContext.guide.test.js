@@ -115,7 +115,7 @@ describe('guide Entraîneur — démarrage', () => {
     expect(mockNavigate)
       .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome });
     expect(tour.missions.map((mission) => mission.id))
-      .toEqual(['coach_m1', 'coach_m2', 'coach_m3', 'coach_m4']);
+      .toEqual(['coach_m1', 'coach_m2', 'coach_m3', 'coach_m4', 'coach_b1', 'coach_b2']);
   });
 
   it('« C’est parti » mène à la 1re étape, sans naviguer à la place de la personne', () => {
@@ -276,5 +276,86 @@ describe('guide Entraîneur — reprise', () => {
     renderProvider();
     expect(tour.isTourActive).toBe(false);
     expect(mockStore.has(STORAGE_KEY)).toBe(false);
+  });
+});
+
+describe('guide Entraîneur — bonus (TUTOE-2)', () => {
+  const startBonus = (missionId) => {
+    renderProvider();
+    act(() => { tour.startTour('coach', { fromMission: missionId }); });
+  };
+
+  it('le palier propose 2 bonus, chacun avec sa durée', () => {
+    renderProvider();
+    const bonus = tour.missions || [];
+    act(() => { tour.startTour('coach'); });
+    expect(tour.missions.filter((mission) => !mission.locked)
+      .map((mission) => [mission.id, mission.estimatedSeconds]))
+      .toEqual([['coach_b1', 15], ['coach_b2', 35]]);
+    expect(bonus).toEqual([]);
+  });
+
+  it('B1 : planning › séance › relance réelle ⇒ bonus réussi, jauge inchangée', () => {
+    startBonus('coach_b1');
+    expect(tour.currentStep.id).toBe('b1-dock');
+    expect(tour.gauge).toBe(100);
+    route(RouteNames.MyEventList);
+    expect(tour.currentStep.id).toBe('b1-card');
+    route(RouteNames.EventDetails);
+    expect(tour.currentStep.id).toBe('b1-relance');
+    action('event.relance.sent');
+    expect(tour.reward).toEqual({
+      from: 100, isBonus: true, missionId: 'coach_b1', to: 100,
+    });
+    reward();
+    // Le bonus suivant ramène lui-même à l'accueil (on était sur la fiche).
+    expect(tour.currentStep.id).toBe('b2-dock');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(tour.missionStatus.coach_b1).toBe('done');
+  });
+
+  it('« Passer ce bonus » saute à B2 sans le valider', () => {
+    startBonus('coach_b1');
+    act(() => { tour.skipMission(); });
+    expect(tour.currentStep.id).toBe('b2-dock');
+    expect(tour.missionStatus.coach_b1).toBe('skipped');
+  });
+
+  it('B2 : le match d’exemple s’ouvre sans eventId ni teamId, puis la publication simulée clôt', () => {
+    mockUserData.trainedTeams = [{ activities: [{ name: 'Rugby' }], name: 'U13 A' }];
+    startBonus('coach_b2');
+    route(RouteNames.MyEventList);
+    expect(tour.currentStep.id).toBe('b2-where');
+    act(() => { tour.completeCurrentStep(); });
+    expect(tour.currentStep.id).toBe('b2-list');
+    const [stack, { params, screen }] = mockNavigate.mock.calls.at(-1);
+    expect([stack, screen]).toEqual([RouteNames.EventStack, RouteNames.MatchCallUpSelection]);
+    expect(params.tourExample).toBe('match');
+    expect(params.sport).toBe('Rugby');
+    expect(params.teamName).toBe('U13 A');
+    expect(params.players.length).toBeGreaterThan(0);
+    expect(params.players.every((player) => player.isSimulation)).toBe(true);
+    // Aucun identifiant réel : aucune requête ne peut partir de ces écrans.
+    expect(params).not.toHaveProperty('eventId');
+    expect(params).not.toHaveProperty('teamId');
+    expect(params).not.toHaveProperty('clubId');
+
+    route(RouteNames.MatchCompositionStart);
+    expect(tour.currentStep.id).toBe('b2-start');
+    route(RouteNames.MatchCompositionBoard);
+    expect(tour.currentStep.id).toBe('b2-pub');
+    action('composition.simulated.published');
+    expect(tour.reward.isBonus).toBe(true);
+    reward();
+    expect(tour.currentStep.kind).toBe('closing');
+  });
+
+  it('M3 : la feuille « Répéter » et le formulaire de lieu ont leurs sous-bulles en M3', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const byId = (id) => COACH_GUIDE.steps.find((step) => step.id === id);
+    expect(byId('m3-when').subGuides[0].bubbles.map(([target]) => target)).toEqual([
+      'repeat.frequency', 'repeat.interval', 'repeat.days', 'repeat.end', 'repeat.apply',
+    ]);
+    expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(6);
   });
 });

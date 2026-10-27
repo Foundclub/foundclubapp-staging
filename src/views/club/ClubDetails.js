@@ -54,6 +54,7 @@ import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
@@ -4751,27 +4752,30 @@ function ClubDetails({ navigation, route }) {
           {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles
               se rangent avec les autres portes « je m'attache a ce club »,
               avant les portes d'interet qui, elles, restent en Secondary. */}
+          {/* TUTOE-2 : ancre invisible du guide (M1 sans club), le bouton garde son ombre. */}
           {showJoinClubAction ? (
-            <Button
-              disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
-              onPress={handleAskToJoinClub}
-              style={[
-                floatingClubActionButtonStyle,
-                (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
-                  ? { opacity: 0.7 }
-                  : null,
-              ]}
-              title={(() => {
-                if (hasPendingClubRequest || joinRequestPending) {
-                  return t('clubDetails.actions.requestPending', 'Demande en attente');
-                }
-                if (isClubWithoutVisibleOwner) {
-                  return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
-                }
-                return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
-              })()}
-              variant="Primary"
-            />
+            <TourTarget id="club.itsMine">
+              <Button
+                disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
+                onPress={handleAskToJoinClub}
+                style={[
+                  floatingClubActionButtonStyle,
+                  (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
+                    ? { opacity: 0.7 }
+                    : null,
+                ]}
+                title={(() => {
+                  if (hasPendingClubRequest || joinRequestPending) {
+                    return t('clubDetails.actions.requestPending', 'Demande en attente');
+                  }
+                  if (isClubWithoutVisibleOwner) {
+                    return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
+                  }
+                  return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
+                })()}
+                variant="Primary"
+              />
+            </TourTarget>
           ) : null}
 
           {showContactAdminClaimAction ? (

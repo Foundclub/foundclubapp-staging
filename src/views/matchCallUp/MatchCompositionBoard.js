@@ -31,9 +31,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isRsvpEnabled } from '@/domains/event/presenceRule';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { isTourExample } from '@/domains/tour/tourExamples';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -691,6 +693,21 @@ function MatchCompositionBoard() {
   }, [buildPack, eventId, handleActionError, isBusy, isReadOnly, publicationBloquee, t, teamId]);
 
   const handlePublish = useCallback(async () => {
+    // TUTOE-2 (bonus B2) : match d'exemple du guide. Rien ne part au serveur,
+    // le signal fait avancer le guide.
+    if (isTourExample(params)) {
+      setIsSheetVisible(false);
+      emitGuidanceAction('composition.simulated.published');
+      Alert.alert(
+        t('matchComposition.board.alerts.published.title'),
+        t(
+          'tourExamples.match.published',
+          'C’était un exemple : rien n’a été envoyé. Pour un vrai match, tes joueur·se·s la '
+            + 'reçoivent dans le canal de l’équipe.',
+        ),
+      );
+      return;
+    }
     if (isReadOnly || publicationBloquee) return;
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
@@ -788,6 +805,7 @@ function MatchCompositionBoard() {
     isBusy,
     isReadOnly,
     navigation,
+    params,
     publicationBloquee,
     queryClient,
     startTeamChat,
