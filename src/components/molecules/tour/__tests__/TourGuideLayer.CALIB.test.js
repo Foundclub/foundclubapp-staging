@@ -43,11 +43,12 @@ jest.mock('@/components/atoms/SvgIcon/SvgIcon', () => ({ SvgIcon: () => null }))
 jest.mock('@/components/molecules/tour/TourFullScreen', () => ({
   __esModule: true, default: () => null,
 }));
+jest.mock('@/theme/colors', () => ({ withAlpha: (color) => color }));
 jest.mock('@/hooks/useReduceMotion', () => ({ __esModule: true, default: () => true }));
 jest.mock('@/theme/themeContext', () => ({
   __esModule: true,
   default: () => ({
-    Colors: new Proxy({}, { get: () => '#102030' }),
+    Colors: new Proxy({}, { get: () => 'couleur' }),
     Fonts: new Proxy({}, { get: () => ({}) }),
   }),
 }));
