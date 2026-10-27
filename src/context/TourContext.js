@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -12,25 +10,59 @@ import { Platform } from 'react-native';
 import useAuth from '@/domains/auth/useAuth';
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { getTourProfile, TOUR_HOME_TARGET } from '@/domains/tour/tourCatalog';
+import {
+  firstIndexOfNextMission,
+  getMission,
+  indexOfStep,
+  matchCurrentRoute,
+  matchSignal,
+  missionPosition,
+  nextAvailableIndex,
+} from '@/domains/tour/tourGuideEngine';
 import { storage } from '@/store/appContext';
 
 import { navigate as navigateRoot } from '@/navigation/navigationService';
+
+import { TourContext, useTour } from './useTour';
 
 /**
  * Moteur du tour guidé v2 (docs/PLAN_TOUR_GUIDE_V2_2026_07_10.md) :
  * navigation directe sur les vraies pages + message de succès par étape.
  * Remplace le système de missions (obsolète, décision 2026-07-10).
+ *
+ * TUTOE (pack design_handoff_tutoriels, 27/10) : un profil `version: 3` est un
+ * GUIDE À MISSIONS. Il ne navigue qu'au départ et à la reprise ; ensuite chaque
+ * étape attend le vrai geste de la personne (signal du bus guidance). Missions
+ * essentielles verrouillées (+jauge), palier, bonus passables, clôture.
  */
 
 const SUCCESS_DISPLAY_MS = 1800;
+// Bandeau « Mission réussie » du guide (04_COUCHE_VISUELLE §5).
+const REWARD_DISPLAY_MS = 1700;
+const GUIDE_VERSION = 3;
+// Garde-fou : une suite d'étapes déjà faites ne s'enchaîne pas sans fin.
+const MAX_AUTO_ADVANCE = 20;
 
-const TourContext = createContext(/** @type {any} */ (null));
 
 /**
  * @param {string | null | undefined} userId
  * @returns {string}
  */
 const getStorageKey = (userId) => `tourProgress_${String(userId || 'anonymous')}`;
+
+/**
+ * Clé des bonus laissés « pour plus tard » au palier (relance depuis Mon compte).
+ * @param {string | null | undefined} userId - Identifiant de la personne.
+ * @returns {string} Clé MMKV.
+ */
+export const getBonusLaterKey = (userId) => `tourBonusLater_${String(userId || 'anonymous')}`;
+
+/**
+ * Vrai pour un guide à missions (TUTOE), faux pour un tour v2.
+ * @param {any} profile - Profil du catalogue.
+ * @returns {boolean} Guide à missions ?
+ */
+const isGuideProfile = (profile) => profile?.version === GUIDE_VERSION;
 
 /**
  * @param {any} target
@@ -41,6 +73,18 @@ const navigateToTarget = (target, context) => {
   if (!target?.routeName) return false;
   const params = typeof target.params === 'function' ? target.params(context) : target.params;
   return Boolean(navigateRoot(target.routeName, params));
+};
+
+/**
+ * Ce qu'une action réelle a créé, gardé pour la clôture (« RÉEL »).
+ * @param {any} signal - Signal du bus guidance.
+ * @returns {Record<string, any>} Métadonnées utiles du signal.
+ */
+const signalMeta = (signal) => {
+  const {
+    key, kind, occurredAt, ...meta
+  } = signal || {};
+  return { ...meta, at: occurredAt || null };
 };
 
 /**
@@ -55,12 +99,25 @@ export function TourProvider({ children }) {
   const [tourState, setTourState] = useState(/** @type {any} */ (null));
   const tourStateRef = useRef(/** @type {any} */ (null));
   tourStateRef.current = tourState;
+  const userDataRef = useRef(userData);
+  userDataRef.current = userData;
   const successTimerRef = useRef(/** @type {any} */ (null));
   const hydratedUserRef = useRef(/** @type {string | null} */ (null));
+  const lastRouteRef = useRef(/** @type {string | null} */ (null));
 
   const persist = useCallback((/** @type {any} */ nextState) => {
     if (!userId) return;
-    if (nextState) {
+    if (nextState && nextState.version === GUIDE_VERSION) {
+      storage.set(getStorageKey(userId), JSON.stringify({
+        created: nextState.created || {},
+        flags: nextState.flags || {},
+        gauge: nextState.gauge || 0,
+        missionStatus: nextState.missionStatus || {},
+        profileKey: nextState.profileKey,
+        stepIndex: nextState.stepIndex,
+        version: GUIDE_VERSION,
+      }));
+    } else if (nextState) {
       storage.set(getStorageKey(userId), JSON.stringify({
         profileKey: nextState.profileKey,
         skippedStepIds: nextState.skippedStepIds || [],
@@ -88,6 +145,24 @@ export function TourProvider({ children }) {
       const profile = getTourProfile(saved?.profileKey);
       if (!profile || !Number.isFinite(Number(saved?.stepIndex))) return;
       const stepIndex = Math.min(Number(saved.stepIndex), profile.steps.length - 1);
+      if (isGuideProfile(profile)) {
+        // Un état v2 d'un profil devenu guide à missions ne se rejoue pas : purge.
+        if (saved.version !== GUIDE_VERSION) {
+          storage.delete(getStorageKey(userId));
+          return;
+        }
+        setTourState({
+          created: saved.created || {},
+          flags: saved.flags || {},
+          gauge: Number(saved.gauge) || 0,
+          missionStatus: saved.missionStatus || {},
+          profileKey: saved.profileKey,
+          status: 'paused',
+          stepIndex,
+          version: GUIDE_VERSION,
+        });
+        return;
+      }
       setTourState({
         profileKey: saved.profileKey,
         skippedStepIds: Array.isArray(saved.skippedStepIds) ? saved.skippedStepIds : [],
@@ -115,7 +190,90 @@ export function TourProvider({ children }) {
     navigateToTarget(target, { userData });
   }, [userData]);
 
-  const startTour = useCallback((/** @type {string} */ profileKey) => {
+  const finishTour = useCallback(() => {
+    clearSuccessTimer();
+    setTourState(null);
+    persist(null);
+  }, [persist]);
+
+  /**
+   * Guide : contexte passé aux `when` / textes du catalogue.
+   * @param {any} state - État du guide.
+   * @returns {any} Contexte.
+   */
+  const guideContext = (state) => ({
+    created: state?.created || {},
+    flags: state?.flags || {},
+    userData: userDataRef.current,
+  });
+
+  // Guide : entrer dans une étape. Si la personne est déjà là où l'étape veut
+  // l'emmener, on applique la sortie tout de suite (sans boucle infinie).
+  const enterGuideStep = useCallback((
+    /** @type {any} */ base,
+    /** @type {number} */ index,
+    /** @type {number} */ depth = 0,
+  ) => {
+    const profile = getTourProfile(base.profileKey);
+    if (!profile || index < 0 || index >= profile.steps.length) {
+      finishTour();
+      return;
+    }
+    const nextState = {
+      ...base, reward: null, status: 'active', stepIndex: index,
+    };
+    const already = depth < MAX_AUTO_ADVANCE
+      ? matchCurrentRoute(profile, index, lastRouteRef.current, guideContext(nextState))
+      : null;
+    if (already && !already.completes) {
+      enterGuideStep(nextState, already.index, depth + 1);
+      return;
+    }
+    setTourState(nextState);
+    persist(nextState);
+    if (already) {
+      applyGuideMatch(nextState, already);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finishTour, persist]);
+
+  // Guide : une étape est franchie. Si elle clôt une mission, bandeau de
+  // récompense + jauge, puis étape suivante.
+  const applyGuideMatch = useCallback((
+    /** @type {any} */ current,
+    /** @type {{ completes: boolean; index: number }} */ match,
+  ) => {
+    clearSuccessTimer();
+    if (!match.completes) {
+      enterGuideStep(current, match.index);
+      return;
+    }
+    const profile = getTourProfile(current.profileKey);
+    const step = profile?.steps?.[current.stepIndex];
+    const mission = getMission(profile, step?.missionId);
+    const from = Number(current.gauge) || 0;
+    const to = Math.min(100, from + (Number(mission?.gaugeStep) || 0));
+    const rewarded = {
+      ...current,
+      gauge: to,
+      missionStatus: { ...(current.missionStatus || {}), [String(mission?.id)]: 'done' },
+      reward: {
+        from, isBonus: !mission?.locked, missionId: mission?.id || null, to,
+      },
+      status: 'success',
+    };
+    setTourState(rewarded);
+    persist(rewarded);
+    successTimerRef.current = setTimeout(() => {
+      successTimerRef.current = null;
+      enterGuideStep(rewarded, match.index);
+    }, REWARD_DISPLAY_MS);
+  }, [enterGuideStep, persist]);
+
+  const startTour = useCallback((
+    /** @type {string} */ profileKey,
+    /** @type {{ fromMission?: string }} */ options = {},
+  ) => {
     // Sur le site, TourBanner n'est pas monté (audit 2026-07-31 §4.5) : démarrer
     // baladerait l'utilisateur de page en page sans instruction ni porte de
     // sortie. Refuser ⇒ Welcome navigue vers l'accueil (son chemin `!started`).
@@ -123,6 +281,37 @@ export function TourProvider({ children }) {
     const profile = getTourProfile(profileKey);
     if (!profile || profile.steps.length === 0) return false;
     clearSuccessTimer();
+
+    if (isGuideProfile(profile)) {
+      const fromMission = getMission(profile, options.fromMission);
+      const essentialsDone = Boolean(fromMission && !fromMission.locked);
+      const base = {
+        created: {},
+        flags: typeof profile.buildFlags === 'function' ? profile.buildFlags({ userData }) : {},
+        gauge: essentialsDone ? 100 : 0,
+        missionStatus: essentialsDone
+          ? Object.fromEntries(profile.missions
+            .filter((/** @type {any} */ mission) => mission.locked)
+            .map((/** @type {any} */ mission) => [mission.id, 'done']))
+          : {},
+        profileKey,
+        status: 'active',
+        stepIndex: 0,
+        version: GUIDE_VERSION,
+      };
+      const ctx = guideContext(base);
+      const startIndex = fromMission
+        ? nextAvailableIndex(profile, profile.steps
+          .findIndex((/** @type {any} */ step) => step.missionId === fromMission.id) - 1, ctx)
+        : nextAvailableIndex(profile, -1, ctx);
+      if (startIndex === -1) return false;
+      const startState = { ...base, stepIndex: startIndex };
+      setTourState(startState);
+      persist(startState);
+      navigateToTarget(profile.steps[startIndex].navTarget, { userData });
+      return true;
+    }
+
     // Les etapes deja accomplies (ex. equipe deja creee) sont sautees au demarrage.
     let startIndex = 0;
     while (startIndex < profile.steps.length - 1
@@ -142,11 +331,24 @@ export function TourProvider({ children }) {
     return true;
   }, [goToStep, persist, userData]);
 
-  const finishTour = useCallback(() => {
-    clearSuccessTimer();
-    setTourState(null);
-    persist(null);
-  }, [persist]);
+  // Guide : la mission bonus courante est passée ; on saute à la suivante.
+  const skipMission = useCallback(() => {
+    const { current } = tourStateRef;
+    if (!current || current.status !== 'active' || current.version !== GUIDE_VERSION) return;
+    const profile = getTourProfile(current.profileKey);
+    const step = profile?.steps?.[current.stepIndex];
+    const mission = getMission(profile, step?.missionId);
+    // Mission essentielle : jamais de « Passer » (règle 3 du pack).
+    if (!mission || mission.locked) return;
+    const skipped = {
+      ...current,
+      missionStatus: { ...(current.missionStatus || {}), [mission.id]: 'skipped' },
+    };
+    enterGuideStep(
+      skipped,
+      firstIndexOfNextMission(profile, current.stepIndex, guideContext(skipped)),
+    );
+  }, [enterGuideStep]);
 
   // Succès d'une étape : message ✓ dans le bandeau, puis navigation vers la suivante.
   const completeCurrentStep = useCallback((/** @type {{ skipped?: boolean }} */ options = {}) => {
@@ -155,6 +357,19 @@ export function TourProvider({ children }) {
     const profile = getTourProfile(current.profileKey);
     const step = profile?.steps?.[current.stepIndex];
     if (!step) return;
+
+    if (isGuideProfile(profile)) {
+      if (options.skipped) {
+        skipMission();
+        return;
+      }
+      // Bouton de la bulle (« Compris », « C'est parti », « Continuer »).
+      applyGuideMatch(current, {
+        completes: Boolean(step.completesMission),
+        index: nextAvailableIndex(profile, current.stepIndex, guideContext(current)),
+      });
+      return;
+    }
 
     const skippedStepIds = options.skipped
       ? [...(current.skippedStepIds || []), step.id]
@@ -194,15 +409,53 @@ export function TourProvider({ children }) {
       persist(nextState);
       goToStep(nextState, nextState.stepIndex);
     }, options.skipped ? 150 : SUCCESS_DISPLAY_MS);
-  }, [goToStep, persist, userData]);
+  }, [applyGuideMatch, goToStep, persist, skipMission, userData]);
+
+  // Guide : fin (palier « Plus tard » ou clôture) ⇒ retour à l'accueil.
+  const finishGuide = useCallback((/** @type {{ later?: boolean }} */ options = {}) => {
+    const { current } = tourStateRef;
+    if (!current || current.version !== GUIDE_VERSION) return;
+    if (options.later && userId) {
+      const profile = getTourProfile(current.profileKey);
+      const left = (profile?.missions || [])
+        .filter((/** @type {any} */ mission) => !mission.locked
+          && !current.missionStatus?.[mission.id])
+        .map((/** @type {any} */ mission) => mission.id);
+      storage.set(getBonusLaterKey(userId), JSON.stringify(left));
+    }
+    finishTour();
+    navigateToTarget(TOUR_HOME_TARGET, { userData });
+  }, [finishTour, userData, userId]);
+
+  // Guide : « Quitter » met en PAUSE (question ouverte n° 2, reco du pack) ;
+  // la progression reste, « Reprendre le tour » revient à l'étape.
+  const pauseTour = useCallback(() => {
+    const { current } = tourStateRef;
+    if (!current) return;
+    clearSuccessTimer();
+    setTourState({ ...current, reward: null, status: 'paused' });
+  }, []);
 
   const resumeTour = useCallback(() => {
     const { current } = tourStateRef;
     if (!current || current.status !== 'paused') return;
+    const profile = getTourProfile(current.profileKey);
+    if (isGuideProfile(profile)) {
+      // Une étape au milieu d'un tunnel reprend au début du tunnel (le
+      // brouillon est perdu à la fermeture de l'app) : `resumeFrom`.
+      const step = profile.steps[current.stepIndex];
+      const resumeIndex = step?.resumeFrom ? indexOfStep(profile, step.resumeFrom) : -1;
+      const index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
+      const nextState = { ...current, status: 'active', stepIndex: index };
+      setTourState(nextState);
+      persist(nextState);
+      navigateToTarget(profile.steps[index]?.navTarget, { userData });
+      return;
+    }
     const nextState = { ...current, status: 'active' };
     setTourState(nextState);
     goToStep(nextState, nextState.stepIndex);
-  }, [goToStep]);
+  }, [goToStep, persist, userData]);
 
   const exitTour = useCallback(() => {
     finishTour();
@@ -211,39 +464,73 @@ export function TourProvider({ children }) {
   // Validation automatique : signaux métier du bus guidance (event.created, etc.).
   useEffect(() => {
     const unsubscribe = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      if (signal?.kind === 'route') lastRouteRef.current = signal.key;
       const { current } = tourStateRef;
       if (!current || current.status !== 'active') return;
       const profile = getTourProfile(current.profileKey);
       const step = profile?.steps?.[current.stepIndex];
+      if (isGuideProfile(profile)) {
+        const match = matchSignal(profile, current.stepIndex, signal, guideContext(current));
+        if (!match) return;
+        const withCreated = signal.kind === 'action'
+          ? {
+            ...current,
+            created: { ...(current.created || {}), [signal.key]: signalMeta(signal) },
+          }
+          : current;
+        applyGuideMatch(withCreated, match);
+        return;
+      }
       if (!step || step.success?.type === 'manual') return;
       if (signal?.kind === step.success?.type && signal?.key === step.success?.key) {
         completeCurrentStep();
       }
     });
     return unsubscribe;
-  }, [completeCurrentStep]);
+  }, [applyGuideMatch, completeCurrentStep]);
 
   useEffect(() => () => clearSuccessTimer(), []);
 
   const profile = getTourProfile(tourState?.profileKey);
   const currentStep = profile?.steps?.[tourState?.stepIndex] || null;
+  const isGuide = isGuideProfile(profile);
+  const currentMission = isGuide ? getMission(profile, currentStep?.missionId) : null;
 
   const value = useMemo(() => ({
     completeCurrentStep,
+    created: tourState?.created || {},
+    currentMission,
     currentStep,
     exitTour,
+    finishGuide,
+    flags: tourState?.flags || {},
+    gauge: Number(tourState?.gauge || 0),
+    isGuide,
+    isLockedStep: Boolean(currentMission?.locked),
     isTourActive: Boolean(tourState),
+    missionPosition: isGuide ? missionPosition(profile, currentStep?.missionId) : null,
+    missions: isGuide ? profile.missions : [],
+    missionStatus: tourState?.missionStatus || {},
+    pauseTour,
+    profileKey: tourState?.profileKey || null,
     resumeTour,
+    reward: tourState?.reward || null,
+    skipMission,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),
     totalSteps: profile?.steps?.length || 0,
     tourStatus: tourState?.status || null,
   }), [
     completeCurrentStep,
+    currentMission,
     currentStep,
     exitTour,
-    profile?.steps?.length,
+    finishGuide,
+    isGuide,
+    pauseTour,
+    profile,
     resumeTour,
+    skipMission,
     startTour,
     tourState,
   ]);
@@ -255,14 +542,4 @@ export function TourProvider({ children }) {
   );
 }
 
-export const useTour = () => useContext(TourContext) || {
-  completeCurrentStep: () => {},
-  currentStep: null,
-  exitTour: () => {},
-  isTourActive: false,
-  resumeTour: () => {},
-  startTour: () => false,
-  stepIndex: 0,
-  totalSteps: 0,
-  tourStatus: null,
-};
+export { useTour };

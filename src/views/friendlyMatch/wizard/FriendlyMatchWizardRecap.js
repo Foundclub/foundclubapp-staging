@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import {
   getAdCategories,
   getAdLevels,
@@ -131,6 +132,8 @@ function FriendlyMatchWizardRecap({ navigation }) {
       // Releve AVANT le RESET, qui efface le brouillon — origine comprise.
       const entryOrigin = ENTRY_ORIGINS.has(state.entryOrigin) ? state.entryOrigin : '';
       const createdAd = await createFriendlyMatchAd(buildFriendlyMatchAdPayload(state));
+      // Guide Entraîneur (TUTOE, M4) : l'annonce existe en base.
+      emitGuidanceAction('friendlyMatch.ad.published');
       // Le brouillon est vide AVANT la navigation : revenir sur le tunnel ne
       // doit pas reproposer une annonce deja publiee.
       dispatch({ type: 'RESET' });

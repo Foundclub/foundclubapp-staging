@@ -142,6 +142,7 @@ function PrivateTabNavigator() {
             icon: Images.home,
             label: t('menu.home', 'Accueil'),
             renderTabBarIcon,
+            tourTargetId: 'dock.home',
             visualLabel: t('menuDock.home', 'Accueil'),
           }),
         }}
@@ -159,6 +160,7 @@ function PrivateTabNavigator() {
             icon: Images.stadium,
             label: t('menu.planning'),
             renderTabBarIcon,
+            tourTargetId: 'dock.planning',
             visualLabel: t('menuDock.planning', 'Planning'),
           }),
         }}
@@ -182,6 +184,7 @@ function PrivateTabNavigator() {
               icon: Images.strokeShield,
               label: teamTabLabel,
               renderTabBarIcon,
+              tourTargetId: 'dock.teams',
               visualLabel: canManageTeam && hasMultisportAccess && !isSectionScope
                 ? t('menuDock.myClub', 'Club')
                 : t('menuDock.myTeams', 'Équipes'),

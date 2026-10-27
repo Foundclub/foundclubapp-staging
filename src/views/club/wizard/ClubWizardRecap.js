@@ -10,6 +10,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { lienDeLaVilleRetenu, oublierLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -111,6 +112,8 @@ function ClubWizardRecap({ navigation, route }) {
     // declaration du module : creer un club change aussi la fiche du club, la
     // liste des equipes et le resume d'accueil.
     invalidateAfterAction(queryClient, 'createClub').catch(() => {});
+    // Guide Entraîneur (TUTOE, « Je ne trouve pas mon club ») : le club existe.
+    emitGuidanceAction('club.created');
 
     // T10 — MAIS LE PROFIL, SI : la navigation ne part plus devant lui.
     // `refetchUserData()` partait sans `await`, donc l'etape suivante se montait

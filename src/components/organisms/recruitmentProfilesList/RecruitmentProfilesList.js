@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import MercatoCard from '@/components/molecules/mercatoCard/MercatoCard';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import ProfileFiltersSheet from '@/components/organisms/filtersSheet/ProfileFiltersSheet';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 
@@ -344,9 +345,13 @@ function RecruitmentProfilesList({
               refreshing={isRefetching && !isFetchingNextPage}
             />
           )}
-          renderItem={({ item }) => (
+          renderItem={({ index, item }) => (index === 0 ? (
+            <TourTarget id="search.result.0">
+              <MercatoCard onPress={handleCardPress} user={item} />
+            </TourTarget>
+          ) : (
             <MercatoCard onPress={handleCardPress} user={item} />
-          )}
+          ))}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         />

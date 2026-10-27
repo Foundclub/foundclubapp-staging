@@ -27,6 +27,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
 import ClubCard from '@/components/molecules/clubCard/ClubCard';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
@@ -781,7 +782,7 @@ function ClubListContent({
     return () => observateur.disconnect();
   }, [annuaire, displayedClubs]);
 
-  const renderItem = useCallback(({ item }) => {
+  const renderItem = useCallback((/** @type {{ index?: number, item: any }} */ { index, item }) => {
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
     const searchMeta = Reflect.get(item || {}, '__search');
     const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
@@ -804,10 +805,12 @@ function ClubListContent({
       />
     );
     // R17-INVITER : un club multisport n'est pas un club qu'une Ville rattache.
-    if (!actionDeCarte || isMultisport) return carte;
+    // Guide Entraîneur (TUTOE) : le 1er résultat porte l'ancre « ouvre sa fiche ».
+    const carteAncree = index === 0 ? <TourTarget id="search.result.0">{carte}</TourTarget> : carte;
+    if (!actionDeCarte || isMultisport) return carteAncree;
     return (
       <View style={Spaces.gap[8]}>
-        {carte}
+        {carteAncree}
         {actionDeCarte(item)}
       </View>
     );
@@ -871,7 +874,7 @@ function ClubListContent({
         width: '50%',
       }}
     >
-      {renderItem({ item: cellule.item })}
+      {renderItem({ index: cellule.index, item: cellule.item })}
     </View>
   ), [renderItem]);
   const enTetePertinence = isSmartSearchEnabled ? (

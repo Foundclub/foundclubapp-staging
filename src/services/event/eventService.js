@@ -406,7 +406,11 @@ export const createEventSeries = async (payloads = [], options = {}) => {
       teamId: first?.team || null,
     });
   }
-  emitGuidanceAction('event.created', { eventType: first?.type || null });
+  emitGuidanceAction('event.created', {
+    eventType: first?.type || null,
+    // Guide Entraîneur (TUTOE) : la clôture compte les séances programmées.
+    occurrences: payloads.length,
+  });
 
   if (Array.isArray(reponse?.data) && reponse?.meta?.series) {
     const instant = (/** @type {any} */ value) => new Date(value).getTime();

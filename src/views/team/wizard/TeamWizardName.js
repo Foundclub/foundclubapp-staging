@@ -9,7 +9,7 @@ import {
 
 import { resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
 import { isMyTeam } from '@/domains/team/teamMembership';
@@ -22,6 +22,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import SubscriptionQuotaBanner from '@/components/molecules/subscriptionQuotaBanner/SubscriptionQuotaBanner';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
@@ -237,9 +238,11 @@ function TeamWizardName({ navigation, route }) {
     // R06 : cet ecran est pousse sur le navigateur RACINE (TeamStack y est monte,
     // d'ou l'absence de barre d'onglets). L'ancien appel visait `Search`, qui
     // n'existe qu'un cran plus bas, dans `HomeTab` : il echouait en silence.
+    emitGuidanceInteraction('clubGate.search');
     navigateToSearchHub(navigation, 'clubs');
   };
   const handleCreateClub = () => {
+    emitGuidanceInteraction('clubGate.notFound');
     /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
       params: { entry: 'search' },
       screen: RouteNames.ClubWizardName,
@@ -257,18 +260,20 @@ function TeamWizardName({ navigation, route }) {
         )}
         title={t('teamWizard.clubRequired.title', "Il te faut d'abord un club")}
       >
-        <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
-          <Button
-            onPress={handleSearchClub}
-            title={t('teamWizard.clubRequired.searchCta', 'Rechercher mon club')}
-            variant="Primary"
-          />
-          <Button
-            onPress={handleCreateClub}
-            title={t('teamWizard.clubRequired.createCta', 'Je ne trouve pas mon club')}
-            variant="Secondary"
-          />
-        </View>
+        <TourTarget id="clubGate.actions">
+          <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
+            <Button
+              onPress={handleSearchClub}
+              title={t('teamWizard.clubRequired.searchCta', 'Rechercher mon club')}
+              variant="Primary"
+            />
+            <Button
+              onPress={handleCreateClub}
+              title={t('teamWizard.clubRequired.createCta', 'Je ne trouve pas mon club')}
+              variant="Secondary"
+            />
+          </View>
+        </TourTarget>
       </WizardStepLayout>
     );
   }
@@ -462,11 +467,13 @@ function TeamWizardName({ navigation, route }) {
             })}
           </View>
 
-          <Button
-            onPress={() => setIsChooserDismissed(true)}
-            title={t('teamWizardName.chooser.createNew', 'Créer une nouvelle équipe')}
-            variant="Primary"
-          />
+          <TourTarget id="teams.sheet.newTeam">
+            <Button
+              onPress={() => setIsChooserDismissed(true)}
+              title={t('teamWizardName.chooser.createNew', 'Créer une nouvelle équipe')}
+              variant="Primary"
+            />
+          </TourTarget>
         </View>
       </BottomModal>
 

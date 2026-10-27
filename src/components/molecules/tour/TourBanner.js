@@ -38,6 +38,7 @@ function TourBanner() {
     completeCurrentStep,
     currentStep,
     exitTour,
+    isGuide,
     isTourActive,
     resumeTour,
     stepIndex,
@@ -63,7 +64,8 @@ function TourBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep?.id, tourStatus]);
 
-  if (!isTourActive || !currentStep) return null;
+  // Le guide à missions (TUTOE) a sa propre couche : TourGuideLayer.
+  if (!isTourActive || !currentStep || isGuide) return null;
 
   const quitButton = (
     <TouchableOpacity

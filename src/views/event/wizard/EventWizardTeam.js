@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
@@ -347,6 +348,16 @@ function EventWizardTeam({ navigation }) {
     />
   );
 
+  /**
+   * Carte d'équipe ; la 1re porte l'ancre du guide Entraîneur (TUTOE, « Rattache la séance »).
+   * @param {any} team - Équipe.
+   * @param {number} index - Rang dans la liste.
+   * @returns {import('react').ReactElement} Carte.
+   */
+  const renderTeamCardWithAnchor = (team, index) => (index === 0 ? (
+    <TourTarget id="eventWizard.team.0" key={team.documentId}>{renderTeamCard(team)}</TourTarget>
+  ) : renderTeamCard(team));
+
   const renderModeCard = ({ description, label, mode }) => {
     const selected = tournamentMode === mode;
     return (
@@ -551,7 +562,7 @@ function EventWizardTeam({ navigation }) {
                 </View>
               ) : null}
 
-              {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCard) : null}
+              {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCardWithAnchor) : null}
 
               {!isLoading && !error && hasFilteredTeams && isClubManager ? (
                 <View style={[Spaces.gap[16]]}>
@@ -560,7 +571,7 @@ function EventWizardTeam({ navigation }) {
                       <Text style={intertitreStyle}>
                         {t('eventWizardTeam.myTeams', 'MES ÉQUIPES')}
                       </Text>
-                      <View>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
+                      <View>{teamsByOwnership.myTeams.map(renderTeamCardWithAnchor)}</View>
                     </View>
                   ) : null}
                   {teamsByOwnership.otherTeams.length > 0 ? (
@@ -794,7 +805,7 @@ function EventWizardTeam({ navigation }) {
           </View>
         ) : null}
 
-        {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCard) : null}
+        {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCardWithAnchor) : null}
 
         {!isLoading && !error && hasFilteredTeams && isClubManager ? (
           <View style={[Spaces.gap[16]]}>
@@ -804,7 +815,7 @@ function EventWizardTeam({ navigation }) {
                   {t('eventWizard.steps.team.myTeams', 'MES ÉQUIPES')}
                 </Text>
                 <View style={[Spaces.gap[12]]}>
-                  {teamsByOwnership.myTeams.map(renderTeamCard)}
+                  {teamsByOwnership.myTeams.map(renderTeamCardWithAnchor)}
                 </View>
               </>
             ) : null}

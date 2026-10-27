@@ -29,6 +29,7 @@ import {
   estUneVilleSeule,
   valeurDeMaCollectivite,
 } from '@/domains/collectivite/collectiviteRattachement';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -357,6 +358,8 @@ function ClubDetails({ navigation, route }) {
   });
 
   const handleGoToNextOnboardingStep = useCallback(() => {
+    // Guide Entraîneur (TUTOE) : « OK » de l'alerte « C'est fait ! ».
+    emitGuidanceInteraction('club.joined.ack');
     if (!fromOnboardingAffiliation) return;
 
     const parentNavigation = navigation.getParent?.();
@@ -544,6 +547,8 @@ function ClubDetails({ navigation, route }) {
     },
     onSuccess: async (reponseServeur) => {
       setJoinRequestPending(true);
+      // Guide Entraîneur (TUTOE, M1 sans club) : le club est rejoint.
+      emitGuidanceAction('club.joined', { clubName: club?.name || '' });
       // LOT INSTANT (2026-08-27) — LA RECETTE QUI DORMAIT. `joinClub` etait
       // ecrite dans le registre depuis le lot T08 et n'avait AUCUN appelant :
       // cet ecran ne posait aucune invalidation. La demande partait, et
@@ -752,6 +757,7 @@ function ClubDetails({ navigation, route }) {
       );
     },
     onSuccess: (reponseServeur) => {
+      emitGuidanceAction('club.joined', { clubName: club?.name || '' });
       // AFFIL A5 (2026-08-28) — 🔑 LE DECLENCHEMENT QUI MANQUAIT.
       //
       // Le lot INSTANT (27/08) a branche la recette `joinClub` sur la mutation

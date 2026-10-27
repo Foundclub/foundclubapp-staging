@@ -83,32 +83,23 @@ afterEach(() => {
 });
 
 describe('TourContext — démarrage', () => {
-  it("startTour('coach') démarre à l'étape 1 et navigue vers le tunnel équipe", () => {
+  // TUTOE (27/10) : le tour coach est devenu le guide à missions (v3, ses
+  // témoins sont dans TourContext.guide.test.js). Le moteur v2 se caractérise
+  // désormais sur le tour du dirigeant, qui le garde.
+  it("startTour('president') démarre à l'étape 1 et navigue vers sa page", () => {
     renderProvider();
     let started;
-    act(() => { started = tour.startTour('coach'); });
+    act(() => { started = tour.startTour('president'); });
 
     expect(started).toBe(true);
     expect(tour.isTourActive).toBe(true);
     expect(tour.tourStatus).toBe('active');
     expect(tour.stepIndex).toBe(0);
-    expect(tour.currentStep.id).toBe('coach_create_team');
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.TeamStack, {
-      params: { clubId: 'club-1' },
-      screen: RouteNames.TeamWizardName,
-    });
+    expect(tour.currentStep.id).toBe('president_club');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
     expect(readPersisted()).toEqual({
-      profileKey: 'coach', skippedStepIds: [], stepIndex: 0,
+      profileKey: 'president', skippedStepIds: [], stepIndex: 0,
     });
-  });
-
-  it('les étapes déjà accomplies sont sautées au démarrage (isAlreadyDone)', () => {
-    mockUserData.trainedTeams = [{ documentId: 'team-1' }];
-    renderProvider();
-    act(() => { tour.startTour('coach'); });
-
-    expect(tour.stepIndex).toBe(1);
-    expect(tour.currentStep.id).toBe('coach_find_event_card');
   });
 
   it('un profil inconnu ne démarre rien', () => {
@@ -201,9 +192,9 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
   });
 
-  it('entraîneur : même retour à l`accueil depuis la dernière étape', () => {
+  it('dirigeant : même retour à l`accueil depuis la dernière étape', () => {
     renderProvider();
-    allerJusquALaDerniereEtape('coach');
+    allerJusquALaDerniereEtape('president');
     mockNavigate.mockClear();
 
     act(() => { tour.completeCurrentStep(); });
@@ -228,40 +219,50 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
 describe('TourContext — validation par signal (bus guidance)', () => {
   it("le signal attendu valide l'étape ; un autre signal ne fait rien", () => {
     renderProvider();
-    act(() => { tour.startTour('coach'); });
-    expect(tour.currentStep.success).toEqual({ key: 'team.created', type: 'action' });
-
-    act(() => { emitGuidanceAction('event.created'); });
-    expect(tour.tourStatus).toBe('active');
+    act(() => { tour.startTour('president'); });
+    [0, 1, 2].forEach(() => {
+      act(() => { tour.completeCurrentStep({ skipped: true }); });
+      act(() => jest.advanceTimersByTime(150));
+    });
+    expect(tour.currentStep.success).toEqual({ key: 'event.created', type: 'action' });
 
     act(() => { emitGuidanceAction('team.created'); });
+    expect(tour.tourStatus).toBe('active');
+
+    act(() => { emitGuidanceAction('event.created'); });
     expect(tour.tourStatus).toBe('success');
 
     act(() => jest.advanceTimersByTime(1800));
-    expect(tour.stepIndex).toBe(1);
+    expect(tour.stepIndex).toBe(4);
   });
 });
 
 describe('TourContext — étape passée (skipped)', () => {
   it("« Passer » consigne l'étape sautée et enchaîne sur la cible de repli", () => {
     renderProvider();
-    act(() => { tour.startTour('coach'); });
+    act(() => { tour.startTour('president'); });
+    [0, 1].forEach(() => {
+      act(() => { tour.completeCurrentStep({ skipped: true }); });
+      act(() => jest.advanceTimersByTime(150));
+    });
     mockNavigate.mockClear();
 
     act(() => { tour.completeCurrentStep({ skipped: true }); });
     act(() => jest.advanceTimersByTime(150));
 
-    expect(tour.stepIndex).toBe(1);
-    expect(readPersisted().skippedStepIds).toEqual(['coach_create_team']);
-    // Étape précédente sautée ⇒ fallbackTarget (l'accueil), pas la cible nominale.
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(tour.stepIndex).toBe(3);
+    expect(readPersisted().skippedStepIds)
+      .toEqual(['president_club', 'president_teams', 'president_planning']);
+    // Étape précédente sautée ⇒ fallbackTarget (le planning), pas le tunnel.
+    expect(mockNavigate)
+      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.MyEventList });
   });
 });
 
 describe('TourContext — reprise « paused » (audit §2.2 D-D)', () => {
   it('un tour inachevé revient en « paused » au montage, sans naviguer tout seul', () => {
     mockStore.set(STORAGE_KEY, JSON.stringify({
-      profileKey: 'coach', skippedStepIds: [], stepIndex: 2,
+      profileKey: 'president', skippedStepIds: [], stepIndex: 2,
     }));
     renderProvider();
 
@@ -275,14 +276,14 @@ describe('TourContext — reprise « paused » (audit §2.2 D-D)', () => {
 
   it("resumeTour repart de l'étape sauvegardée et renavigue vers sa cible", () => {
     mockStore.set(STORAGE_KEY, JSON.stringify({
-      profileKey: 'coach', skippedStepIds: [], stepIndex: 2,
+      profileKey: 'president', skippedStepIds: [], stepIndex: 2,
     }));
     renderProvider();
 
     act(() => { tour.resumeTour(); });
     expect(tour.tourStatus).toBe('active');
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
-      screen: RouteNames.EventWizardType,
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
+      screen: RouteNames.MyEventList,
     });
   });
 });
@@ -290,7 +291,7 @@ describe('TourContext — reprise « paused » (audit §2.2 D-D)', () => {
 describe('TourContext — porte de sortie (exitTour)', () => {
   it('exitTour éteint le tour et efface la progression persistée', () => {
     renderProvider();
-    act(() => { tour.startTour('coach'); });
+    act(() => { tour.startTour('president'); });
     expect(readPersisted()).not.toBeNull();
 
     act(() => { tour.exitTour(); });

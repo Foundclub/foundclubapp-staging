@@ -293,10 +293,13 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
       'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion',
     ]],
+    // TUTOE (27/10) : le guide Entraîneur se relance d'ici (règle 7 du pack).
     ['coach', [
       'Voir le détail des offres',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
-      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion',
+      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
+      'Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Guide entraîneur·e',
+      'Nous contacter', 'Déconnexion',
     ]],
     ['president', [
       'Voir le détail des offres',

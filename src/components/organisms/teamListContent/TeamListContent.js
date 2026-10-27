@@ -40,6 +40,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
@@ -540,55 +541,57 @@ function TeamListContent({
         );
     }
     return (
-      <TouchableOpacity
-        accessibilityHint={quotaHint}
-        accessibilityLabel={t('teamListContent.newTeam.title', 'Nouvelle équipe')}
-        accessibilityRole="button"
-        onPress={() => {
-          if (newTeamLock) {
-            setSubscriptionPaywallDecision(newTeamLock.decision);
-            return;
-          }
+      <TourTarget id="teams.newTeam">
+        <TouchableOpacity
+          accessibilityHint={quotaHint}
+          accessibilityLabel={t('teamListContent.newTeam.title', 'Nouvelle équipe')}
+          accessibilityRole="button"
+          onPress={() => {
+            if (newTeamLock) {
+              setSubscriptionPaywallDecision(newTeamLock.decision);
+              return;
+            }
 
-          /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
-            params: { clubId },
-            screen: RouteNames.TeamWizardName,
-          });
-        }}
-        style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.gap[12],
-          {
-            borderColor: 'rgba(1,179,244,0.45)',
-            borderRadius: 16,
-            borderStyle: 'dashed',
-            borderWidth: 1.5,
-            marginTop: 12,
-            minHeight: 64,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-          },
-          // Grise, mais jamais muet ni inerte : l'etiquette dit pourquoi et
-          // l'appui reste actif pour ouvrir la vente (§2.3).
-          Boolean(newTeamLock) && { opacity: 0.55 },
-        ]}
-      >
-        <Text style={[Fonts.p1Bold, Fonts.primary500]}>+</Text>
-        <View style={[Alignments.fill, Spaces.gap[4]]}>
-          {newTeamLock ? (
-            <View style={[Alignments.row]}>
-              <PremiumBadge label={newTeamLock.badgeLabel} scope={newTeamLock.scope} />
-            </View>
-          ) : null}
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-            {t('teamListContent.newTeam.title', 'Nouvelle équipe')}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
-            {quotaHint}
-          </Text>
-        </View>
-      </TouchableOpacity>
+            /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+              params: { clubId },
+              screen: RouteNames.TeamWizardName,
+            });
+          }}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[12],
+            {
+              borderColor: 'rgba(1,179,244,0.45)',
+              borderRadius: 16,
+              borderStyle: 'dashed',
+              borderWidth: 1.5,
+              marginTop: 12,
+              minHeight: 64,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+            },
+            // Grise, mais jamais muet ni inerte : l'etiquette dit pourquoi et
+            // l'appui reste actif pour ouvrir la vente (§2.3).
+            Boolean(newTeamLock) && { opacity: 0.55 },
+          ]}
+        >
+          <Text style={[Fonts.p1Bold, Fonts.primary500]}>+</Text>
+          <View style={[Alignments.fill, Spaces.gap[4]]}>
+            {newTeamLock ? (
+              <View style={[Alignments.row]}>
+                <PremiumBadge label={newTeamLock.badgeLabel} scope={newTeamLock.scope} />
+              </View>
+            ) : null}
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('teamListContent.newTeam.title', 'Nouvelle équipe')}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
+              {quotaHint}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </TourTarget>
     );
   }, [
     Alignments,
@@ -1226,9 +1229,9 @@ function TeamListContent({
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
             {t('teamListContent.sections.mine', 'Mes équipes')}
           </Text>
-          {myTeams.map((team) => (
+          {myTeams.map((team, index) => (
             <View key={`joined-${team.documentId}`}>
-              {renderTeamCard(team)}
+              <TourTarget id={`teams.card.${index}`}>{renderTeamCard(team)}</TourTarget>
             </View>
           ))}
         </View>

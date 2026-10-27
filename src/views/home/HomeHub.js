@@ -60,6 +60,7 @@ import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerMode
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -272,29 +273,32 @@ function HomeSection({
             }
           };
 
+          // Guide (TUTOE) : ancre invisible de chaque carte (ex. « Ajouter un événement »).
           const body = (
-            <HomeActionCard
-              accentColor={card.accentColor}
-              accessibilityLabel={card.accessibilityLabel}
-              badgeCount={card.badgeCount}
-              disabled={card.disabled}
-              emphasis={card.emphasis}
-              footer={card.footer}
-              hasAlert={card.hasAlert}
-              highlighted={card.highlighted}
-              icon={card.icon}
-              illustration={card.illustration || illustrationsParFamille[card.icon]}
-              illustrationPlacement={card.illustrationPlacement}
-              locked={card.locked}
-              onPress={card.onPress}
-              premiumScope={card.premiumScope}
-              subtitle={card.subtitle}
-              subtitleLines={card.subtitleLines}
-              title={card.title}
-              titleCount={card.titleCount}
-              tone={card.tone}
-              tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
-            />
+            <TourTarget id={`home.card.${card.key}`} style={{ flex: 1 }}>
+              <HomeActionCard
+                accentColor={card.accentColor}
+                accessibilityLabel={card.accessibilityLabel}
+                badgeCount={card.badgeCount}
+                disabled={card.disabled}
+                emphasis={card.emphasis}
+                footer={card.footer}
+                hasAlert={card.hasAlert}
+                highlighted={card.highlighted}
+                icon={card.icon}
+                illustration={card.illustration || illustrationsParFamille[card.icon]}
+                illustrationPlacement={card.illustrationPlacement}
+                locked={card.locked}
+                onPress={card.onPress}
+                premiumScope={card.premiumScope}
+                subtitle={card.subtitle}
+                subtitleLines={card.subtitleLines}
+                title={card.title}
+                titleCount={card.titleCount}
+                tone={card.tone}
+                tutorialTargetRef={card.tutorial ? assignTutorialTargetRef : undefined}
+              />
+            </TourTarget>
           );
 
           if (!card.tutorial) {

@@ -18,6 +18,7 @@ import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
@@ -173,70 +174,72 @@ function TeamList({ navigation, route }) {
           <WebFloatingOverlay
             style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
           >
-            <TouchableOpacity
-              accessibilityLabel={t('teamList.actions.add', 'Ajouter une équipe')}
-              accessibilityRole="button"
-              activeOpacity={0.85}
-              onPress={handleAddTeam}
-              style={[
-                ApplicationStyle.shadow200,
-                {
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary500,
-                  borderColor: 'rgba(255,255,255,0.18)',
-                  borderRadius: 32,
-                  borderWidth: 1,
-                  elevation: 8,
-                  height: 64,
-                  justifyContent: 'center',
-                  shadowColor: 'black',
-                  shadowOffset: {
-                    height: 6,
-                    width: 0,
+            <TourTarget id="teams.fab">
+              <TouchableOpacity
+                accessibilityLabel={t('teamList.actions.add', 'Ajouter une équipe')}
+                accessibilityRole="button"
+                activeOpacity={0.85}
+                onPress={handleAddTeam}
+                style={[
+                  ApplicationStyle.shadow200,
+                  {
+                    alignItems: 'center',
+                    backgroundColor: Colors.primary500,
+                    borderColor: 'rgba(255,255,255,0.18)',
+                    borderRadius: 32,
+                    borderWidth: 1,
+                    elevation: 8,
+                    height: 64,
+                    justifyContent: 'center',
+                    shadowColor: 'black',
+                    shadowOffset: {
+                      height: 6,
+                      width: 0,
+                    },
+                    shadowOpacity: 0.32,
+                    shadowRadius: 12,
+                    width: 64,
                   },
-                  shadowOpacity: 0.32,
-                  shadowRadius: 12,
-                  width: 64,
-                },
-              ]}
-            >
-              <Image
-                resizeMode="contain"
-                source={Images.strokeShield}
-                style={{
-                  height: 24,
-                  // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
-                  // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
-                  tintColor: Colors.primary900,
-                  width: 24,
-                }}
-              />
-              <View
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary200,
-                  borderColor: 'rgba(255,255,255,0.36)',
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  height: 20,
-                  justifyContent: 'center',
-                  position: 'absolute',
-                  right: 8,
-                  top: 8,
-                  width: 20,
-                }}
+                ]}
               >
                 <Image
                   resizeMode="contain"
-                  source={Images.plus}
+                  source={Images.strokeShield}
                   style={{
-                    height: 10,
+                    height: 24,
+                    // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
+                    // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
                     tintColor: Colors.primary900,
-                    width: 10,
+                    width: 24,
                   }}
                 />
-              </View>
-            </TouchableOpacity>
+                <View
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: Colors.primary200,
+                    borderColor: 'rgba(255,255,255,0.36)',
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    height: 20,
+                    justifyContent: 'center',
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
+                    width: 20,
+                  }}
+                >
+                  <Image
+                    resizeMode="contain"
+                    source={Images.plus}
+                    style={{
+                      height: 10,
+                      tintColor: Colors.primary900,
+                      width: 10,
+                    }}
+                  />
+                </View>
+              </TouchableOpacity>
+            </TourTarget>
           </WebFloatingOverlay>
         ) : null}
 

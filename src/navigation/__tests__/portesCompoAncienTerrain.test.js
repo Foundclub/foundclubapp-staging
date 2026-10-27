@@ -86,31 +86,26 @@ const findPressable = (node) => {
   return children.reduce((found, child) => found || findPressable(child), null);
 };
 
-describe('C-F temoin 1 — le TOUR GUIDE du coach mene toujours quelque part', () => {
-  it("l'etape composition existe encore dans le tour du coach", () => {
-    expect(findStep('coach', 'coach_composition')).toBeDefined();
-  });
+// TUTOE (27/10) — LE JOUR DE LA COUPE EST ARRIVE POUR CETTE PORTE-LA. Le guide
+// Entraineur valide par Adel le 26/10 (« 2- ok go ») remplace l'ancien tour
+// coach : il n'ouvre plus l'ANCIEN terrain. Sa composition passera par le bonus
+// B2 (convocation simulee sur les ecrans NEUFS du pack composition), pas encore
+// code. Le filet garde son sens : le tour ne doit JAMAIS dependre de
+// `tactical_v2`, sinon couper le dossier l'arreterait au milieu.
+describe('C-F temoin 1 — le TOUR GUIDE du coach ne passe plus par l ANCIEN terrain', () => {
+  it('aucune etape du guide coach ne navigue vers TacticalBoardV2', () => {
+    const contexte = { userData: { club: { documentId: 'c-1' }, preferredSport: 'football' } };
+    const ecrans = TOUR_PROFILES.coach.steps
+      .map((/** @type {any} */ step) => step.navTarget)
+      .filter(Boolean)
+      .map((/** @type {any} */ cible) => {
+        const params = typeof cible.params === 'function' ? cible.params(contexte) : cible.params;
+        return params?.screen || cible.routeName;
+      });
 
-  it('elle ouvre l ANCIEN terrain, en simulation — et rien d autre ne sait le faire', () => {
-    const cible = findStep('coach', 'coach_composition').navTarget;
-    const resolue = cible.params({ userData: { preferredSport: 'football' } });
-
-    expect(cible.routeName).toBe(RouteNames.EventStack);
-    // 🔒 LE JOUR DE LA COUPE, CETTE LIGNE DEVIENT ROUGE. C'est voulu : elle dit
-    // que le tour guide n'a pas encore de terrain de remplacement.
-    expect(resolue.screen).toBe(RouteNames.TacticalBoardV2);
-    // Le mode simulation est la promesse faite au coach : « rien n'est publie ».
-    // Mesure du 2026-08-16 : `simulationMode` n'existe dans AUCUN ecran neuf.
-    expect(resolue.params.simulationMode).toBe(true);
-    expect(resolue.params.canEdit).toBe(true);
-  });
-
-  it('elle part avec un effectif d essai non vide, sinon le terrain est nu', () => {
-    const resolue = findStep('coach', 'coach_composition')
-      .navTarget.params({ userData: { preferredSport: 'football' } });
-
-    expect(Array.isArray(resolue.params.players)).toBe(true);
-    expect(resolue.params.players.length).toBeGreaterThan(0);
+    expect(ecrans.length).toBeGreaterThan(0);
+    expect(ecrans).not.toContain(RouteNames.TacticalBoardV2);
+    expect(findStep('coach', 'coach_composition')).toBeUndefined();
   });
 });
 

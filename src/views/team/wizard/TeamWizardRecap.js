@@ -142,7 +142,7 @@ function TeamWizardRecap({ navigation }) {
       Alert.alert(t('common.error', 'Erreur'), message);
     },
     onSuccess: (createdTeam) => {
-      emitGuidanceAction('team.created');
+      emitGuidanceAction('team.created', { teamName: state.name?.trim() || '' });
       refreshCachesAfterTeamCreation(queryClient);
       const targetClubId = selectedOverview.clubId;
 

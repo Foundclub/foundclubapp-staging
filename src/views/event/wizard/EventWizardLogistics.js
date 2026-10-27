@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import DateEtHoraire, {
   areSameDay,
@@ -646,54 +647,56 @@ function EventWizardLogistics({ navigation, route }) {
         {/* DATESDABORD (23/10) — le bloc est PARTAGE avec « Attribuer un créneau » de la Ville
             (point 9 d'Adel : « le même modèle ») ; il est sorti d'ici tel quel. */}
         {showSingleDateTimeFields ? (
-          <DateEtHoraire
-            date={date}
-            debut={startTime}
-            fin={endTime}
-            onDate={changerLaDate}
-            onDebut={handleStartTimeChange}
-            onFin={handleEndTimeChange}
-            onRepetition={(/** @type {any} */ suite) => {
-              if (!suite) {
-                setIsRecurrent(false);
-                return;
-              }
-              setRecurrenceFrequency(suite.frequence);
-              setRecurrenceIntervalText(suite.intervalleTexte);
-              setRecurrenceDays(suite.jours);
-              setRecurrenceStartDate(suite.du);
-              setRecurrenceEndDate(suite.au);
-              setIsRecurrent(true);
-            }}
-            repetition={{
-              actif: isRecurrent,
-              au: recurrenceEndDate,
-              du: recurrenceStartDate,
-              frequence: recurrenceFrequency,
-              intervalleTexte: recurrenceIntervalText,
-              jours: recurrenceDays,
-            }}
-            sansRepetition={isTournament}
-            vacances={vacancesDeLaZone ? {
-              actif: saufVacances,
-              onBasculer: () => setSaufVacances((avant) => !avant),
-              zone: vacancesDeLaZone.label || '',
-            } : null}
-            // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.
-            sousLesHeures={avecJugement ? (
-              <JugementDuCreneau
-                date={date}
-                debut={startTime}
-                etat={{
-                  ...state,
-                  isRecurrent,
-                  recurrenceEndDate,
-                }}
-                fin={endTime}
-                onEtat={recevoirLeJugement}
-              />
-            ) : null}
-          />
+          <TourTarget id="eventWizard.when">
+            <DateEtHoraire
+              date={date}
+              debut={startTime}
+              fin={endTime}
+              onDate={changerLaDate}
+              onDebut={handleStartTimeChange}
+              onFin={handleEndTimeChange}
+              onRepetition={(/** @type {any} */ suite) => {
+                if (!suite) {
+                  setIsRecurrent(false);
+                  return;
+                }
+                setRecurrenceFrequency(suite.frequence);
+                setRecurrenceIntervalText(suite.intervalleTexte);
+                setRecurrenceDays(suite.jours);
+                setRecurrenceStartDate(suite.du);
+                setRecurrenceEndDate(suite.au);
+                setIsRecurrent(true);
+              }}
+              repetition={{
+                actif: isRecurrent,
+                au: recurrenceEndDate,
+                du: recurrenceStartDate,
+                frequence: recurrenceFrequency,
+                intervalleTexte: recurrenceIntervalText,
+                jours: recurrenceDays,
+              }}
+              sansRepetition={isTournament}
+              vacances={vacancesDeLaZone ? {
+                actif: saufVacances,
+                onBasculer: () => setSaufVacances((avant) => !avant),
+                zone: vacancesDeLaZone.label || '',
+              } : null}
+              // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.
+              sousLesHeures={avecJugement ? (
+                <JugementDuCreneau
+                  date={date}
+                  debut={startTime}
+                  etat={{
+                    ...state,
+                    isRecurrent,
+                    recurrenceEndDate,
+                  }}
+                  fin={endTime}
+                  onEtat={recevoirLeJugement}
+                />
+              ) : null}
+            />
+          </TourTarget>
         ) : null}
 
         {isTournament ? (

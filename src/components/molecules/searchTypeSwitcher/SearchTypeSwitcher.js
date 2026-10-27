@@ -13,6 +13,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
@@ -122,60 +123,62 @@ function SearchTypeSwitcher({ activeType, onTypeChange, types }) {
           const isUnavailable = option.key === UNAVAILABLE_TYPE;
 
           return (
-            <TouchableOpacity
-              accessibilityLabel={option.label}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-              activeOpacity={0.8}
-              key={option.key}
-              onPress={() => {
-                if (isUnavailable) {
-                  setShowUnavailableSheet(true);
-                  return;
-                }
-                onTypeChange(/** @type {SearchType} */ (option.key));
-              }}
-              style={{
-                alignItems: 'center',
-                backgroundColor: isActive ? Colors.primary500 : inactiveSurface,
-                borderColor: isActive ? Colors.primary500 : inactiveBorder,
-                borderRadius: 999,
-                borderWidth: 1,
-                flexDirection: 'row',
-                gap: 8,
-                height: DOCK_ITEM_SIZE,
-                justifyContent: 'center',
-                minWidth: DOCK_ITEM_SIZE,
-                opacity: isUnavailable ? 0.55 : 1,
-                paddingHorizontal: isActive ? 14 : 0,
-              }}
-            >
-              <Image
-                source={option.icon}
-                style={{
-                  height: 16,
-                  resizeMode: 'contain',
-                  tintColor: isActive ? Colors.primary900 : Colors.neutral300,
-                  width: 16,
+            <TourTarget id={`search.tab.${option.key}`} key={option.key}>
+              <TouchableOpacity
+                accessibilityLabel={option.label}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+                activeOpacity={0.8}
+                key={option.key}
+                onPress={() => {
+                  if (isUnavailable) {
+                    setShowUnavailableSheet(true);
+                    return;
+                  }
+                  onTypeChange(/** @type {SearchType} */ (option.key));
                 }}
-              />
-              {isActive ? (
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    Fonts.p4Bold,
-                    Fonts.primary900,
-                    {
-                      includeFontPadding: !isWeb ? false : undefined,
-                      lineHeight: isWeb ? 17 : 16,
-                      textAlignVertical: 'center',
-                    },
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              ) : null}
-            </TouchableOpacity>
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: isActive ? Colors.primary500 : inactiveSurface,
+                  borderColor: isActive ? Colors.primary500 : inactiveBorder,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  flexDirection: 'row',
+                  gap: 8,
+                  height: DOCK_ITEM_SIZE,
+                  justifyContent: 'center',
+                  minWidth: DOCK_ITEM_SIZE,
+                  opacity: isUnavailable ? 0.55 : 1,
+                  paddingHorizontal: isActive ? 14 : 0,
+                }}
+              >
+                <Image
+                  source={option.icon}
+                  style={{
+                    height: 16,
+                    resizeMode: 'contain',
+                    tintColor: isActive ? Colors.primary900 : Colors.neutral300,
+                    width: 16,
+                  }}
+                />
+                {isActive ? (
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.p4Bold,
+                      Fonts.primary900,
+                      {
+                        includeFontPadding: !isWeb ? false : undefined,
+                        lineHeight: isWeb ? 17 : 16,
+                        textAlignVertical: 'center',
+                      },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            </TourTarget>
           );
         })}
       </ScrollView>

@@ -12,6 +12,7 @@ import OnboardingOverlay from '@/components/molecules/onboardingOverlay/Onboardi
 import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import { useStartupPhase } from '@/context/StartupPhaseContext';
+import { useTour } from '@/context/useTour';
 
 /**
  * @param {{
@@ -157,8 +158,10 @@ function TutorialFlowBoundary({
   tutorialId,
   userId,
 }) {
+  // Règle 8 du pack tutoriels (TUTOE) : pendant un tour, pas de tuto par écran.
+  const { isTourActive } = useTour();
   const tutorial = useFeatureTutorial({
-    autoStart,
+    autoStart: autoStart && !isTourActive,
     routeParams,
     tutorialId,
     userId,

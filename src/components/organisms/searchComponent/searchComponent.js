@@ -6,6 +6,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 const normalizeSearchValue = (value) => {
   const normalized = String(value || '');
@@ -142,19 +143,21 @@ function SearchComponent({
         {/* RECRUTER-TUNNEL (audit V1) — sans libelle, le lecteur d'ecran
             annoncait « bouton » tout court (`content-desc` vide), et la pastille
             du nombre ne se lit pas avec lui. 8 listes partagent ce bouton. */}
-        <Button
-          accessibilityLabel={filterNumber
-            ? t('search.filters.buttonActive', {
-              count: filterNumber,
-              defaultValue_one: 'Filtrer, {{count}} filtre actif',
-              defaultValue_other: 'Filtrer, {{count}} filtres actifs',
-            })
-            : t('search.filters.button', 'Filtrer')}
-          icon="filter"
-          onPress={openFilters}
-          size="sm"
-          variant="Secondary"
-        />
+        <TourTarget id="search.filters">
+          <Button
+            accessibilityLabel={filterNumber
+              ? t('search.filters.buttonActive', {
+                count: filterNumber,
+                defaultValue_one: 'Filtrer, {{count}} filtre actif',
+                defaultValue_other: 'Filtrer, {{count}} filtres actifs',
+              })
+              : t('search.filters.button', 'Filtrer')}
+            icon="filter"
+            onPress={openFilters}
+            size="sm"
+            variant="Secondary"
+          />
+        </TourTarget>
       </View>
     </View>
   );

@@ -6,6 +6,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import TourBanner from '@/components/molecules/tour/TourBanner';
+import TourGuideLayer from '@/components/molecules/tour/TourGuideLayer';
 
 import {
   ecouterLesLiens,
@@ -206,6 +207,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
       )}
       {isPrivateMode ? <PrivateNavigator /> : <PublicNavigator />}
       {isPrivateMode ? <TourBanner /> : null}
+      {isPrivateMode ? <TourGuideLayer /> : null}
     </NavigationContainer>
   );
 }
