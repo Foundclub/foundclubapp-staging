@@ -24,6 +24,9 @@ import SeasonSlotForm from '../SeasonSlotForm';
 //   proposait 8 h – 22 h (aucune heure pleine n'est calculée dans ce cas).
 // - Q3-13 : « Mercredi » puis « Des dates choisies » : le récapitulatif annonçait « Mercredi »,
 //   un jour de semaine qui ne part pas au serveur.
+// - Voisin (trouvé par le lot, « Q1 = A » du chef 27/10) : « Répéter » toutes les 2 semaines (ou une
+//   période), puis retour à « chaque semaine jusqu'à la fin de saison » : la forme restait l'ancienne,
+//   le récapitulatif la disait et elle partait au serveur (`everyWeeks: 2`).
 // Montage repris de SeasonSlotForm.R17Q1.quand.test.js.
 
 const i18nextTemoin = require('i18next');
@@ -275,6 +278,22 @@ test('Q3-13 — « Mercredi » puis « Des dates choisies » : le récapitulatif
   expect(heures.join(' | ')).not.toMatch(/Mercredi/);
   await appeler(() => tunnel(arbre).onNext());
   expect(modifySeasonSlot).toHaveBeenCalledWith('c-mer', expect.not.objectContaining({ weekday: expect.anything() }));
+});
+
+test.each([
+  ['toutes les 2 semaines', { intervalleTexte: '2' }],
+  ['une période', { au: new Date(2026, 11, 18), du: new Date(2026, 9, 21) }],
+])('Voisin — %s, puis « chaque semaine » jusqu’à la fin de saison : retour à toute la saison', async (_nom, avant) => {
+  const arbre = await monter();
+  await jusquAuQuand(arbre);
+  await repeter(arbre, avant);
+  await repeter(arbre, {});
+  await avancer(arbre);
+  expect(lus(arbre)).toContain('Toute la saison · 21 oct. – 30 juin');
+  await appeler(() => tunnel(arbre).onNext());
+  expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
+    club: 'basket', endTime: '19:00', startTime: '17:30', weekday: 3,
+  });
 });
 
 jest.mock(

@@ -837,6 +837,8 @@ function SeasonSlotForm({
     setJour(lue.jour);
     setJoursDifferents(lue.joursDifferents);
     if (lue.forme === 'dates') setDatesChoisies(lue.dates || []);
+    // APRESDATES (voisin) — revenir à « chaque semaine, toute la saison » quitte l'ancienne forme.
+    if (lue.forme === 'saison') setForme('saison');
     if (lue.forme === 'periode') {
       setForme('periode');
       setPeriodeDu(versSaisie(lue.periodeDu));
