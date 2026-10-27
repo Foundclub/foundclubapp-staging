@@ -1,6 +1,21 @@
+import { pointEtRayon } from '@/domains/places/placesUseCases';
+
 import client from '../client';
 
 /** @typedef {import('@/domains/event/types').FCEvent} Reservation */
+
+/**
+ * PHASE3C02 · Q2-07 — les pastilles de la liste (ReservationListContent) écrivent un slug ;
+ * le sport d'une réservation est celui de son équipe, et une activité n'a pas de slug :
+ * on filtre sur son NOM.
+ * @type {Record<string, string[]>}
+ */
+const NOMS_DES_PASTILLES = {
+  basket: ['Basketball', 'Basket'],
+  foot: ['Football'],
+  padel: ['Padel'],
+  tennis: ['Tennis'],
+};
 
 /**
  * Get reservations with filters
@@ -12,7 +27,11 @@ import client from '../client';
  *   reservationMode?: string;
  *   club?: string;
  *   activity?: string;
+ *   activitySlug?: string | null;
  *   geohash?: string;
+ *   lat?: number;
+ *   lon?: number;
+ *   radius?: number;
  *   maxPricePerPerson?: number;
  *   maxPrice?: number | string;
  *   needsPlayers?: boolean;
@@ -26,8 +45,11 @@ export const getReservations = async (filters = {}) => {
   try {
     const {
       activity,
+      activitySlug,
       club,
       geohash,
+      lat,
+      lon,
       // BUGHUNT C02 Q2-07 : la feuille de filtres écrit `maxPrice` (seule la recherche
       // par texte le lisait) ; sans texte tapé, le prix maximum n'avait aucun effet.
       maxPrice,
@@ -36,6 +58,7 @@ export const getReservations = async (filters = {}) => {
       page = 1,
       pageSize = 15,
       q,
+      radius,
       reservationMode,
       startDateAfter,
       startDateBefore,
@@ -43,7 +66,7 @@ export const getReservations = async (filters = {}) => {
       type,
     } = filters;
 
-    /** @type {{ filters: Record<string, any>; pagination: { page: number; pageSize: number }; populate: string[]; sort: string[] }} */
+    /** @type {{ filters: Record<string, any>; lat?: number; lon?: number; pagination: { page: number; pageSize: number }; populate: string[]; radius?: number; sort: string[] }} */
     const params = {
       filters: {
         type: { name: { $eq: 'Réservation' } },
@@ -116,6 +139,12 @@ export const getReservations = async (filters = {}) => {
           documentId: { $eq: activity },
         },
       };
+    } else if (activitySlug && NOMS_DES_PASTILLES[activitySlug]) {
+      params.filters.team = {
+        activities: {
+          $or: NOMS_DES_PASTILLES[activitySlug].map((name) => ({ name: { $eqi: name } })),
+        },
+      };
     }
 
     if (maxPricePerPerson) {
@@ -129,7 +158,13 @@ export const getReservations = async (filters = {}) => {
       params.filters.startTime = { $gte: timeString };
     }
 
-    if (geohash) {
+    // PHASE3C02 · Q2-04 : avec le point et le rayon, /events filtre à la vraie distance (bornes
+    // du cercle, puis Haversine, comme la liste des événements) ; la case seule excluait des lieux
+    // situés dans le rayon.
+    const zone = pointEtRayon(lat, lon, radius);
+    if (zone) {
+      Object.assign(params, zone);
+    } else if (geohash) {
       params.filters.geohash = { $contains: geohash };
     }
 

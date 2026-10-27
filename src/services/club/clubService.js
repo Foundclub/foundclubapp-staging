@@ -4,6 +4,7 @@ import Joi from 'joi';
 import { Platform } from 'react-native';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { filtreGeohashDuCercle } from '@/domains/places/placesUseCases';
 import { getUploadEndpoint } from '@/config/runtimeUrls';
 import { buildPreservedApiError } from '@/utils/errors/apiError';
 import { createLogger } from '@/utils/logger/logger';
@@ -191,9 +192,12 @@ const buildClubListParams = (params = {}) => {
     clubPartner,
     geohash,
     isCustomer,
+    lat,
+    lon,
     name,
     page,
     pageSize,
+    radius,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -252,7 +256,12 @@ const buildClubListParams = (params = {}) => {
     };
   }
 
-  if (geohash && geohash.length) {
+  // PHASE3C02 · Q2-04 : avec le point et le rayon de « ville · N km », tout le cercle ; la case
+  // seule n'est plus que le repli des écrans qui n'envoient qu'elle.
+  const cercle = filtreGeohashDuCercle(lat, lon, radius);
+  if (cercle) {
+    filters.filters = Object.assign(filters.filters, cercle);
+  } else if (geohash && geohash.length) {
     filters.filters = Object.assign(filters.filters, {
       geohash: {
         $contains: geohash,
@@ -266,9 +275,12 @@ const buildClubListParams = (params = {}) => {
 const buildMultisportClubListParams = (params = {}) => {
   const {
     geohash,
+    lat,
+    lon,
     name,
     page,
     pageSize,
+    radius,
   } = params;
 
   /** @type {Record<string, any>} */
@@ -296,7 +308,11 @@ const buildMultisportClubListParams = (params = {}) => {
     };
   }
 
-  if (geohash && geohash.length) {
+  // PHASE3C02 · Q2-04 : le même cercle que la liste des clubs.
+  const cercle = filtreGeohashDuCercle(lat, lon, radius);
+  if (cercle) {
+    filters.filters = { ...(filters.filters || {}), ...cercle };
+  } else if (geohash && geohash.length) {
     filters.filters = {
       ...(filters.filters || {}),
       geohash: {
@@ -315,9 +331,12 @@ const buildMultisportClubListParams = (params = {}) => {
  *   geohash?: string[];
  *   clubPartner?: boolean;
  *   isCustomer?: boolean;
+ *   lat?: number;
+ *   lon?: number;
  *   name?: string;
  *   page?: number;
  *   pageSize?: number;
+ *   radius?: number;
  *   includeMultisport?: boolean;
  * }} params
  * @returns {Promise<{data: Club[], meta: {
@@ -382,6 +401,9 @@ export const getClubs = async (params = {}) => {
  * Get the list of multisport clubs
  * @param {{
  *   geohash?: string[];
+ *   lat?: number;
+ *   lon?: number;
+ *   radius?: number;
  *   name?: string;
  *   page?: number;
  *   pageSize?: number;

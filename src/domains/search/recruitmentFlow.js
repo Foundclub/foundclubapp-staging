@@ -1,5 +1,7 @@
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 
+import coordonneesDeLaVille from '@/components/organisms/filtersSheet/cityCoordinates';
+
 // D57 — Rechercher EXPLORE, « Mes activites » GERE. Deux onglets de gestion ont
 // donc quitte cette liste : « Mes annonces » (staff) est repris par
 // « Mes activites › Publications », et « Mes candidatures » (joueur) par
@@ -91,3 +93,23 @@ export const getProfileFilterCount = (filters) => getAppliedFilterCount({
   geohash: filters?.geohash,
   position: filters?.positions || filters?.position,
 });
+
+/**
+ * PHASE3C02 · Q2-04 — les paramètres de la liste des profils (RecruitmentProfilesList). La ville
+ * choisie donne aussi le point et le rayon : /search/profiles filtre alors à la vraie distance.
+ * @param {Record<string, any> | null | undefined} filters - `mercatoFilters`.
+ * @param {string} searchValue - Le texte tapé.
+ * @returns {Record<string, any>}
+ */
+export const parametresDeRechercheDeProfils = (filters, searchValue) => {
+  const texte = String(searchValue || '').trim();
+  const coordonnees = coordonneesDeLaVille(filters?.city);
+  return {
+    activity: filters?.activityNames || filters?.activity,
+    category: filters?.sectionIds || filters?.category,
+    geohash: filters?.geohash,
+    ...(coordonnees ? { lat: coordonnees.lat, lon: coordonnees.lon, radius: filters?.radius } : {}),
+    position: filters?.positions || filters?.position,
+    ...(texte.length >= 2 ? { q: texte, sort: 'relevance' } : { sort: 'date' }),
+  };
+};

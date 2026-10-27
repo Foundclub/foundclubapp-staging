@@ -1,5 +1,5 @@
 // @ts-ignore
-import { encode } from 'ngeohash';
+import { bboxes, encode } from 'ngeohash';
 
 /**
  * Calculate appropriate geohash precision based on radius
@@ -39,4 +39,65 @@ export const getGeohashForPointAndRadius = (latitude, longitude, radius) => {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
   const precision = getGeohashPrecision(radius);
   return encode(latitude, longitude, precision);
+};
+
+const KM_PAR_DEGRE = 111.32;
+// Au-delà, on passe à des cases plus grandes. Mesure PHASE3C02 (Marseille) : 16 faisait garder des
+// lieux jusqu'à 231 km pour un rayon de 50 km ; 32 : 101 km (4 à 30 cases de 1 à 50 km).
+const CASES_MAX = 32;
+
+/**
+ * Un nombre, ou NaN pour une valeur absente (`Number(null)` vaudrait 0, un faux point).
+ * @param {any} valeur
+ * @returns {number}
+ */
+const nombre = (valeur) => (
+  valeur === null || valeur === undefined || valeur === '' ? NaN : Number(valeur)
+);
+
+/**
+ * PHASE3C02 · Q2-04 — le point et le rayon d'un filtre « ville · N km », ou rien.
+ * @param {any} latitude
+ * @param {any} longitude
+ * @param {any} radius - En km.
+ * @returns {{ lat: number, lon: number, radius: number } | null}
+ */
+export const pointEtRayon = (latitude, longitude, radius) => {
+  const lat = nombre(latitude);
+  const lon = nombre(longitude);
+  const rayon = nombre(radius);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !(rayon > 0)) return null;
+  return { lat, lon, radius: rayon };
+};
+
+/**
+ * PHASE3C02 · Q2-04 — le filtre Strapi qui garde TOUT le cercle : les cases de geohash qui couvrent
+ * son carré englobant. La case seule (getGeohashForPointAndRadius) n'est pas centrée sur la
+ * ville : Aix, à 26,7 km de Marseille, sortait d'un rayon de 30 km.
+ * ponytail: les coins du carré et les bords des cases gardent aussi des lieux au-delà du rayon
+ * (30 km : jusqu'à 67 km, comme la case seule avant). Sortie : la distance réelle côté serveur,
+ * comme /events.
+ * @param {any} latitude
+ * @param {any} longitude
+ * @param {any} radius - En km.
+ * @returns {{ $or: { geohash: { $startsWith: string } }[] } | null} Rien sans point ni rayon.
+ */
+export const filtreGeohashDuCercle = (latitude, longitude, radius) => {
+  const zone = pointEtRayon(latitude, longitude, radius);
+  if (!zone) return null;
+  const dLat = zone.radius / KM_PAR_DEGRE;
+  const cosLat = Math.max(Math.cos((zone.lat * Math.PI) / 180), 0.01);
+  const dLon = zone.radius / (KM_PAR_DEGRE * cosLat);
+  const sud = Math.max(zone.lat - dLat, -90);
+  const nord = Math.min(zone.lat + dLat, 90);
+  const ouest = Math.max(zone.lon - dLon, -180);
+  const est = Math.min(zone.lon + dLon, 180);
+  let precision = getGeohashPrecision(zone.radius);
+  /** @type {string[]} */
+  let cases = bboxes(sud, ouest, nord, est, precision);
+  while (cases.length > CASES_MAX && precision > 1) {
+    precision -= 1;
+    cases = bboxes(sud, ouest, nord, est, precision);
+  }
+  return { $or: cases.map((cellule) => ({ geohash: { $startsWith: cellule } })) };
 };

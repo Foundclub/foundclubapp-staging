@@ -257,8 +257,12 @@ function ClubListContent({
     refetch: refetchMultisport,
   } = useGetMultisportClubs({
     geohash: clubFilters?.geohash,
+    // PHASE3C02 · Q2-04 : le point et le rayon, pour garder tout le cercle (clubService).
+    lat: clubFilters?.lat,
+    lon: clubFilters?.lon,
     name: activeSearchText || undefined,
     pageSize: 10,
+    radius: clubFilters?.radius,
   }, {
     enabled: screenActive
       && !isViewportListMode

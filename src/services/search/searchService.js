@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 
+import { pointEtRayon } from '@/domains/places/placesUseCases';
+
 import client from '@/services/client';
 
 const DEFAULT_PAGE_SIZE = 15;
@@ -450,7 +452,11 @@ export const searchProfiles = async (params = {}, options = {}) => {
     ...baseParams,
     activity: normalizeActivity(params.activityNames || params.activity),
     category: normalizeCategoryOrLevel(params.sectionIds || params.category),
-    geohash: toStringOrUndefined(params.geohash),
+    // PHASE3C02 · Q2-04 : avec le point et le rayon, le serveur filtre à la vraie distance ;
+    // la case en plus (`$startsWith`) exclurait des profils situés dans le rayon.
+    geohash: pointEtRayon(params.lat, params.lon, params.radius)
+      ? undefined
+      : toStringOrUndefined(params.geohash),
     position: normalizeCategoryOrLevel(params.position),
   }, options);
 };
