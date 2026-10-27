@@ -142,7 +142,7 @@ describe('CARTEAFF 3 — le terrain ne déforme plus le reste du dessin', () => 
     const terrain = arbre.root.find((n) => n.type === 'svg:G' && /scale\(/.test(String(n.props.transform)));
     expect(terrain).toBeTruthy();
     const scene = arbre.root.find(
-      (n) => n.type === 'svg:G' && n.props.clipPath === 'url(#cadreScene)',
+      (n) => n.type === 'svg:G' && n.props.clipPath === 'url(#zoneScene)',
     );
     // le numéro et le terrain sont dans la scène
     expect(scene.findAll((n) => n.type === 'svg:Text').map(lire)).toContain('9');

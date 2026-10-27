@@ -466,7 +466,7 @@ function PlayerCardBase({
           <ClipPath id="interieur">
             <Path d={INNER} />
           </ClipPath>
-          <ClipPath id="cadreScene">
+          <ClipPath id="zoneScene">
             <Rect height={STAGE_H} width={W - 2 * LISERE} x={LISERE} y={LISERE} />
           </ClipPath>
           {/* La photo se fond dans la scène : bords gauche et droit, haut, et tout le bas */}
@@ -522,7 +522,7 @@ function PlayerCardBase({
           <Rect fill="url(#halo)" height={STAGE_H} width={W} x={0} y={LISERE} />
           {/* La scène, découpée à son cadre. Le terrain est un groupe mis à l'échelle, pas un
               <Svg> imbriqué : sur l'iPhone, celui-ci étirait ce qui venait après (CARTEAFF). */}
-          <G clipPath="url(#cadreScene)">
+          <G clipPath="url(#zoneScene)">
             <G transform={TERRAIN}>
               <CourtLines sport={sport} strokeWidth={1.6} />
             </G>
