@@ -951,6 +951,17 @@ function EvenementDeLaVilleForm({
           'qui',
         )}
       </View>
+      {/* VILLEEVT-CODE : un refus au moment de publier (un jour passé, un brouillon relu) se dit
+          ici aussi ; sinon « Publier » ne ferait rien de visible. */}
+      {essaye && Object.keys(erreurs).length ? (
+        <Text
+          accessibilityRole="alert"
+          style={[Fonts.p3, { color: Colors.error300 }]}
+          testID="evenement-refus-recap"
+        >
+          {t(Object.values(erreurs)[0])}
+        </Text>
+      ) : null}
       <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-recap-modifiable">
         {t('collectiviteEvenement.recap.modifiable', 'Tout reste modifiable après.')}
       </Text>

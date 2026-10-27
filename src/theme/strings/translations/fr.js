@@ -6806,7 +6806,7 @@ export default {
         + '{{installation}} redevient libre : {{quand}}.',
       prevenus: 'Ceux qui avaient été prévenus le sont de l’annulation.',
       // VILLEEVT-CODE (2B, 27/10) : une date d'une série.
-      serie: 'Annuler cette date et les suivantes',
+      serie: 'Annuler celle-ci et la suite',
       serieAide: 'Cette date fait partie d’une série : {{regle}}',
       titre: 'Annuler « {{nom}} » ?',
       uneDate: 'Annuler cette date seulement',

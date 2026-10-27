@@ -361,7 +361,7 @@ function EvenementDeLaVille() {
                 <Button
                   isLoading={annuler.isPending}
                   onPress={() => confirmerLAnnulation(true)}
-                  title={t('collectiviteEvenement.annulation.serie', 'Annuler cette date et les suivantes')}
+                  title={t('collectiviteEvenement.annulation.serie', 'Annuler celle-ci et la suite')}
                   variant="DangerFilled"
                 />
               </>

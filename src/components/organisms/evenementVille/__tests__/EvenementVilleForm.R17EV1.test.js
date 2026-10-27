@@ -912,3 +912,26 @@ describe('VILLEEVT-CODE — ligne 12 : le brouillon (site)', () => {
     expect(dernierInput('evenement-nom').value).toBe('');
   });
 });
+
+describe('VILLEEVT-CODE — un refus au moment de publier se dit au récapitulatif', () => {
+  it('🔴 depuis une case d’un jour passé : « Ce jour est déjà passé. », rien n’est envoyé', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    // Horloge figée au 20/10 ; la case est celle du lundi 19.
+    const arbre = await monter({
+      initial: {
+        date: '2026-10-19', endTime: '15:30', facilityId: 'stade', startTime: '14:00',
+      },
+      onPublier,
+    });
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Cross');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    expect(titre(arbre)).toBe('Récapitulatif');
+    await touche(arbre, 'tunnel-suivant');
+    expect(onPublier).not.toHaveBeenCalled();
+    expect(textes(arbre)).toContain('Ce jour est déjà passé.');
+  });
+});

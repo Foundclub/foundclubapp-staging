@@ -6244,7 +6244,7 @@ export default {
       libere: 'Everyone who was notified is told about the cancellation. {{installation}} is free again: {{quand}}.',
       prevenus: 'Everyone who was notified is told about the cancellation.',
       // VILLEEVT-CODE (2B, 27/10) : one date of a series.
-      serie: 'Cancel this date and the following ones',
+      serie: 'Cancel this one and the rest',
       serieAide: 'This date is part of a series: {{regle}}',
       titre: 'Cancel “{{nom}}”?',
       uneDate: 'Cancel this date only',

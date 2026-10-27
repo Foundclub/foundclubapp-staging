@@ -515,7 +515,7 @@ describe('VILLEEVT-CODE — la fiche d’une date de série, ses places (2B, 3B)
     expect(textes(arbre)).toContain(
       'Cette date fait partie d’une série : Chaque semaine (samedi) jusqu’au sam. 14 nov.',
     );
-    await touche(arbre, 'bouton:Annuler cette date et les suivantes');
+    await touche(arbre, 'bouton:Annuler celle-ci et la suite');
     expect(mockAnnuler).toHaveBeenCalledWith({ evenementId: 'evt-1', serie: true });
   });
 
