@@ -36,6 +36,13 @@ const FETE = {
 };
 
 describe('R17-EVT-1 — l’événement de la Ville, en règles pures', () => {
+  // VILLEEVT-CODE (27/10) : un jour passé se refuse désormais ; l'horloge est figée avant le 24/10.
+  beforeAll(() => {
+    jest.useFakeTimers({ now: new Date(2026, 9, 20, 8, 0) });
+  });
+  afterAll(() => {
+    jest.useRealTimers();
+  });
   it('le tunnel : 6 étapes ; 4 depuis une case ; « Ailleurs » saute la place', () => {
     expect(etapesDuTunnel()).toEqual(['quoi', 'quand', 'ou', 'place', 'qui', 'recap']);
     expect(etapesDuTunnel({ depuisUneCase: true })).toEqual(['quoi', 'place', 'qui', 'recap']);
@@ -86,6 +93,8 @@ describe('R17-EVT-1 — l’événement de la Ville, en règles pures', () => {
     expect(versCorpsDeLApi(FETE).data).toEqual({
       address: null,
       audience: 'dirigeants',
+      // VILLEEVT-CODE (3B) : sans places, null.
+      capacity: null,
       description: null,
       endDate: null,
       endTime: '17:00',

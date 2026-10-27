@@ -189,6 +189,8 @@ function WizardStepLayout({
     const handleWindowKeyDown = (event) => {
       if (
         event.defaultPrevented
+        // APRESDATES / Q1-13 — Entree maintenue repete `keydown` : une etape par appui.
+        || event.repeat
         || event.key !== 'Enter'
         || event.shiftKey
         || event.altKey

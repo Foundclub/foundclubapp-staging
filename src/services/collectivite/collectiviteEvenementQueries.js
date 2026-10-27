@@ -135,10 +135,13 @@ export const useGestesEvenementDeLaVille = (collectiviteId) => {
   };
   return {
     annuler: useMutation({
-      mutationFn: (/** @type {string} */ evenementId) => annulerEvenement({
-        collectiviteId: String(collectiviteId),
-        evenementId,
-      }),
+      // VILLEEVT-CODE (2B) : un id (cette date), ou `{ evenementId, serie: true }` (et les suivantes).
+      mutationFn: (/** @type {string | { evenementId: string, serie: boolean }} */ cible) => (
+        annulerEvenement({
+          collectiviteId: String(collectiviteId),
+          ...(typeof cible === 'string' ? { evenementId: cible } : cible),
+        })
+      ),
       onSuccess: relire,
     }),
     modifier: useMutation({
@@ -159,6 +162,18 @@ export const useGestesEvenementDeLaVille = (collectiviteId) => {
 };
 
 const HEURE = /^\d{2}:\d{2}$/;
+
+/**
+ * VILLEEVT-CODE (ligne 5) — « Réessayer la vérification » : relit les plannings des installations
+ * (la clé de `useOccupationDesLieux`).
+ * @returns {() => void} Le geste.
+ */
+export const useRelireLesOccupations = () => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['planning', 'fullscreen', 'facility'] });
+  };
+};
 
 /**
  * 🏟️ R17-EVT-1-BIS (d) (20/10) — « Où ? » : l'occupation de chaque installation de la Ville aux
@@ -206,6 +221,8 @@ export const useOccupationDesLieux = (collectiviteId, installations, fenetre) =>
   });
   if (!prete) return {};
   return occupationDesLieux({
+    // VILLEEVT-CODE (ligne 5) : une lecture en échec dit « Impossible de vérifier ».
+    echecs: lectures.map((lecture) => Boolean(lecture.isError)),
     fenetre,
     fermetures: fermetures.data?.data,
     installations: liste,

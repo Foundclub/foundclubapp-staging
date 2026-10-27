@@ -6243,7 +6243,11 @@ export default {
       garder: 'Keep the event',
       libere: 'Everyone who was notified is told about the cancellation. {{installation}} is free again: {{quand}}.',
       prevenus: 'Everyone who was notified is told about the cancellation.',
+      // VILLEEVT-CODE (2B, 27/10) : one date of a series.
+      serie: 'Cancel this one and the rest',
+      serieAide: 'This date is part of a series: {{regle}}',
       titre: 'Cancel “{{nom}}”?',
+      uneDate: 'Cancel this date only',
     },
     annulerSaisie: 'Cancel',
     description: {
@@ -6261,6 +6265,7 @@ export default {
       etiquette: 'Town event',
       introuvable: 'This event no longer exists, or it is not shown to you.',
       modifier: 'Edit',
+      repetition: 'Repeats: {{regle}}',
       titre: 'Town event',
       toucheesExplication_one: 'Its club sees it “Blocked by the town · to move” and can move it.',
       toucheesExplication_other:
@@ -6278,12 +6283,16 @@ export default {
       adresseExemple: 'Town hall square',
       ailleurs: 'Elsewhere in town',
       ailleursAide: 'Square, park, village hall…',
+      // VILLEEVT-CODE (ligne 5) : the chosen facility is full or closed; a failed read.
+      changerDate: 'Change the date',
       fermeeAvertissement: '{{installation}}: closure that day. You can still hold the event there.',
       occupationComplet: 'Full at these times',
+      occupationErreur: 'Could not check',
       occupationFermee: 'Closure that day',
       occupationLibre: 'Free at these times',
       occupationPlusieurs: '{{nombre}} sessions at these times',
       occupationUne: '1 session at these times',
+      reessayer: 'Check again',
       titre: 'Where?',
       titrePanneau: 'Where',
     },
@@ -6298,6 +6307,13 @@ export default {
       titre: 'How much space does it take?',
       toute: 'The whole facility',
       touteAide: 'No club is there during the event.',
+    },
+    // VILLEEVT-CODE (3B, 27/10) : « N places ».
+    places: {
+      exemple: 'No limit',
+      label: 'Number of places (optional)',
+      plusieurs: '{{nombre}} places',
+      une: '1 place',
     },
     planning: {
       aCote: 'Town · next to it',
@@ -6314,8 +6330,11 @@ export default {
       memesHeures: 'The same hours every day.',
       plusieursJours: 'Over several days',
       plusieursJoursPhrase: 'from {{debut}} to {{fin}} · {{heures}}',
+      // VILLEEVT-CODE (2B) : « Répéter » of the shared « Date & time » block.
+      repeterTitre: 'Repeat the event',
       titre: 'When?',
       unJour: '{{jour}} · {{heures}}',
+      vacancesZone: 'Your town’s zone',
     },
     qui: {
       actualite: 'The clubs and a news post',
@@ -6344,8 +6363,11 @@ export default {
     },
     recap: {
       evenement: 'Event',
+      // VILLEEVT-CODE (ligne 10) : as for the coach.
+      modifiable: 'Everything can still be changed afterwards.',
       modifier: 'Edit',
       ou: 'Where · space taken',
+      quand: 'When',
       qui: 'Who sees it',
       sousTitre: 'Read it again, then publish.',
       titre: 'Summary',
@@ -6356,10 +6378,24 @@ export default {
     },
     refus: {
       date: 'Choose the day.',
+      // VILLEEVT-CODE (27/10) : line 3, then 3B and 2B.
+      datePassee: 'This day has already passed.',
+      debutPasse: 'The start time has already passed.',
       finApresDebut: 'The end must come after the start.',
       heures: 'Choose the start time and the end time.',
       lieu: 'Say where the event takes place: a facility, or an address.',
       nom: 'Give the event a name.',
+      places: 'A number of places, from 1 to 100,000.',
+      repetitionFin: '“To” must come after the date.',
+    },
+    // VILLEEVT-CODE (2B) : the phrase of a series.
+    repetition: {
+      chaqueMois: 'Every month',
+      chaqueSemaine: 'Every week ({{jours}})',
+      jusquau: '{{rythme}} until {{au}}',
+      saufVacances: '{{phrase}}, except school holidays',
+      tousLesMois: 'Every {{nombre}} months',
+      toutesLesSemaines: 'Every {{nombre}} weeks ({{jours}})',
     },
     titre: 'Add a town event',
     titreModifier: 'Edit the event',
@@ -6375,6 +6411,24 @@ export default {
       portes_ouvertes: 'Open day',
       reunion: 'Meeting',
       tournoi: 'Tournament',
+    },
+    // VILLEEVT-CODE (ligne 1) : what each type means, as for the coach.
+    typesAide: {
+      autre: 'Everything else: ceremony, race, works…',
+      manifestation: 'A fair, a forum, a day open to all.',
+      portes_ouvertes: 'Clubs introduce themselves and let people try their sport.',
+      reunion: 'A meeting with the clubs: assembly, information, review.',
+      tournoi: 'Matches between teams, over one or several days.',
+    },
+    // VILLEEVT-CODE (4B) : the showcase, after publishing.
+    vitrine: {
+      dates: '{{nombre}} dates',
+      partage: 'Ready to paste wherever you like.',
+      partageEchec: 'Sharing could not open.',
+      partager: 'Share',
+      publie: 'It’s published',
+      sousTitre: 'Spread the word: share it with clubs and residents.',
+      voirFiche: 'See the event page',
     },
   },
   collectiviteFermetures: {
@@ -16953,6 +17007,22 @@ export default {
         position: 'position',
       },
       next: 'Next',
+      // CARTEFIN (board v2, part 8, screen 7): the next rarity step.
+      nextStep: {
+        and: 'and',
+        climb: 'From {{from}} to {{to}}',
+        clubs_one: 'add {{count}} more club to your history',
+        clubs_other: 'add {{count}} more clubs to your history',
+        fill_one: 'fill in {{count}} more box on your card',
+        fill_other: 'fill in {{count}} more boxes on your card',
+        goal: 'To reach {{rarity}}: {{actions}}.',
+        matches_one: 'play {{count}} match with your team',
+        matches_other: 'play {{count}} matches with your team',
+        matchesMore_one: 'play {{count}} more match with your team',
+        matchesMore_other: 'play {{count}} more matches with your team',
+        team: 'join a team',
+        top: 'This is the highest rarity.',
+      },
       number: {
         label: 'Number',
         title: 'Your shirt number',
@@ -16962,6 +17032,14 @@ export default {
         title: 'Your height and weight',
       },
       position: {
+        // CARTEFIN: the player's real sport, one full sentence per sport.
+        bySport: {
+          basketball: 'Your position in basketball',
+          football: 'Your position in football',
+          handball: 'Your position in handball',
+          rugby: 'Your position in rugby',
+          volleyball: 'Your position in volleyball',
+        },
         title: 'Your position',
       },
       saveError: "Can't save right now. Check your connection, or skip this step.",

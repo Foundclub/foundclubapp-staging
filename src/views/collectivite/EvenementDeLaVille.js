@@ -6,7 +6,9 @@ import {
 } from 'react-native';
 
 import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
-import { lieuLabel, quandLabel, quiLeVoitLabel } from '@/domains/collectivite/evenementDeLaVille';
+import {
+  lieuLabel, placesLabel, quandLabel, quiLeVoitLabel, repetitionLabel,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -150,13 +152,18 @@ function EvenementDeLaVille() {
     navigation.navigate(RouteNames.CollectiviteActualites, { collectiviteId });
   };
 
-  const confirmerLAnnulation = async () => {
+  // VILLEEVT-CODE (2B) : une date d'une série s'annule seule, ou avec les suivantes.
+  const confirmerLAnnulation = async (/** @type {boolean} */ toute = false) => {
     try {
-      await annuler.mutateAsync(String(evenement.documentId));
+      await annuler.mutateAsync(toute
+        ? { evenementId: String(evenement.documentId), serie: true }
+        : String(evenement.documentId));
     } finally {
       setConfirmer(false);
     }
   };
+  const regle = evenement.serie?.regle ? repetitionLabel(t, evenement.serie.regle) : '';
+  const places = placesLabel(t, evenement.capacity);
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
@@ -225,6 +232,16 @@ function EvenementDeLaVille() {
         </Text>
         <View style={{ gap: 4 }}>
           {ligne({ icone: 'calendar', testID: 'evenement-quand', texte: quand })}
+          {/* VILLEEVT-CODE (2B, 3B) : le rythme de sa série ; ses places. */}
+          {regle ? ligne({
+            icone: 'calendar',
+            testID: 'evenement-repetition',
+            texte: t('collectiviteEvenement.fiche.repetition', 'Se répète : {{regle}}', {
+              interpolation: { escapeValue: false },
+              regle,
+            }),
+          }) : null}
+          {places ? ligne({ icone: 'users', testID: 'evenement-places', texte: places }) : null}
           {ligne({
             icone: 'stadium',
             onPress: ouvrirLePlanning || ouvrirLaCarte,
@@ -326,12 +343,36 @@ function EvenementDeLaVille() {
               title={t('collectiviteEvenement.annulation.garder', 'Garder l’événement')}
               variant="Secondary"
             />
-            <Button
-              isLoading={annuler.isPending}
-              onPress={confirmerLAnnulation}
-              title={t('collectiviteEvenement.fiche.annuler', 'Annuler l’événement')}
-              variant="DangerFilled"
-            />
+            {regle ? (
+              <>
+                <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-annulation-serie">
+                  {t(
+                    'collectiviteEvenement.annulation.serieAide',
+                    'Cette date fait partie d’une série : {{regle}}',
+                    { interpolation: { escapeValue: false }, regle },
+                  )}
+                </Text>
+                <Button
+                  isLoading={annuler.isPending}
+                  onPress={() => confirmerLAnnulation(false)}
+                  title={t('collectiviteEvenement.annulation.uneDate', 'Annuler cette date seulement')}
+                  variant="Danger"
+                />
+                <Button
+                  isLoading={annuler.isPending}
+                  onPress={() => confirmerLAnnulation(true)}
+                  title={t('collectiviteEvenement.annulation.serie', 'Annuler celle-ci et la suite')}
+                  variant="DangerFilled"
+                />
+              </>
+            ) : (
+              <Button
+                isLoading={annuler.isPending}
+                onPress={() => confirmerLAnnulation(false)}
+                title={t('collectiviteEvenement.fiche.annuler', 'Annuler l’événement')}
+                variant="DangerFilled"
+              />
+            )}
           </View>
         </View>
       </BottomModal>

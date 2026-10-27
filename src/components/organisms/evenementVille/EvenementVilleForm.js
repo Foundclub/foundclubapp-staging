@@ -1,5 +1,5 @@
 import { format, isValid, parse } from 'date-fns';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, ScrollView, Switch, Text, TouchableOpacity, View,
@@ -10,11 +10,17 @@ import {
   etatDepuisLaVue,
   etatInitial,
   EVENEMENT_TYPES,
+  finAutomatique,
+  garderBrouillon,
   lieuLabel,
+  lireBrouillon,
   NOM_MAX,
   occupationLabel,
+  oublierBrouillon,
+  placesLabel,
   quandLabel,
   quiLeVoitLabel,
+  repetitionLabel,
   verifierEvenement,
   versCorpsDeLApi,
 } from '@/domains/collectivite/evenementDeLaVille';
@@ -25,10 +31,10 @@ import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
-import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import DateEtHoraire from '@/components/organisms/dateEtHoraire/DateEtHoraire';
 import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
@@ -36,6 +42,7 @@ import { uploadActualiteFile } from '@/services/collectivite/collectiviteActuali
 import {
   useApercuEvenement,
   useOccupationDesLieux,
+  useRelireLesOccupations,
 } from '@/services/collectivite/collectiviteEvenementQueries';
 
 import { getErrorStatus } from '@/utils/errors/displayError';
@@ -64,6 +71,13 @@ const AFFICHE_OCTETS_MAX = 10 * 1024 * 1024;
  * de la Ville (`collectiviteVille`).
  * R17-EVT-1-BIS (c) : `etroit` — posé dans le panneau de droite du planning (380 px, qui défile
  * déjà) : une colonne, aucun défilement à lui.
+ * 🏛️ VILLEEVT-CODE (27/10/2026, décisions d'Adel du 25/10 « 9- 1a 2B 3B ») : ce que l'entraîneur
+ * avait de mieux — une phrase d'aide sous le type (ligne 1), le bloc partagé « Date & horaire » de
+ * DATESDABORD avec la fin qui suit le début et le refus d'un début passé (ligne 3), « Impossible de
+ * vérifier » + « Réessayer » et « Changer la date » à « Où ? » (ligne 5), une ligne « Quand » et un
+ * « Modifier » écrit au récapitulatif (ligne 10), le brouillon gardé sur le site (ligne 12) ; puis
+ * « Répéter » (« Sauf vacances scolaires » compris, à la création seulement) et « Nombre de
+ * places ».
  * @param {{ collectiviteId: string, collectiviteNom?: string, collectiviteVille?: string,
  *   etroit?: boolean, evenement?: any, initial?: any, installations?: any[],
  *   onClose: () => void, onPublier: (corps: any) => Promise<any>,
@@ -87,11 +101,24 @@ function EvenementDeLaVilleForm({
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const modification = Boolean(evenement?.documentId);
-  // R17-EVT-1-BIS (c) : deux colonnes dans le panneau large ; une dans le panneau étroit.
-  const enColonnes = presentation === 'panneau' && !etroit;
-  const [etat, setEtat] = useState(() => (
-    modification ? etatDepuisLaVue(evenement) : etatInitial(initial || {})
-  ));
+  const depuisUneCase = Boolean(
+    !modification && initial?.facilityId && initial?.date && initial?.startTime,
+  );
+  // VILLEEVT-CODE (ligne 12) : le brouillon d'une création (pas depuis une case : elle dit déjà
+  // le jour, l'heure et le lieu).
+  const avecBrouillon = !modification && !depuisUneCase;
+  const [etat, setEtat] = useState(() => {
+    if (modification) return etatDepuisLaVue(evenement);
+    const brouillon = avecBrouillon ? lireBrouillon(collectiviteId) : null;
+    // VILLEEVT-CODE (ligne 3) : la date part d'aujourd'hui, comme chez l'entraîneur.
+    return brouillon || etatInitial({
+      ...(initial || {}),
+      date: initial?.date || format(new Date(), 'yyyy-MM-dd'),
+    });
+  });
+  useEffect(() => {
+    if (avecBrouillon) garderBrouillon(collectiviteId, etat);
+  }, [avecBrouillon, collectiviteId, etat]);
   const [etape, setEtape] = useState(0);
   const [essaye, setEssaye] = useState(false);
   const [envoi, setEnvoi] = useState(
@@ -103,12 +130,9 @@ function EvenementDeLaVilleForm({
     (/** @type {Record<string, any>} */ avant) => ({ ...avant, ...champs }),
   );
 
-  const depuisUneCase = Boolean(
-    !modification && initial?.facilityId && initial?.date && initial?.startTime,
-  );
   const etapes = etapesDuTunnel({ ailleurs: etat.ailleurs, depuisUneCase });
   const etapeCourante = etapes[Math.min(etape, etapes.length - 1)];
-  const erreurs = verifierEvenement(etat);
+  const erreurs = verifierEvenement(etat, { modification });
   const installation = installations.find((item) => item?.documentId === etat.facilityId) || null;
   const installationNom = etat.ailleurs ? null : installation?.name || null;
   const apercu = useApercuEvenement(collectiviteId, {
@@ -149,10 +173,17 @@ function EvenementDeLaVilleForm({
     setEnvoi({ enCours: true, panne: null });
     try {
       await onPublier(versCorpsDeLApi(etat));
+      if (avecBrouillon) oublierBrouillon(collectiviteId);
       setEnvoi({ enCours: false, panne: null });
     } catch (error) {
       setEnvoi({ enCours: false, panne: error || true });
     }
+  };
+
+  // « Annuler » (ou fermer) abandonne la saisie : le brouillon s'oublie.
+  const fermer = () => {
+    if (avecBrouillon) oublierBrouillon(collectiviteId);
+    onClose();
   };
 
   // ---------------------------------------------------------------------------------------------
@@ -249,7 +280,27 @@ function EvenementDeLaVilleForm({
           />
         ))}
       </View>
+      {/* VILLEEVT-CODE (ligne 1) : ce que le type choisi veut dire, comme chez l'entraîneur. */}
+      <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-type-aide">
+        {t(`collectiviteEvenement.typesAide.${etat.kind}`)}
+      </Text>
     </View>
+  );
+
+  // VILLEEVT-CODE (3B) : « Nombre de places », facultatif ; vide = sans limite.
+  const champPlaces = (
+    <Input
+      error={erreurDe('capacite')}
+      keyboardType="number-pad"
+      label={t('collectiviteEvenement.places.label', 'Nombre de places (facultatif)')}
+      maxLength={6}
+      onChangeText={(/** @type {string} */ valeur) => changer({
+        capacite: String(valeur || '').replace(/\D/g, ''),
+      })}
+      placeholder={t('collectiviteEvenement.places.exemple', 'Sans limite')}
+      testID="evenement-places"
+      value={etat.capacite}
+    />
   );
 
   const versSaisie = (/** @type {string} */ jour) => {
@@ -261,76 +312,88 @@ function EvenementDeLaVilleForm({
     return date && isValid(date) ? format(date, 'yyyy-MM-dd') : '';
   };
 
+  // 🗓️ VILLEEVT-CODE (ligne 3) — LE BLOC PARTAGÉ « DATE & HORAIRE » (DATESDABORD), le même que
+  // la création d'événement et « Attribuer un créneau » : la fin suit le début ; « Répéter » à la
+  // création (2B), jamais avec « Sur plusieurs jours » ; « Sauf vacances scolaires » dedans.
+  const dateChoisie = (() => {
+    const date = etat.date ? parse(etat.date, 'yyyy-MM-dd', new Date()) : new Date();
+    return isValid(date) ? date : new Date();
+  })();
+  const heureDuBloc = (/** @type {string} */ heure) => {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(String(heure || ''));
+    if (!match) return null;
+    const instant = new Date(dateChoisie);
+    instant.setHours(Number(match[1]), Number(match[2]), 0, 0);
+    return instant;
+  };
+  const refus = (/** @type {string} */ champ, /** @type {string} */ testID) => (
+    erreurDe(champ) ? (
+      <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.error300 }]} testID={testID}>
+        {erreurDe(champ)}
+      </Text>
+    ) : null
+  );
   const champsQuand = (
-    <View style={{ gap: 12 }}>
-      <View
-        style={[enColonnes ? Alignments.row : null, { gap: 12 }]}
-        testID="evenement-quand-colonnes"
-      >
-        <View style={{ flex: enColonnes ? 1.4 : undefined }}>
-          <DatePickerInput
-            error={erreurDe('date')}
-            label={t('collectiviteEvenement.quand.le', 'Le')}
-            minimumDate={new Date()}
-            onChange={(/** @type {string} */ valeur) => changer({ date: versJour(valeur) })}
-            placeholder={t('collectiviteEvenement.quand.choisir', 'Choisir')}
-            testID="evenement-date"
-            value={versSaisie(etat.date)}
+    <View style={{ gap: 12 }} testID="evenement-quand-colonnes">
+      <DateEtHoraire
+        date={dateChoisie}
+        debut={heureDuBloc(etat.heureDebut)}
+        fin={heureDuBloc(etat.heureFin)}
+        finApres={etat.heureDebut || null}
+        libelleDate={t('collectiviteEvenement.quand.le', 'Le')}
+        libelleDebut={t('collectiviteEvenement.quand.de', 'De')}
+        libelleFin={t('collectiviteEvenement.quand.a', 'À')}
+        onDate={(/** @type {Date} */ valeur) => changer({ date: format(valeur, 'yyyy-MM-dd') })}
+        onDebut={(/** @type {Date} */ valeur) => {
+          const debut = format(valeur, 'HH:mm');
+          changer({ heureDebut: debut, heureFin: finAutomatique(debut, etat.heureFin) });
+        }}
+        onFin={(/** @type {Date} */ valeur) => changer({ heureFin: format(valeur, 'HH:mm') })}
+        // « Du » de la répétition EST la date de l'événement : les deux bougent ensemble.
+        onRepetition={(/** @type {any} */ repetition) => changer(repetition
+          ? {
+            repetition,
+            ...(repetition.du && isValid(repetition.du)
+              ? { date: format(repetition.du, 'yyyy-MM-dd') }
+              : {}),
+          }
+          : { repetition: null })}
+        repetition={etat.repetition ? { ...etat.repetition, actif: true } : null}
+        sansRepetition={modification || etat.plusieursJours}
+        sousLaDate={refus('date', 'evenement-refus-date')}
+        sousLesHeures={refus('heures', 'evenement-refus-heures')}
+        testIDDate="evenement-date"
+        titreRepeter={t('collectiviteEvenement.quand.repeterTitre', 'Répéter l’événement')}
+        vacances={{
+          actif: Boolean(etat.saufVacances),
+          onBasculer: () => changer({ saufVacances: !etat.saufVacances }),
+          testID: 'evenement-sauf-vacances',
+          zone: t('collectiviteEvenement.quand.vacancesZone', 'La zone de votre commune'),
+        }}
+        webZIndex={presentation === 'tunnel' ? 10000 : undefined}
+      />
+      {refus('repetition', 'evenement-refus-repetition')}
+      {etat.repetition ? null : (
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {t('collectiviteEvenement.quand.plusieursJours', 'Sur plusieurs jours')}
+          </Text>
+          <Switch
+            accessibilityLabel={t(
+              'collectiviteEvenement.quand.plusieursJours',
+              'Sur plusieurs jours',
+            )}
+            onValueChange={(/** @type {boolean} */ valeur) => changer({
+              dateFin: valeur ? etat.dateFin : '',
+              plusieursJours: valeur,
+            })}
+            testID="evenement-plusieurs-jours"
+            thumbColor={Colors.neutral00}
+            trackColor={{ false: withAlpha(Colors.primary500, 0.3), true: Colors.primary500 }}
+            value={etat.plusieursJours}
           />
         </View>
-        <View
-          style={[Alignments.row, { flex: enColonnes ? 2 : undefined, gap: 12 }]}
-        >
-          <View style={{ flex: 1 }}>
-            <TimePickerInput
-              label={t('collectiviteEvenement.quand.de', 'De')}
-              onChange={(/** @type {string} */ valeur) => changer({
-                heureDebut: String(valeur || '').trim(),
-              })}
-              placeholder="10:00"
-              value={etat.heureDebut}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <TimePickerInput
-              label={t('collectiviteEvenement.quand.a', 'À')}
-              onChange={(/** @type {string} */ valeur) => changer({
-                heureFin: String(valeur || '').trim(),
-              })}
-              placeholder="17:00"
-              value={etat.heureFin}
-            />
-          </View>
-        </View>
-      </View>
-      {erreurDe('heures') ? (
-        <Text
-          accessibilityRole="alert"
-          style={[Fonts.p3, { color: Colors.error300 }]}
-          testID="evenement-refus-heures"
-        >
-          {erreurDe('heures')}
-        </Text>
-      ) : null}
-      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-          {t('collectiviteEvenement.quand.plusieursJours', 'Sur plusieurs jours')}
-        </Text>
-        <Switch
-          accessibilityLabel={t(
-            'collectiviteEvenement.quand.plusieursJours',
-            'Sur plusieurs jours',
-          )}
-          onValueChange={(/** @type {boolean} */ valeur) => changer({
-            dateFin: valeur ? etat.dateFin : '',
-            plusieursJours: valeur,
-          })}
-          testID="evenement-plusieurs-jours"
-          thumbColor={Colors.neutral00}
-          trackColor={{ false: withAlpha(Colors.primary500, 0.3), true: Colors.primary500 }}
-          value={etat.plusieursJours}
-        />
-      </View>
+      )}
       {etat.plusieursJours ? (
         <DatePickerInput
           error={erreurDe('dateFin')}
@@ -369,6 +432,22 @@ function EvenementDeLaVilleForm({
   const fermetureChoisie = !etat.ailleurs && etat.facilityId
     ? occupations[etat.facilityId]?.fermeture
     : null;
+  // VILLEEVT-CODE (ligne 5) : une occupation illisible se dit et se relit ; une installation pleine
+  // ou fermée propose de revenir à « Quand ? » (le tunnel).
+  const relireLesOccupations = useRelireLesOccupations();
+  const lectureEnEchec = installations.some((item) => occupations[item?.documentId]?.erreur);
+  const choisieOccupee = !etat.ailleurs && etat.facilityId
+    && (occupations[etat.facilityId]?.complet || fermetureChoisie);
+  const lienDuBas = (/** @type {string} */ testID, /** @type {string} */ texte, /** @type {() => void} */ onPress) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+      testID={testID}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.primary200]}>{texte}</Text>
+    </TouchableOpacity>
+  );
   const lignesOu = (
     <View
       accessibilityLabel={t('collectiviteEvenement.ou.titre', 'Où ?')}
@@ -413,6 +492,16 @@ function EvenementDeLaVilleForm({
             )}
           </Text>
         </View>
+      ) : null}
+      {lectureEnEchec ? lienDuBas(
+        'evenement-lieu-reessayer',
+        t('collectiviteEvenement.ou.reessayer', 'Réessayer la vérification'),
+        relireLesOccupations,
+      ) : null}
+      {choisieOccupee && presentation === 'tunnel' && etapes.includes('quand') ? lienDuBas(
+        'evenement-lieu-changer-date',
+        t('collectiviteEvenement.ou.changerDate', 'Changer la date'),
+        () => setEtape(etapes.indexOf('quand')),
       ) : null}
       {champAdresse}
       {!etat.ailleurs && erreurDe('lieu') ? (
@@ -687,6 +776,7 @@ function EvenementDeLaVilleForm({
       <>
         {champNom}
         {champType}
+        {champPlaces}
         {champsQuand}
         <View style={{ gap: 8 }}>
           {titreDeChamp(t('collectiviteEvenement.ou.titrePanneau', 'Où'))}
@@ -718,7 +808,7 @@ function EvenementDeLaVilleForm({
           <TouchableOpacity
             accessibilityLabel={t('collectiviteEvenement.fermerLePanneau', 'Fermer le panneau')}
             accessibilityRole="button"
-            onPress={onClose}
+            onPress={fermer}
             style={{
               alignItems: 'center',
               height: 44,
@@ -739,7 +829,7 @@ function EvenementDeLaVilleForm({
         )}
         <View style={[Alignments.row, { gap: 12 }]}>
           <Button
-            onPress={onClose}
+            onPress={fermer}
             style={{ flex: 1 }}
             title={t('collectiviteEvenement.annulerSaisie', 'Annuler')}
             variant="Secondary"
@@ -783,9 +873,9 @@ function EvenementDeLaVilleForm({
   const refusDeLEtape = {
     ou: ['lieu'],
     place: [],
-    quand: ['date', 'heures', 'dateFin'],
+    quand: ['date', 'heures', 'dateFin', 'repetition'],
     qui: [],
-    quoi: ['name'],
+    quoi: ['name', 'capacite'],
     recap: Object.keys(erreurs),
   };
   const avancer = () => {
@@ -811,28 +901,42 @@ function EvenementDeLaVilleForm({
       accessibilityRole="button"
       key={cle}
       onPress={() => allerA(cible)}
-      style={{
+      style={[Alignments.row, Alignments.alignCenter, {
         borderBottomColor: withAlpha(Colors.neutral00, 0.08),
         borderBottomWidth: 1,
-        gap: 2,
-        justifyContent: 'center',
+        gap: 12,
         minHeight: 56,
         paddingVertical: 8,
-      }}
+      }]}
       testID={`evenement-recap-${cle}`}
     >
-      <Text style={[Fonts.p4, Fonts.primary200]}>{libelle}</Text>
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{valeur}</Text>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[Fonts.p4, Fonts.primary200]}>{libelle}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{valeur}</Text>
+      </View>
+      {/* VILLEEVT-CODE (ligne 10) : « Modifier » se lit, comme chez l'entraîneur. */}
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+        {t('collectiviteEvenement.recap.modifier', 'Modifier')}
+      </Text>
     </TouchableOpacity>
   );
+  const repetitionEnvoyee = versCorpsDeLApi(etat).data.repetition;
+  const places = placesLabel(t, versCorpsDeLApi(etat).data.capacity);
   const recap = (
     <View style={{ gap: 12 }}>
       <View>
         {ligneDuRecap(
           'evenement',
           t('collectiviteEvenement.recap.evenement', 'Événement'),
-          [etat.name, quand].filter(Boolean).join(' · '),
+          [etat.name, places].filter(Boolean).join(' · '),
           'quoi',
+        )}
+        {/* VILLEEVT-CODE (ligne 10) : « Quand » a sa ligne, qui va droit à « Quand ? ». */}
+        {ligneDuRecap(
+          'quand',
+          t('collectiviteEvenement.recap.quand', 'Quand'),
+          [quand, repetitionLabel(t, repetitionEnvoyee)].filter(Boolean).join(' · '),
+          etapes.includes('quand') ? 'quand' : 'quoi',
         )}
         {ligneDuRecap(
           'ou',
@@ -847,6 +951,20 @@ function EvenementDeLaVilleForm({
           'qui',
         )}
       </View>
+      {/* VILLEEVT-CODE : un refus au moment de publier (un jour passé, un brouillon relu) se dit
+          ici aussi ; sinon « Publier » ne ferait rien de visible. */}
+      {essaye && Object.keys(erreurs).length ? (
+        <Text
+          accessibilityRole="alert"
+          style={[Fonts.p3, { color: Colors.error300 }]}
+          testID="evenement-refus-recap"
+        >
+          {t(Object.values(erreurs)[0])}
+        </Text>
+      ) : null}
+      <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-recap-modifiable">
+        {t('collectiviteEvenement.recap.modifiable', 'Tout reste modifiable après.')}
+      </Text>
       {encadreTouchees}
       {champDescription}
       {champAffiche}
@@ -869,6 +987,7 @@ function EvenementDeLaVilleForm({
           )}
         </Text>
         {champType}
+        {champPlaces}
       </View>
     ),
     recap,
@@ -880,7 +999,7 @@ function EvenementDeLaVilleForm({
       isNextLoading={envoi.enCours}
       nextLabel={derniere ? libellePublier : t('common.next', 'Suivant')}
       onBack={etape > 0 ? () => setEtape((avant) => Math.max(avant - 1, 0)) : undefined}
-      onClose={onClose}
+      onClose={fermer}
       onNext={derniere ? publier : avancer}
       stepCount={etapes.length}
       stepIndex={Math.min(etape, etapes.length - 1) + 1}

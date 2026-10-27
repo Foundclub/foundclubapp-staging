@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -9,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import EvenementDeLaVilleForm from '@/components/organisms/evenementVille/EvenementVilleForm';
+import VitrineEvenementVille from '@/components/organisms/evenementVille/VitrineEvenementVille';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -33,6 +35,8 @@ import { useIsDesktop } from '@/responsive';
  * planning d'une installation (`facilityId`, `date`, `startTime` : les étapes connues sont
  * sautées) ;
  * « Modifier » sur la fiche (`evenementId`). Publié : la fiche de l'événement le remplace.
+ * VILLEEVT-CODE (4B, 27/10) : une CRÉATION publiée montre d'abord la vitrine à partager ; « Voir la
+ * fiche » remplace l'écran par la fiche. « Modifier » va droit à la fiche, comme avant.
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteEvenement() {
@@ -53,6 +57,7 @@ function CollectiviteEvenement() {
   const installations = useCollectiviteInstallations(collectiviteId);
   const existant = useEvenementDeLaVille(evenementId);
   const { modifier, publier } = useGestesEvenementDeLaVille(collectiviteId);
+  const [publie, setPublie] = useState(/** @type {any} */ (null));
 
   const fermer = () => {
     if (navigation.canGoBack?.()) navigation.goBack();
@@ -63,9 +68,23 @@ function CollectiviteEvenement() {
       ? await modifier.mutateAsync({ data: corps.data, evenementId })
       : await publier.mutateAsync(corps.data);
     const id = reponse?.data?.documentId || evenementId;
-    if (id) navigation.replace(RouteNames.EvenementDeLaVille, { evenementId: id });
+    if (!evenementId && id) setPublie(reponse.data);
+    else if (id) navigation.replace(RouteNames.EvenementDeLaVille, { evenementId: id });
     return reponse;
   };
+
+  if (publie) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+        <VitrineEvenementVille
+          evenement={publie}
+          onVoirLaFiche={() => navigation.replace(RouteNames.EvenementDeLaVille, {
+            evenementId: publie.documentId,
+          })}
+        />
+      </ScreenContainer>
+    );
+  }
 
   const chargement = (evenementId && existant.isLoading) || installations.isLoading;
   if (chargement) {

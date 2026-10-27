@@ -6805,7 +6805,11 @@ export default {
       libere: 'Ceux qui avaient été prévenus le sont de l’annulation. '
         + '{{installation}} redevient libre : {{quand}}.',
       prevenus: 'Ceux qui avaient été prévenus le sont de l’annulation.',
+      // VILLEEVT-CODE (2B, 27/10) : une date d'une série.
+      serie: 'Annuler celle-ci et la suite',
+      serieAide: 'Cette date fait partie d’une série : {{regle}}',
       titre: 'Annuler « {{nom}} » ?',
+      uneDate: 'Annuler cette date seulement',
     },
     annulerSaisie: 'Annuler',
     description: {
@@ -6823,6 +6827,7 @@ export default {
       etiquette: 'Événement de la Ville',
       introuvable: 'Cet événement n’existe plus, ou il ne vous est pas montré.',
       modifier: 'Modifier',
+      repetition: 'Se répète : {{regle}}',
       titre: 'Événement de la Ville',
       toucheesExplication_one:
         'Son club la voit « Bloqué par la Ville · à déplacer » et peut la déplacer.',
@@ -6841,13 +6846,17 @@ export default {
       adresseExemple: 'Place de la mairie',
       ailleurs: 'Ailleurs dans la commune',
       ailleursAide: 'Place, parc, salle des fêtes…',
+      // VILLEEVT-CODE (ligne 5) : l'installation pleine ou fermée ; une lecture en échec.
+      changerDate: 'Changer la date',
       fermeeAvertissement:
         '{{installation}} : fermeture ce jour-là. Vous pouvez quand même y tenir l’événement.',
       occupationComplet: 'Complet sur ces heures',
+      occupationErreur: 'Impossible de vérifier',
       occupationFermee: 'Fermeture ce jour-là',
       occupationLibre: 'Libre sur ces heures',
       occupationPlusieurs: '{{nombre}} séances sur ces heures',
       occupationUne: '1 séance sur ces heures',
+      reessayer: 'Réessayer la vérification',
       titre: 'Où ?',
       titrePanneau: 'Où',
     },
@@ -6862,6 +6871,13 @@ export default {
       titre: 'Quelle place prend-il ?',
       toute: 'Toute l’installation',
       touteAide: 'Aucun club n’y est pendant l’événement.',
+    },
+    // VILLEEVT-CODE (3B, 27/10) : « N places ».
+    places: {
+      exemple: 'Sans limite',
+      label: 'Nombre de places (facultatif)',
+      plusieurs: '{{nombre}} places',
+      une: '1 place',
     },
     planning: {
       aCote: 'Ville · à côté',
@@ -6878,8 +6894,11 @@ export default {
       memesHeures: 'Les mêmes heures chaque jour.',
       plusieursJours: 'Sur plusieurs jours',
       plusieursJoursPhrase: 'du {{debut}} au {{fin}} · {{heures}}',
+      // VILLEEVT-CODE (2B) : « Répéter » du bloc partagé « Date & horaire ».
+      repeterTitre: 'Répéter l’événement',
       titre: 'Quand ?',
       unJour: '{{jour}} · {{heures}}',
+      vacancesZone: 'La zone de votre commune',
     },
     qui: {
       actualite: 'Les clubs et une actualité',
@@ -6909,8 +6928,11 @@ export default {
     },
     recap: {
       evenement: 'Événement',
+      // VILLEEVT-CODE (ligne 10) : comme chez l'entraîneur.
+      modifiable: 'Tout reste modifiable après.',
       modifier: 'Modifier',
       ou: 'Où · place prise',
+      quand: 'Quand',
       qui: 'Qui le voit',
       sousTitre: 'Relisez, puis publiez.',
       titre: 'Récapitulatif',
@@ -6921,10 +6943,24 @@ export default {
     },
     refus: {
       date: 'Choisissez le jour.',
+      // VILLEEVT-CODE (27/10) : ligne 3, puis 3B et 2B.
+      datePassee: 'Ce jour est déjà passé.',
+      debutPasse: 'Le début est déjà passé.',
       finApresDebut: 'La fin doit venir après le début.',
       heures: 'Choisissez l’heure de début et l’heure de fin.',
       lieu: 'Dites où a lieu l’événement : une installation, ou une adresse.',
       nom: 'Donnez un nom à l’événement.',
+      places: 'Un nombre de places, de 1 à 100 000.',
+      repetitionFin: '« Au » doit venir après la date.',
+    },
+    // VILLEEVT-CODE (2B) : la phrase d'une série.
+    repetition: {
+      chaqueMois: 'Chaque mois',
+      chaqueSemaine: 'Chaque semaine ({{jours}})',
+      jusquau: '{{rythme}} jusqu’au {{au}}',
+      saufVacances: '{{phrase}}, sauf vacances scolaires',
+      tousLesMois: 'Tous les {{nombre}} mois',
+      toutesLesSemaines: 'Toutes les {{nombre}} semaines ({{jours}})',
     },
     titre: 'Ajouter un événement de la Ville',
     titreModifier: 'Modifier l’événement',
@@ -6940,6 +6976,24 @@ export default {
       portes_ouvertes: 'Portes ouvertes',
       reunion: 'Réunion',
       tournoi: 'Tournoi',
+    },
+    // VILLEEVT-CODE (ligne 1) : ce que veut dire chaque type, comme chez l'entraîneur.
+    typesAide: {
+      autre: 'Tout le reste : cérémonie, course, chantier…',
+      manifestation: 'Une fête, un forum, une journée ouverte à tous.',
+      portes_ouvertes: 'Les clubs se présentent et font essayer leur sport.',
+      reunion: 'Une rencontre avec les clubs : assemblée, information, bilan.',
+      tournoi: 'Des matchs entre équipes, sur une ou plusieurs journées.',
+    },
+    // VILLEEVT-CODE (4B) : la vitrine, après la publication.
+    vitrine: {
+      dates: '{{nombre}} dates',
+      partage: 'C’est prêt à être collé où vous voulez.',
+      partageEchec: 'Le partage n’a pas pu s’ouvrir.',
+      partager: 'Partager',
+      publie: 'C’est publié',
+      sousTitre: 'Faites-le savoir : partagez-le aux clubs et aux habitants.',
+      voirFiche: 'Voir la fiche',
     },
   },
   collectiviteFermetures: {
@@ -17543,6 +17597,22 @@ export default {
         position: 'poste',
       },
       next: 'Suivant',
+      // CARTEFIN (planche v2, partie 8, écran 7) : la prochaine marche de rareté.
+      nextStep: {
+        and: 'et',
+        climb: 'De {{from}} à {{to}}',
+        clubs_one: 'déclare {{count}} club de plus dans ton parcours',
+        clubs_other: 'déclare {{count}} clubs de plus dans ton parcours',
+        fill_one: 'remplis {{count}} case de plus sur ta carte',
+        fill_other: 'remplis {{count}} cases de plus sur ta carte',
+        goal: 'Pour passer {{rarity}} : {{actions}}.',
+        matches_one: 'joue {{count}} match avec ton équipe',
+        matches_other: 'joue {{count}} matchs avec ton équipe',
+        matchesMore_one: 'joue encore {{count}} match avec ton équipe',
+        matchesMore_other: 'joue encore {{count}} matchs avec ton équipe',
+        team: 'rejoins une équipe',
+        top: 'C\'est la plus haute rareté.',
+      },
       number: {
         label: 'Numéro',
         title: 'Ton numéro de maillot',
@@ -17552,6 +17622,14 @@ export default {
         title: 'Ta taille et ton poids',
       },
       position: {
+        // CARTEFIN : le vrai sport du joueur, une phrase entière par sport (« au basket »).
+        bySport: {
+          basketball: 'Ton poste au basket',
+          football: 'Ton poste au football',
+          handball: 'Ton poste au handball',
+          rugby: 'Ton poste au rugby',
+          volleyball: 'Ton poste au volley',
+        },
         title: 'Ton poste',
       },
       saveError: 'Impossible d\'enregistrer pour le moment. '

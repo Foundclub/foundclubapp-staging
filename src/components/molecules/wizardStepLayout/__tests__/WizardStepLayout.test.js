@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import WizardStepLayout from '../WizardStepLayout';
@@ -625,5 +625,51 @@ describe('WizardStepLayout — la marge basse (D53)', () => {
     rendre({ onNext: jest.fn() });
 
     expect(propsDuConteneur[0].bottomInsetMode).toBe('edge-to-edge');
+  });
+});
+
+// APRESDATES / Q1-13 (27/10) — sur le site, Entree MAINTENUE envoie des `keydown` repetes
+// (`event.repeat`) : chacun passait une etape, jusqu'a creer l'evenement sans relecture.
+describe('Entree sur le site', () => {
+  const osAvant = Platform.OS;
+  /** @type {Set<Function>} */
+  const ecouteurs = new Set();
+  /** @type {any} */
+  const fenetre = window;
+  const avant = { add: fenetre.addEventListener, remove: fenetre.removeEventListener };
+  beforeEach(() => {
+    // L'environnement jest de React Native n'a pas de `window` d'evenements : une doublure.
+    fenetre.addEventListener = (/** @type {string} */ _t, /** @type {Function} */ f) => {
+      ecouteurs.add(f);
+    };
+    fenetre.removeEventListener = (/** @type {string} */ _t, /** @type {Function} */ f) => {
+      ecouteurs.delete(f);
+    };
+  });
+  afterEach(() => {
+    Platform.OS = osAvant;
+    fenetre.addEventListener = avant.add;
+    fenetre.removeEventListener = avant.remove;
+    ecouteurs.clear();
+  });
+
+  const entree = (/** @type {boolean} */ repeat) => {
+    const evenement = {
+      defaultPrevented: false, key: 'Enter', preventDefault: jest.fn(), repeat, target: null,
+    };
+    act(() => { [...ecouteurs].forEach((f) => f(evenement)); });
+  };
+
+  it('un appui passe une etape ; les repetitions de la touche maintenue, aucune', () => {
+    Platform.OS = 'web';
+    const onNext = jest.fn();
+    const arbre = rendre({ onNext });
+
+    entree(false);
+    entree(true);
+    entree(true);
+
+    expect(onNext).toHaveBeenCalledTimes(1);
+    act(() => arbre.unmount());
   });
 });

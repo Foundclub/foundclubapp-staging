@@ -225,6 +225,7 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   vacances?: { actif: boolean, onBasculer: () => void, testID?: string, zone: string } | null,
  *   sousLaDate?: import('react').ReactNode,
  *   sousLesHeures?: import('react').ReactNode,
+ *   testIDDate?: string,
  *   webZIndex?: number,
  * }} props - `debut` / `fin` nuls : l heure reste a choisir (« Attribuer ») ; `libelleDate`,
  *   `libelleDebut`, `libelleFin` : les mots de l ecran (« Première date », « Début », « Fin » de
@@ -236,7 +237,8 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   `vacances` : la case « Sauf vacances scolaires » de la répétition, quand la zone est connue
  *   (DATESDABORD 26/10, la Ville et l installation choisie) ; `webZIndex` : la couche de la
  *   feuille sur
- *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS).
+ *   le site (au-dessus d une fenetre plein ecran, comme la feuille des vacances, R17-QUAND-2-BIS) ;
+ *   `testIDDate` : le repere du champ de la date (temoins de l evenement de la Ville, VILLEEVT-CODE).
  * @returns {import('react').ReactElement} Le bloc.
  */
 function DateEtHoraire({
@@ -256,6 +258,7 @@ function DateEtHoraire({
   sansRepetition = false,
   sousLaDate = null,
   sousLesHeures = null,
+  testIDDate = undefined,
   titreRepeter = null,
   vacances = null,
   webZIndex = undefined,
@@ -470,6 +473,7 @@ function DateEtHoraire({
         label={libelleDate || t('eventEdit.fields.date.label')}
         minimumDate={new Date()}
         onChange={(/** @type {string} */ text) => onDate(mergeDateInput(text, date))}
+        testID={testIDDate}
         value={toDateInputText(date)}
       />
       {sousLaDate}
