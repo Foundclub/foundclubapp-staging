@@ -319,7 +319,9 @@ function EventEditForm({ navigation, route }) {
       const nextEventId = getEntityDocumentId(response?.data || response);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['events'] }),
-        queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
+        // PLANMODIF (27/10) — `['planning']` large, comme le telephone (EventEdit.js) : le plein
+        // ecran lit `['planning','fullscreen',…]` et restait sur l ancienne case.
+        queryClient.invalidateQueries({ queryKey: ['planning'] }),
       ]);
       if (nextEventId) {
         navigation.replace(RouteNames.EventDetails, { eventId: nextEventId });
@@ -340,7 +342,7 @@ function EventEditForm({ navigation, route }) {
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event', eventId, 'edit'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
-        queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
+        queryClient.invalidateQueries({ queryKey: ['planning'] }),
       ]);
       // SERIES (08/10, point 5) — des dates de la série attendent la Ville ou le dirigeant : on le
       // dit (fenêtre du navigateur, comme la messagerie du site), puis on ouvre la fiche.
