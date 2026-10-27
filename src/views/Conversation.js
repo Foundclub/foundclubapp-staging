@@ -7581,7 +7581,6 @@ function Conversation({ navigation, route }) {
           isVisible={isAttachmentMenuVisible}
           keyboardBehavior="interactive"
           onDismissed={handleAttachmentSheetDismissed}
-          snapPoints={['70%']}
         >
           {isAttachmentSheetV2Enabled ? (
             <ChatAttachmentSheet
