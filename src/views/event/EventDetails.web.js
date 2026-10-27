@@ -839,6 +839,8 @@ function EventDetails({ navigation, route }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      // PLANMODIF2 — la séance annulée quitte aussi le planning (onglet et plein écran).
+      queryClient.invalidateQueries({ queryKey: ['planning'] });
     },
   });
   const annulerLaSeanceFermee = useCallback(() => {
