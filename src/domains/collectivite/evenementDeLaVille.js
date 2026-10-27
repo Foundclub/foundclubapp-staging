@@ -5,6 +5,7 @@ import { enGB, fr } from 'date-fns/locale';
 
 import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { LEAGUE_TIMEZONE, toUtcFromZonedLocal } from '@/utils/parisTime';
 import { getPlanningItemWindow, normalizePlanningItems } from '@/utils/planning/planningSlots';
@@ -28,6 +29,8 @@ export const AUDIENCES = ['dirigeants', 'membres'];
 export const NOM_MAX = 80;
 export const DESCRIPTION_MAX = 2000;
 export const ADRESSE_MAX = 200;
+// VILLEEVT-CODE (3B) : la borne du serveur (EVENEMENT_MAX_CAPACITY).
+export const PLACES_MAX = 100000;
 
 const ETAPES_COMPLETES = ['quoi', 'quand', 'ou', 'place', 'qui', 'recap'];
 
@@ -91,6 +94,13 @@ export const etatInitial = (initial = {}) => ({
   kind: 'manifestation',
   name: '',
   plusieursJours: false,
+  // VILLEEVT-CODE (3B) : « Nombre de places », tel que saisi ('' = sans limite).
+  capacite: '',
+  // VILLEEVT-CODE (2B) : « Répéter », au format du bloc partagé DateEtHoraire
+  // (`{ frequence, intervalleTexte, jours, du, au }`), ou null (« Une seule fois ») ; « Sauf vacances
+  // scolaires » à côté.
+  repetition: null,
+  saufVacances: false,
   takesPlace: true,
   visibility: 'actualite',
 });
@@ -108,6 +118,7 @@ export const etatDepuisLaVue = (vue) => ({
     : null,
   affiche: vue?.poster?.url ? { id: null, url: vue.poster.url } : null,
   ailleurs: !vue?.facility?.documentId,
+  capacite: Number.isInteger(vue?.capacity) ? String(vue.capacity) : '',
   audience: vue?.audience || 'dirigeants',
   date: vue?.startDate || '',
   dateFin: vue?.endDate && vue.endDate !== vue.startDate ? vue.endDate : '',
@@ -127,13 +138,47 @@ const minutes = (/** @type {unknown} */ heure) => {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 };
 
+const deuxChiffres = (/** @type {number} */ nombre) => String(nombre).padStart(2, '0');
+
+/**
+ * 🕐 VILLEEVT-CODE (ligne 3, comme l'étape « Date & horaire » de l'entraîneur) — LA FIN SUIT LE
+ * DÉBUT : vide, ou pas après le nouveau début, elle passe une heure après (23:59 au plus) ; choisie
+ * plus tard, elle reste.
+ * @param {string} heureDebut - « HH:MM ».
+ * @param {string} heureFin - « HH:MM », ou ''.
+ * @returns {string} La fin à garder.
+ */
+export const finAutomatique = (heureDebut, heureFin) => {
+  const debut = minutes(heureDebut);
+  const fin = minutes(heureFin);
+  if (debut === null || (fin !== null && fin > debut)) return heureFin;
+  const suite = Math.min(debut + 60, 23 * 60 + 59);
+  return `${deuxChiffres(Math.floor(suite / 60))}:${deuxChiffres(suite % 60)}`;
+};
+
+const jourIso = (/** @type {Date} */ date) => format(date, 'yyyy-MM-dd');
+
+/**
+ * VILLEEVT-CODE (3B) : les places saisies, en nombre ; null si vide ; NaN si ce n'en est pas un.
+ * @param {unknown} saisie - La saisie.
+ * @returns {number | null} Les places.
+ */
+const placesLues = (saisie) => {
+  const texte = String(saisie ?? '').trim();
+  if (!texte) return null;
+  return /^\d+$/.test(texte) ? Number(texte) : Number.NaN;
+};
+
 /**
  * Les refus du formulaire (planche P10-evenement-ordi, état 10), champ par champ : des CLÉS de
- * traduction, l'écran les dit sous le champ.
+ * traduction, l'écran les dit sous le champ. VILLEEVT-CODE (ligne 3) : un jour passé, ou un début
+ * déjà passé aujourd'hui, se refuse (pas en « Modifier » : le serveur juge la fin) ; 3B : les
+ * places ; 2B : « jusqu'au » après la date.
  * @param {any} etat - L'état du formulaire.
+ * @param {{ maintenant?: Date, modification?: boolean }} [options] - L'heure de l'appareil.
  * @returns {Record<string, string>} `{ champ: clé }` ; vide si tout va bien.
  */
-export const verifierEvenement = (etat) => {
+export const verifierEvenement = (etat, { maintenant = new Date(), modification = false } = {}) => {
   /** @type {Record<string, string>} */
   const erreurs = {};
   if (!String(etat?.name || '').trim()) erreurs.name = 'collectiviteEvenement.refus.nom';
@@ -142,6 +187,23 @@ export const verifierEvenement = (etat) => {
   const fin = minutes(etat?.heureFin);
   if (debut === null || fin === null) erreurs.heures = 'collectiviteEvenement.refus.heures';
   else if (fin <= debut) erreurs.heures = 'collectiviteEvenement.refus.finApresDebut';
+  // ponytail: l'heure de l'appareil, pas celle de Paris ; le serveur refuse de toute façon un jour
+  // passé. Sortie : lire le jour de Paris (parisTime) si une Ville hors fuseau le demande.
+  const aujourdhui = jourIso(maintenant);
+  if (!modification && etat?.date && etat.date < aujourdhui) {
+    erreurs.date = 'collectiviteEvenement.refus.datePassee';
+  } else if (!modification && etat?.date === aujourdhui && debut !== null && !erreurs.heures
+    && debut <= maintenant.getHours() * 60 + maintenant.getMinutes()) {
+    erreurs.heures = 'collectiviteEvenement.refus.debutPasse';
+  }
+  const places = placesLues(etat?.capacite);
+  if (places !== null && !(Number.isInteger(places) && places >= 1 && places <= PLACES_MAX)) {
+    erreurs.capacite = 'collectiviteEvenement.refus.places';
+  }
+  if (etat?.repetition && !etat?.plusieursJours && etat?.date && isValid(etat.repetition.au)
+    && jourIso(etat.repetition.au) < etat.date) {
+    erreurs.repetition = 'collectiviteEvenement.refus.repetitionFin';
+  }
   if (etat?.plusieursJours && (!etat?.dateFin || etat.dateFin <= etat.date)) {
     erreurs.dateFin = 'collectiviteEvenement.refus.finApresDebut';
   }
@@ -164,12 +226,16 @@ export const versCorpsDeLApi = (etat) => {
   }
   if (etat?.visibility === 'public') audience = 'membres';
   const description = String(etat?.description || '').trim();
+  const places = placesLues(etat?.capacite);
+  // VILLEEVT-CODE (2B) : une série, jamais avec « Sur plusieurs jours » (deux façons de dire quand).
+  const repetition = etat?.repetition && !etat?.plusieursJours ? etat.repetition : null;
   return {
     data: {
       address: etat?.ailleurs ? String(etat?.adresse || '').trim() : null,
       // R17-EVT-1-BIS (e) : « ailleurs », son point sur la carte (null s'il n'est que du texte).
       ...(etat?.ailleurs ? { addressLocation: pointDe(etat?.adresseLieu) } : {}),
       audience,
+      capacity: Number.isInteger(places) ? places : null,
       description: description || null,
       endDate: etat?.plusieursJours && etat?.dateFin ? etat.dateFin : null,
       endTime: etat?.heureFin,
@@ -179,6 +245,15 @@ export const versCorpsDeLApi = (etat) => {
       // R17-EVT-1-BIS (f) : l'affiche, seulement si elle a changé (ajoutée : son id ; retirée :
       // null) ; sinon le serveur garde celle en place.
       ...(etat?.afficheModifiee ? { poster: etat?.affiche?.id ?? null } : {}),
+      ...(repetition ? {
+        repetition: {
+          au: isValid(repetition.au) ? jourIso(repetition.au) : '',
+          frequence: repetition.frequence === 'month' ? 'month' : 'week',
+          intervalle: Math.max(1, Number.parseInt(String(repetition.intervalleTexte || '1'), 10) || 1),
+          jours: (Array.isArray(repetition.jours) ? repetition.jours : []).map(Number),
+          saufVacances: Boolean(etat?.saufVacances),
+        },
+      } : {}),
       startDate: etat?.date,
       startTime: etat?.heureDebut,
       takesPlace: etat?.ailleurs ? false : Boolean(etat?.takesPlace),
@@ -219,6 +294,124 @@ export const quandLabel = (t, evenement) => {
       interpolation: { escapeValue: false },
     },
   );
+};
+
+/**
+ * VILLEEVT-CODE (3B) : « 1 place », « 200 places » ; '' sans places.
+ * @param {any} t - i18next.
+ * @param {unknown} capacite - Les places (`capacity`).
+ * @returns {string} La phrase.
+ */
+export const placesLabel = (t, capacite) => {
+  if (!Number.isInteger(capacite)) return '';
+  return Number(capacite) === 1
+    ? t('collectiviteEvenement.places.une', '1 place')
+    : t('collectiviteEvenement.places.plusieurs', '{{nombre}} places', { nombre: capacite });
+};
+
+const NOMS_DES_JOURS = [1, 2, 3, 4, 5, 6, 0];
+
+/**
+ * VILLEEVT-CODE (2B) — la phrase d'une série, d'après sa règle (`serie.regle` du serveur) :
+ * « Chaque semaine (samedi) jusqu'au sam. 14 nov. », « Tous les 2 mois jusqu'au … , sauf vacances
+ * scolaires » ; '' sans règle.
+ * @param {any} t - i18next.
+ * @param {{ au?: string, frequence?: string, intervalle?: number, jours?: number[],
+ *   saufVacances?: boolean } | null | undefined} regle - La règle.
+ * @returns {string} La phrase.
+ */
+export const repetitionLabel = (t, regle) => {
+  if (!regle?.au) return '';
+  const intervalle = Math.max(1, Number(regle.intervalle) || 1);
+  const jours = NOMS_DES_JOURS.filter((jour) => (regle.jours || []).map(Number).includes(jour))
+    // Un lundi (1er janvier 2024) : le nom d'un jour se lit sur la date du même rang.
+    .map((jour) => format(new Date(2024, 0, 1 + ((jour + 6) % 7)), 'EEEE', { locale: dateLocale() }))
+    .join(', ');
+  let rythme;
+  if (regle.frequence === 'month') {
+    rythme = intervalle === 1
+      ? t('collectiviteEvenement.repetition.chaqueMois', 'Chaque mois')
+      : t('collectiviteEvenement.repetition.tousLesMois', 'Tous les {{nombre}} mois', { nombre: intervalle });
+  } else {
+    rythme = intervalle === 1
+      ? t('collectiviteEvenement.repetition.chaqueSemaine', 'Chaque semaine ({{jours}})', { jours, ...SANS_ECHAPPEMENT })
+      : t('collectiviteEvenement.repetition.toutesLesSemaines', 'Toutes les {{nombre}} semaines ({{jours}})', {
+        jours, nombre: intervalle, ...SANS_ECHAPPEMENT,
+      });
+  }
+  const phrase = t('collectiviteEvenement.repetition.jusquau', '{{rythme}} jusqu’au {{au}}', {
+    au: jourCourt(regle.au), rythme, ...SANS_ECHAPPEMENT,
+  });
+  return regle.saufVacances
+    ? t('collectiviteEvenement.repetition.saufVacances', '{{phrase}}, sauf vacances scolaires', {
+      phrase, ...SANS_ECHAPPEMENT,
+    })
+    : phrase;
+};
+
+// ---------------------------------------------------------------------------------------------
+// 📝 VILLEEVT-CODE (ligne 12) — LE BROUILLON, comme celui de l'entraîneur (EventWizardContext) :
+// `sessionStorage` du navigateur ; au téléphone, rien (pas de rechargement de page).
+// ---------------------------------------------------------------------------------------------
+
+const cleDuBrouillon = (/** @type {string} */ collectiviteId) => `fc:evenement-ville:${collectiviteId}`;
+const stockage = () => {
+  try {
+    return typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Garde la saisie (création seulement : l'écran en décide).
+ * @param {string} collectiviteId - La Ville.
+ * @param {any} etat - L'état du formulaire.
+ */
+export const garderBrouillon = (collectiviteId, etat) => {
+  try {
+    stockage()?.setItem(cleDuBrouillon(collectiviteId), JSON.stringify(etat));
+  } catch {
+    // Un stockage plein ou refusé ne casse pas la saisie.
+  }
+};
+
+/**
+ * La saisie gardée, ou null. Les dates de « Répéter » redeviennent des dates. ⚠️ Le stockage du
+ * navigateur se modifie à la main : on ne relit que les champs connus, et le serveur juge tout.
+ * @param {string} collectiviteId - La Ville.
+ * @returns {any | null} L'état.
+ */
+export const lireBrouillon = (collectiviteId) => {
+  try {
+    const texte = stockage()?.getItem(cleDuBrouillon(collectiviteId));
+    const lu = texte ? JSON.parse(texte) : null;
+    if (!lu || typeof lu !== 'object') return null;
+    const base = etatInitial();
+    const etat = Object.fromEntries(Object.keys(base).map((cle) => [cle, cle in lu ? lu[cle] : base[cle]]));
+    if (etat.repetition) {
+      etat.repetition = {
+        ...etat.repetition,
+        au: etat.repetition.au ? new Date(etat.repetition.au) : null,
+        du: etat.repetition.du ? new Date(etat.repetition.du) : null,
+      };
+    }
+    return etat;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Oublie la saisie (publiée, ou abandonnée par « Annuler »).
+ * @param {string} collectiviteId - La Ville.
+ */
+export const oublierBrouillon = (collectiviteId) => {
+  try {
+    stockage()?.removeItem(cleDuBrouillon(collectiviteId));
+  } catch {
+    // Rien à oublier.
+  }
 };
 
 /**
@@ -399,7 +592,7 @@ const picSimultane = (fenetres) => fenetres.reduce((pic, fenetre) => Math.max(
  *   installation (documentId).
  */
 export const occupationDesLieux = ({
-  fenetre, fermetures, installations, lectures,
+  echecs = [], fenetre, fermetures, installations, lectures,
 }) => {
   const premier = parseISO(String(fenetre?.date || ''));
   if (!isValid(premier)) return {};
@@ -418,7 +611,12 @@ export const occupationDesLieux = ({
       une?.facility?.documentId === lieu?.documentId
       && jours.some((jour) => closureCoversDay(une, jour)))) || null;
     const lecture = lectures?.[rang];
-    if (!lecture) return [lieu?.documentId, { complet: false, fermeture, seances: null }];
+    // VILLEEVT-CODE (ligne 5) : une lecture en échec n'est pas « libre » : « Impossible de vérifier ».
+    if (!lecture) {
+      return [lieu?.documentId, {
+        complet: false, erreur: Boolean(echecs?.[rang]), fermeture, seances: null,
+      }];
+    }
     const fenetresDesSeances = normalizePlanningItems(lecture?.data || [])
       .filter((bloc) => bloc?.raw?.pending !== true && !bloc?.raw?.evenementDeLaVille)
       .map((bloc) => getPlanningItemWindow(bloc))
@@ -454,6 +652,9 @@ export const occupationLabel = (t, occupation) => {
   if (!occupation) return '';
   if (occupation.fermeture) {
     return t('collectiviteEvenement.ou.occupationFermee', 'Fermeture ce jour-là');
+  }
+  if (occupation.erreur) {
+    return t('collectiviteEvenement.ou.occupationErreur', 'Impossible de vérifier');
   }
   if (occupation.seances === null || occupation.seances === undefined) return '';
   if (occupation.complet) {

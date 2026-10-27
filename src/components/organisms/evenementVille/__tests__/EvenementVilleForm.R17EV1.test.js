@@ -57,7 +57,18 @@ jest.mock('@/services/collectivite/collectiviteEvenementQueries', () => ({
     mockOccupationDemandes.push(args);
     return mockOccupations;
   },
+  // VILLEEVT-CODE (ligne 5) : « Réessayer la vérification ».
+  useRelireLesOccupations: () => mockRelireLesOccupations,
 }));
+const mockRelireLesOccupations = jest.fn();
+// VILLEEVT-CODE (ligne 3) : le bloc partagé « Date & horaire » ; sa feuille « Répéter » et ses
+// pastilles de jours, doublées (comme dans les témoins de DATESDABORD).
+jest.mock('@/components/molecules/dayPicker/DayPicker', () => function JoursMock() {
+  return null;
+});
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function FeuilleMock() {
+  return null;
+});
 jest.mock('@/components/organisms/seasonSlot/SeasonSlotForm', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
@@ -254,6 +265,21 @@ const remplirJusquaQui = async (/** @type {any} */ arbre) => {
   await touche(arbre, 'tunnel-suivant');
 };
 
+// VILLEEVT-CODE (27/10) : un jour passé se refuse ; l'horloge (seulement elle) est figée avant le
+// samedi 24 octobre 2026 de ces témoins.
+beforeAll(() => {
+  jest.useFakeTimers({
+    doNotFake: [
+      'nextTick', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval', 'setTimeout',
+      'clearTimeout', 'queueMicrotask',
+    ],
+    now: new Date(2026, 9, 20, 8, 0),
+  });
+});
+afterAll(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   mockApercu = { data: null };
   mockDateProps.length = 0;
@@ -357,7 +383,9 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
     await touche(arbre, 'evenement-qui-public');
     await touche(arbre, 'tunnel-suivant');
     const lus = textes(arbre);
-    expect(lus).toContain('Fête du sport · sam. 24 oct. · 10:00 – 17:00');
+    // VILLEEVT-CODE (ligne 10) : « Événement » et « Quand » ont chacun leur ligne.
+    expect(lus).toContain('Fête du sport');
+    expect(lus).toContain('sam. 24 oct. · 10:00 – 17:00');
     expect(lus).toContain('Stade municipal · toute l’installation');
     expect(lus).toContain('Tout le monde');
     expect(lus).toContain('Publier l’événement');
@@ -366,6 +394,7 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
       data: {
         address: null,
         audience: 'membres',
+        capacity: null,
         description: null,
         endDate: null,
         endTime: '17:00',
@@ -423,7 +452,9 @@ describe('R17-EVT-1 — le tunnel « Ajouter un événement de la Ville »', () 
     const lus = textes(arbre);
     expect(lus).toContain('L’événement n’a pas été publié.');
     expect(lus).toContain('La connexion a été perdue. Ce que vous avez saisi est gardé.');
-    expect(lus).toContain('Fête du sport · sam. 24 oct. · 10:00 – 17:00');
+    // VILLEEVT-CODE (ligne 10) : « Événement » et « Quand » ont chacun leur ligne.
+    expect(lus).toContain('Fête du sport');
+    expect(lus).toContain('sam. 24 oct. · 10:00 – 17:00');
     await touche(arbre, 'bouton:Réessayer');
     expect(onPublier).toHaveBeenCalledTimes(2);
     expect(textes(arbre)).not.toContain('L’événement n’a pas été publié.');
@@ -690,5 +721,194 @@ describe('R17-EVT-1-BIS — le panneau étroit, à côté de la grille', () => {
       && n.props?.testID === 'evenement-quand-colonnes');
     expect(enLigne).toHaveLength(1);
     expect(StyleSheet.flatten(enLigne[0].props.style).flexDirection).not.toBe('row');
+  });
+});
+
+// 🏛️ VILLEEVT-CODE (27/10/2026, décisions d'Adel du 25/10 « 9- 1a 2B 3B ») — ce que l'entraîneur
+// avait de mieux (lignes 1, 3, 5, 10, 12 du tableau de VILLEEVT), puis « Répéter » et « N places ».
+const recapDuTunnel = async (/** @type {any} */ arbre) => {
+  await remplirJusquaQui(arbre);
+  await touche(arbre, 'tunnel-suivant');
+};
+const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.testID === id);
+
+describe('VILLEEVT-CODE — ligne 1 : une phrase sous le type', () => {
+  it('🔴 le type choisi dit ce qu’il veut dire, et change avec lui', async () => {
+    const arbre = await monter();
+    const aide = () => aplatir(arbre.root.findByProps({ testID: 'evenement-type-aide' }).props.children);
+    expect(aide()).toBe('Une fête, un forum, une journée ouverte à tous.');
+    await touche(arbre, 'evenement-type-tournoi');
+    expect(aide()).toBe('Des matchs entre équipes, sur une ou plusieurs journées.');
+  });
+});
+
+describe('VILLEEVT-CODE — ligne 3 : le bloc « Date & horaire » de la création d’événement', () => {
+  it('🔴 la fin suit le début : une heure après', async () => {
+    const arbre = await monter();
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Cross');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await act(async () => {
+      dernieresHeures()[0].onChange('10:00');
+    });
+    expect(dernieresHeures()[1].value).toBe('11:00');
+  });
+
+  it('🔴 aujourd’hui, un début déjà passé se refuse à « Quand ? »', async () => {
+    // Horloge figée : mardi 20 octobre 2026, 08:00 ; la date part d'aujourd'hui.
+    const arbre = await monter();
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Cross');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await act(async () => {
+      dernieresHeures()[0].onChange('07:00');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    expect(titre(arbre)).toBe('Quand ?');
+    expect(textes(arbre)).toContain('Le début est déjà passé.');
+  });
+});
+
+describe('VILLEEVT-CODE — 3B : « Nombre de places »', () => {
+  it('🔴 facultatif ; « 200 places » au récapitulatif et `capacity` au serveur', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ onPublier });
+    await act(async () => {
+      dernierInput('evenement-places').onChangeText('200');
+    });
+    await recapDuTunnel(arbre);
+    expect(textes(arbre)).toContain('Fête du sport · 200 places');
+    await touche(arbre, 'tunnel-suivant');
+    expect(onPublier.mock.calls[0][0].data.capacity).toBe(200);
+  });
+});
+
+describe('VILLEEVT-CODE — 2B : « Répéter », sauf vacances scolaires', () => {
+  it('🔴 « Chaque semaine » + « Sauf vacances » : la règle part au serveur et se relit au récap', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ onPublier });
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Fête du sport');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await act(async () => {
+      derniereDate('evenement-date').onChange('24/10/2026');
+    });
+    await act(async () => {
+      dernieresHeures()[0].onChange('10:00');
+    });
+    await touche(arbre, 'date-et-horaire-chaque-semaine');
+    await touche(arbre, 'evenement-sauf-vacances');
+    // « Sur plusieurs jours » s'efface : une seule façon de dire « quand ».
+    expect(parTestID(arbre, 'evenement-plusieurs-jours')).toHaveLength(0);
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'evenement-lieu-stade');
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    expect(textes(arbre)).toContain(
+      'sam. 24 oct. · 10:00 – 11:00 · Chaque semaine (samedi) jusqu’au sam. 31 oct., sauf vacances scolaires',
+    );
+    await touche(arbre, 'tunnel-suivant');
+    expect(onPublier.mock.calls[0][0].data.repetition).toEqual({
+      au: '2026-10-31', frequence: 'week', intervalle: 1, jours: [6], saufVacances: true,
+    });
+  });
+
+  it('🔴 « Modifier » : pas de « Répéter » (une date se modifie seule)', async () => {
+    const arbre = await monter({
+      evenement: {
+        documentId: 'evt-1',
+        endTime: '17:00',
+        facility: { documentId: 'stade' },
+        name: 'Cross',
+        startDate: '2026-10-24',
+        startTime: '10:00',
+        visibility: 'clubs',
+      },
+      presentation: 'panneau',
+    });
+    expect(parTestID(arbre, 'date-et-horaire-repeter-en-avant')).toHaveLength(0);
+  });
+});
+
+describe('VILLEEVT-CODE — ligne 5 : « Où ? » ne dit pas « libre » sans le savoir', () => {
+  afterEach(() => {
+    mockOccupations = {};
+  });
+
+  it('🔴 « Impossible de vérifier » et « Réessayer la vérification »', async () => {
+    mockOccupations = {
+      gym: {
+        complet: false, erreur: true, fermeture: null, seances: null,
+      },
+    };
+    const arbre = await monter({ presentation: 'panneau' });
+    expect(textes(arbre)).toContain('Impossible de vérifier');
+    await touche(arbre, 'evenement-lieu-reessayer');
+    expect(mockRelireLesOccupations).toHaveBeenCalled();
+  });
+
+  it('🔴 l’installation choisie est complète : « Changer la date » ramène à « Quand ? »', async () => {
+    mockOccupations = { stade: { complet: true, fermeture: null, seances: 3 } };
+    const arbre = await monter();
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Cross');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await act(async () => {
+      dernieresHeures()[0].onChange('10:00');
+    });
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'evenement-lieu-stade');
+    await touche(arbre, 'evenement-lieu-changer-date');
+    expect(titre(arbre)).toBe('Quand ?');
+  });
+});
+
+describe('VILLEEVT-CODE — ligne 10 : le récapitulatif', () => {
+  it('🔴 « Modifier » se lit ; « Quand » va droit à « Quand ? » ; « Tout reste modifiable »', async () => {
+    const arbre = await monter();
+    await recapDuTunnel(arbre);
+    const lus = textes(arbre);
+    expect(lus.filter((texte) => texte === 'Modifier').length).toBeGreaterThanOrEqual(4);
+    expect(lus).toContain('Tout reste modifiable après.');
+    await touche(arbre, 'evenement-recap-quand');
+    expect(titre(arbre)).toBe('Quand ?');
+  });
+});
+
+describe('VILLEEVT-CODE — ligne 12 : le brouillon (site)', () => {
+  beforeEach(() => {
+    const memoire = new Map();
+    global.window.sessionStorage = /** @type {any} */ ({
+      getItem: (/** @type {string} */ cle) => (memoire.has(cle) ? memoire.get(cle) : null),
+      removeItem: (/** @type {string} */ cle) => memoire.delete(cle),
+      setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => memoire.set(cle, valeur),
+    });
+  });
+  afterEach(() => {
+    delete global.window.sessionStorage;
+  });
+
+  it('🔴 la saisie revient après un rechargement ; « Annuler » l’oublie', async () => {
+    const premier = await monter({ presentation: 'panneau' });
+    await act(async () => {
+      dernierInput('evenement-nom').onChangeText('Fête du sport');
+    });
+    await act(async () => {
+      premier.unmount();
+    });
+    const second = await monter({ presentation: 'panneau' });
+    expect(dernierInput('evenement-nom').value).toBe('Fête du sport');
+    await touche(second, 'bouton:Annuler');
+    await act(async () => {
+      second.unmount();
+    });
+    await monter({ presentation: 'panneau' });
+    expect(dernierInput('evenement-nom').value).toBe('');
   });
 });

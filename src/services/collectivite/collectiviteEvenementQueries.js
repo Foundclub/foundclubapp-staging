@@ -161,6 +161,18 @@ export const useGestesEvenementDeLaVille = (collectiviteId) => {
 const HEURE = /^\d{2}:\d{2}$/;
 
 /**
+ * VILLEEVT-CODE (ligne 5) — « Réessayer la vérification » : relit les plannings des installations
+ * (la clé de `useOccupationDesLieux`).
+ * @returns {() => void} Le geste.
+ */
+export const useRelireLesOccupations = () => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['planning', 'fullscreen', 'facility'] });
+  };
+};
+
+/**
  * 🏟️ R17-EVT-1-BIS (d) (20/10) — « Où ? » : l'occupation de chaque installation de la Ville aux
  * jours et heures choisis. Une lecture du planning par installation (la MÊME clé que le planning
  * plein écran et celui de toutes les installations : le cache sert les trois) et les fermetures
@@ -206,6 +218,8 @@ export const useOccupationDesLieux = (collectiviteId, installations, fenetre) =>
   });
   if (!prete) return {};
   return occupationDesLieux({
+    // VILLEEVT-CODE (ligne 5) : une lecture en échec dit « Impossible de vérifier ».
+    echecs: lectures.map((lecture) => Boolean(lecture.isError)),
     fenetre,
     fermetures: fermetures.data?.data,
     installations: liste,
