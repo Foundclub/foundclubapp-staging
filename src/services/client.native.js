@@ -54,6 +54,14 @@ const onRequest = (axiosConfig) => {
     url: `${newConfig.baseURL || ''}${newConfig.url || ''}`,
   });
 
+  // TUTOE-CALIBRAGE (développement) : chaque écriture est notée, pour prouver
+  // que le match d'exemple du guide (bonus B2) n'écrit rien sur le serveur.
+  const method = String(newConfig.method || 'get').toUpperCase();
+  if (__DEV__ && method !== 'GET') {
+    // eslint-disable-next-line no-console
+    console.log(`[TUTOE-NET] ${method} ${newConfig.url || ''}`);
+  }
+
   return newConfig;
 };
 
