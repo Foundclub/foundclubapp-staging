@@ -231,3 +231,33 @@ test('P7-01 — fermer la feuille d echec partiel puis recreer ne duplique pas l
   expect(mockEnvois.filter((nom) => nom === 'A')).toHaveLength(1);
   act(() => arbre.unmount());
 });
+
+// APRESDATES / Q4-05 (27/10) — sur telephone, la croix ou le fond appellent `close`, puis la
+// VRAIE feuille le rappelle a la fin de son animation (`BottomModal.handleDismiss`), avec la
+// fonction du rendu suivant : `partialState` y vaut deja null, et ce 2e appel effacait la
+// memoire de l'echec. « Creer » recreait alors les dates deja creees.
+test('Q4-05 — la fermeture rappelee par la feuille ne fait pas oublier l echec partiel', async () => {
+  mockEnvois.length = 0;
+  const navigation = {
+    canGoBack: () => true, goBack: () => {}, navigate: () => {}, push: () => {}, replace: () => {}, reset: () => {},
+  };
+  const rendre = (/** @type {any} */ contenu) => createElement(EventWizardProvider, null, createElement(PriseDeCourant), contenu);
+  /** @type {any} */
+  let arbre;
+  act(() => { arbre = renderer.create(rendre(null)); });
+  act(() => semer({ payload: ETAT_COMPLET, type: 'SET_META' }));
+  act(() => {
+    arbre.update(rendre(createElement(EventWizardRecap, { navigation, route: { params: {} } })));
+  });
+  const appuyerSurCreer = async () => {
+    const gabarit = mockProprietesDuGabarit[mockProprietesDuGabarit.length - 1];
+    await act(async () => { await gabarit.onNext(); });
+  };
+  await appuyerSurCreer();
+  expect(mockEnvois).toEqual(['A', 'B']);
+  act(() => { mockFeuilles.filter((p) => p.isVisible).pop().close(); });
+  act(() => { mockFeuilles[mockFeuilles.length - 1].close(); });
+  await appuyerSurCreer();
+  expect(mockEnvois.filter((nom) => nom === 'A')).toHaveLength(1);
+  act(() => arbre.unmount());
+});

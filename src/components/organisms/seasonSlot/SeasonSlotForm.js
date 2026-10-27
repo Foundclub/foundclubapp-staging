@@ -558,7 +558,11 @@ function SeasonSlotForm({
     Number(slot?.plateau?.number || initial.plateau) || null,
   );
   const [aPartirDu, setAPartirDu] = useState(
-    modification ? format(prochainJour(Number(slot?.weekday) || 1), 'dd/MM/yyyy') : '',
+    // APRESDATES / Q3-02 — un creneau a dates n'a pas de jour : aujourd'hui (le lundi suivant
+    // laissait aux seances d'avant l'ancienne heure, le serveur coupant a cette date).
+    modification
+      ? format(slot?.weekday ? prochainJour(Number(slot.weekday)) : new Date(), 'dd/MM/yyyy')
+      : '',
   );
   // COLL-C2B-BIS — la periode d un creneau qu on modifie (la mairie seule ; pas en repartition).
   const avecPeriode = modification && !repartition;
@@ -1269,7 +1273,9 @@ function SeasonSlotForm({
         {/* VILLE-T18A — planche 23, etat 3. Les heures libres se lisent sur l installation : un
             plateau deja pris (D66) n a pas cette liste. Texte GRAS dans une boite a sa largeur :
             espaces insecables (Android 16, piege du dernier mot perdu). */}
-        {besoinDeConfirmer && !surPlateau && !repartition ? (
+        {/* APRESDATES / Q3-09 — des dates choisies n ont pas de jour : aucune heure pleine n y
+            est calculee, la liste dirait 8 h – 22 h. */}
+        {besoinDeConfirmer && !surPlateau && !repartition && formeChoisie !== 'dates' ? (
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setVoirLibres(true)}
@@ -1290,7 +1296,7 @@ function SeasonSlotForm({
   })();
 
   // VILLE-T18A — « Libre ce mardi : » et une puce par plage ; un appui pose ses heures.
-  const lesHeuresLibres = voirLibres && jour && !repartition
+  const lesHeuresLibres = voirLibres && jour && !repartition && formeChoisie !== 'dates'
     && !lecture.isLoading && !lecture.error ? (
       <View style={{ gap: 8 }} testID="attribuer-heures-libres">
         <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
@@ -1473,8 +1479,10 @@ function SeasonSlotForm({
     }
     return chaqueJour(suite);
   };
-  // « Mercredi 17:30 – 19:00 » ; des jours différents : les heures seules.
-  const momentDuCreneau = joursDifferents
+  // « Mercredi 17:30 – 19:00 » ; des dates choisies : les heures seules (APRESDATES / Q3-13 :
+  // la FORME, pas le bouton « Des jours différents » — « Mercredi » puis « Des dates choisies »
+  // n'envoie aucun jour).
+  const momentDuCreneau = formeChoisie === 'dates'
     ? lesHeures
     : `${weekdayName(Number(jour))} ${lesHeures}`;
   const quiEtEquipe = modification
@@ -1539,12 +1547,12 @@ function SeasonSlotForm({
       valeur: installation?.name || '',
     },
     {
-      cle: joursDifferents
+      cle: formeChoisie === 'dates'
         ? t('collectiviteCreneaux.quand.recapHeures', 'Heures')
         : t('collectiviteCreneaux.tunnel.recapHeures', 'Jour et heures'),
       id: 'heures',
       onPress: () => allerA('jour'),
-      valeur: joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`,
+      valeur: formeChoisie === 'dates' ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`,
     },
     // R17-QUAND-1 — la ligne « Quand » dit la forme, ses bornes et ses séances ; elle se touche,
     // même depuis une case du planning (elle était figée : « Toute la saison »).
@@ -1759,7 +1767,7 @@ function SeasonSlotForm({
       {parcoursGuide && !compact && depuisUneCase && etapeCourante !== 'recap' ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="season-slot-moment">
           {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
-          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
+          {formeChoisie === 'dates' ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
 
@@ -2437,7 +2445,7 @@ function SeasonSlotForm({
       {parcoursGuide && compact && (visible('jour') || visible('horaires')) ? (
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {/* R17-QUAND-1 : des jours différents n ont pas de jour fixe, les heures seules. */}
-          {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
+          {formeChoisie === 'dates' ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
         </Text>
       ) : null}
       {parcoursGuide && confirmationFinale && !tunnelPleinEcran ? (
@@ -2448,7 +2456,7 @@ function SeasonSlotForm({
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{quiEtEquipe}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>{installation?.name}</Text>
           <Text style={[Fonts.p2, Fonts.neutral00]}>
-            {joursDifferents ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
+            {formeChoisie === 'dates' ? lesHeures : `${weekdayName(Number(jour))} · ${lesHeures}`}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]} testID="season-slot-recap-quand">
             {libelleDuQuand}

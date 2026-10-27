@@ -1933,7 +1933,9 @@ function EventWizardRecap({ navigation }) {
 
       <BottomModal
         close={() => {
-          setDismissedPartialState(partialState);
+          // APRESDATES / Q4-05 — la feuille rappelle `close` a la fin de son animation, quand
+          // `partialState` vaut deja null : ce 2e appel ne doit pas effacer l'echec memorise.
+          if (partialState) setDismissedPartialState(partialState);
           setPartialState(null);
         }}
         isVisible={Boolean(partialState)}

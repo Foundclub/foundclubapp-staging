@@ -325,10 +325,15 @@ function eventWizardReducer(state, action) {
       };
 
       if (!isStage) {
+        // APRESDATES / Q4-10 — meme regle que P8-03 : un tournoi inchange (lien « modifier »
+        // du Recap) garde ses jours et son programme.
+        const garderLesJours = isTournament && !hasTypeChanged;
         const normalizedState = {
           ...nextState,
-          isMultiDayTournament: false,
-          stageSchedule: [],
+          isMultiDayTournament: garderLesJours ? state.isMultiDayTournament === true : false,
+          stageSchedule: garderLesJours && Array.isArray(state.stageSchedule)
+            ? state.stageSchedule
+            : [],
         };
 
         if (!isTournament) {
