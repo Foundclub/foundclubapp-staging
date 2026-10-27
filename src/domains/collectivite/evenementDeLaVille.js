@@ -387,7 +387,7 @@ export const lireBrouillon = (collectiviteId) => {
     const texte = stockage()?.getItem(cleDuBrouillon(collectiviteId));
     const lu = texte ? JSON.parse(texte) : null;
     if (!lu || typeof lu !== 'object') return null;
-    const base = etatInitial();
+    const base = /** @type {Record<string, any>} */ (etatInitial());
     const etat = Object.fromEntries(Object.keys(base).map((cle) => [cle, cle in lu ? lu[cle] : base[cle]]));
     if (etat.repetition) {
       etat.repetition = {
@@ -585,8 +585,8 @@ const picSimultane = (fenetres) => fenetres.reduce((pic, fenetre) => Math.max(
  * (`maxSlots`) est atteinte EN MÊME TEMPS un des jours (une demande en attente ne compte pas),
  * et la FERMETURE (jamais un blocage) qui touche un des jours. Une installation dont le planning
  * n'est pas lu n'a pas de nombre (`seances: null`) : on ne dit pas « libre » sans le savoir.
- * @param {{ fenetre: { date: string, dateFin?: string, heureDebut: string, heureFin: string },
- *   fermetures?: any[] | null, installations: any[], lectures: Array<any> }} entree
+ * @param {{ echecs?: boolean[], fenetre: { date: string, dateFin?: string, heureDebut: string,
+ *   heureFin: string }, fermetures?: any[] | null, installations: any[], lectures: Array<any> }} entree
  *   - `lectures` : les réponses de `GET /facilities/:id/planning`, dans l'ordre des installations.
  * @returns {Record<string, { complet: boolean, fermeture: any, seances: number | null }>} Par
  *   installation (documentId).

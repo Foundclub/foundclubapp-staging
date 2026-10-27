@@ -59,7 +59,8 @@ function VitrineEvenementVille({ evenement, onVoirLaFiche }) {
   const [partage, setPartage] = useState({ enCours: false, etat: '' });
   const lignes = lignesDeLaVitrine(t, evenement);
   const lien = evenement?.documentId
-    ? buildPublicWebUrl({ path: `/evenements-de-la-ville/${evenement.documentId}` })
+    // Les autres réglages (origine du site) se lisent dans la configuration.
+    ? buildPublicWebUrl(/** @type {any} */ ({ path: `/evenements-de-la-ville/${evenement.documentId}` }))
     : null;
 
   const partager = async () => {
