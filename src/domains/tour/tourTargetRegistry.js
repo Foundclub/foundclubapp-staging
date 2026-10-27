@@ -7,7 +7,11 @@
  * @typedef {(done: (rect: TourRect | null) => void) => void} TourMeasure
  */
 
-/** @type {Map<string, { clipTo?: string; measure: TourMeasure }>} */
+// Plusieurs écrans d'une pile peuvent porter le même id (« Suivant » d'un
+// tunnel) : chaque ancre garde sa propre entrée, et la mesure prend la plus
+// récente des ancres actives (son écran a le focus, lu au moment de mesurer).
+/** @typedef {{ clipTo?: string; isActive?: () => boolean; measure: TourMeasure }} TourEntry */
+/** @type {Map<string, TourEntry[]>} */
 const targets = new Map();
 /** @type {Set<() => void>} */
 const listeners = new Set();
@@ -20,20 +24,36 @@ const notify = () => {
  * Dépose la mesure d’une ancre.
  * @param {string} id
  * @param {TourMeasure} measure
- * @param {{ clipTo?: string }} [options] - `clipTo` : ancre de la zone visible
- *   qui la contient (ex. un ScrollView) ; la mesure y est coupée.
+ * @param {{ clipTo?: string; isActive?: () => boolean }} [options] - `clipTo` :
+ *   ancre de la zone visible qui la contient (ex. un ScrollView) ; la mesure y
+ *   est coupée. `isActive` : l'ancre compte-t-elle en ce moment (focus) ?
  * @returns {() => void} désinscription (ne retire que SA mesure)
  */
 export const registerTourTarget = (id, measure, options = {}) => {
-  const entry = { clipTo: options.clipTo, measure };
-  targets.set(id, entry);
+  /** @type {TourEntry} */
+  const entry = { clipTo: options.clipTo, isActive: options.isActive, measure };
+  targets.set(id, [...(targets.get(id) || []), entry]);
   notify();
   return () => {
-    if (targets.get(id) === entry) {
-      targets.delete(id);
-      notify();
-    }
+    const rest = (targets.get(id) || []).filter((candidate) => candidate !== entry);
+    if (rest.length) targets.set(id, rest);
+    else targets.delete(id);
+    notify();
   };
+};
+
+/**
+ * L'ancre qui compte pour cet id : la plus récente des actives.
+ * @param {string | undefined} id
+ * @returns {TourEntry | null}
+ */
+const activeEntry = (id) => {
+  const entries = id ? targets.get(id) || [] : [];
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const entry = entries[index];
+    if (!entry.isActive || entry.isActive()) return entry;
+  }
+  return null;
 };
 
 /**
@@ -48,7 +68,7 @@ export const notifyTourTargetLayout = () => notify();
  * @returns {Promise<TourRect | null>}
  */
 const measureRaw = (id) => new Promise((resolve) => {
-  const entry = id ? targets.get(id) : null;
+  const entry = activeEntry(id);
   if (!entry) {
     resolve(null);
     return;
@@ -84,7 +104,7 @@ const intersect = (rect, clip) => {
  */
 export const measureTourTarget = async (id) => {
   const rect = /** @type {TourRect | null} */ (await measureRaw(id));
-  const clip = rect ? /** @type {TourRect | null} */ (await measureRaw(targets.get(id)?.clipTo))
+  const clip = rect ? /** @type {TourRect | null} */ (await measureRaw(activeEntry(id)?.clipTo))
     : null;
   return rect && clip ? intersect(rect, clip) : rect;
 };

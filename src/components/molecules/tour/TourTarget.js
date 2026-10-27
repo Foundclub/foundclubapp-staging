@@ -1,6 +1,6 @@
 import * as ReactNavigation from '@react-navigation/native';
 import {
-  createContext, useContext, useEffect, useRef, useState,
+  createContext, useContext, useEffect, useRef,
 } from 'react';
 import { Platform, View } from 'react-native';
 
@@ -50,21 +50,8 @@ function TourTarget({
   const viewRef = useRef(/** @type {any} */ (null));
   const ownNavigation = /** @type {any} */ (useContext(NavigationContext));
   const navigation = focusFromParent ? ownNavigation?.getParent?.() : ownNavigation;
-  const [isFocused, setIsFocused] = useState(() => navigation?.isFocused?.() ?? true);
-
   useEffect(() => {
-    if (!navigation?.addListener) return undefined;
-    setIsFocused(navigation.isFocused());
-    const offFocus = navigation.addListener('focus', () => setIsFocused(true));
-    const offBlur = navigation.addListener('blur', () => setIsFocused(false));
-    return () => {
-      offFocus();
-      offBlur();
-    };
-  }, [navigation]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web' || !isFocused) return undefined;
+    if (Platform.OS === 'web') return undefined;
     return registerTourTarget(id, (done) => {
       const node = viewRef.current;
       if (!node?.measureInWindow) {
@@ -79,8 +66,13 @@ function TourTarget({
       ) => done({
         height, width, x, y,
       }));
-    }, { clipTo });
-  }, [clipTo, id, isFocused]);
+    }, {
+      clipTo,
+      // Le focus se lit à la mesure : un événement « focus » arrivé avant
+      // l'abonnement laissait le cadre absent 30 à 45 s (CALIBRAGE-2).
+      isActive: () => (navigation?.isFocused ? navigation.isFocused() : true),
+    });
+  }, [clipTo, id, navigation]);
 
   if (Platform.OS === 'web') return /** @type {any} */ (children);
 

@@ -129,6 +129,21 @@ describe('clipAboveDock', () => {
     }, dock)).toBeNull();
   });
 
+  // TUTOE-CALIBRAGE-2 (texte agrandi 1,3) : la carte M4 ne dépassait que de
+  // 10 pt au-dessus de la barre ; le voile s'allumait et bloquait le défilement.
+  it('moins de 44 pt visibles (toucher minimal) : ne compte pas encore', () => {
+    expect(clipAboveDock({
+      height: 80, width: 170, x: 20, y: 770,
+    }, dock)).toBeNull();
+  });
+
+  it('petite cible entièrement visible : comptée telle quelle', () => {
+    const rect = {
+      height: 30, width: 60, x: 20, y: 740,
+    };
+    expect(clipAboveDock(rect, dock)).toBe(rect);
+  });
+
   it('sans barre à l’écran, ou cible au-dessus : inchangée', () => {
     const rect = {
       height: 100, width: 170, x: 20, y: 300,

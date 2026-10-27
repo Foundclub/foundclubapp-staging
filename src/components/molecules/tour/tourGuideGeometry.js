@@ -56,10 +56,15 @@ export const stableHeight = (previous, next) => (Math.abs(next - previous) < 1 ?
 export const isOnScreen = (rect, screenWidth, screenHeight) => rect.y < screenHeight - 2
   && rect.y + rect.height > 2 && rect.x < screenWidth - 2 && rect.x + rect.width > 2;
 
+// Hauteur minimale d'un toucher (accessibilité).
+const MIN_TOUCH = 44;
+
 /**
  * Coupe une cible au-dessus de la barre d'onglets flottante, qui recouvre le
  * contenu : sinon la découpe déborde sur les onglets et un toucher au centre
- * du trou tombe sur un onglet. Entièrement dessous : la cible ne compte pas.
+ * du trou tombe sur un onglet. Entièrement dessous, ou moins d'un toucher
+ * (44 pt) au-dessus : la cible ne compte pas encore (sinon le voile s'allume
+ * sur une lamelle et bloque le défilement qui la ferait monter).
  * @param {{ height: number; width: number; x: number; y: number }} rect - Cible.
  * @param {{ height: number; width: number; x: number; y: number } | null} dock - Barre.
  * @returns {{ height: number; width: number; x: number; y: number } | null} Cible.
@@ -67,7 +72,7 @@ export const isOnScreen = (rect, screenWidth, screenHeight) => rect.y < screenHe
 export const clipAboveDock = (rect, dock) => {
   if (!dock || rect.y + rect.height <= dock.y) return rect;
   const height = dock.y - rect.y;
-  return height > 0 ? { ...rect, height } : null;
+  return height >= Math.min(rect.height, MIN_TOUCH) ? { ...rect, height } : null;
 };
 
 /**

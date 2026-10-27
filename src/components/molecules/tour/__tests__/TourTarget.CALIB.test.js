@@ -99,6 +99,42 @@ describe('TourTarget — seul l’écran qui a le focus compte', () => {
     await expect(measureTourTarget('cible')).resolves.toBeNull();
   });
 
+  // TUTOE-CALIBRAGE-2 (petit écran, tunnel « match amical ») : le cadre
+  // manquait 30 à 45 s à l'arrivée sur un écran ; son focus était venu sans
+  // que l'ancre reçoive l'événement « focus ». Le focus se lit à la mesure.
+  it('focus acquis sans événement « focus » : mesurée tout de suite', async () => {
+    const navigation = fakeNavigation(false);
+    mount(navigation);
+    navigation.focused = true;
+    await expect(measureTourTarget('cible')).resolves.toEqual(RECT);
+  });
+
+  it('même id sur deux écrans de la pile : seul celui qui a le focus compte', async () => {
+    const dessous = fakeNavigation(true);
+    mount(dessous);
+    const dessus = fakeNavigation(false);
+    let tree;
+    act(() => {
+      tree = renderer.create(
+        <NavigationContext.Provider value={dessus}>
+          <TourTarget id="cible"><View /></TourTarget>
+        </NavigationContext.Provider>,
+      );
+    });
+    const host = tree.root.findAll((node) => node.props.testID === 'tour.target.cible'
+      && typeof node.type !== 'string')[0];
+    host.instance.measureInWindow = (cb) => cb(0, 500, 100, 50);
+    await expect(measureTourTarget('cible')).resolves.toEqual(RECT);
+    dessous.focused = false;
+    dessus.focused = true;
+    await expect(measureTourTarget('cible')).resolves.toEqual({
+      height: 50, width: 100, x: 0, y: 500,
+    });
+    act(() => tree.unmount());
+    dessous.focused = true;
+    await expect(measureTourTarget('cible')).resolves.toEqual(RECT);
+  });
+
   it('hors navigation (feuille en portail, barre d’onglets) : mesurée', async () => {
     mount(undefined);
     await expect(measureTourTarget('cible')).resolves.toEqual(RECT);
