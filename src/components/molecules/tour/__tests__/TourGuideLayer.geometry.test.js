@@ -104,3 +104,36 @@ describe('stableHeight', () => {
     expect(stableHeight(103.2, 130)).toBe(130);
   });
 });
+
+// TUTOE-CALIBRAGE (27/10) — émulateur, M4 : la carte visée était à moitié sous
+// la barre d'onglets FLOTTANTE ; la découpe couvrait « Accueil / Planning » et
+// un toucher au centre du trou tombait sur un onglet.
+describe('clipAboveDock', () => {
+  // eslint-disable-next-line global-require
+  const { clipAboveDock } = require('../tourGuideGeometry');
+  const dock = {
+    height: 60, width: 330, x: 30, y: 780,
+  };
+
+  it('coupe une cible à cheval au-dessus de la barre', () => {
+    expect(clipAboveDock({
+      height: 200, width: 170, x: 20, y: 700,
+    }, dock)).toEqual({
+      height: 80, width: 170, x: 20, y: 700,
+    });
+  });
+
+  it('une cible entièrement sous la barre ne compte pas', () => {
+    expect(clipAboveDock({
+      height: 40, width: 170, x: 20, y: 790,
+    }, dock)).toBeNull();
+  });
+
+  it('sans barre à l’écran, ou cible au-dessus : inchangée', () => {
+    const rect = {
+      height: 100, width: 170, x: 20, y: 300,
+    };
+    expect(clipAboveDock(rect, null)).toBe(rect);
+    expect(clipAboveDock(rect, dock)).toBe(rect);
+  });
+});

@@ -149,7 +149,7 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.currentStep.id).toBe('m1-dock');
   });
 
-  it('une équipe entraînée dans son club : « Retrouve ton équipe » vise une équipe entraînée', () => {
+  it('équipe entraînée dans son club : « Retrouve ton équipe » vise une équipe entraînée', () => {
     mockUserData = {
       ...mockUserData,
       trainedTeams: [{ club: { documentId: 'club-1' }, documentId: 't-ici' }],
@@ -325,6 +325,19 @@ describe('guide Entraîneur — reprise', () => {
     renderProvider();
     expect(tour.isTourActive).toBe(false);
     expect(mockStore.has(STORAGE_KEY)).toBe(false);
+  });
+});
+
+// TUTOE-CALIBRAGE (27/10) — émulateur : la carte « Rechercher » ouvre
+// `SearchRecruitment`, une REDIRECTION vers le hub de recherche ; seule la route
+// du hub arrive au guide, qui restait bloqué sur « m4-card ».
+describe('guide Entraîneur — M4 par la redirection de recherche', () => {
+  it('arriver sur le hub de recherche fait passer à la lecture des profils', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const { matchSignal } = jest.requireActual('@/domains/tour/tourGuideEngine');
+    const index = COACH_GUIDE.steps.findIndex((step) => step.id === 'm4-card');
+    const match = matchSignal(COACH_GUIDE, index, { key: RouteNames.SearchHub, kind: 'route' }, {});
+    expect(COACH_GUIDE.steps[match?.index]?.id).toBe('m4-read');
   });
 });
 

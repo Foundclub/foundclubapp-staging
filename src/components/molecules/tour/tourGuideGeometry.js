@@ -43,6 +43,34 @@ export const toAbsoluteStyle = (rect) => ({
 export const stableHeight = (previous, next) => (Math.abs(next - previous) < 1 ? previous : next);
 
 /**
+ * La cible est-elle (au moins en partie) à l'écran ? Une cible hors écran
+ * donnait une découpe de hauteur négative et une bulle hors écran.
+ * ponytail: on ne fait pas défiler l'écran jusqu'à la cible (pack 04 §2,
+ * point 5) : bulle en haut et écran libre ; la re-mesure la découpe dès que la
+ * personne la fait entrer à l'écran. Sortie : un `scrollTo` par écran ancré.
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
+ * @param {number} screenWidth - Largeur de la couche.
+ * @param {number} screenHeight - Hauteur de la couche.
+ * @returns {boolean} À l'écran ?
+ */
+export const isOnScreen = (rect, screenWidth, screenHeight) => rect.y < screenHeight - 2
+  && rect.y + rect.height > 2 && rect.x < screenWidth - 2 && rect.x + rect.width > 2;
+
+/**
+ * Coupe une cible au-dessus de la barre d'onglets flottante, qui recouvre le
+ * contenu : sinon la découpe déborde sur les onglets et un toucher au centre
+ * du trou tombe sur un onglet. Entièrement dessous : la cible ne compte pas.
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Cible.
+ * @param {{ height: number; width: number; x: number; y: number } | null} dock - Barre.
+ * @returns {{ height: number; width: number; x: number; y: number } | null} Cible.
+ */
+export const clipAboveDock = (rect, dock) => {
+  if (!dock || rect.y + rect.height <= dock.y) return rect;
+  const height = dock.y - rect.y;
+  return height > 0 ? { ...rect, height } : null;
+};
+
+/**
  * Découpe d'une cible : marge de 6, bornée à 2 du bord de l'écran.
  * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
  * @param {number} screenWidth - Largeur de l'écran.

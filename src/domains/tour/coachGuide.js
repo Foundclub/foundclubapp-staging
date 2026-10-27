@@ -523,7 +523,12 @@ const STEPS = [
     },
   },
   {
-    advanceOn: { key: RouteNames.SearchRecruitment, type: 'route' },
+    // `SearchRecruitment` est une redirection vers le hub : c'est la route du
+    // hub qui arrive au guide (TUTOE-CALIBRAGE, émulateur).
+    advanceOn: [
+      { key: RouteNames.SearchRecruitment, type: 'route' },
+      { key: RouteNames.SearchHub, type: 'route' },
+    ],
     id: 'm4-card',
     missionId: 'coach_m4',
     resumeFrom: 'm4-back',

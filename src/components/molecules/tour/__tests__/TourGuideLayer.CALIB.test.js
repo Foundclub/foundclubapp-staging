@@ -179,6 +179,22 @@ describe('TourGuideLayer — le toucher passe dans la découpe', () => {
   });
 });
 
+// Émulateur, M4 : la carte « Rechercher » était SOUS le bas de l'écran (y 1 449
+// pour 923) : découpe de hauteur négative, bulle hors écran, écran voilé sans
+// issue. Une cible hors écran ne compte pas : bulle en haut, écran libre pour
+// faire défiler ; la re-mesure la découpe dès qu'elle entre à l'écran.
+describe('TourGuideLayer — cible hors de l’écran', () => {
+  it('ni voile ni découpe tant que la cible est sous le bas de l’écran', async () => {
+    mountTarget('home.card.search-profiles', {
+      height: 148, width: 176, x: 24, y: 1449 - STATUS_BAR,
+    });
+    mockTour = activeTour({ id: 'm4-card', targets: ['home.card.search-profiles'], text: 'x' });
+    const tree = await renderLayer();
+    expect(framesOf(tree)).toHaveLength(0);
+    expect(blockersOf(tree)).toHaveLength(0);
+  });
+});
+
 describe('TourGuideLayer — hors du mode connecté', () => {
   it('« Ajouter un compte » (écran de connexion) : ni voile ni bulle', async () => {
     mockIsAddingAccount = true;

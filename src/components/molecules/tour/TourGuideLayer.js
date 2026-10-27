@@ -23,7 +23,14 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
-  computeBlockers, placeBubble, stableHeight, toAbsoluteStyle, toCutout, toLayerFrame,
+  clipAboveDock,
+  computeBlockers,
+  isOnScreen,
+  placeBubble,
+  stableHeight,
+  toAbsoluteStyle,
+  toCutout,
+  toLayerFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
 
 import { useTour } from '@/context/useTour';
@@ -53,6 +60,9 @@ import useReduceMotion from '@/hooks/useReduceMotion';
 
 const CUTOUT_RADIUS = 16;
 const MEASURE_INTERVAL_MS = 400;
+// Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
+// où est la barre (elle recouvre le contenu), quand elle est à l'écran.
+const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 
 /**
  * Variante de l'étape dont la 1ʳᵉ cible est montée (ex. feuille de choix ouverte).
@@ -155,6 +165,7 @@ function TourGuideLayer() {
       ]),
       ...(currentStep.targets || []),
       ...(currentStep.variants || []).flatMap((/** @type {any} */ v) => v.targets || []),
+      ...DOCK_IDS,
     ])]
     : [];
   const targetKey = allTargetIds.join('|');
@@ -236,8 +247,21 @@ function TourGuideLayer() {
     return () => loop.stop();
   }, [isStepVisible, pulse, reduceMotion]);
 
-  const measuredTargets = variant.targets.filter((id) => rects[id]);
-  const cutouts = measuredTargets.map((id) => toCutout(rects[id], width, height));
+  const dockRects = DOCK_IDS.map((id) => rects[id]).filter(Boolean);
+  const dock = dockRects.length ? {
+    height: 1,
+    width: 1,
+    x: 0,
+    y: Math.min(...dockRects.map((rect) => rect.y)),
+  } : null;
+  /** @type {Record<string, any>} */
+  const visibleRects = Object.fromEntries(variant.targets.map((id) => [
+    id,
+    rects[id] && !DOCK_IDS.includes(id) ? clipAboveDock(rects[id], dock) : rects[id],
+  ]));
+  const measuredTargets = variant.targets
+    .filter((id) => visibleRects[id] && isOnScreen(visibleRects[id], width, height));
+  const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
   const primary = cutouts[0] || null;
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide;
@@ -259,7 +283,7 @@ function TourGuideLayer() {
       step: currentStep.id,
       sub: sheetGuide ? `${sheetGuide.anchor}#${sheetIndex}` : null,
       targets: measuredTargets.map((id, index) => ({
-        hole: roundRect(cutouts[index]), id, rect: roundRect(rects[id]),
+        hole: roundRect(cutouts[index]), id, rect: roundRect(visibleRects[id]),
       })),
       veil: withVeil,
     })
