@@ -204,7 +204,8 @@ describe('RETOUCHES-DESIGN D4 — lisible, et le bas équilibré', () => {
       .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
     return 0.2126 * r + 0.7152 * v + 0.0722 * b;
   };
-  const NOMMEES = { black: '#000000', white: '#ffffff' };
+  // Couleurs nommées (`Fonts.*` porte `'black'`) : leur luminance, sans hex (contrat de thème).
+  const LUMINANCES_NOMMEES = { black: 0, white: 1 };
   /**
    * Contraste WCAG entre deux couleurs.
    * @param {string} a Couleur.
@@ -212,7 +213,8 @@ describe('RETOUCHES-DESIGN D4 — lisible, et le bas équilibré', () => {
    * @returns {number} Le rapport.
    */
   const contraste = (a, b) => {
-    const [x, y] = [NOMMEES[a] || a, NOMMEES[b] || b].map(luminance);
+    const [x, y] = [a, b]
+      .map((c) => (c in LUMINANCES_NOMMEES ? LUMINANCES_NOMMEES[c] : luminance(c)));
     return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
   };
 
