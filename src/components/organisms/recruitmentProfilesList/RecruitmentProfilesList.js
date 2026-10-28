@@ -328,39 +328,44 @@ function RecruitmentProfilesList({
       {isLoading ? (
         <Loader />
       ) : (
-        <FlatList
-          contentContainerStyle={[Spaces.gap[16], { flexGrow: 1, paddingBottom: bottomPadding }]}
-          data={users}
-          keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
-          ListEmptyComponent={renderEmptyState()}
-          ListFooterComponent={isFetchingNextPage ? (
-            <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
-              <ActivityIndicator color={Colors.primary500} />
-            </View>
-          ) : null}
-          ListHeaderComponent={renderHeader()}
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) {
-              fetchNextPage();
-            }
-          }}
-          onEndReachedThreshold={0.35}
-          refreshControl={(
-            <RefreshControl
-              onRefresh={refetch}
-              refreshing={isRefetching && !isFetchingNextPage}
-            />
-          )}
-          renderItem={({ index, item }) => (index === 0 ? (
-            <TourTarget id="search.result.0">
+        // GUIDE-RECUL (constat FINITIONS-GUIDE, petit écran) : « Filtrer » et la
+        // 1ʳᵉ carte sont coupés à la zone visible de la liste ; passés sous
+        // l'en-tête de l'écran, leur cadre restait sur l'onglet « Candidatures ».
+        <TourTarget clipChildren id="search.viewport" style={{ flex: 1 }}>
+          <FlatList
+            contentContainerStyle={[Spaces.gap[16], { flexGrow: 1, paddingBottom: bottomPadding }]}
+            data={users}
+            keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
+            ListEmptyComponent={renderEmptyState()}
+            ListFooterComponent={isFetchingNextPage ? (
+              <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
+                <ActivityIndicator color={Colors.primary500} />
+              </View>
+            ) : null}
+            ListHeaderComponent={renderHeader()}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.35}
+            refreshControl={(
+              <RefreshControl
+                onRefresh={refetch}
+                refreshing={isRefetching && !isFetchingNextPage}
+              />
+            )}
+            renderItem={({ index, item }) => (index === 0 ? (
+              <TourTarget id="search.result.0">
+                <MercatoCard onPress={handleCardPress} user={item} />
+              </TourTarget>
+            ) : (
               <MercatoCard onPress={handleCardPress} user={item} />
-            </TourTarget>
-          ) : (
-            <MercatoCard onPress={handleCardPress} user={item} />
-          ))}
-          showsVerticalScrollIndicator={false}
-          style={{ flex: 1 }}
-        />
+            ))}
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+          />
+        </TourTarget>
       )}
 
       {/* D69 — la feuille du pack. Le bouton et sa pastille n'ont pas bouge. */}

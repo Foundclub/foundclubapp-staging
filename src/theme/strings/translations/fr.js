@@ -24907,6 +24907,8 @@ export default {
     quit: 'Arrêter le guide',
     resume: 'Reprendre le tour',
     ringLabel: 'Équipe prête',
+    scrollDown: 'Fais défiler vers le bas.',
+    scrollUp: 'Fais défiler vers le haut.',
     skipBonus: 'Passer ce bonus',
     teamReady: 'Équipe prête {{gauge}} %',
   },

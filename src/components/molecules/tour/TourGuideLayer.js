@@ -183,9 +183,14 @@ function TourGuideLayer() {
   // tunnel (l'ancre « Suivant » existe aussi sur l'écran d'avant) : hors de
   // l'écran qui a ouvert l'étape, le voile tombe pour qu'on puisse corriger.
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
+  const routeRef = useRef(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
-    if (signal?.kind === 'route') setRoute(signal.key);
+    if (signal?.kind !== 'route') return;
+    routeRef.current = signal.key;
+    setRoute(signal.key);
   }), []);
+  // GUIDE-RECUL : écran où une cible propre de l'étape a été mesurée.
+  const [seenRoute, setSeenRoute] = useState(/** @type {string | null} */ (null));
   const isOffStepRoute = Boolean(stepRoute && route && route !== stepRoute);
 
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
@@ -219,6 +224,7 @@ function TourGuideLayer() {
   // régulièrement (défilement).
   useEffect(() => {
     setSubIndex(0);
+    setSeenRoute(null);
     if (!targetKey) {
       setRects({});
       return undefined;
@@ -226,6 +232,7 @@ function TourGuideLayer() {
     let cancelled = false;
     const ids = targetKey.split('|');
     const measureAll = () => {
+      const routeAtStart = routeRef.current;
       Promise.all([
         measureLayerOrigin(layerRef.current),
         ...ids.map(measureTourTarget),
@@ -240,6 +247,10 @@ function TourGuideLayer() {
         setRects((previous) => (
           JSON.stringify(previous) === JSON.stringify(next) ? previous : next
         ));
+        // Mesure commencée sur un autre écran : on ne sait pas où la cible était.
+        const seen = ids.some((id) => next[id] && !DOCK_IDS.includes(id)
+          && !HEADER_IDS.includes(id));
+        if (seen && routeAtStart && routeRef.current === routeAtStart) setSeenRoute(routeAtStart);
       });
     };
     measureAll();
@@ -318,6 +329,24 @@ function TourGuideLayer() {
       .map((rect) => toCutout(rect, width, height)),
   ];
   const primary = cutouts[0] || null;
+  // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
+  // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
+  // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
+  const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
+    && !variant.targets.some((id) => rects[id]));
+  // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
+  // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
+  // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
+  // écran ancré ; sortie : un `scrollTo` par écran si la recette le demande.
+  const offTarget = !primary && !sheetGuide
+    ? variant.targets.map((id) => rects[id]).find(Boolean)
+    : null;
+  let scrollHint = null;
+  if (offTarget && offTarget.y + offTarget.height <= 2) {
+    scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
+  } else if (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2) {
+    scrollHint = t('tourGuide.scrollDown', 'Fais défiler vers le bas.');
+  }
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
@@ -433,10 +462,14 @@ function TourGuideLayer() {
             : { height: layoutHeight, width: layoutWidth }
         ));
       }}
-      pointerEvents="box-none"
+      // Bulle périmée : la couche reste montée (elle se mesure, la cible peut
+      // revenir), mais invisible, muette et sans toucher.
+      accessibilityElementsHidden={isStale}
+      importantForAccessibility={isStale ? 'no-hide-descendants' : 'auto'}
+      pointerEvents={isStale ? 'none' : 'box-none'}
       ref={layerRef}
       style={{
-        bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
+        bottom: 0, left: 0, opacity: isStale ? 0 : 1, position: 'absolute', right: 0, top: 0,
       }}
       testID="tour.layer"
     >
@@ -667,6 +700,17 @@ function TourGuideLayer() {
           </Text>
           {buttonLabel ? nextButton : null}
         </View>
+        {scrollHint ? (
+          <Text
+            allowFontScaling={false}
+            style={[
+              scaledFont(Fonts.p3Bold, fontScale),
+              { color: Colors.primary600, marginTop: 4 },
+            ]}
+          >
+            {scrollHint}
+          </Text>
+        ) : null}
         {isBonus ? (
           <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
             <TouchableOpacity
