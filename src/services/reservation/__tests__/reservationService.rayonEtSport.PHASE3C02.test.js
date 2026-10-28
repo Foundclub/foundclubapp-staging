@@ -43,7 +43,8 @@ describe('Q2-07 — pastilles de sport', () => {
   it.each([
     ['padel', ['Padel']],
     ['tennis', ['Tennis']],
-    ['foot', ['Football']],
+    // « Foot 5 » : les deux noms lus en prod par le chef (28/10).
+    ['foot', ['Football', 'Football à 5']],
     ['basket', ['Basketball', 'Basket']],
   ])('« %s » filtre le sport de l\'équipe par son nom', async (slug, noms) => {
     const params = await envoyes({ activitySlug: slug });

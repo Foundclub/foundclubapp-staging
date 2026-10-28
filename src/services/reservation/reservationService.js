@@ -12,7 +12,8 @@ import client from '../client';
  */
 const NOMS_DES_PASTILLES = {
   basket: ['Basketball', 'Basket'],
-  foot: ['Football'],
+  // « Foot 5 » : « Football à 5 » existe aussi en base (lu en prod par le chef, 28/10).
+  foot: ['Football', 'Football à 5'],
   padel: ['Padel'],
   tennis: ['Tennis'],
 };
