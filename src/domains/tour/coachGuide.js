@@ -368,6 +368,12 @@ const STEPS = [
   {
     advanceOn: { key: 'teamActions.shareLink', type: 'interaction' },
     bubblePlacement: 'top',
+    // Menu refermé (reprise, retour) : on remontre le bouton ⋮ au lieu d'une
+    // bulle « en haut » posée dessus (GUIDE-ENTETE, émulateur 28/10).
+    fallback: {
+      targets: ['team.more'],
+      get text() { return t('m2-more', 'Les actions de l’équipe sont rangées dans ce menu.'); },
+    },
     id: 'm2-share',
     missionId: 'coach_m2',
     resumeFrom: 'm2-card',

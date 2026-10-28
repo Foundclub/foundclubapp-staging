@@ -190,6 +190,9 @@ function TourGuideLayer() {
 
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
   const [bubbleHeight, setBubbleHeight] = useState(110);
+  // Échelle maximale qui laisse la bulle « en haut » au-dessus de sa cible
+  // (texte agrandi) ; repart du plafond à chaque nouveau texte.
+  const [fitScale, setFitScale] = useState(MAX_FONT_SCALE);
   const [subIndex, setSubIndex] = useState(0);
   const [sheetIndex, setSheetIndex] = useState(0);
   const pulse = useRef(new Animated.Value(0)).current;
@@ -267,6 +270,8 @@ function TourGuideLayer() {
     ? bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]()
     : variant.text;
 
+  useEffect(() => { setFitScale(MAX_FONT_SCALE); }, [text]);
+
   // Annonce au lecteur d'écran, et apparition (fondu + 6 pt) à chaque bulle.
   useEffect(() => {
     if (!isStepVisible || !text) return;
@@ -304,6 +309,14 @@ function TourGuideLayer() {
   const measuredTargets = variant.targets
     .filter((id) => visibleRects[id] && isOnScreen(visibleRects[id], width, height));
   const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
+  // Décision d'Adel 4- A : l'en-tête ancré (Retour, Fermer) reste visible et
+  // touchable sous le voile, sans cadre ; ce n'est pas la cible de l'étape.
+  const passThrough = [
+    ...cutouts,
+    ...HEADER_IDS.map((id) => rects[id])
+      .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
+      .map((rect) => toCutout(rect, width, height)),
+  ];
   const primary = cutouts[0] || null;
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
@@ -375,7 +388,12 @@ function TourGuideLayer() {
   const hudTop = Math.max(insets.top + 6, (headerBottom ?? 0) + 6);
   const showHud = position.top > hudTop + 104
     && !cutouts.some((cutout) => cutout.y < hudTop + 104);
-  const fontScale = Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE);
+  // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
+  const fontScale = Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
+  // Place d'une bulle « en haut » au-dessus de sa cible (null : pas de limite).
+  const roomAbove = isTop && primary && primary.y > insets.top + 52
+    ? primary.y - 6 - (insets.top + 4)
+    : null;
   const kicker = missionPosition
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
       + ` · ${currentMission?.title || ''}`
@@ -421,7 +439,7 @@ function TourGuideLayer() {
                 y={0}
               >
                 <Rect fill="white" height={height} width={width} x={0} y={0} />
-                {cutouts.map((cutout, index) => (
+                {passThrough.map((cutout, index) => (
                   <Rect
                     fill="black"
                     height={cutout.height}
@@ -444,7 +462,7 @@ function TourGuideLayer() {
               y={0}
             />
           </Svg>
-          {computeBlockers(cutouts, width, height).map((blocker) => (
+          {computeBlockers(passThrough, width, height).map((blocker) => (
             <Pressable
               accessible={false}
               key={`${blocker.x}-${blocker.y}`}
@@ -512,6 +530,11 @@ function TourGuideLayer() {
         onLayout={(event) => {
           const measured = event.nativeEvent.layout.height;
           setBubbleHeight((previous) => stableHeight(previous, measured));
+          // Trop haute pour tenir au-dessus de la cible : la police rapetisse
+          // (seulement vers le bas, donc sans aller-retour), au plus jusqu'à 1.
+          if (roomAbove !== null && measured > roomAbove + 1 && fontScale > 1) {
+            setFitScale(Math.max(1, fontScale * (roomAbove / measured)));
+          }
         }}
         style={{
           backgroundColor: Colors.neutral50,
@@ -520,7 +543,7 @@ function TourGuideLayer() {
           left: position.left,
           opacity: appear,
           paddingHorizontal: 16,
-          paddingVertical: 13,
+          paddingVertical: 10,
           position: 'absolute',
           shadowColor: Colors.primary900,
           shadowOffset: { height: 14, width: 0 },
@@ -594,7 +617,7 @@ function TourGuideLayer() {
               alignItems: 'center',
               flexDirection: 'row',
               justifyContent: 'space-between',
-              marginTop: 10,
+              marginTop: 6,
             }}
           >
             {isBonus ? (

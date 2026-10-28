@@ -170,6 +170,13 @@ describe('L2 — la bulle « en haut » se pose sous l’en-tête', () => {
     const bubbleTop = styleOf(bubbleOf(tree)).top;
     // Bas de la rangée dans la couche : 16 + 44 + 54 = 114.
     expect(bubbleTop).toBeGreaterThanOrEqual(114);
+    // Retour (à gauche) et Fermer (à droite) restent touchables sous le voile.
+    const blockers = blockersOf(tree).map(styleOf);
+    expect(blockers.length).toBeGreaterThan(0);
+    [[30, 92], [360, 92]].forEach(([x, y]) => {
+      expect(blockers.some((style) => x >= style.left && x < style.left + style.width
+        && y >= style.top && y < style.top + style.height)).toBe(false);
+    });
   });
 
   it('m1-back : flèche Retour encadrée, rien de bloqué, bulle dessous', async () => {
@@ -182,6 +189,45 @@ describe('L2 — la bulle « en haut » se pose sous l’en-tête', () => {
     expect(blockersOf(tree)).toHaveLength(0);
     // Bas de la flèche dans la couche : 12 + 32 + 54 = 98.
     expect(styleOf(bubbleOf(tree)).top).toBeGreaterThanOrEqual(98);
+  });
+});
+
+describe('L2 — la bulle « en haut » ne se pose jamais sur sa cible', () => {
+  it('m2-share, menu refermé : ⋮ encadré, bulle dessous (émulateur 28/10)', async () => {
+    mountTarget('header.back', {
+      height: 32, width: 32, x: 12, y: 12,
+    });
+    // Bouton ⋮ de la fiche d'équipe, juste sous l'en-tête.
+    mountTarget('team.more', {
+      height: 44, width: 44, x: 334, y: 70,
+    });
+    mockTour = activeTour(step('m2-share'));
+    const tree = await renderLayer();
+    const [frame] = framesOf(tree);
+    const hole = styleOf(frame);
+    const bubble = styleOf(bubbleOf(tree));
+    // La bulle (hauteur retenue 110 au départ) ne chevauche pas la découpe.
+    expect(bubble.top >= hole.top + hole.height || bubble.top + 110 <= hole.top).toBe(true);
+  });
+});
+
+describe('L2 — trop haute pour tenir entre l’en-tête et la cible', () => {
+  it('m4-tab-ev : la bulle passe sous les onglets, la flèche Retour reste visible', async () => {
+    mountTarget('header.back', {
+      height: 34, width: 46, x: 0, y: 15,
+    });
+    mountTarget('search.tab.events', {
+      height: 46, width: 46, x: 24, y: 138,
+    });
+    mockTour = activeTour(step('m4-tab-ev'));
+    const tree = await renderLayer();
+    // Hauteur retenue de la bulle (texte agrandi) : 105 pt.
+    await act(async () => {
+      bubbleOf(tree).props.onLayout({ nativeEvent: { layout: { height: 105 } } });
+    });
+    await flush();
+    // Bas de la flèche : 15 + 34 + 54 = 103 ; bas de l'onglet : 138 + 46 + 54 = 238.
+    expect(styleOf(bubbleOf(tree)).top).toBeGreaterThanOrEqual(238);
   });
 });
 
@@ -211,6 +257,25 @@ describe('Accessibilité 3- B — la bulle grandit avec le texte, plafonnée à 
   };
 
   afterEach(() => { mockFontScale = 1; });
+
+  it('bulle « en haut » trop grande pour tenir au-dessus du champ : elle rapetisse, pas sous 1', async () => {
+    mockFontScale = 1.3;
+    mountTarget('teamWizard.field', {
+      height: 600, width: 358, x: 16, y: 200,
+    });
+    mockTour = activeTour({
+      bubblePlacement: 'top', id: 'm3-place', targets: ['teamWizard.field'], text: 'Touche',
+    });
+    const tree = await renderLayer();
+    // Place au-dessus du champ : 200 + 54 - 6 (marge du trou) - 6 - (54 + 4) = 188.
+    await act(async () => {
+      bubbleOf(tree).props.onLayout({ nativeEvent: { layout: { height: 240 } } });
+    });
+    await flush();
+    const consigne = textsOf(tree).find((node) => node.props.children === 'Touche');
+    expect(styleOf(consigne).fontSize).toBeLessThan(16 * 1.3);
+    expect(styleOf(consigne).fontSize).toBeGreaterThanOrEqual(16);
+  });
 
   it('1,0 → taille normale ; 1,3 → ×1,3 ; 2,0 → plafonnée à ×1,3', async () => {
     const normal = await fontSizeAt(1);

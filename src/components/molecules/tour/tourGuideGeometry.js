@@ -170,12 +170,19 @@ export const placeBubble = ({
   bubbleHeight, headerBottom = null, height, insetTop, primary, top, width,
 }) => {
   if (top || !primary) {
+    let bubbleTop = Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP);
+    // Jamais sur la cible (champ du tunnel, bouton ⋮ ou onglets sous l'en-tête) :
+    // dessous si la place y est, sinon au-dessus, quitte à remonter sur
+    // l'en-tête (grand champ de tunnel). Une cible qui commence plus haut
+    // (tout l'écran) ne compte pas.
+    if (primary && primary.y >= bubbleTop && bubbleTop + bubbleHeight > primary.y - HEADER_GAP) {
+      const below = primary.y + primary.height + BUBBLE_GAP;
+      bubbleTop = below + bubbleHeight <= height
+        ? below
+        : Math.max(insetTop + 4, primary.y - HEADER_GAP - bubbleHeight);
+    }
     return {
-      arrow: 'none',
-      arrowX: 0,
-      left: 14,
-      top: Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP),
-      width: width - 28,
+      arrow: 'none', arrowX: 0, left: 14, top: bubbleTop, width: width - 28,
     };
   }
   const bubbleWidth = Math.min(BUBBLE_WIDTH, width - 28);
