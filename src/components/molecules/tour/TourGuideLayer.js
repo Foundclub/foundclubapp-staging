@@ -61,6 +61,14 @@ import useReduceMotion from '@/hooks/useReduceMotion';
 
 const CUTOUT_RADIUS = 16;
 const MEASURE_INTERVAL_MS = 400;
+// FINITIONS-GUIDE (27/10) : en texte agrandi (1,3, Pixel 9), la bulle « en
+// haut » du tunnel recouvrait le haut du champ (31 à 93 px). Sa police ne suit
+// plus le réglage du téléphone (`allowFontScaling={false}`, comme la barre
+// d'onglets) : `maxFontSizeMultiplier` est resté sans effet à l'émulateur
+// (RN 0.81, nouvelle architecture, Android 16).
+// ponytail: la bulle reste à la taille normale pour qui agrandit le texte (le
+// reste de l'écran grandit). Sortie : textes du tunnel plus courts, puis
+// agrandissement rendu à la bulle, à remesurer avec tutoe-calibrage.py.
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
 const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
@@ -520,6 +528,7 @@ function TourGuideLayer() {
           <View style={{ flex: 1 }}>
             {kicker ? (
               <Text
+                allowFontScaling={false}
                 style={[Fonts.p4Bold, {
                   color: isBonus ? Colors.gold900 : Colors.primary600,
                   letterSpacing: 1,
@@ -530,7 +539,12 @@ function TourGuideLayer() {
                 {kicker}
               </Text>
             ) : null}
-            <Text style={[Fonts.p2Bold, { color: Colors.primary900, lineHeight: 20 }]}>{text}</Text>
+            <Text
+              allowFontScaling={false}
+              style={[Fonts.p2Bold, { color: Colors.primary900, lineHeight: 20 }]}
+            >
+              {text}
+            </Text>
           </View>
           <TouchableOpacity
             accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
@@ -556,12 +570,18 @@ function TourGuideLayer() {
                 onPress={tour.skipMission}
                 style={{ justifyContent: 'center', minHeight: 44 }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral600 }]}>
+                <Text
+                  allowFontScaling={false}
+                  style={[Fonts.p3Bold, { color: Colors.neutral600 }]}
+                >
                   {t('tourGuide.skipBonus', 'Passer ce bonus')}
                 </Text>
               </TouchableOpacity>
             ) : (
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral600 }]}>
+              <Text
+                allowFontScaling={false}
+                style={[Fonts.p4Bold, { color: Colors.neutral600 }]}
+              >
                 {isLockedStep ? t('tourGuide.essential', 'Mission essentielle') : ''}
               </Text>
             )}
@@ -581,7 +601,12 @@ function TourGuideLayer() {
                   paddingHorizontal: 16,
                 }}
               >
-                <Text style={[Fonts.p3Black, { color: Colors.primary900 }]}>{buttonLabel}</Text>
+                <Text
+                  allowFontScaling={false}
+                  style={[Fonts.p3Black, { color: Colors.primary900 }]}
+                >
+                  {buttonLabel}
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>

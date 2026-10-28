@@ -558,7 +558,8 @@ const STEPS = [
     get text() {
       return t(
         'm4-read',
-        'Voici les profils. Pour trouver le bon, utilise les filtres, puis ouvre une carte.',
+        'Fais défiler pour voir les profils. Pour trouver le bon, utilise les filtres, puis ouvre '
+          + 'une carte.',
       );
     },
     veil: false,
