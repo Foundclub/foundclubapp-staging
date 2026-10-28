@@ -7615,7 +7615,7 @@ function Conversation({ navigation, route }) {
               />
               <Button
                 onPress={() => setIsAttachmentMenuVisible(false)}
-                title={t('common.cancel', 'Fermer')}
+                title={t('common.close', 'Fermer')}
                 variant="PrimaryLight"
               />
             </View>

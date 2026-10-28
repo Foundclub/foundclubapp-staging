@@ -305,9 +305,15 @@ describe('D20 — ⑦ l ecran reserve la barre d etat et la barre gestuelle', ()
   // rien au-dessus de lui ne reserve la barre d'etat — le titre chevauchait
   // l'heure du telephone (capture d'Adel). Il applique desormais les retraits
   // systeme, comme le gabarit maison ScreenContainer (`insets.top`).
+  // DEPLACE le 2026-10-28 (PETITSBUGS-2, affiche SMUC). Le retrait systeme reste
+  // reserve, mais HORS du defilement : pose dans le contenu, il defilait avec lui
+  // et le titre remontait sous l'heure. Le contenu garde la marge d'ecran seule,
+  // la racine immobile (parent du ScrollView) porte la barre d'etat.
   it('la marge haute vaut la marge d ecran PLUS le retrait systeme', async () => {
     const tree = await renderScreen(eventParams());
-    expect(contentStyle(tree).paddingTop).toBe(20 + 47);
+    expect(contentStyle(tree).paddingTop).toBe(20);
+    const racine = StyleSheet.flatten(tree.root.findByType(ScrollView).parent.props.style) || {};
+    expect(racine.paddingTop).toBe(47);
   });
 
   it('la marge basse vaut la marge d ecran PLUS la barre gestuelle', async () => {
