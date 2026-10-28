@@ -4,6 +4,8 @@ import { Image, Platform, TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import TourTarget from '@/components/molecules/tour/TourTarget';
+
 /**
  * HeaderBackButton component.
  * @param {object} props
@@ -49,29 +51,34 @@ function HeaderBackButton({
       : Spaces.marginLeft[12];
   }
 
+  // GUIDE-ENTETE (décision d'Adel 4- A, 28/10) : ancre du guide, posée une
+  // fois pour tous les écrans ; la bulle « en haut » se pose dessous et m1-back
+  // l'encadre. Hors guide, l'ancre ne fait rien.
   return (
-    <TouchableOpacity
-      accessibilityHint={decorative ? undefined : accessibilityHint}
-      accessibilityLabel={decorative ? undefined : accessibilityLabel || t('common.back')}
-      accessibilityRole={decorative ? undefined : accessibilityRole}
-      accessible={!decorative}
-      hitSlop={ApplicationStyle.hitSlop.min44From32}
-      importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
-      onPress={onPress || navigation.goBack}
-      style={[
-        ApplicationStyle.borderRadius100,
-        ApplicationStyle.borderWidth1,
-        resolvedBorderColor,
-        Spaces.padding[8],
-        defaultMarginStyle,
-        style,
-      ]}
-    >
-      <Image
-        source={Images[iconName] || Images.arrowLeft}
-        style={[ApplicationStyle.icon16, resolvedTintColor, iconStyle]}
-      />
-    </TouchableOpacity>
+    <TourTarget id="header.back">
+      <TouchableOpacity
+        accessibilityHint={decorative ? undefined : accessibilityHint}
+        accessibilityLabel={decorative ? undefined : accessibilityLabel || t('common.back')}
+        accessibilityRole={decorative ? undefined : accessibilityRole}
+        accessible={!decorative}
+        hitSlop={ApplicationStyle.hitSlop.min44From32}
+        importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
+        onPress={onPress || navigation.goBack}
+        style={[
+          ApplicationStyle.borderRadius100,
+          ApplicationStyle.borderWidth1,
+          resolvedBorderColor,
+          Spaces.padding[8],
+          defaultMarginStyle,
+          style,
+        ]}
+      >
+        <Image
+          source={Images[iconName] || Images.arrowLeft}
+          style={[ApplicationStyle.icon16, resolvedTintColor, iconStyle]}
+        />
+      </TouchableOpacity>
+    </TourTarget>
   );
 }
 

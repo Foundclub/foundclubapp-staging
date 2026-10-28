@@ -34,6 +34,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { resolveCompositionClubId } from '@/views/event/matchPageModel';
@@ -774,17 +775,20 @@ function MatchCallUpSelection() {
   if (isCompositionOutOfOffer) {
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
-        <View style={styles.header}>
-          <HeaderBackButton onPress={() => navigation.goBack()} />
-          <View style={styles.headerTexts}>
-            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-              {t('matchCallUp.selection.title')}
-            </Text>
-            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {subtitle}
-            </Text>
+        {/* GUIDE-ENTETE : la bulle du guide se pose sous cet en-tête. */}
+        <TourTarget id="screen.header">
+          <View style={styles.header}>
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+            <View style={styles.headerTexts}>
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                {t('matchCallUp.selection.title')}
+              </Text>
+              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {subtitle}
+              </Text>
+            </View>
           </View>
-        </View>
+        </TourTarget>
         <View style={[Spaces.paddingHorizontal[16]]}>
           <View
             style={[
@@ -818,23 +822,28 @@ function MatchCallUpSelection() {
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
-      <View style={styles.header}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-        <View style={styles.headerTexts}>
-          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {t('matchCallUp.selection.title')}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <View style={[styles.countPill, { backgroundColor: Colors.primary500 }]}>
-            <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>{counters.calledUp}</Text>
+      {/* GUIDE-ENTETE : la bulle du guide se pose sous cet en-tête. */}
+      <TourTarget id="screen.header">
+        <View style={styles.header}>
+          <HeaderBackButton onPress={() => navigation.goBack()} />
+          <View style={styles.headerTexts}>
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+              {t('matchCallUp.selection.title')}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {subtitle}
+            </Text>
           </View>
-          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-            {t('matchCallUp.selection.progress', { current: 1, total: 2 })}
-          </Text>
+          <View style={styles.headerRight}>
+            <View style={[styles.countPill, { backgroundColor: Colors.primary500 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>{counters.calledUp}</Text>
+            </View>
+            <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+              {t('matchCallUp.selection.progress', { current: 1, total: 2 })}
+            </Text>
+          </View>
         </View>
-      </View>
+      </TourTarget>
 
       {/* Barre de progression 1/2 : convoquer, puis placer. Le 2e segment
           s'allumera quand le lot suivant livrera l'ecran « Partir de… ». */}

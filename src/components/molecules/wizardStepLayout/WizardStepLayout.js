@@ -273,46 +273,49 @@ function WizardStepLayout({
               isHeaderCollapsed ? Spaces.marginBottom[12] : Spaces.marginBottom[24],
             ]}
           >
-            <View
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Alignments.justifySpaceBetween,
-                Spaces.marginBottom[12],
-              ]}
-            >
-              {onBack ? (
-                <WizardRoundButton
-                  icon="arrowLeft"
-                  label={t('common.back', 'Retour')}
-                  onPress={onBack}
-                  size={header.roundButtonSize}
-                />
-              ) : (
-                // La place est reservee meme sans bouton : c'est elle qui tient
-                // « Étape n/N » au centre exact de l'ecran.
-                <View style={{ width: header.roundButtonSize }} />
-              )}
-              {hasProgress ? (
-                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                  {t('eventWizard.common.stepCounter', {
-                    current: stepIndex,
-                    defaultValue: `Étape ${stepIndex}/${stepCount}`,
-                    total: stepCount,
-                  })}
-                </Text>
-              ) : <View />}
-              {onClose ? (
-                <WizardRoundButton
-                  icon="close"
-                  label={t('common.close', 'Fermer')}
-                  onPress={onClose}
-                  size={header.roundButtonSize}
-                />
-              ) : (
-                <View style={{ width: header.roundButtonSize }} />
-              )}
-            </View>
+            {/* GUIDE-ENTETE : la bulle du guide se pose sous Retour / Fermer. */}
+            <TourTarget id="screen.header">
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.marginBottom[12],
+                ]}
+              >
+                {onBack ? (
+                  <WizardRoundButton
+                    icon="arrowLeft"
+                    label={t('common.back', 'Retour')}
+                    onPress={onBack}
+                    size={header.roundButtonSize}
+                  />
+                ) : (
+                  // La place est reservee meme sans bouton : c'est elle qui tient
+                  // « Étape n/N » au centre exact de l'ecran.
+                  <View style={{ width: header.roundButtonSize }} />
+                )}
+                {hasProgress ? (
+                  <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                    {t('eventWizard.common.stepCounter', {
+                      current: stepIndex,
+                      defaultValue: `Étape ${stepIndex}/${stepCount}`,
+                      total: stepCount,
+                    })}
+                  </Text>
+                ) : <View />}
+                {onClose ? (
+                  <WizardRoundButton
+                    icon="close"
+                    label={t('common.close', 'Fermer')}
+                    onPress={onClose}
+                    size={header.roundButtonSize}
+                  />
+                ) : (
+                  <View style={{ width: header.roundButtonSize }} />
+                )}
+              </View>
+            </TourTarget>
             {hasProgress ? (
               <View
                 style={[
@@ -362,12 +365,16 @@ function WizardStepLayout({
               du contenu y sont coupées (une longue liste dépassait de 239 px). */}
           <TourTarget clipChildren id="teamWizard.viewport" style={{ flex: 1 }}>
             <ScrollView
-              automaticallyAdjustKeyboardInsets
+              // ⌨️ CLAVSCROLL — PAS de `automaticallyAdjustKeyboardInsets` ici : l'évitement
+              // du ScreenContainer rétrécit déjà la liste. iOS mesurait son retrait sur le
+              // cadre d'AVANT ce rétrécissement : clavier compté deux fois, zone visible
+              // négative, champ poussé au-dessus de la liste (iPhone 2.6.83, 28/10).
+              // Témoin : __tests__/WizardStepLayoutCLAVSCROLL.clavier.test.js.
               // D53 — 40 pt ici + 16 pt de marge sur le bloc de boutons faisaient
               // 56 pt de blanc entre le dernier champ et le CTA. 16 + 16 = 32, le
               // meme ecart que celui qui separe deja deux sections dans l'app.
-              // Ce n'est pas une reserve de clavier : `automaticallyAdjustKeyboardInsets`
-              // s'en charge, et le CTA est un FRERE de la liste, jamais par-dessus.
+              // Ce n'est pas une reserve de clavier, et le CTA est un FRERE de la
+              // liste, jamais par-dessus.
               contentContainerStyle={[Spaces.paddingBottom[16]]}
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"

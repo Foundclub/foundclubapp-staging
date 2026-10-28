@@ -19,6 +19,7 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+import TourReponsesExemple from '@/components/molecules/tour/TourReponsesExemple';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import { resolveEventEndedAt } from '@/views/event/eventMatchClock';
 
@@ -1638,14 +1639,18 @@ function EventParticipants({
         </View>
       )}
 
-      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('eventDetails.fields.participations')}
-        </Text>
-        <TouchableOpacity onPress={handleShare}>
-          <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
-        </TouchableOpacity>
-      </View>
+      {/* GUIDE-BONUS (L5) : « Ici, tu verras qui vient » (bonus B1, équipe vide). */}
+      <TourTarget id="event.participants">
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('eventDetails.fields.participations')}
+          </Text>
+          <TouchableOpacity onPress={handleShare}>
+            <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
+          </TouchableOpacity>
+        </View>
+      </TourTarget>
+      <TourReponsesExemple equipeVide={hasRenderedLists && totalAttendu === 0} />
 
       {canEdit && (
         <TouchableOpacity onPress={handleExportParticipants} style={[{ alignSelf: 'flex-start' }, Spaces.marginTop[4]]}>

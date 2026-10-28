@@ -241,25 +241,24 @@ function Welcome({ navigation }) {
     });
   };
 
-  const handleContinue = () => {
+  // BOUCLE-ACCUEIL (tournee 2.6.83, 28/10/2026) — LE GUIDE, PUIS LA SORTIE DU TUNNEL.
+  // Le guide demarrait SANS quitter le tunnel : il empilait l'accueil par-dessus, et le retour
+  // arriere rendait « Bienvenue » sous la bulle « Mission 1/4 », puis l'etape 5/5. La pile repart
+  // donc toujours de l'accueil, et APRES `startTour` : sa navigation passe par la reference
+  // racine, qui voit encore l'ancienne pile ; posee avant, la remise a zero etait recouverte
+  // (preuve a l'emulateur : retour ⇒ « Bienvenue »). Un `reset` ne depend pas de la pile.
+  const leaveOnboarding = (/** @type {string | null} */ tourProfileKey) => {
     finalizeOnboarding();
-    // Tour leger joueur (4 etapes, zero vente) : demarre a la sortie du Welcome.
-    if (roleKey === 'player' && startTour('player')) {
-      return;
-    }
+    if (tourProfileKey) startTour(tourProfileKey);
     navigateAfterOnboarding(getPostOnboardingHomeRoute());
   };
 
-  const handleStartTour = () => {
-    finalizeOnboarding();
-    // Tour guide v2 : navigation directe page par page avec messages de succes
-    // (docs/PLAN_TOUR_GUIDE_V2_2026_07_10.md). Fallback home si pas de script.
-    const started = startTour(roleKey === 'president' ? 'president' : 'coach');
-    if (started) {
-      return;
-    }
-    navigateAfterOnboarding(getPostOnboardingHomeRoute());
-  };
+  // Tour leger joueur (4 etapes, zero vente) : demarre a la sortie du Welcome.
+  const handleContinue = () => leaveOnboarding(roleKey === 'player' ? 'player' : null);
+
+  // Tour guide v2 : navigation directe page par page avec messages de succes
+  // (docs/PLAN_TOUR_GUIDE_V2_2026_07_10.md).
+  const handleStartTour = () => leaveOnboarding(roleKey === 'president' ? 'president' : 'coach');
 
   // Une etape du rail : la colonne de gauche porte la pastille et le trait qui
   // relie a l'etape suivante, la carte porte le contenu. Seule la 1re est

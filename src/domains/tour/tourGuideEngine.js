@@ -25,9 +25,13 @@ export const getMission = (profile, missionId) => (
  * @param {any} ctx
  * @returns {boolean}
  */
-export const isStepAvailable = (step, ctx) => (
-  typeof step?.when === 'function' ? Boolean(step.when(ctx)) : Boolean(step)
-);
+export const isStepAvailable = (step, ctx) => {
+  // GUIDE-RELANCE : la visite ne joue que ses étapes `review`, le vrai guide
+  // jamais ; une mission refusée par l'écran (« blocked ») est sautée.
+  if (Boolean(step?.review) !== Boolean(ctx?.review)) return false;
+  if (ctx?.missionStatus?.[step?.missionId] === 'blocked') return false;
+  return typeof step?.when === 'function' ? Boolean(step.when(ctx)) : Boolean(step);
+};
 
 /**
  * Prochaine étape disponible APRÈS `fromIndex` (les branches `when` sautées).

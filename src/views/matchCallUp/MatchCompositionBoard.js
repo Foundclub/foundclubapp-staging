@@ -44,6 +44,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -857,54 +858,57 @@ function MatchCompositionBoard() {
         fillHeight
         style={[styles.screen]}
       >
-        <View style={styles.header}>
-          <HeaderBackButton onPress={() => navigation.goBack()} />
-          <View style={styles.headerTexts}>
-            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-              {t('matchComposition.board.title')}
-            </Text>
-            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {[t('matchComposition.start.eventLabel'), teamName, sportLabel]
-                .filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-          {/* Le pack dit « retour a la selection » : on remonte a l'ecran 1, pas
-              a l'ecran 4. `navigate` vers un ecran deja empile y revient en
-              depilant, donc la selection cochee est retrouvee telle quelle.
-              🧨 S04 — ET LE TERRAIN PART AVEC. Depiler cet ecran DETRUIT son
-              `useState` : sans ce parametre, les jetons poses a la main
-              n'existent plus nulle part, et le retour les reconstruisait depuis
-              une rangee de depart.
-              🚪 COMPOLECT (D2) — EN CONSULTATION, C'EST LA SEULE PORTE VERS
-              L'ECRITURE, et elle n'existe que pour qui peut vraiment modifier.
-              🧨 ET ELLE DOIT EFFACER `readOnly` : `MatchCallUpSelection`
-              retransmet `...params` au terrain (`:318`). Un `readOnly` oublie
-              ici reviendrait par la bande et rendrait l'EDITION consultable. */}
-          {isReadOnly && !canEdit ? null : (
-            <TouchableOpacity
-              accessibilityRole="button"
-              activeOpacity={0.8}
-              // @ts-ignore
-              onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, {
-                ...params,
-                canEdit: true,
-                readOnly: false,
-                startPlacements: placements,
-              })}
-              style={[
-                styles.editButton,
-                {
-                  backgroundColor: withAlpha(Colors.primary500, 0.12),
-                  borderColor: withAlpha(Colors.primary500, 0.45),
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {t('matchComposition.board.edit')}
+        {/* GUIDE-ENTETE : la bulle du guide se pose sous cet en-tête. */}
+        <TourTarget id="screen.header">
+          <View style={styles.header}>
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+            <View style={styles.headerTexts}>
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                {t('matchComposition.board.title')}
               </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+              <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {[t('matchComposition.start.eventLabel'), teamName, sportLabel]
+                  .filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+            {/* Le pack dit « retour a la selection » : on remonte a l'ecran 1, pas
+                a l'ecran 4. `navigate` vers un ecran deja empile y revient en
+                depilant, donc la selection cochee est retrouvee telle quelle.
+                🧨 S04 — ET LE TERRAIN PART AVEC. Depiler cet ecran DETRUIT son
+                `useState` : sans ce parametre, les jetons poses a la main
+                n'existent plus nulle part, et le retour les reconstruisait depuis
+                une rangee de depart.
+                🚪 COMPOLECT (D2) — EN CONSULTATION, C'EST LA SEULE PORTE VERS
+                L'ECRITURE, et elle n'existe que pour qui peut vraiment modifier.
+                🧨 ET ELLE DOIT EFFACER `readOnly` : `MatchCallUpSelection`
+                retransmet `...params` au terrain (`:318`). Un `readOnly` oublie
+                ici reviendrait par la bande et rendrait l'EDITION consultable. */}
+            {isReadOnly && !canEdit ? null : (
+              <TouchableOpacity
+                accessibilityRole="button"
+                activeOpacity={0.8}
+                // @ts-ignore
+                onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, {
+                  ...params,
+                  canEdit: true,
+                  readOnly: false,
+                  startPlacements: placements,
+                })}
+                style={[
+                  styles.editButton,
+                  {
+                    backgroundColor: withAlpha(Colors.primary500, 0.12),
+                    borderColor: withAlpha(Colors.primary500, 0.45),
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                  {t('matchComposition.board.edit')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TourTarget>
 
         <View style={styles.chipRow}>
           {/* 👀 COMPOMSG — « 8/11 places » compte les POSTES ENCORE VIDES : c'est
@@ -1267,6 +1271,16 @@ function MatchCompositionBoard() {
               iconPosition="before"
               onPress={() => {
                 if (publicationBloquee) return;
+                // GUIDE-BONUS (L5) : sur le match d'exemple, « Publier » sans titulaire
+                // ne restait pas muet (audit, capture 61).
+                // ponytail: exemple seulement ; un vrai match garde sa feuille à 0.
+                if (isTourExample(params) && counters.placed === 0) {
+                  Alert.alert(
+                    t('matchComposition.board.actions.publish'),
+                    t('tourExamples.match.nonePlaced', 'Place au moins un joueur sur le terrain.'),
+                  );
+                  return;
+                }
                 setIsSheetVisible(true);
               }}
               style={styles.footerPublish}

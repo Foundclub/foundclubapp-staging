@@ -112,8 +112,9 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.isGuide).toBe(true);
     expect(tour.currentStep.kind).toBe('opening');
     expect(tour.gauge).toBe(0);
+    // GUIDE-ENTETE (3- A, 28/10) : retour à l'accueil en dépilant (relance depuis Mon compte).
     expect(mockNavigate)
-      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome });
+      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome }, { pop: true });
     expect(tour.missions.map((mission) => mission.id))
       .toEqual(['coach_m1', 'coach_m2', 'coach_m3', 'coach_m4', 'coach_b1', 'coach_b2']);
   });
@@ -255,7 +256,12 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     act(() => { tour.finishGuide(); });
     expect(tour.isTourActive).toBe(false);
     expect(mockStore.has(STORAGE_KEY)).toBe(false);
-    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    // GUIDE-BONUS (L5) : en dépilant (la compo d'exemple sort de la pile).
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      RouteNames.HomeTab,
+      { screen: 'SearchHome' },
+      { pop: true },
+    );
   });
 });
 
@@ -370,9 +376,13 @@ describe('guide Entraîneur — bonus (TUTOE-2)', () => {
       from: 100, isBonus: true, missionId: 'coach_b1', to: 100,
     });
     reward();
-    // Le bonus suivant ramène lui-même à l'accueil (on était sur la fiche).
+    // GUIDE-BONUS (L5) : le bonus suivant emmène directement au planning, en dépilant.
     expect(tour.currentStep.id).toBe('b2-dock');
-    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      RouteNames.HomeTab,
+      { screen: RouteNames.MyEventList },
+      { pop: true },
+    );
     expect(tour.missionStatus.coach_b1).toBe('done');
   });
 

@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -278,18 +279,23 @@ function MatchCompositionStart() {
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
-      <View style={styles.header}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-        <View style={styles.headerTexts}>
-          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {t('matchComposition.start.title')}
+      {/* GUIDE-ENTETE : la bulle du guide se pose sous cet en-tête. */}
+      <TourTarget id="screen.header">
+        <View style={styles.header}>
+          <HeaderBackButton onPress={() => navigation.goBack()} />
+          <View style={styles.headerTexts}>
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+              {t('matchComposition.start.title')}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {subtitle}
+            </Text>
+          </View>
+          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+            {t('matchComposition.start.progress', { current: 2, total: 2 })}
           </Text>
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>{subtitle}</Text>
         </View>
-        <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-          {t('matchComposition.start.progress', { current: 2, total: 2 })}
-        </Text>
-      </View>
+      </TourTarget>
 
       {/* Barre de progression 2/2 : convoquer est fait, placer commence. */}
       <View

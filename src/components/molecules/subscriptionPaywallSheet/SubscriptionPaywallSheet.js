@@ -10,6 +10,7 @@ import {
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceRefusal } from '@/domains/guidance/guidanceRuntime';
 import {
   buildClubOfferAvailability,
   clampSubscriptionLicenseeCount,
@@ -351,6 +352,8 @@ function SubscriptionPaywallSheet({
       abBucket: funnelAbBucket,
       paywallKey: paywall.paywallKey,
     });
+    // GUIDE-RELANCE (L6) : le guide en cours apprend que l'écran a refusé.
+    emitGuidanceRefusal(`paywall.${paywall.paywallKey}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible]);
 

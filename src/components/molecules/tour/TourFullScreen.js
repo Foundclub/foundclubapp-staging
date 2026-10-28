@@ -137,12 +137,15 @@ function TourFullScreen({ kind }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
-    completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus,
+    completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
   } = useTour();
 
   const essentials = missions.filter((/** @type {any} */ mission) => mission.locked);
   const bonuses = missions.filter((/** @type {any} */ mission) => !mission.locked);
   const name = flags?.firstName ? ` ${flags.firstName}` : '';
+  // Missions refusées par l'écran (quota, club partenaire) : jamais « faites ».
+  const blockedCount = essentials
+    .filter((/** @type {any} */ mission) => missionStatus?.[mission.id] === 'blocked').length;
 
   let content = null;
   let cta = null;
@@ -200,11 +203,24 @@ function TourFullScreen({ kind }) {
       </>
     );
     cta = (
-      <Button
-        onPress={() => completeCurrentStep()}
-        title={t('tourCatalog.coach.open.cta', "C'est parti")}
-        variant="Primary"
-      />
+      <>
+        <Button
+          onPress={() => completeCurrentStep()}
+          title={t('tourCatalog.coach.open.cta', "C'est parti")}
+          variant="Primary"
+        />
+        {/* GUIDE-RELANCE (décision d'Adel 5- A) : découvrir l'app seul ; le
+            guide attend en pause (pastille de l'accueil et de Mon compte). */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={pauseTour}
+          style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
+            {t('tourCatalog.coach.open.later', 'Plus tard')}
+          </Text>
+        </TouchableOpacity>
+      </>
     );
   } else if (kind === 'milestone') {
     content = (
@@ -221,12 +237,28 @@ function TourFullScreen({ kind }) {
           {t('tourCatalog.coach.palier.title', 'Ton équipe est prête !')}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
-          {t('tourCatalog.coach.palier.subtitle', '{{count}} missions sur {{count}}, l’essentiel '
-            + 'est fait.', { count: essentials.length })}
+          {blockedCount > 0
+            ? t('tourCatalog.coach.palier.subtitlePartial', '{{done}} missions sur {{total}} : '
+              + 'les autres attendent que l’app te le permette.', {
+              done: essentials.length - blockedCount, total: essentials.length,
+            })
+            : t(
+              'tourCatalog.coach.palier.subtitle',
+              '{{count}} missions sur {{count}}, l’essentiel est fait.',
+              { count: essentials.length },
+            )}
         </Text>
         <View style={{ rowGap: 8 }}>
           {essentials.map((/** @type {any} */ mission, index) => (
-            <MissionRow done key={mission.id} label={mission.title} marker={String(index + 1)} />
+            <MissionRow
+              done={missionStatus?.[mission.id] !== 'blocked'}
+              key={mission.id}
+              label={mission.title}
+              marker={String(index + 1)}
+              right={missionStatus?.[mission.id] === 'blocked'
+                ? t('tourCatalog.coach.palier.blocked', 'Plus tard')
+                : undefined}
+            />
           ))}
         </View>
         {bonuses.length > 0 ? (

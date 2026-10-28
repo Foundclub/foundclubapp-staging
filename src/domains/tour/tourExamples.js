@@ -45,3 +45,10 @@ export const exampleMatch = (context = {}) => {
     tourExample: 'match',
   };
 };
+
+/**
+ * Bonus B1, équipe vide (GUIDE-BONUS, décision d'Adel « 2- A ») : trois faux
+ * profils qui répondent « présent » le temps d'une animation, jamais envoyés.
+ * @returns {Array<{ documentId: string; firstname: string; lastname: string }>} Profils.
+ */
+export const exampleResponders = () => getSimulationRoster('football').slice(0, 3);

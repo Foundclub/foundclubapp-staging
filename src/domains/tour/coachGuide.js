@@ -31,6 +31,14 @@ const t = (id, fallback, values) => String(
 
 const homeTarget = {
   params: { screen: RouteNames.SearchHome },
+  // GUIDE-BONUS (L5) : revenir en dépilant ; un accueil empilé en doublon laissait
+  // l'onglet visé sans cadre ni voile (b1-dock, audit 39-41).
+  pop: true,
+  routeName: RouteNames.HomeTab,
+};
+const planningTarget = {
+  params: { screen: RouteNames.MyEventList },
+  pop: true,
   routeName: RouteNames.HomeTab,
 };
 const teamHubTarget = {
@@ -69,29 +77,57 @@ const hadClub = (ctx) => Boolean(ctx?.flags?.hadClub);
  */
 const hadTeam = (ctx) => Boolean(ctx?.flags?.hadTeam);
 
+// Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
+const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
+  + 'une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.');
+const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déjà tous ses événements : '
+  + 'un nouvel événement demande l’offre Équipe. Rien n’a été créé.');
+
 const MISSIONS = [
   {
     gaugeStep: 25,
     id: 'coach_m1',
     locked: true,
+    // GUIDE-RELANCE : refus de l'écran (clé du signal ⇒ raison dite par le guide).
+    refusals: {
+      get 'club.join.unavailable'() {
+        return t('refusal.clubPartner', 'Ce club passe par son dirigeant : « Je dirige ce club » '
+          + 'remplace « C’est mon club ». Choisis un autre club, ou passe cette mission.');
+      },
+      get 'paywall.club-tier-team-limit'() { return teamQuota(); },
+      get 'paywall.team-limit'() { return teamQuota(); },
+    },
     get title() { return t('missions.m1', 'Créer ton équipe'); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m2',
     locked: true,
+    needs: ['coach_m1'],
     get title() { return t('missions.m2', 'Inviter tes joueur·se·s'); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m3',
     locked: true,
+    needs: ['coach_m1'],
+    refusals: {
+      get 'paywall.event-limit'() { return eventQuota(); },
+      get 'paywall.match-limit'() { return eventQuota(); },
+    },
     get title() { return t('missions.m3', "Programmer l'entraînement de la semaine"); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m4',
     locked: true,
+    // « Publier une annonce » demande une équipe encadrée (FriendlyMatchWizardTeam).
+    needs: ['coach_m1'],
+    refusals: {
+      get 'friendly.publish.refused'() {
+        return t('refusal.friendly', 'L’annonce n’a pas pu être publiée.');
+      },
+    },
     get title() { return t('missions.m4', 'Rechercher'); },
   },
   {
@@ -212,8 +248,16 @@ const STEPS = [
     id: 'm1-mine',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
+    // GUIDE-TEXTES (audit du 28/10, capture 89) : la bulle nomme le bouton
+    // affiché ; un club qui a un dirigeant n'a que « Demander à rejoindre ».
     targets: ['club.itsMine'],
-    get text() { return t('m1-mine', 'C’est bien lui ? Dis-le.'); },
+    get text() { return t('m1-mine', 'C’est ton club ? Touche « C’est mon club ! ».'); },
+    variants: [{
+      targets: ['club.askToJoin'],
+      get text() {
+        return t('m1-mine-ask', 'C’est ton club ? Demande à le rejoindre : un dirigeant validera.');
+      },
+    }],
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
   },
   {
@@ -227,11 +271,21 @@ const STEPS = [
   },
   {
     advanceOn: { not: RouteNames.Club, type: 'route' },
-    bubblePlacement: 'top',
     id: 'm1-back',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
-    get text() { return t('m1-back', 'Quitte la fiche du club avec la flèche retour.'); },
+    // Décision d'Adel 4- A (28/10) : cadre sur la flèche, bulle dessous, et le
+    // geste du bord (seul retour d'un iPhone). Rien n'est bloqué : le glissement
+    // depuis le bord doit passer.
+    targets: ['header.back'],
+    get text() {
+      return t(
+        'm1-back',
+        'Reviens en arrière : touche la flèche en haut à gauche, ou glisse ton doigt depuis le '
+          + 'bord gauche de l’écran.',
+      );
+    },
+    veil: false,
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
   },
   {
@@ -350,6 +404,12 @@ const STEPS = [
   {
     advanceOn: { key: 'teamActions.shareLink', type: 'interaction' },
     bubblePlacement: 'top',
+    // Menu refermé (reprise, retour) : on remontre le bouton ⋮ au lieu d'une
+    // bulle « en haut » posée dessus (GUIDE-ENTETE, émulateur 28/10).
+    fallback: {
+      targets: ['team.more'],
+      get text() { return t('m2-more', 'Les actions de l’équipe sont rangées dans ce menu.'); },
+    },
     id: 'm2-share',
     missionId: 'coach_m2',
     resumeFrom: 'm2-card',
@@ -416,17 +476,10 @@ const STEPS = [
     advanceOn: { key: RouteNames.EventWizardLogistics, type: 'route' },
     bubblePlacement: 'top',
     bubbles: [
-      () => t(
-        'm3-place-1',
-        'Club : une installation de ton club. Extérieur : une autre adresse (stade adverse, parc, '
-          + 'salle louée…).',
-      ),
-      () => t('m3-place-2', 'Ici, les installations de ton club. Touche celle de ta séance.'),
-      () => t(
-        'm3-place-3',
-        'Ton terrain n’est pas dans la liste ? Ajoute-le ici : il servira pour toutes tes '
-          + 'prochaines séances.',
-      ),
+      // Courtes (arbitrage du chef, 28/10) : la bulle tient entre l'en-tête et le champ.
+      () => t('m3-place-1', 'Club : une installation du club. Extérieur : une autre adresse.'),
+      () => t('m3-place-2', 'Les installations de ton club : touche celle de ta séance.'),
+      () => t('m3-place-3', 'Ton terrain n’y est pas ? Ajoute-le ici, il resservira.'),
       () => t('m3-place-4', 'Choisis ton lieu, puis Suivant.'),
     ],
     id: 'm3-place',
@@ -572,7 +625,11 @@ const STEPS = [
     resumeFrom: 'm4-back',
     targets: ['search.tab.events'],
     get text() {
-      return t('m4-tab-ev', 'Rechercher, ce n’est pas que des profils. Ouvre « Événement ».');
+      return t(
+        'm4-tab-ev',
+        'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et détections près '
+          + 'de chez toi.',
+      );
     },
   },
   {
@@ -605,7 +662,7 @@ const STEPS = [
   ...(/** @type {Array<[string, string, () => string]>} */ ([
     ['m4-am1', RouteNames.FriendlyMatchWizardHosting, () => t(
       'm4-am1',
-      'Choisis l’équipe qui cherche un adversaire, puis Suivant.',
+      'Touche l’équipe qui cherche un adversaire.',
     )],
     ['m4-am2', RouteNames.FriendlyMatchWizardDates, () => t(
       'm4-am2',
@@ -619,16 +676,17 @@ const STEPS = [
     )],
     ['m4-am4', RouteNames.FriendlyMatchWizardOpponent, () => t(
       'm4-am4',
-      'Ta ville, et jusqu’où tu acceptes d’aller : c’est le rayon où ton annonce sera '
-        + 'montrée.',
+      'Touche ton terrain, ou tape ta ville. Puis choisis jusqu’où tu acceptes de te déplacer.',
     )],
     ['m4-am5', RouteNames.FriendlyMatchWizardDescription, () => t(
       'm4-am5',
-      'Les catégories adverses que tu acceptes. Rien de coché : toutes.',
+      'On a coché la catégorie et le niveau de ton équipe. Ajoute-en d’autres, ou touche « Peu '
+        + 'importe, je prends tout ».',
     )],
     ['m4-am6', RouteNames.FriendlyMatchWizardRecap, () => t(
       'm4-am6',
-      'Le niveau souhaité et un message : facultatif.',
+      'Un mot pour les autres coachs et qui arbitre : c’est facultatif. Sinon, « Passer cette '
+        + 'étape ».',
     )],
   ])).map(([id, nextRoute, text]) => ({
     ...wizardStep(id, 'coach_m4', nextRoute, 'm4-frc', text),
@@ -678,8 +736,11 @@ const STEPS = [
     get text() { return t('b1-card', 'Ouvre ta séance.'); },
   },
   {
-    // Équipe encore vide : rien à relancer, « Passer ce bonus » reste là.
-    advanceOn: { key: 'event.relance.sent', type: 'action' },
+    advanceOn: [
+      { key: 'event.relance.sent', type: 'action' },
+      // Équipe encore vide (signalée par la fiche) : b1-vide.
+      { goto: 'b1-vide', key: 'event.participants.empty', type: 'action' },
+    ],
     completesMission: true,
     id: 'b1-relance',
     missionId: 'coach_b1',
@@ -688,10 +749,25 @@ const STEPS = [
     get text() {
       return t(
         'b1-relance',
-        'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic. Pas '
-          + 'encore de joueur·se ? C’est ici que tu les relanceras.',
+        'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic.',
       );
     },
+  },
+  {
+    // Décision d'Adel « 2- A » (28/10) : équipe vide, visite simple ; la fiche
+    // montre de faux profils d'exemple qui répondent, sans rien envoyer.
+    bubblePlacement: 'top',
+    completesMission: true,
+    id: 'b1-vide',
+    missionId: 'coach_b1',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b1-dock',
+    targets: ['event.participants'],
+    get text() {
+      return t('b1-vide', 'Ici, tu verras qui vient dès que tes joueur·se·s répondront.');
+    },
+    // Seulement par le `goto` de b1-relance : une relance réussie le saute.
+    when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['event.participants.empty']),
   },
 
   // ── B2 · Convoquer pour un match (bonus SIMULÉ : rien n'est envoyé) ──────
@@ -699,9 +775,10 @@ const STEPS = [
     advanceOn: { key: RouteNames.MyEventList, type: 'route' },
     id: 'b2-dock',
     missionId: 'coach_b2',
-    // Après le palier ou B1, on est loin du dock : le guide ramène à l'accueil.
+    // Après le palier ou B1, le guide emmène directement au planning (audit 47-49 :
+    // l'aller-retour par l'accueil ne servait à rien).
     navigateOnEnter: true,
-    navTarget: homeTarget,
+    navTarget: planningTarget,
     targets: ['dock.planning'],
     get text() { return t('b2-dock', 'Tes matchs sont dans le planning : ouvre-le.'); },
   },
@@ -737,7 +814,10 @@ const STEPS = [
       routeName: RouteNames.EventStack,
     },
     resumeFrom: 'b2-dock',
-    get text() { return t('b2-list', 'Coche les joueur·se·s que tu convoques, puis Suivant.'); },
+    get text() {
+      // Une formation demande au moins la moitié de ses titulaires (matchCompositionUtils).
+      return t('b2-list', 'Coche au moins la moitié d’une équipe, puis Suivant.');
+    },
     veil: false,
   },
   {
@@ -769,6 +849,51 @@ const STEPS = [
   { id: 'close', kind: 'closing' },
 ];
 
+/**
+ * GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : « Revoir le guide sans rien
+ * créer ». Une étape par mission, qui emmène sur l'écran et le décrit ; on
+ * avance au bouton, aucun geste réel n'est attendu. Jouées seulement en visite
+ * (`review`, voir `isStepAvailable`).
+ * @param {string} id - Id de l'étape.
+ * @param {string} missionId - Mission.
+ * @param {any} navTarget - Écran montré.
+ * @param {string[]} targets - Ancres encadrées.
+ * @param {() => string} text - Texte de la bulle.
+ * @returns {any} Étape.
+ */
+const reviewStep = (id, missionId, navTarget, targets, text) => ({
+  id,
+  missionId,
+  navTarget,
+  get nextLabel() { return t('review.next', 'Suivant'); },
+  review: true,
+  targets,
+  get text() { return text(); },
+  veil: false,
+});
+
+const REVIEW_STEPS = [
+  reviewStep('rv-m1', 'coach_m1', teamHubTarget, ['teams.fab', 'teams.newTeam'], () => t(
+    'rv-m1',
+    'Tes équipes sont ici. « Nouvelle équipe » en crée une : un nom, une catégorie, un niveau.',
+  )),
+  reviewStep('rv-m2', 'coach_m2', teamHubTarget, ['teams.trained.0'], () => t(
+    'rv-m2',
+    'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes '
+      + 'joueur·se·s.',
+  )),
+  reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
+    'rv-m3',
+    'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
+      + 'le lieu, l’horaire.',
+  )),
+  reviewStep('rv-m4', 'coach_m4', friendlySearchTarget, ['friendly.create'], () => t(
+    'rv-m4',
+    'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match '
+      + 'amical » publie ton annonce.',
+  )),
+];
+
 export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
@@ -789,6 +914,6 @@ export const COACH_GUIDE = Object.freeze({
   }),
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
   missions: MISSIONS,
-  steps: STEPS,
+  steps: [...STEPS, ...REVIEW_STEPS],
   version: 3,
 });

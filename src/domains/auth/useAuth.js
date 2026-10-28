@@ -65,6 +65,7 @@ import {
   getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
   isClubMember as isClubMemberForUser,
+  onboardingCompleteKey,
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
@@ -496,9 +497,27 @@ const useAuth = () => {
     });
   }, [appDispatch, auth?.token, currentContextUserData, fullUserData]);
 
+  // BOUCLE-ACCUEIL (tournee 2.6.83, 28/10/2026) — « inscription finie » est un drapeau de
+  // l'appareil (`markOnboardingComplete`), pas un champ du profil : le parcours ne se recalculait
+  // qu'avec `userData`. « Demarrer le tour guide » posait le drapeau, mais le navigateur gardait
+  // le tunnel monte (bulle « Mission 1/4 » sur « Bienvenue », retour arriere vers 5/5). Toute
+  // ecriture de la cle du compte recalcule donc le parcours, quel que soit l'ecran qui finit.
+  const onboardingDocumentId = userData?.documentId;
+  const [onboardingCompleteVersion, setOnboardingCompleteVersion] = useState(0);
+  useEffect(() => {
+    if (!onboardingDocumentId) return undefined;
+    if (typeof storage.addOnValueChangedListener !== 'function') return undefined;
+    const cle = onboardingCompleteKey(onboardingDocumentId);
+    const abonnement = storage.addOnValueChangedListener((/** @type {string} */ changedKey) => {
+      if (changedKey === cle) setOnboardingCompleteVersion((version) => version + 1);
+    });
+    return () => abonnement?.remove?.();
+  }, [onboardingDocumentId]);
+
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined
-  ), [userData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [userData, onboardingCompleteVersion]);
 
   const profileFields = useMemo(() => (
     userData ? profileFieldToDisplay(userData.role) : []

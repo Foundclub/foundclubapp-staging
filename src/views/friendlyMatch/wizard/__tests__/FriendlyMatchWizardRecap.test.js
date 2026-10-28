@@ -237,4 +237,24 @@ describe('Etape 7/7 — ⑤ ou l on atterrit apres avoir publie', () => {
       tone: 'error',
     });
   });
+
+  // GUIDE-RELANCE (L6, 28/10) : la mission « publier une annonce » du guide
+  // n'avait aucune sortie quand le serveur refusait ; il apprend pourquoi.
+  it('une publication refusee previent le guide, avec le message du serveur', async () => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    const signaux = [];
+    const desabonner = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    mockCreer.mockRejectedValue(new Error('Cette équipe a déjà une annonce ouverte.'));
+    rendre({});
+
+    await publier();
+    desabonner();
+
+    expect(signaux.filter((signal) => signal.kind === 'refusal')).toEqual([
+      expect.objectContaining({
+        key: 'friendly.publish.refused',
+        reason: 'Cette équipe a déjà une annonce ouverte.',
+      }),
+    ]);
+  });
 });
