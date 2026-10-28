@@ -1271,6 +1271,16 @@ function MatchCompositionBoard() {
               iconPosition="before"
               onPress={() => {
                 if (publicationBloquee) return;
+                // GUIDE-BONUS (L5) : sur le match d'exemple, « Publier » sans titulaire
+                // ne restait pas muet (audit, capture 61).
+                // ponytail: exemple seulement ; un vrai match garde sa feuille à 0.
+                if (isTourExample(params) && counters.placed === 0) {
+                  Alert.alert(
+                    t('matchComposition.board.actions.publish'),
+                    t('tourExamples.match.nonePlaced', 'Place au moins un joueur sur le terrain.'),
+                  );
+                  return;
+                }
                 setIsSheetVisible(true);
               }}
               style={styles.footerPublish}

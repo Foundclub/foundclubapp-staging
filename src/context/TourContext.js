@@ -72,8 +72,11 @@ const isGuideProfile = (profile) => profile?.version === GUIDE_VERSION;
 const navigateToTarget = (target, context, options) => {
   if (!target?.routeName) return false;
   const params = typeof target.params === 'function' ? target.params(context) : target.params;
-  return Boolean(options
-    ? navigateRoot(target.routeName, params, options)
+  // GUIDE-BONUS (L5) : une cible `pop` revient en DÉPILANT (sinon react-navigation 7
+  // empile un doublon de l'accueil au-dessus de l'écran quitté).
+  const navOptions = options || (target.pop ? { pop: true } : null);
+  return Boolean(navOptions
+    ? navigateRoot(target.routeName, params, navOptions)
     : navigateRoot(target.routeName, params));
 };
 
@@ -439,7 +442,9 @@ export function TourProvider({ children }) {
       storage.set(getBonusLaterKey(userId), JSON.stringify(left));
     }
     finishTour();
-    navigateToTarget(TOUR_HOME_TARGET, { userData });
+    // GUIDE-BONUS (L5) : en DÉPILANT, la compo d'exemple et sa feuille « Publier la
+    // compo ? » sortent de la pile (audit, captures 64-67).
+    navigateToTarget(TOUR_HOME_TARGET, { userData }, { pop: true });
   }, [finishTour, userData, userId]);
 
   // Guide : « Quitter » met en PAUSE (question ouverte n° 2, reco du pack) ;
