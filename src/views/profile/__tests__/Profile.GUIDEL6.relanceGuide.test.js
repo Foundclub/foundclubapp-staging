@@ -260,6 +260,9 @@ describe('Mon compte › Guide entraîneur·e', () => {
     expect(aplatirTexte(pastille[0].findByType(Text).props.children).replace(/\u00a0/g, ' '))
       .toBe('En pause');
     await toucher('Guide entraîneur·e');
+    // Point 1 du chef (28/10, B) : un bonus remplacerait la progression en cours.
+    expect(textes()).not.toContain('Faire un bonus');
+    expect(textes()).toContain('Revoir le guide sans rien créer');
     await toucher('Reprendre là où j’en étais');
     expect(mockTour.resumeTour).toHaveBeenCalledWith({ pop: true });
     expect(mockTour.startTour).not.toHaveBeenCalled();

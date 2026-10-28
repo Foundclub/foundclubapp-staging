@@ -1143,12 +1143,13 @@ function Profile({ navigation, route }) {
           label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
           onPress: () => chooseGuide(() => tour.startTour('coach', { review: true })),
         },
-        {
+        // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
+        ...(isGuideInProgress ? [] : [{
           icon: Images.flag,
           key: 'coachGuide-bonus',
           label: t('profile.coachGuide.bonus', 'Faire un bonus'),
           onPress: () => chooseGuide(() => tour.startTour('coach', { fromMission: 'coach_b1' })),
-        },
+        }]),
       ] : []),
     {
       icon: Images.envelope,
