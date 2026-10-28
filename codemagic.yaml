@@ -184,3 +184,88 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # CLAVIER-FOND (28/10) — PREUVE AU SIMULATEUR D'IPHONE, sans signature ni envoi.
+  # Construit l'app pour le simulateur (cible API : RECETTE), la lance, rejoue les
+  # scenarios Maestro de .maestro/clavier-iphone et rend les CAPTURES clavier ouvert.
+  # Les tests jest prouvent un calcul ; seul ce passage montre si la feuille BOUGE.
+  # Lancement MANUEL seulement (aucun declencheur), decision d'Adel : ~20-30 min
+  # de Mac M2 sur les 500 gratuites du mois. Fiche : .maestro/clavier-iphone/FICHE.md
+  # ════════════════════════════════════════════════════════════════════════════
+  ios-simulateur-clavier:
+    name: iOS simulateur — clavier
+    instance_type: mac_mini_m2
+    # Plafond : protege le budget si un scenario pend (connexion, simulateur).
+    max_build_duration: 45
+    inputs:
+      match_id:
+        description: "documentId d'un match de RECETTE sans adversaire, du club du compte de recette"
+        type: string
+    environment:
+      # foundclub_ios : memes secrets que la TestFlight (TomTom, RevenueCat, Sentry, plist).
+      # foundclub_recette (A CREER par Adel) : FC_RECETTE_TEL, FC_RECETTE_CODE —
+      #   un numero de TEST Firebase et son code de test, jamais un vrai numero.
+      groups:
+        - foundclub_ios
+        - foundclub_recette
+      vars:
+        API_ENV: staging
+        FC_FORCE_REVENUECAT_RAIL: "0"
+        FC_MATCH_ID: ${{ inputs.match_id }}
+        SENTRY_ALLOW_FAILURE: "true"
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
+      xcode: 26.0
+      node: 20
+      cocoapods: default
+    scripts:
+      - name: Configuration de l'app (cible API = recette)
+        script: python3 scripts/ci/ios/preparer_build.py env
+      - name: GoogleService-Info.plist (apparie a la cible API)
+        script: python3 scripts/ci/ios/preparer_build.py firebase
+      - name: Dependances JS
+        script: npm ci
+      - name: Dependances CocoaPods
+        script: cd ios && pod install
+      - name: Construire pour le simulateur (sans signature)
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          xcodebuild -workspace ios/foundclub.xcworkspace -scheme foundclub \
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build | tail -n 40
+      - name: Simulateur iPhone + app installee
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          SIM="$(xcrun simctl list devices available | grep -m1 -E '^\s+iPhone [0-9]+ \(' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+          echo "SIMULATEUR : $SIM"
+          echo "FC_SIM=$SIM" >> "$CM_ENV"
+          xcrun simctl boot "$SIM"
+          xcrun simctl bootstatus "$SIM" -b
+          xcrun simctl install "$SIM" build/sim/Build/Products/Release-iphonesimulator/foundclub.app
+      - name: Maestro
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "PATH=$PATH:$HOME/.maestro/bin" >> "$CM_ENV"
+      - name: Scenarios clavier (captures)
+        script: |
+          #!/usr/bin/env bash
+          set -uo pipefail
+          mkdir -p build/maestro
+          cd build/maestro
+          STATUT=0
+          for F in nommer-adversaire nom-equipe; do
+            maestro --device "$FC_SIM" test \
+              -e FC_RECETTE_TEL="$FC_RECETTE_TEL" -e FC_RECETTE_CODE="$FC_RECETTE_CODE" \
+              -e FC_MATCH_ID="$FC_MATCH_ID" \
+              "$CM_BUILD_DIR/.maestro/clavier-iphone/$F.yaml" || STATUT=1
+          done
+          # Les captures valent preuve meme si une etape a echoue : on les rend toujours.
+          exit $STATUT
+    artifacts:
+      - build/maestro/*.png
+      - ~/.maestro/tests/**/*

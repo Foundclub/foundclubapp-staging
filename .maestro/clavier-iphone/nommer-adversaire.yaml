@@ -1,0 +1,28 @@
+# CLAVIER-FOND (28/10) — « Nommer l'adversaire » sur un vrai simulateur d'iPhone.
+# Ce que les tests jest ne peuvent pas voir : la feuille MONTE-t-elle avec le clavier ?
+# Attendu : le champ « Nom de l'équipe adverse » et le bouton d'enregistrement AU-DESSUS du clavier.
+# Entrées : FC_MATCH_ID = un match de recette SANS adversaire, dont le compte connecté est le club.
+appId: com.foundclub
+---
+- launchApp:
+    clearState: true
+- runFlow: _connexion.yaml
+- openLink: foundclub://event/${FC_MATCH_ID}
+- extendedWaitUntil:
+    visible:
+      id: "event-header-nommer-adversaire"
+    timeout: 30000
+- takeScreenshot: 01-fiche-match
+- tapOn:
+    id: "event-header-nommer-adversaire"
+# La feuille donne le clavier à la fin de son animation (onOpened) : laisser le clavier finir.
+- extendedWaitUntil:
+    visible: "Nom de l'équipe adverse"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 02-nommer-adversaire-clavier-ouvert
+# Preuve lisible par une machine : le champ est encore touchable avec le clavier ouvert.
+- assertVisible: "Nom de l'équipe adverse"
+- inputText: "Clavier OK"
+- takeScreenshot: 03-nommer-adversaire-texte-tape
