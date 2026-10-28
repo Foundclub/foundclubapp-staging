@@ -10,7 +10,10 @@ import {
   View,
 } from 'react-native';
 
-import { getProfileFilterCount } from '@/domains/search/recruitmentFlow';
+import {
+  getProfileFilterCount,
+  parametresDeRechercheDeProfils,
+} from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -65,22 +68,25 @@ function RecruitmentProfilesList({
 
   const filtersCount = useMemo(() => getProfileFilterCount(mercatoFilters), [mercatoFilters]);
 
-  const profileSearchParams = useMemo(() => {
-    const trimmedSearch = String(searchValue || '').trim();
-    return {
-      activity: mercatoFilters?.activityNames || mercatoFilters?.activity,
-      category: mercatoFilters?.sectionIds || mercatoFilters?.category,
-      geohash: mercatoFilters?.geohash,
-      position: mercatoFilters?.positions || mercatoFilters?.position,
-      ...(trimmedSearch.length >= 2 ? { q: trimmedSearch, sort: 'relevance' } : { sort: 'date' }),
-    };
-  }, [
+  const profileSearchParams = useMemo(() => parametresDeRechercheDeProfils({
+    activity: mercatoFilters?.activity,
+    activityNames: mercatoFilters?.activityNames,
+    category: mercatoFilters?.category,
+    city: mercatoFilters?.city,
+    geohash: mercatoFilters?.geohash,
+    position: mercatoFilters?.position,
+    positions: mercatoFilters?.positions,
+    radius: mercatoFilters?.radius,
+    sectionIds: mercatoFilters?.sectionIds,
+  }, searchValue), [
     mercatoFilters?.activity,
     mercatoFilters?.activityNames,
     mercatoFilters?.category,
+    mercatoFilters?.city,
     mercatoFilters?.geohash,
     mercatoFilters?.position,
     mercatoFilters?.positions,
+    mercatoFilters?.radius,
     mercatoFilters?.sectionIds,
     searchValue,
   ]);
