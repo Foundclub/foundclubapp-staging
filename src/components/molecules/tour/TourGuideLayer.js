@@ -385,8 +385,10 @@ function TourGuideLayer() {
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
   const fontScale = Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
   // Place d'une bulle « en haut » au-dessus de sa cible (null : pas de limite).
-  const roomAbove = isTop && primary && primary.y > insets.top + 52
-    ? primary.y - 6 - (insets.top + 4)
+  // Sous l'en-tête ancré s'il y en a un (la rangée Retour reste libre, 4- A).
+  const roomTop = Math.max(insets.top + 4, (headerBottom ?? 0) + 6);
+  const roomAbove = isTop && primary && primary.y > roomTop + 48
+    ? primary.y - 6 - roomTop
     : null;
   const kicker = missionPosition
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
@@ -587,13 +589,17 @@ function TourGuideLayer() {
           />
         ) : null}
         <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
-          <View style={{ flex: 1 }}>
+          <View style={{
+            alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,
+          }}
+          >
             {kicker ? (
               <Text
                 allowFontScaling={false}
                 numberOfLines={1}
                 style={[scaledFont(Fonts.p4Bold, fontScale), {
                   color: isBonus ? Colors.gold900 : Colors.primary600,
+                  flex: 1,
                   letterSpacing: 1,
                   textTransform: 'uppercase',
                 }]}
@@ -602,26 +608,20 @@ function TourGuideLayer() {
               </Text>
             ) : null}
             {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
-                visible, et plus rien par-dessus l'en-tête. */}
+                visible, sur la ligne du titre pour que la bulle reste basse. */}
             <View
               accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
               accessible
-              style={{
-                alignItems: 'center',
-                columnGap: 8,
-                flexDirection: 'row',
-                marginBottom: 6,
-                marginTop: 4,
-              }}
+              style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
               testID={__DEV__ ? 'tour.gauge' : undefined}
             >
               <View
                 style={{
                   backgroundColor: withAlpha(Colors.primary900, 0.12),
                   borderRadius: 999,
-                  flex: 1,
                   height: 4,
                   overflow: 'hidden',
+                  width: 56,
                 }}
               >
                 <View

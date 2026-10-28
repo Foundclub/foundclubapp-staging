@@ -258,7 +258,7 @@ describe('Accessibilité 3- B — la bulle grandit avec le texte, plafonnée à 
 
   afterEach(() => { mockFontScale = 1; });
 
-  it('bulle « en haut » trop grande pour tenir au-dessus du champ : elle rapetisse, pas sous 1', async () => {
+  it('bulle « en haut » trop grande pour tenir : elle rapetisse, pas sous 1', async () => {
     mockFontScale = 1.3;
     mountTarget('teamWizard.field', {
       height: 600, width: 358, x: 16, y: 200,
@@ -325,5 +325,29 @@ describe('m3-place : consignes courtes (arbitrage du chef, 28/10)', () => {
   it('chacune des 3 premières tient en 70 signes', () => {
     step('m3-place').bubbles.slice(0, 3)
       .forEach((bubble) => expect(bubble().length).toBeLessThanOrEqual(70));
+  });
+});
+
+describe('Texte agrandi sous un en-tête ancré (émulateur 28/10, m3-place à 1,3)', () => {
+  it('place comptée SOUS l’en-tête : la police rapetisse, Retour reste libre', async () => {
+    mockFontScale = 1.3;
+    mountTarget('screen.header', {
+      height: 56, width: 358, x: 16, y: 16,
+    });
+    mountTarget('teamWizard.field', {
+      height: 600, width: 358, x: 16, y: 230,
+    });
+    mockTour = activeTour({
+      bubblePlacement: 'top', id: 'm3-place', targets: ['teamWizard.field'], text: 'Touche',
+    });
+    const tree = await renderLayer();
+    // Sous l'encoche il y aurait 230 + 54 - 6 - 6 - 58 = 214 pt, sous l'en-tête 132 :
+    // une bulle de 180 pt ne tient que dans le premier cas.
+    await act(async () => {
+      bubbleOf(tree).props.onLayout({ nativeEvent: { layout: { height: 180 } } });
+    });
+    await flush();
+    const consigne = textsOf(tree).find((node) => node.props.children === 'Touche');
+    expect(styleOf(consigne).fontSize).toBeLessThan(16 * 1.3);
   });
 });
