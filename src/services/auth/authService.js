@@ -181,6 +181,7 @@ const userSchema = Joi.object({
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
   section: Joi.object().allow(null).optional(),
+  videoCvUrl: Joi.string().allow(null, '').optional(),
   weight: Joi.number().allow(null, '').optional(),
 }).required();
 
@@ -222,6 +223,7 @@ const publicUserSchema = Joi.object({
   section: appEntitySummarySchema.optional(),
   sportsHistory: Joi.string().allow(null, '').optional(),
   trainedTeams: Joi.array().items(appTeamSummarySchema).optional(),
+  videoCvUrl: Joi.string().allow(null, '').optional(),
   weight: Joi.alternatives().try(Joi.number(), Joi.string()).allow(null, '').optional(),
 }).required();
 

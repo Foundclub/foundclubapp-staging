@@ -1,11 +1,13 @@
 /**
  * VIDEOCV (28/10, planche validée par Adel) — les règles du lien YouTube, côté app.
- * Les mêmes que le serveur (`admin/src/api/firebase-auth/services/youtube-url.ts`), qui reste seul
- * juge : ici, elles servent à afficher l'erreur sous le champ et à trouver l'ID de la vidéo.
+ * Les mêmes que le serveur (`admin/src/api/firebase-auth/services/youtube-url.ts`), qui reste
+ * seul juge : ici, elles servent à afficher l'erreur sous le champ et à trouver l'ID de la vidéo.
  * Analyse à la main, sans `new URL()` : le `URL` de React Native ne sait pas lire `hostname`.
  */
 
-export const YOUTUBE_ALLOWED_HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'];
+export const YOUTUBE_ALLOWED_HOSTS = [
+  'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be',
+];
 export const YOUTUBE_URL_MAX_LENGTH = 200;
 export const YOUTUBE_PLAYER_ORIGIN = 'https://foundclub.app';
 
@@ -13,18 +15,23 @@ const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const URL_PARTS = /^(https?):\/\/([^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/i;
 
 /**
+ * La forme stockée : `https://www.youtube.com/watch?v=ID`.
  * @param {string} videoId
  * @returns {string}
  */
 export const buildYoutubeCanonicalUrl = (videoId) => `https://www.youtube.com/watch?v=${videoId}`;
 
 /**
+ * La miniature, affichée avant l'appui (décision 1- A).
  * @param {string} videoId
  * @returns {string}
  */
-export const buildYoutubeThumbnailUrl = (videoId) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+export const buildYoutubeThumbnailUrl = (videoId) => (
+  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+);
 
 /**
+ * L'ID selon la forme du lien : youtu.be/ID, /watch?v=ID ou /shorts/ID.
  * @param {string} path
  * @param {string} query
  * @param {string} host
@@ -43,7 +50,8 @@ const extractVideoId = (path, query, host) => {
 /**
  * Lit un lien YouTube collé par le joueur.
  * @param {unknown} value
- * @returns {{ empty: true } | { error: 'host' | 'incomplete' } | { canonicalUrl: string, videoId: string }}
+ * @returns {{ empty: true } | { error: 'host' | 'incomplete' }
+ *   | { canonicalUrl: string, videoId: string }}
  */
 export const parseYoutubeUrl = (value) => {
   const raw = typeof value === 'string' ? value.trim() : '';
@@ -63,6 +71,16 @@ export const parseYoutubeUrl = (value) => {
 };
 
 /**
+ * L'adresse du lecteur du site : youtube-nocookie, lancé à l'appui (une seule touche suffit).
+ * @param {string} videoId
+ * @returns {string}
+ */
+export const buildYoutubeEmbedUrl = (videoId) => {
+  if (!VIDEO_ID.test(videoId)) throw new Error('VIDEOCV : ID de vidéo hors forme');
+  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+};
+
+/**
  * La page du lecteur du téléphone : l'API du lecteur YouTube, sur youtube-nocookie, chargée avec
  * l'origine FoundClub (sans elle, YouTube répond « erreur 153 » dans une WebView). Les erreurs du
  * lecteur remontent à l'app par `postMessage`.
@@ -75,10 +93,15 @@ export const buildYoutubeEmbedPage = (videoId) => {
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{width:100%;height:100%}</style>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+#p{width:100%;height:100%}
+</style>
 </head><body><div id="p"></div>
 <script>
-function envoyer(m){window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}
+function envoyer(m){
+  window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));
+}
 function onYouTubeIframeAPIReady(){
   new YT.Player('p', {
     host: 'https://www.youtube-nocookie.com',

@@ -1,21 +1,20 @@
-import i18next from 'i18next';
 import { useState } from 'react';
 import { ImageBackground, Pressable } from 'react-native';
-import { WebView } from 'react-native-webview';
 
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
-import { openUrl } from '@/platform/links';
-
+import texteVideoCv from '@/components/molecules/videoCv/videoCvCopy';
+import VideoCvFrame from '@/components/molecules/videoCv/VideoCvFrame';
 import {
   buildYoutubeEmbedPage,
   buildYoutubeThumbnailUrl,
   parseYoutubeUrl,
   YOUTUBE_PLAYER_ORIGIN,
   youtubeErrorKind,
-} from './youtubeUrl';
-import VideoCvFrame from './VideoCvFrame';
+} from '@/components/molecules/videoCv/youtubeUrl';
+
+import { openUrl } from '@/platform/links';
 
 /**
  * VIDEOCV (28/10, planche validée par Adel) — la vidéo YouTube du profil, sur le téléphone.
@@ -31,7 +30,8 @@ import VideoCvFrame from './VideoCvFrame';
  */
 function VideoCvPlayer({ isOwner = false, testID = 'video-cv-player', url }) {
   const { Colors } = useTheme();
-  const [state, setState] = useState(/** @type {'idle' | 'playing' | 'unavailable' | 'embed' | 'network'} */ ('idle'));
+  /** @type {['idle' | 'playing' | 'unavailable' | 'embed' | 'network', Function]} */
+  const [state, setState] = useState(/** @type {any} */ ('idle'));
   const parsed = parseYoutubeUrl(url);
   if (!('videoId' in parsed)) return null;
   const { canonicalUrl, videoId } = parsed;
@@ -49,6 +49,10 @@ function VideoCvPlayer({ isOwner = false, testID = 'video-cv-player', url }) {
 
   let media = null;
   if (state === 'playing') {
+    // Chargé à l'appui seulement, comme la carte (`maps.native.js`) : le module WebView
+    // n'entre pas en mémoire tant que personne ne lance la vidéo.
+    // eslint-disable-next-line global-require
+    const { WebView } = require('react-native-webview');
     media = (
       <WebView
         allowsFullscreenVideo
@@ -73,7 +77,7 @@ function VideoCvPlayer({ isOwner = false, testID = 'video-cv-player', url }) {
         testID={`${testID}-thumbnail`}
       >
         <Pressable
-          accessibilityLabel={i18next.t('videoCv.play', 'Lire la vidéo')}
+          accessibilityLabel={texteVideoCv('play')}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => setState('playing')}

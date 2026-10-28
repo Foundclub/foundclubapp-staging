@@ -51,6 +51,7 @@ const PROFILE_FIELD_LABELS = /** @type {Record<string, { fallback: string, key: 
   preferredSport: { fallback: 'Sport de préférence', key: 'profile.fields.preferredSport.label' },
   section: { fallback: 'Section', key: 'profile.fields.section.label' },
   sportsHistory: { fallback: 'Historique sportif', key: 'profile.fields.sportsHistory.label' },
+  videoCvUrl: { fallback: 'Lien YouTube', key: 'videoCv.form.label' },
   weight: { fallback: 'Poids (kg)', key: 'profile.fields.weight.label' },
 });
 
@@ -112,7 +113,7 @@ export const listChangedProfileFields = (before, after) => {
  */
 const CLEARABLE_FIELDS = new Set([
   'avatar', 'bestLevel', 'category', 'height', 'jerseyNumber', 'nationality',
-  'position', 'preferredSport', 'section', 'sportsHistory', 'weight',
+  'position', 'preferredSport', 'section', 'sportsHistory', 'videoCvUrl', 'weight',
 ]);
 
 /**

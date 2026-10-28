@@ -623,3 +623,79 @@ describe('PAR-L7 — un sportif qui a des enfants les retrouve sur « Mon profil
     expect(texteVisible(await rendre(entraineur))).not.toContain('Mes enfants');
   });
 });
+
+// VIDEOCV (28/10, planche validée par Adel) — la vidéo YouTube du profil.
+const CANONIQUE = 'https://www.youtube.com/watch?v=k3Lm9QpX2aE';
+
+/**
+ * Le champ « Lien YouTube » de la carte « Ma vidéo ».
+ * @param {any} arbre
+ * @returns {any}
+ */
+const champVideo = (arbre) => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props.testID === 'video-cv-field-input'
+    && typeof n.props.onChangeText === 'function',
+)[0];
+
+/**
+ * Touche « Enregistrer ».
+ * @param {any} arbre
+ * @returns {Promise<void>}
+ */
+const enregistrer = async (arbre) => {
+  await act(async () => {
+    await pressablePortant(arbre, 'Enregistrer').props.onPress();
+  });
+};
+
+describe('VIDEOCV — « Ma vidéo » sur Mon profil', () => {
+  it('M1 — un joueur sans lien voit la carte, l aide et la phrase de confidentialité', async () => {
+    const texte = texteVisible(await rendre(joueur));
+    expect(texte).toContain('Ma vidéo');
+    expect(texte).toContain("Colle le lien d'une vidéo YouTube");
+    expect(texte).toContain('FoundClub garde seulement le lien');
+  });
+
+  it('décision 2- A — un entraîneur n a pas la carte', async () => {
+    const texte = texteVisible(await rendre(entraineur));
+    expect(texte).not.toContain('Ma vidéo');
+  });
+
+  it('M3 — un lien vimeo : erreur sous le champ, RIEN n est envoyé', async () => {
+    const arbre = await rendre(joueur);
+    await act(async () => champVideo(arbre).props.onChangeText('https://vimeo.com/812345678'));
+    await enregistrer(arbre);
+    expect(mockUpdateMe).not.toHaveBeenCalled();
+    expect(champVideo(arbre).props.error).toBeTruthy();
+  });
+
+  it('M2 — un lien youtu.be : la forme canonique part au serveur', async () => {
+    const arbre = await rendre(joueur);
+    const lien = 'https://youtu.be/k3Lm9QpX2aE?si=suivi';
+    await act(async () => champVideo(arbre).props.onChangeText(lien));
+    expect(texteVisible(arbre)).toContain('Lien YouTube reconnu');
+    await enregistrer(arbre);
+    expect(mockUpdateMe).toHaveBeenCalledTimes(1);
+    expect(mockUpdateMe.mock.calls[0][0].videoCvUrl).toBe(CANONIQUE);
+  });
+
+  it('M4 — « Retirer la vidéo » puis Enregistrer : le champ part pour être effacé', async () => {
+    const arbre = await rendre({ ...joueur, videoCvUrl: CANONIQUE });
+    const retirer = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props.testID === 'video-cv-field-remove'
+        && typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => retirer.props.onPress());
+    expect(texteVisible(arbre)).toContain('La vidéo quittera ton profil');
+    await enregistrer(arbre);
+    const charge = mockUpdateMe.mock.calls[0][0];
+    expect(charge.videoCvUrl).toBe('');
+    expect(charge.clearFields).toContain('videoCvUrl');
+  });
+
+  it('un entraîneur n envoie jamais videoCvUrl', async () => {
+    const arbre = await rendre({ ...entraineur, videoCvUrl: CANONIQUE });
+    await enregistrer(arbre);
+    expect(mockUpdateMe.mock.calls[0][0]).not.toHaveProperty('videoCvUrl');
+  });
+});

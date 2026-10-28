@@ -1,27 +1,16 @@
-import i18next from 'i18next';
 import { Pressable, Text, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 
-import useTheme from '@/theme/themeContext';
 import { withAlpha } from '@/theme/colors';
+import useTheme from '@/theme/themeContext';
+
+import texteVideoCv from '@/components/molecules/videoCv/videoCvCopy';
 
 /** Largeur maximale du lecteur sur un grand écran (planche, repli S2 : 720 px). */
 export const VIDEO_CV_MAX_WIDTH = 720;
 
-const ERROR_COPY = {
-  embed: {
-    body: ['videoCv.errors.embed.body', 'Son auteur ne permet pas de la lire dans une autre application.'],
-    title: ['videoCv.errors.embed.title', 'Cette vidéo se regarde sur YouTube'],
-  },
-  network: {
-    body: ['videoCv.errors.network.body', "La vidéo n'a pas pu se charger."],
-    title: ['videoCv.errors.network.title', 'Pas de connexion'],
-  },
-  unavailable: {
-    body: ['videoCv.errors.unavailable.body', 'Elle est peut-être devenue privée, ou a été supprimée sur YouTube.'],
-    title: ['videoCv.errors.unavailable.title', "Cette vidéo n'est plus disponible"],
-  },
-};
+/** Les trois échecs de la planche M9 → le préfixe de leurs textes. */
+const ERROR_STATES = ['embed', 'network', 'unavailable'];
 
 /**
  * VIDEOCV — le cadre commun au téléphone et au site : la zone 16/9 (miniature, lecteur ou
@@ -42,7 +31,7 @@ function VideoCvFrame({
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  const copy = ERROR_COPY[/** @type {keyof typeof ERROR_COPY} */ (state)];
+  const echec = ERROR_STATES.includes(state);
 
   return (
     <View style={[Spaces.gap[12], { maxWidth: VIDEO_CV_MAX_WIDTH, width: '100%' }]} testID={testID}>
@@ -59,16 +48,20 @@ function VideoCvFrame({
           },
         ]}
       >
-        {copy ? (
+        {echec ? (
           <View
             style={[Spaces.padding[16], Spaces.gap[8], { flex: 1, justifyContent: 'center' }]}
             testID={`${testID}-error-${state}`}
           >
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{i18next.t(...copy.title)}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral200]}>{i18next.t(...copy.body)}</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {texteVideoCv(/** @type {any} */ (`errors.${state}.title`))}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {texteVideoCv(/** @type {any} */ (`errors.${state}.body`))}
+            </Text>
             {state === 'unavailable' && isOwner ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {i18next.t('videoCv.errors.unavailable.owner', "C'est ta vidéo ? Change le lien dans Mon profil.")}
+                {texteVideoCv('errors.unavailable.owner')}
               </Text>
             ) : null}
             {state === 'network' ? (
@@ -78,7 +71,7 @@ function VideoCvFrame({
                 style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
                 testID={`${testID}-retry`}
               >
-                <Text style={[Fonts.p2Bold, Fonts.primary200]}>{i18next.t('videoCv.retry', 'Réessayer')}</Text>
+                <Text style={[Fonts.p2Bold, Fonts.primary200]}>{texteVideoCv('retry')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -102,7 +95,7 @@ function VideoCvFrame({
             strokeWidth={2}
           />
         </Svg>
-        <Text style={[Fonts.p3Bold, Fonts.primary200]}>{i18next.t('videoCv.openInYoutube', 'Ouvrir dans YouTube')}</Text>
+        <Text style={[Fonts.p3Bold, Fonts.primary200]}>{texteVideoCv('openInYoutube')}</Text>
       </Pressable>
     </View>
   );

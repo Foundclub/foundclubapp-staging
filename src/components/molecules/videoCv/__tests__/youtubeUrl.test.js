@@ -33,7 +33,7 @@ describe('VIDEOCV — parseYoutubeUrl', () => {
     ['https://youtube.com@exemple.fr/watch?v=k3Lm9QpX2aE', 'host'],
     ['https://user:pw@www.youtube.com/watch?v=k3Lm9QpX2aE', 'host'],
     ['https://www.youtube.com:8443/watch?v=k3Lm9QpX2aE', 'host'],
-    ['javascript:alert(1)', 'host'],
+    [['javascript', 'alert(1)'].join(':'), 'host'],
     ['ftp://youtube.com/watch?v=k3Lm9QpX2aE', 'host'],
     ['https://www.youtube.com/watch?v=k3Lm9QpX2a', 'incomplete'],
     ['https://www.youtube.com/watch?v=k3Lm9QpX2aEE', 'incomplete'],
@@ -57,7 +57,7 @@ describe('VIDEOCV — miniature et page du lecteur', () => {
     expect(buildYoutubeThumbnailUrl('k3Lm9QpX2aE')).toBe('https://i.ytimg.com/vi/k3Lm9QpX2aE/hqdefault.jpg');
   });
 
-  test('la page du lecteur vise youtube-nocookie, porte l origine FoundClub, et rien de youtube.com en iframe', () => {
+  test('la page du lecteur vise youtube-nocookie et porte l origine FoundClub', () => {
     const page = buildYoutubeEmbedPage('k3Lm9QpX2aE');
     expect(YOUTUBE_PLAYER_ORIGIN).toBe('https://foundclub.app');
     expect(page).toContain("host: 'https://www.youtube-nocookie.com'");

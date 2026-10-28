@@ -26,6 +26,8 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
+import VideoCvField from '@/components/molecules/videoCv/VideoCvField';
+import { parseYoutubeUrl } from '@/components/molecules/videoCv/youtubeUrl';
 // eslint-disable-next-line max-len
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -292,6 +294,7 @@ function SelfProfilePlayerCoach({ navigation }) {
     formState: { errors: formErrors, isDirty },
     handleSubmit,
     reset,
+    setError,
     setFocus,
     setValue,
     watch,
@@ -438,6 +441,13 @@ function SelfProfilePlayerCoach({ navigation }) {
    */
   const handleFormSubmit = (data) => {
     if (!userData) return;
+    // VIDEOCV — la regle du lien est redite ici : sur le site, `Joi` est une doublure qui ne
+    // valide rien (web/src/shims/joi.ts). Un lien refuse n'envoie RIEN.
+    const lienVideo = parseYoutubeUrl(data.videoCvUrl);
+    if (allowedFields.includes('videoCvUrl') && 'error' in lienVideo) {
+      setError('videoCvUrl', { message: `videoCv.errors.${lienVideo.error}` });
+      return;
+    }
 
     let geohash = null;
     const coords = String(data.address?.value || '').split('|');
@@ -468,6 +478,9 @@ function SelfProfilePlayerCoach({ navigation }) {
     if (allowedFields.includes('position')) payload.position = data.position;
     if (allowedFields.includes('height')) payload.height = data.height;
     if (allowedFields.includes('weight')) payload.weight = data.weight;
+    if (allowedFields.includes('videoCvUrl')) {
+      payload.videoCvUrl = 'videoId' in lienVideo ? lienVideo.canonicalUrl : '';
+    }
     if (allowedFields.includes('jerseyNumber')) {
       payload.jerseyNumber = data.jerseyNumber === ''
         ? null
@@ -722,6 +735,26 @@ function SelfProfilePlayerCoach({ navigation }) {
             sportHint={playerTeams[0]?.activities?.[0]?.name || ''}
             stats={personalStats}
           />
+        ) : null}
+
+        {/* ── Ma video — JOUEUR uniquement (VIDEOCV, decision 2- A ; planche M1 a M5). */}
+        {allowedFields.includes('videoCvUrl') ? (
+          <View style={{ gap: 10 }}>
+            <Text style={labelStyle}>{t('videoCv.sectionTitle', 'Ma vidéo')}</Text>
+            <Controller
+              control={control}
+              name="videoCvUrl"
+              render={({ field: { onBlur, onChange, value } }) => (
+                <VideoCvField
+                  error={getFieldError({ errors: formErrors, fieldName: 'videoCvUrl' })}
+                  onBlur={onBlur}
+                  onChange={onChange}
+                  savedValue={userData?.videoCvUrl || ''}
+                  value={String(value ?? '')}
+                />
+              )}
+            />
+          </View>
         ) : null}
 
         {/* ── Identite ───────────────────────────────────────────────── */}

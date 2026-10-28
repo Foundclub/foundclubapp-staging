@@ -7,7 +7,16 @@ import VideoCvPlayer from '../VideoCvPlayer';
 
 jest.mock('react-native-webview', () => {
   const { View } = jest.requireActual('react-native');
-  const WebView = (props) => <View {...props} testID={props.testID} />;
+  /**
+   * Doublure : une vue qui garde la source et les rappels de la vraie WebView.
+   * @param {any} props
+   * @returns {any}
+   */
+  function WebView({
+    onError, onMessage, source, testID,
+  }) {
+    return <View onError={onError} onMessage={onMessage} source={source} testID={testID} />;
+  }
   return { WebView };
 });
 
@@ -36,12 +45,14 @@ const URL = 'https://www.youtube.com/watch?v=k3Lm9QpX2aE';
 const monter = (props = {}) => {
   let arbre;
   act(() => {
-    arbre = renderer.create(<VideoCvPlayer url={URL} {...props} />);
+    arbre = renderer.create(<VideoCvPlayer isOwner={props.isOwner} url={props.url || URL} />);
   });
   return arbre;
 };
 
-const parId = (arbre, id) => arbre.root.findAll((n) => n.props.testID === id && typeof n.type !== 'string');
+const parId = (arbre, id) => arbre.root.findAll(
+  (n) => n.props.testID === id && typeof n.type !== 'string',
+);
 
 const webViews = (arbre) => arbre.root.findAll((n) => n.props.testID === 'video-cv-player-webview'
   && n.props.source !== undefined);
@@ -66,7 +77,8 @@ describe('VIDEOCV — VideoCvPlayer', () => {
   test('message 150 : « Cette vidéo se regarde sur YouTube » + le lien', () => {
     const arbre = monter();
     act(() => parId(arbre, 'video-cv-player-play')[0].props.onPress());
-    act(() => webViews(arbre)[0].props.onMessage({ nativeEvent: { data: JSON.stringify({ code: 150, type: 'error' }) } }));
+    const message = JSON.stringify({ code: 150, type: 'error' });
+    act(() => webViews(arbre)[0].props.onMessage({ nativeEvent: { data: message } }));
     expect(parId(arbre, 'video-cv-player-error-embed')).not.toHaveLength(0);
     expect(JSON.stringify(arbre.toJSON())).toContain('Cette vidéo se regarde sur YouTube');
     act(() => parId(arbre, 'video-cv-player-open-youtube')[0].props.onPress());
@@ -76,7 +88,8 @@ describe('VIDEOCV — VideoCvPlayer', () => {
   test('message 100 : « plus disponible », et la phrase de l auteur pour lui seul', () => {
     const arbre = monter({ isOwner: true });
     act(() => parId(arbre, 'video-cv-player-play')[0].props.onPress());
-    act(() => webViews(arbre)[0].props.onMessage({ nativeEvent: { data: '{"type":"error","code":100}' } }));
+    const message = '{"type":"error","code":100}';
+    act(() => webViews(arbre)[0].props.onMessage({ nativeEvent: { data: message } }));
     const texte = JSON.stringify(arbre.toJSON());
     expect(texte).toContain("Cette vidéo n'est plus disponible");
     expect(texte).toContain("C'est ta vidéo ?");

@@ -1234,6 +1234,8 @@ export const profileFieldToDisplay = (role) => {
         'preferredSport',
         'nationality',
         'jerseyNumber',
+        // VIDEOCV (28/10, décision 2- A) : les JOUEURS seulement.
+        'videoCvUrl',
       ];
     // AGE-OBLIGATOIRE-2 b (02/10/2026, « profil dirigeant oui ») - le dirigeant donne sa date
     // a l'inscription depuis AGE-OBLIGATOIRE 1 : il doit pouvoir la corriger ici, avec les
