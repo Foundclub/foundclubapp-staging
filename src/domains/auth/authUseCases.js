@@ -682,7 +682,7 @@ export const getOnboardingViews = ({
   const hasCompletedOnboarding = (() => {
     try {
       if (documentId) {
-        return storage.getBoolean(`hasCompletedOnboarding_${documentId}`);
+        return storage.getBoolean(onboardingCompleteKey(documentId));
       }
       return false;
     } catch (e) { return false; }
@@ -1174,13 +1174,21 @@ export const markOnboardingStarted = (documentId) => {
 };
 
 /**
+ * BOUCLE-ACCUEIL (28/10/2026) — LA cle qui dit « inscription finie sur cet appareil ». `useAuth`
+ * l'ecoute : son ecriture ferme le tunnel tout de suite (voir `onboardingViews`).
+ * @param {string} documentId - Le compte.
+ * @returns {string} La cle de stockage.
+ */
+export const onboardingCompleteKey = (documentId) => `hasCompletedOnboarding_${documentId}`;
+
+/**
  * Mark onboarding as completed for a user
  * This should be called when the user finishes or skips the last onboarding step
  * @param {string} documentId - The user's document ID
  */
 export const markOnboardingComplete = (documentId) => {
   if (documentId) {
-    storage.set(`hasCompletedOnboarding_${documentId}`, true);
+    storage.set(onboardingCompleteKey(documentId), true);
   }
 };
 
