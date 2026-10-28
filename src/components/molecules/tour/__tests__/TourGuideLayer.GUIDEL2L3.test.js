@@ -306,3 +306,24 @@ describe('L3 — textes réécrits (audit, captures 07, 13, 27, 29, 30, 89)', ()
     expect(step('m4-am6').text).not.toContain('niveau');
   });
 });
+
+// Arbitrage du chef (28/10) : jauge DANS la bulle (toujours visible) ; bulles de
+// m3-place assez courtes pour tenir entre l'en-tête et le champ (~100 pt à 1,0).
+describe('Jauge dans la bulle (3- A du chef)', () => {
+  it('la bulle porte la barre et le pourcentage, même bulle « en haut »', async () => {
+    mockTour = { ...activeTour({ id: 'm1-new', targets: [], text: 'Touche' }), gauge: 50 };
+    const tree = await renderLayer();
+    const bubble = tree.root.findAll((node) => node.props.testID === 'tour.bubble')[0];
+    const [gaugeRow] = bubble.findAll((node) => node.props.testID === 'tour.gauge');
+    expect(gaugeRow).toBeDefined();
+    expect(gaugeRow.findAll((node) => node.type === ReactNative.Text)
+      .some((node) => node.props.children === '50 %')).toBe(true);
+  });
+});
+
+describe('m3-place : consignes courtes (arbitrage du chef, 28/10)', () => {
+  it('chacune des 3 premières tient en 70 signes', () => {
+    step('m3-place').bubbles.slice(0, 3)
+      .forEach((bubble) => expect(bubble().length).toBeLessThanOrEqual(70));
+  });
+});

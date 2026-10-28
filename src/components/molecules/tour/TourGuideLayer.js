@@ -382,12 +382,6 @@ function TourGuideLayer() {
   const buttonLabel = hasMoreBubbles
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
-  const isCompact = isTop && !buttonLabel && !isBonus;
-  // La jauge se pose sous l'en-tête, comme la bulle : elle couvrait Fermer et
-  // la flèche (audit du 28/10, captures 86 et 89).
-  const hudTop = Math.max(insets.top + 6, (headerBottom ?? 0) + 6);
-  const showHud = position.top > hudTop + 104
-    && !cutouts.some((cutout) => cutout.y < hudTop + 104);
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
   const fontScale = Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
   // Place d'une bulle « en haut » au-dessus de sa cible (null : pas de limite).
@@ -398,6 +392,33 @@ function TourGuideLayer() {
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
       + ` · ${currentMission?.title || ''}`
     : '';
+
+  const essentialHint = isLockedStep ? t('tourGuide.essential', 'Mission essentielle') : undefined;
+  const nextButton = (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => {
+        if (hasMoreSheetBubbles) setSheetIndex((value) => value + 1);
+        else if (hasMoreBubbles) setSubIndex((value) => value + 1);
+        else tour.completeCurrentStep();
+      }}
+      style={{
+        backgroundColor: Colors.primary500,
+        borderRadius: 999,
+        justifyContent: 'center',
+        minHeight: MIN_TOUCH,
+        paddingHorizontal: 16,
+      }}
+      testID={__DEV__ ? 'tour.next' : undefined}
+    >
+      <Text
+        allowFontScaling={false}
+        style={[scaledFont(Fonts.p3Black, fontScale), { color: Colors.primary900 }]}
+      >
+        {buttonLabel}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View
@@ -515,16 +536,8 @@ function TourGuideLayer() {
         </View>
       ))}
 
-      {showHud ? (
-        <GuideHud
-          gauge={gauge}
-          isBonus={isBonus}
-          missionPosition={missionPosition}
-          top={hudTop}
-        />
-      ) : null}
-
       <Animated.View
+        accessibilityHint={essentialHint}
         accessibilityLiveRegion="polite"
         accessibilityRole="alert"
         onLayout={(event) => {
@@ -578,22 +591,54 @@ function TourGuideLayer() {
             {kicker ? (
               <Text
                 allowFontScaling={false}
+                numberOfLines={1}
                 style={[scaledFont(Fonts.p4Bold, fontScale), {
                   color: isBonus ? Colors.gold900 : Colors.primary600,
                   letterSpacing: 1,
-                  marginBottom: 5,
                   textTransform: 'uppercase',
                 }]}
               >
                 {kicker}
               </Text>
             ) : null}
-            <Text
-              allowFontScaling={false}
-              style={[scaledFont(Fonts.p2Bold, fontScale, 20), { color: Colors.primary900 }]}
+            {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
+                visible, et plus rien par-dessus l'en-tête. */}
+            <View
+              accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
+              accessible
+              style={{
+                alignItems: 'center',
+                columnGap: 8,
+                flexDirection: 'row',
+                marginBottom: 6,
+                marginTop: 4,
+              }}
+              testID={__DEV__ ? 'tour.gauge' : undefined}
             >
-              {text}
-            </Text>
+              <View
+                style={{
+                  backgroundColor: withAlpha(Colors.primary900, 0.12),
+                  borderRadius: 999,
+                  flex: 1,
+                  height: 4,
+                  overflow: 'hidden',
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: isBonus ? Colors.gold500 : Colors.primary500,
+                    height: 4,
+                    width: `${gauge}%`,
+                  }}
+                />
+              </View>
+              <Text
+                allowFontScaling={false}
+                style={[scaledFont(Fonts.p4Bold, fontScale), { color: Colors.neutral600 }]}
+              >
+                {`${gauge} %`}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
@@ -611,133 +656,34 @@ function TourGuideLayer() {
             <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
           </TouchableOpacity>
         </View>
-        {!isCompact ? (
-          <View
-            style={{
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginTop: 6,
-            }}
+        {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait
+            tenir dans ~100 pt entre l'en-tête et le champ, arbitrage du chef 28/10). */}
+        <View style={{ alignItems: 'center', columnGap: 10, flexDirection: 'row' }}>
+          <Text
+            allowFontScaling={false}
+            style={[scaledFont(Fonts.p2Bold, fontScale, 20), { color: Colors.primary900, flex: 1 }]}
           >
-            {isBonus ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={tour.skipMission}
-                style={{ justifyContent: 'center', minHeight: 44 }}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
-                >
-                  {t('tourGuide.skipBonus', 'Passer ce bonus')}
-                </Text>
-              </TouchableOpacity>
-            ) : (
+            {text}
+          </Text>
+          {buttonLabel ? nextButton : null}
+        </View>
+        {isBonus ? (
+          <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={tour.skipMission}
+              style={{ justifyContent: 'center', minHeight: 44 }}
+            >
               <Text
                 allowFontScaling={false}
-                style={[scaledFont(Fonts.p4Bold, fontScale), { color: Colors.neutral600 }]}
+                style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
               >
-                {isLockedStep ? t('tourGuide.essential', 'Mission essentielle') : ''}
+                {t('tourGuide.skipBonus', 'Passer ce bonus')}
               </Text>
-            )}
-            {buttonLabel ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => {
-                  if (hasMoreSheetBubbles) setSheetIndex((value) => value + 1);
-                  else if (hasMoreBubbles) setSubIndex((value) => value + 1);
-                  else tour.completeCurrentStep();
-                }}
-                style={{
-                  backgroundColor: Colors.primary500,
-                  borderRadius: 999,
-                  justifyContent: 'center',
-                  minHeight: MIN_TOUCH,
-                  paddingHorizontal: 16,
-                }}
-                testID={__DEV__ ? 'tour.next' : undefined}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={[scaledFont(Fonts.p3Black, fontScale), { color: Colors.primary900 }]}
-                >
-                  {buttonLabel}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+            </TouchableOpacity>
           </View>
         ) : null}
       </Animated.View>
-    </View>
-  );
-}
-
-/**
- * Jauge en haut (HUD) : « MISSION 2/4 », barre, « Équipe prête 50 % ».
- * @param {object} props - Propriétés.
- * @param {number} props.gauge - Jauge en %.
- * @param {boolean} props.isBonus - Bonus en cours.
- * @param {{ index: number; total: number } | null} props.missionPosition - Position.
- * @param {number} props.top - Ordonnée (sous l'en-tête).
- * @returns {import('react').ReactElement} HUD.
- */
-function GuideHud({
-  gauge, isBonus, missionPosition, top,
-}) {
-  const { Colors, Fonts } = useTheme();
-  const { t } = useTranslation();
-  const accent = isBonus ? Colors.gold500 : Colors.primary500;
-  const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        alignItems: 'center',
-        backgroundColor: withAlpha(Colors.primary800, 0.92),
-        borderColor: isBonus ? withAlpha(Colors.gold500, 0.4) : withAlpha(Colors.primary500, 0.35),
-        borderRadius: 999,
-        borderWidth: 1,
-        columnGap: 10,
-        flexDirection: 'row',
-        left: 14,
-        paddingBottom: 7,
-        paddingLeft: 14,
-        paddingRight: 8,
-        paddingTop: 7,
-        position: 'absolute',
-        right: 14,
-        top,
-      }}
-    >
-      <Text style={[Fonts.p4Bold, { color: accent, letterSpacing: 1, textTransform: 'uppercase' }]}>
-        {missionPosition
-          ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
-          : ''}
-      </Text>
-      <View
-        style={{
-          backgroundColor: withAlpha(Colors.neutral00, 0.12),
-          borderRadius: 999,
-          flex: 1,
-          height: 6,
-          overflow: 'hidden',
-        }}
-      >
-        <View style={{ backgroundColor: Colors.primary500, height: 6, width: `${gauge}%` }} />
-      </View>
-      <View
-        style={{
-          backgroundColor: withAlpha(Colors.primary500, 0.14),
-          borderRadius: 999,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-        }}
-      >
-        <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-          {t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
-        </Text>
-      </View>
     </View>
   );
 }

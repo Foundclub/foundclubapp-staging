@@ -440,17 +440,10 @@ const STEPS = [
     advanceOn: { key: RouteNames.EventWizardLogistics, type: 'route' },
     bubblePlacement: 'top',
     bubbles: [
-      () => t(
-        'm3-place-1',
-        'Club : une installation de ton club. Extérieur : une autre adresse (stade adverse, parc, '
-          + 'salle louée…).',
-      ),
-      () => t('m3-place-2', 'Ici, les installations de ton club. Touche celle de ta séance.'),
-      () => t(
-        'm3-place-3',
-        'Ton terrain n’est pas dans la liste ? Ajoute-le ici : il servira pour toutes tes '
-          + 'prochaines séances.',
-      ),
+      // Courtes (arbitrage du chef, 28/10) : la bulle tient entre l'en-tête et le champ.
+      () => t('m3-place-1', 'Club : une installation du club. Extérieur : une autre adresse.'),
+      () => t('m3-place-2', 'Les installations de ton club : touche celle de ta séance.'),
+      () => t('m3-place-3', 'Ton terrain n’y est pas ? Ajoute-le ici, il resservira.'),
       () => t('m3-place-4', 'Choisis ton lieu, puis Suivant.'),
     ],
     id: 'm3-place',
