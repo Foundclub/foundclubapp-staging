@@ -132,13 +132,16 @@ const lireLesCompensations = (os, version) => {
   const evitements = arbre.root.findAllByType(KeyboardAvoidingView);
   // Android 15+ : l'évitement du ScreenContainer est une marge basse qui suit le clavier.
   const retraitAndroid = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
-    && Object.prototype.hasOwnProperty.call(StyleSheet.flatten(n.props.style) || {}, 'paddingBottom')
+    && Object.prototype.hasOwnProperty.call(
+      StyleSheet.flatten(n.props.style) || {},
+      'paddingBottom',
+    )
     && n.findAllByType(ScrollView).length > 0
     && !n.findAllByType(KeyboardAvoidingView).length).length > 0;
   const resultat = {
     evitementPadding: evitements.some((e) => e.props.behavior === 'padding'),
-    retraitAuto: Boolean(liste.props.automaticallyAdjustKeyboardInsets),
     retraitAndroid,
+    retraitAuto: Boolean(liste.props.automaticallyAdjustKeyboardInsets),
   };
   act(() => arbre.unmount());
   return resultat;
@@ -173,8 +176,8 @@ const ouvrirLeClavier = (c, os) => {
   };
 };
 
-describe('CLAVSCROLL — clavier ouvert, le champ touché reste visible et « Suivant » accessible', () => {
-  it('iPhone 852 pt, clavier 336 pt : un seul évitement, le champ entre la liste et le clavier', () => {
+describe('CLAVSCROLL — clavier ouvert, le champ reste visible et « Suivant » accessible', () => {
+  it('iPhone 852 pt, clavier 336 pt : un seul évitement, le champ au-dessus du clavier', () => {
     const c = lireLesCompensations('ios', '18.0');
     expect(c.evitementPadding).toBe(true);
 
@@ -187,7 +190,7 @@ describe('CLAVSCROLL — clavier ouvert, le champ touché reste visible et « Su
     expect(c.retraitAuto).toBe(false);
   });
 
-  it('Android 15+ : marge basse du conteneur seulement, le champ et « Suivant » restent visibles', () => {
+  it('Android 15+ : marge basse du conteneur seule, champ et « Suivant » visibles', () => {
     const c = lireLesCompensations('android', 35);
     expect(c.evitementPadding).toBe(false);
     expect(c.retraitAndroid).toBe(true);
