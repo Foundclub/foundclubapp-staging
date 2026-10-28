@@ -537,7 +537,7 @@ describe('PAR-L10 — l écran plein dit pourquoi l alerte n a pas été enregis
       (/** @type {any} */ n) => n.props?.testID === 'saisie' && n.props?.onChangeText,
     )[0];
     await act(async () => { saisie.props.onChangeText('Matchs Marseille'); });
-    await appuyerSur(tree, 'Sauvegarder');
+    await appuyerSur(tree, 'Enregistrer'); // PETITSBUGS-2 (28/10) : common.save, accepté par le chef
     await act(async () => { await Promise.resolve(); });
     const appels = alerte.mock.calls;
     alerte.mockRestore();

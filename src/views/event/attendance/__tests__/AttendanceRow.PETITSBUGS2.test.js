@@ -13,7 +13,7 @@ jest.mock('@/theme/themeContext', () => {
   return {
     __esModule: true,
     default: () => ({
-      Colors: new Proxy({}, { get: () => '#000000' }),
+      Colors: new Proxy({}, { get: () => 'black' }),
       Fonts: new Proxy({}, { get: () => leaf }),
       Images: new Proxy({}, { get: () => 1 }),
     }),

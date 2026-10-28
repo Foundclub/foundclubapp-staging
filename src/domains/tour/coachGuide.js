@@ -70,10 +70,10 @@ const hadClub = (ctx) => Boolean(ctx?.flags?.hadClub);
 const hadTeam = (ctx) => Boolean(ctx?.flags?.hadTeam);
 
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
-const TEAM_QUOTA = 'Ton offre gratuite compte déjà toutes ses équipes : une nouvelle équipe '
-  + 'demande l’offre Équipe. Rien n’a été créé.';
-const EVENT_QUOTA = 'Ton offre gratuite compte déjà tous ses événements : un nouvel événement '
-  + 'demande l’offre Équipe. Rien n’a été créé.';
+const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
+  + 'une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.');
+const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déjà tous ses événements : '
+  + 'un nouvel événement demande l’offre Équipe. Rien n’a été créé.');
 
 const MISSIONS = [
   {
@@ -86,8 +86,8 @@ const MISSIONS = [
         return t('refusal.clubPartner', 'Ce club passe par son dirigeant : « Je dirige ce club » '
           + 'remplace « C’est mon club ». Choisis un autre club, ou passe cette mission.');
       },
-      get 'paywall.club-tier-team-limit'() { return t('refusal.teamQuota', TEAM_QUOTA); },
-      get 'paywall.team-limit'() { return t('refusal.teamQuota', TEAM_QUOTA); },
+      get 'paywall.club-tier-team-limit'() { return teamQuota(); },
+      get 'paywall.team-limit'() { return teamQuota(); },
     },
     get title() { return t('missions.m1', 'Créer ton équipe'); },
   },
@@ -104,8 +104,8 @@ const MISSIONS = [
     locked: true,
     needs: ['coach_m1'],
     refusals: {
-      get 'paywall.event-limit'() { return t('refusal.eventQuota', EVENT_QUOTA); },
-      get 'paywall.match-limit'() { return t('refusal.eventQuota', EVENT_QUOTA); },
+      get 'paywall.event-limit'() { return eventQuota(); },
+      get 'paywall.match-limit'() { return eventQuota(); },
     },
     get title() { return t('missions.m3', "Programmer l'entraînement de la semaine"); },
   },
