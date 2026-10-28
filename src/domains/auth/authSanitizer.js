@@ -234,6 +234,7 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   trainedTeamIds: normalizeIdList(
     user?.trainedTeams?.map((/** @type {any} */ team) => normalizeString(team?.documentId)),
   ),
+  videoCvUrl: normalizeString(user?.videoCvUrl),
   weight: user?.weight ?? null,
 });
 
@@ -312,6 +313,7 @@ export const sanitizeUser = (user) => {
     trainedTeams: Array.isArray(user?.trainedTeams)
       ? user.trainedTeams.map(sanitizeTeamSummary).filter(Boolean)
       : [],
+    videoCvUrl: normalizeString(user?.videoCvUrl),
     weight: user?.weight ?? null,
   };
 };

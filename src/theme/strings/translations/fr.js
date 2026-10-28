@@ -26968,6 +26968,48 @@ export default {
       readFailed: 'Lecture du visuel impossible.',
     },
   },
+  // VIDEOCV (28/10, planche validée par Adel) — la vidéo YouTube du profil du joueur.
+  videoCv: {
+    cardTitle: 'Vidéo',
+    errors: {
+      embed: {
+        body: 'Son auteur ne permet pas de la lire dans une autre application.',
+        title: 'Cette vidéo se regarde sur YouTube',
+      },
+      host: 'Seuls les liens YouTube sont acceptés : youtube.com, youtu.be ou un Short.',
+      incomplete: 'Ce lien YouTube est incomplet : il manque la vidéo.',
+      network: {
+        body: "La vidéo n'a pas pu se charger.",
+        title: 'Pas de connexion',
+      },
+      unavailable: {
+        body: 'Elle est peut-être devenue privée, ou a été supprimée sur YouTube.',
+        owner: "C'est ta vidéo ? Change le lien dans Mon profil.",
+        title: "Cette vidéo n'est plus disponible",
+      },
+    },
+    form: {
+      help: "Colle le lien d'une vidéo YouTube : tes meilleures actions, "
+        + 'un match, un entraînement.',
+      label: 'Lien YouTube',
+      placeholder: 'youtube.com/watch?v=… ou youtu.be/…',
+      previewHint: "Appuie sur lecture pour vérifier qu'elle se lit bien ici, "
+        + "avant d'enregistrer.",
+      privacy: 'FoundClub garde seulement le lien : la vidéo reste sur YouTube. '
+        + 'Elle est vue par les mêmes personnes que ton profil ; '
+        + 'si ton compte est privé, elle est cachée aussi.',
+      recognized: 'Lien YouTube reconnu',
+      remove: 'Retirer la vidéo',
+      removedNotice: 'La vidéo quittera ton profil quand tu enregistreras. '
+        + "Elle reste sur ta chaîne YouTube : FoundClub ne l'a jamais copiée.",
+      shareTip: 'Sur YouTube, touche « Partager » sous la vidéo, puis « Copier le lien ».',
+      undoTip: "Changé d'avis ? « Annuler », en bas, la remet.",
+    },
+    openInYoutube: 'Ouvrir dans YouTube',
+    play: 'Lire la vidéo',
+    retry: 'Réessayer',
+    sectionTitle: 'Ma vidéo',
+  },
   voiceComposer: {
     attach: 'Ajouter',
     delete: "Supprimer l'enregistrement",

@@ -606,3 +606,49 @@ describe('PAR-L12 — « Mon profil » suit le mode parent', () => {
     expect(texte).toContain('ECRAN PROFIL JOUEUR OU ENTRAINEUR');
   });
 });
+
+// VIDEOCV (28/10, planche validée par Adel) — la vidéo YouTube du profil.
+const CANONIQUE = 'https://www.youtube.com/watch?v=k3Lm9QpX2aE';
+const joueurVu = {
+  documentId: 'autre-1',
+  firstname: 'Lucas',
+  lastname: 'Martin',
+  position: 'Ailier',
+  role: { name: 'Joueur' },
+};
+
+/**
+ * La carte « Vidéo » du profil vu.
+ * @param {any} arbre
+ * @returns {any[]}
+ */
+const carteVideo = (arbre) => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props.testID === 'user-details-video-card',
+);
+
+describe('VIDEOCV — la carte « Vidéo » du profil d un autre', () => {
+  it('M8 — sans lien, RIEN : ni carte, ni espace', async () => {
+    mockFetchedUser = joueurVu;
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
+    expect(carteVideo(arbre)).toHaveLength(0);
+  });
+
+  it('M7 — avec lien : la carte, sa miniature, entre l identité et le profil sportif', async () => {
+    mockFetchedUser = { ...joueurVu, videoCvUrl: CANONIQUE };
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
+    expect(carteVideo(arbre)).not.toHaveLength(0);
+    const miniature = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props.testID === 'video-cv-player-thumbnail' && n.props.source,
+    )[0];
+    expect(miniature.props.source.uri).toBe('https://i.ytimg.com/vi/k3Lm9QpX2aE/hqdefault.jpg');
+    const texte = texteVisible(arbre);
+    expect(texte.indexOf('Lucas Martin')).toBeLessThan(texte.indexOf('Vidéo'));
+    expect(texte.indexOf('Vidéo')).toBeLessThan(texte.indexOf('Profil sportif'));
+  });
+
+  it('décision 2- A — un lien resté sur un ancien joueur ne s affiche pas', async () => {
+    mockFetchedUser = { ...joueurVu, role: { name: 'Entraineur' }, videoCvUrl: CANONIQUE };
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
+    expect(carteVideo(arbre)).toHaveLength(0);
+  });
+});

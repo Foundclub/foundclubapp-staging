@@ -30,6 +30,7 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import VideoCvPlayer from '@/components/molecules/videoCv/VideoCvPlayer';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -1331,6 +1332,23 @@ function UserDetails({ navigation, route }) {
           )}
 
           {estMonProfilDeParent ? <BlocMesEnfants navigation={navigation} toujours /> : null}
+
+          {/* VIDEOCV (planche M7/M8) — la video du JOUEUR, juste apres son identite. Sans lien :
+              rien, ni carte ni espace. Sa visibilite est celle du profil (un compte prive rend
+              deja 404 cote serveur, la video part avec le reste). */}
+          {showsPlayerBlocks && user?.videoCvUrl ? (
+            <View testID="user-details-video-card">
+              <SectionCard
+                ApplicationStyle={ApplicationStyle}
+                Colors={Colors}
+                Fonts={Fonts}
+                Spaces={Spaces}
+                title={t('videoCv.cardTitle', 'Vidéo')}
+              >
+                <VideoCvPlayer isOwner={isSelfPreview} url={user.videoCvUrl} />
+              </SectionCard>
+            </View>
+          ) : null}
 
           {/* D54 — les stats de match sont un bloc JOUEUR : le pack les
               range en « heritage joueur » et les interdit sur un profil d'entraineur.

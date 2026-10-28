@@ -25378,6 +25378,43 @@ export default {
       readFailed: 'Unable to read the visual.',
     },
   },
+  // VIDEOCV (28/10) — the YouTube video on a player's profile.
+  videoCv: {
+    cardTitle: 'Video',
+    errors: {
+      embed: {
+        body: 'Its owner does not allow it to be played in another app.',
+        title: 'This video can only be watched on YouTube',
+      },
+      host: 'Only YouTube links are accepted: youtube.com, youtu.be or a Short.',
+      incomplete: 'This YouTube link is incomplete: the video is missing.',
+      network: {
+        body: 'The video could not be loaded.',
+        title: 'No connection',
+      },
+      unavailable: {
+        body: 'It may have been made private, or deleted on YouTube.',
+        owner: 'Is this your video? Change the link in My profile.',
+        title: 'This video is no longer available',
+      },
+    },
+    form: {
+      help: 'Paste the link to a YouTube video: your best moves, a match, a training session.',
+      label: 'YouTube link',
+      placeholder: 'youtube.com/watch?v=… or youtu.be/…',
+      previewHint: 'Tap play to check it plays here before saving.',
+      privacy: 'FoundClub only keeps the link: the video stays on YouTube. It is seen by the same people as your profile; if your account is private, it is hidden too.',
+      recognized: 'YouTube link recognised',
+      remove: 'Remove the video',
+      removedNotice: 'The video will leave your profile when you save. It stays on your YouTube channel: FoundClub never copied it.',
+      shareTip: 'On YouTube, tap "Share" under the video, then "Copy link".',
+      undoTip: 'Changed your mind? "Cancel", at the bottom, brings it back.',
+    },
+    openInYoutube: 'Open in YouTube',
+    play: 'Play the video',
+    retry: 'Try again',
+    sectionTitle: 'My video',
+  },
   voiceComposer: {
     attach: 'Add',
     delete: 'Delete recording',

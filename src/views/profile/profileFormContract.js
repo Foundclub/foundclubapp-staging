@@ -1,5 +1,7 @@
 import { Joi } from '@/theme/strings';
 
+import { parseYoutubeUrl } from '@/components/molecules/videoCv/youtubeUrl';
+
 import { erreurPhysique, parseHeightCm } from '@/utils/heightCentimeters';
 
 // D39 — le contrat du formulaire de profil, extrait de `ProfileEdit.js` pour
@@ -27,6 +29,7 @@ export const defaultValues = {
   position: '',
   preferredSport: '',
   section: '',
+  videoCvUrl: '',
   weight: '',
 };
 
@@ -74,6 +77,20 @@ const bornePhysique = (champ) => (value, helpers) => {
   return cle ? helpers.message(cle) : valeur;
 };
 
+/**
+ * VIDEOCV (28/10) — le lien YouTube du joueur : vide (retirer la vidéo) ou un lien que le serveur
+ * acceptera ; ce qui part est la forme canonique. Le serveur reste seul juge.
+ * @param {any} value
+ * @param {any} helpers
+ * @returns {any}
+ */
+const lienYoutube = (value, helpers) => {
+  const lu = parseYoutubeUrl(value);
+  if ('empty' in lu) return '';
+  if ('error' in lu) return helpers.message(`videoCv.errors.${lu.error}`);
+  return lu.canonicalUrl;
+};
+
 export const profileSchema = Joi.object({
   address: Joi.object().allow(null).optional(),
   bestLevel: Joi.string().allow(null, '').optional(),
@@ -93,6 +110,7 @@ export const profileSchema = Joi.object({
   position: Joi.string().allow(null, '').optional(),
   preferredSport: Joi.string().allow(null, '').optional(),
   section: Joi.string().allow(null, '').optional(),
+  videoCvUrl: Joi.string().allow(null, '').optional().custom(lienYoutube),
   weight: Joi.string().allow(null, '').optional().custom(bornePhysique('weight')),
 }).unknown(true);
 
@@ -118,6 +136,7 @@ export const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   nationality: userData?.nationality || '',
   preferredSport: userData?.preferredSport || '',
   section: userData?.section?.documentId || '',
+  videoCvUrl: userData?.videoCvUrl || '',
   weight: userData?.weight ? String(userData.weight) : '',
 });
 
