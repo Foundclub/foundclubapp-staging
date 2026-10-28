@@ -186,6 +186,11 @@ const validateClubListPayload = async (data, meta) => {
   return { ...envelope, data: clubs.length ? clubs : undefined };
 };
 
+/**
+ * Les paramètres de GET /clubs.
+ * @param {Record<string, any>} [params]
+ * @returns {Record<string, any>}
+ */
 const buildClubListParams = (params = {}) => {
   const {
     activity,
@@ -272,6 +277,11 @@ const buildClubListParams = (params = {}) => {
   return filters;
 };
 
+/**
+ * Les paramètres de GET /multisport-clubs.
+ * @param {Record<string, any>} [params]
+ * @returns {Record<string, any>}
+ */
 const buildMultisportClubListParams = (params = {}) => {
   const {
     geohash,

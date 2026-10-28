@@ -88,6 +88,8 @@
  * @property {string} geohash
  * @property {string} activity
  * @property {{label: string, value: string}} city
+ * @property {number} [lat] - PHASE3C02 : le point de la ville (filtresAvecLieu).
+ * @property {number} [lon]
  * @property {number} radius
  */
 
