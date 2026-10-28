@@ -319,7 +319,13 @@ function TourGuideLayer() {
     rects[id] && !DOCK_IDS.includes(id) ? clipAboveDock(rects[id], dock) : rects[id],
   ]));
   const measuredTargets = variant.targets
-    .filter((id) => visibleRects[id] && isOnScreen(visibleRects[id], width, height));
+    // La barre d'onglets est fixe : seule une cible de contenu doit montrer un toucher entier.
+    .filter((id) => visibleRects[id] && isOnScreen(
+      visibleRects[id],
+      width,
+      height,
+      DOCK_IDS.includes(id) ? 0 : MIN_TOUCH,
+    ));
   const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
   // Décision d'Adel 4- A : l'en-tête ancré (Retour, Fermer) reste visible et
   // touchable sous le voile, sans cadre ; ce n'est pas la cible de l'étape.
@@ -343,7 +349,8 @@ function TourGuideLayer() {
     ? variant.targets.map((id) => rects[id]).find(Boolean)
     : null;
   let scrollHint = null;
-  if (offTarget && offTarget.y + offTarget.height <= 2) {
+  // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
+  if (offTarget && offTarget.y < 0) {
     scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
   } else if (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2) {
     scrollHint = t('tourGuide.scrollDown', 'Fais défiler vers le bas.');

@@ -1,7 +1,5 @@
 import Joi from 'joi';
 
-import { celebrate } from '@/services/celebrations/celebrationRuntime';
-
 import { createLogger } from '@/utils/logger/logger';
 
 import client from '../client';
@@ -127,9 +125,9 @@ export const createClubMembershipRequest = async (clubMembershipRequestData) => 
   const response = await client.post('/club-membership-requests', {
     data: clubMembershipRequestData,
   });
-  celebrate('club_membership_request_sent', {
-    clubId: clubMembershipRequestData?.club,
-  });
+  // GUIDE-REPRISE N2 : plus de bandeau « Demande envoyée » ici. Le serveur peut avoir
+  // RATTACHÉ la personne (club sans dirigeant) ; la fiche club, seul appelant, dit
+  // ce qui s'est vraiment passé (`clubAffiliationOutcome.js`).
   return response.data;
 };
 

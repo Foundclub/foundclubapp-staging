@@ -728,3 +728,74 @@ describe('GUIDE-RELANCE — club partenaire : la fiche prévient le guide', () =
     expect(signaux.filter((signal) => signal.kind === 'refusal')).toEqual([]);
   });
 });
+
+// ===========================================================================
+// GUIDE-REPRISE N2 (rejeu du 28/10, captures 97-98) — « C'est mon club ! » sur un
+// club sans dirigeant : le serveur RATTACHE le coach (`outcome: 'auto_affiliated'`,
+// demande `processed`), mais l'écran affichait aussi « Demande en attente ». Un
+// seul message, celui du serveur ; le guide n'entend « club rejoint » que s'il l'est.
+// ===========================================================================
+describe('GUIDE-REPRISE N2 — un seul message, celui du serveur', () => {
+  const REPONSE_COACH_RATTACHE = {
+    data: { documentId: 'req-3', state: 'processed' },
+    meta: {
+      affiliation: {
+        clubDocumentId: 'club-1',
+        clubName: 'BASKET CLUB DE LETOILE',
+        message: 'Tu fais maintenant partie de BASKET CLUB DE LETOILE.',
+        outcome: 'auto_affiliated',
+      },
+    },
+  };
+
+  /**
+   * Coach sur un club, réponse du serveur choisie ; rend les signaux du guide.
+   * @param {any} club - Le club affiché.
+   * @param {any} reponse - Ce que le serveur répond.
+   * @param {string} libelle - Le bouton touché.
+   * @returns {Promise<{ arbre: any, signaux: any[] }>} L'arbre et les signaux.
+   */
+  const rejoindre = async (club, reponse, libelle) => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    const signaux = [];
+    const desabonner = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    mockCanJoinClub = true;
+    mockCanContactAdmin = false;
+    mockUserData.role = { name: 'coach' };
+    mockClubQuery.data = club;
+    mockRoute = { params: { clubId: 'club-1' } };
+    /** @type {any} */ (createClubMembershipRequest).mockResolvedValue(reponse);
+    const arbre = monter();
+    await appuyerSur(arbre, libelle);
+    desabonner();
+    return { arbre, signaux };
+  };
+
+  it('club rejoint : pas de « Demande en attente », guide : « club.joined »', async () => {
+    const { arbre, signaux } = await rejoindre(
+      CLUB_SANS_DIRIGEANT,
+      REPONSE_COACH_RATTACHE,
+      "C'est mon club !",
+    );
+
+    expect(fenetresOuvertes().at(-1)).toEqual({
+      message: 'Tu fais maintenant partie de BASKET CLUB DE LETOILE.',
+      titre: 'C’est fait !',
+    });
+    expect(pressableAvecTexte(arbre, 'Demande en attente')).toBeUndefined();
+    expect(signaux.filter((signal) => signal.kind === 'action').map((signal) => signal.key))
+      .toEqual(['club.joined']);
+  });
+
+  it('demande qui attend : « Demande en attente », guide : « club.requested »', async () => {
+    const { arbre, signaux } = await rejoindre(
+      CLUB_AVEC_DIRIGEANT,
+      REPONSE_EN_ATTENTE_DU_DIRIGEANT,
+      LIBELLE_DEMANDER_A_REJOINDRE,
+    );
+
+    expect(pressableAvecTexte(arbre, 'Demande en attente')).toBeDefined();
+    expect(signaux.filter((signal) => signal.kind === 'action').map((signal) => signal.key))
+      .toEqual(['club.requested']);
+  });
+});

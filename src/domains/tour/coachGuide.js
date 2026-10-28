@@ -76,6 +76,39 @@ const hadClub = (ctx) => Boolean(ctx?.flags?.hadClub);
  * @returns {boolean}
  */
 const hadTeam = (ctx) => Boolean(ctx?.flags?.hadTeam);
+/**
+ * Le coach a un club accepté MAINTENANT (profil relu), pas seulement au départ :
+ * rejoint pendant une pause ou hors du guide (GUIDE-REPRISE N3).
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const hasClubNow = (ctx) => Boolean(ctx?.userData?.club?.documentId);
+/**
+ * Demande d'adhésion qui attend un dirigeant, sans club accepté (L1 GUIDE-ATTENTE).
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const isJoinPending = (ctx) => {
+  const requests = ctx?.userData?.clubMembershipRequests;
+  return !hasClubNow(ctx) && (Array.isArray(requests) ? requests : [])
+    .some((/** @type {any} */ request) => request?.state === 'pending');
+};
+/**
+ * Branche « trouve ton club » : ni équipe, ni club (au départ comme maintenant),
+ * ni demande en attente. Sinon la bulle « Pas de club ? » s'affichait sur le
+ * tunnel équipe d'un coach qui avait déjà son club (N3, capture K4).
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const needsClub = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
+  && !hasClubNow(ctx) && !isJoinPending(ctx);
+/**
+ * Suite « club rejoint » : seulement si le club a été rejoint PENDANT le guide.
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const joinedInGuide = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
+  && Boolean(ctx?.created?.['club.joined']);
 
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
@@ -200,6 +233,31 @@ const STEPS = [
     when: (/** @type {any} */ ctx) => !hadTeam(ctx),
   },
   {
+    // L1 GUIDE-ATTENTE (décision « 1- A » de l'audit : le guide attend, et le dit).
+    // La demande d'adhésion attend un dirigeant : le tunnel équipe la refuse, et
+    // « Nouvelle équipe » ↔ « J'ai compris » tournait en boucle (rejeu, captures
+    // 03-05). « Compris » met le guide en pause ; reprise sur Équipes quand le
+    // club a répondu. Sans serveur : le remodelage de l'adhésion (registre des
+    // mineurs, ligne 49) créera l'équipe tout de suite ; le tunnel n'étant plus
+    // refusé, cette étape ne s'affichera plus.
+    id: 'm1-wait',
+    missionId: 'coach_m1',
+    navTarget: teamHubTarget,
+    get nextLabel() { return t('understood', 'Compris'); },
+    get pausedLabel() { return t('m1-wait-pill', 'En attente du club · Reprendre'); },
+    pauseOnNext: true,
+    resumeFrom: 'm1-dock',
+    get text() {
+      return t(
+        'm1-wait',
+        'Ta demande pour rejoindre ton club attend la réponse d’un dirigeant. Le guide t’attend : '
+          + 'dès qu’il accepte, reprends-le ici, tu créeras ton équipe. En attendant, explore '
+          + 'l’app librement.',
+      );
+    },
+    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && isJoinPending(ctx),
+  },
+  {
     advanceOn: { key: RouteNames.TeamWizardName, type: 'route' },
     id: 'm1-new',
     missionId: 'coach_m1',
@@ -210,7 +268,7 @@ const STEPS = [
       targets: ['teams.fab'],
       get text() { return t('m1-new-fab', 'Crée ton équipe avec ce bouton.'); },
     }],
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx),
+    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !isJoinPending(ctx),
   },
   // Branche sans club : l'écran « Il te faut d'abord un club » du tunnel équipe.
   {
@@ -229,7 +287,7 @@ const STEPS = [
           + 'Je ne trouve pas mon club » te guidera pour le créer.',
       );
     },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: needsClub,
   },
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
@@ -241,10 +299,14 @@ const STEPS = [
     get text() { return t('m1-csearch', 'Tape le nom de ton club, puis ouvre sa fiche.'); },
     // Taper le nom puis ouvrir la fiche : le champ doit rester libre (CALIBRAGE-2).
     veil: false,
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: needsClub,
   },
   {
-    advanceOn: { key: 'club.joined', type: 'action' },
+    advanceOn: [
+      { key: 'club.joined', type: 'action' },
+      // Club qui a un dirigeant : la demande attend (L1 GUIDE-ATTENTE).
+      { goto: 'm1-wait', key: 'club.requested', type: 'action' },
+    ],
     id: 'm1-mine',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
@@ -258,22 +320,23 @@ const STEPS = [
         return t('m1-mine-ask', 'C’est ton club ? Demande à le rejoindre : un dirigeant validera.');
       },
     }],
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: needsClub,
   },
   {
     advanceOn: { key: 'club.joined.ack', type: 'interaction' },
     bubblePlacement: 'top',
     id: 'm1-ok',
     missionId: 'coach_m1',
-    resumeFrom: 'm1-dock',
+    // Club rejoint : la reprise ne repasse plus par « trouve ton club » (N3).
+    resumeFrom: 'm1-dock2',
     get text() { return t('m1-ok', 'Tu fais maintenant partie du club. Touche OK.'); },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: joinedInGuide,
   },
   {
     advanceOn: { not: RouteNames.Club, type: 'route' },
     id: 'm1-back',
     missionId: 'coach_m1',
-    resumeFrom: 'm1-dock',
+    resumeFrom: 'm1-dock2',
     // Décision d'Adel 4- A (28/10) : cadre sur la flèche, bulle dessous, et le
     // geste du bord (seul retour d'un iPhone). Rien n'est bloqué : le glissement
     // depuis le bord doit passer.
@@ -286,7 +349,7 @@ const STEPS = [
       );
     },
     veil: false,
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: joinedInGuide,
   },
   {
     advanceOn: [
@@ -295,19 +358,21 @@ const STEPS = [
     ],
     id: 'm1-dock2',
     missionId: 'coach_m1',
-    resumeFrom: 'm1-dock',
+    // Reprise de la suite « club rejoint » : depuis l'accueil.
+    navTarget: homeTarget,
+    resumeFrom: 'm1-dock2',
     targets: ['dock.teams'],
     get text() { return t('m1-dock2', 'Retourne dans Équipes pour créer ton équipe.'); },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: joinedInGuide,
   },
   {
     advanceOn: { goto: 'tw1', key: RouteNames.TeamWizardName, type: 'route' },
     id: 'm1-new2',
     missionId: 'coach_m1',
-    resumeFrom: 'm1-dock',
+    resumeFrom: 'm1-dock2',
     targets: ['teams.fab', 'teams.newTeam'],
     get text() { return t('m1-new2', 'Ton club est rejoint : touche « Nouvelle équipe ».'); },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
+    when: joinedInGuide,
   },
   {
     // Variante « Je ne trouve pas mon club » : tunnel de création de club

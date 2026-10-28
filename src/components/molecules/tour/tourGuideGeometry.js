@@ -44,22 +44,29 @@ export const toAbsoluteStyle = (rect) => ({
  */
 export const stableHeight = (previous, next) => (Math.abs(next - previous) < 1 ? previous : next);
 
+// Hauteur minimale d'un toucher (accessibilité).
+const MIN_TOUCH = 44;
+
 /**
- * La cible est-elle (au moins en partie) à l'écran ? Une cible hors écran
- * donnait une découpe de hauteur négative et une bulle hors écran.
+ * La cible est-elle à l'écran ? Une cible hors écran donnait une découpe de
+ * hauteur négative et une bulle hors écran. GUIDE-REPRISE N5 (rejeu du 28/10,
+ * captures 40-41) : avec `minVisible`, une lamelle qui dépasse du bord ne compte
+ * pas, sinon le voile s'allume dessus, bloque le défilement qui la ferait entrer,
+ * et « Fais défiler » ne s'affiche pas (même règle que `clipAboveDock`).
  * ponytail: on ne fait pas défiler l'écran jusqu'à la cible (pack 04 §2,
  * point 5) : bulle en haut et écran libre ; la re-mesure la découpe dès que la
  * personne la fait entrer à l'écran. Sortie : un `scrollTo` par écran ancré.
  * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
  * @param {number} screenWidth - Largeur de la couche.
  * @param {number} screenHeight - Hauteur de la couche.
+ * @param {number} [minVisible] - Hauteur visible exigée (bornée à celle de la cible).
  * @returns {boolean} À l'écran ?
  */
-export const isOnScreen = (rect, screenWidth, screenHeight) => rect.y < screenHeight - 2
-  && rect.y + rect.height > 2 && rect.x < screenWidth - 2 && rect.x + rect.width > 2;
-
-// Hauteur minimale d'un toucher (accessibilité).
-const MIN_TOUCH = 44;
+export const isOnScreen = (rect, screenWidth, screenHeight, minVisible = 0) => {
+  const visible = Math.min(rect.y + rect.height, screenHeight - 2) - Math.max(rect.y, 2);
+  return visible > 0 && visible >= Math.min(rect.height, minVisible)
+    && rect.x < screenWidth - 2 && rect.x + rect.width > 2;
+};
 
 /**
  * Coupe une cible au-dessus de la barre d'onglets flottante, qui recouvre le

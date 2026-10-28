@@ -106,7 +106,10 @@ import {
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
-import { resolveClubAffiliationOutcome } from '@/services/requests/clubAffiliationOutcome';
+import {
+  isAutoAffiliated,
+  resolveClubAffiliationOutcome,
+} from '@/services/requests/clubAffiliationOutcome';
 import { resolveClubAffiliationRefusal } from '@/services/requests/clubAffiliationRefusal';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
@@ -553,9 +556,17 @@ function ClubDetails({ navigation, route }) {
       );
     },
     onSuccess: async (reponseServeur) => {
-      setJoinRequestPending(true);
-      // Guide Entraîneur (TUTOE, M1 sans club) : le club est rejoint.
-      emitGuidanceAction('club.joined', { clubName: club?.name || '' });
+      // GUIDE-REPRISE N2 (rejeu du 28/10, captures 97-98) : un club sans dirigeant
+      // RATTACHE le coach (`auto_affiliated`) ; « Demande en attente » contredisait
+      // alors l'alerte « C'est fait ! ». Seule une vraie demande attend.
+      const rattache = isAutoAffiliated(reponseServeur);
+      if (!rattache) setJoinRequestPending(true);
+      // Guide Entraîneur (TUTOE, M1 sans club) : club rejoint, ou demande qui attend
+      // un dirigeant (GUIDE-ATTENTE : le guide le dit et attend).
+      emitGuidanceAction(
+        rattache ? 'club.joined' : 'club.requested',
+        { clubName: club?.name || '' },
+      );
       // LOT INSTANT (2026-08-27) — LA RECETTE QUI DORMAIT. `joinClub` etait
       // ecrite dans le registre depuis le lot T08 et n'avait AUCUN appelant :
       // cet ecran ne posait aucune invalidation. La demande partait, et

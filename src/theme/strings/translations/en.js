@@ -23722,6 +23722,8 @@ export default {
       'm1-new2': "You've joined your club: tap \"New team\".",
       'm1-ok': "You're now part of the club. Tap OK.",
       'm1-sheet': 'Your club already has teams: you could join one. Here, create your own.',
+      'm1-wait': 'Your request to join your club is waiting for a club manager. The guide is waiting too: once they accept, resume it here and you will create your team. Meanwhile, feel free to explore the app.',
+      'm1-wait-pill': 'Waiting for the club · Resume',
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",

@@ -24706,6 +24706,10 @@ export default {
       'm1-new2': 'Ton club est rejoint : touche « Nouvelle équipe ».',
       'm1-ok': 'Tu fais maintenant partie du club. Touche OK.',
       'm1-sheet': 'Ton club a déjà des équipes : tu pourrais en rejoindre une. Ici, crée la tienne.',
+      'm1-wait': 'Ta demande pour rejoindre ton club attend la réponse d’un dirigeant. '
+        + 'Le guide t’attend : dès qu’il accepte, reprends-le ici, tu créeras ton équipe. '
+        + 'En attendant, explore l’app librement.',
+      'm1-wait-pill': 'En attente du club · Reprendre',
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',

@@ -253,3 +253,33 @@ describe('L4 — reprise sur une cible hors écran', () => {
     expect(bubbleText(tree)).not.toContain('Fais défiler');
   });
 });
+
+// GUIDE-REPRISE N5 (rejeu du 28/10, captures 40-41) : b1-vide « Ici, tu verras qui
+// vient » visait la zone Participants qui dépassait de 12 pt en bas de l'écran.
+// Elle comptait « à l'écran » : cadre de 32 px tout en bas, voile qui bloquait le
+// défilement, pas de « Fais défiler » ; les profils d'exemple restaient invisibles.
+describe('GUIDE-REPRISE N5 — cible qui ne dépasse que d’une lamelle', () => {
+  const blockersOf = (tree) => tree.root.findAll((node) => typeof node.type === 'string'
+    && String(node.props.testID || '').startsWith('tour.blocker'));
+
+  it('zone Participants dépassant de 12 pt en bas : « Fais défiler », sans voile', async () => {
+    mountTarget('event.participants', {
+      height: 400, width: 358, x: 16, y: 778,
+    });
+    mockTour = activeTour(step('b1-vide'));
+    const tree = await renderLayer();
+    expect(framesOf(tree)).toHaveLength(0);
+    expect(blockersOf(tree)).toHaveLength(0);
+    expect(bubbleText(tree)).toContain('Fais défiler vers le bas');
+  });
+
+  it('la même zone remontée à l’écran : cadre, voile, plus de « Fais défiler »', async () => {
+    mountTarget('event.participants', {
+      height: 400, width: 358, x: 16, y: 300,
+    });
+    mockTour = activeTour(step('b1-vide'));
+    const tree = await renderLayer();
+    expect(framesOf(tree)).toHaveLength(1);
+    expect(bubbleText(tree)).not.toContain('Fais défiler');
+  });
+});
