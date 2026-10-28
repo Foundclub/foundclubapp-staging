@@ -13,11 +13,13 @@
  */
 
 const mockGet = jest.fn();
+const mockPost = jest.fn();
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {
     get: mockGet,
+    post: mockPost,
   },
 }));
 
@@ -25,7 +27,12 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({
   celebrate: jest.fn(),
 }));
 
-const { getClubMembershipRequests } = require('../clubMembershipRequestService');
+const { celebrate } = require('@/services/celebrations/celebrationRuntime');
+
+const {
+  createClubMembershipRequest,
+  getClubMembershipRequests,
+} = require('../clubMembershipRequestService');
 
 const PAGINATION = {
   page: 1, pageCount: 1, pageSize: 50, total: 2,
@@ -91,5 +98,20 @@ describe('S01 — getClubMembershipRequests, le filet qui manquait', () => {
     mockGet.mockResolvedValueOnce({ data: { data: [HEALTHY_REQUEST] } });
 
     await expect(getClubMembershipRequests('club-1', { pageSize: 50 })).rejects.toThrow();
+  });
+});
+
+// GUIDE-REPRISE N2 (rejeu du 28/10, captures 97-98) : le bandeau « Demande envoyée »
+// partait à chaque envoi, même quand le serveur avait rattaché le coach (« C'est fait ! »).
+// La fiche club, seul appelant, dit déjà ce qui s'est passé : le service se tait.
+describe('GUIDE-REPRISE N2 — le service ne parle pas à la place du serveur', () => {
+  test('aucun bandeau « Demande envoyée » posé par le service', async () => {
+    mockPost.mockResolvedValueOnce({
+      data: { data: { state: 'processed' }, meta: { affiliation: { outcome: 'auto_affiliated' } } },
+    });
+
+    await createClubMembershipRequest({ club: 'club-1' });
+
+    expect(celebrate).not.toHaveBeenCalled();
   });
 });

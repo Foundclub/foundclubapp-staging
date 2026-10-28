@@ -51,7 +51,8 @@ function TourResumePill() {
         style={{ justifyContent: 'center', minHeight: 28 }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          {t('tourGuide.resume', 'Reprendre le tour')}
+          {/* L1 GUIDE-ATTENTE : une étape d'attente dit ce qu'elle attend. */}
+          {tour.currentStep?.pausedLabel || t('tourGuide.resume', 'Reprendre le tour')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity

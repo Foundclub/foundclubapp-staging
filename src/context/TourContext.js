@@ -14,6 +14,7 @@ import {
   firstIndexOfNextMission,
   getMission,
   indexOfStep,
+  isStepAvailable,
   matchCurrentRoute,
   matchSignal,
   missionPosition,
@@ -158,7 +159,11 @@ export function TourProvider({ children }) {
     hydratedUserRef.current = userId;
     clearSuccessTimer();
     setTourState(null);
-    setGuideDone(Boolean(userId && storage.getString(getGuideDoneKey(userId))));
+    // GUIDE-REPRISE N1 (rejeu du 28/10, captures 09 et 54) : la marque n'existe que
+    // depuis la 2.6.84. Un guide d'avant laisse des bonus « pour plus tard » ou une
+    // progression gardée (marquée plus bas) : il a déjà été lancé.
+    setGuideDone(Boolean(userId && (storage.getString(getGuideDoneKey(userId))
+      || storage.getString(getBonusLaterKey(userId)))));
     if (!userId) return;
     try {
       const raw = storage.getString(getStorageKey(userId));
@@ -173,6 +178,8 @@ export function TourProvider({ children }) {
           storage.delete(getStorageKey(userId));
           return;
         }
+        storage.set(getGuideDoneKey(userId), '1');
+        setGuideDone(true);
         setTourState({
           created: saved.created || {},
           flags: saved.flags || {},
@@ -242,6 +249,7 @@ export function TourProvider({ children }) {
     /** @type {number} */ index,
     /** @type {number} */ depth = 0,
     /** @type {string | null} */ stepRoute = null,
+    /** @type {string | null} */ entryRoute = lastRouteRef.current,
   ) => {
     const profile = getTourProfile(base.profileKey);
     if (!profile || index < 0 || index >= profile.steps.length) {
@@ -270,7 +278,7 @@ export function TourProvider({ children }) {
       && profile.steps[first.index]?.missionId === profile.steps[index]?.missionId;
     historyRef.current = [
       ...(sameMission ? historyRef.current : []),
-      { index, route: lastRouteRef.current, stepRoute },
+      { index, route: entryRoute, stepRoute },
     ];
     setTourState(nextState);
     persist(nextState);
@@ -296,8 +304,14 @@ export function TourProvider({ children }) {
   ) => {
     clearSuccessTimer();
     const stepRoute = match.advance?.type === 'route' ? lastRouteRef.current : null;
+    // GUIDE-REPRISE N4 (capture 94) : après un geste (« Rechercher mon club »),
+    // l'écran affiché n'est pas encore celui de l'étape ; c'est le premier vu
+    // (`stepBack`). Sinon le retour d'une fiche club ne retrouvait pas m1-csearch.
+    const entryRoute = match.advance && match.advance.type !== 'route'
+      ? null
+      : lastRouteRef.current;
     if (!match.completes) {
-      enterGuideStep(current, match.index, 0, stepRoute);
+      enterGuideStep(current, match.index, 0, stepRoute, entryRoute);
       return;
     }
     const profile = getTourProfile(current.profileKey);
@@ -318,7 +332,7 @@ export function TourProvider({ children }) {
     persist(rewarded);
     successTimerRef.current = setTimeout(() => {
       successTimerRef.current = null;
-      enterGuideStep(rewarded, match.index, 0, stepRoute);
+      enterGuideStep(rewarded, match.index, 0, stepRoute, entryRoute);
     }, REWARD_DISPLAY_MS);
   }, [enterGuideStep, persist]);
 
@@ -463,6 +477,12 @@ export function TourProvider({ children }) {
         skipMission();
         return;
       }
+      // L1 GUIDE-ATTENTE : « Compris » d'une étape d'attente met le guide en pause.
+      if (step.pauseOnNext) {
+        clearSuccessTimer();
+        setTourState({ ...current, reward: null, status: 'paused' });
+        return;
+      }
       // Bouton de la bulle (« Compris », « C'est parti », « Continuer »).
       applyGuideMatch(current, {
         completes: Boolean(step.completesMission),
@@ -550,7 +570,11 @@ export function TourProvider({ children }) {
       // au début du tunnel (le brouillon est perdu) : `resumeFrom`. Une pause
       // dans la même séance revient à l'étape en pause (décision du chef, 27/10).
       const step = profile.steps[current.stepIndex];
-      const resumeIndex = current.restored && step?.resumeFrom
+      // L1 GUIDE-ATTENTE : l'attente est finie (club accepté ou demande refusée)
+      // ⇒ la mission repart de `resumeFrom`, comme après un relancement.
+      const waitOver = Boolean(step?.pauseOnNext)
+        && !isStepAvailable(step, guideContext(current));
+      const resumeIndex = (current.restored || waitOver) && step?.resumeFrom
         ? indexOfStep(profile, step.resumeFrom)
         : -1;
       const index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
@@ -619,17 +643,19 @@ export function TourProvider({ children }) {
         return;
       }
       if (isGuideProfile(profile)) {
-        const match = matchSignal(profile, current.stepIndex, signal, guideContext(current));
-        if (!match) {
-          if (signal?.kind === 'route') stepBack(current, signal.key);
-          return;
-        }
+        // Ce que l'action vient de créer compte déjà pour choisir l'étape suivante
+        // (« club rejoint » ouvre la suite m1-ok, GUIDE-REPRISE N3).
         const withCreated = signal.kind === 'action'
           ? {
             ...current,
             created: { ...(current.created || {}), [signal.key]: signalMeta(signal) },
           }
           : current;
+        const match = matchSignal(profile, current.stepIndex, signal, guideContext(withCreated));
+        if (!match) {
+          if (signal?.kind === 'route') stepBack(current, signal.key);
+          return;
+        }
         applyGuideMatch(withCreated, match);
         return;
       }
