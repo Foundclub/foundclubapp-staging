@@ -94,7 +94,7 @@ export const buildYoutubeEmbedPage = (videoId) => {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
-html,body{margin:0;height:100%;background:#000;overflow:hidden}
+html,body{margin:0;height:100%;background:black;overflow:hidden}
 #p{width:100%;height:100%}
 </style>
 </head><body><div id="p"></div>

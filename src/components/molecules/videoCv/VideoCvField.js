@@ -32,7 +32,9 @@ function VideoCvField({
   } = useTheme();
   const lu = parseYoutubeUrl(value);
   const valide = 'videoId' in lu;
-  const enregistree = valide && lu.canonicalUrl === parseYoutubeUrl(savedValue)?.canonicalUrl;
+  const lienEnregistre = parseYoutubeUrl(savedValue);
+  const enregistree = valide && 'videoId' in lienEnregistre
+    && lu.canonicalUrl === lienEnregistre.canonicalUrl;
   const retiree = 'empty' in lu && Boolean(String(savedValue || '').trim());
   // S1 (planche) : sur un écran d'au moins 1 024 px, le lecteur à gauche et le champ à droite.
   const coteACote = useWindowDimensions().width >= 1024 && valide;

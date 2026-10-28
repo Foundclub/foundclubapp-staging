@@ -5,7 +5,7 @@ import VideoCvPlayer from '../VideoCvPlayer.web';
 // VIDEOCV (28/10) — le lecteur du site. Décision 1- A : la miniature d'abord ; l'iframe
 // youtube-nocookie ne naît qu'à l'appui.
 
-jest.mock('@/platform/links', () => ({ openUrl: jest.fn() }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/components/atoms/glyphIcon/GlyphIcon', () => () => null);
 jest.mock('@/theme/themeContext', () => {
   const leaf = {};
@@ -14,7 +14,7 @@ jest.mock('@/theme/themeContext', () => {
     __esModule: true,
     default: () => ({
       ApplicationStyle: ramp(),
-      Colors: new Proxy({}, { get: () => '#000000' }),
+      Colors: new Proxy({}, { get: () => 'black' }),
       Fonts: ramp(),
       Spaces: new Proxy({}, { get: () => ramp() }),
     }),

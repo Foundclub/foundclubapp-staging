@@ -20,7 +20,7 @@ jest.mock('react-native-webview', () => {
   return { WebView };
 });
 
-jest.mock('@/platform/links', () => ({ openUrl: jest.fn() }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 
 jest.mock('@/components/atoms/glyphIcon/GlyphIcon', () => () => null);
 
@@ -31,14 +31,14 @@ jest.mock('@/theme/themeContext', () => {
     __esModule: true,
     default: () => ({
       ApplicationStyle: ramp(),
-      Colors: new Proxy({}, { get: () => '#000000' }),
+      Colors: new Proxy({}, { get: () => 'black' }),
       Fonts: ramp(),
       Spaces: new Proxy({}, { get: () => ramp() }),
     }),
   };
 });
 
-const { openUrl } = jest.requireMock('@/platform/links');
+const { openUrl } = jest.requireMock('@/platform/links').default;
 
 const URL = 'https://www.youtube.com/watch?v=k3Lm9QpX2aE';
 

@@ -14,7 +14,7 @@ import {
   youtubeErrorKind,
 } from '@/components/molecules/videoCv/youtubeUrl';
 
-import { openUrl } from '@/platform/links';
+import LinksPlatform from '@/platform/links';
 
 /**
  * VIDEOCV (28/10, planche validée par Adel) — la vidéo YouTube du profil, sur le téléphone.
@@ -102,7 +102,7 @@ function VideoCvPlayer({ isOwner = false, testID = 'video-cv-player', url }) {
       canonicalUrl={canonicalUrl}
       isOwner={isOwner}
       media={media}
-      onOpenYoutube={() => openUrl(canonicalUrl)}
+      onOpenYoutube={() => LinksPlatform.openUrl(canonicalUrl)}
       onRetry={() => setState('playing')}
       state={state}
       testID={testID}
