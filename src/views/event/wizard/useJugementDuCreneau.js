@@ -118,7 +118,8 @@ const useJugementDuCreneau = (etat, {
 
   // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — les vacances de la zone
   // de l'installation (le planning, `meta.holidays`, comme la Ville) sur la période répétée.
-  // Le serveur ne les connaît que pour une installation d'une collectivité : ailleurs, rien.
+  // Le serveur les connaît pour une installation d'une collectivité et, depuis VACCLUB (27/10), pour
+  // le terrain d'un club dont la commune est connue ; ailleurs, rien (pas de case).
   const periode = etat?.isRecurrent && date
     ? {
       from: format(new Date(date), 'yyyy-MM-dd'),

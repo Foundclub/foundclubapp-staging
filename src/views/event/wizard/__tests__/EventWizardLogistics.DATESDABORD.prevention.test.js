@@ -1,6 +1,9 @@
 /* eslint-disable max-len -- des phrases entières, comparées telles quelles */
+import { format } from 'date-fns';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
+
+import { createReccurrentEventPayload } from '@/domains/event/eventUseCases';
 
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardLogistics from '../EventWizardLogistics';
@@ -265,7 +268,44 @@ describe('DATESDABORD 6- B — « Date & horaire » prévient à chaque horaire,
     expect(etatDuTunnel.holidayPeriods).toHaveLength(1);
   });
 
-  test('zone inconnue (gymnase du club) : pas de case, rien ne part', () => {
+  // 🌴 VACCLUB (27/10, Adel « 1- B ») — le TERRAIN D'UN CLUB : le serveur rend la zone de la commune
+  // du club (`meta.holidays`, VACCLUB-1 côté admin) ; la même case apparaît, et la série dépliée
+  // n'a pas les séances des vacances. L'app ne fait aucune différence avec la Ville : le ROUGE de ce
+  // lot est côté serveur (le planning du terrain du club rendait `holidays: null`).
+  test('le terrain du club, commune connue (Caen, zone B) : la case apparaît et la série la respecte', () => {
+    mockVacances = {
+      label: 'Zone B',
+      periods: [{
+        end: '2026-11-01', key: '2026-2027:toussaint', name: 'Toussaint', start: '2026-10-17',
+      }],
+      zone: 'B',
+    };
+    afficherLEcran({ facility: 'terrain-du-club', location: null });
+    expect(mockFenetres.at(-1).installation).toBe('terrain-du-club');
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-chaque-semaine' }).props.onPress());
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-sauf-vacances' }).props.onPress());
+    act(() => dernierGabarit().onNext());
+    expect(etatDuTunnel.exceptHolidays).toBe(true);
+    const seances = createReccurrentEventPayload({
+      capacity: 10,
+      date: '08/10/2026',
+      endTime: '21:00',
+      exceptHolidays: etatDuTunnel.exceptHolidays,
+      holidayPeriods: etatDuTunnel.holidayPeriods,
+      isRecurrent: true,
+      recurrenceDays: [4],
+      recurrenceEndDate: '12/11/2026',
+      recurrenceFrequency: 'week',
+      recurrenceInterval: 1,
+      recurrenceStartDate: '08/10/2026',
+      sessionStatus: 'closed',
+      startTime: '19:30',
+      time: '19:30',
+    }).map((seance) => format(new Date(seance.date), 'yyyy-MM-dd'));
+    expect(seances).toEqual(['2026-10-08', '2026-10-15', '2026-11-05', '2026-11-12']);
+  });
+
+  test('zone inconnue (club sans commune connue) : pas de case, rien ne part', () => {
     afficherLEcran();
     act(() => arbre.root.findByProps({ testID: 'date-et-horaire-chaque-semaine' }).props.onPress());
     expect(arbre.root.findAllByProps({ testID: 'date-et-horaire-sauf-vacances' })).toHaveLength(0);
