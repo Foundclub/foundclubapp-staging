@@ -1,0 +1,27 @@
+# CLAVIER-FOND (28/10) — création d'équipe, étape 1/8 « Nom de l'équipe », sur un vrai simulateur.
+# Constat d'Adel (2.6.83 puis 2.6.84) : à l'ouverture du clavier, l'écran défile trop haut et le
+# champ disparaît. Attendu : titre, champ « Nom » et « Suivant » visibles au-dessus du clavier.
+# Compte : entraîneur ou dirigeant d'un club de recette (le champ prend le clavier tout seul).
+appId: com.foundclub
+---
+- launchApp:
+    clearState: true
+- runFlow: _connexion.yaml
+- tapOn: "Équipes"
+- tapOn: "Nouvelle équipe"
+# Club qui a déjà des équipes : la question « rejoindre / reprendre / créer » d'abord.
+- runFlow:
+    when:
+      visible: "Créer une nouvelle équipe"
+    commands:
+      - tapOn: "Créer une nouvelle équipe"
+- extendedWaitUntil:
+    visible: "Nom de l'équipe"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 11-nom-equipe-clavier-ouvert
+- assertVisible: "Ex. : U15 Filles"
+- assertVisible: "Suivant"
+- inputText: "U15 Clavier"
+- takeScreenshot: 12-nom-equipe-texte-tape

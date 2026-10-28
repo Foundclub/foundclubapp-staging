@@ -1,0 +1,23 @@
+# CLAVIER-FOND (28/10) — connexion d'un compte de RECETTE (numéro de test Firebase, jamais un vrai
+# numéro). Le numéro et le code viennent de l'environnement (groupe secret Codemagic
+# `foundclub_recette`) : rien n'est écrit dans le dépôt.
+# Sélecteurs = textes de fr.js (login.*, otp.*). NON VÉRIFIÉ au simulateur : premier passage à relire.
+appId: com.foundclub
+---
+- runFlow:
+    when:
+      visible: "Se connecter"
+    commands:
+      - tapOn: "Se connecter"
+- tapOn: "0612345678"
+- inputText: ${FC_RECETTE_TEL}
+- tapOn: "Se connecter"
+- extendedWaitUntil:
+    visible: "Confirme ton numéro"
+    timeout: 30000
+- tapOn: "123456"
+- inputText: ${FC_RECETTE_CODE}
+- tapOn: "Confirmer"
+- extendedWaitUntil:
+    notVisible: "Confirme ton numéro"
+    timeout: 30000

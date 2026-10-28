@@ -27,6 +27,8 @@ import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 // l'animation de sortie qu'on vient d'interrompre. Calée sur la même échelle
 // que la reprise de présentation ci-dessous (260 ms), avec de la marge.
 const STALE_DISMISS_WINDOW_MS = 400;
+// `@gorhom/bottom-sheet` 5.2.4 (constants INITIAL_LAYOUT_VALUE) : mesure pas encore reçue.
+const INITIAL_LAYOUT_VALUE = -999;
 
 // ⌨️ CLAVREGLE (23/10) — LA RÈGLE DU CLAVIER, POUR TOUTES LES FEUILLES : un champ touché se place
 // au-dessus du clavier. `@gorhom/bottom-sheet` 5.2.4 ne suit le clavier que si un champ est
@@ -47,16 +49,43 @@ const STALE_DISMISS_WINDOW_MS = 400;
 // feuilles de 78, 84 et 86 % se refermaient au focus. Même règle qu'iPhone, sauf les feuilles en
 // `androidKeyboardBehavior="extend"` (la bibliothèque réduit leur contenu, sans ce chemin).
 // Témoin : __tests__/BottomModalCLAVPOPANDROID.clavier.test.js.
+// ⌨️ CLAVIER-FOND (28/10) — CLAVPOP comptait sur la bibliothèque pour réduire son conteneur quand
+// `bottomInset` change : elle ne le fait pas. Sa hauteur de conteneur n'est recalculée que si la
+// hauteur MESURÉE change (hooks/useAnimatedLayout : `result === previous` ⇒ sortie, et Reanimated
+// garde `previous` quand la réaction est réenregistrée). Seul le cadre raccourcissait : la feuille
+// restait où elle était, le clavier par-dessus (VU par Adel, 2.6.84, « Nommer l'adversaire »).
+// La feuille rend donc elle-même à la bibliothèque l'écart de `bottomInset` : crans recalculés,
+// position = cran de l'index courant (jamais -1, la feuille ne se ferme pas).
+// Témoin : __tests__/BottomModalCLAVIERFOND.clavier.test.js (code installé de la bibliothèque).
+// ponytail: si une version de @gorhom recalcule elle-même ce conteneur, l'écart serait retiré deux
+// fois ; le témoin exécute le code installé et le dira.
 /**
  * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
  * @param {object} props
+ * @param {number} props.basDuConteneur - Part de `bottomInset` qui pose la feuille sur le clavier.
  * @param {React.ReactNode} props.children
  * @param {boolean} props.declare - Faux quand la feuille se pose elle-même sur le clavier.
  * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
  * @returns {React.ReactElement}
  */
-function ChampsSuivisParLeClavier({ children, declare, style }) {
+function ChampsSuivisParLeClavier({
+  basDuConteneur, children, declare, style,
+}) {
   const interne = useBottomSheetInternal(true);
+  const basPrecedentRef = useRef(basDuConteneur);
+  useEffect(() => {
+    const ecart = basDuConteneur - basPrecedentRef.current;
+    basPrecedentRef.current = basDuConteneur;
+    const mise = interne?.animatedLayoutState;
+    if (!ecart || !mise) return;
+    mise.modify((/** @type {any} */ etat) => {
+      'worklet';
+
+      // Conteneur pas encore mesuré : la bibliothèque le calculera avec le bon `bottomInset`.
+      if (etat.containerHeight === INITIAL_LAYOUT_VALUE) return etat;
+      return { ...etat, containerHeight: etat.containerHeight - ecart };
+    });
+  }, [basDuConteneur, interne]);
   const declarer = useCallback((/** @type {any} */ event) => {
     const target = event?.nativeEvent?.target;
     if (!interne || !target || !declare) return;
@@ -364,8 +393,9 @@ function BottomModal({
     && modeDuClavierAndroid === 'adjustPan';
   const keyboardBehaviorForPlatform = usesAndroidExtend ? 'extend' : keyboardBehavior;
   // CLAVPOP — iPhone : le bas de la feuille se pose sur le clavier (barre de gestes déduite, elle
-  // reste dans la marge du contenu). La bibliothèque réduit alors le conteneur et recalcule ses
-  // crans : une grande feuille tient sous le haut de l'écran, l'index reste un cran.
+  // reste dans la marge du contenu). Le conteneur est réduit d'autant (CLAVIER-FOND, plus haut) et
+  // la bibliothèque recalcule ses crans : une grande feuille tient sous le haut de l'écran, l'index
+  // reste un cran.
   // CLAVPOP-ANDROID — Android 15+ en `adjustPan` et `interactive` : pareil. React Native y annonce
   // le clavier SANS la barre de navigation (ReactRootView : ime - barres), déduite une 2ᵉ fois plus
   // haut : on la rend, elle reste dans la marge du contenu.
@@ -384,6 +414,18 @@ function BottomModal({
     || usesAndroidExtend
     ? 0
     : keyboardHeight;
+  // CLAVIER-FOND — un cran en % se calcule sur le conteneur : réduit par le clavier, « 52 % »
+  // rapetissait la feuille au lieu de la monter. Clavier ouvert, le cran garde sa hauteur d'avant
+  // (en points) ; la bibliothèque le borne au conteneur restant. Clavier fermé : crans inchangés.
+  // ponytail: conteneur d'avant estimé par la fenêtre (le fournisseur de la bibliothèque la
+  // couvre) ; quelques points d'écart possibles sur Android, clavier ouvert seulement.
+  const crans = useMemo(() => {
+    if (!snapPoints || !remonteeSurLeClavier) return snapPoints;
+    const conteneurSansClavier = Dimensions.get('window').height - (insets.top + 20);
+    return snapPoints.map((cran) => (typeof cran === 'string'
+      ? (Number(cran.split('%')[0]) * conteneurSansClavier) / 100
+      : cran));
+  }, [insets.top, remonteeSurLeClavier, snapPoints]);
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
   // RECETTEWEB retour 5 (26/10) — EN HAUTEUR AUTOMATIQUE (sans snapPoints), `@gorhom/bottom-sheet`
@@ -436,7 +478,7 @@ function BottomModal({
       onChange={onOpened ? handleChange : undefined}
       onDismiss={handleDismiss}
       ref={modalRef}
-      snapPoints={snapPoints}
+      snapPoints={crans}
       topInset={insets.top + 20}
     >
       {!hideCloseButton && (
@@ -462,6 +504,7 @@ function BottomModal({
         </TouchableOpacity>
       )}
       <ChampsSuivisParLeClavier
+        basDuConteneur={remonteeSurLeClavier}
         declare={!poseSurLeClavier}
         style={[snapPoints ? Alignments.fill : undefined]}
       >
