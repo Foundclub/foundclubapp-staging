@@ -20,7 +20,7 @@ jest.mock('@/store/appContext', () => ({
 jest.mock('@/theme/themeContext', () => {
   const deep = new Proxy(() => {}, {
     get: (target, prop) => {
-      if (prop === Symbol.toPrimitive || prop === 'toString') return () => '#000000';
+      if (prop === Symbol.toPrimitive || prop === 'toString') return () => 'couleur';
       return deep;
     },
   });
