@@ -106,6 +106,11 @@ export function TourProvider({ children }) {
   const successTimerRef = useRef(/** @type {any} */ (null));
   const hydratedUserRef = useRef(/** @type {string | null} */ (null));
   const lastRouteRef = useRef(/** @type {string | null} */ (null));
+  // GUIDE-RECUL : étapes de la mission en cours et l'écran où chacune s'est
+  // ouverte, pour revenir à la bonne au retour arrière.
+  const historyRef = useRef(
+    /** @type {Array<{ index: number; route: string | null; stepRoute: string | null }>} */ ([]),
+  );
 
   const persist = useCallback((/** @type {any} */ nextState) => {
     if (!userId) return;
@@ -236,6 +241,13 @@ export function TourProvider({ children }) {
       enterGuideStep(nextState, already.index, depth + 1, lastRouteRef.current);
       return;
     }
+    const first = historyRef.current[0];
+    const sameMission = Boolean(first)
+      && profile.steps[first.index]?.missionId === profile.steps[index]?.missionId;
+    historyRef.current = [
+      ...(sameMission ? historyRef.current : []),
+      { index, route: lastRouteRef.current, stepRoute },
+    ];
     setTourState(nextState);
     persist(nextState);
     if (already) {
@@ -318,6 +330,7 @@ export function TourProvider({ children }) {
         : nextAvailableIndex(profile, -1, ctx);
       if (startIndex === -1) return false;
       const startState = { ...base, stepIndex: startIndex };
+      historyRef.current = [{ index: startIndex, route: null, stepRoute: null }];
       setTourState(startState);
       persist(startState);
       // GUIDE-ENTETE (décision d'Adel 3- A, 28/10) : relancé depuis Mon compte,
@@ -467,6 +480,7 @@ export function TourProvider({ children }) {
       const nextState = {
         ...current, restored: false, status: 'active', stepIndex: index,
       };
+      historyRef.current = [{ index, route: null, stepRoute: current.stepRoute || null }];
       setTourState(nextState);
       persist(nextState);
       navigateToTarget(profile.steps[index]?.navTarget, { userData });
@@ -481,6 +495,28 @@ export function TourProvider({ children }) {
     finishTour();
   }, [finishTour]);
 
+  // GUIDE-RECUL (audit du 28/10, capture 25) : retour arrière vers un écran où
+  // une étape de la mission s'est ouverte ⇒ cette étape revient, au lieu de la
+  // bulle de l'étape suivante posée sur l'écran d'avant.
+  const stepBack = useCallback((/** @type {any} */ current, /** @type {string} */ routeKey) => {
+    const history = historyRef.current;
+    const top = history[history.length - 1];
+    if (!top || top.index !== current.stepIndex) return;
+    // Écran de l'étape encore inconnu (départ, reprise) : c'est le premier vu.
+    if (!top.route) top.route = routeKey;
+    if (top.route === routeKey) return;
+    let at = history.length - 2;
+    while (at >= 0 && history[at].route !== routeKey) at -= 1;
+    if (at < 0) return;
+    const entry = history[at];
+    historyRef.current = history.slice(0, at + 1);
+    const back = {
+      ...current, reward: null, stepIndex: entry.index, stepRoute: entry.stepRoute,
+    };
+    setTourState(back);
+    persist(back);
+  }, [persist]);
+
   // Validation automatique : signaux métier du bus guidance (event.created, etc.).
   useEffect(() => {
     const unsubscribe = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
@@ -491,7 +527,10 @@ export function TourProvider({ children }) {
       const step = profile?.steps?.[current.stepIndex];
       if (isGuideProfile(profile)) {
         const match = matchSignal(profile, current.stepIndex, signal, guideContext(current));
-        if (!match) return;
+        if (!match) {
+          if (signal?.kind === 'route') stepBack(current, signal.key);
+          return;
+        }
         const withCreated = signal.kind === 'action'
           ? {
             ...current,
@@ -507,7 +546,7 @@ export function TourProvider({ children }) {
       }
     });
     return unsubscribe;
-  }, [applyGuideMatch, completeCurrentStep]);
+  }, [applyGuideMatch, completeCurrentStep, stepBack]);
 
   useEffect(() => () => clearSuccessTimer(), []);
 

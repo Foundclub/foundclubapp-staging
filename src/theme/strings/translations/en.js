@@ -23921,6 +23921,8 @@ export default {
     quit: 'Stop the guide',
     resume: 'Resume the tour',
     ringLabel: 'Team ready',
+    scrollDown: 'Scroll down.',
+    scrollUp: 'Scroll up.',
     skipBonus: 'Skip this bonus',
     teamReady: 'Team ready {{gauge}} %',
   },
