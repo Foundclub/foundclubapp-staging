@@ -83,6 +83,7 @@ import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityR
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSucces';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
@@ -9384,59 +9385,48 @@ function EventDetails({ navigation, route }) {
         Spaces={Spaces}
       />
 
-      <BottomModal
+      {/* RETOUCHES-DESIGN (28/10) : meme feuille de succes que « Ajout reussi ! » ;
+          hauteur sur son contenu (plus de 70 % fixes), sans X : « Continuer » ferme. */}
+      <FeuilleDeSucces
+        actionPrincipale={{
+          onPress: handleOpenSubscriptionOverviewFromSheet,
+          title: t('eventDetails.seeMySubscription', 'Voir mon abonnement'),
+        }}
+        actionSecondaire={{
+          onPress: closeSubscriptionFollowUp,
+          title: t('eventDetails.continue', 'Continuer'),
+        }}
         close={closeSubscriptionFollowUp}
         isVisible={isSubscriptionFollowUpVisible}
         onDismissed={runSubscriptionFollowUpExit}
-        snapPoints={['70%']}
+        texte={remainingEventPublishQuota > 0
+          ? t('eventDetails.yourFreeEventCreditHas', 'Ton credit gratuit événement a bien été utilise. Il t en reste {{remainingEventPublishQuota}}{{totalSuffix}}.', { remainingEventPublishQuota, totalSuffix: totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : '', ...SANS_ECHAPPEMENT })
+          : t('eventDetails.yourFreeEventCreditHas2', 'Ton credit gratuit événement a bien été utilise. Les prochaines publications passeront par une offre Team ou Club.')}
+        titre={t('eventDetails.wellDoneYourEventIs', 'Bravo, ton événement est en ligne')}
       >
         {/* 🚪 EVEDIT-2 / D3 — meme signal de sortie que le menu ⋯ :
             il ne rend rien, et il part quand la feuille quitte l arbre. */}
         <SheetExitSignal onExit={runSubscriptionFollowUpExit} />
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.wellDoneYourEventIs', 'Bravo, ton événement est en ligne')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {remainingEventPublishQuota > 0
-                ? t('eventDetails.yourFreeEventCreditHas', 'Ton credit gratuit événement a bien été utilise. Il t en reste {{remainingEventPublishQuota}}{{totalSuffix}}.', { remainingEventPublishQuota, totalSuffix: totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : '', ...SANS_ECHAPPEMENT })
-                : t('eventDetails.yourFreeEventCreditHas2', 'Ton credit gratuit événement a bien été utilise. Les prochaines publications passeront par une offre Team ou Club.')}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.padding[16],
-              Spaces.gap[8],
-              {
-                borderColor: `${Colors.primary500}44`,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              {t('eventDetails.nextStep', 'Suite logique')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventDetails.checkYourSubscriptionToSee', 'Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.')}
-            </Text>
-          </View>
-
-          <Button
-            onPress={handleOpenSubscriptionOverviewFromSheet}
-            title={t('eventDetails.seeMySubscription', 'Voir mon abonnement')}
-            variant="Primary"
-          />
-          <Button
-            onPress={closeSubscriptionFollowUp}
-            title={t('eventDetails.continue', 'Continuer')}
-            variant="Secondary"
-          />
+        <View
+          style={[
+            ApplicationStyle.backgroundColor.primary900,
+            ApplicationStyle.borderRadius24,
+            ApplicationStyle.borderWidth1,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              borderColor: `${Colors.primary500}44`,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            {t('eventDetails.nextStep', 'Suite logique')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('eventDetails.checkYourSubscriptionToSee', 'Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.')}
+          </Text>
         </View>
-      </BottomModal>
+      </FeuilleDeSucces>
 
       <BottomModal
         close={closeTournamentParticipationFlow}
