@@ -189,8 +189,6 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
     expect(mockStartTour).toHaveBeenCalledWith('coach');
     expect(mockStorageSet).toHaveBeenCalledWith('hasSeenWelcome_user-d23', true);
     expect(mockMarkOnboardingComplete).toHaveBeenCalledWith('user-d23');
-    // Le tour a demarre : il prend la main, on ne repart pas a l'accueil.
-    expect(navigation.reset).not.toHaveBeenCalled();
   });
 
   it('le dirigeant demarre le tour dirigeant', () => {
@@ -200,6 +198,27 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
     act(() => { pressableParTexte(tree, 'Démarrer le tour guidé').props.onPress(); });
 
     expect(mockStartTour).toHaveBeenCalledWith('president');
+  });
+
+  // BOUCLE-ACCUEIL (tournee 2.6.83, 28/10/2026) — CE QUI ETAIT VERROUILLE ICI : « le tour a
+  // demarre, on ne repart pas a l'accueil » (`reset` jamais appele). Le guide empilait alors
+  // l'accueil PAR-DESSUS le tunnel : le retour arriere rendait « Bienvenue » sous la bulle
+  // « Mission 1/4 », puis l'etape 5/5. Le guide demarre, PUIS la pile repart de l'accueil : la
+  // remise a zero passe en dernier (la navigation du guide, par la reference racine, la
+  // recouvrait quand elle passait avant — vu a l'emulateur). Plus rien du tunnel n'est derriere.
+  it.each([
+    ['coach', 'Démarrer le tour guidé', 'coach'],
+    ['president', 'Démarrer le tour guidé', 'president'],
+    ['player', 'welcome.actions.go', 'player'],
+  ])('%s : la pile repart de l accueil APRES le depart du guide', (role, libelle, profil) => {
+    mockRole.current = role;
+    const { navigation, tree } = rendre();
+    act(() => { pressableParTexte(tree, libelle).props.onPress(); });
+
+    expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'HomeTab' }] });
+    expect(mockStartTour).toHaveBeenCalledWith(profil);
+    expect(navigation.reset.mock.invocationCallOrder[0])
+      .toBeGreaterThan(mockStartTour.mock.invocationCallOrder[0]);
   });
 
   it('sans script de tour, le bouton reconduit a l`accueil plutot que nulle part', () => {
