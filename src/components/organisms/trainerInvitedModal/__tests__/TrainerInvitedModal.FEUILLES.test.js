@@ -184,3 +184,64 @@ describe('FEUILLES — ses deux boutons sont dans la hauteur de la feuille', () 
     expect('headerComponent' in modale.props).toBe(false);
   });
 });
+
+// RETOUCHES-DESIGN D4 (28/10, Adel sur iPhone) — le texte de la feuille était
+// NOIR sur le fond sombre (`Fonts.p1` porte `color: 'black'`, la feuille est
+// `primary700`) : 1,69:1. Et le bas tombait trop bas : la zone défilante
+// ajoutait 40 + la barre de gestes sous « Plus tard », pour 20 au-dessus du titre.
+describe('RETOUCHES-DESIGN D4 — lisible, et le bas équilibré', () => {
+  const { StyleSheet } = jest.requireActual('react-native');
+  const couleurs = jest.requireActual('@/theme/colors').default();
+
+  /**
+   * Luminance relative WCAG d'une couleur #rrggbb.
+   * @param {string} hex La couleur.
+   * @returns {number} La luminance.
+   */
+  const luminance = (hex) => {
+    const [r, v, b] = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * v + 0.0722 * b;
+  };
+  const NOMMEES = { black: '#000000', white: '#ffffff' };
+  /**
+   * Contraste WCAG entre deux couleurs.
+   * @param {string} a Couleur.
+   * @param {string} b Couleur.
+   * @returns {number} Le rapport.
+   */
+  const contraste = (a, b) => {
+    const [x, y] = [NOMMEES[a] || a, NOMMEES[b] || b].map(luminance);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+
+  test('🔴 D4-1 — chaque texte de la feuille se lit sur son fond (≥ 4,5:1)', () => {
+    const racine = monterLaFeuille();
+    const textes = racine.findAllByType(Text)
+      .filter((/** @type {any} */ n) => typeof n.props.children === 'string')
+      .filter((/** @type {any} */ n) => n.props.children.startsWith('addCoach.alerts'));
+
+    expect(textes).toHaveLength(2);
+    textes.forEach((/** @type {any} */ n) => {
+      const { color } = StyleSheet.flatten(n.props.style);
+      expect({ cle: n.props.children, ratio: contraste(color, couleurs.primary700) >= 4.5 })
+        .toEqual({ cle: n.props.children, ratio: true });
+    });
+  });
+
+  test('🔴 D4-2 — sous « Plus tard », la même marge qu au-dessus du titre, plus la barre de gestes', () => {
+    const racine = monterLaFeuille();
+    const zones = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'zone-mesuree');
+    const zone = zones[zones.length - 1];
+    const styleZone = StyleSheet.flatten(zone.props.contentContainerStyle || zone.props.style);
+
+    // La zone ne réserve que la barre de gestes (34 au banc) ; la marge est posée
+    // par le contenu, d'un seul bloc, la même en haut et en bas.
+    expect(styleZone.paddingBottom).toBe(34);
+    expect(zone.children).toHaveLength(1);
+    const styleContenu = StyleSheet.flatten(zone.children[0].props.style);
+    const enHaut = (styleZone.paddingTop || 0) + (styleContenu.paddingTop || 0);
+    expect({ enBas: styleContenu.paddingBottom, enHaut }).toEqual({ enBas: 24, enHaut: 24 });
+  });
+});
