@@ -117,7 +117,8 @@ describe('CARTEAFF 1 et 4 — le shield d’un club sans logo', () => {
     expect(style.height).toBe(32);
     const boite = plat(arbre.root.findAll((n) => n.type === 'View')[0].props.style);
     expect(boite.overflow).toBe('hidden');
-    expect(textes(arbre)).toContain('S');
+    // PETITSBUGS-2683 : un nom déjà en sigle court reste entier (il s'affichait « S »).
+    expect(textes(arbre)).toContain('SCM');
   });
 
   it('les initiales suivent ClubLogoMark : sans les mots de liaison, 3 lettres au plus', () => {

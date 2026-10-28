@@ -3,6 +3,7 @@ import {
   buildClubFormInitialValues,
   CLUB_DETAIL_POPULATE,
   getClubCity,
+  getClubInitials,
 } from './adminClubContentModel';
 
 // La fiche club du superadmin passe par /superadmin/content/:uid/:documentId, qui
@@ -128,5 +129,19 @@ describe('C10 · Q4-22 — l adresse JSON avancée saisie à la main n est plus 
     expect(adresse.city).toBe('');
     expect(adresse.postcode).toBe('');
     expect(adresse.lat).toBeNull();
+  });
+});
+
+describe('getClubInitials (fiche club du superadmin)', () => {
+  it('garde le comportement actuel des autres noms', () => {
+    expect(getClubInitials({})).toBe('FC');
+    expect(getClubInitials({ name: 'Bordeaux' })).toBe('BO');
+    expect(getClubInitials({ name: 'Football Club Paris' })).toBe('FC');
+  });
+
+  // PETITSBUGS-2683 : « SCM » s'affichait « SC ».
+  it('garde entier un nom qui est deja un sigle court en capitales', () => {
+    expect(getClubInitials({ name: 'SCM' })).toBe('SCM');
+    expect(getClubInitials({ name: 'ASPTT' })).toBe('AS');
   });
 });

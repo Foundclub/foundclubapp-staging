@@ -43,6 +43,16 @@ describe('clubUseCases', () => {
       expect(getClubInitials('Arsenal')).toBe('A');
       expect(getClubInitials('Bordeaux')).toBe('B');
     });
+
+    // PETITSBUGS-2683 : le club « SCM » s'affichait « S ».
+    it('garde entier un nom qui est deja un sigle court en capitales', () => {
+      expect(getClubInitials('SCM')).toBe('SCM');
+      expect(getClubInitials('OM')).toBe('OM');
+      expect(getClubInitials(' PSG ')).toBe('PSG');
+      expect(getClubInitials('ASPTT')).toBe('A');
+      expect(getClubInitials('Scm')).toBe('S');
+      expect(getClubInitials('S')).toBe('S');
+    });
   });
 
   describe('getClubFiltersNumber', () => {

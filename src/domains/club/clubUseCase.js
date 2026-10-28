@@ -1,12 +1,28 @@
 /**
+ * Returns the club name when it already is a short acronym in capitals (« SCM », « OM »).
+ * @param {unknown} clubName
+ * @returns {string} The acronym, or '' when the name is not one
+ */
+export function getShortClubAcronym(clubName) {
+  const name = typeof clubName === 'string' ? clubName.trim() : '';
+  return /^[A-ZÀ-ÖØ-Þ]{2,4}$/.test(name) ? name : '';
+}
+
+/**
  * Generates initials from a club name by taking the first letter of each significant word.
  * Excludes common French connecting words like "de", "du", "d'", "la", etc.
+ * A name that already is a short acronym is kept whole.
  * @param {string} clubName - The full name of the club
  * @returns {string} The initials of the club name in uppercase
  */
 export function getClubInitials(clubName) {
   if (!clubName || typeof clubName !== 'string') {
     return '';
+  }
+
+  const acronym = getShortClubAcronym(clubName);
+  if (acronym) {
+    return acronym;
   }
 
   // List of French connecting words to exclude
