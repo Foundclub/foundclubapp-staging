@@ -17605,6 +17605,12 @@ export default {
     clubs: {
       title: 'My clubs',
     },
+    coachGuide: {
+      bonus: 'Do a bonus',
+      paused: 'Paused',
+      resume: 'Pick up where I left off',
+      review: 'Review the guide without creating anything',
+    },
     contactSupport: {
       ecrire: 'Write to support',
       email: 'Send an email',
@@ -23768,17 +23774,33 @@ export default {
       open: {
         cta: "Let's go",
         gauge: '{{count}} missions. Each one raises your gauge by 25%.',
+        later: 'Later',
         note: "Everything is real: your club, your team, your invitation link, your session. I'll guide you at every step.",
         noteWithClub: "Everything is real: your team, your invitation link, your session. I'll guide you at every step.",
         title: 'Hi{{name}}, ready for your first session?',
       },
       palier: {
+        blocked: 'Later',
         bonus: "{{count}} bonuses · we'll show you where they are",
         continue: 'Continue',
         later: 'Later',
         subtitle: '{{count}} missions out of {{count}}, the essentials are done.',
+        subtitlePartial: '{{done}} missions out of {{total}}: the others wait until the app lets you.',
         title: 'Your team is ready!',
       },
+      refusal: {
+        clubPartner: 'This club goes through its manager: “I run this club” replaces “It’s my club”. Pick another club, or skip this mission.',
+        eventQuota: 'Your free plan already has all its events: a new event needs the Team plan. Nothing was created.',
+        friendly: 'The listing could not be published.',
+        teamQuota: 'Your free plan already has all its teams: a new team needs the Team plan. Nothing was created.',
+      },
+      review: {
+        next: 'Next',
+      },
+      'rv-m1': 'Your teams are here. “New team” creates one: a name, an age group, a level.',
+      'rv-m2': 'On a team’s page, “⋯” then “Share link” sends the invitation to your players.',
+      'rv-m3': 'From home, “Add an event” schedules a session: type, team, place, time.',
+      'rv-m4': 'Search finds clubs, events and friendly matches. Here, “Create a friendly match” publishes your listing.',
       tw1: 'Name your team: type it or pick a suggestion, then Next.',
       tw2: 'Optional: describe your team, or skip this step.',
       tw3: 'Choose the section, then Next.',
@@ -23911,6 +23933,11 @@ export default {
     },
   },
   tourGuide: {
+    blocked: {
+      skip: 'Skip this mission',
+      stay: 'Stay',
+      title: 'You can’t do this right now',
+    },
     bonus: 'Bonus',
     bonusDone: 'Bonus completed · {{title}}',
     essential: 'Essential mission',

@@ -13,16 +13,20 @@ export const TourContext = createContext(/** @type {any} */ (null));
  * @returns {any} Contexte du tour.
  */
 export const useTour = () => useContext(TourContext) || {
+  blocked: null,
   completeCurrentStep: () => {},
   created: {},
   currentMission: null,
   currentStep: null,
+  dismissBlocked: () => {},
   exitTour: () => {},
   finishGuide: () => {},
   flags: {},
   gauge: 0,
+  hasGuideHistory: false,
   isGuide: false,
   isLockedStep: false,
+  isReview: false,
   isTourActive: false,
   missionPosition: null,
   missions: [],
@@ -31,6 +35,7 @@ export const useTour = () => useContext(TourContext) || {
   profileKey: null,
   resumeTour: () => {},
   reward: null,
+  skipBlockedMission: () => {},
   skipMission: () => {},
   startTour: () => false,
   stepIndex: 0,

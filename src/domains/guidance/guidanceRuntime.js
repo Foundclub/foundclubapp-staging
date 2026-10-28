@@ -54,6 +54,16 @@ export const emitGuidanceAction = (key, meta = {}) => {
   emitGuidanceSignal(buildSignal('action', key.trim(), meta));
 };
 
+// GUIDE-RELANCE (L6) : l'écran REFUSE le geste (quota, droit) ; le guide en
+// tire une sortie, sans jamais contourner le refus.
+export const emitGuidanceRefusal = (key, meta = {}) => {
+  if (typeof key !== 'string' || key.trim().length === 0) {
+    return;
+  }
+
+  emitGuidanceSignal(buildSignal('refusal', key.trim(), meta));
+};
+
 export const resetGuidanceRuntimeForTests = () => {
   listeners.clear();
 };

@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -29,7 +31,11 @@ import {
   estUneVilleSeule,
   valeurDeMaCollectivite,
 } from '@/domains/collectivite/collectiviteRattachement';
-import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import {
+  emitGuidanceAction,
+  emitGuidanceInteraction,
+  emitGuidanceRefusal,
+} from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -1375,6 +1381,12 @@ function ClubDetails({ navigation, route }) {
     && isCoachRole
     && isPartnerClub(club)
   ), [club, clubHasNoTeams, clubId, isCoachRole, isMember]);
+
+  // GUIDE-RELANCE (L6, bloquant n° 6) : ici « C'est mon club ! » cède la place
+  // à « Je dirige ce club » ; la mission du guide apprend qu'elle ne peut pas finir.
+  useEffect(() => {
+    if (canUseClubPartneringFlow) emitGuidanceRefusal('club.join.unavailable');
+  }, [canUseClubPartneringFlow]);
 
   const {
     data: pendingClubCreationRequestsResponse,
