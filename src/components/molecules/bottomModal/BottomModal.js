@@ -43,20 +43,25 @@ const STALE_DISMISS_WINDOW_MS = 400;
 // pas un cran ⇒ index -1 ⇒ `onClose` ⇒ la feuille se referme (VU par Adel, 2.6.81/2.6.82,
 // « Adresse du club »). Sur iPhone, la feuille se pose donc elle-même sur le clavier (bottomInset,
 // plus bas). Témoin : __tests__/BottomModalCLAVPOP.clavier.test.js.
+// ⌨️ CLAVPOP-ANDROID (28/10) — MÊME DÉFAUT SUR ANDROID 15+ (`adjustPan`, `interactive`) : les
+// feuilles de 78, 84 et 86 % se refermaient au focus. Même règle qu'iPhone, sauf les feuilles en
+// `androidKeyboardBehavior="extend"` (la bibliothèque réduit leur contenu, sans ce chemin).
+// Témoin : __tests__/BottomModalCLAVPOPANDROID.clavier.test.js.
 /**
  * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
  * @param {object} props
  * @param {React.ReactNode} props.children
+ * @param {boolean} props.declare - Faux quand la feuille se pose elle-même sur le clavier.
  * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
  * @returns {React.ReactElement}
  */
-function ChampsSuivisParLeClavier({ children, style }) {
+function ChampsSuivisParLeClavier({ children, declare, style }) {
   const interne = useBottomSheetInternal(true);
   const declarer = useCallback((/** @type {any} */ event) => {
     const target = event?.nativeEvent?.target;
-    if (!interne || !target || Platform.OS === 'ios') return;
+    if (!interne || !target || !declare) return;
     interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target }));
-  }, [interne]);
+  }, [declare, interne]);
   const oublier = useCallback((/** @type {any} */ event) => {
     const target = event?.nativeEvent?.target;
     if (!interne || !target || interne.animatedKeyboardState.get().target !== target) return;
@@ -361,7 +366,19 @@ function BottomModal({
   // CLAVPOP — iPhone : le bas de la feuille se pose sur le clavier (barre de gestes déduite, elle
   // reste dans la marge du contenu). La bibliothèque réduit alors le conteneur et recalcule ses
   // crans : une grande feuille tient sous le haut de l'écran, l'index reste un cran.
-  const remonteeIPhone = Platform.OS === 'ios' ? keyboardHeight : 0;
+  // CLAVPOP-ANDROID — Android 15+ en `adjustPan` et `interactive` : pareil. React Native y annonce
+  // le clavier SANS la barre de navigation (ReactRootView : ime - barres), déduite une 2ᵉ fois plus
+  // haut : on la rend, elle reste dans la marge du contenu.
+  const poseAndroid = !usesAndroidExtend
+    && keyboardBehavior === 'interactive'
+    && Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35
+    && modeDuClavierAndroid === 'adjustPan';
+  const poseSurLeClavier = Platform.OS === 'ios' || poseAndroid;
+  let remonteeSurLeClavier = 0;
+  if (Platform.OS === 'ios') remonteeSurLeClavier = keyboardHeight;
+  else if (poseAndroid && keyboardHeight > 0) remonteeSurLeClavier = keyboardHeight + insets.bottom;
   const sheetBottomInset = Platform.OS === 'ios'
     || keyboardBehavior === 'interactive'
     || usesAndroidExtend
@@ -408,7 +425,7 @@ function BottomModal({
         ApplicationStyle.borderRadius32,
         ApplicationStyle.backgroundColor.primary700,
         style]}
-      bottomInset={sheetBottomInset + remonteeIPhone}
+      bottomInset={sheetBottomInset + remonteeSurLeClavier}
       enableContentPanningGesture={enableContentPanningGesture}
       enableDynamicSizing={!snapPoints}
       enablePanDownToClose={enablePanDownToClose}
@@ -444,7 +461,10 @@ function BottomModal({
           />
         </TouchableOpacity>
       )}
-      <ChampsSuivisParLeClavier style={[snapPoints ? Alignments.fill : undefined]}>
+      <ChampsSuivisParLeClavier
+        declare={!poseSurLeClavier}
+        style={[snapPoints ? Alignments.fill : undefined]}
+      >
         {/* Fixed Header */}
         {headerComponent && !enTeteDansLaMesure && (
           <View
