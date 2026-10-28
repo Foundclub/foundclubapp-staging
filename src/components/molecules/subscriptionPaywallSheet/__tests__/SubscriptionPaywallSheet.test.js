@@ -1071,3 +1071,19 @@ describe('BUGHUNT C03 — feuille de vente', () => {
     expect(purchasedPlanCode()).toBe('fc_team_3_monthly');
   });
 });
+
+/* ================================================================== */
+/* GUIDE-RELANCE (L6, 28/10) : le guide apprend que le quota refuse    */
+/* ================================================================== */
+
+describe('SubscriptionPaywallSheet — signal de refus pour le guide', () => {
+  it('à l’ouverture d’une feuille de quota, dit au guide « refusé » avec la clé du mur', () => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    const signals = [];
+    const unsubscribe = subscribeToGuidanceSignals((signal) => signals.push(signal));
+    renderSheet({ decision: TEAM_QUOTA_DECISION });
+    unsubscribe();
+    expect(signals.filter((signal) => signal.kind === 'refusal').map((signal) => signal.key))
+      .toEqual(['paywall.team-limit']);
+  });
+});

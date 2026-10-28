@@ -692,3 +692,39 @@ describe('AFFIL · A5 — la revendication rafraichit ce que la personne va rega
     expect(invalidateAfterAction).toHaveBeenCalledWith(expect.anything(), 'joinClub');
   });
 });
+
+// ===========================================================================
+// GUIDE-RELANCE (L6, 28/10) — bloquant n° 6 de l'audit du guide : sur un club
+// PARTENAIRE, « C'est mon club ! » est remplacé par « Je dirige ce club », sans
+// un mot ; la mission du guide (« Dis-le ») ne pouvait pas finir. La fiche
+// prévient le guide, qui donne la raison et une sortie.
+// ===========================================================================
+describe('GUIDE-RELANCE — club partenaire : la fiche prévient le guide', () => {
+  it('un entraineur sur un club partenaire : signal « club.join.unavailable »', async () => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    const signaux = [];
+    const desabonner = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    mockCanJoinClub = true;
+    mockUserData.role = { name: 'coach' };
+    mockClubQuery.data = { ...CLUB_SANS_DIRIGEANT, clubPartner: true };
+
+    monter();
+    desabonner();
+
+    expect(signaux.filter((signal) => signal.kind === 'refusal').map((signal) => signal.key))
+      .toEqual(['club.join.unavailable']);
+  });
+
+  it('un club ordinaire ne dit rien au guide', async () => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    const signaux = [];
+    const desabonner = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    mockCanJoinClub = true;
+    mockUserData.role = { name: 'coach' };
+
+    monter();
+    desabonner();
+
+    expect(signaux.filter((signal) => signal.kind === 'refusal')).toEqual([]);
+  });
+});

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+import { emitGuidanceAction, emitGuidanceRefusal } from '@/domains/guidance/guidanceRuntime';
 import {
   getAdCategories,
   getAdLevels,
@@ -170,6 +170,8 @@ function FriendlyMatchWizardRecap({ navigation }) {
           "Impossible de publier l'annonce.",
         );
       logger.error('Publication d annonce amicale refusee', { error });
+      // GUIDE-RELANCE (L6) : la mission du guide sait pourquoi elle ne peut pas finir.
+      emitGuidanceRefusal('friendly.publish.refused', { reason: message });
       setSubmitErrorMessage(message);
       showBanner({
         body: message,

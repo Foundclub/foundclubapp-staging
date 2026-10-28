@@ -22,6 +22,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   clipAboveDock,
@@ -370,6 +371,9 @@ function TourGuideLayer() {
   if (tourStatus === 'active' && currentStep?.kind) {
     return <TourFullScreen kind={currentStep.kind} />;
   }
+
+  // GUIDE-RELANCE (bloquant n° 6) : l'écran a refusé le geste ; sans voile.
+  if (tourStatus === 'active' && tour.blocked) return <TourBlockedCard />;
 
   if (!isStepVisible) return null;
 

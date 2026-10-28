@@ -18265,6 +18265,12 @@ export default {
     // R24 — le repli quand aucune application e-mail ne s'ouvre. Un lien de
     // contact qui ne fait rien vaut un lien absent : on donne alors l'adresse
     // en toutes lettres pour qu'elle reste recopiable.
+    coachGuide: {
+      bonus: 'Faire un bonus',
+      paused: 'En pause',
+      resume: 'Reprendre là où j’en étais',
+      review: 'Revoir le guide sans rien créer',
+    },
     contactSupport: {
       ecrire: 'Écrire à l’assistance',
       email: 'Envoyer un e-mail',
@@ -24752,17 +24758,33 @@ export default {
       open: {
         cta: "C'est parti",
         gauge: '{{count}} missions. Chacune fait monter ta jauge de 25 %.',
+        later: 'Plus tard',
         note: "Tout est réel : ton club, ton équipe, ton lien d'invitation, ta séance. Je t'accompagne à chaque étape.",
         noteWithClub: "Tout est réel : ton équipe, ton lien d'invitation, ta séance. Je t'accompagne à chaque étape.",
         title: 'Salut{{name}}, prêt·e pour ta première séance ?',
       },
       palier: {
+        blocked: 'Plus tard',
         bonus: '{{count}} bonus · on te montre où ça se trouve',
         continue: 'Continuer',
         later: 'Plus tard',
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
+        subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le permette.',
         title: 'Ton équipe est prête !',
       },
+      refusal: {
+        clubPartner: 'Ce club passe par son dirigeant : « Je dirige ce club » remplace « C’est mon club ». Choisis un autre club, ou passe cette mission.',
+        eventQuota: 'Ton offre gratuite compte déjà tous ses événements : un nouvel événement demande l’offre Équipe. Rien n’a été créé.',
+        friendly: 'L’annonce n’a pas pu être publiée.',
+        teamQuota: 'Ton offre gratuite compte déjà toutes ses équipes : une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.',
+      },
+      review: {
+        next: 'Suivant',
+      },
+      'rv-m1': 'Tes équipes sont ici. « Nouvelle équipe » en crée une : un nom, une catégorie, un niveau.',
+      'rv-m2': 'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes joueur·se·s.',
+      'rv-m3': 'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, le lieu, l’horaire.',
+      'rv-m4': 'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match amical » publie ton annonce.',
       tw1: 'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
       tw2: 'Optionnel : décris ton équipe, ou passe cette étape.',
       tw3: 'Choisis la section, puis Suivant.',
@@ -24897,6 +24919,11 @@ export default {
     },
   },
   tourGuide: {
+    blocked: {
+      skip: 'Passer cette mission',
+      stay: 'Rester',
+      title: 'Tu ne peux pas le faire maintenant',
+    },
     bonus: 'Bonus',
     bonusDone: 'Bonus réussi · {{title}}',
     essential: 'Mission essentielle',

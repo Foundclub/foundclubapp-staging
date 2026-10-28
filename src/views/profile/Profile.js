@@ -165,7 +165,19 @@ function Profile({ navigation, route }) {
   const safeAuthSessions = authSessions || [];
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
-  const { startTour } = useTour();
+  const tour = useTour();
+  // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
+  const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
+  const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
+  /**
+   * Choix du menu du guide : le menu se referme, puis le guide part.
+   * @param {() => void} action - Ce que fait le choix.
+   * @returns {void}
+   */
+  const chooseGuide = (action) => {
+    setIsGuideChoiceOpen(false);
+    action();
+  };
   const canShowSubscriptionExperience = currentRoleKey === 'coach'
     || currentRoleKey === 'president'
     || currentRoleKey === 'superAdmin';
@@ -1100,12 +1112,44 @@ function Profile({ navigation, route }) {
     // superadmins, pas un canal vers nous, et invisible hors onboarding.
     // Guide Entraîneur (TUTOE, règle 7 du pack) : il se relance d'ici, sur
     // téléphone seulement (le site ne joue aucun tour).
+    // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
+    // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
     ...(currentRoleKey === 'coach' && Platform.OS !== 'web' ? [{
+      accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
+        <PastilleDEtat
+          testID="coachGuide-pause"
+          texte={t('profile.coachGuide.paused', 'En pause')}
+          ton="attente"
+        />
+      ) : null,
       icon: Images.flag,
       key: 'coachGuide',
       label: t('profile.actions.coachGuide', 'Guide entraîneur·e'),
-      onPress: () => startTour('coach'),
+      onPress: () => (tour.hasGuideHistory
+        ? setIsGuideChoiceOpen((ouvert) => !ouvert)
+        : tour.startTour('coach')),
     }] : []),
+    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' && isGuideChoiceOpen
+      && tour.hasGuideHistory ? [
+        ...(isGuideInProgress ? [{
+          icon: Images.flag,
+          key: 'coachGuide-resume',
+          label: t('profile.coachGuide.resume', 'Reprendre là où j’en étais'),
+          onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
+        }] : []),
+        {
+          icon: Images.flag,
+          key: 'coachGuide-review',
+          label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
+          onPress: () => chooseGuide(() => tour.startTour('coach', { review: true })),
+        },
+        {
+          icon: Images.flag,
+          key: 'coachGuide-bonus',
+          label: t('profile.coachGuide.bonus', 'Faire un bonus'),
+          onPress: () => chooseGuide(() => tour.startTour('coach', { fromMission: 'coach_b1' })),
+        },
+      ] : []),
     {
       icon: Images.envelope,
       key: 'contactSupport',

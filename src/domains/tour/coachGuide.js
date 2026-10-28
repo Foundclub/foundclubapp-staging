@@ -69,29 +69,57 @@ const hadClub = (ctx) => Boolean(ctx?.flags?.hadClub);
  */
 const hadTeam = (ctx) => Boolean(ctx?.flags?.hadTeam);
 
+// Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
+const TEAM_QUOTA = 'Ton offre gratuite compte déjà toutes ses équipes : une nouvelle équipe '
+  + 'demande l’offre Équipe. Rien n’a été créé.';
+const EVENT_QUOTA = 'Ton offre gratuite compte déjà tous ses événements : un nouvel événement '
+  + 'demande l’offre Équipe. Rien n’a été créé.';
+
 const MISSIONS = [
   {
     gaugeStep: 25,
     id: 'coach_m1',
     locked: true,
+    // GUIDE-RELANCE : refus de l'écran (clé du signal ⇒ raison dite par le guide).
+    refusals: {
+      get 'club.join.unavailable'() {
+        return t('refusal.clubPartner', 'Ce club passe par son dirigeant : « Je dirige ce club » '
+          + 'remplace « C’est mon club ». Choisis un autre club, ou passe cette mission.');
+      },
+      get 'paywall.club-tier-team-limit'() { return t('refusal.teamQuota', TEAM_QUOTA); },
+      get 'paywall.team-limit'() { return t('refusal.teamQuota', TEAM_QUOTA); },
+    },
     get title() { return t('missions.m1', 'Créer ton équipe'); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m2',
     locked: true,
+    needs: ['coach_m1'],
     get title() { return t('missions.m2', 'Inviter tes joueur·se·s'); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m3',
     locked: true,
+    needs: ['coach_m1'],
+    refusals: {
+      get 'paywall.event-limit'() { return t('refusal.eventQuota', EVENT_QUOTA); },
+      get 'paywall.match-limit'() { return t('refusal.eventQuota', EVENT_QUOTA); },
+    },
     get title() { return t('missions.m3', "Programmer l'entraînement de la semaine"); },
   },
   {
     gaugeStep: 25,
     id: 'coach_m4',
     locked: true,
+    // « Publier une annonce » demande une équipe encadrée (FriendlyMatchWizardTeam).
+    needs: ['coach_m1'],
+    refusals: {
+      get 'friendly.publish.refused'() {
+        return t('refusal.friendly', 'L’annonce n’a pas pu être publiée.');
+      },
+    },
     get title() { return t('missions.m4', 'Rechercher'); },
   },
   {
@@ -791,6 +819,51 @@ const STEPS = [
   { id: 'close', kind: 'closing' },
 ];
 
+/**
+ * GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : « Revoir le guide sans rien
+ * créer ». Une étape par mission, qui emmène sur l'écran et le décrit ; on
+ * avance au bouton, aucun geste réel n'est attendu. Jouées seulement en visite
+ * (`review`, voir `isStepAvailable`).
+ * @param {string} id - Id de l'étape.
+ * @param {string} missionId - Mission.
+ * @param {any} navTarget - Écran montré.
+ * @param {string[]} targets - Ancres encadrées.
+ * @param {() => string} text - Texte de la bulle.
+ * @returns {any} Étape.
+ */
+const reviewStep = (id, missionId, navTarget, targets, text) => ({
+  id,
+  missionId,
+  navTarget,
+  get nextLabel() { return t('review.next', 'Suivant'); },
+  review: true,
+  targets,
+  get text() { return text(); },
+  veil: false,
+});
+
+const REVIEW_STEPS = [
+  reviewStep('rv-m1', 'coach_m1', teamHubTarget, ['teams.fab', 'teams.newTeam'], () => t(
+    'rv-m1',
+    'Tes équipes sont ici. « Nouvelle équipe » en crée une : un nom, une catégorie, un niveau.',
+  )),
+  reviewStep('rv-m2', 'coach_m2', teamHubTarget, ['teams.trained.0'], () => t(
+    'rv-m2',
+    'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes '
+      + 'joueur·se·s.',
+  )),
+  reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
+    'rv-m3',
+    'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
+      + 'le lieu, l’horaire.',
+  )),
+  reviewStep('rv-m4', 'coach_m4', friendlySearchTarget, ['friendly.create'], () => t(
+    'rv-m4',
+    'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match '
+      + 'amical » publie ton annonce.',
+  )),
+];
+
 export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
@@ -811,6 +884,6 @@ export const COACH_GUIDE = Object.freeze({
   }),
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
   missions: MISSIONS,
-  steps: STEPS,
+  steps: [...STEPS, ...REVIEW_STEPS],
   version: 3,
 });
