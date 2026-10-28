@@ -23,12 +23,14 @@ const mockUseGetEvents = jest.fn();
 const mockCartes = [];
 const mockCalendriers = [];
 const mockNavigate = jest.fn();
+const ROLE_PARENT = { name: 'Parent', type: 'parent' };
+let mockRole = ROLE_PARENT;
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     canManageEvents: false,
-    userData: { documentId: 'paul', role: { name: 'Parent', type: 'parent' } },
+    userData: { documentId: 'paul', role: mockRole },
   }),
 }));
 
@@ -377,10 +379,27 @@ describe('PARENT-PLANNING / 3 — le planning d un parent', () => {
     expect(mockCalendriers[mockCalendriers.length - 1].datesAVenir).toBeNull();
   });
 
-  test('3-8 PROTEGE — sans enfant, le message du vide ne change pas', async () => {
+  test('3-8 PROTEGE — un joueur sans enfant : le message du vide ne change pas', async () => {
+    mockRole = { name: 'Authenticated', type: 'authenticated' };
+    try {
+      const racine = await monter(requete([]));
+      expect(texteDeLEcran(racine)).toContain(
+        'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
+      );
+    } finally {
+      mockRole = ROLE_PARENT;
+    }
+  });
+
+  // PETITSBUGS-2 (audit) — un compte Parent dont le serveur ne trouve aucun enfant lisait
+  // le texte du joueur, « ton équipe ». Il lit maintenant un texte de parent.
+  test('PETITSBUGS-2 ROUGE-AVANT — un parent sans enfant trouve : texte de parent', async () => {
     const racine = await monter(requete([]));
-    expect(texteDeLEcran(racine)).toContain(
-      'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
+    const texte = texteDeLEcran(racine);
+    expect(texte).toContain(
+      'Les prochains événements de tes enfants s’afficheront ici dès que leurs équipes '
+      + 'en publieront.',
     );
+    expect(texte).not.toContain('ton équipe');
   });
 });

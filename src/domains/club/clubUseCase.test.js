@@ -53,6 +53,15 @@ describe('clubUseCases', () => {
       expect(getClubInitials('Scm')).toBe('S');
       expect(getClubInitials('S')).toBe('S');
     });
+
+    // PETITSBUGS-2 : « SCM95 - SPORTING CLUB MACCABI » donnait « S-SCM » (le tiret compte
+    // comme un mot), coupe a 3 lettres : « S-S ». Un signe seul n est pas un mot.
+    it('ne compte pas un tiret ou un signe isole comme un mot', () => {
+      expect(getClubInitials('SCM95 - SPORTING CLUB MACCABI')).toBe('SSCM');
+      expect(getClubInitials('AS Bouc – Bel Air')).toBe('ABBA');
+      expect(getClubInitials('FC / Lyon')).toBe('FL');
+      expect(getClubInitials('Saint-Étienne')).toBe('S');
+    });
   });
 
   describe('getClubFiltersNumber', () => {

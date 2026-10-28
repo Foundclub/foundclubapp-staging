@@ -328,12 +328,14 @@ export default function EventPublishedShowcase({ navigation, route }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       enabled={!clavierAndroid.ecoute}
       keyboardVerticalOffset={0}
-      style={[styles.flex, { paddingBottom: clavierAndroid.retrait }]}
+      // PETITSBUGS-2 — la barre d'état est réservée HORS du défilement : posée dans le
+      // contenu, elle défilait avec lui et le titre remontait sous l'heure (affiche SMUC).
+      style={[styles.flex, { paddingBottom: clavierAndroid.retrait, paddingTop: insets.top }]}
     >
       <ScrollView
         contentContainerStyle={[styles.container, {
           paddingBottom: SCREEN_PADDING + insets.bottom,
-          paddingTop: SCREEN_PADDING + insets.top,
+          paddingTop: SCREEN_PADDING,
         }]}
         keyboardShouldPersistTaps="handled"
       >

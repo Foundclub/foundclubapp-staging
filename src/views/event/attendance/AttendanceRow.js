@@ -5,7 +5,6 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
-import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { isNoShow, resolveRowState } from './attendanceCallModel';
@@ -218,8 +217,12 @@ function AttendanceRow({
       </View>
 
       <View style={styles.identity}>
-        {/* MARQUEE — le nom du participant se lit en entier pendant l'appel. */}
-        <MarqueeText style={[Fonts.h5Bold, { color: Colors.neutral00 }]} text={nom} />
+        {/* PETITSBUGS-2 — le nom se lit en entier sur DEUX lignes, immobile. Le
+            défilement (MARQUEE) se photographiait coupé au début (« obin masir »),
+            ou par « … » au milieu d'un prénom. */}
+        <Text numberOfLines={2} style={[Fonts.h5Bold, { color: Colors.neutral00 }]}>
+          {nom}
+        </Text>
         <Text numberOfLines={1} style={[Fonts.p3Bold, { color: couleurSousLigne }]}>
           {sousLigne}
         </Text>

@@ -28,10 +28,11 @@ export function getClubInitials(clubName) {
   // List of French connecting words to exclude
   const excludedWords = ['de', 'du', 'des', 'le', 'la', 'les', 'et', 'a', 'à', 'au', 'aux', 'en', 'l', 'd'];
 
-  // Split the club name into words and filter out empty strings
+  // Split the club name into words; a lone sign (« - », « / ») is not a word
+  // (PETITSBUGS-2 : « SCM95 - SPORTING CLUB » donnait « S-S »).
   const words = clubName
     .split(/[\s']+/)
-    .filter((word) => word.length > 0);
+    .filter((word) => /[\p{L}\p{N}]/u.test(word));
 
   // Get the initial of each word that's not in the excluded list
   const initials = words

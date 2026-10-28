@@ -9,6 +9,7 @@ import {
   Alert, FlatList, Image, InteractionManager, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import {
@@ -909,6 +910,19 @@ function ParticipantEventList({ navigation }) {
       );
     }
 
+    // PETITSBUGS-2 — un compte Parent dont le serveur ne trouve aucun enfant lisait
+    // « ton équipe », le texte du joueur.
+    const texteSansEnfantTrouve = userData?.role?.name === USER_ROLES.parent
+      ? t(
+        'participantEventList.parentNextEventsWillShow',
+        'Les prochains événements de tes enfants s’afficheront ici dès que leurs équipes '
+        + 'en publieront.',
+      )
+      : t(
+        'participantEventList.yourNextEventsWillShow',
+        'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
+      );
+
     // 👪 PARENT-PLANNING — un parent sans evenement a venir lit le prenom de son enfant.
     const parentDescription = viewerChildrenNames
       ? t('participantEventList.childrenNextEventsWillShow', {
@@ -920,10 +934,7 @@ function ParticipantEventList({ navigation }) {
         names: viewerChildrenNames,
         ...SANS_ECHAPPEMENT,
       })
-      : t(
-        'participantEventList.yourNextEventsWillShow',
-        'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
-      );
+      : texteSansEnfantTrouve;
 
     return (
       <View style={[Spaces.marginHorizontal[16]]}>
@@ -957,6 +968,7 @@ function ParticipantEventList({ navigation }) {
     isEventsLoading,
     refetchEvents,
     shouldLoadEventFeed, t,
+    userData?.role?.name,
     viewerChildrenCount,
     viewerChildrenNames,
   ]);
