@@ -34,9 +34,11 @@ export const registerWebNavigationHandlers = (handlers = {}) => {
 /**
  * @param {string} name
  * @param {Record<string, unknown>} [params]
+ * @param {{ pop?: boolean }} [options] - `pop` : revenir en DÉPILANT à un écran déjà
+ *   empilé (react-navigation 7 empile un doublon sinon). Ignoré sur le site.
  * @returns {boolean}
  */
-export const navigate = (name, params) => {
+export const navigate = (name, params, options) => {
   if (Platform.OS === 'web') {
     if (typeof webNavigateHandler === 'function') {
       webNavigateHandler(name, params || {});
@@ -52,7 +54,8 @@ export const navigate = (name, params) => {
   }
 
   if (!navigationRef.isReady()) return false;
-  /** @type {any} */ (navigationRef).navigate(name, params);
+  if (options) /** @type {any} */ (navigationRef).navigate(name, params, options);
+  else /** @type {any} */ (navigationRef).navigate(name, params);
   return true;
 };
 

@@ -22,7 +22,8 @@ export const commonOptions = {
   get headerBackAccessibilityLabel() {
     return i18next.isInitialized ? i18next.t('common.back', 'Retour') : 'Retour';
   },
-  headerBackImage: () => <HeaderBackButton decorative />,
+  // GUIDE-ENTETE : ancre du guide (m1-back, et bas de l'en-tête pour la bulle).
+  headerBackImage: () => <TourTarget id="header.back"><HeaderBackButton decorative /></TourTarget>,
   headerBackTitle: '',
   headerShadowVisible: false,
   headerShown: true,

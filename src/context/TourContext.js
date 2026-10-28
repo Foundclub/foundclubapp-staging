@@ -66,12 +66,15 @@ const isGuideProfile = (profile) => profile?.version === GUIDE_VERSION;
 /**
  * @param {any} target
  * @param {any} context
+ * @param {{ pop?: boolean }} [options] - Options de navigation.
  * @returns {boolean}
  */
-const navigateToTarget = (target, context) => {
+const navigateToTarget = (target, context, options) => {
   if (!target?.routeName) return false;
   const params = typeof target.params === 'function' ? target.params(context) : target.params;
-  return Boolean(navigateRoot(target.routeName, params));
+  return Boolean(options
+    ? navigateRoot(target.routeName, params, options)
+    : navigateRoot(target.routeName, params));
 };
 
 /**
@@ -317,7 +320,10 @@ export function TourProvider({ children }) {
       const startState = { ...base, stepIndex: startIndex };
       setTourState(startState);
       persist(startState);
-      navigateToTarget(profile.steps[startIndex].navTarget, { userData });
+      // GUIDE-ENTETE (décision d'Adel 3- A, 28/10) : relancé depuis Mon compte,
+      // le guide repart de l'accueil en dépilant Mon compte ; sans `pop`, il
+      // restait sur Mon compte, sans barre d'onglets (audit, captures 76-77).
+      navigateToTarget(profile.steps[startIndex].navTarget, { userData }, { pop: true });
       return true;
     }
 

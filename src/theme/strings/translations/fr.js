@@ -24679,7 +24679,8 @@ export default {
         yourTeam: 'Ton équipe',
       },
       kicker: 'Guide entraîneur·e',
-      'm1-back': 'Quitte la fiche du club avec la flèche retour.',
+      'm1-back': 'Reviens en arrière : touche la flèche en haut à gauche, ou glisse ton doigt '
+        + 'depuis le bord gauche de l’écran.',
       'm1-csearch': 'Tape le nom de ton club, puis ouvre sa fiche.',
       'm1-cw': 'Crée ton club : remplis chaque écran, puis Suivant.',
       'm1-dock': 'Commence par ton équipe. Ouvre l’onglet Équipes.',
@@ -24687,7 +24688,8 @@ export default {
       'm1-find': 'Ton équipe est déjà là : ouvre-la.',
       'm1-find-dock': 'Ton équipe est déjà là : ouvre l’onglet Équipes.',
       'm1-gate': 'Une équipe appartient toujours à un club. Commence par trouver le tien. Pas de club ? « Je ne trouve pas mon club » te guidera pour le créer.',
-      'm1-mine': 'C’est bien lui ? Dis-le.',
+      'm1-mine': 'C’est ton club ? Touche « C’est mon club ! ».',
+      'm1-mine-ask': 'C’est ton club ? Demande à le rejoindre : un dirigeant validera.',
       'm1-new': 'Touche « Nouvelle équipe ».',
       'm1-new-fab': 'Crée ton équipe avec ce bouton.',
       'm1-new2': 'Ton club est rejoint : touche « Nouvelle équipe ».',
@@ -24721,19 +24723,23 @@ export default {
       'm3-team': 'Rattache la séance à ton équipe.',
       'm3-type': 'Choisis « Entraînement ».',
       'm3-when': 'Touche la date et les heures pour les choisir. Ta séance revient chaque semaine ? Ouvre « Répéter » et applique. Puis Suivant.',
-      'm4-am1': 'Choisis l’équipe qui cherche un adversaire, puis Suivant.',
+      'm4-am1': 'Touche l’équipe qui cherche un adversaire.',
       'm4-am2': 'Tu reçois sur ton terrain, tu te déplaces, ou les deux. « Les deux » touche le plus d’équipes.',
       'm4-am3': 'Choisis un jour (l’heure est facultative), puis « Ajouter cette date ». Propose-en plusieurs : tu auras plus de réponses.',
-      'm4-am4': 'Ta ville, et jusqu’où tu acceptes d’aller : c’est le rayon où ton annonce sera montrée.',
-      'm4-am5': 'Les catégories adverses que tu acceptes. Rien de coché : toutes.',
-      'm4-am6': 'Le niveau souhaité et un message : facultatif.',
+      'm4-am4': 'Touche ton terrain, ou tape ta ville. Puis choisis jusqu’où tu acceptes de te '
+        + 'déplacer.',
+      'm4-am5': 'On a coché la catégorie et le niveau de ton équipe. Ajoute-en d’autres, ou '
+        + 'touche « Peu importe, je prends tout ».',
+      'm4-am6': 'Un mot pour les autres coachs et qui arbitre : c’est facultatif. Sinon, « Passer '
+        + 'cette étape ».',
       'm4-am7': 'Tout est bon ? Publie : les équipes de ta zone pourront te proposer un match.',
       'm4-back': 'Ta séance est en ligne. Dernière mission : retourne à l’accueil.',
       'm4-card': 'Il te manque un·e joueur·se ? Les profils ouverts au recrutement sont ici.',
       'm4-frc': 'À toi : crée ton annonce de match amical.',
       'm4-read': 'Fais défiler pour voir les profils. Pour trouver le bon, utilise les filtres, puis ouvre une carte.',
       'm4-tab-club': 'Les événements. Ouvre maintenant « Club ».',
-      'm4-tab-ev': 'Rechercher, ce n’est pas que des profils. Ouvre « Événement ».',
+      'm4-tab-ev': 'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et '
+        + 'détections près de chez toi.',
       'm4-tab-fr': 'Les clubs. Dernier onglet : « Matchs amicaux ».',
       missions: {
         b1: 'Voir qui vient et relancer',

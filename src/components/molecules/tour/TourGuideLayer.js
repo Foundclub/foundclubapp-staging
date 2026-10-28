@@ -26,6 +26,7 @@ import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   clipAboveDock,
   computeBlockers,
+  headerBottomOf,
   isOnScreen,
   placeBubble,
   stableHeight,
@@ -61,17 +62,33 @@ import useReduceMotion from '@/hooks/useReduceMotion';
 
 const CUTOUT_RADIUS = 16;
 const MEASURE_INTERVAL_MS = 400;
-// FINITIONS-GUIDE (27/10) : en texte agrandi (1,3, Pixel 9), la bulle « en
-// haut » du tunnel recouvrait le haut du champ (31 à 93 px). Sa police ne suit
-// plus le réglage du téléphone (`allowFontScaling={false}`, comme la barre
-// d'onglets) : `maxFontSizeMultiplier` est resté sans effet à l'émulateur
-// (RN 0.81, nouvelle architecture, Android 16).
-// ponytail: la bulle reste à la taille normale pour qui agrandit le texte (le
-// reste de l'écran grandit). Sortie : textes du tunnel plus courts, puis
-// agrandissement rendu à la bulle, à remesurer avec tutoe-calibrage.py.
+// GUIDE-TEXTES (décision d'Adel 3- B, 28/10) : la bulle suit l'agrandissement
+// du texte du téléphone, plafonné à 1,3 (au-delà, elle recouvrait les champs du
+// tunnel, FINITIONS-GUIDE). `maxFontSizeMultiplier` est resté sans effet à
+// l'émulateur (RN 0.81, nouvelle architecture, Android 16) : la taille est
+// calculée ici et le système ne la multiplie plus (`allowFontScaling={false}`).
+const MAX_FONT_SCALE = 1.3;
+// Toucher minimal (accessibilité) : croix et bouton de la bulle.
+const MIN_TOUCH = 44;
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
 const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
+// En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
+// haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
+const HEADER_IDS = ['header.back', 'screen.header'];
+
+/**
+ * Police de la bulle à l'échelle du téléphone, plafonnée.
+ * @param {any} font - Style du thème (`fontSize`, `lineHeight`).
+ * @param {number} scale - Échelle retenue.
+ * @param {number} [lineHeight] - Interligne imposé.
+ * @returns {any} Style.
+ */
+const scaledFont = (font, scale, lineHeight) => ({
+  ...font,
+  fontSize: font.fontSize * scale,
+  lineHeight: (lineHeight ?? font.lineHeight) * scale,
+});
 
 /**
  * Variante de l'étape dont la 1ʳᵉ cible est montée (ex. feuille de choix ouverte).
@@ -190,6 +207,7 @@ function TourGuideLayer() {
       ...stepTargets,
       ...(currentStep.variants || []).flatMap((/** @type {any} */ v) => v.targets || []),
       ...DOCK_IDS,
+      ...HEADER_IDS,
     ])]
     : [];
   const targetKey = allTargetIds.join('|');
@@ -290,8 +308,12 @@ function TourGuideLayer() {
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
+  const headerBottom = headerBottomOf(
+    HEADER_IDS.map((id) => rects[id] || null),
+    height,
+  );
   const position = placeBubble({
-    bubbleHeight, height, insetTop: insets.top, primary, top: isTop, width,
+    bubbleHeight, headerBottom, height, insetTop: insets.top, primary, top: isTop, width,
   });
 
   // Journal de calibrage (développement seulement) : une ligne par état de
@@ -348,8 +370,12 @@ function TourGuideLayer() {
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
   const isCompact = isTop && !buttonLabel && !isBonus;
-  const showHud = position.top > insets.top + 110
-    && !cutouts.some((cutout) => cutout.y < insets.top + 110);
+  // La jauge se pose sous l'en-tête, comme la bulle : elle couvrait Fermer et
+  // la flèche (audit du 28/10, captures 86 et 89).
+  const hudTop = Math.max(insets.top + 6, (headerBottom ?? 0) + 6);
+  const showHud = position.top > hudTop + 104
+    && !cutouts.some((cutout) => cutout.y < hudTop + 104);
+  const fontScale = Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE);
   const kicker = missionPosition
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
       + ` · ${currentMission?.title || ''}`
@@ -474,9 +500,9 @@ function TourGuideLayer() {
       {showHud ? (
         <GuideHud
           gauge={gauge}
-          insetTop={insets.top}
           isBonus={isBonus}
           missionPosition={missionPosition}
+          top={hudTop}
         />
       ) : null}
 
@@ -529,7 +555,7 @@ function TourGuideLayer() {
             {kicker ? (
               <Text
                 allowFontScaling={false}
-                style={[Fonts.p4Bold, {
+                style={[scaledFont(Fonts.p4Bold, fontScale), {
                   color: isBonus ? Colors.gold900 : Colors.primary600,
                   letterSpacing: 1,
                   marginBottom: 5,
@@ -541,7 +567,7 @@ function TourGuideLayer() {
             ) : null}
             <Text
               allowFontScaling={false}
-              style={[Fonts.p2Bold, { color: Colors.primary900, lineHeight: 20 }]}
+              style={[scaledFont(Fonts.p2Bold, fontScale, 20), { color: Colors.primary900 }]}
             >
               {text}
             </Text>
@@ -549,8 +575,15 @@ function TourGuideLayer() {
           <TouchableOpacity
             accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
             accessibilityRole="button"
-            hitSlop={12}
             onPress={tour.pauseTour}
+            style={{
+              alignItems: 'center',
+              height: MIN_TOUCH,
+              justifyContent: 'center',
+              margin: -14,
+              width: MIN_TOUCH,
+            }}
+            testID={__DEV__ ? 'tour.pause' : undefined}
           >
             <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
           </TouchableOpacity>
@@ -572,7 +605,7 @@ function TourGuideLayer() {
               >
                 <Text
                   allowFontScaling={false}
-                  style={[Fonts.p3Bold, { color: Colors.neutral600 }]}
+                  style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
                 >
                   {t('tourGuide.skipBonus', 'Passer ce bonus')}
                 </Text>
@@ -580,7 +613,7 @@ function TourGuideLayer() {
             ) : (
               <Text
                 allowFontScaling={false}
-                style={[Fonts.p4Bold, { color: Colors.neutral600 }]}
+                style={[scaledFont(Fonts.p4Bold, fontScale), { color: Colors.neutral600 }]}
               >
                 {isLockedStep ? t('tourGuide.essential', 'Mission essentielle') : ''}
               </Text>
@@ -596,14 +629,15 @@ function TourGuideLayer() {
                 style={{
                   backgroundColor: Colors.primary500,
                   borderRadius: 999,
-                  height: 36,
                   justifyContent: 'center',
+                  minHeight: MIN_TOUCH,
                   paddingHorizontal: 16,
                 }}
+                testID={__DEV__ ? 'tour.next' : undefined}
               >
                 <Text
                   allowFontScaling={false}
-                  style={[Fonts.p3Black, { color: Colors.primary900 }]}
+                  style={[scaledFont(Fonts.p3Black, fontScale), { color: Colors.primary900 }]}
                 >
                   {buttonLabel}
                 </Text>
@@ -620,13 +654,13 @@ function TourGuideLayer() {
  * Jauge en haut (HUD) : « MISSION 2/4 », barre, « Équipe prête 50 % ».
  * @param {object} props - Propriétés.
  * @param {number} props.gauge - Jauge en %.
- * @param {number} props.insetTop - Encoche.
  * @param {boolean} props.isBonus - Bonus en cours.
  * @param {{ index: number; total: number } | null} props.missionPosition - Position.
+ * @param {number} props.top - Ordonnée (sous l'en-tête).
  * @returns {import('react').ReactElement} HUD.
  */
 function GuideHud({
-  gauge, insetTop, isBonus, missionPosition,
+  gauge, isBonus, missionPosition, top,
 }) {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -650,7 +684,7 @@ function GuideHud({
         paddingTop: 7,
         position: 'absolute',
         right: 14,
-        top: insetTop + 6,
+        top,
       }}
     >
       <Text style={[Fonts.p4Bold, { color: accent, letterSpacing: 1, textTransform: 'uppercase' }]}>

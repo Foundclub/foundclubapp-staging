@@ -112,8 +112,9 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.isGuide).toBe(true);
     expect(tour.currentStep.kind).toBe('opening');
     expect(tour.gauge).toBe(0);
+    // GUIDE-ENTETE (3- A, 28/10) : retour à l'accueil en dépilant (relance depuis Mon compte).
     expect(mockNavigate)
-      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome });
+      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome }, { pop: true });
     expect(tour.missions.map((mission) => mission.id))
       .toEqual(['coach_m1', 'coach_m2', 'coach_m3', 'coach_m4', 'coach_b1', 'coach_b2']);
   });

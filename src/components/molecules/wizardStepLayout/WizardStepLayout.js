@@ -273,46 +273,49 @@ function WizardStepLayout({
               isHeaderCollapsed ? Spaces.marginBottom[12] : Spaces.marginBottom[24],
             ]}
           >
-            <View
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Alignments.justifySpaceBetween,
-                Spaces.marginBottom[12],
-              ]}
-            >
-              {onBack ? (
-                <WizardRoundButton
-                  icon="arrowLeft"
-                  label={t('common.back', 'Retour')}
-                  onPress={onBack}
-                  size={header.roundButtonSize}
-                />
-              ) : (
-                // La place est reservee meme sans bouton : c'est elle qui tient
-                // « Étape n/N » au centre exact de l'ecran.
-                <View style={{ width: header.roundButtonSize }} />
-              )}
-              {hasProgress ? (
-                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                  {t('eventWizard.common.stepCounter', {
-                    current: stepIndex,
-                    defaultValue: `Étape ${stepIndex}/${stepCount}`,
-                    total: stepCount,
-                  })}
-                </Text>
-              ) : <View />}
-              {onClose ? (
-                <WizardRoundButton
-                  icon="close"
-                  label={t('common.close', 'Fermer')}
-                  onPress={onClose}
-                  size={header.roundButtonSize}
-                />
-              ) : (
-                <View style={{ width: header.roundButtonSize }} />
-              )}
-            </View>
+            {/* GUIDE-ENTETE : la bulle du guide se pose sous Retour / Fermer. */}
+            <TourTarget id="screen.header">
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  Spaces.marginBottom[12],
+                ]}
+              >
+                {onBack ? (
+                  <WizardRoundButton
+                    icon="arrowLeft"
+                    label={t('common.back', 'Retour')}
+                    onPress={onBack}
+                    size={header.roundButtonSize}
+                  />
+                ) : (
+                  // La place est reservee meme sans bouton : c'est elle qui tient
+                  // « Étape n/N » au centre exact de l'ecran.
+                  <View style={{ width: header.roundButtonSize }} />
+                )}
+                {hasProgress ? (
+                  <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                    {t('eventWizard.common.stepCounter', {
+                      current: stepIndex,
+                      defaultValue: `Étape ${stepIndex}/${stepCount}`,
+                      total: stepCount,
+                    })}
+                  </Text>
+                ) : <View />}
+                {onClose ? (
+                  <WizardRoundButton
+                    icon="close"
+                    label={t('common.close', 'Fermer')}
+                    onPress={onClose}
+                    size={header.roundButtonSize}
+                  />
+                ) : (
+                  <View style={{ width: header.roundButtonSize }} />
+                )}
+              </View>
+            </TourTarget>
             {hasProgress ? (
               <View
                 style={[

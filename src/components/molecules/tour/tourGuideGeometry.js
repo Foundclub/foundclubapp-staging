@@ -6,6 +6,8 @@
 const CUTOUT_MARGIN = 6;
 const BUBBLE_WIDTH = 304;
 const BUBBLE_GAP = 14;
+// Écart entre le bas de l'en-tête et une bulle « en haut ».
+const HEADER_GAP = 6;
 
 /**
  * Mesure d'une cible ramenée dans le repère de la couche. Les deux viennent de
@@ -133,8 +135,26 @@ export const computeBlockers = (cutouts, width, height) => {
 };
 
 /**
+ * Bas de l'en-tête de l'écran (flèche Retour, avatar, « Exemple · contre… ») :
+ * le plus bas des en-têtes ancrés visibles dans le tiers haut de l'écran, ou
+ * null (écran sans en-tête ancré).
+ * @param {Array<{ height: number; width: number; x: number; y: number } | null>} rects - Mesures.
+ * @param {number} screenHeight - Hauteur de la couche.
+ * @returns {number | null} Ordonnée du bas de l'en-tête.
+ */
+export const headerBottomOf = (rects, screenHeight) => {
+  const bottoms = rects
+    .filter((rect) => rect && rect.y + rect.height > 2 && rect.y < screenHeight / 3)
+    .map((rect) => /** @type {any} */ (rect).y + /** @type {any} */ (rect).height);
+  return bottoms.length ? Math.max(...bottoms) : null;
+};
+
+/**
  * Place la bulle (04_COUCHE_VISUELLE §2, « Placement ») : en haut, au centre
  * d'une très grande cible, ou du côté de la cible où il reste le plus de place.
+ * GUIDE-ENTETE (décision d'Adel 4- A, 28/10) : « en haut » veut dire SOUS
+ * l'en-tête ancré, pour que la flèche Retour reste visible et touchable ; sans
+ * en-tête ancré, sous l'encoche comme avant.
  * @param {object} args - Mesures.
  * @param {{ height: number; width: number; x: number; y: number } | null} args.primary - Découpe.
  * @param {boolean} args.top - Étape « bulle en haut ».
@@ -142,15 +162,20 @@ export const computeBlockers = (cutouts, width, height) => {
  * @param {number} args.width - Largeur de l'écran.
  * @param {number} args.height - Hauteur de l'écran.
  * @param {number} args.insetTop - Encoche.
+ * @param {number | null} [args.headerBottom] - Bas de l'en-tête ancré (`headerBottomOf`).
  * @returns {{ arrow: 'down' | 'none' | 'up'; arrowX: number; left: number; top: number;
  *   width: number }} Position.
  */
 export const placeBubble = ({
-  bubbleHeight, height, insetTop, primary, top, width,
+  bubbleHeight, headerBottom = null, height, insetTop, primary, top, width,
 }) => {
   if (top || !primary) {
     return {
-      arrow: 'none', arrowX: 0, left: 14, top: insetTop + 4, width: width - 28,
+      arrow: 'none',
+      arrowX: 0,
+      left: 14,
+      top: Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP),
+      width: width - 28,
     };
   }
   const bubbleWidth = Math.min(BUBBLE_WIDTH, width - 28);

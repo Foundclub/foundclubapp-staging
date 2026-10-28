@@ -4752,9 +4752,10 @@ function ClubDetails({ navigation, route }) {
           {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles
               se rangent avec les autres portes « je m'attache a ce club »,
               avant les portes d'interet qui, elles, restent en Secondary. */}
-          {/* TUTOE-2 : ancre invisible du guide (M1 sans club), le bouton garde son ombre. */}
+          {/* TUTOE-2 : ancre invisible du guide (M1 sans club), le bouton garde son ombre.
+              GUIDE-TEXTES : une ancre par libellé, la bulle nomme le bouton affiché. */}
           {showJoinClubAction ? (
-            <TourTarget id="club.itsMine">
+            <TourTarget id={isClubWithoutVisibleOwner ? 'club.itsMine' : 'club.askToJoin'}>
               <Button
                 disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
                 onPress={handleAskToJoinClub}

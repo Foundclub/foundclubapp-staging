@@ -212,8 +212,16 @@ const STEPS = [
     id: 'm1-mine',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
+    // GUIDE-TEXTES (audit du 28/10, capture 89) : la bulle nomme le bouton
+    // affiché ; un club qui a un dirigeant n'a que « Demander à rejoindre ».
     targets: ['club.itsMine'],
-    get text() { return t('m1-mine', 'C’est bien lui ? Dis-le.'); },
+    get text() { return t('m1-mine', 'C’est ton club ? Touche « C’est mon club ! ».'); },
+    variants: [{
+      targets: ['club.askToJoin'],
+      get text() {
+        return t('m1-mine-ask', 'C’est ton club ? Demande à le rejoindre : un dirigeant validera.');
+      },
+    }],
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
   },
   {
@@ -227,11 +235,21 @@ const STEPS = [
   },
   {
     advanceOn: { not: RouteNames.Club, type: 'route' },
-    bubblePlacement: 'top',
     id: 'm1-back',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
-    get text() { return t('m1-back', 'Quitte la fiche du club avec la flèche retour.'); },
+    // Décision d'Adel 4- A (28/10) : cadre sur la flèche, bulle dessous, et le
+    // geste du bord (seul retour d'un iPhone). Rien n'est bloqué : le glissement
+    // depuis le bord doit passer.
+    targets: ['header.back'],
+    get text() {
+      return t(
+        'm1-back',
+        'Reviens en arrière : touche la flèche en haut à gauche, ou glisse ton doigt depuis le '
+          + 'bord gauche de l’écran.',
+      );
+    },
+    veil: false,
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !hadClub(ctx),
   },
   {
@@ -572,7 +590,11 @@ const STEPS = [
     resumeFrom: 'm4-back',
     targets: ['search.tab.events'],
     get text() {
-      return t('m4-tab-ev', 'Rechercher, ce n’est pas que des profils. Ouvre « Événement ».');
+      return t(
+        'm4-tab-ev',
+        'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et détections près '
+          + 'de chez toi.',
+      );
     },
   },
   {
@@ -605,7 +627,7 @@ const STEPS = [
   ...(/** @type {Array<[string, string, () => string]>} */ ([
     ['m4-am1', RouteNames.FriendlyMatchWizardHosting, () => t(
       'm4-am1',
-      'Choisis l’équipe qui cherche un adversaire, puis Suivant.',
+      'Touche l’équipe qui cherche un adversaire.',
     )],
     ['m4-am2', RouteNames.FriendlyMatchWizardDates, () => t(
       'm4-am2',
@@ -619,16 +641,17 @@ const STEPS = [
     )],
     ['m4-am4', RouteNames.FriendlyMatchWizardOpponent, () => t(
       'm4-am4',
-      'Ta ville, et jusqu’où tu acceptes d’aller : c’est le rayon où ton annonce sera '
-        + 'montrée.',
+      'Touche ton terrain, ou tape ta ville. Puis choisis jusqu’où tu acceptes de te déplacer.',
     )],
     ['m4-am5', RouteNames.FriendlyMatchWizardDescription, () => t(
       'm4-am5',
-      'Les catégories adverses que tu acceptes. Rien de coché : toutes.',
+      'On a coché la catégorie et le niveau de ton équipe. Ajoute-en d’autres, ou touche « Peu '
+        + 'importe, je prends tout ».',
     )],
     ['m4-am6', RouteNames.FriendlyMatchWizardRecap, () => t(
       'm4-am6',
-      'Le niveau souhaité et un message : facultatif.',
+      'Un mot pour les autres coachs et qui arbitre : c’est facultatif. Sinon, « Passer cette '
+        + 'étape ».',
     )],
   ])).map(([id, nextRoute, text]) => ({
     ...wizardStep(id, 'coach_m4', nextRoute, 'm4-frc', text),

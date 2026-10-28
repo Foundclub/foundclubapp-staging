@@ -2652,14 +2652,17 @@ function HomeHubContent({ auth, navigation, route }) {
       contentWidth="wide"
       responsivePadding
     >
-      <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-        {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
-        <LeagueHeaderSwitch onPress={scrollToTop} />
-        <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-          <NotificationBadge />
-          <ProfileButton hasAlert={cotisationAPayer} />
+      {/* GUIDE-ENTETE : la bulle du guide se pose sous le logo, la cloche et l’avatar. */}
+      <TourTarget id="screen.header">
+        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
+          <LeagueHeaderSwitch onPress={scrollToTop} />
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+            <NotificationBadge />
+            <ProfileButton hasAlert={cotisationAPayer} />
+          </View>
         </View>
-      </View>
+      </TourTarget>
 
       <ScrollView
         bounces={false}
