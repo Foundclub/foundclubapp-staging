@@ -23681,9 +23681,10 @@ export default {
     coach: {
       'b1-card': 'Open your session.',
       'b1-dock': "To see who's coming: open the schedule.",
-      'b1-relance': "Further down: the participants. Nobody has answered yet: nudge them in one tap. No players yet? This is where you'll nudge them.",
+      'b1-relance': 'Further down: the participants. Nobody has answered yet: nudge them in one tap.',
+      'b1-vide': "This is where you'll see who's coming as soon as your players answer.",
       'b2-dock': 'Your matches are in the schedule: open it.',
-      'b2-list': "Tick the players you're calling up, then Next.",
+      'b2-list': 'Tick at least half a team, then Next.',
       'b2-pub': 'Drag your players onto the positions, then publish: the line-up goes to the team channel, with a request to reply.',
       'b2-start': 'Start from a formation or an empty pitch.',
       'b2-where': "For a real match: open it here, \"Call-up\" tab, then \"Prepare the call-up\". Let's practise on an example match against US Monpeyroux: nothing will be sent.",
@@ -23932,7 +23933,12 @@ export default {
   tourExamples: {
     match: {
       label: 'Example · vs US Monpeyroux',
+      nonePlaced: 'Place at least one player on the pitch.',
       published: 'That was an example: nothing was sent. For a real match, your players receive it in the team channel.',
+    },
+    responders: {
+      label: 'Example · nothing is sent',
+      present: 'Present',
     },
   },
   tourGuide: {

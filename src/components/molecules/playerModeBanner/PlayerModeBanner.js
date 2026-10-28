@@ -4,6 +4,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import { useTour } from '@/context/useTour';
+
 /** @typedef {'player' | 'parent' | null} DisplayMode */
 
 /**
@@ -87,6 +89,10 @@ function PlayerModeBanner(props) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const tour = useTour();
+  // GUIDE-BONUS (L5) : pendant le guide, aucune bascule proposée (un double toucher
+  // y faisait passer en mode joueur, audit 50-51) ; le retour reste.
+  const guideEnCours = Boolean(tour.isGuide && tour.isTourActive && tour.tourStatus === 'active');
 
   const estStaff = accountRoleKey === 'president' || accountRoleKey === 'coach';
   const staffLabel = accountRoleKey === 'coach'
@@ -216,7 +222,7 @@ function PlayerModeBanner(props) {
     };
   }
 
-  if (!etat) return null;
+  if (!etat || (guideEnCours && !etat.actif)) return null;
 
   return (
     <View

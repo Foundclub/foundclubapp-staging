@@ -31,6 +31,14 @@ const t = (id, fallback, values) => String(
 
 const homeTarget = {
   params: { screen: RouteNames.SearchHome },
+  // GUIDE-BONUS (L5) : revenir en dépilant ; un accueil empilé en doublon laissait
+  // l'onglet visé sans cadre ni voile (b1-dock, audit 39-41).
+  pop: true,
+  routeName: RouteNames.HomeTab,
+};
+const planningTarget = {
+  params: { screen: RouteNames.MyEventList },
+  pop: true,
   routeName: RouteNames.HomeTab,
 };
 const teamHubTarget = {
@@ -728,8 +736,11 @@ const STEPS = [
     get text() { return t('b1-card', 'Ouvre ta séance.'); },
   },
   {
-    // Équipe encore vide : rien à relancer, « Passer ce bonus » reste là.
-    advanceOn: { key: 'event.relance.sent', type: 'action' },
+    advanceOn: [
+      { key: 'event.relance.sent', type: 'action' },
+      // Équipe encore vide (signalée par la fiche) : b1-vide.
+      { goto: 'b1-vide', key: 'event.participants.empty', type: 'action' },
+    ],
     completesMission: true,
     id: 'b1-relance',
     missionId: 'coach_b1',
@@ -738,10 +749,25 @@ const STEPS = [
     get text() {
       return t(
         'b1-relance',
-        'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic. Pas '
-          + 'encore de joueur·se ? C’est ici que tu les relanceras.',
+        'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic.',
       );
     },
+  },
+  {
+    // Décision d'Adel « 2- A » (28/10) : équipe vide, visite simple ; la fiche
+    // montre de faux profils d'exemple qui répondent, sans rien envoyer.
+    bubblePlacement: 'top',
+    completesMission: true,
+    id: 'b1-vide',
+    missionId: 'coach_b1',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b1-dock',
+    targets: ['event.participants'],
+    get text() {
+      return t('b1-vide', 'Ici, tu verras qui vient dès que tes joueur·se·s répondront.');
+    },
+    // Seulement par le `goto` de b1-relance : une relance réussie le saute.
+    when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['event.participants.empty']),
   },
 
   // ── B2 · Convoquer pour un match (bonus SIMULÉ : rien n'est envoyé) ──────
@@ -749,9 +775,10 @@ const STEPS = [
     advanceOn: { key: RouteNames.MyEventList, type: 'route' },
     id: 'b2-dock',
     missionId: 'coach_b2',
-    // Après le palier ou B1, on est loin du dock : le guide ramène à l'accueil.
+    // Après le palier ou B1, le guide emmène directement au planning (audit 47-49 :
+    // l'aller-retour par l'accueil ne servait à rien).
     navigateOnEnter: true,
-    navTarget: homeTarget,
+    navTarget: planningTarget,
     targets: ['dock.planning'],
     get text() { return t('b2-dock', 'Tes matchs sont dans le planning : ouvre-le.'); },
   },
@@ -787,7 +814,10 @@ const STEPS = [
       routeName: RouteNames.EventStack,
     },
     resumeFrom: 'b2-dock',
-    get text() { return t('b2-list', 'Coche les joueur·se·s que tu convoques, puis Suivant.'); },
+    get text() {
+      // Une formation demande au moins la moitié de ses titulaires (matchCompositionUtils).
+      return t('b2-list', 'Coche au moins la moitié d’une équipe, puis Suivant.');
+    },
     veil: false,
   },
   {

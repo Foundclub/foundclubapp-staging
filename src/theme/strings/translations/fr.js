@@ -24665,9 +24665,10 @@ export default {
     coach: {
       'b1-card': 'Ouvre ta séance.',
       'b1-dock': 'Pour savoir qui vient : ouvre le planning.',
-      'b1-relance': 'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic. Pas encore de joueur·se ? C’est ici que tu les relanceras.',
+      'b1-relance': 'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic.',
+      'b1-vide': 'Ici, tu verras qui vient dès que tes joueur·se·s répondront.',
       'b2-dock': 'Tes matchs sont dans le planning : ouvre-le.',
-      'b2-list': 'Coche les joueur·se·s que tu convoques, puis Suivant.',
+      'b2-list': 'Coche au moins la moitié d’une équipe, puis Suivant.',
       'b2-pub': 'Glisse tes joueur·se·s sur les postes, puis publie : la compo part dans le canal de l’équipe, avec une demande de réponse.',
       'b2-start': 'Pars d’une formation ou d’un terrain vide.',
       'b2-where': 'Pour un vrai match : ouvre-le ici, onglet « Convocation », puis « Préparer la convocation ». On s’entraîne sur un match d’exemple contre US Monpeyroux : rien ne sera envoyé.',
@@ -24919,7 +24920,12 @@ export default {
   tourExamples: {
     match: {
       label: 'Exemple · contre US Monpeyroux',
+      nonePlaced: 'Place au moins un joueur sur le terrain.',
       published: 'C’était un exemple : rien n’a été envoyé. Pour un vrai match, tes joueur·se·s la reçoivent dans le canal de l’équipe.',
+    },
+    responders: {
+      label: 'Exemple · rien n’est envoyé',
+      present: 'Présent·e',
     },
   },
   tourGuide: {
