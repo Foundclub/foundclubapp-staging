@@ -135,6 +135,8 @@ import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMess
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
+import VideoMessagePlayer from '@/components/molecules/videoMessage/VideoMessagePlayer';
+import VideoMessageTile from '@/components/molecules/videoMessage/VideoMessageTile';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -215,6 +217,7 @@ import {
   getDocumentPreviewText,
   getPrimaryDocumentAttachment,
   isDocumentAttachment,
+  isVideoAttachment,
 } from '@/utils/documentAttachment';
 import { getEntityDocumentId } from '@/utils/entityId';
 import { isLeagueCaptain } from '@/utils/league/captains';
@@ -231,12 +234,16 @@ import { EVENTS } from '@/hooks/useSocket';
 import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
+import {
+  readVideoMessageText, videoDurationRefusal, videoMessageText,
+} from '@/platform/media/videoLimits';
 import shareApi from '@/platform/share';
 
 const conversationLogger = createLogger('conversation');
 
 /**
  * @typedef {{
+ *   duration?: number;
  *   fileName?: string;
  *   fileSize?: number;
  *   name?: string;
@@ -1048,6 +1055,12 @@ function Conversation({ navigation, route }) {
       };
     }
 
+    // MSG-MEDIA — une vidéo trop longue est refusée AVANT l'envoi (limite : videoLimits.js).
+    const videoRefusal = normalizedType.startsWith('video/')
+      ? videoDurationRefusal(asset?.duration)
+      : '';
+    if (videoRefusal) return { reason: 'video_too_long', userMessage: videoRefusal };
+
     return null;
   }, [getAttachmentSizeLimit]);
 
@@ -1525,6 +1538,8 @@ function Conversation({ navigation, route }) {
   const [selectedContactId, setSelectedContactId] = useState('');
   const [isImagePreviewVisible, setIsImagePreviewVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
+  // MSG-MEDIA — l'adresse de la vidéo ouverte en grand ; '' : lecteur fermé.
+  const [videoOuverte, setVideoOuverte] = useState('');
   const [didTryImageHttpsFallback, setDidTryImageHttpsFallback] = useState(false);
   const handledSharedEventFromPickerRef = useRef('');
   const sharedEventPreviewByIdRef = useRef(new Map());
@@ -2171,7 +2186,8 @@ function Conversation({ navigation, route }) {
         }));
 
         const uploadResponse = await client.post('/upload', formData, {
-          timeout: 45000,
+          // MSG-MEDIA — une vidéo (jusqu'à 80 Mo) ne monte pas en 45 s sur un réseau mobile.
+          timeout: String(asset.type || '').startsWith('video/') ? 180000 : 45000,
         });
         const uploadItems = Array.isArray(uploadResponse?.data) ? uploadResponse.data : [];
         logAttachmentDebug('uploadAttachmentAsset success', {
@@ -2308,7 +2324,11 @@ function Conversation({ navigation, route }) {
         && uploadedMime.startsWith('image/');
 
       const normalizedCaption = String(options?.caption || '').trim();
-      const fallbackText = isImageAttachment ? '' : `Pièce jointe : ${uploadedName}`;
+      // MSG-MEDIA — une vidéo part avec « Vidéo · 0:42 » (videoLimits.js dit pourquoi le texte).
+      const texteVideo = videoMessageText(uploadedMime, asset.duration);
+      const fallbackText = isImageAttachment
+        ? ''
+        : (texteVideo || `Pièce jointe : ${uploadedName}`);
       const messageText = normalizedCaption || fallbackText;
 
       const optimisticMessageId = sendMessage(chatId, messageText, {
@@ -2489,6 +2509,7 @@ function Conversation({ navigation, route }) {
     });
 
     return {
+      duration: Number(selectedAsset?.duration) || 0,
       fileName: baseName || `media_${Date.now()}.${extension}`,
       size: Number(selectedAsset?.fileSize || selectedAsset?.size || 0) || 0,
       type: safeType,
@@ -3632,7 +3653,7 @@ function Conversation({ navigation, route }) {
       {
         icon: 'PH',
         key: 'photos',
-        label: t('conversation.attachments.photos', 'Photos'),
+        label: t('conversation.attachments.photos', 'Médias'),
         loading: isUploading,
       },
       {
@@ -6221,6 +6242,51 @@ function Conversation({ navigation, route }) {
       />
     ) : null;
     const normalizedCurrentAttachments = normalizeMessageAttachments(currentMessage?.attachments);
+    // 🎬 MSG-MEDIA — la vidéo : une tuile « Vidéo · 0:42 » dans le cadre commun ; l'appui ouvre
+    // le lecteur. Une note vocale (parfois en video/mp4) est passée plus haut, par sa composition.
+    const pieceVideo = normalizedCurrentAttachments.find((/** @type {any} */ attachment) => (
+      isVideoAttachment(attachment)
+    ));
+    const adresseVideo = pieceVideo ? resolveMediaUri(pieceVideo.url || pieceVideo.uri) : '';
+    if (adresseVideo) {
+      const texteVideo = readVideoMessageText(currentMessage?.text);
+      return wrapWithMessageInteractions(
+        currentMessage,
+        (
+          <View
+            style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}
+          >
+            <BulleDuFil
+              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+              estAMoi={estAMoi}
+              estDernier={estDernierDuGroupe}
+              nom={nomEnTete}
+              role={roleEnTete}
+              testID="bulle-video"
+            >
+              {citationNode}
+              <VideoMessageTile
+                durationSeconds={texteVideo.durationSeconds}
+                onLongPress={() => handleMessageLongPress(null, currentMessage)}
+                onPress={() => setVideoOuverte(adresseVideo)}
+              />
+              {texteVideo.auto ? null : (
+                <Text style={[Fonts.p2, Fonts.neutral00, { marginTop: 6 }]}>
+                  {currentMessage.text}
+                </Text>
+              )}
+              <View style={stylesDuFil.metaSousCarte}>
+                <MetaDuMessage
+                  estAMoi={estAMoi}
+                  etat={etatDEnvoi(currentMessage)}
+                  heure={heureDuMessage(currentMessage.createdAt)}
+                />
+              </View>
+            </BulleDuFil>
+          </View>
+        ),
+      );
+    }
     const hasDocumentAttachment = normalizedCurrentAttachments.some((attachment) => (
       isDocumentAttachment(attachment)
     ));
@@ -7436,6 +7502,7 @@ function Conversation({ navigation, route }) {
         ) : null}
 
         {/* MSGIMG — l'image ouverte en grand : croix toujours visible (cf. ApercuDImage). */}
+        <VideoMessagePlayer onClose={() => setVideoOuverte('')} url={videoOuverte} />
         <ApercuDImage
           onClose={() => {
             setIsImagePreviewVisible(false);

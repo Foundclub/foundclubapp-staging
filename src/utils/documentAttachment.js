@@ -7,6 +7,9 @@ const DOCUMENT_FALLBACK_PREFIXES = [
 
 const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/i;
 const AUDIO_EXTENSION_REGEX = /\.(mp4|m4a|aac|mp3|wav|ogg|oga|webm)$/i;
+// MSG-MEDIA (29/10) — `.mp4` reste aussi dans AUDIO_EXTENSION_REGEX : les notes vocales Android
+// arrivent en video/mp4. Une note vocale se reconnaît à sa composition, lue avant (Conversation).
+const VIDEO_EXTENSION_REGEX = /\.(mov|m4v|3gp|qt)$/i;
 
 const normalizeString = (value) => String(value || '')
   .trim()
@@ -98,10 +101,22 @@ export const isAudioAttachment = (attachment) => {
   return mime.startsWith('audio/') || AUDIO_EXTENSION_REGEX.test(source);
 };
 
+/**
+ * MSG-MEDIA — une vidéo (type vidéo, ou extension .mov/.m4v/.3gp).
+ * @param {any} attachment
+ * @returns {boolean}
+ */
+export const isVideoAttachment = (attachment) => {
+  const mime = String(attachment?.mime || '').toLowerCase();
+  const source = `${getAttachmentName(attachment)} ${getAttachmentUrlLike(attachment)}`;
+  return mime.startsWith('video/') || VIDEO_EXTENSION_REGEX.test(source);
+};
+
 export const isDocumentAttachment = (attachment) => (
   Boolean(attachment)
   && !isImageAttachment(attachment)
   && !isAudioAttachment(attachment)
+  && !isVideoAttachment(attachment)
 );
 
 export const getPrimaryDocumentAttachment = (attachments = []) => (
