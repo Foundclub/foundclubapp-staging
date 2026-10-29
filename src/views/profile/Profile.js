@@ -305,7 +305,10 @@ function Profile({ navigation, route }) {
   };
 
   const handleViewProfile = () => {
-    navigation.navigate(RouteNames.UserDetails);
+    // RW-PARENT (29/10) — l'identifiant, toujours : sans lui, le site laisse « :userId » dans
+    // l'adresse (/users/:userId) et l'écran cherche ce compte-là (404). UserDetails reconnaît
+    // le sien et garde la vue du propriétaire.
+    navigation.navigate(RouteNames.UserDetails, { userId: userData?.documentId });
   };
 
   const handleOpenMyCard = () => {

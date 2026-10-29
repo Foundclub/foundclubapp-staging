@@ -333,3 +333,33 @@ describe('PAR-L12 — un joueur en mode parent lit « Mon compte » comme un par
     expect(libelles).toContain('Profil & activité');
   });
 });
+
+// RW-PARENT (29/10, recette du site) — « Voir mon profil » ouvrait l'adresse littérale
+// `/users/:userId` : sans identifiant, le site ne remplit pas le motif, et l'écran lisait
+// « :userId » (404, « User not found »). Le téléphone acceptait l'appel nu ; le site non.
+describe('RW-PARENT — « Voir mon profil » nomme le compte', () => {
+  it('🔴 la navigation porte SON identifiant (le site en fait /users/<id>)', async () => {
+    mockUserData = {
+      club: null,
+      documentId: 'user-doc-1',
+      firstname: 'Nadia',
+      multisportClubs: [],
+      role: ROLE_PARENT,
+    };
+    const navigate = jest.fn();
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <Profile navigation={{ navigate, setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const rangee = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.onPress === 'function'
+      && aplatirTexte(noeud.props?.children).includes('Voir mon profil')
+    )).at(-1);
+    await act(async () => { rangee.props.onPress(); });
+
+    expect(navigate).toHaveBeenCalledWith('UserDetails', { userId: 'user-doc-1' });
+  });
+});
