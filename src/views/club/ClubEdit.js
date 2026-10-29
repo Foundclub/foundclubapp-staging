@@ -187,9 +187,14 @@ function ClubEdit({ navigation, route }) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
+      // RWDIRIG (29/10) : « Failed to update club info: Failed to upload file: Files are empty »
+      // s'affichait tel quel (vu par Adel en prod). Les messages du service commencent par
+      // « Failed » (anglais, technique) : la phrase française les remplace.
+      // ponytail: on reconnaît le préfixe du service ; un message serveur en français passe encore.
+      const messageTechnique = /^Failed /.test(String(mutationError?.message || ''));
       Alert.alert(
         t('common.error', 'Erreur'),
-        mutationError?.message || t(
+        (!messageTechnique && mutationError?.message) || t(
           'clubEdit.errors.updateFallback',
           'Impossible de mettre à jour ce club pour le moment.',
         ),
