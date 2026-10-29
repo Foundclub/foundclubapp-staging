@@ -234,6 +234,7 @@ import { EVENTS } from '@/hooks/useSocket';
 import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
+import { preparerVideo } from '@/platform/media/preparerVideo';
 import {
   readVideoMessageText, VIDEO_MAX_BYTES, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
@@ -2515,10 +2516,28 @@ function Conversation({ navigation, route }) {
     };
   }, [getAttachmentExtensionFromAsset]);
 
+  // MSGVIDZIP — une vidéo est compressée par le téléphone AVANT la validation : la limite
+  // de taille s'applique au fichier réduit (preparerVideo.js). `null` : refus déjà affiché.
+  const compresserSiVideo = useCallback(async (/** @type {AttachmentAsset} */ asset) => {
+    if (!String(asset?.type || '').startsWith('video/')) return asset;
+    setIsUploading(true);
+    try {
+      const preparation = await preparerVideo(asset);
+      if ('refus' in preparation) {
+        showErrorBanner(preparation.refus);
+        return null;
+      }
+      return /** @type {AttachmentAsset} */ (preparation.asset);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [showErrorBanner]);
+
   const queueOrSendPickedAsset = async (
     /** @type {AttachmentAsset} */ selectedAsset,
   ) => {
-    const normalizedAsset = normalizePickedAsset(selectedAsset);
+    const normalizedAsset = await compresserSiVideo(normalizePickedAsset(selectedAsset));
+    if (!normalizedAsset) return;
     const validationError = validateAttachmentAsset(normalizedAsset);
     if (validationError) {
       logAttachmentDebug('queueOrSendPickedAsset validation failed', {
@@ -2769,7 +2788,8 @@ function Conversation({ navigation, route }) {
   };
 
   const appendEditAttachmentsFromAsset = useCallback(async (/** @type {AttachmentAsset} */ selectedAsset) => {
-    const normalizedAsset = normalizePickedAsset(selectedAsset || {});
+    const normalizedAsset = await compresserSiVideo(normalizePickedAsset(selectedAsset || {}));
+    if (!normalizedAsset) return;
     const validationError = validateAttachmentAsset(normalizedAsset);
     if (validationError) {
       showErrorBanner(validationError.userMessage);
@@ -2816,6 +2836,7 @@ function Conversation({ navigation, route }) {
     }
   }, [
     buildAttachmentUploadErrorMessage,
+    compresserSiVideo,
     normalizePickedAsset,
     showErrorBanner,
     uploadAttachmentAsset,

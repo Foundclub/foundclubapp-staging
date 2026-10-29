@@ -8715,6 +8715,7 @@ export default {
       openInBrowser: 'Open in the browser',
       play: 'Play the video',
       tooLarge: 'Video too large: {{max}} MB maximum.',
+      tooLargeUncompressed: 'Video too large: {{max}} MB maximum. Your phone could not shrink it.',
       unreadable: 'This video cannot be played here.',
     },
     viewMatch: 'View match details',

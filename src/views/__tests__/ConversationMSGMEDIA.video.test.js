@@ -18,6 +18,14 @@ const mockPost = jest.fn();
 const mockShowBanner = jest.fn();
 const mockSendMessage = jest.fn(() => 'opt-1');
 let mockChatData;
+// MSGVIDZIP — la bibliotheque de compression, doublee (elle n'existe pas encore dans
+// node_modules : `virtual`). Par defaut elle echoue, comme sur un telephone sans le module.
+const mockCompress = jest.fn();
+const mockGetFileSize = jest.fn();
+jest.mock('react-native-compressor', () => ({
+  getFileSize: (/** @type {string} */ uri) => mockGetFileSize(uri),
+  Video: { compress: (/** @type {any[]} */ ...args) => mockCompress(...args) },
+}), { virtual: true });
 
 // Le premier montage de l'écran entier prend jusqu'à 35 s à froid.
 jest.setTimeout(60000);
@@ -383,6 +391,9 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     mockPost.mockReset();
     mockShowBanner.mockReset();
     mockSendMessage.mockClear();
+    mockCompress.mockReset();
+    mockCompress.mockRejectedValue(new Error('module absent'));
+    mockGetFileSize.mockReset();
   });
 
   afterEach(() => {
@@ -470,5 +481,35 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     });
 
     expect(mockLecteurs[mockLecteurs.length - 1].url).toBe(ADRESSE_VIDEO);
+  });
+
+  test('5 — MSGVIDZIP : une vidéo de 420 Mo est compressée, le fichier réduit part', async () => {
+    mockCompress.mockResolvedValue('file:///cache/match-reduit.mp4');
+    mockGetFileSize.mockResolvedValue(String(38 * 1024 * 1024));
+    mockLaunchImageLibrary.mockResolvedValue({
+      assets: [{
+        duration: 180,
+        fileName: 'match.mov',
+        fileSize: 420 * 1024 * 1024,
+        type: 'video/quicktime',
+        uri: 'file:///match.mov',
+      }],
+    });
+    mockPost.mockResolvedValue({
+      data: [{
+        id: 10, mime: 'video/mp4', name: 'match.mp4', url: '/uploads/match.mp4',
+      }],
+    });
+    monterLaConversation();
+
+    await appuyerSurLaTuile('photos');
+
+    expect(mockCompress).toHaveBeenCalledTimes(1);
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    const [envoye] = mockPost.mock.calls[0][1].fichiers;
+    expect(envoye).toEqual(expect.objectContaining({
+      name: 'match.mp4', type: 'video/mp4', uri: 'file:///cache/match-reduit.mp4',
+    }));
+    expect(/** @type {any} */ (mockSendMessage.mock.calls[0])[1]).toBe('Vidéo · 3:00');
   });
 });
