@@ -92,7 +92,7 @@ function AddCoach({ navigation, route }) {
   );
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [createdTrainer, setCreatedTrainer] = useState(
-    /** @type {{ firstname?: string, phoneNumber?: string } | null} */
+    /** @type {{ firstname?: string, lastname?: string, phoneNumber?: string } | null} */
     (null),
   );
   // `club.roles.manage` exige l'offre Club : ces deux mutations sont les seules de l'ecran
@@ -271,21 +271,8 @@ function AddCoach({ navigation, route }) {
     meta: { preventToastError: true },
     onSuccess: (data, variables) => {
       setCreatedTrainer({ ...(data || {}), ...variables });
-      if (isManagerMode) {
-        Alert.alert(
-          t('addClubManager.alerts.success.title', 'Ajout réussi !'),
-          t(
-            'addClubManager.alerts.success.description',
-            'Le dirigeant {{managerName}} a bien été ajouté à cette section.',
-            {
-              managerName: successEntityName(variables?.firstname, variables?.lastname, variables?.phoneNumber),
-              ...SANS_ECHAPPEMENT,
-            },
-          ),
-          [{ onPress: () => navigation.goBack(), text: t('common.actions.ok', 'OK') }],
-        );
-        return;
-      }
+      // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — le dirigeant aussi : la feuille
+      // d'invitation (SMS pre-rempli) au lieu d'une alerte, sinon personne ne le previent.
       // PETITSBUGS-3 (R4-34) : « Ajout réussi ! » s'ouvrait sur le clavier numérique.
       Keyboard.dismiss();
       setIsSuccessModalVisible(true);
@@ -378,6 +365,9 @@ function AddCoach({ navigation, route }) {
         // role et bouton touchaient les deux bords. Posee ici, elle vaut aussi
         // pour le CTA, qui vit hors du defilement.
         Spaces.paddingHorizontal[16],
+        // R5-48 (REJEU-5) : borne le contenu a l'ecran (ScreenContainer le pose en `flexGrow`) ;
+        // sans elle le ScrollView ne defilait pas et la date restait sous le bouton.
+        Alignments.fill,
       ]}
       keyboardAvoiding
     >
@@ -540,31 +530,34 @@ function AddCoach({ navigation, route }) {
           />
         </View>
       </View>
-      {!isManagerMode ? (
-        <TrainerInvitedModal
-          isVisible={isSuccessModalVisible}
-          onClose={() => {
-            setIsSuccessModalVisible(false);
-            navigation.goBack();
-          }}
-          onInvite={() => {
-            if (createdTrainer) {
-              inviteTrainer({
-                clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
-                clubName: resolvedClubName,
-                firstname: createdTrainer.firstname || t(
-                  'addCoach.fallbacks.inviteFirstname',
-                  'Coach / Prof',
-                ),
-                phoneNumber: createdTrainer.phoneNumber,
-              });
-            }
-            setIsSuccessModalVisible(false);
-            navigation.goBack();
-          }}
-          trainerName={createdTrainer?.firstname || ''}
-        />
-      ) : null}
+      <TrainerInvitedModal
+        isManager={isManagerMode}
+        isVisible={isSuccessModalVisible}
+        onClose={() => {
+          setIsSuccessModalVisible(false);
+          navigation.goBack();
+        }}
+        onInvite={() => {
+          if (createdTrainer) {
+            inviteTrainer({
+              clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
+              clubName: resolvedClubName,
+              firstname: createdTrainer.firstname || (isManagerMode
+                ? t('addCoach.roles.manager')
+                : t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof')),
+              isManager: isManagerMode,
+              phoneNumber: createdTrainer.phoneNumber,
+            });
+          }
+          setIsSuccessModalVisible(false);
+          navigation.goBack();
+        }}
+        trainerName={successEntityName(
+          createdTrainer?.firstname,
+          createdTrainer?.lastname,
+          createdTrainer?.phoneNumber,
+        )}
+      />
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}

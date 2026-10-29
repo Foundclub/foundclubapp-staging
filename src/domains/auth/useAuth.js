@@ -557,11 +557,14 @@ const useAuth = () => {
    * @param {string | undefined} param.firstname
    * @param {string | undefined} param.clubName
    * @param {string | undefined} param.phoneNumber
+   * @param {boolean} [param.isManager] - INVITESMS : un dirigeant (son SMS dit « dirigeant·e »).
    */
   const inviteTrainer = ({
-    clubId, clubName, firstname, phoneNumber,
+    clubId, clubName, firstname, isManager = false, phoneNumber,
   }) => {
-    const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
+    const shareMessage = t(isManager
+      ? 'clubDetails.alerts.inviteManager.message'
+      : 'clubDetails.alerts.inviteTrainer.message', {
       clubName,
       coachName: firstname,
       ...SANS_ECHAPPEMENT,

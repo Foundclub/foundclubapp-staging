@@ -28,6 +28,17 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/auth/authService', () => ({ createTrainer: jest.fn() }));
+// INVITESMS (29/10) : la fenetre lit desormais `useAuth` (invitation SMS) et le nom du club ;
+// le vrai `useAuth` tire le client reseau, qui exige une configuration d'API.
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ inviteTrainer: jest.fn(), userData: null }),
+}));
+jest.mock('@/services/club/clubQueries', () => ({ useGetClub: () => ({ data: null }) }));
+jest.mock(
+  '@/components/organisms/trainerInvitedModal/TrainerInvitedModal',
+  () => function TrainerInvitedModalMock() { return null; },
+);
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   const { createElement } = jest.requireActual('react');
   const { View } = jest.requireActual('react-native');

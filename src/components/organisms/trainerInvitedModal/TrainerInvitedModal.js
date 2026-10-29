@@ -11,8 +11,10 @@ import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSuc
  * @param {Function} props.onClose - Function to call when closing the modal (e.g. navigation.goBack)
  * @param {Function} props.onInvite - Function to call when clicking on "Invite"
  * @param {string} props.trainerName - Name of the trainer
+ * @param {boolean} [props.isManager] - INVITESMS (29/10) : un dirigeant (son texte).
  */
 function TrainerInvitedModal({
+  isManager = false,
   isVisible,
   onClose,
   onInvite,
@@ -29,7 +31,11 @@ function TrainerInvitedModal({
       actionSecondaire={{ onPress: () => onClose(), title: t('common.actions.askLater') }}
       close={onClose}
       isVisible={isVisible}
-      texte={t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT })}
+      texte={isManager
+        ? t('addClubManager.alerts.success.description', {
+          managerName: trainerName, ...SANS_ECHAPPEMENT,
+        })
+        : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT })}
       titre={t('addCoach.alerts.success.title')}
     />
   );
