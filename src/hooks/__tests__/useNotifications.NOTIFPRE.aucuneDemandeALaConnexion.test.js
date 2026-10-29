@@ -8,8 +8,10 @@ import renderer, { act } from 'react-test-renderer';
 import { forgetDeviceRegistrationsExcept } from '@/utils/notifications/deviceRegistrationMemory';
 import { lireMemoirePreDemande } from '@/utils/notifications/preDemandeNotifications';
 
-import { setItem } from '@/platform/storage';
 import useNotifications from '../useNotifications';
+
+// Le stockage reel du telephone (doublure memoire en test), pour repartir d'un appareil neuf.
+const { setItem } = require('@/platform/storage');
 // et fait tomber la SUITE ENTIERE (0 test execute).
 
 const mockAddDeviceToken = jest.fn();
@@ -217,7 +219,7 @@ beforeEach(() => {
   setItem('notif_predemande_v1', '');
 });
 
-test('iPhone, permission jamais demandee : la connexion n ouvre PAS la fenetre systeme', async () => {
+test('iPhone jamais demande : la connexion n ouvre PAS la fenetre systeme', async () => {
   Platform.OS = 'ios';
   mockReglagesIos.mockResolvedValue({ authorizationStatus: -1 });
   const demonter = await monter();
@@ -226,7 +228,7 @@ test('iPhone, permission jamais demandee : la connexion n ouvre PAS la fenetre s
   demonter();
 });
 
-test('Android, permission jamais demandee : la connexion n ouvre PAS la fenetre systeme', async () => {
+test('Android jamais demande : la connexion n ouvre PAS la fenetre systeme', async () => {
   Platform.OS = 'android';
   jest.spyOn(PermissionsAndroid, 'check').mockResolvedValue(false);
   const demander = jest.spyOn(PermissionsAndroid, 'request').mockResolvedValue('denied');
@@ -235,7 +237,7 @@ test('Android, permission jamais demandee : la connexion n ouvre PAS la fenetre 
   demonter();
 });
 
-test('iPhone : « Activer » (activerNotifications) ouvre la fenetre systeme puis prend le jeton', async () => {
+test('iPhone : « Activer » ouvre la fenetre systeme puis prend le jeton', async () => {
   Platform.OS = 'ios';
   mockReglagesIos.mockResolvedValue({ authorizationStatus: -1 });
   const demonter = await monter();

@@ -14,8 +14,10 @@ import {
   proposerPreDemandeNotifications,
 } from '@/utils/notifications/preDemandeNotifications';
 
-import { setItem } from '@/platform/storage';
 import PreDemandeNotifications from '../PreDemandeNotifications';
+
+// Le stockage reel du telephone (doublure memoire en test), pour repartir d'un appareil neuf.
+const { setItem } = require('@/platform/storage');
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
@@ -65,11 +67,12 @@ jest.mock('@/components/atoms/button/Button', () => {
 
 const JOUR = 24 * 60 * 60 * 1000;
 
-const textes = (arbre) => arbre.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+const texte = (noeud) => [].concat(noeud.props.children).join('');
+const textes = (arbre) => arbre.root.findAllByType(Text).map(texte);
 const visible = (arbre) => arbre.root.findByType(Modal).props.visible;
 const appuyer = async (arbre, libelle) => {
   const noeud = arbre.root.findAllByType(TouchableOpacity)
-    .find((n) => n.findAllByType(Text).some((t) => [].concat(t.props.children).join('') === libelle));
+    .find((n) => n.findAllByType(Text).some((t) => texte(t) === libelle));
   await act(async () => { await noeud.props.onPress(); });
 };
 
@@ -131,7 +134,7 @@ test('« Plus tard » ⇒ aucune demande systeme, un report compte', async () =>
   expect(lireMemoirePreDemande().reports).toBe(1);
 });
 
-test('apres « Plus tard », l ecran ne revient pas avant 7 jours, puis revient au moment cle', async () => {
+test('apres « Plus tard », rien avant 7 jours, puis retour au moment cle', async () => {
   const maintenant = jest.spyOn(Date, 'now').mockReturnValue(1_000_000_000_000);
   const arbre = await monter();
   await proposer();
@@ -163,7 +166,7 @@ test('permission deja accordee ⇒ l ecran ne s ouvre pas', async () => {
   expect(visible(arbre)).toBe(false);
 });
 
-test('fenetre systeme deja refusee ⇒ « Ouvrir les Réglages », sans demande systeme', async () => {
+test('deja refusee ⇒ « Ouvrir les Réglages », sans demande systeme', async () => {
   lireEtatPermissionNotifications.mockResolvedValue('refusee');
   const reglages = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
   const arbre = await monter();

@@ -16856,6 +16856,7 @@ export default {
     },
     later: 'Plus tard',
     push: {
+      // eslint-disable-next-line max-len
       body: 'Active les notifications pour savoir quand ton coach t’accepte, quand tu es convoqué et quand on t’écrit.',
       // eslint-disable-next-line max-len
       bodyRefused: 'Les notifications sont coupées pour FoundClub. Pour savoir quand ton coach t’accepte, active-les dans les Réglages de ton téléphone.',

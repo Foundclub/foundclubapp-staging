@@ -63,20 +63,26 @@ jest.mock('@/hooks/useNotifications', () => ({
 test('la fenetre « Match confirmé » reste montee, visible, et branchee sur son geste', () => {
   let arbre;
   act(() => { arbre = renderer.create(<NotificationBootstrap />); });
-  const calendrier = arbre.root.findAll((n) => n.props?.title === 'Match confirmé' && n.props?.visible !== undefined);
+  const calendrier = arbre.root.findAll(
+    (n) => n.props?.title === 'Match confirmé' && n.props?.visible !== undefined,
+  );
   expect(calendrier).toHaveLength(1);
   expect(calendrier[0].props.visible).toBe(true);
   expect(calendrier[0].props.primaryAction.label).toBe('Ajouter au calendrier');
   expect(calendrier[0].props.primaryAction.onPress).toBe(mockCalendarAccept);
 });
 
-test('NOTIF-PREDEMANDE — notre ecran remplace l ancienne fenetre maison, branche sur « Activer »', () => {
+test('NOTIF-PREDEMANDE — notre ecran remplace l ancienne fenetre maison', () => {
   let arbre;
   act(() => { arbre = renderer.create(<NotificationBootstrap />); });
-  const ecran = arbre.root.findAll((n) => n.props?.activerNotifications !== undefined && typeof n.type === 'function');
+  const ecran = arbre.root.findAll(
+    (n) => n.props?.activerNotifications !== undefined && typeof n.type === 'function',
+  );
   expect(ecran.length).toBeGreaterThan(0);
   expect(ecran[0].props.activerNotifications).toBe(mockActiver);
-  // Plus de fenetre maison « Active les notifications FoundClub » : seule reste celle du calendrier.
-  const fenetres = arbre.root.findAll((n) => n.props?.primaryAction !== undefined && typeof n.type === 'function');
+  // Plus de fenetre maison « Active les notifications » : seule reste celle du calendrier.
+  const fenetres = arbre.root.findAll(
+    (n) => n.props?.primaryAction !== undefined && typeof n.type === 'function',
+  );
   expect(fenetres.map((n) => n.props.primaryAction.label)).toEqual(['Ajouter au calendrier']);
 });

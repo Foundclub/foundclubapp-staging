@@ -189,7 +189,9 @@ const requestUserPermission = async () => {
   }
 
   if (Platform.OS === 'android') {
-    const reponse = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    const reponse = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
     if (reponse === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
       noterRefusDefinitifAndroid();
     }
@@ -1182,7 +1184,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
     handleNavigateOnOpen,
     // NOTIF-PREDEMANDE — « Activer » sur notre ecran : la SEULE porte vers la fenetre systeme.
-    activerNotifications: () => syncTokenIfNeeded('preprompt', { bypassPreprompt: true, force: true }),
+    activerNotifications: () => syncTokenIfNeeded('preprompt', {
+      bypassPreprompt: true,
+      force: true,
+    }),
     saveToken,
   };
 };

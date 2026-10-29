@@ -712,7 +712,7 @@ jest.mock('@/utils/notifications/preDemandeNotifications', () => ({
 }));
 const mockProposerPreDemande = jest.fn();
 
-describe('UserName — la pre-demande des notifications suit « Qui es-tu ? » (NOTIF-PREDEMANDE)', () => {
+describe('UserName — la pre-demande suit « Qui es-tu ? » (NOTIF-PREDEMANDE)', () => {
   it('Continuer accepte ⇒ notre ecran est propose, puis l etape suivante', async () => {
     const arbre = rendre('Dirigeant');
 

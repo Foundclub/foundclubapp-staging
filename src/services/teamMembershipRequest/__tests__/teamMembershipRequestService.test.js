@@ -144,11 +144,14 @@ describe('createTeamMembershipRequest — moment cle de la pre-demande (NOTIF-PR
     jest.resetModules();
     const mockPost = jest.fn();
     const mockProposer = jest.fn();
-    jest.doMock('@/services/client', () => ({ __esModule: true, default: { get: jest.fn(), post: mockPost } }));
+    jest.doMock('@/services/client', () => ({
+      __esModule: true, default: { get: jest.fn(), post: mockPost },
+    }));
     jest.doMock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
     jest.doMock('@/utils/notifications/preDemandeNotifications', () => ({
       proposerPreDemandeNotifications: mockProposer,
     }));
+    // eslint-disable-next-line global-require
     const { createTeamMembershipRequest } = require('../teamMembershipRequestService');
 
     mockPost.mockRejectedValueOnce(new Error('refus'));

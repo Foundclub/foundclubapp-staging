@@ -16125,7 +16125,6 @@ export default {
     later: 'Later',
     push: {
       body: 'Turn on notifications to know when your coach accepts you, when you are called up and when someone writes to you.',
-      // eslint-disable-next-line max-len
       bodyRefused: 'Notifications are turned off for FoundClub. To know when your coach accepts you, turn them on in your phone Settings.',
       enable: 'Enable',
       openSettings: 'Open Settings',

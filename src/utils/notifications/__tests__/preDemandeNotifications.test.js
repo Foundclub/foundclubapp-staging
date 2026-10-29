@@ -3,7 +3,6 @@
 import notifee from '@notifee/react-native';
 import { PermissionsAndroid, Platform } from 'react-native';
 
-import { setItem } from '@/platform/storage';
 import { lireEtatPermissionNotifications } from '../etatPermissionNotifications';
 import {
   DELAI_ENTRE_DEUX_AFFICHAGES_MS,
@@ -17,6 +16,9 @@ import {
   proposerPreDemandeNotifications,
   REPORTS_MAX,
 } from '../preDemandeNotifications';
+
+// Le stockage reel du telephone (doublure memoire en test), pour repartir d'un appareil neuf.
+const { setItem } = require('@/platform/storage');
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
@@ -57,7 +59,9 @@ describe('la regle de retour', () => {
 
   it('une memoire illisible vaut un appareil neuf', () => {
     setItem('notif_predemande_v1', '{pas du json');
-    expect(lireMemoirePreDemande()).toEqual({ dernierAffichage: 0, refusDefinitif: false, reports: 0 });
+    expect(lireMemoirePreDemande()).toEqual({
+      dernierAffichage: 0, refusDefinitif: false, reports: 0,
+    });
   });
 });
 
@@ -75,17 +79,19 @@ describe('les moments cles', () => {
   });
 
   it('un message non lu dans la liste des conversations = premier message recu', () => {
-    expect(momentCleDansLeCache(['chats'], { pages: [{ data: [], meta: { unreadTotal: 2 } }] })).toBe('message');
-    expect(momentCleDansLeCache(['chats'], { pages: [{ data: [{ unreadCount: 1 }], meta: {} }] })).toBe('message');
-    expect(momentCleDansLeCache(['chats'], { pages: [{ data: [], meta: { unreadTotal: 0 } }] })).toBeNull();
+    const fils = (data, meta) => ({ pages: [{ data, meta }] });
+    expect(momentCleDansLeCache(['chats'], fils([], { unreadTotal: 2 }))).toBe('message');
+    expect(momentCleDansLeCache(['chats'], fils([{ unreadCount: 1 }], {}))).toBe('message');
+    expect(momentCleDansLeCache(['chats'], fils([], { unreadTotal: 0 }))).toBeNull();
   });
 
   it('une convocation non lue dans la cloche = convocation', () => {
     const page = (type, read) => ({ pages: [{ data: [{ read, type }] }] });
-    expect(momentCleDansLeCache(['notifications'], page('eventConvocationPublished', false))).toBe('convocation');
-    expect(momentCleDansLeCache(['notifications'], page('eventConvocationPublished', true))).toBeNull();
-    expect(momentCleDansLeCache(['notifications'], page('newWhisper', false))).toBe('message');
-    expect(momentCleDansLeCache(['notifications'], page('eventReminder', false))).toBeNull();
+    const cloche = (type, read) => momentCleDansLeCache(['notifications'], page(type, read));
+    expect(cloche('eventConvocationPublished', false)).toBe('convocation');
+    expect(cloche('eventConvocationPublished', true)).toBeNull();
+    expect(cloche('newWhisper', false)).toBe('message');
+    expect(cloche('eventReminder', false)).toBeNull();
     expect(momentCleDansLeCache(['notifications', 'unread-count'], 3)).toBeNull();
   });
 });
