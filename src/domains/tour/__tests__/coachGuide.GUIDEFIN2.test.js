@@ -63,7 +63,8 @@ describe('N11 — B1 vise la prochaine séance, pas une séance passée', () => 
         documentId: 'ev-1',
       },
     };
-    expect(step('b1-card').targetsFor({ created })).toEqual(['planning.event.ev-2']);
+    expect(step('b1-card').targetsFor({ created }))
+      .toEqual(['planning.event.ev-2', 'planning.event.next']);
   });
 
   it('témoin : séance à venir, ou progression d’avant (sans dates) : la séance créée', () => {
@@ -74,9 +75,9 @@ describe('N11 — B1 vise la prochaine séance, pas une séance passée', () => 
           documentId: 'ev-1',
         },
       },
-    })).toEqual(['planning.event.ev-1']);
+    })).toEqual(['planning.event.ev-1', 'planning.event.next']);
     expect(step('b1-card').targetsFor({
       created: { 'event.created': { documentId: 'ev-1' } },
-    })).toEqual(['planning.event.ev-1']);
+    })).toEqual(['planning.event.ev-1', 'planning.event.next']);
   });
 });

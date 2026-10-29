@@ -167,6 +167,7 @@ function TeamList({ navigation, route }) {
             assignmentTrainerId={assignmentTrainerId}
             assignmentTrainerName={assignmentTrainerName}
             clubId={clubId}
+            hasFloatingAction={canManageTeam}
           />
         </OnboardingWrapper>
 

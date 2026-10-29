@@ -106,12 +106,14 @@ const getTeamTrainerCount = (team) => (
  * @param {boolean} [props.showOnlyMyTeams] - Hide non-affiliated teams and keep only the user's teams.
  * @param {string} [props.assignmentTrainerId] - Optional trainer to preselect on TeamDetails trainer picker.
  * @param {string} [props.assignmentTrainerName] - Optional trainer display name for assignment flow.
+ * @param {boolean} [props.hasFloatingAction] - The screen shows the floating « + » over the list.
  * @returns {import('react').ReactElement} Team list content component
  */
 function TeamListContent({
   assignmentTrainerId = undefined,
   assignmentTrainerName = undefined,
   clubId = undefined,
+  hasFloatingAction = false,
   isLeagueMode = false,
   showOnlyMyTeams = false,
 }) {
@@ -501,11 +503,13 @@ function TeamListContent({
   );
   const shouldShowClubSearchCta = !isLeagueMode && !hasClubContext;
 
+  // GUIDE-FINITIONS-3 R2-7 (capture R01) : le « + » flottant de l'écran Équipes
+  // couvrait « Autres équipes du club », et la liste trop courte ne défilait pas.
   const listBottomPadding = useMemo(
-    () => (isLeagueMode
+    () => (isLeagueMode || hasFloatingAction
       ? Math.max(sceneBottomInset, floatingActionBottom + 92)
       : sceneBottomInset),
-    [floatingActionBottom, isLeagueMode, sceneBottomInset],
+    [floatingActionBottom, hasFloatingAction, isLeagueMode, sceneBottomInset],
   );
 
   const handleOpenClubSearch = useCallback(() => {

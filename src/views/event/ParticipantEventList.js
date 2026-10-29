@@ -49,6 +49,7 @@ import { getPlanningItemDate } from '@/utils/planning/planningSlots';
 
 import { useEventAnswerMutations } from './hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
+import usePlanningGuideFab from './usePlanningGuideFab';
 
 const participantEventListLogger = createLogger('participant-event-list');
 const FEATURED_PLANNING_SCOPES = ['SECTION', 'CM'];
@@ -353,6 +354,16 @@ function ParticipantEventList({ navigation }) {
       })
       .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
   ), [events, featuredEvents, listStartDate]);
+
+  // Guide Entraîneur (GUIDE-FINITIONS-3, R2-3) : la prochaine séance pas encore
+  // finie, cadrée par b1-card quand la séance de M3 est inconnue (C02 : séances du
+  // jour déjà passées, bonus relancé depuis Mon compte).
+  const nextEventId = useMemo(() => {
+    const now = Date.now();
+    return listEvents.find((event) => !event.reservation
+      && new Date(event.endDate || event.date).getTime() > now)?.documentId || null;
+  }, [listEvents]);
+  const hidesFloatingAction = usePlanningGuideFab(nextEventId);
 
   const queryClient = useQueryClient();
 
@@ -709,8 +720,8 @@ function ParticipantEventList({ navigation }) {
         </View>
       );
     }
-    return (
-      <View style={[Spaces.marginBottom[16]]}>
+    const card = (
+      <>
         {/* Guide Entraîneur (TUTOE, B1) : « Ouvre ta séance » vise cette carte. */}
         <TourTarget id={`planning.event.${item.documentId}`}>
           <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
@@ -736,6 +747,13 @@ function ParticipantEventList({ navigation }) {
             />
           </Suspense>
         </TourTarget>
+      </>
+    );
+    return (
+      <View style={[Spaces.marginBottom[16]]}>
+        {item.documentId === nextEventId
+          ? <TourTarget id="planning.event.next">{card}</TourTarget>
+          : card}
       </View>
     );
   };
@@ -993,72 +1011,75 @@ function ParticipantEventList({ navigation }) {
         updateCellsBatchingPeriod={50}
         windowSize={7}
       />
-      {canManageEvents && (
+      {canManageEvents && !hidesFloatingAction && (
         <WebFloatingOverlay style={getFloatingActionContainerStyle(floatingCtaBottom, { zIndex: 1100 })}>
-          <TouchableOpacity
-            accessibilityLabel={t('participantEventList.addAnEvent', 'Ajouter un événement')}
-            accessibilityRole="button"
-            activeOpacity={0.85}
-            onPress={handleCreateEventPress}
-            style={[
-              ApplicationStyle.shadow200,
-              {
-                alignItems: 'center',
-                backgroundColor: Colors.primary500,
-                borderColor: 'rgba(255,255,255,0.18)',
-                borderRadius: 32,
-                borderWidth: 1,
-                elevation: 8,
-                height: 64,
-                justifyContent: 'center',
-                shadowColor: '#000',
-                shadowOffset: {
-                  height: 6,
-                  width: 0,
+          {/* Guide (R2-3) : sans séance à venir, b1-card montre ce bouton. */}
+          <TourTarget id="planning.fab">
+            <TouchableOpacity
+              accessibilityLabel={t('participantEventList.addAnEvent', 'Ajouter un événement')}
+              accessibilityRole="button"
+              activeOpacity={0.85}
+              onPress={handleCreateEventPress}
+              style={[
+                ApplicationStyle.shadow200,
+                {
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary500,
+                  borderColor: 'rgba(255,255,255,0.18)',
+                  borderRadius: 32,
+                  borderWidth: 1,
+                  elevation: 8,
+                  height: 64,
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: {
+                    height: 6,
+                    width: 0,
+                  },
+                  shadowOpacity: 0.32,
+                  shadowRadius: 12,
+                  width: 64,
                 },
-                shadowOpacity: 0.32,
-                shadowRadius: 12,
-                width: 64,
-              },
-            ]}
-          >
-            <Image
-              resizeMode="contain"
-              source={Images.calendar}
-              style={{
-                height: 24,
-                // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
-                // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
-                tintColor: Colors.primary900,
-                width: 24,
-              }}
-            />
-            <View
-              style={{
-                alignItems: 'center',
-                backgroundColor: Colors.primary200,
-                borderColor: 'rgba(255,255,255,0.36)',
-                borderRadius: 999,
-                borderWidth: 1,
-                height: 20,
-                justifyContent: 'center',
-                position: 'absolute',
-                right: 8,
-                top: 8,
-                width: 20,
-              }}
+              ]}
             >
               <Image
                 resizeMode="contain"
-                source={Images.plus}
+                source={Images.calendar}
                 style={{
-                  height: 10,
+                  height: 24,
+                  // Icone porteuse d'information sur fond primary500 : blanc = 2,40:1
+                  // (sous le seuil 3:1 des elements graphiques), primary900 = 7,96:1.
                   tintColor: Colors.primary900,
-                  width: 10,
+                  width: 24,
                 }}
               />
-            </View>
-          </TouchableOpacity>
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: Colors.primary200,
+                  borderColor: 'rgba(255,255,255,0.36)',
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  height: 20,
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                  width: 20,
+                }}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.plus}
+                  style={{
+                    height: 10,
+                    tintColor: Colors.primary900,
+                    width: 10,
+                  }}
+                />
+              </View>
+            </TouchableOpacity>
+          </TourTarget>
         </WebFloatingOverlay>
       )}
       <Suspense fallback={null}>

@@ -150,6 +150,19 @@ function TourFullScreen({ kind }) {
   // Missions refusées par l'écran (quota, club partenaire) : jamais « faites ».
   const blockedCount = essentials
     .filter((/** @type {any} */ mission) => missionStatus?.[mission.id] === 'blocked').length;
+  // GUIDE-FINITIONS-3 R2-5 (A15, A23) : « Ton équipe est prête ! » et « Prêt·e pour
+  // la séance » s'affichaient à 0 %, missions passées. Le titre dit ce qui est fait.
+  const doneCount = essentials
+    .filter((/** @type {any} */ mission) => missionStatus?.[mission.id] === 'done').length;
+  let milestoneTitle = t('tourCatalog.coach.palier.title', 'Ton équipe est prête !');
+  if (missionStatus?.coach_m1 !== 'done') {
+    milestoneTitle = doneCount > 0
+      ? t('tourCatalog.coach.palier.titlePartial', 'Une partie est faite')
+      : t('tourCatalog.coach.palier.titleNone', 'Aucune mission faite pour l’instant');
+  }
+  const closingTitle = doneCount === essentials.length
+    ? t('tourCatalog.coach.close.title', 'Prêt·e pour la séance')
+    : t('tourCatalog.coach.close.titlePartial', 'Le guide est fini');
 
   let content = null;
   let cta = null;
@@ -239,7 +252,7 @@ function TourFullScreen({ kind }) {
           textAlign: 'center',
         }]}
         >
-          {t('tourCatalog.coach.palier.title', 'Ton équipe est prête !')}
+          {milestoneTitle}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
           {blockedCount > 0
@@ -361,7 +374,7 @@ function TourFullScreen({ kind }) {
           textAlign: 'center',
         }]}
         >
-          {t('tourCatalog.coach.close.title', 'Prêt·e pour la séance')}
+          {closingTitle}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
           {t('tourCatalog.coach.close.subtitle', 'Bonne saison !')}
