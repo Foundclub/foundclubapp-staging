@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import ParentalDeclarationCard
   from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { parentLinkErrorCode } from '@/services/parentLink/parentLinkErrors';
 import { useRequestParentLink } from '@/services/parentLink/parentLinkQueries';
 import { openInviteSms, resolveInviteLinkOrigin } from '@/services/teamInvite/teamInviteShare';
@@ -56,7 +57,13 @@ function ParentLinkInvite() {
   const { Colors, Fonts, Spaces } = useTheme();
 
   const childDocumentId = String(route?.params?.childDocumentId || '').trim();
-  const childFirstname = String(route?.params?.childFirstname || '').trim();
+  // RW-PARENT e1 (29/10) — le prénom du mineur ne voyage plus dans l'adresse (le site la montre
+  // et la garde dans l'historique) : on le relit dans la fiche, par son identifiant.
+  const { data: enfantsDeclares } = useGetMyDeclaredChildren();
+  const childFirstname = useMemo(() => String(
+    (Array.isArray(enfantsDeclares) ? enfantsDeclares : [])
+      .find((enfant) => enfant?.documentId === childDocumentId)?.firstname || '',
+  ).trim(), [enfantsDeclares, childDocumentId]);
   const pourUneFiche = Boolean(childDocumentId);
 
   const [phoneNumber, setPhoneNumber] = useState('');

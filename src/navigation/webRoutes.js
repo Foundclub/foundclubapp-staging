@@ -14,6 +14,8 @@ const WEB_ROUTE_PATTERNS = {
   // (D15 du plan). L URL n expose donc rien par elle-meme.
   [RouteNames.MyChildren]: '/profile/children',
   [RouteNames.ChildEdit]: '/profile/children/edit',
+  // RW-PARENT e1 (29/10, Adel « 5- A ») — relier le compte de son ado depuis le site.
+  [RouteNames.ParentLinkInvite]: '/profile/children/link',
   [RouteNames.PlayerCard]: '/profile/player-card',
   [RouteNames.SubscriptionOverview]: '/profile/subscription',
   [RouteNames.SubscriptionOffers]: '/profile/subscription/offers',

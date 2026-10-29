@@ -13,6 +13,8 @@ import ParentLinkInvite from '../ParentLinkInvite';
 
 /** @type {any} */
 let mockRouteParams;
+// RW-PARENT e1 (29/10) — le prénom se relit dans « Mes enfants », jamais dans l'adresse.
+let mockEnfantsDeclares = [{ documentId: 'enfant-1', firstname: 'Léa' }];
 /** @type {any} */
 let mockOptionsDeLaMutation;
 const mockDemander = jest.fn();
@@ -115,6 +117,10 @@ jest.mock('@/services/parentLink/parentLinkQueries', () => ({
   },
 }));
 
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
+  useGetMyDeclaredChildren: () => ({ data: mockEnfantsDeclares }),
+}));
+
 jest.mock('@/services/teamInvite/teamInviteShare', () => ({
   openInviteSms: (/** @type {any} */ params) => mockSms(params),
   resolveInviteLinkOrigin: () => 'https://staging.foundclub.app',
@@ -201,7 +207,7 @@ test('LIEN-ÉCRAN ④ la demande part, et la réponse ne dit RIEN du numéro', a
 
 // ⑤ — et l'écran propose de prévenir Léa par SMS.
 test('LIEN-ÉCRAN ⑤ F20 : « Donner un compte à Léa » porte la fiche', async () => {
-  mockRouteParams = { childDocumentId: 'enfant-1', childFirstname: 'Léa' };
+  mockRouteParams = { childDocumentId: 'enfant-1' };
   const arbre = await rendre();
   expect(texte(arbre)).toContain('Donner un compte à Léa');
 
@@ -221,7 +227,7 @@ test('LIEN-ÉCRAN ⑤ F20 : « Donner un compte à Léa » porte la fiche', asyn
 
 // ⑥ — âge du parent, fiche trop jeune, débit.
 test('LIEN-ÉCRAN ⑥ les refus du serveur se disent en français', async () => {
-  mockRouteParams = { childDocumentId: 'enfant-1', childFirstname: 'Léa' };
+  mockRouteParams = { childDocumentId: 'enfant-1' };
   const arbre = await rendre();
   await act(async () => {
     mockOptionsDeLaMutation.onError({
@@ -238,4 +244,19 @@ test('LIEN-ÉCRAN ⑥ les refus du serveur se disent en français', async () => 
 
   await act(async () => { mockOptionsDeLaMutation.onError({ status: 429 }); });
   expect(texte(arbre)).toContain('Trop de demandes');
+});
+
+// RW-PARENT e1 (29/10) — sur le site, l'adresse de la page ne porte plus le prénom du mineur :
+// l'écran le relit dans la fiche, et n'en invente pas un quand la fiche est absente.
+test('RW-PARENT e1 : le prénom vient de la fiche, pas de l adresse', async () => {
+  mockRouteParams = { childDocumentId: 'enfant-1', childFirstname: 'Intrus' };
+  const arbre = await rendre();
+  expect(texte(arbre)).toContain('Donner un compte à Léa');
+  expect(texte(arbre)).not.toContain('Intrus');
+
+  mockEnfantsDeclares = [];
+  mockRouteParams = { childDocumentId: 'enfant-1' };
+  const sansFiche = await rendre();
+  expect(texte(sansFiche)).not.toContain('Léa');
+  mockEnfantsDeclares = [{ documentId: 'enfant-1', firstname: 'Léa' }];
 });
