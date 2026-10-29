@@ -4,6 +4,7 @@ import {
   AccessibilityInfo,
   Animated,
   Pressable,
+  ScrollView,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -25,6 +26,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
+  bubbleRoom,
   clipAboveDock,
   computeBlockers,
   headerBottomOf,
@@ -202,6 +204,10 @@ function TourGuideLayer() {
 
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
   const [bubbleHeight, setBubbleHeight] = useState(110);
+  // GUIDE-PETIT-ECRAN : hauteur du contenu entier (la bulle bornée défile) ; la
+  // place se choisit sur ce que la bulle voudrait, pas sur sa hauteur bornée.
+  const [contentHeight, setContentHeight] = useState(0);
+  const wantedHeight = Math.max(bubbleHeight, contentHeight);
   // Échelle maximale qui laisse la bulle « en haut » au-dessus de sa cible
   // (texte agrandi) ; repart du plafond à chaque nouveau texte.
   const [fitScale, setFitScale] = useState(MAX_FONT_SCALE);
@@ -387,13 +393,27 @@ function TourGuideLayer() {
   // sous son titre (tunnel équipe, composition), sinon comme avant.
   const slotRect = currentStep?.bubbleSlot && !sheetGuide ? rects[SLOT_ID] : null;
   const slot = slotRect && isOnScreen(slotRect, width, height) ? slotRect : null;
+  // Bas utile : la barre d'onglets flottante, sinon le bas sûr de l'écran.
+  const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height);
   const position = slot
     ? {
       arrow: 'none', arrowX: 0, left: 14, top: slot.y, width: width - 28,
     }
     : placeBubble({
-      bubbleHeight, headerBottom, height, insetTop: insets.top, primary, top: isTop, width,
+      bottomLimit,
+      bubbleHeight: wantedHeight,
+      headerBottom,
+      height,
+      insetTop: insets.top,
+      primary,
+      top: isTop,
+      width,
     });
+  // GUIDE-PETIT-ECRAN (décision A du chef, 29/10) : la bulle ne dépasse jamais
+  // la place qu'on lui donne ; au-delà, son contenu défile dedans.
+  const maxHeight = bubbleRoom({
+    bottomLimit, headerBottom, insetTop: insets.top, position, primary, slot,
+  });
 
   // Journal de calibrage (développement seulement) : une ligne par état de
   // l'étape, lue par `.local/outils/tutoe-calibrage.py` (cible, trou, bulle,
@@ -453,13 +473,17 @@ function TourGuideLayer() {
     : currentStep.nextLabel || null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
   const fontScale = Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
-  // Place d'une bulle « en haut » au-dessus de sa cible (null : pas de limite).
-  // Sous l'en-tête ancré s'il y en a un (la rangée Retour reste libre, 4- A).
-  const roomTop = Math.max(insets.top + 4, (headerBottom ?? 0) + 6);
-  let roomAbove = isTop && primary && primary.y > roomTop + 48
-    ? primary.y - 6 - roomTop
-    : null;
-  if (slot) roomAbove = slot.height;
+  /**
+   * Trop haute pour sa place : la police rapetisse (seulement vers le bas, donc
+   * sans aller-retour), au plus jusqu'à 1 ; ensuite le contenu défile.
+   * @param {number} measured - Hauteur voulue.
+   * @returns {void}
+   */
+  const fitFont = (measured) => {
+    if (measured > maxHeight + 1 && fontScale > 1) {
+      setFitScale(Math.max(1, fontScale * (maxHeight / measured)));
+    }
+  };
   const kicker = missionPosition
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
       + ` · ${currentMission?.title || ''}`
@@ -619,20 +643,15 @@ function TourGuideLayer() {
         onLayout={(event) => {
           const measured = event.nativeEvent.layout.height;
           setBubbleHeight((previous) => stableHeight(previous, measured));
-          // Trop haute pour tenir au-dessus de la cible : la police rapetisse
-          // (seulement vers le bas, donc sans aller-retour), au plus jusqu'à 1.
-          if (roomAbove !== null && measured > roomAbove + 1 && fontScale > 1) {
-            setFitScale(Math.max(1, fontScale * (roomAbove / measured)));
-          }
+          fitFont(measured);
         }}
         style={{
           backgroundColor: Colors.neutral50,
           borderRadius: 18,
           elevation: 12,
           left: position.left,
+          maxHeight,
           opacity: appear,
-          paddingHorizontal: 16,
-          paddingVertical: 10,
           position: 'absolute',
           shadowColor: Colors.primary900,
           shadowOffset: { height: 14, width: 0 },
@@ -662,114 +681,127 @@ function TourGuideLayer() {
             }}
           />
         ) : null}
-        <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
-          <View style={{
-            alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,
+        <ScrollView
+          bounces={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
+          onContentSizeChange={(_contentWidth, measured) => {
+            setContentHeight((previous) => stableHeight(previous, measured));
+            fitFont(measured);
           }}
-          >
-            {kicker ? (
-              // GUIDE-FINITIONS-2 N12 : deux lignes plutôt qu'un titre coupé
-              // (« MISSION 1/4 · CRÉER TO… », capture 02).
-              <Text
-                allowFontScaling={false}
-                numberOfLines={2}
-                style={[scaledFont(Fonts.p4Bold, fontScale), {
-                  color: isBonus ? Colors.gold900 : Colors.primary600,
-                  flex: 1,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                }]}
-              >
-                {kicker}
-              </Text>
-            ) : null}
-            {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
-                visible, sur la ligne du titre pour que la bulle reste basse. */}
-            <View
-              accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
-              accessible
-              style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
-              testID={__DEV__ ? 'tour.gauge' : undefined}
+          style={{ flexGrow: 0 }}
+          testID={__DEV__ ? 'tour.bubble.scroll' : undefined}
+        >
+          <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
+            <View style={{
+              alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,
+            }}
             >
+              {kicker ? (
+                // GUIDE-FINITIONS-2 N12 puis GUIDE-PETIT-ECRAN (R3-07) : jamais coupé
+                // (« PROGRAMMER L'ENTRA… » sur 2 lignes) ; la bulle bornée défile.
+                <Text
+                  allowFontScaling={false}
+                  style={[scaledFont(Fonts.p4Bold, fontScale), {
+                    color: isBonus ? Colors.gold900 : Colors.primary600,
+                    flex: 1,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                  }]}
+                >
+                  {kicker}
+                </Text>
+              ) : null}
+              {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
+                  visible, sur la ligne du titre pour que la bulle reste basse. */}
               <View
-                style={{
-                  backgroundColor: withAlpha(Colors.primary900, 0.12),
-                  borderRadius: 999,
-                  height: 4,
-                  overflow: 'hidden',
-                  width: 56,
-                }}
+                accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
+                accessible
+                style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
+                testID={__DEV__ ? 'tour.gauge' : undefined}
               >
                 <View
                   style={{
-                    backgroundColor: isBonus ? Colors.gold500 : Colors.primary500,
+                    backgroundColor: withAlpha(Colors.primary900, 0.12),
+                    borderRadius: 999,
                     height: 4,
-                    width: `${gauge}%`,
+                    overflow: 'hidden',
+                    width: 56,
                   }}
-                />
+                >
+                  <View
+                    style={{
+                      backgroundColor: isBonus ? Colors.gold500 : Colors.primary500,
+                      height: 4,
+                      width: `${gauge}%`,
+                    }}
+                  />
+                </View>
+                <Text
+                  allowFontScaling={false}
+                  style={[scaledFont(Fonts.p4Bold, fontScale), { color: Colors.neutral600 }]}
+                >
+                  {`${gauge} %`}
+                </Text>
               </View>
-              <Text
-                allowFontScaling={false}
-                style={[scaledFont(Fonts.p4Bold, fontScale), { color: Colors.neutral600 }]}
-              >
-                {`${gauge} %`}
-              </Text>
             </View>
-          </View>
-          <TouchableOpacity
-            accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
-            accessibilityRole="button"
-            onPress={tour.pauseTour}
-            style={{
-              alignItems: 'center',
-              height: MIN_TOUCH,
-              justifyContent: 'center',
-              margin: -14,
-              width: MIN_TOUCH,
-            }}
-            testID={__DEV__ ? 'tour.pause' : undefined}
-          >
-            <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
-          </TouchableOpacity>
-        </View>
-        {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait
-            tenir dans ~100 pt entre l'en-tête et le champ, arbitrage du chef 28/10). */}
-        <View style={{ alignItems: 'center', columnGap: 10, flexDirection: 'row' }}>
-          <Text
-            allowFontScaling={false}
-            style={[scaledFont(Fonts.p2Bold, fontScale, 20), { color: Colors.primary900, flex: 1 }]}
-          >
-            {text}
-          </Text>
-          {buttonLabel ? nextButton : null}
-        </View>
-        {scrollHint ? (
-          <Text
-            allowFontScaling={false}
-            style={[
-              scaledFont(Fonts.p3Bold, fontScale),
-              { color: Colors.primary600, marginTop: 4 },
-            ]}
-          >
-            {scrollHint}
-          </Text>
-        ) : null}
-        {isBonus ? (
-          <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
             <TouchableOpacity
+              accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
               accessibilityRole="button"
-              onPress={tour.skipMission}
-              style={{ justifyContent: 'center', minHeight: 44 }}
+              onPress={tour.pauseTour}
+              style={{
+                alignItems: 'center',
+                height: MIN_TOUCH,
+                justifyContent: 'center',
+                margin: -14,
+                width: MIN_TOUCH,
+              }}
+              testID={__DEV__ ? 'tour.pause' : undefined}
             >
-              <Text
-                allowFontScaling={false}
-                style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
-              >
-                {t('tourGuide.skipBonus', 'Passer ce bonus')}
-              </Text>
+              <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
             </TouchableOpacity>
           </View>
-        ) : null}
+          {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait
+              tenir dans ~100 pt entre l'en-tête et le champ, arbitrage du chef 28/10). */}
+          <View style={{ alignItems: 'center', columnGap: 10, flexDirection: 'row' }}>
+            <Text
+              allowFontScaling={false}
+              style={[
+                scaledFont(Fonts.p2Bold, fontScale, 20),
+                { color: Colors.primary900, flex: 1 },
+              ]}
+            >
+              {text}
+            </Text>
+            {buttonLabel ? nextButton : null}
+          </View>
+          {scrollHint ? (
+            <Text
+              allowFontScaling={false}
+              style={[
+                scaledFont(Fonts.p3Bold, fontScale),
+                { color: Colors.primary600, marginTop: 4 },
+              ]}
+            >
+              {scrollHint}
+            </Text>
+          ) : null}
+          {isBonus ? (
+            <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={tour.skipMission}
+                style={{ justifyContent: 'center', minHeight: 44 }}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
+                >
+                  {t('tourGuide.skipBonus', 'Passer ce bonus')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </ScrollView>
       </Animated.View>
     </View>
   );

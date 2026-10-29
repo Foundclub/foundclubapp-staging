@@ -11,6 +11,7 @@ import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import TeamListContent from '@/components/organisms/teamListContent/TeamListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -60,19 +61,23 @@ function MyTeamList({ navigation, route }) {
         ]}
         responsiveHorizontalPadding
       >
-        <View style={[
-          Spaces.marginTop[16],
-          Spaces.marginBottom[24],
-          Alignments.row,
-          Alignments.alignCenter,
-          Alignments.justifySpaceBetween]}
-        >
-          <LeagueHeaderSwitch />
-          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-            <NotificationBadge />
-            <ProfileButton />
+        {/* GUIDE-PETIT-ECRAN (R3-03) : la bulle du guide (m1-wait) se pose sous le
+            logo, la cloche et l'avatar, au lieu de les couvrir. */}
+        <TourTarget id="screen.header">
+          <View style={[
+            Spaces.marginTop[16],
+            Spaces.marginBottom[24],
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween]}
+          >
+            <LeagueHeaderSwitch />
+            <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+              <NotificationBadge />
+              <ProfileButton />
+            </View>
           </View>
-        </View>
+        </TourTarget>
         <OnboardingWrapper
           description={t(
             'myTeamList.tutorial.description',

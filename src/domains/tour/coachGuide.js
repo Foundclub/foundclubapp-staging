@@ -995,6 +995,9 @@ const STEPS = [
       { goto: 'b2-pub', key: RouteNames.MatchCompositionBoard, type: 'route' },
     ],
     bubblePlacement: 'top',
+    // GUIDE-PETIT-ECRAN (R3-21) : dans la place gardée sous le titre, au-dessus
+    // de la liste ; en haut, elle cachait toutes les lignes à 720×1280, texte 1,3.
+    bubbleSlot: true,
     id: 'b2-list',
     missionId: 'coach_b2',
     navigateOnEnter: true,
