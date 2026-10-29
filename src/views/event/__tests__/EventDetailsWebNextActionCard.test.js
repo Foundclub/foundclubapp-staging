@@ -839,7 +839,8 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
     expect(texteRendu(parTestID(bloc, 'post-match-relancer')[0])).toContain('Déjà relancés aujourd’hui');
   });
 
-  test('🔴 point 5 — « Gérer l événement » : Modifier, Convocation, « Stats du match » et sa note', () => {
+  // RWDIRIG (29/10, « 4- A ») : « Annuler » ferme la liste, comme au téléphone.
+  test('🔴 point 5 — « Gérer l événement » : Modifier, Convocation, « Stats du match » et sa note, puis Annuler', () => {
     const root = mountScreen({
       attendance: buildAttendance(PENDANT_LE_MATCH),
       event: buildMatchEvent(),
@@ -852,7 +853,7 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
     const menu = root.findAll((/** @type {any} */ n) => n.props?.role === 'menu')[0];
     const items = menu.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem');
     expect(items.map((/** @type {any} */ item) => textOf(item).split(' S’ouvre')[0]))
-      .toEqual(['Modifier', 'Convocation', 'Stats du match']);
+      .toEqual(['Modifier', 'Convocation', 'Stats du match', 'Annuler']);
     // Avant la fin du match : la puce est éteinte et dit QUAND elle s'ouvrira.
     expect(textOf(items[2])).toContain('S’ouvre à la fin du match');
     expect(items[2].props.disabled).toBe(true);
@@ -875,11 +876,16 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
     );
   });
 
-  test('protégé — un entraînement garde son seul bouton « Modifier », sans menu', () => {
+  // RWDIRIG (29/10, « 4- A ») : un entraînement a désormais le menu, pour pouvoir l'annuler ;
+  // « Modifier » y reste en tête.
+  test('protégé — un entraînement : « Gérer l événement » commence par Modifier et finit par Annuler', () => {
     const root = mountScreen({});
 
-    expect(boutonsDOM(root, "Gérer l'événement")).toHaveLength(0);
-    expect(boutonsDOM(root, 'Modifier')).not.toHaveLength(0);
+    act(() => boutonsDOM(root, "Gérer l'événement")[0].props.onClick());
+    const items = root.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem')
+      .map((/** @type {any} */ item) => textOf(item));
+    expect(items[0]).toBe('Modifier');
+    expect(items[items.length - 1]).toBe('Annuler');
   });
 });
 // FINITIONS11-STATS · point 4 (écran 7) — le site lit le MÊME juge (`matchPageModel.js`) :
