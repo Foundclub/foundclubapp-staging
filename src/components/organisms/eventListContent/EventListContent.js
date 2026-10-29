@@ -68,7 +68,7 @@ import { createEventParticipation } from '@/services/eventParticipation/eventPar
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchEvents, useSearchEventsMap } from '@/services/search/searchQueries';
-import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
+import { mapSearchPayload } from '@/services/search/searchService';
 
 import { createLogger } from '@/utils/logger/logger';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
@@ -1367,16 +1367,9 @@ function EventListContent({
       />
     );
 
-    const searchMeta = item ? Reflect.get(item, '__search') : null;
-    const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
-    const wrappedCard = primaryReasonLabel ? (
-      <View style={[Spaces.gap[8]]}>
-        <Text style={[Fonts.p3, Fonts.primary500]}>
-          {`Tri pertinence: ${primaryReasonLabel}`}
-        </Text>
-        {card}
-      </View>
-    ) : card;
+    // PETITSBUGS-3 : plus de « Tri pertinence: … » (texte technique, en dur)
+    // au-dessus de la carte ; le tri du serveur ne change pas.
+    const wrappedCard = card;
 
     if (!onTutorialLayout || index !== 0) return wrappedCard;
 

@@ -27,7 +27,6 @@ import useAuth from '@/domains/auth/useAuth';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 import { useAppContext } from '@/store/appContext';
 import { horizontalScale } from '@/theme/scaling';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
@@ -44,7 +43,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import { useGetFeaturedReservations, useGetReservations } from '@/services/reservation/reservationQueries';
 import { joinReservation } from '@/services/reservation/reservationService';
 import { useSearchReservations } from '@/services/search/searchQueries';
-import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
+import { mapSearchPayload } from '@/services/search/searchService';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
@@ -443,21 +442,11 @@ function ReservationListContent({
    */
   const renderItem = useCallback(({ item }) => {
     const isManager = userData?.role?.name === USER_ROLES.coach || userData?.role?.name === USER_ROLES.president;
-    const primaryReasonLabel = getMatchReasonLabel(
-      Reflect.get(item || {}, '__search')?.matchReasons?.[0],
-    );
 
+    // PETITSBUGS-3 : plus de « Tri pertinence: … » au-dessus de la carte ; le tri
+    // du serveur ne change pas.
     return (
       <View style={[Spaces.gap[8]]}>
-        {primaryReasonLabel ? (
-          <Text style={[Fonts.p3, Fonts.primary500]}>
-            {t(
-              'reservationListContent.relevanceReason',
-              'Tri pertinence: {{reason}}',
-              { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
-            )}
-          </Text>
-        ) : null}
         <EventCardNew
           actionLabel={isManager ? t('eventList.actions.about') : undefined}
           item={item}
@@ -472,7 +461,7 @@ function ReservationListContent({
         />
       </View>
     );
-  }, [Fonts, Spaces, handleCardPress, handleJoinEvent, t, userData?.role?.name]);
+  }, [Spaces, handleCardPress, handleJoinEvent, t, userData?.role?.name]);
 
   if (activeLoading && !(isSmartSearchEnabled ? smartPages : requestPages)) {
     return (
