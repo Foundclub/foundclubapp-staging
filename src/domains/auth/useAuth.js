@@ -17,7 +17,7 @@ import SharePlatform from '@/platform/share';
 
 import {
   deleteDeviceToken,
-  getMe, login, logout, signInWithPhoneNumber,
+  getMe, login, logout, markOnboardingCompletedOnServer, signInWithPhoneNumber,
 } from '@/services/auth/authService';
 import {
   getRetryAfterSeconds,
@@ -88,6 +88,10 @@ let lastBootstrapRequestLogKey = null;
 let lastBootstrapSyncedKey = null;
 /** @type {string | null} */
 let lastFullUserSyncedKey = null;
+// ONBOARDDATE — les comptes dont la fin d'inscription est partie au serveur pendant CE lancement.
+// Un echec n'est pas rejoue avant le lancement suivant (variable de module, remise a zero).
+/** @type {Set<string>} */
+const finInscriptionEnvoyee = new Set();
 
 const getBootstrapErrorStatus = (/** @type {any} */ error) => {
   const parsedStatus = Number(error?.status || error?.response?.status || error?.error?.status);
@@ -513,6 +517,29 @@ const useAuth = () => {
     });
     return () => abonnement?.remove?.();
   }, [onboardingDocumentId]);
+
+  // ONBOARDDATE (29/10/2026, decision d'Adel « 3- A ») — le SERVEUR garde la date de fin : le
+  // drapeau pose (n'importe quelle sortie du tunnel), ou deja la sans date serveur au demarrage
+  // (appel rate, version d'avant), on la lui demande. Un echec ne bloque personne : le drapeau
+  // ferme deja le tunnel sur cet appareil.
+  const onboardingCompletedAtServeur = userData?.onboardingCompletedAt;
+  useEffect(() => {
+    if (!onboardingDocumentId || onboardingCompletedAtServeur) return;
+    if (finInscriptionEnvoyee.has(onboardingDocumentId)) return;
+    // Meme lecture prudente que `getOnboardingViews` : un stockage illisible = pas de drapeau.
+    let drapeauLocal = false;
+    try {
+      drapeauLocal = storage.getBoolean(onboardingCompleteKey(onboardingDocumentId)) === true;
+    } catch { /* rien */ }
+    if (!drapeauLocal) return;
+    finInscriptionEnvoyee.add(onboardingDocumentId);
+    // Jamais d'erreur qui remonte a l'ecran : l'appel part dans une promesse, son echec se
+    // journalise.
+    const appel = Promise.resolve().then(() => markOnboardingCompletedOnServer());
+    appel.catch((/** @type {any} */ error) => {
+      authLogger.warn('Onboarding completion not saved on server', error?.message || error);
+    });
+  }, [onboardingCompleteVersion, onboardingCompletedAtServeur, onboardingDocumentId]);
 
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined

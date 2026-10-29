@@ -49,6 +49,7 @@
  * @property {string | object} [address]
  * @property {{lat?: number, lng?: number, label?: string, city?: string, radius?: number, address?: string, value?: string}} [location]
  * @property {{ documentId?: string; name?: string; logo?: Avatar }[]} [multisportClubs]
+ * @property {string | null} [onboardingCompletedAt] - ONBOARDDATE : fin d'inscription (serveur).
  * @property {boolean} [parentalDeclarationAccepted]
  * @property {string} [parentalDeclarationAcceptedAt]
  * @property {string} [parentalDeclarantUserDocumentId]

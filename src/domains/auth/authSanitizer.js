@@ -216,6 +216,7 @@ const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
   nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
     user?.nonPartnerCoachPublishingAccess,
   ),
+  onboardingCompletedAt: normalizeString(user?.onboardingCompletedAt),
   parentAccountDocumentId: normalizeString(user?.parentAccount?.documentId),
   parentalDeclarantUserDocumentId: normalizeString(user?.parentalDeclarantUserDocumentId),
   parentalDeclarationAccepted: user?.parentalDeclarationAccepted === true,
@@ -295,6 +296,8 @@ export const sanitizeUser = (user) => {
     nonPartnerCoachPublishingAccess: sanitizeNonPartnerCoachPublishingAccess(
       user?.nonPartnerCoachPublishingAccess,
     ),
+    // ONBOARDDATE : la date de fin d'inscription gardee par le serveur (getOnboardingViews).
+    onboardingCompletedAt: normalizeString(user?.onboardingCompletedAt),
     parentAccount: user?.parentAccount
       ? { documentId: normalizeString(user.parentAccount.documentId) }
       : null,
