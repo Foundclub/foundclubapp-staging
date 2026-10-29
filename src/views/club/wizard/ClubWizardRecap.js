@@ -177,7 +177,12 @@ function ClubWizardRecap({ navigation, route }) {
         // possede — un `reset` sur la pile PARENTE depuis une sous-pile est
         // servi par la sous-pile et la renvoie a son ecran initial (mesure du
         // 2026-08-17, filet `clubWizardOnboardingAtterrissage`).
-        navigation.reset({ index: 0, routes: [{ name: RouteNames.ClubList }] });
+        // RWDIRIG (29/10) : seulement s'il y a VRAIMENT une sous-pile. Sur le site, l'adaptateur
+        // est son propre parent et n'a qu'une adresse : ce reset remplaçait l'étape suivante
+        // qu'on venait d'ouvrir par « Trouver mon club ».
+        if (parentNavigation !== navigation) {
+          navigation.reset({ index: 0, routes: [{ name: RouteNames.ClubList }] });
+        }
         return;
       }
       markOnboardingComplete(userData?.documentId);
