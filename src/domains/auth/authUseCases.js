@@ -675,11 +675,13 @@ const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role 
  */
 export const getOnboardingViews = ({
   address, avatar, bestLevel, birthdate, category, club, clubAffiliations,
-  clubs, documentId, firstname, height, lastname, multisportClubs, myTeams, parentalDeclarationAccepted, position, preferredSport, role,
-  section, sportsHistory, trainedTeams, weight,
+  clubs, documentId, firstname, height, lastname, multisportClubs, myTeams, onboardingCompletedAt,
+  parentalDeclarationAccepted, position, preferredSport, role, section, sportsHistory, trainedTeams,
+  weight,
 }) => {
-  // Check if user has already completed onboarding once
-  const hasCompletedOnboarding = (() => {
+  // ONBOARDDATE (29/10/2026, decision d'Adel « 3- A ») — fini si le SERVEUR a la date de fin
+  // (tout appareil, le site compris) OU si le drapeau de cet appareil est pose (avant le serveur).
+  const hasCompletedOnboarding = Boolean(onboardingCompletedAt) || (() => {
     try {
       if (documentId) {
         return storage.getBoolean(onboardingCompleteKey(documentId));

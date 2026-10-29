@@ -762,6 +762,16 @@ export const leaveClub = async (clubId) => {
 };
 
 /**
+ * ONBOARDDATE (29/10/2026) — previent le serveur que l'inscription est finie. Aucune date ne part :
+ * le serveur pose la sienne, une seule fois, et ne l'efface jamais.
+ * @returns {Promise<{ data: { onboardingCompletedAt: string } }>} La date gardee par le serveur.
+ */
+export const markOnboardingCompletedOnServer = async () => {
+  const result = await client.post('/firebase-auth/me/onboarding-complete');
+  return result.data;
+};
+
+/**
  * Switch the active managed club for the current user.
  * @param {string | { clubId?: string }} id
  * @returns {Promise<object>}

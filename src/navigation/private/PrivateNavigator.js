@@ -35,7 +35,7 @@ import Welcome from '@/views/onboarding/Welcome';
 import ChildEdit from '@/views/profile/ChildEdit';
 
 import { commonOptions } from '@/navigation/commonOptions';
-import { navigate as navigateRoot, navigationRef } from '@/navigation/navigationService';
+import { getCurrentRouteTrail, navigate as navigateRoot } from '@/navigation/navigationService';
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
 import useLiensEnAttente from '@/navigation/useLiensEnAttente';
@@ -208,7 +208,9 @@ function PrivateNavigator() {
       return undefined;
     }
 
-    const currentRouteName = navigationRef.getCurrentRoute()?.name || null;
+    // ONBOARDDATE (29/10/2026) — la RACINE de la pile : HomeTab contient les onglets puis la pile
+    // d'accueil, l'ecran affiche s'y appelle SearchHome et ne valait jamais HomeTab.
+    const currentRouteName = getCurrentRouteTrail()[0] || null;
     const shouldRedirectFromHome = (
       !currentRouteName
       || currentRouteName === RouteNames.HomeTab

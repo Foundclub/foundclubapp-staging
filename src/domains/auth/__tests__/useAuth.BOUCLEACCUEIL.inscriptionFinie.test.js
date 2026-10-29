@@ -62,6 +62,7 @@ jest.mock('@/services/auth/authService', () => ({
   getMe: jest.fn(),
   login: jest.fn(),
   logout: jest.fn(),
+  markOnboardingCompletedOnServer: jest.fn(() => Promise.resolve({})),
   signInWithPhoneNumber: jest.fn(),
 }));
 jest.mock('@/services/bootstrap/bootstrapService', () => ({
