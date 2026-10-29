@@ -850,6 +850,33 @@ function EventDetails({ navigation, route }) {
     )}`);
     if (ok) annulerSeanceFermee.mutate({ documentId: eventId });
   }, [annulerSeanceFermee, eventId, t]);
+  // RWDIRIG (29/10, décision d'Adel « 4- A ») — « Annuler » de « Gérer l'événement », comme le
+  // téléphone : confirmation, annulation, puis retour (useEventMutations.cancelEventMutation).
+  // ponytail: une seule séance, même dans une série ; le téléphone propose aussi « les suivantes »
+  // et « toutes », qu'un confirm du navigateur ne sait pas offrir (sortie : une vraie feuille).
+  const annulerEvenement = useMutation({
+    mutationFn: cancelEvent,
+    onSuccess: (/** @type {any} */ reponse) => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning'] });
+      const prevenue = reponse?.meta?.collectivitePrevenue;
+      if (prevenue && typeof window?.alert === 'function') {
+        window.alert(t(
+          'useEventMutations.villePrevenue.corps',
+          'La {{ville}} est prévenue : la place se libère.',
+          { ville: prevenue.collectiviteName || t('collectiviteDemandes.club.laVille', 'Ville') },
+        ));
+      }
+      navigation.goBack();
+    },
+  });
+  const annulerLEvenement = useCallback(() => {
+    if (!eventId || typeof window?.confirm !== 'function') return;
+    const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
+      'eventDetails.modals.cancelEvent.description',
+    )}`);
+    if (ok) annulerEvenement.mutate({ documentId: eventId });
+  }, [annulerEvenement, eventId, t]);
   const matchEncartSummary = useMemo(() => {
     if (!isMatchEvent) return null;
     const summary = buildMatchHeaderScoreSummary({
@@ -1389,8 +1416,16 @@ function EventDetails({ navigation, route }) {
       note: postMatchAction.subtitle,
       onPress: openMatchStatsEditor,
     }] : []),
+    ...(canEdit ? [{
+      disabled: annulerEvenement.isPending,
+      icon: 'close',
+      key: 'cancel',
+      label: t('eventDetails.managePanel.cancel', 'Annuler'),
+      onPress: annulerLEvenement,
+    }] : []),
   ];
-  const showManageMenu = Boolean(canEdit && isMatchEvent && manageMenuItems.length > 1);
+  // RWDIRIG (29/10, « 4- A ») : le menu vaut pour tous les types, pour que « Annuler » soit joignable.
+  const showManageMenu = Boolean(canEdit && manageMenuItems.length > 1);
   const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
