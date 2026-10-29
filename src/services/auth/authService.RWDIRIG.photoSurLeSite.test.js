@@ -53,6 +53,7 @@ class FormDataNote {
   }
 
   /**
+   * Garde la valeur telle quelle.
    * @param {string} nom
    * @param {any} valeur
    */
@@ -83,7 +84,9 @@ describe('photo de profil envoyée depuis le site (RWDIRIG)', () => {
   it('🔴 le fichier du navigateur part tel quel', async () => {
     const file = new File(['png'], 'moi.png', { type: 'image/png' });
     await updateMe(/** @type {any} */ ({
-      avatar: { file, filename: 'moi.png', mime: 'image/png', path: 'blob:http://localhost:5303/abc' },
+      avatar: {
+        file, filename: 'moi.png', mime: 'image/png', path: 'blob:http://localhost:5303/abc',
+      },
       firstname: 'Karim',
     })).catch(() => {});
 

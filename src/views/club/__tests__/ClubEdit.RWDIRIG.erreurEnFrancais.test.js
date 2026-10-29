@@ -137,7 +137,10 @@ beforeEach(() => {
   mockOptions.length = 0;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   mockGetClub.mockReturnValue({
-    data: { activites: [], documentId: 'club-1', name: 'AS Exemple' }, error: null, isLoading: false, refetch: jest.fn(),
+    data: { activites: [], documentId: 'club-1', name: 'AS Exemple' },
+    error: null,
+    isLoading: false,
+    refetch: jest.fn(),
   });
 });
 
@@ -155,7 +158,8 @@ it('🔴 un échec technique en anglais s affiche en français', async () => {
 
   const { updateClubInfo } = jest.requireMock('@/services/club/clubService');
   const { onError } = mockOptions.find((o) => o.mutationFn === updateClubInfo);
-  act(() => onError(new Error('Failed to update club info: Failed to upload file: Files are empty')));
+  const brut = 'Failed to update club info: Failed to upload file: Files are empty';
+  act(() => onError(new Error(brut)));
 
   const [, message] = /** @type {any} */ (Alert.alert).mock.calls[0];
   expect(message).toBe('Impossible de mettre à jour ce club pour le moment.');

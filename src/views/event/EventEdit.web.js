@@ -552,9 +552,13 @@ function EventEditForm({ navigation, route }) {
               >
                 {t('eventEdit.planning', 'Planning')}
               </span>
-              {/* RWDIRIG (29/10) : sans couleur, le titre prenait celle des h1 du site (sombre sur ce panneau sombre). */}
+              {/* RWDIRIG (29/10) : sans couleur, le titre prenait celle des h1 du site
+                  (sombre sur ce panneau sombre). */}
               <h1 style={{
-                color: textColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0,
+                color: textColor,
+                fontFamily: 'Montserrat-Black, sans-serif',
+                fontSize: isTablet ? 34 : 28,
+                margin: 0,
               }}
               >
                 {eventId ? t(

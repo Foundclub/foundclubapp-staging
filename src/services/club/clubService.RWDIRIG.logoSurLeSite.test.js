@@ -45,6 +45,7 @@ class FormDataNote {
   }
 
   /**
+   * Garde la valeur telle quelle.
    * @param {string} nom
    * @param {any} valeur
    */
