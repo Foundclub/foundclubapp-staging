@@ -1,19 +1,26 @@
 import fs from 'fs';
 import path from 'path';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ScrollView, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { computeMessageMenuLayout } from '@/domains/messaging/reactionPillPlacement';
 
 import Calque from '@/components/molecules/messageReactionOverlay/MessageReactionOverlay';
+import VideoMessagePlayer from '@/components/molecules/videoMessage/VideoMessagePlayer';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import LieuSurCarte from '@/components/organisms/autocompleteAddressInput/LieuSurCarte';
+import PreDemandeNotifications from '@/components/organisms/notifications/PreDemandeNotifications';
 import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
 import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
 import FeuillePhotoDuGroupe from '@/views/chat/FeuillePhotoDuGroupe';
 import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
+
+import { proposerPreDemandeNotifications } from '@/utils/notifications/preDemandeNotifications';
+
+import { setItem } from '@/platform/storage';
 
 // 🤖 ANDROIDBAR-2BIS — les fenêtres <Modal statusBarTranslucent> qui restaient à trier après
 // ANDROIDBAR-2. Règle mesurée à l'émulateur par ANDROIDBAR-2 (Pixel 9, Android 16, barre à
@@ -29,6 +36,13 @@ import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
 // 🖼️ MSGIMG (20/10) — 15ᵉ, triée : l'image d'une conversation ouverte en grand (ApercuDImage).
 // Seul l'avis « Image enregistrée » touche son bas, et il RÉSERVE la barre (`insets.bottom + 24`,
 // mesuré dans ConversationMSGIMG.apercu MSGIMG-3a) ; boutons en haut, image centrée.
+// 🎬 MSG-MEDIA (29/10) — 16ᵉ, triée : le lecteur d'une vidéo de messagerie (VideoMessagePlayer,
+// plein écran). Son bas porte « Ouvrir dans le navigateur » et RÉSERVE la barre
+// (`bottom + 12`), mesuré ci-dessous ; la croix est en haut, sous `insets.top`.
+// 🔔 NOTIF-PREDEMANDE (29/10) — 17ᵉ, triée : l'écran « Active les notifications » (plein écran).
+// Son bas porte « Activer » / « Plus tard » et RÉSERVE la barre (`insets.bottom + 24`), mesuré
+// ci-dessous. Les deux lots ont tourné pendant la panne des modules du 29/10 (21:31) : ce
+// témoin ne les avait pas vus, la récolte 2686 l'a fait rougir.
 // 📐 COLL-R-A7 (13/10, COL-005) — 14ᵉ, triée : le tunnel « Attribuer un créneau » en plein écran
 // (`FenetrePleinEcran` de SeasonSlotForm). Son bas est celui du gabarit des tunnels
 // (WizardStepLayout, `insets.bottom + 12`, D53) : RÉSERVE la barre, mesuré ci-dessous.
@@ -124,6 +138,17 @@ jest.mock('@/components/molecules/input/Input', () => {
   };
 });
 jest.mock('@/components/atoms/button/Button', () => 'Button');
+// MSG-MEDIA : le lecteur vidéo charge sa WebView à l'ouverture ; NOTIF-PREDEMANDE lit la
+// permission du téléphone. Les deux sont doublés.
+jest.mock('react-native-webview', () => ({ WebView: 'WebView' }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: () => {} } }));
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: { getNotificationSettings: () => Promise.resolve({}) },
+}));
+jest.mock('@/utils/notifications/etatPermissionNotifications', () => ({
+  lireEtatPermissionNotifications: () => Promise.resolve('a_demander'),
+}));
 
 /** Android 15/16 en 3 boutons et en gestes, iPhone (barre d'accueil), Android ≤ 14. */
 const BARRES = /** @type {[string, number][]} */ ([
@@ -303,6 +328,10 @@ const FEUILLES = [
     toucher(arbre, 'WHATSAPP-plus');
     return margeBasseDe(natif(arbre, 'WHATSAPP-clavier'));
   }],
+  ['VideoMessagePlayer — « Ouvrir dans le navigateur »', 12, () => margeBasseDe(natif(
+    monter(<VideoMessagePlayer onClose={rien} url="https://cdn.example.test/but.mp4" />),
+    'video-message-player-browser',
+  ))],
   ['SeasonSlotForm — bas du tunnel plein écran (WizardStepLayout)', 12, () => margeBasseDe(natif(
     monter(
       <WizardStepLayout
@@ -323,7 +352,7 @@ const FEUILLES = [
 jest.setTimeout(60000);
 
 describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d’Android', () => {
-  test('R — il y a 15 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
+  test('R — il y a 17 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
     const racine = path.join(__dirname, '..', '..');
     /** @type {string[]} */
     const trouvees = [];
@@ -353,8 +382,10 @@ describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d�
     expect(trouvees.sort()).toEqual([
       'components/molecules/apercuDImage/ApercuDImage.js ×1',
       'components/molecules/messageReactionOverlay/MessageReactionOverlay.js ×1',
+      'components/molecules/videoMessage/VideoMessagePlayer.js ×1',
       'components/organisms/autocompleteAddressInput/LieuSurCarte.js ×1',
       'components/organisms/feuilleDAdresse/FeuilleDAdresse.js ×1',
+      'components/organisms/notifications/PreDemandeNotifications.js ×1',
       'components/organisms/notifications/SmartNotificationHost.js ×1',
       'components/organisms/popup/GlobalPromptModal.js ×1',
       'components/organisms/seasonSlot/SeasonSlotForm.js ×1',
@@ -375,6 +406,34 @@ describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d�
       const marge = mesurer();
       expect(marge).toBeGreaterThanOrEqual(bas);
       expect(marge).toBeGreaterThanOrEqual(dessin);
+    });
+
+    test('PreDemandeNotifications — les boutons du bas au-dessus de la barre', async () => {
+      simuler(bas);
+      // La memoire de la pre-demande remise a zero : l ecran peut s ouvrir a chaque barre.
+      setItem('notif_predemande_v1', '');
+      const client = new QueryClient();
+      /** @type {any} */
+      let arbre;
+      await act(async () => {
+        arbre = renderer.create(
+          <QueryClientProvider client={client}>
+            <PreDemandeNotifications activerNotifications={() => Promise.resolve('success')} />
+          </QueryClientProvider>,
+        );
+      });
+      await act(async () => {
+        proposerPreDemandeNotifications('inscription');
+        await Promise.resolve();
+      });
+      const bouton = arbre.root.findAll(
+        (/** @type {any} */ n) => n.type === 'Button',
+      )[0];
+      const marge = margeBasseDe(bouton);
+      expect(marge).toBeGreaterThanOrEqual(bas);
+      expect(marge).toBeGreaterThanOrEqual(24);
+      act(() => arbre.unmount());
+      client.clear();
     });
 
     test('ApercuDuFil — le menu sous la carte finit au-dessus de la barre (écran 640)', () => {
