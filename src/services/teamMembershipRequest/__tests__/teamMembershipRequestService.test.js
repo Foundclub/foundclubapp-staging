@@ -134,3 +134,29 @@ describe('S01 — getTeamMembershipRequests, le filet qui manquait', () => {
     await expect(getTeamMembershipRequests(['team-1'], { pageSize: 50 })).rejects.toThrow();
   });
 });
+
+// NOTIF-PREDEMANDE (29/10/2026, decision d'Adel « 2- A ») — « demande d'adhesion
+// envoyee » est un moment cle : notre ecran de pre-demande peut revenir. Le crochet
+// est ICI, dans la fonction partagee, pour couvrir tous ses appelants (fiche d'equipe,
+// fiche de club, lien d'invitation, tunnel d'inscription).
+describe('createTeamMembershipRequest — moment cle de la pre-demande (NOTIF-PREDEMANDE)', () => {
+  it('demande envoyee ⇒ proposer la pre-demande ; demande refusee ⇒ rien', async () => {
+    jest.resetModules();
+    const mockPost = jest.fn();
+    const mockProposer = jest.fn();
+    jest.doMock('@/services/client', () => ({ __esModule: true, default: { get: jest.fn(), post: mockPost } }));
+    jest.doMock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
+    jest.doMock('@/utils/notifications/preDemandeNotifications', () => ({
+      proposerPreDemandeNotifications: mockProposer,
+    }));
+    const { createTeamMembershipRequest } = require('../teamMembershipRequestService');
+
+    mockPost.mockRejectedValueOnce(new Error('refus'));
+    await expect(createTeamMembershipRequest({ team: 't1', user: 'u1' })).rejects.toThrow('refus');
+    expect(mockProposer).not.toHaveBeenCalled();
+
+    mockPost.mockResolvedValueOnce({ data: { data: { documentId: 'tmr-1' } } });
+    await createTeamMembershipRequest({ team: 't1', user: 'u1' });
+    expect(mockProposer).toHaveBeenCalledWith('adhesion');
+  });
+});

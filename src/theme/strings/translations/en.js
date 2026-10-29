@@ -16124,8 +16124,13 @@ export default {
     },
     later: 'Later',
     push: {
+      body: 'Turn on notifications to know when your coach accepts you, when you are called up and when someone writes to you.',
+      // eslint-disable-next-line max-len
+      bodyRefused: 'Notifications are turned off for FoundClub. To know when your coach accepts you, turn them on in your phone Settings.',
       enable: 'Enable',
+      openSettings: 'Open Settings',
       supporting: 'You can always change this later in settings.',
+      title: 'Get notified at the right time',
     },
   },
   notificationList: {
@@ -24945,10 +24950,6 @@ export default {
     calendarPrompt: {
       body: 'Add this League match to your calendar so you don’t miss it?',
       title: 'Match confirmed',
-    },
-    pushPrompt: {
-      body: 'Turn on FoundClub notifications to get League approvals, line-up reminders and important actions without waiting.',
-      title: 'Turn on FoundClub notifications',
     },
   },
   userAddress: {

@@ -28,6 +28,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { updateMe } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
+import { proposerPreDemandeNotifications } from '@/utils/notifications/preDemandeNotifications';
 
 import {
   isBirthdateUnderParentalAge,
@@ -269,6 +270,10 @@ function UserName({ navigation }) {
         return;
       }
 
+      // NOTIF-PREDEMANDE (29/10/2026, decision d'Adel « 2- A ») — notre ecran de
+      // pre-demande des notifications s'ouvre par-dessus l'etape suivante : juste apres
+      // « Qui es-tu ? », jamais au point de controle d'un ancien compte (retour plus haut).
+      proposerPreDemandeNotifications('inscription');
       const nextRoute = resolveAvailableRoute(
         navigation,
         getNextOnboardingRoute(RouteNames.UserName),

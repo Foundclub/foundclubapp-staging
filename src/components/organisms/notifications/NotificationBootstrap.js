@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
 
+import PreDemandeNotifications from '@/components/organisms/notifications/PreDemandeNotifications';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 
 import { navigate } from '@/navigation/navigationService';
@@ -57,8 +58,8 @@ function NotificationBootstrapEnabled() {
   }, []);
 
   const {
+    activerNotifications,
     calendarPrompt,
-    pushPermissionPrompt,
   } = useNotifications({
     navigate,
     onSmartNotification: ENABLE_SMART_NOTIFICATIONS ? consumeNotification : undefined,
@@ -69,17 +70,8 @@ function NotificationBootstrapEnabled() {
     calendarPrompt.canShow,
     calendarPrompt.descriptor.priority,
   );
-  const canShowPushPrompt = useBlockingOverlayPrompt(
-    pushPermissionPrompt.descriptor.id,
-    pushPermissionPrompt.canShow,
-    pushPermissionPrompt.descriptor.priority,
-  );
   const isCalendarPromptVisible = Boolean(calendarPrompt.canShow && canShowCalendarPrompt);
-  const isPushPromptVisible = Boolean(pushPermissionPrompt.canShow && canShowPushPrompt);
   useBlockingOverlayLifecycle(calendarPrompt.descriptor.id, isCalendarPromptVisible, {
-    releaseDelayMs: 320,
-  });
-  useBlockingOverlayLifecycle(pushPermissionPrompt.descriptor.id, isPushPromptVisible, {
     releaseDelayMs: 320,
   });
 
@@ -88,32 +80,10 @@ function NotificationBootstrapEnabled() {
     calendarPrompt.onVisible?.();
   }, [calendarPrompt, isCalendarPromptVisible]);
 
-  React.useEffect(() => {
-    if (!isPushPromptVisible) return;
-    pushPermissionPrompt.onVisible?.();
-  }, [isPushPromptVisible, pushPermissionPrompt]);
-
   return (
     <>
-      <GlobalPromptModal
-        body={pushPermissionPrompt.body}
-        inlineOnAndroid
-        onRequestClose={pushPermissionPrompt.onDismiss}
-        primaryAction={{
-          label: t('notificationBootstrap.push.enable', 'Activer'),
-          onPress: pushPermissionPrompt.onAccept,
-        }}
-        secondaryAction={{
-          label: t('notificationBootstrap.later', 'Plus tard'),
-          onPress: pushPermissionPrompt.onDismiss,
-        }}
-        supportingText={t(
-          'notificationBootstrap.push.supporting',
-          'Tu pourras toujours modifier ce choix plus tard dans les réglages.',
-        )}
-        title={pushPermissionPrompt.title}
-        visible={isPushPromptVisible}
-      />
+      {/* NOTIF-PREDEMANDE (29/10/2026) — notre ecran avant la fenetre systeme. */}
+      <PreDemandeNotifications activerNotifications={activerNotifications} />
 
       <GlobalPromptModal
         body={calendarPrompt.body}
