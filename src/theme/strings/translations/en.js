@@ -2598,6 +2598,9 @@ export default {
         error: 'Unable to remove this coach right now.',
         title: "You're about to remove this coach.",
       },
+      inviteManager: {
+        message: "Hi {{coachName}}!\nYou've been designated as a manager at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your club.",
+      },
       inviteTrainer: {
         message: "Hi {{coachName}}!\nYou've been designated as coach / instructor at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events.",
         title: 'Welcome to FoundClub!',

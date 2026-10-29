@@ -2826,6 +2826,13 @@ export default {
         error: 'Impossible de retirer cet entraîneur pour le moment.',
         title: 'Tu es sur le point de supprimer cet·te entraîneur·e.',
       },
+      // INVITESMS (29/10) : le SMS du dirigeant cree par son club (l'entraineur a le sien).
+      inviteManager: {
+        message: 'Bonjour {{coachName}} !'
+          + '\nTu as été désigné·e comme dirigeant·e dans le club {{clubName}}.'
+          + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
+          + ' et commencer à gérer ton club.',
+      },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
           + '\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.'

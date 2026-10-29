@@ -439,14 +439,40 @@ describe('AddCoach — apres la creation', () => {
     expect(mockNavigation.goBack).not.toHaveBeenCalled();
   });
 
-  it('pour un dirigeant, une alerte confirme et il n y a pas de modale SMS', async () => {
+  // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — le dirigeant cree n'etait prevenu par
+  // personne : une alerte « Ajout reussi ! », et pas d'invitation. Il a desormais la MEME feuille
+  // que l'entraineur, avec son texte de dirigeant. ROUGE avant (l'ancien test figeait l'alerte).
+  it('pour un dirigeant, la feuille d invitation SMS s ouvre aussi, sans alerte', async () => {
     const arbre = await monterEcran({ name: RouteNames.AddClubManager });
     await saisirTelephone('+33612345678');
 
     await appuyerSur(arbre, LIBELLE_CTA);
 
-    expect(Alert.alert).toHaveBeenCalled();
-    expect(mockInvitedModalProps).toHaveLength(0);
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(dernieresProps(mockInvitedModalProps).isVisible).toBe(true);
+    expect(dernieresProps(mockInvitedModalProps).isManager).toBe(true);
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('pour un dirigeant, « Inviter » part avec le role dirigeant (texte du SMS)', async () => {
+    const arbre = await monterEcran({ name: RouteNames.AddClubManager });
+    await saisirTelephone('+33612345678');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    await act(async () => { dernieresProps(mockInvitedModalProps).onInvite(); });
+
+    expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
+      isManager: true, phoneNumber: '+33612345678',
+    }));
+    expect(mockNavigation.goBack).toHaveBeenCalled();
+  });
+
+  it('pour un entraineur, la feuille garde son texte d entraineur', async () => {
+    const arbre = await monterEcran();
+    await saisirTelephone('+33612345678');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    expect(dernieresProps(mockInvitedModalProps).isManager).toBe(false);
   });
 });
 
@@ -485,17 +511,18 @@ describe('AddCoach — fusion D51 ecran 10 : le role se choisit a l ecran', () =
     expect(createManager).not.toHaveBeenCalled();
   });
 
-  it('le role choisi commande aussi la suite : bascule en dirigeant, pas de modale SMS', async () => {
+  // INVITESMS (29/10) : la suite suit toujours le role choisi — la feuille d'invitation s'ouvre
+  // desormais pour les deux, avec le texte du role BASCULE (dirigeant).
+  it('le role choisi commande la suite : bascule en dirigeant, feuille de dirigeant', async () => {
     const arbre = await monterEcran({ name: RouteNames.AddCoach });
     await saisirTelephone('+33612345678');
 
     await appuyerSur(arbre, 'Dirigeant·e');
     await appuyerSur(arbre, LIBELLE_CTA);
 
-    // La modale a bien ete rendue AVANT la bascule (l'ecran s'ouvrait en
-    // entraineur) : ce qui compte est qu'elle ne s'OUVRE jamais.
-    expect(dernieresProps(mockInvitedModalProps)?.isVisible).not.toBe(true);
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(dernieresProps(mockInvitedModalProps)?.isVisible).toBe(true);
+    expect(dernieresProps(mockInvitedModalProps)?.isManager).toBe(true);
+    expect(createManager).toHaveBeenCalled();
   });
 });
 
@@ -582,5 +609,28 @@ describe('AddCoach — D63 : l ecart entre la maquette et l ecran', () => {
     await appuyerSur(arbre, 'Annuler');
 
     expect(mockNavigation.goBack).toHaveBeenCalled();
+  });
+});
+
+// R5-48 (REJEU-5, 29/10, capture R5-48-addcoach-butee.png) — clavier ferme, le formulaire ne
+// defilait pas : « Date de naissance » restait sous « Envoyer l'invitation », inatteignable.
+// Cause : ScreenContainer pose le contenu dans une vue `flexGrow: 1` (`staticContent`) ; sans
+// `flex: 1` dans `contentContainerStyle`, cette vue grandit a la taille du formulaire au lieu
+// d'etre bornee a l'ecran, et le ScrollView qu'elle contient n'a plus rien a faire defiler. Les
+// ecrans voisins (ClubFilters, NewConversation, formulaires collectivite) passent
+// `Alignments.fill`.
+// ⚠️ Jest ne mesure aucun pixel : il lit le style qui borne la zone. Preuve a l'ecran = emulateur.
+describe('R5-48 — le formulaire defile jusqu au-dessus du bouton', () => {
+  it('🔴 la zone de contenu est bornee a la hauteur de l ecran', async () => {
+    await monterEcran();
+    expect(aplatirStyle(dernieresProps(mockScreenProps).contentContainerStyle).flex).toBe(1);
+  });
+
+  it('🔒 le ScrollView remplit la zone bornee, les boutons restent dessous', async () => {
+    const arbre = await monterEcran();
+    const { ScrollView: DefilementRN } = jest.requireActual('react-native');
+    const defilement = arbre.root.findByType(DefilementRN);
+    expect(aplatirStyle(defilement.props.style).flex).toBe(1);
+    expect(texteDe(defilement)).not.toContain(LIBELLE_CTA);
   });
 });
