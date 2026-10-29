@@ -615,6 +615,18 @@ export const getClubById = async (id) => {
  *   `clearSponsors` : the caller removes the LAST sponsor (an empty list is then sent).
  * @returns {Promise<Club>} - The updated club data
  */
+/**
+ * RWDIRIG (29/10) — sur le site, le choix d'image (`SelectAvatar.web.js`) rend le fichier du
+ * navigateur dans `file` : c'est lui qu'on envoie. La forme `{ uri, name, type }` du téléphone
+ * y devient « [object Object] » et aucun logo n'arrivait au serveur.
+ * @param {any} picked - L'image choisie.
+ * @param {any} descriptor - La forme du téléphone.
+ * @returns {any} Ce que reçoit `FormData.append`.
+ */
+const filePart = (picked, descriptor) => (
+  typeof File !== 'undefined' && picked?.file instanceof File ? picked.file : descriptor
+);
+
 export const updateClub = async (clubData) => {
   try {
     console.log('[DEBUG - FRONTEND] ========== UPDATE CLUB START ==========');
@@ -688,11 +700,11 @@ export const updateClub = async (clubData) => {
           console.warn('Appended file for sponsor', i);
           const sponsorLogoPath = sponsor.logo.path || '';
           // @ts-expect-error - React Native FormData supports file descriptor objects.
-          formData.append(`sponsor[${i}][logo]`, {
+          formData.append(`sponsor[${i}][logo]`, filePart(sponsor.logo, {
             name: sponsor.logo.filename || `sponsor_${i}.jpg`,
             type: sponsor.logo.mime || 'image/jpeg',
             uri: Platform.OS === 'android' ? sponsorLogoPath : sponsorLogoPath.replace('file://', ''),
-          });
+          }));
         } else {
           // EXISTING LOGO - DO NOT SEND ANYTHING
           // This prevents sending invalid documentIds that don't exist
@@ -773,7 +785,7 @@ export const updateClub = async (clubData) => {
         // Strapi default upload usually looks for `files` key.
         // Let's assume standard multipart: `logo` as key for file.
         // @ts-expect-error - React Native FormData supports file descriptor objects.
-        formData.append('files.logo', fileToUpload);
+        formData.append('files.logo', filePart(clubDataCopy.logo, fileToUpload));
       } else if (clubDataCopy.logo.documentId) {
         formData.append('logo', clubDataCopy.logo.documentId);
       } else if (clubDataCopy.logo.id) {
@@ -857,7 +869,7 @@ export const uploadFile = async (file) => {
     console.log('[DEBUG] FormData file:', JSON.stringify(fileToUpload));
 
     // @ts-expect-error because of react native image type
-    formData.append('files', fileToUpload);
+    formData.append('files', filePart(file, fileToUpload));
 
     const auth = getAuthTokens();
     const token = auth?.token;
