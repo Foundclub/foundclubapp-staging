@@ -52,19 +52,64 @@ export const computeAge = (birthdate, now = new Date()) => {
   return age >= 0 && age < 130 ? age : null;
 };
 
+// BIENVENUE-VILLE — les mots en minuscules d'un nom de commune (« Saint-Martin-de-Crau »).
+const PARTICULES = new Set([
+  'aux', 'de', 'des', 'du', 'en', 'et', 'la', 'le', 'les', 'sous', 'sur',
+]);
+
+/**
+ * « PLAN-DE-CUQUES » ⇒ « Plan-de-Cuques » ; un nom pas tout en capitales reste tel quel.
+ * @param {string} nom
+ * @returns {string}
+ */
+const casseCommune = (nom) => (nom !== nom.toUpperCase() ? nom : nom.toLowerCase()
+  .replace(/[^\s-]+/g, (mot, index) => (index > 0 && PARTICULES.has(mot)
+    ? mot
+    : mot.charAt(0).toUpperCase() + mot.slice(1))));
+
+/**
+ * BIENVENUE-VILLE (29/10/2026) — une adresse prise dans nos imports de clubs n'a pas de `city`,
+ * seulement un libellé (12 comptes en prod). La commune et son code postal s'y relisent :
+ * « Gardanne (13120) », « 2 RUE PASTEUR 13127 VITROLLES ».
+ * ponytail: seul un libellé qui porte un code postal est lu ; sans code postal (« VITROLLES SPORT
+ * TIR », un nom de club), rien n'est deviné et la carte dit « à compléter ».
+ * @param {any} raw - L'adresse, objet.
+ * @returns {{ city: string, postcode: string }}
+ */
+const communeDuLibelle = (raw) => {
+  const libelle = String(raw?.label || raw?.description || '').trim();
+  const entreParentheses = libelle.match(/^([^\d(]+?)\s*\((\d{5})\)$/);
+  const apresLeCode = libelle.match(/\b(\d{5})\s+([^\d(]+?)(?:\s*\(\d{5}\))?$/);
+  if (entreParentheses) {
+    return { city: casseCommune(entreParentheses[1].trim()), postcode: entreParentheses[2] };
+  }
+  if (apresLeCode) return { city: casseCommune(apresLeCode[2].trim()), postcode: apresLeCode[1] };
+  return { city: '', postcode: '' };
+};
+
+/**
+ * L'adresse (json Strapi, éventuellement en texte) en objet, ou null.
+ * @param {any} address
+ * @returns {any}
+ */
+const adresseObjet = (address) => {
+  let raw = address;
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch (_e) { return null; }
+  }
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+};
+
 /**
  * Parse l'objet address (json Strapi, eventuellement stringifie) -> ville.
  * @param {any} address
  * @returns {string}
  */
 export const extractCity = (address) => {
-  if (!address) return '';
-  let raw = address;
-  if (typeof raw === 'string') {
-    try { raw = JSON.parse(raw); } catch (_e) { return ''; }
-  }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return '';
-  return String(raw.city || raw.town || raw.municipality || '').trim();
+  const raw = adresseObjet(address);
+  if (!raw) return '';
+  const connue = String(raw.city || raw.town || raw.municipality || '').trim();
+  return connue || communeDuLibelle(raw).city;
 };
 
 /**
@@ -76,11 +121,10 @@ export const extractCity = (address) => {
 export const extractCityWithPostcode = (address) => {
   const city = extractCity(address);
   if (!city) return '';
-  let raw = address;
-  if (typeof raw === 'string') {
-    try { raw = JSON.parse(raw); } catch (_e) { return city; }
-  }
-  const postcode = String(raw?.postcode || raw?.zipCode || '').trim();
+  const raw = adresseObjet(address);
+  const connue = String(raw?.city || raw?.town || raw?.municipality || '').trim();
+  const postcode = String(raw?.postcode || raw?.zipCode || '').trim()
+    || (connue ? '' : communeDuLibelle(raw).postcode);
   return [city, postcode].filter(Boolean).join(' ');
 };
 
