@@ -490,13 +490,17 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
     ]);
   });
 
-  test('✅ témoin 12 — le signal de guidage part UNE fois par onglet et par écran', async () => {
+  // GUIDE-FINITIONS-3 n° 23 : « une fois par onglet et par écran » laissait le guide
+  // sur m4-tab-* quand l'onglet avait déjà été vu ; chaque retour sur un onglet signale.
+  test('✅ témoin 12 — le signal de guidage part à chaque onglet rouvert', async () => {
     await monter({});
     await changerOnglet('clubs');
     await changerOnglet('events');
     await changerOnglet('clubs');
 
     expect(emitGuidanceInteraction.mock.calls).toEqual([
+      ['search.tab.events'],
+      ['search.tab.clubs'],
       ['search.tab.events'],
       ['search.tab.clubs'],
     ]);

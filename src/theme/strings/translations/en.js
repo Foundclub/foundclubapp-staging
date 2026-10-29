@@ -23681,6 +23681,7 @@ export default {
   tourCatalog: {
     coach: {
       'b1-card': 'Open your session.',
+      'b1-card-none': 'No upcoming session in your schedule: plan one with this button, or skip this bonus.',
       'b1-dock': "To see who's coming: open the schedule.",
       'b1-relance': 'Further down: the participants. Nobody has answered yet: nudge them in one tap.',
       'b1-vide': "This is where you'll see who's coming as soon as your players answer.",
@@ -23707,6 +23708,7 @@ export default {
         team: '{{team}} created',
         teamReady: 'Your team, already set',
         title: 'Ready for the session',
+        titlePartial: 'The guide is over',
         yourClub: 'Your club',
         yourTeam: 'Your team',
       },
@@ -23732,6 +23734,8 @@ export default {
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
+      'm2-sent': 'Was the link sent? Tap “It’s sent”. Otherwise, reopen this menu to share it.',
+      'm2-sent-next': 'It’s sent',
       'm2-share': 'The easiest way: an invitation link.',
       'm3-access': 'Public: anyone can find it in Search and ask to come. Private: only your team and your guests. For a training session, keep it Private.',
       'm3-card': 'Tap "Add an event".',
@@ -23800,6 +23804,8 @@ export default {
         subtitle: '{{count}} missions out of {{count}}, the essentials are done.',
         subtitlePartial: '{{done}} missions out of {{total}}: the others wait until the app lets you.',
         title: 'Your team is ready!',
+        titleNone: 'No mission done yet',
+        titlePartial: 'Part of it is done',
       },
       refusal: {
         clubPartner: 'This club goes through its manager: “I run this club” replaces “It’s my club”. Pick another club, or skip this mission.',
@@ -23815,6 +23821,7 @@ export default {
       'rv-m1': 'Your teams are here. “New team” creates one: a name, an age group, a level.',
       'rv-m2': 'On a team’s page, “⋯” then “Share link” sends the invitation to your players.',
       'rv-m3': 'From home, “Add an event” schedules a session: type, team, place, time.',
+      'rv-m3-dock': 'Sessions are scheduled from home (this tab): “Add an event”, then type, team, place, time.',
       'rv-m4': 'Search finds clubs, events and friendly matches. Here, “Create a friendly match” publishes your listing.',
       tw1: 'Name your team: type it or pick a suggestion, then Next.',
       tw2: 'Optional: describe your team, or skip this step.',

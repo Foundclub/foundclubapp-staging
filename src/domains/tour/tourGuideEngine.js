@@ -3,7 +3,8 @@
  * 01_ARCHITECTURE §1-§2). Le TourContext s'en sert pour les profils
  * `version: 3` ; les profils v2 (joueur, dirigeant) gardent leur moteur.
  * @typedef {{ goto?: string; key?: string; meta?: Record<string, any>; not?: string;
- *   type: 'action' | 'interaction' | 'route'; when?: (ctx: any) => boolean }} TourAdvance
+ *   type: 'action' | 'interaction' | 'route'; when?: (ctx: any) => boolean;
+ *   completes?: boolean }} TourAdvance
  * @typedef {{ id: string; locked: boolean; gaugeStep: number; title: string;
  *   estimatedSeconds?: number }} TourMission
  * @typedef {{ advance: TourAdvance; index: number; completes: boolean } | null} TourMatch
@@ -104,7 +105,7 @@ const advanceMatches = (advance, signal, ctx) => {
 
 /**
  * Le signal fait-il avancer l'étape courante ? Une sortie `goto` est un
- * aiguillage (branche), elle ne valide jamais la mission.
+ * aiguillage (branche) ; elle ne valide la mission que si elle le dit (`completes`).
  * @param {any} profile
  * @param {number} stepIndex
  * @param {any} signal
@@ -117,7 +118,9 @@ export const matchSignal = (profile, stepIndex, signal, ctx) => {
   if (!advance) return null;
   if (advance.goto) {
     const index = indexOfStep(profile, advance.goto);
-    return index === -1 ? null : { advance, completes: false, index };
+    // `completes` : un aiguillage qui valide aussi la mission (équipe créée hors du
+    // tunnel suivi, GUIDE-FINITIONS-3 R2-1).
+    return index === -1 ? null : { advance, completes: Boolean(advance.completes), index };
   }
   return {
     advance,

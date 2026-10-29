@@ -87,8 +87,11 @@ export const shareTeamInviteLink = async ({
     url,
   }).catch(() => undefined);
   // Guide Entraîneur (TUTOE, M2) : feuille fermée sans envoi ⇒ on reste à
-  // l'étape « lien ». Android ne distingue pas l'abandon : il compte comme envoi.
-  if (result && result.action !== Share.dismissedAction) {
+  // l'étape « lien ». Android ne distingue pas l'abandon (toujours « partagé ») :
+  // le guide demande au lieu de conclure (GUIDE-FINITIONS-3, n° 22).
+  if (Platform.OS === 'android') {
+    emitGuidanceInteraction('team.invite.returned', { teamId });
+  } else if (result && result.action !== Share.dismissedAction) {
     emitGuidanceAction('team.invite.shared', { teamId });
   } else {
     emitGuidanceInteraction('team.invite.dismissed');

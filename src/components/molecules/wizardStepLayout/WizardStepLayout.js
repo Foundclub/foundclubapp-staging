@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -359,6 +360,9 @@ function WizardStepLayout({
                 {subtitle}
               </Text>
             ) : null}
+            {/* GUIDE-FINITIONS-3 R2-2 : la bulle du guide se pose ici, sous le titre
+                et la consigne (« Sélectionne au moins un·e entraîneur·e », A09). */}
+            {!isHeaderCollapsed ? <TourBubbleSlot /> : null}
           </View>
 
           {/* Guide (TUTOE-CALIBRAGE) : la zone VISIBLE de la liste ; toutes les ancres

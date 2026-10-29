@@ -430,8 +430,13 @@ export function TourProvider({ children }) {
     const mission = getMission(profile, profile?.steps?.[current.stepIndex]?.missionId);
     if (!mission) return;
     const missionStatus = { ...(current.missionStatus || {}), [mission.id]: 'blocked' };
+    // GUIDE-FINITIONS-3 (réserve du n° 6) : ce qu'apportait la mission existe déjà
+    // (une équipe) ⇒ celles qui en ont besoin restent ouvertes.
+    const satisfied = typeof (/** @type {any} */ (mission)).satisfiedBy === 'function'
+      && (/** @type {any} */ (mission)).satisfiedBy(guideContext(current));
     (profile.missions || []).forEach((/** @type {any} */ other) => {
-      if ((other.needs || []).includes(mission.id) && missionStatus[other.id] !== 'done') {
+      if (!satisfied && (other.needs || []).includes(mission.id)
+        && missionStatus[other.id] !== 'done') {
         missionStatus[other.id] = 'blocked';
       }
     });
@@ -671,6 +676,20 @@ export function TourProvider({ children }) {
     });
     return unsubscribe;
   }, [applyGuideMatch, completeCurrentStep, stepBack]);
+
+  // GUIDE-FINITIONS-3 R2-1 : une étape `recheck` (m1-gate « Pas de club ? ») que le
+  // profil relu rend caduque (club rejoint) cède la place à la suivante, au lieu
+  // de rester figée pendant tout le tunnel.
+  useEffect(() => {
+    const { current } = tourStateRef;
+    if (!current || current.status !== 'active' || current.review) return;
+    const profile = getTourProfile(current.profileKey);
+    const step = profile?.steps?.[current.stepIndex];
+    if (!isGuideProfile(profile) || !step?.recheck) return;
+    if (isStepAvailable(step, guideContext(current))) return;
+    enterGuideStep(current, nextAvailableIndex(profile, current.stepIndex, guideContext(current)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
 
   useEffect(() => () => clearSuccessTimer(), []);
 

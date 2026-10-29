@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -306,6 +307,9 @@ function MatchCompositionStart() {
         <View style={[styles.progressSegment, { backgroundColor: Colors.primary500 }]} />
         <View style={[styles.progressSegment, { backgroundColor: Colors.primary500 }]} />
       </View>
+      {/* GUIDE-FINITIONS-3 R2-4 : place de la bulle du guide, au-dessus de la liste ;
+          « Terrain vide », en tête, restait dessous (A20). */}
+      <TourBubbleSlot />
 
       {/* R07 point 7 — `styles.list` (flex: 1) BORNE la zone qui defile. C'est
           EXACTEMENT le correctif de D84 sur les ecrans 2 et 3 du meme pack :

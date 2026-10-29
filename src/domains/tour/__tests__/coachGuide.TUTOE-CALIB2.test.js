@@ -38,11 +38,12 @@ describe('B1 « Ouvre ta séance » : la carte de la séance créée en M3', () 
   it('vise planning.event.<id de la séance>', () => {
     const b1 = step('b1-card');
     expect(b1.targetsFor({ created: { 'event.created': { documentId: 'ev-42' } } }))
-      .toEqual(['planning.event.ev-42']);
+      .toEqual(['planning.event.ev-42', 'planning.event.next']);
   });
 
-  it('sans séance connue : bulle seule', () => {
-    expect(step('b1-card').targetsFor({ created: {} })).toEqual([]);
+  // GUIDE-FINITIONS-3 R2-3 : plus de « bulle seule », la prochaine séance du planning.
+  it('sans séance connue : la prochaine séance du planning', () => {
+    expect(step('b1-card').targetsFor({ created: {} })).toEqual(['planning.event.next']);
   });
 
   it('la création d’une séance donne son id au guide', async () => {

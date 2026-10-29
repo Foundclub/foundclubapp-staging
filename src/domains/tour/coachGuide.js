@@ -67,6 +67,38 @@ const friendlySearchTarget = {
 const WIZARD = ['teamWizard.field', 'teamWizard.next', 'teamWizard.skip'];
 
 /**
+ * GUIDE-FINITIONS-3 R2-1 (rejeu 2, A03-A15) : un coach qui rejoint son club en
+ * route gardait la bulle d'une étape « club » pendant tout le tunnel, et l'équipe
+ * créée ne validait pas M1. Depuis toute étape de M1 hors tunnel : chaque écran
+ * du tunnel ouvre SA bulle, et l'équipe réellement créée valide la mission.
+ * @type {any[]}
+ */
+const M1_ESCAPES = [
+  {
+    completes: true, goto: 'm2-card', key: 'team.created', type: 'action',
+  },
+  ...[
+    ['tw2', RouteNames.TeamWizardDescription],
+    ['tw3', RouteNames.TeamWizardSection],
+    ['tw4', RouteNames.TeamWizardActivity],
+    ['tw5', RouteNames.TeamWizardCategory],
+    ['tw6', RouteNames.TeamWizardLevel],
+    ['tw7', RouteNames.TeamWizardTrainers],
+    ['tw8', RouteNames.TeamWizardRecap],
+  ].map(([goto, key]) => ({ goto, key, type: 'route' })),
+];
+/**
+ * Sorties d'une étape de M1 hors tunnel, échappatoires en tête (la 1re qui
+ * correspond gagne : `{ not: Club }` de m1-back aurait pris les écrans du tunnel).
+ * @param {any} [advanceOn] - Sorties propres de l'étape.
+ * @returns {any[]} Sorties.
+ */
+const withM1Escapes = (advanceOn) => [
+  ...M1_ESCAPES,
+  ...(Array.isArray(advanceOn) ? advanceOn : [advanceOn]).filter(Boolean),
+];
+
+/**
  * Le coach avait un club au départ du guide.
  * @param {any} ctx
  * @returns {boolean}
@@ -111,6 +143,28 @@ const needsClub = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
  */
 const joinedInGuide = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
   && Boolean(ctx?.created?.['club.joined']);
+/**
+ * Il entraîne une équipe de son club courant (l'écran Équipes ne montre que
+ * celui-là ; tournée : Julien entraîne ailleurs, et « ouvre-la » visait son
+ * équipe de JOUEUR).
+ * @param {any} userData - Profil.
+ * @returns {boolean}
+ */
+const trainsTeamInClub = (userData) => (Array.isArray(userData?.trainedTeams)
+  ? userData.trainedTeams
+  : [])
+  .some((/** @type {any} */ team) => !userData?.club?.documentId
+    || !team?.club?.documentId
+    || team.club.documentId === userData.club.documentId);
+/**
+ * GUIDE-FINITIONS-3 (réserve du n° 6) : une équipe existe MAINTENANT (créée
+ * pendant le guide, ou profil relu) : inviter, programmer et publier restent
+ * possibles même si M1 a été passée.
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const hasTeamNow = (ctx) => Boolean(ctx?.created?.['team.created'])
+  || trainsTeamInClub(ctx?.userData);
 
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
@@ -141,6 +195,8 @@ const MISSIONS = [
     openingDetail: (flags) => (flags?.hadClub || flags?.hadTeam || flags?.joinPending
       ? null
       : t('missions.m1-club', 'D’abord, trouve ton club (ou crée-le)')),
+    // Passée (quota) alors qu'une équipe existe : M2-M4 restent ouvertes.
+    satisfiedBy: hasTeamNow,
     get title() { return t('missions.m1', 'Créer ton équipe'); },
   },
   {
@@ -204,6 +260,9 @@ const MISSIONS = [
 const wizardStep = (id, missionId, nextRoute, resumeFrom, text) => ({
   advanceOn: { key: nextRoute, type: 'route' },
   bubblePlacement: 'top',
+  // GUIDE-FINITIONS-3 R2-2 : la bulle se pose sous le titre et la consigne de
+  // l'écran (place réservée par WizardStepLayout), plus dessus (A04-A10).
+  bubbleSlot: true,
   id,
   missionId,
   resumeFrom,
@@ -221,7 +280,7 @@ const STEPS = [
   // ── M1 · Créer ton équipe ────────────────────────────────────────────────
   {
     // Coach qui a déjà une équipe : « Retrouve ton équipe ».
-    advanceOn: { key: RouteNames.TeamDetails, type: 'route' },
+    advanceOn: withM1Escapes({ key: RouteNames.TeamDetails, type: 'route' }),
     completesMission: true,
     // Vue de l'accueil (carte pas à l'écran) : on montre l'onglet Équipes.
     fallback: {
@@ -236,7 +295,7 @@ const STEPS = [
     when: hadTeam,
   },
   {
-    advanceOn: { key: RouteNames.MyTeamList, type: 'route' },
+    advanceOn: withM1Escapes({ key: RouteNames.MyTeamList, type: 'route' }),
     id: 'm1-dock',
     missionId: 'coach_m1',
     navTarget: homeTarget,
@@ -252,6 +311,7 @@ const STEPS = [
     // club a répondu. Sans serveur : le remodelage de l'adhésion (registre des
     // mineurs, ligne 49) créera l'équipe tout de suite ; le tunnel n'étant plus
     // refusé, cette étape ne s'affichera plus.
+    advanceOn: withM1Escapes(),
     id: 'm1-wait',
     missionId: 'coach_m1',
     navTarget: teamHubTarget,
@@ -270,7 +330,7 @@ const STEPS = [
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && isJoinPending(ctx),
   },
   {
-    advanceOn: [
+    advanceOn: withM1Escapes([
       // GUIDE-FINITIONS-2 n° 2 : la demande est passée « en attente » après l'entrée
       // dans l'étape (pause, demande faite hors du guide) ; le tunnel montre alors
       // « Ton adhésion est en attente » : le guide attend avec lui, pas de tw1.
@@ -278,7 +338,7 @@ const STEPS = [
         goto: 'm1-wait', key: RouteNames.TeamWizardName, type: 'route', when: isJoinPending,
       },
       { key: RouteNames.TeamWizardName, type: 'route' },
-    ],
+    ]),
     id: 'm1-new',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
@@ -292,10 +352,10 @@ const STEPS = [
   },
   // Branche sans club : l'écran « Il te faut d'abord un club » du tunnel équipe.
   {
-    advanceOn: [
+    advanceOn: withM1Escapes([
       { key: 'clubGate.search', type: 'interaction' },
       { goto: 'm1-cw', key: 'clubGate.notFound', type: 'interaction' },
-    ],
+    ]),
     id: 'm1-gate',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
@@ -307,10 +367,12 @@ const STEPS = [
           + 'Je ne trouve pas mon club » te guidera pour le créer.',
       );
     },
+    // Club arrivé pendant la bulle (profil relu) : la bulle passe au tunnel (R2-1).
+    recheck: true,
     when: needsClub,
   },
   {
-    advanceOn: { key: RouteNames.Club, type: 'route' },
+    advanceOn: withM1Escapes({ key: RouteNames.Club, type: 'route' }),
     bubblePlacement: 'top',
     id: 'm1-csearch',
     missionId: 'coach_m1',
@@ -322,11 +384,11 @@ const STEPS = [
     when: needsClub,
   },
   {
-    advanceOn: [
+    advanceOn: withM1Escapes([
       { key: 'club.joined', type: 'action' },
       // Club qui a un dirigeant : la demande attend (L1 GUIDE-ATTENTE).
       { goto: 'm1-wait', key: 'club.requested', type: 'action' },
-    ],
+    ]),
     id: 'm1-mine',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
@@ -343,7 +405,7 @@ const STEPS = [
     when: needsClub,
   },
   {
-    advanceOn: { key: 'club.joined.ack', type: 'interaction' },
+    advanceOn: withM1Escapes({ key: 'club.joined.ack', type: 'interaction' }),
     bubblePlacement: 'top',
     id: 'm1-ok',
     missionId: 'coach_m1',
@@ -353,7 +415,7 @@ const STEPS = [
     when: joinedInGuide,
   },
   {
-    advanceOn: { not: RouteNames.Club, type: 'route' },
+    advanceOn: withM1Escapes({ not: RouteNames.Club, type: 'route' }),
     id: 'm1-back',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock2',
@@ -372,10 +434,10 @@ const STEPS = [
     when: joinedInGuide,
   },
   {
-    advanceOn: [
+    advanceOn: withM1Escapes([
       { key: RouteNames.MyTeamList, type: 'route' },
       { goto: 'tw1', key: RouteNames.TeamWizardName, type: 'route' },
-    ],
+    ]),
     id: 'm1-dock2',
     missionId: 'coach_m1',
     // Reprise de la suite « club rejoint » : depuis l'accueil.
@@ -386,7 +448,7 @@ const STEPS = [
     when: joinedInGuide,
   },
   {
-    advanceOn: { goto: 'tw1', key: RouteNames.TeamWizardName, type: 'route' },
+    advanceOn: withM1Escapes({ goto: 'tw1', key: RouteNames.TeamWizardName, type: 'route' }),
     id: 'm1-new2',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock2',
@@ -460,6 +522,7 @@ const STEPS = [
     // succès serveur de la création (`team.created`).
     advanceOn: { key: 'team.created', type: 'action' },
     bubblePlacement: 'top',
+    bubbleSlot: true,
     completesMission: true,
     id: 'tw8',
     missionId: 'coach_m1',
@@ -506,6 +569,8 @@ const STEPS = [
     advanceOn: [
       { key: 'team.invite.shared', type: 'action' },
       { goto: 'm2-share', key: 'team.invite.dismissed', type: 'interaction' },
+      // Android ne dit pas si le lien est parti (teamInviteShare) : on demande.
+      { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
     ],
     bubblePlacement: 'top',
     completesMission: true,
@@ -518,6 +583,26 @@ const STEPS = [
         'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
       );
     },
+  },
+  {
+    // GUIDE-FINITIONS-3 n° 22 : sur Android, fermer la feuille sans envoyer
+    // validait M2. Le coach confirme ; sinon il rouvre le menu (retour à m2-share).
+    advanceOn: { goto: 'm2-share', key: 'team.actions.open', type: 'interaction' },
+    completesMission: true,
+    id: 'm2-sent',
+    missionId: 'coach_m2',
+    get nextLabel() { return t('m2-sent-next', 'C’est envoyé'); },
+    resumeFrom: 'm2-card',
+    targets: ['team.more'],
+    get text() {
+      return t(
+        'm2-sent',
+        'Le lien est parti ? Touche « C’est envoyé ». Sinon, rouvre ce menu pour le partager.',
+      );
+    },
+    veil: false,
+    // Seulement par le `goto` de m2-pick.
+    when: () => false,
   },
 
   // ── M3 · Programmer l'entraînement ───────────────────────────────────────
@@ -823,8 +908,23 @@ const STEPS = [
         (/** @type {any} */ date) => new Date(date?.endDate || date?.date).getTime() > now,
       );
       const eventId = next?.documentId || created?.documentId;
-      return eventId ? [`planning.event.${eventId}`] : [];
+      // GUIDE-FINITIONS-3 R2-3 (C02) : sans la séance de M3 (bonus relancé depuis
+      // Mon compte, séances du jour finies), la prochaine séance du planning.
+      return [...(eventId ? [`planning.event.${eventId}`] : []), 'planning.event.next'];
     },
+    // R2-3 (A17) : aucune séance à venir, « Ouvre ta séance » n'avait pas de cible.
+    fallback: {
+      targets: ['planning.fab'],
+      get text() {
+        return t(
+          'b1-card-none',
+          'Aucune séance à venir dans ton planning : programme-en une avec ce bouton, ou passe '
+            + 'ce bonus.',
+        );
+      },
+    },
+    // N11 bis (capture 39) : le bouton flottant chevauchait la carte cadrée.
+    hidesFloatingAction: true,
     get text() { return t('b1-card', 'Ouvre ta séance.'); },
   },
   {
@@ -918,6 +1018,8 @@ const STEPS = [
     id: 'b2-start',
     missionId: 'coach_b2',
     resumeFrom: 'b2-dock',
+    // GUIDE-FINITIONS-3 R2-4 (A20) : « Terrain vide », en tête de liste, restait sous la bulle.
+    bubbleSlot: true,
     get text() { return t('b2-start', 'Pars d’une formation ou d’un terrain vide.'); },
     veil: false,
   },
@@ -975,11 +1077,25 @@ const REVIEW_STEPS = [
     'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes '
       + 'joueur·se·s.',
   )),
-  reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
-    'rv-m3',
-    'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
-      + 'le lieu, l’horaire.',
-  )),
+  {
+    ...reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
+      'rv-m3',
+      'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
+        + 'le lieu, l’horaire.',
+    )),
+    // GUIDE-FINITIONS-3 R2-7 (R03) : la visite restait sur Équipes ; la carte de
+    // l'accueil absente, on montre l'onglet au lieu de parler d'un autre écran.
+    fallback: {
+      targets: ['dock.home'],
+      get text() {
+        return t(
+          'rv-m3-dock',
+          'Les séances se programment sur l’accueil (cet onglet) : « Ajouter un événement », puis '
+            + 'le type, l’équipe, le lieu, l’horaire.',
+        );
+      },
+    },
+  },
   reviewStep('rv-m4', 'coach_m4', friendlySearchTarget, ['friendly.create'], () => t(
     'rv-m4',
     'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match '
@@ -1008,13 +1124,8 @@ export const COACH_GUIDE = Object.freeze({
     hadClub: Boolean(userData?.club?.documentId),
     // n° 20 : l'ouverture ne dit pas « trouve ton club » à qui attend déjà le sien.
     joinPending: isJoinPending({ userData }),
-    // Seules les équipes qu'il entraîne (décision du chef, 27/10), et dans son
-    // club courant : l'écran Équipes ne montre que celui-là (tournée : Julien
-    // entraîne ailleurs, et « ouvre-la » visait son équipe de JOUEUR).
-    hadTeam: (Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : [])
-      .some((/** @type {any} */ team) => !userData?.club?.documentId
-        || !team?.club?.documentId
-        || team.club.documentId === userData.club.documentId),
+    // Seules les équipes qu'il entraîne (décision du chef, 27/10), dans son club courant.
+    hadTeam: trainsTeamInClub(userData),
   }),
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
   missions: MISSIONS,

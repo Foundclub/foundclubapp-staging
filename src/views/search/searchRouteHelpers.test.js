@@ -14,13 +14,14 @@ describe('searchRouteHelpers', () => {
     expect(getSearchHubGuidanceSignalKey('recrutement')).toBe('search.tab.recruitment');
   });
 
-  it('emits the guidance signal only the first time a tab is exposed in a screen session', () => {
+  // GUIDE-FINITIONS-3 n° 23.
+  it('emits the guidance signal each time a tab becomes the exposed one', () => {
     const exposedTypes = new Set();
 
     expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBe('search.tab.clubs');
     expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBeNull();
     expect(consumeSearchHubGuidanceSignal('recruitment', exposedTypes)).toBe('search.tab.recruitment');
-    expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBeNull();
+    expect(consumeSearchHubGuidanceSignal('clubs', exposedTypes)).toBe('search.tab.clubs');
   });
 
   it('reconnait l onglet des matchs amicaux et retombe sur les evenements sinon', () => {

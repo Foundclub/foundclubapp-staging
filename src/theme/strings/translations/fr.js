@@ -24665,6 +24665,7 @@ export default {
   tourCatalog: {
     coach: {
       'b1-card': 'Ouvre ta séance.',
+      'b1-card-none': 'Aucune séance à venir dans ton planning : programme-en une avec ce bouton, ou passe ce bonus.',
       'b1-dock': 'Pour savoir qui vient : ouvre le planning.',
       'b1-relance': 'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic.',
       'b1-vide': 'Ici, tu verras qui vient dès que tes joueur·se·s répondront.',
@@ -24691,6 +24692,7 @@ export default {
         team: '{{team}} créée',
         teamReady: 'Ton équipe, déjà prête',
         title: 'Prêt·e pour la séance',
+        titlePartial: 'Le guide est fini',
         yourClub: 'Ton club',
         yourTeam: 'Ton équipe',
       },
@@ -24718,6 +24720,8 @@ export default {
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
+      'm2-sent': 'Le lien est parti ? Touche « C’est envoyé ». Sinon, rouvre ce menu pour le partager.',
+      'm2-sent-next': 'C’est envoyé',
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Public : tout le monde le trouve dans Rechercher et peut demander à venir. Privé : seulement ton équipe et tes invités. Pour un entraînement, garde Privé.',
       'm3-card': 'Touche « Ajouter un événement ».',
@@ -24787,6 +24791,8 @@ export default {
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
         subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le permette.',
         title: 'Ton équipe est prête !',
+        titleNone: 'Aucune mission faite pour l’instant',
+        titlePartial: 'Une partie est faite',
       },
       refusal: {
         clubPartner: 'Ce club passe par son dirigeant : « Je dirige ce club » remplace « C’est mon club ». Choisis un autre club, ou passe cette mission.',
@@ -24802,6 +24808,7 @@ export default {
       'rv-m1': 'Tes équipes sont ici. « Nouvelle équipe » en crée une : un nom, une catégorie, un niveau.',
       'rv-m2': 'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes joueur·se·s.',
       'rv-m3': 'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, le lieu, l’horaire.',
+      'rv-m3-dock': 'Les séances se programment sur l’accueil (cet onglet) : « Ajouter un événement », puis le type, l’équipe, le lieu, l’horaire.',
       'rv-m4': 'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match amical » publie ton annonce.',
       tw1: 'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
       tw2: 'Optionnel : décris ton équipe, ou passe cette étape.',

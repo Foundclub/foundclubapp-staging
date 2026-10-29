@@ -81,6 +81,8 @@ const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
 const HEADER_IDS = ['header.back', 'screen.header'];
+// GUIDE-FINITIONS-3 R2-2 : place réservée par l'écran sous son titre (TourBubbleSlot).
+const SLOT_ID = 'tour.bubbleSlot';
 
 /**
  * Police de la bulle à l'échelle du téléphone, plafonnée.
@@ -213,6 +215,7 @@ function TourGuideLayer() {
     && tourStatus === 'active' && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
+      ...(currentStep.bubbleSlot ? [SLOT_ID] : []),
       ...(currentStep.fallback?.targets || []),
       ...(currentStep.subGuides || []).flatMap((/** @type {any} */ guide) => [
         guide.anchor,
@@ -380,9 +383,17 @@ function TourGuideLayer() {
     HEADER_IDS.map((id) => rects[id] || null),
     height,
   );
-  const position = placeBubble({
-    bubbleHeight, headerBottom, height, insetTop: insets.top, primary, top: isTop, width,
-  });
+  // Étape `bubbleSlot` : la bulle se pose dans la place que l'écran lui a gardée
+  // sous son titre (tunnel équipe, composition), sinon comme avant.
+  const slotRect = currentStep?.bubbleSlot && !sheetGuide ? rects[SLOT_ID] : null;
+  const slot = slotRect && isOnScreen(slotRect, width, height) ? slotRect : null;
+  const position = slot
+    ? {
+      arrow: 'none', arrowX: 0, left: 14, top: slot.y, width: width - 28,
+    }
+    : placeBubble({
+      bubbleHeight, headerBottom, height, insetTop: insets.top, primary, top: isTop, width,
+    });
 
   // Journal de calibrage (développement seulement) : une ligne par état de
   // l'étape, lue par `.local/outils/tutoe-calibrage.py` (cible, trou, bulle,
@@ -445,9 +456,10 @@ function TourGuideLayer() {
   // Place d'une bulle « en haut » au-dessus de sa cible (null : pas de limite).
   // Sous l'en-tête ancré s'il y en a un (la rangée Retour reste libre, 4- A).
   const roomTop = Math.max(insets.top + 4, (headerBottom ?? 0) + 6);
-  const roomAbove = isTop && primary && primary.y > roomTop + 48
+  let roomAbove = isTop && primary && primary.y > roomTop + 48
     ? primary.y - 6 - roomTop
     : null;
+  if (slot) roomAbove = slot.height;
   const kicker = missionPosition
     ? `${missionWord} ${missionPosition.index}/${missionPosition.total}`
       + ` · ${currentMission?.title || ''}`

@@ -129,8 +129,9 @@ export function getSearchHubGuidanceSignalKey(searchType) {
 }
 
 /**
- * Returns a guidance signal key only the first time a tab is exposed for the current
- * SearchHub screen instance.
+ * Returns a guidance signal key each time a tab becomes the exposed one, but not twice
+ * in a row for the same tab (re-render). GUIDE-FINITIONS-3 n° 23 : un onglet revu
+ * après un autre ne signalait plus rien, et le guide restait sur m4-tab-*.
  * @param {SearchHubType | unknown} searchType
  * @param {Set<SearchHubType>} exposedTypes
  * @returns {`search.tab.${SearchHubType}` | null}
@@ -145,6 +146,7 @@ export function consumeSearchHubGuidanceSignal(searchType, exposedTypes) {
     return null;
   }
 
+  exposedTypes.clear();
   exposedTypes.add(normalizedType);
   return getSearchHubGuidanceSignalKey(normalizedType);
 }
