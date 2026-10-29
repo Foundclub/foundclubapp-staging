@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  useCallback, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -117,10 +117,28 @@ function ChildEdit() {
   const [position, setPosition] = useState(enfantExistant?.position || '');
   // PAR-L5L6 (E09) — ce que l'écran MONTRAIT à l'ouverture : seul un champ qui portait une
   // valeur peut être effacé (jamais une valeur pas encore lue, site ouvert à froid).
-  const [affiche] = useState(() => ({
+  const [affiche, setAffiche] = useState(() => ({
     number: enfantExistant?.number ?? null,
     position: enfantExistant?.position ?? null,
   }));
+  // RW-PARENT (29/10) — site ouvert À FROID (rafraîchir, lien) : la fiche arrive après le
+  // premier rendu. On la pose UNE fois, sans écraser ce que le parent a déjà tapé.
+  const ficheLue = useRef(Boolean(enfantExistant));
+  useEffect(() => {
+    if (ficheLue.current || !enfantExistant) return;
+    ficheLue.current = true;
+    setFirstname((tape) => tape || enfantExistant.firstname || '');
+    setLastname((tape) => tape || enfantExistant.lastname || '');
+    setNumber((tape) => tape || (
+      enfantExistant.number === null || enfantExistant.number === undefined
+        ? ''
+        : String(enfantExistant.number)));
+    setPosition((tape) => tape || enfantExistant.position || '');
+    setAffiche({
+      number: enfantExistant.number ?? null,
+      position: enfantExistant.position ?? null,
+    });
+  }, [enfantExistant]);
   const [erreur, setErreur] = useState('');
   const [envoiTente, setEnvoiTente] = useState(false);
   const refJour = useRef(null);
