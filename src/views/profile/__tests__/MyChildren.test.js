@@ -525,10 +525,8 @@ describe('PARENT-LIEN — les comptes de mes enfants', () => {
     const bouton = pressable(arbre, 'Donner un compte à Léa');
     expect(bouton).toBeTruthy();
     await act(async () => { bouton.props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('ParentLinkInvite', {
-      childDocumentId: 'enfant-1',
-      childFirstname: 'Léa',
-    });
+    // RW-PARENT e1 (29/10) — le prénom du mineur ne part plus dans l'adresse du site.
+    expect(mockNavigate).toHaveBeenCalledWith('ParentLinkInvite', { childDocumentId: 'enfant-1' });
   });
 
   // ④ — ni avant 13 ans, ni quand la fiche a déjà son compte.

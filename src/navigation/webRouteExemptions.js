@@ -95,9 +95,7 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.MyParentLink]:
     'TODO(web) MyParentLink screen (the child accepts or removes the link) is built and'
     + ' mounted in the app; waiting for its entry in web/src/routes/screenRegistry.tsx',
-  [RouteNames.ParentLinkInvite]:
-    'TODO(web) ParentLinkInvite screen is built and mounted in the app;'
-    + ' waiting for its entry in web/src/routes/screenRegistry.tsx',
+  // RW-PARENT e1 (29/10) : ParentLinkInvite est route sur le site (/profile/children/link).
   // CARTECODE (26/10) — meme sequencement : l ecran « Confidentialite » est monte cote app, le
   // registre web (autre depot) ne le declare pas encore ; la ligne du profil passe par
   // navigateOrExplainOnWeb.

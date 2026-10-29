@@ -398,10 +398,10 @@ function MyChildren({ route } = {}) {
   }, [navigation]);
 
   const relierUnCompte = useCallback((enfant) => {
-    // Ecran pas encore route sur le site (webRouteExemptions) : le site EXPLIQUE au lieu
-    // d atterrir en silence sur l accueil.
+    // RW-PARENT e1 (29/10) — l'écran relit le prénom dans la fiche : seul l'identifiant part
+    // dans l'adresse du site.
     navigateOrExplainOnWeb(navigation, RouteNames.ParentLinkInvite, enfant
-      ? { childDocumentId: enfant.documentId, childFirstname: enfant.firstname || '' }
+      ? { childDocumentId: enfant.documentId }
       : undefined);
   }, [navigation]);
 
