@@ -387,14 +387,25 @@ const useMessaging = (currentChatId) => {
       return cachedChats;
     }
 
-    const response = await queryClient.fetchQuery({
-      queryFn: () => getChats(1, 20, chatsLookupFilters),
+    // RECETTE-WEB-COACH — meme clef que `useGetChats`, donc la meme forme PAGINEE.
+    // Un `fetchQuery` y rangeait une page nue ({ data, meta }) : la liste des fils
+    // montee ensuite lisait `pages.length` dessus et l'ecran tombait.
+    const response = await queryClient.fetchInfiniteQuery({
+      getNextPageParam: (/** @type {any} */ lastPage) => {
+        const pagination = lastPage?.meta?.pagination;
+        if (!pagination || pagination.page >= pagination.pageCount) return undefined;
+        return pagination.page + 1;
+      },
+      initialPageParam: 1,
+      queryFn: ({ pageParam = 1 }) => getChats(pageParam),
       queryKey: chatsLookupQueryKey,
       staleTime: 30000,
     });
 
-    return Array.isArray(response?.data) ? response.data : [];
-  }, [chatsLookupFilters, chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
+    return (response?.pages || []).flatMap((/** @type {any} */ page) => (
+      Array.isArray(page?.data) ? page.data : []
+    ));
+  }, [chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
 
   // AE06 — en plus du clonage qui fait relire le « lu » local, on remet a zero
   // le compte SERVEUR du fil ouvert et on baisse le total d autant. Sans
