@@ -4,7 +4,8 @@ import renderer, { act } from 'react-test-renderer';
 // Ce témoin monte le VRAI écran `Conversation.js` (mêmes doublures que MSGIMG) et vérifie :
 // 1. la tuile de la feuille s'appelle « Médias » et ouvre la galerie en photo + vidéo ;
 // 2. une vidéo de 42 s part avec son type et le texte « Vidéo · 0:42 » ;
-// 3. une vidéo de 75 s est refusée AVANT l'envoi, avec un message en français ;
+// 3. une vidéo de 160 Mo est refusée AVANT l'envoi, avec un message en français (la durée,
+//    elle, ne refuse rien : décision d'Adel du 29/10) ;
 // 4. la bulle d'une vidéo est une tuile « Vidéo · 0:42 », et l'appui ouvre le lecteur.
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
@@ -431,12 +432,12 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     expect(extra.attachments[0].mime).toBe('video/mp4');
   });
 
-  test('3 — une vidéo de 75 s est refusée avant l envoi, en français', async () => {
+  test('3 — une vidéo de 160 Mo est refusée avant l envoi, en français', async () => {
     mockLaunchImageLibrary.mockResolvedValue({
       assets: [{
         duration: 75,
-        fileName: 'long.mp4',
-        fileSize: 20000000,
+        fileName: 'lourde.mp4',
+        fileSize: 160 * 1024 * 1024,
         type: 'video/mp4',
         uri: 'file:///long.mp4',
       }],
@@ -447,7 +448,7 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
 
     expect(mockPost).not.toHaveBeenCalled();
     expect(mockSendMessage).not.toHaveBeenCalled();
-    expect(textesDesBandeaux()).toContain('Vidéo trop longue : 1 min maximum.');
+    expect(textesDesBandeaux()).toContain('Vidéo trop lourde : 150 Mo maximum.');
   });
 
   test('4 — la bulle d une vidéo est une tuile « Vidéo · 0:42 » ; l appui ouvre le lecteur', () => {

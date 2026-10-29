@@ -235,7 +235,7 @@ import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
 import {
-  readVideoMessageText, videoDurationRefusal, videoMessageText,
+  readVideoMessageText, VIDEO_MAX_BYTES, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
 import shareApi from '@/platform/share';
 
@@ -391,7 +391,8 @@ const MAX_ATTACHMENT_BYTES = {
   audio: 20 * BYTES_PER_MB,
   default: 25 * BYTES_PER_MB,
   image: MAX_UPLOAD_IMAGE_BYTES,
-  video: 80 * BYTES_PER_MB,
+  // MSG-MEDIA — la limite des vidéos vit dans videoLimits.js (décision d'Adel : la taille).
+  video: VIDEO_MAX_BYTES,
 };
 
 /**
@@ -1051,15 +1052,12 @@ function Conversation({ navigation, route }) {
     if (normalizedSize > 0 && normalizedSize > maxBytes) {
       return {
         reason: 'file_too_large',
-        userMessage: buildFileTooLargeMessage(maxBytes),
+        // MSG-MEDIA — une vidéo trop lourde le dit avec ses mots (« Vidéo trop lourde : … »).
+        userMessage: normalizedType.startsWith('video/')
+          ? videoSizeRefusal(normalizedSize)
+          : buildFileTooLargeMessage(maxBytes),
       };
     }
-
-    // MSG-MEDIA — une vidéo trop longue est refusée AVANT l'envoi (limite : videoLimits.js).
-    const videoRefusal = normalizedType.startsWith('video/')
-      ? videoDurationRefusal(asset?.duration)
-      : '';
-    if (videoRefusal) return { reason: 'video_too_long', userMessage: videoRefusal };
 
     return null;
   }, [getAttachmentSizeLimit]);

@@ -8714,7 +8714,7 @@ export default {
       label: 'Video',
       openInBrowser: 'Open in the browser',
       play: 'Play the video',
-      tooLong: 'Video too long: {{max}} maximum. Trim it in your gallery, then send it again.',
+      tooLarge: 'Video too large: {{max}} MB maximum.',
       unreadable: 'This video cannot be played here.',
     },
     viewMatch: 'View match details',

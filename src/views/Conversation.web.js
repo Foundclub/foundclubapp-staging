@@ -135,7 +135,7 @@ import { buildExternalMapLinks } from '@/platform/maps/externalMap';
 import media from '@/platform/media'
 import lireDureeVideo from '@/platform/media/lireDureeVideo.web';
 import {
-  readVideoMessageText, videoDurationRefusal, videoMessageText,
+  readVideoMessageText, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
 import {
   useGetChatById,
@@ -2418,12 +2418,12 @@ function Conversation({ navigation, route }) {
 
   const handlePickImage = useCallback(async () => {
     try {
-      // MSG-MEDIA — « Médias » : photo OU vidéo. Une vidéo trop longue est refusée avant l'envoi.
+      // MSG-MEDIA — « Médias » : photo OU vidéo. Une vidéo trop lourde est refusée avant l'envoi.
       const file = await pickDocument({ accept: 'image/*,video/*' });
       if (!file) return;
       const estVideo = String(file.type || '').startsWith('video/');
       const dureeVideo = estVideo ? await lireDureeVideo(file) : 0;
-      const refus = estVideo ? videoDurationRefusal(dureeVideo) : '';
+      const refus = estVideo ? videoSizeRefusal(file.size) : '';
       if (refus) {
         // Même canal que les autres refus de pièce jointe du site.
         // eslint-disable-next-line no-alert

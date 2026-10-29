@@ -9230,8 +9230,7 @@ export default {
       label: 'Vidéo',
       openInBrowser: 'Ouvrir dans le navigateur',
       play: 'Lire la vidéo',
-      tooLong: 'Vidéo trop longue : {{max}} maximum. '
-        + 'Raccourcis-la dans ta galerie, puis renvoie-la.',
+      tooLarge: 'Vidéo trop lourde : {{max}} Mo maximum.',
       unreadable: 'Cette vidéo ne se lit pas ici.',
     },
     viewMatch: 'Voir la fiche match',

@@ -1,17 +1,20 @@
 import i18n from '@/theme/strings';
 
+import { BYTES_PER_MB } from '@/platform/media/photoLimits';
+
 /**
- * MSG-MEDIA (29/10) — LE SEUL ENDROIT QUI DIT COMBIEN DE TEMPS DURE UNE VIDÉO DE MESSAGERIE.
+ * MSG-MEDIA (29/10) — LE SEUL ENDROIT QUI DIT COMBIEN PÈSE AU PLUS UNE VIDÉO DE MESSAGERIE.
  *
- * Demande d'Adel : « Média » = photo OU vidéo, une minute au plus. Changer la limite, c'est
- * changer CETTE constante : le refus du téléphone, celui du site et le texte affiché la lisent.
+ * Décision d'Adel (29/10) : pas de limite de durée, une limite de TAILLE. Changer la limite,
+ * c'est changer CETTE constante : le refus du téléphone, celui du site et le texte affiché la
+ * lisent. 150 Mo en attendant la valeur d'Adel ; le serveur accepte jusqu'à 250 Mo
+ * (admin config/plugins.ts).
  *
  * ⚠️ Ce que la limite ne fait PAS : compresser. `react-native-image-picker` 7.2.3 ne
- * recompresse que ce que la CAMÉRA filme (`videoQuality`, `durationLimit`) ; la galerie
- * (PHPicker iOS, Photo Picker Android) rend l'original, durée comprise (`asset.duration`).
- * Le poids reste donc tenu par le plafond de taille de la messagerie (Conversation.js).
+ * recompresse que ce que la CAMÉRA filme (`videoQuality`) ; la galerie (PHPicker iOS, Photo
+ * Picker Android) rend l'original. Recompresser demanderait une bibliothèque (TestFlight native).
  */
-export const VIDEO_MAX_DURATION_SECONDS = 60;
+export const VIDEO_MAX_BYTES = 150 * BYTES_PER_MB;
 
 /**
  * Le fichier est-il une vidéo ?
@@ -34,30 +37,18 @@ export const formatVideoDuration = (seconds) => {
 };
 
 /**
- * La limite dite comme on la lit : « 1 min », « 2 min », « 45 s ».
- * @param {number} [maxSeconds]
- * @returns {string}
- */
-export const formatVideoLimit = (maxSeconds = VIDEO_MAX_DURATION_SECONDS) => (
-  maxSeconds % 60 === 0 ? `${maxSeconds / 60} min` : `${maxSeconds} s`
-);
-
-/**
- * Le refus d'une vidéo trop longue, AVANT l'envoi. Une durée inconnue ne refuse rien : on ne
+ * Le refus d'une vidéo trop lourde, AVANT l'envoi. Une taille inconnue ne refuse rien : on ne
  * refuse pas ce qu'on n'a pas mesuré (même règle que les photos, `photoLimits.js`).
- * @param {unknown} durationSeconds Durée de la vidéo, en secondes.
- * @param {number} [maxSeconds]
+ * @param {unknown} sizeInBytes Taille du fichier, en octets.
+ * @param {number} [maxBytes]
  * @returns {string} Le message de refus, ou '' si la vidéo passe.
  */
-export const videoDurationRefusal = (durationSeconds, maxSeconds = VIDEO_MAX_DURATION_SECONDS) => {
-  const duree = Number(durationSeconds);
-  if (!Number.isFinite(duree) || duree <= 0) return '';
-  // Une seconde de grâce : la galerie arrondit (60,4 s pour une vidéo filmée « 1 min »).
-  if (duree < maxSeconds + 1) return '';
-  return i18n.t('conversation.video.tooLong', {
-    defaultValue:
-      'Vidéo trop longue : {{max}} maximum. Raccourcis-la dans ta galerie, puis renvoie-la.',
-    max: formatVideoLimit(maxSeconds),
+export const videoSizeRefusal = (sizeInBytes, maxBytes = VIDEO_MAX_BYTES) => {
+  const taille = Number(sizeInBytes);
+  if (!Number.isFinite(taille) || taille <= 0 || taille <= maxBytes) return '';
+  return i18n.t('conversation.video.tooLarge', {
+    defaultValue: 'Vidéo trop lourde : {{max}} Mo maximum.',
+    max: Math.round(maxBytes / BYTES_PER_MB),
   });
 };
 

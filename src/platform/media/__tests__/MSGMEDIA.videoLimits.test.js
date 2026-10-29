@@ -7,28 +7,28 @@ jest.mock('@/theme/strings', () => ({
 const {
   formatVideoDuration,
   readVideoMessageText,
-  VIDEO_MAX_DURATION_SECONDS,
-  videoDurationRefusal,
+  VIDEO_MAX_BYTES,
   videoMessageText,
+  videoSizeRefusal,
 } = require('../videoLimits');
 
+const MO = 1024 * 1024;
+
 describe('MSG-MEDIA — limites des vidéos', () => {
-  test('la limite est d une minute, dans une seule constante', () => {
-    expect(VIDEO_MAX_DURATION_SECONDS).toBe(60);
+  test('la limite est une TAILLE, de 150 Mo, dans une seule constante (décision d Adel)', () => {
+    expect(VIDEO_MAX_BYTES).toBe(150 * MO);
   });
 
-  test('une vidéo de 61 s est refusée, avec un message en français qui dit la limite', () => {
-    expect(videoDurationRefusal(61.2)).toBe(
-      'Vidéo trop longue : 1 min maximum. Raccourcis-la dans ta galerie, puis renvoie-la.',
-    );
-    expect(videoDurationRefusal(75, 45)).toContain('45 s maximum');
+  test('une vidéo de 151 Mo est refusée, avec un message en français qui dit la limite', () => {
+    expect(videoSizeRefusal(151 * MO)).toBe('Vidéo trop lourde : 150 Mo maximum.');
+    expect(videoSizeRefusal(101 * MO, 100 * MO)).toBe('Vidéo trop lourde : 100 Mo maximum.');
   });
 
-  test('une vidéo d une minute (arrondie par la galerie) passe ; une durée inconnue aussi', () => {
-    expect(videoDurationRefusal(60.4)).toBe('');
-    expect(videoDurationRefusal(42)).toBe('');
-    expect(videoDurationRefusal(undefined)).toBe('');
-    expect(videoDurationRefusal(0)).toBe('');
+  test('une vidéo de 150 Mo pile passe ; une taille inconnue aussi ; la durée ne refuse rien', () => {
+    expect(videoSizeRefusal(150 * MO)).toBe('');
+    expect(videoSizeRefusal(9 * MO)).toBe('');
+    expect(videoSizeRefusal(undefined)).toBe('');
+    expect(videoSizeRefusal(0)).toBe('');
   });
 
   test('la durée s affiche en minutes:secondes', () => {
