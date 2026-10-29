@@ -1164,6 +1164,28 @@ function Profile({ navigation, route }) {
             'Voir qui vient, puis convoquer pour un match',
           ),
         }]),
+        // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : seule la progression
+        // repart de zéro, rien de ce qui a été créé n'est effacé ; une question d'abord.
+        {
+          icon: Images.flag,
+          key: 'coachGuide-restart',
+          label: t('profile.coachGuide.restart', 'Recommencer à zéro'),
+          onPress: () => Alert.alert(
+            t('profile.coachGuide.restartConfirm.title', 'Recommencer le guide ?'),
+            t(
+              'profile.coachGuide.restartConfirm.message',
+              'Ta progression repart de zéro. Rien de ce que tu as créé n’est effacé.',
+            ),
+            [
+              { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
+              {
+                onPress: () => chooseGuide(() => tour.restartTour('coach')),
+                text: t('profile.coachGuide.restartConfirm.confirm', 'Recommencer'),
+              },
+            ],
+          ),
+          sousLigne: true,
+        },
       ] : []),
     {
       icon: Images.envelope,

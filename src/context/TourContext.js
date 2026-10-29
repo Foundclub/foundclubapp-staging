@@ -420,6 +420,25 @@ export function TourProvider({ children }) {
     return true;
   }, [enterGuideStep, goToStep, persist, userData, userId]);
 
+  // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : « Recommencer à zéro ».
+  // Seule la PROGRESSION du guide repart de zéro (progression, bonus gardés, marque
+  // « déjà lancé », reposée par `startTour`) ; rien de réel n'est effacé. Ce qui
+  // existe déjà est reconnu par les drapeaux de départ (équipe ⇒ « m1-find »).
+  const restartTour = useCallback((/** @type {string} */ profileKey) => {
+    // Le site ne joue aucun guide : on n'efface rien pour ne rien relancer.
+    if (Platform.OS === 'web') return false;
+    if (userId) {
+      storage.delete(getStorageKey(userId));
+      storage.delete(getBonusLaterKey(userId));
+      storage.delete(getGuideDoneKey(userId));
+    }
+    clearSuccessTimer();
+    historyRef.current = [];
+    tourStateRef.current = null;
+    setTourState(null);
+    return startTour(profileKey);
+  }, [startTour, userId]);
+
   // Bloquant n° 6 de l'audit : l'écran a refusé le geste d'une mission
   // essentielle (quota, club partenaire, publication refusée). On ne contourne
   // rien : la mission est passée, et celles qui en ont besoin aussi.
@@ -719,6 +738,7 @@ export function TourProvider({ children }) {
     missionStatus: tourState?.missionStatus || {},
     pauseTour,
     profileKey: tourState?.profileKey || null,
+    restartTour,
     resumeTour,
     reward: tourState?.reward || null,
     skipBlockedMission,
@@ -739,6 +759,7 @@ export function TourProvider({ children }) {
     isGuide,
     pauseTour,
     profile,
+    restartTour,
     resumeTour,
     skipBlockedMission,
     skipMission,

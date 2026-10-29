@@ -18273,6 +18273,13 @@ export default {
       bonus: 'Faire un bonus',
       bonusDetail: 'Voir qui vient, puis convoquer pour un match',
       paused: 'En pause',
+      restart: 'Recommencer à zéro',
+      restartConfirm: {
+        cancel: 'Annuler',
+        confirm: 'Recommencer',
+        message: 'Ta progression repart de zéro. Rien de ce que tu as créé n’est effacé.',
+        title: 'Recommencer le guide ?',
+      },
       resume: 'Reprendre là où j’en étais',
       review: 'Revoir le guide sans rien créer',
     },

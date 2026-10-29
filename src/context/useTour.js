@@ -33,6 +33,7 @@ export const useTour = () => useContext(TourContext) || {
   missionStatus: {},
   pauseTour: () => {},
   profileKey: null,
+  restartTour: () => false,
   resumeTour: () => {},
   reward: null,
   skipBlockedMission: () => {},

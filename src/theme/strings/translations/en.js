@@ -17612,6 +17612,13 @@ export default {
       bonus: 'Do a bonus',
       bonusDetail: "See who's coming, then call up players for a match",
       paused: 'Paused',
+      restart: 'Start over from scratch',
+      restartConfirm: {
+        cancel: 'Cancel',
+        confirm: 'Start over',
+        message: 'Your progress starts again from zero. Nothing you created is deleted.',
+        title: 'Restart the guide?',
+      },
       resume: 'Pick up where I left off',
       review: 'Review the guide without creating anything',
     },
