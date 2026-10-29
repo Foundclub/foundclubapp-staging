@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView,
+  Alert, Keyboard, ScrollView,
   Text, View,
 } from 'react-native';
 
@@ -33,6 +33,7 @@ import {
 } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 
 const defaultValues = {
@@ -187,9 +188,14 @@ function AddCoach({ navigation, route }) {
         return;
       }
 
-      const errorResponse = error?.response?.data?.error;
-      if (errorResponse?.message === 'Uniqueness check failed' && errorResponse?.details?.user) {
-        const { user } = errorResponse.details;
+      // PETITSBUGS-3 : le service aplatit l'erreur (`buildPreservedApiError`) ; ses
+      // `details` restent sur l'erreur, plus sous `response`. Lus sous les deux
+      // formes : sinon « Failed to create trainer: Uniqueness check failed » brut,
+      // puis l'alerte du filet global (2 alertes, rejeu 4).
+      const details = /** @type {any} */ (error)?.details
+        || /** @type {any} */ (error)?.response?.data?.error?.details;
+      if (details?.user) {
+        const { user } = details;
         if (user?.club) {
           Alert.alert(
             isManagerMode
@@ -257,13 +263,12 @@ function AddCoach({ navigation, route }) {
           );
         }
       } else {
-        // Fallback generic error
-        Alert.alert(
-          t('APIerrors.error'), // Or a generic title
-          error?.response?.data?.error?.message || error.message || t('APIerrors.unknown'),
-        );
+        // Une seule alerte, traduite (code PHONE_NUMBER_TAKEN…), jamais le message brut.
+        displayErrorAlert(error);
       }
     },
+    // L'écran parle seul : le filet global (queryClient) se tait.
+    meta: { preventToastError: true },
     onSuccess: (data, variables) => {
       setCreatedTrainer({ ...(data || {}), ...variables });
       if (isManagerMode) {
@@ -281,6 +286,8 @@ function AddCoach({ navigation, route }) {
         );
         return;
       }
+      // PETITSBUGS-3 (R4-34) : « Ajout réussi ! » s'ouvrait sur le clavier numérique.
+      Keyboard.dismiss();
       setIsSuccessModalVisible(true);
     },
   });

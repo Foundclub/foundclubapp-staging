@@ -17061,6 +17061,7 @@ export default {
       createFirst: 'Créer ma première équipe',
       // eslint-disable-next-line max-len
       empty: "Aucune équipe n'est encore déclarée dans ton club. Crée la première : tu en seras l'entraîneur·e.",
+      emptyNoClub: "Tu n'as pas encore de club. Crée ta première équipe : tu en seras l'entraîneur·e.",
       errorMessage: "Impossible d'envoyer ta demande pour le moment. Réessaie dans un instant.",
       errorTitle: 'Demande non envoyée',
       submit: 'Envoyer ma demande ({{count}})',

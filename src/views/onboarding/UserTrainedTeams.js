@@ -260,10 +260,14 @@ function UserTrainedTeams({ navigation, route }) {
 
         {teams.length === 0 ? (
           <Text style={[Fonts.p1, Fonts.neutral300]}>
-            {t(
+            {/* PETITSBUGS-3 (R4-82) : sans club, « dans ton club » était faux. */}
+            {clubId ? t(
               'onboarding.trainedTeams.empty',
               'Aucune équipe n\'est encore déclarée dans ton club. '
                 + 'Crée la première : tu en seras l\'entraîneur·e.',
+            ) : t(
+              'onboarding.trainedTeams.emptyNoClub',
+              'Tu n\'as pas encore de club. Crée ta première équipe : tu en seras l\'entraîneur·e.',
             )}
           </Text>
         ) : (

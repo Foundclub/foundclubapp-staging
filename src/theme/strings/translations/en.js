@@ -16322,6 +16322,7 @@ export default {
       alreadyRequested: 'Request already sent',
       createFirst: 'Create my first team',
       empty: "No team has been added to your club yet. Create the first one: you'll be its coach.",
+      emptyNoClub: "You don't have a club yet. Create your first team: you'll be its coach.",
       errorMessage: 'Unable to send your request right now. Try again shortly.',
       errorTitle: 'Request not sent',
       submit: 'Send my request ({{count}})',

@@ -418,3 +418,24 @@ describe('UserTrainedTeams — « Quelles equipes entraines-tu ? » (D16)', () =
       .toHaveBeenCalledWith({ team: 'team-2', user: 'coach-1' });
   });
 });
+
+// PETITSBUGS-3 (rejeu 4, R4-82) : inscription 5/5 SANS club, l'écran disait
+// « Aucune équipe n'est encore déclarée dans ton club ».
+describe('UserTrainedTeams — PETITSBUGS-3 : sans club, un texte juste', () => {
+  it('sans club, il ne parle pas de « ton club »', () => {
+    mockUserData.current = { documentId: 'coach-1', teamMembershipRequests: [] };
+    mockUseGetTeams.mockReturnValue(teamsQuery([]));
+    const { tree } = rendre();
+
+    const lus = textes(tree).join(' ');
+    expect(lus).not.toContain('dans ton club');
+    expect(lus).toContain('pas encore de club');
+  });
+
+  it('témoin : avec un club sans équipe, le texte du club reste', () => {
+    mockUseGetTeams.mockReturnValue(teamsQuery([]));
+    const { tree } = rendre();
+
+    expect(textes(tree).join(' ')).toContain('dans ton club');
+  });
+});

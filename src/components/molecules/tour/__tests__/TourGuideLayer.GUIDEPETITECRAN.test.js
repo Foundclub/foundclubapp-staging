@@ -301,3 +301,23 @@ describe('point 6 — rv-m1 : la bulle va sous « Nouvelle équipe » quand elle
     expect(position.top + 136).toBeLessThanOrEqual(primary.y);
   });
 });
+
+// PETITSBUGS-3, point 6 (rejeu 4, R4-17, vu sur 08779ba1) : sur une bulle
+// ÉTROITE (304 pt, flèche vers l'onglet), « MISSION 3/4 · PROGRAMMER L'ENTR… ».
+describe('PETITSBUGS-3 — titre de mission entier sur une bulle étroite (m3-dock)', () => {
+  it('bulle à flèche, 304 pt de large : aucune limite de lignes sur le titre', async () => {
+    mockFontScale = 1;
+    mockTour = {
+      ...activeTour(step('m3-dock')),
+      currentMission: { title: 'Programmer l’entraînement de la semaine' },
+      missionPosition: { index: 3, isBonus: false, total: 4 },
+    };
+    mountDock(402);
+    const tree = await renderLayer();
+    expect(styleOf(hostBubbleOf(tree)).width).toBeLessThan(SCREEN.width - 28 + 1);
+    const kicker = tree.root.findAll((node) => typeof node.type === 'string'
+      && String(node.props.children).startsWith('Mission 3/4'))[0];
+    expect(kicker).toBeTruthy();
+    expect(kicker.props.numberOfLines).toBeUndefined();
+  });
+});

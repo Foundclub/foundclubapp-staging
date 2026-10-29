@@ -19,7 +19,6 @@ import {
 
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -40,7 +39,7 @@ import { cheminFicheAnnuaire, slugAnnuaire } from '@/services/annuaire/slugAnnua
 import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
-import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchService';
+import { mapSearchPayload } from '@/services/search/searchService';
 
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
@@ -788,8 +787,6 @@ function ClubListContent({
 
   const renderItem = useCallback((/** @type {{ index?: number, item: any }} */ { index, item }) => {
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
-    const searchMeta = Reflect.get(item || {}, '__search');
-    const primaryReasonLabel = getMatchReasonLabel(searchMeta?.matchReasons?.[0]);
 
     const carte = (
       <ClubCard
@@ -798,14 +795,9 @@ function ClubListContent({
         onPress={() => (isMultisport
           ? handleMultisportSelection(item.documentId)
           : handleClubSelection(item.documentId))}
+        // PETITSBUGS-3 (R4-91) : plus de « Tri pertinence: Correspondance exacte du
+        // nom » sur chaque carte ; le tri, lui, ne change pas.
         paused={idsVisibles !== null && !idsVisibles.has(item?.documentId)}
-        reasonLabel={primaryReasonLabel
-          ? t(
-            'clubListContent.relevanceReason',
-            'Tri pertinence: {{reason}}',
-            { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
-          )
-          : ''}
       />
     );
     // R17-INVITER : un club multisport n'est pas un club qu'une Ville rattache.
