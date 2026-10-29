@@ -34,6 +34,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -857,6 +858,9 @@ function MatchCallUpSelection() {
           style={[styles.progressSegment, { backgroundColor: withAlpha(Colors.neutral00, 0.12) }]}
         />
       </View>
+      {/* GUIDE-PETIT-ECRAN (R3-21) : place de la bulle du guide (b2-list) au-dessus de
+          la liste ; en haut, la bulle couvrait toutes les lignes sur un petit écran. */}
+      <TourBubbleSlot />
 
       <View style={styles.tabsRow}>
         {tabs.map((tab) => {
@@ -989,7 +993,15 @@ function MatchCallUpSelection() {
               })}
             </Text>
           ) : null}
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+          {/* GUIDE-PETIT-ECRAN (R3-22) : « 0 conv-oqué » coupé en plein mot à 720 px,
+              texte 1,3 ; une ligne, la police rapetisse au besoin. */}
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            numberOfLines={1}
+            style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+            testID="matchcallup-footer-count"
+          >
             {t('matchCallUp.selection.footer.calledUp', { count: counters.calledUp })}
           </Text>
           {counters.calledUp > 0 ? (

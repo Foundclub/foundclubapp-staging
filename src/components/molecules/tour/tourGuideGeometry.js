@@ -170,12 +170,14 @@ export const headerBottomOf = (rects, screenHeight) => {
  * @param {number} args.height - Hauteur de l'écran.
  * @param {number} args.insetTop - Encoche.
  * @param {number | null} [args.headerBottom] - Bas de l'en-tête ancré (`headerBottomOf`).
+ * @param {number} [args.bottomLimit] - Bas utile (barre d'onglets, bas sûr) ; défaut : `height`.
  * @returns {{ arrow: 'down' | 'none' | 'up'; arrowX: number; left: number; top: number;
  *   width: number }} Position.
  */
 export const placeBubble = ({
-  bubbleHeight, headerBottom = null, height, insetTop, primary, top, width,
+  bottomLimit, bubbleHeight, headerBottom = null, height, insetTop, primary, top, width,
 }) => {
+  const bottom = bottomLimit ?? height;
   if (top || !primary) {
     let bubbleTop = Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP);
     // Jamais sur la cible (champ du tunnel, bouton ⋮ ou onglets sous l'en-tête) :
@@ -184,7 +186,7 @@ export const placeBubble = ({
     // (tout l'écran) ne compte pas.
     if (primary && primary.y >= bubbleTop && bubbleTop + bubbleHeight > primary.y - HEADER_GAP) {
       const below = primary.y + primary.height + BUBBLE_GAP;
-      bubbleTop = below + bubbleHeight <= height
+      bubbleTop = below + bubbleHeight <= bottom
         ? below
         : Math.max(insetTop + 4, primary.y - HEADER_GAP - bubbleHeight);
     }
@@ -206,9 +208,15 @@ export const placeBubble = ({
       width: bubbleWidth,
     };
   }
-  const spaceAbove = primary.y - insetTop;
-  const spaceBelow = height - (primary.y + primary.height);
-  if (spaceAbove >= spaceBelow) {
+  const spaceAbove = primary.y - BUBBLE_GAP - (insetTop + 4);
+  const spaceBelow = bottom - (primary.y + primary.height + BUBBLE_GAP);
+  // GUIDE-PETIT-ECRAN (rejeu 3, R3-05) : dessous dès que la bulle y tient (sous
+  // la barre d'onglets), sinon au-dessus si elle y tient, sinon le plus grand
+  // côté. Avant : le plus grand côté, barre d'onglets comprise ⇒ la bulle de
+  // rv-m1 couvrait la carte EN ATTENTE au-dessus de « Nouvelle équipe ».
+  const goesAbove = bubbleHeight > spaceBelow
+    && (bubbleHeight <= spaceAbove || spaceAbove > spaceBelow);
+  if (goesAbove) {
     return {
       arrow: 'down',
       arrowX,
@@ -220,4 +228,40 @@ export const placeBubble = ({
   return {
     arrow: 'up', arrowX, left, top: primary.y + primary.height + BUBBLE_GAP, width: bubbleWidth,
   };
+};
+
+// Hauteur sous laquelle une bulle n'a plus de sens (titre + une ligne) : en
+// deçà, on la laisse déborder plutôt que de montrer une bande vide.
+const MIN_BUBBLE_ROOM = 88;
+
+/**
+ * Hauteur maximale de la bulle à la place que `placeBubble` lui a donnée
+ * (GUIDE-PETIT-ECRAN, décision A du chef 29/10) : jusqu'à la cible si elle est
+ * dessous, sinon jusqu'au bas utile. Au-delà, le contenu défile DANS la bulle.
+ * Rejeu 3 (720×1280, texte 1,3) : la bulle de b2-where dépassait l'écran, celle
+ * de b2-start sa place réservée de 75 px.
+ * @param {object} args - Mesures.
+ * @param {{ arrow: string; top: number }} args.position - Sortie de `placeBubble`.
+ * @param {{ height: number; width: number; x: number; y: number } | null} args.primary - Découpe.
+ * @param {number} args.bottomLimit - Bas utile (barre d'onglets, bas sûr).
+ * @param {number} args.insetTop - Encoche.
+ * @param {number | null} [args.headerBottom] - Bas de l'en-tête ancré.
+ * @param {{ height: number; y: number } | null} [args.slot] - Place réservée par l'écran.
+ * @returns {number} Hauteur maximale.
+ */
+export const bubbleRoom = ({
+  bottomLimit, headerBottom = null, insetTop, position, primary, slot = null,
+}) => {
+  if (slot) return slot.height;
+  const base = Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP);
+  let room = bottomLimit - position.top;
+  if (position.arrow === 'down' && primary) {
+    room = primary.y - BUBBLE_GAP - (insetTop + 4);
+  } else if (position.arrow === 'none' && primary && primary.y >= base
+    && primary.y > position.top) {
+    // « En haut », cible dessous : entre l'en-tête et la cible (même repli que
+    // `placeBubble`, qui la remonte sur l'en-tête quand elle ne tient pas).
+    room = primary.y - HEADER_GAP - Math.min(base, position.top);
+  }
+  return Math.max(MIN_BUBBLE_ROOM, room);
 };

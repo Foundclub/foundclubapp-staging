@@ -196,7 +196,10 @@ describe('N12 — le titre de mission tient dans la bulle', () => {
       height: 60, width: 78, x: 156, y: 770,
     });
     const tree = await renderLayer();
-    expect(kickerOf(tree).props.numberOfLines).toBeGreaterThanOrEqual(2);
+    // GUIDE-PETIT-ECRAN (R3-07) : 2 lignes coupaient encore « PROGRAMMER L'ENTRA… » ;
+    // plus aucune limite (la bulle bornée défile). Jamais 1 ligne.
+    const lines = kickerOf(tree).props.numberOfLines;
+    expect(lines === undefined || lines >= 2).toBe(true);
   });
 });
 
