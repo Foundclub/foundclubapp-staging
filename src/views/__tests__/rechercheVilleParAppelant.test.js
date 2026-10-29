@@ -447,7 +447,8 @@ describe('D32 — taper une ville rend des propositions, sur les CINQ appelants'
     const arbre = monter(<UserAddress navigation={{ navigate: jest.fn() }} />);
     const affiche = await chercherUneVille(arbre, PLACEHOLDER_PROFIL);
 
-    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', undefined);
+    // VILLE-COMMUNES (29/10/2026) : l'inscription demande une commune.
+    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', 'municipality');
     expect(affiche).toContain('Lyon (69000)');
     expect(affiche).toContain('Lyon 3e Arrondissement (69003)');
   });

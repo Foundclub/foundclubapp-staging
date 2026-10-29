@@ -149,6 +149,8 @@ function UserAddress({ navigation }) {
             label={t('profile.fields.city.label', 'Ville')}
             placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
             setAddress={setAddress}
+            // VILLE-COMMUNES (29/10/2026, « 1- A ») — une commune, ni rue ni siège de club.
+            type="municipality"
           />
         </View>
       </View>

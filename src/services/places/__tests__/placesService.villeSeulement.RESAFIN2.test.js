@@ -5,6 +5,8 @@ import { searchPlaces } from '../placesService';
 // un LIEU — là où on attend une ville. Notre recherche (`/geo/search`) mêle aux communes les
 // installations et les imports. Demandée, une COMMUNE ne garde que les communes de la base
 // d'adresses (`source: 'autocomplete'`) ; sinon, la base d'adresses interrogée en communes.
+// VILLE-COMMUNES (29/10/2026) : une commune va désormais DROIT à la base d'adresses (notre
+// recherche rendait aussi des rues marquées `autocomplete` et des doublons) ; même intention.
 
 const mockGet = jest.fn();
 jest.mock('@/services/client', () => ({
@@ -58,15 +60,16 @@ describe('RESA-FIN-APP-2 E-P01 — « Ta ville » ne propose que des villes', ()
     mockGet.mockReset();
   });
 
-  it('une commune demandée : le stade est écarté, la commune reste', async () => {
-    rend([STADE, MONTRIVAGE_GEO], []);
+  it('une commune demandée : le stade n’est jamais proposé, la commune reste', async () => {
+    rend([STADE, MONTRIVAGE_GEO], [MONTRIVAGE_BAN]);
     expect(libelles(await searchPlaces('Montrivage', 'municipality'))).toEqual(['Montrivage']);
   });
 
-  it('notre recherche ne rend qu’un lieu : la base d’adresses, en communes', async () => {
+  it('une commune demandée : la base d’adresses, en communes, et pas notre recherche', async () => {
     rend([STADE], [MONTRIVAGE_BAN]);
     expect(libelles(await searchPlaces('Montrivage', 'municipality'))).toEqual(['Montrivage']);
-    expect(mockGet.mock.calls[1][1].params).toEqual(expect.objectContaining({
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(mockGet.mock.calls[0][1].params).toEqual(expect.objectContaining({
       q: 'Montrivage', type: 'municipality',
     }));
   });

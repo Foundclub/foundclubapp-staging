@@ -255,12 +255,16 @@ export const searchPlaces = async (search, type) => {
   }
 
   try {
+    // VILLE-COMMUNES (29/10/2026, « 1- A ») — une COMMUNE demandée va droit à la base
+    // d'adresses, en communes, sans repli sur les rues. Notre recherche y mêlait nos imports
+    // (« Vitrolles » ⇒ des sièges de clubs), des rues marquées `autocomplete` (« plan de cuques »)
+    // et des doublons ; le tri de RESA-FIN-APP-2 (garder `autocomplete`) laissait rues et doublons.
+    if (resolvedType === 'municipality') {
+      return await fetchPlacesByType(normalizedSearch, 'municipality');
+    }
+
     try {
-      const geoResults = (await fetchPlacesFromGeoSearch(normalizedSearch, resolvedType))
-        // RESA-FIN-APP-2 (E-P01) : une COMMUNE demandée ne garde que les communes de la base
-        // d'adresses ; notre recherche y mêle installations et imports (« Stade du Moulin »).
-        .filter((place) => resolvedType !== 'municipality'
-          || place.properties.source === 'autocomplete');
+      const geoResults = await fetchPlacesFromGeoSearch(normalizedSearch, resolvedType);
       if (geoResults.length > 0) {
         return geoResults;
       }
