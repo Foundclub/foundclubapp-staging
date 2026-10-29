@@ -1,5 +1,6 @@
 import {
   getOnboardingViews,
+  markOnboardingStarted,
   resolveAffiliationOriginRoute,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
@@ -186,8 +187,11 @@ describe('D33 — club trouve, equipe absente : aucune impasse', () => {
   it('joueur deja affilie a une equipe : l\'etape equipe n\'est pas montee, la sortie reste le sas', () => {
     // FINITIONS18 · POINT 4 : une inscription EN COURS sur cet appareil (« Quel est ton statut ? »
     // l'a marquee) garde son tunnel ; sans ce marqueur, un compte deja affilie n'en a plus.
+    // TUNNELREPRISE (29/10) : « en cours » = dans CE lancement de l'app ; une reouverture rend
+    // l'accueil. Le scenario reste le meme : le tunnel ouvert ici, maintenant.
     /** @type {any} */ (storage.getBoolean)
       .mockImplementation((cle) => cle === 'onboardingStarted_user-d33');
+    markOnboardingStarted('user-d33');
     const { views } = getOnboardingViews({
       ...joueurPresqueFini(),
       myTeams: [{ documentId: 'team-1' }],
