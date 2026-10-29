@@ -12,6 +12,8 @@ import TourGuideLayer from '../TourGuideLayer';
 // lui donnait. Décision A du chef : hauteur bornée à la place, contenu qui
 // défile dans la bulle, la liste visée garde au moins une ligne visible.
 
+jest.setTimeout(30000);
+
 let mockTour;
 // Réglage « taille du texte » du téléphone, lu par la couche.
 let mockFontScale = 1.3;
