@@ -57,20 +57,10 @@ const MOBILE_ONLY_SCREENS = {
     'Onglet-leurre public : déclenche le tunnel de connexion, ne monte aucun écran',
 
   // --- Ecrit, monte cote app, pas encore route cote web ---
-  // TODO(web) « Mes activites » (lot D35) DOIT exister sur le web : c est un
-  // ecran de gestion, pas un capteur. Il n est pas exempte par principe mais
-  // par sequencement — l enregistrer cote app ferait passer check:routes au
-  // rouge tant que web/src/routes/screenRegistry.tsx ne porte pas son entree,
-  // et ce fichier vit dans l autre depot. A retirer d ici DES QUE le registre
-  // web declare MyActivities (une ligne), puis ajouter son motif dans
-  // webRoutes.js.
-  [RouteNames.MyActivities]:
-    'TODO(web) ecran de gestion ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
-
   // TODO(web) ESSAI (2026-08-28) — la page cadeau du dirigeant DOIT exister sur
   // le web : l'inscription s'y fait aussi, et un dirigeant qui s'inscrit depuis
   // le navigateur a droit au meme cadeau. Elle est exemptee par SEQUENCEMENT,
-  // pas par principe, exactement comme MyActivities ci-dessus : l'enregistrer
+  // pas par principe, comme l'etait MyActivities (route le 29/10) : l'enregistrer
   // cote app ferait passer `check:routes` au rouge tant que
   // web/src/routes/screenRegistry.tsx ne porte pas son entree, et ce fichier
   // vit dans l'autre depot — hors du perimetre de ce lot.
@@ -82,7 +72,7 @@ const MOBILE_ONLY_SCREENS = {
   // TODO(web) BLOQUER (2026-09-02) — « Personnes bloquees » DOIT exister sur le
   // web : la messagerie y tourne aussi, et Apple comme Google exigent qu on
   // puisse DEBLOQUER aussi facilement qu on bloque. Elle est exemptee par
-  // SEQUENCEMENT, pas par principe, exactement comme MyActivities et
+  // SEQUENCEMENT, pas par principe, comme l'etait MyActivities et
   // OnboardingGift ci-dessus : l enregistrer cote app ferait passer
   // `check:routes` au rouge tant que web/src/routes/screenRegistry.tsx ne porte
   // pas son entree, et ce fichier vit dans l autre depot — hors du perimetre
