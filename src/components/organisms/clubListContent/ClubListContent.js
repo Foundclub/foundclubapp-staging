@@ -811,7 +811,7 @@ function ClubListContent({
       </View>
     );
   }, [
-    actionDeCarte, annuaire, handleClubSelection, handleMultisportSelection, idsVisibles, Spaces, t,
+    actionDeCarte, annuaire, handleClubSelection, handleMultisportSelection, idsVisibles, Spaces,
   ]);
 
   const renderEmptyList = useCallback(() => {

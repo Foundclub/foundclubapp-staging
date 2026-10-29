@@ -244,17 +244,6 @@ const aplatirTexte = (enfants) => {
 };
 
 /**
- * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
- * @param {any} style
- * @returns {any}
- */
-const aplatirStyle = (style) => {
-  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
-  if (!style || typeof style !== 'object') return {};
-  return style;
-};
-
-/**
  * Texte visible sous un noeud de l'arbre rendu.
  * @param {any} noeud
  * @returns {string}
@@ -380,7 +369,7 @@ const textesDesAlertes = () => /** @type {any} */ (Alert.alert).mock.calls
 describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français', () => {
   beforeEach(() => { mockMutationOptions.length = 0; });
 
-  it('le numéro appartient à quelqu’un : l’alerte « déjà utilisé » propose de l’ajouter', async () => {
+  it('numéro d’un compte existant : une alerte qui propose de l’ajouter', async () => {
     /** @type {any} */ (createTrainer).mockRejectedValue(refusUnicite({
       user: { documentId: 'u-9', firstname: 'Audit', lastname: 'Rejeu' },
     }));
@@ -394,8 +383,9 @@ describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français'
     expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toHaveLength(2);
   });
 
-  it('numéro pris sans fiche jointe : « Ce numéro de téléphone est déjà utilisé. », seul', async () => {
-    /** @type {any} */ (createTrainer).mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
+  it('numéro pris sans fiche jointe : « … déjà utilisé. », seul', async () => {
+    /** @type {any} */ (createTrainer)
+      .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
     const arbre = await monterEcran();
     await saisirTelephone('+33639980001');
     await appuyerSur(arbre, LIBELLE_CTA);
@@ -415,7 +405,8 @@ describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français'
 describe('PETITSBUGS-3 — « Ajout réussi ! » sans le clavier numérique', () => {
   it('le clavier se ferme avant que la feuille s’ouvre', async () => {
     const ordre = /** @type {string[]} */ ([]);
-    const fermer = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => { ordre.push('clavier'); });
+    const fermer = jest.spyOn(Keyboard, 'dismiss')
+      .mockImplementation(() => { ordre.push('clavier'); });
     const arbre = await monterEcran();
     await saisirTelephone('+33639980001');
     await appuyerSur(arbre, LIBELLE_CTA);

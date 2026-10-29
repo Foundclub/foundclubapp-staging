@@ -278,32 +278,12 @@ const demonter = () => {
   monte = null;
 };
 
-/** @type {Record<string, any>} */
-let propsMontees = {};
-
 const monter = async (/** @type {Record<string, any>} */ props = {}) => {
   demonter();
-  propsMontees = props;
   await act(async () => {
     // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
     monte = renderer.create(<ClubListContent {...props} />);
   });
-};
-
-const rendreDeNouveau = async () => {
-  // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
-  await act(async () => { monte.update(<ClubListContent {...propsMontees} />); });
-};
-
-/**
- * Tape un texte dans le champ, comme le doigt d Adel, puis laisse la liste se
- * re-rendre avec les resultats que le serveur double vient de recevoir.
- * @param {string} texte - ce qui est tape dans le champ de recherche
- * @returns {Promise<void>} rien
- */
-const chercher = async (texte) => {
-  act(() => { mockChamp.props.handleSearchField(texte); });
-  await rendreDeNouveau();
 };
 
 const texteRendu = () => JSON.stringify(monte.toJSON());
