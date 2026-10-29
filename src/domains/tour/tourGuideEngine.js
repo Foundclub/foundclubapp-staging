@@ -3,7 +3,7 @@
  * 01_ARCHITECTURE §1-§2). Le TourContext s'en sert pour les profils
  * `version: 3` ; les profils v2 (joueur, dirigeant) gardent leur moteur.
  * @typedef {{ goto?: string; key?: string; meta?: Record<string, any>; not?: string;
- *   type: 'action' | 'interaction' | 'route' }} TourAdvance
+ *   type: 'action' | 'interaction' | 'route'; when?: (ctx: any) => boolean }} TourAdvance
  * @typedef {{ id: string; locked: boolean; gaugeStep: number; title: string;
  *   estimatedSeconds?: number }} TourMission
  * @typedef {{ advance: TourAdvance; index: number; completes: boolean } | null} TourMatch
@@ -86,13 +86,16 @@ const advancesOf = (step) => {
 };
 
 /**
- * Le signal correspond-il à cette sortie ?
+ * Le signal correspond-il à cette sortie ? Une sortie `when` ne vaut que dans ce
+ * contexte (GUIDE-FINITIONS-2 n° 2 : « Nouvelle équipe » pendant une attente).
  * @param {TourAdvance} advance
  * @param {{ key?: string; kind?: string; [meta: string]: any }} signal
+ * @param {any} [ctx]
  * @returns {boolean}
  */
-const advanceMatches = (advance, signal) => {
+const advanceMatches = (advance, signal, ctx) => {
   if (advance.type !== signal?.kind) return false;
+  if (typeof advance.when === 'function' && !advance.when(ctx)) return false;
   if (advance.not) return signal.key !== advance.not;
   if (advance.key !== signal.key) return false;
   return Object.entries(advance.meta || {})
@@ -110,7 +113,7 @@ const advanceMatches = (advance, signal) => {
  */
 export const matchSignal = (profile, stepIndex, signal, ctx) => {
   const step = profile?.steps?.[stepIndex];
-  const advance = advancesOf(step).find((candidate) => advanceMatches(candidate, signal));
+  const advance = advancesOf(step).find((candidate) => advanceMatches(candidate, signal, ctx));
   if (!advance) return null;
   if (advance.goto) {
     const index = indexOfStep(profile, advance.goto);

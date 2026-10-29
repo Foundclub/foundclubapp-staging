@@ -1331,7 +1331,14 @@ function MatchCompositionBoard() {
             {t('matchComposition.sheet.title')}
           </Text>
           <Text style={[Fonts.p2, styles.sheetText, { color: Colors.neutral300 }]}>
-            {t('matchComposition.sheet.description', { teamName, ...SANS_ECHAPPEMENT })}
+            {/* GUIDE-FINITIONS-2 N8 : sur le match d'exemple du guide, rien ne part. */}
+            {isTourExample(params)
+              ? t(
+                'tourExamples.match.sheetDescription',
+                'C’est un exemple : rien ne sera envoyé. Sur un vrai match, la convocation part '
+                  + 'dans le canal de l’équipe.',
+              )
+              : t('matchComposition.sheet.description', { teamName, ...SANS_ECHAPPEMENT })}
           </Text>
 
           <View

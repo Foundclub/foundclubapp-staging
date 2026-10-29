@@ -95,7 +95,7 @@ describe('Clôture du guide', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith(
       RouteNames.HomeTab,
-      { screen: 'SearchHome' },
+      { params: { pop: true, screen: 'SearchHome' }, screen: RouteNames.Search },
       { pop: true },
     );
   });

@@ -38,8 +38,10 @@ const teamHubTarget = {
   routeName: RouteNames.HomeTab,
 };
 const homeTarget = {
-  // L'accueil (HomeHub) est enregistre sous 'SearchHome' dans le SearchStack.
-  params: { screen: 'SearchHome' },
+  // L'accueil (HomeHub) est enregistre sous 'SearchHome' dans le SearchStack, lui-meme
+  // onglet `Search` : nommer l'onglet (allerDansLOnglet.js). Sans lui, l'onglet au
+  // premier plan restait (cloture du guide sur le Planning, GUIDE-FINITIONS-2 N7).
+  params: { params: { pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search },
   routeName: RouteNames.HomeTab,
 };
 

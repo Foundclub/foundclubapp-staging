@@ -257,7 +257,7 @@ export function TourProvider({ children }) {
       if (base.review) {
         clearSuccessTimer();
         setTourState(base.resumeAfter ? { ...base.resumeAfter, status: 'paused' } : null);
-        navigateToTarget(TOUR_HOME_TARGET, guideContext(base));
+        navigateToTarget(TOUR_HOME_TARGET, guideContext(base), { pop: true });
         return;
       }
       finishTour();
@@ -571,9 +571,10 @@ export function TourProvider({ children }) {
       // dans la même séance revient à l'étape en pause (décision du chef, 27/10).
       const step = profile.steps[current.stepIndex];
       // L1 GUIDE-ATTENTE : l'attente est finie (club accepté ou demande refusée)
-      // ⇒ la mission repart de `resumeFrom`, comme après un relancement.
-      const waitOver = Boolean(step?.pauseOnNext)
-        && !isStepAvailable(step, guideContext(current));
+      // ⇒ la mission repart de `resumeFrom`, comme après un relancement. Plus
+      // généralement, une étape que la situation a rendue caduque pendant la
+      // pause (demande d'adhésion faite entre-temps, GUIDE-FINITIONS-2 n° 2).
+      const waitOver = !isStepAvailable(step, guideContext(current));
       const resumeIndex = (current.restored || waitOver) && step?.resumeFrom
         ? indexOfStep(profile, step.resumeFrom)
         : -1;
@@ -615,6 +616,10 @@ export function TourProvider({ children }) {
     while (at >= 0 && history[at].route !== routeKey) at -= 1;
     if (at < 0) return;
     const entry = history[at];
+    // GUIDE-FINITIONS-2 n° 2 : on ne revient pas à une étape devenue caduque (« J'ai
+    // compris » de l'écran d'attente ramenait à « Nouvelle équipe » : la boucle).
+    const profile = getTourProfile(current.profileKey);
+    if (!isStepAvailable(profile?.steps?.[entry.index], guideContext(current))) return;
     historyRef.current = history.slice(0, at + 1);
     const back = {
       ...current, reward: null, stepIndex: entry.index, stepRoute: entry.stepRoute,

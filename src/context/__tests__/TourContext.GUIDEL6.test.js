@@ -119,7 +119,8 @@ describe('« Revoir le guide sans rien créer » (décision 3- A)', () => {
       flushTimers();
       if (tour.currentStep) visited.push(tour.currentStep.id);
     }
-    expect(visited).toEqual(['rv-m1', 'rv-m2', 'rv-m3', 'rv-m4']);
+    // GUIDE-FINITIONS-2 N10 : une bulle de fin (« rien n'a été créé »).
+    expect(visited).toEqual(['rv-m1', 'rv-m2', 'rv-m3', 'rv-m4', 'rv-end']);
     expect(tour.isTourActive).toBe(false);
     expect(tour.gauge).toBe(0);
   });
@@ -132,7 +133,7 @@ describe('« Revoir le guide sans rien créer » (décision 3- A)', () => {
     expect(tour.currentStep?.id).toBe('rv-m1');
     // La visite n'écrit jamais dans la progression gardée.
     expect(mockStore.get(PROGRESS_KEY)).toBe(saved);
-    for (let guard = 0; guard < 4; guard += 1) pressNext();
+    for (let guard = 0; guard < 5; guard += 1) pressNext();
     expect(mockStore.get(PROGRESS_KEY)).toBe(saved);
     expect(tour.tourStatus).toBe('paused');
     expect(tour.currentStep?.id).toBe('m2-card');

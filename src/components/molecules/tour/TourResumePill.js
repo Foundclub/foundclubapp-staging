@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -28,6 +30,27 @@ function TourResumePill() {
 
   if (!tour.isGuide || !tour.isTourActive || tour.tourStatus !== 'paused') return null;
 
+  // GUIDE-FINITIONS-2 n° 24 (captures 00 et 55) : la pastille dit la mission et la
+  // jauge, et sa croix (12 pt) n'efface plus le guide d'un toucher sans demander.
+  const position = tour.missionPosition;
+  const where = position
+    ? `${position.isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission')} `
+      + `${position.index}/${position.total}`
+    : null;
+  const confirmQuit = () => Alert.alert(
+    t('tourGuide.quitConfirm.title', 'Arrêter le guide ?'),
+    t(
+      'tourGuide.quitConfirm.message',
+      'Ta progression sera effacée. Tu pourras le revoir depuis Mon compte › Guide entraîneur·e.',
+    ),
+    [
+      { style: 'cancel', text: t('tourGuide.quitConfirm.cancel', 'Annuler') },
+      {
+        onPress: tour.exitTour, style: 'destructive', text: t('tourGuide.quit', 'Arrêter le guide'),
+      },
+    ],
+  );
+
   return (
     <View
       style={{
@@ -37,29 +60,40 @@ function TourResumePill() {
         borderColor: withAlpha(Colors.primary500, 0.35),
         borderRadius: 999,
         borderWidth: 1,
-        columnGap: 12,
+        columnGap: 4,
         flexDirection: 'row',
         marginHorizontal: 16,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        paddingLeft: 14,
+        paddingVertical: 4,
       }}
     >
       <TouchableOpacity
         accessibilityRole="button"
         hitSlop={8}
         onPress={tour.resumeTour}
-        style={{ justifyContent: 'center', minHeight: 28 }}
+        style={{ flexShrink: 1, justifyContent: 'center', minHeight: 36 }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
           {/* L1 GUIDE-ATTENTE : une étape d'attente dit ce qu'elle attend. */}
           {tour.currentStep?.pausedLabel || t('tourGuide.resume', 'Reprendre le tour')}
         </Text>
+        <View style={{ columnGap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
+          {where ? <Text style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>{where}</Text> : null}
+          {where && tour.currentMission?.title ? (
+            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300, flexShrink: 1 }]}>
+              {tour.currentMission.title}
+            </Text>
+          ) : null}
+          <Text style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>{`${tour.gauge || 0} %`}</Text>
+        </View>
       </TouchableOpacity>
       <TouchableOpacity
         accessibilityLabel={t('tourGuide.quit', 'Arrêter le guide')}
         accessibilityRole="button"
-        hitSlop={10}
-        onPress={tour.exitTour}
+        onPress={confirmQuit}
+        style={{
+          alignItems: 'center', justifyContent: 'center', minHeight: 44, minWidth: 44,
+        }}
       >
         <SvgIcon color={Colors.neutral400} height={12} name="close" width={12} />
       </TouchableOpacity>

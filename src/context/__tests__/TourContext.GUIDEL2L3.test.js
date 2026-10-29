@@ -77,7 +77,7 @@ describe('Relance du guide depuis Mon compte', () => {
     act(() => { tour.startTour('coach'); });
     expect(mockNavigate).toHaveBeenCalledWith(
       RouteNames.HomeTab,
-      { screen: 'SearchHome' },
+      { params: { pop: true, screen: 'SearchHome' }, screen: RouteNames.Search },
       { pop: true },
     );
   });

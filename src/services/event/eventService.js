@@ -104,9 +104,14 @@ export const createEvent = async (eventData, options = {}) => {
       teamId: eventData?.team || eventData?.team?.documentId || null,
     });
   }
+  const createdId = response?.data?.data?.documentId || response?.data?.documentId || null;
   emitGuidanceAction('event.created', {
+    // Guide Entraîneur (GUIDE-FINITIONS-2 N11) : B1 vise la prochaine date pas finie.
+    dates: [{
+      date: eventData?.date || null, documentId: createdId, endDate: eventData?.endDate || null,
+    }],
     // Guide Entraîneur (TUTOE, B1) : la carte de cette séance dans le planning.
-    documentId: response?.data?.data?.documentId || response?.data?.documentId || null,
+    documentId: createdId,
     eventType: eventData?.type || null,
   });
   return response.data;
@@ -409,6 +414,12 @@ export const createEventSeries = async (payloads = [], options = {}) => {
     });
   }
   emitGuidanceAction('event.created', {
+    // Guide Entraîneur (GUIDE-FINITIONS-2 N11) : chaque date posée ; B1 vise la prochaine.
+    dates: (Array.isArray(reponse?.data) ? reponse.data : [reponse?.data])
+      .filter((/** @type {any} */ row) => row?.documentId)
+      .map((/** @type {any} */ row) => ({
+        date: row.date || null, documentId: row.documentId, endDate: row.endDate || null,
+      })),
     // Guide Entraîneur (TUTOE, B1) : la 1re séance posée, visée dans le planning.
     documentId: (Array.isArray(reponse?.data) ? reponse.data[0] : reponse?.data)?.documentId || null,
     eventType: first?.type || null,

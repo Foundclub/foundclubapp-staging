@@ -63,6 +63,10 @@ import useReduceMotion from '@/hooks/useReduceMotion';
 
 const CUTOUT_RADIUS = 16;
 const MEASURE_INTERVAL_MS = 400;
+// GUIDE-FINITIONS-2 N9 : une étape à variantes attend de voir quel bouton l'écran
+// affiche avant de parler (sinon « C'est mon club ! » sur « Demander à rejoindre »,
+// capture 92) ; au-delà, la bulle principale revient (jamais de guide muet).
+const VARIANT_WAIT_MS = 2000;
 // GUIDE-TEXTES (décision d'Adel 3- B, 28/10) : la bulle suit l'agrandissement
 // du texte du téléphone, plafonné à 1,3 (au-delà, elle recouvrait les champs du
 // tunnel, FINITIONS-GUIDE). `maxFontSizeMultiplier` est resté sans effet à
@@ -201,6 +205,7 @@ function TourGuideLayer() {
   const [fitScale, setFitScale] = useState(MAX_FONT_SCALE);
   const [subIndex, setSubIndex] = useState(0);
   const [sheetIndex, setSheetIndex] = useState(0);
+  const [isVariantWaitOver, setIsVariantWaitOver] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const appear = useRef(new Animated.Value(0)).current;
 
@@ -213,10 +218,10 @@ function TourGuideLayer() {
         guide.anchor,
         ...guide.bubbles.map((/** @type {any[]} */ bubble) => bubble[0]),
       ]),
-      ...stepTargets,
       ...(currentStep.variants || []).flatMap((/** @type {any} */ v) => v.targets || []),
       ...DOCK_IDS,
       ...HEADER_IDS,
+      ...stepTargets,
     ])]
     : [];
   const targetKey = allTargetIds.join('|');
@@ -263,6 +268,14 @@ function TourGuideLayer() {
       clearInterval(timer);
     };
   }, [targetKey, currentStep?.id]);
+
+  const hasVariants = Boolean(currentStep?.variants?.length);
+  useEffect(() => {
+    setIsVariantWaitOver(false);
+    if (!hasVariants) return undefined;
+    const timer = setTimeout(() => setIsVariantWaitOver(true), VARIANT_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [currentStep?.id, hasVariants]);
 
   const resolved = resolveVariant(currentStep, rects, height, stepTargets);
   const sheetGuide = resolved.sub || null;
@@ -341,6 +354,11 @@ function TourGuideLayer() {
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
   const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
     && !variant.targets.some((id) => rects[id]));
+  // N9 : aucune ancre de l'étape ni de ses variantes encore mesurée.
+  const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
+    && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
+      .some((id) => rects[id]);
+  const isHidden = isStale || isChoosingVariant;
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
@@ -475,12 +493,12 @@ function TourGuideLayer() {
       }}
       // Bulle périmée : la couche reste montée (elle se mesure, la cible peut
       // revenir), mais invisible, muette et sans toucher.
-      accessibilityElementsHidden={isStale}
-      importantForAccessibility={isStale ? 'no-hide-descendants' : 'auto'}
-      pointerEvents={isStale ? 'none' : 'box-none'}
+      accessibilityElementsHidden={isHidden}
+      importantForAccessibility={isHidden ? 'no-hide-descendants' : 'auto'}
+      pointerEvents={isHidden ? 'none' : 'box-none'}
       ref={layerRef}
       style={{
-        bottom: 0, left: 0, opacity: isStale ? 0 : 1, position: 'absolute', right: 0, top: 0,
+        bottom: 0, left: 0, opacity: isHidden ? 0 : 1, position: 'absolute', right: 0, top: 0,
       }}
       testID="tour.layer"
     >
@@ -638,9 +656,11 @@ function TourGuideLayer() {
           }}
           >
             {kicker ? (
+              // GUIDE-FINITIONS-2 N12 : deux lignes plutôt qu'un titre coupé
+              // (« MISSION 1/4 · CRÉER TO… », capture 02).
               <Text
                 allowFontScaling={false}
-                numberOfLines={1}
+                numberOfLines={2}
                 style={[scaledFont(Fonts.p4Bold, fontScale), {
                   color: isBonus ? Colors.gold900 : Colors.primary600,
                   flex: 1,
