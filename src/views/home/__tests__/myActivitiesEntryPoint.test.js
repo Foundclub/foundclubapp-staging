@@ -75,7 +75,8 @@ describe('D57 — la porte de « Mes activites » existe pour un compte joueur',
   it('elle vise la route directement, sans empiler un navigateur de plus', () => {
     const branche = brancheSansSectionGerer('searchCards');
 
-    expect(branche).toContain('navigation.navigate(RouteNames.MyActivities)');
+    // RW-PARENT (29/10) — toujours un seul niveau, par le garde du site.
+    expect(branche).toContain('navigateOrExplainOnWeb(navigation, RouteNames.MyActivities)');
     expect(branche).not.toContain('screen: RouteNames.MyActivities');
   });
 
@@ -83,6 +84,7 @@ describe('D57 — la porte de « Mes activites » existe pour un compte joueur',
   // « Gerer mon club » (D35, §4 du pack).
   it('NON-REGRESSION : le staff garde son entree dans « Gerer mon club »', () => {
     expect(corpsDuMemo('manageSectionCards')).toContain('handleOpenMyRecruitmentAds');
-    expect(SOURCE_HOME_HUB).toContain('navigation.navigate(RouteNames.MyActivities)');
+    expect(SOURCE_HOME_HUB)
+      .toContain('navigateOrExplainOnWeb(navigation, RouteNames.MyActivities)');
   });
 });

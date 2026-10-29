@@ -273,7 +273,8 @@ describe('E6 — « Mon compte » : ce qui ne bouge pas', () => {
     appuyerSur(arbre, 'Gérer mes alertes');
 
     expect(navigation.navigate.mock.calls).toEqual([
-      [RouteNames.UserDetails],
+      // RW-PARENT (29/10) — avec SON identifiant : sans lui, le site ouvrait /users/:userId.
+      [RouteNames.UserDetails, { userId: 'moi-player' }],
       [RouteNames.SearchAlerts],
     ]);
   });
@@ -358,18 +359,20 @@ describe('A17 + A21 — aucune destination de l accueil n est perdue', () => {
    * @param {...any} appel - Les arguments attendus de `navigate`.
    * @returns {(contexte: { navigation: any }) => void}
    */
+  // RW-PARENT (29/10) — « Voir mon profil » porte l'identifiant du compte (`moi-<rôle>`).
+  const MON_IDENTIFIANT = expect.objectContaining({ userId: expect.stringMatching(/^moi-/) });
   const ouvre = (...appel) => (/** @type {any} */ { navigation }) => {
     expect(navigation.navigate).toHaveBeenCalledWith(...appel);
   };
 
   it.each([
-    ['Voir mon profil', TOUS, 'Voir mon profil', ouvre(RouteNames.UserDetails)],
+    ['Voir mon profil', TOUS, 'Voir mon profil', ouvre(RouteNames.UserDetails, MON_IDENTIFIANT)],
     // D41 (arbitrage d'Adel du 08/08) : la page profil du staff ÉDITE — sa porte
     // vers le formulaire est le crayon de la carte d'identité (dirigeant) ou
     // l'édition sur place (entraîneur, D39). Le super admin garde la rangée.
     ['Modifier mon profil', ['superAdmin'], 'Modifier mon profil', ouvre(RouteNames.ProfileEdit)],
     ['Modifier mon profil', ['coach', 'president'], 'Voir mon profil',
-      ouvre(RouteNames.UserDetails)],
+      ouvre(RouteNames.UserDetails, MON_IDENTIFIANT)],
     ['Historique sportif', ['player', 'coach', 'president', 'superAdmin'], 'Historique sportif',
       ouvre(RouteNames.HistoryWizardCategory, { resetContext: true })],
     ['Gérer mes alertes', TOUS, 'Gérer mes alertes', ouvre(RouteNames.SearchAlerts)],

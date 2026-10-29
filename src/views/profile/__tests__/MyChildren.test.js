@@ -116,11 +116,13 @@ jest.mock('@/services/eventChildRegistration/eventChildRegistrationQueries', () 
 
 // PAR-L8 — la fiche se RELIT apres une annulation (le club a pu accepter entre-temps).
 const mockRelireEnfants = jest.fn();
+/** @type {any} RW-PARENT — la lecture des fiches en échec. */
+let mockErreurEnfants;
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useDeleteDeclaredChild: () => ({ isPending: false, mutate: mockSupprimer }),
   useGetMyDeclaredChildren: () => ({
     data: mockEnfants,
-    error: undefined,
+    error: mockErreurEnfants,
     isLoading: mockIsLoading,
     refetch: mockRelireEnfants,
   }),
@@ -198,11 +200,18 @@ jest.mock('@/components/templates/ScreenContainer', () => {
   };
 });
 
+// RW-PARENT (29/10) — les props de chaque enveloppe sont gardées : le témoin lit le message
+// d'erreur qu'elle reçoit (jamais le texte technique du service).
+/** @type {any[]} */
+const mockEnveloppes = [];
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+    default: (/** @type {any} */ props) => {
+      mockEnveloppes.push(props);
+      return <View>{props.children}</View>;
+    },
   };
 });
 
@@ -403,11 +412,16 @@ test('P2/7 ⑦ « chercher un club » emmène la recherche AVEC l\'enfant visé'
 
 /** @type {any} */
 let mockLiens;
+/** @type {any} */
+let mockErreurLiens;
 const mockAnnuler = jest.fn();
+const mockRelireLesLiens = jest.fn();
 
 jest.mock('@/services/parentLink/parentLinkQueries', () => ({
   useCancelParentLink: () => ({ isPending: false, mutate: mockAnnuler }),
-  useParentLinksAsParent: () => ({ data: mockLiens, error: undefined, isLoading: false }),
+  useParentLinksAsParent: () => ({
+    data: mockLiens, error: mockErreurLiens, isLoading: false, refetch: mockRelireLesLiens,
+  }),
 }));
 
 /**
@@ -424,6 +438,44 @@ const pressable = (arbre, libelle) => arbre.root.findAll((/** @type {any} */ noe
 describe('PARENT-LIEN — les comptes de mes enfants', () => {
   beforeEach(() => {
     mockLiens = { children: [], requests: [] };
+  });
+
+  // RW-PARENT (29/10, site) — Adel a lu « Parent links (parent) failed: Network Error » sur
+  // « Mes enfants » : l'écran passait `erreurLiens.message`, le préfixe de journal du service.
+  test('🔴 RW-PARENT la fiche d un enfant, en panne de lecture, parle français aussi', async () => {
+    mockErreurEnfants = new Error('Request failed with status code 502');
+    mockEnveloppes.length = 0;
+    try {
+      await act(async () => {
+        renderer.create(<MyChildren route={{ params: { childDocumentId: 'enfant-1' } }} />);
+      });
+      const recues = mockEnveloppes.filter((props) => props.error === mockErreurEnfants);
+      expect(recues.length).toBeGreaterThan(0);
+      recues.forEach((props) => {
+        expect(props.errorMessage).toBe('Impossible de charger tes enfants.');
+      });
+      expect(mockEnveloppes.some((props) => props.error === mockErreurEnfants.message)).toBe(false);
+    } finally {
+      mockErreurEnfants = undefined;
+    }
+  });
+
+  test('🔴 RW-PARENT les comptes reliés en panne : un message français, et on relit', async () => {
+    mockErreurLiens = new Error('Parent links (parent) failed: Network Error');
+    mockEnveloppes.length = 0;
+    try {
+      await rendre();
+      const recues = mockEnveloppes.filter((props) => props.error === mockErreurLiens);
+      expect(recues.length).toBeGreaterThan(0);
+      recues.forEach((props) => {
+        expect(props.errorMessage).toBe('Impossible de charger tes enfants.');
+        props.onRetry();
+      });
+      expect(mockRelireLesLiens).toHaveBeenCalled();
+      expect(mockEnveloppes.some((props) => props.error === mockErreurLiens.message)).toBe(false);
+    } finally {
+      mockErreurLiens = undefined;
+    }
   });
 
   // ① — avec la porte « Relier le compte de mon enfant ».

@@ -305,7 +305,10 @@ function Profile({ navigation, route }) {
   };
 
   const handleViewProfile = () => {
-    navigation.navigate(RouteNames.UserDetails);
+    // RW-PARENT (29/10) — l'identifiant, toujours : sans lui, le site laisse « :userId » dans
+    // l'adresse (/users/:userId) et l'écran cherche ce compte-là (404). UserDetails reconnaît
+    // le sien et garde la vue du propriétaire.
+    navigation.navigate(RouteNames.UserDetails, { userId: userData?.documentId });
   };
 
   const handleOpenMyCard = () => {
@@ -1103,7 +1106,8 @@ function Profile({ navigation, route }) {
       icon: Images.shield,
       key: 'blockedUsers',
       label: t('userBlock.screen.title', 'Personnes bloquées'),
-      onPress: () => navigation.navigate(RouteNames.BlockedUsers),
+      // RW-PARENT (29/10) — exempté du site : « Bientôt sur le site », pas un retour muet.
+      onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.BlockedUsers),
     },
     // CARTECODE Q1 C — « Compte privé », séparé de « Ouvert au recrutement » (profil).
     {

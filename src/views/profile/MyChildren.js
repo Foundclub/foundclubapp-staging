@@ -359,6 +359,7 @@ function MyChildren({ route } = {}) {
     data: liens,
     error: erreurLiens,
     isLoading: chargementLiens,
+    refetch: relireLesLiens,
   } = useParentLinksAsParent();
   const { isPending: annulationEnCours, mutate: annulerDemande } = useCancelParentLink();
   const comptesRelies = Array.isArray(liens?.children) ? liens.children : [];
@@ -580,7 +581,12 @@ function MyChildren({ route } = {}) {
             onRetry={annulationDInscription.retry}
             outcome={annulationDInscription.outcome}
           />
-          <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
+          <WithDataWrapper
+            error={erreurEnfants}
+            errorMessage={t('myChildren.list.loadError')}
+            isLoading={chargementEnfants}
+            onRetry={relireLesEnfants ? () => relireLesEnfants() : undefined}
+          >
             {enfantOuvert ? (
               <DeclaredChildPage
                 annulationEnCours={annulationEnvoyee ? demandeEnvoyee : ''}
@@ -665,7 +671,14 @@ function MyChildren({ route } = {}) {
         <BandeauDeResultat annonce={annonce} onSearchClub={chercherUnClub} />
         {/* STATS-FIX2 · 8-22 (tournee T10, ecran 22) — les comptes relies D ABORD (planche 22,
             etat 1) : c est la que vivent les retours de l entraineur. */}
-        <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
+        {/* RW-PARENT (29/10) — jamais `erreurLiens.message` : c'est le préfixe de journal du
+            service (« Parent links (parent) failed: Network Error »), lu tel quel sur le site. */}
+        <WithDataWrapper
+          error={erreurLiens}
+          errorMessage={t('myChildren.list.loadError')}
+          isLoading={chargementLiens}
+          onRetry={relireLesLiens ? () => relireLesLiens() : undefined}
+        >
           <View style={{ gap: 12 }} testID="my-children-accounts">
             {erreurLiens ? placeDuPave : null}
             {comptesRelies.map((compte) => (

@@ -186,6 +186,9 @@ const Input = forwardRef(
                   Fonts.p1,
                   props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
                   Alignments.fill,
+                  // RW-PARENT (29/10) — sur le site, sans lui, le champ garde ~20 caractères de
+                  // large et sort de sa case (« AAAA », 80 px). Le téléphone le faisait déjà.
+                  { minWidth: 0 },
                   { minHeight: isCompact ? INPUT_ROW_COMPACT_MIN_HEIGHT : INPUT_ROW_MIN_HEIGHT },
                   props.style,
                 ]}

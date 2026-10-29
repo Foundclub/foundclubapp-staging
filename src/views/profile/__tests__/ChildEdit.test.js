@@ -961,3 +961,29 @@ test('BH02 P11-15 MODIFIER avec jour et mois sans année : rien ne part, et l\'�
   expect(mockModifier).not.toHaveBeenCalled();
   expect(texteVisible(arbre)).toContain('Cette date n’existe pas.');
 });
+
+// RW-PARENT (29/10, recette du site) — /profile/children/edit?childDocumentId=… ouvert À FROID
+// (rafraîchir, lien) : la fiche arrive APRÈS le premier rendu, et Prénom/Nom restaient vides
+// (puis « Le prénom, le nom et la date de naissance sont obligatoires. »).
+test('🔴 RW-PARENT la fiche lue après l ouverture remplit le formulaire', async () => {
+  mockParams = { childDocumentId: 'enfant-1' };
+  mockEnfants = undefined;
+  const arbre = await rendre();
+  const valeur = (/** @type {string} */ repere) => arbre.root
+    .findByProps({ testID: repere }).props.value;
+  expect(valeur('child-firstname')).toBe('');
+
+  mockEnfants = [{
+    age: 10,
+    documentId: 'enfant-1',
+    firstname: 'Lina',
+    lastname: 'Recette',
+    number: 7,
+    position: 'Milieu',
+  }];
+  await act(async () => { arbre.update(<ChildEdit />); });
+
+  expect(valeur('child-firstname')).toBe('Lina');
+  expect(valeur('child-lastname')).toBe('Recette');
+  expect(valeur('child-number')).toBe('7');
+});

@@ -83,6 +83,7 @@ import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { useAdminCollectivitesATraiter } from '@/services/collectivite/collectiviteQueries';
 import { useHomeSummary } from '@/services/home/homeSummaryQueries';
@@ -1422,7 +1423,9 @@ function HomeHubContent({ auth, navigation, route }) {
   // « Mes activites » n a pas passe la recette emulateur, retirer l ancien
   // chemin priverait d acces sans filet.
   const handleOpenMyRecruitmentAds = useCallback(() => {
-    navigation.navigate(RouteNames.MyActivities);
+    // RW-PARENT (29/10) — « Mes activités » n'a pas encore d'adresse sur le site
+    // (webRouteExemptions.js) : on l'explique au lieu d'un bouton qui ne fait rien.
+    navigateOrExplainOnWeb(navigation, RouteNames.MyActivities);
   }, [navigation]);
 
   const handleOpenClubLicenses = useCallback(() => {
@@ -2284,7 +2287,10 @@ function HomeHubContent({ auth, navigation, route }) {
         icon: 'clock',
         key: 'training-mine',
         layout: 'full',
-        onPress: () => navigation.navigate(
+        // RW-PARENT (29/10) — l'entraînement n'est pas sur le site (webRouteExemptions.js) : les
+        // trois cartes disent « Bientôt sur le site » au lieu de ne rien faire.
+        onPress: () => navigateOrExplainOnWeb(
+          navigation,
           trainingEnrollment ? RouteNames.TrainingPlan : RouteNames.TrainingCatalog,
         ),
         subtitle: suitUnProgramme
@@ -2308,7 +2314,7 @@ function HomeHubContent({ auth, navigation, route }) {
         // seance. Les deux dessins manquants sont a demander au designer.
         icon: 'running',
         key: 'training-find',
-        onPress: () => navigation.navigate(RouteNames.TrainingCatalog),
+        onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.TrainingCatalog),
         subtitle: t('training.home.findCard.subtitle'),
         title: t('training.home.findCard.title'),
       },
@@ -2316,7 +2322,7 @@ function HomeHubContent({ auth, navigation, route }) {
         accentColor: Colors.primary500,
         icon: 'chart',
         key: 'training-logbook',
-        onPress: () => navigation.navigate(RouteNames.TrainingLogbook),
+        onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.TrainingLogbook),
         subtitle: t('training.home.logbookCard.subtitle'),
         title: t('training.home.logbookCard.title'),
       },
@@ -2444,7 +2450,7 @@ function HomeHubContent({ auth, navigation, route }) {
           : homeAlerts['search-my-activities'],
         icon: 'running',
         key: 'search-my-activities',
-        onPress: () => navigation.navigate(RouteNames.MyActivities),
+        onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.MyActivities),
         subtitle: isMyActivitiesStaff
           ? t(
             'homeHub.cards.manage.myAds.subtitle',
