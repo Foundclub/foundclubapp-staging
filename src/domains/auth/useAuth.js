@@ -65,6 +65,8 @@ import {
   getUserRoleKey,
   hasClubAccess as hasClubAccessForUser,
   isClubMember as isClubMemberForUser,
+  markOnboardingComplete,
+  markOnboardingStarted,
   onboardingCompleteKey,
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
@@ -546,6 +548,15 @@ const useAuth = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [userData, onboardingCompleteVersion]);
 
+  // TUNNELREPRISE (29/10/2026, decision d'Adel « 1- A ») — a la reouverture d'une inscription a
+  // qui il ne manque que des etapes qui se passent, `getOnboardingViews` rend l'accueil ; on pose
+  // alors la fin (drapeau local, que l'effet ONBOARDDATE ci-dessus envoie au serveur).
+  useEffect(() => {
+    if (onboardingDocumentId && onboardingViews?.finieALaReouverture) {
+      markOnboardingComplete(onboardingDocumentId);
+    }
+  }, [onboardingDocumentId, onboardingViews]);
+
   const profileFields = useMemo(() => (
     userData ? profileFieldToDisplay(userData.role) : []
   ), [userData]);
@@ -859,6 +870,10 @@ const useAuth = () => {
   // temporelle) des le premier rendu. Le corps du callback, lui, n'a pas bouge
   // d'une ligne.
   const getNextOnboardingRoute = useCallback((/** @type {string} */currentRoute) => {
+    // TUNNELREPRISE — avancer dans le tunnel le note ouvert dans ce lancement (et commence sur cet
+    // appareil) : c'est le seul marqueur d'un compte cree par un club, qui ne passe pas par « Quel
+    // est ton statut ? ». Sans lui, sa reouverture ne serait jamais reconnue comme telle.
+    markOnboardingStarted(userData?.documentId);
     // D33 - la recherche elle-meme vit desormais dans `resolveNextOnboardingRoute`
     // (`authUseCases.js`), ou elle est TESTABLE : le trajet club -> equipe -> sas
     // se mesure sans monter un ecran. Meme code, meme ordre, memes sorties.

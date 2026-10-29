@@ -605,6 +605,15 @@ const OPTIONAL_ONBOARDING_ROUTES = [
   RouteNames.UserAffiliationGuide, RouteNames.UserTeamAffiliation, RouteNames.UserTrainedTeams,
 ];
 
+// TUNNELREPRISE (29/10/2026, decision d'Adel « 1- A ») — les etapes qui ont un « Passer » sans
+// etre dans la liste ci-dessus : section, ville, photo, « ton enfant ». Seules « Quel est ton
+// statut ? », « Qui es-tu ? » et la declaration parentale ne se passent pas.
+/** @type {string[]} */
+const SKIPPABLE_ONBOARDING_ROUTES = [
+  ...OPTIONAL_ONBOARDING_ROUTES,
+  RouteNames.UserSection, RouteNames.UserAddress, RouteNames.UserAvatar, RouteNames.UserChild,
+];
+
 /**
  * AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire de
  * l'onboarding », `docs/DECISIONS_MINEURS.md` ligne 10) - LE POINT DE CONTROLE
@@ -670,7 +679,7 @@ const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role 
 /**
  * Get the onboarding view to show based on user type and existing user data
  * @param {User} params - The user data parameters
- * @returns {{isEntryCheckpoint?: boolean, totalViews: number,
+ * @returns {{finieALaReouverture?: boolean, isEntryCheckpoint?: boolean, totalViews: number,
  *   views: {index: number, route: string, canShow: boolean}[]}} Le parcours.
  */
 export const getOnboardingViews = ({
@@ -966,6 +975,30 @@ export const getOnboardingViews = ({
     return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
   }
 
+  // TUNNELREPRISE (29/10/2026, decision d'Adel « 1- A », diagnostic DIAG-ROLE-TUNNEL) - un
+  // « Passer » n'enregistre rien et la fin ne s'ecrit qu'au dernier ecran : une REOUVERTURE
+  // ramenait sur la premiere etape vide, meme passee (joueur ferme sur « Niveau » => « Sport
+  // 5/13 », 9 etapes dues). Reouverture = inscription commencee sur cet appareil, mais pas dans
+  // ce lancement de l'app (`tunnelsOuvertsCetteSession`). S'il ne manque que des etapes qui se
+  // passent : l'accueil, et `finieALaReouverture` fait poser la fin par `useAuth` (drapeau local
+  // + date serveur ONBOARDDATE). Dans le meme lancement, le tunnel garde ses etapes facultatives.
+  if (
+    firstname
+    && lastname
+    && onboardingStartedHere
+    && !tunnelsOuvertsCetteSession.has(documentId)
+    && pendingRoutes.length > 0
+    && pendingRoutes.every((route) => ENTRY_CHECKPOINT_ROUTES.includes(route)
+      || SKIPPABLE_ONBOARDING_ROUTES.includes(route))
+  ) {
+    const pointDeControle = getEntryCheckpointViews({
+      birthdate, parentalDeclarationAccepted, role,
+    });
+    return pointDeControle.views.length === 0
+      ? { ...pointDeControle, finieALaReouverture: true }
+      : pointDeControle;
+  }
+
   const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,
@@ -1162,16 +1195,31 @@ export const resolveOnboardingExitRoute = ({
  */
 const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
 
+// TUNNELREPRISE — les inscriptions ouvertes dans CE lancement de l'app (memoire, pas stockage) :
+// ce qui distingue « je continue mon tunnel » de « je rouvre l'app » (`getOnboardingViews`).
+/** @type {Set<string>} */
+const tunnelsOuvertsCetteSession = new Set();
+
+/**
+ * TUNNELREPRISE — remet a zero les inscriptions de ce lancement (un « nouveau lancement »).
+ * @returns {void}
+ */
+export const resetOnboardingSessionForTests = () => {
+  tunnelsOuvertsCetteSession.clear();
+};
+
 /**
  * FINITIONS18 · POINT 4 — « Quel est ton statut ? » ouvre l'inscription d'un compte NEUF : elle est
  * marquee commencee sur cet appareil. Sans ce marqueur, un compte deja dans une equipe n'est pas
  * renvoye au tunnel pour des etapes facultatives (`getOnboardingViews`).
+ * TUNNELREPRISE : elle est aussi notee ouverte dans CE lancement (une reouverture ne l'est pas).
  * @param {string | null | undefined} documentId - Le compte.
  * @returns {void}
  */
 export const markOnboardingStarted = (documentId) => {
   if (documentId) {
     storage.set(onboardingStartedKey(documentId), true);
+    tunnelsOuvertsCetteSession.add(documentId);
   }
 };
 
