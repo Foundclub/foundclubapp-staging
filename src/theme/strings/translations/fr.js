@@ -16856,8 +16856,14 @@ export default {
     },
     later: 'Plus tard',
     push: {
+      // eslint-disable-next-line max-len
+      body: 'Active les notifications pour savoir quand ton coach t’accepte, quand tu es convoqué et quand on t’écrit.',
+      // eslint-disable-next-line max-len
+      bodyRefused: 'Les notifications sont coupées pour FoundClub. Pour savoir quand ton coach t’accepte, active-les dans les Réglages de ton téléphone.',
       enable: 'Activer',
+      openSettings: 'Ouvrir les Réglages',
       supporting: 'Tu pourras toujours modifier ce choix plus tard dans les réglages.',
+      title: 'Sois prévenu au bon moment',
     },
   },
   notificationList: {
@@ -26523,11 +26529,6 @@ export default {
     calendarPrompt: {
       body: 'Ajouter ce match League à ton agenda pour ne pas le manquer ?',
       title: 'Match confirmé',
-    },
-    pushPrompt: {
-      // eslint-disable-next-line max-len
-      body: 'Active les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.',
-      title: 'Active les notifications FoundClub',
     },
   },
   userAddress: {

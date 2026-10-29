@@ -71,6 +71,7 @@ import {
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
+import { noterRefusDefinitifAndroid } from '@/utils/notifications/preDemandeNotifications';
 import {
   classifyTokenSyncError,
   getBackoffDelayMs,
@@ -83,14 +84,10 @@ import {
   POPUP_IDS,
 } from '@/constants/popupRegistry';
 import {
-  APP_RUNTIME_ENV,
   ENABLE_PUSH_NOTIFICATIONS,
   ENABLE_SMART_NOTIFICATIONS,
 } from '@/constants/runtimeFlags';
-import {
-  usePopupEligibility,
-  usePopupManager,
-} from '@/context/PopupManagerContext';
+import { usePopupEligibility } from '@/context/PopupManagerContext';
 import {
   NOTIFICATIONS_QUERY_KEY,
   refreshUnreadCountIfStale,
@@ -192,7 +189,12 @@ const requestUserPermission = async () => {
   }
 
   if (Platform.OS === 'android') {
-    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    const reponse = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    if (reponse === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      noterRefusDefinitifAndroid();
+    }
   }
 };
 
@@ -292,7 +294,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     setSafeInterval,
     setSafeTimeout,
   } = useSafeTimers();
-  const { isStartupWindowActive } = usePopupManager();
 
   /**
    * FCMSTORM (2026-08-28) — LE SILENCIEUX.
@@ -452,7 +453,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
-  const [pendingPushPermissionReason, setPendingPushPermissionReason] = useState('');
   const promptedCalendarMatchesRef = useRef(/** @type {Set<string>} */ (new Set()));
   const queuedCalendarPromptKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const shownCalendarPromptKeyRef = useRef('');
@@ -471,18 +471,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     {
       cooldownKey: pendingCalendarPromptKey || 'default',
       dismissScope: POPUP_DISMISS_SCOPES.SESSION,
-    },
-  );
-  const pushPermissionPrompt = usePopupEligibility(
-    POPUP_IDS.PUSH_PERMISSION_PREPROMPT,
-    Boolean(
-      pendingPushPermissionReason
-      && userData
-      && (!isStartupWindowActive || pendingPushPermissionReason !== 'login'),
-    ),
-    {
-      cooldownKey: userData?.documentId || 'anonymous',
-      dismissScope: POPUP_DISMISS_SCOPES.DAY,
     },
   );
 
@@ -520,7 +508,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
   useEffect(() => {
     if (!userData) {
-      setPendingPushPermissionReason('');
       lastSyncedUserIdRef.current = '';
       if (tokenSyncRetryTimerRef.current) {
         clearSafeTimer(tokenSyncRetryTimerRef.current);
@@ -547,26 +534,12 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     ));
   }, [pendingCalendarPromptKey]);
 
-  const requestPushPermissionPrePrompt = useCallback((reason) => {
-    if (!userData) return false;
-    if (pushPermissionPrompt.isDismissed) {
-      pushPermissionPrompt.trackEvent('deferred', { reason, source: 'cooldown' });
-      return false;
-    }
-
-    setPendingPushPermissionReason((previousReason) => previousReason || reason);
-    return true;
-  }, [pushPermissionPrompt, userData]);
-
   const syncTokenIfNeeded = useCallback(async (reason = 'manual', options = {}) => {
     if (!ENABLE_PUSH_NOTIFICATIONS || !userData) {
       return 'skipped';
     }
 
     const bypassPreprompt = Boolean(options?.bypassPreprompt);
-    // In local development we allow the native OS prompt immediately so emulator
-    // push validation is not blocked behind the in-app pre-prompt flow.
-    const bypassPrepromptForLocal = APP_RUNTIME_ENV === 'local';
     const force = Boolean(options?.force);
 
     // FCMSTORM — le silencieux passe AVANT le frein de 30 s, parce que `force`
@@ -597,18 +570,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
       const permissionGranted = await getPushPermissionGranted();
 
-      // iOS must reach the native permission prompt at least once, otherwise the app
-      // never appears in Settings > Notifications and no FCM token can be issued.
-      const shouldDeferBehindInAppPreprompt = (
-        Platform.OS !== 'ios'
-        && !permissionGranted
-        && !bypassPreprompt
-        && !bypassPrepromptForLocal
-        && requestPushPermissionPrePrompt(reason)
-      );
-
-      if (shouldDeferBehindInAppPreprompt) {
-        notificationsLogger.info('[FCM] Deferring token sync until push pre-prompt is answered.', { reason });
+      // NOTIF-PREDEMANDE (29/10/2026, decision d'Adel « 2- A ») — plus AUCUNE fenetre
+      // systeme ici, sur les deux plateformes : la connexion et le retour au premier plan
+      // ne font que lire. Seul « Activer » sur notre ecran (`activerNotifications`, ci-
+      // dessous) passe `bypassPreprompt` ; avant, l'iPhone demandait des la connexion, et
+      // un refus y est definitif.
+      if (!permissionGranted && !bypassPreprompt) {
+        notificationsLogger.info('[FCM] Token sync waits for the in-app pre-prompt.', { reason });
         return 'deferred';
       }
 
@@ -675,7 +643,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     } finally {
       tokenSyncInFlightRef.current = false;
     }
-  }, [isTokenSyncMuted, requestPushPermissionPrePrompt, saveToken, userData]);
+  }, [isTokenSyncMuted, saveToken, userData]);
 
   const scheduleTokenSyncRetry = useCallback((userIdentity, reason = 'retry', delayMs = 15000) => {
     if (!userIdentity || tokenSyncRetryTimerRef.current) {
@@ -1215,30 +1183,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       visiblePayload: pendingCalendarPrompt,
     },
     handleNavigateOnOpen,
-    pushPermissionPrompt: {
-      body: i18next.t(
-        'useNotifications.pushPrompt.body',
-        'Active les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.', // eslint-disable-line max-len
-      ),
-      canShow: pushPermissionPrompt.canShow,
-      descriptor: pushPermissionPrompt.descriptor,
-      onAccept: async () => {
-        const nextReason = pendingPushPermissionReason || 'manual';
-        pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.SESSION);
-        pushPermissionPrompt.trackEvent('accepted', { reason: nextReason });
-        setPendingPushPermissionReason('');
-        // BH01/P2-03 : la synchro différée vient de poser le frein de 30 s ; l'accord le franchit.
-        await syncTokenIfNeeded(nextReason, { bypassPreprompt: true, force: true });
-      },
-      onDismiss: () => {
-        pushPermissionPrompt.dismiss(POPUP_DISMISS_SCOPES.DAY);
-        setPendingPushPermissionReason('');
-      },
-      onVisible: () => {
-        pushPermissionPrompt.markShown({ reason: pendingPushPermissionReason || 'manual' });
-      },
-      title: i18next.t('useNotifications.pushPrompt.title', 'Active les notifications FoundClub'),
-    },
+    // NOTIF-PREDEMANDE — « Activer » sur notre ecran : la SEULE porte vers la fenetre systeme.
+    activerNotifications: () => syncTokenIfNeeded('preprompt', {
+      bypassPreprompt: true,
+      force: true,
+    }),
     saveToken,
   };
 };

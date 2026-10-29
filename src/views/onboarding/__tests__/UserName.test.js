@@ -703,3 +703,44 @@ describe('UserName — point de controle d entree d un ancien compte (AGE-OBLIGA
     expect(bouton(arbre, 'Changer de compte')).toBeUndefined();
   });
 });
+
+// NOTIF-PREDEMANDE (29/10/2026, decision d'Adel « 2- A ») — notre ecran de
+// pre-demande des notifications arrive JUSTE APRES « Qui es-tu ? », dans le tunnel
+// d'inscription seulement (pas au point de controle d'un ancien compte).
+jest.mock('@/utils/notifications/preDemandeNotifications', () => ({
+  proposerPreDemandeNotifications: (...args) => mockProposerPreDemande(...args),
+}));
+const mockProposerPreDemande = jest.fn();
+
+describe('UserName — la pre-demande suit « Qui es-tu ? » (NOTIF-PREDEMANDE)', () => {
+  it('Continuer accepte ⇒ notre ecran est propose, puis l etape suivante', async () => {
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await saisir(arbre, 'JJ', '02');
+    await saisir(arbre, 'MM', '04');
+    await saisir(arbre, 'AAAA', '1980');
+    expect(mockProposerPreDemande).not.toHaveBeenCalled();
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(mockProposerPreDemande).toHaveBeenCalledWith('inscription');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserAvatar');
+  });
+
+  it('Continuer refuse par le serveur ⇒ rien n est propose', async () => {
+    /** @type {any} */ (updateMe).mockRejectedValue(new Error('panne'));
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await saisir(arbre, 'JJ', '02');
+    await saisir(arbre, 'MM', '04');
+    await saisir(arbre, 'AAAA', '1980');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(mockProposerPreDemande).not.toHaveBeenCalled();
+    alerte.mockRestore();
+  });
+});

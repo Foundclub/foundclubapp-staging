@@ -203,8 +203,10 @@ test('BH01/P2-03 — accepter la pre-autorisation Android DEMANDE la permission'
   await act(async () => { await Promise.resolve(); });
   expect(demander).not.toHaveBeenCalled();
 
+  // NOTIF-PREDEMANDE (29/10/2026) — la pre-autorisation est desormais NOTRE ecran
+  // (PreDemandeNotifications) ; son « Activer » appelle `activerNotifications`.
   await act(async () => {
-    await resultat.pushPermissionPrompt.onAccept();
+    await resultat.activerNotifications();
   });
 
   expect(demander).toHaveBeenCalled();

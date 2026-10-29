@@ -4,6 +4,7 @@ import Joi from 'joi';
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
 import { createLogger } from '@/utils/logger/logger';
+import { proposerPreDemandeNotifications } from '@/utils/notifications/preDemandeNotifications';
 
 import client from '../client';
 
@@ -119,6 +120,9 @@ export const createTeamMembershipRequest = async (teamMembershipRequestData) => 
   celebrate('team_membership_request_sent', {
     teamId: teamMembershipRequestData?.team,
   });
+  // NOTIF-PREDEMANDE — « demande d'adhesion envoyee » est un moment cle : ici, dans la
+  // fonction partagee, pour couvrir tous ses appelants.
+  proposerPreDemandeNotifications('adhesion');
   return response.data;
 };
 
