@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 
 import client from '@/services/client';
+import { filePart } from '@/services/formDataFile';
 
 import { getDeviceLocaleCountry } from '@/utils/device/deviceInfo';
 import { buildPreservedApiError } from '@/utils/errors/apiError';
@@ -536,8 +537,7 @@ export const updateMe = async (userData) => {
         console.warn('[updateMe] Invalid file properties!');
       }
 
-      // @ts-expect-error because of react native image type
-      formData.append('avatar', fileToUpload);
+      formData.append('avatar', filePart(userDataCopy.avatar, fileToUpload));
     } else if (clearFields.includes('avatar')) {
       // C10BIS · P11-05 — supprimer la photo : `avatar: ''` sans fichier.
       formData.append('avatar', '');
@@ -671,8 +671,7 @@ const createClubStaff = async (userData, kind) => {
       type: userDataCopy.avatar.mime,
       uri: Platform.OS === 'ios' ? userDataCopy.avatar.path.replace('file://', '') : userDataCopy.avatar.path,
     };
-    // @ts-expect-error because of react native image type
-    formData.append('avatar', fileToUpload);
+    formData.append('avatar', filePart(userDataCopy.avatar, fileToUpload));
     delete userDataCopy.avatar;
   }
 

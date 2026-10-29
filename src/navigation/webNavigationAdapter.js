@@ -96,6 +96,13 @@ const buildRouteState = (routeName, params = {}) => ({
   params,
 });
 
+// RWDIRIG (29/10) — React Router numérote ses entrées (`history.state.idx`) : 0 = première page
+// du site dans cet onglet (lien, rechargement). `navigate(-1)` y faisait SORTIR du site après un
+// « Enregistrer » ; on rentre à l'accueil du site à la place.
+const estPremierePageDuSite = () => (
+  typeof window !== 'undefined' && window.history?.state?.idx === 0
+);
+
 export const createWebNavigationAdapter = ({
   currentPath = '/',
   currentRouteName,
@@ -119,6 +126,7 @@ export const createWebNavigationAdapter = ({
     addListener: () => () => {},
     canGoBack: () => {
       if (typeof window === 'undefined') return false;
+      if (estPremierePageDuSite()) return false;
       return window.history.length > 1;
     },
     currentPath,
@@ -150,6 +158,10 @@ export const createWebNavigationAdapter = ({
     },
     getParent: () => parentNavigation || adapter,
     goBack: () => {
+      if (estPremierePageDuSite() && typeof replace === 'function') {
+        replace('/');
+        return;
+      }
       if (typeof goBack === 'function') {
         goBack();
       }

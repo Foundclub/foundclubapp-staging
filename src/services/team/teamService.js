@@ -3,6 +3,7 @@ import Joi from 'joi';
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
 import client from '../client';
+import { filePart } from '../formDataFile';
 
 const buildClubFilter = (clubId, useLegacyId = false) => {
   if (!clubId) return undefined;
@@ -458,22 +459,20 @@ export const createTeam = async (teamData) => {
     // Append files if they exist
     if (logo) {
       const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
-      // @ts-expect-error - React Native FormData accepts file descriptor objects.
-      formData.append('files.logo', {
+      formData.append('files.logo', filePart(logo, {
         name: logoFile.filename || 'logo.jpg',
         type: logoFile.mime || 'image/jpeg',
         uri: logoFile.uri || '',
-      });
+      }));
     }
 
     if (cover) {
       const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
-      // @ts-expect-error - React Native FormData accepts file descriptor objects.
-      formData.append('files.cover', {
+      formData.append('files.cover', filePart(cover, {
         name: coverFile.filename || 'cover.jpg',
         type: coverFile.mime || 'image/jpeg',
         uri: coverFile.uri || '',
-      });
+      }));
     }
 
     response = await client.post('/teams', formData, {
@@ -537,22 +536,20 @@ export const updateTeam = async (teamData) => {
     // Append files if they exist
     if (logo) {
       const logoFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (logo);
-      // @ts-expect-error - React Native FormData accepts file descriptor objects.
-      formData.append('files.logo', {
+      formData.append('files.logo', filePart(logo, {
         name: logoFile.filename || 'logo.jpg',
         type: logoFile.mime || 'image/jpeg',
         uri: logoFile.uri || '',
-      });
+      }));
     }
 
     if (cover) {
       const coverFile = /** @type {{ uri?: string; filename?: string; mime?: string }} */ (cover);
-      // @ts-expect-error - React Native FormData accepts file descriptor objects.
-      formData.append('files.cover', {
+      formData.append('files.cover', filePart(cover, {
         name: coverFile.filename || 'cover.jpg',
         type: coverFile.mime || 'image/jpeg',
         uri: coverFile.uri || '',
-      });
+      }));
     }
 
     response = await client.put(`/teams/${id}`, formData, {

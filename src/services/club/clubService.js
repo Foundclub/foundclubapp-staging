@@ -10,6 +10,7 @@ import { buildPreservedApiError } from '@/utils/errors/apiError';
 import { createLogger } from '@/utils/logger/logger';
 
 import client from '../client';
+import { filePart } from '../formDataFile';
 /* eslint-enable perfectionist/sort-imports */
 
 const clubListLogger = createLogger('club-list');
@@ -687,12 +688,11 @@ export const updateClub = async (clubData) => {
           // NEW FILE UPLOAD
           console.warn('Appended file for sponsor', i);
           const sponsorLogoPath = sponsor.logo.path || '';
-          // @ts-expect-error - React Native FormData supports file descriptor objects.
-          formData.append(`sponsor[${i}][logo]`, {
+          formData.append(`sponsor[${i}][logo]`, filePart(sponsor.logo, {
             name: sponsor.logo.filename || `sponsor_${i}.jpg`,
             type: sponsor.logo.mime || 'image/jpeg',
             uri: Platform.OS === 'android' ? sponsorLogoPath : sponsorLogoPath.replace('file://', ''),
-          });
+          }));
         } else {
           // EXISTING LOGO - DO NOT SEND ANYTHING
           // This prevents sending invalid documentIds that don't exist
@@ -772,8 +772,7 @@ export const updateClub = async (clubData) => {
         // Based on sponsor logic `sponsor[${i}][logo]`, let's try appending to `files.logo` or `logo`.
         // Strapi default upload usually looks for `files` key.
         // Let's assume standard multipart: `logo` as key for file.
-        // @ts-expect-error - React Native FormData supports file descriptor objects.
-        formData.append('files.logo', fileToUpload);
+        formData.append('files.logo', filePart(clubDataCopy.logo, fileToUpload));
       } else if (clubDataCopy.logo.documentId) {
         formData.append('logo', clubDataCopy.logo.documentId);
       } else if (clubDataCopy.logo.id) {
@@ -856,8 +855,7 @@ export const uploadFile = async (file) => {
 
     console.log('[DEBUG] FormData file:', JSON.stringify(fileToUpload));
 
-    // @ts-expect-error because of react native image type
-    formData.append('files', fileToUpload);
+    formData.append('files', filePart(file, fileToUpload));
 
     const auth = getAuthTokens();
     const token = auth?.token;

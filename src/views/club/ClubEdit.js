@@ -28,6 +28,7 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetClub } from '@/services/club/clubQueries';
 import { updateClubInfo } from '@/services/club/clubService';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 import { normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
@@ -187,9 +188,12 @@ function ClubEdit({ navigation, route }) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
+      // RWDIRIG (29/10) : « Failed to update club info: Failed to upload file: Files are empty »
+      // s'affichait tel quel (vu par Adel en prod). Un refus que le serveur nomme garde sa
+      // traduction ; tout le reste, la phrase française de l'écran.
       Alert.alert(
         t('common.error', 'Erreur'),
-        mutationError?.message || t(
+        getApiErrorTranslation(mutationError) || t(
           'clubEdit.errors.updateFallback',
           'Impossible de mettre à jour ce club pour le moment.',
         ),

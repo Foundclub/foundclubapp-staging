@@ -18,6 +18,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
+
 /**
  * User avatar selection screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -56,7 +58,9 @@ function UserAvatar({ navigation }) {
           'userAvatar.alerts.updateError.network',
           'Connexion impossible au serveur pour le moment. Réessaie dans quelques secondes.',
         )
-        : (rawMessage || t(
+        // RWDIRIG (29/10) : « Failed to update user data: … 2 errors occurred »
+        // s'affichait tel quel.
+        : (getApiErrorTranslation(error) || t(
           'userAvatar.alerts.updateError.message',
           'Impossible de mettre à jour ton profil.',
         ));

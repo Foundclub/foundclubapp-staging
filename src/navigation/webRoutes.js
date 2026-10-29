@@ -139,6 +139,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.SearchReservations]: '/search/reservations',
   [RouteNames.SearchRecruitment]: '/search/recruitment',
   [RouteNames.SearchAlerts]: '/search/alerts',
+  // RWDIRIG (29/10) : la carte « Mes activités » de l'accueil ne menait nulle part sur le site.
+  [RouteNames.MyActivities]: '/search/activities',
   [RouteNames.MercatoFilters]: '/search/recruitment/filters',
   [RouteNames.ReservationFilters]: '/search/reservations/filters',
   [RouteNames.NotificationList]: '/notifications',
