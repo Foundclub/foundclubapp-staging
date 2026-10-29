@@ -8709,7 +8709,7 @@ export default {
       openErrorDescription: 'Le document n a pas pu être ouvert.',
       openErrorTitle: 'Ouverture impossible',
       photo: 'Photo',
-      photos: 'Photos',
+      photos: 'Médias',
       pickFile: 'Envoyer un fichier',
       pickMedia: 'Envoyer un média',
       poll: 'Sondage',
@@ -9223,6 +9223,16 @@ export default {
       named_other: '{{names}} écrivent...',
       short: 'écrit…',
       someone: "Quelqu'un écrit...",
+    },
+    // MSG-MEDIA (29/10) — une vidéo dans la messagerie.
+    video: {
+      close: 'Fermer la vidéo',
+      label: 'Vidéo',
+      openInBrowser: 'Ouvrir dans le navigateur',
+      play: 'Lire la vidéo',
+      tooLong: 'Vidéo trop longue : {{max}} maximum. '
+        + 'Raccourcis-la dans ta galerie, puis renvoie-la.',
+      unreadable: 'Cette vidéo ne se lit pas ici.',
     },
     viewMatch: 'Voir la fiche match',
     voice: {

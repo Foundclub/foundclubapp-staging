@@ -8204,7 +8204,7 @@ export default {
       openErrorDescription: "The document couldn't be opened.",
       openErrorTitle: 'Unable to open',
       photo: 'Photo',
-      photos: 'Photos',
+      photos: 'Media',
       pickFile: 'Send a file',
       pickMedia: 'Send media',
       poll: 'Poll',
@@ -8707,6 +8707,15 @@ export default {
       named_other: '{{names}} are typing...',
       short: 'typing…',
       someone: 'Someone is typing...',
+    },
+    // MSG-MEDIA (29/10) — a video in the chat.
+    video: {
+      close: 'Close the video',
+      label: 'Video',
+      openInBrowser: 'Open in the browser',
+      play: 'Play the video',
+      tooLong: 'Video too long: {{max}} maximum. Trim it in your gallery, then send it again.',
+      unreadable: 'This video cannot be played here.',
     },
     viewMatch: 'View match details',
     voice: {
