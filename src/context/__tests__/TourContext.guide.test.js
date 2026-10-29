@@ -114,7 +114,9 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.gauge).toBe(0);
     // GUIDE-ENTETE (3- A, 28/10) : retour à l'accueil en dépilant (relance depuis Mon compte).
     expect(mockNavigate)
-      .toHaveBeenCalledWith(RouteNames.HomeTab, { screen: RouteNames.SearchHome }, { pop: true });
+      .toHaveBeenCalledWith(RouteNames.HomeTab, {
+        params: { pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search,
+      }, { pop: true });
     expect(tour.missions.map((mission) => mission.id))
       .toEqual(['coach_m1', 'coach_m2', 'coach_m3', 'coach_m4', 'coach_b1', 'coach_b2']);
   });
@@ -259,7 +261,7 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     // GUIDE-BONUS (L5) : en dépilant (la compo d'exemple sort de la pile).
     expect(mockNavigate).toHaveBeenLastCalledWith(
       RouteNames.HomeTab,
-      { screen: 'SearchHome' },
+      { params: { pop: true, screen: 'SearchHome' }, screen: RouteNames.Search },
       { pop: true },
     );
   });

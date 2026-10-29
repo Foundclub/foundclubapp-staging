@@ -780,14 +780,16 @@ function Profile({ navigation, route }) {
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
    *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
-   *   nombre?: number, a11y?: string, accessoire?: import('react').ReactNode }} params -
+   *   nombre?: number, a11y?: string, accessoire?: import('react').ReactNode,
+   *   sousLigne?: boolean }} params -
    *   `nombre` (PAR-L7) : un compte qui n'est pas une alerte (« 2 » enfants), dit par une pastille
    *   cyan, jamais par la pastille rouge. `accessoire` (RESA-L6B-1) : ce qui se lit lui-même (le
-   *   nombre de « Mes réservations »), posé à la place de cette pastille.
+   *   nombre de « Mes réservations »), posé à la place de cette pastille. `sousLigne`
+   *   (GUIDE-FINITIONS-2 N10) : un choix d'un menu déplié, en retrait sous sa rangée.
    */
   const renderAccountRow = ({
     a11y = undefined, accessoire = null, badge = 0, destructive = false, icon, isLast = false,
-    key, label, nombre = 0, onPress, value = undefined,
+    key, label, nombre = 0, onPress, sousLigne = false, value = undefined,
   }) => (
     <TouchableOpacity
       accessibilityLabel={a11y}
@@ -803,6 +805,7 @@ function Profile({ navigation, route }) {
           paddingVertical: 12,
         },
         !isLast && { borderBottomColor: SURFACE.divider, borderBottomWidth: 1 },
+        sousLigne && { marginLeft: 42 },
       ]}
     >
       <View style={{
@@ -832,7 +835,10 @@ function Profile({ navigation, route }) {
         </Text>
         {/* COLL-ACCUEIL — la rangée de la Ville : son nom, puis « Ma collectivité » dessous. */}
         {value ? (
-          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{value}</Text>
+          // N10 : le détail d'un choix de menu tient sur deux lignes (retrait de 42).
+          <Text numberOfLines={sousLigne ? 2 : 1} style={[Fonts.p3, Fonts.neutral300]}>
+            {value}
+          </Text>
         ) : null}
       </View>
       {nombre > 0 ? (
@@ -1136,19 +1142,27 @@ function Profile({ navigation, route }) {
           key: 'coachGuide-resume',
           label: t('profile.coachGuide.resume', 'Reprendre là où j’en étais'),
           onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
+          sousLigne: true,
         }] : []),
         {
           icon: Images.flag,
           key: 'coachGuide-review',
           label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
           onPress: () => chooseGuide(() => tour.startTour('coach', { review: true })),
+          sousLigne: true,
         },
         // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
         ...(isGuideInProgress ? [] : [{
           icon: Images.flag,
           key: 'coachGuide-bonus',
           label: t('profile.coachGuide.bonus', 'Faire un bonus'),
+          sousLigne: true,
+          // N10 : lesquels (B1 puis B2, `startTour` part du premier).
           onPress: () => chooseGuide(() => tour.startTour('coach', { fromMission: 'coach_b1' })),
+          value: t(
+            'profile.coachGuide.bonusDetail',
+            'Voir qui vient, puis convoquer pour un match',
+          ),
         }]),
       ] : []),
     {

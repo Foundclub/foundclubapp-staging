@@ -30,7 +30,9 @@ const t = (id, fallback, values) => String(
 );
 
 const homeTarget = {
-  params: { screen: RouteNames.SearchHome },
+  // L'accueil vit dans l'onglet `Search` (allerDansLOnglet.js) : sans l'onglet nommé,
+  // l'onglet au premier plan restait (clôture sur le Planning, GUIDE-FINITIONS-2 N7).
+  params: { params: { pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search },
   // GUIDE-BONUS (L5) : revenir en dépilant ; un accueil empilé en doublon laissait
   // l'onglet visé sans cadre ni voile (b1-dock, audit 39-41).
   pop: true,
@@ -130,6 +132,15 @@ const MISSIONS = [
       get 'paywall.club-tier-team-limit'() { return teamQuota(); },
       get 'paywall.team-limit'() { return teamQuota(); },
     },
+    /**
+     * GUIDE-FINITIONS-2 n° 20 : l'ouverture d'un coach sans club annonce l'étape
+     * « club » de M1 (la plus longue), absente des 4 missions (capture 75).
+     * @param {any} flags - Situation au départ (`buildFlags`).
+     * @returns {string | null} Ligne sous la mission, ou rien.
+     */
+    openingDetail: (flags) => (flags?.hadClub || flags?.hadTeam || flags?.joinPending
+      ? null
+      : t('missions.m1-club', 'D’abord, trouve ton club (ou crée-le)')),
     get title() { return t('missions.m1', 'Créer ton équipe'); },
   },
   {
@@ -161,7 +172,8 @@ const MISSIONS = [
         return t('refusal.friendly', 'L’annonce n’a pas pu être publiée.');
       },
     },
-    get title() { return t('missions.m4', 'Rechercher'); },
+    // GUIDE-FINITIONS-2 n° 26 : l'acte essentiel est l'annonce, pas « Rechercher ».
+    get title() { return t('missions.m4', 'Proposer un match amical'); },
   },
   {
     estimatedSeconds: 15,
@@ -258,7 +270,15 @@ const STEPS = [
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && isJoinPending(ctx),
   },
   {
-    advanceOn: { key: RouteNames.TeamWizardName, type: 'route' },
+    advanceOn: [
+      // GUIDE-FINITIONS-2 n° 2 : la demande est passée « en attente » après l'entrée
+      // dans l'étape (pause, demande faite hors du guide) ; le tunnel montre alors
+      // « Ton adhésion est en attente » : le guide attend avec lui, pas de tw1.
+      {
+        goto: 'm1-wait', key: RouteNames.TeamWizardName, type: 'route', when: isJoinPending,
+      },
+      { key: RouteNames.TeamWizardName, type: 'route' },
+    ],
     id: 'm1-new',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock',
@@ -794,8 +814,15 @@ const STEPS = [
     missionId: 'coach_b1',
     resumeFrom: 'b1-dock',
     // La carte de LA séance créée en M3 (pack 02, B1) ; inconnue : bulle seule.
+    // GUIDE-FINITIONS-2 N11 : sa prochaine date pas encore finie (capture 39 : la
+    // séance du jour « déjà passée ») ; une progression d'avant n'a que la 1re.
     targetsFor: (/** @type {any} */ context) => {
-      const eventId = context?.created?.['event.created']?.documentId;
+      const created = context?.created?.['event.created'];
+      const now = Date.now();
+      const next = (Array.isArray(created?.dates) ? created.dates : []).find(
+        (/** @type {any} */ date) => new Date(date?.endDate || date?.date).getTime() > now,
+      );
+      const eventId = next?.documentId || created?.documentId;
       return eventId ? [`planning.event.${eventId}`] : [];
     },
     get text() { return t('b1-card', 'Ouvre ta séance.'); },
@@ -904,8 +931,9 @@ const STEPS = [
     get text() {
       return t(
         'b2-pub',
-        'Glisse tes joueur·se·s sur les postes, puis publie : la compo part dans le canal de '
-          + 'l’équipe, avec une demande de réponse.',
+        // GUIDE-FINITIONS-2 N8 : match d'exemple, rien ne part (capture 46).
+        'Glisse tes joueur·se·s sur les postes, puis publie. Sur un vrai match, la compo part '
+          + 'dans le canal de l’équipe ; ici, rien n’est envoyé.',
       );
     },
     veil: false,
@@ -957,6 +985,14 @@ const REVIEW_STEPS = [
     'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match '
       + 'amical » publie ton annonce.',
   )),
+  {
+    // GUIDE-FINITIONS-2 N10 : la visite finissait sans un mot, sur Rechercher (capture 14).
+    ...reviewStep('rv-end', '', homeTarget, [], () => t(
+      'rv-end',
+      'C’est tout pour la visite : rien n’a été créé. Le guide se relance depuis Mon compte.',
+    )),
+    get nextLabel() { return t('review.end', 'Terminer'); },
+  },
 ];
 
 export const COACH_GUIDE = Object.freeze({
@@ -964,11 +1000,14 @@ export const COACH_GUIDE = Object.freeze({
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
    * doit pas faire sauter la suite de la branche « sans club »).
    * @param {{ userData: any }} context - Personne connectée.
-   * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean }} Drapeaux.
+   * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean; joinPending: boolean }}
+   *   Drapeaux.
    */
   buildFlags: ({ userData }) => ({
     firstName: String(userData?.firstname || userData?.firstName || ''),
     hadClub: Boolean(userData?.club?.documentId),
+    // n° 20 : l'ouverture ne dit pas « trouve ton club » à qui attend déjà le sien.
+    joinPending: isJoinPending({ userData }),
     // Seules les équipes qu'il entraîne (décision du chef, 27/10), et dans son
     // club courant : l'écran Équipes ne montre que celui-là (tournée : Julien
     // entraîne ailleurs, et « ouvre-la » visait son équipe de JOUEUR).

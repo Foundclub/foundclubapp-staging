@@ -77,10 +77,11 @@ function GaugeRing({ size, value }) {
  * @param {string} props.marker - Numéro ou « + ».
  * @param {string} [props.right] - Texte à droite (« +25 % », « Passé »).
  * @param {boolean} [props.bonus] - Bonus.
+ * @param {string | null} [props.detail] - Ligne sous le libellé (GUIDE-FINITIONS-2 n° 20).
  * @returns {import('react').ReactElement} Ligne.
  */
 function MissionRow({
-  bonus, done, label, marker, right,
+  bonus, detail, done, label, marker, right,
 }) {
   const { Colors, Fonts } = useTheme();
   return (
@@ -117,7 +118,10 @@ function MissionRow({
           </Text>
         )}
       </View>
-      <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{label}</Text>
+        {detail ? <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{detail}</Text> : null}
+      </View>
       {right ? (
         <Text style={[Fonts.p3Bold, { color: bonus ? Colors.gold500 : Colors.neutral400 }]}>
           {right}
@@ -174,6 +178,7 @@ function TourFullScreen({ kind }) {
         <View style={{ rowGap: 8 }}>
           {essentials.map((/** @type {any} */ mission, index) => (
             <MissionRow
+              detail={mission.openingDetail?.(flags)}
               key={mission.id}
               label={mission.title}
               marker={String(index + 1)}
@@ -281,6 +286,13 @@ function TourFullScreen({ kind }) {
                 right={mission.estimatedSeconds ? `~${mission.estimatedSeconds} s` : undefined}
               />
             ))}
+            {/* GUIDE-FINITIONS-2 n° 29 : « Plus tard » dit où les retrouver. */}
+            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {t(
+                'tourCatalog.coach.palier.laterHint',
+                'Plus tard ? Les bonus t’attendent dans Mon compte › Guide entraîneur·e.',
+              )}
+            </Text>
           </View>
         ) : null}
       </>
@@ -320,13 +332,19 @@ function TourFullScreen({ kind }) {
             || t('tourCatalog.coach.close.yourTeam', 'Ton équipe'),
           ...SANS_ECHAPPEMENT,
         })
-        : null,
+        // n° 29 : l'équipe d'un coach qui l'avait déjà (M1 « Retrouve ton équipe »).
+        : (flags?.hadTeam
+          && t('tourCatalog.coach.close.teamReady', 'Ton équipe, déjà prête')) || null,
       created?.['team.invite.shared']
         ? t('tourCatalog.coach.close.link', "Lien d'invitation partagé")
         : null,
       created?.['event.created']
-        ? t('tourCatalog.coach.close.sessions', '{{count}} séance(s) '
-          + 'programmée(s)', { count: Number(created['event.created'].occurrences) || 1 })
+        // n° 29 : pluriel d'i18next (`sessions_one` / `sessions_other`), plus de « (s) ».
+        ? t('tourCatalog.coach.close.sessions', {
+          count: Number(created['event.created'].occurrences) || 1,
+          defaultValue_one: '{{count}} séance programmée',
+          defaultValue_other: '{{count}} séances programmées',
+        })
         : null,
       created?.['friendlyMatch.ad.published']
         ? t('tourCatalog.coach.close.friendly', 'Annonce de match amical publiée')
@@ -395,8 +413,20 @@ function TourFullScreen({ kind }) {
             </View>
           ))}
         </View>
+        {/* n° 29 : le match d'exemple de B2 n'a rien laissé. */}
+        {missionStatus?.coach_b2 === 'done' ? (
+          <Text style={[Fonts.p3, { color: Colors.neutral200, textAlign: 'center' }]}>
+            {t(
+              'tourCatalog.coach.close.example',
+              'Le match d’exemple est effacé : rien n’a été envoyé.',
+            )}
+          </Text>
+        ) : null}
         <Text style={[Fonts.p3, { color: Colors.neutral400, textAlign: 'center' }]}>
-          {t('tourCatalog.coach.close.footer', 'Retrouve ce guide dans Mon compte.')}
+          {t(
+            'tourCatalog.coach.close.footer',
+            'Retrouve ce guide dans Mon compte › Guide entraîneur·e.',
+          )}
         </Text>
       </>
     );

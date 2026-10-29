@@ -82,6 +82,9 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+// GUIDE-FINITIONS-2 N7 : l'accueil vit dans l'onglet `Search` (allerDansLOnglet.js).
+const ACCUEIL = { params: { pop: true, screen: 'SearchHome' }, screen: RouteNames.Search };
+
 describe('TourContext — démarrage', () => {
   // TUTOE (27/10) : le tour coach est devenu le guide à missions (v3, ses
   // témoins sont dans TourContext.guide.test.js). Le moteur v2 se caractérise
@@ -96,7 +99,7 @@ describe('TourContext — démarrage', () => {
     expect(tour.tourStatus).toBe('active');
     expect(tour.stepIndex).toBe(0);
     expect(tour.currentStep.id).toBe('president_club');
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, ACCUEIL);
     expect(readPersisted()).toEqual({
       profileKey: 'president', skippedStepIds: [], stepIndex: 0,
     });
@@ -189,7 +192,7 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
     act(() => jest.advanceTimersByTime(1800));
 
     expect(tour.isTourActive).toBe(false);
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, ACCUEIL);
   });
 
   it('dirigeant : même retour à l`accueil depuis la dernière étape', () => {
@@ -200,7 +203,7 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
     act(() => { tour.completeCurrentStep(); });
     act(() => jest.advanceTimersByTime(1800));
 
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, ACCUEIL);
   });
 
   it('le retour n`a lieu qu`à la FIN : une étape intermédiaire suit sa cible', () => {
@@ -212,7 +215,7 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
     act(() => jest.advanceTimersByTime(1800));
 
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.SearchHub, { activeType: 'events' });
-    expect(mockNavigate).not.toHaveBeenCalledWith(RouteNames.HomeTab, { screen: 'SearchHome' });
+    expect(mockNavigate).not.toHaveBeenCalledWith(RouteNames.HomeTab, ACCUEIL);
   });
 });
 
