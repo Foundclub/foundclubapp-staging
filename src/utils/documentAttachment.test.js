@@ -37,3 +37,21 @@ describe('BH04 / P3-13 — légende « Pièce jointe » générée', () => {
     expect(isGeneratedDocumentFallbackText('Pièce jointe : contrat.pdf', piece)).toBe(true);
   });
 });
+
+describe('MSG-MEDIA — une vidéo de la galerie n est pas un document', () => {
+  test('un .mov d iPhone est une vidéo, pas une carte document « MOV »', () => {
+    // eslint-disable-next-line global-require
+    const { isVideoAttachment } = require('./documentAttachment');
+    const mov = { mime: 'video/quicktime', name: 'IMG_0042.MOV', url: '/uploads/IMG_0042.mov' };
+    expect(isVideoAttachment(mov)).toBe(true);
+    expect(isDocumentAttachment(mov)).toBe(false);
+  });
+
+  test('un mp4 porte le type vidéo ; un PDF ou une photo non', () => {
+    // eslint-disable-next-line global-require
+    const { isVideoAttachment } = require('./documentAttachment');
+    expect(isVideoAttachment({ mime: 'video/mp4', name: 'clip.mp4' })).toBe(true);
+    expect(isVideoAttachment({ mime: 'application/pdf', name: 'guide.pdf' })).toBe(false);
+    expect(isVideoAttachment({ mime: 'image/jpeg', name: 'photo.jpg' })).toBe(false);
+  });
+});

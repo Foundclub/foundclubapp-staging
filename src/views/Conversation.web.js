@@ -133,6 +133,10 @@ import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
 import { buildExternalMapLinks } from '@/platform/maps/externalMap';
 import media from '@/platform/media'
+import lireDureeVideo from '@/platform/media/lireDureeVideo.web';
+import {
+  readVideoMessageText, videoMessageText, videoSizeRefusal,
+} from '@/platform/media/videoLimits';
 import {
   useGetChatById,
   useGetChatMessageReactions,
@@ -161,7 +165,8 @@ import {
   getDocumentDisplayName,
   isDocumentAttachment,
   isImageAttachment,
-} from '@/utils/documentAttachment'
+  isVideoAttachment,
+} from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import { getImageUrl } from '@/utils/imageUrl'
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
@@ -181,7 +186,7 @@ import {
 } from '@/constants/leagueLegalAcceptance'
 
 const { openUrl } = links || {}
-const { pickDocument, pickImage, recordVoiceNote } = media || {}
+const { pickDocument, recordVoiceNote } = media || {};
 
 // @ts-ignore: FIXME: Baseline TS regression
 const formatDateTime = (value, options = {}) => {
@@ -2374,7 +2379,7 @@ function Conversation({ navigation, route }) {
   }, [])
 
   // @ts-ignore: FIXME: Baseline TS regression
-  const sendPickedFile = useCallback(async (file) => {
+  const sendPickedFile = useCallback(async (file, dureeVideo = 0) => {
     if (!file || !chatId) return
 
     setIsUploading(true)
@@ -2389,9 +2394,11 @@ function Conversation({ navigation, route }) {
       }
 
       const firstFile = uploadedFiles[0]
+      // MSG-MEDIA — une vidéo part avec « Vidéo · 0:42 », comme sur le téléphone.
+      const texteVideo = videoMessageText(firstFile?.mime || file?.type, dureeVideo);
       const fallbackMessage = isImageAttachment(firstFile)
         ? composerText
-        : (composerText || `Pièce jointe : ${getDocumentDisplayName(firstFile)}`)
+        : (composerText || texteVideo || `Pièce jointe : ${getDocumentDisplayName(firstFile)}`);
 
       await sendChatPayload({
         attachments: uploadedFiles,
@@ -2411,10 +2418,19 @@ function Conversation({ navigation, route }) {
 
   const handlePickImage = useCallback(async () => {
     try {
-      const file = await pickImage()
-      if (file) {
-        await sendPickedFile(file)
+      // MSG-MEDIA — « Médias » : photo OU vidéo. Une vidéo trop lourde est refusée avant l'envoi.
+      const file = await pickDocument({ accept: 'image/*,video/*' });
+      if (!file) return;
+      const estVideo = String(file.type || '').startsWith('video/');
+      const dureeVideo = estVideo ? await lireDureeVideo(file) : 0;
+      const refus = estVideo ? videoSizeRefusal(file.size) : '';
+      if (refus) {
+        // Même canal que les autres refus de pièce jointe du site.
+        // eslint-disable-next-line no-alert
+        window.alert(refus);
+        return;
       }
+      await sendPickedFile(file, dureeVideo);
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
       window.alert(error?.message || i18next.t(
@@ -2931,6 +2947,31 @@ function Conversation({ navigation, route }) {
         const label = getDocumentDisplayName(attachment)
         const isImage = isImageAttachment(attachment)
         const isDocument = isDocumentAttachment(attachment)
+
+        // MSG-MEDIA — la vidéo se lit DANS la bulle : le navigateur montre la première image,
+        // la durée et ses commandes (plein écran, téléchargement). Aucune bibliothèque.
+        if (isVideoAttachment(attachment) && attachmentUrl) {
+          return (
+            // Vidéo d'un membre, sans piste de sous-titres à proposer.
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video
+              controls
+              data-testid="video-message-web"
+              key={attachmentUrl}
+              playsInline
+              preload="metadata"
+              src={attachmentUrl}
+              style={{
+                background: 'black',
+                borderRadius: 18,
+                display: 'block',
+                maxHeight: 260,
+                maxWidth: '100%',
+                width: '100%',
+              }}
+            />
+          );
+        }
 
         if (isImage && attachmentUrl) {
           return (
@@ -4029,7 +4070,12 @@ function Conversation({ navigation, route }) {
       Boolean(String(message?.composition?.staffMessage || '').trim())
       || !canAcceptFriendlyProposal(message?.composition, userData?.documentId)
     );
-    const texte = evenement || texteDeSecoursInutile ? '' : String(message?.message || '').trim();
+    // MSG-MEDIA — « Vidéo · 0:42 » ne se répète pas sous la vidéo ; une vraie légende, si.
+    const texteVideoAuto = attachments.some((/** @type {any} */ piece) => isVideoAttachment(piece))
+      && readVideoMessageText(message?.message).auto;
+    const texte = evenement || texteDeSecoursInutile || texteVideoAuto
+      ? ''
+      : String(message?.message || '').trim();
     // Les cartes du telephone (composition, sondage) portent deja leur cadre : elles se posent
     // SANS bulle. COL-015 — PAS l evenement : depuis MSG1A §3.8, EventMessageBubble se pose DANS
     // la bulle (BulleDuFil sur le telephone) ; nue, elle tombait sur le fond nuit du fil.
@@ -4799,7 +4845,7 @@ function Conversation({ navigation, route }) {
     {
       action: handlePickImage,
       cle: 'photos',
-      libelle: t('conversation.attachments.photos', 'Photos'),
+      libelle: t('conversation.attachments.photos', 'Médias'),
     },
     {
       action: handlePickDocument,
