@@ -5,14 +5,17 @@ import {
 import { useCallback, useMemo, useRef } from 'react';
 
 import {
+  invalidateAfterAction,
+  resolveNotificationRefreshAction,
+} from '@/domains/refresh/afterAction';
+
+import {
   deleteNotification,
   getNotifications,
   getUnreadCount,
   markAllAsRead,
   markAsRead,
 } from '@/services/notification/notificationService';
-
-import { invalidateAfterAction, resolveNotificationRefreshAction } from '@/domains/refresh/afterAction';
 
 const PAGE_SIZE = 20;
 export const NOTIFICATIONS_QUERY_KEY = ['notifications'];

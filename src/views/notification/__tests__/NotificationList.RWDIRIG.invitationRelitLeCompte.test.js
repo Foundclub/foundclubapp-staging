@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -76,8 +77,8 @@ jest.mock('@/hooks/useNotificationController', () => ({
     loadMore: jest.fn(),
     markAllAsRead: jest.fn(),
     markAsRead: mockMarkAsRead,
-    refreshAfterOpening: mockRefreshAfterOpening,
     notifications: mockNotifications.list,
+    refreshAfterOpening: mockRefreshAfterOpening,
     refreshNotifications: jest.fn(),
     unreadCount: 1,
   }),

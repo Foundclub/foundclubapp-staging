@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
@@ -27,10 +28,17 @@ const monter = () => {
   const invalidees = jest.spyOn(queryClient, 'invalidateQueries');
   /** @type {any} */
   let controleur = null;
-  const Sonde = () => {
+  /**
+   *
+   */
+  /**
+   * La sonde qui lit le contrôleur.
+   * @returns {null} rien à afficher.
+   */
+  function Sonde() {
     controleur = useNotificationController({ notificationsEnabled: false, unreadCountEnabled: false });
     return null;
-  };
+  }
   act(() => {
     renderer.create(<QueryClientProvider client={queryClient}><Sonde /></QueryClientProvider>);
   });
