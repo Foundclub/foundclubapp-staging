@@ -8,16 +8,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import OTPForm from '@/components/organisms/otpForm/OTPForm';
 import PhoneForm from '@/components/organisms/signinPhoneForm/SigninPhoneForm';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 /**
  * Registration screen component for new user sign-up.
  * Handles phone number input and OTP verification for user registration.
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Registration screen component
  */
-function Register() {
+function Register({ navigation }) {
   // local states
   const [phone, setPhone] = useState('');
   // hooks
@@ -103,6 +107,7 @@ function Register() {
               <PhoneForm
                 isLoading={isLoading}
                 onSubmit={handleFormSubmit}
+                submitLabel={t('register.actions.submit')}
               />
             )}
           {authErrorMessage ? (
@@ -110,6 +115,16 @@ function Register() {
               {authErrorMessage}
             </Text>
           ) : null}
+          {/* CORR-INSCRIPTION p12 : même page que « Connecte-toi », le petit bouton bascule en retour. */}
+          {canShowCodeButton ? null : (
+            <Button
+              disabled={otpMutation.isPending}
+              onPress={() => navigation.navigate(RouteNames.Login)}
+              style={Alignments.fullWidth}
+              title={t('register.actions.haveAccount')}
+              variant="Ghost"
+            />
+          )}
         </View>
       </ScrollView>
     </FormScreenContainer>

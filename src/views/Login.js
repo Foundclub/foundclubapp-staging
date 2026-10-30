@@ -26,7 +26,7 @@ function Login({ navigation }) {
   const [phone, setPhone] = useState('');
   // hooks
   const {
-    Alignments, ApplicationStyle, Fonts, Images, Spaces,
+    Alignments, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -136,38 +136,16 @@ function Login({ navigation }) {
               {authErrorMessage}
             </Text>
           ) : null}
+          {/* CORR-INSCRIPTION p12 (consigne d'Adel) : un petit bouton en bas, qui bascule sur
+              « Crée ton compte », à la place du séparateur « OU » et du gros bouton. */}
           {canShowCodeButton ? null : (
-            <View style={[Spaces.gap[16], Spaces.paddingTop[8]]}>
-              <View style={[
-                Alignments.alignCenter,
-                Alignments.row,
-                Spaces.gap[16],
-              ]}
-              >
-                <View style={[
-                  Alignments.fill,
-                  ApplicationStyle.separator,
-                  ApplicationStyle.backgroundColor.neutral500,
-                ]}
-                />
-                <Text style={[Fonts.p1Bold, Fonts.neutral400]}>
-                  {t('login.or').toUpperCase()}
-                </Text>
-                <View style={[
-                  Alignments.fill,
-                  ApplicationStyle.separator,
-                  ApplicationStyle.backgroundColor.neutral500,
-                ]}
-                />
-              </View>
-              <Button
-                disabled={otpMutation.isPending}
-                onPress={handleGoToRegister}
-                style={Alignments.fullWidth}
-                title={t('login.actions.register')}
-                variant="Secondary"
-              />
-            </View>
+            <Button
+              disabled={otpMutation.isPending}
+              onPress={handleGoToRegister}
+              style={Alignments.fullWidth}
+              title={t('login.actions.noAccount')}
+              variant="Ghost"
+            />
           )}
         </View>
       </ScrollView>

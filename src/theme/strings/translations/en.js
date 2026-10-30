@@ -13981,6 +13981,7 @@ export default {
   login: {
     actions: {
       login: 'Log in',
+      noAccount: 'Not signed up yet? Create your account',
       register: 'Create an account',
     },
     fields: {
@@ -18526,7 +18527,9 @@ export default {
   },
   register: {
     actions: {
+      haveAccount: 'Already signed up? Log in',
       register: 'Continue',
+      submit: 'Create your account',
     },
     fields: {
       phoneNumber: {

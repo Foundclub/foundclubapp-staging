@@ -26,9 +26,10 @@ const loginSchema = Joi.object({
  * @param {object} props - Component props
  * @param {boolean} props.isLoading - Loading state of the form
  * @param {(data: { phoneNumber: string }) => void} props.onSubmit
+ * @param {string} [props.submitLabel] - CORR-INSCRIPTION p12 : « Créer ton compte » sur l'inscription
  * @returns {import('react').ReactElement} Phone form component
  */
-function PhoneForm({ isLoading, onSubmit }) {
+function PhoneForm({ isLoading, onSubmit, submitLabel }) {
   const { Alignments, Spaces } = useTheme();
   const { t } = useTranslation();
 
@@ -71,7 +72,7 @@ function PhoneForm({ isLoading, onSubmit }) {
         isLoading={isLoading}
         onPress={handleSubmit(onSubmit)}
         style={Alignments.fullWidth}
-        title={t('login.actions.login')}
+        title={submitLabel || t('login.actions.login')}
         variant="Primary"
       />
     </View>

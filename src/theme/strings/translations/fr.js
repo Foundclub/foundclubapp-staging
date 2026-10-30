@@ -14839,6 +14839,8 @@ export default {
   login: {
     actions: {
       login: 'Se connecter',
+      // CORR-INSCRIPTION p12 — le petit bouton du bas qui bascule sur « Crée ton compte ».
+      noAccount: 'Pas encore inscrit ? Créer ton compte',
       register: 'Créer un compte',
     },
     fields: {
@@ -19241,7 +19243,10 @@ export default {
   },
   register: {
     actions: {
+      // CORR-INSCRIPTION p12 — page identique à « Connecte-toi », sauf ces deux libellés.
+      haveAccount: 'Déjà inscrit ? Se connecter',
       register: 'Continuer',
+      submit: 'Créer ton compte',
     },
     fields: {
       phoneNumber: {
