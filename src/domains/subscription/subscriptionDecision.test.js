@@ -121,7 +121,7 @@ describe('subscriptionDecision', () => {
       ctaLabel: 'Voir mon abonnement',
       description: 'La gestion des sponsors du club est réservée à l’offre Club.'
         + ' Offre conseillée: Club.',
-      title: 'Sponsors reserves',
+      title: 'Sponsors réservés',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -549,8 +549,8 @@ describe('S12-B — le refus de quota au licencie', () => {
   test('ses benefices ne REVENDENT rien : ce club paie deja', () => {
     expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
       'Les membres déjà inscrits gardent tout',
-      'Seules les NOUVELLES adhesions sont en pause',
-      'Passe a la tranche superieure pour rouvrir',
+      'Seules les NOUVELLES adhésions sont en pause',
+      'Passe à la tranche supérieure pour rouvrir',
     ]);
   });
 

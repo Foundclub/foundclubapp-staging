@@ -541,7 +541,7 @@ describe('SubscriptionPaywallSheet — palier Club plein (CLUB_TIER_TEAM_LIMIT)'
     });
     const tree = renderSheet({ auth, decision: CLUB_TIER_LIMIT_DECISION });
 
-    expect(allTexts(tree)).toContain('Limite d équipes atteinte');
+    expect(allTexts(tree)).toContain('Limite d’équipes atteinte');
     // Un second achat Club sur un club deja couvert leve CLUB_ALREADY_COVERED
     // (subscription-billing.ts:617) : la montee de palier passe par le
     // CARROUSEL, qui sait deja faire un changement de plan.
