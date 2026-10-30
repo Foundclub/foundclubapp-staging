@@ -36,13 +36,19 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        const valeur = String(cle || '')
+        // CORR-TEXTES (point 24) : t(clef, options) et les formes _one / _other, comme i18next.
+        const opts = repli && typeof repli === 'object' ? repli : options;
+        const lire = (/** @type {string} */ chemin) => chemin
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        let valeur = lire(String(cle || ''));
+        if (valeur === undefined && typeof opts?.count === 'number') {
+          valeur = lire(`${cle}${opts.count === 1 ? '_one' : '_other'}`);
+        }
         let texte = cle;
         if (typeof valeur === 'string') texte = valeur;
         else if (typeof repli === 'string') texte = repli;
-        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(options?.[nom] ?? ''));
+        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(opts?.[nom] ?? ''));
       },
     }),
   };

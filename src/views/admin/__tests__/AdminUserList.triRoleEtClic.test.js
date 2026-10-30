@@ -243,7 +243,7 @@ test('USERS/3 — par defaut, on demande les DERNIERS inscrits', () => {
 test('USERS/4 — on peut demander les PLUS ANCIENS', () => {
   const arbre = monter();
 
-  expect(appuyerSur(arbre, 'Trier par date d inscription')).toBe(true);
+  expect(appuyerSur(arbre, 'Trier par date d’inscription')).toBe(true);
 
   const dernier = mockParamsRecus[mockParamsRecus.length - 1];
   expect(dernier.sort).toEqual(['createdAt:asc']);
