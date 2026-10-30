@@ -1197,8 +1197,35 @@ const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
 
 // TUNNELREPRISE — les inscriptions ouvertes dans CE lancement de l'app (memoire, pas stockage) :
 // ce qui distingue « je continue mon tunnel » de « je rouvre l'app » (`getOnboardingViews`).
+// RWDIRIG3 (30/10, chef « Q2 ») — sur le SITE, un rechargement d'onglet n'est pas une reouverture :
+// le lancement est aussi garde dans le sessionStorage de l'onglet (un onglet neuf l'a vide). Le
+// telephone n'en a pas : rien ne change pour lui.
+const CLE_ONGLET = 'tunnelsOuvertsCetteSession';
+
+/**
+ * Le sessionStorage de l'onglet, s'il y en a un (site seulement).
+ * @returns {Storage | null} Le stockage, ou null (telephone, navigateur qui le refuse).
+ */
+const stockageDeLOnglet = () => {
+  try {
+    return (typeof window !== 'undefined' && window.sessionStorage) || null;
+  } catch {
+    return null;
+  }
+};
+
+/** @returns {string[]} Les inscriptions ouvertes dans cet onglet. */
+const lireLOnglet = () => {
+  try {
+    const valeur = JSON.parse(stockageDeLOnglet()?.getItem(CLE_ONGLET) || '[]');
+    return Array.isArray(valeur) ? valeur.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
 /** @type {Set<string>} */
-const tunnelsOuvertsCetteSession = new Set();
+const tunnelsOuvertsCetteSession = new Set(lireLOnglet());
 
 /**
  * TUNNELREPRISE — remet a zero les inscriptions de ce lancement (un « nouveau lancement »).
@@ -1220,6 +1247,11 @@ export const markOnboardingStarted = (documentId) => {
   if (documentId) {
     storage.set(onboardingStartedKey(documentId), true);
     tunnelsOuvertsCetteSession.add(documentId);
+    try {
+      stockageDeLOnglet()?.setItem(CLE_ONGLET, JSON.stringify([...tunnelsOuvertsCetteSession]));
+    } catch {
+      // Onglet qui refuse le stockage : le lancement reste en memoire, comme au telephone.
+    }
   }
 };
 
