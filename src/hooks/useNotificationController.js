@@ -5,6 +5,11 @@ import {
 import { useCallback, useMemo, useRef } from 'react';
 
 import {
+  invalidateAfterAction,
+  resolveNotificationRefreshAction,
+} from '@/domains/refresh/afterAction';
+
+import {
   deleteNotification,
   getNotifications,
   getUnreadCount,
@@ -335,6 +340,13 @@ export const useNotificationController = (options = {}) => {
     markAsRead: markAsReadMutationAsync,
     notifications,
     refetch,
+    // RWDIRIG (30/10) — ouvrir une notification d'appartenance depuis la cloche relit ce
+    // qu'elle rend faux (la bannière « Accepter / Refuser » d'une invitation lit get-me),
+    // avec la même table que l'arrivée du push (useNotifications). Le site n'a pas de push.
+    refreshAfterOpening: (/** @type {string | undefined} */ notificationType) => {
+      const refreshAction = resolveNotificationRefreshAction(notificationType);
+      return refreshAction ? invalidateAfterAction(queryClient, refreshAction) : Promise.resolve();
+    },
     refreshNotifications: () => {
       if (notificationsEnabled) {
         refetch();

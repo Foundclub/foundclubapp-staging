@@ -864,7 +864,10 @@ function EventDetails({ navigation, route }) {
         window.alert(t(
           'useEventMutations.villePrevenue.corps',
           'La {{ville}} est prévenue : la place se libère.',
-          { ville: prevenue.collectiviteName || t('collectiviteDemandes.club.laVille', 'Ville') },
+          {
+            ville: prevenue.collectiviteName || t('collectiviteDemandes.club.laVille', 'Ville'),
+            ...SANS_ECHAPPEMENT,
+          },
         ));
       }
       navigation.goBack();
