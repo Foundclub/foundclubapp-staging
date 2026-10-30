@@ -2671,6 +2671,7 @@ export default {
       noneEligible: 'None of your children can request a place here right now.',
       noTeamYet: 'No team yet',
       onlyOneEligible: 'Selected for you: {{firstname}}, the only child who can request a place here.',
+      otherTeams: 'Other teams',
       pendingHereMany: '{{count}} requests pending here',
       pendingHereOne: '1 request pending here',
       pickerDescription: 'Choose the team. Its staff will see your child’s first name and age, and will be able to accept or decline.',
@@ -2790,6 +2791,7 @@ export default {
     },
     playerTeamPicker: {
       description: 'Select your team in this club to send a membership request.',
+      otherTeams: 'Other teams',
       selectAction: 'Choose',
       title: 'Choose my team',
     },

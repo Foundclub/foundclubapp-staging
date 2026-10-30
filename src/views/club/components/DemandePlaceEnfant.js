@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { equipeDeSonAge } from '@/domains/category/ageEtCategorie';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -16,7 +17,7 @@ const NOMBRE_D_ETAPES = 3;
 
 /**
  * @typedef {import('../clubDetailsActionMatrix').EnfantDeLaFeuille} EnfantDeLaFeuille
- * @typedef {{ details: string, documentId: string, name: string }} EquipeDeLaFeuille
+ * @typedef {{ categorie?: string, details: string, documentId: string, name: string }} EquipeDeLaFeuille
  * @typedef {{ enfant: EnfantDeLaFeuille, equipe: EquipeDeLaFeuille }} ChoixDeLaFeuille
  * @typedef {(choix: ChoixDeLaFeuille) => void} EnvoiDeLaFeuille
  */
@@ -259,31 +260,47 @@ function DemandePlaceEnfant({
               </Text>
             </TouchableOpacity>
           </View>
-          {equipes.map((ligne) => {
+          {/* CORR-INSCRIPTION p19 (recette du site, décision A) : les équipes de l'âge de l'enfant
+              d'abord ; les autres, grisées sous « Autres équipes », restent demandables. */}
+          {[
+            ...equipes.filter((ligne) => equipeDeSonAge(ligne.categorie, enfant.age)),
+            ...equipes.filter((ligne) => !equipeDeSonAge(ligne.categorie, enfant.age)),
+          ].flatMap((ligne, rang, rangees) => {
             const dejaDemandee = clesEnAttente.has(
               pendingChildRequestKey(ligne.documentId, enfant.documentId),
             );
-            return (
-              <WizardOptionCard
-                accessibilityRole="radio"
-                disabled={dejaDemandee}
-                key={`equipe-${ligne.documentId}`}
-                onPress={() => {
-                  if (!dejaDemandee) setEquipeId(ligne.documentId);
-                }}
-                selected={!dejaDemandee && ligne.documentId === equipeId}
-                subtitle={dejaDemandee
-                  ? t('clubDetails.childInterest.teamAlreadyAsked', {
-                    defaultValue: 'Demande déjà envoyée pour {{firstname}}',
-                    ...nomme,
-                  })
-                  : ligne.details}
-                subtitleLines={2}
-                testID={`demande-enfant-equipe-${ligne.documentId}`}
-                title={ligne.name}
-                titleLines={2}
-              />
+            const horsDeSonAge = !equipeDeSonAge(ligne.categorie, enfant.age);
+            const entete = horsDeSonAge && (rang === 0 || equipeDeSonAge(rangees[rang - 1].categorie, enfant.age))
+              ? (
+                <Text key="autres-equipes" style={[Fonts.p2Bold, Fonts.neutral300, { marginTop: 8 }]}>
+                  {t('clubDetails.childInterest.otherTeams', 'Autres équipes')}
+                </Text>
+              )
+              : null;
+            const carte = (
+              <View key={`equipe-${ligne.documentId}`} style={horsDeSonAge ? { opacity: 0.55 } : null}>
+                <WizardOptionCard
+                  accessibilityRole="radio"
+                  disabled={dejaDemandee}
+                  key={`equipe-${ligne.documentId}`}
+                  onPress={() => {
+                    if (!dejaDemandee) setEquipeId(ligne.documentId);
+                  }}
+                  selected={!dejaDemandee && ligne.documentId === equipeId}
+                  subtitle={dejaDemandee
+                    ? t('clubDetails.childInterest.teamAlreadyAsked', {
+                      defaultValue: 'Demande déjà envoyée pour {{firstname}}',
+                      ...nomme,
+                    })
+                    : ligne.details}
+                  subtitleLines={2}
+                  testID={`demande-enfant-equipe-${ligne.documentId}`}
+                  title={ligne.name}
+                  titleLines={2}
+                />
+              </View>
             );
+            return entete ? [entete, carte] : [carte];
           })}
           <Button
             disabled={!equipe}

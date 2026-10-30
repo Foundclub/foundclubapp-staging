@@ -2915,6 +2915,8 @@ export default {
       noTeamYet: 'Pas encore d’équipe',
       onlyOneEligible: 'Choix fait pour toi : {{firstname}}, seul enfant qui peut demander'
         + ' une place ici.',
+      // CORR-INSCRIPTION p19 — les équipes hors de l'âge de l'enfant, grisées sous ce titre.
+      otherTeams: 'Autres équipes',
       pendingHereMany: '{{count}} demandes en attente ici',
       pendingHereOne: '1 demande en attente ici',
       pickerDescription: 'Choisis l’équipe. Ses responsables verront le prénom et l’âge'
@@ -3048,6 +3050,8 @@ export default {
     },
     playerTeamPicker: {
       description: 'Sélectionne ton équipe dans ce club pour envoyer une demande d’affiliation.',
+      // CORR-INSCRIPTION p19 — les équipes hors de son âge, grisées sous ce titre.
+      otherTeams: 'Autres équipes',
       selectAction: 'Choisir',
       title: 'Choisir mon équipe',
     },
