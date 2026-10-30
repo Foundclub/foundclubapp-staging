@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Platform,
+  Share,
   Text,
   TouchableOpacity,
   View,
@@ -32,6 +33,7 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
+import { buildWebPath } from '@/navigation/webRoutes';
 
 import {
   getFriendlyMatchAds,
@@ -41,6 +43,7 @@ import {
 
 import { createLogger } from '@/utils/logger/logger';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
+import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import FriendlyMatchFiltersSheet, {
   countFriendlyMatchFilters,
@@ -263,6 +266,20 @@ function FriendlyMatchListContent({
     if (!targetAdId) return;
     navigateOrExplainOnWeb(navigation, RouteNames.FriendlyMatchAdDetails, { adId: targetAdId });
   }, [navigation]);
+
+  // CORR-CHEMINS (30/10, point 45, consigne d'Adel) : un parent ou un joueur ne propose pas de
+  // match, mais il peut faire passer l'annonce (à son entraîneur·e, par exemple) : sa fiche.
+  const handleSharePress = useCallback((/** @type {any} */ ad) => {
+    const targetAdId = getAdKey(ad);
+    if (!targetAdId) return;
+    const chemin = buildWebPath(RouteNames.FriendlyMatchAdDetails, { adId: targetAdId });
+    const url = buildPublicWebUrl({ path: chemin });
+    if (!url) return;
+    Share.share({
+      message: `${t('friendlyMatch.adCard.accessibilityLabelPrefix', 'Match amical')} : ${url}`,
+      url,
+    }).catch(() => {});
+  }, [t]);
 
   const handlePublishPress = useCallback(() => {
     navigateOrExplainOnWeb(navigation, RouteNames.FriendlyMatchWizardStack);
@@ -512,6 +529,7 @@ function FriendlyMatchListContent({
             myApplicationStatus={item.applicationStatus || null}
             onApply={handleApplyPress}
             onPress={handleAdPress}
+            onShare={canApply ? undefined : handleSharePress}
           />
         )}
         showsVerticalScrollIndicator={false}

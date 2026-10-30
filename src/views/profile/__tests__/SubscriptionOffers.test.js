@@ -1157,7 +1157,8 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
       && typeof noeud.type !== 'string');
     expect(boutons.length).toBeGreaterThan(0);
     await act(async () => { boutons[0].props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ProfileStack, { screen: RouteNames.Profile });
+    expect(mockNavigate)
+      .toHaveBeenCalledWith(RouteNames.ProfileStack, { screen: RouteNames.Profile });
   });
 });
 

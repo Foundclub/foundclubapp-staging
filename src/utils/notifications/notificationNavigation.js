@@ -766,7 +766,7 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       // `requestType === 'claim'`, plus bas).
       // ⚠️ Sans `teamId` l ecran n a rien a lister : on retombe sur la fiche.
       // CORR-CHEMINS (30/10, point 48, Adel « A ») : la liste de l'équipe est l'ancienne page « Ce
-      // flux a été migré vers Demandes » ; la demande s'ouvre directement dans Demandes, filtre équipe.
+      // flux a été migré vers Demandes » ; la demande s'ouvre dans Demandes, filtre équipe.
       if (type === NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST) {
         return adaptDestinationForCurrentPlatform(payload, {
           params: {

@@ -423,7 +423,7 @@ describe('D89 ① — ON DOIT POUVOIR PASSER : le sas n\'est jamais un cul-de-sa
   });
 
   // CORR-CHEMINS (30/10, point 49) : hors du sas, plus de page blanche ; un message, sans naviguer.
-  it('hors du sas, un role non servi voit « Pas d offre pour ton rôle » sans naviguer', async () => {
+  it('hors du sas, un role non servi voit « Pas d offre … » sans naviguer', async () => {
     const arbre = await rendre(undefined, {
       userData: { documentId: 'user-2', role: { name: 'Joueur', type: 'player' } },
     });

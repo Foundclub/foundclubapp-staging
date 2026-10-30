@@ -207,11 +207,10 @@ const MOBILE_ONLY_SCREENS = {
  */
 const UNREGISTERED_WEB_PATTERNS = {
   // RESA-L6A (14/10/2026) — les écrans téléphone étaient morts (aucune porte) et sont retirés ; le
-  // site sert toujours BookingCalendar.web.js et MissingPlayersView.web.js à ces adresses.
+  // site sert toujours BookingCalendar.web.js à cette adresse. CORR-CHEMINS (30/10, point 50, Adel
+  // « 4- A ») : « joueurs recherchés » (MissingPlayersView.web.js), atteint par aucun chemin, retiré.
   [RouteNames.BookingCalendar]:
     'RESA-L6A : website-only screen (BookingCalendar.web.js); the dead phone screen was removed',
-  [RouteNames.MissingPlayersView]:
-    'RESA-L6A : website-only screen (MissingPlayersView.web.js); the dead phone screen was removed',
 };
 
 module.exports = {

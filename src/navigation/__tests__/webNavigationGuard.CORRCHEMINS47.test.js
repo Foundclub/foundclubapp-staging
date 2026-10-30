@@ -1,7 +1,7 @@
 import { Alert, Linking, Platform } from 'react-native';
 
-import { navigateOrExplainOnWeb } from '../webNavigationGuard';
 import { RouteNames } from '../routeNames';
+import { navigateOrExplainOnWeb } from '../webNavigationGuard';
 
 // CORR-CHEMINS (30/10, point 47, décision d'Adel « B ») — une tuile dont l'écran n'existe que dans
 // l'application (programmes, carnet d'entraînement…) ne promet plus « Bientôt sur le site » :

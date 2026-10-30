@@ -1,5 +1,7 @@
-import { RouteNames } from '@/navigation/routeNames';
 import { NOTIFICATION_TYPES } from '@/domains/auth/authUseCases';
+
+import { RouteNames } from '@/navigation/routeNames';
+
 import { resolveNotificationDestination } from '@/utils/notifications/notificationNavigation';
 
 // CORR-CHEMINS (30/10, point 48, Adel « A ») — deux notifications de la recette du site :

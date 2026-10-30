@@ -8216,6 +8216,44 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  // CORR-CHEMINS (30/10, point 41, Adel « A ») : le serveur rend aussi une fiche ANNULÉE.
+  // Elle reste lisible (l'en-tête : titre, date, lieu) sous un bandeau « Annulé le … », sans
+  // aucun geste de réponse ni d'organisation : la fiche s'arrête là.
+  if (String(event?.status || '') === 'cancelled') {
+    return (
+      <ScreenContainer bgImage="bg2" gradient={null} keyboardAvoiding withHeaderPadding>
+        <ScrollView contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[16]]}>
+          <EventHeader event={event} />
+          <View
+            accessibilityRole="summary"
+            style={[Spaces.gap[8], Spaces.padding[16], ApplicationStyle.borderRadius16, {
+              backgroundColor: 'rgba(255, 92, 92, 0.12)',
+              borderColor: 'rgba(255, 92, 92, 0.4)',
+              borderWidth: 1,
+            }]}
+            testID="event-cancelled-banner"
+          >
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {event?.updatedAt
+                ? t('eventDetails.annule.titreDate', 'Annulé le {{date}}', {
+                  date: new Date(event.updatedAt)
+                    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : t('eventDetails.annule.titre', 'Événement annulé')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t(
+                'eventDetails.annule.texte',
+                'L’organisateur a annulé cet événement : il n’y a plus rien à répondre.',
+              )}
+            </Text>
+          </View>
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
   // T02 — PLUS DE MARGE BASSE SUR LE CONTENEUR. Adel, le 2026-08-17 :
   // « supprimer le padding en bas des pages détails événement ». Elle
   // s'AJOUTAIT au plancher systeme au lieu de le porter : `ScreenContainer` pose

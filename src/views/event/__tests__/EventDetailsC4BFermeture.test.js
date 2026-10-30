@@ -615,3 +615,29 @@ describe('FINITIONS13-COLL point 8 — la séance en attente dit qui décide', (
     expect(parTestID(racine, 'event-attente-decision')).toHaveLength(0);
   });
 });
+
+// CORR-CHEMINS (30/10, point 41, Adel « A ») : le serveur rend désormais une fiche ANNULÉE.
+// Elle reste lisible sous « Annulé le … », pour tous, sans geste de réponse.
+describe('CORR-CHEMINS 41 — un événement annulé reste lisible', () => {
+  const annule = () => buildEvent({
+    isActive: false, status: 'cancelled', updatedAt: '2026-10-29T18:00:00.000Z',
+  });
+
+  test('🔴 l organisateur lit le bandeau, sans « Annuler » ni boutons de réponse', () => {
+    const racine = monter({ auth: ORGANISATEUR(), event: annule() });
+    expect(parTestID(racine, 'event-cancelled-banner')).toHaveLength(1);
+    expect(contient(racine, 'Annulé le 29 octobre')).toBe(true);
+    expect(parTestID(racine, 'bandeau-fermeture')).toHaveLength(0);
+    expect(boutonAvecTitre(racine, 'Annuler')).toBeUndefined();
+  });
+
+  test('un spectateur lit le même bandeau', () => {
+    const racine = monter({ auth: SPECTATEUR(), event: annule() });
+    expect(parTestID(racine, 'event-cancelled-banner')).toHaveLength(1);
+  });
+
+  test('une fiche active n a pas de bandeau', () => {
+    const racine = monter({ auth: ORGANISATEUR(), event: buildEvent() });
+    expect(parTestID(racine, 'event-cancelled-banner')).toHaveLength(0);
+  });
+});

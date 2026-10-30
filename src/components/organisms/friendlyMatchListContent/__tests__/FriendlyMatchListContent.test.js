@@ -178,7 +178,8 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
     expect(rendered).not.toContain('Mes annonces');
     expect(rendered).not.toContain('+ Créer un match amical');
     // La carte le dit en toutes lettres au lieu de laisser un bouton mort.
-    expect(rendered).toContain('Réservé aux entraîneurs et dirigeants');
+    // CORR-CHEMINS (30/10, point 45) : qui ne peut pas proposer de match peut partager l'annonce.
+    expect(rendered).toContain('Partager l’annonce');
   });
 
   it('affiche la liste ET les 3 sous-onglets a un ENTRAINEUR', async () => {
@@ -208,7 +209,7 @@ describe('FriendlyMatchListContent — qui voit quoi (Q12)', () => {
 
     expect(rendered).toContain('Club des Annonceurs');
     expect(rendered).not.toContain('Mes propositions');
-    expect(rendered).toContain('Réservé aux entraîneurs et dirigeants');
+    expect(rendered).toContain('Partager l’annonce');
   });
 
   it('dit quoi faire quand il n y a aucune annonce, au lieu d une page vide', async () => {

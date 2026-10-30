@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { Alert, Linking, Platform } from 'react-native';
 
 import { isWebRouteSupported } from '@/navigation/webRoutes';
+
 import { DEFAULT_STORE_URL_BY_PLATFORM } from '@/services/appUpdate/appUpdateGateRules';
 
 /**
@@ -48,7 +49,7 @@ export const navigateOrExplainOnWeb = (navigation, routeName, params = undefined
       i18next.t('webNavigationGuard.surLApp.title', 'Disponible sur l’app'),
       i18next.t(
         'webNavigationGuard.surLApp.message',
-        "Cet écran se trouve dans l'application FoundClub, gratuite sur l'App Store et Google Play.",
+        "Cet écran se trouve dans l'application FoundClub, gratuite sur l'App Store et Google Play.", // eslint-disable-line max-len
       ),
       [
         { style: 'cancel', text: i18next.t('webNavigationGuard.surLApp.fermer', 'Plus tard') },

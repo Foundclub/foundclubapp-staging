@@ -56,7 +56,7 @@ describe('RESA-L6B-1 — N-20 mène à E-P14 « Demain, tu joues ? »', () => {
     });
   });
 
-  // CORR-CHEMINS (30/10, point 48, Adel « A ») : plus jamais « nulle part » ; le détail de la notification.
+  // CORR-CHEMINS (30/10, point 48, Adel « A ») : plus jamais « nulle part » ; le détail.
   it('éteint, ou sans réservation : l’appui ouvre le détail de la notification', () => {
     expect(charger(false).resolveNotificationDestination({
       data: { change: 'veille', reservationId: 'r-1' }, type: ETIQUETTE_SERVEUR,

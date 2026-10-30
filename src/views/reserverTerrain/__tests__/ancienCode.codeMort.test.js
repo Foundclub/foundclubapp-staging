@@ -34,11 +34,12 @@ const RETIRES = [
   'views/reservation/MissingPlayersView.js',
   // CORR-CHEMINS (30/10, point 50 « A ») : « modifier une réservation », atteint par aucun chemin.
   'views/reservation/ReservationEdit.web.js',
+  // CORR-CHEMINS (30/10, point 50, Adel « 4- A », 20:02) : « joueurs recherchés », sans chemin.
+  'views/reservation/MissingPlayersView.web.js',
 ];
 
 const GARDES = [
   'views/booking/BookingCalendar.web.js',
-  'views/reservation/MissingPlayersView.web.js',
   'views/reservation/ReservationFilters.js',
   'views/reservation/ReservationDetails.js',
   'views/search/SearchReservationsScreen.js',
@@ -77,18 +78,16 @@ describe('RESA-L6A — le code mort de l’ancienne réservation est retiré', (
     expect(coupables).toEqual([]);
   });
 
-  it('le téléphone ne déclare plus BookingCalendar ni MissingPlayersView ; le site oui', () => {
+  it('le téléphone ne déclare plus BookingCalendar ni MissingPlayersView', () => {
     const navigateur = fs.readFileSync(
       path.join(SRC, 'navigation', 'private', 'PrivateNavigator.js'),
       'utf8',
     );
     expect(navigateur).not.toContain('RouteNames.BookingCalendar}');
-    expect(navigateur).not.toContain('RouteNames.MissingPlayersView}');
+    expect(navigateur).not.toContain('MissingPlayersView}');
     // Les adresses du site restent, déclarées « sans écran du téléphone ».
     expect(WEB_ROUTE_PATTERNS[RouteNames.BookingCalendar]).toBe('/booking');
-    expect(WEB_ROUTE_PATTERNS[RouteNames.MissingPlayersView]).toBe('/booking/missing-players');
     expect(UNREGISTERED_WEB_PATTERNS).toHaveProperty(RouteNames.BookingCalendar);
-    expect(UNREGISTERED_WEB_PATTERNS).toHaveProperty(RouteNames.MissingPlayersView);
   });
 
   it.each(GARDES)('%s est GARDÉ (atteignable par le site, ou dans le doute)', (fichier) => {

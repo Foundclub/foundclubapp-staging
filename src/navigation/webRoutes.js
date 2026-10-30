@@ -16,7 +16,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ChildEdit]: '/profile/children/edit',
   // RW-PARENT e1 (29/10, Adel « 5- A ») — relier le compte de son ado depuis le site.
   [RouteNames.ParentLinkInvite]: '/profile/children/link',
-  // CORR-CHEMINS (30/10, point 40 « A ») — « Mon parent » : l'ado accepte ou refuse le lien sur le site.
+  // CORR-CHEMINS (30/10, point 40 « A ») — « Mon parent » : l'ado accepte ou refuse le lien.
   [RouteNames.MyParentLink]: '/profile/parent',
   [RouteNames.PlayerCard]: '/profile/player-card',
   [RouteNames.SubscriptionOverview]: '/profile/subscription',
@@ -157,7 +157,6 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.NewConversation]: '/messages/new',
   [RouteNames.ConversationPublicEventPicker]: '/messages/:chatId/public-events',
   [RouteNames.BookingCalendar]: '/booking',
-  [RouteNames.MissingPlayersView]: '/booking/missing-players',
   [RouteNames.ReservationDetails]: '/reservations/:reservationId',
   // CORR-CHEMINS (30/10, point 50 « A ») : « modifier une réservation » (ReservationEdit.web.js),
   // qu'aucun chemin n'atteignait, est retiré du code.

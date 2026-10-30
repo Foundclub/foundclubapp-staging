@@ -562,6 +562,7 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
         declined: 'Proposition refusée',
         matched: 'Adversaire trouvé',
         pending: 'Proposition envoyée',
+        share: 'Partager l’annonce',
         staffOnly: 'Réservé aux entraîneurs et dirigeants',
       },
       distance: 'à {{km}} km',
@@ -654,5 +655,27 @@ describe('FriendlyMatchAdCard — creneau a venir (Q1-11)', () => {
     expect(affiches).not.toContain(formatDateWithDayPrefix(new Date('2026-10-18T12:00:00')));
     expect(affiches).toContain('16:00-18:00');
     expect(affiches).not.toMatch(/\d{4} \+1/);
+  });
+});
+
+// CORR-CHEMINS (30/10, point 45, consigne d'Adel) : « ceux qui ne peuvent pas faire grand-chose
+// (parent, joueur) peuvent avoir un bouton pour partager l'annonce ». Le bouton remplace le refus
+// muet quand la liste sait partager ; sans `onShare`, rien ne change.
+describe('CORR-CHEMINS 45 — partager l annonce quand on ne peut pas proposer de match', () => {
+  it('🔴 « Partager l’annonce » remplace le refus et partage cette annonce', () => {
+    const onShare = jest.fn();
+    const ad = annonce();
+    const arbre = rendre({ ad, canApply: false, onShare });
+
+    expect(textesVisibles(arbre)).toContain('Partager l’annonce');
+    expect(textesVisibles(arbre)).not.toContain('Réservé aux entraîneurs et dirigeants');
+    appuyerSurLeTexte(arbre, 'Partager l’annonce');
+    expect(onShare).toHaveBeenCalledWith(ad);
+  });
+
+  it('un entraîneur garde « Proposer un match »', () => {
+    const arbre = rendre({ canApply: true, onApply: jest.fn(), onShare: jest.fn() });
+    expect(textesVisibles(arbre)).toContain('Proposer un match');
+    expect(textesVisibles(arbre)).not.toContain('Partager l’annonce');
   });
 });

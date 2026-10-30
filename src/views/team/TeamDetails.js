@@ -1957,6 +1957,9 @@ function TeamDetails({ navigation, route }) {
   const showDefaultCompositionAction = canManageTeam && isMyClub;
   const showLeaveAction = isMyTeam;
   const showContactTrainersAction = canContactViewedTeamTrainers;
+  // CORR-CHEMINS (30/10, point 43) : le panneau d'actions, pour les membres (canManageViewedTeam).
+  const showTeamActionsPanelContent = showEditAction || canManageViewedTeam || showTeamChatAction
+    || showContactTrainersAction;
   const showJoinAction = !isAuthenticated || canJoinTeam(teamId) || canCoachRequestJoinViewedTeam;
   // Deblocage par offre (handoff decision 7) : l'offre Équipe est consideree active
   // pour CETTE equipe si elle est couverte (slot Team ou offre Club du club).
@@ -4832,7 +4835,7 @@ function TeamDetails({ navigation, route }) {
             >
               {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
             </Text>
-            {(showEditAction || canManageViewedTeam || showTeamChatAction || showContactTrainersAction) ? (
+            {showTeamActionsPanelContent ? (
               <View style={teamActionsListStyle}>
                 {showEditAction ? renderTeamActionRow({
                   icon: 'edit',

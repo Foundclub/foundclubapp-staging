@@ -9495,6 +9495,11 @@ export default {
     allowedSingular: 'Allowed',
     anErrorOccurred: 'An error occurred.',
     announceTheEstimatedDelayYou: 'Announce the estimated delay. You’ll then confirm your actual arrival.',
+    annule: {
+      texte: 'The organiser cancelled this event: there is nothing left to answer.',
+      titre: 'Event cancelled',
+      titreDate: 'Cancelled on {{date}}',
+    },
     answerExpected: 'Answer expected',
     answerMyInvitation: 'Answer my invitation',
     approve: 'Approve',
@@ -12093,6 +12098,7 @@ export default {
         declined: 'Proposal declined',
         matched: 'Opponent found',
         pending: 'Proposal sent',
+        share: 'Share this listing',
         staffOnly: 'Reserved for coaches and club managers',
       },
       distance: '{{km}} km away',
@@ -21435,13 +21441,13 @@ export default {
       limitedRecruitmentAds: 'Limited recruitment listings',
       oneTeam: '1 free team',
     },
+    pager: {
+      card: 'Card {{position}} of 3',
+    },
     pasPourTonRole: {
       description: 'FoundClub plans are for club coaches and managers.',
       retour: 'Back to my account',
       title: 'No plan for your role',
-    },
-    pager: {
-      card: 'Card {{position}} of 3',
     },
     plans: {
       club: 'Club',
