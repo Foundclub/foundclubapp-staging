@@ -55,6 +55,7 @@ import {
   getCallUpCounters,
   getPlayerUnavailability,
   hasSilentCallUp,
+  isDeclaredChildCallUpPlayer,
   isManualCallUpPlayer,
 } from './matchCallUpUtils';
 import { readCalledUpIdsFromPack, resumeFieldForSelection } from './matchCompositionUtils';
@@ -234,11 +235,24 @@ function MatchCallUpSelection() {
     // effectif (`handleManageComposition`) ; il porte aussi les renforts, que le
     // serveur y etiquette `club_reinforcement`. Sans ce tri, le renfort
     // s affichait sous « Mon equipe » et disparaissait d « Autres equipes ».
-    return source
+    // ENFANT-JOUEUR (Adel 30/10) — les fiches enfant de l'equipe ne sont pas dans
+    // `team.players` (des comptes) : seul le serveur les connait (`eligiblePlayers`).
+    const enfantsDuServeur = (Array.isArray(teamComposition?.eligiblePlayers)
+      ? teamComposition.eligiblePlayers
+      : EMPTY_LIST).filter(isDeclaredChildCallUpPlayer);
+    const vus = new Set();
+    return [...source, ...enfantsDuServeur]
       .filter((player) => player?.participantSource !== 'club_reinforcement')
-      .map((player) => normalizePlayer(player))
-      .filter(Boolean);
-  }, [eventFromApi?.team?.players, playersParam]);
+      .map((player) => normalizePlayer(
+        player,
+        isDeclaredChildCallUpPlayer(player) ? { participantSource: player.participantSource } : {},
+      ))
+      .filter((player) => {
+        if (!player || vus.has(player.documentId)) return false;
+        vus.add(player.documentId);
+        return true;
+      });
+  }, [eventFromApi?.team?.players, playersParam, teamComposition?.eligiblePlayers]);
 
   const reinforcementPlayers = useMemo(() => {
     /** @type {any[]} */
@@ -269,10 +283,11 @@ function MatchCallUpSelection() {
   // memes briques que les boutons de reponse et le bandeau de l'accueil.
   const rsvpAnswers = useMemo(
     () => buildRsvpAnswersByPlayerId({
+      childAnswers: teamComposition?.childAnswers,
       event: eventFromApi,
       players: [...squadPlayers, ...reinforcementPlayers],
     }),
-    [eventFromApi, reinforcementPlayers, squadPlayers],
+    [eventFromApi, reinforcementPlayers, squadPlayers, teamComposition?.childAnswers],
   );
 
   // Pre-cochage depuis la composition existante : meme lecture que
@@ -712,6 +727,9 @@ function MatchCallUpSelection() {
             </Text>
             {isManualCallUpPlayer(player) ? (
               <Tag text={t('matchCallUp.selection.offAppTag')} />
+            ) : null}
+            {isDeclaredChildCallUpPlayer(player) ? (
+              <Tag text={t('matchCallUp.selection.parentAnswersTag')} />
             ) : null}
             {player?.fromTeamName ? <Tag text={player.fromTeamName} /> : null}
             {renderRsvpBadge(player)}
