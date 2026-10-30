@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, StyleSheet, Text, View,
@@ -8,6 +8,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { categorieDeLaSaison } from '@/domains/category/ageEtCategorie';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -20,6 +21,8 @@ import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStic
 import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
+import { useGetCategories } from '@/services/category/categoryQueries';
+import { getCategorySortKey } from '@/services/category/categoryService';
 
 /**
  * Player categories (age groups)
@@ -76,6 +79,19 @@ function UserCategory({ navigation }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  // CORR-INSCRIPTION p17 (décision A + ajout d'Adel « regarde en prod, les catégories sont nommées
+  // différemment ») : la liste vient du SERVEUR (« U10 (10 ans) », « Sénior (+18 ans) »), comme dans
+  // « Modifier mon profil », déjà rangée U6 → U21 → Sénior. La liste écrite ici ne sert plus que de
+  // repli quand le serveur ne répond pas.
+  const { data: categoriesDuServeur } = useGetCategories();
+  // Une clé stable : l'effet de présélection ne dépend pas de l'identité du tableau rendu.
+  const nomsDuServeur = (Array.isArray(categoriesDuServeur) ? categoriesDuServeur : [])
+    .map((categorie) => categorie?.name)
+    .filter(Boolean)
+    .join('|');
+  const choix = useMemo(() => (nomsDuServeur
+    ? nomsDuServeur.split('|').map((nom) => ({ label: nom, value: nom }))
+    : CATEGORIES), [nomsDuServeur]);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -92,15 +108,35 @@ function UserCategory({ navigation }) {
   });
 
   useEffect(() => {
+    // CORR-INSCRIPTION p17 : le choix de la liste qui désigne la même catégorie (« Senior », écrit
+    // par l'ancienne liste de cet écran, désigne « Sénior (+18 ans) » du serveur).
+    const memeCategorie = (/** @type {string} */ valeur) => {
+      const cible = getCategorySortKey(valeur);
+      return cible.group < 3 ? choix.find((option) => {
+        const cle = getCategorySortKey(option.value);
+        return cle.group === cible.group && cle.rank === cible.rank;
+      }) : undefined;
+    };
     const categories = String(userData?.category || '')
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
 
     if (categories.length) {
-      setSelectedCategories(categories);
+      setSelectedCategories(categories.map((valeur) => memeCategorie(valeur)?.value || valeur));
+      return;
     }
-  }, [userData?.category]);
+
+    // CORR-INSCRIPTION p17 : rien d'enregistré ⇒ la catégorie de son âge est présélectionnée
+    // (« Sénior » pour un adulte de 28 ans), une seule, qu'il peut changer.
+    const proposee = memeCategorie(categorieDeLaSaison(userData?.birthdate) || '');
+    // La liste du serveur peut arriver après la liste de repli : ce qui est déjà coché suit.
+    setSelectedCategories((avant) => {
+      if (avant.length) return avant.map((valeur) => memeCategorie(valeur)?.value || valeur);
+      return proposee ? [proposee.value] : avant;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.category, userData?.birthdate, nomsDuServeur]);
 
   if (userDataLoading) {
     return (
@@ -185,7 +221,7 @@ function UserCategory({ navigation }) {
             faibles la ou le pack en veut un seul, fort.
           */}
           <View style={[Alignments.row, styles.chipsGrid]}>
-            {CATEGORIES.map((category) => (
+            {choix.map((category) => (
               <OnboardingChoiceChip
                 checked={selectedCategories.includes(category.value)}
                 key={category.value}
