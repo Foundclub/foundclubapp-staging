@@ -17184,6 +17184,15 @@ export default {
       titleClub: 'Je ne trouve pas mon club',
       titleTeam: 'Je ne trouve pas mon équipe',
     },
+    // CORR-INSCRIPTION p15 — le joueur sans club : une carte, puis deux chemins.
+    noClub: {
+      action: 'Choisir',
+      choiceDescription: 'Ton club existe mais n’est pas dans la liste, ou tu n’as pas encore de club ?',
+      noClub: 'Je n’ai pas de club',
+      notFound: 'Je ne trouve pas mon club',
+      subtitle: 'Signale ton club, ou continue sans club.',
+      title: 'Je ne trouve pas / je n’ai pas de club',
+    },
     results: {
       openClubFallback: 'Voir fiche club',
       openTeamFallback: 'Voir fiche équipe',

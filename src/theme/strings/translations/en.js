@@ -16435,6 +16435,14 @@ export default {
       titleClub: "I can't find my club",
       titleTeam: "I can't find my team",
     },
+    noClub: {
+      action: 'Choose',
+      choiceDescription: 'Your club exists but is not in the list, or you do not have a club yet?',
+      noClub: 'I don’t have a club',
+      notFound: 'I can’t find my club',
+      subtitle: 'Report your club, or go on without a club.',
+      title: 'I can’t find / don’t have a club',
+    },
     results: {
       openClubFallback: 'View club page',
       openTeamFallback: 'View team page',

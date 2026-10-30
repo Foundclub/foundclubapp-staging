@@ -269,6 +269,9 @@ function UserAffiliationGuideContent({ navigation, route }) {
   const [searchValue, setSearchValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isNotFoundModalVisible, setIsNotFoundModalVisible] = useState(false);
+  // CORR-INSCRIPTION p15 (consigne d'Adel) : le joueur à l'étape club touche « Je ne trouve pas /
+  // je n'ai pas de club », puis choisit son chemin dans une petite fenêtre.
+  const [isNoClubChoiceVisible, setIsNoClubChoiceVisible] = useState(false);
   const [requestedName, setRequestedName] = useState('');
   const [comment, setComment] = useState('');
   // C02 / décision D3 : contact du coach/dirigeant saisi quand le club choisi
@@ -1376,7 +1379,10 @@ function UserAffiliationGuideContent({ navigation, route }) {
             ? t('onboardingAffiliation.actions.notFoundClub', 'Je ne trouve pas mon club')
             : t('onboardingAffiliation.actions.notFoundTeam', 'Je ne trouve pas mon équipe')}
           accessibilityRole="button"
-          onPress={isStaffAffiliationFlow ? handleOpenClubWizard : handleOpenNotFoundModal}
+          onPress={(() => {
+            if (isStaffAffiliationFlow) return handleOpenClubWizard;
+            return isPlayerClubSelectionStep ? () => setIsNoClubChoiceVisible(true) : handleOpenNotFoundModal;
+          })()}
           style={[styles.addCard, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
         >
           <View
@@ -1395,24 +1401,34 @@ function UserAffiliationGuideContent({ navigation, route }) {
           </View>
           <View style={styles.addTextBox}>
             <Text style={[styles.addTitle, { color: Colors.neutral00 }]}>
-              {isClubFlow
+              {isPlayerClubSelectionStep
+                ? t('onboardingAffiliation.noClub.title', 'Je ne trouve pas / je n’ai pas de club')
+                : null}
+              {!isPlayerClubSelectionStep && isClubFlow
                 ? t('onboardingAffiliation.addClub.title', 'Ton club n\'est pas là ?')
-                : t('onboardingAffiliation.addTeam.title', 'Ton équipe n\'est pas là ?')}
+                : null}
+              {!isClubFlow ? t('onboardingAffiliation.addTeam.title', 'Ton équipe n\'est pas là ?') : null}
             </Text>
             <Text style={[styles.addSubtitle, { color: Colors.neutral300 }]}>
-              {isClubFlow
+              {isPlayerClubSelectionStep
+                ? t('onboardingAffiliation.noClub.subtitle', 'Signale ton club, ou continue sans club.')
+                : null}
+              {!isPlayerClubSelectionStep && isClubFlow
                 ? t(
                   'onboardingAffiliation.addClub.subtitle',
                   'Ajoute-le en 2 minutes, on s\'occupe du reste.',
                 )
-                : t(
-                  'onboardingAffiliation.addTeam.subtitle',
-                  'Signale-la, on s\'occupe du reste.',
-                )}
+                : null}
+              {!isClubFlow ? t(
+                'onboardingAffiliation.addTeam.subtitle',
+                'Signale-la, on s\'occupe du reste.',
+              ) : null}
             </Text>
           </View>
           <Text style={[styles.addAction, { color: Colors.primary500 }]}>
-            {t('onboardingAffiliation.addClub.action', 'Ajouter')}
+            {isPlayerClubSelectionStep
+              ? t('onboardingAffiliation.noClub.action', 'Choisir')
+              : t('onboardingAffiliation.addClub.action', 'Ajouter')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1495,6 +1511,11 @@ function UserAffiliationGuideContent({ navigation, route }) {
 
         {searchField}
 
+        {/* CORR-INSCRIPTION p14 (recette du site, décision A) : à l'étape club, la carte « Ton club
+            n'est pas là ? » vient sous la recherche ; en fin de liste, elle se perdait sous une liste
+            qui se rallonge sans fin. À l'étape équipe, elle reste en fin de liste. */}
+        {isClubFlow ? addMyClubCard : null}
+
         {isClubFlow ? quickChips : null}
 
         {isClubFlow && nearbyNotice ? (
@@ -1535,7 +1556,7 @@ function UserAffiliationGuideContent({ navigation, route }) {
                       <ActivityIndicator color={Colors.primary500} size="small" />
                     </View>
                   ) : null}
-                  {isPlayerTeamStepWithoutTeams ? null : addMyClubCard}
+                  {isPlayerTeamStepWithoutTeams || isClubFlow ? null : addMyClubCard}
                   {staffManagementNotice}
                 </View>
               )}
@@ -1564,6 +1585,39 @@ function UserAffiliationGuideContent({ navigation, route }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <BottomModal
+        close={() => setIsNoClubChoiceVisible(false)}
+        isVisible={isNoClubChoiceVisible}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingTop[24]]}>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('onboardingAffiliation.noClub.title', 'Je ne trouve pas / je n’ai pas de club')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t(
+              'onboardingAffiliation.noClub.choiceDescription',
+              'Ton club existe mais n’est pas dans la liste, ou tu n’as pas encore de club ?',
+            )}
+          </Text>
+          <Button
+            onPress={() => {
+              setIsNoClubChoiceVisible(false);
+              handleOpenNotFoundModal();
+            }}
+            title={t('onboardingAffiliation.noClub.notFound', 'Je ne trouve pas mon club')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => {
+              setIsNoClubChoiceVisible(false);
+              handleContinueLater();
+            }}
+            title={t('onboardingAffiliation.noClub.noClub', 'Je n’ai pas de club')}
+            variant="Secondary"
+          />
+        </View>
+      </BottomModal>
 
       <BottomModal
         close={() => setIsNotFoundModalVisible(false)}

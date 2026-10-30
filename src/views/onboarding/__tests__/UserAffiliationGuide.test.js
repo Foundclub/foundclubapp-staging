@@ -1,5 +1,5 @@
 import {
-  Alert, Text, TextInput, TouchableOpacity, View,
+  Alert, FlatList, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -645,7 +645,8 @@ describe('UserAffiliationGuide — refonte 6b', () => {
     expect(mockUseGetClubs.mock.calls.at(-1)[0].activity).toBeUndefined();
   });
 
-  it('carte « Ton club n\'est pas là ? » en fin de liste, pas de gros bouton permanent', () => {
+  it('carte « Ton club n\'est pas là ? » (coach, sous la recherche depuis CORR-INSCRIPTION p14), pas de gros bouton permanent', () => {
+    mockRoleKey.current = 'coach'; // CORR-INSCRIPTION p15 : ce texte reste celui du coach
     const rendered = renderScreen();
     const texts = collectTexts(rendered.tree);
     expect(texts).toContain('Ton club n\'est pas là ?');
@@ -666,6 +667,7 @@ describe('UserAffiliationGuide — refonte 6b', () => {
 
   it('recherche sans résultat : la carte « Ajouter » reste, avec le message vide', () => {
     mockUseGetClubs.mockReturnValue(queryWith([]));
+    mockRoleKey.current = 'coach';
     const rendered = renderScreen();
     const input = findHandle(rendered, AFFILIATION_TEST_IDS.search)
       .findAllByType(TextInput)[0];
@@ -1036,5 +1038,78 @@ describe('D80 — laisser le contact de son coach', () => {
     expect(shown).toContain('demande');
     alertSpy.mockRestore();
     rendered.tree.unmount();
+  });
+});
+
+// CORR-INSCRIPTION p14 et p15 (recette du site, 30/10).
+// p14 (décision A) : à l'étape club, la carte « Ton club n'est pas là ? » est sous la recherche, avant
+// la liste, et plus en fin de liste.
+// p15 (consigne d'Adel) : le joueur touche « Je ne trouve pas / je n'ai pas de club », une petite
+// fenêtre s'ouvre avec les deux chemins : signaler son club, ou continuer sans club.
+describe('CORR-INSCRIPTION p14-p15 — Trouve ton club', () => {
+  /**
+   * Les fenêtres (BottomModal) sont doublées par un composant vide : on lit leurs propriétés.
+   * @param {any} rendered - Le rendu de l'écran.
+   * @returns {any[]} Les fenêtres montées, dans l'ordre.
+   */
+  const fenetres = (rendered) => rendered.tree.root
+    .findAll((/** @type {any} */ n) => typeof n.props?.close === 'function' && 'isVisible' in n.props);
+
+  /**
+   * Cherche, dans les enfants (éléments React) d'une fenêtre, le bouton qui porte ce titre.
+   * @param {any} element - Un élément React.
+   * @param {string} titre - Le titre du bouton.
+   * @returns {any} L'élément du bouton.
+   */
+  const boutonDans = (element, titre) => {
+    if (!element || typeof element !== 'object') return null;
+    if (Array.isArray(element)) {
+      return element.map((e) => boutonDans(e, titre)).find(Boolean) || null;
+    }
+    if (element.props?.title === titre && typeof element.props?.onPress === 'function') return element;
+    return boutonDans(element.props?.children, titre);
+  };
+
+  it('p14 — la carte est montée avant la liste (sous la recherche), une seule fois', () => {
+    mockRoleKey.current = 'coach';
+    const rendered = renderScreen();
+    const cartes = rendered.tree.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === AFFILIATION_TEST_IDS.notFound && typeof n.type === 'string',
+    );
+    expect(cartes).toHaveLength(1);
+    const liste = rendered.tree.root.findByType(FlatList);
+    expect(liste.findAll(
+      (/** @type {any} */ n) => n.props?.testID === AFFILIATION_TEST_IDS.notFound,
+    )).toHaveLength(0);
+  });
+
+  it('p15 — le joueur lit « Je ne trouve pas / je n’ai pas de club », qui ouvre la fenêtre aux deux chemins', () => {
+    const rendered = renderScreen();
+    expect(collectTexts(rendered.tree)).toContain('Je ne trouve pas / je n’ai pas de club');
+    expect(fenetres(rendered).some((f) => f.props.isVisible)).toBe(false);
+
+    pressHandle(rendered, AFFILIATION_TEST_IDS.notFound);
+
+    const ouverte = fenetres(rendered).find((f) => f.props.isVisible);
+    expect(ouverte).toBeDefined();
+    expect(boutonDans(ouverte.props.children, 'Je ne trouve pas mon club')).toBeTruthy();
+    const sansClub = boutonDans(ouverte.props.children, 'Je n’ai pas de club');
+    expect(sansClub).toBeTruthy();
+
+    act(() => { sansClub.props.onPress(); });
+    expect(rendered.navigation.navigate).toHaveBeenCalledWith(RouteNames.Welcome);
+  });
+
+  it('p15 — « Je ne trouve pas mon club » ouvre le formulaire de signalement existant', () => {
+    const rendered = renderScreen();
+    pressHandle(rendered, AFFILIATION_TEST_IDS.notFound);
+    const choix = fenetres(rendered).find((f) => f.props.isVisible);
+    act(() => { boutonDans(choix.props.children, 'Je ne trouve pas mon club').props.onPress(); });
+
+    const visibles = fenetres(rendered).filter((f) => f.props.isVisible);
+    expect(visibles).toHaveLength(1);
+    expect(visibles[0]).not.toBe(choix);
+    expect(JSON.stringify(visibles[0].props.children, (k, v) => (k === '_owner' ? undefined : v)))
+      .toContain('Je ne trouve pas mon club');
   });
 });
