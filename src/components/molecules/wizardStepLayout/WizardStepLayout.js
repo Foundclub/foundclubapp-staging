@@ -150,6 +150,12 @@ function WizardStepLayout({
   // Un nom de grammaire inconnu retombe sur l'existant : un tunnel ne peut pas
   // perdre son en-tete a cause d'une faute de frappe.
   const header = HEADER_VARIANTS[headerVariant] || HEADER_VARIANTS.default;
+  // CORR-SOCLE (point 3) : la rangée du haut tient en 56 px là où elle reste figée (téléphone,
+  // site étroit). Sur ordinateur toute la page défile : la disposition d'avant est gardée
+  // (témoin du site cra7f-wizard, « 1280 px : garde la disposition »).
+  const margesDeLaRangee = Platform.OS === 'web' && !siteEtroit
+    ? { marginBottom: 12, marginTop: 16 }
+    : { marginVertical: (56 - header.roundButtonSize) / 2 };
 
   const safeStepIndex = Number(stepIndex);
   const safeStepCount = Number(stepCount);
@@ -255,7 +261,7 @@ function WizardStepLayout({
               du haut du conteneur). La barre, le titre et la consigne défilent avec le contenu ;
               le repli d'en-tête (`collapsibleHeader`) n'a donc plus
               d'objet : la prop est retirée. Témoin : WizardStepLayout.test.js. */}
-          <View style={{ marginVertical: (56 - header.roundButtonSize) / 2 }}>
+          <View style={margesDeLaRangee}>
             {/* GUIDE-ENTETE : la bulle du guide se pose sous Retour / Fermer. */}
             <TourTarget id="screen.header">
               <View
