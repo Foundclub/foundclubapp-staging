@@ -17927,6 +17927,10 @@ export default {
       required: 'Required field',
       updateFailed: 'Unable to update your profile.',
     },
+    notice: {
+      parentBody: 'Your category, sport and visibility are edited on your player account: switch to it to change them.',
+      parentTitle: 'This is your parent profile.',
+    },
     parentalDeclaration: {
       required: 'Tick the box to save a profile of someone under 15.',
     },

@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -155,6 +156,9 @@ function ProfileEditWeb({ navigation, route }) {
     userData,
   } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
+  // CORR-INSCRIPTION p21 (recette du site, décision A) : un parent ne voit que photo, nom, date et
+  // ville ; ses champs de sport vivent sur son compte joueur (petit texte au-dessus du formulaire).
+  const estParent = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'parent';
 
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
@@ -409,6 +413,16 @@ function ProfileEditWeb({ navigation, route }) {
               <View style={[Alignments.fill, Spaces.gap[24]]}>
                 {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
                     déjà 24. */}
+                {estParent ? (
+                  <View style={Spaces.gap[4]}>
+                    <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {t('profileEdit.notice.parentTitle')}
+                    </Text>
+                    <Text style={[Fonts.p2, Fonts.neutral300]}>
+                      {t('profileEdit.notice.parentBody')}
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={[Alignments.row]}>
                   <SelectAvatar
                     currentAvatar={avatar}
@@ -513,20 +527,22 @@ function ProfileEditWeb({ navigation, route }) {
                   />
                 ) : null}
 
-                <AutocompleteSelect
-                  error={formErrors.category}
-                  isMulti
-                  isSearchable
-                  label={t('profile.fields.category.label', 'Categorie')}
-                  options={buildChoiceOptions(categories, formValues.category, categorySearch)}
-                  placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
-                  searchValue={categorySearch}
-                  setSearchValue={setCategorySearch}
-                  setValue={(options) => {
-                    setFieldValue('category', options?.map((option) => option.value).join(', ') || '');
-                  }}
-                  value={resolveChoiceValues(categories, formValues.category)}
-                />
+                {estParent ? null : (
+                  <AutocompleteSelect
+                    error={formErrors.category}
+                    isMulti
+                    isSearchable
+                    label={t('profile.fields.category.label', 'Categorie')}
+                    options={buildChoiceOptions(categories, formValues.category, categorySearch)}
+                    placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                    searchValue={categorySearch}
+                    setSearchValue={setCategorySearch}
+                    setValue={(options) => {
+                      setFieldValue('category', options?.map((option) => option.value).join(', ') || '');
+                    }}
+                    value={resolveChoiceValues(categories, formValues.category)}
+                  />
+                )}
 
                 {profileFields?.includes('height') ? (
                   <Input
@@ -543,20 +559,22 @@ function ProfileEditWeb({ navigation, route }) {
                   />
                 ) : null}
 
-                <AutocompleteSelect
-                  error={formErrors.preferredSport}
-                  isSearchable
-                  label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
-                  options={buildChoiceOptions(activities, formValues.preferredSport, sportSearch)}
-                  placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
-                  searchValue={sportSearch}
-                  setSearchValue={setSportSearch}
-                  setValue={(option) => {
-                    setFieldValue('preferredSport', option?.value || '');
-                    setFieldValue('position', '');
-                  }}
-                  value={resolveChoiceValues(activities, formValues.preferredSport)[0] || ''}
-                />
+                {estParent ? null : (
+                  <AutocompleteSelect
+                    error={formErrors.preferredSport}
+                    isSearchable
+                    label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
+                    options={buildChoiceOptions(activities, formValues.preferredSport, sportSearch)}
+                    placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+                    searchValue={sportSearch}
+                    setSearchValue={setSportSearch}
+                    setValue={(option) => {
+                      setFieldValue('preferredSport', option?.value || '');
+                      setFieldValue('position', '');
+                    }}
+                    value={resolveChoiceValues(activities, formValues.preferredSport)[0] || ''}
+                  />
+                )}
 
                 {profileFields?.includes('position') ? (() => {
                   if (sportPositions.length > 0) {
@@ -593,16 +611,18 @@ function ProfileEditWeb({ navigation, route }) {
                   setAddress={(value) => setFieldValue('address', value)}
                 />
 
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                    {t('profile.fields.isLookingForClub.label', 'Profil visible')}
-                  </Text>
-                  <Switch
-                    onValueChange={(value) => setFieldValue('isLookingForClub', value)}
-                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                    value={Boolean(formValues.isLookingForClub)}
-                  />
-                </View>
+                {estParent ? null : (
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
+                    <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {t('profile.fields.isLookingForClub.label', 'Profil visible')}
+                    </Text>
+                    <Switch
+                      onValueChange={(value) => setFieldValue('isLookingForClub', value)}
+                      trackColor={{ false: '#767577', true: '#81b0ff' }}
+                      value={Boolean(formValues.isLookingForClub)}
+                    />
+                  </View>
+                )}
 
                 {requiresParentalDeclaration ? (
                   <ParentalDeclarationCard

@@ -18632,6 +18632,11 @@ export default {
       required: 'Champ obligatoire',
       updateFailed: 'Impossible de mettre à jour ton profil.',
     },
+    // CORR-INSCRIPTION p21 — le petit texte du profil d'un parent.
+    notice: {
+      parentBody: 'Ta catégorie, ton sport et ta visibilité se modifient sur ton compte joueur : bascule dessus pour les changer.',
+      parentTitle: 'C’est ton profil de parent.',
+    },
     parentalDeclaration: {
       required: 'Coche la case pour enregistrer un profil de moins de 15 ans.',
     },
