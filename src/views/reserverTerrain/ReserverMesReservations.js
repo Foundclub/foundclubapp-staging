@@ -182,24 +182,29 @@ function ReserverMesReservations() {
     </Text>
   );
 
-  const puces = (
+  const listeDesPuces = ONGLETS_DE_MES_RESERVATIONS.map((p) => (
+    <PuceChoix
+      choisie={p === periode}
+      key={p}
+      libelle={onglets[p]}
+      onPress={() => {
+        setPeriode(p);
+        setChoisie(null);
+      }}
+      testID={`mes-reservations-onglet-${p}`}
+    />
+  ));
+  // CORR-SOCLE (30/10, point 9) : sur ordinateur, les onglets passent à la ligne (« Refusées et
+  // annulées » était coupé) ; au téléphone, la rangée défile (plan E-P10 §9).
+  const puces = surOrdinateur ? (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{listeDesPuces}</View>
+  ) : (
     <ScrollView
       contentContainerStyle={{ gap: 8 }}
       horizontal
       showsHorizontalScrollIndicator={false}
     >
-      {ONGLETS_DE_MES_RESERVATIONS.map((p) => (
-        <PuceChoix
-          choisie={p === periode}
-          key={p}
-          libelle={onglets[p]}
-          onPress={() => {
-            setPeriode(p);
-            setChoisie(null);
-          }}
-          testID={`mes-reservations-onglet-${p}`}
-        />
-      ))}
+      {listeDesPuces}
     </ScrollView>
   );
 
@@ -395,12 +400,13 @@ function ReserverMesReservations() {
   );
 
   return (
-    // `boundedHeight` : sur le SITE, la liste défile DANS l'écran (sans lui, l'écran prend la
-    // hauteur de tout son contenu) ; sur ordinateur, la liste et le volet défilent chacun à part.
+    // `boundedHeight` : sur le SITE étroit, la liste défile DANS l'écran. CORR-SOCLE (30/10,
+    // point 9, décision d'Adel « A ») : sur ordinateur, la PAGE défile, liste et volet compris
+    // (le volet défilait seul). Témoin : EP10.mesReservations.test.js.
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
-      boundedHeight
+      boundedHeight={!surOrdinateur}
       contentContainerStyle={[Alignments.fill]}
     >
       {surOrdinateur ? (
@@ -413,17 +419,12 @@ function ReserverMesReservations() {
           ]}
         >
           {enTete}
-          <View style={[Alignments.fill, Alignments.row, { gap: 24 }]}>
-            <ScrollView
-              contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
-              refreshControl={rafraichir}
-              showsVerticalScrollIndicator={false}
-              style={{ flexGrow: 0, width: LISTE_ORDINATEUR }}
-            >
+          <View style={[Alignments.fill, Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
+            <View style={{ gap: 16, paddingBottom: 24, width: LISTE_ORDINATEUR }}>
               {puces}
               {corps}
               {maFidelite}
-            </ScrollView>
+            </View>
             {ficheDuVolet ? (
               <View
                 accessibilityLabel={t('reserverTerrain.maReservation.titre', 'Ma réservation')}

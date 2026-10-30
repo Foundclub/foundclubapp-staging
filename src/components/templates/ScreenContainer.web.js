@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
+
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 
 import { BREAKPOINTS } from '@/responsive';
 
@@ -82,6 +84,8 @@ function ScreenContainer({
   } = useTheme();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
+  // CORR-SOCLE (30/10, point 5) : sous la barre de titre du site, ses 56 px tiennent le haut.
+  const sousUneBarreDeTitre = useContext(BarreDeTitreDuSiteContext);
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
   const safeStyle = Array.isArray(style) ? style : [style];
   const safeContentContainerStyle = Array.isArray(contentContainerStyle)
@@ -146,7 +150,7 @@ function ScreenContainer({
       // La coque réserve déjà le bas : ne pas lui ajouter une deuxième hauteur de fenêtre.
       minHeight: 'calc(100dvh - var(--fc-shell-bottom-space, 0px))',
       paddingHorizontal: horizontalPadding,
-      paddingTop: withHeaderPadding ? Math.max(insets.top, 20) : 0,
+      paddingTop: withHeaderPadding && !sousUneBarreDeTitre ? Math.max(insets.top, 20) : 0,
     },
     ...safeStyle,
   ];

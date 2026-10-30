@@ -736,3 +736,34 @@ describe('RESA-L6B-2 — E-P12, le canal d’un complexe sur le site', () => {
     expect(texteDe(arbre.root)).not.toContain('Aucun message pour le moment.');
   });
 });
+
+// 📐 CORR-SOCLE (30/10, point 1 de la recette du site) — à 390 px, une photo du fil élargissait la
+// colonne du fil à 390 px dans un cadre de 350 : envoi, options et photo coupés à droite. La
+// grille du fil n'avait pas de colonne déclarée (piste « auto » = largeur du contenu). Sa colonne
+// est désormais bornée au cadre, comme celle du cadre extérieur.
+describe('CORR-SOCLE point 1 — le fil ne déborde pas à droite', () => {
+  test.each([390, 1280])('à %i px, la colonne du fil est bornée au cadre', async (largeur) => {
+    mockLargeur = largeur;
+    const { arbre } = await monter();
+    const [fil] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'section'
+      && n.props?.style?.gridTemplateRows === 'auto minmax(0, 1fr) auto');
+    expect(fil.props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+  });
+});
+
+// 📐 CORR-SOCLE (30/10, point 4, décision d'Adel « A ») — sur ordinateur, les deux colonnes
+// défilent chacune (exception acceptée), mais 20 % restaient figés en haut de la liste : titre,
+// recherche et portées. Seul le titre reste ; la recherche et les portées défilent avec la liste.
+describe('CORR-SOCLE point 4 — l en-tête de la colonne Messages tient en 56 px', () => {
+  test('à 1 280 px, la recherche est dans la partie qui défile, pas dans l en-tête', async () => {
+    const { arbre } = await monter();
+    const [colonne] = parTestId(arbre, 'MSG1W-colonne-messages');
+    const [enTete, liste] = colonne.children
+      .filter((/** @type {any} */ n) => typeof n !== 'string');
+    const recherches = (/** @type {any} */ noeud) => noeud
+      .findAll((/** @type {any} */ n) => n.type === 'input');
+    expect(recherches(enTete)).toHaveLength(0);
+    expect(recherches(liste)).toHaveLength(1);
+    expect(liste.type).toBe('nav');
+  });
+});

@@ -2982,7 +2982,9 @@ function ClubDetails({ navigation, route }) {
               Spaces.gap[16],
               Spaces.paddingHorizontal[24],
               Spaces.paddingBottom[40],
-              Spaces.marginTop[64],
+              // CORR-SOCLE (30/10, point 5) : le logo dépasse de 24 ; 64 laissait 40 px vides
+              // au-dessus (la rampe n'a pas de jeton 48).
+              Spaces.marginTop[44],
               { overflow: 'visible' },
             ]}
             >

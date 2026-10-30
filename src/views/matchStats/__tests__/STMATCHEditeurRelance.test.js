@@ -1,7 +1,9 @@
 /* eslint-disable max-len -- les libellés se lisent en entier. */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
-import { Alert, ScrollView, Text } from 'react-native';
+import {
+  Alert, ScrollView, StyleSheet, Text,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -96,7 +98,10 @@ jest.mock('@/responsive', () => ({
   ...jest.requireActual('@/responsive'),
   useIsDesktop: () => mockDesktop,
 }));
-jest.mock('@/navigation/useBottomDockLayout', () => ({ __esModule: true, default: () => ({ sceneBottomInset: 0 }) }));
+// CORR-SOCLE : sur le site, la coque réserve déjà la barre du bas (`dockClearance` 0) alors que
+// `sceneBottomInset` la compte encore (132 + 12). Réglable par témoin.
+let mockDock = { dockClearance: 0, sceneBottomInset: 0 };
+jest.mock('@/navigation/useBottomDockLayout', () => ({ __esModule: true, default: () => mockDock }));
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View } = jest.requireActual('react-native');
   return { __esModule: true, default: (/** @type {any} */ { children }) => jest.requireActual('react').createElement(View, null, children) };
@@ -453,10 +458,14 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
   test('Barre collante : « Brouillon » et « Publier » restent hors du défilement', async () => {
     const racine = await monter(feuilleU15());
     const [defilement] = racine.findAllByType(ScrollView);
+    // CORR-SOCLE : la pastille « Brouillon » (l'état de la feuille) défile désormais avec le
+    // contenu ; ce sont les BOUTONS qui doivent rester hors du défilement.
     const dansLeDefilement = textes(defilement);
+    const boutonsDuDefilement = defilement.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button')
+      .map((n) => textes(n).join(''));
 
     expect(dansLeDefilement).not.toContain('Publier');
-    expect(dansLeDefilement).not.toContain('Brouillon');
+    expect(boutonsDuDefilement).not.toContain('Brouillon');
     const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
     expect(textes(barre)).toEqual(['Brouillon', 'Publier']);
   });
@@ -1057,5 +1066,37 @@ describe('FINITIONS11 · point 6 — « compte A » : la feuille compte les conv
       'Nino Garcia, Théo Nguyen et 2 autres ne sont pas convoqués : la relance ne part qu’aux convoqués.',
     ]));
     expect(vus.join(' ')).not.toContain('Joueur Ajouté');
+  });
+});
+
+// 📐 CORR-SOCLE (30/10, point 3 de la recette du site, décision d'Adel « A », plus « la barre du
+// bas réduite à un seul bouton (56 px) ») — à 390 px, 24 % figés en haut (titre du match,
+// pastille, onglets) et 35 % en bas : la barre d'actions gardait 144 px sous ses boutons, la
+// réserve de la barre de navigation que la coque du site pose déjà. Seule la rangée retour +
+// « Feuille de match » reste en haut ; le reste défile ; la barre d'actions finit à 12 px.
+describe('CORR-SOCLE point 3 — feuille de match : place rendue', () => {
+  afterEach(() => { mockDock = { dockClearance: 0, sceneBottomInset: 0 }; });
+
+  test('le titre du match et les onglets défilent avec le contenu', async () => {
+    const racine = await monter(feuilleU15());
+    const [defilement] = racine.findAllByType(ScrollView);
+    const onglets = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-onglets');
+    expect(onglets(defilement).length).toBeGreaterThan(0);
+    expect(onglets(defilement)).toHaveLength(onglets(racine).length);
+    expect(textes(defilement)).toContain('AS Montrivage — Test-COMPO');
+  });
+
+  test('site (coque qui réserve la barre) : 12 px sous les boutons, pas 144', async () => {
+    mockDock = { dockClearance: 0, sceneBottomInset: 144 };
+    const racine = await monter(feuilleU15());
+    const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
+    expect(StyleSheet.flatten(barre.props.style).paddingBottom).toBe(12);
+  });
+
+  test('téléphone : la réserve de la barre flottante est gardée', async () => {
+    mockDock = { dockClearance: 96, sceneBottomInset: 108 };
+    const racine = await monter(feuilleU15());
+    const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
+    expect(StyleSheet.flatten(barre.props.style).paddingBottom).toBe(108);
   });
 });

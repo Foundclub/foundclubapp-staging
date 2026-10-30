@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
@@ -63,6 +64,12 @@ function GrillePlanning({
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const { width } = useWindowDimensions();
+  // CORR-SOCLE (30/10, point 8, décision d'Adel « A ») — les colonnes se calculaient sur la
+  // FENÊTRE (1 440 px : 194 px par jour) alors que la grille n'a que la place laissée par le menu
+  // et le cadre : samedi coupé, dimanche invisible. Elles se calculent sur la place mesurée ; avant
+  // la première mesure, sur la fenêtre comme avant.
+  // Témoin : GrillePlanning.CORRSOCLE.largeur.test.js.
+  const [largeurMesuree, setLargeurMesuree] = useState(0);
 
   const tous = colonnes.flatMap((colonne) => colonne.creneaux.map(minutesDuCreneau));
   if (!tous.length) {
@@ -76,7 +83,8 @@ function GrillePlanning({
   const fin = Math.ceil(Math.max(...tous.map((m) => m.a)) / 60) * 60;
   const hauteur = (fin - debut) * PAR_MINUTE;
   const heures = Array.from({ length: (fin - debut) / 60 + 1 }, (_v, index) => debut + index * 60);
-  const parColonne = Math.floor((width - 32 - AXE) / Math.max(1, colonnes.length));
+  const place = largeurMesuree || width - 32;
+  const parColonne = Math.floor((place - AXE) / Math.max(1, colonnes.length));
   const largeurColonne = Math.max(104, parColonne);
 
   const caseDe = (
@@ -132,7 +140,11 @@ function GrillePlanning({
   };
 
   return (
-    <View style={[Alignments.row]} testID="grille-planning">
+    <View
+      onLayout={(evenement) => setLargeurMesuree(Math.round(evenement.nativeEvent.layout.width))}
+      style={[Alignments.row]}
+      testID="grille-planning"
+    >
       <View style={{ paddingTop: ENTETE, width: AXE }}>
         <View style={{ height: hauteur }}>
           {heures.map((minutes) => (

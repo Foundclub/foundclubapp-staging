@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Keyboard, ScrollView,
+  Alert, Keyboard, Platform, ScrollView,
   Text, View,
 } from 'react-native';
 
@@ -364,7 +364,8 @@ function AddCoach({ navigation, route }) {
         // D63 : l ecran n avait AUCUNE marge laterale — champs, pilules de
         // role et bouton touchaient les deux bords. Posee ici, elle vaut aussi
         // pour le CTA, qui vit hors du defilement.
-        Spaces.paddingHorizontal[16],
+        // CORR-SOCLE (30/10, point 6) : sur le site, le conteneur pose deja 24 (40 avant).
+        Platform.OS === 'web' ? null : Spaces.paddingHorizontal[16],
         // R5-48 (REJEU-5) : borne le contenu a l'ecran (ScreenContainer le pose en `flexGrow`) ;
         // sans elle le ScrollView ne defilait pas et la date restait sous le bouton.
         Alignments.fill,

@@ -283,3 +283,23 @@ describe('RESA-FIN-APP-2 E-P10 — les onglets défilent, aucun libellé coupé'
     ].map((libelle) => libelle.split(' ').join(String.fromCharCode(160))));
   });
 });
+
+// 📐 CORR-SOCLE (30/10, point 9 de la recette du site, décision d'Adel « A ») — sur ordinateur, la
+// fiche de droite défilait seule et l'onglet « Refusées et annulées » était coupé. La page entière
+// défile : ni la liste ni le volet n'ont leur propre défilement, et les onglets passent à la ligne.
+describe('CORR-SOCLE point 9 — sur ordinateur, toute la page défile', () => {
+  it('aucun défilement intérieur, les onglets sur une rangée qui passe à la ligne', async () => {
+    mockOrdinateur = true;
+    const arbre = await monter();
+    const { ScrollView: Defilant, StyleSheet: Styles } = jest.requireActual('react-native');
+    expect(arbre.root.findAllByType(Defilant)).toHaveLength(0);
+    const onglet = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'mes-reservations-onglet-refusees'
+    ))[0];
+    let rangee = onglet.parent;
+    while (rangee && Styles.flatten(rangee.props?.style)?.flexWrap !== 'wrap') {
+      rangee = rangee.parent;
+    }
+    expect(rangee).toBeTruthy();
+  });
+});

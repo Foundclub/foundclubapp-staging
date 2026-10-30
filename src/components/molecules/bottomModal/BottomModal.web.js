@@ -134,6 +134,10 @@ function BottomModal({
         minHeight: 220,
       };
 
+  // CORR-SOCLE (30/10, ajout d'Adel aux points 13 et 30) — une feuille à hauteur donnée gardait sa
+  // liste sous 420 px : le vide tombait SOUS le bouton du pied. La liste remplit la hauteur libre.
+  // Témoin : __tests__/BottomModalWeb.margeSousBouton.test.js.
+  const listeRemplit = !isDialog && firstSnapPoint !== undefined;
   const content = scrollable ? (
     <ScrollView
       contentContainerStyle={[
@@ -143,7 +147,7 @@ function BottomModal({
         contentContainerStyle,
       ]}
       keyboardShouldPersistTaps="handled"
-      style={[Alignments.fill, { maxHeight: isDialog ? 520 : 420 }]}
+      style={[Alignments.fill, listeRemplit ? null : { maxHeight: isDialog ? 520 : 420 }]}
     >
       {children}
     </ScrollView>

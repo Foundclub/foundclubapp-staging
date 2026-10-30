@@ -598,7 +598,8 @@ function NotificationList() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.padding[16]]}
+      // CORR-SOCLE (30/10, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
+      contentContainerStyle={[Spaces.paddingVertical[16]]}
     >
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginBottom[16]]}>
         <View style={{ width: 48 }}>

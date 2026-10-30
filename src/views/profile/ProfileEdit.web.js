@@ -407,7 +407,9 @@ function ProfileEditWeb({ navigation, route }) {
               title={t('profileEdit.tutorial.form.title', 'Édition du profil')}
             >
               <View style={[Alignments.fill, Spaces.gap[24]]}>
-                <View style={[Alignments.row, Spaces.marginVertical[24]]}>
+                {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
+                    déjà 24. */}
+                <View style={[Alignments.row]}>
                   <SelectAvatar
                     currentAvatar={avatar}
                     onAvatarSelected={(/** @type {any} */ choisi) => {

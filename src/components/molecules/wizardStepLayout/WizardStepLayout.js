@@ -1,8 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -40,7 +36,6 @@ import { BREAKPOINTS } from '@/responsive/breakpoints';
  * parce que la graisse 900 demandee existe deja et qu'ecrire `fontSize: 25` en
  * dur sortirait de la rampe sans qu'aucune porte ne le voie.
  * @type {Record<'default' | 'focus', {
- *   collapsedTitleFont: 'h2' | 'h2Black',
  *   progressHeight: number,
  *   roundButtonSize: number,
  *   subtitleLines: number | undefined,
@@ -49,14 +44,12 @@ import { BREAKPOINTS } from '@/responsive/breakpoints';
  */
 const HEADER_VARIANTS = {
   default: {
-    collapsedTitleFont: 'h2',
     progressHeight: 8,
     roundButtonSize: 40,
     subtitleLines: undefined,
     titleFont: 'h1',
   },
   focus: {
-    collapsedTitleFont: 'h2Black',
     progressHeight: 4,
     roundButtonSize: 44,
     subtitleLines: 1,
@@ -109,7 +102,6 @@ function WizardRoundButton({
  * progression, CTA pleine largeur en bas + ghost « Passer cette étape ».
  * @param {object} root0
  * @param {import('react').ReactNode} root0.children
- * @param {boolean} [root0.collapsibleHeader]
  * @param {'default' | 'focus'} [root0.headerVariant] - Grammaire d'en-tete, voir
  *   HEADER_VARIANTS. `default` (valeur par defaut) ne change rien a l'existant.
  * @param {boolean} [root0.isNextDisabled]
@@ -129,7 +121,6 @@ function WizardRoundButton({
  */
 function WizardStepLayout({
   children,
-  collapsibleHeader = false,
   headerVariant = 'default',
   isNextDisabled = false,
   isNextLoading = false,
@@ -156,7 +147,6 @@ function WizardStepLayout({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const siteEtroit = Platform.OS === 'web' && width < BREAKPOINTS.desktop;
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   // Un nom de grammaire inconnu retombe sur l'existant : un tunnel ne peut pas
   // perdre son en-tete a cause d'une faute de frappe.
   const header = HEADER_VARIANTS[headerVariant] || HEADER_VARIANTS.default;
@@ -169,15 +159,6 @@ function WizardStepLayout({
   const normalizedProgress = hasProgress
     ? Math.max(0, Math.min(1, safeStepIndex / safeStepCount))
     : 0;
-  const handleScroll = useCallback((/** @type {any} */ event) => {
-    if (!collapsibleHeader) return;
-
-    const offsetY = Number(event?.nativeEvent?.contentOffset?.y || 0);
-    setIsHeaderCollapsed((currentValue) => {
-      const nextValue = offsetY > 24;
-      return currentValue === nextValue ? currentValue : nextValue;
-    });
-  }, [collapsibleHeader]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !onNext || isNextDisabled || isNextLoading) {
@@ -244,6 +225,7 @@ function WizardStepLayout({
       // pas cumuler deux fois insets.bottom sous les boutons du wizard.
       bottomInsetMode="edge-to-edge"
       boundedHeight={siteEtroit}
+      withHeaderPadding={!siteEtroit}
       // D53 — le vide sous le bouton principal, signale par Adel sur « TOUS les
       // ecrans » du tunnel : 28 pt s'ajoutaient au retrait systeme, soit 62 pt
       // de blanc sous le CTA sur un telephone a encoche. On garde 12 — le meme
@@ -268,12 +250,12 @@ function WizardStepLayout({
     >
       <View style={[Alignments.fill]}>
         <View style={[Alignments.fill]}>
-          <View
-            style={[
-              Spaces.marginTop[16],
-              isHeaderCollapsed ? Spaces.marginBottom[12] : Spaces.marginBottom[24],
-            ]}
-          >
+          {/* CORR-SOCLE (30/10, point 3, décision d'Adel « A ») — seule cette rangée reste en
+              place : 56 px au plus, bouton rond compris (le site étroit ne pose pas les 20 px
+              du haut du conteneur). La barre, le titre et la consigne défilent avec le contenu ;
+              le repli d'en-tête (`collapsibleHeader`) n'a donc plus
+              d'objet : la prop est retirée. Témoin : WizardStepLayout.test.js. */}
+          <View style={{ marginVertical: (56 - header.roundButtonSize) / 2 }}>
             {/* GUIDE-ENTETE : la bulle du guide se pose sous Retour / Fermer. */}
             <TourTarget id="screen.header">
               <View
@@ -281,7 +263,6 @@ function WizardStepLayout({
                   Alignments.row,
                   Alignments.alignCenter,
                   Alignments.justifySpaceBetween,
-                  Spaces.marginBottom[12],
                 ]}
               >
                 {onBack ? (
@@ -317,52 +298,6 @@ function WizardStepLayout({
                 )}
               </View>
             </TourTarget>
-            {hasProgress ? (
-              <View
-                style={[
-                  isHeaderCollapsed ? Spaces.marginBottom[12] : Spaces.marginBottom[16],
-                  ApplicationStyle.card,
-                  {
-                    backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                    borderColor: 'rgba(1, 179, 244, 0.22)',
-                    borderRadius: 999,
-                    height: isHeaderCollapsed ? 4 : header.progressHeight,
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
-                <View
-                  style={{
-                    backgroundColor: Colors.primary500,
-                    borderRadius: 999,
-                    height: '100%',
-                    width: `${normalizedProgress * 100}%`,
-                  }}
-                />
-              </View>
-            ) : null}
-
-            <Text
-              numberOfLines={isHeaderCollapsed ? 1 : undefined}
-              style={[
-                Fonts[isHeaderCollapsed ? header.collapsedTitleFont : header.titleFont],
-                Fonts.neutral00,
-                isHeaderCollapsed ? Spaces.marginBottom[4] : Spaces.marginBottom[8],
-              ]}
-            >
-              {title}
-            </Text>
-            {subtitle && !isHeaderCollapsed ? (
-              <Text
-                numberOfLines={header.subtitleLines}
-                style={[Fonts.p2, Fonts.neutral100, { lineHeight: 22, maxWidth: 720 }]}
-              >
-                {subtitle}
-              </Text>
-            ) : null}
-            {/* GUIDE-FINITIONS-3 R2-2 : la bulle du guide se pose ici, sous le titre
-                et la consigne (« Sélectionne au moins un·e entraîneur·e », A09). */}
-            {!isHeaderCollapsed ? <TourBubbleSlot /> : null}
           </View>
 
           {/* Guide (TUTOE-CALIBRAGE) : la zone VISIBLE de la liste ; toutes les ancres
@@ -382,10 +317,56 @@ function WizardStepLayout({
               contentContainerStyle={[Spaces.paddingBottom[16]]}
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
             >
+              {/* CORR-SOCLE (point 3) : barre, titre et consigne défilent avec le contenu. */}
+              <View style={[Spaces.marginBottom[24]]}>
+                {hasProgress ? (
+                  <View
+                    style={[
+                      Spaces.marginBottom[16],
+                      ApplicationStyle.card,
+                      {
+                        backgroundColor: 'rgba(1, 179, 244, 0.08)',
+                        borderColor: 'rgba(1, 179, 244, 0.22)',
+                        borderRadius: 999,
+                        height: header.progressHeight,
+                        overflow: 'hidden',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: Colors.primary500,
+                        borderRadius: 999,
+                        height: '100%',
+                        width: `${normalizedProgress * 100}%`,
+                      }}
+                    />
+                  </View>
+                ) : null}
+
+                <Text
+                  style={[
+                    Fonts[header.titleFont],
+                    Fonts.neutral00,
+                    Spaces.marginBottom[8],
+                  ]}
+                >
+                  {title}
+                </Text>
+                {subtitle ? (
+                  <Text
+                    numberOfLines={header.subtitleLines}
+                    style={[Fonts.p2, Fonts.neutral100, { lineHeight: 22, maxWidth: 720 }]}
+                  >
+                    {subtitle}
+                  </Text>
+                ) : null}
+                {/* GUIDE-FINITIONS-3 R2-2 : la bulle du guide se pose ici, sous le titre
+                    et la consigne (« Sélectionne au moins un·e entraîneur·e », A09). */}
+                <TourBubbleSlot />
+              </View>
               {/* Guide (TUTOE) : ancres invisibles communes à tous les tunnels. */}
               <TourTarget id="teamWizard.field">{children}</TourTarget>
             </ScrollView>

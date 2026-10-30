@@ -1001,8 +1001,7 @@ function ColonneDesConversations({
           borderBottom: `1px solid ${PALETTE_DU_FIL.filet}`,
           boxSizing: 'border-box',
           display: 'grid',
-          gap: 10,
-          padding: '10px 14px 12px 18px',
+          padding: '6px 14px 6px 18px',
         }}
       >
         <div
@@ -1040,69 +1039,74 @@ function ColonneDesConversations({
             <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
           </button>
         </div>
-        {/* SMF — la recherche et la portee de la page de la messagerie (README §3.13). */}
-        <div
-          style={{
-            alignItems: 'center',
-            background: PALETTE_DU_FIL.menu,
-            border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
-            borderRadius: 999,
-            display: 'flex',
-            gap: 8,
-            minHeight: 40,
-            padding: '0 14px',
-          }}
-        >
-          <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="search" size={16} />
-          <input
-            aria-label={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
-            onChange={(event) => setRecherche(event.target.value)}
-            placeholder={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
-            style={{
-              background: 'transparent',
-              border: 0,
-              color: PALETTE_DU_FIL.texte,
-              flex: 1,
-              fontFamily: 'Montserrat-Regular, sans-serif',
-              fontSize: 14,
-              minWidth: 0,
-              outline: 'none',
-            }}
-            type="search"
-            value={recherche}
-          />
-        </div>
-        <div
-          aria-label={t('messaging.filters.label', 'Conversations à afficher')}
-          role="group"
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-        >
-          {portees.map(({ libelle, valeur }) => (
-            <button
-              aria-pressed={portee === valeur}
-              key={valeur}
-              onClick={() => setPortee(valeur)}
-              style={{
-                background: portee === valeur ? PALETTE_DU_FIL.accent : 'transparent',
-                border: `1px solid ${
-                  portee === valeur ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.menuBord
-                }`,
-                borderRadius: 999,
-                color: portee === valeur ? PALETTE_DU_FIL.encre : PALETTE_DU_FIL.texte,
-                cursor: 'pointer',
-                fontFamily: 'Montserrat-Bold, sans-serif',
-                fontSize: 13,
-                minHeight: 32,
-                padding: '0 14px',
-              }}
-              type="button"
-            >
-              {libelle}
-            </button>
-          ))}
-        </div>
       </div>
       <nav ref={listeRef} style={{ overflowY: 'auto' }}>
+        {/* CORR-SOCLE (30/10, point 4, décision d'Adel « A ») — deux colonnes qui défilent
+            chacune : l'exception acceptée, mais l'en-tête de la liste ramené à 56 px. La
+            recherche et les portées défilent avec les conversations. */}
+        <div style={{ display: 'grid', gap: 10, padding: '12px 14px 12px 18px' }}>
+          {/* SMF — la recherche et la portee de la page de la messagerie (README §3.13). */}
+          <div
+            style={{
+              alignItems: 'center',
+              background: PALETTE_DU_FIL.menu,
+              border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+              borderRadius: 999,
+              display: 'flex',
+              gap: 8,
+              minHeight: 40,
+              padding: '0 14px',
+            }}
+          >
+            <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="search" size={16} />
+            <input
+              aria-label={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
+              onChange={(event) => setRecherche(event.target.value)}
+              placeholder={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
+              style={{
+                background: 'transparent',
+                border: 0,
+                color: PALETTE_DU_FIL.texte,
+                flex: 1,
+                fontFamily: 'Montserrat-Regular, sans-serif',
+                fontSize: 14,
+                minWidth: 0,
+                outline: 'none',
+              }}
+              type="search"
+              value={recherche}
+            />
+          </div>
+          <div
+            aria-label={t('messaging.filters.label', 'Conversations à afficher')}
+            role="group"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
+          >
+            {portees.map(({ libelle, valeur }) => (
+              <button
+                aria-pressed={portee === valeur}
+                key={valeur}
+                onClick={() => setPortee(valeur)}
+                style={{
+                  background: portee === valeur ? PALETTE_DU_FIL.accent : 'transparent',
+                  border: `1px solid ${
+                    portee === valeur ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.menuBord
+                  }`,
+                  borderRadius: 999,
+                  color: portee === valeur ? PALETTE_DU_FIL.encre : PALETTE_DU_FIL.texte,
+                  cursor: 'pointer',
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  fontSize: 13,
+                  minHeight: 32,
+                  padding: '0 14px',
+                }}
+                type="button"
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+        </div>
         <style>{ARCHIVEES_STYLE}</style>
         {/* R17-CANAUX (19/10) — plus de canaux de la Ville épinglés au-dessus : le canal des
             dirigeants et « Toute la ville » sont des lignes (filsDeLaMessagerie). Reste la
@@ -3105,7 +3109,7 @@ function Conversation({ navigation, route }) {
     // MSG1W §3.4 — la bulle de sondage du TELEPHONE (ronds, barres, votants, « voir les votes »).
     if (composition.type === 'poll') {
       return (
-        <div style={{ display: 'grid', gap: 4 }}>
+        <div style={{ display: 'grid', gap: 4, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {/* ⚠️ Sans `onOpenDetails` : sur le site, la carte cliquable devient un <button> qui
               contient les boutons de vote (HTML invalide, votes injoignables au lecteur d ecran).
               « Voir les votes » est donc un bouton a part, sous la carte. */}
@@ -4996,6 +5000,9 @@ function Conversation({ navigation, route }) {
             border: `1px solid ${PALETTE_DU_FIL.filet}`,
             borderRadius: isDesktop ? 20 : 16,
             display: 'grid',
+            // CORR-SOCLE (point 1) : sans colonne déclarée, une photo élargissait le fil au-delà
+            // du cadre (390 px dans 350 à 390 de large). Témoin : ConversationWebMSG1W.test.js.
+            gridTemplateColumns: 'minmax(0, 1fr)',
             gridTemplateRows: 'auto minmax(0, 1fr) auto',
             minHeight: 0,
             minWidth: 0,

@@ -134,14 +134,12 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     gap: 8,
     padding: 16,
   };
+  // CORR-SOCLE (30/10, point 9) : le volet de « Mes réservations » ne défile plus à part, c'est
+  // la page qui défile.
   const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (dansUnVolet ? (
-    <ScrollView
-      contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
-      style={[Alignments.fill]}
-    >
+    <View style={{ gap: 16, paddingBottom: 24 }}>
       {contenu}
-    </ScrollView>
+    </View>
   ) : (
     <ScreenContainer
       bgImage="bg2"

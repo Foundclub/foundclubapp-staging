@@ -673,3 +673,43 @@ describe('Entree sur le site', () => {
     act(() => arbre.unmount());
   });
 });
+
+// CORR-SOCLE (30/10, point 3 de la recette du site, décision d'Adel « A ») — l'en-tête entier
+// (retour, « Étape n/N », barre, titre, consigne) restait FIGÉ au-dessus de la liste : 24 à 27 %
+// de l'écran à 390 px. Seule la rangée retour / « Étape n/N » / fermer reste en place (barre fine,
+// 56 px au plus) ; la barre de progression, le titre et la consigne défilent avec le contenu.
+describe('CORR-SOCLE point 3 — seule une barre fine reste figée', () => {
+  /**
+   * Le texte est-il rendu sous ce nœud ?
+   * @param {any} racine - Le nœud.
+   * @param {string} texte - Le texte cherché.
+   * @returns {boolean} Trouvé.
+   */
+  const contientLeTexte = (racine, texte) => racine.findAll(
+    (/** @type {any} */ n) => [].concat(n.props?.children).includes(texte),
+  ).length > 0;
+
+  it('le titre, la consigne et la barre de progression défilent avec le contenu', () => {
+    const arbre = rendre({
+      stepCount: 5, stepIndex: 2, subtitle: 'Un seul choix', title: 'Type',
+    });
+    const liste = listeDefilante(arbre);
+    expect(contientLeTexte(liste, 'Type')).toBe(true);
+    expect(contientLeTexte(liste, 'Un seul choix')).toBe(true);
+    expect(liste.findAll((/** @type {any} */ n) => (
+      typeof style(n).width === 'string' && style(n).width === '40%'
+    )).length).toBeGreaterThan(0);
+  });
+
+  it('retour, « Étape n/N » et fermer restent hors de la liste', () => {
+    const arbre = rendre({
+      onBack: () => {}, onClose: () => {}, stepCount: 5, stepIndex: 2, title: 'Type',
+    });
+    const liste = listeDefilante(arbre);
+    expect(contientLeTexte(liste, 'Étape 2/5')).toBe(false);
+    expect(contientLeTexte(arbre.root, 'Étape 2/5')).toBe(true);
+    const retours = liste
+      .findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Retour');
+    expect(retours).toHaveLength(0);
+  });
+});

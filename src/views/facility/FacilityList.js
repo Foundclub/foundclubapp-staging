@@ -1640,9 +1640,9 @@ function FacilityList() {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // CORR-SOCLE (30/10, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
       contentContainerStyle={[
         Spaces.paddingVertical[24],
-        Spaces.paddingHorizontal[16],
         Alignments.fill,
       ]}
     >

@@ -54,7 +54,8 @@ function MyTeamList({ navigation, route }) {
     >
       <ScreenContainer
         contentContainerStyle={[
-          Spaces.paddingVertical[24],
+          // CORR-SOCLE (30/10, point 5) : l'en-tête pose déjà 16 en haut (66 px vides à 390).
+          Spaces.paddingBottom[24],
           Alignments.justifySpaceBetween,
           Alignments.column,
           Alignments.fill,

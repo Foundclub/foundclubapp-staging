@@ -362,7 +362,7 @@ function MatchStatsEditor({ navigation, route }) {
   const surfaces = useSurfacesFeuille();
   const { userData } = useAuth();
   const ordinateur = useIsDesktop();
-  const { sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance } = useBottomDockLayout();
   const queryClient = useQueryClient();
   const sourceType = route?.params?.sourceType === 'league' ? 'league' : 'event';
   const eventId = route?.params?.eventId || null;
@@ -1586,53 +1586,53 @@ function MatchStatsEditor({ navigation, route }) {
         {ordinateur ? renderPill() : <View style={{ width: 44 }} />}
       </View>
 
-      <View
-        style={[
-          ordinateur ? null : Alignments.alignCenter,
-          SpacesAny.gap[8],
-          SpacesAny.paddingHorizontal[16],
-          SpacesAny.paddingTop[8],
-        ]}
-      >
-        {ordinateur && desktopSubtitle ? (
-          <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>{desktopSubtitle}</Text>
-        ) : null}
-        {!ordinateur && matchLabel ? (
-          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-            {matchLabel}
-          </Text>
-        ) : null}
-        {!ordinateur && isReady ? (
-          <View
-            style={[
-              Alignments.row, Alignments.alignCenter, Alignments.wrap, SpacesAny.gap[8],
-              Alignments.justifyCenter,
-            ]}
-          >
-            {renderPill()}
-            {metaLine ? <Text style={[Fonts.p3, Fonts.neutral300]}>{metaLine}</Text> : null}
-          </View>
-        ) : null}
-      </View>
-
-      {!ordinateur && !hasError ? (
-        <View style={[SpacesAny.paddingHorizontal[16], SpacesAny.paddingTop[8]]}>
-          <SegmentedControl
-            centerContent
-            fitLabels
-            onChange={(/** @type {any} */ value) => setActiveTab(value)}
-            options={ONGLETS.map((value) => ({ label: tabLabels[value], value }))}
-            value={activeTab}
-          />
-        </View>
-      ) : null}
-
       <ScrollView
         contentContainerStyle={[SpacesAny.padding[16], SpacesAny.gap[16]]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         style={Alignments.fill}
       >
+        {/* CORR-SOCLE (30/10, point 3, décision d'Adel « A ») — le match, sa pastille et les
+            onglets figeaient 24 % de l'écran à 390 px : ils défilent avec la feuille. Seule la
+            rangée retour + « Feuille de match » reste en haut. */}
+        <View
+          style={[
+            ordinateur ? null : Alignments.alignCenter,
+            SpacesAny.gap[8],
+          ]}
+        >
+          {ordinateur && desktopSubtitle ? (
+            <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>{desktopSubtitle}</Text>
+          ) : null}
+          {!ordinateur && matchLabel ? (
+            <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+              {matchLabel}
+            </Text>
+          ) : null}
+          {!ordinateur && isReady ? (
+            <View
+              style={[
+                Alignments.row, Alignments.alignCenter, Alignments.wrap, SpacesAny.gap[8],
+                Alignments.justifyCenter,
+              ]}
+            >
+              {renderPill()}
+              {metaLine ? <Text style={[Fonts.p3, Fonts.neutral300]}>{metaLine}</Text> : null}
+            </View>
+          ) : null}
+        </View>
+
+        {!ordinateur && !hasError ? (
+          <View>
+            <SegmentedControl
+              centerContent
+              fitLabels
+              onChange={(/** @type {any} */ value) => setActiveTab(value)}
+              options={ONGLETS.map((value) => ({ label: tabLabels[value], value }))}
+              value={activeTab}
+            />
+          </View>
+        ) : null}
         {isLoading ? renderSkeleton() : null}
         {hasError ? renderError() : null}
         {isReady ? (
@@ -1655,7 +1655,9 @@ function MatchStatsEditor({ navigation, route }) {
               borderTopColor: withAlpha(Colors.neutral300, 0.18),
               borderTopWidth: ordinateur ? 0 : 1,
               minWidth: ordinateur ? 420 : undefined,
-              paddingBottom: Math.max(sceneBottomInset, 12),
+              // CORR-SOCLE (point 3) : `dockClearance` vaut 0 quand la coque du site réserve déjà
+              // la barre du bas ; `sceneBottomInset` la recomptait (144 px vides sous les boutons).
+              paddingBottom: dockClearance + 12,
             },
           ]}
           testID="feuille-barre"

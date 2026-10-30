@@ -293,3 +293,17 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
     expect(etiquettes).not.toMatch(/Adel|Karim|Lea|Membre/);
   });
 });
+
+// CORR-SOCLE (30/10, point 1 de la recette du site) — la carte fait 294 px (pack) : à 390 px sur
+// le site, le fil n'en offre que 262 et la carte débordait à droite. Elle garde 294 px quand la
+// place existe et ne dépasse plus son parent.
+describe('CORR-SOCLE point 1 — la carte de sondage ne dépasse pas le fil', () => {
+  test('carte seule : 294 px au plus, jamais plus que son parent', () => {
+    const { StyleSheet, View } = jest.requireActual('react-native');
+    const arbre = rendre({});
+    const carte = arbre.root.findAllByType(View)
+      .map((n) => StyleSheet.flatten(n.props.style) || {})
+      .find((s) => s.width === 294);
+    expect(carte.maxWidth).toBe('100%');
+  });
+});

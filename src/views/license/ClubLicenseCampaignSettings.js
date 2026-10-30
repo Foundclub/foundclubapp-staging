@@ -4277,7 +4277,6 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   return (
     <>
       <WizardStepLayout
-        collapsibleHeader
         headerVariant="focus"
         isNextDisabled={isWizardNextDisabled}
         isNextLoading={saveMutation.isPending || isSubmitting}

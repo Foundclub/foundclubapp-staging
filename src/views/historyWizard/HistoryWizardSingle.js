@@ -502,7 +502,6 @@ function HistoryWizardSingle({ navigation, route }) {
       userId={userData?.documentId}
     >
       <WizardStepLayout
-        collapsibleHeader
         isNextDisabled={!canSubmit}
         isNextLoading={isSubmitting}
         nextLabel={isEditing ? t(

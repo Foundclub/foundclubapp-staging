@@ -392,6 +392,8 @@ function PollMessageBubble({
         {
           alignSelf: isMe ? 'flex-end' : 'flex-start',
           backgroundColor: fondDeLaBulle,
+          // CORR-SOCLE (point 1) : le fil du site à 390 px n'offre que 262 px.
+          maxWidth: '100%',
           width: fullWidth ? '100%' : LARGEUR_DU_SONDAGE + 20,
         },
       ]}
