@@ -433,3 +433,42 @@ describe('EQUIPES — Q6 : la creation se dit', () => {
     expect(titres.join(' ')).not.toMatch(/Félicitations/i);
   });
 });
+
+describe('RWCOACH N1 — un double clic ne cree qu une equipe', () => {
+  /** @type {any} */
+  let alerte;
+
+  beforeEach(() => {
+    mockCreations.length = 0;
+    alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    alerte.mockRestore();
+  });
+
+  test('deux appuis avant la reponse du serveur : une seule creation', async () => {
+    mockReponse.team = { documentId: 'team-1', isAwaitingClubApproval: false };
+    afficherLEcran();
+    const gabarit = mockGabarits[mockGabarits.length - 1];
+
+    act(() => { gabarit.onNext(); gabarit.onNext(); });
+    await laisserRespirer();
+
+    expect(mockCreations).toHaveLength(1);
+  });
+
+  test('apres un refus du serveur, on peut reessayer', async () => {
+    mockReponse.erreur = new Error('refus');
+    afficherLEcran();
+
+    creerLEquipe();
+    await laisserRespirer();
+    mockReponse.erreur = null;
+    mockReponse.team = { documentId: 'team-1', isAwaitingClubApproval: false };
+    creerLEquipe();
+    await laisserRespirer();
+
+    expect(mockCreations).toHaveLength(2);
+  });
+});

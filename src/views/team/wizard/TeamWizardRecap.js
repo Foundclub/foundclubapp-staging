@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -105,6 +105,9 @@ function TeamWizardRecap({ navigation }) {
   const { data: sections } = sectionsQuery;
   const { data: clubData } = clubQuery;
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  // RWCOACH N1 : `isPending` arrive trop tard pour un double clic (2 equipes).
+  // Verrou synchrone, comme ClubWizardRecap ; un refus du serveur le rouvre.
+  const envoiEnCours = useRef(false);
   const teamCreationGate = useMemo(
     () => resolveTeamCreationGate({ club: clubData, userData }),
     [clubData, userData],
@@ -131,6 +134,7 @@ function TeamWizardRecap({ navigation }) {
     meta: { preventToastError: true },
     mutationFn: createTeam,
     onError: (error) => {
+      envoiEnCours.current = false;
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
@@ -264,6 +268,7 @@ function TeamWizardRecap({ navigation }) {
   );
 
   const handleSubmit = () => {
+    if (envoiEnCours.current) return;
     if (!selectedOverview.clubId) {
       Alert.alert(t('common.error', 'Erreur'), t('teamWizard.errors.clubRequired', 'Club introuvable. Recommence la création depuis la liste équipe.'));
       return;
@@ -273,6 +278,7 @@ function TeamWizardRecap({ navigation }) {
       return;
     }
 
+    envoiEnCours.current = true;
     createTeamMutation.mutate(/** @type {any} */ ({
       activities: selectedOverview.activity ? [selectedOverview.activity] : [],
       authorizedMembershipManagers: [],
