@@ -26,6 +26,7 @@ import {
   buildChoiceOptions,
   buildProfileFormValues,
   defaultValues,
+  mesureAEnvoyer,
   profileSchema,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
@@ -167,6 +168,7 @@ function ProfileEdit({ navigation, route }) {
     setValue,
     watch,
   } = useForm({
+    context: { valeursChargees: buildProfileFormValues(userData, formatBirthdateToDisplay) },
     defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
@@ -258,7 +260,7 @@ function ProfileEdit({ navigation, route }) {
         clearFields: listClearedProfileFields(loadedValues, { ...data, avatar }),
         firstname: data.firstname,
         geohash,
-        height: data.height,
+        height: mesureAEnvoyer('height', data.height, loadedValues),
         isLookingForClub: data.isLookingForClub,
         jerseyNumber: data.jerseyNumber === '' ? null : Number.parseInt(data.jerseyNumber, 10),
         lastname: data.lastname,
@@ -277,7 +279,7 @@ function ProfileEdit({ navigation, route }) {
         position: data.position,
         preferredSport: data.preferredSport,
         section: data.section,
-        weight: data.weight,
+        weight: mesureAEnvoyer('weight', data.weight, loadedValues),
       });
     }
   };
