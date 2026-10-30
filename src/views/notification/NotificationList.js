@@ -104,6 +104,7 @@ function NotificationList() {
     markAllAsRead,
     markAsRead,
     notifications,
+    refreshAfterOpening,
     refreshNotifications,
     unreadCount,
   } = useNotificationController();
@@ -246,6 +247,9 @@ function NotificationList() {
 
     const payload = getNotificationPayload(notification);
     const destination = resolveNotificationDestination(payload);
+    // RWDIRIG (30/10) — sans cela, sur le site, l'invitée arrivait sur la fiche sans
+    // « Accepter / Refuser » : la relecture ne partait qu'à l'arrivée d'un push.
+    Promise.resolve(refreshAfterOpening?.(notification.type || payload.type)).catch(() => {});
 
     if (destination?.route) {
       console.log(`[NOTIF_OPENED] type=${notification.type || payload.type || 'unknown'} route=${destination.route} source=in_app_history`);
@@ -261,7 +265,7 @@ function NotificationList() {
     if (!didNavigate) {
       nav.navigate(RouteNames.NotificationList);
     }
-  }, [markAsRead, nav, showActionError]);
+  }, [markAsRead, nav, refreshAfterOpening, showActionError]);
 
   const handleDelete = useCallback((/** @type {NotificationItem} */ notification) => {
     Alert.alert(
