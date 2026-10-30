@@ -14946,6 +14946,7 @@ export default {
       },
       noSms: 'Préviens-le toi-même',
       offAppTag: 'Hors app',
+      parentAnswersTag: 'Répond via son parent',
       progress: '{{current}}/{{total}}',
       rsvp: {
         absent: 'Absent',
