@@ -38,6 +38,7 @@ import {
   buildProfileFormValues,
   defaultValues,
   getAgeFromDisplayedBirthdate,
+  mesureAEnvoyer,
   profileSchema,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
@@ -299,6 +300,7 @@ function SelfProfilePlayerCoach({ navigation }) {
     setValue,
     watch,
   } = useForm({
+    context: { valeursChargees: buildProfileFormValues(userData, formatBirthdateToDisplay) },
     defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(profileSchema),
@@ -476,8 +478,13 @@ function SelfProfilePlayerCoach({ navigation }) {
     if (allowedFields.includes('bestLevel')) payload.bestLevel = data.bestLevel;
     if (allowedFields.includes('section')) payload.section = data.section;
     if (allowedFields.includes('position')) payload.position = data.position;
-    if (allowedFields.includes('height')) payload.height = data.height;
-    if (allowedFields.includes('weight')) payload.weight = data.weight;
+    const charge = buildProfileFormValues(userData, formatBirthdateToDisplay);
+    if (allowedFields.includes('height')) {
+      payload.height = mesureAEnvoyer('height', data.height, charge);
+    }
+    if (allowedFields.includes('weight')) {
+      payload.weight = mesureAEnvoyer('weight', data.weight, charge);
+    }
     if (allowedFields.includes('videoCvUrl')) {
       payload.videoCvUrl = 'videoId' in lienVideo ? lienVideo.canonicalUrl : '';
     }

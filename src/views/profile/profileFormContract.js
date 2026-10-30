@@ -72,6 +72,9 @@ export const getAgeFromDisplayedBirthdate = (displayedBirthdate) => {
  * @returns {(value: any, helpers: any) => any}
  */
 const bornePhysique = (champ) => (value, helpers) => {
+  // RECETTE-WEB-COACH 2 — deja enregistree et non retouchee : repart telle quelle. Le champ peut
+  // etre cache pour ce role (entraineur), et l'erreur tomberait sur un champ invisible.
+  if (value === helpers.prefs?.context?.valeursChargees?.[champ]) return value;
   const age = getAgeFromDisplayedBirthdate(helpers.state.ancestors?.[0]?.birthdate);
   const { cle, valeur } = erreurPhysique(champ, value, age);
   return cle ? helpers.message(cle) : valeur;
@@ -89,6 +92,21 @@ const lienYoutube = (value, helpers) => {
   if ('empty' in lu) return '';
   if ('error' in lu) return helpers.message(`videoCv.errors.${lu.error}`);
   return lu.canonicalUrl;
+};
+
+/**
+ * RECETTE-WEB-COACH 2 — la taille ou le poids qui PART : deja enregistree, non retouchee et hors
+ * bornes, elle ne part pas (le serveur, qui borne aussi, refuserait tout l'envoi) ; absente du
+ * corps, le serveur la garde. Toute autre valeur part telle quelle.
+ * @param {'height' | 'weight'} champ
+ * @param {any} valeur - Dans le formulaire.
+ * @param {any} valeursChargees - Le profil tel que charge (`buildProfileFormValues`).
+ * @returns {any}
+ */
+export const mesureAEnvoyer = (champ, valeur, valeursChargees) => {
+  if (valeur !== valeursChargees?.[champ]) return valeur;
+  const age = getAgeFromDisplayedBirthdate(valeursChargees?.birthdate);
+  return erreurPhysique(champ, valeur, age).cle ? undefined : valeur;
 };
 
 export const profileSchema = Joi.object({

@@ -30,6 +30,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   buildChoiceOptions,
   getAgeFromDisplayedBirthdate,
+  mesureAEnvoyer,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 
@@ -96,9 +97,10 @@ const isBirthdateDisplayValid = (value) => {
 
 /**
  * @param {typeof defaultValues} values
+ * @param {Record<string, any>} [valeursChargees] - Le profil tel que charge (taille, poids).
  * @returns {Record<string, string>}
  */
-export const validateValues = (values) => {
+export const validateValues = (values, valeursChargees = undefined) => {
   /** @type {Record<string, string>} */
   const nextErrors = {};
 
@@ -119,6 +121,8 @@ export const validateValues = (values) => {
   // selon l'age (meme regle que `profileFormContract`, que le Joi du site ne fait pas tourner).
   const age = getAgeFromDisplayedBirthdate(values?.birthdate);
   ['height', 'weight'].forEach((champ) => {
+    // RECETTE-WEB-COACH 2 — meme regle que `profileFormContract` : non retouchee, elle passe.
+    if (values?.[champ] === valeursChargees?.[champ]) return;
     const { cle } = erreurPhysique(/** @type {'height' | 'weight'} */ (champ), values?.[champ], age);
     if (cle) nextErrors[champ] = i18next.t(cle);
   });
@@ -286,7 +290,10 @@ function ProfileEditWeb({ navigation, route }) {
   );
 
   const handleFormSubmit = () => {
-    const nextErrors = validateValues(formValues);
+    const nextErrors = validateValues(
+      formValues,
+      userData ? buildProfileFormValues(userData, formatBirthdateToDisplay) : undefined,
+    );
     setFormErrors(nextErrors);
 
     if (hasAnyFormError(nextErrors) || !userData) {
@@ -326,7 +333,13 @@ function ProfileEditWeb({ navigation, route }) {
       clearFields: listClearedProfileFields(loadedValues, { ...formValues, avatar }),
       firstname: formValues.firstname,
       geohash,
-      height: formValues.height ? String(parseHeightCm(formValues.height)) : formValues.height,
+      height: formValues.height
+        ? mesureAEnvoyer(
+          'height',
+          String(parseHeightCm(formValues.height) ?? formValues.height),
+          loadedValues,
+        )
+        : formValues.height,
       isLookingForClub: formValues.isLookingForClub,
       lastname: formValues.lastname,
       ...(requiresParentalDeclaration ? {
@@ -343,7 +356,7 @@ function ProfileEditWeb({ navigation, route }) {
       position: formValues.position,
       preferredSport: formValues.preferredSport,
       section: formValues.section,
-      weight: formValues.weight,
+      weight: mesureAEnvoyer('weight', formValues.weight, loadedValues),
     });
   };
 
