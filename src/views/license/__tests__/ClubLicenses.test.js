@@ -544,7 +544,7 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       const texte = texteDeLEcran(monterDetail());
 
       expect(texte).toContain('Attendu');
-      expect(texte).toContain('Encaisse');
+      expect(texte).toContain('Encaissé');
       expect(texte).toContain('Reste');
       expect(texte).toContain('Retards');
     });

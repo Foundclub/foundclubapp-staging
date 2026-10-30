@@ -496,6 +496,12 @@ function EventWizardRecap({ navigation }) {
   const dateValue = getFormattedDate();
   const timeValue = getFormattedTime();
   const locationValue = getLocationDisplayText();
+  // CORR-TEXTES (point 29, ajout d'Adel « et adresse complète en petit ») : le nom
+  // du terrain d'abord, l'adresse en petit dessous.
+  const nomDuTerrain = typeof state.location === 'object' && state.location
+    ? String(state.location.name || '').trim()
+    : '';
+  const adresseDuTerrain = nomDuTerrain && nomDuTerrain !== locationValue ? locationValue : '';
   // COLL-R-APP-CREATION (13/10, COL-003, « D2- A ») — la question de l etape 4, relue ici : un
   // « Modifier » depuis le recap (date, heure, lieu) change la reponse sans repasser par l etape.
   const decisionDeLaVille = useMairieDecideALaCreation(state, state.facility);
@@ -1458,8 +1464,13 @@ function EventWizardRecap({ navigation }) {
                 </TouchableOpacity>
               </View>
               <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>
-                {locationValue}
+                {nomDuTerrain || locationValue}
               </Text>
+              {adresseDuTerrain ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]} testID="recap-adresse-du-terrain">
+                  {adresseDuTerrain}
+                </Text>
+              ) : null}
               {ligneDeLaMairie ? (
                 <Text style={[Fonts.p3, Fonts.warning500]} testID="recap-mairie-decide">
                   {ligneDeLaMairie}

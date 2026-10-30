@@ -4109,12 +4109,15 @@ function ClubLicenses({ navigation, route }) {
     if (!canManageLicenses) {
       return (
         <LicenseEmptyState
+          // CORR-TEXTES (point 34) : le bandeau seul ne disait pas qu'il n'y a rien à suivre.
           description={t(
             'clubLicenses.emptyStates.coachDescription',
-            'Vue limitée aux équipes que tu entraines. Les actions financieres restent '
-              + 'réservées aux dirigeants.',
+            'Les cotisations de tes équipes sont suivies par les dirigeants du club.',
           )}
-          title={t('clubLicenses.emptyStates.coachTitle', 'Vue entraîneur')}
+          title={t(
+            'clubLicenses.emptyStates.coachTitle',
+            'Aucune cotisation à suivre pour tes équipes',
+          )}
         />
       );
     }

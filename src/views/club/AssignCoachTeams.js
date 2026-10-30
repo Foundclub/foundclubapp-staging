@@ -24,6 +24,7 @@ import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetUserById } from '@/services/auth/authQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
 import { updateTeam } from '@/services/team/teamService';
 
@@ -62,8 +63,17 @@ function AssignCoachTeams({ navigation, route }) {
   const clubId = sanitizeRouteParam(route?.params?.clubId);
   const trainerId = sanitizeRouteParam(route?.params?.trainerId)
     || sanitizeRouteParam(route?.params?.coachId);
-  const trainerName = String(route?.params?.trainerName || '').trim();
   const { t } = useTranslation();
+  // CORR-TEXTES (point 35) : l'adresse du site ne porte que l'identifiant ; ouvert à
+  // froid (rechargement), le nom se relit au serveur au lieu de dire « Utilisateur ».
+  const nomPasse = String(route?.params?.trainerName || '').trim();
+  const { data: entraineurLu } = useGetUserById(trainerId, {
+    enabled: !nomPasse && Boolean(trainerId),
+  });
+  const trainerName = nomPasse || [entraineurLu?.firstname, entraineurLu?.lastname]
+    .map((morceau) => String(morceau || '').trim())
+    .filter(Boolean)
+    .join(' ');
   const {
     Alignments,
     ApplicationStyle,
@@ -425,7 +435,7 @@ function AssignCoachTeams({ navigation, route }) {
               {trainerName || t('assignCoachTeams.header.userFallback', 'Utilisateur')}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
-              {t('assignCoachTeams.header.hint', 'Cochez une ou plusieurs équipes, puis valide.')}
+              {t('assignCoachTeams.header.hint', 'Coche une ou plusieurs équipes, puis valide.')}
             </Text>
           </View>
 

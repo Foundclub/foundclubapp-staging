@@ -283,8 +283,10 @@ describe('AutocompleteAddressInput — la recherche de ville, de l\'appui aux pr
   // 🏟️ FINITIONS-VILLE (08/10/2026, tournée T20 C00g) — l'assistant de club proposait DEUX lignes
   // « 1 Chemin du Château 14400 Agy » (même point, même libellé : deux réponses de la base
   // d'adresses) qui s'allumaient ensemble. Une option identique (même point ET même libellé)
-  // ne s'affiche qu'une fois ; le même libellé ailleurs reste deux lignes. ROUGE avant le lot.
-  it('FINITIONS-VILLE : même point ET même libellé = une seule ligne', async () => {
+  // ne s'affiche qu'une fois. CORR-TEXTES (point 30, décision d'Adel du 30/10 « retirer les
+  // doublons exacts ») : le même libellé à un autre point ne fait plus une deuxième ligne non
+  // plus — deux lignes identiques ne se distinguent pas à l'écran.
+  it('FINITIONS-VILLE + CORR-TEXTES : même libellé = une ligne, même ailleurs', async () => {
     const agy = (/** @type {string} */ id, /** @type {number[]} */ point) => ({
       geometry: { coordinates: point },
       properties: {
@@ -315,6 +317,6 @@ describe('AutocompleteAddressInput — la recherche de ville, de l\'appui aux pr
       });
     }
     const texte = texteVisible(arbre);
-    expect(texte.split('1 Chemin du Château 14400 Agy').length - 1).toBe(2);
+    expect(texte.split('1 Chemin du Château 14400 Agy').length - 1).toBe(1);
   });
 });

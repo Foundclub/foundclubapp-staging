@@ -1028,7 +1028,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
 
     // Le contenu des options, lui, est bien replie.
     expect(contenu).not.toContain('Nouvelle tâche');
-    expect(contenu).not.toContain('A la une publique');
+    expect(contenu).not.toContain('À la une publique');
     demonter();
   });
 
@@ -1148,7 +1148,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('Nouvelle tâche');
     // ⛔ Orthographe EXACTE : ce sont les valeurs deja en base. « Materiel » et
-    // « Photos / videos » s ecrivent SANS accent. Les retaper « proprement »
+    // « Photos / vidéos » s ecrivent SANS accent. Les retaper « proprement »
     // fabriquerait des types fantomes.
     [
       'Accompagnateur',
@@ -1157,7 +1157,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       'Arbitrage',
       'Materiel',
       'Buvette',
-      'Photos / videos',
+      'Photos / vidéos',
       'Responsable maillots',
       'Autre',
     ].forEach((type) => {
@@ -1174,9 +1174,9 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     });
 
     const contenu = contenuDe(arbre);
-    expect(contenu).toContain('A la une publique');
-    expect(contenu).toContain('A la une du club');
-    expect(contenu).toContain('A la une multisport');
+    expect(contenu).toContain('À la une publique');
+    expect(contenu).toContain('À la une du club');
+    expect(contenu).toContain('À la une multisport');
     // ⛔ Aucune regle metier inventee : la demande part seulement si l on
     // coche. La rangee dit « Non » tant que rien n est choisi.
     expect(contenu).toContain('Non');
@@ -1190,7 +1190,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       pressableQuiPorte(arbre, 'Mise à la une').props.onPress();
     });
     act(() => {
-      pressableQuiPorte(arbre, 'A la une du club').props.onPress();
+      pressableQuiPorte(arbre, 'À la une du club').props.onPress();
     });
     act(() => {
       pressableQuiPorte(arbre, 'Mise à la une').props.onPress();
@@ -1198,7 +1198,7 @@ describe('D10 — etape 8 · Recapitulatif', () => {
 
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('1 espace(s)');
-    expect(contenu).not.toContain('A la une du club');
+    expect(contenu).not.toContain('À la une du club');
     demonter();
   });
 

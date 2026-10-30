@@ -117,7 +117,7 @@ describe('participationFlow', () => {
 
     expect(flow.kind).toBe(ParticipationFlowKind.eventClosed);
     expect(flow.canAct).toBe(true);
-    expect(flow.actionLabel).toBe('Present');
+    expect(flow.actionLabel).toBe('Présent');
   });
 
   test('redirects stage day children to their parent event', () => {

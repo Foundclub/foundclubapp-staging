@@ -263,7 +263,7 @@ function AdWizardRecap({ navigation }) {
   ) : playerAdTypeLabel;
   const needsSectionTitle = isCoachAd ? t(
     'adWizardRecap.needs.titleCoach',
-    'Rôle recherche',
+    'Rôle recherché',
   ) : t('adWizardRecap.needs.title', 'Postes recherchés');
   const needsEditRoute = isCoachAd ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions;
   const coachNeedsSummary = t('adWizardRecap.needs.coachSummary', {
@@ -328,6 +328,14 @@ function AdWizardRecap({ navigation }) {
     },
   ];
   const completedQuickOverviewCount = quickOverviewItems.filter((item) => item.complete).length;
+  const certificationsVoulues = Array.isArray(state.certificationsWanted)
+    ? state.certificationsWanted
+    : [];
+  const certificationsLues = certificationsVoulues
+    .map((certification) => String(certification || '').trim())
+    .filter(Boolean)
+    .join(', ');
+  const disponibilitesLues = String(state.availabilityText || '').trim();
   const needsCardsContent = isCoachAd ? (
     <View
       style={[
@@ -737,6 +745,21 @@ function AdWizardRecap({ navigation }) {
 
             <View style={[Spaces.gap[12]]}>
               {isCoachAd ? needsCardsContent : playerNeedsCardsContent}
+              {/* CORR-TEXTES (point 31) : ce qui part avec l'annonce se relit ici. */}
+              {isCoachAd && certificationsLues ? (
+                <Text style={[Fonts.p2, Fonts.neutral100]} testID="ad-recap-certifications">
+                  {t('adWizardCoachProfile.certificationsLabel', 'Certifications souhaitées')}
+                  {' : '}
+                  {certificationsLues}
+                </Text>
+              ) : null}
+              {isCoachAd && disponibilitesLues ? (
+                <Text style={[Fonts.p2, Fonts.neutral100]} testID="ad-recap-disponibilites">
+                  {t('adWizardCoachProfile.availabilityLabel', 'Disponibilités attendues')}
+                  {' : '}
+                  {disponibilitesLues}
+                </Text>
+              ) : null}
             </View>
           </RecapSection>
 

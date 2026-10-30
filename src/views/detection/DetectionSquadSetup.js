@@ -143,8 +143,8 @@ function DetectionSquadSetup() {
   }, [activeMode, activePresentIds, checkInFirst, navigation, params, sport, teamName]);
 
   const subtitle = t('detection.squad.subtitle', {
+    count: players.length,
     members: members.length,
-    registered: players.length,
     teamName: teamName || t('common.team', { defaultValue: '' }),
     ...SANS_ECHAPPEMENT,
   });
@@ -152,13 +152,21 @@ function DetectionSquadSetup() {
   // L'apercu du pack change avec le choix : c'est lui qui rend la consequence
   // lisible AVANT de generer, et il compte de vrais joueurs, jamais un exemple.
   const previewText = useMemo(() => {
-    const base = t(`detection.squad.preview.${activeMode}`, {
-      candidates: candidateCount,
-      members: members.length,
-      teamName,
-      total: players.length,
-      ...SANS_ECHAPPEMENT,
-    });
+    // CORR-TEXTES (point 24) : une phrase par nombre, pour accorder chacune
+    // (« 1 membre de U11 forme une équipe », jamais « 1 membres … forment »).
+    const options = { teamName, ...SANS_ECHAPPEMENT };
+    const phrases = {
+      excluded: [
+        t('detection.squad.preview.excluded', { ...options, count: candidateCount }),
+        t('detection.squad.preview.excludedMembers', { ...options, count: members.length }),
+      ],
+      grouped: [
+        t('detection.squad.preview.grouped', { ...options, count: members.length }),
+        t('detection.squad.preview.groupedCandidates', { ...options, count: candidateCount }),
+      ],
+      mix: [t('detection.squad.preview.mix', { ...options, count: players.length })],
+    };
+    const base = (phrases[activeMode] || phrases.mix).join(' ');
     return checkInFirst ? `${base} ${t('detection.squad.preview.withCheckIn')}` : base;
   }, [activeMode, candidateCount, checkInFirst, members.length, players.length, t, teamName]);
 

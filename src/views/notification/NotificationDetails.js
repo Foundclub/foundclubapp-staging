@@ -124,7 +124,7 @@ function NotificationDetails() {
     if (!isValid(parsedDate)) {
       return t('notifications.details.participationDeclined.unknownDate');
     }
-    return format(parsedDate, "dd MMM yyyy 'a' HH:mm", { locale: fr });
+    return format(parsedDate, "dd MMM yyyy 'à' HH:mm", { locale: fr });
   }, [details.createdAt, t]);
 
   const isParticipationDeclined = details.status === 'declined';

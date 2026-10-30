@@ -15,11 +15,16 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 
+// Même voisinage que AdWizardRecap.js : perfectionist et import/order se contredisent ici.
+/* eslint-disable perfectionist/sort-imports */
+import { getCoachRoleLabel } from '@/constants/coachRoles';
+
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardDescriptionStepIndex,
   getAdWizardStepCount,
 } from './adWizardStepUtils';
+/* eslint-enable perfectionist/sort-imports */
 
 /**
  * Wizard step for the optional copy.
@@ -79,7 +84,8 @@ function AdWizardDescription({ navigation }) {
     isCoachAd && state.coachRole ? t(
       'adWizardDescription.context.role',
       'Rôle : {{role}}',
-      { role: state.coachRoleOther || state.coachRole, ...SANS_ECHAPPEMENT },
+      // CORR-TEXTES (point 31) : le libellé (« Entraîneur adjoint »), jamais la valeur technique.
+      { role: getCoachRoleLabel(state.coachRole, state.coachRoleOther), ...SANS_ECHAPPEMENT },
     ) : null,
     locationHighlight ? t(
       'adWizardDescription.context.location',

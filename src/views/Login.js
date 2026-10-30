@@ -15,6 +15,8 @@ import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
+
 /**
  * Login screen component for user authentication.
  * Handles phone number input and OTP verification for user login.
@@ -33,7 +35,10 @@ function Login({ navigation }) {
   const {
     cancelAddAccount, canShowCodeButton, confirm, isAddingAccount, isLoading, loginMutation, otpMutation,
   } = useAuth();
-  const authErrorMessage = loginMutation.error?.message || otpMutation.error?.message || '';
+  // CORR-TEXTES (point 23) : la phrase française du code Firebase,
+  // jamais « Firebase: Error (auth/…) ».
+  const authError = loginMutation.error || otpMutation.error;
+  const authErrorMessage = authError ? getErrorMessage(authError, 'OTP_ERROR') : '';
   const isWebBypassEnabled = Platform.OS === 'web' && process.env.BYPASS_FIREBASE_AUTH === 'true';
   const renderBrandLogo = () => {
     if (Platform.OS === 'web') {

@@ -425,7 +425,7 @@ const ouvrirLaRechercheDeClub = async () => {
   await act(async () => { arbre = renderer.create(element); });
   await laisserLeReseauRepondre();
   mockJournal.length = 0;
-  await act(async () => { presserLeTexte('Inviter l équipe adverse sur FoundClub'); });
+  await act(async () => { presserLeTexte('Inviter l’équipe adverse sur FoundClub'); });
   await laisserLeReseauRepondre();
 };
 

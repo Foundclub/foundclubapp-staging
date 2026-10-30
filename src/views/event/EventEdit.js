@@ -755,7 +755,12 @@ function EventEditForm({ navigation, route }) {
     const myTeamsOptions = teamOptions.filter((teamOption) => teamOption.value !== selectedTeamId);
 
     // Filter other teams (exclude my teams and selected team)
-    const myTeamIds = trainedTeams.map((teamItem) => teamItem.documentId);
+    // CORR-TEXTES (point 28) : « mes équipes » d'un dirigeant = tout le club ; on
+    // retire donc ce qui est DÉJÀ listé au-dessus, pas seulement ce qu'il entraîne.
+    const myTeamIds = [
+      ...trainedTeams.map((teamItem) => teamItem.documentId),
+      ...teamOptions.map((teamOption) => teamOption.value),
+    ];
     const otherTeamsOptions = clubTeams
       .filter((teamItem) => !myTeamIds.includes(teamItem.documentId) && teamItem.documentId !== selectedTeamId)
       .map((teamItem) => ({ label: teamItem.name, value: teamItem.documentId }));

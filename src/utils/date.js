@@ -56,7 +56,7 @@ export const formatDateTimeWithDayPrefix = (value, options) => {
 
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${day} a ${hours}h${minutes}`;
+  return `${day} à ${hours}h${minutes}`;
 };
 
 /**

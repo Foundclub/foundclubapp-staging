@@ -177,7 +177,7 @@ describe('FINITIONS10 · point 2 — le balayage 2 des valeurs de fr.js', () => 
     ['squadDetailsScreen.reports.published', 'Publié'],
     ['teamDetails.perf.published', 'Publié'],
     ['eventWizard.steps.participants.internalInvitesAllMembers', 'Tous les membres invités'],
-    ['eventWizard.steps.participants.internalInvitesSelectedCount', '{{count}} membre(s) invité(s)'],
+    ['eventWizard.steps.participants.internalInvitesSelectedCount_other', '{{count}} membres invités'],
     ['requestMappers.facility.subtitle', '{{team}} demande une place supplémentaire sur {{facility}} ({{overlap}}/{{max}} créneaux déjà pris).'],
     ['tournamentManagement.bracketGenerated', 'Tableau final généré'],
   ])('%s vaut « %s »', (chemin, attendu) => {

@@ -57,7 +57,7 @@ import {
 } from '@/services/recruitment/recruitmentService';
 import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/services/search/searchService';
 
-import { getApiErrorTranslation } from '@/utils/errors/displayError';
+import { getApiErrorTranslation, getErrorStatus } from '@/utils/errors/displayError';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 import texteInsecable from '@/utils/texteInsecable';
 
@@ -170,6 +170,16 @@ function RecrutementListContent({
     'Vérifie ta connexion, puis réessaie.',
   );
   const UNREACHABLE_ACTION = t('recrutementListContent.unreachable.retry', 'Réessayer');
+  // CORR-TEXTES (point 25) : un refus du serveur (403) n'est pas une panne ;
+  // on ne fait pas vérifier sa connexion à quelqu'un dont le profil n'a pas accès.
+  const REFUSED_TITLE = t(
+    'recrutementListContent.refused.title',
+    'Cette page n’est pas ouverte à ton profil.',
+  );
+  const REFUSED_DESCRIPTION = t(
+    'recrutementListContent.refused.description',
+    'Ton profil ne donne pas accès à ces annonces.',
+  );
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -201,6 +211,8 @@ function RecrutementListContent({
   // « il n'y a rien », et les deux listes tombent en panne separement.
   const [adsUnreachable, setAdsUnreachable] = useState(false);
   const [myApplicationsUnreachable, setMyApplicationsUnreachable] = useState(false);
+  const [adsRefused, setAdsRefused] = useState(false);
+  const [myApplicationsRefused, setMyApplicationsRefused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [applyingAdId, setApplyingAdId] = useState('');
@@ -353,7 +365,10 @@ function RecrutementListContent({
       console.error('[RecrutementListContent] Error fetching ads:', error);
       // Une page suivante ratee ne condamne pas les pages deja affichees :
       // seule la premiere page decide de l'etat « injoignable ».
-      if (!append) setAdsUnreachable(true);
+      if (!append) {
+        setAdsUnreachable(true);
+        setAdsRefused(getErrorStatus(error) === 403);
+      }
     } finally {
       if (page === 1 && !isRefresh) setLoading(false);
       else if (page > 1) setAdsLoadingMore(false);
@@ -426,6 +441,7 @@ function RecrutementListContent({
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching applications:', error);
       setMyApplicationsUnreachable(true);
+      setMyApplicationsRefused(getErrorStatus(error) === 403);
     } finally {
       if (!isRefresh) setLoading(false);
     }
@@ -786,14 +802,19 @@ function RecrutementListContent({
   // Le rappel est enveloppe : sans ca, Button passerait son evenement de
   // pression en premier argument, et `fetchMyAds(event)` partirait en
   // rafraichissement silencieux, sans jamais montrer le chargement.
-  const renderUnreachableState = (/** @type {() => void} */ onRetry) => (
+  const renderUnreachableState = (
+    /** @type {() => void} */ onRetry,
+    refused = false,
+  ) => (refused ? (
+    <EmptyState description={REFUSED_DESCRIPTION} title={REFUSED_TITLE} />
+  ) : (
     <EmptyState
       actionLabel={UNREACHABLE_ACTION}
       description={UNREACHABLE_DESCRIPTION}
       onAction={onRetry}
       title={UNREACHABLE_TITLE}
     />
-  );
+  ));
 
   // Le bouton de publication, ecrit UNE fois et pose a DEUX endroits : sur
   // l onglet d exploration (« Profils »), ou le pack le veut — on publie depuis
@@ -940,7 +961,7 @@ function RecrutementListContent({
     // La panne passe AVANT le filtre : sans ca, un serveur muet renverrait
     // l'utilisateur ajuster une recherche qui n'y est pour rien.
     if (adsUnreachable) {
-      return renderUnreachableState(() => fetchAdsForPlayer(1, false));
+      return renderUnreachableState(() => fetchAdsForPlayer(1, false), adsRefused);
     }
 
     return (
@@ -1311,6 +1332,7 @@ function RecrutementListContent({
         keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
         ListEmptyComponent={myApplicationsUnreachable ? renderUnreachableState(
           () => fetchMyApplications(),
+          myApplicationsRefused,
         ) : (
           <View style={[Spaces.padding[24], {
             alignItems: 'center',

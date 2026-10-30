@@ -225,7 +225,10 @@ function CollectiviteJoin() {
             {[
               installation?.type ? getFacilityTypeLabel(installation.type) : null,
               Number.isInteger(installation?.maxSlots)
-                ? t('collectiviteClubs.join.capacity', '{{nombre}} équipe(s) à la fois', {
+                ? t('collectiviteClubs.join.capacity', {
+                  count: installation.maxSlots,
+                  defaultValue_one: '{{nombre}} équipe à la fois',
+                  defaultValue_other: '{{nombre}} équipes à la fois',
                   nombre: installation.maxSlots,
                 })
                 : null,

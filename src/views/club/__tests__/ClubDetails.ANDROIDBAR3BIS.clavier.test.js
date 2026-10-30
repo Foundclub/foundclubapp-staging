@@ -58,6 +58,11 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));
 
+// CORR-TEXTES (point 26) : le bandeau du site, hors de ce filet.
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
+
 // L'en-tête de pile est transparent : `ScreenContainer` le lit pour sa marge HAUTE seulement.
 jest.mock('@react-navigation/elements', () => ({
   // eslint-disable-next-line global-require

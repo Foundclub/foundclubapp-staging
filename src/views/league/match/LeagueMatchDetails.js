@@ -480,7 +480,7 @@ function LeagueMatchDetails({ navigation, route }) {
     let formattedDate = t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
     if (negotiationProposalDate) {
       try {
-        formattedDate = format(new Date(negotiationProposalDate), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
+        formattedDate = format(new Date(negotiationProposalDate), "EEEE d MMMM 'à' HH'h'mm", { locale: fr });
       } catch (_error) {
         formattedDate = t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
       }
@@ -564,7 +564,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
     }
     try {
-      return format(new Date(match.date), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
+      return format(new Date(match.date), "EEEE d MMMM 'à' HH'h'mm", { locale: fr });
     } catch (_error) {
       return match.date;
     }

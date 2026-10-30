@@ -74,10 +74,19 @@ describe("getCompositionPlayerInitials — ce qui remplit l'avatar sans photo", 
     expect(getCompositionPlayerInitials({ firstname: 'Jean' })).toBe('J');
   });
 
-  it('trois mots : on s arrete a DEUX initiales', () => {
+  // CORR-TEXTES (point 38, décision d'Adel du 30/10 « initiale du prénom et initiale du nom ») :
+  // un deuxième prénom ne remplace plus le nom.
+  it('trois mots : DEUX initiales, le premier mot et le dernier (le nom)', () => {
     const joueur = { firstname: 'Jean Pierre', lastname: 'Dupont' };
     const initiales = getCompositionPlayerInitials(joueur);
-    expect(initiales).toBe('JP');
+    expect(initiales).toBe('JD');
+  });
+
+  it('prénoms et nom composés : « Zoé-Anaïs Marie-Hélène D’Artagnan-Lefèvre » donne ZD', () => {
+    expect(getCompositionPlayerInitials({
+      firstname: 'Zoé-Anaïs Marie-Hélène',
+      lastname: 'D’Artagnan-Lefèvre',
+    })).toBe('ZD');
   });
 
   it('personne : le repli est « ? » — c est le repli de `Joueur`, donc « J »', () => {

@@ -191,13 +191,13 @@ describe('N4/D3 — 🚨 un echec PARTIEL se dit, il ne se noie pas', () => {
 });
 
 describe('N4/D3 — le resultat se traduit SANS ADAPTATION', () => {
-  test('8 relances sur deux equipes se disent « 8 personnes relancees »', () => {
+  test('8 relances sur deux equipes se disent « 8 personnes relancées »', () => {
     const reuni = aggregateRemindReports([
       { report: rapport({ remindedCount: 3 }), teamId: 'a' },
       { report: rapport({ remindedCount: 5 }), teamId: 'b' },
     ]);
 
-    expect(buildRemindMessage(reuni).title).toBe('8 personnes relancees');
+    expect(buildRemindMessage(reuni).title).toBe('8 personnes relancées');
     expect(buildRemindMessage(reuni).outcome).toBe('sent');
   });
 

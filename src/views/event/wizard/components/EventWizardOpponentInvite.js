@@ -408,7 +408,7 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
             {t(
               'eventWizard.steps.opponent.inviteTitle',
-              'Inviter l équipe adverse sur FoundClub',
+              'Inviter l’équipe adverse sur FoundClub',
             )}
           </Text>
           <Image

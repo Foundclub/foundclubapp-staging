@@ -164,8 +164,8 @@ describe('COLL-CLUBS — planche 3, côté club : la page du lien de la Ville', 
       'Une fois ton club rattaché à la Ville, tu pourras :',
       'Les installations de la Ville',
       'Gymnase des Tilleuls',
-      'Gymnase · 2 équipe(s) à la fois · 12 rue des Tilleuls',
-      'Dojo · 1 équipe(s) à la fois',
+      'Gymnase · 2 équipes à la fois · 12 rue des Tilleuls',
+      'Dojo · 1 équipe à la fois',
       'M',
     ]));
   });

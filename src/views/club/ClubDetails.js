@@ -63,6 +63,8 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import { useAppFeedback } from '@/context/AppFeedbackContext';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
@@ -326,6 +328,7 @@ function ClubDetails({ navigation, route }) {
   const { startClubChat } = useMessaging();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { showBanner } = useAppFeedback();
   const insets = useSafeAreaInsets();
   const isAuthenticated = Boolean(userData?.documentId);
   const [selectedTab, setSelectedTab] = useState(
@@ -1697,26 +1700,36 @@ function ClubDetails({ navigation, route }) {
       // 👶 PARENT P3 — la place demandee POUR un enfant le dit, et dit la suite.
       // 👶 PAR-L4 — et mene a SA fiche (« Voir sa fiche », design parent E13).
       if (variables?.declaredChildId) {
-        Alert.alert(
-          t('clubDetails.childInterest.sentTitle', 'Demande envoyée'),
-          t('clubDetails.childInterest.sentDescription', {
-            defaultValue: 'Les responsables de {{teamName}} vont examiner la demande'
-              + ' pour {{firstname}}. Tu recevras leur réponse.',
-            firstname: variables?.childFirstname || '',
-            teamName: selectedTeamName,
-            ...SANS_ECHAPPEMENT,
-          }),
-          [
-            {
-              onPress: () => navigation.navigate(RouteNames.ProfileStack, {
-                params: { childDocumentId: variables.declaredChildId },
-                screen: RouteNames.MyChildren,
-              }),
-              text: t('clubDetails.childInterest.viewChildPage', 'Voir sa fiche'),
-            },
-            { style: 'cancel', text: t('common.actions.ok', 'OK') },
-          ],
-        );
+        const titreEnvoye = t('clubDetails.childInterest.sentTitle', 'Demande envoyée');
+        const phraseEnvoyee = t('clubDetails.childInterest.sentDescription', {
+          defaultValue: 'Les responsables de {{teamName}} vont examiner la demande'
+            + ' pour {{firstname}}. Tu recevras leur réponse.',
+          firstname: variables?.childFirstname || '',
+          teamName: selectedTeamName,
+          ...SANS_ECHAPPEMENT,
+        });
+        const voirSaFiche = () => navigation.navigate(RouteNames.ProfileStack, {
+          params: { childDocumentId: variables.declaredChildId },
+          screen: RouteNames.MyChildren,
+        });
+        const libelleFiche = t('clubDetails.childInterest.viewChildPage', 'Voir sa fiche');
+        // CORR-TEXTES (point 26) : sur le site, Alert devient une boîte grise du
+        // navigateur avec « Annuler », qui laisse croire qu'on retire la demande.
+        // Un bandeau dans la page, comme « Demande annulée » ; le téléphone garde sa boîte.
+        if (Platform.OS === 'web') {
+          showBanner({
+            actionLabel: libelleFiche,
+            body: phraseEnvoyee,
+            onAction: voirSaFiche,
+            title: titreEnvoye,
+            tone: 'success',
+          });
+          return;
+        }
+        Alert.alert(titreEnvoye, phraseEnvoyee, [
+          { onPress: voirSaFiche, text: libelleFiche },
+          { style: 'cancel', text: t('common.actions.ok', 'OK') },
+        ]);
         return;
       }
 

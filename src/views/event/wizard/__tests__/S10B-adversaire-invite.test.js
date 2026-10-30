@@ -330,7 +330,7 @@ const ouvrirLesEquipesDuVoisin = async (etatSeme = {}) => {
     })));
   });
 
-  await presserLeTexte('Inviter l équipe adverse sur FoundClub');
+  await presserLeTexte('Inviter l’équipe adverse sur FoundClub');
   await laisserLeReseauRepondre();
   await presserLeTexte('AS Voisine');
   await laisserLeReseauRepondre();

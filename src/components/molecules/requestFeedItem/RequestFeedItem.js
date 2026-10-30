@@ -36,7 +36,7 @@ const formatWindowLabel = (startValue, endValue) => {
     : '';
 
   if (endTimeLabel) {
-    return `${dateLabel} - ${startTimeLabel} a ${endTimeLabel}`;
+    return `${dateLabel} - ${startTimeLabel} à ${endTimeLabel}`;
   }
 
   return `${dateLabel} - ${startTimeLabel}`;

@@ -35,6 +35,7 @@ import {
 import { markApplicationResponsesAsRead } from '@/services/notification/notificationService';
 import { getMyApplications, getMyRecruitmentAds } from '@/services/recruitment/recruitmentService';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
 import texteInsecable from '@/utils/texteInsecable';
 
 const TAB_PUBLICATIONS = 'publications';
@@ -80,6 +81,15 @@ function MyActivitiesScreen({ navigation }) {
     'Vérifie ta connexion, puis réessaie.',
   );
   const UNREACHABLE_ACTION = t('myActivitiesScreen.unreachable.retry', 'Réessayer');
+  // CORR-TEXTES (point 25) : un refus du serveur (403) n'est pas une panne.
+  const REFUSED_TITLE = t(
+    'myActivitiesScreen.refused.title',
+    'Cette page n’est pas ouverte à ton profil.',
+  );
+  const REFUSED_DESCRIPTION = t(
+    'myActivitiesScreen.refused.description',
+    'Ton profil ne donne pas accès à ces annonces.',
+  );
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -104,6 +114,7 @@ function MyActivitiesScreen({ navigation }) {
   // Un seul drapeau, mais leve UNIQUEMENT sur un rejet : sans lui, un serveur
   // muet renverrait « tu n as encore rien publie » a quelqu un qui a publie.
   const [unreachable, setUnreachable] = useState(false);
+  const [refused, setRefused] = useState(false);
 
   const ownerFilters = useMemo(() => (
     managedTeamIds.length > 0
@@ -144,8 +155,10 @@ function MyActivitiesScreen({ navigation }) {
       setSentApplications(valeur(mesCandidatures));
       setSentFriendlyApplications(valeur(mesPropositions));
       // BH15 P14-11 : seules les requetes du role comptent ; les autres repondent [] d'office.
-      setUnreachable((isStaff ? [offres, matchs] : [mesCandidatures, mesPropositions])
-        .every((resultat) => resultat.status === 'rejected'));
+      const duRole = isStaff ? [offres, matchs] : [mesCandidatures, mesPropositions];
+      setUnreachable(duRole.every((resultat) => resultat.status === 'rejected'));
+      setRefused(duRole.every((resultat) => resultat.status === 'rejected'
+        && getErrorStatus(resultat.reason) === 403));
 
       // MES-CANDIDATURES (A13) — la liste est a l'ecran : ses reponses sont VUES, et
       // la pastille rouge de l'accueil s'eteint (le serveur compte les notifications
@@ -162,6 +175,7 @@ function MyActivitiesScreen({ navigation }) {
     } catch (error) {
       console.error('[MyActivitiesScreen] Error fetching activities:', error);
       setUnreachable(true);
+      setRefused(false);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -338,6 +352,10 @@ function MyActivitiesScreen({ navigation }) {
   );
 
   const renderEmpty = () => {
+    if (unreachable && refused) {
+      return <EmptyState description={REFUSED_DESCRIPTION} title={REFUSED_TITLE} />;
+    }
+
     if (unreachable) {
       return (
         <EmptyState

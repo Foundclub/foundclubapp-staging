@@ -270,7 +270,7 @@ describe('MASQUE — identites masquees : un NOMBRE, jamais un nom', () => {
 
     expect(textes).toContain('3 participants');
     expect(textes).not.toContain('Aucun participant confirmé pour le moment.');
-    expect(textes).toContain('Les identités des participants sont masquees par l organisateur.');
+    expect(textes).toContain('Les identités des participants sont masquées par l’organisateur.');
   });
 
   test('MASQUE/2 — tuiles et « N reponses sur M » : relus sur les listes recues', () => {

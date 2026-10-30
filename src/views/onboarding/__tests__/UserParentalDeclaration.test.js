@@ -297,13 +297,15 @@ test('CONSENTEMENT ⑦ sur le telephone, le lien parent est propose comme autre 
   expect(texte).toContain('dans Profil, rubrique Mes enfants');
 });
 
-test('CONSENTEMENT ⑦ bis sur le site, l ecran dit que le lien parent n y est pas', async () => {
+// CORR-TEXTES (point 39, décision d'Adel du 30/10) : depuis « 5- A » le parent le fait aussi
+// sur le site ; la fin de phrase « pas encore possible sur le site » est retirée.
+test('CONSENTEMENT ⑦ bis sur le site, l ecran ne dit plus que le site en est privé', async () => {
   Platform.OS = 'web';
   const texte = texteVisible(await rendre());
 
-  expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte');
-  expect(texte).toContain('application mobile FoundClub');
-  expect(texte).toContain('pas encore possible sur le site');
+  expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte.');
+  expect(texte).not.toContain('application mobile FoundClub');
+  expect(texte).not.toContain('pas encore possible sur le site');
   expect(texte).not.toContain('dans Profil, rubrique Mes enfants');
 });
 

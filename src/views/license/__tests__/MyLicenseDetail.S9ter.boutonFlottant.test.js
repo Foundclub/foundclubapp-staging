@@ -242,7 +242,7 @@ describe('S9-ter — la barre du bas devient UN bouton flottant', () => {
    */
   const ouvrirLeMenu = () => {
     const trois = arbre.root.findAll((/** @type {any} */ n) => (
-      n.props?.accessibilityLabel === 'Plus d options' && typeof n.props?.onPress === 'function'
+      n.props?.accessibilityLabel === 'Plus d’options' && typeof n.props?.onPress === 'function'
     ))[0];
     expect(trois).toBeTruthy();
     act(() => trois.props.onPress());

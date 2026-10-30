@@ -493,8 +493,12 @@ function CollectiviteClubDetails() {
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t(
               'collectiviteClubs.detail.requestsMore',
-              'Et {{nombre}} autre(s) en attente.',
-              { nombre: restantes },
+              {
+                count: restantes,
+                defaultValue_one: 'Et {{nombre}} autre en attente.',
+                defaultValue_other: 'Et {{nombre}} autres en attente.',
+                nombre: restantes,
+              },
             )}
           </Text>
         ) : null}

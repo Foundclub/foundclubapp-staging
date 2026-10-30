@@ -303,7 +303,7 @@ describe('N4/1I — la feuille previent AVANT d envoyer', () => {
     });
 
     // Le drapeau interne : tant que CETTE ouverture n a rien envoye, la feuille
-    // montre le CHOIX. Sans lui, rouvrir afficherait « 9 personnes relancees »
+    // montre le CHOIX. Sans lui, rouvrir afficherait « 9 personnes relancées »
     // et l on ne pourrait plus rien relancer du tout.
     expect(parTestID(root, 'remind-sheet-teams')).toHaveLength(1);
     expect(parTestID(root, 'remind-sheet-report')).toHaveLength(0);
@@ -331,7 +331,7 @@ describe('N4/1H — apres l envoi, la feuille rend compte', () => {
     relancer(root);
 
     expect(parTestID(root, 'remind-sheet-report')).toHaveLength(1);
-    expect(textes(root)).toEqual(expect.arrayContaining(['1 personne relancee']));
+    expect(textes(root)).toEqual(expect.arrayContaining(['1 personne relancée']));
   });
 
   test('🚨 quand RIEN n est parti, la feuille ne dit jamais « envoye »', () => {
@@ -383,7 +383,7 @@ describe('N4/1H — apres l envoi, la feuille rend compte', () => {
 
     relancer(root);
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['2 personnes relancees']));
+    expect(textes(root)).toEqual(expect.arrayContaining(['2 personnes relancées']));
     expect(textes(root)).not.toEqual(expect.arrayContaining(['2 relancé·e·s']));
   });
 

@@ -402,11 +402,6 @@ function EventEditForm({ navigation, route }) {
     }));
   };
 
-  const handleInvitedTeamsChange = (selectedOptions) => {
-    const values = Array.from(selectedOptions || []).map((option) => option.value).filter(Boolean);
-    updateField('invitedTeams', values);
-  };
-
   const toggleInvitedTeam = (teamId) => {
     setFormState((current) => {
       const alreadySelected = current.invitedTeams.includes(teamId);
@@ -965,18 +960,8 @@ function EventEditForm({ navigation, route }) {
                         </div>
                       )}
                     </div>
-                    <select
-                      multiple
-                      onChange={(eventObject) => handleInvitedTeamsChange(eventObject.target.selectedOptions)}
-                      style={{ ...fieldStyle, minHeight: 140 }}
-                      value={formState.invitedTeams}
-                    >
-                      {availableInvitedTeams.map((team) => (
-                        <option key={getEntityDocumentId(team)} value={getEntityDocumentId(team)}>
-                          {team?.name || t('eventEdit.teamFallback', 'Equipe')}
-                        </option>
-                      ))}
-                    </select>
+                    {/* CORR-TEXTES (point 28) : la même liste revenait dessous en
+                        menu à choix multiples ; les pastilles suffisent. */}
                   </div>
                 </label>
               </div>

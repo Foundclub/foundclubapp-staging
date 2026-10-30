@@ -473,8 +473,14 @@ function ClubSlotRequest({
           <Text style={[Fonts.p3Bold, Fonts.error500]}>
             {t(
               'collectiviteDemandes.club.ratees',
-              '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
-              { nombre: resultat.ratees },
+              {
+                count: resultat.ratees,
+                defaultValue_one: '{{nombre}} date n’a pas pu être envoyée : '
+                  + 'réessaie depuis ton planning.',
+                defaultValue_other: '{{nombre}} dates n’ont pas pu être envoyées : '
+                  + 'réessaie depuis ton planning.',
+                nombre: resultat.ratees,
+              },
             )}
           </Text>
         ) : null}
