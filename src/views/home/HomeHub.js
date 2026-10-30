@@ -67,6 +67,8 @@ import ExternalCompetitionPromptGate from '@/components/organisms/externalCompet
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
+import { resolveManageClubTarget } from '@/domains/home/manageClubTarget';
+
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
@@ -1462,16 +1464,10 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [clubId, cmId, navigation, showBanner, t, trainedTeamIds.length]);
 
   const handleOpenManageClub = useCallback(() => {
-    if (clubId) {
-      navigation.navigate(RouteNames.ClubStack, {
-        params: { clubId },
-        screen: RouteNames.Club,
-      });
-      return;
-    }
-
-    if (cmId) {
-      navigation.navigate(RouteNames.CMDashboard, { cmId });
+    // RWDIRIG3 : un dirigeant sans club va a la creation de son club (manageClubTarget.js).
+    const cible = resolveManageClubTarget({ clubId, cmId, isPresident });
+    if (cible) {
+      navigation.navigate(cible.name, cible.params);
       return;
     }
 
@@ -1480,7 +1476,7 @@ function HomeHubContent({ auth, navigation, route }) {
       title: t('homeHub.alerts.missingContext.title', 'Contexte manquant'),
       tone: 'error',
     });
-  }, [clubId, cmId, navigation, showBanner, t]);
+  }, [clubId, cmId, isPresident, navigation, showBanner, t]);
 
   // 🏠 A17 + A21 (lot ACCUEIL, 30/09) — les gestes de « Mon profil » et de
   // « Compte » (voir mon profil, le modifier, historique, alertes, cotisations,
