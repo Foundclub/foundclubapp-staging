@@ -1197,7 +1197,7 @@ const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
 
 // TUNNELREPRISE — les inscriptions ouvertes dans CE lancement de l'app (memoire, pas stockage) :
 // ce qui distingue « je continue mon tunnel » de « je rouvre l'app » (`getOnboardingViews`).
-// RWDIRIG3 (30/10, chef « Q2 ») — sur le SITE, un rechargement d'onglet n'est pas une reouverture :
+// RWDIRIG3 (30/10, chef « Q2 ») — sur le SITE, recharger l'onglet n'est pas une reouverture :
 // le lancement est aussi garde dans le sessionStorage de l'onglet (un onglet neuf l'a vide). Le
 // telephone n'en a pas : rien ne change pour lui.
 const CLE_ONGLET = 'tunnelsOuvertsCetteSession';
@@ -1214,7 +1214,10 @@ const stockageDeLOnglet = () => {
   }
 };
 
-/** @returns {string[]} Les inscriptions ouvertes dans cet onglet. */
+/**
+ * Les inscriptions ouvertes dans cet onglet (site), lues sans jamais lever.
+ * @returns {string[]} Leurs comptes.
+ */
 const lireLOnglet = () => {
   try {
     const valeur = JSON.parse(stockageDeLOnglet()?.getItem(CLE_ONGLET) || '[]');

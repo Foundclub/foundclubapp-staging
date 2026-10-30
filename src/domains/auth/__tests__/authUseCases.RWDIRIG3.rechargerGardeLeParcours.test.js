@@ -25,12 +25,16 @@ const sessionStorageDuSite = {
 const chargerLaPage = () => {
   /** @type {any} */
   let module = null;
+  // eslint-disable-next-line global-require -- un nouveau chargement de page
   jest.isolateModules(() => { module = require('@/domains/auth/authUseCases'); });
   return module;
 };
 
 const DIRIGEANT_SANS_CLUB = {
-  birthdate: '1985-03-12', documentId: 'dirigeant-neuf', firstname: 'Fin', lastname: 'Trois',
+  birthdate: '1985-03-12',
+  documentId: 'dirigeant-neuf',
+  firstname: 'Fin',
+  lastname: 'Trois',
   role: { name: 'president' },
 };
 
@@ -39,12 +43,12 @@ const etapes = (/** @type {any} */ resultat) => (resultat.views || [])
 
 beforeEach(() => {
   onglet = {};
-  /** @type {any} */ (globalThis).window = globalThis.window || {};
-  /** @type {any} */ (globalThis).window.sessionStorage = sessionStorageDuSite;
+  /** @type {any} */ (global).window = global.window || {};
+  /** @type {any} */ (global).window.sessionStorage = sessionStorageDuSite;
 });
 
 afterAll(() => {
-  delete (/** @type {any} */ (globalThis).window).sessionStorage;
+  delete (/** @type {any} */ (global).window).sessionStorage;
 });
 
 it('🔴 recharger sur « Trouve ton club » : le parcours reste ouvert (meme onglet)', () => {

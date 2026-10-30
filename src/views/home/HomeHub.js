@@ -67,6 +67,8 @@ import ExternalCompetitionPromptGate from '@/components/organisms/externalCompet
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
+import { resolveManageClubTarget } from '@/domains/home/manageClubTarget';
+
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
@@ -82,7 +84,6 @@ import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
-import { resolveManageClubTarget } from '@/domains/home/manageClubTarget';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 

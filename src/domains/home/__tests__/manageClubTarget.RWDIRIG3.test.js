@@ -1,6 +1,7 @@
-import { RouteNames } from '@/navigation/routeNames';
-
+/* eslint-disable max-len -- des phrases entieres */
 import { resolveManageClubTarget } from '@/domains/home/manageClubTarget';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 // RWDIRIG3 (30/10/2026, chef « Q1 = A », BLOQUANT) — UN DIRIGEANT SANS CLUB QUI TOUCHE « GÉRER MON
 // CLUB » ARRIVE SUR LA CRÉATION DE SON CLUB. Avant : un bandeau « Contexte manquant », et aucun
