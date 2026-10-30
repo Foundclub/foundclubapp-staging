@@ -424,6 +424,9 @@ const notificationDetailsDestination = (payload) => {
         title: notificationTitle,
         type: payload.type,
       },
+      // RW-PARENT3 (30/10) — l'adresse du site (/notifications/:notificationId) ne lit que ce
+      // paramètre : sans lui, « Notification introuvable ».
+      ...(notificationId ? { notificationId } : {}),
     },
     route: RouteNames.NotificationDetails,
   };
