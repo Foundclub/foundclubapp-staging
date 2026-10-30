@@ -89,7 +89,16 @@ function UserClubSearch({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: continuerLeTunnel,
+    // CORR-INSCRIPTION p18 (recette du site, décision A) : la carte s'ouvre juste après et lit le
+    // profil en cache, qui disait encore l'ancienne valeur (« INDISPONIBLE » après « Oui »). On y
+    // pose la réponse AVANT d'ouvrir la carte.
+    onSuccess: () => {
+      queryClient.setQueriesData(
+        { queryKey: ['get-me'] },
+        (/** @type {any} */ profil) => (profil ? { ...profil, isLookingForClub: isLooking } : profil),
+      );
+      return continuerLeTunnel();
+    },
   });
 
   useEffect(() => {

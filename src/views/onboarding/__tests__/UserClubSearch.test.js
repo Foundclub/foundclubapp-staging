@@ -17,6 +17,7 @@ import UserClubSearch from '../UserClubSearch';
 const mockGetNextOnboardingRoute = jest.fn();
 const mockUpdateMe = jest.fn();
 const mockInvalidateQueries = jest.fn();
+const mockSetQueriesData = jest.fn();
 const mockMarkOnboardingComplete = jest.fn();
 const mockUserData = {
   current: /** @type {any} */ ({ documentId: 'user-1' }),
@@ -29,7 +30,7 @@ jest.mock('@tanstack/react-query', () => ({
       .then((data) => options.onSuccess?.(data))
       .catch((error) => options.onError?.(error)),
   }),
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries, setQueriesData: mockSetQueriesData }),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -281,5 +282,30 @@ describe('CARTECODE-PARCOURS — la carte arrive à la fin de l inscription', ()
     await act(async () => { passer.props.onPress(); });
 
     expect(navigation.navigate).toHaveBeenCalledWith(...VERS_LA_CARTE);
+  });
+});
+
+// CORR-INSCRIPTION p18 (recette du site 30/10, décision A) — la carte lisait l'ancienne valeur et
+// disait « INDISPONIBLE » juste après « Oui, ouvert ». La nouvelle valeur est posée dans le profil
+// en cache AVANT d'ouvrir la carte.
+describe('CORR-INSCRIPTION p18 — la carte lit le « oui » tout de suite', () => {
+  it('« Oui, ouvert » puis Continuer : le profil en cache dit ouvert avant la navigation', async () => {
+    mockSetQueriesData.mockClear();
+    const { navigation, tree } = rendre();
+    await act(async () => { piluleIntitulee(tree, 'Oui, ouvert').props.onPress(); });
+    const continuer = tree.root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ node) => node.findAllByType(Text)
+        .map((/** @type {any} */ noeud) => noeud.props.children)
+        .flat()
+        .includes('Continuer'));
+    await act(async () => { continuer.props.onPress(); });
+
+    expect(mockSetQueriesData).toHaveBeenCalledWith({ queryKey: ['get-me'] }, expect.any(Function));
+    const majDuCache = mockSetQueriesData.mock.calls[0][1];
+    expect(majDuCache({ documentId: 'user-1', isLookingForClub: false }))
+      .toEqual({ documentId: 'user-1', isLookingForClub: true });
+    expect(majDuCache(undefined)).toBeUndefined();
+    expect(mockSetQueriesData.mock.invocationCallOrder[0])
+      .toBeLessThan(navigation.navigate.mock.invocationCallOrder[0]);
   });
 });
