@@ -389,3 +389,22 @@ describe('FINITIONS16 21 — planche 8 : « Continuer » à droite sur ordinateu
     expect(style.alignSelf).toBeUndefined();
   });
 });
+
+// CORR-INSCRIPTION p10 (recette du site 30/10, décision A) — un dirigeant sans compte touche
+// « Inscrire mon club » sur l'invitation de la Ville : le lien est retenu, puis il crée son compte.
+// Au choix du statut, « Dirigeant·e » est déjà coché.
+describe('CORR-INSCRIPTION p10 — l’invitation de la Ville présélectionne Dirigeant·e', () => {
+  const lien = jest.requireActual('@/domains/collectivite/lienDeLaVille');
+  afterEach(() => { lien.oublierLienDeLaVille(); });
+
+  it('lien de la Ville retenu : Dirigeant·e coché d’office', async () => {
+    lien.retenirLienDeLaVille('jeton-ville');
+    const arbre = await monter();
+    expect(rangee(arbre, 'Dirigeant·e')?.props.accessibilityState?.checked).toBe(true);
+  });
+
+  it('sans lien : rien n’est coché', async () => {
+    const arbre = await monter();
+    expect(rangee(arbre, 'Dirigeant·e')?.props.accessibilityState?.checked).toBe(false);
+  });
+});

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRoleDocumentIdByKey, markOnboardingStarted } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { lienDeLaVilleRetenu } from '@/domains/collectivite/lienDeLaVille';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -173,6 +174,16 @@ function UserRole({ navigation }) {
   // PARENT (2026-09-02) — le 4e choix : « un compte parent dans les roles ».
   // Il n apparait que si le serveur porte ce role (liste `/users-permissions/roles`).
   const parentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.parent);
+
+  // CORR-INSCRIPTION p10 (recette du site, décision A) — arrivé par « Inscrire mon club » d'une
+  // invitation de la Ville, sans compte : le lien est retenu 48 h (lienDeLaVille). Le compte neuf
+  // trouve « Dirigeant·e » déjà coché ; la création du club enverra le lien (ClubWizardRecap).
+  useEffect(() => {
+    if (!presidentRoleId || !lienDeLaVilleRetenu()) return;
+    setRole((avant) => (
+      [playerRoleId, coachRoleId, presidentRoleId, parentRoleId].includes(avant) ? avant : presidentRoleId
+    ));
+  }, [coachRoleId, parentRoleId, playerRoleId, presidentRoleId]);
   // FINITIONS5 (tournee 7, defaut 8) — « Continuer » ne part qu'avec un role
   // COCHE. `role` demarre sur le role ACTUEL du compte : pour un compte neuf,
   // c'est le role provisoire (« Authenticated »), qu'aucune case ne montre.
