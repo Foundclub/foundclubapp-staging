@@ -9238,6 +9238,8 @@ export default {
       openInBrowser: 'Ouvrir dans le navigateur',
       play: 'Lire la vidéo',
       tooLarge: 'Vidéo trop lourde : {{max}} Mo maximum.',
+      tooLargeUncompressed: 'Vidéo trop lourde : {{max}} Mo maximum. '
+        + 'Le téléphone n a pas pu la réduire.',
       unreadable: 'Cette vidéo ne se lit pas ici.',
     },
     viewMatch: 'Voir la fiche match',
