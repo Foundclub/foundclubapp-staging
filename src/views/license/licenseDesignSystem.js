@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 export const licenseSpacing = {
@@ -194,9 +195,8 @@ export const createHelloAssoDraft = (snapshot) => ({
   organizationSlug: snapshot?.organizationSlug || '',
 });
 
-export const describeHelloAssoReadiness = (snapshot) => {
-  const readiness = String(snapshot?.readiness || '').trim();
-  return {
+const describeHelloAssoReadinessOnly = (readiness) => (
+  {
     checkout_failed: i18next.t(
       'licenseDesignSystem.helloAsso.checkoutFailed',
       'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.',
@@ -238,7 +238,20 @@ export const describeHelloAssoReadiness = (snapshot) => {
     : i18next.t(
       'licenseDesignSystem.helloAsso.notConfigured',
       'La connexion HelloAsso n est pas encore configurée pour ce club.',
-    ));
+    ))
+);
+// HELLOASSO-TEST (30/10) — la raison donnee par HelloAsso, renvoyee par le serveur : sans
+// elle, le club relit son slug alors que la faute peut etre ailleurs (le 30/10 : notre serveur).
+export const describeHelloAssoReadiness = (snapshot) => {
+  const readiness = String(snapshot?.readiness || '').trim();
+  const message = describeHelloAssoReadinessOnly(readiness);
+  const reason = String(snapshot?.lastError || '').trim();
+  if (!reason || !['checkout_failed', 'oauth_failed'].includes(readiness)) return message;
+  return `${message} ${i18next.t(
+    'licenseDesignSystem.helloAsso.providerReason',
+    'Réponse de HelloAsso : {{reason}}',
+    { reason, ...SANS_ECHAPPEMENT },
+  )}`;
 };
 
 export const normalizePaymentModes = (raw = {}) => {
