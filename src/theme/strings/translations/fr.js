@@ -22225,6 +22225,12 @@ export default {
       limitedRecruitmentAds: 'Annonces de recrutement limitées',
       oneTeam: '1 équipe gratuite',
     },
+    // CORR-CHEMINS (30/10, point 49) : un rôle sans offre (joueur, parent) arrivé sur cette page.
+    pasPourTonRole: {
+      description: 'Les offres FoundClub concernent les entraîneur·e·s et les dirigeant·e·s de club.',
+      retour: 'Retour à mon compte',
+      title: 'Pas d’offre pour ton rôle',
+    },
     pager: {
       card: 'Carte {{position}} sur 3',
     },
@@ -27155,6 +27161,13 @@ export default {
   webNavigationGuard: {
     // eslint-disable-next-line max-len
     message: "Cet écran n'est pas encore disponible sur le site : ouvre-le depuis l'application FoundClub.",
+    // CORR-CHEMINS (30/10, point 47 « B ») : l'écran vit dans l'application ; la boutique est proposée.
+    surLApp: {
+      fermer: 'Plus tard',
+      message: "Cet écran se trouve dans l'application FoundClub, gratuite sur l'App Store et Google Play.",
+      ouvrir: "Télécharger l'app",
+      title: 'Disponible sur l’app',
+    },
     title: 'Bientôt sur le site',
   },
   welcome: {

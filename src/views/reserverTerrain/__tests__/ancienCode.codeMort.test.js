@@ -32,12 +32,13 @@ const RETIRES = [
   'components/organisms/bookingConfigModal/BookingConfigModal.js',
   'views/booking/BookingCalendar.js',
   'views/reservation/MissingPlayersView.js',
+  // CORR-CHEMINS (30/10, point 50 « A ») : « modifier une réservation », atteint par aucun chemin.
+  'views/reservation/ReservationEdit.web.js',
 ];
 
 const GARDES = [
   'views/booking/BookingCalendar.web.js',
   'views/reservation/MissingPlayersView.web.js',
-  'views/reservation/ReservationEdit.web.js',
   'views/reservation/ReservationFilters.js',
   'views/reservation/ReservationDetails.js',
   'views/search/SearchReservationsScreen.js',

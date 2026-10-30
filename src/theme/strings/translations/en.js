@@ -21435,6 +21435,11 @@ export default {
       limitedRecruitmentAds: 'Limited recruitment listings',
       oneTeam: '1 free team',
     },
+    pasPourTonRole: {
+      description: 'FoundClub plans are for club coaches and managers.',
+      retour: 'Back to my account',
+      title: 'No plan for your role',
+    },
     pager: {
       card: 'Card {{position}} of 3',
     },
@@ -25548,6 +25553,12 @@ export default {
   },
   webNavigationGuard: {
     message: "This screen isn't available on the website yet: open it in the FoundClub app.",
+    surLApp: {
+      fermer: 'Later',
+      message: 'This screen is in the FoundClub app, free on the App Store and Google Play.',
+      ouvrir: 'Get the app',
+      title: 'Available in the app',
+    },
     title: 'Coming soon to the website',
   },
   welcome: {

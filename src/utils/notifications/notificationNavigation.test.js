@@ -256,18 +256,17 @@ describe('notificationNavigation', () => {
  * de l'equipe plutot que d'ouvrir une page vide.
  */
 describe('U06 — la demande d adhesion a une equipe a enfin une porte', () => {
-  test('temoin 6 — la notification ouvre la LISTE DES DEMANDES de l equipe', () => {
+  // CORR-CHEMINS (30/10, point 48, Adel « A ») : l'ancienne liste de l'équipe ne disait plus que
+  // « Ce flux a été migré vers Demandes » ; la notification ouvre Demandes, filtre équipe.
+  test('temoin 6 — la notification ouvre DEMANDES, filtre équipe', () => {
     const destination = resolveNotificationDestination({
       teamId: 'team-7',
       type: NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST,
     });
 
     expect(destination).toEqual({
-      params: {
-        params: { teamId: 'team-7' },
-        screen: RouteNames.TeamMembershipRequests,
-      },
-      route: RouteNames.TeamStack,
+      params: { initialFilter: 'team', source: 'notification' },
+      route: RouteNames.RequestsHub,
     });
   });
 

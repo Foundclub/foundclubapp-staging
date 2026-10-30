@@ -72,6 +72,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
@@ -1141,8 +1142,24 @@ function SubscriptionOffers({ navigation, route }) {
     }
   }, [canShowSubscriptionExperience, isOnboardingExit, leaveOffers, skipRouteName]);
 
+  // CORR-CHEMINS (30/10, point 49, Adel « A ») : un joueur ou un parent arrivé ici (une notification
+  // d'abonnement, une adresse tapée) voyait une page vide. Un message et un retour, jamais d'offre.
   if (!canShowSubscriptionExperience) {
-    return null;
+    // En fin d'inscription, le filet D89 plus haut fait déjà avancer : rien à montrer.
+    if (isOnboardingExit) return null;
+    return (
+      <ScreenContainer>
+        <EmptyState
+          actionLabel={t('subscriptionOffers.pasPourTonRole.retour', 'Retour à mon compte')}
+          description={t(
+            'subscriptionOffers.pasPourTonRole.description',
+            'Les offres FoundClub concernent les entraîneur·e·s et les dirigeant·e·s de club.',
+          )}
+          onAction={() => navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile })}
+          title={t('subscriptionOffers.pasPourTonRole.title', 'Pas d’offre pour ton rôle')}
+        />
+      </ScreenContainer>
+    );
   }
 
   const sidePadding = Math.max(16, Math.round((windowWidth - cardWidth) / 2));

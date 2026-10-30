@@ -215,8 +215,10 @@ jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   hasActiveClubOffer: () => false,
 }));
 
+// CORR-CHEMINS 43 : un témoin peut dire « je ne suis pas membre de cette équipe ».
+let mockEstMembre = true;
 jest.mock('@/domains/team/teamMembership', () => ({
-  isMyTeam: () => true,
+  isMyTeam: () => mockEstMembre,
 }));
 
 jest.mock('@/services/team/teamQueries', () => ({
@@ -595,6 +597,7 @@ beforeEach(() => {
   mockAlerte.mockClear();
   mockRefusDuServeur = null;
   mockAuthCourant = AUTH_DIRIGEANT;
+  mockEstMembre = true;
   mockReponseClub = clubAvec([]);
   mockPropositions = undefined;
   mockEnvoyees = [];
@@ -1066,5 +1069,48 @@ describe('INVIT2 — un seul message par geste', () => {
     feuille.forEach((options) => {
       expect(options.meta).toEqual(expect.objectContaining({ preventToastError: true }));
     });
+  });
+});
+
+// CORR-CHEMINS (30/10, point 43, Adel « A ») — un entraîneur qui n'est NI dans l'équipe NI
+// dirigeant de son club (arrivé par une invitation en attente, ou par la recherche) ne voit plus
+// « Inviter », « Créer », le « + » ni la corbeille : des gestes que le serveur refuserait.
+describe('CORR-CHEMINS 43 — les gestes de gestion sont réservés aux membres', () => {
+  const AUTH_COACH_ETRANGER = Object.freeze({
+    ...AUTH_DIRIGEANT,
+    canEditClub: () => false,
+    userData: {
+      club: { documentId: 'autre-club' },
+      documentId: 'guide',
+      myTeams: [],
+      role: { name: 'Entraineur' },
+      teamMembershipRequests: [],
+      trainedTeams: [],
+    },
+  });
+
+  const gestes = (racine) => racine.findAll(
+    (/** @type {any} */ noeud) => typeof noeud.type !== 'string'
+      && ['plus', 'trash'].includes(noeud.props?.icon),
+    { deep: true },
+  );
+
+  test('🔴 un entraîneur hors de l équipe ne voit ni « + », ni corbeille, ni « Inviter »', () => {
+    mockAuthCourant = AUTH_COACH_ETRANGER;
+    mockEstMembre = false;
+    const racine = monterLaFiche();
+
+    expect(gestes(racine)).toHaveLength(0);
+    expect(racine.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.label === LIBELLE_INVITER
+        || noeud.props?.children === LIBELLE_INVITER,
+      { deep: true },
+    )).toHaveLength(0);
+  });
+
+  test('l entraîneur de l équipe les garde', () => {
+    const racine = monterLaFiche();
+
+    expect(gestes(racine).length).toBeGreaterThan(0);
   });
 });

@@ -53,3 +53,17 @@ test('P12-09 : canManage true ⇒ Accepter et Refuser', () => {
   monter();
   expect(mockBoutons.length).toBe(2);
 });
+
+// CORR-CHEMINS (30/10, point 48, Adel « A ») : l'ancienne page « Ce flux a été migré vers Demandes »
+// se remplace d'elle-même par Demandes, filtre équipe (une adresse ou une vieille notification y mène).
+test('CORR-CHEMINS 48 : la page se remplace d elle-même par Demandes, filtre équipe', () => {
+  const { navigateToRequestsHub } = require('@/domains/requests/requestNavigation');
+  navigateToRequestsHub.mockClear();
+  mockDemandes = [];
+  monter();
+  expect(navigateToRequestsHub).toHaveBeenCalledWith(
+    expect.anything(),
+    { initialFilter: 'team', source: 'profile' },
+    { remplacer: true },
+  );
+});

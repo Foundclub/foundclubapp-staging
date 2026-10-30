@@ -210,6 +210,11 @@ function TeamDetails({ navigation, route }) {
   // STATS-ENQUETE (defaut 3) — decision d'Adel du 21/09 (« go a ») : le dirigeant du
   // club voit les statistiques de toutes ses equipes ; le serveur les lui ouvre
   // depuis SENTRY-1 (`can-view-team-stats`). Cette porte ouvre aussi l'onglet.
+  // CORR-CHEMINS (30/10, point 43, Adel « A ») — `canManageTeam` ne lit que le RÔLE : un entraîneur
+  // de passage (invitation en attente, recherche) voyait « + », « Inviter », « Créer » et la corbeille
+  // sur l'équipe d'un autre, que le serveur refuserait. Ces gestes sont réservés aux membres de
+  // l'équipe et au dirigeant de son club.
+  const canManageViewedTeam = canManageTeam && (isMyTeam || isClubManagerForCurrentTeam);
   const canLoadTeamStats = Boolean(teamId && (isMyTeam || isClubManagerForCurrentTeam));
   const canLoadTeamPerformanceStats = canLoadTeamStats && hasMatchStatsSport(team);
   // ST-VUES (planches 13 et 14) — l ENTRAINEUR de cette equipe. Le dirigeant qui
@@ -3318,7 +3323,7 @@ function TeamDetails({ navigation, route }) {
                   )}
                 </View>
               ) : null}
-              {playersCount || canManageTeam ? (
+              {playersCount || canManageViewedTeam ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -3332,7 +3337,7 @@ function TeamDetails({ navigation, route }) {
                         membre du club, ou partager un lien. L ancienne icone
                         disait « partager » et etait pourtant le seul moyen
                         d « inviter » — c est exactement ce que ce lot repare. */}
-                    {canManageTeam && (
+                    {canManageViewedTeam && (
                     <Button
                       icon="plus"
                       isOption
@@ -3382,7 +3387,7 @@ function TeamDetails({ navigation, route }) {
                               {describePersonName(player)}
                             </Text>
                           </TouchableOpacity>
-                          {canManageTeam && (
+                          {canManageViewedTeam && (
                           <View style={[Alignments.row, Spaces.gap[8]]}>
                             <Button
                               icon="trash"
@@ -3426,7 +3431,7 @@ function TeamDetails({ navigation, route }) {
                           </Text>
                         </View>
                       ))}
-                      {!playersCount && canManageTeam ? (
+                      {!playersCount && canManageViewedTeam ? (
                         <TouchableOpacity
                           accessibilityRole="button"
                           onPress={handleOpenInviteSheet}
@@ -3491,7 +3496,7 @@ function TeamDetails({ navigation, route }) {
                     ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
                     teamIds: [team?.documentId || ''],
                   }}
-                  customEmptyComponent={canManageTeam ? (
+                  customEmptyComponent={canManageViewedTeam ? (
                     <TouchableOpacity
                       accessibilityRole="button"
                       onPress={() => navigation.navigate(RouteNames.EventStack, {
@@ -4827,7 +4832,7 @@ function TeamDetails({ navigation, route }) {
             >
               {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
             </Text>
-            {(showEditAction || canManageTeam || showTeamChatAction || showContactTrainersAction) ? (
+            {(showEditAction || canManageViewedTeam || showTeamChatAction || showContactTrainersAction) ? (
               <View style={teamActionsListStyle}>
                 {showEditAction ? renderTeamActionRow({
                   icon: 'edit',
@@ -4839,12 +4844,12 @@ function TeamDetails({ navigation, route }) {
                     partage SMS : elle promettait une invitation et livrait un
                     lien. Elle garde son geste sous son vrai nom, et la vraie
                     invitation prend le sien. */}
-                {canManageTeam ? renderTeamActionRow({
+                {canManageViewedTeam ? renderTeamActionRow({
                   icon: 'plus',
                   label: t('teamDetails.actions.inviteMember', 'Inviter un membre du club'),
                   onPress: handleOpenInviteSheet,
                 }) : null}
-                {canManageTeam ? (
+                {canManageViewedTeam ? (
                   <TourTarget id="teamActions.shareLink">
                     {renderTeamActionRow({
                       icon: 'share',
@@ -4875,7 +4880,7 @@ function TeamDetails({ navigation, route }) {
               </View>
             ) : null}
 
-            {canManageTeam ? (
+            {canManageViewedTeam ? (
               <>
                 {renderTeamActionsGroupHead({
                   actionLabel: isTeamOfferUnlocked ? null : t(

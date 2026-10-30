@@ -164,7 +164,6 @@ export const RouteNames = /** @type {const} */ ({
   RequestsDashboard: 'RequestsDashboard',
   RequestsHub: 'RequestsHub',
   ReservationDetails: 'ReservationDetails',
-  ReservationEdit: 'ReservationEdit',
   ReservationFilters: 'ReservationFilters',
   // « Mes activites » (lot D35) : on publie depuis Rechercher, on gere ici.
   // Vit dans SearchStack, a cote de l accueil du membre connecte.

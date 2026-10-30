@@ -56,12 +56,13 @@ describe('RESA-L6B-1 — N-20 mène à E-P14 « Demain, tu joues ? »', () => {
     });
   });
 
-  it('éteint, ou sans réservation : l’appui ne mène nulle part (comme staging)', () => {
+  // CORR-CHEMINS (30/10, point 48, Adel « A ») : plus jamais « nulle part » ; le détail de la notification.
+  it('éteint, ou sans réservation : l’appui ouvre le détail de la notification', () => {
     expect(charger(false).resolveNotificationDestination({
       data: { change: 'veille', reservationId: 'r-1' }, type: ETIQUETTE_SERVEUR,
-    })).toBeNull();
+    })?.route).toBe(RouteNames.NotificationDetails);
     expect(charger(true).resolveNotificationDestination({
       data: { change: 'veille' }, type: ETIQUETTE_SERVEUR,
-    })).toBeNull();
+    })?.route).toBe(RouteNames.NotificationDetails);
   });
 });

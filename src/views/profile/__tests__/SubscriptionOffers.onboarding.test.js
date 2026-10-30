@@ -422,12 +422,13 @@ describe('D89 ① — ON DOIT POUVOIR PASSER : le sas n\'est jamais un cul-de-sa
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.Welcome, undefined);
   });
 
-  it('hors du sas, un role non servi rend toujours `null` sans naviguer', async () => {
+  // CORR-CHEMINS (30/10, point 49) : hors du sas, plus de page blanche ; un message, sans naviguer.
+  it('hors du sas, un role non servi voit « Pas d offre pour ton rôle » sans naviguer', async () => {
     const arbre = await rendre(undefined, {
       userData: { documentId: 'user-2', role: { name: 'Joueur', type: 'player' } },
     });
 
-    expect(arbre.toJSON()).toBeNull();
+    expect(textesDe(arbre)).toContain('Pas d’offre pour ton rôle');
     expect(mockReplace).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });

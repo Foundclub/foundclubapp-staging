@@ -663,8 +663,9 @@ describe('🚨 TOUCHER UNE NOTIFICATION DANS LA LISTE OUVRE SON ECRAN', () => {
       RouteNames.EventDetails,
     ],
     [
+      // CORR-CHEMINS (30/10, point 48) : Demandes, filtre équipe (l'ancienne liste est un renvoi).
       { teamId: 'team-1', type: NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST },
-      RouteNames.TeamMembershipRequests,
+      RouteNames.RequestsHub,
     ],
     [
       { matchId: 'match-1', type: NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND },
