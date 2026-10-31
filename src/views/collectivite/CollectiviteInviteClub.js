@@ -427,23 +427,26 @@ function CollectiviteInviteClub() {
         ]}
       >
         <View style={[Alignments.fill, zoneDeRecherche]} testID="inviter-recherche">
-          {/* CORR-RECHERCHE point 2 (décision A) — le titre, l'aide et le lien du bas défilent
-              AVEC la liste (elle les pose en tête et en fin) : plus de boîte de 409 px. */}
+          {/* CORR-RECHERCHE point 2 (décision A) — le titre et l'aide défilent AVEC la liste
+              (elle les pose en tête) : plus de boîte de 409 px. Le lien du bas reste fixé dessous,
+              toujours à l'écran (INVPAD, 20/10 : témoin invpad-ajouter-un-club.spec.ts, test 4). */}
           <EnTeteDeRechercheContext.Provider value={enTeteDeLaRecherche}>
-            <ClubListContent
-              actionDeCarte={actionDeCarte}
-              paramsDeFiche={paramsDeFiche}
-              pied={lienDiscret(
-                'inviter-absent',
-                t(
-                  'collectiviteRattachement.ajouter.notOnFoundClub',
-                  'Le club n’est pas sur FoundClub ?',
-                ),
-                () => setOnglet('lien'),
-              )}
-              surDeuxColonnes
-            />
+            <View style={Alignments.fill}>
+              <ClubListContent
+                actionDeCarte={actionDeCarte}
+                paramsDeFiche={paramsDeFiche}
+                surDeuxColonnes
+              />
+            </View>
           </EnTeteDeRechercheContext.Provider>
+          {lienDiscret(
+            'inviter-absent',
+            t(
+              'collectiviteRattachement.ajouter.notOnFoundClub',
+              'Le club n’est pas sur FoundClub ?',
+            ),
+            () => setOnglet('lien'),
+          )}
         </View>
       </ScreenContainer>
     );

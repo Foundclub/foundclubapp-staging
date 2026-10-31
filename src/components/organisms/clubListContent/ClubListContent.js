@@ -145,7 +145,6 @@ const mergeClubCollections = (...collections) => {
  *  childDocumentId?: string;
  *  enableMapMode?: boolean;
  *  paramsDeFiche?: Record<string, unknown>;
- *  pied?: import('react').ReactNode;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
  *  surDeuxColonnes?: boolean;
@@ -163,8 +162,6 @@ const mergeClubCollections = (...collections) => {
  *   `surDeuxColonnes` (INVPAD, 20/10, posé par la seule Ville dans « Ajouter un club ») : sur le
  *   SITE, dès 1 024 px (la borne de l'annuaire), la liste qui défile range ses cartes sur deux
  *   colonnes. Absent, ou sur le téléphone, rien ne change.
- *   `pied` (CORR-RECHERCHE point 2, posé par la seule Ville dans « Ajouter un club ») : rendu en
- *   fin de liste, il défile avec elle au lieu de rester figé dessous. Absent, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
@@ -173,7 +170,6 @@ function ClubListContent({
   childDocumentId = undefined,
   enableMapMode = false,
   paramsDeFiche = undefined,
-  pied = null,
   refreshSignal = 0,
   screenActive = true,
   surDeuxColonnes = false,
@@ -1042,7 +1038,6 @@ function ClubListContent({
             key={deuxColonnes ? 'deux-colonnes' : 'une-colonne'}
             keyExtractor={cleDeCarte}
             ListEmptyComponent={renderEmptyList}
-            ListFooterComponent={pied}
             ListHeaderComponent={(
               <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
                 {enTeteDeRecherche}
