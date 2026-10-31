@@ -284,6 +284,35 @@ const rangerLesCommunes = (lieux) => {
 };
 
 /**
+ * CORR-INSCRIPTION-2 (récolte du 31/10) — partout, les arrondissements d'une même ville se rangent
+ * du 1er au dernier (« Marseille 11e, 10e, 12e » ⇒ 10e, 11e, 12e). Ils ne changent de place
+ * qu'entre eux : une rue, un club ou une autre commune garde son rang, la pertinence des adresses ne
+ * bouge pas. Le champ Ville de « Mes informations » (sans type) en profite comme les communes.
+ * @param {Place[]} lieux - Les lieux, dans l'ordre rendu.
+ * @returns {Place[]} Les mêmes, arrondissements rangés.
+ */
+const rangerLesArrondissements = (lieux) => {
+  if (!Array.isArray(lieux) || lieux.length < 2) return lieux;
+  /** @type {Map<string, { numero: number, rang: number }[]>} */
+  const parVille = new Map();
+  lieux.forEach((lieu, rang) => {
+    const libelle = String(lieu?.properties?.label || '');
+    const trouve = /^(.*?)\s+(\d+)\s*(?:er|e|ème)\s+arrondissement/i.exec(libelle);
+    if (!trouve) return;
+    const ville = trouve[1].trim().toLowerCase();
+    parVille.set(ville, [...(parVille.get(ville) || []), { numero: Number(trouve[2]), rang }]);
+  });
+  const ranges = [...lieux];
+  parVille.forEach((places) => {
+    const rangsLibres = places.map(({ rang }) => rang);
+    [...places]
+      .sort((a, b) => a.numero - b.numero)
+      .forEach(({ rang }, i) => { ranges[rangsLibres[i]] = lieux[rang]; });
+  });
+  return ranges;
+};
+
+/**
  * Search for places
  * @param {string} search - The search query
  * @param {string} [type] - The type of place to search for
@@ -309,7 +338,7 @@ export const searchPlaces = async (search, type) => {
     try {
       const geoResults = await fetchPlacesFromGeoSearch(normalizedSearch, resolvedType);
       if (geoResults.length > 0) {
-        return geoResults;
+        return rangerLesArrondissements(geoResults);
       }
     } catch (_geoError) {
       // Fallback handled below with direct BAN call.
@@ -318,10 +347,10 @@ export const searchPlaces = async (search, type) => {
     const searchTypes = getSearchTypes(resolvedType, normalizedSearch);
     const typedResults = await searchByTypeWithFallback(normalizedSearch, searchTypes);
     if (typedResults.length > 0) {
-      return typedResults;
+      return rangerLesArrondissements(typedResults);
     }
 
-    return fetchPlacesByType(normalizedSearch, undefined);
+    return rangerLesArrondissements(await fetchPlacesByType(normalizedSearch, undefined));
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : String(error);
     throw new Error(`Failed to fetch places for "${normalizedSearch}": ${errorToDisplay}`);
