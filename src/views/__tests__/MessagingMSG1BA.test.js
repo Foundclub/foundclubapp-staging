@@ -141,9 +141,11 @@ jest.mock('@/utils/performance/messagingPerformance', () => ({
   markMessagingPerf: jest.fn(),
 }));
 
+/** Les mesures du dock (CORR-MESSAGERIE 100b : le témoin les change). */
+let mockDock = /** @type {any} */ ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 });
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
 }));
 
 jest.mock('@/navigation/commonOptions', () => ({
@@ -452,6 +454,35 @@ describe('CORR-MESSAGERIE p114 — l étiquette Club / Complexe d un compte à d
     mockChatsQuery = listeDe([FIL_EQUIPE, { ...FIL_EQUIPE, documentId: 'fil-2' }]);
     const arbre = await monter({ chatScope: 'classic', espace: 'complexe' });
     expect(textes(arbre)).not.toContain('"Club"');
+  });
+});
+
+// CORR-MESSAGERIE 100b (31/10, venu de CORR-COLLECTIVITES) — à 390 px, /messages?espace=ville
+// défilait de 235 px dans le vide : la liste réservait en bas la barre ET le bouton rond
+// (230 px), alors que la coque du site réserve déjà la barre (dockClearance = 0). Sur le site,
+// la liste ne garde que ce qui dépasse de la coque : la place du bouton rond.
+describe('CORR-MESSAGERIE 100b — la marge du bas de la liste ne recompte pas la barre', () => {
+  // eslint-disable-next-line global-require
+  const { Platform } = require('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+    mockDock = { floatingActionBottomOffset: 0, sceneBottomInset: 0 };
+  });
+  const margeDuBas = () => mockListProps[mockListProps.length - 1]?.contentContainerStyle?.paddingBottom;
+
+  test('site, la coque réserve la barre : la liste ne garde que la place du bouton rond', async () => {
+    Platform.OS = 'web';
+    mockDock = { dockClearance: 0, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
+    await monter({ collectiviteId: 'ville-1', espace: 'ville' });
+    expect(margeDuBas()).toBe(146 + 84 - 92);
+  });
+
+  test('téléphone : inchangé (la barre flotte au-dessus de la liste)', async () => {
+    Platform.OS = 'ios';
+    mockDock = { dockClearance: 104, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
+    await monter({ collectiviteId: 'ville-1', espace: 'ville' });
+    expect(margeDuBas()).toBe(146 + 84);
   });
 });
 

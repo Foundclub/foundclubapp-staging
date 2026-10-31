@@ -178,7 +178,7 @@ function Messaging({ navigation, route }) {
   );
   // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
   // MSG-VILLE-NOUVELLE (20/10, décisions d’Adel « 1- B » / « 2- A ») — dans l’espace de
   // la Ville, le bouton rond ouvre « Nouvelle conversation » AU NOM DE LA VILLE (ses contacts :
@@ -189,9 +189,15 @@ function Messaging({ navigation, route }) {
     .includes(getUserRoleKey(userData?.role?.name));
   const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
   const floatingButtonBottom = floatingActionBottomOffset;
-  const chatListBottomInset = canCreateConversation
+  // CORR-MESSAGERIE 100b (31/10) — sur le site, la coque réserve déjà la barre du bas (le
+  // socle : `dockClearance` vaut 0) ; la liste la recomptait et la page défilait de 235 px
+  // dans le vide à 390 px. Elle ne garde que ce qui dépasse de la coque : la place du bouton.
+  const reserveDeLaCoque = Platform.OS === 'web'
+    ? Math.max(sceneBottomInset - (dockClearance ?? sceneBottomInset), 0)
+    : 0;
+  const chatListBottomInset = Math.max((canCreateConversation
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
-    : sceneBottomInset;
+    : sceneBottomInset) - reserveDeLaCoque, 0);
   const listOpenLoggedRef = useRef(false);
   const listPrimaryLoggedRef = useRef(false);
   const listFirstRenderedLoggedRef = useRef(false);
