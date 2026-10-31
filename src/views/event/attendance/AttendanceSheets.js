@@ -3,6 +3,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -204,6 +205,7 @@ export function AttendanceCloseSheet({
               defaultValue_other: 'Le serveur passera {{count}} personnes non pointées '
                 + 'en « Non pointé » après la fin, vers {{heure}}.',
               heure: heureBalayage,
+              ...SANS_ECHAPPEMENT,
             })}
           </Text>
         ) : null}

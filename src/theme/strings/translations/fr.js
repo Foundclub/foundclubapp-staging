@@ -10697,6 +10697,8 @@ export default {
     optional: 'Facultatif',
     organisingClub: 'Club organisateur:',
     organisingTeam: 'Équipe organisatrice',
+    // CORR-EVENEMENTS 121 : un joueur convoqué sans l'app, présent d'office.
+    participantWithoutApp: 'sans l’app',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absents',

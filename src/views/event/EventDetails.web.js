@@ -99,6 +99,7 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 /* eslint-disable perfectionist/sort-imports */
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
+import { buildConvocationRoster } from '@/views/matchCallUp/matchConvocationUtils';
 import {
   formatTimeInZone,
   resolveAttendanceWindow,
@@ -1756,8 +1757,25 @@ function EventDetails({ navigation, route }) {
     t,
     trainerKeys: getEventTrainerKeys(event),
   });
+  // CORR-EVENEMENTS 121 (décision A) : la fiche compte comme le fil de l'équipe — un joueur
+  // sans app convoqué est présent d'office (`buildAnswerGroups`, même roster).
+  const joueursSansAppParEquipe = useMemo(() => {
+    const parEquipe = new Map();
+    convocationBranches.forEach((branch) => {
+      const teamId = branch?.team?.documentId;
+      if (!teamId) return;
+      const sansApp = buildConvocationRoster({ published: branch?.published })
+        .filter((row) => row.isManual && row.player)
+        .map((row) => ({ ...row.player, sansApp: true }));
+      if (sansApp.length) parEquipe.set(teamId, [...(parEquipe.get(teamId) || []), ...sansApp]);
+    });
+    return parEquipe;
+  }, [convocationBranches]);
   const participantSections = [
-    ...teamParticipationSections,
+    ...teamParticipationSections.map((section) => {
+      const sansApp = joueursSansAppParEquipe.get(section.key);
+      return sansApp ? { ...section, participating: [...section.participating, ...sansApp] } : section;
+    }),
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
   // 🔢 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur) — les trois tuiles de la colonne de
@@ -1854,7 +1872,10 @@ function EventDetails({ navigation, route }) {
       </span>
       {people.length > 0 ? (
         <div style={{ display: 'grid', gap: 12 }}>
-          {people.map((person) => renderParticipantCard(person))}
+          {people.map((person) => renderParticipantCard(
+            person,
+            person?.sansApp ? t('eventDetails.participantWithoutApp', 'sans l’app') : '',
+          ))}
         </div>
       ) : (
         <div style={{ color: mutedTextColor, fontSize: 13 }}>{emptyMessage}</div>

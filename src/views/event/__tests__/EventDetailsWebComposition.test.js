@@ -715,3 +715,50 @@ describe('AMIC-INVITE — sur le site, les portes de la compo : le club de l equ
     }));
   });
 });
+
+// CORR-EVENEMENTS point 121 (recette du site, 30/10) — le fil disait « Présents · 1 » (le
+// joueur sans app, présent d'office), la fiche « Présent·e·s · 0 ». Décision A : la fiche
+// compte comme le fil, joueur sans app compris.
+describe('CORR-EVENEMENTS 121 — la fiche compte le joueur sans app comme le fil', () => {
+  const kevin = {
+    documentId: 'manual_1', firstname: 'Kévin', id: 'manual_1', isManual: true, lastname: 'Main',
+  };
+
+  test('🐞 un joueur sans app convoqué compte dans « Présent·e·s »', () => {
+    const root = mountScreen({
+      convocation: {
+        branches: [{
+          published: {
+            manualPlayers: [kevin],
+            reservePlayerIds: ['manual_1'],
+            schemaVersion: 3,
+            snapshotPlayers: [],
+            teams: [{ placements: [] }],
+          },
+          responses: { byPlayerId: {} },
+          team: { documentId: TEAM_ID, name: 'U15' },
+        }],
+        schemaVersion: 3,
+      },
+      event: buildEvent({
+        team: {
+          club: { documentId: CLUB_ID },
+          documentId: TEAM_ID,
+          name: 'U15',
+          players: [],
+          trainers: [],
+        },
+        type: { name: 'Match' },
+      }),
+    });
+
+    const groupe = root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'PARTWEB-groupe-participating',
+    )[0];
+    expect(groupe).toBeDefined();
+    const texte = textOf(groupe);
+    expect(texte).toContain('· 1');
+    expect(texte).toContain('Kévin Main');
+    expect(texte).toContain('sans l’app');
+  });
+});
