@@ -151,7 +151,7 @@ jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
-  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => aucune };
+  return { useCollectiviteRequests: () => aucune, useMyManagerRequests: () => ({ data: [] }), useMyCollectivites: () => aucune };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
 

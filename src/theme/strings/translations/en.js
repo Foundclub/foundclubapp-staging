@@ -4756,6 +4756,7 @@ export default {
       voir: 'See the clubs',
     },
     compte: {
+      demandeEnCours: 'Manager request · {{ville}}',
       gestionnaire: 'Manager · {{ville}}',
       rangeeA11y: '{{nom}}, my local authority',
       rangeeA11yDemande: '{{nom}}, my local authority, 1 pending request',
@@ -4834,6 +4835,13 @@ export default {
         titre: 'Your space is open',
       },
       attente: {
+        annuler: 'Cancel my request',
+        annulerOui: 'Yes, cancel',
+        annulerQuestion: 'Cancel your request for {{ville}}?',
+        dejaGereeAutres: 'This city already has a manager: {{premier}} and {{nombre}} others. Your request will go to the FoundClub team.',
+        dejaGereeSeul: 'This city already has a manager: {{premier}}. Your request will go to the FoundClub team.',
+        dejaGereeUnAutre: 'This city already has a manager: {{premier}} and 1 other. Your request will go to the FoundClub team.',
+        garder: 'Keep my request',
         clubs: 'Find the general contact of the linked clubs.',
         demandes: "Decide on the clubs' slot requests, with a message.",
         le: 'Request sent on {{date}}',

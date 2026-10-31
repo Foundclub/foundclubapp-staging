@@ -489,6 +489,17 @@ export const getMyManagerRequests = async () => {
 };
 
 /**
+ * CORR-COLLECTIVITES 102 (31/10/2026, decision d Adel A) — « Annuler ma demande » : SA demande de
+ * gestionnaire, en attente (le serveur refuse toute autre).
+ * @param {string} requestId - documentId de la demande.
+ * @returns {Promise<any>} `{ data: demande }` (statut « cancelled »).
+ */
+export const cancelManagerRequest = async (requestId) => {
+  const response = await client.post(`/collectivite-manager-requests/${requestId}/cancel`);
+  return response.data;
+};
+
+/**
  * La file de la console (SuperAdmin) : en attente, ou traitees.
  * @param {'pending' | 'decided'} status - L onglet.
  * @returns {Promise<any>} `{ data: [...] }`.

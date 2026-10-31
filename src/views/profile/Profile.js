@@ -64,6 +64,7 @@ import { deleteAccount } from '@/services/auth/authService';
 import {
   useCollectiviteRequests,
   useMyCollectivites,
+  useMyManagerRequests,
 } from '@/services/collectivite/collectiviteQueries';
 import { useMyFacilityReports } from '@/services/facilityReport/facilityReportQueries';
 
@@ -268,6 +269,13 @@ function Profile({ navigation, route }) {
     ? demandesEnAttente.data.length
     : 0;
   const estVilleSeule = currentRoleKey === 'new' && managedCollectivites.length > 0;
+  // CORR-COLLECTIVITES 102 (31/10, Adel A) : un compte sans rôle sportif qui ATTEND sa demande de
+  // gestionnaire lit un profil allégé (ni « Membre » ni rangées de sport), comme la Ville seule.
+  const { data: mesDemandesGestionnaire } = useMyManagerRequests({ enabled: currentRoleKey === 'new' });
+  const demandeGestionnaire = currentRoleKey === 'new' && !estVilleSeule && Array.isArray(mesDemandesGestionnaire)
+    ? mesDemandesGestionnaire.find((demande) => demande?.status === 'pending') || null
+    : null;
+  const profilDeVille = estVilleSeule || Boolean(demandeGestionnaire);
   // R17-SIGNALER-1 (19/10, P11-securite-ou-ca-vit 6) — « Mes signalements » n'apparaît que si on
   // en a envoyé un ; « 1 en cours » tant que la Ville ne l'a pas clos.
   const mesSignalements = useMyFacilityReports({ enabled: !estVilleSeule });
@@ -499,6 +507,11 @@ function Profile({ navigation, route }) {
   if (estVilleSeule) {
     identitySubline = t('collectiviteAccueil.compte.gestionnaire', 'Gestionnaire · {{ville}}', {
       ville: premiereVilleGeree?.name || '',
+      ...SANS_ECHAPPEMENT,
+    });
+  } else if (demandeGestionnaire) {
+    identitySubline = t('collectiviteAccueil.compte.demandeEnCours', 'Demande de gestionnaire · {{ville}}', {
+      ville: demandeGestionnaire?.collectivite?.name || '',
       ...SANS_ECHAPPEMENT,
     });
   }
@@ -1043,7 +1056,7 @@ function Profile({ navigation, route }) {
   // COLL-ACCUEIL — compte Ville seule : l'espace de la Ville, rien de sportif.
   // PAR-L7 (E02) — un parent : sa famille d'abord (`ORDRE_DU_PARENT`, tri stable).
   let lignesActivite = activityRows;
-  if (estVilleSeule) {
+  if (profilDeVille) {
     lignesActivite = activityRows.filter((row) => row.key.startsWith('collectivite-'));
   } else if (estParent) {
     lignesActivite = [...activityRows].sort((a, b) => rangPourLeParent(a) - rangPourLeParent(b));

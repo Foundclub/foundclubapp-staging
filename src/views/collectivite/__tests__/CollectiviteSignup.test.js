@@ -30,6 +30,11 @@ const mockReset = jest.fn();
 const mockGoBack = jest.fn();
 const mockEnvoi = jest.fn();
 
+/** CORR-COLLECTIVITES 102 — « Annuler ma demande ». */
+const mockAnnulerDemande = jest.fn(async () => ({ data: { status: 'cancelled' } }));
+jest.mock('@/services/collectivite/collectiviteService', () => ({
+  cancelManagerRequest: (/** @type {any} */ id) => mockAnnulerDemande(id),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
   useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, reset: mockReset }),
@@ -588,5 +593,41 @@ describe('SVF — le prénom et le nom du compte, même lus après l ouverture',
     await act(async () => { arbre.update(<CollectiviteSignup />); });
     expect(valeur(arbre, 'collectivite-inscription-firstname')).toBe('Adèle');
     expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
+  });
+});
+
+
+// CORR-COLLECTIVITES 102 (31/10/2026, décision d'Adel A) — « Cette Ville a déjà un gestionnaire :
+// Karim B. et 1 autre. Votre demande ira à l'équipe FoundClub », et « Annuler ma demande ».
+describe('CORR-COLLECTIVITES 102 — la demande en attente d’une Ville déjà gérée', () => {
+  const DEJA_GEREE = {
+    collectivite: { documentId: 'ville-montrivage', name: 'Ville de Montrivage', type: 'commune' },
+    createdAt: '2026-10-01T09:00:00.000Z',
+    decidedAt: null,
+    documentId: 'dm-9',
+    gestionnairesConnus: { autres: 1, premier: 'Karim B.' },
+    refusalReason: null,
+    status: 'pending',
+  };
+
+  it('le gestionnaire en place est dit, et la demande s’annule après confirmation', async () => {
+    mockAnnulerDemande.mockClear();
+    const relire = jest.fn();
+    mockDemandes = { data: [DEJA_GEREE], isLoading: false, refetch: relire };
+    const arbre = await monter(CollectiviteSignupStatus);
+    expect(textes(arbre)).toContain('Cette Ville a déjà un gestionnaire : Karim B. et 1 autre. Votre demande ira à l’équipe FoundClub.');
+    await appuyer(arbre, 'bouton-Annuler ma demande');
+    expect(mockAnnulerDemande).not.toHaveBeenCalled();
+    expect(textes(arbre)).toContain('Annuler votre demande pour Ville de Montrivage ?');
+    await appuyer(arbre, 'bouton-Oui, annuler');
+    expect(mockAnnulerDemande).toHaveBeenCalledWith('dm-9');
+    expect(relire).toHaveBeenCalled();
+  });
+
+  it('une Ville sans gestionnaire : pas de phrase, mais « Annuler ma demande » reste', async () => {
+    mockDemandes = { data: [{ ...DEJA_GEREE, gestionnairesConnus: null }], isLoading: false, refetch: jest.fn() };
+    const arbre = await monter(CollectiviteSignupStatus);
+    expect(textes(arbre).some((texte) => texte.startsWith('Cette Ville a déjà un gestionnaire'))).toBe(false);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'bouton-Annuler ma demande').length).toBeGreaterThan(0);
   });
 });

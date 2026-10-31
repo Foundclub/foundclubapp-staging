@@ -5112,6 +5112,7 @@ export default {
       voir: 'Voir les clubs',
     },
     compte: {
+      demandeEnCours: 'Demande de gestionnaire · {{ville}}',
       gestionnaire: 'Gestionnaire · {{ville}}',
       rangeeA11y: '{{nom}}, ma collectivité',
       rangeeA11yDemande: '{{nom}}, ma collectivité, 1 demande en attente',
@@ -5197,6 +5198,13 @@ export default {
         titre: 'Votre espace est ouvert',
       },
       attente: {
+        annuler: 'Annuler ma demande',
+        annulerOui: 'Oui, annuler',
+        annulerQuestion: 'Annuler votre demande pour {{ville}} ?',
+        dejaGereeAutres: 'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira à l’équipe FoundClub.',
+        dejaGereeSeul: 'Cette Ville a déjà un gestionnaire : {{premier}}. Votre demande ira à l’équipe FoundClub.',
+        dejaGereeUnAutre: 'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à l’équipe FoundClub.',
+        garder: 'Garder ma demande',
         clubs: 'Retrouver le contact général des clubs rattachés.',
         demandes: 'Trancher les demandes de créneau des clubs, avec un message.',
         le: 'Demande envoyée le {{date}}',
