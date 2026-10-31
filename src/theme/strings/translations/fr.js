@@ -2408,6 +2408,7 @@ export default {
       noSlot: 'Aucun créneau disponible pour cette date.',
       pickFacilityFirst: 'Choisis une installation pour voir ses créneaux disponibles.',
       refresh: 'Rafraîchir les disponibilités',
+      // eslint-disable-next-line max-len
       sansHoraires: 'Cette installation n’a pas encore d’horaires : aucun créneau ne peut être réservé.',
       selectFacilityFirst: 'Sélectionne d’abord une installation.',
       selectSlot: 'Sélectionne un créneau disponible pour configurer la réservation.',
@@ -4380,6 +4381,7 @@ export default {
       previewSuffix: ' - aperçu sur {{loaded}}/{{total}}',
       // eslint-disable-next-line max-len
       previewSummary_one: 'Aperçu sur {{loaded}} membre sur {{total}}. Affine avec la recherche ou les filtres.',
+      // eslint-disable-next-line max-len
       previewSummary_other: 'Aperçu sur {{loaded}} membres sur {{total}}. Affine avec la recherche ou les filtres.',
       quickView: 'Vue rapide: {{view}}',
       shownSummary_one: '{{shown}} membre affiché{{preview}}.',
@@ -4885,6 +4887,7 @@ export default {
       bulkCreate: {
         confirm: 'Créer',
         message_one: '{{sectionCount}} section recevra une campagne {{seasonLabel}} à {{amount}}.',
+        // eslint-disable-next-line max-len
         message_other: '{{sectionCount}} sections recevront une campagne {{seasonLabel}} à {{amount}}.',
         title: 'Créer les campagnes manquantes',
       },
@@ -8595,6 +8598,7 @@ export default {
       annulees_other: '{{count}} réservations à venir seront annulées et les joueurs prévenus.',
       aucune: 'Aucune réservation à venir sur ce terrain.',
       collectes_one: '{{count}} collecte en cours s’arrêtera et ses joueurs seront prévenus.',
+      // eslint-disable-next-line max-len
       collectes_other: '{{count}} collectes en cours s’arrêteront et leurs joueurs seront prévenus.',
       compte: 'On compte ses réservations à venir…',
       dit: 'Il ne sera plus réservable ; son historique est gardé.',
@@ -10577,6 +10581,7 @@ export default {
     lastMatch: 'Dernier match',
     // eslint-disable-next-line max-len
     lastSavedExternalSpotsSetting_one: 'Dernier réglage mémorisé : {{limit}} place externe - validation {{mode}}',
+    // eslint-disable-next-line max-len
     lastSavedExternalSpotsSetting_other: 'Dernier réglage mémorisé : {{limit}} places externes - validation {{mode}}',
     lastSavedSetting: 'Dernier réglage mémorisé : {{quotaLine}}',
     late: {
@@ -13102,6 +13107,7 @@ export default {
     cancelThisListing: 'Annuler cette annonce ?',
     // eslint-disable-next-line max-len
     cancelWithApplications_one: 'Elle ne sera plus visible, et l’équipe qui a répondu ({{applicationCount}}) ne pourra plus aller plus loin.',
+    // eslint-disable-next-line max-len
     cancelWithApplications_other: 'Elle ne sera plus visible, et les {{applicationCount}} équipes qui ont répondu ne pourront plus aller plus loin.',
     congratulationsProposalSent: 'Félicitations, proposition envoyée !',
     itSSentWhatComes: 'Elle est envoyée. La suite se joue dans la discussion.',
@@ -17070,7 +17076,9 @@ export default {
     mysteryOpponent: 'Adversaire Mystère',
     opponentFallback: 'Adversaire',
     quorum: {
+      // eslint-disable-next-line max-len
       missing_one: 'Minimum requis : {{requiredPlayers}} joueurs. Il manque {{missingCount}} joueur.',
+      // eslint-disable-next-line max-len
       missing_other: 'Minimum requis : {{requiredPlayers}} joueurs. Il manque {{missingCount}} joueurs.',
       reached: 'Quorum atteint. Équipe prête.',
     },
@@ -18506,6 +18514,7 @@ export default {
         // previent le staff. Cette phrase l annonce AVANT la confirmation.
         // CORR-TEXTES (point 37) : ce qui part et ce qui reste, dit avant de confirmer
         // (lu dans deleteAccount et account-erasure du serveur, 30/10).
+        // eslint-disable-next-line max-len
         complexe: 'Si tu es le seul gérant d’un complexe, il est masqué : les joueurs ne le trouvent plus.',
         consequences: 'Ce qui part : ton nom, ton numéro, ta photo, '
           + 'et ta place dans tes clubs et tes équipes.'
@@ -19961,6 +19970,7 @@ export default {
       collectePriseTexte: 'Désolé, ta réservation n’a pas pu aboutir : quelqu’un a réservé le '
         + 'créneau avant que tu réunisses assez de joueurs.',
       collecteTerrainRetire: 'Collecte arrêtée',
+      // eslint-disable-next-line max-len
       collecteTerrainRetireTexte: 'Le complexe a retiré ce terrain : ta collecte s’arrête, rien n’est réservé.',
       complete: 'La partie est complète.',
       completerProfil: 'Compléter mon profil',
@@ -25528,6 +25538,7 @@ export default {
     teamApproval: 'Validation des équipes',
     // eslint-disable-next-line max-len
     teamSAlreadyAcceptedWill_one: '{{teamsCount}} équipe déjà acceptée deviendra non conforme avec ces règles. Son statut restera « acceptée », avec un avertissement visible.',
+    // eslint-disable-next-line max-len
     teamSAlreadyAcceptedWill_other: '{{teamsCount}} équipes déjà acceptées deviendront non conformes avec ces règles. Leur statut restera « acceptée », avec un avertissement visible.',
     teamsAndEligibility: 'Équipes et éligibilité',
     theMinimumSquadSizeCan: 'L’effectif minimum ne peut pas dépasser l’effectif maximum.',

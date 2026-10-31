@@ -474,7 +474,11 @@ const buildTargetSummary = (campaign) => {
     labels.push(i18next.t(
       'clubLicenses.target.categories',
       '{{categories}} catégorie(s)',
-      { categories: config.categoryIds.length, count: config.categoryIds.length, ...SANS_ECHAPPEMENT },
+      {
+        categories: config.categoryIds.length,
+        count: config.categoryIds.length,
+        ...SANS_ECHAPPEMENT,
+      },
     ));
   }
   if (Array.isArray(config.sectionIds) && config.sectionIds.length) {
@@ -1869,7 +1873,11 @@ function ClubLicenses({ navigation, route }) {
       summary.push(t(
         'clubLicenses.reminderTiming.maxCount',
         '{{max}} relance(s) max',
-        { count: reminderAutomation.maxCount, max: reminderAutomation.maxCount, ...SANS_ECHAPPEMENT },
+        {
+          count: reminderAutomation.maxCount,
+          max: reminderAutomation.maxCount,
+          ...SANS_ECHAPPEMENT,
+        },
       ));
     }
     return summary;
@@ -2064,7 +2072,10 @@ function ClubLicenses({ navigation, route }) {
         'clubLicenses.memberList.previewSummary',
         'Aperçu sur {{loaded}} membre(s) sur {{total}}. Affine avec la recherche ou les filtres.',
         {
-          count: assignments.length, loaded: assignments.length, total: assignmentsTotalCount, ...SANS_ECHAPPEMENT,
+          count: assignments.length,
+          loaded: assignments.length,
+          total: assignmentsTotalCount,
+          ...SANS_ECHAPPEMENT,
         },
       );
     }
@@ -3189,7 +3200,11 @@ function ClubLicenses({ navigation, route }) {
                         {t(
                           'clubLicenses.overview.moreRules',
                           '+ {{more}} autre(s) règle(s)',
-                          { count: pricingRuleSummaries.length - 4, more: pricingRuleSummaries.length - 4, ...SANS_ECHAPPEMENT },
+                          {
+                            count: pricingRuleSummaries.length - 4,
+                            more: pricingRuleSummaries.length - 4,
+                            ...SANS_ECHAPPEMENT,
+                          },
                         )}
                       </Text>
                     ) : null}
@@ -3858,7 +3873,11 @@ function ClubLicenses({ navigation, route }) {
                             ? t(
                               'clubLicenses.remindersTab.reminderCount',
                               ' - {{reminders}} relance(s)',
-                              { count: item.reminderCount, reminders: item.reminderCount, ...SANS_ECHAPPEMENT },
+                              {
+                                count: item.reminderCount,
+                                reminders: item.reminderCount,
+                                ...SANS_ECHAPPEMENT,
+                              },
                             )
                             : '',
                           status: statusLabel[item?.status] || item?.status,

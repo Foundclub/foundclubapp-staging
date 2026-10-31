@@ -490,7 +490,11 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                   ? t(
                     'eventTasksSection.memberSReadyToBe',
                     '{{selectedCount}} membre(s) prêt(s) à être assignes',
-                    { count: selectedManagerMemberIds.length, selectedCount: selectedManagerMemberIds.length, ...SANS_ECHAPPEMENT },
+                    {
+                      count: selectedManagerMemberIds.length,
+                      selectedCount: selectedManagerMemberIds.length,
+                      ...SANS_ECHAPPEMENT,
+                    },
                   )
                   : t('eventTasksSection.chooseThePeopleToAdd', 'Choisis les personnes à ajouter.')}
               </Text>

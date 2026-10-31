@@ -3479,7 +3479,11 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {tournamentTeamCounters.accepted}
                       {' '}
-                      {t('eventDetails.approved2', 'validées', { count: tournamentTeamCounters.accepted })}
+                      {t(
+                        'eventDetails.approved2',
+                        'validées',
+                        { count: tournamentTeamCounters.accepted },
+                      )}
                     </span>
                     <span>
                       {tournamentTeamCounters.warning}
@@ -3681,14 +3685,22 @@ function EventDetails({ navigation, route }) {
                                 <span>
                                   {rosterSummary.invitedCount}
                                   {' '}
-                                  {t('eventDetails.invitationS', 'invitations', { count: rosterSummary.invitedCount })}
+                                  {t(
+                                    'eventDetails.invitationS',
+                                    'invitations',
+                                    { count: rosterSummary.invitedCount },
+                                  )}
                                 </span>
                               ) : null}
                               {rosterSummary.requestedCount > 0 ? (
                                 <span>
                                   {rosterSummary.requestedCount}
                                   {' '}
-                                  {t('eventDetails.requestS', 'demandes', { count: rosterSummary.requestedCount })}
+                                  {t(
+                                    'eventDetails.requestS',
+                                    'demandes',
+                                    { count: rosterSummary.requestedCount },
+                                  )}
                                 </span>
                               ) : null}
                               {hasRosterWarning ? <span style={{ color: '#ffd54a' }}>Warning roster</span> : null}

@@ -363,7 +363,11 @@ function AdminNotificationsHealth() {
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {token.subscriptionCount || 0}
                       {' '}
-                      {t('adminNotificationsHealth.tokens.subscriptionsCount', 'abonnements', { count: token.subscriptionCount || 0 })}
+                      {t(
+                        'adminNotificationsHealth.tokens.subscriptionsCount',
+                        'abonnements',
+                        { count: token.subscriptionCount || 0 },
+                      )}
                       {Array.isArray(token.linkedUsers) && token.linkedUsers.length > 0
                         ? ` - ${token.linkedUsers.map((linkedUser) => linkedUser.label || linkedUser.documentId || linkedUser.id).filter(Boolean).join(', ')}`
                         : ''}
@@ -405,7 +409,11 @@ function AdminNotificationsHealth() {
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {installation.subscriptionCount || 0}
                           {' '}
-                          {t('adminNotificationsHealth.tokens.linkedAccounts', 'comptes liés', { count: installation.subscriptionCount || 0 })}
+                          {t(
+                            'adminNotificationsHealth.tokens.linkedAccounts',
+                            'comptes liés',
+                            { count: installation.subscriptionCount || 0 },
+                          )}
                         </Text>
                         {Array.isArray(installation.linkedUsers) && installation.linkedUsers.length > 0 ? (
                           <Text style={[Fonts.p3, Fonts.neutral300]}>

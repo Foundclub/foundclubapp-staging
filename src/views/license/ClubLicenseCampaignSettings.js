@@ -3395,7 +3395,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       return t(
         'clubLicenseCampaignSettings.review.audience.players',
         'Pratiquants / Joueurs · {{teamCount}} équipe(s)',
-        { count: targetConfig.teamIds.length, teamCount: targetConfig.teamIds.length, ...SANS_ECHAPPEMENT },
+        {
+          count: targetConfig.teamIds.length,
+          teamCount: targetConfig.teamIds.length,
+          ...SANS_ECHAPPEMENT,
+        },
       );
     }
     return `${rolePill?.label || t(
@@ -3710,7 +3714,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                       {t(
                         'clubLicenseCampaignSettings.audience.teamsChecked',
                         '{{teamCount}} équipe(s) cochée(s).',
-                        { count: targetConfig.teamIds.length, teamCount: targetConfig.teamIds.length, ...SANS_ECHAPPEMENT },
+                        {
+                          count: targetConfig.teamIds.length,
+                          teamCount: targetConfig.teamIds.length,
+                          ...SANS_ECHAPPEMENT,
+                        },
                       )}
                     </Text>
                     {teamOptions.map((team) => (
@@ -3913,7 +3921,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               ? t(
                 'clubLicenseCampaignSettings.payment.filledCount',
                 '{{filledCount}} renseignée(s)',
-                { count: filledPaymentInstructionCount, filledCount: filledPaymentInstructionCount, ...SANS_ECHAPPEMENT },
+                {
+                  count: filledPaymentInstructionCount,
+                  filledCount: filledPaymentInstructionCount,
+                  ...SANS_ECHAPPEMENT,
+                },
               )
               : t('clubLicenseCampaignSettings.status.toFill', 'À remplir')}
           />
@@ -4166,7 +4178,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               ? t(
                 'clubLicenseCampaignSettings.payment.filledCount',
                 '{{filledCount}} renseignée(s)',
-                { count: filledPaymentInstructionCount, filledCount: filledPaymentInstructionCount, ...SANS_ECHAPPEMENT },
+                {
+                  count: filledPaymentInstructionCount,
+                  filledCount: filledPaymentInstructionCount,
+                  ...SANS_ECHAPPEMENT,
+                },
               )
               : t('clubLicenseCampaignSettings.review.none', 'Aucune')}
           />
