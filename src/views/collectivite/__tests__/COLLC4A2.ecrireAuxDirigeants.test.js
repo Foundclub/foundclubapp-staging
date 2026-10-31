@@ -174,6 +174,8 @@ describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
     expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
       chatId: 'privee-1',
       chatType: 'collectivite_club',
+      // CORR-COLLECTIVITES 100 (31/10, Adel A) : la messagerie s'ouvre sur la Ville de ce fil.
+      collectiviteId: 'ville-1',
       espace: 'ville',
       title: 'AS Montrivage',
     });
@@ -257,6 +259,8 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
       chatId: 'privee-1',
       chatType: 'collectivite_club',
+      // CORR-COLLECTIVITES 100 (31/10, Adel A) : la messagerie s'ouvre sur la Ville de ce fil.
+      collectiviteId: 'ville-1',
       espace: 'ville',
       title: 'AS Montrivage',
     });
@@ -332,5 +336,24 @@ describe('VILLE-T18C point 6 — « d’AS Montrivage », « de Montrivage FC »
     );
     await appuyer(arbre, 'ecrire-aux-dirigeants');
     expect(textes(arbre)).toContain(attendu);
+  });
+});
+
+
+// CORR-COLLECTIVITES 100 (31/10/2026, décision d'Adel A) — un message à un club sans dirigeant
+// partait dans le vide. La saisie du premier message le dit : personne ne le lira pour l'instant.
+describe('CORR-COLLECTIVITES 100 — « personne ne lira »', () => {
+  it('un club sans dirigeant inscrit : l’avertissement sous le titre du premier message', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={{ ...CLUB, leaders: [] }} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    expect(textes(arbre)).toContain('Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.');
+  });
+
+  it('un club avec ses dirigeants : pas d’avertissement', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={{ ...CLUB, leaders: [{ firstname: 'Karim' }] }} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    expect(textes(arbre)).not.toContain('Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.');
   });
 });

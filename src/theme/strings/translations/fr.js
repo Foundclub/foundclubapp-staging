@@ -5439,6 +5439,7 @@ export default {
       envoyer: 'Envoyer',
       // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).
       premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
+      personneNeLira: 'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
       premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
       premierMessageTitreElide: 'Premier message aux dirigeants d’{{club}}',
     },

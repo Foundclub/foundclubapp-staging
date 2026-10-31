@@ -5061,6 +5061,7 @@ export default {
       ecrire: 'Write to the club managers',
       envoyer: 'Send',
       premierMessageAide: 'The conversation opens when you send this message.',
+      personneNeLira: 'This club has no registered leader: nobody will read this message for now.',
       premierMessageTitre: 'First message to the managers of {{club}}',
       // VILLE-T18C (07/10) — French elides « de » before a vowel; English does not.
       premierMessageTitreElide: 'First message to the managers of {{club}}',
