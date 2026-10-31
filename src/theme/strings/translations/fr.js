@@ -5347,7 +5347,10 @@ export default {
     semaine: {
       aucuneInstallation: 'Aucune installation pour l’instant.',
       aucuneSeance: 'Aucune séance',
+      aucuneSeancePosee: 'aucune séance posée',
       complet: 'complet {{moment}}',
+      creneaux_one: '{{count}} créneau',
+      creneaux_other: '{{count}} créneaux',
       // FINITIONS-VILLE (T20) : le lien mène à la liste des installations.
       installations: 'Installations',
       libre: 'libre',
@@ -5355,6 +5358,8 @@ export default {
       // VILLE-T18B (b) : une installation sans horaires (pas de taux).
       reservees: '{{duree}} réservées cette semaine',
       seances: '{{nombre}} séances',
+      seancesPosees_one: '{{count}} séance posée',
+      seancesPosees_other: '{{count}} séances posées',
       titre: 'Cette semaine',
       uneSeance: '1 séance',
     },

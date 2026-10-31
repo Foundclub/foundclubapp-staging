@@ -947,10 +947,28 @@ function CollectiviteHome() {
   const seancesSelonChiffres = (/** @type {string | undefined} */ facilityId) => (
     seancesDeLInstallation(chiffresSemaine.data, facilityId)
   );
-  const libelleSeances = (/** @type {string | undefined} */ facilityId) => {
+  const libelleSeances = (/** @type {string | undefined} */ facilityId, creneaux = 0) => {
     if (chiffresSemaine.isLoading) return '…';
     const total = seancesSelonChiffres(facilityId);
     if (total === null) return '—';
+    // CORR-COLLECTIVITES 90 (31/10, Adel B) : des créneaux de saison prennent la place sans être des
+    // séances ; deux chiffres, « 2 créneaux · aucune séance posée » (plus « Aucune séance » à côté
+    // de « complet »).
+    if (creneaux > 0) {
+      const lesCreneaux = t('collectiviteAccueil.semaine.creneaux', {
+        count: creneaux,
+        defaultValue_one: '{{count}} créneau',
+        defaultValue_other: '{{count}} créneaux',
+      });
+      const posees = total === 0
+        ? t('collectiviteAccueil.semaine.aucuneSeancePosee', 'aucune séance posée')
+        : t('collectiviteAccueil.semaine.seancesPosees', {
+          count: total,
+          defaultValue_one: '{{count}} séance posée',
+          defaultValue_other: '{{count}} séances posées',
+        });
+      return `${lesCreneaux} · ${posees}`;
+    }
     if (total === 0) return t('collectiviteAccueil.semaine.aucuneSeance', 'Aucune séance');
     if (total === 1) return t('collectiviteAccueil.semaine.uneSeance', '1 séance');
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
@@ -980,8 +998,8 @@ function CollectiviteHome() {
     seancesSelonChiffres(facilityId) || 0
   );
 
-  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
-    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId);
+  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId, creneaux = 0) => {
+    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId, creneaux);
     if (!sansTauxMesurable(facilityId)) {
       const occupation = phraseOccupation(
         t,
@@ -989,11 +1007,11 @@ function CollectiviteHome() {
         ligneDeLaSemaine(facilityId)?.sur24h === true,
         Boolean(ligneDeLaSemaine(facilityId)?.plageOuverture),
       );
-      return `${libelleSeances(facilityId)} · ${occupation}`;
+      return `${libelleSeances(facilityId, creneaux)} · ${occupation}`;
     }
     const minutes = ligneDeLaSemaine(facilityId)?.minutes;
-    if (typeof minutes !== 'number') return libelleSeances(facilityId);
-    return `${libelleSeances(facilityId)} · ${t(
+    if (typeof minutes !== 'number') return libelleSeances(facilityId, creneaux);
+    return `${libelleSeances(facilityId, creneaux)} · ${t(
       'collectiviteAccueil.semaine.reservees',
       '{{duree}} réservées cette semaine',
       { duree: dureeLisible(minutes), ...SANS_ECHAPPEMENT },
@@ -1020,6 +1038,8 @@ function CollectiviteHome() {
           {semaine.map(({ installation, query }) => {
             const blocs = Array.isArray(query?.data?.data) ? query.data.data : [];
             const complet = firstFullMoment(blocs, installation?.maxSlots);
+            // CORR-COLLECTIVITES 90 : les créneaux de saison de la semaine (blocs `origin: 'slot'`).
+            const creneaux = blocs.filter((/** @type {any} */ bloc) => (bloc?.origin ?? bloc?.raw?.origin) === 'slot').length;
             let etat = null;
             if (complet) {
               etat = (
@@ -1077,7 +1097,7 @@ function CollectiviteHome() {
                   />
                 )}
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {libelleDeLaSemaine(installation?.documentId)}
+                  {libelleDeLaSemaine(installation?.documentId, creneaux)}
                 </Text>
               </TouchableOpacity>
             );

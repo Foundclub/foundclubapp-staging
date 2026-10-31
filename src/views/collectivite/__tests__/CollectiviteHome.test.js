@@ -1453,3 +1453,27 @@ describe('CORR-COLLECTIVITES 89 — un club demande à rejoindre la Ville', () =
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteClubs', expect.objectContaining({ collectiviteId: 'ville-montrivage' }));
   });
 });
+
+// CORR-COLLECTIVITES 90 (31/10/2026, décision d'Adel B) — la carte d'une installation disait
+// « Aucune séance » à côté de « complet mar. 18:00 » : les créneaux de saison prennent la place sans
+// être des séances. Deux chiffres : « 2 créneaux · aucune séance posée ».
+describe('CORR-COLLECTIVITES 90 — créneaux et séances posées, deux chiffres', () => {
+  const creneau = { date: '2030-10-03', endTime: '19:30', origin: 'slot', startTime: '18:00' };
+  it('2 créneaux, 0 séance selon « Chiffres » : « 2 créneaux · aucune séance posée »', async () => {
+    mockSemaine = [{ installation: TILLEULS, query: lu({ data: [creneau, { ...creneau, date: '2030-10-04' }], meta: { total: 2 } }) }];
+    mockChiffresSemaine = {
+      data: { installations: [{ documentId: TILLEULS.documentId, seances: 0, taux: 0 }] }, error: null, isLoading: false,
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('2 créneaux · aucune séance posée');
+    expect(lus).not.toContain('Aucune séance');
+  });
+
+  it('1 créneau, 3 séances : « 1 créneau · 3 séances posées · occupation : 7 % »', async () => {
+    mockSemaine = [{ installation: TILLEULS, query: lu({ data: [creneau], meta: { total: 1 } }) }];
+    mockChiffresSemaine = {
+      data: { installations: [{ documentId: TILLEULS.documentId, seances: 3, taux: 7 }] }, error: null, isLoading: false,
+    };
+    expect(textes(await monter())).toContain('1 créneau · 3 séances posées · occupation : 7 %');
+  });
+});
