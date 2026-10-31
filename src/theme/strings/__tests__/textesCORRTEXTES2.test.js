@@ -191,4 +191,11 @@ describe('CORR-TEXTES-2 31 et 133 — accents du recrutement et du tournoi', () 
     const aleatoires = [...FR.entries()].filter(([, texte]) => /\bAleatoire\b/.test(texte)).map(([clef]) => clef);
     expect(aleatoires).toEqual([]);
   });
+
+  it('133 — la structure du tournoi et l’annonce coach, vues au passage pendant les captures', () => {
+    const fautes = [...FR.entries()]
+      .filter(([, texte]) => /\b(des que|facon|declenchement|concretement|diplomes)\b/.test(texte))
+      .map(([clef, texte]) => `${clef} : ${texte}`);
+    expect(fautes).toEqual([]);
+  });
 });

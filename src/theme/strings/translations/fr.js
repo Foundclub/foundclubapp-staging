@@ -1622,7 +1622,7 @@ export default {
       title: "Contexte de l'annonce",
     },
     missions: {
-      body: 'Décris ce que tu attends concretement du futur entraîneur.',
+      body: 'Décris ce que tu attends concrètement du futur entraîneur.',
       // eslint-disable-next-line max-len
       placeholder: 'Ex. Préparation des séances, accompagnement le week-end, lien avec les joueurs et coordination avec le reste du staff.',
       title: 'Missions principales',
@@ -1648,7 +1648,7 @@ export default {
       coach1: 'Précise le projet sportif et la place du rôle dans le staff.',
       coach2: 'Indique le rythme attendu des entraînements et des matchs.',
       coach3: 'Explique le cadre de mission et les responsabilités principales.',
-      coach4: 'Mentionne les qualités humaines ou diplomes qui feront la différence.',
+      coach4: 'Mentionne les qualités humaines ou diplômes qui feront la différence.',
       players1: "Précise l'intensité ou le niveau de jeu attendu.",
       players2: 'Indique les horaires et le rythme des entraînements.',
       players3: "Mentionne si une séance d'essai ou une détection est prévue.",
@@ -12306,9 +12306,9 @@ export default {
     generationAndPoints: 'Génération et points',
     generationAutomatic: 'Automatique',
     // eslint-disable-next-line max-len
-    generationAutomaticDescription: 'Le calendrier est généré automatiquement des que les poules sont créées.',
+    generationAutomaticDescription: 'Le calendrier est généré automatiquement dès que les poules sont créées.',
     generationManual: 'Manuelle',
-    generationManualDescription: 'L’organisateur garde la main sur le declenchement des matchs.',
+    generationManualDescription: 'L’organisateur garde la main sur le déclenchement des matchs.',
     groupsAndQualification: 'Poules et qualification',
     groupsFinal: 'Poules + finale',
     groupsFinalDescription: 'Des poules puis une phase finale automatique.',
@@ -12324,7 +12324,7 @@ export default {
     seedingRandom: 'Aléatoire',
     seedingSnake: 'Serpentin',
     // eslint-disable-next-line max-len
-    setTheNumberOfGroups: 'Configure le nombre de poules et la facon dont les équipes passent au tableau final ou au classement.',
+    setTheNumberOfGroups: 'Configure le nombre de poules et la façon dont les équipes passent au tableau final ou au classement.',
     // eslint-disable-next-line max-len
     setTheTournamentSSports: 'Définis la structure sportive du tournoi: poules, tableau final, génération des matchs et règles de classement.',
     // eslint-disable-next-line max-len
@@ -15744,7 +15744,7 @@ export default {
     // eslint-disable-next-line max-len
     goalsExceedScore: 'Les buts saisis ({{totalGoals}}) dépassent le score final ({{resolvedScoreFor}}).',
     // eslint-disable-next-line max-len
-    individualFeedbackEmptyHint: 'Les retours individuels apparaîtront ici des que la liste joueur sera disponible.',
+    individualFeedbackEmptyHint: 'Les retours individuels apparaîtront ici dès que la liste joueur sera disponible.',
     // eslint-disable-next-line max-len
     individualFeedbackHint: 'Tu peux ajouter une note et un commentaire prive à chaque joueur si tu le souhaites.',
     leagueMatchTeamReview: 'Bilan collectif du match ligue',
