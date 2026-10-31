@@ -1533,3 +1533,17 @@ describe('R3 — « Restaurer mes achats » est visible sur l ecran d abonnement
     expect(texteVisible(arbre)).toContain('Restaurer mes achats');
   });
 });
+
+// CORR-RECHERCHE (recette du site, 30/10, reste de CORR-INSCRIPTION point 11) — à 1440 px, le
+// panneau du CTA s'arrêtait à 757 px dans une fenêtre de 900 : 143 px de fond vide dessous
+// (mesure du 31/10). Sur le site, le cadre de contenu ne s'étire pas sans `fillHeight`
+// (ScreenContainer.web.js) : le panneau suivait la fin des cartes au lieu du bas de la fenêtre.
+describe('CORR-RECHERCHE — le panneau des offres descend jusqu au bas, sur le site', () => {
+  it('🔴 le cadre s etire sur toute la hauteur (fillHeight)', async () => {
+    mockCadresRendus.length = 0;
+    await rendre();
+    const cadre = mockCadresRendus[mockCadresRendus.length - 1];
+
+    expect(cadre.fillHeight).toBe(true);
+  });
+});

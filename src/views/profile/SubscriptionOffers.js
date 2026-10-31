@@ -1545,6 +1545,10 @@ function SubscriptionOffers({ navigation, route }) {
       // panneau touchait les bords gauche et droit, mais pas le bas.
       bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingBottom[0], Spaces.paddingTop[0]]}
+      // CORR-RECHERCHE (30/10) — sur le SITE, le cadre ne s'étirait pas : à 1440 px le panneau du
+      // CTA s'arrêtait 143 px au-dessus du bas de la fenêtre. `fillHeight` (opt-in déjà prévu par
+      // ScreenContainer.web) le pose au bas ; ignoré par le téléphone.
+      fillHeight
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
