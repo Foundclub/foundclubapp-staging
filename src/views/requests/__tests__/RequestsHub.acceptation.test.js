@@ -4,9 +4,13 @@ import {
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  rejectClubMembershipRequest,
+} from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { refuseFacilityOverrideRequest } from '@/services/facility/facilityService';
 import {
   acceptTeamMembershipRequest,
+  rejectTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import RequestsHub from '../RequestsHub';
@@ -83,7 +87,12 @@ jest.mock('@tanstack/react-query', () => {
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ _key, /** @type {string} */ fallback) => fallback,
+    // Une valeur par défaut passée en objet ({ defaultValue, name… }) est interpolée.
+    t: (/** @type {string} */ _key, /** @type {any} */ fallback) => (
+      typeof fallback === 'object' && fallback
+        ? String(fallback.defaultValue || '').replace(/\{\{(\w+)\}\}/g, (_m, cle) => fallback[cle] ?? '')
+        : fallback
+    ),
   }),
 }));
 
@@ -449,5 +458,38 @@ describe('Y04 — accepter une demande : la fenetre, la vitesse, et l echec', ()
     });
 
     expect(acceptTeamMembershipRequest).toHaveBeenCalledTimes(1);
+  });
+
+  // CORR-ROBUSTESSE point 53 (recette du site, 30/10, « A ») — « Refuser » une demande
+  // d'adhésion partait d'un coup : un mauvais clic envoyait un refus définitif à la famille.
+  it.each([
+    ['equipe', DEMANDE_EQUIPE, rejectTeamMembershipRequest],
+    ['club', {
+      ...DEMANDE_EQUIPE,
+      id: 'club:request-2',
+      meta: { requesterName: 'Zinedine', requestId: 'request-2' },
+      type: 'club',
+    }, rejectClubMembershipRequest],
+  ])('point 53 — « Refuser » (%s) confirme avant d envoyer', async (_nom, demande, refuser) => {
+    const tree = await monterLeHub([demande]);
+    const carte = tree.root.findAll(
+      (/** @type {any} */ node) => typeof node.props?.onSecondaryPress === 'function'
+        && node.props?.item?.id === demande.id,
+      { deep: true },
+    )[0];
+
+    await act(async () => { await carte.props.onSecondaryPress(demande); });
+    expect(refuser).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith(
+      'Refuser la demande de Zinedine ?',
+      expect.any(String),
+      expect.any(Array),
+    );
+
+    const boutons = alerte.mock.calls[alerte.mock.calls.length - 1][2];
+    const confirmer = boutons.find((/** @type {any} */ b) => b.style === 'destructive');
+    await act(async () => { await confirmer.onPress(); });
+    expect(refuser).toHaveBeenCalledTimes(1);
+    expect(refuser).toHaveBeenCalledWith(demande.meta.requestId);
   });
 });

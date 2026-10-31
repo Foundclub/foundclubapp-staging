@@ -2660,6 +2660,7 @@ function ClubDetails({ navigation, route }) {
       return (
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Button
+            accessibilityLabel={t('clubDetails.a11y.addActivity', 'Ajouter une activité')}
             icon="plus"
             isOption
             onPress={handleOpenAddActivityModal}
@@ -3428,6 +3429,10 @@ function ClubDetails({ navigation, route }) {
                     </Text>
                     {canEdit ? (
                       <Button
+                        accessibilityLabel={t(
+                          'clubDetails.a11y.addFacility',
+                          'Ajouter une installation',
+                        )}
                         icon="plus"
                         isOption
                         onPress={() => navigation.navigate(RouteNames.FacilityList, {
@@ -3662,6 +3667,10 @@ function ClubDetails({ navigation, route }) {
                     </Text>
                     {canEdit ? (
                       <Button
+                        accessibilityLabel={t(
+                          'clubDetails.a11y.addSponsor',
+                          'Ajouter un partenaire',
+                        )}
                         icon="plus"
                         isOption
                         onPress={handleCreateSponsor}
@@ -3908,6 +3917,10 @@ function ClubDetails({ navigation, route }) {
                       </Text>
                       {canEdit ? (
                         <Button
+                          accessibilityLabel={t(
+                            'clubDetails.a11y.addCoach',
+                            'Ajouter un entraîneur',
+                          )}
                           icon="plus"
                           isOption
                           onPress={handleCreateCoach}
@@ -4008,6 +4021,10 @@ function ClubDetails({ navigation, route }) {
                     </Text>
                     {canEdit ? (
                       <Button
+                        accessibilityLabel={t(
+                          'clubDetails.a11y.addManager',
+                          'Ajouter un dirigeant',
+                        )}
                         icon="plus"
                         isOption
                         onPress={handleCreateManager}

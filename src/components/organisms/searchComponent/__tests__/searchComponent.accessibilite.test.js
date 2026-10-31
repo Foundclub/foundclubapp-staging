@@ -100,7 +100,13 @@ describe('RECRUTER-TUNNEL — le bouton de filtre se nomme', () => {
   });
 
   it('il reste annonce comme un bouton', () => {
-    const roles = boutonDeFiltre().map((noeud) => noeud.props.accessibilityRole).filter(Boolean);
+    // CORR-ROBUSTESSE point 52 : le bouton partagé enveloppe `onPress` (verrou du double appui),
+    // le rôle se lit donc sur l'élément rendu sous le nœud qui reçoit `ouvrir`.
+    const roles = boutonDeFiltre()
+      .flatMap((noeud) => noeud.findAll(
+        (/** @type {any} */ n) => Boolean(n.props?.accessibilityRole),
+      ))
+      .map((noeud) => noeud.props.accessibilityRole);
 
     expect(roles.length).toBeGreaterThan(0);
     expect(new Set(roles)).toEqual(new Set(['button']));

@@ -472,4 +472,30 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(mockUseComposition).toHaveBeenCalledWith('evt_1', 'team_1', { enabled: true });
     expect(texteVisible(arbre)).toContain('2 convoqués');
   });
+
+  // CORR-ROBUSTESSE point 56 (recette du site, 30/10, « A ») — « Entrée sur un joueur, puis sur
+  // un poste » ne marchait pas : les postes, dessinés AVANT le banc, restaient derrière le focus
+  // (Tab avançait dans le banc). Le choix au clavier porte désormais le focus sur le 1er poste.
+  test('point 56 — Entrée sur un joueur du banc porte le focus sur le 1er poste', async () => {
+    mockReponseComposition = { data: undefined, isError: false };
+    mockRouteParams = { ...PAR_L_ADRESSE, selectedPlayers: [J1, J2], startPlacements: [] };
+    // Dans jest, la vue native est simulee : `focus` y est un espion partage (MockNativeMethods).
+    // eslint-disable-next-line global-require, @react-native/no-deep-imports
+    const { focus } = require('react-native/jest/MockNativeMethods').default;
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MatchCompositionBoard />);
+    });
+    focus.mockClear();
+
+    const jeton = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
+    await act(async () => {
+      jeton.props.onKeyDown({ nativeEvent: { key: 'Enter' }, preventDefault: jest.fn() });
+    });
+
+    const focalises = focus.mock.instances
+      .map((/** @type {any} */ vue) => vue?.props?.accessibilityLabel);
+    expect(focalises).toEqual(['Placer Prenom2 Nom2 au poste GB']);
+  });
 });

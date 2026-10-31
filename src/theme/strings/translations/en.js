@@ -2490,6 +2490,11 @@ export default {
   },
   clubDetails: {
     a11y: {
+      addActivity: 'Add an activity',
+      addCoach: 'Add a coach',
+      addFacility: 'Add a facility',
+      addManager: 'Add a manager',
+      addSponsor: 'Add a partner',
       callClub: 'Call the club on {{phoneNumber}}',
       deleteSponsor: 'Delete sponsor {{sponsorName}}',
       emailClub: 'Send an email to {{email}}',
@@ -13029,6 +13034,10 @@ export default {
       },
     },
   },
+  inputStepper: {
+    decrement: 'One less',
+    increment: 'One more',
+  },
   invitationLink: {
     clipboard: {
       body: 'If you just installed FoundClub from an invitation, '
@@ -18761,6 +18770,9 @@ export default {
     rejectEventTitle: 'Decline the request?',
     rejectFeaturedMessage: 'The requester will be notified of the refusal.',
     rejectFeaturedTitle: 'Decline the request?',
+    rejectMembershipConfirm: 'Decline',
+    rejectMembershipMessage: 'This cannot be undone. The requester will be notified.',
+    rejectMembershipTitle: "Decline {{name}}'s request?",
     title: 'Requests',
     types: {
       childPlace: 'Child place',
@@ -22451,6 +22463,10 @@ export default {
     yourClub: 'your club',
   },
   teamDetails: {
+    a11y: {
+      addTrainer: 'Add a coach',
+      invitePlayers: 'Invite players',
+    },
     actions: {
       contactTeam: 'Contact',
       contactTrainer: 'Contact the coach',

@@ -818,6 +818,10 @@ function HistoryWizardSingle({ navigation, route }) {
 
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
                 <Switch
+                  accessibilityLabel={t(
+                    'historyWizardSingle.period.stillActive',
+                    'Je suis toujours dans ce club',
+                  )}
                   onValueChange={(value) => dispatch({ payload: value, type: 'SET_CURRENTLY_ACTIVE' })}
                   thumbColor={Colors.neutral00}
                   trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}

@@ -1533,6 +1533,7 @@ function EndMatchScreen() {
                   {t('endMatchScreen.dispute.question', 'Y a-t-il un litige ?')}
                 </Text>
                 <Switch
+                  accessibilityLabel={t('endMatchScreen.dispute.question', 'Y a-t-il un litige ?')}
                   onValueChange={setDispute}
                   thumbColor={Colors.neutral100}
                   trackColor={{ false: Colors.neutral600, true: Colors.error500 }}

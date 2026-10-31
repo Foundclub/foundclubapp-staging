@@ -572,6 +572,14 @@ function NewConversation({ navigation, route }) {
     // 🧑 MSG1A (§3.15) — ligne de 64 : avatar 44, nom, role (ou « Deja dans le groupe », grise).
     return (
       <TouchableOpacity
+        // CORR-ROBUSTESSE point 55 — une case à cocher, nommée par la personne.
+        accessibilityLabel={[
+          nomComplet(item),
+          dejaDansLeGroupe
+            ? t('newConversation.alreadyInGroup', 'Déjà dans le groupe')
+            : sousTitreDeLaLigne,
+        ].filter(Boolean).join(', ')}
+        accessibilityRole="checkbox"
         accessibilityState={{ checked: isSelected, disabled: dejaDansLeGroupe }}
         disabled={dejaDansLeGroupe}
         onPress={() => toggleSelection(item)}

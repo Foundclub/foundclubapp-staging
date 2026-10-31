@@ -1286,7 +1286,7 @@ function PaymentModeToggle({ enabled, label, onChange }) {
   return (
     <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{label}</Text>
-      <Switch onValueChange={onChange} value={enabled} />
+      <Switch accessibilityLabel={label} onValueChange={onChange} value={enabled} />
     </View>
   );
 }
@@ -1312,7 +1312,7 @@ function SwitchRow({
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
         {hint ? <Text style={[Fonts.p3, Fonts.neutral200]}>{hint}</Text> : null}
       </View>
-      <Switch onValueChange={onChange} value={enabled} />
+      <Switch accessibilityLabel={label} onValueChange={onChange} value={enabled} />
     </View>
   );
 }

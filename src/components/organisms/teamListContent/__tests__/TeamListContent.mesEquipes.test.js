@@ -633,4 +633,32 @@ describe('TeamListContent — l onglet « Equipe » d un joueur (lot U03)', () =
       expect(mockPagesDemandees).toHaveBeenCalledTimes(0);
     });
   });
+
+  // CORR-ROBUSTESSE point 57 (recette du site, 30/10) — deux demandes « rejoindre » en attente
+  // pour le MÊME club donnaient deux cartes à la même clef (« two children with the same key »).
+  it('point 57 — deux demandes en attente pour un meme club : aucune clef en double', async () => {
+    const erreurs = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const club = { activities: [], documentId: 'club-x', name: 'Club X' };
+    try {
+      const arbre = await monter({
+        userData: {
+          ...LE_JOUEUR,
+          clubMembershipRequests: [
+            {
+              club, documentId: 'demande-1', state: 'pending', type: 'join',
+            },
+            {
+              club, documentId: 'demande-2', state: 'pending', type: 'join',
+            },
+          ],
+        },
+      });
+      const clefsEnDouble = erreurs.mock.calls
+        .filter((appel) => String(appel[0]).includes('same key'));
+      expect(clefsEnDouble).toEqual([]);
+      expect(texteVisible(arbre)).toContain('Club X');
+    } finally {
+      erreurs.mockRestore();
+    }
+  });
 });

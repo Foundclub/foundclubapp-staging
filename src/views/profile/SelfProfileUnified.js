@@ -818,6 +818,7 @@ function SelfProfileUnified({ navigation }) {
                 {t('profile.fields.isLookingForClub.label', 'Profil visible')}
               </Text>
               <Switch
+                accessibilityLabel={t('profile.fields.isLookingForClub.label', 'Profil visible')}
                 onValueChange={toggleVisibility}
                 trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
                 value={Boolean(userData?.isLookingForClub)}

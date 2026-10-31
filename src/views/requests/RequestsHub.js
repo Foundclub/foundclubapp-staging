@@ -563,6 +563,35 @@ function RequestsHub({ navigation, route }) {
       return;
     }
 
+    // CORR-ROBUSTESSE point 53 (recette du site, 30/10) — un refus d'adhésion prévient la
+    // famille aussitôt et ne se rattrape pas : on confirme d'abord, comme les autres refus.
+    const estRefusDAdhesion = (item?.type === 'team' || item?.type === 'club')
+      && action === 'reject' && actionPosition === 'secondary';
+    if (estRefusDAdhesion) {
+      Alert.alert(
+        t('requestsHub.rejectMembershipTitle', {
+          defaultValue: 'Refuser la demande de {{name}} ?',
+          name: item?.meta?.requesterName || '',
+          ...SANS_ECHAPPEMENT,
+        }),
+        t(
+          'requestsHub.rejectMembershipMessage',
+          'Le refus est définitif. Le demandeur sera prévenu.',
+        ),
+        [
+          { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
+          {
+            onPress: () => {
+              runItemAction(item, 'secondary-confirmed');
+            },
+            style: 'destructive',
+            text: t('requestsHub.rejectMembershipConfirm', 'Refuser'),
+          },
+        ],
+      );
+      return;
+    }
+
     // 👶 PARENT P3 (11/09) — UNE PLACE DEMANDEE POUR UN ENFANT SE TRANCHE. Accepter
     // fait entrer l'enfant dans l'equipe ; refuser EFFACE la demande — d'ou la
     // confirmation, le geste ne se rattrape pas. Et aucune fenetre de message type.

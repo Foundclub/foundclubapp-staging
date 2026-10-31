@@ -266,11 +266,31 @@ function ClubMembershipRequestList({ navigation, route }) {
   /**
    * Handle reject request
    * @param {string} requestId
+   * @param {string} [name] - Le nom du demandeur, dans la confirmation.
    */
-  const handleRejectRequest = (requestId) => {
-    if (requestId) {
-      rejectRequestMutation.mutate(requestId);
-    }
+  const handleRejectRequest = (requestId, name = '') => {
+    if (!requestId) return;
+    // CORR-ROBUSTESSE point 53 (recette du site, 30/10) — le refus prévient la famille
+    // aussitôt et ne se rattrape pas : confirmer d'abord, comme dans le hub des demandes.
+    Alert.alert(
+      t('requestsHub.rejectMembershipTitle', {
+        defaultValue: 'Refuser la demande de {{name}} ?',
+        name,
+        ...SANS_ECHAPPEMENT,
+      }),
+      t(
+        'requestsHub.rejectMembershipMessage',
+        'Le refus est définitif. Le demandeur sera prévenu.',
+      ),
+      [
+        { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
+        {
+          onPress: () => rejectRequestMutation.mutate(requestId),
+          style: 'destructive',
+          text: t('requestsHub.rejectMembershipConfirm', 'Refuser'),
+        },
+      ],
+    );
   };
 
   /**
@@ -419,7 +439,7 @@ function ClubMembershipRequestList({ navigation, route }) {
                 icon="close"
                 isLoading={rejectRequestMutation.isPending}
                 isOption
-                onPress={() => handleRejectRequest(item.documentId)}
+                onPress={() => handleRejectRequest(item.documentId, title)}
                 style={[Alignments.fill, { borderColor: Colors.error500, minHeight: 42 }]}
                 textStyle={[Fonts.error300]}
                 title={t('clubMembershipRequestList.actions.reject')}

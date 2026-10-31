@@ -277,10 +277,11 @@ function SegmentedControl({
     return (
       <TouchableOpacity
         accessibilityLabel={option.accessibilityLabel}
-        accessibilityRole={radio ? 'radio' : undefined}
+        // CORR-ROBUSTESSE point 55 — hors `radio`, un bouton qui dit s'il est choisi.
+        accessibilityRole={radio ? 'radio' : 'button'}
         accessibilityState={radio
           ? { checked: isSelected, disabled: inerte, selected: isSelected }
-          : undefined}
+          : { selected: isSelected }}
         activeOpacity={0.8}
         disabled={radio ? inerte : undefined}
         key={option.value}

@@ -402,6 +402,10 @@ function EventWizardTournamentStructure({ navigation, route }) {
                 </Text>
               </View>
               <Switch
+                accessibilityLabel={t(
+                  'eventWizardTournamentStructure.thirdPlaceMatch',
+                  'Match pour la 3e place',
+                )}
                 onValueChange={setThirdPlaceMatch}
                 thumbColor={Colors.neutral00}
                 trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}

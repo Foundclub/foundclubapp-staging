@@ -382,6 +382,14 @@ function MatchCompositionBoard() {
       && Math.abs(Number(placement?.positionY) - y) < 8,
   )) || GRILLE_CLAVIER[0];
 
+  // CORR-ROBUSTESSE point 56 (recette du site, 30/10) — les postes sont dessinés AVANT le banc :
+  // après « Entrée » sur un joueur du banc, Tab avançait dans le banc et les postes restaient
+  // hors d'atteinte. Le choix porte donc le focus sur le premier poste proposé.
+  const premiereCibleRef = useRef(/** @type {any} */ (null));
+  useEffect(() => {
+    if (clavierActif && joueurAuClavier) premiereCibleRef.current?.focus?.();
+  }, [clavierActif, joueurAuClavier]);
+
   const choisirAuClavier = useCallback((/** @type {any} */ player) => {
     const playerId = getCompositionPlayerId(player);
     if (!playerId) return;
@@ -1046,6 +1054,7 @@ function MatchCompositionBoard() {
                   case libre du terrain. */}
               {joueurChoisi ? (freeSlots.length > 0 ? freeSlots : [null]).map((
                 /** @type {any} */ entry,
+                /** @type {number} */ rang,
               ) => (
                 <TouchableOpacity
                   accessibilityLabel={entry
@@ -1064,6 +1073,7 @@ function MatchCompositionBoard() {
                   onPress={() => poserAuClavier(entry
                     ? { surUnPoste: true, x: entry.positionX, y: entry.positionY }
                     : { surUnPoste: false, x: caseLibreAuClavier.x, y: caseLibreAuClavier.y })}
+                  ref={rang === 0 ? premiereCibleRef : undefined}
                   style={[
                     styles.cibleClavier,
                     {

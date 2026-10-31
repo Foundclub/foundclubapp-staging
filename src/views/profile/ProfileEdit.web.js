@@ -598,6 +598,10 @@ function ProfileEditWeb({ navigation, route }) {
                     {t('profile.fields.isLookingForClub.label', 'Profil visible')}
                   </Text>
                   <Switch
+                    accessibilityLabel={t(
+                      'profile.fields.isLookingForClub.label',
+                      'Profil visible',
+                    )}
                     onValueChange={(value) => setFieldValue('isLookingForClub', value)}
                     trackColor={{ false: '#767577', true: '#81b0ff' }}
                     value={Boolean(formValues.isLookingForClub)}

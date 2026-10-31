@@ -100,12 +100,16 @@ const ecouteursDuClavier = (/** @type {any} */ arbre) => arbre.root.findAll(
 );
 
 describe('RESA-BASCULE — sans les ajouts, rien ne bouge (figé avant le lot)', () => {
-  it('aucun rôle ni état accessible sur les segments', () => {
-    segments(monter()).forEach((segment) => {
-      expect(segment.props.accessibilityRole).toBeUndefined();
-      expect(segment.props.accessibilityState).toBeUndefined();
-      expect(segment.props.disabled).toBeUndefined();
-    });
+  // CORR-ROBUSTESSE point 55 (recette du site, 30/10, « A ») — les onglets n'étaient pas
+  // annoncés : ils deviennent des boutons qui disent lequel est choisi. Rien d'autre ne bouge.
+  it('point 55 — chaque segment est un bouton qui dit s il est choisi ; jamais éteint', () => {
+    expect(segments(monter()).map((segment) => [
+      segment.props.accessibilityRole, segment.props.accessibilityState, segment.props.disabled,
+    ])).toEqual([
+      ['button', { selected: false }, undefined],
+      ['button', { selected: false }, undefined],
+      ['button', { selected: true }, undefined],
+    ]);
   });
 
   it('les hauteurs d origine : 32 (téléphone) / 36 (site), enveloppe 45 / 52', () => {

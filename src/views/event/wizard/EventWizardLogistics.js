@@ -723,6 +723,10 @@ function EventWizardLogistics({ navigation, route }) {
               </Text>
             </View>
             <Switch
+              accessibilityLabel={t(
+                'eventWizard.tournamentProgram.logisticsToggleTitle',
+                'Tournoi sur plusieurs jours',
+              )}
               onValueChange={handleTournamentToggle}
               thumbColor={Colors.neutral00}
               trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
@@ -863,6 +867,7 @@ function EventWizardLogistics({ navigation, route }) {
                         </Text>
                       </View>
                       <Switch
+                        accessibilityLabel={format(day.date, 'EEEE d MMMM', { locale: fr })}
                         onValueChange={(value) => handleToggleTournamentDay(dateKey, value)}
                         thumbColor={day.isActive !== false ? Colors.primary500 : Colors.neutral500}
                         trackColor={{

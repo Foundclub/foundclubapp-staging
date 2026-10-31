@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EventWizardTeamCard from '../components/EventWizardTeamCard';
@@ -157,4 +158,21 @@ describe('FINITIONS15 point 7 — la carte ne compte pas des membres qu elle n a
     expect(textes).toContain('Membres');
     expect(textes).toContain('0');
   });
+});
+
+// CORR-ROBUSTESSE point 55 (recette du site, 30/10, « A ») — la carte se touche mais n'était
+// annoncée ni comme bouton, ni par son nom, ni « sélectionnée ».
+test('point 55 — la carte est un bouton nommé (équipe, club) qui dit si elle est choisie', () => {
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(createElement(EventWizardTeamCard, {
+      isSelected: true, onPress: () => {}, team: EQUIPE_SPONSORISEE,
+    }));
+  });
+  const { props } = arbre.root.findAllByType(TouchableOpacity)[0];
+  act(() => arbre.unmount());
+
+  expect([props.accessibilityRole, props.accessibilityLabel, props.accessibilityState])
+    .toEqual(['button', 'U15 A, FC Test', { disabled: false, selected: true }]);
 });

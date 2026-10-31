@@ -42,6 +42,8 @@ function InputStepper({
   } = useTheme();
   const { t } = useTranslation();
 
+  // CORR-ROBUSTESSE point 55 — sans nom fourni, « − / + » s'annonçaient « Précédent / Suivant ».
+  const suffixeDuNom = label ? ` : ${label}` : '';
   const isTunnelTone = tone === 'tunnel';
   const containerStyle = isTunnelTone
     ? {
@@ -87,7 +89,8 @@ function InputStepper({
       ]}
       >
         <TouchableOpacity
-          accessibilityLabel={decrementLabel || `${t('common.previous')} ${label || ''}`.trim()}
+          accessibilityLabel={decrementLabel
+            || `${t('inputStepper.decrement', 'Un de moins')}${suffixeDuNom}`}
           accessibilityRole="button"
           accessibilityState={{ disabled: decrementDisabled }}
           disabled={decrementDisabled}
@@ -105,7 +108,8 @@ function InputStepper({
         <Text style={[Fonts.h3, valueStyle]}>{value}</Text>
 
         <TouchableOpacity
-          accessibilityLabel={incrementLabel || `${t('common.next')} ${label || ''}`.trim()}
+          accessibilityLabel={incrementLabel
+            || `${t('inputStepper.increment', 'Un de plus')}${suffixeDuNom}`}
           accessibilityRole="button"
           accessibilityState={{ disabled: incrementDisabled }}
           disabled={incrementDisabled}

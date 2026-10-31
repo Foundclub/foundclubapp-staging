@@ -543,6 +543,7 @@ function EventWizardStageProgram({ navigation, route }) {
                     </Text>
                   </View>
                   <Switch
+                    accessibilityLabel={format(day.date, 'EEEE d MMMM', { locale: fr })}
                     onValueChange={(value) => handleToggleDay(dateKey, value)}
                     thumbColor={day.isActive !== false ? Colors.primary500 : Colors.neutral500}
                     trackColor={{
