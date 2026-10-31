@@ -577,11 +577,11 @@ export const buildParticipationsByStatus = ({
  * @param {any} personne - Un joueur des sections, ou de la convocation.
  * @returns {string[]} - `doc:…` / `id:…`, sans doublon nul.
  */
-const clesDe = (personne) => [
+const clesDe = (personne) => /** @type {string[]} */ ([
   getUserKey(personne),
   personne?.convocationKey ? `doc:${personne.convocationKey}` : null,
   personne?.convocationKey ? `id:${personne.convocationKey}` : null,
-].filter((cle) => typeof cle === 'string');
+].filter(Boolean));
 
 /**
  * Les réponses de la convocation publiée, par équipe : présents, absents, joueurs sans app.
@@ -601,8 +601,9 @@ const reponsesConvocationParEquipe = (convocationBranches) => {
           equipe.sansApp.push({ ...row.player, sansApp: true });
           return;
         }
-        const liste = { absent: equipe.absent, present: equipe.present }[row.response];
-        if (liste) liste.push({ ...row.player, convocationKey: row.playerId });
+        const joueur = { ...row.player, convocationKey: row.playerId };
+        if (row.response === 'absent') equipe.absent.push(joueur);
+        if (row.response === 'present') equipe.present.push(joueur);
       });
     parEquipe.set(teamId, equipe);
   });
