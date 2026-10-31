@@ -420,3 +420,54 @@ describe('CORR-EVENEMENTS 126 · la pastille de validation dit la vraie règle',
     expect(JSON.stringify(mounted.toJSON())).toContain('Validation manuelle');
   });
 });
+
+// CORR-EVENEMENTS point 128 (recette du site, 30/10) — un stage de 31 jours : la fiche n'affichait
+// que le premier jour, ni date de fin ni programme. Décision A : un bloc « Programme », repliable
+// au-delà de 7 jours.
+describe('CORR-EVENEMENTS 128 · le programme d un stage sur la fiche', () => {
+  const jours = Array.from({ length: 10 }, (_v, index) => ({
+    date: `2099-11-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`,
+    documentId: `jour-${index + 1}`,
+    endTime: '17:00:00.000',
+    isActive: true,
+    startTime: '09:00:00.000',
+  }));
+  const stage = () => buildEvent({
+    childStageEvents: jours,
+    eventFormat: 'stage_parent',
+    stageDefaultEndTime: '17:00:00.000',
+    stageDefaultStartTime: '09:00:00.000',
+    stageEndDate: '2099-11-10',
+    stageStartDate: '2099-11-01',
+    type: { name: 'Stage' },
+  });
+  const programme = (/** @type {any} */ root) => root.findAll(
+    (/** @type {any} */ n) => n.props?.['data-event-section'] === 'stage-programme',
+  )[0];
+
+  test('🐞 la fiche montre la période et les 7 premiers jours, le reste se déplie', () => {
+    const root = mountScreen({ event: stage() });
+    const bloc = programme(root);
+    expect(bloc).toBeDefined();
+    // Les jours sont un tableau d'enfants : on lit le rendu hôte du bloc, pas `textOf`.
+    const lire = () => JSON.stringify(mounted.toJSON());
+    let texte = lire();
+    expect(texte).toContain('Programme du stage');
+    expect(texte).toContain('Jour 7');
+    expect(texte).not.toContain('Jour 8');
+    expect(texte).toContain('09:00 – 17:00');
+
+    const deplier = root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && textOf(n) === 'Voir les 3 autres jours',
+    )[0];
+    expect(deplier).toBeDefined();
+    act(() => deplier.props.onClick());
+    texte = lire();
+    expect(texte).toContain('Jour 10');
+  });
+
+  test('un événement d un seul jour n a pas de bloc programme', () => {
+    const root = mountScreen({ event: buildEvent() });
+    expect(programme(root)).toBeUndefined();
+  });
+});

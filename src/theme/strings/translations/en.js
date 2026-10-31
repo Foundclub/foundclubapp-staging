@@ -10257,6 +10257,7 @@ export default {
     staffNote: 'Staff note',
     stage: {
       day: 'Day',
+      fromTo: 'From {{debut}} to {{fin}}',
       hours: 'Times',
       hoursEmpty: 'Variable',
       legend: 'present · absent · no response',
@@ -10265,6 +10266,9 @@ export default {
       period: 'Period',
       periodEmpty: 'Not specified',
       placeEmpty: 'To be determined',
+      programme: 'Camp programme',
+      showMoreDays_one: 'Show the last day',
+      showMoreDays_other: 'Show the {{count}} other days',
       today: 'TODAY',
     },
     stageLicense: {

@@ -30,6 +30,7 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -870,6 +871,17 @@ function EventDetails({ navigation, route }) {
   // CORR-EVENEMENTS 119 (décision A) : dans une série, une vraie feuille propose, comme le
   // téléphone, « cette séance », « les suivantes » ou « toutes » (CancelSeriesSheet).
   const [feuilleAnnulationSerie, setFeuilleAnnulationSerie] = useState(false);
+  // CORR-EVENEMENTS 128 (décision A) : le programme d'un stage, jour par jour, replié au-delà
+  // de 7 jours. Mêmes données que l'onglet « Jours » du téléphone (`childStageEvents`).
+  const [programmeDeplie, setProgrammeDeplie] = useState(false);
+  const joursDuStage = useMemo(() => (
+    String(event?.eventFormat || '').toLowerCase() === 'stage_parent'
+    && Array.isArray(event?.childStageEvents)
+      ? event.childStageEvents
+        .filter((jour) => jour?.isActive !== false)
+        .sort((gauche, droite) => new Date(gauche?.date || 0) - new Date(droite?.date || 0))
+      : []
+  ), [event?.childStageEvents, event?.eventFormat]);
   const annulerEvenement = useMutation({
     mutationFn: cancelEvent,
     onSuccess: (/** @type {any} */ reponse) => {
@@ -2827,6 +2839,68 @@ function EventDetails({ navigation, route }) {
                   <p style={{ color: softTextColor, fontSize: 15, lineHeight: 1.6, margin: 0 }}>
                     {trainingDescription}
                   </p>
+                </div>
+              ) : null}
+              {joursDuStage.length > 0 ? (
+                <div
+                  data-event-section="stage-programme"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 10,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.stage.programme', 'Programme du stage')}
+                  </span>
+                  {event?.stageStartDate && event?.stageEndDate ? (
+                    <span style={{ color: softTextColor, fontSize: 14 }}>
+                      {t('eventDetails.stage.fromTo', 'Du {{debut}} au {{fin}}', {
+                        debut: new Date(event.stageStartDate).toLocaleDateString(localeDesFormats()),
+                        fin: new Date(event.stageEndDate).toLocaleDateString(localeDesFormats()),
+                        ...SANS_ECHAPPEMENT,
+                      })}
+                    </span>
+                  ) : null}
+                  {(programmeDeplie ? joursDuStage : joursDuStage.slice(0, 7)).map((jour, index) => (
+                    <button
+                      key={jour?.documentId || jour?.date}
+                      onClick={() => navigation.navigate(RouteNames.EventDetails, { eventId: jour?.documentId })}
+                      style={{
+                        ...outlineButtonStyle,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        textAlign: 'left',
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${new Date(jour?.date).toLocaleDateString(localeDesFormats(), {
+                          day: '2-digit', month: 'short', weekday: 'long',
+                        })}`}
+                      </span>
+                      <span style={{ color: mutedTextColor }}>
+                        {`${String(jour?.startTime || '').slice(0, 5)} – ${String(jour?.endTime || '').slice(0, 5)}`}
+                      </span>
+                    </button>
+                  ))}
+                  {joursDuStage.length > 7 && !programmeDeplie ? (
+                    <button
+                      onClick={() => setProgrammeDeplie(true)}
+                      style={{ ...outlineButtonStyle, padding: '10px 14px' }}
+                      type="button"
+                    >
+                      {t('eventDetails.stage.showMoreDays', {
+                        count: joursDuStage.length - 7,
+                        defaultValue_one: 'Voir le dernier jour',
+                        defaultValue_other: 'Voir les {{count}} autres jours',
+                      })}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 

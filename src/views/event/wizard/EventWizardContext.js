@@ -18,6 +18,14 @@ const createDefaultTimeRange = () => {
   return { end, start };
 };
 
+// CORR-EVENEMENTS 128 (décision A) : un stage se tient en journée, 09:00 – 17:00 par défaut ;
+// l'heure d'ouverture de l'assistant + 1 h donnait « 06:00 – 07:00 » au petit matin.
+const aHeureFixe = (/** @type {Date} */ jour, /** @type {number} */ heures) => {
+  const instant = new Date(jour);
+  instant.setHours(heures, 0, 0, 0);
+  return instant;
+};
+
 const normalizeTypeLabel = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -64,8 +72,8 @@ const createInitialState = () => {
     recurrenceInterval: 1,
     recurrenceStartDate: null,
     reservationMode: 'FULL_GROUP',
-    stageDefaultEndTime: end,
-    stageDefaultStartTime: start,
+    stageDefaultEndTime: aHeureFixe(start, 17),
+    stageDefaultStartTime: aHeureFixe(start, 9),
     stageEndDate: start,
     stageSchedule: [],
     stageStartDate: start,

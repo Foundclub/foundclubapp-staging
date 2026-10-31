@@ -10852,6 +10852,8 @@ export default {
     staffNote: 'Note staff',
     stage: {
       day: 'Jour',
+      // CORR-EVENEMENTS 128 : le programme d'un stage sur la fiche du site.
+      fromTo: 'Du {{debut}} au {{fin}}',
       hours: 'Horaires',
       hoursEmpty: 'Variables',
       legend: 'présent·e·s · absent·e·s · sans réponse',
@@ -10860,6 +10862,9 @@ export default {
       period: 'Période',
       periodEmpty: 'Non renseignée',
       placeEmpty: 'À définir',
+      programme: 'Programme du stage',
+      showMoreDays_one: 'Voir le dernier jour',
+      showMoreDays_other: 'Voir les {{count}} autres jours',
       today: 'AUJOURD’HUI',
     },
     stageLicense: {
