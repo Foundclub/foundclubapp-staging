@@ -9136,6 +9136,7 @@ export default {
         empty: 'No one registered to check in yet.',
         subtitle_one: '{{count}} registered so far. Generating before check-in produces inaccurate teams.',
         subtitle_other: 'Out of {{count}} registered, rarely do all turn up. Generating before check-in produces inaccurate teams.',
+        // eslint-disable-next-line max-len
         subtitle_zero: 'No one registered yet. Check people in as they arrive, then generate the teams.',
         title: "Check in who's present first",
       },
@@ -10111,7 +10112,6 @@ export default {
     optional: 'Optional',
     organisingClub: 'Organising club:',
     organisingTeam: 'Organising team',
-    participantWithoutApp: 'without the app',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absent',
@@ -10140,6 +10140,7 @@ export default {
       responses_one: '{{received}} response out of {{total}}',
       responses_other: '{{received}} responses out of {{total}}',
     },
+    participantWithoutApp: 'without the app',
     participationStatus: {
       missing: 'Absent',
       notAnswered: 'No response',
@@ -17310,10 +17311,6 @@ export default {
       absent: 'Absent',
       present: 'Present',
     },
-    cancelled: {
-      text: 'The organiser cancelled this match: there is nothing left to answer.',
-      title: 'Match cancelled',
-    },
     alerts: {
       error: {
         message: "Can't save your response. Try again in a moment.",
@@ -17323,6 +17320,10 @@ export default {
     answer: {
       absent: 'You answered Absent',
       present: 'You answered Present',
+    },
+    cancelled: {
+      text: 'The organiser cancelled this match: there is nothing left to answer.',
+      title: 'Match cancelled',
     },
     card: {
       calledUpBy: 'Called up by {{name}}',
@@ -20717,7 +20718,9 @@ export default {
       reopens: 'Marking a player present reopens their match questionnaire.',
       reopensNamed: 'Marking {{name}} present reopens their match questionnaire.',
       serverWill: 'The server will mark them « Not checked » after the end, around',
+      // eslint-disable-next-line max-len
       serverWillCount_one: 'The server will mark {{count}} unchecked person « Not checked » after the end, around {{heure}}.',
+      // eslint-disable-next-line max-len
       serverWillCount_other: 'The server will mark {{count}} unchecked people « Not checked » after the end, around {{heure}}.',
     },
     attente: {
@@ -24167,6 +24170,10 @@ export default {
     bracketGenerated: 'Bracket generated',
     cancel: 'Cancel',
     close: 'Close',
+    closedBanner: 'Tournament closed',
+    closedOn: 'Tournament closed on {{date}}',
+    closedReadOnly: 'Groups, matches and standings stay readable; nothing can be changed any more.',
+    closedTag: 'Closed',
     closeTheTournament: 'Close the tournament',
     competitionActions: 'Competition actions',
     competitionPublished: 'Competition published',
@@ -24185,7 +24192,12 @@ export default {
     generateTheKnockoutStage: 'Generate the knockout stage',
     generateTheMatches: 'Generate the matches',
     manual: 'Manual',
+    matchesGenerated_one: '{{count}} match created.',
+    matchesGenerated_other: '{{count}} matches created.',
     matchGenerationMode: 'Match generation: {{mode}}',
+    noMatchGenerated: 'No match created.',
+    // eslint-disable-next-line max-len
+    noMatchGeneratedHint: 'Each group needs at least 2 teams: reduce the number of groups in the settings.',
     noMatchGeneratedYet: 'No match generated yet.',
     noTeamMatchesThisFilter: 'No team matches this filter for now.',
     openTheTeam: 'Open the team',
@@ -24286,6 +24298,7 @@ export default {
     maxNumberOfTeams: 'Max number of teams',
     maxSquad: 'Max squad',
     minSquad: 'Min squad',
+    minSquadAtLeastOne: 'The minimum squad size is at least 1 player.',
     numberOfGroups: 'Number of groups',
     onlyTheTournamentCreatorCan: 'Only the tournament creator can edit these global settings.',
     playersCanCreateTheirOwn: 'Players can create their own team for this tournament.',
@@ -24308,6 +24321,8 @@ export default {
     theseSettingsDriveTheGroups: 'These settings drive the groups, the knockout stage and the standings calculation. After editing, resync the competition from the cockpit.',
     thirdPlaceMatch: 'Third-place match',
     thisTextIsShownOn: 'This text is shown on the tournament page and serves as a shared reference for the teams.',
+    tooManyGroups_one: 'At most {{count}} group for {{teams}} teams: each group needs 2 teams.',
+    tooManyGroups_other: 'At most {{count}} groups for {{teams}} teams: each group needs 2 teams.',
     tournamentFrame: 'Tournament frame',
     tournamentRules: 'Tournament rules',
     tournamentSettings: 'Tournament settings',

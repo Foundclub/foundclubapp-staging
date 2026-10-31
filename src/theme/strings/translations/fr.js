@@ -10697,8 +10697,6 @@ export default {
     optional: 'Facultatif',
     organisingClub: 'Club organisateur:',
     organisingTeam: 'Équipe organisatrice',
-    // CORR-EVENEMENTS 121 : un joueur convoqué sans l'app, présent d'office.
-    participantWithoutApp: 'sans l’app',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absents',
@@ -10729,6 +10727,8 @@ export default {
       responses_one: '{{received}} réponse sur {{total}}',
       responses_other: '{{received}} réponses sur {{total}}',
     },
+    // CORR-EVENEMENTS 121 : un joueur convoqué sans l'app, présent d'office.
+    participantWithoutApp: 'sans l’app',
     participationStatus: {
       missing: 'Absent·e·s',
       notAnswered: 'Sans réponse',
@@ -17937,11 +17937,6 @@ export default {
       absent: 'Absent',
       present: 'Présent',
     },
-    // CORR-EVENEMENTS 120 : la convocation d'un match annulé.
-    cancelled: {
-      text: 'L’organisateur a annulé ce match : il n’y a plus rien à répondre.',
-      title: 'Match annulé',
-    },
     alerts: {
       error: {
         message: 'Impossible d’enregistrer ta réponse. Réessaie dans un instant.',
@@ -17953,6 +17948,11 @@ export default {
     answer: {
       absent: 'Tu as répondu Absent',
       present: 'Tu as répondu Présent',
+    },
+    // CORR-EVENEMENTS 120 : la convocation d'un match annulé.
+    cancelled: {
+      text: 'L’organisateur a annulé ce match : il n’y a plus rien à répondre.',
+      title: 'Match annulé',
     },
     card: {
       calledUpBy: 'Convoqué par {{name}}',
@@ -21492,7 +21492,9 @@ export default {
       reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
       reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
+      // eslint-disable-next-line max-len
       serverWillCount_one: 'Le serveur passera {{count}} personne non pointée en « Non pointé » après la fin, vers {{heure}}.',
+      // eslint-disable-next-line max-len
       serverWillCount_other: 'Le serveur passera {{count}} personnes non pointées en « Non pointé » après la fin, vers {{heure}}.',
     },
     attente: {
@@ -25192,6 +25194,12 @@ export default {
     bracketGenerated: 'Tableau final généré',
     cancel: 'Annuler',
     close: 'Clôturer',
+    // CORR-EVENEMENTS 129 C et 131 : bilan de génération, tournoi clôturé.
+    closedBanner: 'Tournoi clôturé',
+    closedOn: 'Tournoi clôturé le {{date}}',
+    // eslint-disable-next-line max-len
+    closedReadOnly: 'Les poules, les matchs et les classements restent consultables ; plus rien ne se modifie.',
+    closedTag: 'Clôturé',
     closeTheTournament: 'Clôturer le tournoi',
     competitionActions: 'Actions compétition',
     competitionPublished: 'Compétition publiée',
@@ -25211,7 +25219,12 @@ export default {
     generateTheKnockoutStage: 'Générer la phase finale',
     generateTheMatches: 'Générer les matchs',
     manual: 'Manuelle',
+    matchesGenerated_one: '{{count}} match créé.',
+    matchesGenerated_other: '{{count}} matchs créés.',
     matchGenerationMode: 'Génération des matchs: {{mode}}',
+    noMatchGenerated: 'Aucun match créé.',
+    // eslint-disable-next-line max-len
+    noMatchGeneratedHint: 'Chaque poule doit compter au moins 2 équipes : réduis le nombre de poules dans les paramètres.',
     noMatchGeneratedYet: 'Aucun match génère pour le moment.',
     noTeamMatchesThisFilter: 'Aucune équipe ne correspond à ce filtre pour le moment.',
     openTheTeam: 'Ouvrir l’équipe',
@@ -25323,6 +25336,8 @@ export default {
     maxNumberOfTeams: 'Nombre max d’équipes',
     maxSquad: 'Effectif max',
     minSquad: 'Effectif min',
+    // CORR-EVENEMENTS 129 : des réglages de tournoi qui peuvent marcher.
+    minSquadAtLeastOne: 'L’effectif minimum est d’au moins 1 joueur.',
     numberOfGroups: 'Nombre de poules',
     // eslint-disable-next-line max-len
     onlyTheTournamentCreatorCan: 'Seul le createur du tournoi peut modifier ces paramètres globaux.',
@@ -25352,6 +25367,10 @@ export default {
     thirdPlaceMatch: 'Match pour la 3e place',
     // eslint-disable-next-line max-len
     thisTextIsShownOn: 'Ce texte est affiché sur la fiche tournoi et sert de référence commune pour les équipes.',
+    // eslint-disable-next-line max-len
+    tooManyGroups_one: 'Au plus {{count}} poule pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
+    // eslint-disable-next-line max-len
+    tooManyGroups_other: 'Au plus {{count}} poules pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
     tournamentFrame: 'Cadre du tournoi',
     tournamentRules: 'Règles du tournoi',
     tournamentSettings: 'Paramètres du tournoi',

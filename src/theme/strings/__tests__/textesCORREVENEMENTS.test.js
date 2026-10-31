@@ -24,6 +24,12 @@ const i18n = creer('fr', fr);
 const i18nEn = creer('en', en);
 
 describe('CORR-EVENEMENTS — textes', () => {
+  it('129 : les bornes du tournoi se disent en français, accordées', () => {
+    expect(i18n.t('tournamentSettingsEdit.tooManyGroups', { count: 1, teams: 2 })).toBe('Au plus 1 poule pour 2 équipes : chaque poule doit compter 2 équipes.');
+    expect(i18n.t('tournamentSettingsEdit.tooManyGroups', { count: 3, teams: 6 })).toBe('Au plus 3 poules pour 6 équipes : chaque poule doit compter 2 équipes.');
+    expect(i18n.t('tournamentSettingsEdit.minSquadAtLeastOne')).toBe('L’effectif minimum est d’au moins 1 joueur.');
+  });
+
   it('136 : une détection sans inscrit dit « Pas encore d’inscrits », sans « 0 inscrit »', () => {
     const zero = i18n.t('detection.squad.checkIn.subtitle', { count: 0 });
     expect(zero).toMatch(/^Pas encore d’inscrits/);
