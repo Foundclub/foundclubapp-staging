@@ -104,7 +104,7 @@ const TEAM_FILTER_OPTIONS = [
     value: 'archived',
   },
   {
-    get label() { return i18next.t('tournamentManagement.filterWarning', 'Warnings roster'); },
+    get label() { return i18next.t('tournamentManagement.filterRosterToReview', 'Effectifs à revoir'); },
     value: 'warning',
   },
 ];
@@ -368,11 +368,12 @@ function TournamentManagement({ navigation, route }) {
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);
   const isCompetitionPublished = normalizeTournamentText(tournamentConfig?.competitionState) === 'published';
-  let seedingLabel = 'Aleatoire';
+  // CORR-EVENEMENTS 133 : les textes du cockpit passent par le catalogue, avec leurs accents.
+  let seedingLabel = t('tournamentManagement.seedingRandom', 'Aléatoire');
   if (tournamentConfig?.seedingMode === 'manual') {
-    seedingLabel = 'Manuel';
+    seedingLabel = t('tournamentManagement.seedingManual', 'Manuel');
   } else if (tournamentConfig?.seedingMode === 'snake') {
-    seedingLabel = 'Serpentin';
+    seedingLabel = t('tournamentManagement.seedingSnake', 'Serpentin');
   }
 
   const renderOverviewTab = () => (
@@ -386,7 +387,10 @@ function TournamentManagement({ navigation, route }) {
               {t('tournamentManagement.sportsStructure', 'Structure sportive')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {`Format: ${getTournamentFormatLabel(tournamentConfig?.formatMode)}`}
+              {t('tournamentManagement.formatLine', 'Format : {{format}}', {
+                format: getTournamentFormatLabel(tournamentConfig?.formatMode),
+                ...SANS_ECHAPPEMENT,
+              })}
             </Text>
           </View>
           <Tag
@@ -398,13 +402,13 @@ function TournamentManagement({ navigation, route }) {
         </View>
 
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-          <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${dashboard?.overview?.groups || 0} poule(s)`} textColor="primary500" />
-          <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${dashboard?.overview?.totalMatches || 0} match(s)`} textColor="primary500" />
+          <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.groupsCount', { count: dashboard?.overview?.groups || 0, defaultValue_one: '{{count}} poule', defaultValue_other: '{{count}} poules' })} textColor="primary500" />
+          <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.matchesCount', { count: dashboard?.overview?.totalMatches || 0, defaultValue_one: '{{count}} match', defaultValue_other: '{{count}} matchs' })} textColor="primary500" />
           {competitionActions.hasBracket ? (
             <Tag style={tournamentDs.getToneTagStyle(Colors.success500)} text={t('tournamentManagement.bracketGenerated', 'Bracket génère')} textColor="neutral00" textStyle={{ color: Colors.success500 }} />
           ) : null}
           {counters.warning > 0 ? (
-            <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={`${counters.warning} warning(s) roster`} textColor="gold500" />
+            <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterAlertsCount', { count: counters.warning, defaultValue_one: '{{count}} effectif à revoir', defaultValue_other: '{{count}} effectifs à revoir' })} textColor="gold500" />
           ) : null}
         </View>
 
@@ -600,17 +604,17 @@ function TournamentManagement({ navigation, route }) {
             </View>
 
             <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-              <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${rosterSummary.totalCount} roster`} textColor="primary500" />
-              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={`${rosterSummary.presentCount} presents`} textColor="neutral00" />
-              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={`${rosterSummary.pendingCount} en attente`} textColor="neutral00" />
+              <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterTotal', { count: rosterSummary.totalCount, defaultValue_one: '{{count}} joueur', defaultValue_other: '{{count}} joueurs' })} textColor="primary500" />
+              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPresent', { count: rosterSummary.presentCount, defaultValue_one: '{{count}} présent', defaultValue_other: '{{count}} présents' })} textColor="neutral00" />
+              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPending', { count: rosterSummary.pendingCount, defaultValue: '{{count}} en attente' })} textColor="neutral00" />
               {rosterSummary.invitedCount > 0 ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${rosterSummary.invitedCount} invitation${rosterSummary.invitedCount > 1 ? 's' : ''}`} textColor="primary500" />
+                <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterInvited', { count: rosterSummary.invitedCount, defaultValue_one: '{{count}} invitation', defaultValue_other: '{{count}} invitations' })} textColor="primary500" />
               ) : null}
               {rosterSummary.requestedCount > 0 ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${rosterSummary.requestedCount} demande${rosterSummary.requestedCount > 1 ? 's' : ''}`} textColor="warning500" />
+                <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={t('tournamentManagement.rosterRequested', { count: rosterSummary.requestedCount, defaultValue_one: '{{count}} demande', defaultValue_other: '{{count}} demandes' })} textColor="warning500" />
               ) : null}
               {hasRosterWarning ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterWarning', 'Warning roster')} textColor="gold500" />
+                <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterToReview', 'Effectif à revoir')} textColor="gold500" />
               ) : null}
             </View>
 
@@ -735,10 +739,10 @@ function TournamentManagement({ navigation, route }) {
           </View>
 
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-            {renderSummaryCard('Equipes', tournamentTeams.length, Colors.primary500)}
-            {renderSummaryCard('Poules', dashboard?.overview?.groups || 0, Colors.primary500)}
-            {renderSummaryCard('Matchs', dashboard?.overview?.totalMatches || 0, Colors.success500)}
-            {renderSummaryCard('Warnings', counters.warning, Colors.gold500)}
+            {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), tournamentTeams.length, Colors.primary500)}
+            {renderSummaryCard(t('tournamentManagement.summaryGroups', 'Poules'), dashboard?.overview?.groups || 0, Colors.primary500)}
+            {renderSummaryCard(t('tournamentManagement.summaryMatches', 'Matchs'), dashboard?.overview?.totalMatches || 0, Colors.success500)}
+            {renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500)}
           </View>
 
           <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>

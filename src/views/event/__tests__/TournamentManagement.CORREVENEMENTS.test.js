@@ -170,3 +170,20 @@ describe('CORR-EVENEMENTS 131 — un tournoi clôturé se lit, il ne se pilote p
     expect(boutons(arbre)).not.toContain('Clôturer le tournoi');
   });
 });
+
+// CORR-EVENEMENTS point 133 (recette du site, 30/10) — textes du tournoi sans accents, « (s) » et
+// mots anglais. Les textes écrits en dur dans le cockpit passent par le catalogue.
+describe('CORR-EVENEMENTS 133 — le cockpit parle français', () => {
+  test('🐞 plus de « poule(s) », « match(s) », « Equipes », « Aleatoire » ni « roster »', async () => {
+    const arbre = await monter(tableau({
+      config: { competitionState: 'draft', formatMode: 'groups_only', seedingMode: 'random' },
+    }));
+    const rendu = texte(arbre);
+
+    expect(rendu).toContain('1 poule');
+    expect(rendu).toContain('0 match');
+    expect(rendu).toContain('Équipes');
+    expect(rendu).toContain('Aléatoire');
+    expect(rendu).not.toMatch(/poule\(s\)|match\(s\)|"Equipes"|Aleatoire|Warnings|roster/);
+  });
+});
