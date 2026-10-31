@@ -765,6 +765,55 @@ describe('CORR-EVENEMENTS 121 — la fiche compte le joueur sans app comme le fi
   });
 });
 
+// CORR-EVENEMENTS-2 point 121 (contre-recette Coach, 31/10) — le fil comptait « Absents · 1 Lina »
+// (réponse donnée par son parent, que le serveur range dans les réponses de la convocation), la
+// fiche « Absent·e·s · 0 » : elle ne lisait que les participations de l'événement. La fiche
+// prend maintenant la réponse de la convocation, comme le fil.
+describe('CORR-EVENEMENTS-2 121 — la fiche compte les absents comme le fil', () => {
+  const lina = { documentId: 'lina', firstname: 'Lina', lastname: 'Recette' };
+  const convocationDeLina = {
+    branches: [{
+      published: {
+        reservePlayerIds: ['lina'],
+        schemaVersion: 3,
+        snapshotPlayers: [lina],
+        teams: [{ placements: [] }],
+      },
+      responses: { byPlayerId: { lina: 'absent' } },
+      team: { documentId: TEAM_ID, name: 'U15' },
+    }],
+    schemaVersion: 3,
+  };
+  const matchDeLina = (/** @type {any[]} */ players) => buildEvent({
+    team: {
+      club: { documentId: CLUB_ID },
+      documentId: TEAM_ID,
+      name: 'U15',
+      players,
+      trainers: [],
+    },
+    type: { name: 'Match' },
+  });
+  const groupe = (/** @type {any} */ root, /** @type {string} */ cle) => root.findAll(
+    (/** @type {any} */ n) => n.props?.['data-testid'] === `PARTWEB-groupe-${cle}`,
+  )[0];
+
+  test('🐞 membre de l équipe, absente à la convocation : « Absent·e·s · 1 »', () => {
+    const root = mountScreen({ convocation: convocationDeLina, event: matchDeLina([lina]) });
+
+    expect(textOf(groupe(root, 'missing'))).toContain('· 1');
+    expect(textOf(groupe(root, 'missing'))).toContain('Lina Recette');
+    expect(textOf(groupe(root, 'notAnswered') || { children: [] })).not.toContain('Lina Recette');
+  });
+
+  test('🐞 hors des membres (enfant déclaré) : elle compte quand même dans les absents', () => {
+    const root = mountScreen({ convocation: convocationDeLina, event: matchDeLina([]) });
+
+    expect(groupe(root, 'missing')).toBeDefined();
+    expect(textOf(groupe(root, 'missing'))).toContain('Lina Recette');
+  });
+});
+
 // CORR-EVENEMENTS point 123 (recette du site, 30/10) — le joueur lisait dans « Composition
 // d'équipes » un texte de coach, et n'avait que « Participer », sans « Absent ». Décision A :
 // cacher le bloc au joueur tant que rien n'est publié, et deux boutons « Présent / Absent ».
