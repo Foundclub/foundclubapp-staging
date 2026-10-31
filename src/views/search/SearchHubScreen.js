@@ -27,6 +27,7 @@ import EventListContent from '@/components/organisms/eventListContent/EventListC
 import FriendlyMatchListContent from '@/components/organisms/friendlyMatchListContent/FriendlyMatchListContent';
 import RecrutementListContent from '@/components/organisms/recrutementListContent/RecrutementListContent';
 import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 import SearchScreenShell from '@/views/search/components/SearchScreenShell';
 import {
   coerceSearchHubType,
@@ -67,13 +68,48 @@ const DEFAULT_EVENT_FILTERS = Object.freeze({
 });
 
 /**
+ * C30 (décision D5) — l'onglet Réservation tant que la réservation n'est pas ouverte.
+ * CORR-RECHERCHE point 2 : il pose lui aussi l'en-tête de la recherche (logo, onglets), comme les
+ * listes : une liste déjà visitée l'ayant réclamé, la coque ne l'affiche plus elle-même.
+ * @returns {import('react').ReactElement}
+ */
+function ReservationBientotDisponible() {
+  const { Colors } = useTheme();
+  const enTete = useEnTeteDeRecherche();
+  return (
+    <View style={{ flex: 1 }}>
+      {enTete}
+      <View style={{
+        alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 24,
+      }}
+      >
+        <Text style={{
+          color: Colors.neutral00, fontSize: 20, fontWeight: '700', textAlign: 'center',
+        }}
+        >
+          {i18next.t('searchHubScreen.reservations.comingSoonTitle', 'Bientôt disponible')}
+        </Text>
+        <Text style={{
+          color: Colors.neutral300, fontSize: 14, lineHeight: 22, marginTop: 12, textAlign: 'center',
+        }}
+        >
+          {i18next.t(
+            'searchHubScreen.reservations.comingSoonBody',
+            "La réservation de terrains et d'installations arrive très vite. Reste connecté, on te préviendra dès son ouverture.", // eslint-disable-line max-len
+          )}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  * Canonical retained search hub used by all search entry routes.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  * @returns {import('react').ReactElement}
  */
 function SearchHubScreen({ navigation, route }) {
   const { userData } = useAuth();
-  const { Colors } = useTheme();
   const allowedTypes = useMemo(
     () => resolveAllowedTypes(route?.params?.types),
     [route?.params?.types],
@@ -245,28 +281,7 @@ function SearchHubScreen({ navigation, route }) {
       }
       // C30 (décision D5) : l'onglet reste, mais la réservation n'est pas encore
       // ouverte -> écran « Bientôt disponible » au lieu de la liste.
-      return (
-        <View style={{
-          alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 24,
-        }}
-        >
-          <Text style={{
-            color: Colors.neutral00, fontSize: 20, fontWeight: '700', textAlign: 'center',
-          }}
-          >
-            {i18next.t('searchHubScreen.reservations.comingSoonTitle', 'Bientôt disponible')}
-          </Text>
-          <Text style={{
-            color: Colors.neutral300, fontSize: 14, lineHeight: 22, marginTop: 12, textAlign: 'center',
-          }}
-          >
-            {i18next.t(
-              'searchHubScreen.reservations.comingSoonBody',
-              "La réservation de terrains et d'installations arrive très vite. Reste connecté, on te préviendra dès son ouverture.", // eslint-disable-line max-len
-            )}
-          </Text>
-        </View>
-      );
+      return <ReservationBientotDisponible />;
     }
 
     return (
@@ -277,7 +292,6 @@ function SearchHubScreen({ navigation, route }) {
       />
     );
   }, [
-    Colors,
     activeType,
     annuaire,
     childDocumentId,

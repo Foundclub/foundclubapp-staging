@@ -57,6 +57,7 @@ import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -189,6 +190,8 @@ function EventListContent({
   screenActive = true,
   showFilters = false,
 }) {
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche (logo, onglets) défile avec la liste.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
   // ALERTES (A20) — ouverte POUR une alerte, la feuille s'ouvre sur la rangée Ville.
   const [feuillePourAlerte, setFeuillePourAlerte] = useState(false);
@@ -1443,6 +1446,7 @@ function EventListContent({
   );
   const listHeader = (
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+      {enTeteDeRecherche}
       {entete}
       {!propEvents && !showFilters && featuredEvents.length > 0 ? (
         <FeaturedEvents events={featuredEvents} />

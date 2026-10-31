@@ -283,3 +283,53 @@ describe('ANNUAIRE-E1 — la coquille de l annuaire du site', () => {
     expect(cadres(arbre).length).toBeGreaterThan(0);
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — l'en-tête défile avec la liste.
+// Mesure avant (site, 390 px) : une boîte intérieure défile, 168 px figés au-dessus d'elle.
+describe('CORR-RECHERCHE point 2 — l en-tete passe dans ce qui defile', () => {
+  const { ScrollView } = jest.requireActual('react-native');
+  // eslint-disable-next-line global-require
+  const { useEnTeteDeRecherche } = require('../enTeteDeRecherche');
+
+  /**
+   * Une liste qui pose l'en-tete de la recherche en tete de ce qu'elle fait defiler.
+   * @returns {any} La liste rendue.
+   */
+  function ListePorteuse() {
+    const enTete = useEnTeteDeRecherche();
+    return createElement(
+      ScrollView,
+      { testID: 'ce-qui-defile' },
+      enTete,
+      createElement(Text, null, 'temoin-contenu'),
+    );
+  }
+
+  const rendrePorteuse = () => {
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(createElement(
+        SearchScreenShell,
+        { activeType: 'events', navigation },
+        createElement(ListePorteuse),
+      ));
+    });
+    return arbre;
+  };
+
+  it('pose le bandeau et les chips DANS la liste qui defile, une seule fois', () => {
+    const arbre = rendrePorteuse();
+    const defile = arbre.root.findByProps({ testID: 'ce-qui-defile' });
+    const dansLaListe = defile.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
+    expect(dansLaListe).toContain('temoin-bandeau-logo');
+    expect(dansLaListe).toContain('temoin-chips:events');
+    expect(textesVisibles(arbre).filter((t) => t === 'temoin-bandeau-logo')).toHaveLength(1);
+  });
+
+  it('un contenu qui ne le reclame pas garde l en-tete au-dessus, comme avant', () => {
+    const affiches = textesVisibles(rendre());
+    expect(affiches.filter((t) => t === 'temoin-bandeau-logo')).toHaveLength(1);
+    expect(affiches.indexOf('temoin-chips:amicaux')).toBeLessThan(affiches.indexOf('temoin-contenu'));
+  });
+});

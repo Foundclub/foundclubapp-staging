@@ -32,7 +32,9 @@ import { mapSearchPayload } from '@/services/search/searchService';
 /**
  * @param {{
  *  bottomPadding?: number;
+ *  enTete?: import('react').ReactNode;
  *  onUserPress?: (user: any) => void;
+ *  pied?: import('react').ReactNode;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
  * }} props
@@ -40,7 +42,9 @@ import { mapSearchPayload } from '@/services/search/searchService';
  */
 function RecruitmentProfilesList({
   bottomPadding = 140,
+  enTete = null,
   onUserPress,
+  pied = null,
   refreshSignal = 0,
   screenActive = true,
 }) {
@@ -325,8 +329,13 @@ function RecruitmentProfilesList({
 
   return (
     <View style={{ flex: 1 }}>
+      {/* CORR-RECHERCHE point 2 — `enTete` (en-tête de la recherche, sous-onglets) et `pied` (le
+          bouton de publication) défilent AVEC les profils : rien de figé autour de la liste. */}
       {isLoading ? (
-        <Loader />
+        <View style={{ flex: 1 }}>
+          {enTete}
+          <Loader />
+        </View>
       ) : (
         // GUIDE-RECUL (constat FINITIONS-GUIDE, petit écran) : « Filtrer » et la
         // 1ʳᵉ carte sont coupés à la zone visible de la liste ; passés sous
@@ -337,12 +346,22 @@ function RecruitmentProfilesList({
             data={users}
             keyExtractor={(item) => String(item.documentId || item.id || Math.random())}
             ListEmptyComponent={renderEmptyState()}
-            ListFooterComponent={isFetchingNextPage ? (
-              <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
-                <ActivityIndicator color={Colors.primary500} />
-              </View>
-            ) : null}
-            ListHeaderComponent={renderHeader()}
+            ListFooterComponent={(
+              <>
+                {isFetchingNextPage ? (
+                  <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
+                    <ActivityIndicator color={Colors.primary500} />
+                  </View>
+                ) : null}
+                {pied}
+              </>
+            )}
+            ListHeaderComponent={(
+              <>
+                {enTete}
+                {renderHeader()}
+              </>
+            )}
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();

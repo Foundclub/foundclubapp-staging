@@ -110,17 +110,23 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
 // l'action que l'écran de la Ville lui donne (comme la vraie, témoin ClubListContent R17-INVITER).
 jest.mock('@/components/organisms/clubListContent/ClubListContent', () => {
   const { Text: TexteRN, View } = jest.requireActual('react-native');
+  const { useEnTeteDeRecherche } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
   return function ClubListContentMock(/** @type {any} */ props) {
     mockListeProps = props;
     const { actionDeCarte } = props;
+    // CORR-RECHERCHE point 2 — comme la vraie, la liste pose l'en-tête reçu en tête de ce qui
+    // défile, et son `pied` en fin de liste.
+    const enTete = useEnTeteDeRecherche();
     return (
       <View testID="recherche-habituelle">
+        {enTete}
         {mockClubs.map((club) => (
           <View key={club.documentId} testID={`carte-${club.documentId}`}>
             <TexteRN>{`carte:${club.name}`}</TexteRN>
             {actionDeCarte ? actionDeCarte(club) : null}
           </View>
         ))}
+        {props.pied || null}
       </View>
     );
   };
@@ -428,5 +434,21 @@ describe('INVPAD — sur ordinateur, ni colonne étroite, ni place pour une barr
     regler('ios', 1366);
     const arbre = await monter();
     expect(zone(arbre).paddingBottom).toBe(0);
+  });
+});
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — « Ajouter un club » défilait dans une
+// boîte de 409 px (2 366 px de contenu) sous un titre figé. Le titre, la phrase d'aide et le lien
+// « Le club n'est pas sur FoundClub ? » passent DANS la liste qui défile.
+describe('CORR-RECHERCHE point 2 — tout defile avec la recherche', () => {
+  it('🔴 le titre, l aide et le lien du bas sont DANS la liste', async () => {
+    const arbre = await monter();
+    const liste = dans(arbre, 'recherche-habituelle');
+    const lus = liste.findAllByType(Text).map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
+    expect(lus).toEqual(expect.arrayContaining([
+      'Ajouter un club',
+      'Le club n’est pas sur FoundClub ?',
+    ]));
+    expect(liste.findAll((/** @type {any} */ n) => n.props?.testID === 'inviter-absent').length).toBeGreaterThan(0);
   });
 });

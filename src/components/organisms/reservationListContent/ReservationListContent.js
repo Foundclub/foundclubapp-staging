@@ -36,6 +36,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ReservationFiltersSheet from '@/components/organisms/filtersSheet/ReservationFiltersSheet';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -63,6 +64,8 @@ function ReservationListContent({
   screenActive = true,
   showFilters = false,
 }) {
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche défile avec la liste.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   const navigation = useNavigation();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -504,6 +507,7 @@ function ReservationListContent({
 
   const renderHeader = () => (
     <View style={[Spaces.gap[24], Spaces.marginBottom[24]]}>
+      {enTeteDeRecherche}
       {!isFeaturedLoading && !featuredError && featuredReservations.length > 0 ? (
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>

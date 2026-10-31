@@ -42,6 +42,7 @@ import {
 import RecruitmentFiltersSheet from '@/components/organisms/recruitmentFiltersSheet/RecruitmentFiltersSheet';
 import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 // Services
 import { useAppContext } from '@/store/appContext';
 
@@ -161,6 +162,8 @@ function RecrutementListContent({
 }) {
   const isWeb = Platform.OS === 'web';
   const { t } = useTranslation();
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche défile avec la liste.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   const UNREACHABLE_TITLE = t(
     'recrutementListContent.unreachable.title',
     'On n’arrive pas à joindre le serveur.',
@@ -1255,10 +1258,22 @@ function RecrutementListContent({
     </>
   );
 
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche et les sous-onglets du staff défilent
+  // AVEC chaque liste : rien de figé au-dessus d'elle.
+  const enTeteDeListe = (
+    <>
+      {enTeteDeRecherche}
+      {isCoachOrAdmin ? renderCoachTabs() : null}
+    </>
+  );
+
   // Render content for Player - Smart Feed
   const renderPlayerContent = () => (
     loading ? (
-      <Loader />
+      <View style={{ flex: 1 }}>
+        {enTeteDeListe}
+        <Loader />
+      </View>
     ) : (
       <FlatList
         contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
@@ -1267,7 +1282,12 @@ function RecrutementListContent({
         keyExtractor={(item) => item.key}
         ListEmptyComponent={renderPlayerEmptyState()}
         ListFooterComponent={piedDeListe}
-        ListHeaderComponent={renderPlayerListHeader()}
+        ListHeaderComponent={(
+          <>
+            {enTeteDeListe}
+            {renderPlayerListHeader()}
+          </>
+        )}
         nestedScrollEnabled
         onEndReached={handleLoadMoreAds}
         onEndReachedThreshold={0.35}
@@ -1324,7 +1344,10 @@ function RecrutementListContent({
   // Render Applications Content
   const renderApplicationsContent = () => (
     loading ? (
-      <Loader />
+      <View style={{ flex: 1 }}>
+        {enTeteDeListe}
+        <Loader />
+      </View>
     ) : (
       <FlatList
         contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[160], { flexGrow: 1 }]}
@@ -1351,12 +1374,15 @@ function RecrutementListContent({
           </View>
         )}
         ListHeaderComponent={(
-          <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
-            <Text style={[Fonts.h4, Fonts.neutral100]}>
-              {t('recrutementListContent.applications.title', 'Suivi de tes candidatures')}
-            </Text>
-            {renderAudienceTypeTabs()}
-          </View>
+          <>
+            {enTeteDeListe}
+            <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
+              <Text style={[Fonts.h4, Fonts.neutral100]}>
+                {t('recrutementListContent.applications.title', 'Suivi de tes candidatures')}
+              </Text>
+              {renderAudienceTypeTabs()}
+            </View>
+          </>
         )}
         onRefresh={onRefresh}
         refreshing={refreshing}
@@ -1378,21 +1404,18 @@ function RecrutementListContent({
     <View style={[Alignments.fill, { width: '100%' }]}>
       {isCoachOrAdmin ? (
         <View style={{ flex: 1 }}>
-          {renderCoachTabs()}
           {activeTab === 'profils' ? (
-            // Le pack pose le CTA SOUS la liste (capture 01). Il n y montre que
-            // deux profils ; avec une vraie liste, un bouton place a la fin du
-            // defilement serait introuvable. Il est donc pose sous la liste
-            // mais HORS d elle : toujours a l ecran, a la place dessinee.
-            <View style={{ flex: 1 }}>
-              <RecruitmentProfilesList
-                bottomPadding={140}
-                onUserPress={handleUserCardPress}
-                refreshSignal={refreshSignal}
-                screenActive={screenActive && activeTab === 'profils'}
-              />
-              {renderPublishOfferCta()}
-            </View>
+            // Le pack pose le CTA SOUS la liste (capture 01). CORR-RECHERCHE point 2 (décision A
+            // d'Adel, 30/10) : il n'est plus une barre figée sous la liste (20 % de l'écran à
+            // 390 px) mais un bouton DANS la page, en fin de liste, à la place dessinée.
+            <RecruitmentProfilesList
+              bottomPadding={24}
+              enTete={enTeteDeListe}
+              onUserPress={handleUserCardPress}
+              pied={<View style={Spaces.marginTop[8]}>{renderPublishOfferCta()}</View>}
+              refreshSignal={refreshSignal}
+              screenActive={screenActive && activeTab === 'profils'}
+            />
           ) : null}
           {activeTab === 'opportunites' ? renderPlayerContent() : null}
           {activeTab === 'candidatures' ? renderApplicationsContent() : null}

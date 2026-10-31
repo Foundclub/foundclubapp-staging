@@ -28,6 +28,7 @@ import ClubCard from '@/components/molecules/clubCard/ClubCard';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
@@ -144,6 +145,7 @@ const mergeClubCollections = (...collections) => {
  *  childDocumentId?: string;
  *  enableMapMode?: boolean;
  *  paramsDeFiche?: Record<string, unknown>;
+ *  pied?: import('react').ReactNode;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
  *  surDeuxColonnes?: boolean;
@@ -161,6 +163,8 @@ const mergeClubCollections = (...collections) => {
  *   `surDeuxColonnes` (INVPAD, 20/10, posé par la seule Ville dans « Ajouter un club ») : sur le
  *   SITE, dès 1 024 px (la borne de l'annuaire), la liste qui défile range ses cartes sur deux
  *   colonnes. Absent, ou sur le téléphone, rien ne change.
+ *   `pied` (CORR-RECHERCHE point 2, posé par la seule Ville dans « Ajouter un club ») : rendu en
+ *   fin de liste, il défile avec elle au lieu de rester figé dessous. Absent, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
@@ -169,10 +173,13 @@ function ClubListContent({
   childDocumentId = undefined,
   enableMapMode = false,
   paramsDeFiche = undefined,
+  pied = null,
   refreshSignal = 0,
   screenActive = true,
   surDeuxColonnes = false,
 }) {
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche défile avec la liste.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -931,8 +938,11 @@ function ClubListContent({
     </View>
   ) : null;
 
-  return (
-    <View style={annuaire ? Spaces.gap[16] : [Alignments.fill, Spaces.gap[16]]}>
+  // CORR-RECHERCHE point 2 (décision A) — le champ, les pastilles et les bandeaux défilent AVEC la
+  // liste, sous l'en-tête de la recherche : rien ne reste figé au-dessus d'elle. L'annuaire du site
+  // les garde au-dessus de ses cartes à plat (la page entière y défile déjà).
+  const filtresDeLaListe = (
+    <>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
         <View style={{ flex: 1 }}>
           <SearchComponent
@@ -1008,6 +1018,12 @@ function ClubListContent({
           </TouchableOpacity>
         </View>
       ) : null}
+    </>
+  );
+
+  return (
+    <View style={annuaire ? Spaces.gap[16] : [Alignments.fill, Spaces.gap[16]]}>
+      {annuaire ? filtresDeLaListe : null}
 
       <WithDataWrapper
         error={activeError?.message}
@@ -1026,7 +1042,14 @@ function ClubListContent({
             key={deuxColonnes ? 'deux-colonnes' : 'une-colonne'}
             keyExtractor={cleDeCarte}
             ListEmptyComponent={renderEmptyList}
-            ListHeaderComponent={enTetePertinence}
+            ListFooterComponent={pied}
+            ListHeaderComponent={(
+              <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+                {enTeteDeRecherche}
+                {filtresDeLaListe}
+                {enTetePertinence}
+              </View>
+            )}
             numColumns={deuxColonnes ? 2 : 1}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}

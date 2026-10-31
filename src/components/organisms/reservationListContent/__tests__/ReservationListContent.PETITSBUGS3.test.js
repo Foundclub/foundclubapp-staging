@@ -29,8 +29,9 @@ jest.mock('@tanstack/react-query', () => ({
 jest.mock('@shopify/flash-list', () => {
   const { View } = jest.requireActual('react-native');
   return {
-    FlashList: (/** @type {any} */ { data, renderItem }) => (
+    FlashList: (/** @type {any} */ { data, ListHeaderComponent, renderItem }) => (
       <View>
+        {typeof ListHeaderComponent === 'function' ? <ListHeaderComponent /> : ListHeaderComponent}
         {(data || []).map((/** @type {any} */ item, /** @type {number} */ index) => (
           <View key={item.documentId}>{renderItem({ index, item })}</View>
         ))}
@@ -132,5 +133,29 @@ describe('PETITSBUGS-3 — la carte de réservation ne montre plus la raison du 
     const lu = texteRendu();
     expect(lu.indexOf('carte:Padel B')).toBeGreaterThan(-1);
     expect(lu.indexOf('carte:Padel B')).toBeLessThan(lu.indexOf('carte:Padel A'));
+  });
+});
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — sur le site, /search/reservations
+// monte cette liste sous l'en-tête de la recherche : il défile désormais AVEC elle.
+describe('CORR-RECHERCHE point 2 — l en-tete de la recherche defile avec la liste', () => {
+  const { Text } = jest.requireActual('react-native');
+  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+
+  test('🔴 l en-tete de la recherche est pose en tete de la liste, avant les cartes', () => {
+    mockPages = { pages: [[reservation('Padel B')]] };
+    const reclamer = jest.fn(() => () => {});
+    act(() => {
+      monte = renderer.create(
+        <EnTeteDeRechercheContext.Provider value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer }}>
+          <ReservationListContent showFilters />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+
+    const lu = texteRendu();
+    expect(lu).toContain('temoin-entete-recherche');
+    expect(lu.indexOf('temoin-entete-recherche')).toBeLessThan(lu.indexOf('carte:Padel B'));
+    expect(reclamer).toHaveBeenCalled();
   });
 });

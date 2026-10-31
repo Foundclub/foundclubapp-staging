@@ -654,3 +654,30 @@ describe('PAR-L4 — l enfant venu de sa fiche traverse la recherche', () => {
     expect(mockPanneaux.clubs.props.childDocumentId).toBeUndefined();
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — les listes posent l'en-tête de la
+// recherche dans ce qu'elles font défiler et le « réclament » à la coque. Le panneau « Bientôt
+// disponible » doit le poser lui aussi : sinon, une liste déjà visitée l'ayant réclamé, l'onglet
+// Réservation n'aurait plus ni logo ni onglets.
+describe('SearchHubScreen — CORR-RECHERCHE point 2 : le panneau Bientot porte l en-tete', () => {
+  const { Text } = jest.requireActual('react-native');
+  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+
+  test('🔴 « reservations » : l en-tete de la recherche est dans le panneau, et reclame', async () => {
+    demonter();
+    const reclamer = jest.fn(() => () => {});
+    navigation = { navigate: jest.fn(), setParams: jest.fn() };
+    await act(async () => {
+      arbre = renderer.create(
+        <EnTeteDeRechercheContext.Provider value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer }}>
+          <SearchHubScreen navigation={navigation} route={{ params: { activeType: 'reservations' } }} />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+
+    const lu = texteRendu();
+    expect(lu).toContain('temoin-entete-recherche');
+    expect(lu.indexOf('temoin-entete-recherche')).toBeLessThan(lu.indexOf('Bientôt disponible'));
+    expect(reclamer).toHaveBeenCalled();
+  });
+});
