@@ -504,11 +504,21 @@ function FriendlyMatchAdDetails({ navigation, route }) {
                 : t('friendlyMatchAdDetails.proposalsReceived', 'Les propositions reçues')}
             </Text>
 
-            {applications.length === 0 ? (
+            {/* CORR-TEXTES (point 32) : une annonce annulée n'est plus vue par personne ;
+                « les équipes du secteur la voient » ne vaut que pour une annonce ouverte. */}
+            {applications.length === 0 && ad.status === 'open' ? (
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                 {t(
                   'friendlyMatchAdDetails.nobodyHasAnsweredYetTeams',
                   'Personne n’a encore répondu. Les équipes du secteur voient ton annonce.',
+                )}
+              </Text>
+            ) : null}
+            {applications.length === 0 && ad.status === 'cancelled' ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {t(
+                  'friendlyMatchAdDetails.cancelledNobodySees',
+                  'Annonce annulée, plus personne ne la voit.',
                 )}
               </Text>
             ) : null}

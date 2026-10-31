@@ -471,12 +471,15 @@ function RecruitmentAdEdit({ navigation, route }) {
               'Nombre de profils recherchés',
             ) : t(
               'recruitmentAdEdit.form.quantityPlayers',
-              'Nombre de joueurs recherches',
+              'Nombre de joueurs recherchés',
             )}
             max={20}
             min={1}
             onDecrement={() => setValue('quantity', Math.max(1, watchedQuantity - 1))}
             onIncrement={() => setValue('quantity', watchedQuantity + 1)}
+            // CORR-TEXTES (point 36) : le registre sombre du thème ; la case gris clair
+            // par défaut rendait le compteur illisible sur cet écran sombre.
+            tone="tunnel"
             value={watchedQuantity}
           />
         </View>

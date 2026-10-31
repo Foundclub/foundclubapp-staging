@@ -74,7 +74,7 @@ describe('MSGVIDZIP — préparer une vidéo avant l envoi', () => {
     const resultat = await preparerVideo(VIDEO);
 
     expect(resultat).toEqual({
-      refus: 'Vidéo trop lourde : 150 Mo maximum. Le téléphone n a pas pu la réduire.',
+      refus: 'Vidéo trop lourde : 150 Mo maximum. Le téléphone n’a pas pu la réduire.',
     });
   });
 

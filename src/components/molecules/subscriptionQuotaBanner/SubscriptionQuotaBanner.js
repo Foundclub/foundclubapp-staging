@@ -156,6 +156,27 @@ function SubscriptionQuotaBanner({
       'cette équipe',
     );
 
+    // CORR-TEXTES (point 27) : quand la Ville paie, on le dit (« Offert par la
+    // Ville de … »), au lieu de nommer le dirigeant comme s'il payait.
+    const offertPar = String(coveringEntitlement?.offeredBy?.name || '').trim();
+    const phraseCouverture = offertPar
+      ? t('subscriptionQuotaBanner.covered.offeredBy', {
+        coveredThing,
+        defaultValue: 'Offert par {{who}} pour {{coveredThing}}.',
+        who: offertPar,
+        ...SANS_ECHAPPEMENT,
+      })
+      : t(
+        'subscriptionQuotaBanner.covered.message',
+        "{{displayName}} paie l'offre {{offerName}} pour {{coveredThing}}.",
+        {
+          coveredThing,
+          displayName,
+          offerName,
+          ...SANS_ECHAPPEMENT,
+        },
+      );
+
     return (
       <View
         style={[
@@ -180,16 +201,7 @@ function SubscriptionQuotaBanner({
           </Text>
         </View>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {t(
-            'subscriptionQuotaBanner.covered.message',
-            "{{displayName}} paie l'offre {{offerName}} pour {{coveredThing}}.",
-            {
-              coveredThing,
-              displayName,
-              offerName,
-              ...SANS_ECHAPPEMENT,
-            },
-          )}
+          {phraseCouverture}
         </Text>
       </View>
     );

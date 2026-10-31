@@ -100,6 +100,15 @@ jest.mock('@/services/team/teamQueries', () => ({
   useGetTeams: () => mockTeamsQuery,
 }));
 
+// CORR-TEXTES (point 35) : ouvert à froid, l'écran relit l'entraîneur par son identifiant.
+/** @type {any} */
+let mockEntraineurLu;
+jest.mock('@/services/auth/authQueries', () => ({
+  useGetUserById: (/** @type {any} */ id, /** @type {any} */ options) => ({
+    data: options?.enabled === false ? undefined : mockEntraineurLu,
+  }),
+}));
+
 // Service double ENTIEREMENT : il importe le client HTTP, qui refuse de se
 // charger sans `API_URL`.
 jest.mock('@/services/team/teamService', () => ({
@@ -241,6 +250,7 @@ beforeEach(() => {
   };
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
   mockRoute = { params: { clubId: 'club-1', trainerId: 'coach-7', trainerName: 'Nadia Berger' } };
+  mockEntraineurLu = undefined;
 });
 
 afterEach(() => {
@@ -301,6 +311,25 @@ describe('AssignCoachTeams — ce que l ecran fait (fige par D62)', () => {
     expect(ecussons).toHaveLength(EQUIPES.length);
     expect(ecussons[0].props.club?.logo?.url).toBe('/uploads/smuc.png');
     expect(ecussons[0].props.name).toBe('Stade Marseillais');
+  });
+});
+
+describe('CORR-TEXTES (point 35) — ouvert à froid, le nom et le tutoiement', () => {
+  it('sans nom dans l adresse, il relit l entraîneur au lieu de dire « Utilisateur »', () => {
+    mockRoute = { params: { clubId: 'club-1', trainerId: 'coach-7' } };
+    mockEntraineurLu = { firstname: 'Nadia', lastname: 'Berger' };
+
+    const textes = texteDe(monter().root);
+
+    expect(textes).toContain('Nadia Berger');
+    expect(textes).not.toContain('Utilisateur');
+  });
+
+  it('tutoie partout : « Coche », jamais « Cochez »', () => {
+    const textes = texteDe(monter().root);
+
+    expect(textes).toContain('Coche une ou plusieurs équipes, puis valide.');
+    expect(textes).not.toContain('Cochez');
   });
 });
 

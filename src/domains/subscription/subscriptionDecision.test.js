@@ -76,7 +76,7 @@ describe('subscriptionDecision', () => {
     expect(mapSubscriptionDecisionToPaywall(decision).paywallKey).toBe('composition-required');
     expect(getSubscriptionPaywallContent(decision)).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La composition d équipe est réservée a l offre Équipe. Offre conseillée: Équipe ou Club.',
+      description: 'La composition d’équipe est réservée à l’offre Équipe. Offre conseillée: Équipe ou Club.',
       title: 'Composition réservée',
     });
     expect(getSubscriptionQuotaSheetContent(decision)).toMatchObject({
@@ -108,7 +108,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des installations du club est réservée a l offre Club.'
+      description: 'La gestion des installations du club est réservée à l’offre Club.'
         + ' Offre conseillée: Club.',
       title: 'Installations réservées',
     });
@@ -119,9 +119,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des sponsors du club est réservée a l offre Club.'
+      description: 'La gestion des sponsors du club est réservée à l’offre Club.'
         + ' Offre conseillée: Club.',
-      title: 'Sponsors reserves',
+      title: 'Sponsors réservés',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -130,7 +130,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des rôles et des droits du club est réservée a l offre Club.'
+      description: 'La gestion des rôles et des droits du club est réservée à l’offre Club.'
         + ' Offre conseillée: Club.',
       title: 'Rôles club reserves',
     });
@@ -205,8 +205,8 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Tu as atteint la limite gratuite de publication d événements. Offre conseillée: Équipe ou Club.',
-      title: 'Publication d événement limitée',
+      description: 'Tu as atteint la limite gratuite de publication d’événements. Offre conseillée: Équipe ou Club.',
+      title: 'Publication d’événement limitée',
     });
   });
 
@@ -322,10 +322,10 @@ describe('subscriptionDecision', () => {
     })).toEqual([
       'Événements et matchs illimités',
       'Composition et convocations',
-      'Toute l équipe en profite',
+      'Toute l’équipe en profite',
     ]);
     expect(getSubscriptionPaywallBenefits({ paywall: 'TEAM_LIMIT' })).toEqual([
-      'Ajoute autant d équipes que besoin',
+      'Ajoute autant d’équipes que besoin',
       'Événements et matchs illimités',
       'Gestion complète de chaque équipe',
     ]);
@@ -406,7 +406,7 @@ describe('subscriptionDecision', () => {
       expect(lock?.scope).toBe('team');
     });
 
-    test('ne verrouille PAS tant qu il reste du quota gratuit', () => {
+    test('ne verrouille PAS tant qu’il reste du quota gratuit', () => {
       expect(getSubscriptionEntryPointLock({
         freeUsageSummary: usageOf({ limit: 1, quotaType: 'FREE_TEAM', used: 0 }),
         quotaType: 'FREE_TEAM',
@@ -414,7 +414,7 @@ describe('subscriptionDecision', () => {
       })).toBeNull();
     });
 
-    test('ne verrouille PAS un abonne : il n a plus de compteur', () => {
+    test('ne verrouille PAS un abonne : il n’a plus de compteur', () => {
       expect(getSubscriptionEntryPointLock({
         freeUsageSummary: exhaustedTeam,
         quotaType: 'FREE_TEAM',
@@ -524,7 +524,7 @@ describe('S12-B — le refus de quota au licencie', () => {
     expect(content.ctaLabel).toBe('Passer à la tranche supérieure');
   });
 
-  test('⛔ il RASSURE sur ce qui n est PAS bloque', () => {
+  test('⛔ il RASSURE sur ce qui n’est PAS bloque', () => {
     // Un dirigeant qui lit « ton club est plein » doit savoir, dans la meme
     // phrase, que ses membres actuels ne perdent rien.
     const content = getSubscriptionPaywallContent(QUOTA_DECISION);
@@ -549,8 +549,8 @@ describe('S12-B — le refus de quota au licencie', () => {
   test('ses benefices ne REVENDENT rien : ce club paie deja', () => {
     expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
       'Les membres déjà inscrits gardent tout',
-      'Seules les NOUVELLES adhesions sont en pause',
-      'Passe a la tranche superieure pour rouvrir',
+      'Seules les NOUVELLES adhésions sont en pause',
+      'Passe à la tranche supérieure pour rouvrir',
     ]);
   });
 
@@ -566,7 +566,7 @@ describe('S12-B — le refus de quota au licencie', () => {
   });
 });
 
-describe('S12-B — « Mon abonnement » nomme l offre au licencie', () => {
+describe('S12-B — « Mon abonnement » nomme l’offre au licencie', () => {
   test('LE TEMOIN — plus jamais « Fc Club Licensee Yearly »', () => {
     expect(formatSubscriptionPlanLabel('fc_club_licensee_yearly')).toBe('Club au licencié / an');
     expect(formatSubscriptionPlanLabel('fc_club_licensee_monthly')).toBe('Club au licencié / mois');
@@ -605,7 +605,7 @@ describe('CLUBEQ — la raison de la couverture', () => {
     }).clubCoveredTeamDocumentIds).toEqual(['team-du-club']);
   });
 
-  test('un serveur qui ne dit pas encore la raison ne casse pas l ecran', () => {
+  test('un serveur qui ne dit pas encore la raison ne casse pas l’ecran', () => {
     // Un telephone a jour peut parler a un serveur qui ne l est pas : la liste
     // est alors vide, et la modale se comporte comme avant.
     expect(getSubscriptionTeamSlotSummary({
@@ -636,7 +636,7 @@ describe('ABOCLUB — getActiveClubNotCovered', () => {
     })).toBeNull();
   });
 
-  test('un droit qui designe le club actif l emporte sur un resume contradictoire', () => {
+  test('un droit qui designe le club actif l’emporte sur un resume contradictoire', () => {
     // Sans preuve, pas d'accusation : deux lectures qui se contredisent gardent
     // l'ecran d'avant plutot que d'annoncer a tort « pas couvert ».
     expect(getActiveClubNotCovered({
@@ -684,7 +684,7 @@ describe('ABOCLUB2 — getActiveOfferDetails', () => {
     expect(offre.date).toEqual({ kind: 'ends', value: '2026-10-31T12:00:00.000Z' });
   });
 
-  test('une offre payee par quelqu un d autre n est pas datee', () => {
+  test('une offre payee par quelqu un d’autre n’est pas datee', () => {
     const [offre] = getActiveOfferDetails({
       activePlanCodes: ['fc_club_tier_1_yearly'],
       subscriptionSummary: { payerSubscriptionsSummary: [] },
@@ -709,7 +709,7 @@ describe('ABOCLUB2 — getActiveOfferDetails', () => {
     expect(offre.date).toBeNull();
   });
 
-  test('sans offre couvrant le club actif, l ordre du serveur est garde', () => {
+  test('sans offre couvrant le club actif, l’ordre du serveur est garde', () => {
     const offres = getActiveOfferDetails({
       activePlanCodes: ['fc_team_2_yearly', 'fc_club_tier_1_yearly'],
       clubVerificationSummary: { clubDocumentId: 'club-aiki' },

@@ -252,6 +252,9 @@ function FacilitySelector({
       isShared: Boolean(selectedFacility.isShared),
       location: {
         label: getAddressText(selectedFacility.address),
+        // CORR-TEXTES (point 29) : le nom du terrain, pour que le récapitulatif
+        // dise « Salle annexe » et pas seulement la ville. Le serveur ne lit que label.
+        name: String(selectedFacility.name || '').trim(),
         value: '',
       },
     });

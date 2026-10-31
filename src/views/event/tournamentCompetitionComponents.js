@@ -131,7 +131,7 @@ export function TournamentMatchCard({
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {match?.group?.label
-              ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+              ? t('tournamentCompetitionComponents.groupLabel', '{{label}}', {
                 label: match.group.label,
                 ...SANS_ECHAPPEMENT,
               })
@@ -220,7 +220,7 @@ export function TournamentStandingsTable({ standings = [] }) {
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
             {standing?.label
-              ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+              ? t('tournamentCompetitionComponents.groupLabel', '{{label}}', {
                 label: standing.label,
                 ...SANS_ECHAPPEMENT,
               })
@@ -458,7 +458,7 @@ export function TournamentGroupCards({ groups = [], onGroupPress = null, standin
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {group?.label
-                ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+                ? t('tournamentCompetitionComponents.groupLabel', '{{label}}', {
                   label: group.label,
                   ...SANS_ECHAPPEMENT,
                 })

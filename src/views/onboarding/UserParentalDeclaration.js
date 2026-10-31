@@ -204,8 +204,7 @@ function UserParentalDeclaration({ navigation, route }) {
           {Platform.OS === 'web'
             ? t(
               'userParentalDeclaration.parentLink.web',
-              'Ton parent peut aussi donner son accord depuis son propre compte, dans '
-                + 'l’application mobile FoundClub : ce n’est pas encore possible sur le site.',
+              'Ton parent peut aussi donner son accord depuis son propre compte.',
             )
             : t(
               'userParentalDeclaration.parentLink.app',

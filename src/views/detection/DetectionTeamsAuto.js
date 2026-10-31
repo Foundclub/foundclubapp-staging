@@ -229,7 +229,7 @@ function DetectionTeamsAuto() {
             {t('detection.teams.auto.title')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {t('detection.teams.auto.subtitle', { registered: players.length, sport })}
+            {t('detection.teams.auto.subtitle', { count: players.length, sport })}
           </Text>
         </View>
         {/* Fond neutre — meme motif que l'ecran 13, voir le commentaire la-bas. */}
@@ -255,7 +255,10 @@ function DetectionTeamsAuto() {
           ]}
         >
           <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-            {t('detection.teams.auto.perTeam', { perTeam, registered: players.length })}
+            {[
+              t('detection.teams.auto.perTeam', { count: players.length }),
+              t('detection.teams.auto.perTeamPlayers', { count: perTeam }),
+            ].join(' · ')}
           </Text>
           <View style={styles.counterRow}>
             <TouchableOpacity
@@ -333,11 +336,13 @@ function DetectionTeamsAuto() {
         <View style={[styles.previewCard, { borderColor: withAlpha(Colors.neutral00, 0.24) }]}>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {distributedCount
-              ? t('detection.teams.auto.preview.text', {
-                perTeam,
-                teams: teamCount,
-                unassigned: preview.unassignedIds.length,
-              })
+              ? [
+                t('detection.teams.auto.preview.text', { count: teamCount }),
+                t('detection.teams.auto.preview.textPlayers', { count: perTeam }),
+                t('detection.teams.auto.preview.textUnassigned', {
+                  count: preview.unassignedIds.length,
+                }),
+              ].join(' ')
               : t('detection.teams.auto.preview.empty')}
           </Text>
         </View>

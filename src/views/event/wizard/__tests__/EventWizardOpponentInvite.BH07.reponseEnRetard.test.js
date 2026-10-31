@@ -331,7 +331,7 @@ const ouvrirLesEquipesDuVoisin = async (etatSeme = {}) => {
     })));
   });
 
-  await presserLeTexte('Inviter l équipe adverse sur FoundClub');
+  await presserLeTexte('Inviter l’équipe adverse sur FoundClub');
   await laisserLeReseauRepondre();
   await presserLeTexte('AS Voisine');
   await laisserLeReseauRepondre();
@@ -377,7 +377,7 @@ test('P8-16 — les equipes du club precedent n arrivent pas sous le club actuel
   await act(async () => {
     arbre.update(rendre(createElement(EventWizardOpponent, { navigation, route: { params: {} } })));
   });
-  await presserLeTexte('Inviter l équipe adverse sur FoundClub');
+  await presserLeTexte('Inviter l’équipe adverse sur FoundClub');
   await laisserLeReseauRepondre();
   await presserLeTexte('Club Alpha');
   await laisserLeReseauRepondre();

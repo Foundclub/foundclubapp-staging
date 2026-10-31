@@ -14,6 +14,7 @@ import PhoneForm from '@/components/organisms/signinPhoneForm/SigninPhoneForm';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
  * Registration screen component for new user sign-up.
@@ -33,7 +34,10 @@ function Register({ navigation }) {
   const {
     canShowCodeButton, confirm, isLoading, loginMutation, otpMutation,
   } = useAuth();
-  const authErrorMessage = loginMutation.error?.message || otpMutation.error?.message || '';
+  // CORR-TEXTES (point 23) : la phrase française du code Firebase,
+  // jamais « Firebase: Error (auth/…) ».
+  const authError = loginMutation.error || otpMutation.error;
+  const authErrorMessage = authError ? getErrorMessage(authError, 'OTP_ERROR') : '';
   const renderBrandLogo = () => {
     if (Platform.OS === 'web') {
       return (

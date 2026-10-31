@@ -330,7 +330,7 @@ function TournamentMatchDetails({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
                   {match?.group?.label
-                    ? t('tournamentMatchDetails.groupLabel', 'Poule {{label}}', {
+                    ? t('tournamentMatchDetails.groupLabel', '{{label}}', {
                       label: match.group.label,
                       ...SANS_ECHAPPEMENT,
                     })

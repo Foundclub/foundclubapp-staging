@@ -43,6 +43,11 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));
 
+// CORR-TEXTES (point 26) : le bandeau du site, hors de ce filet.
+jest.mock('@/context/AppFeedbackContext', () => ({
+  useAppFeedback: () => ({ showBanner: jest.fn() }),
+}));
+
 // `mutate` appelle vraiment la `mutationFn` : les services doubles sont le point
 // d'observation reseau de ce filet.
 jest.mock('@tanstack/react-query', () => ({

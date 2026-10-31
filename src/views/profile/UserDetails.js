@@ -27,6 +27,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -76,7 +77,7 @@ import {
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
 
-import { getErrorMessage } from '@/utils/errors/displayError';
+import { getErrorMessage, getErrorStatus } from '@/utils/errors/displayError';
 import { formatHeight } from '@/utils/heightCentimeters';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -1159,6 +1160,22 @@ function UserDetails({ navigation, route }) {
       </Text>
     </View>
   ) : null;
+
+  // CORR-TEXTES (point 25) : un profil effacé (404) ne s'ouvre plus en fiche
+  // « Utilisateur » vide qui a l'air réelle ; on dit qu'il n'existe plus.
+  if (!isSelfProfile && !isProfileLoading && getErrorStatus(fetchedUserError) === 404) {
+    return (
+      <ScreenContainer bgImage="bg2">
+        <EmptyState
+          description={t(
+            'userDetails.gone.description',
+            'Ce compte a été supprimé ou n’est plus visible.',
+          )}
+          title={t('userDetails.gone.title', 'Ce profil n’existe plus.')}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

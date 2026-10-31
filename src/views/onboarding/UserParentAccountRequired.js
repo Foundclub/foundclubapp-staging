@@ -13,8 +13,8 @@ import { RouteNames } from '@/navigation/routeNames';
 const FALLBACKS = {
   body: 'Tu as moins de 13 ans. Sur FoundClub, tu n’as pas besoin de compte : '
     + 'c’est ton parent qui te déclare depuis le sien.',
-  steps: 'Il installe l’app, choisit « Parent » à l’inscription, puis te déclare '
-    + 'comme joueur. Tu apparaîtras sous ton prénom dans ton équipe.',
+  steps: 'Il crée son compte FoundClub (site ou application), choisit « Parent » à l’inscription, '
+    + 'puis te déclare comme joueur. Tu apparaîtras sous ton prénom dans ton équipe.',
   title: 'Un compte parent est nécessaire',
 };
 

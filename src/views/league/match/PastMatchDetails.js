@@ -207,7 +207,7 @@ function PastMatchDetails() {
       return t('pastMatchDetails.unknownDate', 'Date inconnue');
     }
     try {
-      return format(new Date(match.date), "EEEE d MMMM yyyy 'a' HH'h'mm", { locale: fr });
+      return format(new Date(match.date), "EEEE d MMMM yyyy 'à' HH'h'mm", { locale: fr });
     } catch (_error) {
       return match.date;
     }

@@ -207,12 +207,16 @@ function AutocompleteAddressInput({
     if (!Array.isArray(places) || places.length === 0) return [];
     // FINITIONS-VILLE (T20 C00g) : la base d'adresses rend parfois DEUX fois la même adresse (même
     // point, même libellé) ; deux lignes identiques s'allumaient ensemble. Une seule ligne.
+    // CORR-TEXTES (point 30) : le même libellé revient aussi avec un point à quelques
+    // mètres près (notre serveur puis la base nationale) ; deux lignes identiques ne se
+    // distinguent pas à l'écran. Le juge est donc le libellé seul, sans casse ni espaces
+    // en trop ; la première ligne (la nôtre) est gardée.
     const vues = new Set();
     return places
       .map(placeToOption)
       .filter((option) => option.label && option.value)
       .filter((option) => {
-        const cle = `${option.label}|${option.value}`;
+        const cle = String(option.label).trim().replace(/\s+/g, ' ').toLowerCase();
         if (vues.has(cle)) return false;
         vues.add(cle);
         return true;

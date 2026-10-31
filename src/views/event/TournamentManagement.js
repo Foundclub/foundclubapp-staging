@@ -184,7 +184,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToUpdateThisTeam',
         'Impossible de mettre à jour cette équipe.',
       ));
@@ -198,7 +198,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToCloseThisTournament',
         'Impossible de clôturer ce tournoi.',
       ));
@@ -212,7 +212,7 @@ function TournamentManagement({ navigation, route }) {
   const setupCompetitionMutation = useMutation({
     mutationFn: () => setupTournamentCompetition(eventId, tournamentConfig),
     onError: (mutationError) => {
-      Alert.alert(t('common.error', 'Erreur'), mutationError?.message || t('tournamentManagement.unableToSyncTheTournament', 'Impossible de synchroniser la structure du tournoi.'));
+      Alert.alert(t('common.error', 'Erreur'), mutationError?.details?.error || mutationError?.message || t('tournamentManagement.unableToSyncTheTournament', 'Impossible de synchroniser la structure du tournoi.'));
     },
     onSuccess: invalidate,
   });
@@ -223,7 +223,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToDrawTheGroups',
         'Impossible de tirer les poules.',
       ));
@@ -237,7 +237,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToGenerateTheMatches',
         'Impossible de générer les matchs.',
       ));
@@ -251,7 +251,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToGenerateTheKnockout',
         'Impossible de générer la phase finale.',
       ));
@@ -265,7 +265,7 @@ function TournamentManagement({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), mutationError?.details?.error || mutationError?.message || t(
         'tournamentManagement.unableToPublishThisCompetition',
         'Impossible de publier cette compétition.',
       ));

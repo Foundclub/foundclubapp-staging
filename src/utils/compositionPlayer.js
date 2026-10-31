@@ -77,11 +77,10 @@ export const getCompositionPlayerLabel = (player) => (
  * @returns {string} Deux lettres au plus.
  */
 export const getCompositionPlayerInitials = (player) => {
-  const label = getCompositionPlayerLabel(player);
-  return label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
+  const mots = getCompositionPlayerLabel(player).split(/\s+/).filter(Boolean);
+  // CORR-TEXTES (point 38) : le premier mot et le DERNIER (le nom), jamais le
+  // deuxième prénom : « Zoé-Anaïs Marie-Hélène D'Artagnan-Lefèvre » donne « ZD ».
+  return (mots.length > 1 ? [mots[0], mots[mots.length - 1]] : mots)
     .map((part) => part[0]?.toUpperCase() || '')
     .join('') || '?';
 };

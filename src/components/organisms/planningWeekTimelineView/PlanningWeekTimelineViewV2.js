@@ -646,12 +646,16 @@ function PlanningWeekTimelineView({
 
   // Periode vide : le resume n'est pas rendu (voir summarySection), l'etat vide
   // porte seul le message. Ce libelle ne concerne donc que les periodes remplies.
-  const summaryText = useMemo(() => t('planningWeekTimelineViewV2.summary', {
+  // CORR-TEXTES (point 24) : deux nombres, deux accords (« 3 événements sur 1 jour »).
+  const summaryText = useMemo(() => `${t('planningWeekTimelineViewV2.summary', {
     count: weekEvents.length,
-    daysCount: weekDays.length,
-    defaultValue_one: '{{count}} événement sur {{daysCount}} jours',
-    defaultValue_other: '{{count}} événements sur {{daysCount}} jours',
-  }), [t, weekDays.length, weekEvents.length]);
+    defaultValue_one: '{{count}} événement',
+    defaultValue_other: '{{count}} événements',
+  })} ${t('planningWeekTimelineViewV2.summaryDays', {
+    count: weekDays.length,
+    defaultValue_one: 'sur {{count}} jour',
+    defaultValue_other: 'sur {{count}} jours',
+  })}`, [t, weekDays.length, weekEvents.length]);
 
   const nowLine = useMemo(() => {
     if (!timedEvents.length) return null;

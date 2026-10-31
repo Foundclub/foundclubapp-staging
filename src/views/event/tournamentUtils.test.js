@@ -144,7 +144,7 @@ describe('tournamentUtils', () => {
     expect(formatTournamentScore({ scoreA: 3, scoreB: 1 })).toBe('3 - 1');
     expect(formatTournamentScore({ scoreA: null, scoreB: 1 })).toBe('--');
     expect(getTournamentMatchStatusMeta('validated', colors)).toEqual({
-      label: 'Valide',
+      label: 'Validé',
       tone: '#0f0',
     });
   });

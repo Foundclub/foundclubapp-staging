@@ -145,7 +145,7 @@ describe('Y07 · temoin 4 🔒 — le joueur ne change pas de comportement', () 
     const flow = resolveParticipationFlow(closedTeamEvent(), { user: playerUser });
 
     expect(flow.canAct).toBe(true);
-    expect(flow.actionLabel).toBe('Present');
+    expect(flow.actionLabel).toBe('Présent');
   });
 
   it('joueur NON convoque sur un evenement ferme : bloque, meme phrase qu avant', () => {

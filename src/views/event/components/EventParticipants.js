@@ -1047,7 +1047,11 @@ function EventParticipants({
             </Text>
             {historicalPending.length > 0 ? (
               <Text style={[Fonts.p4, Fonts.neutral300]}>
-                {t('eventDetails.invitedTeams.historicalPending', '{{count}} réponse(s) en attente').replace('{{count}}', String(historicalPending.length))}
+                {t('eventDetails.invitedTeams.historicalPending', {
+                  count: historicalPending.length,
+                  defaultValue_one: '{{count}} réponse en attente',
+                  defaultValue_other: '{{count}} réponses en attente',
+                })}
               </Text>
             ) : null}
             {historicalParticipating.map((player) => renderParticipant(player, {

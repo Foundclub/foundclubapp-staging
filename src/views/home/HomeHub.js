@@ -1606,10 +1606,13 @@ function HomeHubContent({ auth, navigation, route }) {
   const highlightAddEventCard = tourCurrentStep?.id === 'coach_find_event_card';
 
   // Badges d'offre informatifs sur les cartes du hub (handoff 12).
-  const teamCardPremiumScope = (subscriptionAccessLevel === 'TEAM' || subscriptionAccessLevel === 'CLUB')
+  // CORR-TEXTES (point 27) : un club que la Ville paie n'a rien à acheter ; un
+  // badge « Offre Équipe / Offre Club » y fait croire au coach qu'il doit payer.
+  const teamCardPremiumScope = (clubCouvertParLaVille
+    || subscriptionAccessLevel === 'TEAM' || subscriptionAccessLevel === 'CLUB')
     ? undefined
     : /** @type {'team'} */ ('team');
-  const clubCardPremiumScope = subscriptionAccessLevel === 'CLUB'
+  const clubCardPremiumScope = (clubCouvertParLaVille || subscriptionAccessLevel === 'CLUB')
     ? undefined
     : /** @type {'club'} */ ('club');
 

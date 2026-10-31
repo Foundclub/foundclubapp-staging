@@ -638,7 +638,7 @@ function TournamentSettingsEdit({ navigation, route }) {
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                  {t('tournamentSettingsEdit.teamsAndEligibility', 'Équipes et eligibility')}
+                  {t('tournamentSettingsEdit.teamsAndEligibility', 'Équipes et éligibilité')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {t(

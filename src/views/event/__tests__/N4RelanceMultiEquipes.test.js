@@ -278,7 +278,7 @@ describe('N4/D3 — la charge en CHAINE fait exactement ce qu elle faisait', () 
     await relancerAvec(EVENEMENT_ID);
 
     expect(/** @type {any} */ (Alert.alert)).toHaveBeenCalledTimes(1);
-    expect(/** @type {any} */ (Alert.alert).mock.calls[0][0]).toBe('2 personnes relancees');
+    expect(/** @type {any} */ (Alert.alert).mock.calls[0][0]).toBe('2 personnes relancées');
   });
 });
 

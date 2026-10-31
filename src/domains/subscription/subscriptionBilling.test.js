@@ -151,7 +151,7 @@ describe('subscriptionBilling', () => {
 
   test('maps Team slot errors to actionable copy', () => {
     expect(getSubscriptionBillingErrorMessage({ message: 'TEAM_SLOT_COUNT_EXCEEDED' }))
-      .toBe('Cette offre n a pas assez de places pour couvrir autant d équipes. Ajuste la sélection avant de continuer.');
+      .toBe('Cette offre n’a pas assez de places pour couvrir autant d’équipes. Ajuste la sélection avant de continuer.');
   });
 
   test('reads the tier rank from slot count (Team) or plan code (Club)', () => {
