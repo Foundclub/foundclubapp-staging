@@ -515,7 +515,10 @@ function MercatoFilters({ navigation }) {
               address={value && typeof value === 'object' ? value : undefined}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
-              placeholder={t('clubFilters.fields.city.placeholderChoisir', 'Choisir une ville (ex. : Marseille)')}
+              placeholder={t(
+                'clubFilters.fields.city.placeholderChoisir',
+                'Choisir une ville (ex. : Marseille)',
+              )}
               setAddress={(nextValue) => {
                 setVilleManquante(false);
                 onChange(nextValue);

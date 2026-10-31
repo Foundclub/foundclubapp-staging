@@ -4,7 +4,8 @@
  * Un gérant de complexe qui dirige aussi un club, une Ville qui gère aussi un club : leurs
  * conversations et leurs notifications se mêlaient sans qu'on sache de quelle casquette elles
  * relèvent. Tout reste affiché ; chaque ligne porte « Club », « Complexe » ou « Ville » — mais
- * seulement quand la liste MÊLE au moins deux casquettes (les autres comptes ne voient rien de neuf).
+ * seulement quand la liste MÊLE au moins deux casquettes (les autres comptes ne voient rien
+ * de neuf).
  *
  * Le classement se lit sur le type du fil ou de la notification : une conversation privée
  * (`whisper`) ou l'assistance n'a pas de casquette, aucune donnée ne la rattache.
@@ -15,7 +16,7 @@ import { estUnCanalDeComplexe } from '@/domains/messaging/habillageDuFil';
 
 /** @typedef {'club' | 'complexe' | 'ville'} Casquette */
 
-const TYPES_DU_CLUB = new Set(['club', 'team', 'multisport', 'league_match', 'friendly_match']);
+const TYPES_DU_CLUB = new Set(['club', 'friendly_match', 'league_match', 'multisport', 'team']);
 
 /**
  * La casquette d'un fil.

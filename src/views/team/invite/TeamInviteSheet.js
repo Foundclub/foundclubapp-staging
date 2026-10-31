@@ -133,7 +133,8 @@ function TeamInviteSheetBody({
   // que la feuille est ouverte.
   const [invitedMemberIds, setInvitedMemberIds] = useState(/** @type {string[]} */ ([]));
   const [isPhoneFormOpen, setIsPhoneFormOpen] = useState(false);
-  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie si rien ne s'ouvre.
+  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie
+  // si rien ne s'ouvre.
   const [messageDuSms, setMessageDuSms] = useState('');
   const [phoneFirstname, setPhoneFirstname] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');

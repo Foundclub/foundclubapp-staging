@@ -581,13 +581,15 @@ describe('CORR-MESSAGERIE p67 — le chemin de création d une alerte', () => {
     let tree;
     await act(async () => {
       tree = renderer.create(
-        <EventFilters navigation={/** @type {any} */ ({ goBack: jest.fn(), setOptions: jest.fn() })} />,
+        <EventFilters
+          navigation={/** @type {any} */ ({ goBack: jest.fn(), setOptions: jest.fn() })}
+        />,
       );
     });
     return tree;
   };
 
-  it('la ville vide invite à choisir, elle ne montre pas « Marseille » comme un choix', async () => {
+  it('la ville vide invite à choisir, sans montrer « Marseille » comme un choix', async () => {
     const tree = await monterEnCreation();
     const champsVille = tree.root.findAll(
       (/** @type {any} */ n) => typeof n.props?.setAddress === 'function',
@@ -599,6 +601,7 @@ describe('CORR-MESSAGERIE p67 — le chemin de création d une alerte', () => {
   it('sans ville, « Créer l alerte » le dit DANS la page', async () => {
     const tree = await monterEnCreation();
     await appuyerSur(tree, "Créer l'alerte");
-    expect(texteVisible(tree)).toContain('La ville et le rayon sont obligatoires pour créer une alerte');
+    expect(texteVisible(tree))
+      .toContain('La ville et le rayon sont obligatoires pour créer une alerte');
   });
 });

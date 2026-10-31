@@ -1069,7 +1069,11 @@ describe('CORR-MESSAGERIE p61 — copier le message si le SMS ne s ouvre pas', (
   const osDOrigine = Platform.OS;
   afterEach(() => { Platform.OS = osDOrigine; });
 
-  const taperDans = (/** @type {any} */ racine, /** @type {string} */ indication, /** @type {string} */ texte) => {
+  const taperDans = (
+    /** @type {any} */ racine,
+    /** @type {string} */ indication,
+    /** @type {string} */ texte,
+  ) => {
     const champ = racine.findAll(
       (/** @type {any} */ noeud) => typeof noeud.props?.onChangeText === 'function'
         && noeud.props?.placeholder === indication,
@@ -1096,7 +1100,8 @@ describe('CORR-MESSAGERIE p61 — copier le message si le SMS ne s ouvre pas', (
     await appuyerEtAttendre(racine, 'Rien ne s’est ouvert ? Copier le message');
     const messageDuSms = mockOuvrirSms.mock.calls[mockOuvrirSms.mock.calls.length - 1][0].message;
     expect(mockCopier).toHaveBeenCalledWith(messageDuSms);
-    expect(textesPortant(racine, 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.').length)
+    const messageCopie = 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.';
+    expect(textesPortant(racine, messageCopie).length)
       .toBeGreaterThan(0);
   });
 

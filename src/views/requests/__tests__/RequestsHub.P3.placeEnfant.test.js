@@ -343,7 +343,7 @@ describe('P3 — trancher une place demandee pour un enfant', () => {
   // CORR-MESSAGERIE p62 (31/10) — les demandes soeurs restent ouvertes : un 2e club qui accepte
   // une enfant deja placee ailleurs bute sur le garde-fou du serveur. Il lit une phrase, pas
   // « Declared child already belongs to a team ».
-  test('p62 : accepter une enfant deja placee ailleurs le dit en francais, et la carte reste', async () => {
+  test('p62 : enfant deja placee ailleurs, dit en francais ; la carte reste', async () => {
     respondClubInterestRequest.mockRejectedValue({
       message: 'Declared child already belongs to a team',
       status: 400,

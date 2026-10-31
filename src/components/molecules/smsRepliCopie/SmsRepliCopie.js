@@ -17,6 +17,7 @@ import Button from '@/components/atoms/button/Button';
 import { copier } from '@/platform/share';
 
 /**
+ * Le bouton « Copier le message » sous un SMS, sur le site.
  * @param {object} props - Les propriétés.
  * @param {string} [props.message] - Le texte du SMS ; vide : rien n'est rendu.
  * @param {string} [props.testID] - Le repère du bouton.
@@ -44,10 +45,14 @@ function SmsRepliCopie({ message = '', testID = 'sms-repli-copie' }) {
       {issue ? (
         <Text accessibilityLiveRegion="polite" style={[Fonts.p4, Fonts.neutral200]}>
           {issue === 'copie'
-            ? t('smsRepliCopie.copie', 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.')
+            ? t(
+              'smsRepliCopie.copie',
+              'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.',
+            )
             : t(
               'smsRepliCopie.echec',
-              'La copie n’a pas marché sur ce navigateur : envoie l’invitation depuis ton téléphone.',
+              'La copie n’a pas marché sur ce navigateur : '
+                + 'envoie l’invitation depuis ton téléphone.',
             )}
         </Text>
       ) : null}

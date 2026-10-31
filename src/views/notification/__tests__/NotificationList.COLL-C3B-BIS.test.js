@@ -35,7 +35,8 @@ jest.mock('@/theme/themeContext', () => {
     __esModule: true,
     default: () => ({
       Alignments: makeRamp(),
-      // CORR-MESSAGERIE p114 : l'étiquette « Ville » est le Tag du design (ApplicationStyle.borderColor…).
+      // CORR-MESSAGERIE p114 : l'étiquette « Ville » est le Tag du design
+      // (ApplicationStyle.borderColor…).
       ApplicationStyle: new Proxy({}, { get: () => makeRamp() }),
       Colors: new Proxy({}, { get: (_target, key) => `couleur-${String(key)}` }),
       Fonts: makeRamp(),

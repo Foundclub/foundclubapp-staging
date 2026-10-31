@@ -594,7 +594,10 @@ function EventFilters({ navigation }) {
               address={/** @type {Option | undefined} */ (value || undefined)}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
-              placeholder={t('clubFilters.fields.city.placeholderChoisir', 'Choisir une ville (ex. : Marseille)')}
+              placeholder={t(
+                'clubFilters.fields.city.placeholderChoisir',
+                'Choisir une ville (ex. : Marseille)',
+              )}
               setAddress={(adresse) => {
                 setVilleManquante(false);
                 onChange(adresse);

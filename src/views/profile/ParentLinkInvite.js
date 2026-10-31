@@ -10,9 +10,9 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
-import SmsRepliCopie from '@/components/molecules/smsRepliCopie/SmsRepliCopie';
 import ParentalDeclarationCard
   from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
+import SmsRepliCopie from '@/components/molecules/smsRepliCopie/SmsRepliCopie';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
@@ -71,7 +71,8 @@ function ParentLinkInvite() {
   const [declarationCochee, setDeclarationCochee] = useState(false);
   const [erreur, setErreur] = useState('');
   const [envoyee, setEnvoyee] = useState(false);
-  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie si rien ne s'ouvre.
+  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie
+  // si rien ne s'ouvre.
   const [messageDuSms, setMessageDuSms] = useState('');
 
   const nomme = { firstname: childFirstname, ...SANS_ECHAPPEMENT };

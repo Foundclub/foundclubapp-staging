@@ -393,7 +393,7 @@ describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le
 
   const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
 
-  test('site : plus de boutons « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre le menu', async () => {
+  test('site : plus de « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre le menu', async () => {
     Platform.OS = 'web';
     mockChatsQuery = etatListe({
       data: {
@@ -412,7 +412,9 @@ describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le
       (/** @type {any} */ n) => n.props?.testID === 'liste-fil-options-chat-1'
         && typeof n.props?.onPress === 'function',
     )[0];
-    act(() => { options.props.onPress({ nativeEvent: { pageY: 300 }, stopPropagation: () => {} }); });
+    act(() => {
+      options.props.onPress({ nativeEvent: { pageY: 300 }, stopPropagation: () => {} });
+    });
     const menu = arbre.root.findByType(MenuDuFil);
     expect(menu.props.haut).toBe(300);
     const entree = (/** @type {string} */ cle) => menu.props.entrees
@@ -433,7 +435,11 @@ describe('CORR-MESSAGERIE p114 — l étiquette Club / Complexe d un compte à d
     ...CHATS[0], documentId: 'fil-equipe', groupName: 'U11 Tunnel', type: 'team',
   };
   const CANAL_COMPLEXE = {
-    ...CHATS[0], documentId: 'fil-canal', groupName: 'Complexe Test', participantsCount: 8, type: 'group',
+    ...CHATS[0],
+    documentId: 'fil-canal',
+    groupName: 'Complexe Test',
+    participantsCount: 8,
+    type: 'group',
   };
   const listeDe = (/** @type {any[]} */ fils) => etatListe({
     data: {
@@ -469,9 +475,10 @@ describe('CORR-MESSAGERIE 100b — la marge du bas de la liste ne recompte pas l
     Platform.OS = osDOrigine;
     mockDock = { floatingActionBottomOffset: 0, sceneBottomInset: 0 };
   });
-  const margeDuBas = () => mockListProps[mockListProps.length - 1]?.contentContainerStyle?.paddingBottom;
+  const margeDuBas = () => mockListProps[mockListProps.length - 1]
+    ?.contentContainerStyle?.paddingBottom;
 
-  test('site, la coque réserve la barre : la liste ne garde que la place du bouton rond', async () => {
+  test('site, la coque réserve la barre : la liste ne garde que le bouton rond', async () => {
     Platform.OS = 'web';
     mockDock = { dockClearance: 0, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
     await monter({ collectiviteId: 'ville-1', espace: 'ville' });

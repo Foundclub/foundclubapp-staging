@@ -800,7 +800,7 @@ describe('CORR-MESSAGERIE p66 — la proposition revient à chaque recherche san
     expect(texteVisible(tree)).not.toContain('Ne rate plus aucun événement');
   });
 
-  it('« Plus tard » la ferme pour CETTE recherche ; une autre recherche vide la repropose', async () => {
+  it('« Plus tard » la ferme pour CETTE recherche ; une autre vide la repropose', async () => {
     const tree = await monter({ liste: LISTE_VIDE });
     await appuyerSur(tree, 'Plus tard');
     expect(texteVisible(tree)).not.toContain('Ne rate plus aucun événement');
