@@ -8,7 +8,8 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity,
+  useWindowDimensions, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -63,6 +64,8 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
 import MenuDuFil from '@/views/chat/MenuDuFil';
+
+import { BREAKPOINTS } from '@/responsive';
 // IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
@@ -180,6 +183,7 @@ function Messaging({ navigation, route }) {
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
   const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
+  const { width: largeurDeLaFenetre } = useWindowDimensions();
   // MSG-VILLE-NOUVELLE (20/10, décisions d’Adel « 1- B » / « 2- A ») — dans l’espace de
   // la Ville, le bouton rond ouvre « Nouvelle conversation » AU NOM DE LA VILLE (ses contacts :
   // membres majeurs de ses clubs et autres gestionnaires), quel que soit le rôle du compte ;
@@ -590,14 +594,80 @@ function Messaging({ navigation, route }) {
     }
   };
 
-  // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site, « Épingler » et « Archiver »
-  // restaient visibles sur CHAQUE ligne et coupaient les noms à 390 px. Un seul bouton ⋮ ouvre
+  // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site étroit, « Épingler » et
+  // « Archiver » restaient sur CHAQUE ligne et coupaient les noms à 390 px. Un seul bouton ⋮ ouvre
   // les gestes de l'apercu (MSG1BA : « Marquer comme lu », « Épingler », « Archiver ») dans le
   // petit menu ⋮ du fil (MenuDuFil), posé à hauteur de la ligne touchée.
   const renderWebChatActions = (
     /** @type {LigneOuverte} */ ligne,
   ) => {
     if (!isWeb) return null;
+    // Sur un écran large (≥ 768 px), la place est là : les deux boutons restent sur la ligne
+    // (R17-CANAUX, « sur ordinateur, les gestes de chaque ligne sont des boutons »).
+    if (largeurDeLaFenetre >= BREAKPOINTS.tablet) {
+      const { chat } = ligne;
+      const chatId = String(chat?.documentId || '').trim();
+      const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+      const isPendingAction = pendingChatAction.chatId === chatId;
+      const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
+      const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
+      let pinActionLabel = t('messaging.pin', 'Épingler');
+      if (isPinned) {
+        pinActionLabel = t('messaging.unpin', 'Désépingler');
+      }
+      if (isPinPending) {
+        pinActionLabel = t('common.loading', 'Chargement...');
+      }
+
+      return (
+        <View
+          style={[
+            Alignments.row,
+            Alignments.justifyEnd,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginTop[12],
+          ]}
+        >
+          <TouchableOpacity
+            disabled={isPendingAction}
+            onPress={() => handleTogglePin(chat)}
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[8],
+              {
+                backgroundColor: Colors.primary700,
+                opacity: isPendingAction ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              {pinActionLabel}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            disabled={isPendingAction}
+            onPress={() => handleArchive(chat)}
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[8],
+              {
+                backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+                  ? Colors.primary700
+                  : Colors.error500,
+                opacity: isPendingAction ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     const chatId = String(ligne.chat?.documentId || '').trim();
     return (
       <TouchableOpacity
