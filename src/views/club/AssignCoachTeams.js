@@ -148,7 +148,7 @@ function AssignCoachTeams({ navigation, route }) {
           ? t(
             'assignCoachTeams.errors.partial',
             '{{done}} assignée(s), {{failed}} en échec : réessaie pour les autres.',
-            { done: assignError.done, failed: assignError.failed },
+            { count: assignError.done, done: assignError.done, failed: assignError.failed },
           )
           : t(
             'assignCoachTeams.errors.assign',

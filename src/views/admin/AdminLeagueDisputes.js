@@ -144,7 +144,7 @@ function AdminLeagueDisputes() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
               {disputes.length}
               {' '}
-              {t('adminLeagueDisputes.count', 'match(es) en litige')}
+              {t('adminLeagueDisputes.count', 'matchs en litige', { count: disputes.length })}
             </Text>
           </View>
           <TouchableOpacity onPress={() => refetch()}>

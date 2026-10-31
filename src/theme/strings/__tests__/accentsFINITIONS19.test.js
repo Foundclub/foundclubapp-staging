@@ -15,7 +15,7 @@ import i18n from '@/theme/strings';
 
 const TEXTES = {
   'adminReports.filters.resolved': 'Résolus',
-  'adminReports.shownCount': 'signalement(s) affiché(s)',
+  'adminReports.shownCount_other': 'signalements affichés',
   'adWizardCoachProfile.certificationsHelper': 'Séparer chaque certification par une virgule.',
   'eventDetails.loadingTheEvent': 'Chargement de l’événement...',
   'eventEdit.clickATeamToAdd': 'Clique sur une équipe pour l’ajouter ou la retirer, sans combinaison clavier.',

@@ -1961,6 +1961,7 @@ function EventWizardRecap({ navigation }) {
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t('eventWizard.partial.summary', {
+              count: partialState?.failed?.length || 0,
               failed: partialState?.failed?.length || 0,
               success: partialState?.created?.length || 0,
             })}

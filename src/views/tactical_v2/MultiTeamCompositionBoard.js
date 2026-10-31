@@ -1241,13 +1241,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
               {!readOnly ? (
                 <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                    {t('multiTeamCompositionBoard.teamCountPill', '{{teamCount}} equipe(s)', { teamCount: (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) })}
+                    {t('multiTeamCompositionBoard.teamCountPill', '{{teamCount}} équipes', { count: (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0), teamCount: (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) })}
                   </Text>
                 </View>
               ) : (
                 <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                    {t('multiTeamCompositionBoard.branchCountPill', '{{branchCount}} branche(s)', { branchCount: viewerBranchCount })}
+                    {t('multiTeamCompositionBoard.branchCountPill', '{{branchCount}} branches', { branchCount: viewerBranchCount, count: viewerBranchCount })}
                   </Text>
                 </View>
               )}
@@ -1484,7 +1484,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       : t('multiTeamCompositionBoard.convokeHint', "Coche les joueurs que tu convoques. Tu les placeras sur le terrain à l'étape suivante.")}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {t('multiTeamCompositionBoard.convokedCount', '{{convokedCount}} joueur(s) convoqué(s) sur {{total}}', { convokedCount, total: knownPlayers.length })}
+                    {t('multiTeamCompositionBoard.convokedCount', '{{convokedCount}} joueurs convoqués sur {{total}}', { convokedCount, count: convokedCount, total: knownPlayers.length })}
                   </Text>
 
                   <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>

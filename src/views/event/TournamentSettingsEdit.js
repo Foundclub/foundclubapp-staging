@@ -445,7 +445,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                     {t('tournamentSettingsEdit.rosterImpactDetected', 'Impact roster détecte')}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    {t('tournamentSettingsEdit.teamSAlreadyAcceptedWill', '{{teamsCount}} équipe(s) déjà acceptée(s) deviendront non conformes avec ces règles. Leur statut restera accepte, avec warning visible seulement.', { teamsCount: nonCompliantAcceptedTeams.length, ...SANS_ECHAPPEMENT })}
+                    {t('tournamentSettingsEdit.teamSAlreadyAcceptedWill', '{{teamsCount}} équipe(s) déjà acceptée(s) deviendront non conformes avec ces règles. Leur statut restera accepte, avec warning visible seulement.', { count: nonCompliantAcceptedTeams.length, teamsCount: nonCompliantAcceptedTeams.length, ...SANS_ECHAPPEMENT })}
                   </Text>
                 </View>
               ) : null}

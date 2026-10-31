@@ -331,7 +331,7 @@ function SquadRequestsScreen({ navigation, route }) {
             <>
               <Text style={{ color: Colors.gold500 }}>{requests.length}</Text>
               {' '}
-              {t('squadRequestsScreen.pendingCount', 'demande(s) en attente')}
+              {t('squadRequestsScreen.pendingCount', 'demandes en attente', { count: requests.length })}
             </>
           ) : t('squadRequestsScreen.noPending', 'Aucune demande en attente')}
         </Text>

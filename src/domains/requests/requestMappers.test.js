@@ -94,7 +94,7 @@ describe('requestMappers', () => {
       actions: {},
       id: 'team:request-1',
       status: 'pending',
-      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
+      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation des dirigeants de ton club.',
       title: 'Demande équipe en validation',
       type: 'team',
     }));

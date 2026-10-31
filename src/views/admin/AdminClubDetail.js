@@ -422,7 +422,7 @@ function AdminClubDetail() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {items.length}
               {' '}
-              {t('adminClubDetail.itemsCount', 'element(s)')}
+              {t('adminClubDetail.itemsCount', 'éléments', { count: items.length })}
             </Text>
           </View>
           <Button

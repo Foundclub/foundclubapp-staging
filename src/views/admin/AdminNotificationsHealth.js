@@ -317,7 +317,8 @@ function AdminNotificationsHealth() {
                   {' '}
                   {t(
                     'adminNotificationsHealth.tokens.subscribedLocal',
-                    'compte(s) local(aux) abonnes sur cet appareil.',
+                    'comptes locaux abonnés sur cet appareil.',
+                    { count: subscribedLocalAccountsCount },
                   )}
                 </Text>
                 {unsubscribedLocalAccounts.length > 0 ? (
@@ -326,7 +327,8 @@ function AdminNotificationsHealth() {
                     {' '}
                     {t(
                       'adminNotificationsHealth.tokens.unsubscribedLocal',
-                      'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.', // eslint-disable-line max-len
+                      'comptes locaux connectés ne sont pas encore abonnés sur cet appareil.',
+                      { count: unsubscribedLocalAccounts.length },
                     )}
                   </Text>
                 ) : (
@@ -361,7 +363,7 @@ function AdminNotificationsHealth() {
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {token.subscriptionCount || 0}
                       {' '}
-                      {t('adminNotificationsHealth.tokens.subscriptionsCount', 'abonnement(s)')}
+                      {t('adminNotificationsHealth.tokens.subscriptionsCount', 'abonnements', { count: token.subscriptionCount || 0 })}
                       {Array.isArray(token.linkedUsers) && token.linkedUsers.length > 0
                         ? ` - ${token.linkedUsers.map((linkedUser) => linkedUser.label || linkedUser.documentId || linkedUser.id).filter(Boolean).join(', ')}`
                         : ''}
@@ -403,7 +405,7 @@ function AdminNotificationsHealth() {
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {installation.subscriptionCount || 0}
                           {' '}
-                          {t('adminNotificationsHealth.tokens.linkedAccounts', 'compte(s) lie(s)')}
+                          {t('adminNotificationsHealth.tokens.linkedAccounts', 'comptes liés', { count: installation.subscriptionCount || 0 })}
                         </Text>
                         {Array.isArray(installation.linkedUsers) && installation.linkedUsers.length > 0 ? (
                           <Text style={[Fonts.p3, Fonts.neutral300]}>
