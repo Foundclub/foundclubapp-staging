@@ -340,6 +340,26 @@ describe('P3 — trancher une place demandee pour un enfant', () => {
     expect(relire).toHaveBeenCalled();
   });
 
+  // CORR-MESSAGERIE p62 (31/10) — les demandes soeurs restent ouvertes : un 2e club qui accepte
+  // une enfant deja placee ailleurs bute sur le garde-fou du serveur. Il lit une phrase, pas
+  // « Declared child already belongs to a team ».
+  test('p62 : enfant deja placee ailleurs, dit en francais ; la carte reste', async () => {
+    respondClubInterestRequest.mockRejectedValue({
+      message: 'Declared child already belongs to a team',
+      status: 400,
+    });
+    const tree = await monterLeHub([PLACE_POUR_LEA]);
+    const carte = carteDe(tree, PLACE_POUR_LEA.id);
+
+    await act(async () => { await carte.props.onPrimaryPress(carte.props.item); });
+
+    const [titre, message] = alerte.mock.calls[alerte.mock.calls.length - 1];
+    expect(titre).toBe('Déjà dans une équipe');
+    expect(String(message)).not.toContain('already belongs');
+    expect(String(message)).toContain('autre équipe');
+    expect(carteDe(tree, PLACE_POUR_LEA.id)).toBeDefined();
+  });
+
   test('④ une autre panne garde son message, et la carte reste', async () => {
     respondClubInterestRequest.mockRejectedValue(new Error('Network Error'));
     const tree = await monterLeHub([PLACE_POUR_LEA]);

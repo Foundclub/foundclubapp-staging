@@ -131,8 +131,9 @@ jest.mock('react-i18next', () => {
   };
 });
 
+let mockRouteParams = /** @type {any} */ ({});
 jest.mock('@react-navigation/native', () => ({
-  useRoute: () => ({ params: {} }),
+  useRoute: () => ({ params: mockRouteParams }),
 }));
 
 const mockGeohash = jest.fn(
@@ -564,5 +565,43 @@ describe('PAR-L10 — l écran plein dit pourquoi l alerte n a pas été enregis
     });
 
     expect(corps).toBe('Ton compte ne peut pas encore créer d\'alerte.');
+  });
+});
+
+// CORR-MESSAGERIE p67 (31/10, décision d'Adel « A ») — créer une alerte : la ville grise
+// « Marseille » avait l'air déjà choisie ; sans ville, « Créer l'alerte » ne disait rien sur le
+// site (Alert.alert de react-native-web est muet).
+describe('CORR-MESSAGERIE p67 — le chemin de création d une alerte', () => {
+  afterEach(() => { mockRouteParams = {}; });
+
+  const monterEnCreation = async () => {
+    mockRouteParams = { createAlertMode: true };
+    mockEventFilters = {};
+    /** @type {any} */
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <EventFilters
+          navigation={/** @type {any} */ ({ goBack: jest.fn(), setOptions: jest.fn() })}
+        />,
+      );
+    });
+    return tree;
+  };
+
+  it('la ville vide invite à choisir, sans montrer « Marseille » comme un choix', async () => {
+    const tree = await monterEnCreation();
+    const champsVille = tree.root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.setAddress === 'function',
+    );
+    expect(champsVille.length).toBeGreaterThan(0);
+    expect(champsVille[0].props.placeholder).toBe('Choisir une ville (ex. : Marseille)');
+  });
+
+  it('sans ville, « Créer l alerte » le dit DANS la page', async () => {
+    const tree = await monterEnCreation();
+    await appuyerSur(tree, "Créer l'alerte");
+    expect(texteVisible(tree))
+      .toContain('La ville et le rayon sont obligatoires pour créer une alerte');
   });
 });

@@ -105,6 +105,9 @@ function EventFilters({ navigation }) {
 
   // local states
   const [categorySearchValue, setCategorySearchValue] = useState('');
+  // CORR-MESSAGERIE p67 — sans ville, « Créer l'alerte » le dit dans la page : sur le site,
+  // Alert.alert de react-native-web est muet.
+  const [villeManquante, setVilleManquante] = useState(false);
   const [clubSearchValue, setClubSearchValue] = useState('');
   const [levelSearchValue, setLevelSearchValue] = useState('');
   const [typeSearchValue, setTypeSearchValue] = useState('');
@@ -429,6 +432,7 @@ function EventFilters({ navigation }) {
 
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
+      setVilleManquante(true);
       Alert.alert(t(
         'common.error',
         'Erreur',
@@ -590,8 +594,14 @@ function EventFilters({ navigation }) {
               address={/** @type {Option | undefined} */ (value || undefined)}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
-              placeholder={t('clubFilters.fields.city.placeholder')}
-              setAddress={onChange}
+              placeholder={t(
+                'clubFilters.fields.city.placeholderChoisir',
+                'Choisir une ville (ex. : Marseille)',
+              )}
+              setAddress={(adresse) => {
+                setVilleManquante(false);
+                onChange(adresse);
+              }}
             />
           )}
         />
@@ -767,6 +777,14 @@ function EventFilters({ navigation }) {
       <View style={[Spaces.gap[24]]}>
         {isAlertMode ? (
           <>
+            {villeManquante ? (
+              <Text accessibilityLiveRegion="polite" style={[Fonts.p3, { color: Colors.error500 }]}>
+                {t(
+                  'eventFilters.cityAndRadiusAreRequired',
+                  'La ville et le rayon sont obligatoires pour créer une alerte',
+                )}
+              </Text>
+            ) : null}
             <Button
               onPress={() => navigation.goBack()}
               title={t('eventFilters.cancel', 'Annuler')}

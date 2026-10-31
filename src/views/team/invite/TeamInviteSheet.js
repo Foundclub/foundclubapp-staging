@@ -55,6 +55,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SmsRepliCopie from '@/components/molecules/smsRepliCopie/SmsRepliCopie';
 
 import {
   useSentTeamInvites,
@@ -132,6 +133,9 @@ function TeamInviteSheetBody({
   // que la feuille est ouverte.
   const [invitedMemberIds, setInvitedMemberIds] = useState(/** @type {string[]} */ ([]));
   const [isPhoneFormOpen, setIsPhoneFormOpen] = useState(false);
+  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie
+  // si rien ne s'ouvre.
+  const [messageDuSms, setMessageDuSms] = useState('');
   const [phoneFirstname, setPhoneFirstname] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [qrCodeValue, setQrCodeValue] = useState('');
@@ -269,6 +273,7 @@ function TeamInviteSheetBody({
       setPhoneFirstname('');
       setPhoneNumber('');
       refreshLists();
+      setMessageDuSms(message);
       // Le lien part DEPUIS le téléphone du staff : l'app n'envoie pas de SMS.
       // S'il a déjà un compte, la personne reçoit aussi une notification.
       await openInviteSms({ message, phoneNumber: number, url });
@@ -482,6 +487,8 @@ function TeamInviteSheetBody({
           />
         </View>
       </View>
+
+      <SmsRepliCopie message={messageDuSms} testID="team-invite-sms-copie" />
 
       {isPhoneFormOpen ? (
         <View

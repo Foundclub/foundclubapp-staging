@@ -272,6 +272,29 @@ describe('PAR-L5L6 E07 — la fiche de l enfant', () => {
     expect(texte).not.toContain('Annuler la demande');
   });
 
+  // CORR-MESSAGERIE p62 (31/10, ajout d'Adel) — une demande acceptée ailleurs ne retire plus les
+  // autres : la fiche, où mène l'avis, pose la question « tu la gardes ? ».
+  test('p62 — déjà en équipe, une demande en attente : « gardes ou retires ? »', async () => {
+    const MONTRIVAGE = { documentId: 'club-mo', name: 'AS Montrivage' };
+    const texte = texteVisible(await rendreLaFiche({
+      demandes: [demande({
+        club: MONTRIVAGE,
+        team: { club: MONTRIVAGE, documentId: 'u11m', name: 'U11' },
+      })],
+      enfant: ANISSA,
+      onCancelRequest: jest.fn(),
+    }));
+
+    expect(texte).toContain('Anissa est déjà dans l’équipe Senior : ');
+    expect(texte).toContain('tu gardes cette demande, ou tu la retires ?');
+    expect(texte).toContain('Annuler la demande');
+  });
+
+  test('p62 — sans équipe, pas de question : la demande suit son cours', async () => {
+    const texte = texteVisible(await rendreLaFiche({ demandes: [demande()], enfant: LEA }));
+    expect(texte).not.toContain('tu gardes cette demande');
+  });
+
   test('aucune demande en attente : le bloc « Ses demandes » n existe pas', async () => {
     const arbre = await rendreLaFiche({ demandes: [], enfant: LEA });
 

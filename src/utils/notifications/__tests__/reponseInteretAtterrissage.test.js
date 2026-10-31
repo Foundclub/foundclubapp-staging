@@ -72,6 +72,24 @@ describe('PAR-L9a — la notification « Réponse du club » ouvre la conversati
     expect(destination).not.toContain(RouteNames.Conversation);
   });
 
+  // CORR-MESSAGERIE p63 (31/10, décision d'Adel « C ») — la réponse à une demande POUR UN ENFANT
+  // ouvre directement sa fiche (« Acceptée le … » y est déjà), plus un détail façon événement
+  // (« Statut : clubInterestResponse », « Événement indisponible »).
+  test.each(['ios', 'android', 'web'])('%s : une réponse pour un enfant ouvre SA fiche', (os) => {
+    Platform.OS = os;
+    const destination = destinationDe({
+      body: 'Réponse concernant U11 Tunnel : C’est accepté : Lina rejoint l’équipe U11 Tunnel.',
+      data: { childDocumentId: 'fiche-lina', teamName: 'U11 Tunnel' },
+      documentId: 'notif-3',
+      title: 'Réponse du club',
+      type: REPONSE,
+    });
+
+    expect(destination).toContain(RouteNames.MyChildren);
+    expect(destination).toContain('"childDocumentId":"fiche-lina"');
+    expect(destination).not.toContain(RouteNames.NotificationDetails);
+  });
+
   test('deux réponses de deux fils différents ne se confondent pas (clé d ouverture)', () => {
     expect(getNotificationOpenKey({ chatDocumentId: 'fil-a', type: REPONSE }))
       .not.toBe(getNotificationOpenKey({ chatDocumentId: 'fil-b', type: REPONSE }));

@@ -764,6 +764,52 @@ describe('A20.2 — la PREMIÈRE ouverture propose de créer son alerte, une foi
   });
 });
 
+// CORR-MESSAGERIE p66 (31/10) — consigne d'Adel : « C'est bien de la proposer direct puis à
+// chaque recherche sans résultat ». La première ouverture reste (A20.2) ; ensuite, chaque
+// recherche qui ne rend RIEN la repropose, une fois par recherche.
+describe('CORR-MESSAGERIE p66 — la proposition revient à chaque recherche sans résultat', () => {
+  beforeEach(() => { propositionDejaVue('u-1'); });
+
+  /**
+   * Relance la liste avec d'autres filtres, comme une nouvelle recherche.
+   * @param {any} tree L'arbre monté.
+   * @param {Record<string, unknown>} filtres Les filtres de la nouvelle recherche.
+   */
+  const rechercherAutrement = async (tree, filtres) => {
+    mockContexte.valeur = [{ eventFilters: filtres, searchMapSessions: {} }, mockDispatch];
+    await act(async () => {
+      tree.update(
+        <EventListContent
+          additionalFilters={{ excludeType: 'Réservation', sessionStatus: 'open' }}
+          enableMapMode
+          screenActive
+          showFilters
+        />,
+      );
+    });
+    await laisserFiler();
+  };
+
+  it('déjà vue, une recherche SANS résultat la repropose', async () => {
+    const tree = await monter({ liste: LISTE_VIDE });
+    expect(texteVisible(tree)).toContain('Ne rate plus aucun événement');
+  });
+
+  it('déjà vue, une recherche AVEC résultats ne la propose pas', async () => {
+    const tree = await monter();
+    expect(texteVisible(tree)).not.toContain('Ne rate plus aucun événement');
+  });
+
+  it('« Plus tard » la ferme pour CETTE recherche ; une autre vide la repropose', async () => {
+    const tree = await monter({ liste: LISTE_VIDE });
+    await appuyerSur(tree, 'Plus tard');
+    expect(texteVisible(tree)).not.toContain('Ne rate plus aucun événement');
+
+    await rechercherAutrement(tree, { city: MONTRIVAGE, radius: 30 });
+    expect(texteVisible(tree)).toContain('Ne rate plus aucun événement');
+  });
+});
+
 describe('A20.3 — un guide pour créer une alerte, accessible à chaque fois', () => {
   beforeEach(() => { propositionDejaVue('u-1'); });
 

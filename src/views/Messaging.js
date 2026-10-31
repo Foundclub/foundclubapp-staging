@@ -8,7 +8,8 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity,
+  useWindowDimensions, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -19,6 +20,9 @@ import {
 } from '@/domains/collectivite/collectiviteCanaux';
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
+import {
+  casquetteDuFil, casquettesMelees, libelleDeCasquette,
+} from '@/domains/messaging/casquette';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -59,6 +63,9 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
+import MenuDuFil from '@/views/chat/MenuDuFil';
+
+import { BREAKPOINTS } from '@/responsive';
 // IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
@@ -83,6 +90,16 @@ const normalizeChatScopeFilter = (value) => {
 };
 
 /**
+ * La ligne dont l'apercu (téléphone) ou le menu ⋮ (site, CORR-MESSAGERIE p4) est ouvert.
+ * @typedef {object} LigneOuverte
+ * @property {any} chat - Le fil.
+ * @property {boolean} epingle - Épinglé par moi.
+ * @property {number} [haut] - Site : la hauteur du menu, sous le doigt.
+ * @property {boolean} nonLu - Encore non lu.
+ * @property {string} titre - Le titre de la ligne.
+ */
+
+/**
  * Main messaging screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Home screen component
@@ -102,6 +119,8 @@ function Messaging({ navigation, route }) {
   // fils : depuis R17-CANAUX (19/10), son canal des dirigeants y est une ligne comme les autres,
   // avec ses conversations privées ; ailleurs, le canal des dirigeants est épinglé en tête.
   const espaceVille = route?.params?.espace === 'ville';
+  // CORR-MESSAGERIE p114 — l'onglet « Messages » de l'espace du complexe (ComplexeTabNavigator).
+  const espaceComplexe = route?.params?.espace === 'complexe';
   const villeId = route?.params?.collectiviteId || null;
   const [chatScopeFilter, setChatScopeFilter] = useState(
     () => normalizeChatScopeFilter(routeChatScope),
@@ -158,12 +177,13 @@ function Messaging({ navigation, route }) {
   } = useMessaging();
   // 👁️ MSG1BA (§3.14) — l'apercu ouvert par un appui long : la ligne, son titre, ses non-lus.
   const [apercu, setApercu] = useState(
-    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string } | null} */ (null),
+    /** @type {LigneOuverte | null} */ (null),
   );
   // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
+  const { width: largeurDeLaFenetre } = useWindowDimensions();
   // MSG-VILLE-NOUVELLE (20/10, décisions d’Adel « 1- B » / « 2- A ») — dans l’espace de
   // la Ville, le bouton rond ouvre « Nouvelle conversation » AU NOM DE LA VILLE (ses contacts :
   // membres majeurs de ses clubs et autres gestionnaires), quel que soit le rôle du compte ;
@@ -173,9 +193,15 @@ function Messaging({ navigation, route }) {
     .includes(getUserRoleKey(userData?.role?.name));
   const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
   const floatingButtonBottom = floatingActionBottomOffset;
-  const chatListBottomInset = canCreateConversation
+  // CORR-MESSAGERIE 100b (31/10) — sur le site, la coque réserve déjà la barre du bas (le
+  // socle : `dockClearance` vaut 0) ; la liste la recomptait et la page défilait de 235 px
+  // dans le vide à 390 px. Elle ne garde que ce qui dépasse de la coque : la place du bouton.
+  const reserveDeLaCoque = Platform.OS === 'web'
+    ? Math.max(sceneBottomInset - (dockClearance ?? sceneBottomInset), 0)
+    : 0;
+  const chatListBottomInset = Math.max((canCreateConversation
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
-    : sceneBottomInset;
+    : sceneBottomInset) - reserveDeLaCoque, 0);
   const listOpenLoggedRef = useRef(false);
   const listPrimaryLoggedRef = useRef(false);
   const listFirstRenderedLoggedRef = useRef(false);
@@ -371,6 +397,11 @@ function Messaging({ navigation, route }) {
     allChats, chatScopeFilter, enModeArchivees, espaceVille, filsArchives, searchQuery,
     getConversationName, t, userData, villeId,
   ]);
+  // CORR-MESSAGERIE p114 (décision d'Adel « B ») — dans l'espace de la Ville ou du complexe, un
+  // compte à deux casquettes voit aussi les fils de son club : chaque ligne porte sa casquette,
+  // dès que la liste en mêle deux. Ailleurs, rien ne change.
+  const etiquettesDeCasquette = (espaceVille || espaceComplexe)
+    && casquettesMelees(filteredChats.map(casquetteDuFil));
 
   const getEmptyListMessage = () => {
     if (searchQuery.trim()) {
@@ -563,69 +594,100 @@ function Messaging({ navigation, route }) {
     }
   };
 
-  const renderWebChatActions = (/** @type {Chat} */ chat) => {
+  // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site étroit, « Épingler » et
+  // « Archiver » restaient sur CHAQUE ligne et coupaient les noms à 390 px. Un seul bouton ⋮ ouvre
+  // les gestes de l'apercu (MSG1BA : « Marquer comme lu », « Épingler », « Archiver ») dans le
+  // petit menu ⋮ du fil (MenuDuFil), posé à hauteur de la ligne touchée.
+  const renderWebChatActions = (
+    /** @type {LigneOuverte} */ ligne,
+  ) => {
     if (!isWeb) return null;
+    // Sur un écran large (≥ 768 px), la place est là : les deux boutons restent sur la ligne
+    // (R17-CANAUX, « sur ordinateur, les gestes de chaque ligne sont des boutons »).
+    if (largeurDeLaFenetre >= BREAKPOINTS.tablet) {
+      const { chat } = ligne;
+      const chatId = String(chat?.documentId || '').trim();
+      const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
+      const isPendingAction = pendingChatAction.chatId === chatId;
+      const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
+      const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
+      let pinActionLabel = t('messaging.pin', 'Épingler');
+      if (isPinned) {
+        pinActionLabel = t('messaging.unpin', 'Désépingler');
+      }
+      if (isPinPending) {
+        pinActionLabel = t('common.loading', 'Chargement...');
+      }
 
-    const chatId = String(chat?.documentId || '').trim();
-    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-    const isPendingAction = pendingChatAction.chatId === chatId;
-    const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
-    const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
-    let pinActionLabel = t('messaging.pin', 'Épingler');
-    if (isPinned) {
-      pinActionLabel = t('messaging.unpin', 'Désépingler');
+      return (
+        <View
+          style={[
+            Alignments.row,
+            Alignments.justifyEnd,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginTop[12],
+          ]}
+        >
+          <TouchableOpacity
+            disabled={isPendingAction}
+            onPress={() => handleTogglePin(chat)}
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[8],
+              {
+                backgroundColor: Colors.primary700,
+                opacity: isPendingAction ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              {pinActionLabel}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            disabled={isPendingAction}
+            onPress={() => handleArchive(chat)}
+            style={[
+              ApplicationStyle.borderRadius16,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[8],
+              {
+                backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+                  ? Colors.primary700
+                  : Colors.error500,
+                opacity: isPendingAction ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+              {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
     }
-    if (isPinPending) {
-      pinActionLabel = t('common.loading', 'Chargement...');
-    }
-
+    const chatId = String(ligne.chat?.documentId || '').trim();
     return (
-      <View
-        style={[
-          Alignments.row,
-          Alignments.justifyEnd,
-          Alignments.alignCenter,
-          Spaces.gap[8],
-          Spaces.marginTop[12],
-        ]}
+      <TouchableOpacity
+        accessibilityLabel={t('messaging.conversationOptions', 'Options de la conversation')}
+        accessibilityRole="button"
+        disabled={pendingChatAction.chatId === chatId}
+        hitSlop={8}
+        onPress={(/** @type {any} */ evenement) => {
+          evenement?.stopPropagation?.();
+          const y = Number(evenement?.nativeEvent?.clientY ?? evenement?.nativeEvent?.pageY);
+          // 3 lignes de 48 sous le doigt, sans sortir de l'écran.
+          const plafond = Dimensions.get('window').height - (3 * 48) - 24;
+          const haut = Number.isFinite(y) ? Math.max(16, Math.min(y, plafond)) : undefined;
+          setApercu({ ...ligne, haut });
+        }}
+        style={[Spaces.padding[4]]}
+        testID={`liste-fil-options-${chatId}`}
       >
-        <TouchableOpacity
-          disabled={isPendingAction}
-          onPress={() => handleTogglePin(chat)}
-          style={[
-            ApplicationStyle.borderRadius16,
-            Spaces.paddingHorizontal[12],
-            Spaces.paddingVertical[8],
-            {
-              backgroundColor: Colors.primary700,
-              opacity: isPendingAction ? 0.6 : 1,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {pinActionLabel}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={isPendingAction}
-          onPress={() => handleArchive(chat)}
-          style={[
-            ApplicationStyle.borderRadius16,
-            Spaces.paddingHorizontal[12],
-            Spaces.paddingVertical[8],
-            {
-              backgroundColor: estArchivePourMoi(chat, userData?.documentId)
-                ? Colors.primary700
-                : Colors.error500,
-              opacity: isPendingAction ? 0.6 : 1,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <GlyphIcon color={withAlpha(Colors.neutral00, 0.7)} name="dotsVertical" size={20} />
+      </TouchableOpacity>
     );
   };
 
@@ -826,6 +888,19 @@ function Messaging({ navigation, route }) {
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
               </View>
               )}
+              {etiquettesDeCasquette && casquetteDuFil(chat) ? (
+                <View
+                  style={[
+                    stylesDeLaListe.puceLigue,
+                    { backgroundColor: withAlpha(Colors.neutral00, 0.12) },
+                  ]}
+                  testID={`liste-fil-casquette-${chat.documentId}`}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontSize: 10 }]}>
+                    {libelleDeCasquette(t, casquetteDuFil(chat))}
+                  </Text>
+                </View>
+              ) : null}
               {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon. En cyan tant que la
                   conversation n'est pas lue. */}
               {lastMessage ? (
@@ -917,7 +992,12 @@ function Messaging({ navigation, route }) {
               </View>
             ) : null}
           </View>
-          {avecGestes ? renderWebChatActions(chat) : null}
+          {avecGestes ? renderWebChatActions({
+            chat,
+            epingle: Boolean(isPinned),
+            nonLu: Boolean(hasUnread),
+            titre: String(titreDeLaLigne || ''),
+          }) : null}
         </TouchableOpacity>
       </Swipeable>
     );
@@ -1126,7 +1206,21 @@ function Messaging({ navigation, route }) {
             </TouchableOpacity>
           </WebFloatingOverlay>
         ) : null}
-        {apercu ? (
+        {apercu && isWeb ? (
+          <MenuDuFil
+            entrees={entreesDeLApercu(apercu).map((entree) => ({
+              ...entree,
+              onPress: () => {
+                setApercu(null);
+                entree.onPress();
+              },
+            }))}
+            haut={apercu.haut}
+            onClose={() => setApercu(null)}
+            visible
+          />
+        ) : null}
+        {apercu && !isWeb ? (
           <ApercuDuFil
             chat={apercu.chat}
             entrees={entreesDeLApercu(apercu)}

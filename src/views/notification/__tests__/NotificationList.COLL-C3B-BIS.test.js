@@ -35,6 +35,9 @@ jest.mock('@/theme/themeContext', () => {
     __esModule: true,
     default: () => ({
       Alignments: makeRamp(),
+      // CORR-MESSAGERIE p114 : l'étiquette « Ville » est le Tag du design
+      // (ApplicationStyle.borderColor…).
+      ApplicationStyle: new Proxy({}, { get: () => makeRamp() }),
       Colors: new Proxy({}, { get: (_target, key) => `couleur-${String(key)}` }),
       Fonts: makeRamp(),
       Spaces: makeRamp(),
@@ -174,4 +177,29 @@ test('RESA-FIN-APP-2 (T13) — le titre a deux lignes avant de couper', () => {
   const [titre] = monter().root.findAllByType(Text)
     .filter((/** @type {any} */ noeud) => noeud.props.children === 'Complexe de nouveau visible');
   expect(titre.props.numberOfLines).toBe(2);
+});
+
+// CORR-MESSAGERIE p114 (31/10, décision d'Adel « B ») — dans l'espace de la Ville, un compte qui
+// gère aussi un club voyait les notifications des deux mêlées. Quand la liste mêle la Ville et le
+// reste, chaque notification de la Ville porte « Ville » (celles du complexe ont déjà « Mode
+// complexe ») ; une liste d'une seule casquette ne change pas.
+const avisDeLaVille = (/** @type {string} */ documentId) => ({
+  ...notification(documentId, {}, 'La Ville a publié une actualité'),
+  data: {},
+  type: 'collectiviteNewsPublished',
+});
+const etiquettesVille = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+  .filter((/** @type {any} */ noeud) => [noeud.props.children].flat().join('') === 'Ville');
+
+test('p114 — Ville et club mêlés : « Ville » sur la notification de la Ville, seulement', () => {
+  mockNotifications.list = [
+    avisDeLaVille('n-ville'),
+    notification('n-club', { ...VILLE, decision: 'approved' }, 'Créneau accepté'),
+  ];
+  expect(etiquettesVille(monter())).toHaveLength(1);
+});
+
+test('p114 — une seule casquette : aucune étiquette', () => {
+  mockNotifications.list = [avisDeLaVille('n-1'), avisDeLaVille('n-2')];
+  expect(etiquettesVille(monter())).toHaveLength(0);
 });

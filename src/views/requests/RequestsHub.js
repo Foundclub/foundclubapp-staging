@@ -647,6 +647,21 @@ function RequestsHub({ navigation, route }) {
           );
           return;
         }
+        // CORR-MESSAGERIE p62 — les demandes soeurs restent ouvertes : l'enfant a pu rejoindre
+        // une autre équipe entre-temps (une fiche n'a qu'une équipe, le serveur refuse).
+        const messageDuRefus = String(/** @type {any} */ (childDecisionError)?.message || '');
+        if (messageDuRefus.includes('already belongs to a team')) {
+          invalidateRequestsInBackground();
+          Alert.alert(
+            t('requestsHub.childInterest.dejaPlaceeTitre', 'Déjà dans une équipe'),
+            t(
+              'requestsHub.childInterest.dejaPlaceeMessage',
+              'Cet enfant a rejoint une autre équipe. Le parent peut encore retirer sa demande ; '
+                + 'tu peux aussi la refuser.',
+            ),
+          );
+          return;
+        }
         Alert.alert(
           t('common.error', 'Erreur'),
           /** @type {any} */ (childDecisionError)?.message

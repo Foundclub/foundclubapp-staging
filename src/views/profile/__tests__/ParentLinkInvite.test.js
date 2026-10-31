@@ -121,6 +121,13 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useGetMyDeclaredChildren: () => ({ data: mockEnfantsDeclares }),
 }));
 
+const mockCopier = jest.fn(async () => true);
+jest.mock('@/platform/share', () => ({
+  __esModule: true,
+  copier: (/** @type {any} */ texteACopier) => mockCopier(texteACopier),
+  default: {},
+}));
+
 jest.mock('@/services/teamInvite/teamInviteShare', () => ({
   openInviteSms: (/** @type {any} */ params) => mockSms(params),
   resolveInviteLinkOrigin: () => 'https://staging.foundclub.app',
@@ -259,4 +266,40 @@ test('RW-PARENT e1 : le prénom vient de la fiche, pas de l adresse', async () =
   const sansFiche = await rendre();
   expect(texte(sansFiche)).not.toContain('Léa');
   mockEnfantsDeclares = [{ documentId: 'enfant-1', firstname: 'Léa' }];
+});
+
+// CORR-MESSAGERIE p61 (décision d'Adel « B ») — sur le site, si rien ne s'ouvre, copier le message.
+describe('CORR-MESSAGERIE p61 : « Rien ne s’est ouvert ? Copier le message »', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => { Platform.OS = osDOrigine; });
+
+  const jusquAuSms = async () => {
+    mockRouteParams = { childDocumentId: 'enfant-1' };
+    const arbre = await rendre();
+    await saisir(arbre, '06 77 77 77 77');
+    await cocher(arbre);
+    await envoyer(arbre);
+    await act(async () => { mockOptionsDeLaMutation.onSuccess({ state: 'pending' }); });
+    await act(async () => { parRepere(arbre, 'parent-link-sms').props.onPress(); });
+    return arbre;
+  };
+
+  test('site : après le SMS, le repli copie le message du SMS, lien compris', async () => {
+    Platform.OS = 'web';
+    mockCopier.mockClear();
+    const arbre = await jusquAuSms();
+    expect(texte(arbre)).toContain('Rien ne s’est ouvert ? Copier le message');
+    await act(async () => { await parRepere(arbre, 'parent-link-sms-copie').props.onPress(); });
+    const messageDuSms = mockSms.mock.calls[mockSms.mock.calls.length - 1][0].message;
+    expect(mockCopier).toHaveBeenCalledWith(messageDuSms);
+    expect(messageDuSms).toContain('https://staging.foundclub.app');
+    expect(texte(arbre)).toContain('Message copié');
+  });
+
+  test('téléphone : rien ne change', async () => {
+    Platform.OS = 'ios';
+    const arbre = await jusquAuSms();
+    expect(texte(arbre)).not.toContain('Copier le message');
+  });
 });

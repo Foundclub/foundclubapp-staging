@@ -141,9 +141,11 @@ jest.mock('@/utils/performance/messagingPerformance', () => ({
   markMessagingPerf: jest.fn(),
 }));
 
+/** Les mesures du dock (CORR-MESSAGERIE 100b : le témoin les change). */
+let mockDock = /** @type {any} */ ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 });
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
 }));
 
 jest.mock('@/navigation/commonOptions', () => ({
@@ -215,16 +217,17 @@ const etatListe = (surcharge = {}) => ({
 
 /**
  * Monte l ecran Messages sous ses doublures.
+ * @param {Record<string, any>} [params] Les parametres de la route (l espace, p114).
  * @returns {Promise<any>} L ecran monte.
  */
-const monter = async () => {
+const monter = async (params = {}) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
     arbre = renderer.create(
       <Messaging
         navigation={{ navigate: mockNavigate, setParams: jest.fn() }}
-        route={{ params: {} }}
+        route={{ params }}
       />,
     );
   });
@@ -374,6 +377,119 @@ describe('MSG1BA (§3.14) — l apercu par appui long', () => {
     appuiLong(arbre, 'chat-1');
     await toucher(arbre, 'archiver');
     expect(mockArchiveChatAsync).toHaveBeenCalledWith('chat-1');
+  });
+});
+
+// CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site à 390 px, « Épingler » et
+// « Archiver » restaient visibles sur CHAQUE ligne et coupaient les noms. Un seul bouton ⋮
+// ouvre le petit menu du fil (MenuDuFil) avec les gestes de l'apercu (MSG1BA).
+describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le site', () => {
+  // eslint-disable-next-line global-require
+  const MenuDuFil = require('@/views/chat/MenuDuFil').default;
+  // eslint-disable-next-line global-require
+  const { Platform } = require('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => { Platform.OS = osDOrigine; });
+
+  const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+
+  test('site : plus de « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre le menu', async () => {
+    Platform.OS = 'web';
+    mockChatsQuery = etatListe({
+      data: {
+        pages: [{
+          data: [{ ...CHATS[0], unreadCount: 0 }],
+          meta: { pagination: { page: 1, pageCount: 1, total: 1 }, unreadTotal: 0 },
+        }],
+      },
+      hasNextPage: false,
+    });
+    const arbre = await monter();
+    expect(textes(arbre)).not.toContain('"Épingler"');
+    expect(textes(arbre)).not.toContain('"Archiver"');
+
+    const options = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'liste-fil-options-chat-1'
+        && typeof n.props?.onPress === 'function',
+    )[0];
+    act(() => {
+      options.props.onPress({ nativeEvent: { pageY: 300 }, stopPropagation: () => {} });
+    });
+    const menu = arbre.root.findByType(MenuDuFil);
+    expect(menu.props.haut).toBe(300);
+    const entree = (/** @type {string} */ cle) => menu.props.entrees
+      .find((/** @type {any} */ e) => e.cle === cle);
+    expect(entree('epingler')).toBeDefined();
+    expect(entree('archiver')).toBeDefined();
+    // Toucher « Archiver » ferme le menu et archive, comme le glissement.
+    await act(async () => { await entree('archiver').onPress(); });
+    expect(mockArchiveChatAsync).toHaveBeenCalledWith('chat-1');
+    expect(arbre.root.findAllByType(MenuDuFil)).toHaveLength(0);
+  });
+});
+
+// CORR-MESSAGERIE p114 (31/10, décision d'Adel « B ») — en mode complexe, la messagerie montre
+// aussi les conversations du club : chaque ligne porte sa casquette, « Club » ou « Complexe ».
+describe('CORR-MESSAGERIE p114 — l étiquette Club / Complexe d un compte à deux casquettes', () => {
+  const FIL_EQUIPE = {
+    ...CHATS[0], documentId: 'fil-equipe', groupName: 'U11 Tunnel', type: 'team',
+  };
+  const CANAL_COMPLEXE = {
+    ...CHATS[0],
+    documentId: 'fil-canal',
+    groupName: 'Complexe Test',
+    participantsCount: 8,
+    type: 'group',
+  };
+  const listeDe = (/** @type {any[]} */ fils) => etatListe({
+    data: {
+      pages: [{ data: fils, meta: { pagination: { page: 1, pageCount: 1, total: fils.length } } }],
+    },
+    hasNextPage: false,
+  });
+  const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+
+  test('espace du complexe, fils mêlés : « Club » et « Complexe » sur les lignes', async () => {
+    mockChatsQuery = listeDe([FIL_EQUIPE, CANAL_COMPLEXE]);
+    const arbre = await monter({ chatScope: 'classic', espace: 'complexe' });
+    expect(textes(arbre)).toContain('"Club"');
+    expect(textes(arbre)).toContain('"Complexe"');
+  });
+
+  test('un compte à une casquette ne voit rien de neuf', async () => {
+    mockChatsQuery = listeDe([FIL_EQUIPE, { ...FIL_EQUIPE, documentId: 'fil-2' }]);
+    const arbre = await monter({ chatScope: 'classic', espace: 'complexe' });
+    expect(textes(arbre)).not.toContain('"Club"');
+  });
+});
+
+// CORR-MESSAGERIE 100b (31/10, venu de CORR-COLLECTIVITES) — à 390 px, /messages?espace=ville
+// défilait de 235 px dans le vide : la liste réservait en bas la barre ET le bouton rond
+// (230 px), alors que la coque du site réserve déjà la barre (dockClearance = 0). Sur le site,
+// la liste ne garde que ce qui dépasse de la coque : la place du bouton rond.
+describe('CORR-MESSAGERIE 100b — la marge du bas de la liste ne recompte pas la barre', () => {
+  // eslint-disable-next-line global-require
+  const { Platform } = require('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+    mockDock = { floatingActionBottomOffset: 0, sceneBottomInset: 0 };
+  });
+  const margeDuBas = () => mockListProps[mockListProps.length - 1]
+    ?.contentContainerStyle?.paddingBottom;
+
+  test('site, la coque réserve la barre : la liste ne garde que le bouton rond', async () => {
+    Platform.OS = 'web';
+    mockDock = { dockClearance: 0, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
+    await monter({ collectiviteId: 'ville-1', espace: 'ville' });
+    expect(margeDuBas()).toBe(146 + 84 - 92);
+  });
+
+  test('téléphone : inchangé (la barre flotte au-dessus de la liste)', async () => {
+    Platform.OS = 'ios';
+    mockDock = { dockClearance: 104, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
+    await monter({ collectiviteId: 'ville-1', espace: 'ville' });
+    expect(margeDuBas()).toBe(146 + 84);
   });
 });
 

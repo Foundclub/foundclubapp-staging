@@ -332,6 +332,15 @@ function DeclaredChildPage({
               ) : null}
             </View>
           ) : null}
+          {/* CORR-MESSAGERIE p62 (31/10, ajout d'Adel) — accepté ailleurs, la demande reste : le
+              parent décide ici, « Annuler la demande » prévient le club. */}
+          {equipe && attente.length > 0 ? (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('myChildren.sheet.garderOuRetirer', {
+                ...avecPrenom, team: equipe, ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
           {attente.map((demande) => (
             <View
               key={demande?.documentId}

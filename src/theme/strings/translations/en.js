@@ -2929,6 +2929,7 @@ export default {
       city: {
         label: 'City',
         placeholder: 'Marseille',
+        placeholderChoisir: 'Choose a city (e.g. Marseille)',
       },
       radius: {
         label: 'Within a radius of: ',
@@ -15226,6 +15227,11 @@ export default {
     archived: 'Archived',
     archivedBack: 'Back to chats',
     archiveError: 'Unable to archive this conversation.',
+    casquette: {
+      club: 'Club',
+      complexe: 'Venue',
+      ville: 'City',
+    },
     conversationOptions: 'Conversation options',
     createConversationError: 'Unable to start this conversation.',
     errors: {
@@ -15928,6 +15934,8 @@ export default {
       acceptedOn: 'Accepted on {{date}}',
       complete: 'Complete',
       edit: 'Edit',
+      garderOuRetirer: '{{firstname}} is already in the {{team}} team: keep this'
+        + ' request, or withdraw it?',
       numberLabel: 'Shirt number',
       pending: 'Pending',
       positionLabel: 'Position',
@@ -18898,6 +18906,9 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      dejaPlaceeMessage: 'This child has joined another team. The parent can still'
+        + ' withdraw the request; you can also decline it.',
+      dejaPlaceeTitre: 'Already in a team',
       goneMessage: 'The parent has withdrawn this request.',
       goneTitle: 'Request withdrawn',
       parent: 'Parent: {{name}}',
@@ -20173,6 +20184,12 @@ export default {
       publish: 'Publish the line-up',
       title: 'Publish the line-up',
     },
+  },
+  // CORR-MESSAGERIE p61 (31/10) — website: the SMS app may not open, copy the message.
+  smsRepliCopie: {
+    copie: 'Message copied: paste it into an SMS, WhatsApp or an email.',
+    copier: 'Nothing opened? Copy the message',
+    echec: 'Copy failed in this browser: send the invitation from your phone.',
   },
   squad: {
     filters: {
