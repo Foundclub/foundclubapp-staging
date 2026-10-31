@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
@@ -62,6 +62,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
+import MenuDuFil from '@/views/chat/MenuDuFil';
 // IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
@@ -84,6 +85,16 @@ const normalizeChatScopeFilter = (value) => {
   const safeValue = String(value || '').trim().toLowerCase();
   return CHAT_SCOPE_VALUES.has(safeValue) ? safeValue : 'all';
 };
+
+/**
+ * La ligne dont l'apercu (téléphone) ou le menu ⋮ (site, CORR-MESSAGERIE p4) est ouvert.
+ * @typedef {object} LigneOuverte
+ * @property {any} chat - Le fil.
+ * @property {boolean} epingle - Épinglé par moi.
+ * @property {number} [haut] - Site : la hauteur du menu, sous le doigt.
+ * @property {boolean} nonLu - Encore non lu.
+ * @property {string} titre - Le titre de la ligne.
+ */
 
 /**
  * Main messaging screen component
@@ -163,7 +174,7 @@ function Messaging({ navigation, route }) {
   } = useMessaging();
   // 👁️ MSG1BA (§3.14) — l'apercu ouvert par un appui long : la ligne, son titre, ses non-lus.
   const [apercu, setApercu] = useState(
-    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string } | null} */ (null),
+    /** @type {LigneOuverte | null} */ (null),
   );
   // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
@@ -575,9 +586,10 @@ function Messaging({ navigation, route }) {
 
   // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site, « Épingler » et « Archiver »
   // restaient visibles sur CHAQUE ligne et coupaient les noms à 390 px. Un seul bouton ⋮ ouvre
-  // l'apercu du téléphone (MSG1BA), qui porte déjà ces gestes et « Marquer comme lu ».
+  // les gestes de l'apercu (MSG1BA : « Marquer comme lu », « Épingler », « Archiver ») dans le
+  // petit menu ⋮ du fil (MenuDuFil), posé à hauteur de la ligne touchée.
   const renderWebChatActions = (
-    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string }} */ ligne,
+    /** @type {LigneOuverte} */ ligne,
   ) => {
     if (!isWeb) return null;
     const chatId = String(ligne.chat?.documentId || '').trim();
@@ -589,7 +601,11 @@ function Messaging({ navigation, route }) {
         hitSlop={8}
         onPress={(/** @type {any} */ evenement) => {
           evenement?.stopPropagation?.();
-          setApercu(ligne);
+          const y = Number(evenement?.nativeEvent?.clientY ?? evenement?.nativeEvent?.pageY);
+          // 3 lignes de 48 sous le doigt, sans sortir de l'écran.
+          const plafond = Dimensions.get('window').height - (3 * 48) - 24;
+          const haut = Number.isFinite(y) ? Math.max(16, Math.min(y, plafond)) : undefined;
+          setApercu({ ...ligne, haut });
         }}
         style={[Spaces.padding[4]]}
         testID={`liste-fil-options-${chatId}`}
@@ -794,7 +810,10 @@ function Messaging({ navigation, route }) {
               )}
               {etiquettesDeCasquette && casquetteDuFil(chat) ? (
                 <View
-                  style={[stylesDeLaListe.puceLigue, { backgroundColor: withAlpha(Colors.neutral00, 0.12) }]}
+                  style={[
+                    stylesDeLaListe.puceLigue,
+                    { backgroundColor: withAlpha(Colors.neutral00, 0.12) },
+                  ]}
                   testID={`liste-fil-casquette-${chat.documentId}`}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontSize: 10 }]}>
@@ -1107,7 +1126,21 @@ function Messaging({ navigation, route }) {
             </TouchableOpacity>
           </WebFloatingOverlay>
         ) : null}
-        {apercu ? (
+        {apercu && isWeb ? (
+          <MenuDuFil
+            entrees={entreesDeLApercu(apercu).map((entree) => ({
+              ...entree,
+              onPress: () => {
+                setApercu(null);
+                entree.onPress();
+              },
+            }))}
+            haut={apercu.haut}
+            onClose={() => setApercu(null)}
+            visible
+          />
+        ) : null}
+        {apercu && !isWeb ? (
           <ApercuDuFil
             chat={apercu.chat}
             entrees={entreesDeLApercu(apercu)}

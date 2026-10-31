@@ -380,10 +380,10 @@ describe('MSG1BA (§3.14) — l apercu par appui long', () => {
 
 // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site à 390 px, « Épingler » et
 // « Archiver » restaient visibles sur CHAQUE ligne et coupaient les noms. Un seul bouton ⋮
-// ouvre l'apercu existant (MSG1BA), qui porte déjà ces deux gestes.
+// ouvre le petit menu du fil (MenuDuFil) avec les gestes de l'apercu (MSG1BA).
 describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le site', () => {
   // eslint-disable-next-line global-require
-  const ApercuDuFil = require('@/views/chat/ApercuDuFil').default;
+  const MenuDuFil = require('@/views/chat/MenuDuFil').default;
   // eslint-disable-next-line global-require
   const { Platform } = require('react-native');
   const osDOrigine = Platform.OS;
@@ -391,7 +391,7 @@ describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le
 
   const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
 
-  test('site : plus de boutons « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre l apercu', async () => {
+  test('site : plus de boutons « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre le menu', async () => {
     Platform.OS = 'web';
     mockChatsQuery = etatListe({
       data: {
@@ -410,10 +410,17 @@ describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le
       (/** @type {any} */ n) => n.props?.testID === 'liste-fil-options-chat-1'
         && typeof n.props?.onPress === 'function',
     )[0];
-    act(() => { options.props.onPress({ stopPropagation: () => {} }); });
-    const cles = arbre.root.findByType(ApercuDuFil).props.entrees
-      .map((/** @type {any} */ entree) => entree.cle);
-    expect(cles).toEqual(expect.arrayContaining(['epingler', 'archiver']));
+    act(() => { options.props.onPress({ nativeEvent: { pageY: 300 }, stopPropagation: () => {} }); });
+    const menu = arbre.root.findByType(MenuDuFil);
+    expect(menu.props.haut).toBe(300);
+    const entree = (/** @type {string} */ cle) => menu.props.entrees
+      .find((/** @type {any} */ e) => e.cle === cle);
+    expect(entree('epingler')).toBeDefined();
+    expect(entree('archiver')).toBeDefined();
+    // Toucher « Archiver » ferme le menu et archive, comme le glissement.
+    await act(async () => { await entree('archiver').onPress(); });
+    expect(mockArchiveChatAsync).toHaveBeenCalledWith('chat-1');
+    expect(arbre.root.findAllByType(MenuDuFil)).toHaveLength(0);
   });
 });
 
