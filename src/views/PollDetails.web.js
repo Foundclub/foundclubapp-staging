@@ -272,7 +272,7 @@ function PollDetails({ navigation, route }) {
                       )}
                     {' • '}
                     {poll?.allowMultipleVotes
-                      ? t('pollDetails.multipleVotesAllowed', 'Votes multiples autorises')
+                      ? t('conversation.poll.details.multipleAllowed', 'Votes multiples autorisés')
                       : t('pollDetails.oneChoicePerParticipant', 'Un seul choix par participant')}
                   </p>
                 </section>

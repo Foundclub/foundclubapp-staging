@@ -9684,6 +9684,8 @@ export default {
           + 'Générer avant le pointage produit des équipes fausses.',
         subtitle_other: 'Sur {{count}} inscrits, rarement tous se présentent. '
           + 'Générer avant le pointage produit des équipes fausses.',
+        subtitle_zero: 'Pas encore d’inscrits. Pointe les présents à leur arrivée, '
+          + 'puis génère les équipes.',
         title: 'Pointer les présents d’abord',
       },
       checkInList: {
@@ -21470,6 +21472,8 @@ export default {
       reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
       reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
+      serverWillCount_one: 'Le serveur passera {{count}} personne non pointée en « Non pointé » après la fin, vers {{heure}}.',
+      serverWillCount_other: 'Le serveur passera {{count}} personnes non pointées en « Non pointé » après la fin, vers {{heure}}.',
     },
     attente: {
       colEnd: 'Fin du match',

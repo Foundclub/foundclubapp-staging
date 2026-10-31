@@ -9136,6 +9136,7 @@ export default {
         empty: 'No one registered to check in yet.',
         subtitle_one: '{{count}} registered so far. Generating before check-in produces inaccurate teams.',
         subtitle_other: 'Out of {{count}} registered, rarely do all turn up. Generating before check-in produces inaccurate teams.',
+        subtitle_zero: 'No one registered yet. Check people in as they arrive, then generate the teams.',
         title: "Check in who's present first",
       },
       checkInList: {
@@ -20701,6 +20702,8 @@ export default {
       reopens: 'Marking a player present reopens their match questionnaire.',
       reopensNamed: 'Marking {{name}} present reopens their match questionnaire.',
       serverWill: 'The server will mark them « Not checked » after the end, around',
+      serverWillCount_one: 'The server will mark {{count}} unchecked person « Not checked » after the end, around {{heure}}.',
+      serverWillCount_other: 'The server will mark {{count}} unchecked people « Not checked » after the end, around {{heure}}.',
     },
     attente: {
       colEnd: 'End of match',
