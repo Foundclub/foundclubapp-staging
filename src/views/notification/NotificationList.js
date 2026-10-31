@@ -19,10 +19,14 @@ import {
   demandeATrancher,
   estNotificationDuComplexe,
 } from '@/domains/complexe/notificationsDuComplexe';
+import {
+  casquetteDeLaNotification, casquettesMelees, libelleDeCasquette,
+} from '@/domains/messaging/casquette';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import Tag from '@/components/atoms/tag/Tag';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
@@ -111,6 +115,13 @@ function NotificationList() {
 
   const groupedNotifications = useMemo(
     () => groupNotificationsByDate(notifications),
+    [notifications],
+  );
+  // CORR-MESSAGERIE p114 (décision d'Adel « B ») — un compte à deux casquettes (la Ville et un
+  // club) : quand la liste les mêle, la notification de la Ville porte « Ville » ; celle du
+  // complexe a déjà « Mode complexe », le reste est celle du club.
+  const etiquettesDeCasquette = useMemo(
+    () => casquettesMelees((notifications || []).map(casquetteDeLaNotification)),
     [notifications],
   );
 
@@ -448,6 +459,12 @@ function NotificationList() {
                 </Text>
                 {/* RESA-L5A2 (RB, état 4) : une notification du complexe, en mode joueur aussi. */}
                 {estNotificationDuComplexe(notification.type) ? <PastilleModeComplexe /> : null}
+                {etiquettesDeCasquette && casquetteDeLaNotification(notification) === 'ville' ? (
+                  <Tag
+                    style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                    text={libelleDeCasquette(t, 'ville')}
+                  />
+                ) : null}
                 {isDeclinedParticipation ? (
                   <Text
                     style={[
@@ -533,7 +550,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
+  }, [Colors, Fonts, Spaces, etiquettesDeCasquette, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

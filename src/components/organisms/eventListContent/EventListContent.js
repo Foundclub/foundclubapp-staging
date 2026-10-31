@@ -704,6 +704,29 @@ function EventListContent({
     propositionAlerteDejaVue,
     screenActive,
   ]);
+
+  // CORR-MESSAGERIE p66 (31/10) — consigne d'Adel : « la proposer direct puis à chaque recherche
+  // sans résultat ». Une recherche qui ne rend RIEN la repropose, une fois par recherche (un
+  // « Plus tard » tient jusqu'à la recherche suivante). Pas sur la zone de la carte, qu'une
+  // alerte ne sait pas suivre, ni quand l'alerte de ces filtres existe déjà.
+  const rechercheEnCours = JSON.stringify([eventFilters, activeSearchText]);
+  const rechercheVideProposeeRef = useRef('');
+  const rechercheSansResultat = peutProposerUneAlerte && !isViewportListMode
+    && hasResolvedActiveQuery && !isActiveQueryBusy && visibleEvents.length === 0;
+  useEffect(() => {
+    if (!rechercheSansResultat || !screenActive || filtersSheetVisible) return;
+    if (rechercheVideProposeeRef.current === rechercheEnCours) return;
+    rechercheVideProposeeRef.current = rechercheEnCours;
+    if (alerteDejaCreee(eventFilters)) return;
+    setPropositionAlerteVisible(true);
+  }, [
+    alerteDejaCreee,
+    eventFilters,
+    filtersSheetVisible,
+    rechercheEnCours,
+    rechercheSansResultat,
+    screenActive,
+  ]);
   let activeMode = 'default-list';
   if (isViewportListMode) {
     activeMode = 'viewport-list';

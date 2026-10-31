@@ -359,6 +359,17 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   };
 });
 
+const mockCopier = jest.fn(async () => true);
+jest.mock('@/platform/share', () => {
+  const vrai = jest.requireActual('@/platform/share');
+  return {
+    ...vrai,
+    __esModule: true,
+    copier: (/** @type {any} */ texte) => mockCopier(texte),
+    default: { ...(vrai.default || {}), copier: (/** @type {any} */ texte) => mockCopier(texte) },
+  };
+});
+
 jest.mock('@/components/atoms/button/Button', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   const reactActuel = jest.requireActual('react');
@@ -1048,6 +1059,52 @@ describe('INVIT2 · E — inviter quelqu un qui n a pas l app', () => {
       'Invitation impossible',
       'Ce numéro de téléphone n\'est pas valide.',
     );
+  });
+});
+
+// CORR-MESSAGERIE p61 (décision d'Adel « B ») — sur le site, le SMS reste, et si rien ne
+// s'ouvre, « Rien ne s'est ouvert ? Copier le message » copie le message de l'invitation.
+describe('CORR-MESSAGERIE p61 — copier le message si le SMS ne s ouvre pas', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => { Platform.OS = osDOrigine; });
+
+  const taperDans = (/** @type {any} */ racine, /** @type {string} */ indication, /** @type {string} */ texte) => {
+    const champ = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onChangeText === 'function'
+        && noeud.props?.placeholder === indication,
+      { deep: true },
+    )[0];
+    act(() => { champ.props.onChangeText(texte); });
+  };
+
+  const inviterMarie = async (/** @type {any} */ racine) => {
+    await ouvrirLaFeuilleDInvitation(racine);
+    appuyerSur(racine, 'Par numéro');
+    taperDans(racine, 'Prénom', 'Marie');
+    taperDans(racine, 'Numéro de téléphone', '06 77 77 77 77');
+    await appuyerEtAttendre(racine, "Envoyer l'invitation");
+    await act(async () => { await Promise.resolve(); });
+  };
+
+  test('site : après l envoi, le repli copie le message du SMS', async () => {
+    Platform.OS = 'web';
+    mockCopier.mockClear();
+    const racine = monterLaFiche();
+    await inviterMarie(racine);
+    expect(mockOuvrirSms).toHaveBeenCalled();
+    await appuyerEtAttendre(racine, 'Rien ne s’est ouvert ? Copier le message');
+    const messageDuSms = mockOuvrirSms.mock.calls[mockOuvrirSms.mock.calls.length - 1][0].message;
+    expect(mockCopier).toHaveBeenCalledWith(messageDuSms);
+    expect(textesPortant(racine, 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.').length)
+      .toBeGreaterThan(0);
+  });
+
+  test('téléphone : pas de repli, rien ne change', async () => {
+    Platform.OS = 'ios';
+    const racine = monterLaFiche();
+    await inviterMarie(racine);
+    expect(textesPortant(racine, 'Rien ne s’est ouvert ? Copier le message')).toHaveLength(0);
   });
 });
 

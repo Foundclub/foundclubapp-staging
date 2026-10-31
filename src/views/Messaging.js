@@ -19,6 +19,9 @@ import {
 } from '@/domains/collectivite/collectiviteCanaux';
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
+import {
+  casquetteDuFil, casquettesMelees, libelleDeCasquette,
+} from '@/domains/messaging/casquette';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -102,6 +105,8 @@ function Messaging({ navigation, route }) {
   // fils : depuis R17-CANAUX (19/10), son canal des dirigeants y est une ligne comme les autres,
   // avec ses conversations privées ; ailleurs, le canal des dirigeants est épinglé en tête.
   const espaceVille = route?.params?.espace === 'ville';
+  // CORR-MESSAGERIE p114 — l'onglet « Messages » de l'espace du complexe (ComplexeTabNavigator).
+  const espaceComplexe = route?.params?.espace === 'complexe';
   const villeId = route?.params?.collectiviteId || null;
   const [chatScopeFilter, setChatScopeFilter] = useState(
     () => normalizeChatScopeFilter(routeChatScope),
@@ -371,6 +376,11 @@ function Messaging({ navigation, route }) {
     allChats, chatScopeFilter, enModeArchivees, espaceVille, filsArchives, searchQuery,
     getConversationName, t, userData, villeId,
   ]);
+  // CORR-MESSAGERIE p114 (décision d'Adel « B ») — dans l'espace de la Ville ou du complexe, un
+  // compte à deux casquettes voit aussi les fils de son club : chaque ligne porte sa casquette,
+  // dès que la liste en mêle deux. Ailleurs, rien ne change.
+  const etiquettesDeCasquette = (espaceVille || espaceComplexe)
+    && casquettesMelees(filteredChats.map(casquetteDuFil));
 
   const getEmptyListMessage = () => {
     if (searchQuery.trim()) {
@@ -563,69 +573,29 @@ function Messaging({ navigation, route }) {
     }
   };
 
-  const renderWebChatActions = (/** @type {Chat} */ chat) => {
+  // CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site, « Épingler » et « Archiver »
+  // restaient visibles sur CHAQUE ligne et coupaient les noms à 390 px. Un seul bouton ⋮ ouvre
+  // l'apercu du téléphone (MSG1BA), qui porte déjà ces gestes et « Marquer comme lu ».
+  const renderWebChatActions = (
+    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string }} */ ligne,
+  ) => {
     if (!isWeb) return null;
-
-    const chatId = String(chat?.documentId || '').trim();
-    const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-    const isPendingAction = pendingChatAction.chatId === chatId;
-    const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
-    const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
-    let pinActionLabel = t('messaging.pin', 'Épingler');
-    if (isPinned) {
-      pinActionLabel = t('messaging.unpin', 'Désépingler');
-    }
-    if (isPinPending) {
-      pinActionLabel = t('common.loading', 'Chargement...');
-    }
-
+    const chatId = String(ligne.chat?.documentId || '').trim();
     return (
-      <View
-        style={[
-          Alignments.row,
-          Alignments.justifyEnd,
-          Alignments.alignCenter,
-          Spaces.gap[8],
-          Spaces.marginTop[12],
-        ]}
+      <TouchableOpacity
+        accessibilityLabel={t('messaging.conversationOptions', 'Options de la conversation')}
+        accessibilityRole="button"
+        disabled={pendingChatAction.chatId === chatId}
+        hitSlop={8}
+        onPress={(/** @type {any} */ evenement) => {
+          evenement?.stopPropagation?.();
+          setApercu(ligne);
+        }}
+        style={[Spaces.padding[4]]}
+        testID={`liste-fil-options-${chatId}`}
       >
-        <TouchableOpacity
-          disabled={isPendingAction}
-          onPress={() => handleTogglePin(chat)}
-          style={[
-            ApplicationStyle.borderRadius16,
-            Spaces.paddingHorizontal[12],
-            Spaces.paddingVertical[8],
-            {
-              backgroundColor: Colors.primary700,
-              opacity: isPendingAction ? 0.6 : 1,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {pinActionLabel}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={isPendingAction}
-          onPress={() => handleArchive(chat)}
-          style={[
-            ApplicationStyle.borderRadius16,
-            Spaces.paddingHorizontal[12],
-            Spaces.paddingVertical[8],
-            {
-              backgroundColor: estArchivePourMoi(chat, userData?.documentId)
-                ? Colors.primary700
-                : Colors.error500,
-              opacity: isPendingAction ? 0.6 : 1,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <GlyphIcon color={withAlpha(Colors.neutral00, 0.7)} name="dotsVertical" size={20} />
+      </TouchableOpacity>
     );
   };
 
@@ -822,6 +792,16 @@ function Messaging({ navigation, route }) {
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
               </View>
               )}
+              {etiquettesDeCasquette && casquetteDuFil(chat) ? (
+                <View
+                  style={[stylesDeLaListe.puceLigue, { backgroundColor: withAlpha(Colors.neutral00, 0.12) }]}
+                  testID={`liste-fil-casquette-${chat.documentId}`}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00, fontSize: 10 }]}>
+                    {libelleDeCasquette(t, casquetteDuFil(chat))}
+                  </Text>
+                </View>
+              ) : null}
               {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon. En cyan tant que la
                   conversation n'est pas lue. */}
               {lastMessage ? (
@@ -913,7 +893,12 @@ function Messaging({ navigation, route }) {
               </View>
             ) : null}
           </View>
-          {avecGestes ? renderWebChatActions(chat) : null}
+          {avecGestes ? renderWebChatActions({
+            chat,
+            epingle: Boolean(isPinned),
+            nonLu: Boolean(hasUnread),
+            titre: String(titreDeLaLigne || ''),
+          }) : null}
         </TouchableOpacity>
       </Swipeable>
     );

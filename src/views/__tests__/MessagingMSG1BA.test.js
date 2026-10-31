@@ -215,16 +215,17 @@ const etatListe = (surcharge = {}) => ({
 
 /**
  * Monte l ecran Messages sous ses doublures.
+ * @param {Record<string, any>} [params] Les parametres de la route (l espace, p114).
  * @returns {Promise<any>} L ecran monte.
  */
-const monter = async () => {
+const monter = async (params = {}) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
     arbre = renderer.create(
       <Messaging
         navigation={{ navigate: mockNavigate, setParams: jest.fn() }}
-        route={{ params: {} }}
+        route={{ params }}
       />,
     );
   });
@@ -374,6 +375,76 @@ describe('MSG1BA (§3.14) — l apercu par appui long', () => {
     appuiLong(arbre, 'chat-1');
     await toucher(arbre, 'archiver');
     expect(mockArchiveChatAsync).toHaveBeenCalledWith('chat-1');
+  });
+});
+
+// CORR-MESSAGERIE p4 (31/10, vu par la récolte) — sur le site à 390 px, « Épingler » et
+// « Archiver » restaient visibles sur CHAQUE ligne et coupaient les noms. Un seul bouton ⋮
+// ouvre l'apercu existant (MSG1BA), qui porte déjà ces deux gestes.
+describe('CORR-MESSAGERIE p4 — les gestes de la ligne derrière un ⋮, sur le site', () => {
+  // eslint-disable-next-line global-require
+  const ApercuDuFil = require('@/views/chat/ApercuDuFil').default;
+  // eslint-disable-next-line global-require
+  const { Platform } = require('react-native');
+  const osDOrigine = Platform.OS;
+  afterEach(() => { Platform.OS = osDOrigine; });
+
+  const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+
+  test('site : plus de boutons « Épingler » / « Archiver » sur la ligne ; le ⋮ ouvre l apercu', async () => {
+    Platform.OS = 'web';
+    mockChatsQuery = etatListe({
+      data: {
+        pages: [{
+          data: [{ ...CHATS[0], unreadCount: 0 }],
+          meta: { pagination: { page: 1, pageCount: 1, total: 1 }, unreadTotal: 0 },
+        }],
+      },
+      hasNextPage: false,
+    });
+    const arbre = await monter();
+    expect(textes(arbre)).not.toContain('"Épingler"');
+    expect(textes(arbre)).not.toContain('"Archiver"');
+
+    const options = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'liste-fil-options-chat-1'
+        && typeof n.props?.onPress === 'function',
+    )[0];
+    act(() => { options.props.onPress({ stopPropagation: () => {} }); });
+    const cles = arbre.root.findByType(ApercuDuFil).props.entrees
+      .map((/** @type {any} */ entree) => entree.cle);
+    expect(cles).toEqual(expect.arrayContaining(['epingler', 'archiver']));
+  });
+});
+
+// CORR-MESSAGERIE p114 (31/10, décision d'Adel « B ») — en mode complexe, la messagerie montre
+// aussi les conversations du club : chaque ligne porte sa casquette, « Club » ou « Complexe ».
+describe('CORR-MESSAGERIE p114 — l étiquette Club / Complexe d un compte à deux casquettes', () => {
+  const FIL_EQUIPE = {
+    ...CHATS[0], documentId: 'fil-equipe', groupName: 'U11 Tunnel', type: 'team',
+  };
+  const CANAL_COMPLEXE = {
+    ...CHATS[0], documentId: 'fil-canal', groupName: 'Complexe Test', participantsCount: 8, type: 'group',
+  };
+  const listeDe = (/** @type {any[]} */ fils) => etatListe({
+    data: {
+      pages: [{ data: fils, meta: { pagination: { page: 1, pageCount: 1, total: fils.length } } }],
+    },
+    hasNextPage: false,
+  });
+  const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+
+  test('espace du complexe, fils mêlés : « Club » et « Complexe » sur les lignes', async () => {
+    mockChatsQuery = listeDe([FIL_EQUIPE, CANAL_COMPLEXE]);
+    const arbre = await monter({ chatScope: 'classic', espace: 'complexe' });
+    expect(textes(arbre)).toContain('"Club"');
+    expect(textes(arbre)).toContain('"Complexe"');
+  });
+
+  test('un compte à une casquette ne voit rien de neuf', async () => {
+    mockChatsQuery = listeDe([FIL_EQUIPE, { ...FIL_EQUIPE, documentId: 'fil-2' }]);
+    const arbre = await monter({ chatScope: 'classic', espace: 'complexe' });
+    expect(textes(arbre)).not.toContain('"Club"');
   });
 });
 

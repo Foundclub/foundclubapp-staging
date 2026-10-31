@@ -723,6 +723,19 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     case 'clubInterestRequest':
     case 'clubInterestRequestCancelled':
     case 'clubInterestResponse': {
+      // CORR-MESSAGERIE p63 (31/10, décision d'Adel « C ») — la réponse à une demande POUR UN
+      // ENFANT ouvre sa fiche (« Acceptée le … », ses demandes restantes), pas un détail
+      // façon événement. Les avis d'avant le 31/10 n'ont pas la fiche : chemin d'avant.
+      const ficheEnfant = normalizeEntityId(payload.childDocumentId);
+      if (type === 'clubInterestResponse' && ficheEnfant) {
+        return adaptDestinationForCurrentPlatform(payload, {
+          params: {
+            params: { childDocumentId: ficheEnfant },
+            screen: RouteNames.MyChildren,
+          },
+          route: RouteNames.ProfileStack,
+        });
+      }
       const interestChat = chatDestination(payload.chatId);
       if (interestChat) return adaptDestinationForCurrentPlatform(payload, interestChat);
       if (type === 'clubInterestResponse') {

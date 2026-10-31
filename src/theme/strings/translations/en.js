@@ -2920,6 +2920,7 @@ export default {
       city: {
         label: 'City',
         placeholder: 'Marseille',
+        placeholderChoisir: 'Choose a city (e.g. Marseille)',
       },
       radius: {
         label: 'Within a radius of: ',
@@ -15114,6 +15115,11 @@ export default {
   },
   messaging: {
     addGroupMembers: 'Add members',
+    casquette: {
+      club: 'Club',
+      complexe: 'Venue',
+      ville: 'City',
+    },
     archive: 'Archive',
     archived: 'Archived',
     archivedBack: 'Back to chats',
@@ -18780,6 +18786,8 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      dejaPlaceeMessage: 'This child has joined another team. The parent can still withdraw the request; you can also decline it.',
+      dejaPlaceeTitre: 'Already in a team',
       goneMessage: 'The parent has withdrawn this request.',
       goneTitle: 'Request withdrawn',
       parent: 'Parent: {{name}}',
@@ -20038,6 +20046,12 @@ export default {
     subtitle: "Show it off. The more it's seen, the more you fill up.",
     title: 'Your event is live',
     variantHint: 'Choose the {{label}} style',
+  },
+  // CORR-MESSAGERIE p61 (31/10) — on the website, the SMS app does not always open: copy the message.
+  smsRepliCopie: {
+    copie: 'Message copied: paste it into an SMS, WhatsApp or an email.',
+    copier: 'Nothing opened? Copy the message',
+    echec: 'Copy failed in this browser: send the invitation from your phone.',
   },
   smartNotificationHost: {
     defaultBody: 'New update.',

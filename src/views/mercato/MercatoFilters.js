@@ -78,6 +78,9 @@ function MercatoFilters({ navigation }) {
 
   // local states
   const [categorySearchValue, setCategorySearchValue] = useState('');
+  // CORR-MESSAGERIE p67 — sans ville, « Créer l'alerte » le dit dans la page : sur le site,
+  // Alert.alert de react-native-web est muet.
+  const [villeManquante, setVilleManquante] = useState(false);
   const [positionSearchValue, setPositionSearchValue] = useState('');
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState(
@@ -286,6 +289,7 @@ function MercatoFilters({ navigation }) {
 
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
+      setVilleManquante(true);
       Alert.alert(
         t('mercatoFilters.alerts.errorTitle', 'Erreur'),
         t(
@@ -503,8 +507,11 @@ function MercatoFilters({ navigation }) {
               address={value && typeof value === 'object' ? value : undefined}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
-              placeholder={t('clubFilters.fields.city.placeholder')}
-              setAddress={(nextValue) => onChange(nextValue)}
+              placeholder={t('clubFilters.fields.city.placeholderChoisir', 'Choisir une ville (ex. : Marseille)')}
+              setAddress={(nextValue) => {
+                setVilleManquante(false);
+                onChange(nextValue);
+              }}
             />
           )}
         />
@@ -636,6 +643,14 @@ function MercatoFilters({ navigation }) {
       <View style={[Spaces.gap[24]]}>
         {isAlertMode ? (
           <>
+            {villeManquante ? (
+              <Text accessibilityLiveRegion="polite" style={[Fonts.p3, { color: Colors.error500 }]}>
+                {t(
+                  'mercatoFilters.alerts.cityRadiusRequired',
+                  'La ville et le rayon sont obligatoires pour créer une alerte',
+                )}
+              </Text>
+            ) : null}
             <Button
               onPress={() => navigation.goBack()}
               title={t('mercatoFilters.cancel', 'Annuler')}

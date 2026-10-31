@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
+import SmsRepliCopie from '@/components/molecules/smsRepliCopie/SmsRepliCopie';
 import ParentalDeclarationCard
   from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -70,6 +71,8 @@ function ParentLinkInvite() {
   const [declarationCochee, setDeclarationCochee] = useState(false);
   const [erreur, setErreur] = useState('');
   const [envoyee, setEnvoyee] = useState(false);
+  // CORR-MESSAGERIE p61 — le texte du dernier SMS ouvert : sur le site, il se copie si rien ne s'ouvre.
+  const [messageDuSms, setMessageDuSms] = useState('');
 
   const nomme = { firstname: childFirstname, ...SANS_ECHAPPEMENT };
 
@@ -108,11 +111,9 @@ function ParentLinkInvite() {
   /** F20 — le SMS part DU TÉLÉPHONE DU PARENT : l'app n'envoie pas de SMS. */
   const prevenirParSms = useCallback(() => {
     const url = resolveInviteLinkOrigin();
-    openInviteSms({
-      message: t('parentLink.invite.smsMessage', { url, ...SANS_ECHAPPEMENT }),
-      phoneNumber,
-      url,
-    });
+    const message = t('parentLink.invite.smsMessage', { url, ...SANS_ECHAPPEMENT });
+    setMessageDuSms(message);
+    openInviteSms({ message, phoneNumber, url });
   }, [phoneNumber, t]);
 
   return (
@@ -144,6 +145,9 @@ function ParentLinkInvite() {
                 title={t('parentLink.invite.sendSms', nomme)}
                 variant="Secondary"
               />
+            ) : null}
+            {pourUneFiche ? (
+              <SmsRepliCopie message={messageDuSms} testID="parent-link-sms-copie" />
             ) : null}
             <Button
               onPress={() => navigation.goBack()}

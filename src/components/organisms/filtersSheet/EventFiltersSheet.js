@@ -386,7 +386,7 @@ function EventFiltersSheet({
           <AutocompleteAddressInput
             address={city}
             label={t('clubFilters.fields.city.label', 'Ville')}
-            placeholder={t('clubFilters.fields.city.placeholder', 'Entre une ville')}
+            placeholder={t('clubFilters.fields.city.placeholderChoisir', 'Choisir une ville (ex. : Marseille)')}
             setAddress={setCity}
           />
           {/* Le rayon n'est plus un reglage a part : le pack le lit dans la

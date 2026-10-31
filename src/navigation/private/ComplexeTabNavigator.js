@@ -136,7 +136,9 @@ function ComplexeTabNavigator() {
       />
       <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}
-        initialParams={{ chatScope: 'classic' }}
+        // CORR-MESSAGERIE p114 : la messagerie sait qu'elle est dans l'espace du complexe (les
+        // fils du club d'un gérant qui dirige aussi un club y portent l'étiquette « Club »).
+        initialParams={{ chatScope: 'classic', espace: 'complexe' }}
         listeners={createFocusedTabResetListener}
         name={RouteNames.Chat}
         options={optionsDe(
