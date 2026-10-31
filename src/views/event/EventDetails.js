@@ -2391,7 +2391,7 @@ function EventDetails({ navigation, route }) {
     return t(
       'eventDetails.openTraining.publicLine',
       'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
-      { quota, taken },
+      { count: taken, quota, taken },
     );
   }, [
     externalParticipationSection,
@@ -6780,7 +6780,7 @@ function EventDetails({ navigation, route }) {
             {t(
               'eventDetails.openTraining.seatsLeft',
               '{{left}} place(s) externe(s) restante(s) sur {{quota}}',
-              { left: Math.max(0, quota - taken), quota },
+              { count: Math.max(0, quota - taken), left: Math.max(0, quota - taken), quota },
             )}
           </Text>
         ) : null}
@@ -6806,7 +6806,7 @@ function EventDetails({ navigation, route }) {
             {t(
               'eventDetails.openTraining.pendingSuffix',
               '{{pending}} demande(s) à vérifier',
-              { pending },
+              { count: pending, pending },
             )}
           </Text>
         ) : null}
@@ -7296,7 +7296,7 @@ function EventDetails({ navigation, route }) {
                     {' - '}
                     {assignmentTotal}
                     {' '}
-                    {t('eventDetails.assignmentS', 'affectation(s)')}
+                    {t('eventDetails.assignmentS', 'affectations', { count: assignmentTotal })}
                   </Text>
                 </View>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
@@ -7363,6 +7363,7 @@ function EventDetails({ navigation, route }) {
       '{{accepted}} validée(s) · {{pending}} en attente',
       {
         accepted: tournamentTeamCounters.accepted,
+        count: tournamentTeamCounters.accepted,
         pending: tournamentTeamCounters.pending,
         ...SANS_ECHAPPEMENT,
       },
@@ -7623,6 +7624,7 @@ function EventDetails({ navigation, route }) {
       '{{accepted}} validée(s) · {{pending}} en attente',
       {
         accepted: tournamentTeamCounters.accepted,
+        count: tournamentTeamCounters.accepted,
         pending: tournamentTeamCounters.pending,
         ...SANS_ECHAPPEMENT,
       },

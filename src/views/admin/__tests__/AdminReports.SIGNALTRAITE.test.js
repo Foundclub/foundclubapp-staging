@@ -28,7 +28,9 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        const valeur = String(cle || '')
+        // CORR-TEXTES-2 : une clef accordée vit en `_one` / `_other`, choisie par `count` comme i18next.
+        const forme = typeof options?.count === 'number' ? `_${new Intl.PluralRules('fr').select(options.count)}` : '';
+        const valeur = `${String(cle || '')}${forme}`
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
         let texte = cle;
@@ -188,7 +190,7 @@ test('C1 — chaque signalement montre sa cible, sa source, son motif et son aut
   expect(vu).toContain('Léa Martin');
   expect(vu).toContain('Conversation avec Hugo');
   expect(vu).toContain('Insulte');
-  expect(vu).toContain('2 signalement(s) affiché(s)');
+  expect(vu).toContain('2 signalements affichés');
 });
 
 test('C2 — le filtre Source « Messages » ne garde que les messages', () => {
@@ -197,7 +199,7 @@ test('C2 — le filtre Source « Messages » ne garde que les messages', () => {
   const vu = textes(arbre);
   expect(vu).not.toContain('Match U13');
   expect(vu).toContain('Conversation avec Hugo');
-  expect(vu).toContain('1 signalement(s) affiché(s)');
+  expect(vu).toContain('1 signalement affiché');
 });
 
 test('C3 — sans signalement, la liste vide le dit', () => {

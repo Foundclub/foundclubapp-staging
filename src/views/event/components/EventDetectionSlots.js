@@ -244,7 +244,8 @@ function EventDetectionSlots({
                     <Text style={[Fonts.p4Bold, { color: slot.isComplete ? Colors.gold500 : Colors.primary500 }]}>
                       {slot.isComplete
                         ? t('eventDetectionSlots.full', 'Complet')
-                        : t('eventDetectionSlots.remaining', '{{remaining}} restante(s)', {
+                        : t('eventDetectionSlots.remaining', '{{remaining}} restantes', {
+                          count: slot.remaining,
                           remaining: slot.remaining,
                         })}
                     </Text>

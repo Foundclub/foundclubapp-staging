@@ -467,28 +467,28 @@ const buildTargetSummary = (campaign) => {
     labels.push(i18next.t(
       'clubLicenses.target.teams',
       '{{teams}} équipe(s)',
-      { teams: config.teamIds.length, ...SANS_ECHAPPEMENT },
+      { count: config.teamIds.length, teams: config.teamIds.length, ...SANS_ECHAPPEMENT },
     ));
   }
   if (Array.isArray(config.categoryIds) && config.categoryIds.length) {
     labels.push(i18next.t(
       'clubLicenses.target.categories',
       '{{categories}} catégorie(s)',
-      { categories: config.categoryIds.length, ...SANS_ECHAPPEMENT },
+      { categories: config.categoryIds.length, count: config.categoryIds.length, ...SANS_ECHAPPEMENT },
     ));
   }
   if (Array.isArray(config.sectionIds) && config.sectionIds.length) {
     labels.push(i18next.t(
       'clubLicenses.target.sections',
       '{{sections}} section(s)',
-      { sections: config.sectionIds.length, ...SANS_ECHAPPEMENT },
+      { count: config.sectionIds.length, sections: config.sectionIds.length, ...SANS_ECHAPPEMENT },
     ));
   }
   if (Array.isArray(config.levelIds) && config.levelIds.length) {
     labels.push(i18next.t(
       'clubLicenses.target.levels',
       '{{levels}} niveau(x)',
-      { levels: config.levelIds.length, ...SANS_ECHAPPEMENT },
+      { count: config.levelIds.length, levels: config.levelIds.length, ...SANS_ECHAPPEMENT },
     ));
   }
 
@@ -1869,7 +1869,7 @@ function ClubLicenses({ navigation, route }) {
       summary.push(t(
         'clubLicenses.reminderTiming.maxCount',
         '{{max}} relance(s) max',
-        { max: reminderAutomation.maxCount, ...SANS_ECHAPPEMENT },
+        { count: reminderAutomation.maxCount, max: reminderAutomation.maxCount, ...SANS_ECHAPPEMENT },
       ));
     }
     return summary;
@@ -1897,7 +1897,7 @@ function ClubLicenses({ navigation, route }) {
     return t(
       'clubLicenses.installments.summary',
       '{{installments}} échéance(s) - {{frequency}}',
-      { frequency, installments: count, ...SANS_ECHAPPEMENT },
+      { count, frequency, installments: count, ...SANS_ECHAPPEMENT },
     );
   }, [
     campaign?.allowInstallments,
@@ -2053,6 +2053,7 @@ function ClubLicenses({ navigation, route }) {
               ...SANS_ECHAPPEMENT,
             })
             : '',
+          count: visibleAssignments.length,
           shown: visibleAssignments.length,
           ...SANS_ECHAPPEMENT,
         },
@@ -2062,13 +2063,15 @@ function ClubLicenses({ navigation, route }) {
       return t(
         'clubLicenses.memberList.previewSummary',
         'Aperçu sur {{loaded}} membre(s) sur {{total}}. Affine avec la recherche ou les filtres.',
-        { loaded: assignments.length, total: assignmentsTotalCount, ...SANS_ECHAPPEMENT },
+        {
+          count: assignments.length, loaded: assignments.length, total: assignmentsTotalCount, ...SANS_ECHAPPEMENT,
+        },
       );
     }
     return t(
       'clubLicenses.memberList.inViewSummary',
       '{{members}} membre(s) dans cette vue.',
-      { members: visibleAssignments.length, ...SANS_ECHAPPEMENT },
+      { count: visibleAssignments.length, members: visibleAssignments.length, ...SANS_ECHAPPEMENT },
     );
   }, [
     activeMemberFilterCount,
@@ -3186,7 +3189,7 @@ function ClubLicenses({ navigation, route }) {
                         {t(
                           'clubLicenses.overview.moreRules',
                           '+ {{more}} autre(s) règle(s)',
-                          { more: pricingRuleSummaries.length - 4, ...SANS_ECHAPPEMENT },
+                          { count: pricingRuleSummaries.length - 4, more: pricingRuleSummaries.length - 4, ...SANS_ECHAPPEMENT },
                         )}
                       </Text>
                     ) : null}
@@ -3521,6 +3524,9 @@ function ClubLicenses({ navigation, route }) {
                             sumPaymentReviewCents(item),
                             item?.currency || campaign?.currency || 'EUR',
                           ),
+                          count: (item?.payments || [])
+                            .filter((payment) => payment?.status === 'manual_review')
+                            .length,
                           declarations: (item?.payments || [])
                             .filter((payment) => payment?.status === 'manual_review')
                             .length,
@@ -3738,8 +3744,9 @@ function ClubLicenses({ navigation, route }) {
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {t(
                         'clubLicenses.memberList.previewShort',
-                        'Aperçu sur {{loaded}} membre(s) sur {{total}}.',
+                        'Aperçu sur {{loaded}} membres sur {{total}}.',
                         {
+                          count: assignments.length,
                           loaded: assignments.length,
                           total: assignmentsTotalCount,
                           ...SANS_ECHAPPEMENT,
@@ -3851,7 +3858,7 @@ function ClubLicenses({ navigation, route }) {
                             ? t(
                               'clubLicenses.remindersTab.reminderCount',
                               ' - {{reminders}} relance(s)',
-                              { reminders: item.reminderCount, ...SANS_ECHAPPEMENT },
+                              { count: item.reminderCount, reminders: item.reminderCount, ...SANS_ECHAPPEMENT },
                             )
                             : '',
                           status: statusLabel[item?.status] || item?.status,
@@ -3875,8 +3882,9 @@ function ClubLicenses({ navigation, route }) {
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {t(
                         'clubLicenses.memberList.previewShort',
-                        'Aperçu sur {{loaded}} membre(s) sur {{total}}.',
+                        'Aperçu sur {{loaded}} membres sur {{total}}.',
                         {
+                          count: assignments.length,
                           loaded: assignments.length,
                           total: assignmentsTotalCount,
                           ...SANS_ECHAPPEMENT,

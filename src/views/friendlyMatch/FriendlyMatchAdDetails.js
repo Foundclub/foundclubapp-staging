@@ -252,7 +252,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
           'friendlyMatchAdDetails.cancelWithApplications',
           'Elle ne sera plus visible, et les {{applicationCount}} équipe(s) qui ont'
             + ' répondu ne pourront plus aller plus loin.',
-          { applicationCount },
+          { applicationCount, count: applicationCount },
         )
         : t(
           'friendlyMatchAdDetails.itWillNoLongerBe',

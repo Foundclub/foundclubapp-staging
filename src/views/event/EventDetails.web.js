@@ -2789,6 +2789,7 @@ function EventDetails({ navigation, route }) {
                           'eventDetails.externalSpotsSetting',
                           '{{limit}} place(s) externes - validation {{mode}}',
                           {
+                            count: trainingOpenConfig.externalParticipantLimit,
                             limit: trainingOpenConfig.externalParticipantLimit,
                             mode: trainingOpenConfig.externalParticipantValidationMode === 'auto'
                               ? t('eventDetails.validationAutomatic', 'automatique')
@@ -2799,6 +2800,7 @@ function EventDetails({ navigation, route }) {
                           'eventDetails.lastSavedExternalSpotsSetting',
                           'Dernier reglage mémorise: {{limit}} place(s) externes - validation {{mode}}',
                           {
+                            count: trainingOpenConfig.externalParticipantLimit,
                             limit: trainingOpenConfig.externalParticipantLimit,
                             mode: trainingOpenConfig.externalParticipantValidationMode === 'auto'
                               ? t('eventDetails.validationAutomatic', 'automatique')
@@ -3303,7 +3305,7 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {tournamentTeams.length}
                       {' '}
-                      {t('eventDetails.teamS', 'equipe(s)')}
+                      {t('eventDetails.teamS', 'équipes', { count: tournamentTeams.length })}
                     </span>
                     <span>
                       {tournamentTeamCounters.pending}
@@ -3313,7 +3315,7 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {tournamentTeamCounters.accepted}
                       {' '}
-                      {t('eventDetails.approved2', 'validee(s)')}
+                      {t('eventDetails.approved2', 'validées', { count: tournamentTeamCounters.accepted })}
                     </span>
                     <span>
                       {tournamentTeamCounters.warning}
@@ -3515,14 +3517,14 @@ function EventDetails({ navigation, route }) {
                                 <span>
                                   {rosterSummary.invitedCount}
                                   {' '}
-                                  {t('eventDetails.invitationS', 'invitation(s)')}
+                                  {t('eventDetails.invitationS', 'invitations', { count: rosterSummary.invitedCount })}
                                 </span>
                               ) : null}
                               {rosterSummary.requestedCount > 0 ? (
                                 <span>
                                   {rosterSummary.requestedCount}
                                   {' '}
-                                  {t('eventDetails.requestS', 'demande(s)')}
+                                  {t('eventDetails.requestS', 'demandes', { count: rosterSummary.requestedCount })}
                                 </span>
                               ) : null}
                               {hasRosterWarning ? <span style={{ color: '#ffd54a' }}>Warning roster</span> : null}

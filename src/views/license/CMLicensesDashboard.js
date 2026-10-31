@@ -429,6 +429,7 @@ function CMLicensesDashboard({ navigation, route }) {
         '{{sectionCount}} section(s) recevront une campagne {{seasonLabel}} à {{amount}}.',
         {
           amount: money(amountCents),
+          count: missingSectionIds.length,
           seasonLabel,
           sectionCount: missingSectionIds.length,
           ...SANS_ECHAPPEMENT,
@@ -452,6 +453,7 @@ function CMLicensesDashboard({ navigation, route }) {
                 'cmLicensesDashboard.alerts.bulkCreated.message',
                 '{{created}} créée(s), {{skipped}} ignoree(s), {{errors}} erreur(s).',
                 {
+                  count: result?.summary?.created || 0,
                   created: result?.summary?.created || 0,
                   errors: result?.summary?.errors || 0,
                   skipped: result?.summary?.skipped || 0,
@@ -491,6 +493,7 @@ function CMLicensesDashboard({ navigation, route }) {
                 'cmLicensesDashboard.alerts.resyncDone.message',
                 '{{created}} créée(s), {{skipped}} déjà existante(s).',
                 {
+                  count: result?.summary?.created || 0,
                   created: result?.summary?.created || 0,
                   skipped: result?.summary?.skipped || 0,
                   ...SANS_ECHAPPEMENT,

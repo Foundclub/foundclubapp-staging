@@ -243,7 +243,7 @@ describe('N1 · (a) caracterisation — ce que le composant fait AUJOURD HUI', (
     const contenu = texteDe(racine.toJSON());
 
     expect(contenu).toContain('Gardien');
-    expect(contenu).toContain('2 restante(s)');
+    expect(contenu).toContain('2 restantes');
   });
 });
 

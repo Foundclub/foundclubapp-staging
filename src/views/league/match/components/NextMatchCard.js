@@ -578,8 +578,12 @@ function NextMatchCard({
                 ? t('nextMatchCard.quorum.reached', 'Quorum atteint. Équipe prête.')
                 : t(
                   'nextMatchCard.quorum.missing',
-                  'Minimum requis: {{requiredPlayers}} joueurs. Il manque {{missingCount}} joueur(s).', // eslint-disable-line max-len
-                  { missingCount: Math.max(requiredPlayers - confirmedCount, 0), requiredPlayers },
+                  'Minimum requis : {{requiredPlayers}} joueurs. Il manque {{missingCount}} joueurs.',
+                  {
+                    count: Math.max(requiredPlayers - confirmedCount, 0),
+                    missingCount: Math.max(requiredPlayers - confirmedCount, 0),
+                    requiredPlayers,
+                  },
                 )}
             </Text>
             <View style={styles.gaugeBg}>

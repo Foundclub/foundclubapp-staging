@@ -206,7 +206,7 @@ describe('requestsHubService', () => {
     expect(result.items[0]).toEqual(expect.objectContaining({
       actions: {},
       id: 'team:team-request-1',
-      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
+      subtitle: 'Leo Martin a demandé à rejoindre U18. Ton équipe doit attendre la validation des dirigeants de ton club.',
       type: 'team',
     }));
   });

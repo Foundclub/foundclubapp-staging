@@ -853,7 +853,7 @@ describe('D42 — la lecture seule n\'a PAS de deux temps', () => {
     const rendu = texteRendu(arbre);
 
     expect(rendu).toContain('U15 Filles');
-    expect(rendu).toContain('branche(s)');
+    expect(rendu).toContain('1 branche');
     expect(rendu).not.toContain('Étape 1 sur 2');
     expect(estPressable(arbre, 'Suivant')).toBe(false);
   });

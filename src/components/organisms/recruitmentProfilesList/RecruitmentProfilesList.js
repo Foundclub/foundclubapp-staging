@@ -151,7 +151,7 @@ function RecruitmentProfilesList({
     hasActiveFilters ? t(
       'recruitmentProfilesList.pills.filters',
       '{{total}} filtre(s)',
-      { total: String(filtersCount) },
+      { count: filtersCount, total: String(filtersCount) },
     ) : t('recruitmentProfilesList.pills.noFilter', 'Sans filtre'),
   ];
 

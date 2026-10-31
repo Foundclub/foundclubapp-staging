@@ -310,7 +310,7 @@ function AdminReports() {
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {filteredReports.length}
               {' '}
-              {t('adminReports.shownCount', 'signalement(s) affiché(s)')}
+              {t('adminReports.shownCount', 'signalements affichés', { count: filteredReports.length })}
             </Text>
           </View>
         )}
