@@ -146,7 +146,10 @@ function ReserverAnnonce() {
     );
   }
 
-  const reserveur = Boolean(params.reservationId);
+  // CORR-RESA (80 A) : l'auteur est reconnu d'où qu'il vienne (lien, canal, notification) par le
+  // serveur (`estAuteur`) ; l'adresse avec `reservationId` reste reconnue (une app d'avant le
+  // serveur).
+  const reserveur = Boolean(params.reservationId) || annonce.estAuteur === true;
   const partie = annonce.reservation || {};
   const manque = Math.max(0, (Number(annonce.places) || 0) - (Number(annonce.joined) || 0));
   let titre = t('reserverTerrain.annonce.ilManque', {
@@ -382,12 +385,14 @@ function ReserverAnnonce() {
           ) : null}
           {reserveur ? (
             <View style={{ gap: 10 }}>
-              <Button
-                icon="share"
-                onPress={() => setPartage(true)}
-                title={t('reserverTerrain.lien.partager', 'Partager')}
-                variant="Primary"
-              />
+              {params.reservationId ? (
+                <Button
+                  icon="share"
+                  onPress={() => setPartage(true)}
+                  title={t('reserverTerrain.lien.partager', 'Partager')}
+                  variant="Primary"
+                />
+              ) : null}
               {ouverte ? (
                 <Button
                   isLoading={Boolean(fermer?.isPending)}

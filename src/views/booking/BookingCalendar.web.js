@@ -117,6 +117,24 @@ function BookingCalendar({ navigation, route }) {
     enabled: Boolean(selectedFacilityId && dateString),
   });
 
+  // CORR-RESA (72 A) : une installation sans horaires d'ouverture n'a aucun créneau ; l'écran
+  // le dit en français au lieu du refus brut du serveur (« Facility does not have
+  // opening/closing times… »).
+  // ponytail: le refus se reconnaît aussi à son texte (le serveur ne rend pas de code) ;
+  // sortie : un code d'erreur dans availability.ts.
+  const sansHoraires = Boolean(facility && 'openingTime' in facility
+    && (!facility.openingTime || !facility.closingTime))
+    || /opening\/closing times/i.test(String(availabilityError?.message || ''));
+  const messageDesDisponibilites = sansHoraires
+    ? t(
+      'bookingCalendar.web.sansHoraires',
+      'Cette installation n’a pas encore d’horaires : aucun créneau ne peut être réservé.',
+    )
+    : availabilityError?.message || t(
+      'bookingCalendar.web.errors.availability',
+      'Impossible de charger les disponibilités.',
+    );
+
   const createBookingMutation = useCreateBooking({
     onSuccess: (response) => {
       const reservationId = getEntityDocumentId(response?.data || response);
@@ -386,10 +404,7 @@ function BookingCalendar({ navigation, route }) {
 
                 {availabilityError ? (
                   <div style={{ background: 'rgba(220, 64, 64, 0.12)', border: '1px solid rgba(220, 64, 64, 0.28)', borderRadius: 22, color: '#ffd6d6', padding: 20 }}>
-                    {availabilityError?.message || t(
-                      'bookingCalendar.web.errors.availability',
-                      'Impossible de charger les disponibilités.',
-                    )}
+                    {messageDesDisponibilites}
                   </div>
                 ) : availability?.slots?.length > 0 ? (
                   <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isTablet ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}>

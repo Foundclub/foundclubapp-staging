@@ -7,7 +7,7 @@ import {
 
 import {
   BAN_RAISON_MAX,
-  clientDepuis,
+  clientDepuisLaFiche,
   corpsDuBan,
   etatDuBan,
   ligneHistorique,
@@ -171,9 +171,11 @@ function ComplexeClient({
   );
   // Le champ porte son libellé pour le lecteur d'écran (sur le site, le libellé d'`Input` est un
   // texte à côté du champ, pas son nom).
+  // CORR-RESA (76 A) : le champ est obligatoire (« Bannir » reste gris sans lui) : le libellé
+  // le dit.
   const libelleRaison = t(
-    'complexeClients.bannir.raison',
-    'Raison (privée, jamais montrée à {{prenom}})',
+    'complexeClients.bannir.raisonObligatoire',
+    'Raison (obligatoire, privée, jamais montrée à {{prenom}})',
     avecNom,
   );
   const fermer = () => setFeuille('');
@@ -229,7 +231,7 @@ function ComplexeClient({
       : [];
     const parties = historique.data ? nombre(historique.data.parties) : null;
     const seuilFidelite = Number(fidelite?.threshold);
-    const depuis = clientDepuis(reservationsIci);
+    const depuis = clientDepuisLaFiche(client, reservationsIci);
     const aEcrire = prochaineReservation(reservationsIci);
     const ecrireAuClient = async () => {
       if (!aEcrire) return;

@@ -79,7 +79,8 @@ export const carteDAnnonce = (t, notice) => {
 
 /**
  * « Partager dans mon canal » se propose-t-il pour cette réservation (E-G05, E-G12) ? Une
- * réservation de l'app, confirmée, à venir. Si le serveur dit son annonce (`annonce`, `null` sans
+ * réservation de l'app, confirmée ou en collecte (CORR-RESA 115), à venir. Si le serveur dit son
+ * annonce (`annonce`, `null` sans
  * annonce), seulement quand elle est OUVERTE ; s'il ne la dit pas (champ absent), le bouton est là
  * et le serveur répond (409 « pas d'annonce ouverte »).
  * ponytail: champ absent = serveur sans `annonce` dans la fiche du gérant ; sortie : le serveur
@@ -89,7 +90,9 @@ export const carteDAnnonce = (t, notice) => {
  * @returns {boolean} Vrai si le geste se propose.
  */
 export const peutPartagerLAnnonce = (reservation, maintenant = Date.now()) => {
-  if (reservation?.source !== 'app' || reservation?.status !== 'confirmee') return false;
+  // CORR-RESA (115 A) : une collecte aussi, quand son réserveur a publié l'annonce.
+  if (reservation?.source !== 'app') return false;
+  if (!['confirmee', 'en_collecte'].includes(reservation?.status)) return false;
   const debut = new Date(String(reservation?.startsAt || '')).getTime();
   if (Number.isNaN(debut) || debut <= maintenant) return false;
   if (reservation.annonce === undefined) return true;

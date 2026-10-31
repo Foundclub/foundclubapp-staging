@@ -15,6 +15,7 @@ import {
   messageDeRefusResa,
   plageHoraire,
   semaineLisible,
+  terrainsAvecReservations,
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
@@ -119,6 +120,13 @@ function ComplexePlanning() {
   if (vue === 'semaine') periode = { from: lundi, terrain: terrainSemaine, to: enJours(lundi, 6) };
   else if (vue === 'liste') periode = { from: date, to: enJours(date, 6) };
   if (vue !== 'semaine' && terrainChoisi) periode = { ...periode, terrain: terrainChoisi };
+  // CORR-RESA (73 A) : en Semaine (un terrain à la fois), une pastille dit quels terrains ont des
+  // réservations cette semaine-là (une lecture de tous les terrains, seulement s'il y en a
+  // plusieurs).
+  const toutLaSemaine = usePlanning(complexeId, { from: lundi, to: enJours(lundi, 6) }, {
+    enabled: vue === 'semaine' && terrains.length > 1,
+  });
+  const terrainsOccupes = terrainsAvecReservations(toutLaSemaine.data);
   const planning = usePlanning(complexeId, periode, {
     enabled: terrains.length > 0 && (vue !== 'semaine' || Boolean(terrainSemaine)),
   });
@@ -258,13 +266,26 @@ function ComplexePlanning() {
     reussite,
   );
 
+  // CORR-RESA 73 : le point d'un terrain occupé (aucun texte posé dessus, à côté du libellé).
+  const pastilleOccupee = {
+    backgroundColor: Colors.primary500, borderRadius: 4, height: 8, width: 8,
+  };
+
   // ── L'en-tête ──────────────────────────────────────────────────────────────────────────
   const puce = (
     /** @type {string} */ cle,
     /** @type {string} */ libelle,
     /** @type {boolean} */ actif,
+    pastille = false,
   ) => (
     <TouchableOpacity
+      accessibilityLabel={pastille
+        ? t('complexeReservations.planning.terrainOccupe', {
+          defaultValue: '{{terrain}}, des réservations cette semaine',
+          terrain: libelle,
+          ...SANS_ECHAPPEMENT,
+        })
+        : libelle}
       accessibilityRole="radio"
       accessibilityState={{ checked: actif }}
       key={cle || 'tous'}
@@ -282,7 +303,15 @@ function ComplexePlanning() {
       ]}
       testID={`planning-terrain-${cle || 'tous'}`}
     >
-      <Text style={[Fonts.p3Bold, actif ? Fonts.neutral00 : Fonts.primary200]}>{libelle}</Text>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
+        <Text style={[Fonts.p3Bold, actif ? Fonts.neutral00 : Fonts.primary200]}>{libelle}</Text>
+        {pastille ? (
+          <View
+            style={pastilleOccupee}
+            testID={`planning-terrain-pastille-${cle}`}
+          />
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
   const pas = vue === 'jour' ? 1 : 7;
@@ -667,6 +696,7 @@ function ComplexePlanning() {
               String(terrain.documentId),
               String(terrain.name || ''),
               (vue === 'semaine' ? terrainSemaine : terrainChoisi) === terrain.documentId,
+              vue === 'semaine' && terrainsOccupes.has(String(terrain.documentId)),
             ))}
           </ScrollView>
         ) : null}

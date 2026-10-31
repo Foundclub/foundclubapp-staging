@@ -94,7 +94,7 @@ export const etatAffiche = (reservation, maintenant = new Date()) => {
 };
 
 /**
- * RESA-L5B-1 — « 1 non honorée sur 3 » (E-G05 « Qui », E-G15) : le seuil du bannissement
+ * RESA-L5B-1 — « 1 non honorée (ban auto à 3) » (E-G05 « Qui », E-G15) : le seuil du bannissement
  * automatique du complexe (`autoBanNoShows`, 0 = jamais) tant qu'il n'est pas atteint ; « 3 non
  * honorées » une fois atteint, ou sans seuil.
  * @param {Traduire} t - Traduction.
@@ -107,10 +107,12 @@ export const nonHonoreesLisibles = (t, nombre, seuil) => {
   if (nombre === null || nombre === undefined || !Number.isFinite(compte)) return '';
   const plafond = Number(seuil);
   if (Number.isInteger(plafond) && plafond > 0 && compte < plafond) {
-    return t('complexeReservations.nonHonorees.sur', '{{count}} non honorée sur {{seuil}}', {
+    // CORR-RESA (79 A) : « 0 non honorée (ban auto à 3) » ; « sur 3 » se lisait « sur 3
+    // réservations ».
+    return t('complexeReservations.nonHonorees.banAuto', {
       count: compte,
-      defaultValue_one: '{{count}} non honorée sur {{seuil}}',
-      defaultValue_other: '{{count}} non honorées sur {{seuil}}',
+      defaultValue_one: '{{count}} non honorée (ban auto à {{seuil}})',
+      defaultValue_other: '{{count}} non honorées (ban auto à {{seuil}})',
       seuil: plafond,
       ...SANS_ECHAPPEMENT,
     });
@@ -944,3 +946,18 @@ export const messageDeRefusResa = (t, erreur, repli) => {
       return messageDeRefus(t, erreur, repli);
   }
 };
+
+/**
+ * CORR-RESA (73 A) — les terrains qui ont au moins une réservation dans la période lue (planning
+ * de TOUS les terrains, `GET /complexes/:id/planning` sans `terrain`) : la vue Semaine met une
+ * pastille sur leur puce.
+ * @param {any} donnees - `data` du planning.
+ * @returns {Set<string>} Les `documentId` des terrains occupés.
+ */
+export const terrainsAvecReservations = (donnees) => new Set(
+  (Array.isArray(donnees?.terrains) ? donnees.terrains : [])
+    .filter((/** @type {any} */ terrain) => (Array.isArray(terrain?.days) ? terrain.days : [])
+      .some((/** @type {any} */ jour) => (Array.isArray(jour?.slots) ? jour.slots : [])
+        .some((/** @type {any} */ creneau) => Boolean(creneau?.reservation))))
+    .map((/** @type {any} */ terrain) => String(terrain.documentId)),
+);

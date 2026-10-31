@@ -147,6 +147,18 @@ function CarteComplexeRecherche({
           ) : null}
         </View>
       ) : null}
+      {/* CORR-RESA (70 B, 82 B) : une carte sans créneau dit pourquoi — aucun terrain encore ouvert
+          (« Bientôt réservable »), ou aucun créneau pour les filtres choisis. */}
+      {!montres.length && carte?.bientotReservable ? (
+        <Text style={[Fonts.p3Bold, Fonts.primary200]} testID="carte-bientot-reservable">
+          {t('reserverTerrain.recherche.bientotReservable', 'Bientôt réservable')}
+        </Text>
+      ) : null}
+      {!montres.length && !carte?.bientotReservable && !carte?.phoneOnly ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]} testID="carte-aucun-creneau">
+          {t('reserverTerrain.recherche.aucunCreneauFiltres', 'Aucun créneau pour ces filtres')}
+        </Text>
+      ) : null}
       {(part !== null && !compacte) || carte?.phoneOnly ? (
         <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 12 }]}>
           {part !== null && !compacte ? (

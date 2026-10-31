@@ -54,6 +54,9 @@ import texteInsecable from '@/utils/texteInsecable';
 
 import MediaPlatform from '@/platform/media';
 
+// CORR-RESA (85 A) : la limite du serveur (admin terrain.ts NAME_MAX), dite avant l'envoi.
+const NOM_TERRAIN_MAX = 60;
+
 const VIGNETTE = 72;
 
 /**
@@ -403,10 +406,15 @@ function ComplexeTerrain() {
         <View style={{ gap: 4 }}>
           <Input
             label={t('complexeGerant.creation.nom', 'Nom')}
+            maxLength={NOM_TERRAIN_MAX}
             onChangeText={setNom}
             placeholder={t('complexeGerant.terrain.nomExemple', 'Ex. : Terrain 1')}
+            testID="terrain-nom"
             value={nom}
           />
+          <Text style={[Fonts.p3, Fonts.neutral200]} testID="terrain-nom-compteur">
+            {`${nom.length} / ${NOM_TERRAIN_MAX}`}
+          </Text>
           {montrer('nom')
             ? erreurSous(t('complexeGerant.terrain.nomManquant', 'Donne un nom au terrain.'))
             : null}

@@ -272,9 +272,12 @@ function ReserverInvitation() {
       </View>
       <View style={carte} testID="invitation-jauge">
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-          {t('reserverTerrain.invitation.presentsSur', '{{presents}} présents sur {{places}}', {
+          {/* CORR-RESA (83 A) : « 1 présent », « 3 présents ». */}
+          {t('reserverTerrain.invitation.presentsSurNombre', {
+            count: Number(presents) || 0,
+            defaultValue_one: '{{count}} présent sur {{places}}',
+            defaultValue_other: '{{count}} présents sur {{places}}',
             places,
-            presents,
           })}
         </Text>
         <View

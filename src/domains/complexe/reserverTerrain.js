@@ -595,7 +595,13 @@ export const varianteDeLaReservation = (reservation, contexte = {}) => {
       return 'annuleeParLeComplexe';
     // RESA-L6B-2 — la collecte arrêtée (serveur RESA-L3, `collecte.failure` du groupe ou N-23 /
     // N-24) : créneau pris avant le quorum (le texte A-P08), sinon la date limite.
+    // CORR-RESA (69 A) : le gérant a retiré le terrain (`terrain_retire`, N-23
+    // `collecte-terrain-retire`).
     case 'non_aboutie':
+      if (contexte?.echecDeCollecte === 'terrain_retire'
+        || contexte?.change === 'collecte-terrain-retire') {
+        return 'collecteTerrainRetire';
+      }
       return contexte?.echecDeCollecte === 'creneau_pris'
         || contexte?.change === 'collecte-creneau-pris'
         ? 'collectePrise'
@@ -973,6 +979,18 @@ export const contenuDEchec = (t, variante, contexte = {}) => {
             + 'réunisses assez de joueurs.',
         ),
         titre: t('reserverTerrain.echec.collectePrise', 'Réservation non aboutie'),
+        ton: 'cyan',
+      };
+    case 'collecteTerrainRetire':
+      return {
+        ...base,
+        actions: ['autresCreneaux', 'ailleurs'],
+        icone: 'personnes',
+        texte: t(
+          'reserverTerrain.echec.collecteTerrainRetireTexte',
+          'Le complexe a retiré ce terrain : ta collecte s’arrête, rien n’est réservé.',
+        ),
+        titre: t('reserverTerrain.echec.collecteTerrainRetire', 'Collecte arrêtée'),
         ton: 'cyan',
       };
     case 'complete':

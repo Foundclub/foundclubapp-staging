@@ -22,6 +22,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
@@ -104,6 +105,11 @@ function ComplexeFermetures() {
   const pret = terrainsChoisis.length > 0 && Boolean(dates) && debut <= fin && Boolean(motif);
   const fermetures = Array.isArray(lecture.data) ? lecture.data : [];
   const lignes = regrouperFermetures(t, fermetures, terrains, aujourdhuiAParis());
+  // CORR-RESA (74 A) : « À venir » dit ce qui sera vraiment fermé ; les rouvertes vont dans un
+  // repli.
+  const actives = lignes.filter((ligne) => !ligne.rouverte);
+  const rouvertes = lignes.filter((ligne) => ligne.rouverte);
+  const [voirRouvertes, setVoirRouvertes] = useState(false);
   const nomDuTerrain = (/** @type {string} */ id) => String(
     terrains.find((terrain) => terrain.documentId === id)?.name || '',
   );
@@ -239,23 +245,25 @@ function ComplexeFermetures() {
       // BH16 P13-15 : rien de fermé ⇒ pas de « Fermé » ; un échec garde le formulaire, avec les
       // seuls terrains à refaire.
       const rienDeFerme = echecs.length > 0 && echecs.length >= terrainsChoisis.length;
-      if (!rienDeFerme) setMessage(bilan?.annulees
-        ? t(
-          'complexeReservations.fermetures.fermeEtPrevenu',
-          'Fermé : {{jours}}. {{count}} joueurs prévenus.',
-          {
-            count: bilan.annulees,
-            defaultValue_one: 'Fermé : {{jours}}. {{count}} joueur prévenu.',
-            defaultValue_other: 'Fermé : {{jours}}. {{count}} joueurs prévenus.',
-            jours,
-            ...SANS_ECHAPPEMENT,
-          },
-        )
-        : t(
-          'complexeReservations.fermetures.ferme',
-          'Fermé : {{jours}}.',
-          { jours, ...SANS_ECHAPPEMENT },
-        ));
+      if (!rienDeFerme) {
+        setMessage(bilan?.annulees
+          ? t(
+            'complexeReservations.fermetures.fermeEtPrevenu',
+            'Fermé : {{jours}}. {{count}} joueurs prévenus.',
+            {
+              count: bilan.annulees,
+              defaultValue_one: 'Fermé : {{jours}}. {{count}} joueur prévenu.',
+              defaultValue_other: 'Fermé : {{jours}}. {{count}} joueurs prévenus.',
+              jours,
+              ...SANS_ECHAPPEMENT,
+            },
+          )
+          : t(
+            'complexeReservations.fermetures.ferme',
+            'Fermé : {{jours}}.',
+            { jours, ...SANS_ECHAPPEMENT },
+          ));
+      }
       if (echecs.length) {
         const restes = echecs.map((/** @type {any} */ echec) => nomDuTerrain(echec.id));
         setErreur(t(
@@ -358,52 +366,74 @@ function ComplexeFermetures() {
         </View>
       </View>
     );
-  } else if (!lignes.length) {
-    liste = (
-      <Text style={[Fonts.p2, Fonts.neutral200]}>
-        {t('complexeReservations.fermetures.vide', 'Aucune fermeture prévue.')}
-      </Text>
-    );
   } else {
+    const carteDeLaLigne = (/** @type {any} */ ligne) => (
+      <View key={ligne.cle} style={[carte, Spaces.padding[16], { gap: 8 }]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {`${joursLisibles(ligne.debut, ligne.fin)} · ${ligne.motif}`}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.terrains.join(', ')}</Text>
+        <View
+          style={[
+            Alignments.row, Alignments.alignCenter, { gap: 8, justifyContent: 'space-between' },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, { color: etatDeLaLigne(ligne).couleur }]}>
+            {etatDeLaLigne(ligne).texte}
+          </Text>
+          {ligne.rouverte ? null : (
+            <View style={[Alignments.row, { gap: 8 }]}>
+              <View testID={`fermeture-modifier-${ligne.cle}`}>
+                <Button
+                  onPress={() => commencerLaModification(ligne)}
+                  size="sm"
+                  title={t('complexeReservations.fermetures.modifier', 'Modifier')}
+                  variant="Ghost"
+                />
+              </View>
+              <View testID={`fermeture-rouvrir-${ligne.cle}`}>
+                <Button
+                  onPress={() => setARouvrir(ligne)}
+                  size="sm"
+                  title={t('complexeReservations.fermetures.rouvrir', 'Rouvrir')}
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    );
     liste = (
       <View style={{ gap: 12 }}>
-        {lignes.map((ligne) => (
-          <View key={ligne.cle} style={[carte, Spaces.padding[16], { gap: 8 }]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {`${joursLisibles(ligne.debut, ligne.fin)} · ${ligne.motif}`}
+        {actives.length ? actives.map(carteDeLaLigne) : (
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('complexeReservations.fermetures.vide', 'Aucune fermeture prévue.')}
+          </Text>
+        )}
+        {rouvertes.length ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ expanded: voirRouvertes }}
+            onPress={() => setVoirRouvertes((ouvert) => !ouvert)}
+            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+            testID="fermetures-rouvertes"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {t('complexeReservations.fermetures.rouvertesRepli', {
+                count: rouvertes.length,
+                defaultValue_one: 'Rouverte ({{count}})',
+                defaultValue_other: 'Rouvertes ({{count}})',
+              })}
             </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne.terrains.join(', ')}</Text>
-            <View
-              style={[
-                Alignments.row, Alignments.alignCenter, { gap: 8, justifyContent: 'space-between' },
-              ]}
-            >
-              <Text style={[Fonts.p3Bold, { color: etatDeLaLigne(ligne).couleur }]}>
-                {etatDeLaLigne(ligne).texte}
-              </Text>
-              {ligne.rouverte ? null : (
-                <View style={[Alignments.row, { gap: 8 }]}>
-                  <View testID={`fermeture-modifier-${ligne.cle}`}>
-                    <Button
-                      onPress={() => commencerLaModification(ligne)}
-                      size="sm"
-                      title={t('complexeReservations.fermetures.modifier', 'Modifier')}
-                      variant="Ghost"
-                    />
-                  </View>
-                  <View testID={`fermeture-rouvrir-${ligne.cle}`}>
-                    <Button
-                      onPress={() => setARouvrir(ligne)}
-                      size="sm"
-                      title={t('complexeReservations.fermetures.rouvrir', 'Rouvrir')}
-                      variant="Secondary"
-                    />
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        ))}
+            <GlyphIcon
+              color={Colors.primary200}
+              name={voirRouvertes ? 'chevronUp' : 'chevronDown'}
+              size={16}
+            />
+          </TouchableOpacity>
+        ) : null}
+        {voirRouvertes ? rouvertes.map(carteDeLaLigne) : null}
       </View>
     );
   }

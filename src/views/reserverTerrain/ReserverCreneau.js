@@ -5,6 +5,7 @@ import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
   ajouterJours,
@@ -40,6 +41,7 @@ import {
 
 import texteInsecable from '@/utils/texteInsecable';
 
+import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
 import { useIsDesktop } from '@/responsive';
 
 const COLONNE = 560;
@@ -91,7 +93,14 @@ function ReserverCreneau() {
   );
   const [joursSansLibre, setJoursSansLibre] = useState(() => new Set());
 
+  const { userData } = useAuth();
   const complexe = useComplexePublic(slug)?.data;
+  // CORR-RESA (78 A) : un joueur plus jeune que l'âge du complexe le lit AVANT de choisir un
+  // créneau
+  // (le serveur refusait seulement au bout du parcours).
+  const ageMinimum = Number(complexe?.rules?.minAge) || null;
+  const naissance = /** @type {any} */ (userData)?.birthdate;
+  const tropJeune = Boolean(ageMinimum && naissance && isBirthdateUnderAge(naissance, ageMinimum));
   const terrains = useTerrainsPublics(slug)?.data;
   const lecture = useCreneauxDuJour(slug, terrainId, date);
   const apercu = useApercuDeReservation();
@@ -494,6 +503,25 @@ function ReserverCreneau() {
             }}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{bandeau}</Text>
+          </View>
+        ) : null}
+        {tropJeune ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: withAlpha(Colors.warning500, 0.1),
+              borderColor: withAlpha(Colors.warning500, 0.45),
+              borderRadius: 16,
+              borderWidth: 1,
+              padding: 12,
+            }}
+            testID="creneau-age-minimum"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('reserverTerrain.creneau.reserveAuxAges', 'Réservé aux {{age}} ans et plus.', {
+                age: ageMinimum,
+              })}
+            </Text>
           </View>
         ) : null}
         {grille()}

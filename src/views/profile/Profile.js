@@ -400,7 +400,11 @@ function Profile({ navigation, route }) {
       // FINITIONS18 · POINT 15 (decision d'Adel « abo-suppr oui », 06/10) — la suppression
       // n'arrete PAS un abonnement pris sur l'App Store ou Google Play : l'ecran le dit, apres les
       // consequences, avant les boutons. Rien ne change a la facturation ni au parcours.
-      `${t('profile.alerts.deleteAlert.consequences')}\n\n${t(
+      // CORR-RESA (68 A) : un complexe dont il est le seul gérant est masqué (serveur).
+      `${t('profile.alerts.deleteAlert.consequences')} ${t(
+        'profile.alerts.deleteAlert.complexe',
+        'Si tu es le seul gérant d’un complexe, il est masqué : les joueurs ne le trouvent plus.',
+      )}\n\n${t(
         'profile.alerts.deleteAlert.abonnement',
         // eslint-disable-next-line max-len
         'La suppression de ton compte n’arrête pas un abonnement pris sur l’App Store ou Google Play : résilie-le dans les réglages de ton téléphone.',
