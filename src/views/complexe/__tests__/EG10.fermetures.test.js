@@ -428,7 +428,7 @@ describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
   const TRAVAUX = '2026-10-25|2026-10-26|travaux|';
 
   // CORR-RESA (74 A) : la rouverte quitte « À venir » pour le repli « Rouverte (1) ».
-  it('une rouverte reste visible dans le repli, « Rouverte », sans Rouvrir ni Modifier', async () => {
+  it('une rouverte reste dans le repli « Rouverte », sans Rouvrir ni Modifier', async () => {
     mockFermetures = {
       ...mockFermetures,
       data: [fermeture({

@@ -28,8 +28,10 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        // CORR-TEXTES-2 : une clef accordée vit en `_one` / `_other`, choisie par `count` comme i18next.
-        const forme = typeof options?.count === 'number' ? `_${new Intl.PluralRules('fr').select(options.count)}` : '';
+        // CORR-TEXTES-2 : une clef accordée vit en `_one` / `_other`, choisie par `count`.
+        const forme = typeof options?.count === 'number'
+          ? `_${new Intl.PluralRules('fr').select(options.count)}`
+          : '';
         const valeur = `${String(cle || '')}${forme}`
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);

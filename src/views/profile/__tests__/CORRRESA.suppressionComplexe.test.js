@@ -114,6 +114,8 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
   useCollectiviteRequests: () => ({ data: [] }),
   useMyCollectivites: () => ({ data: [] }),
+  // Récolte 31/10 : le profil lit aussi les demandes de gestionnaire (CORR-COLLECTIVITES 102).
+  useMyManagerRequests: () => ({ data: [] }),
 }));
 
 jest.mock('@/services/auth/authService', () => ({
@@ -254,7 +256,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test('CORR-RESA (68 A) — le message de suppression dit qu’un complexe sans autre gérant est masqué', async () => {
+test('CORR-RESA (68 A) — un complexe sans autre gérant est dit masqué', async () => {
   const arbre = await monterEcran();
 
   await appuyerSur(arbre, 'Supprimer mon compte');

@@ -1166,8 +1166,8 @@ export default {
       subscribedLocal_other: 'comptes locaux abonnés sur cet appareil.',
       subscriptionsCount_one: 'abonnement',
       subscriptionsCount_other: 'abonnements',
-      // eslint-disable-next-line max-len
       unsubscribedLocal_one: 'compte local connecté n’est pas encore abonné sur cet appareil.',
+      // eslint-disable-next-line max-len
       unsubscribedLocal_other: 'comptes locaux connectés ne sont pas encore abonnés sur cet appareil.',
     },
     yes: 'Oui',

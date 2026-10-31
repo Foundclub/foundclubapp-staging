@@ -14,7 +14,7 @@ import { contenuDEchec, varianteDeLaReservation } from '@/domains/complexe/reser
 const { t } = jest.requireActual('@/theme/strings/__mocks__/doublureTraduction');
 
 describe('69 A — une collecte arrêtée parce que le terrain est retiré', () => {
-  it('le motif du serveur (`terrain_retire`) ou la notification N-23 donnent « Collecte arrêtée »', () => {
+  it('le motif `terrain_retire` ou la notification N-23 donnent « Collecte arrêtée »', () => {
     const reservation = { role: 'reserveur', status: 'non_aboutie' };
     expect(varianteDeLaReservation(reservation, { echecDeCollecte: 'terrain_retire' }))
       .toBe('collecteTerrainRetire');
@@ -29,8 +29,10 @@ describe('69 A — une collecte arrêtée parce que le terrain est retiré', () 
 
   it('un créneau pris garde son motif, une date limite aussi', () => {
     const reservation = { status: 'non_aboutie' };
-    expect(varianteDeLaReservation(reservation, { echecDeCollecte: 'creneau_pris' })).toBe('collectePrise');
-    expect(varianteDeLaReservation(reservation, { echecDeCollecte: 'delai' })).toBe('collecteDelai');
+    expect(varianteDeLaReservation(reservation, { echecDeCollecte: 'creneau_pris' }))
+      .toBe('collectePrise');
+    expect(varianteDeLaReservation(reservation, { echecDeCollecte: 'delai' }))
+      .toBe('collecteDelai');
   });
 });
 
@@ -39,7 +41,13 @@ describe('73 A — les terrains qui ont des réservations dans la semaine', () =
     const planning = {
       terrains: [
         { days: [{ slots: [{ reservation: null, state: 'libre' }] }], documentId: 't-1' },
-        { days: [{ slots: [] }, { slots: [{ reservation: { documentId: 'r' }, state: 'reserve-app' }] }], documentId: 't-2' },
+        {
+          days: [
+            { slots: [] },
+            { slots: [{ reservation: { documentId: 'r' }, state: 'reserve-app' }] },
+          ],
+          documentId: 't-2',
+        },
       ],
     };
     expect([...terrainsAvecReservations(planning)]).toEqual(['t-2']);
@@ -50,7 +58,8 @@ describe('73 A — les terrains qui ont des réservations dans la semaine', () =
 describe('75 A — « Client depuis le … »', () => {
   it('la date de la fiche (où il a réservé), pas celle du créneau de l’historique', () => {
     const historique = [{ startsAt: '2026-11-03T17:00:00.000Z' }];
-    expect(clientDepuisLaFiche({ clientDepuis: '2026-10-05T09:00:00.000Z' }, historique)).toBe('05/10');
+    expect(clientDepuisLaFiche({ clientDepuis: '2026-10-05T09:00:00.000Z' }, historique))
+      .toBe('05/10');
     expect(clientDepuisLaFiche({ clientDepuis: null }, historique)).toBe('');
   });
 
