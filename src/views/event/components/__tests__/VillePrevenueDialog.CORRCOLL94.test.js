@@ -4,6 +4,7 @@
 // fenêtre de l'app (BottomModal en dialogue) : un titre, la phrase, un bouton « OK » qui ferme.
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 // RESA-L6B-1 (19/10/2026) — L'ENTRÉE « MES RÉSERVATIONS » DANS « MON COMPTE » (E-P10).
 // Planche EP10 état 5 (toile BLG79NHv2, choix du design S-19 validé avec les planches le 13/10) :
 // « Mes réservations » en TÊTE de « Mon compte » pour tout pratiquant, avec le nombre de
@@ -153,7 +154,7 @@ jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
-  return { useCollectiviteRequests: () => aucune, useMyManagerRequests: () => ({ data: [] }), useMyCollectivites: () => aucune };
+  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => aucune, useMyManagerRequests: () => ({ data: [] }) };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
 

@@ -50,7 +50,8 @@ function CollectiviteActualitesCanal() {
   const route = useRoute();
   const collectiviteId = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params)
     ?.collectiviteId || null;
-  // CORR-COLLECTIVITES 99 (31/10, Adel A) : l'actualité que le lien visait (notification, ligne du fil).
+  // CORR-COLLECTIVITES 99 (31/10, Adel A) : l'actualité que le lien visait (notification, ligne du
+  // fil).
   const actualiteVisee = /** @type {{ actualiteId?: string } | undefined} */ (route?.params)
     ?.actualiteId || null;
   const lecture = useMesActualitesDeLaVille();
@@ -74,7 +75,8 @@ function CollectiviteActualitesCanal() {
       !collectiviteId || actualite?.collectivite?.documentId === collectiviteId
     ));
   // Le serveur rend la plus récente d'abord (collectivite-actualite.ts) : son ordre est gardé.
-  // CORR-COLLECTIVITES 99 : le serveur ne rend jamais une actualité retirée ; visée et absente, elle
+  // CORR-COLLECTIVITES 99 : le serveur ne rend jamais une actualité retirée ; visée et absente,
+  // elle
   // a été retirée (le lien venait d'une notification ou d'une ligne posées avant le retrait).
   const visee = actualiteVisee && !lecture.isLoading && !lecture.error
     && !(Array.isArray(lecture.data?.actualites) ? lecture.data.actualites : [])
@@ -82,7 +84,10 @@ function CollectiviteActualitesCanal() {
     ? (
       <View
         accessibilityRole="alert"
-        style={[Spaces.padding[12], { backgroundColor: withAlpha(Colors.warning500, 0.12), borderRadius: 12 }]}
+        style={[
+          Spaces.padding[12],
+          { backgroundColor: withAlpha(Colors.warning500, 0.12), borderRadius: 12 },
+        ]}
         testID="canal-ville-retiree"
       >
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>

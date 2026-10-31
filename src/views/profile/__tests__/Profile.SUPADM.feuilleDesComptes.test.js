@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 // SUPADM (recette iPhone d'Adel du 23/10, point 3, capture 03) — « Changer de compte » avec 7
 // comptes : la feuille montait presque en haut, la liste s'arrêtait à 70 % de l'écran, une bande
@@ -157,7 +158,7 @@ jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
-  return { useCollectiviteRequests: () => aucune, useMyManagerRequests: () => ({ data: [] }), useMyCollectivites: () => mockVillesGerees };
+  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => mockVillesGerees, useMyManagerRequests: () => ({ data: [] }) };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
 

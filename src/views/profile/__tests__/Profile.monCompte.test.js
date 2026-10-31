@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -151,7 +152,7 @@ jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
-  return { useCollectiviteRequests: () => aucune, useMyManagerRequests: () => ({ data: [] }), useMyCollectivites: () => aucune };
+  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => aucune, useMyManagerRequests: () => ({ data: [] }) };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
 

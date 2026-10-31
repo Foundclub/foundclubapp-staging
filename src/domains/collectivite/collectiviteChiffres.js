@@ -93,7 +93,9 @@ export const phraseOccupation = (t, taux, sur24h = false, surPlage = false) => {
     });
   }
   return t(
-    sur24h ? 'collectiviteChiffres.jauge.occupationSur24h' : 'collectiviteChiffres.jauge.occupation',
+    sur24h
+      ? 'collectiviteChiffres.jauge.occupationSur24h'
+      : 'collectiviteChiffres.jauge.occupation',
     sur24h ? 'occupation : {{taux}} sur 24 h' : 'occupation : {{taux}}',
     { taux: tauxLisible(taux), ...SANS_ECHAPPEMENT },
   );

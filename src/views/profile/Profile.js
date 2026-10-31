@@ -271,8 +271,12 @@ function Profile({ navigation, route }) {
   const estVilleSeule = currentRoleKey === 'new' && managedCollectivites.length > 0;
   // CORR-COLLECTIVITES 102 (31/10, Adel A) : un compte sans rôle sportif qui ATTEND sa demande de
   // gestionnaire lit un profil allégé (ni « Membre » ni rangées de sport), comme la Ville seule.
-  const { data: mesDemandesGestionnaire } = useMyManagerRequests({ enabled: currentRoleKey === 'new' });
-  const demandeGestionnaire = currentRoleKey === 'new' && !estVilleSeule && Array.isArray(mesDemandesGestionnaire)
+  const { data: mesDemandesGestionnaire } = useMyManagerRequests({
+    enabled: currentRoleKey === 'new',
+  });
+  const demandeGestionnaire = currentRoleKey === 'new'
+    && !estVilleSeule
+    && Array.isArray(mesDemandesGestionnaire)
     ? mesDemandesGestionnaire.find((demande) => demande?.status === 'pending') || null
     : null;
   const profilDeVille = estVilleSeule || Boolean(demandeGestionnaire);
@@ -510,10 +514,11 @@ function Profile({ navigation, route }) {
       ...SANS_ECHAPPEMENT,
     });
   } else if (demandeGestionnaire) {
-    identitySubline = t('collectiviteAccueil.compte.demandeEnCours', 'Demande de gestionnaire · {{ville}}', {
-      ville: demandeGestionnaire?.collectivite?.name || '',
-      ...SANS_ECHAPPEMENT,
-    });
+    identitySubline = t(
+      'collectiviteAccueil.compte.demandeEnCours',
+      'Demande de gestionnaire · {{ville}}',
+      { ville: demandeGestionnaire?.collectivite?.name || '', ...SANS_ECHAPPEMENT },
+    );
   }
   let identityClub = null;
   let identityClubOnPress = null;

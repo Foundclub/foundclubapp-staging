@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { auteurDeLApercu } from './collectiviteCanaux';
 
 // CORR-COLLECTIVITES 88 (31/10/2026, décision d'Adel A) — la bulle d'un message de la Ville est

@@ -1007,7 +1007,8 @@ function FacilityList() {
         onPress: () => handleOpenFacilityMap(menuInstallation),
       });
     }
-    // CORR-COLLECTIVITES 91 (31/10, Adel B) : pas de « Supprimer » pour la mairie, mais « Archiver ».
+    // CORR-COLLECTIVITES 91 (31/10, Adel B) : pas de « Supprimer » pour la mairie, mais « Archiver
+    // ».
     const installationAArchiver = menuInstallation;
     menuGestes.push({
       cle: 'archiver',
@@ -1734,7 +1735,11 @@ function FacilityList() {
 
       {menuDesInstallations}
 
-      <BottomModal close={() => setAArchiver(null)} isVisible={Boolean(aArchiver)} webPresentation="dialog">
+      <BottomModal
+        close={() => setAArchiver(null)}
+        isVisible={Boolean(aArchiver)}
+        webPresentation="dialog"
+      >
         {aArchiver ? (
           <View
             accessibilityRole="alert"
@@ -1744,12 +1749,15 @@ function FacilityList() {
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
                 'collectiviteCreneaux.liste.archiverQuestion',
-                'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son historique est gardé.',
+                'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son '
+                  + 'historique est gardé.',
                 { nom: aArchiver?.name || '', ...SANS_ECHAPPEMENT },
               )}
             </Text>
             {erreurArchiver ? (
-              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreurArchiver}</Text>
+              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+                {erreurArchiver}
+              </Text>
             ) : null}
             <Button
               onPress={archiver}

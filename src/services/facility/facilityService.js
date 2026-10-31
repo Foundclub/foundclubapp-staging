@@ -560,6 +560,8 @@ export {
  * @returns {Promise<any>} `{ data: { archived, documentId } }`.
  */
 export const archiveCollectiviteInstallation = async ({ collectiviteId, facilityId }) => {
-  const response = await client.post(`/collectivites/${collectiviteId}/installations/${facilityId}/archive`);
+  const response = await client.post(
+    `/collectivites/${collectiviteId}/installations/${facilityId}/archive`,
+  );
   return response.data;
 };

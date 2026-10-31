@@ -102,13 +102,15 @@ function CollectiviteSignupStatus() {
     if (autres === 1) {
       return t(
         'collectiviteAccueil.demande.attente.dejaGereeUnAutre',
-        'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à l’équipe FoundClub.',
+        'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à '
+          + 'l’équipe FoundClub.',
         valeurs,
       );
     }
     return t(
       'collectiviteAccueil.demande.attente.dejaGereeAutres',
-      'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira à l’équipe FoundClub.',
+      'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira '
+        + 'à l’équipe FoundClub.',
       valeurs,
     );
   };
@@ -207,15 +209,22 @@ function CollectiviteSignupStatus() {
         </Text>
       ) : null}
       {demande?.status === 'pending' && aAnnuler === demande?.documentId ? (
-        <View accessibilityRole="alert" style={{ gap: 8 }} testID="collectivite-demande-annuler-confirmation">
+        <View
+          accessibilityRole="alert"
+          style={{ gap: 8 }}
+          testID="collectivite-demande-annuler-confirmation"
+        >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t('collectiviteAccueil.demande.attente.annulerQuestion', 'Annuler votre demande pour {{ville}} ?', {
-              ...SANS_ECHAPPEMENT,
-              ville: demande?.collectivite?.name || '',
-            })}
+            {t(
+              'collectiviteAccueil.demande.attente.annulerQuestion',
+              'Annuler votre demande pour {{ville}} ?',
+              { ...SANS_ECHAPPEMENT, ville: demande?.collectivite?.name || '' },
+            )}
           </Text>
           {annulation.erreur ? (
-            <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{annulation.erreur}</Text>
+            <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+              {annulation.erreur}
+            </Text>
           ) : null}
           <Button
             disabled={annulation.enCours}

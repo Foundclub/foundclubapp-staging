@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -376,7 +377,6 @@ jest.mock(
   '@/components/organisms/planning/PlanningDesInstallations',
   () => function PlanningDesInstallationsDouble() { return null; },
 );
-
 
 // CORR-COLLECTIVITES 91 (31/10/2026, décision d'Adel B) — la Ville ne pouvait pas supprimer une
 // installation créée par erreur. « Archiver l'installation » : cachée partout, l'historique gardé ;

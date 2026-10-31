@@ -1053,16 +1053,20 @@ function FormulaireDeFermeture({
         ...SANS_ECHAPPEMENT,
       },
     )
-    : t('collectiviteFermetures.confirmer.titreFermerNom', 'Fermer « {{installation}} » {{jours}} ?', {
-      installation: nom,
-      jours: plusieursJours
-        ? joursLongs
-        : t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
-          jour: joursLongs,
-          ...SANS_ECHAPPEMENT,
-        }),
-      ...SANS_ECHAPPEMENT,
-    });
+    : t(
+      'collectiviteFermetures.confirmer.titreFermerNom',
+      'Fermer « {{installation}} » {{jours}} ?',
+      {
+        installation: nom,
+        jours: plusieursJours
+          ? joursLongs
+          : t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
+            jour: joursLongs,
+            ...SANS_ECHAPPEMENT,
+          }),
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   // COLL-FIX2 (T10) : « AS Montrivage seront prévenus. Leurs séances » pour UN club.
   const quiEstPrevenu = nomsDesClubs.length
     ? t(

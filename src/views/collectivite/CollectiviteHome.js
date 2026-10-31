@@ -15,7 +15,6 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
-  rattachementsAVoir,
   availableHomeActions,
   clePremierPas,
   clubInitials,
@@ -26,6 +25,7 @@ import {
   isOwnClubRequest,
   oldestPendingRequest,
   premiersPas,
+  rattachementsAVoir,
   seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
@@ -70,9 +70,11 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import {
+  useCollectiviteClubRequests,
+} from '@/services/collectivite/collectiviteRattachementQueries';
+import {
   useCollectiviteFacilityChecksSummary,
 } from '@/services/facilityCheck/facilityCheckQueries';
-import { useCollectiviteClubRequests } from '@/services/collectivite/collectiviteRattachementQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useCollectiviteFacilityReportsSummary,
@@ -723,7 +725,9 @@ function CollectiviteHome() {
     }
     // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
     // à traiter) : elle seule attend.
-    if (!enTete && (blocDesRattachements || blocDesSignalements || blocDesControles || blocDesFermetures)) {
+    const blocsATraiter = blocDesRattachements || blocDesSignalements
+      || blocDesControles || blocDesFermetures;
+    if (!enTete && blocsATraiter) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
@@ -951,7 +955,8 @@ function CollectiviteHome() {
     if (chiffresSemaine.isLoading) return '…';
     const total = seancesSelonChiffres(facilityId);
     if (total === null) return '—';
-    // CORR-COLLECTIVITES 90 (31/10, Adel B) : des créneaux de saison prennent la place sans être des
+    // CORR-COLLECTIVITES 90 (31/10, Adel B) : des créneaux de saison prennent la place sans être
+    // des
     // séances ; deux chiffres, « 2 créneaux · aucune séance posée » (plus « Aucune séance » à côté
     // de « complet »).
     if (creneaux > 0) {
@@ -1038,8 +1043,11 @@ function CollectiviteHome() {
           {semaine.map(({ installation, query }) => {
             const blocs = Array.isArray(query?.data?.data) ? query.data.data : [];
             const complet = firstFullMoment(blocs, installation?.maxSlots);
-            // CORR-COLLECTIVITES 90 : les créneaux de saison de la semaine (blocs `origin: 'slot'`).
-            const creneaux = blocs.filter((/** @type {any} */ bloc) => (bloc?.origin ?? bloc?.raw?.origin) === 'slot').length;
+            // CORR-COLLECTIVITES 90 : les créneaux de saison de la semaine (blocs `origin:
+            // 'slot'`).
+            const creneaux = blocs.filter(
+              (/** @type {any} */ bloc) => (bloc?.origin ?? bloc?.raw?.origin) === 'slot',
+            ).length;
             let etat = null;
             if (complet) {
               etat = (
@@ -1212,7 +1220,8 @@ function CollectiviteHome() {
   // ── EN-TÊTE ────────────────────────────────────────────────────────────────────────────
   // Dans l'espace de la Ville sur téléphone, la pile cache son en-tête : l'écran pose le sien
   // (logo, cloche, Mon compte). Le compte mixte y lit « ‹ son club » à la place du logo.
-  // CORR-COLLECTIVITES 87 (31/10, Adel A) : sur le site étroit, le menu latéral est caché ; l'accueil
+  // CORR-COLLECTIVITES 87 (31/10, Adel A) : sur le site étroit, le menu latéral est caché ;
+  // l'accueil
   // pose la cloche et « Mon compte », comme dans l'app. En colonnes, le menu latéral les porte.
   const enTeteEspace = (Platform.OS !== 'web' && routeParams?.space === true)
     || (Platform.OS === 'web' && !enColonnes);

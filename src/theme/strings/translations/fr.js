@@ -5201,12 +5201,15 @@ export default {
         annuler: 'Annuler ma demande',
         annulerOui: 'Oui, annuler',
         annulerQuestion: 'Annuler votre demande pour {{ville}} ?',
-        dejaGereeAutres: 'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira à l’équipe FoundClub.',
-        dejaGereeSeul: 'Cette Ville a déjà un gestionnaire : {{premier}}. Votre demande ira à l’équipe FoundClub.',
-        dejaGereeUnAutre: 'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à l’équipe FoundClub.',
-        garder: 'Garder ma demande',
         clubs: 'Retrouver le contact général des clubs rattachés.',
+        // eslint-disable-next-line max-len
+        dejaGereeAutres: 'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira à l’équipe FoundClub.',
+        // eslint-disable-next-line max-len
+        dejaGereeSeul: 'Cette Ville a déjà un gestionnaire : {{premier}}. Votre demande ira à l’équipe FoundClub.',
+        // eslint-disable-next-line max-len
+        dejaGereeUnAutre: 'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à l’équipe FoundClub.',
         demandes: 'Trancher les demandes de créneau des clubs, avec un message.',
+        garder: 'Garder ma demande',
         le: 'Demande envoyée le {{date}}',
         permettra: 'Ce que votre espace permettra',
         planning: 'Voir qui occupe vos installations, jour par jour.',
@@ -5438,8 +5441,9 @@ export default {
       ecrire: 'Écrire aux dirigeants',
       envoyer: 'Envoyer',
       // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).
-      premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
+      // eslint-disable-next-line max-len
       personneNeLira: 'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
+      premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
       premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
       premierMessageTitreElide: 'Premier message aux dirigeants d’{{club}}',
     },
@@ -5677,10 +5681,6 @@ export default {
       semaineUne: '{{nombre}} séance',
     },
     detail: {
-      detacher: 'Détacher ce club',
-      detacherOui: 'Oui, détacher',
-      detacherQuestion: 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
-      detacherQuestionOffre: 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.',
       acceptedMany: '{{nombre}} acceptées',
       acceptedOne: '{{nombre}} acceptée',
       address: 'Adresse',
@@ -5688,6 +5688,12 @@ export default {
       badgeOwn: 'Son propre abonnement',
       coachNotListed: 'L’entraîneur n’est pas listé : la Ville s’adresse aux dirigeants.',
       contact: 'Coordonnées du club',
+      detacher: 'Détacher ce club',
+      detacherOui: 'Oui, détacher',
+      // eslint-disable-next-line max-len
+      detacherQuestion: 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
+      // eslint-disable-next-line max-len
+      detacherQuestionOffre: 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.',
       email: 'E-mail',
       error: 'La fiche du club n’a pas pu être lue.',
       header: 'Fiche du club',
@@ -6390,6 +6396,7 @@ export default {
     liste: {
       archiver: 'Archiver l’installation',
       archiverOui: 'Oui, archiver',
+      // eslint-disable-next-line max-len
       archiverQuestion: 'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son historique est gardé.',
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
@@ -6426,8 +6433,8 @@ export default {
       enAttenteTroisJours_other: '{{count}} demandes en attente sur ces trois jours.',
       // COLL-FIX2 (03/10) — un jour fermé (planche 25).
       fermeJour: 'fermeture ce jour-là',
-      libreJour: 'libre toute la journée',
       libreHorsFermeture: 'libre en dehors de la fermeture',
+      libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
       // COLL-R-APP-PLANNING (12/10, COL-014) — demande sans réponse, son heure est passée.
       nonTrancheeDatePassee: 'Non tranchée, date passée',
@@ -6879,8 +6886,8 @@ export default {
     fermerLePanneau: 'Fermer le panneau',
     fiche: {
       actualitePubliee: 'Actualité publiée : {{quand}}',
-      annulationPubliee: 'Annonce de l’annulation publiée : {{quand}}',
       affiche: 'Affiche de « {{nom}} »',
+      annulationPubliee: 'Annonce de l’annulation publiée : {{quand}}',
       annule: 'Annulé',
       annuler: 'Annuler l’événement',
       etiquette: 'Événement de la Ville',
@@ -12690,6 +12697,7 @@ export default {
       },
       retirerControle: 'Retirer ce contrôle',
       retirerControleOui: 'Oui, retirer',
+      // eslint-disable-next-line max-len
       retirerControleQuestion: 'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient celui en cours.',
       retirerRapport: 'Retirer le rapport',
       titre: 'Contrôles obligatoires',

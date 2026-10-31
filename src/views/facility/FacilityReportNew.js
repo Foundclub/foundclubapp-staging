@@ -358,7 +358,8 @@ function FacilityReportNew() {
           </Text>
         )}
 
-        {/* CORR-COLLECTIVITES 95 (31/10, Adel C) : un texte unique, juste aussi pour un encadrant. */}
+        {/* CORR-COLLECTIVITES 95 (31/10, Adel C) : un texte unique, juste aussi pour un
+            encadrant. */}
         <Text style={[Fonts.p3, Fonts.neutral200]} testID="signaler-ce-que-voit-la-ville">
           {photoPermise
             ? `${t(

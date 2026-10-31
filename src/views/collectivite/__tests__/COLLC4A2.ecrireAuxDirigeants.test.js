@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -338,7 +339,6 @@ describe('VILLE-T18C point 6 — « d’AS Montrivage », « de Montrivage FC »
     expect(textes(arbre)).toContain(attendu);
   });
 });
-
 
 // CORR-COLLECTIVITES 100 (31/10/2026, décision d'Adel A) — un message à un club sans dirigeant
 // partait dans le vide. La saisie du premier message le dit : personne ne le lira pour l'instant.

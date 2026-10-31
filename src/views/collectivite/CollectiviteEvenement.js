@@ -70,7 +70,9 @@ function CollectiviteEvenement() {
     const id = reponse?.data?.documentId || evenementId;
     if (!evenementId && id) setPublie(reponse.data);
     // CORR-COLLECTIVITES 97 (31/10, Adel A) : la fiche garde l'espace Ville (menu du site).
-    else if (id) navigation.replace(RouteNames.EvenementDeLaVille, { espace: 'ville', evenementId: id });
+    else if (id) {
+      navigation.replace(RouteNames.EvenementDeLaVille, { espace: 'ville', evenementId: id });
+    }
     return reponse;
   };
 

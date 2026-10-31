@@ -277,7 +277,9 @@ export const useDetachCollectiviteClub = () => {
   return useMutation({
     mutationFn: detachCollectiviteClub,
     onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({ queryKey: collectiviteClubsQueryKey(variables.collectiviteId) });
+      await queryClient.invalidateQueries({
+        queryKey: collectiviteClubsQueryKey(variables.collectiviteId),
+      });
       await queryClient.invalidateQueries({ queryKey: ['collectivite'] });
     },
   });

@@ -139,7 +139,8 @@ export const sousTitreDuFil = (t, { chat, clubsCount = 0, espaceVille = false })
 
 /**
  * CORR-COLLECTIVITES 88 (31/10, Adel A) — l'auteur dans l'aperçu de la liste des conversations : un
- * message signé par la Ville dit « Ville de Montrivage », comme sa bulle, jamais le prénom de l'agent.
+ * message signé par la Ville dit « Ville de Montrivage », comme sa bulle, jamais le prénom de
+ * l'agent.
  * @param {any} message - Le dernier message, avec `senderSignature`.
  * @param {string} prenom - Le prénom calculé d'avant (`prenomDansLeFil`).
  * @returns {string} L'auteur à afficher.

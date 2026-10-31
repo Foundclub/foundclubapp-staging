@@ -18,7 +18,10 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { FenetrePleinEcran } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
-import { useFacilityChecks, useRemoveFacilityCheck } from '@/services/facilityCheck/facilityCheckQueries';
+import {
+  useFacilityChecks,
+  useRemoveFacilityCheck,
+} from '@/services/facilityCheck/facilityCheckQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -117,7 +120,8 @@ function FacilityCheckPanel({
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
                 'facilityReports.controles.retirerControleQuestion',
-                'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient celui en cours.',
+                'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient '
+                  + 'celui en cours.',
               )}
             </Text>
             <Button

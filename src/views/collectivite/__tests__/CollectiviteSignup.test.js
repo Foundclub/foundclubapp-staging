@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import {
   ScrollView, Text, TextInput, TouchableOpacity,
 } from 'react-native';
@@ -595,7 +596,6 @@ describe('SVF — le prénom et le nom du compte, même lus après l ouverture',
     expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
   });
 });
-
 
 // CORR-COLLECTIVITES 102 (31/10/2026, décision d'Adel A) — « Cette Ville a déjà un gestionnaire :
 // Karim B. et 1 autre. Votre demande ira à l'équipe FoundClub », et « Annuler ma demande ».

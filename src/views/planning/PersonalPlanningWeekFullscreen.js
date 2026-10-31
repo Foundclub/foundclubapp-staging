@@ -767,7 +767,9 @@ function PlanningWeekFullscreen() {
     const debutPlage = String(planningRange.from).slice(0, 10);
     const finPlage = String(planningRange.to).slice(0, 10);
     const fermetureDansLaPlage = vue !== VUES.jour
-      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((/** @type {any} */ fermeture) => (
+      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((
+        /** @type {any} */ fermeture,
+      ) => (
         fermeture?.kind !== 'block'
         && fermeture?.startDate
         && fermeture?.endDate
@@ -785,9 +787,13 @@ function PlanningWeekFullscreen() {
         ...SANS_ECHAPPEMENT,
       });
     } else if (pic === 0) {
-      if (vue === VUES.jour) suite = t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
-      else if (fermetureDansLaPlage) {
-        suite = t('collectiviteCreneaux.planning.libreHorsFermeture', 'libre en dehors de la fermeture');
+      if (vue === VUES.jour) {
+        suite = t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
+      } else if (fermetureDansLaPlage) {
+        suite = t(
+          'collectiviteCreneaux.planning.libreHorsFermeture',
+          'libre en dehors de la fermeture',
+        );
       } else suite = t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine');
     } else {
       suite = t('collectiviteCreneaux.planning.placesLibres', {
@@ -1015,7 +1021,8 @@ function PlanningWeekFullscreen() {
   const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
     if (evenement?.documentId) {
       /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
-        // CORR-COLLECTIVITES 97 (31/10, Adel A) : ouvert depuis la Ville, la fiche garde son espace.
+        // CORR-COLLECTIVITES 97 (31/10, Adel A) : ouvert depuis la Ville, la fiche garde son
+        // espace.
         ...(route?.params?.espace === 'ville' ? { espace: 'ville' } : {}),
         evenementId: evenement.documentId,
       });

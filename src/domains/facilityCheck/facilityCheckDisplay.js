@@ -104,7 +104,10 @@ export const checkPill = (t, check, today) => {
   }
   // CORR-COLLECTIVITES 105 (31/10, Adel A) : un controle non conforme ne se dit plus « À jour ».
   if (check?.result === 'non_conforme') {
-    return { label: t('facilityReports.controles.etat.non_conforme', 'Non conforme'), tone: 'warning' };
+    return {
+      label: t('facilityReports.controles.etat.non_conforme', 'Non conforme'),
+      tone: 'warning',
+    };
   }
   if (check?.state !== 'bientot') {
     return { label: t('facilityReports.controles.etat.a_jour', 'À jour'), tone: 'success' };

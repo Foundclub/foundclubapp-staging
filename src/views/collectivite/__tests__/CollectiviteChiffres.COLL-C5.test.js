@@ -256,7 +256,8 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
       'AS Montrivage', '6 h 30', 'Montrivage FC', '5 h', 'Montrivage Basket', '0 h',
       '8 séances sur 2 installations.',
       '6 tenues · 1 annulée par le club · 2 touchées par une fermeture · 2 à venir',
-      // CORR-COLLECTIVITES 104 (31/10, Adel A) : la demande annulée par le club se dit ; la somme tombe juste.
+      // CORR-COLLECTIVITES 104 (31/10, Adel A) : la demande annulée par le club se dit ; la somme
+      // tombe juste.
       '4 reçues · 1 acceptée · 1 refusée · 1 en attente · 1 annulée par le club',
       'Délai moyen de réponse : 1,3 jour.',
       'Une demande « chaque semaine » compte une fois par date.',
@@ -401,15 +402,21 @@ describe('VILLE-TAUX-24H — le taux calculé sur 24 h se dit', () => {
   });
 });
 
-// CORR-COLLECTIVITES 103 (31/10/2026, décision d'Adel A) — sur 24 h, le taux restait proche de 0 % :
-// le serveur le compte de 8 h à 22 h et pose `plageOuverture: '08:00-22:00'` sur chaque ligne. La page
+// CORR-COLLECTIVITES 103 (31/10/2026, décision d'Adel A) — sur 24 h, le taux restait proche de 0 %
+// :
+// le serveur le compte de 8 h à 22 h et pose `plageOuverture: '08:00-22:00'` sur chaque ligne. La
+// page
 // le dit (admin tests/authz/CORRCOLL-103-104-chiffres.test.js).
 describe('CORR-COLLECTIVITES 103 — le taux calculé de 8 h à 22 h se dit', () => {
   const PLAGE = {
     ...SEMAINE,
     installations: [
-      { ...SEMAINE.installations[0], capaciteMinutes: 5040, plageOuverture: '08:00-22:00', taux: 2 },
-      { ...SEMAINE.installations[1], capaciteMinutes: 11280, plageOuverture: '08:00-22:00', taux: 6 },
+      {
+        ...SEMAINE.installations[0], capaciteMinutes: 5040, plageOuverture: '08:00-22:00', taux: 2,
+      },
+      {
+        ...SEMAINE.installations[1], capaciteMinutes: 11280, plageOuverture: '08:00-22:00', taux: 6,
+      },
     ],
     ville: { capaciteMinutes: 16320, minutes: 750, taux: 5 },
   };

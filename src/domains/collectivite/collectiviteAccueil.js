@@ -99,13 +99,16 @@ const horodatage = (/** @type {unknown} */ valeur) => {
 };
 
 /**
- * CORR-COLLECTIVITES 89 (31/10, Adel A) — les demandes de rattachement VENUES d'un club, en attente,
+ * CORR-COLLECTIVITES 89 (31/10, Adel A) — les demandes de rattachement VENUES d'un club, en
+ * attente,
  * auxquelles la Ville peut répondre : elles comptent dans « Ce qui vous attend ».
  * @param {unknown} demandes - `GET /collectivites/:id/club-requests`.
  * @returns {any[]} Les demandes à voir.
  */
 export const rattachementsAVoir = (demandes) => (Array.isArray(demandes) ? demandes : []).filter(
-  (demande) => demande?.kind === 'attach_request' && demande?.state === 'pending' && demande?.canAnswer === true,
+  (demande) => demande?.kind === 'attach_request'
+    && demande?.state === 'pending'
+    && demande?.canAnswer === true,
 );
 
 /**

@@ -143,6 +143,9 @@ function EcrireAuxDirigeants({
       {getErrorMessage(/** @type {any} */ (erreur))}
     </Text>
   ) : null;
+  // CORR-COLLECTIVITES 100 : un club sans dirigeant inscrit (personne ne lirait le message).
+  const sansDirigeant = Array.isArray(/** @type {any} */ (club).leaders)
+    && /** @type {any} */ (club).leaders.length === 0;
 
   if (premierMessage !== null) {
     return (
@@ -173,8 +176,12 @@ function EcrireAuxDirigeants({
         </Text>
         {/* CORR-COLLECTIVITES 100 (31/10, Adel A) : un club sans dirigeant inscrit ; le message ne
             serait lu par personne. */}
-        {Array.isArray(/** @type {any} */ (club).leaders) && /** @type {any} */ (club).leaders.length === 0 ? (
-          <Text accessibilityRole="alert" style={[Fonts.p3Bold, Fonts.warning500]} testID={`${testID}-personne`}>
+        {sansDirigeant ? (
+          <Text
+            accessibilityRole="alert"
+            style={[Fonts.p3Bold, Fonts.warning500]}
+            testID={`${testID}-personne`}
+          >
             {t(
               'collectiviteCanaux.privee.personneNeLira',
               'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',

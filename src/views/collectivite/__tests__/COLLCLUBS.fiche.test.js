@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Linking, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -308,8 +309,10 @@ jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
 
-// CORR-COLLECTIVITES 101 (31/10/2026, décision d'Adel A) — la Ville ne pouvait pas détacher un club,
-// même sans dirigeant. « Détacher ce club », avec une confirmation qui dit ce qui s'arrête ; puis la
+// CORR-COLLECTIVITES 101 (31/10/2026, décision d'Adel A) — la Ville ne pouvait pas détacher un
+// club,
+// même sans dirigeant. « Détacher ce club », avec une confirmation qui dit ce qui s'arrête ; puis
+// la
 // liste des clubs.
 describe('CORR-COLLECTIVITES 101 — « Détacher ce club »', () => {
   it('le bouton, la confirmation, puis le geste et le retour à la liste', async () => {

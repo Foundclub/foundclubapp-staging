@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -287,9 +288,9 @@ describe('COLL-ACCUEIL — planche 4 : « Mon compte », la porte secondaire', (
   });
 });
 
-
 // CORR-COLLECTIVITES 102 (31/10/2026, décision d'Adel A) — pendant l'attente d'une demande de
-// gestionnaire, le profil montrait des entrées de sport et le rôle « Membre ». Il est allégé : « Demande
+// gestionnaire, le profil montrait des entrées de sport et le rôle « Membre ». Il est allégé : «
+// Demande
 // de gestionnaire · Ville de … » sous le nom, aucune rangée sportive.
 describe('CORR-COLLECTIVITES 102 — le profil d’un demandeur, allégé', () => {
   afterEach(() => { mockDemandesGestionnaire = []; });

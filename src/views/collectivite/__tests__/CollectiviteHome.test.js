@@ -1388,6 +1388,7 @@ describe('SECVUE — le bloc « Sécurité et suivi » de l accueil', () => {
 });
 /* eslint-enable max-len */
 
+/* eslint-disable max-len -- donnees de test CORR-COLLECTIVITES : les fixtures se lisent mieux sur une ligne */
 // CORR-COLLECTIVITES 103 (31/10/2026, décision d'Adel A) — le taux se compte de 8 h à 22 h ; le
 // serveur pose `plageOuverture`. La ligne de l'accueil le dit, comme la page « Chiffres ».
 describe('CORR-COLLECTIVITES 103 — « Cette semaine » : le taux de 8 h à 22 h se dit', () => {
@@ -1408,7 +1409,8 @@ describe('CORR-COLLECTIVITES 103 — « Cette semaine » : le taux de 8 h à 22 
 });
 
 // CORR-COLLECTIVITES 87 (31/10/2026, décision d'Adel A) — sur le site à 390 px, le menu latéral est
-// caché : l'accueil de la Ville n'avait ni cloche ni « Mon compte ». La cloche et l'avatar s'affichent
+// caché : l'accueil de la Ville n'avait ni cloche ni « Mon compte ». La cloche et l'avatar
+// s'affichent
 // en haut de l'accueil, comme dans l'app ; à 1280 px, le menu latéral les porte (pas de doublon).
 describe('CORR-COLLECTIVITES 87 — la cloche et le compte sur le site étroit', () => {
   const { Platform } = jest.requireActual('react-native');
@@ -1443,7 +1445,9 @@ describe('CORR-COLLECTIVITES 89 — un club demande à rejoindre la Ville', () =
   afterEach(() => { mockDemandesDeClubs = []; });
 
   it('plus « Rien ne vous attend » : « 1 club demande à rejoindre la Ville », qui ouvre Clubs', async () => {
-    mockDemandesDeClubs = [{ canAnswer: true, club: { name: 'Judo Club E' }, documentId: 'r1', kind: 'attach_request', state: 'pending' }];
+    mockDemandesDeClubs = [{
+      canAnswer: true, club: { name: 'Judo Club E' }, documentId: 'r1', kind: 'attach_request', state: 'pending',
+    }];
     const arbre = await monter();
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'collectivite-home-rien')).toHaveLength(0);
     expect(textes(arbre)).toContain('1 club demande à rejoindre la Ville');
@@ -1455,10 +1459,13 @@ describe('CORR-COLLECTIVITES 89 — un club demande à rejoindre la Ville', () =
 });
 
 // CORR-COLLECTIVITES 90 (31/10/2026, décision d'Adel B) — la carte d'une installation disait
-// « Aucune séance » à côté de « complet mar. 18:00 » : les créneaux de saison prennent la place sans
+// « Aucune séance » à côté de « complet mar. 18:00 » : les créneaux de saison prennent la place
+// sans
 // être des séances. Deux chiffres : « 2 créneaux · aucune séance posée ».
 describe('CORR-COLLECTIVITES 90 — créneaux et séances posées, deux chiffres', () => {
-  const creneau = { date: '2030-10-03', endTime: '19:30', origin: 'slot', startTime: '18:00' };
+  const creneau = {
+    date: '2030-10-03', endTime: '19:30', origin: 'slot', startTime: '18:00',
+  };
   it('2 créneaux, 0 séance selon « Chiffres » : « 2 créneaux · aucune séance posée »', async () => {
     mockSemaine = [{ installation: TILLEULS, query: lu({ data: [creneau, { ...creneau, date: '2030-10-04' }], meta: { total: 2 } }) }];
     mockChiffresSemaine = {
@@ -1477,3 +1484,4 @@ describe('CORR-COLLECTIVITES 90 — créneaux et séances posées, deux chiffres
     expect(textes(await monter())).toContain('1 créneau · 3 séances posées · occupation : 7 %');
   });
 });
+/* eslint-enable max-len */

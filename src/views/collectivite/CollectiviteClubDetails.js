@@ -781,22 +781,31 @@ function CollectiviteClubDetails() {
             )}
           </Text>
         </TouchableOpacity>
-        {/* CORR-COLLECTIVITES 101 (31/10, Adel A) : la Ville détache le club (le club est prévenu). */}
+        {/* CORR-COLLECTIVITES 101 (31/10, Adel A) : la Ville détache le club (le club est
+            prévenu). */}
         {confirmerDetacher ? (
-          <View accessibilityRole="alert" style={{ gap: 8 }} testID="fiche-club-detacher-confirmation">
+          <View
+            accessibilityRole="alert"
+            style={{ gap: 8 }}
+            testID="fiche-club-detacher-confirmation"
+          >
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
                 offre.kind === 'collectivite'
                   ? 'collectiviteClubs.detail.detacherQuestionOffre'
                   : 'collectiviteClubs.detail.detacherQuestion',
                 offre.kind === 'collectivite'
-                  ? 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.'
-                  : 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
+                  ? 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement '
+                    + 'offert par la Ville s’arrête. Ses dirigeants sont prévenus.'
+                  : 'Détacher {{club}} ? Il ne verra plus vos installations. '
+                    + 'Ses dirigeants sont prévenus.',
                 { club: club?.name || '', ...SANS_ECHAPPEMENT },
               )}
             </Text>
             {erreurDetacher ? (
-              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreurDetacher}</Text>
+              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+                {erreurDetacher}
+              </Text>
             ) : null}
             <Button
               disabled={detacher.isPending}

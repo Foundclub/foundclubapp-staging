@@ -12,7 +12,8 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 /**
  * La fenêtre « C'est annulé · La Ville est prévenue ».
- * @param {{ message: string | null, onClose: () => void }} props - La phrase (rien si null) et la fermeture.
+ * @param {{ message: string | null, onClose: () => void }} props - La phrase (rien si null) et la
+ * fermeture.
  * @returns {JSX.Element} La fenêtre.
  */
 function VillePrevenueDialog({ message, onClose }) {

@@ -3,7 +3,7 @@
 // P11-q6-exemple-tel ecran 4) : « À refaire avant le 12 mars 2027 » / « Dernier : 12/03/2026, Société [X]. »,
 // « Noter le contrôle fait », et l historique de la serie (« 12/03/2026 » / « Société [X] · rapport joint »).
 // En PANNEAU a droite sur ordinateur, en FENETRE plein ecran au telephone (le gabarit des tunnels).
-import { Linking, Text } from 'react-native';
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import FacilityCheckPanel from '../FacilityCheckPanel';

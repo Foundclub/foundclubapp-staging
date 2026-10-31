@@ -92,8 +92,8 @@ jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
   useCollectiviteRequests: () => ({ data: [] }),
-  useMyManagerRequests: () => ({ data: [] }),
   useMyCollectivites: () => ({ data: [] }),
+  useMyManagerRequests: () => ({ data: [] }),
 }));
 
 jest.mock('@/services/auth/authService', () => ({
