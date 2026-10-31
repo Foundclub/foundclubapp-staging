@@ -166,9 +166,21 @@ function TournamentSettingsEdit({ navigation, route }) {
   const pointsLoss = useMemo(() => Number.parseInt(String(pointsLossText || '0'), 10) || 0, [pointsLossText]);
   const pointsForfeit = useMemo(() => Number.parseInt(String(pointsForfeitText || '0'), 10) || 0, [pointsForfeitText]);
   const isRosterRangeInvalid = Boolean(minRosterSize && maxRosterSize && minRosterSize > maxRosterSize);
+  // CORR-EVENEMENTS 129 (décision B) : des réglages qui peuvent marcher. Un effectif minimum
+  // saisi vaut au moins 1 ; une poule compte au moins 2 équipes (les acceptées, sinon le maximum).
+  const minRosterTyped = String(minRosterText || '').trim();
+  const isMinRosterTooLow = minRosterTyped !== '' && !(Number.parseInt(minRosterTyped, 10) >= 1);
+  const acceptedTeamCount = (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
+    .filter((team) => String(team?.status || '').toLowerCase() === 'accepted').length;
+  const teamCountForGroups = acceptedTeamCount >= 2 ? acceptedTeamCount : (maxTeams || 0);
+  const maxGroupCount = Math.max(1, Math.floor(teamCountForGroups / 2));
   const usesGroups = ['groups_only', 'groups_to_knockout', 'round_robin'].includes(formatMode);
   const usesKnockout = ['groups_to_knockout', 'knockout_only'].includes(formatMode);
   const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0 && ![16, 2, 32, 4, 8].includes(knockoutSize);
+  const isGroupCountTooHigh = usesGroups && formatMode !== 'round_robin'
+    && teamCountForGroups >= 2 && groupCount > maxGroupCount;
+  const hasInvalidSettings = isRosterRangeInvalid || isKnockoutSizeInvalid
+    || isMinRosterTooLow || isGroupCountTooHigh;
   const canManageTournament = Boolean(canManageEvent(event));
   let resolvedGroupCount = 0;
   if (formatMode === 'round_robin') {
@@ -406,6 +418,14 @@ function TournamentSettingsEdit({ navigation, route }) {
                 </View>
               </View>
 
+              {isMinRosterTooLow ? (
+                <Text style={[Fonts.p3, Fonts.error500]}>
+                  {t(
+                    'tournamentSettingsEdit.minSquadAtLeastOne',
+                    'L’effectif minimum est d’au moins 1 joueur.',
+                  )}
+                </Text>
+              ) : null}
               {isRosterRangeInvalid ? (
                 <Text style={[Fonts.p3, Fonts.error500]}>
                   {t(
@@ -462,6 +482,17 @@ function TournamentSettingsEdit({ navigation, route }) {
                         style={inputStyle}
                         value={groupCountText}
                       />
+                      {isGroupCountTooHigh ? (
+                        <Text style={[Fonts.p3, Fonts.error500]}>
+                          {t('tournamentSettingsEdit.tooManyGroups', {
+                            count: maxGroupCount,
+                            defaultValue_one: 'Au plus {{count}} poule pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
+                            defaultValue_other: 'Au plus {{count}} poules pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
+                            teams: teamCountForGroups,
+                            ...SANS_ECHAPPEMENT,
+                          })}
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -767,9 +798,12 @@ function TournamentSettingsEdit({ navigation, route }) {
           <View style={[Spaces.gap[12]]}>
             {canManageTournament ? (
               <Button
-                disabled={isRosterRangeInvalid || isKnockoutSizeInvalid || updateMutation.isPending}
+                disabled={hasInvalidSettings || updateMutation.isPending}
                 isLoading={updateMutation.isPending}
-                onPress={() => updateMutation.mutate()}
+                onPress={() => {
+                  if (hasInvalidSettings) return;
+                  updateMutation.mutate();
+                }}
                 title={t('tournamentSettingsEdit.save', 'Enregistrer')}
                 variant="Primary"
               />

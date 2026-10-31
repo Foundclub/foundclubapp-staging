@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Alert } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { deleteTeamDefaultComposition, saveTeamDefaultComposition } from '@/services/team/teamService';
@@ -442,5 +442,38 @@ describe('TacticalBoard — ce que D45 ne devait PAS toucher', () => {
     const arbre = monter(parametresEvenement({ readOnly: true }));
 
     expect(texteRendu(arbre)).toContain('Composition publiée');
+  });
+});
+
+// CORR-EVENEMENTS point 122 (recette du site, 30/10) — en lecture seule, le plateau disait
+// « Place tes titulaires sur le terrain », et à 1440 px le terrain (largeur de la FENÊTRE)
+// débordait sous le menu. Décision A : retirer la phrase, borner le terrain à sa colonne.
+describe('CORR-EVENEMENTS 122 — le plateau en lecture seule', () => {
+  test('🐞 lecture seule sans titulaire : pas de « Place tes titulaires »', () => {
+    const arbre = monter(parametresEvenement({ canEdit: false, readOnly: true }));
+
+    expect(texteRendu(arbre)).not.toContain('Place tes titulaires');
+    expect(texteRendu(arbre)).not.toContain('Maintiens un joueur du banc');
+  });
+
+  test('en édition, la consigne reste', () => {
+    const arbre = monter(parametresEvenement());
+
+    expect(texteRendu(arbre)).toContain('Place tes titulaires');
+  });
+
+  test('🐞 le terrain prend la largeur de SA colonne, pas celle de la fenêtre', () => {
+    const arbre = monter(parametresEvenement({ canEdit: false, readOnly: true }));
+    const colonne = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'tactical-field-column',
+    )[0];
+    expect(colonne).toBeDefined();
+    act(() => {
+      colonne.props.onLayout({ nativeEvent: { layout: { height: 900, width: 800, x: 0, y: 0 } } });
+    });
+    const largeurs = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'tactical-field',
+    ).map((/** @type {any} */ n) => StyleSheet.flatten(n.props.style).width);
+    expect(largeurs[0]).toBe(772);
   });
 });

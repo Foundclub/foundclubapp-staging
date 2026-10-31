@@ -441,6 +441,13 @@ function EventWizardLogistics({ navigation, route }) {
     [tournamentDays],
   );
 
+  // CORR-EVENEMENTS 127 (décision A) : une date passée se dit sous le champ, tout de suite ;
+  // sur le site, l'alerte de « Suivant » passait inaperçue et le bouton semblait muet.
+  const debutChoisi = new Date(date);
+  debutChoisi.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+  const dateEstPassee = !(isTournament && isMultiDayTournament)
+    && debutChoisi.getTime() <= Date.now();
+
   const handleNext = () => {
     const fullStartDate = new Date(date);
     fullStartDate.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
@@ -667,6 +674,11 @@ function EventWizardLogistics({ navigation, route }) {
                 setRecurrenceEndDate(suite.au);
                 setIsRecurrent(true);
               }}
+              sousLaDate={dateEstPassee ? (
+                <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.error500 }]}>
+                  {t('eventWizard.errors.datePastUnderField', 'Cette date est passée : choisis un jour à venir.')}
+                </Text>
+              ) : null}
               repetition={{
                 actif: isRecurrent,
                 au: recurrenceEndDate,

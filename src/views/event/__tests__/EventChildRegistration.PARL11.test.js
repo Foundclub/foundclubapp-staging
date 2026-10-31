@@ -325,3 +325,30 @@ describe('PAR-L11b — chez l organisateur', () => {
     expect(queryByText('Enfants inscrits par leurs parents')).toBeNull();
   });
 });
+
+// CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Inscrire mes enfants » restait affiché
+// quand tous les enfants étaient déjà inscrits. Décision A : le cacher quand tous le sont.
+describe('CORR-EVENEMENTS 126 — plus de bouton quand chaque enfant est déjà inscrit', () => {
+  test('🐞 tous inscrits ou en attente : pas de « Inscrire mes enfants »', () => {
+    mockChildren.current = [
+      { age: 9, documentId: 'anissa', firstname: 'Anissa' },
+      { age: 7, documentId: 'martin', firstname: 'Martin' },
+    ];
+    mockMine.current = [
+      { child: { documentId: 'anissa', firstname: 'Anissa' }, documentId: 'r-1', status: 'pending' },
+      { child: { documentId: 'martin', firstname: 'Martin' }, documentId: 'r-2', status: 'accepted' },
+    ];
+    render(<EventChildRegistration event={DETECTION} />);
+
+    expect(queryByText('Inscrire mes enfants')).toBeNull();
+  });
+
+  test('un enfant encore inscriptible : le bouton reste', () => {
+    mockMine.current = [
+      { child: { documentId: 'anissa', firstname: 'Anissa' }, documentId: 'r-1', status: 'pending' },
+    ];
+    render(<EventChildRegistration event={DETECTION} />);
+
+    expect(queryByText('Inscrire mes enfants')).not.toBeNull();
+  });
+});

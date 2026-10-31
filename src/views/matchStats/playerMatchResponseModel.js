@@ -173,7 +173,11 @@ export const buildConsistencyIssues = ({
  */
 export const buildInitialQuantitative = (response, sport) => {
   const payload = response?.sportPayload || {};
-  const initial = { minutesPlayed: String(response?.minutesPlayed ?? 0) };
+  // CORR-EVENEMENTS 124 : sans temps enregistré, aucune pastille allumée (« 0 » allumait
+  // « Pas joué » juste après « J'ai joué »). Laissé vide, l'envoi part à 0, comme avant.
+  const initial = {
+    minutesPlayed: response?.minutesPlayed == null ? '' : String(response.minutesPlayed),
+  };
   getFigureKeys(sport, true).forEach((key) => { initial[key] = String(payload?.[key] ?? 0); });
   if (normalizeSport(sport) === 'football') initial.cleanSheet = Boolean(payload?.cleanSheet);
   return initial;

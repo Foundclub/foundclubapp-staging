@@ -29,6 +29,9 @@ const mockInvalidateQueries = jest.fn();
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+// CORR-EVENEMENTS 119 et 130 : les feuilles « série » et « équipe » tirent la BottomModal native (gorhom).
+jest.mock('@/views/event/components/CancelSeriesSheet', () => () => null);
+jest.mock('@/views/event/components/TournamentTeamSheet', () => () => null);
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,

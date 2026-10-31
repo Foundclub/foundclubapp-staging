@@ -228,6 +228,8 @@ function PendingMatchStatsScreen({ navigation }) {
         : { eventId: prompt?.eventId }),
       actionType: prompt?.actionType || 'coach_team_review',
       actorRole: prompt?.actorRole || 'player',
+      // CORR-EVENEMENTS 124 : après l'envoi, la réponse revient ici par le retour.
+      fromPendingMatchStats: true,
       // FINITIONS15 point 9g : l'écran s'ouvre avec le titre de la carte (« AS Montrivage — … »).
       matchLabel: describeCoachPromptTitle(
         prompt,

@@ -30,6 +30,7 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -99,18 +100,21 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 /* eslint-disable perfectionist/sort-imports */
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
+import { buildConvocationRoster } from '@/views/matchCallUp/matchConvocationUtils';
 import {
   formatTimeInZone,
   resolveAttendanceWindow,
   resolveCallMode,
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
+import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentTeamSheet from './components/TournamentTeamSheet';
 import MatchBilanCard from './components/MatchBilanCard';
 import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
@@ -520,7 +524,17 @@ function EventDetails({ navigation, route }) {
   });
   const offreAuxEnfants = offreDeParticipation === 'children';
   const rienARepondre = ['children', 'none'].includes(offreDeParticipation);
+  // CORR-EVENEMENTS 123 (décision A) : un membre convié répond « Présent / Absent », comme sur
+  // sa convocation (POST /events/:id/rsvp), au lieu d'une demande « Participer » sans « Absent ».
+  const repondPresentAbsent = !canEdit
+    && isSignedIn
+    && isConvenedMember
+    && !isTournamentEvent
+    && !rienARepondre
+    && !peutPasserPresentApresCoup
+    && !reponsesFermeesAuMembre;
   const afficherParticiper = !canEdit
+    && !repondPresentAbsent
     && !rienARepondre
     && !peutPasserPresentApresCoup
     && !reponsesFermeesAuMembre
@@ -568,8 +582,11 @@ function EventDetails({ navigation, route }) {
       .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId)),
     [registeredTournamentSourceTeamIds, userData?.trainedTeams],
   );
+  // CORR-EVENEMENTS 130 (décision A) : un parent ne joue pas le tournoi ; ces deux gestes de
+  // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
+    && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
     && !currentUserTournamentTeam
@@ -577,6 +594,7 @@ function EventDetails({ navigation, route }) {
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
+    && !offreAuxEnfants
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
@@ -855,8 +873,20 @@ function EventDetails({ navigation, route }) {
   }, [annulerSeanceFermee, eventId, t]);
   // RWDIRIG (29/10, décision d'Adel « 4- A ») — « Annuler » de « Gérer l'événement », comme le
   // téléphone : confirmation, annulation, puis retour (useEventMutations.cancelEventMutation).
-  // ponytail: une seule séance, même dans une série ; le téléphone propose aussi « les suivantes »
-  // et « toutes », qu'un confirm du navigateur ne sait pas offrir (sortie : une vraie feuille).
+  // CORR-EVENEMENTS 119 (décision A) : dans une série, une vraie feuille propose, comme le
+  // téléphone, « cette séance », « les suivantes » ou « toutes » (CancelSeriesSheet).
+  const [feuilleAnnulationSerie, setFeuilleAnnulationSerie] = useState(false);
+  // CORR-EVENEMENTS 128 (décision A) : le programme d'un stage, jour par jour, replié au-delà
+  // de 7 jours. Mêmes données que l'onglet « Jours » du téléphone (`childStageEvents`).
+  const [programmeDeplie, setProgrammeDeplie] = useState(false);
+  const joursDuStage = useMemo(() => (
+    String(event?.eventFormat || '').toLowerCase() === 'stage_parent'
+    && Array.isArray(event?.childStageEvents)
+      ? event.childStageEvents
+        .filter((jour) => jour?.isActive !== false)
+        .sort((gauche, droite) => new Date(gauche?.date || 0) - new Date(droite?.date || 0))
+      : []
+  ), [event?.childStageEvents, event?.eventFormat]);
   const annulerEvenement = useMutation({
     mutationFn: cancelEvent,
     onSuccess: (/** @type {any} */ reponse) => {
@@ -877,12 +907,24 @@ function EventDetails({ navigation, route }) {
     },
   });
   const annulerLEvenement = useCallback(() => {
-    if (!eventId || typeof window?.confirm !== 'function') return;
+    if (!eventId) return;
+    if (event?.recurrenceGroupId) {
+      setFeuilleAnnulationSerie(true);
+      return;
+    }
+    if (typeof window?.confirm !== 'function') return;
     const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
       'eventDetails.modals.cancelEvent.description',
     )}`);
     if (ok) annulerEvenement.mutate({ documentId: eventId });
-  }, [annulerEvenement, eventId, t]);
+  }, [annulerEvenement, event?.recurrenceGroupId, eventId, t]);
+  const annulerAvecLaPortee = useCallback((/** @type {'single' | 'future' | 'all'} */ portee) => {
+    if (!eventId) return;
+    setFeuilleAnnulationSerie(false);
+    annulerEvenement.mutate(portee === 'single'
+      ? { documentId: eventId }
+      : { documentId: eventId, recurrenceMode: portee });
+  }, [annulerEvenement, eventId]);
   const matchEncartSummary = useMemo(() => {
     if (!isMatchEvent) return null;
     const summary = buildMatchHeaderScoreSummary({
@@ -1321,6 +1363,14 @@ function EventDetails({ navigation, route }) {
     mutationFn: (requestId) => deleteEventParticipation(requestId),
     onSuccess: invalidateEventQueries,
   });
+  const rsvpMutation = useMutation({
+    mutationFn: (/** @type {'present' | 'absent'} */ reponse) => respondToEventRsvp(eventId, reponse),
+    onError: (/** @type {any} */ rsvpError) => setActionError(rsvpError?.message || t(
+      'playerConvocation.alerts.error.message',
+      'Impossible d’enregistrer ta réponse. Réessaie dans un instant.',
+    )),
+    onSuccess: invalidateEventQueries,
+  });
   // POINTAGE — « Je passe en present », apres coup.
   const latePresenceMutation = useMutation({
     mutationFn: () => respondToEventRsvp(eventId, 'present'),
@@ -1645,17 +1695,21 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.TournamentTeamDetails, { eventId, teamId: teamDocumentId });
   }, [eventId, navigation]);
 
-  const handleCreateTournamentTeam = useCallback(async () => {
-    const proposedName = window.prompt(t(
-      'eventDetails.tournamentTeamName',
-      'Nom de l équipe tournoi',
-    ));
-    const trimmedName = String(proposedName || '').trim();
-    if (!trimmedName) return;
+  // CORR-EVENEMENTS 130 (décision A) : plus de `window.prompt` — une vraie feuille
+  // (TournamentTeamSheet) demande le nom de l'équipe, ou l'équipe du club à inscrire.
+  const [feuilleEquipeTournoi, setFeuilleEquipeTournoi] = useState(
+    /** @type {'name' | 'choose' | null} */ (null),
+  );
+  const handleCreateTournamentTeam = useCallback(() => {
     setActionError('');
+    setFeuilleEquipeTournoi('name');
+  }, []);
+  const creerLEquipeDuTournoi = useCallback(async (/** @type {string} */ nom) => {
     try {
-      await createTournamentTeamMutation.mutateAsync({ name: trimmedName });
+      await createTournamentTeamMutation.mutateAsync({ name: nom });
+      setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
+      setFeuilleEquipeTournoi(null);
       setActionError(mutationError?.message || t(
         'eventDetails.unableToCreateThisTournament3',
         'Impossible de créer cette équipe tournoi.',
@@ -1663,32 +1717,24 @@ function EventDetails({ navigation, route }) {
     }
   }, [createTournamentTeamMutation, t]);
 
-  const handleRegisterTournamentTeam = useCallback(async () => {
+  const handleRegisterTournamentTeam = useCallback(() => {
     if (availableTournamentSourceTeams.length === 0) return;
-    const optionsText = availableTournamentSourceTeams
-      .map((team, index) => `${index + 1}. ${team?.name || t(
-        'eventDetails.teamFallback',
-        'Equipe',
-      )}`)
-      .join('\n');
-    const rawChoice = window.prompt(t(
-      'eventDetails.chooseATeamToRegister',
-      'Choisis une équipe à inscrire :\n{{optionsText}}',
-      { optionsText, ...SANS_ECHAPPEMENT },
-    ));
-    const choiceIndex = Number.parseInt(String(rawChoice || '').trim(), 10) - 1;
-    const sourceTeam = availableTournamentSourceTeams[choiceIndex];
-    if (!sourceTeam?.documentId) return;
     setActionError('');
+    setFeuilleEquipeTournoi('choose');
+  }, [availableTournamentSourceTeams]);
+  const inscrireLEquipeDuClub = useCallback(async (/** @type {any} */ sourceTeam) => {
+    if (!sourceTeam?.documentId) return;
     try {
       await registerTournamentTeamMutation.mutateAsync(sourceTeam.documentId);
+      setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
+      setFeuilleEquipeTournoi(null);
       setActionError(mutationError?.message || t(
         'eventDetails.unableToRegisterThisTeam2',
         'Impossible d inscrire cette équipe.',
       ));
     }
-  }, [availableTournamentSourceTeams, registerTournamentTeamMutation, t]);
+  }, [registerTournamentTeamMutation, t]);
 
   const handleReviewTournamentTeam = useCallback(async (teamDocumentId, status) => {
     setActionError('');
@@ -1742,8 +1788,25 @@ function EventDetails({ navigation, route }) {
     t,
     trainerKeys: getEventTrainerKeys(event),
   });
+  // CORR-EVENEMENTS 121 (décision A) : la fiche compte comme le fil de l'équipe — un joueur
+  // sans app convoqué est présent d'office (`buildAnswerGroups`, même roster).
+  const joueursSansAppParEquipe = useMemo(() => {
+    const parEquipe = new Map();
+    convocationBranches.forEach((branch) => {
+      const teamId = branch?.team?.documentId;
+      if (!teamId) return;
+      const sansApp = buildConvocationRoster({ published: branch?.published })
+        .filter((row) => row.isManual && row.player)
+        .map((row) => ({ ...row.player, sansApp: true }));
+      if (sansApp.length) parEquipe.set(teamId, [...(parEquipe.get(teamId) || []), ...sansApp]);
+    });
+    return parEquipe;
+  }, [convocationBranches]);
   const participantSections = [
-    ...teamParticipationSections,
+    ...teamParticipationSections.map((section) => {
+      const sansApp = joueursSansAppParEquipe.get(section.key);
+      return sansApp ? { ...section, participating: [...section.participating, ...sansApp] } : section;
+    }),
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
   // 🔢 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur) — les trois tuiles de la colonne de
@@ -1840,7 +1903,10 @@ function EventDetails({ navigation, route }) {
       </span>
       {people.length > 0 ? (
         <div style={{ display: 'grid', gap: 12 }}>
-          {people.map((person) => renderParticipantCard(person))}
+          {people.map((person) => renderParticipantCard(
+            person,
+            person?.sansApp ? t('eventDetails.participantWithoutApp', 'sans l’app') : '',
+          ))}
         </div>
       ) : (
         <div style={{ color: mutedTextColor, fontSize: 13 }}>{emptyMessage}</div>
@@ -2290,9 +2356,11 @@ function EventDetails({ navigation, route }) {
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
                       >
-                        Validation
-                        {' '}
-                        {event.validationMode === 'manual' ? 'manuelle' : 'auto'}
+                        {/* CORR-EVENEMENTS 126 : le serveur ne valide seul que les membres des
+                            équipes conviées ; extérieurs et enfants attendent l'organisateur. */}
+                        {event.validationMode === 'manual'
+                          ? t('eventDetails.validationPill.manual', 'Validation manuelle')
+                          : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
                       </span>
                     ) : null}
                     {event?.sessionStatus ? (
@@ -2376,6 +2444,31 @@ function EventDetails({ navigation, route }) {
                   ) : null}
                   {offreAuxEnfants && !canEdit ? (
                     <EventChildRegistration event={event} navigation={navigation} />
+                  ) : null}
+                  {repondPresentAbsent ? (
+                    [
+                      ['present', t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
+                      ['absent', t('playerConvocation.actions.absent', 'Absent'), participationState?.isMissing],
+                    ].map(([reponse, libelle, choisie]) => (
+                      <button
+                        aria-pressed={Boolean(choisie)}
+                        disabled={rsvpMutation.isPending}
+                        key={String(reponse)}
+                        onClick={() => {
+                          setActionError('');
+                          rsvpMutation.mutate(/** @type {'present' | 'absent'} */ (reponse));
+                        }}
+                        style={{
+                          ...(choisie ? primaryButtonStyle : outlineButtonStyle),
+                          cursor: rsvpMutation.isPending ? 'not-allowed' : 'pointer',
+                          opacity: rsvpMutation.isPending ? 0.7 : 1,
+                          padding: '12px 16px',
+                        }}
+                        type="button"
+                      >
+                        {libelle}
+                      </button>
+                    ))
                   ) : null}
                   {afficherParticiper ? (
                     <button
@@ -2749,6 +2842,68 @@ function EventDetails({ navigation, route }) {
                   </p>
                 </div>
               ) : null}
+              {joursDuStage.length > 0 ? (
+                <div
+                  data-event-section="stage-programme"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 10,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.stage.programme', 'Programme du stage')}
+                  </span>
+                  {event?.stageStartDate && event?.stageEndDate ? (
+                    <span style={{ color: softTextColor, fontSize: 14 }}>
+                      {t('eventDetails.stage.fromTo', 'Du {{debut}} au {{fin}}', {
+                        debut: new Date(event.stageStartDate).toLocaleDateString(localeDesFormats()),
+                        fin: new Date(event.stageEndDate).toLocaleDateString(localeDesFormats()),
+                        ...SANS_ECHAPPEMENT,
+                      })}
+                    </span>
+                  ) : null}
+                  {(programmeDeplie ? joursDuStage : joursDuStage.slice(0, 7)).map((jour, index) => (
+                    <button
+                      key={jour?.documentId || jour?.date}
+                      onClick={() => navigation.navigate(RouteNames.EventDetails, { eventId: jour?.documentId })}
+                      style={{
+                        ...outlineButtonStyle,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        textAlign: 'left',
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${new Date(jour?.date).toLocaleDateString(localeDesFormats(), {
+                          day: '2-digit', month: 'short', weekday: 'long',
+                        })}`}
+                      </span>
+                      <span style={{ color: mutedTextColor }}>
+                        {`${String(jour?.startTime || '').slice(0, 5)} – ${String(jour?.endTime || '').slice(0, 5)}`}
+                      </span>
+                    </button>
+                  ))}
+                  {joursDuStage.length > 7 && !programmeDeplie ? (
+                    <button
+                      onClick={() => setProgrammeDeplie(true)}
+                      style={{ ...outlineButtonStyle, padding: '10px 14px' }}
+                      type="button"
+                    >
+                      {t('eventDetails.stage.showMoreDays', {
+                        count: joursDuStage.length - 7,
+                        defaultValue_one: 'Voir le dernier jour',
+                        defaultValue_other: 'Voir les {{count}} autres jours',
+                      })}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
 
               {hasVisibleEventTasks ? (
                 <div>
@@ -2884,7 +3039,8 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              {supportsEventComposition && (canEdit || canViewPublishedComposition) ? (
+              {/* CORR-EVENEMENTS 123 : le joueur ne voit ce bloc qu'une fois une composition publiée. */}
+              {supportsEventComposition && (canEdit || (canViewPublishedComposition && convocationBranches.length > 0)) ? (
                 <div
                   style={{
                     background: softSurfaceColor,
@@ -2899,6 +3055,7 @@ function EventDetails({ navigation, route }) {
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
                       {t('eventDetails.teamLineUp', "Composition d'equipes")}
                     </strong>
+                    {canEdit ? (
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {staffCompositionPayload?.draft
                         ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
@@ -2906,6 +3063,7 @@ function EventDetails({ navigation, route }) {
                           ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.')
                           : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
                     </span>
+                    ) : null}
                   </div>
 
                   {convocationBranches.length > 0 ? (
@@ -3614,6 +3772,20 @@ function EventDetails({ navigation, route }) {
           </div>
         ) : null}
       </div>
+      <TournamentTeamSheet
+        isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
+        mode={feuilleEquipeTournoi}
+        onChoose={inscrireLEquipeDuClub}
+        onClose={() => setFeuilleEquipeTournoi(null)}
+        onCreate={creerLEquipeDuTournoi}
+        teams={availableTournamentSourceTeams}
+      />
+      <CancelSeriesSheet
+        isPending={annulerEvenement.isPending}
+        isVisible={feuilleAnnulationSerie}
+        onChoose={annulerAvecLaPortee}
+        onClose={() => setFeuilleAnnulationSerie(false)}
+      />
       <JoinEventModal
         clubName={event?.team?.club?.name || event?.club?.name || ''}
         errorMessage={actionError}

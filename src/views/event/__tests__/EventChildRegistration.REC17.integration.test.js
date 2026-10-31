@@ -177,10 +177,9 @@ test('REC17-003 integration : reponse membre de Romain et demande de Greg separe
   expect(getByText('Présent')).toBeTruthy();
   expect(getByText('Absent')).toBeTruthy();
   expect(getByText("Greg — en attente de l'organisateur")).toBeTruthy();
-  press('Inscrire mes enfants');
-  expect(getByText('Déjà membre de cette équipe : utilise la réponse au nom de cet enfant.')).toBeTruthy();
-  expect(getByText("Demande déjà envoyée, en attente de l'organisateur.")).toBeTruthy();
-  expect(pressable('Continuer (0)').props.disabled).toBe(true);
+  // 🎯 CORR-EVENEMENTS 126 — ADAPTÉ : Romain répond comme membre, Greg est déjà en attente ;
+  // plus aucun enfant à inscrire, donc plus de « Inscrire mes enfants » (décision A d'Adel).
+  expect(queryByText('Inscrire mes enfants')).toBeNull();
   expect(mockRegister).not.toHaveBeenCalled();
 });
 

@@ -37,6 +37,9 @@ const CARRIED_ROUTES = new Set([
   RouteNames.ReserverEchec,
   RouteNames.ReserverRecapitulatif,
   RouteNames.ReserverResultat,
+  // CORR-EVENEMENTS 122 (30/10/2026) — le plateau en lecture seule ouvert depuis la carte d'une
+  // convocation en liste : sans ses joueurs (objets), il disait « 0/0 placés », banc vide.
+  RouteNames.TacticalBoardV2,
 ]);
 
 /** Au-dela, les plus anciennes entrees s'oublient : un onglet ne grossit pas sans fin. */
