@@ -1002,6 +1002,8 @@ function PlanningWeekFullscreen() {
   const ouvrirLEvenementDeLaVille = (/** @type {any} */ evenement) => {
     if (evenement?.documentId) {
       /** @type {any} */ (navigation).navigate(RouteNames.EvenementDeLaVille, {
+        // CORR-COLLECTIVITES 97 (31/10, Adel A) : ouvert depuis la Ville, la fiche garde son espace.
+        ...(route?.params?.espace === 'ville' ? { espace: 'ville' } : {}),
         evenementId: evenement.documentId,
       });
     }

@@ -358,18 +358,19 @@ function FacilityReportNew() {
           </Text>
         )}
 
+        {/* CORR-COLLECTIVITES 95 (31/10, Adel C) : un texte unique, juste aussi pour un encadrant. */}
         <Text style={[Fonts.p3, Fonts.neutral200]} testID="signaler-ce-que-voit-la-ville">
           {photoPermise
             ? `${t(
-              'facilityReports.membre.ceQueVoitLaVille',
-              'La Ville verra ton rôle et ton club, pas ton nom.',
+              'facilityReports.membre.ceQueVoitLaVilleRole',
+              'La Ville voit ton rôle et ton club ; ton nom si tu encadres.',
             )} ${t(
               'facilityReports.membre.photoVueVille',
               'La photo n’est vue que par la Ville.',
             )}`
             : t(
-              'facilityReports.membre.ceQueVoitLaVille',
-              'La Ville verra ton rôle et ton club, pas ton nom.',
+              'facilityReports.membre.ceQueVoitLaVilleRole',
+              'La Ville voit ton rôle et ton club ; ton nom si tu encadres.',
             )}
         </Text>
 

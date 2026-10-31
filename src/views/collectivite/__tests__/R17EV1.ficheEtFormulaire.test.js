@@ -405,7 +405,9 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
     // VILLEEVT-CODE (4B) : une création publiée montre d'abord la vitrine ; « Voir la fiche » la remplace.
     expect(mockNavigation.replace).not.toHaveBeenCalled();
     await touche(arbre, 'bouton:Voir la fiche');
+    // CORR-COLLECTIVITES 97 (31/10, Adel A) : la fiche garde l'espace Ville.
     expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', {
+      espace: 'ville',
       evenementId: 'evt-neuf',
     });
   });
@@ -500,7 +502,7 @@ describe('VILLEEVT-CODE — la vitrine après la publication (4B)', () => {
     await act(async () => {
       await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
     });
-    expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-1' });
+    expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', { espace: 'ville', evenementId: 'evt-1' });
   });
 });
 
@@ -525,5 +527,27 @@ describe('VILLEEVT-CODE — la fiche d’une date de série, ses places (2B, 3B)
     await touche(arbre, 'bouton:Annuler l’événement');
     await touche(arbre, 'bouton:Annuler cette date seulement');
     expect(mockAnnuler).toHaveBeenCalledWith('evt-1');
+  });
+});
+
+// CORR-COLLECTIVITES 98 (31/10/2026, décision d'Adel A) — « habitants » seulement pour un événement
+// public (niveau 3) ; réservé aux clubs ou à leurs membres, la vitrine dit « aux clubs ».
+describe('CORR-COLLECTIVITES 98 — la vitrine dit à qui partager', () => {
+  it.each([
+    ['clubs', 'Faites-le savoir : partagez-le aux clubs.'],
+    ['actualite', 'Faites-le savoir : partagez-le aux clubs.'],
+    ['public', 'Faites-le savoir : partagez-le aux clubs et aux habitants.'],
+  ])('niveau « %s » : %s', async (visibility, phrase) => {
+    mockParams = { collectiviteId: 'ville-montrivage' };
+    mockFiche = { data: null, isLoading: false };
+    mockPublier.mockImplementationOnce(async () => ({
+      data: { ...VUE_DE_LA_VILLE, documentId: 'evt-neuf', visibility },
+    }));
+    const arbre = await monter(<CollectiviteEvenement />);
+    await act(async () => {
+      await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
+    });
+    const lus = textes(arbre);
+    expect(lus).toContain(phrase);
   });
 });

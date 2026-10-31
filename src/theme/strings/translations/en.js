@@ -6456,6 +6456,7 @@ export default {
       partager: 'Share',
       publie: 'It’s published',
       sousTitre: 'Spread the word: share it with clubs and residents.',
+      sousTitreClubs: 'Spread the word: share it with clubs.',
       voirFiche: 'See the event page',
     },
   },
@@ -11935,6 +11936,7 @@ export default {
       ajouterPhoto: 'Add a photo (optional)',
       autreChose: 'Report something else',
       ceQueVoitLaVille: 'The city will see your role and your club, not your name.',
+      ceQueVoitLaVilleRole: 'The city sees your role and your club; your name if you supervise.',
       compteur_one: '{{count}} in progress',
       compteur_other: '{{count}} in progress',
       consignePhoto: 'Photograph the problem, never a person. No photos in the changing rooms.',
@@ -12017,6 +12019,7 @@ export default {
       etatASurveiller_other:
         '{{count}} safety reports have been open since {{date}}; the facility stays open.',
       etatEnService: 'No open report, no closure in progress.',
+      etatEnServiceSecurite: 'No safety report, no closure in progress.',
       etatFermee: 'From {{debut}} to {{fin}}',
       etatFermeeMotif: 'From {{debut}} to {{fin}} · {{motif}}',
       etatNonConforme: 'Non-compliant inspection: {{label}}; the facility stays open.',

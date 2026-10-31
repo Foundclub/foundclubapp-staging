@@ -7030,6 +7030,7 @@ export default {
       partager: 'Partager',
       publie: 'C’est publié',
       sousTitre: 'Faites-le savoir : partagez-le aux clubs et aux habitants.',
+      sousTitreClubs: 'Faites-le savoir : partagez-le aux clubs.',
       voirFiche: 'Voir la fiche',
     },
   },
@@ -12671,6 +12672,7 @@ export default {
       ajouterPhoto: 'Ajouter une photo (facultatif)',
       autreChose: 'Signaler autre chose',
       ceQueVoitLaVille: 'La Ville verra ton rôle et ton club, pas ton nom.',
+      ceQueVoitLaVilleRole: 'La Ville voit ton rôle et ton club ; ton nom si tu encadres.',
       compteur_one: '{{count}} en cours',
       compteur_other: '{{count}} en cours',
       consignePhoto:
@@ -12757,6 +12759,7 @@ export default {
         '{{count}} signalements « sécurité » sont ouverts depuis le {{date}} ; l’installation '
         + 'reste ouverte.',
       etatEnService: 'Aucun signalement ouvert, aucune fermeture en cours.',
+      etatEnServiceSecurite: 'Aucun signalement de sécurité, aucune fermeture en cours.',
       etatFermee: 'Du {{debut}} au {{fin}}',
       etatFermeeMotif: 'Du {{debut}} au {{fin}} · {{motif}}',
       etatNonConforme: 'Contrôle non conforme : {{label}} ; l’installation reste ouverte.',

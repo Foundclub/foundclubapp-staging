@@ -127,9 +127,10 @@ function FacilitySecurityTab({
   const motif = state.closure?.reason
     ? t(`collectiviteFermetures.motifs.${state.closure.reason}`, state.closure.reason)
     : null;
+  // CORR-COLLECTIVITES 96 (31/10, Adel A) : l'état ne compte que la sécurité ; la phrase le dit.
   let phraseEtat = t(
-    'facilityReports.ville.etatEnService',
-    'Aucun signalement ouvert, aucune fermeture en cours.',
+    'facilityReports.ville.etatEnServiceSecurite',
+    'Aucun signalement de sécurité, aucune fermeture en cours.',
   );
   // R17CTRL-1 (22/10) : un controle EN COURS non conforme met l installation « À surveiller ».
   // (L etat vient du serveur ; ici, seulement la phrase.)

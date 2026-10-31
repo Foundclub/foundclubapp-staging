@@ -722,7 +722,7 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     expect(case22).toHaveLength(1);
     await act(async () => { case22[0].props.onPress(); });
     expect(mockNavigation.navigate)
-      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+      .toHaveBeenCalledWith('EvenementDeLaVille', { espace: 'ville', evenementId: 'evt-fete' }); // CORR-COLLECTIVITES 97
   });
 
   test('17 ROUGE-AVANT — ordinateur, Jour : dans la colonne du stade, et il s’ouvre', async () => {
@@ -735,7 +735,7 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     expect(grille.laneOf(evenement)).toBe(2);
     grille.onEvenementVillePress(evenement.raw.evenementDeLaVille);
     expect(mockNavigation.navigate)
-      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+      .toHaveBeenCalledWith('EvenementDeLaVille', { espace: 'ville', evenementId: 'evt-fete' }); // CORR-COLLECTIVITES 97
   });
 
   test('18 ROUGE-AVANT — téléphone, Jour : sous le stade, le bloc clair', async () => {
@@ -764,6 +764,6 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     expect(evenement).toBeDefined();
     calendrier.onEventPress(evenement);
     expect(mockNavigation.navigate)
-      .toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-fete' });
+      .toHaveBeenCalledWith('EvenementDeLaVille', { espace: 'ville', evenementId: 'evt-fete' }); // CORR-COLLECTIVITES 97
   });
 });

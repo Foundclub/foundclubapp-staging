@@ -243,7 +243,8 @@ describe('R17SS1 — l onglet « Sécurité et suivi »', () => {
     mockSuivi = { data: { data: [], meta: { closures: [], state: { closure: null, code: 'en_service', securityOpenCount: 0 } } }, isError: false, isLoading: false };
     const tout = textes(monter()).join(' | ');
     expect(tout).toContain('En service');
-    expect(tout).toContain('Aucun signalement ouvert, aucune fermeture en cours.');
+    // CORR-COLLECTIVITES 96 (31/10, Adel A) : l'état ne compte que la sécurité ; il le dit.
+    expect(tout).toContain('Aucun signalement de sécurité, aucune fermeture en cours.');
   });
 
   it('P10-securite-ordi F : pendant la lecture, le squelette — deux blocs de 56 et 80, avec un fond', () => {

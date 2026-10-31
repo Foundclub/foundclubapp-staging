@@ -121,7 +121,8 @@ describe('R17SS1 — signaler un problème (membre)', () => {
     expect(parId(arbre, 'signaler-photo').length).toBeGreaterThan(0);
     const tout = textes(arbre).join(' | ');
     expect(tout).toContain('Photographie le problème, jamais une personne. Pas de photo dans les vestiaires.');
-    expect(tout).toContain('La Ville verra ton rôle et ton club, pas ton nom. La photo n’est vue que par la Ville.');
+    // CORR-COLLECTIVITES 95 (31/10, Adel C) : le texte unique, juste aussi pour un encadrant.
+    expect(tout).toContain('La Ville voit ton rôle et ton club ; ton nom si tu encadres. La photo n’est vue que par la Ville.');
     expect(tout).toContain('Envoyé à Ville de Montrivage');
   });
 

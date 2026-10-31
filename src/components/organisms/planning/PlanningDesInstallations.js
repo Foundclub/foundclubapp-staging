@@ -283,7 +283,11 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
   // R17-EVT-1-BIS (a) : un événement de la Ville ouvre SA fiche.
   const ouvrirEvenement = useCallback((/** @type {any} */ evenement) => {
     if (evenement?.documentId) {
-      navigation.navigate(RouteNames.EvenementDeLaVille, { evenementId: evenement.documentId });
+      // CORR-COLLECTIVITES 97 (31/10, Adel A) : la fiche garde l'espace Ville (menu du site).
+      navigation.navigate(RouteNames.EvenementDeLaVille, {
+        espace: 'ville',
+        evenementId: evenement.documentId,
+      });
     }
   }, [navigation]);
 
