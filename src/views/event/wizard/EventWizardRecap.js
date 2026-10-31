@@ -422,14 +422,27 @@ function EventWizardRecap({ navigation }) {
   );
   // QUOTA-118 — le compteur que le serveur décompte : un match consomme MATCH_PUBLISH
   // (admin is-event-trainer-create.ts, même détection par nom que `isMatch`).
-  const eventPublishQuotaItem = useMemo(
-    () => getSubscriptionQuotaItem(
-      freeUsageSummary,
-      isMatch ? 'MATCH_PUBLISH' : 'EVENT_PUBLISH',
+  // QUOTA-118-2 — et il le décompte PAR ÉQUIPE (subscription-permission getFreeQuotaState :
+  // la ligne de l'équipe, sinon 1/1). Sans équipe envoyée (tournoi autonome), tout le résumé.
+  const quotaTeamDocumentId = isTournament && state.tournamentScopeMode === 'autonomous'
+    ? null
+    : state.team?.documentId || null;
+  const eventPublishQuotaItem = useMemo(() => {
+    const quotaType = isMatch ? 'MATCH_PUBLISH' : 'EVENT_PUBLISH';
+    const teamRows = (Array.isArray(freeUsageSummary) ? freeUsageSummary : [])
+      .filter((row) => row?.quotaType === quotaType && row?.teamDocumentId === quotaTeamDocumentId);
+    if (!quotaTeamDocumentId) {
+      return getSubscriptionQuotaItem(freeUsageSummary, quotaType, subscriptionAccessLevel);
+    }
+    const teamDefault = {
+      limit: 1, quotaType, remaining: 1, used: 0,
+    };
+    return getSubscriptionQuotaItem(
+      teamRows.length ? teamRows : [teamDefault],
+      quotaType,
       subscriptionAccessLevel,
-    ),
-    [freeUsageSummary, isMatch, subscriptionAccessLevel],
-  );
+    );
+  }, [freeUsageSummary, isMatch, quotaTeamDocumentId, subscriptionAccessLevel]);
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
 

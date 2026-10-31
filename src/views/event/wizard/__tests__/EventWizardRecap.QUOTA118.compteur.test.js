@@ -9,6 +9,10 @@ import EventWizardRecap from '../EventWizardRecap';
 // (admin is-event-trainer-create.ts) décompte MATCH_PUBLISH quand le nom du type contient
 // « match », EVENT_PUBLISH sinon. Le récapitulatif lisait toujours EVENT_PUBLISH : pour un
 // match, il annonçait le reste du quota événement et le transmettait à la fiche créée.
+// QUOTA-118-2 (31/10, reponse du chef « 1 C ») — le serveur decompte PAR EQUIPE
+// (subscription-permission.getFreeQuotaState filtre par equipe ; une equipe sans ligne a 1/1).
+// Le recapitulatif additionnait les lignes de toutes les equipes : un match deja publie sur
+// l'equipe 1 affichait 0/1 sur l'equipe 2, que le serveur laisse pourtant publier.
 // Montage repris de EventWizardRecap.BH07.echecPartiel.test.js.
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
@@ -65,8 +69,9 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-// Un dirigeant gratuit : son événement gratuit est INTACT, son match gratuit est UTILISÉ.
-// Les deux compteurs diffèrent exprès : lire le mauvais se voit.
+// Un dirigeant gratuit de trois equipes. Equipe 1 : evenement gratuit INTACT, match gratuit
+// UTILISÉ (les deux compteurs different expres : lire le mauvais se voit). Equipe 2 : aucune
+// ligne. Equipe 3 : match gratuit intact.
 jest.mock('@/domains/auth/useAuth', () => {
   const { USER_ROLES } = jest.requireActual('@/domains/auth/authUseCases');
   return {
@@ -78,6 +83,9 @@ jest.mock('@/domains/auth/useAuth', () => {
         },
         {
           limit: 1, quotaType: 'MATCH_PUBLISH', remaining: 0, teamDocumentId: 'equipe-1', used: 1,
+        },
+        {
+          limit: 1, quotaType: 'MATCH_PUBLISH', remaining: 1, teamDocumentId: 'equipe-3', used: 0,
         },
       ],
       subscriptionAccessLevel: 'FREE',
@@ -164,9 +172,10 @@ function PriseDeCourant() {
 /**
  * Cree l'evenement du type donne et rend le compteur que l'ecran transmet a la fiche creee.
  * @param {{ documentId: string, name: string }} type Le type d'evenement choisi.
+ * @param {string} [equipe] L'equipe choisie dans l'assistant.
  * @returns {Promise<any>} `subscriptionFollowUp` de la fiche ouverte apres creation.
  */
-const compteurTransmis = async (type) => {
+const compteurTransmis = async (type, equipe = 'equipe-1') => {
   /** @type {any[]} */
   const reinitialisations = [];
   const navigation = {
@@ -182,7 +191,10 @@ const compteurTransmis = async (type) => {
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(rendre(null)); });
-  act(() => semer({ payload: { ...ETAT_DE_BASE, type }, type: 'SET_META' }));
+  act(() => semer({
+    payload: { ...ETAT_DE_BASE, team: { ...ETAT_DE_BASE.team, documentId: equipe }, type },
+    type: 'SET_META',
+  }));
   act(() => {
     arbre.update(rendre(createElement(EventWizardRecap, { navigation, route: { params: {} } })));
   });
@@ -206,6 +218,26 @@ test('QUOTA-118 — un evenement hors match garde le compteur EVENT_PUBLISH', as
     beforeRemaining: 1,
     consumedCount: 1,
     quotaType: 'EVENT_PUBLISH',
+    total: 1,
+  });
+});
+
+const MATCH = { documentId: 'type-match', name: 'Match amical' };
+
+test('QUOTA-118-2 — une equipe sans ligne garde son match gratuit apres une autre', async () => {
+  expect(await compteurTransmis(MATCH, 'equipe-2')).toEqual({
+    beforeRemaining: 1,
+    consumedCount: 1,
+    quotaType: 'MATCH_PUBLISH',
+    total: 1,
+  });
+});
+
+test('QUOTA-118-2 — une equipe avec sa ligne lit SA ligne, pas la somme des equipes', async () => {
+  expect(await compteurTransmis(MATCH, 'equipe-3')).toEqual({
+    beforeRemaining: 1,
+    consumedCount: 1,
+    quotaType: 'MATCH_PUBLISH',
     total: 1,
   });
 });
