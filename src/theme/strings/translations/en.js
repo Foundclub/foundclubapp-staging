@@ -4901,6 +4901,10 @@ export default {
         titre: 'You',
       },
     },
+    // CORR-INVITATION-VILLE (31/10) — the home card of an account invited by the town.
+    invitationVille: {
+      titre: 'The town invited you: sign up your club',
+    },
     nousContacter: 'Contact us',
     porte: {
       a11y: 'My local authority, {{nom}}',

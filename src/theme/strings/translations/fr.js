@@ -5269,6 +5269,10 @@ export default {
         titre: 'Vous',
       },
     },
+    // CORR-INVITATION-VILLE (31/10) — la carte de l'accueil d'un compte invité par la Ville.
+    invitationVille: {
+      titre: 'La Ville t’a invité : inscris ton club',
+    },
     nousContacter: 'Nous contacter',
     porte: {
       a11y: 'Ma collectivité, {{nom}}',
