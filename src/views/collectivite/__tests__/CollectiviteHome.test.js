@@ -1406,3 +1406,50 @@ describe('CORR-COLLECTIVITES 103 — « Cette semaine » : le taux de 8 h à 22 
     expect(lus).toContain('6 séances · occupation : 5 % de 8 h à 22 h');
   });
 });
+
+// CORR-COLLECTIVITES 87 (31/10/2026, décision d'Adel A) — sur le site à 390 px, le menu latéral est
+// caché : l'accueil de la Ville n'avait ni cloche ni « Mon compte ». La cloche et l'avatar s'affichent
+// en haut de l'accueil, comme dans l'app ; à 1280 px, le menu latéral les porte (pas de doublon).
+describe('CORR-COLLECTIVITES 87 — la cloche et le compte sur le site étroit', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const os = Platform.OS;
+  afterEach(() => { Platform.OS = os; });
+  const presents = (/** @type {any} */ arbre) => ({
+    cloche: arbre.root.findAll((/** @type {any} */ n) => n.type?.name === 'NotificationBadgeMock').length > 0,
+    compte: arbre.root.findAll((/** @type {any} */ n) => n.type?.name === 'ProfileButtonMock').length > 0,
+  });
+
+  it('site, 390 px : la cloche et l’avatar', async () => {
+    Platform.OS = 'web';
+    mockLargeur = 390;
+    expect(presents(await monter())).toEqual({ cloche: true, compte: true });
+  });
+
+  it('site, 1280 px : ni l’un ni l’autre (le menu latéral les porte)', async () => {
+    Platform.OS = 'web';
+    mockLargeur = 1280;
+    expect(presents(await monter())).toEqual({ cloche: false, compte: false });
+  });
+});
+
+// CORR-COLLECTIVITES 89 (31/10/2026, décision d'Adel A) — « Rien ne vous attend » alors qu'un club
+// demande à rejoindre : la demande compte dans « Ce qui vous attend », et mène à Clubs.
+/** @type {any[]} */
+let mockDemandesDeClubs = [];
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useCollectiviteClubRequests: () => ({ data: mockDemandesDeClubs, isLoading: false }),
+}));
+describe('CORR-COLLECTIVITES 89 — un club demande à rejoindre la Ville', () => {
+  afterEach(() => { mockDemandesDeClubs = []; });
+
+  it('plus « Rien ne vous attend » : « 1 club demande à rejoindre la Ville », qui ouvre Clubs', async () => {
+    mockDemandesDeClubs = [{ canAnswer: true, club: { name: 'Judo Club E' }, documentId: 'r1', kind: 'attach_request', state: 'pending' }];
+    const arbre = await monter();
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'collectivite-home-rien')).toHaveLength(0);
+    expect(textes(arbre)).toContain('1 club demande à rejoindre la Ville');
+    const bloc = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'collectivite-home-rattachements'
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { bloc.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteClubs', expect.objectContaining({ collectiviteId: 'ville-montrivage' }));
+  });
+});

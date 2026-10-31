@@ -15,6 +15,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  rattachementsAVoir,
   availableHomeActions,
   clePremierPas,
   clubInitials,
@@ -71,6 +72,7 @@ import {
 import {
   useCollectiviteFacilityChecksSummary,
 } from '@/services/facilityCheck/facilityCheckQueries';
+import { useCollectiviteClubRequests } from '@/services/collectivite/collectiviteRattachementQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useCollectiviteFacilityReportsSummary,
@@ -167,6 +169,9 @@ function CollectiviteHome() {
   const signalements = useCollectiviteFacilityReportsSummary(collectivite ? collectiviteId : null);
   // R17-CONTROLES (20/10, Q6 B) — les controles a refaire dans les 30 jours, ou en retard.
   const controles = useCollectiviteFacilityChecksSummary(collectivite ? collectiviteId : null);
+  // CORR-COLLECTIVITES 89 (31/10, Adel A) : un club qui demande à rejoindre la Ville l'attend aussi
+  // (même clef que l'onglet Clubs : une seule lecture).
+  const demandesDeClubs = useCollectiviteClubRequests(collectivite ? collectiviteId : null);
   // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
   // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
   const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
@@ -594,6 +599,34 @@ function CollectiviteHome() {
     </TouchableOpacity>
   ) : null;
 
+  // CORR-COLLECTIVITES 89 — « 1 club demande à rejoindre la Ville » : un appui ouvre Clubs.
+  const rattachements = rattachementsAVoir(demandesDeClubs.data);
+  const blocDesRattachements = rattachements.length ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => ouvrir(RouteNames.CollectiviteClubs)}
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        verreStyle,
+        { gap: 4 },
+      ]}
+      testID="collectivite-home-rattachements"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('collectiviteAccueil.attente.rattachements', {
+          ...SANS_ECHAPPEMENT,
+          count: rattachements.length,
+          defaultValue_one: '{{count}} club demande à rejoindre la Ville',
+          defaultValue_other: '{{count}} clubs demandent à rejoindre la Ville',
+        })}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.primary500]}>
+        {t('collectiviteAccueil.attente.rattachementsRepondre', 'Répondre dans Clubs')}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   // R17-CONTROLES (20/10, REC17-011 lot 2, Q6 B ; planche P11-securite-ou-ca-vit porte 1) —
   // « Contrôle à refaire avant le 12 mars » : le plus urgent des controles a refaire dans les 30
   // jours (ou en retard), « n contrôles à refaire » s il y en a plusieurs ; un appui ouvre l onglet
@@ -690,10 +723,11 @@ function CollectiviteHome() {
     }
     // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
     // à traiter) : elle seule attend.
-    if (!enTete && (blocDesSignalements || blocDesControles || blocDesFermetures)) {
+    if (!enTete && (blocDesRattachements || blocDesSignalements || blocDesControles || blocDesFermetures)) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
+          {blocDesRattachements}
           {blocDesSignalements}
           {blocDesControles}
           {blocDesFermetures}
@@ -767,6 +801,7 @@ function CollectiviteHome() {
             () => ouvrir(RouteNames.CollectiviteRequests),
           )}
         </View>
+        {blocDesRattachements}
         {blocDesSignalements}
         {blocDesControles}
         {blocDesFermetures}
@@ -1157,7 +1192,10 @@ function CollectiviteHome() {
   // ── EN-TÊTE ────────────────────────────────────────────────────────────────────────────
   // Dans l'espace de la Ville sur téléphone, la pile cache son en-tête : l'écran pose le sien
   // (logo, cloche, Mon compte). Le compte mixte y lit « ‹ son club » à la place du logo.
-  const enTeteEspace = Platform.OS !== 'web' && routeParams?.space === true;
+  // CORR-COLLECTIVITES 87 (31/10, Adel A) : sur le site étroit, le menu latéral est caché ; l'accueil
+  // pose la cloche et « Mon compte », comme dans l'app. En colonnes, le menu latéral les porte.
+  const enTeteEspace = (Platform.OS !== 'web' && routeParams?.space === true)
+    || (Platform.OS === 'web' && !enColonnes);
   const retour = routeParams?.returnLabel;
   let enTeteEcran = null;
   if (retour) {
