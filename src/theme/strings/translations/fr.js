@@ -3093,6 +3093,11 @@ export default {
     },
     state: {
       backToClubs: 'Retour aux clubs',
+      // CORR-INVITATION-VILLE 59 (31/10) — club neuf, fiche publique en 404.
+      enPreparation: {
+        body: 'La fiche de ce club se prépare. Réessaie dans une minute.',
+        title: 'Fiche en préparation',
+      },
       loadError: {
         fallback: 'Réessaie dans quelques instants.',
         title: 'Impossible de charger le club',

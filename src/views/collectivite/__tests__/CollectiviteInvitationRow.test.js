@@ -27,10 +27,6 @@ jest.mock('@/platform/storage', () => ({
 let mockUserData;
 const mockNavigate = jest.fn();
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate }),
-}));
-
 jest.mock('react-i18next', () => {
   const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
@@ -89,7 +85,7 @@ const monter = async () => {
   /** @type {any} */
   let arbre;
   await act(async () => {
-    arbre = renderer.create(<CollectiviteInvitationRow />);
+    arbre = renderer.create(<CollectiviteInvitationRow navigation={{ navigate: mockNavigate }} />);
   });
   return arbre;
 };
@@ -194,7 +190,7 @@ describe('CORR-INVITATION-VILLE — la place sur l’accueil', () => {
   it('la carte est dans le défilement, juste sous la porte de la Ville', () => {
     const source = readFileSync(join(__dirname, '..', '..', 'home', 'HomeHub.js'), 'utf8');
     const porte = source.indexOf('<CollectivitePorteRow />');
-    const carte = source.indexOf('<CollectiviteInvitationRow />');
+    const carte = source.indexOf('<CollectiviteInvitationRow navigation={navigation} />');
     const banniere = source.indexOf('<PlayerModeBanner');
     expect(porte).toBeGreaterThan(-1);
     expect(carte).toBeGreaterThan(porte);

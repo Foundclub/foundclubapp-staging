@@ -1,4 +1,3 @@
-import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -32,14 +31,15 @@ import { RouteNames } from '@/navigation/routeNames';
  * useLiensEnAttente (PrivateNavigator), que le site n'a pas. L'accueil du site n'est monté qu'une
  * fois l'étape d'âge et le choix du statut faits (SharedHomeRoute) : le compte est prêt. La page
  * du lien, ouverte avec un compte, efface le repère : on n'y revient qu'une fois.
+ * @param {object} props - Les propriétés.
+ * @param {any} props.navigation - La navigation de l'accueil (HomeHub).
  * @returns {import('react').ReactElement | null} La carte, ou rien.
  */
-function CollectiviteInvitationRow() {
+function CollectiviteInvitationRow({ navigation }) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
-  const navigation = /** @type {any} */ (useNavigation());
   const { userData } = useAuth();
 
   useEffect(() => {

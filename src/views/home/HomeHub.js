@@ -2692,7 +2692,7 @@ function HomeHubContent({ auth, navigation, route }) {
         <CollectivitePorteRow />
         {/* CORR-INVITATION-VILLE (31/10) — invité par la Ville sans club encore : la carte qui
             rouvre l'invitation (et, sur le site, le retour au lien après la connexion). */}
-        <CollectiviteInvitationRow />
+        <CollectiviteInvitationRow navigation={navigation} />
         {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
             PAR-L12 (E25) — trois positions : rôle du compte, joueur, parent. Le mode parent ne
             s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27.

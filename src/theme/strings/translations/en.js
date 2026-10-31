@@ -2820,6 +2820,11 @@ export default {
     },
     state: {
       backToClubs: 'Back to clubs',
+      // CORR-INVITATION-VILLE 59 (31/10) — new club, public page in 404.
+      enPreparation: {
+        body: "This club's page is being prepared. Try again in a minute.",
+        title: 'Page being prepared',
+      },
       loadError: {
         fallback: 'Try again in a few moments.',
         title: 'Unable to load the club',
