@@ -59,7 +59,9 @@ jest.mock('@/services/friendlyMatch/friendlyMatchService', () => ({
   ) => mockGetMyFriendlyMatchApplications(params),
 }));
 
-jest.mock('@/services/category/categoryQueries', () => ({ useGetCategories: () => ({ data: [] }) }));
+jest.mock('@/services/category/categoryQueries', () => ({
+  useGetCategories: () => ({ data: [] }),
+}));
 jest.mock('@/services/level/levelQueries', () => ({ useGetLevels: () => ({ data: [] }) }));
 
 jest.mock('@/utils/performance/searchPerformance', () => ({ markSearchPerf: jest.fn() }));
@@ -352,7 +354,8 @@ describe('FriendlyMatchListContent — CORR-RECHERCHE point 2 : tout defile', ()
     const dansLaListe = collectText(liste.findAllByType(Text).map((n) => n.props.children));
     expect(dansLaListe).toContain('temoin-entete-recherche');
     expect(dansLaListe).toContain('Mes annonces');
-    expect(dansLaListe.indexOf('temoin-entete-recherche')).toBeLessThan(dansLaListe.indexOf('Mes annonces'));
+    const placeEnTete = dansLaListe.indexOf('temoin-entete-recherche');
+    expect(placeEnTete).toBeLessThan(dansLaListe.indexOf('Mes annonces'));
     expect(reclamer).toHaveBeenCalled();
   });
 });

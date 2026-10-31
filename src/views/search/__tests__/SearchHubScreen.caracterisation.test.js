@@ -538,7 +538,7 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
 describe('RECHERCHE-UNIQUE — les reglages de l annuaire', () => {
   const ANNUAIRE = { enableMapMode: false, types: ['clubs', 'events'] };
 
-  test('✅ types = clubs + events : le selecteur ne recoit QUE ces deux marches, dans l ordre de l ecran', async () => {
+  test('✅ types = clubs + events : le selecteur recoit ces deux marches seules, en ordre', async () => {
     await monter({ ...ANNUAIRE, activeType: 'clubs' });
 
     expect(mockCoquille.props.types).toEqual(['events', 'clubs']);
@@ -576,7 +576,7 @@ describe('RECHERCHE-UNIQUE — les reglages de l annuaire', () => {
     expect(mockCoquille.props.types).toEqual(['events', 'clubs']);
   });
 
-  test('📌 types vide ou inconnu : les cinq marches restent (rien ne se ferme par erreur)', async () => {
+  test('📌 types vide ou inconnu : les cinq marches restent (rien ne ferme à tort)', async () => {
     await monter({ activeType: 'clubs', types: ['n-importe-quoi'] });
 
     expect(mockCoquille.props.types).toBeUndefined();
@@ -661,9 +661,10 @@ describe('PAR-L4 — l enfant venu de sa fiche traverse la recherche', () => {
 // Réservation n'aurait plus ni logo ni onglets.
 describe('SearchHubScreen — CORR-RECHERCHE point 2 : le panneau Bientot porte l en-tete', () => {
   const { Text } = jest.requireActual('react-native');
-  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const moduleEnTete = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const { EnTeteDeRechercheContext } = moduleEnTete;
 
-  test('🔴 « reservations » : l en-tete de la recherche est dans le panneau, et reclame', async () => {
+  test('🔴 « reservations » : l en-tete de recherche est dans le panneau, et reclame', async () => {
     demonter();
     const reclamer = jest.fn(() => () => {});
     navigation = { navigate: jest.fn(), setParams: jest.fn() };

@@ -23,8 +23,11 @@ test('🐞 un stage part sur 09:00 – 17:00, à n importe quelle heure d ouvert
   jest.useFakeTimers().setSystemTime(new Date(2026, 10, 30, 5, 20));
   /** @type {any} */
   let arbre;
-  act(() => { arbre = renderer.create(createElement(EventWizardProvider, null, createElement(Sonde))); });
-  act(() => sonde.dispatch({ payload: { documentId: 'type-stage', name: 'Stage' }, type: 'SET_TYPE' }));
+  act(() => {
+    arbre = renderer.create(createElement(EventWizardProvider, null, createElement(Sonde)));
+  });
+  const stage = { documentId: 'type-stage', name: 'Stage' };
+  act(() => sonde.dispatch({ payload: stage, type: 'SET_TYPE' }));
 
   const debut = new Date(sonde.state.stageDefaultStartTime);
   const fin = new Date(sonde.state.stageDefaultEndTime);

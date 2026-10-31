@@ -236,7 +236,8 @@ describe('EventListContent — CORR-RECHERCHE point 2 : l en-tete de la recherch
 
     const lus = textes();
     expect(lus).toContain('temoin-entete-recherche');
-    expect(lus.indexOf('temoin-entete-recherche')).toBeLessThan(lus.indexOf('Événements de la Ville'));
+    const placeEnTete = lus.indexOf('temoin-entete-recherche');
+    expect(placeEnTete).toBeLessThan(lus.indexOf('Événements de la Ville'));
     expect(reclamer).toHaveBeenCalled();
   });
 });

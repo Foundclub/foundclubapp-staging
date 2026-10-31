@@ -577,7 +577,7 @@ describe('CORR-EVENEMENTS 124 — retour de match du joueur', () => {
     alerte.mockRestore();
   });
 
-  test("ouvert depuis « Matchs en attente » : on y revient par le retour, sans l'empiler", async () => {
+  test("ouvert depuis « Matchs en attente » : le retour y ramène, sans l'empiler", async () => {
     const alerte = jest.spyOn(Alert, 'alert');
     const { arbre, navigation } = await monter(
       { data: { ...MATCH, response: null } },

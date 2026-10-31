@@ -522,7 +522,8 @@ describe('D6 / ANNUAIRE-E1 — le sport et le lieu en deux pastilles sous le cha
   const feuille = () => monte.root.findByType('ClubFiltersSheet');
 
   test('✅ les pastilles lisent les filtres de la recherche', async () => {
-    mockEtat.filtres = { activity: 'sport-foot', city: { label: 'Lyon', value: '4.83|45.76' }, radius: 10 };
+    const lyon = { label: 'Lyon', value: '4.83|45.76' };
+    mockEtat.filtres = { activity: 'sport-foot', city: lyon, radius: 10 };
 
     await monter();
 
@@ -828,7 +829,8 @@ describe('INVPAD — deux colonnes sur le site ordinateur, pour qui les demande'
 // la recherche monte cette liste sous l'en-tête de la recherche : il défile désormais AVEC elle.
 describe('ClubListContent — CORR-RECHERCHE point 2 : l en-tete de la recherche', () => {
   const { Text } = jest.requireActual('react-native');
-  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const moduleEnTete = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const { EnTeteDeRechercheContext } = moduleEnTete;
 
   test('🔴 l en-tete de la recherche est dans l en-tete de la liste', async () => {
     const reclamer = jest.fn(() => () => {});

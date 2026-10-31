@@ -140,7 +140,8 @@ describe('PETITSBUGS-3 — la carte de réservation ne montre plus la raison du 
 // monte cette liste sous l'en-tête de la recherche : il défile désormais AVEC elle.
 describe('CORR-RECHERCHE point 2 — l en-tete de la recherche defile avec la liste', () => {
   const { Text } = jest.requireActual('react-native');
-  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const moduleEnTete = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+  const { EnTeteDeRechercheContext } = moduleEnTete;
 
   test('🔴 l en-tete de la recherche est pose en tete de la liste, avant les cartes', () => {
     mockPages = { pages: [[reservation('Padel B')]] };

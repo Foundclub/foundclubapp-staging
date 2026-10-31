@@ -330,6 +330,7 @@ describe('CORR-RECHERCHE point 2 — l en-tete passe dans ce qui defile', () => 
   it('un contenu qui ne le reclame pas garde l en-tete au-dessus, comme avant', () => {
     const affiches = textesVisibles(rendre());
     expect(affiches.filter((t) => t === 'temoin-bandeau-logo')).toHaveLength(1);
-    expect(affiches.indexOf('temoin-chips:amicaux')).toBeLessThan(affiches.indexOf('temoin-contenu'));
+    const placeChips = affiches.indexOf('temoin-chips:amicaux');
+    expect(placeChips).toBeLessThan(affiches.indexOf('temoin-contenu'));
   });
 });

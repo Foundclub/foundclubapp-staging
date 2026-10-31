@@ -561,7 +561,9 @@ describe('T9 · la clôture de l appel s accorde, et vaut pour tout événement'
     expect(texte).toContain('1 arrivé·e à l’heure');
     expect(texte).toContain('0 arrivé·e en retard');
     // 🎯 CORR-EVENEMENTS point 125 — ADAPTÉ : la phrase dit combien de personnes restent.
-    expect(texte).toContain('Le serveur passera 1 personne non pointée en « Non pointé » après la fin, vers 20:13.');
+    expect(texte).toContain(
+      'Le serveur passera 1 personne non pointée en « Non pointé » après la fin, vers 20:13.',
+    );
   });
 });
 
@@ -595,7 +597,9 @@ describe('CORR-EVENEMENTS 125 · la clôture ne parle des non pointés que s il 
     await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
     const texte = aplatirTexte(arbre.toJSON());
 
-    expect(texte).toContain('Le serveur passera 2 personnes non pointées en « Non pointé » après la fin, vers 20:13.');
+    expect(texte).toContain(
+      'Le serveur passera 2 personnes non pointées en « Non pointé » après la fin, vers 20:13.',
+    );
   });
 });
 
