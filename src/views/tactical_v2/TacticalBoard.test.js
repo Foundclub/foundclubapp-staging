@@ -477,3 +477,42 @@ describe('CORR-EVENEMENTS 122 — le plateau en lecture seule', () => {
     expect(largeurs[0]).toBe(772);
   });
 });
+
+// CORR-EVENEMENTS-2 point 122 (contre-recette Coach, 31/10) — ouvert depuis la carte du fil, le
+// plateau en lecture seule montrait 7 jetons pour 2 convoqués (« 0/7 placés ») : la carte recolle
+// ses listes (équipe, ajoutés à la main, remplaçants, photo) et le plateau ne dédoublonnait pas.
+// Et le banc d'un lecteur disait encore « Maintiens un joueur puis glisse-le sur le terrain ».
+describe('CORR-EVENEMENTS-2 122 — le banc en lecture seule', () => {
+  const LINA = { documentId: 'lina', firstname: 'Lina', lastname: 'Recette' };
+  const PAUL = { documentId: 'manual_paul', firstname: 'Paul', lastname: 'Contrerecette' };
+  /** Le chiffre que porte l'onglet « Banc ». */
+  const chiffreDuBanc = (/** @type {any} */ arbre) => trouverParLibelle(arbre, 'Banc')[0]
+    .findAll((/** @type {any} */ n) => typeof n.children?.[0] === 'string' && /^\d+$/.test(n.children[0]))
+    .map((/** @type {any} */ n) => n.children[0])[0];
+
+  test('🐞 un joueur présent dans plusieurs listes ne compte qu’une fois', () => {
+    const arbre = monter(parametresEvenement({
+      canEdit: false,
+      existingComposition: { manualPlayers: [PAUL], placements: [] },
+      players: [LINA, PAUL, { ...LINA }, { ...PAUL }, { ...LINA }, { ...PAUL }, { ...PAUL }],
+      readOnly: true,
+    }));
+
+    expect(chiffreDuBanc(arbre)).toBe('2');
+  });
+
+  test('🐞 lecture seule : le banc ne dit plus « Maintiens un joueur… »', () => {
+    const arbre = monter(parametresEvenement({ canEdit: false, players: [LINA, PAUL], readOnly: true }));
+    appuyerSur(arbre, 'Banc');
+
+    expect(chiffreDuBanc(arbre)).toBe('2');
+    expect(texteRendu(arbre)).not.toContain('Maintiens un joueur puis glisse-le');
+  });
+
+  test('en édition, le banc garde sa consigne', () => {
+    const arbre = monter(parametresEvenement({ players: [LINA, PAUL] }));
+    appuyerSur(arbre, 'Banc');
+
+    expect(texteRendu(arbre)).toContain('Maintiens un joueur puis glisse-le');
+  });
+});

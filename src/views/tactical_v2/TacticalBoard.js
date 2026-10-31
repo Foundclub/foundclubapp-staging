@@ -228,13 +228,21 @@ function TacticalBoard() {
   const showGuidedPublishHighlight = isGuidedComposition && guidedPhase === 'publish';
 
   // Use poolPlayers for reconstruction (selectedPlayers from editor, players from viewer)
+  // CORR-EVENEMENTS-2 (122) — un joueur n'y figure qu'UNE fois : la carte du fil recolle ses
+  // listes (équipe, ajoutés à la main, remplaçants, photo) et le banc montrait 7 jetons pour
+  // 2 convoqués. La première occurrence gagne.
   const poolPlayers = useMemo(() => {
     const base = selectedPlayers.length > 0 ? selectedPlayers : players;
     // Include manual players from composition
     const manuals = existingComposition?.manualPlayers || manualPlayers || [];
-    const baseIds = new Set(base.map((/** @type {TacticalPlayer} */ p) => p.id || p.documentId));
-    const uniqueManuals = manuals.filter((/** @type {TacticalPlayer} */ m) => !baseIds.has(m.id || m.documentId));
-    return [...base, ...uniqueManuals];
+    const vus = new Set();
+    return [...base, ...manuals].filter((/** @type {TacticalPlayer} */ p) => {
+      const id = p.id || p.documentId;
+      if (!id) return true;
+      if (vus.has(id)) return false;
+      vus.add(id);
+      return true;
+    });
   }, [selectedPlayers, players, existingComposition, manualPlayers]);
 
   // DEBUG: Log reconstruction data
@@ -1568,14 +1576,16 @@ function TacticalBoard() {
                     )}
                   </Text>
                 </View>
-              ) : (
+              ) : null}
+              {/* CORR-EVENEMENTS-2 (122) : un lecteur ne glisse rien, la consigne est pour le coach. */}
+              {!showGuidedBenchHighlight && !readOnly ? (
                 <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
                   {t(
                     'tacticalBoard.holdPlayerHint',
                     'Maintiens un joueur puis glisse-le sur le terrain.',
                   )}
                 </Text>
-              )}
+              ) : null}
 
               {benchPlayers.length > 0 ? (
                 <ScrollView
