@@ -183,7 +183,14 @@ export const getInstallmentOrder = (installment = {}) => installment.installment
 
 const helloAssoReadyStates = new Set(['ready', 'webhook_pending', 'webhook_stale']);
 
-export const getHelloAssoSnapshot = (campaign) => campaign?.paymentProviderSnapshot?.helloasso || null;
+// HELLOASSOASSIST (31/10) — le serveur ne recopie le compte sur la campagne que si HelloAsso y est
+// DEJA coche : une campagne neuve n a pas de cliche. Repli sur le compte du CLUB, que la liste des
+// campagnes porte (`meta.helloAssoAccounts`, { section, multisport }), selon qui encaisse.
+export const getHelloAssoSnapshot = (campaign, clubAccounts = null, owner = campaign?.paymentOwner) => (
+  campaign?.paymentProviderSnapshot?.helloasso
+  || clubAccounts?.[owner === 'multisport' ? 'multisport' : 'section']
+  || null
+);
 
 export const isHelloAssoReadyForCampaign = (snapshot) => helloAssoReadyStates
   .has(String(snapshot?.readiness || '').trim());

@@ -47,6 +47,7 @@ import {
   upsertLicensePricingRule,
   useCurrentLicenseCampaign,
   useLicenseCampaign,
+  useLicenseCampaigns,
   useLicenseMutation,
 } from '@/services/license/licenseQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
@@ -2037,6 +2038,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const campaignByIdQuery = useLicenseCampaign(routeCampaignId, { enabled: Boolean(routeCampaignId) });
   const currentCampaign = createNewCampaign ? routeCampaign : campaignQuery.data;
   const campaign = routeCampaignId ? (campaignByIdQuery.data || routeCampaign) : currentCampaign;
+  // HELLOASSOASSIST — memes parametres que le hub : la liste est deja en cache.
+  const clubCampaignsQuery = useLicenseCampaigns(useMemo(() => ({ clubId }), [clubId]), { enabled: Boolean(clubId) });
   const clubQuery = useGetClub(clubId, { enabled: Boolean(clubId) });
   const sectionsQuery = useGetSections();
   const categoriesQuery = useGetCategories();
@@ -2504,7 +2507,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // Le tunnel ne fait plus que LIRE l'etat de la connexion HelloAsso du club.
   // Le formulaire (slug, client id, client secret) vit dans le hub — D26,
   // decision 4 : ce reglage porte un `clubId`, jamais un `campaignId`.
-  const effectiveHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
+  const effectiveHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(
+    campaign,
+    clubCampaignsQuery.data?.meta?.helloAssoAccounts,
+    paymentOwner,
+  );
   const helloAssoIsPublishReady = isHelloAssoReadyForCampaign(effectiveHelloAssoSnapshot);
   const helloAssoStatusMessage = describeHelloAssoReadiness(effectiveHelloAssoSnapshot);
 

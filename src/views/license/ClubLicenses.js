@@ -1679,11 +1679,12 @@ function ClubLicenses({ navigation, route }) {
   const deleteMutation = useLicenseMutation((id) => deleteDraftLicenseCampaign(id), campaignId);
 
   // ── HelloAsso au niveau CLUB (D26, decision 4) ────────────────────────────
-  // ⚠️ L'app n'a pas d'appel qui lise la connexion du club seule : le seul
-  // cliche disponible est celui que le serveur recopie sur la campagne
-  // (`paymentProviderSnapshot.helloasso`). On le lit donc depuis la campagne
-  // courante — c'est la meme connexion, vue par la fenetre qui existe.
-  const clubHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(campaign);
+  // HELLOASSOASSIST (31/10) : la liste des campagnes porte le compte du club
+  // (`meta.helloAssoAccounts`), meme sans campagne ouverte ni HelloAsso coche.
+  const clubHelloAssoSnapshot = helloAssoSnapshot || getHelloAssoSnapshot(
+    campaign,
+    campaignsQuery.data?.meta?.helloAssoAccounts,
+  );
   const helloAssoMutation = useLicenseMutation(() => connectLicenseHelloAsso({
     clientId: helloAssoConfig.clientId,
     clientSecret: helloAssoConfig.clientSecret,

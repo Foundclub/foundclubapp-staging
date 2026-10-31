@@ -92,6 +92,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
   upsertLicensePricingRule: jest.fn(),
   useCurrentLicenseCampaign: () => mockRequeteVide,
   useLicenseCampaign: () => mockRequeteVide,
+  useLicenseCampaigns: () => mockRequeteVide,
   useLicenseMutation: () => mockMutationFigee,
 }));
 
