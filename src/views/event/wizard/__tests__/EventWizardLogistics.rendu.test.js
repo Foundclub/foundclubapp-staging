@@ -533,3 +533,21 @@ describe('FINITIONS15 point 1 — la date de la séance déplace le jour de la r
     expect([...joursCoches()].sort()).toEqual([base, autre, nouvelle.getDay()].sort());
   });
 });
+
+// CORR-EVENEMENTS point 127 (recette du site, 30/10) — une date passée : « Suivant » ne faisait
+// rien, sans dire pourquoi (l'alerte du navigateur ne se voyait pas). Décision A : un message
+// sous le champ, « Cette date est passée ».
+describe('CORR-EVENEMENTS 127 — une date passée se dit sous le champ', () => {
+  // eslint-disable-next-line global-require
+  const { toDateInputText } = require('@/components/organisms/dateEtHoraire/DateEtHoraire');
+
+  test('🐞 choisir hier affiche le message sous la date', () => {
+    afficherLEcran();
+    expect(textesCourants()).not.toContain('Cette date est passée : choisis un jour à venir.');
+    const hier = new Date(Date.now() - (24 * 60 * 60 * 1000));
+
+    act(() => { mockDates[mockDates.length - 1].onChange(toDateInputText(hier)); });
+
+    expect(textesCourants()).toContain('Cette date est passée : choisis un jour à venir.');
+  });
+});

@@ -18,8 +18,16 @@ import MercatoFilters from '../MercatoFilters';
 
 jest.setTimeout(30000);
 
+/** @type {any} CORR-EVENEMENTS 134 : les paramètres de la route, et le profil connecté. */
+let mockRouteParams = {};
+/** @type {any} */
+let mockUserData = null;
 jest.mock('@react-navigation/native', () => ({
-  useRoute: () => ({ params: {} }),
+  useRoute: () => ({ params: mockRouteParams }),
+}));
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUserData }),
 }));
 
 jest.mock('@/components/templates/ScreenContainer', () => {
@@ -74,8 +82,8 @@ jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressIn
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { setAddress }) => (
-      <View setAddress={setAddress} testID="adresse" />
+    default: (/** @type {any} */ { address, setAddress }) => (
+      <View address={address} setAddress={setAddress} testID="adresse" />
     ),
   };
 });
@@ -236,6 +244,8 @@ const rendre = async () => {
 };
 
 beforeEach(() => {
+  mockRouteParams = {};
+  mockUserData = null;
   mockDispatch.mockClear();
   mockMercatoFilters = {};
   mockSports = SPORTS_PAR_DEFAUT;
@@ -314,5 +324,40 @@ describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports'
     const { payload } = mockDispatch.mock.calls[0][0];
     expect(payload.activityIds).toEqual(['a-equit']);
     expect(payload.activityNames).toEqual(['Équitation']);
+  });
+});
+
+// CORR-EVENEMENTS point 134 (recette du site, 30/10) — en créant une alerte, le champ Ville
+// affichait « Marseille », qui n'est qu'un exemple, et l'envoi était refusé. Décision A :
+// préremplir la ville du profil.
+describe('CORR-EVENEMENTS 134 — l alerte part avec la ville du profil', () => {
+  const VILLE = { label: 'Lyon 69003', value: '4.85|45.76' };
+  const adresse = (/** @type {any} */ tree) => tree.root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === 'adresse' && typeof node.props?.setAddress === 'function',
+  )[0];
+
+  it('🐞 création d une alerte : la ville du profil est déjà remplie', async () => {
+    mockRouteParams = { createAlertMode: true };
+    mockUserData = { address: VILLE, documentId: 'dirigeant-1' };
+    const tree = await rendre();
+
+    expect(adresse(tree).props.address).toEqual(VILLE);
+  });
+
+  it('sans ville au profil : le champ reste vide', async () => {
+    mockRouteParams = { createAlertMode: true };
+    mockUserData = { documentId: 'dirigeant-1' };
+    const tree = await rendre();
+
+    expect(adresse(tree).props.address?.value || '').toBe('');
+  });
+
+  it('une ville déjà choisie dans la recherche garde la priorité', async () => {
+    mockRouteParams = { createAlertMode: true };
+    mockUserData = { address: VILLE, documentId: 'dirigeant-1' };
+    mockMercatoFilters = { city: { label: 'Marseille 13001', value: '5.37|43.29' } };
+    const tree = await rendre();
+
+    expect(adresse(tree).props.address?.label).toBe('Marseille 13001');
   });
 });

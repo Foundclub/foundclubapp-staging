@@ -324,6 +324,14 @@ describe('le site rend le detail d un sondage', () => {
 
     expect(textOf(root)).toContain('Option 1');
   });
+
+  // CORR-EVENEMENTS point 135 : le site lisait une clé à part, sans accent ; il
+  // prend désormais le libellé de l'app (« Votes multiples autorisés »).
+  test('un sondage à choix multiples le dit avec ses accents', () => {
+    const root = mountScreen({ poll: buildPoll({ allowMultipleVotes: true }) });
+
+    expect(textOf(root)).toContain('Votes multiples autorisés');
+  });
 });
 
 describe('BH04 / P6-15 — sondage encore en synchronisation', () => {

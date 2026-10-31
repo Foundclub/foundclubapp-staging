@@ -514,12 +514,15 @@ describe('ST-REPONSE — ce qui part au serveur, et ce qui reste', () => {
       teamId: 'team-u15',
       teamRating: 7,
     });
-    // Défaut 22 du relevé : `replace` empilait une 2e fiche du match sous la première.
+    // Défaut 22 du relevé : `replace(EventDetails)` empilait une 2e fiche du match sous la
+    // première. 🎯 CORR-EVENEMENTS 124 — ADAPTÉ : ouvert seul (notification, adresse), l'écran
+    // rejoint « Matchs en attente », pas la page d'avant du navigateur.
     const merci = alerte.mock.calls.find(([titre]) => titre === 'Merci');
     expect(merci).toBeTruthy();
     await act(async () => { merci[2][0].onPress(); });
-    expect(navigation.goBack).toHaveBeenCalled();
-    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(navigation.replace).toHaveBeenCalledWith('PendingMatchStats');
+    expect(navigation.replace).not.toHaveBeenCalledWith('EventDetails', expect.anything());
+    expect(navigation.goBack).not.toHaveBeenCalled();
     alerte.mockRestore();
   });
 
@@ -543,5 +546,50 @@ describe('ST-REPONSE — ce qui part au serveur, et ce qui reste', () => {
     expect(textes(arbre)).toContain('Mon retour de match');
     expect(appui(arbre, 'Retour')).toBeTruthy();
     expect(arbre.root.findAllByProps({ testID: 'squelette' }).length).toBeGreaterThan(0);
+  });
+});
+
+// CORR-EVENEMENTS point 124 (recette du site, 30/10) — « Pas joué » allumé juste après
+// « J'ai joué », deux envois et deux « Merci » sur un double clic, puis retour à « Modifier mon
+// profil ». Décision A : rien de présélectionné, « Envoyer » bloqué pendant l'envoi, retour à
+// « Matchs en attente ».
+describe('CORR-EVENEMENTS 124 — retour de match du joueur', () => {
+  test("🐞 « J'ai joué » sans réponse enregistrée : aucune pastille de temps allumée", async () => {
+    const { arbre } = await monter({ data: { ...MATCH, response: null } });
+    await presser(arbre, "J'ai joué");
+    ['Pas joué', 'Une mi-temps', 'Tout le match'].forEach((libelle) => {
+      expect(appui(arbre, libelle).props.accessibilityState).toEqual({ checked: false });
+    });
+  });
+
+  test("🐞 un double clic sur « Envoyer » n'envoie qu'une fois", async () => {
+    const alerte = jest.spyOn(Alert, 'alert');
+    const { arbre } = await monter({ data: { ...MATCH, response: null } });
+    await presser(arbre, "Je n'étais pas concerné·e");
+    await act(async () => {
+      const bouton = appui(arbre, 'Envoyer');
+      bouton.props.onPress();
+      bouton.props.onPress();
+    });
+    await vidanger();
+    expect(saveEventMyMatchResponse).toHaveBeenCalledTimes(1);
+    expect(alerte.mock.calls.filter(([titre]) => titre === 'Merci')).toHaveLength(1);
+    alerte.mockRestore();
+  });
+
+  test("ouvert depuis « Matchs en attente » : on y revient par le retour, sans l'empiler", async () => {
+    const alerte = jest.spyOn(Alert, 'alert');
+    const { arbre, navigation } = await monter(
+      { data: { ...MATCH, response: null } },
+      { fromPendingMatchStats: true },
+    );
+    await presser(arbre, "Je n'étais pas concerné·e");
+    await presser(arbre, 'Envoyer');
+    await vidanger();
+    const merci = alerte.mock.calls.find(([titre]) => titre === 'Merci');
+    await act(async () => { merci[2][0].onPress(); });
+    expect(navigation.goBack).toHaveBeenCalled();
+    expect(navigation.replace).not.toHaveBeenCalled();
+    alerte.mockRestore();
   });
 });

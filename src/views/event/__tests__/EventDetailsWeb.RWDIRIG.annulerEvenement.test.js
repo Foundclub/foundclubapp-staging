@@ -36,7 +36,8 @@ jest.mock('@tanstack/react-query', () => ({
         (error) => options?.onError?.(error, variables),
       );
     },
-    mutateAsync: jest.fn(),
+    // CORR-EVENEMENTS 130 : la feuille d'équipe passe par `mutateAsync`, qui appelle le service.
+    mutateAsync: (/** @type {any} */ variables) => Promise.resolve(options?.mutationFn?.(variables)),
   }),
   useQueryClient: () => ({
     invalidateQueries: jest.fn(),
@@ -107,8 +108,11 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 const mockGoBack = jest.fn();
+const mockRespondToEventRsvp = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/event/eventService', () => ({
   cancelEvent: (/** @type {any} */ data) => mockCancelEvent(data),
+  // CORR-EVENEMENTS 123 : la réponse Présent / Absent du joueur convoqué.
+  respondToEventRsvp: (/** @type {any[]} */ ...args) => mockRespondToEventRsvp(...args),
   updateEvent: jest.fn(),
 }));
 
@@ -122,8 +126,9 @@ jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
   deleteEventParticipation: jest.fn(),
 }));
 
+const mockCreateCustomTournamentTeam = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
-  createCustomTournamentTeam: jest.fn(),
+  createCustomTournamentTeam: (/** @type {any[]} */ ...args) => mockCreateCustomTournamentTeam(...args),
   registerClubTeamToTournament: jest.fn(),
   reviewTournamentTeamRegistration: jest.fn(),
 }));
@@ -131,6 +136,23 @@ jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
 
 jest.mock('@/platform/share', () => ({ share: jest.fn() }));
+
+// CORR-EVENEMENTS 119 : la feuille « série » s'ouvre par une BottomModal ; sa doublure rend
+// en-tête, corps et pied tels quels quand elle est visible.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function BottomModalDouble(/** @type {any} */ props) {
+    if (!props.isVisible) return null;
+    return react.createElement(
+      rn.View,
+      { testID: 'bottom-modal' },
+      props.headerComponent,
+      props.children,
+      props.footerComponent,
+    );
+  };
+});
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');
@@ -297,5 +319,208 @@ describe('RWDIRIG · annuler un événement depuis le site', () => {
     expect(root.findAll(
       (/** @type {any} */ n) => n.type === 'button' && n.props['aria-haspopup'] === 'menu',
     )).toHaveLength(0);
+  });
+});
+
+// CORR-EVENEMENTS point 119 (recette du site, 29/10) — dans une série, « Annuler » n'annulait
+// que la séance, sans le dire : le dirigeant croyait la saison arrêtée. Décision A : la feuille
+// à trois choix du téléphone (cette séance, les suivantes, toutes).
+describe('CORR-EVENEMENTS 119 · annuler une séance d une série', () => {
+  const presser = async (/** @type {any} */ root, /** @type {string} */ libelle) => {
+    const [cible] = root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+      && textOf(n) === libelle);
+    expect(cible).toBeDefined();
+    await act(async () => { cible.props.onPress(); });
+  };
+
+  test('🐞 une séance de série ouvre la feuille à trois choix, sans fenêtre du navigateur', async () => {
+    window.confirm = jest.fn(() => true);
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    expect(window.confirm).not.toHaveBeenCalled();
+    const feuille = textOf(root.findByProps({ testID: 'bottom-modal' }));
+    expect(feuille).toContain('Annulation d’un événement récurrent');
+    const choix = root.findByProps({ testID: 'bottom-modal' })
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')
+      .map(textOf);
+    expect(choix).toEqual(expect.arrayContaining([
+      'Cet événement', 'Cet événement et les suivants', 'Tous les événements', 'Ne rien annuler',
+    ]));
+    expect(mockCancelEvent).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['Cet événement', { documentId: 'event-1' }],
+    ['Cet événement et les suivants', { documentId: 'event-1', recurrenceMode: 'future' }],
+    ['Tous les événements', { documentId: 'event-1', recurrenceMode: 'all' }],
+  ])('« %s » envoie la bonne portée au serveur', async (libelle, attendu) => {
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    await presser(root, libelle);
+    expect(mockCancelEvent).toHaveBeenCalledWith(attendu);
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('« Ne rien annuler » ferme la feuille sans appel', async () => {
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    await presser(root, 'Ne rien annuler');
+    expect(root.findAllByProps({ testID: 'bottom-modal' })).toHaveLength(0);
+    expect(mockCancelEvent).not.toHaveBeenCalled();
+  });
+});
+
+// CORR-EVENEMENTS point 123 (recette du site, 30/10) — le joueur convoqué n'avait que
+// « Participer » (une demande), sans « Absent ». Décision A : deux boutons « Présent / Absent ».
+describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent', () => {
+  const JOUEUR = { documentId: 'joueur-1', firstname: 'Joris', lastname: 'Recette' };
+  const authJoueur = {
+    canEditClub: () => false,
+    canEditEvent: () => false,
+    canManageEvent: () => false,
+    userData: { ...JOUEUR, role: { name: 'Joueur' } },
+  };
+  const matchDuJoueur = () => buildEvent({
+    team: {
+      club: CLUB, documentId: 'team-1', name: 'U15', players: [JOUEUR], trainers: [COACH],
+    },
+    type: { name: 'Match' },
+  });
+  const bouton = (/** @type {any} */ root, /** @type {string} */ libelle) => root.findAll(
+    (/** @type {any} */ n) => n.type === 'button' && textOf(n) === libelle,
+  )[0];
+
+  test('🐞 « Présent » et « Absent » remplacent « Participer »', async () => {
+    const root = mountScreen({ auth: authJoueur, event: matchDuJoueur() });
+
+    expect(bouton(root, 'Participer')).toBeUndefined();
+    expect(bouton(root, 'Présent')).toBeDefined();
+    await act(async () => { bouton(root, 'Absent').props.onClick(); });
+    expect(mockRespondToEventRsvp).toHaveBeenCalledWith('event-1', 'absent');
+  });
+});
+
+// CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Validation auto » s'affichait, mais un
+// joueur extérieur et un enfant inscrit par son parent restaient « en attente ». Le serveur ne
+// valide seul que les membres des équipes conviées (event-participation.ts, « isInternalParticipant » ;
+// child-registration-rules.js : un enfant est toujours une demande hors réservation).
+// Décision A : dire la vraie règle à l'écran.
+describe('CORR-EVENEMENTS 126 · la pastille de validation dit la vraie règle', () => {
+  test('🐞 « Validation auto » précise qu elle ne vaut que pour les membres des équipes', () => {
+    mountScreen({ event: buildEvent({ validationMode: 'auto' }) });
+    const texte = JSON.stringify(mounted.toJSON());
+
+    expect(texte).toContain('Validation auto pour les membres des équipes');
+  });
+
+  test('« Validation manuelle » reste', () => {
+    mountScreen({ event: buildEvent({ validationMode: 'manual' }) });
+
+    expect(JSON.stringify(mounted.toJSON())).toContain('Validation manuelle');
+  });
+});
+
+// CORR-EVENEMENTS point 128 (recette du site, 30/10) — un stage de 31 jours : la fiche n'affichait
+// que le premier jour, ni date de fin ni programme. Décision A : un bloc « Programme », repliable
+// au-delà de 7 jours.
+describe('CORR-EVENEMENTS 128 · le programme d un stage sur la fiche', () => {
+  const jours = Array.from({ length: 10 }, (_v, index) => ({
+    date: `2099-11-${String(index + 1).padStart(2, '0')}T08:00:00.000Z`,
+    documentId: `jour-${index + 1}`,
+    endTime: '17:00:00.000',
+    isActive: true,
+    startTime: '09:00:00.000',
+  }));
+  const stage = () => buildEvent({
+    childStageEvents: jours,
+    eventFormat: 'stage_parent',
+    stageDefaultEndTime: '17:00:00.000',
+    stageDefaultStartTime: '09:00:00.000',
+    stageEndDate: '2099-11-10',
+    stageStartDate: '2099-11-01',
+    type: { name: 'Stage' },
+  });
+  const programme = (/** @type {any} */ root) => root.findAll(
+    (/** @type {any} */ n) => n.props?.['data-event-section'] === 'stage-programme',
+  )[0];
+
+  test('🐞 la fiche montre la période et les 7 premiers jours, le reste se déplie', () => {
+    const root = mountScreen({ event: stage() });
+    const bloc = programme(root);
+    expect(bloc).toBeDefined();
+    // Les jours sont un tableau d'enfants : on lit le rendu hôte du bloc, pas `textOf`.
+    const lire = () => JSON.stringify(mounted.toJSON());
+    let texte = lire();
+    expect(texte).toContain('Programme du stage');
+    expect(texte).toContain('Jour 7');
+    expect(texte).not.toContain('Jour 8');
+    expect(texte).toContain('09:00 – 17:00');
+
+    const deplier = root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && textOf(n) === 'Voir les 3 autres jours',
+    )[0];
+    expect(deplier).toBeDefined();
+    act(() => deplier.props.onClick());
+    texte = lire();
+    expect(texte).toContain('Jour 10');
+  });
+
+  test('un événement d un seul jour n a pas de bloc programme', () => {
+    const root = mountScreen({ event: buildEvent() });
+    expect(programme(root)).toBeUndefined();
+  });
+});
+
+// CORR-EVENEMENTS point 130 (recette du site, 30/10) — le nom d'une équipe de tournoi se tapait
+// dans une fenêtre grise du navigateur, et le parent voyait « Inscrire mon équipe » et « Créer une
+// équipe ». Décision A : une vraie feuille « Nom de l'équipe » pour tous, ces boutons cachés au parent.
+describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
+  const tournoi = () => buildEvent({
+    tournamentConfig: { allowCustomTeams: true },
+    tournamentTeams: [],
+    type: { name: 'Tournoi' },
+  });
+  const bouton = (/** @type {any} */ root, /** @type {string} */ libelle) => root.findAll(
+    (/** @type {any} */ n) => n.type === 'button' && textOf(n) === libelle,
+  )[0];
+
+  test('🐞 « Créer une équipe » ouvre une feuille, sans fenêtre du navigateur', async () => {
+    window.prompt = jest.fn(() => 'Les Lions');
+    const root = mountScreen({ event: tournoi() });
+    await act(async () => { bouton(root, 'Créer une équipe').props.onClick(); });
+
+    expect(window.prompt).not.toHaveBeenCalled();
+    const champ = root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Nom de l’équipe' && typeof n.props?.onChangeText === 'function')[0];
+    expect(champ).toBeDefined();
+    const creer = () => root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function' && textOf(n) === 'Créer mon équipe')[0];
+
+    // Vide : refusé, et dit.
+    await act(async () => { creer().props.onPress(); });
+    expect(mockCreateCustomTournamentTeam).not.toHaveBeenCalled();
+    expect(JSON.stringify(mounted.toJSON())).toContain('Ajoute un nom d’équipe avant de continuer.');
+
+    await act(async () => { champ.props.onChangeText('  Les Lions  '); });
+    await act(async () => { creer().props.onPress(); });
+    expect(mockCreateCustomTournamentTeam).toHaveBeenCalledWith('event-1', { name: 'Les Lions' });
+  });
+
+  test('🐞 le parent ne voit ni « Inscrire mon équipe » ni « Créer une équipe »', () => {
+    const root = mountScreen({
+      auth: {
+        canEditClub: () => false,
+        canEditEvent: () => false,
+        canManageEvent: () => false,
+        userData: {
+          documentId: 'parent-1', firstname: 'Papa', lastname: 'Test', role: { name: 'Parent' }, trainedTeams: [{ documentId: 'team-9', name: 'U9' }],
+        },
+      },
+      event: tournoi(),
+    });
+
+    expect(bouton(root, 'Créer une équipe')).toBeUndefined();
+    expect(bouton(root, 'Inscrire mon équipe')).toBeUndefined();
   });
 });

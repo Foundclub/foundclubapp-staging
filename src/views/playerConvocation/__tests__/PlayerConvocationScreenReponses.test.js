@@ -108,8 +108,9 @@ jest.mock('@/components/atoms/button/Button', () => {
   const { Text: TexteRN, TouchableOpacity } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { onPress, title }) => (
-      <TouchableOpacity accessibilityLabel={title} onPress={onPress}>
+    // CORR-EVENEMENTS 120 : la doublure transmet `disabled`, comme l'atome.
+    default: (/** @type {any} */ { disabled, onPress, title }) => (
+      <TouchableOpacity accessibilityLabel={title} disabled={disabled} onPress={onPress}>
         <TexteRN>{title}</TexteRN>
       </TouchableOpacity>
     ),
@@ -305,5 +306,40 @@ describe('POINTAGE — la barre de reponse suit l option « Les participants rep
 
     expect(boutons(arbre)).not.toContain('Présent');
     expect(boutons(arbre)).not.toContain('Absent');
+  });
+});
+
+// CORR-EVENEMENTS point 120 (recette du site, 30/10) — la convocation d'un match annulé
+// gardait Présent / Absent sans dire « annulé ». Décision A : un bandeau « Match annulé »,
+// boutons désactivés.
+describe('CORR-EVENEMENTS 120 — convocation d un match annulé', () => {
+  afterEach(() => {
+    mockEvenement = { documentId: 'evt-1' };
+  });
+
+  const boutonsInactifs = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ noeud) => ['Présent', 'Absent'].includes(noeud.props?.accessibilityLabel)
+      && typeof noeud.props?.onPress === 'function',
+  ).map((/** @type {any} */ noeud) => Boolean(noeud.props.disabled));
+
+  it('🐞 match annulé : le bandeau le dit, Présent et Absent ne répondent plus', () => {
+    mockConvocation = convocation(REPONSES);
+    mockEvenement = { documentId: 'evt-1', status: 'cancelled' };
+
+    const arbre = rendre();
+
+    expect(texteVisible(arbre)).toContain('Match annulé');
+    const inactifs = boutonsInactifs(arbre);
+    expect(inactifs.length).toBeGreaterThan(0);
+    expect(inactifs.every(Boolean)).toBe(true);
+  });
+
+  it('match maintenu : ni bandeau, ni bouton bloqué', () => {
+    mockConvocation = convocation(REPONSES);
+
+    const arbre = rendre();
+
+    expect(texteVisible(arbre)).not.toContain('Match annulé');
+    expect(boutonsInactifs(arbre).some(Boolean)).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -192,14 +193,22 @@ export function AttendanceCloseSheet({
         </Text>
 
         {/* 🗣️ LA VERITE, PAS UNE PROMESSE : qui le fait, quand, et jusqu a
-            quand on peut revenir dessus. */}
-        <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-          {/* 🐞 T9 — l'appel sert aussi aux entraînements : « après la fin », sans « du match ». */}
-          {`${t(
-            'stMatch.appel.serverWill',
-            'Le serveur les passera en « Non pointé » après la fin, vers',
-          )} ${heureBalayage}.`}
-        </Text>
+            quand on peut revenir dessus. CORR-EVENEMENTS 125 : seulement s'il
+            reste des non pointés, avec leur nombre. */}
+        {neverSeen.length > 0 ? (
+          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+            {/* 🐞 T9 — l'appel sert aussi aux entraînements : « après la fin », sans « du match ». */}
+            {t('stMatch.appel.serverWillCount', {
+              count: neverSeen.length,
+              defaultValue_one: 'Le serveur passera {{count}} personne non pointée '
+                + 'en « Non pointé » après la fin, vers {{heure}}.',
+              defaultValue_other: 'Le serveur passera {{count}} personnes non pointées '
+                + 'en « Non pointé » après la fin, vers {{heure}}.',
+              heure: heureBalayage,
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        ) : null}
         <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
           {`${t(
             'eventDetails.attendanceCall.close.stillCorrect',
@@ -207,6 +216,7 @@ export function AttendanceCloseSheet({
           )} ${heureFermeture}.`}
         </Text>
 
+        {neverSeen.length > 0 ? (
         <ScrollView contentContainerStyle={[styles.namesBox, {
           backgroundColor: withAlpha(Colors.primary900, 0.6),
         }]}
@@ -221,6 +231,7 @@ export function AttendanceCloseSheet({
             </View>
           ))}
         </ScrollView>
+        ) : null}
       </View>
     </BottomModal>
   );

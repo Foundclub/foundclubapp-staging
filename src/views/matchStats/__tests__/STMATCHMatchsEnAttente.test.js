@@ -188,7 +188,7 @@ describe('ST-MATCH écran 6 — Matchs en attente (téléphone)', () => {
     const carte = parId(racine, 'st-match-attente-carte-event:match-19h:u15:self');
     expect(carte.findAllByType(TouchableOpacity)).toHaveLength(1);
     act(() => { carte.props.onPress(); });
-    expect(mockNaviguer).toHaveBeenCalledWith('PlayerMatchResponse', expect.objectContaining({ eventId: 'match-19h' }));
+    expect(mockNaviguer).toHaveBeenCalledWith('PlayerMatchResponse', expect.objectContaining({ eventId: 'match-19h', fromPendingMatchStats: true }));
   });
 
   test('état 2 — brouillon du joueur : ce qui reste, en une ligne', () => {

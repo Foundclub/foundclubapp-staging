@@ -28,6 +28,9 @@ const mockConvocationQuery = { data: null };
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+// CORR-EVENEMENTS 119 et 130 : les feuilles « série » et « équipe » tirent la BottomModal native (gorhom).
+jest.mock('@/views/event/components/CancelSeriesSheet', () => () => null);
+jest.mock('@/views/event/components/TournamentTeamSheet', () => () => null);
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,
@@ -711,5 +714,82 @@ describe('AMIC-INVITE — sur le site, les portes de la compo : le club de l equ
     expect(lastCallUpParams()).toEqual(expect.objectContaining({
       clubId: CLUB_ID, teamId: TEAM_ID,
     }));
+  });
+});
+
+// CORR-EVENEMENTS point 121 (recette du site, 30/10) — le fil disait « Présents · 1 » (le
+// joueur sans app, présent d'office), la fiche « Présent·e·s · 0 ». Décision A : la fiche
+// compte comme le fil, joueur sans app compris.
+describe('CORR-EVENEMENTS 121 — la fiche compte le joueur sans app comme le fil', () => {
+  const kevin = {
+    documentId: 'manual_1', firstname: 'Kévin', id: 'manual_1', isManual: true, lastname: 'Main',
+  };
+
+  test('🐞 un joueur sans app convoqué compte dans « Présent·e·s »', () => {
+    const root = mountScreen({
+      convocation: {
+        branches: [{
+          published: {
+            manualPlayers: [kevin],
+            reservePlayerIds: ['manual_1'],
+            schemaVersion: 3,
+            snapshotPlayers: [],
+            teams: [{ placements: [] }],
+          },
+          responses: { byPlayerId: {} },
+          team: { documentId: TEAM_ID, name: 'U15' },
+        }],
+        schemaVersion: 3,
+      },
+      event: buildEvent({
+        team: {
+          club: { documentId: CLUB_ID },
+          documentId: TEAM_ID,
+          name: 'U15',
+          players: [],
+          trainers: [],
+        },
+        type: { name: 'Match' },
+      }),
+    });
+
+    const groupe = root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'PARTWEB-groupe-participating',
+    )[0];
+    expect(groupe).toBeDefined();
+    const texte = textOf(groupe);
+    expect(texte).toContain('· 1');
+    expect(texte).toContain('Kévin Main');
+    expect(texte).toContain('sans l’app');
+  });
+});
+
+// CORR-EVENEMENTS point 123 (recette du site, 30/10) — le joueur lisait dans « Composition
+// d'équipes » un texte de coach, et n'avait que « Participer », sans « Absent ». Décision A :
+// cacher le bloc au joueur tant que rien n'est publié, et deux boutons « Présent / Absent ».
+describe('CORR-EVENEMENTS 123 — le match vu par un joueur convoqué', () => {
+  const matchDuJoueur = () => buildEvent({
+    team: {
+      club: { documentId: CLUB_ID },
+      documentId: TEAM_ID,
+      name: 'U15',
+      players: [{ documentId: JOUEUR }],
+      trainers: [],
+    },
+    type: { name: 'Match' },
+  });
+
+  test('🐞 rien de publié : pas de bloc « Composition d équipes » pour le joueur', () => {
+    mountScreen({ auth: authJoueur(), event: matchDuJoueur() });
+
+    const texte = JSON.stringify(mounted.toJSON());
+    expect(texte).not.toContain('Tu peux déjà créer les équipes');
+    expect(texte).not.toContain("Composition d'equipes");
+  });
+
+  test('l entraîneur garde son bloc et sa consigne', () => {
+    mountScreen({ event: matchDuJoueur() });
+
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tu peux déjà créer les équipes');
   });
 });

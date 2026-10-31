@@ -93,3 +93,73 @@ describe('BH08 · P8-13 — barème de points du tournoi', () => {
     expect(config.pointsDraw).toBe(0);
   });
 });
+
+// CORR-EVENEMENTS point 129 (recette du site, 30/10) — un effectif minimum de 0 était accepté, et
+// 2 poules pour 2 équipes donnaient 0 match. Décision B : borner les réglages (effectif ≥ 1,
+// poules ≤ équipes ÷ 2).
+describe('CORR-EVENEMENTS 129 — des réglages de tournoi qui peuvent marcher', () => {
+  const monter = async (/** @type {any} */ evenement) => {
+    mockEvent = evenement;
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } });
+    /** @type {any} */
+    let arbre = null;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <TournamentSettingsEdit navigation={{ goBack: jest.fn() }} route={{ params: { eventId: 'evt-1' } }} />
+        </QueryClientProvider>,
+      );
+    });
+    montes.push(arbre);
+    return arbre;
+  };
+  const texte = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+  const enregistrer = async (/** @type {any} */ arbre) => {
+    const bouton = arbre.root.findAll((/** @type {any} */ noeud) => noeud.props?.accessibilityLabel === 'Enregistrer' && typeof noeud.props?.onPress === 'function')[0];
+    await act(async () => { bouton.props.onPress(); });
+  };
+  const equipesAcceptees = (/** @type {number} */ nombre) => Array.from({ length: nombre }, (_v, index) => ({
+    documentId: `eq-${index}`, name: `Équipe ${index + 1}`, status: 'accepted',
+  }));
+
+  test('🐞 un effectif minimum de 0 est refusé, avec un message sous le champ', async () => {
+    mockUpdateEvent.mockClear();
+    const arbre = await monter({
+      documentId: 'evt-1',
+      tournamentConfig: { formatMode: 'round_robin', minRosterSize: 0 },
+    });
+    const champ = arbre.root.findAll((/** @type {any} */ n) => n.props?.placeholder === 'Ex. 5' && typeof n.props?.onChangeText === 'function')[0];
+    await act(async () => { champ.props.onChangeText('0'); });
+
+    expect(texte(arbre)).toContain('L’effectif minimum est d’au moins 1 joueur.');
+    await enregistrer(arbre);
+    expect(mockUpdateEvent).not.toHaveBeenCalled();
+  });
+
+  test('🐞 2 poules pour 2 équipes acceptées sont refusées', async () => {
+    mockUpdateEvent.mockClear();
+    const arbre = await monter({
+      documentId: 'evt-1',
+      tournamentConfig: { formatMode: 'groups_only', groupCount: 2 },
+      tournamentTeams: equipesAcceptees(2),
+    });
+
+    // La doublure de traduction rend la clé ; la phrase est gardée par textesCORREVENEMENTS.
+    expect(texte(arbre)).toContain('tournamentSettingsEdit.tooManyGroups');
+    await enregistrer(arbre);
+    expect(mockUpdateEvent).not.toHaveBeenCalled();
+  });
+
+  test('2 poules pour 4 équipes passent', async () => {
+    mockUpdateEvent.mockClear();
+    const arbre = await monter({
+      documentId: 'evt-1',
+      tournamentConfig: { formatMode: 'groups_only', groupCount: 2 },
+      tournamentTeams: equipesAcceptees(4),
+    });
+
+    expect(texte(arbre)).not.toContain('tournamentSettingsEdit.tooManyGroups');
+    await enregistrer(arbre);
+    expect(mockUpdateEvent).toHaveBeenCalledTimes(1);
+  });
+});

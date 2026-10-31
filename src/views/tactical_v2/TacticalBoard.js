@@ -286,6 +286,7 @@ function TacticalBoard() {
   const fieldH = useSharedValue(450);
 
   // Also keep React state for rendering positioned players
+  const [largeurColonneTerrain, setLargeurColonneTerrain] = useState(0);
   const [fieldRect, setFieldRect] = useState({
     height: 450, width: 300, x: 0, y: 0,
   });
@@ -353,7 +354,9 @@ function TacticalBoard() {
   const aspectRatio = getTacticalFieldAspectRatio(sport);
 
   // Calculate field dimensions - maximize space
-  const fieldWidth = SCREEN_WIDTH - 28;
+  // CORR-EVENEMENTS 122 : la largeur vient de la COLONNE du terrain, mesurée ; la fenêtre ne
+  // sert qu'avant la première mesure (sur ordinateur, elle comptait le menu : 118 px de trop).
+  const fieldWidth = (largeurColonneTerrain > 0 ? largeurColonneTerrain : SCREEN_WIDTH) - 28;
   let fieldHeightRatio = 0.76;
   if (readOnly) {
     fieldHeightRatio = 0.79;
@@ -1409,10 +1412,15 @@ function TacticalBoard() {
         </View>
 
         {/* Field Area */}
-        <View style={styles.fieldContainer}>
+        <View
+          onLayout={(event) => setLargeurColonneTerrain(event?.nativeEvent?.layout?.width || 0)}
+          style={styles.fieldContainer}
+          testID="tactical-field-column"
+        >
           <Animated.View
             onLayout={measureField}
             ref={fieldRef}
+            testID="tactical-field"
             style={[
               styles.field,
               {
@@ -1451,7 +1459,8 @@ function TacticalBoard() {
               );
             })}
 
-            {fieldPlayers.length === 0 ? (
+            {/* CORR-EVENEMENTS 122 : en lecture seule, la consigne de placement ne s'adresse à personne. */}
+            {fieldPlayers.length === 0 && !readOnly ? (
               <View style={[styles.fieldEmptyState, { backgroundColor: `${Colors.primary900}88`, borderColor: `${Colors.primary500}44` }]}>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
                   {isDetectionEvent ? t('tacticalBoard.placeCalledUpPlayers', 'Place les joueurs convoques sur le terrain') : t('tacticalBoard.placeStarters', 'Place tes titulaires sur le terrain')}

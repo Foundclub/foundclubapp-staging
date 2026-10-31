@@ -143,8 +143,9 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
     () => describeChildChoices(children, registrations, event),
     [children, registrations, event],
   );
+  // CORR-EVENEMENTS 126 : le bouton ne reste que s'il reste un enfant à inscrire.
   const showRegistration = children.length === 0
-    || choices.some((choice) => choice.reasonKey !== 'childEventResponse.alreadyMember');
+    || choices.some((choice) => choice.selectable);
   const chosen = choices.filter((choice) => selected.includes(choice.documentId));
   const canContinue = chosen.length > 0 && acceptResponsibility && acceptConditions;
 

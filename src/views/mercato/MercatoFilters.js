@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
@@ -99,19 +100,26 @@ function MercatoFilters({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const [{ mercatoFilters }, appDispatch] = useAppContext();
+  const { userData } = useAuth();
   const { getGeohashForPointAndRadius } = usePlaces();
   const insets = useSafeAreaInsets();
 
+  // CORR-EVENEMENTS 134 (décision A) : une alerte neuve part avec la ville du profil ; le champ
+  // n'affichait que l'exemple « Marseille », et l'envoi était refusé faute de ville.
+  const villeDuProfil = createAlertMode && userData?.address?.value ? userData.address : null;
   const defaultValues = useMemo(() => {
     const source = (editAlertMode && savedFilters) ? savedFilters : (mercatoFilters || {});
     return {
       activity: source?.activity || source?.activityIds || [],
       category: source?.category || source?.sectionIds || [],
-      city: source?.city || { label: '', value: '' },
+      city: (source?.city?.value ? source.city : null)
+        || villeDuProfil
+        || source?.city
+        || { label: '', value: '' },
       position: source?.position || source?.positions || [],
       radius: source?.radius || 20,
     };
-  }, [editAlertMode, savedFilters, mercatoFilters]);
+  }, [editAlertMode, savedFilters, mercatoFilters, villeDuProfil]);
 
   const {
     control,

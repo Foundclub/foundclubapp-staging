@@ -121,6 +121,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const routeMatchLabel = route?.params?.matchLabel || null;
   const forceUnknownStats = Boolean(route?.params?.forceUnknownStats);
   const hydratedKeyRef = useRef(null);
+  const envoiEnCoursRef = useRef(false);
   // Le titre appartient à l'écran : les quatre appelants passent encore « Mon retour
   // post-match » dans la route, la planche dit « Mon retour de match ».
   const pageTitle = t('playerMatchResponseScreen.screenTitle', 'Mon retour de match');
@@ -374,20 +375,17 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   ]);
 
   // Défaut 22 du relevé du 01/10 : `replace(EventDetails)` empilait une 2e fiche du match sous
-  // la première. On revient d'où l'on vient ; on ne remplace que si l'écran a été ouvert seul.
+  // la première. CORR-EVENEMENTS 124 : ouvert depuis « Matchs en attente », on y revient par le
+  // retour ; ouvert seul (notification, adresse tapée), on rejoint « Matchs en attente » au lieu
+  // de la page d'avant du navigateur (« Modifier mon profil » à la recette du site).
+  const fromPendingMatchStats = Boolean(route?.params?.fromPendingMatchStats);
   const leaveAfterSubmit = useCallback(() => {
-    if (navigation.canGoBack?.()) {
+    if (fromPendingMatchStats && navigation.canGoBack?.()) {
       navigation.goBack();
       return;
     }
-    if (sourceType === 'event' && eventId) {
-      navigation.replace(RouteNames.EventDetails, { eventId });
-      return;
-    }
-    if (sourceType === 'league' && matchId) {
-      navigation.replace(RouteNames.LeagueMatchDetails, { matchId });
-    }
-  }, [eventId, matchId, navigation, sourceType]);
+    navigation.replace(RouteNames.PendingMatchStats);
+  }, [fromPendingMatchStats, navigation]);
 
   const saveMutation = useMutation({
     mutationFn: (status) => {
@@ -440,7 +438,12 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       Alert.alert(title, hint);
       return;
     }
-    saveMutation.mutate(status);
+    // CORR-EVENEMENTS 124 : un double clic arrive avant que `isPending` ne désactive le bouton.
+    if (envoiEnCoursRef.current) return;
+    envoiEnCoursRef.current = true;
+    saveMutation.mutate(status, {
+      onSettled: () => { envoiEnCoursRef.current = false; },
+    });
   }, [consistencyIssues, describeIssue, participation, saveMutation, t]);
 
   const chooseParticipation = useCallback((value) => {

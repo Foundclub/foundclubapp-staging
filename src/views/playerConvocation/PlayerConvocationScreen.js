@@ -143,6 +143,9 @@ function PlayerConvocationScreen() {
   // reponse. ponytail: tant que l evenement n est pas relu, la barre s affiche
   // (charge de convocation sans l option) ; elle disparait a la relecture.
   const reponsesOuvertes = isRsvpEnabled(eventQuery.data);
+  // CORR-EVENEMENTS 120 : un match annulé garde sa convocation lisible, sous un bandeau, et
+  // Présent / Absent ne répondent plus (même lecture que la fiche : `status === 'cancelled'`).
+  const estAnnule = eventQuery.data?.status === 'cancelled';
 
   const convocation = convocationQuery.data;
   const viewerId = String(userData?.documentId || userData?.id || '').trim();
@@ -200,9 +203,9 @@ function PlayerConvocationScreen() {
   const pendingAnswer = rsvpMutation.isPending ? rsvpMutation.variables : null;
 
   const handleAnswer = useCallback((/** @type {'present' | 'absent'} */ nextAnswer) => {
-    if (!eventId || rsvpMutation.isPending) return;
+    if (!eventId || rsvpMutation.isPending || estAnnule) return;
     rsvpMutation.mutate(nextAnswer);
-  }, [eventId, rsvpMutation]);
+  }, [estAnnule, eventId, rsvpMutation]);
 
   const fieldTokens = useMemo(() => buildConvocationFieldTokens({
     placements: view?.placements,
@@ -381,6 +384,28 @@ function PlayerConvocationScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.list}
       >
+        {estAnnule ? (
+          <View
+            accessibilityRole="alert"
+            style={[
+              styles.cancelledBanner,
+              {
+                backgroundColor: withAlpha(Colors.error500, 0.12),
+                borderColor: withAlpha(Colors.error500, 0.4),
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+              {t('playerConvocation.cancelled.title', 'Match annulé')}
+            </Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {t(
+                'playerConvocation.cancelled.text',
+                'L’organisateur a annulé ce match : il n’y a plus rien à répondre.',
+              )}
+            </Text>
+          </View>
+        ) : null}
         <View
           style={[
             styles.identityCard,
@@ -672,6 +697,7 @@ function PlayerConvocationScreen() {
           {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
           <View style={styles.footerRow}>
             <Button
+              disabled={estAnnule}
               isLoading={pendingAnswer === 'present'}
               onPress={() => handleAnswer('present')}
               style={styles.footerCta}
@@ -679,6 +705,7 @@ function PlayerConvocationScreen() {
               variant={answer === 'present' ? 'Primary' : 'Secondary'}
             />
             <Button
+              disabled={estAnnule}
               isLoading={pendingAnswer === 'absent'}
               onPress={() => handleAnswer('absent')}
               style={styles.footerCta}
@@ -693,6 +720,13 @@ function PlayerConvocationScreen() {
 }
 
 const styles = StyleSheet.create({
+  cancelledBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    marginBottom: 12,
+    padding: 14,
+  },
   column: {
     flex: 1,
   },

@@ -560,7 +560,42 @@ describe('T9 · la clôture de l appel s accorde, et vaut pour tout événement'
     expect(texte).not.toContain('1 pointés');
     expect(texte).toContain('1 arrivé·e à l’heure');
     expect(texte).toContain('0 arrivé·e en retard');
-    expect(texte).toContain('Le serveur les passera en « Non pointé » après la fin, vers 20:13.');
+    // 🎯 CORR-EVENEMENTS point 125 — ADAPTÉ : la phrase dit combien de personnes restent.
+    expect(texte).toContain('Le serveur passera 1 personne non pointée en « Non pointé » après la fin, vers 20:13.');
+  });
+});
+
+// CORR-EVENEMENTS point 125 (recette du site, 30/10) — « Le serveur les passera en Non pointé »
+// s'affichait alors que tout le monde était pointé. Décision A : la phrase seulement s'il
+// reste des non pointés, avec leur nombre.
+describe('CORR-EVENEMENTS 125 · la clôture ne parle des non pointés que s il en reste', () => {
+  test('🐞 tout le monde pointé : ni phrase du serveur, ni liste', async () => {
+    const arbre = await monter([
+      ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Hugo', userId: 'u1' }),
+      ligne({ arrivedAt: '2026-08-19T15:58:00.000Z', firstname: 'Leo', userId: 'u2' }),
+    ]);
+
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('2 pointés · 0 jamais vu');
+    expect(texte).not.toContain('Non pointé');
+    expect(texte).not.toContain('20:13');
+    // La correction possible reste dite.
+    expect(texte).toContain('22:00');
+  });
+
+  test('deux non pointés : la phrase les compte', async () => {
+    const arbre = await monter([
+      ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Hugo', userId: 'u1' }),
+      ligne({ firstname: 'Malo', userId: 'u2' }),
+      ligne({ firstname: 'Aron', userId: 'u3' }),
+    ]);
+
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('Le serveur passera 2 personnes non pointées en « Non pointé » après la fin, vers 20:13.');
   });
 });
 

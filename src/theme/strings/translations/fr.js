@@ -9695,6 +9695,8 @@ export default {
           + 'Générer avant le pointage produit des équipes fausses.',
         subtitle_other: 'Sur {{count}} inscrits, rarement tous se présentent. '
           + 'Générer avant le pointage produit des équipes fausses.',
+        subtitle_zero: 'Pas encore d’inscrits. Pointe les présents à leur arrivée, '
+          + 'puis génère les équipes.',
         title: 'Pointer les présents d’abord',
       },
       checkInList: {
@@ -10604,6 +10606,7 @@ export default {
         actions: {
           all: 'Tous les événements',
           future: 'Cet événement et les suivants',
+          keep: 'Ne rien annuler',
           thisEvent: 'Cet événement',
         },
         description: 'Cet événement fait partie d\'une série. Que veux-tu annuler ?',
@@ -10735,6 +10738,8 @@ export default {
       responses_one: '{{received}} réponse sur {{total}}',
       responses_other: '{{received}} réponses sur {{total}}',
     },
+    // CORR-EVENEMENTS 121 : un joueur convoqué sans l'app, présent d'office.
+    participantWithoutApp: 'sans l’app',
     participationStatus: {
       missing: 'Absent·e·s',
       notAnswered: 'Sans réponse',
@@ -10858,6 +10863,8 @@ export default {
     staffNote: 'Note staff',
     stage: {
       day: 'Jour',
+      // CORR-EVENEMENTS 128 : le programme d'un stage sur la fiche du site.
+      fromTo: 'Du {{debut}} au {{fin}}',
       hours: 'Horaires',
       hoursEmpty: 'Variables',
       legend: 'présent·e·s · absent·e·s · sans réponse',
@@ -10866,6 +10873,9 @@ export default {
       period: 'Période',
       periodEmpty: 'Non renseignée',
       placeEmpty: 'À définir',
+      programme: 'Programme du stage',
+      showMoreDays_one: 'Voir le dernier jour',
+      showMoreDays_other: 'Voir les {{count}} autres jours',
       today: 'AUJOURD’HUI',
     },
     stageLicense: {
@@ -11024,6 +11034,11 @@ export default {
     updateTheActualDelayOr: 'Mets à jour le retard réel ou réinitialise le pointage.',
     validationAutomatic: 'automatique',
     validationManual: 'manuelle',
+    // CORR-EVENEMENTS 126 : la pastille de l'en-tête dit la vraie règle du serveur.
+    validationPill: {
+      auto: 'Validation auto pour les membres des équipes',
+      manual: 'Validation manuelle',
+    },
     variableTimes: 'Horaires variables',
     view: 'Voir',
     // FINITIONS (recette du 28/09) — « branche » est un mot de développeur : pour un
@@ -11635,6 +11650,8 @@ export default {
     },
     errors: {
       datePast: "La date ou l'heure de début doit être dans le futur.",
+      // CORR-EVENEMENTS 127 : le message sous le champ de la date.
+      datePastUnderField: 'Cette date est passée : choisis un jour à venir.',
       genericCreate: "Erreur de création d'événement.",
       genericLoad: 'Impossible de charger cette étape.',
       invalidTimeRange: "L'heure de fin doit être après l'heure de début.",
@@ -17949,6 +17966,11 @@ export default {
       absent: 'Tu as répondu Absent',
       present: 'Tu as répondu Présent',
     },
+    // CORR-EVENEMENTS 120 : la convocation d'un match annulé.
+    cancelled: {
+      text: 'L’organisateur a annulé ce match : il n’y a plus rien à répondre.',
+      title: 'Match annulé',
+    },
     card: {
       calledUpBy: 'Convoqué par {{name}}',
       number: 'N°{{number}}',
@@ -21498,6 +21520,10 @@ export default {
       reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
       reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
+      // eslint-disable-next-line max-len
+      serverWillCount_one: 'Le serveur passera {{count}} personne non pointée en « Non pointé » après la fin, vers {{heure}}.',
+      // eslint-disable-next-line max-len
+      serverWillCount_other: 'Le serveur passera {{count}} personnes non pointées en « Non pointé » après la fin, vers {{heure}}.',
     },
     attente: {
       colEnd: 'Fin du match',
@@ -25196,6 +25222,12 @@ export default {
     bracketGenerated: 'Tableau final généré',
     cancel: 'Annuler',
     close: 'Clôturer',
+    // CORR-EVENEMENTS 129 C et 131 : bilan de génération, tournoi clôturé.
+    closedBanner: 'Tournoi clôturé',
+    closedOn: 'Tournoi clôturé le {{date}}',
+    // eslint-disable-next-line max-len
+    closedReadOnly: 'Les poules, les matchs et les classements restent consultables ; plus rien ne se modifie.',
+    closedTag: 'Clôturé',
     closeTheTournament: 'Clôturer le tournoi',
     competitionActions: 'Actions compétition',
     competitionPublished: 'Compétition publiée',
@@ -25210,12 +25242,24 @@ export default {
     filterArchived: 'Archivées',
     filterDeclined: 'Refusées',
     filterPending: 'En attente',
+    // CORR-EVENEMENTS 133 : les textes du cockpit, avec leurs accents.
+    filterRosterToReview: 'Effectifs à revoir',
     filterWarning: 'Warnings roster',
+    formatLine: 'Format : {{format}}',
     fromTeam: 'Depuis {{teamName}}',
     generateTheKnockoutStage: 'Générer la phase finale',
     generateTheMatches: 'Générer les matchs',
+    groupsCount_one: '{{count}} poule',
+    groupsCount_other: '{{count}} poules',
     manual: 'Manuelle',
+    matchesCount_one: '{{count}} match',
+    matchesCount_other: '{{count}} matchs',
+    matchesGenerated_one: '{{count}} match créé.',
+    matchesGenerated_other: '{{count}} matchs créés.',
     matchGenerationMode: 'Génération des matchs: {{mode}}',
+    noMatchGenerated: 'Aucun match créé.',
+    // eslint-disable-next-line max-len
+    noMatchGeneratedHint: 'Chaque poule doit compter au moins 2 équipes : réduis le nombre de poules dans les paramètres.',
     noMatchGeneratedYet: 'Aucun match génère pour le moment.',
     noTeamMatchesThisFilter: 'Aucune équipe ne correspond à ce filtre pour le moment.',
     openTheTeam: 'Ouvrir l’équipe',
@@ -25224,12 +25268,31 @@ export default {
     publishTheCompetition: 'Publier la compétition',
     qualifiedPerGroup: 'Qualifiés / poule: {{qualified}}',
     registeredTeams: 'Équipes inscrites',
+    rosterAlertsCount_one: '{{count}} effectif à revoir',
+    rosterAlertsCount_other: '{{count}} effectifs à revoir',
+    rosterInvited_one: '{{count}} invitation',
+    rosterInvited_other: '{{count}} invitations',
+    rosterPending: '{{count}} en attente',
+    rosterPresent_one: '{{count}} présent',
+    rosterPresent_other: '{{count}} présents',
+    rosterRequested_one: '{{count}} demande',
+    rosterRequested_other: '{{count}} demandes',
+    rosterToReview: 'Effectif à revoir',
+    rosterTotal_one: '{{count}} joueur',
+    rosterTotal_other: '{{count}} joueurs',
     rosterWarning: 'Warning roster',
     // eslint-disable-next-line max-len
     runTheDrawGenerateThe: 'Organise le tirage, génère les matchs, puis publie la compétition quand la structure est prête.',
     seeding: 'Tirage: {{seeding}}',
+    seedingManual: 'Manuel',
+    seedingRandom: 'Aléatoire',
+    seedingSnake: 'Serpentin',
     seeTheMatch: 'Voir le match',
     sportsStructure: 'Structure sportive',
+    summaryGroups: 'Poules',
+    summaryMatches: 'Matchs',
+    summaryRosterAlerts: 'À revoir',
+    summaryTeams: 'Équipes',
     syncTheStructure: 'Synchroniser la structure',
     tabBracket: 'Phases finales',
     tabGroups: 'Poules',
@@ -25327,6 +25390,8 @@ export default {
     maxNumberOfTeams: 'Nombre max d’équipes',
     maxSquad: 'Effectif max',
     minSquad: 'Effectif min',
+    // CORR-EVENEMENTS 129 : des réglages de tournoi qui peuvent marcher.
+    minSquadAtLeastOne: 'L’effectif minimum est d’au moins 1 joueur.',
     numberOfGroups: 'Nombre de poules',
     // eslint-disable-next-line max-len
     onlyTheTournamentCreatorCan: 'Seul le createur du tournoi peut modifier ces paramètres globaux.',
@@ -25356,6 +25421,10 @@ export default {
     thirdPlaceMatch: 'Match pour la 3e place',
     // eslint-disable-next-line max-len
     thisTextIsShownOn: 'Ce texte est affiché sur la fiche tournoi et sert de référence commune pour les équipes.',
+    // eslint-disable-next-line max-len
+    tooManyGroups_one: 'Au plus {{count}} poule pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
+    // eslint-disable-next-line max-len
+    tooManyGroups_other: 'Au plus {{count}} poules pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
     tournamentFrame: 'Cadre du tournoi',
     tournamentRules: 'Règles du tournoi',
     tournamentSettings: 'Paramètres du tournoi',
