@@ -15115,15 +15115,15 @@ export default {
   },
   messaging: {
     addGroupMembers: 'Add members',
+    archive: 'Archive',
+    archived: 'Archived',
+    archivedBack: 'Back to chats',
+    archiveError: 'Unable to archive this conversation.',
     casquette: {
       club: 'Club',
       complexe: 'Venue',
       ville: 'City',
     },
-    archive: 'Archive',
-    archived: 'Archived',
-    archivedBack: 'Back to chats',
-    archiveError: 'Unable to archive this conversation.',
     conversationOptions: 'Conversation options',
     createConversationError: 'Unable to start this conversation.',
     errors: {
@@ -15823,6 +15823,8 @@ export default {
       acceptedOn: 'Accepted on {{date}}',
       complete: 'Complete',
       edit: 'Edit',
+      garderOuRetirer: '{{firstname}} is already in the {{team}} team: keep this'
+        + ' request, or withdraw it?',
       numberLabel: 'Shirt number',
       pending: 'Pending',
       positionLabel: 'Position',
@@ -18786,7 +18788,8 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
-      dejaPlaceeMessage: 'This child has joined another team. The parent can still withdraw the request; you can also decline it.',
+      dejaPlaceeMessage: 'This child has joined another team. The parent can still'
+        + ' withdraw the request; you can also decline it.',
       dejaPlaceeTitre: 'Already in a team',
       goneMessage: 'The parent has withdrawn this request.',
       goneTitle: 'Request withdrawn',
@@ -20047,12 +20050,6 @@ export default {
     title: 'Your event is live',
     variantHint: 'Choose the {{label}} style',
   },
-  // CORR-MESSAGERIE p61 (31/10) — on the website, the SMS app does not always open: copy the message.
-  smsRepliCopie: {
-    copie: 'Message copied: paste it into an SMS, WhatsApp or an email.',
-    copier: 'Nothing opened? Copy the message',
-    echec: 'Copy failed in this browser: send the invitation from your phone.',
-  },
   smartNotificationHost: {
     defaultBody: 'New update.',
     defaultTitle: 'League notification',
@@ -20062,6 +20059,12 @@ export default {
       publish: 'Publish the line-up',
       title: 'Publish the line-up',
     },
+  },
+  // CORR-MESSAGERIE p61 (31/10) — website: the SMS app may not open, copy the message.
+  smsRepliCopie: {
+    copie: 'Message copied: paste it into an SMS, WhatsApp or an email.',
+    copier: 'Nothing opened? Copy the message',
+    echec: 'Copy failed in this browser: send the invitation from your phone.',
   },
   squad: {
     filters: {

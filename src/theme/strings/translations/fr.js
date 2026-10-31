@@ -16040,16 +16040,16 @@ export default {
   },
   messaging: {
     addGroupMembers: 'Ajouter des membres',
+    archive: 'Archiver',
+    archived: 'Archivées',
+    archivedBack: 'Retour aux discussions',
+    archiveError: "Impossible d'archiver cette conversation.",
     // CORR-MESSAGERIE p114 (31/10) — la casquette d'une ligne, pour un compte à deux casquettes.
     casquette: {
       club: 'Club',
       complexe: 'Complexe',
       ville: 'Ville',
     },
-    archive: 'Archiver',
-    archived: 'Archivées',
-    archivedBack: 'Retour aux discussions',
-    archiveError: "Impossible d'archiver cette conversation.",
     conversationOptions: 'Options de la conversation',
     createConversationError: 'Impossible de démarrer cette conversation.',
     errors: {
@@ -19536,7 +19536,8 @@ export default {
     },
     childInterest: {
       // CORR-MESSAGERIE p62 (31/10) — l'enfant a rejoint une autre équipe entre-temps.
-      dejaPlaceeMessage: 'Cet enfant a rejoint une autre équipe. Le parent peut encore retirer sa demande ; tu peux aussi la refuser.',
+      dejaPlaceeMessage: 'Cet enfant a rejoint une autre équipe. Le parent peut'
+        + ' encore retirer sa demande ; tu peux aussi la refuser.',
       dejaPlaceeTitre: 'Déjà dans une équipe',
       // PARENT-FINITIONS 6 (14/10) — la demande a été retirée par le parent avant la décision.
       goneMessage: 'Le parent a retiré cette demande.',
@@ -20797,12 +20798,6 @@ export default {
     title: 'Ton événement est en ligne',
     variantHint: 'Choisir le style {{label}}',
   },
-  // CORR-MESSAGERIE p61 (31/10) — sur le site, le SMS ne s'ouvre pas toujours : copier le message.
-  smsRepliCopie: {
-    copie: 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.',
-    copier: 'Rien ne s’est ouvert ? Copier le message',
-    echec: 'La copie n’a pas marché sur ce navigateur : envoie l’invitation depuis ton téléphone.',
-  },
   smartNotificationHost: {
     defaultBody: 'Nouvelle mise à jour.',
     defaultTitle: 'Notification league',
@@ -20812,6 +20807,13 @@ export default {
       publish: 'Publier la compo',
       title: 'Publier la compo',
     },
+  },
+  // CORR-MESSAGERIE p61 (31/10) — sur le site, le SMS peut ne pas s'ouvrir : copier.
+  smsRepliCopie: {
+    copie: 'Message copié : colle-le dans un SMS, WhatsApp ou un e-mail.',
+    copier: 'Rien ne s’est ouvert ? Copier le message',
+    echec: 'La copie n’a pas marché sur ce navigateur :'
+      + ' envoie l’invitation depuis ton téléphone.',
   },
   squad: {
     filters: {
@@ -26400,6 +26402,9 @@ export default {
       acceptedOn: 'Acceptée le {{date}}',
       complete: 'Compléter',
       edit: 'Modifier',
+      // CORR-MESSAGERIE p62 (31/10) — acceptée ailleurs, la demande reste : le parent décide.
+      garderOuRetirer: '{{firstname}} est déjà dans l’équipe {{team}} : tu gardes'
+        + ' cette demande, ou tu la retires ?',
       numberLabel: 'Numéro de maillot',
       pending: 'En attente',
       positionLabel: 'Poste',
