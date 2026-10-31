@@ -6351,10 +6351,7 @@ export default {
       entrainements_other: '{{count}} cette saison',
       entrainementsPoses: 'Entraînements posés',
       modifier: 'Modifier le créneau',
-      modifierSerie: 'Modifier la série',
       noteCreneau: '« Modifier » et « Retirer le créneau » demandent « à partir du » : les dates '
-        + 'passées restent. Le club est prévenu.',
-      noteSerie: '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
         + 'passées restent. Le club est prévenu.',
       origine: 'Origine',
       pasCeJour: 'Ce créneau n’a pas lieu ce jour-là.',
@@ -6370,9 +6367,7 @@ export default {
         + 'club est prévenu.',
       retirerDateTitre: 'Retirer une seule date ?',
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
-      retirerSerie: 'Retirer la série',
       retirerSeriePerd: '{{qui}} perd {{rythme}}, {{installation}}, à partir du {{date}}.',
-      retirerSerieTitre: 'Retirer la série à partir d’une date ?',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
       retirerUneDate: 'Retirer le {{date}} seulement',
       unSurDeux: 'Un {{jour}} sur deux, {{heures}}',
@@ -7125,9 +7120,7 @@ export default {
       // COLL-FIX2 (03/10) — un seul club prévenu (planche 25).
       prevenu: '{{clubs}} sera prévenu. Ses séances restent à sa charge.',
       prevenus: '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
-      titreBloquer: 'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
       titreBloquerNom: 'Bloquer « {{installation}} » {{jours}}, de {{debut}} à {{fin}} ?',
-      titreFermer: 'Fermer {{installation}} {{jours}} ?',
       titreFermerNom: 'Fermer « {{installation}} » {{jours}} ?',
     },
     erreurs: {
@@ -12710,7 +12703,6 @@ export default {
     membre: {
       ajouterPhoto: 'Ajouter une photo (facultatif)',
       autreChose: 'Signaler autre chose',
-      ceQueVoitLaVille: 'La Ville verra ton rôle et ton club, pas ton nom.',
       ceQueVoitLaVilleRole: 'La Ville voit ton rôle et ton club ; ton nom si tu encadres.',
       compteur_one: '{{count}} en cours',
       compteur_other: '{{count}} en cours',
@@ -12797,7 +12789,6 @@ export default {
       etatASurveiller_other:
         '{{count}} signalements « sécurité » sont ouverts depuis le {{date}} ; l’installation '
         + 'reste ouverte.',
-      etatEnService: 'Aucun signalement ouvert, aucune fermeture en cours.',
       etatEnServiceSecurite: 'Aucun signalement de sécurité, aucune fermeture en cours.',
       etatFermee: 'Du {{debut}} au {{fin}}',
       etatFermeeMotif: 'Du {{debut}} au {{fin}} · {{motif}}',
@@ -16925,9 +16916,6 @@ export default {
       dirigeants: 'Dirigeants',
       entraineur: 'Coach',
       entraineurs: 'Coachs',
-      gerants: 'Gérants',
-      gestionnaire: 'Gérant de la Ville',
-      gestionnaires: 'Gérants de la Ville',
       gestionnaireDeLaVille: 'Gestionnaire de la Ville',
       gestionnairesDeLaVille: 'Gestionnaires de la Ville',
       gestionnairesPuce: 'Gestionnaires',

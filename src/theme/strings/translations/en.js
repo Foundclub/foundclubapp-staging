@@ -5811,10 +5811,7 @@ export default {
       entrainements_other: '{{count}} this season',
       entrainementsPoses: 'Trainings set',
       modifier: 'Edit the slot',
-      modifierSerie: 'Edit the series',
       noteCreneau: '“Edit” and “Remove the slot” ask “from”: past dates stay. The club is '
-        + 'notified.',
-      noteSerie: '“Edit” and “Remove the series” ask “from”: past dates stay. The club is '
         + 'notified.',
       origine: 'Origin',
       pasCeJour: 'This slot does not take place on that day.',
@@ -5830,9 +5827,7 @@ export default {
         + 'is notified.',
       retirerDateTitre: 'Remove a single date?',
       retirerPerd: '{{qui}} loses {{jour}} {{heures}}, {{installation}}, from {{date}}.',
-      retirerSerie: 'Remove the series',
       retirerSeriePerd: '{{qui}} loses {{rythme}}, {{installation}}, from {{date}}.',
-      retirerSerieTitre: 'Remove the series from a date?',
       retirerTitre: 'Withdraw the {{jour}} slot?',
       retirerUneDate: 'Remove {{date}} only',
       unSurDeux: 'Every other {{jour}}, {{heures}}',
@@ -6547,9 +6542,7 @@ export default {
       // COLL-FIX2 (03/10) — a single club notified (board 25).
       prevenu: '{{clubs}} will be notified. Its sessions remain its responsibility.',
       prevenus: '{{clubs}} will be notified. Their sessions remain their responsibility.',
-      titreBloquer: 'Block {{installation}} {{jours}}, from {{debut}} to {{fin}}?',
       titreBloquerNom: 'Block “{{installation}}” {{jours}}, from {{debut}} to {{fin}}?',
-      titreFermer: 'Close {{installation}} {{jours}}?',
       titreFermerNom: 'Close “{{installation}}” {{jours}}?',
     },
     erreurs: {
@@ -11974,7 +11967,6 @@ export default {
     membre: {
       ajouterPhoto: 'Add a photo (optional)',
       autreChose: 'Report something else',
-      ceQueVoitLaVille: 'The city will see your role and your club, not your name.',
       ceQueVoitLaVilleRole: 'The city sees your role and your club; your name if you supervise.',
       compteur_one: '{{count}} in progress',
       compteur_other: '{{count}} in progress',
@@ -12057,7 +12049,6 @@ export default {
         '{{count}} safety report has been open since {{date}}; the facility stays open.',
       etatASurveiller_other:
         '{{count}} safety reports have been open since {{date}}; the facility stays open.',
-      etatEnService: 'No open report, no closure in progress.',
       etatEnServiceSecurite: 'No safety report, no closure in progress.',
       etatFermee: 'From {{debut}} to {{fin}}',
       etatFermeeMotif: 'From {{debut}} to {{fin}} · {{motif}}',
@@ -16181,9 +16172,6 @@ export default {
       dirigeants: 'Club managers',
       entraineur: 'Coach',
       entraineurs: 'Coaches',
-      gerants: 'City managers',
-      gestionnaire: 'City manager',
-      gestionnaires: 'City managers',
       gestionnaireDeLaVille: 'City manager',
       gestionnairesDeLaVille: 'City managers',
       gestionnairesPuce: 'Managers',
