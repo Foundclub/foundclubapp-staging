@@ -160,3 +160,19 @@ describe('COMPO-WEB — les objets du parcours de composition voyagent en memoir
     expect(readCarriedWebParams('inconnue')).toBeNull();
   });
 });
+
+// CORR-EVENEMENTS point 122 (recette du site, 30/10) — la carte d'une convocation en liste ouvre
+// le plateau en lecture seule avec ses joueurs EN OBJETS : l'adresse les jetait, le plateau
+// disait « 0/0 placés » avec un banc vide. Décision A : afficher les convoqués.
+describe('CORR-EVENEMENTS 122 — le plateau en lecture seule garde ses convoqués', () => {
+  test('🐞 vers TacticalBoardV2 (imbriqué), les joueurs voyagent en mémoire', () => {
+    const { adapter, push } = fabriquer();
+    const params = { eventId: 'e1', players: JOUEURS, readOnly: true };
+
+    adapter.navigate(RouteNames.EventStack, { params, screen: RouteNames.TacticalBoardV2 });
+
+    const [, etat] = push.mock.calls[0];
+    expect(etat).toEqual({ carry: expect.any(String) });
+    expect(readCarriedWebParams(etat.carry).players).toBe(JOUEURS);
+  });
+});
