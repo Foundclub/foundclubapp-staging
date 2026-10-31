@@ -485,9 +485,9 @@ describe('CORR-EVENEMENTS 122 — le plateau en lecture seule', () => {
 describe('CORR-EVENEMENTS-2 122 — le banc en lecture seule', () => {
   const LINA = { documentId: 'lina', firstname: 'Lina', lastname: 'Recette' };
   const PAUL = { documentId: 'manual_paul', firstname: 'Paul', lastname: 'Contrerecette' };
-  /** Le chiffre que porte l'onglet « Banc ». */
+  // Le chiffre que porte l'onglet « Banc ».
   const chiffreDuBanc = (/** @type {any} */ arbre) => trouverParLibelle(arbre, 'Banc')[0]
-    .findAll((/** @type {any} */ n) => typeof n.children?.[0] === 'string' && /^\d+$/.test(n.children[0]))
+    .findAll((/** @type {any} */ n) => /^\d+$/.test(String(n.children?.[0] ?? '')))
     .map((/** @type {any} */ n) => n.children[0])[0];
 
   test('🐞 un joueur présent dans plusieurs listes ne compte qu’une fois', () => {
@@ -502,7 +502,8 @@ describe('CORR-EVENEMENTS-2 122 — le banc en lecture seule', () => {
   });
 
   test('🐞 lecture seule : le banc ne dit plus « Maintiens un joueur… »', () => {
-    const arbre = monter(parametresEvenement({ canEdit: false, players: [LINA, PAUL], readOnly: true }));
+    const lecteur = { canEdit: false, players: [LINA, PAUL], readOnly: true };
+    const arbre = monter(parametresEvenement(lecteur));
     appuyerSur(arbre, 'Banc');
 
     expect(chiffreDuBanc(arbre)).toBe('2');
