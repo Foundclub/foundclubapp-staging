@@ -230,7 +230,8 @@ describe('COLL-C2B-BIS — planche 21 : le « … » ouvre un petit menu ancré,
     expect(ouvert).toBeDefined();
     expect(mockFeuillesOuvertes).toHaveLength(0);
     const lus = ouvert.findAllByType(Text).map((/** @type {any} */ n) => aplatir(n.props.children).trim());
-    expect(lus).toEqual(['Voir le planning', 'Modifier l’installation', 'Ouvrir dans le GPS']);
+    // CORR-COLLECTIVITES 91 (31/10, Adel B) : + « Archiver l’installation ».
+    expect(lus).toEqual(['Voir le planning', 'Modifier l’installation', 'Ouvrir dans le GPS', 'Archiver l’installation']);
     // Le bouton est en x 1000, y 300, 44 x 44 : le menu s ouvre 4 points dessous, son bord droit
     // aligné sur celui du bouton.
     const style = [].concat(ouvert.props.style).reduce((tout, part) => ({ ...tout, ...(part || {}) }), {});
@@ -239,7 +240,7 @@ describe('COLL-C2B-BIS — planche 21 : le « … » ouvre un petit menu ancré,
     // Chaque geste est un « menuitem » qui se touche.
     const gestes = ouvert.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'menuitem' && typeof n.props?.onPress === 'function');
     const libelles = new Set(gestes.map((/** @type {any} */ n) => n.findAllByType(Text).map((/** @type {any} */ t) => aplatir(t.props.children).trim()).join('')));
-    expect([...libelles]).toEqual(['Voir le planning', 'Modifier l’installation', 'Ouvrir dans le GPS']);
+    expect([...libelles]).toEqual(['Voir le planning', 'Modifier l’installation', 'Ouvrir dans le GPS', 'Archiver l’installation']);
   });
 
   it('un geste ferme le menu et part ; toucher à côté le ferme', () => {
@@ -266,7 +267,7 @@ describe('COLL-C2B-BIS — planche 21 : le « … » ouvre un petit menu ancré,
     const arbre = rendre();
     act(() => { parLibelle(arbre, 'Plus d’actions pour Dojo municipal').props.onPress(); });
     const lus = menu(arbre).findAllByType(Text).map((/** @type {any} */ n) => aplatir(n.props.children).trim());
-    expect(lus).toEqual(['Voir le planning', 'Modifier l’installation']);
+    expect(lus).toEqual(['Voir le planning', 'Modifier l’installation', 'Archiver l’installation']);
   });
 });
 

@@ -62,6 +62,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import {
+  archiveCollectiviteInstallation,
   decideClubSession,
   deleteFacility,
   getFacilitySections,
@@ -280,6 +281,21 @@ function FacilityList() {
   const onRefresh = useCallback(() => {
     refetchFacilities();
   }, [refetchFacilities]);
+
+  // CORR-COLLECTIVITES 91 (31/10, Adel B) : « Archiver l'installation », confirmée dans la fenêtre
+  // de l'app (pas une boîte du navigateur).
+  const [aArchiver, setAArchiver] = useState(/** @type {any} */ (null));
+  const [erreurArchiver, setErreurArchiver] = useState('');
+  const archiver = async () => {
+    setErreurArchiver('');
+    try {
+      await archiveCollectiviteInstallation({ collectiviteId, facilityId: aArchiver?.documentId });
+      setAArchiver(null);
+      collectiviteInstallations.refetch?.();
+    } catch (refus) {
+      setErreurArchiver(getErrorMessage(/** @type {any} */ (refus)));
+    }
+  };
 
   const handleDelete = useCallback((id, name) => {
     if (!id) return;
@@ -991,6 +1007,15 @@ function FacilityList() {
         onPress: () => handleOpenFacilityMap(menuInstallation),
       });
     }
+    // CORR-COLLECTIVITES 91 (31/10, Adel B) : pas de « Supprimer » pour la mairie, mais « Archiver ».
+    const installationAArchiver = menuInstallation;
+    menuGestes.push({
+      cle: 'archiver',
+      danger: true,
+      icone: 'trash',
+      libelle: t('collectiviteCreneaux.liste.archiver', 'Archiver l’installation'),
+      onPress: () => setAArchiver(installationAArchiver),
+    });
   }
   const fermerMenu = () => {
     setMenuInstallation(null);
@@ -1708,6 +1733,37 @@ function FacilityList() {
       {content}
 
       {menuDesInstallations}
+
+      <BottomModal close={() => setAArchiver(null)} isVisible={Boolean(aArchiver)} webPresentation="dialog">
+        {aArchiver ? (
+          <View
+            accessibilityRole="alert"
+            style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}
+            testID="installation-archiver-confirmation"
+          >
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'collectiviteCreneaux.liste.archiverQuestion',
+                'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son historique est gardé.',
+                { nom: aArchiver?.name || '', ...SANS_ECHAPPEMENT },
+              )}
+            </Text>
+            {erreurArchiver ? (
+              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreurArchiver}</Text>
+            ) : null}
+            <Button
+              onPress={archiver}
+              title={t('collectiviteCreneaux.liste.archiverOui', 'Oui, archiver')}
+              variant="Danger"
+            />
+            <Button
+              onPress={() => setAArchiver(null)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+          </View>
+        ) : null}
+      </BottomModal>
 
       {peutRepartir ? (
         <BottomModal

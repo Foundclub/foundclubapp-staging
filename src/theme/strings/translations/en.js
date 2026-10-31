@@ -5844,6 +5844,9 @@ export default {
       type: 'Type',
     },
     liste: {
+      archiver: 'Archive the facility',
+      archiverOui: 'Yes, archive',
+      archiverQuestion: 'Archive “{{nom}}”? It leaves the lists and the schedule; its history is kept.',
       capacite_one: '{{count}} team at a time',
       capacite_other: '{{count}} teams at a time',
       complet: 'full {{moment}}',

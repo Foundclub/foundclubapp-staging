@@ -6384,6 +6384,9 @@ export default {
       type: 'Type',
     },
     liste: {
+      archiver: 'Archiver l’installation',
+      archiverOui: 'Oui, archiver',
+      archiverQuestion: 'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son historique est gardé.',
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',

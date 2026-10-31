@@ -94,7 +94,10 @@ jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
 jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
   useFacilityClosures: () => ({ data: null }),
 }));
+/** CORR-COLLECTIVITES 91 — « Archiver l'installation ». */
+const mockArchiver = jest.fn(async () => ({ data: { archived: true } }));
 jest.mock('@/services/facility/facilityService', () => ({
+  archiveCollectiviteInstallation: (/** @type {any} */ variables) => mockArchiver(variables),
   deleteFacility: jest.fn(),
   getFacilitySections: (/** @type {any[]} */ installations) => (
     Array.isArray(installations) && installations.length ? [{ data: installations, title: '' }] : []
@@ -373,3 +376,20 @@ jest.mock(
   '@/components/organisms/planning/PlanningDesInstallations',
   () => function PlanningDesInstallationsDouble() { return null; },
 );
+
+
+// CORR-COLLECTIVITES 91 (31/10/2026, décision d'Adel B) — la Ville ne pouvait pas supprimer une
+// installation créée par erreur. « Archiver l'installation » : cachée partout, l'historique gardé ;
+// une confirmation dans la fenêtre de l'app d'abord.
+describe('CORR-COLLECTIVITES 91 — « Archiver l’installation »', () => {
+  it('le menu le propose ; la confirmation ; puis l’installation est archivée', async () => {
+    mockArchiver.mockClear();
+    const arbre = rendre();
+    act(() => { parLibelle(arbre, 'Plus d’actions pour Gymnase des Tilleuls').props.onPress(); });
+    act(() => { parTexte(arbre, 'Archiver l’installation').props.onPress(); });
+    expect(textes(arbre)).toContain('Archiver « Gymnase des Tilleuls » ? Elle disparaît des listes et du planning ; son historique est gardé.');
+    expect(mockArchiver).not.toHaveBeenCalled();
+    await act(async () => { await parTexte(arbre, 'Oui, archiver').props.onPress(); });
+    expect(mockArchiver).toHaveBeenCalledWith({ collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' });
+  });
+});

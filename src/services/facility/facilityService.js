@@ -552,3 +552,14 @@ export {
   refuseFacilityOverrideRequest,
   updateFacility,
 };
+
+/**
+ * CORR-COLLECTIVITES 91 (31/10/2026, decision d Adel B) — « Archiver » une installation de la Ville
+ * creee par erreur : cachee partout, son historique garde (policy du gestionnaire cote serveur).
+ * @param {{ collectiviteId: string, facilityId: string }} params - La Ville et l installation.
+ * @returns {Promise<any>} `{ data: { archived, documentId } }`.
+ */
+export const archiveCollectiviteInstallation = async ({ collectiviteId, facilityId }) => {
+  const response = await client.post(`/collectivites/${collectiviteId}/installations/${facilityId}/archive`);
+  return response.data;
+};
