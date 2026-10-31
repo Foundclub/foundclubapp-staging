@@ -99,6 +99,14 @@ describe('CORR-TEXTES 24 — accents, apostrophes, pluriels, anglais', () => {
     expect(restes).toEqual([]);
   });
 
+  it('le tournoi affiche la phrase du serveur, jamais « Error drawing tournament groups: … »', () => {
+    // 4- B du chef (30/10) : `details.error` porte la phrase sans le préfixe technique ;
+    // le site reste propre même si le serveur (0b2fb329) part plus tard.
+    const source = lire('views', 'event', 'TournamentManagement.js');
+    expect(source).not.toMatch(/(?<!details\?\.error \|\| )mutationError\?\.message \|\|/);
+    expect(source.match(/mutationError\?\.details\?\.error \|\| mutationError\?\.message \|\|/g)).toHaveLength(7);
+  });
+
   it('les dates écrites dans le code disent « à », plus « a »', () => {
     expect(lire('views', 'notification', 'NotificationDetails.js')).not.toContain("'a' HH");
     expect(lire('views', 'league', 'match', 'LeagueMatchDetails.js')).not.toContain("'a' HH");
