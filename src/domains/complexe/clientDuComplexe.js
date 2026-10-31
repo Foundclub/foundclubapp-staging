@@ -165,6 +165,18 @@ export const clientDepuis = (reservations) => {
 };
 
 /**
+ * CORR-RESA (75 A) — « Client depuis le … » : le jour où il a RÉSERVÉ sa première réservation
+ * retenue ici (`clientDepuis` de la fiche, serveur), pas celui du créneau ; une demande refusée ne
+ * compte pas. Un serveur d'avant (champ absent) : l'ancienne règle, sur l'historique.
+ * @param {{ clientDepuis?: string | null } | null | undefined} client - La fiche du client.
+ * @param {Array<{ startsAt?: string | null }>} reservations - L'historique, le plus récent d'abord.
+ * @returns {string} « 05/10 », ou ''.
+ */
+export const clientDepuisLaFiche = (client, reservations) => (
+  client && 'clientDepuis' in client ? jourDe(client.clientDepuis) : clientDepuis(reservations)
+);
+
+/**
  * La prochaine réservation à venir d'un client (« Écrire » : la conversation de CETTE réservation,
  * AT-04) : en attente, confirmée ou en collecte, pas encore commencée ; la plus proche.
  * @param {Array<{ documentId?: string, startsAt?: string | null, status?: string }>} reservations

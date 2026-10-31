@@ -2400,6 +2400,7 @@ export default {
       noSlot: 'Aucun créneau disponible pour cette date.',
       pickFacilityFirst: 'Choisis une installation pour voir ses créneaux disponibles.',
       refresh: 'Rafraîchir les disponibilités',
+      sansHoraires: 'Cette installation n’a pas encore d’horaires : aucun créneau ne peut être réservé.',
       selectFacilityFirst: 'Sélectionne d’abord une installation.',
       selectSlot: 'Sélectionne un créneau disponible pour configurer la réservation.',
       slotsOf: 'Créneaux du',
@@ -7664,6 +7665,7 @@ export default {
       dit: 'Il ne pourra plus réserver chez toi. Rien ne change ailleurs.',
       jusqua: 'Jusqu’au (facultatif)',
       raison: 'Raison (privée, jamais montrée à {{prenom}})',
+      raisonObligatoire: 'Raison (obligatoire, privée, jamais montrée à {{prenom}})',
       sansFin: 'Sans date de fin',
       titre: 'Bannir {{nom}}',
     },
@@ -8012,7 +8014,11 @@ export default {
       prixDeBase: 'Prix de base',
       prixDeBaseDit: 'tous les créneaux sans autre tarif',
       prolonger: 'Prolonger la période',
+      quitter: 'Quitter',
+      quitterMessage: 'Tu as des changements non enregistrés : ils seront perdus.',
+      quitterTitre: 'Quitter sans enregistrer ?',
       reste: 'De {{de}} à {{a}}, il reste {{duree}} sans créneau.',
+      rester: 'Rester',
       resumePlage: '{{de}} – {{a}} · créneaux de {{duree}} · {{creneaux}}',
       retirer: 'Retirer : {{quoi}}',
       sansFin: 'Sans date de fin',
@@ -8241,6 +8247,8 @@ export default {
       aide: 'Il apparaîtra sur ta page et sur ta carte dans la recherche.',
       lien: 'Lien vers le site du partenaire (facultatif)',
       lienExemple: 'https://www.exemple.fr',
+      logoObligatoire: 'Logo du partenaire (obligatoire)',
+      nomObligatoire: 'Nom du partenaire (obligatoire)',
       supprimer: 'Supprimer {{nom}}',
     },
     pasVerifie: '« Vérifié » s’ajoutera quand FoundClub l’aura vérifié.',
@@ -8341,6 +8349,8 @@ export default {
       personne: 'Personne à prévenir.',
       rouvert: 'Rouvert : les créneaux sont libres.',
       rouverte: 'Rouverte',
+      rouvertesRepli_one: 'Rouverte ({{count}})',
+      rouvertesRepli_other: 'Rouvertes ({{count}})',
       rouvrir: 'Rouvrir',
       rouvrirDit: 'Les créneaux redeviennent libres. Les réservations annulées ne reviennent pas.',
       rouvrirQuestion: 'Rouvrir {{terrains}} : {{jours}} ?',
@@ -8450,6 +8460,8 @@ export default {
       question: 'Marquer la réservation de {{nom}} ({{quand}}) comme non honorée ?',
     },
     nonHonorees: {
+      banAuto_one: '{{count}} non honorée (ban auto à {{seuil}})',
+      banAuto_other: '{{count}} non honorées (ban auto à {{seuil}})',
       seules_one: '{{count}} non honorée',
       seules_other: '{{count}} non honorées',
       sur_one: '{{count}} non honorée sur {{seuil}}',
@@ -8496,6 +8508,7 @@ export default {
       rienCeJour: 'Rien de réservé ni de bloqué.',
       semaine: 'Semaine',
       suivant: 'Suivant',
+      terrainOccupe: '{{terrain}}, des réservations cette semaine',
       titre: 'Planning',
       voirFermetures: 'Voir les fermetures',
     },
@@ -8510,6 +8523,8 @@ export default {
       annulees_one: '{{count}} réservation à venir sera annulée et le joueur prévenu.',
       annulees_other: '{{count}} réservations à venir seront annulées et les joueurs prévenus.',
       aucune: 'Aucune réservation à venir sur ce terrain.',
+      collectes_one: '{{count}} collecte en cours s’arrêtera et ses joueurs seront prévenus.',
+      collectes_other: '{{count}} collectes en cours s’arrêteront et leurs joueurs seront prévenus.',
       compte: 'On compte ses réservations à venir…',
       dit: 'Il ne sera plus réservable ; son historique est gardé.',
       erreur: 'Le terrain n’a pas pu être retiré.',
@@ -18369,6 +18384,7 @@ export default {
         // previent le staff. Cette phrase l annonce AVANT la confirmation.
         // CORR-TEXTES (point 37) : ce qui part et ce qui reste, dit avant de confirmer
         // (lu dans deleteAccount et account-erasure du serveur, 30/10).
+        complexe: 'Si tu es le seul gérant d’un complexe, il est masqué : les joueurs ne le trouvent plus.',
         consequences: 'Ce qui part : ton nom, ton numéro, ta photo, '
           + 'et ta place dans tes clubs et tes équipes.'
           + ' Tes inscriptions aux événements à venir seront retirées'
@@ -19786,6 +19802,7 @@ export default {
       libre: 'Libre',
       pris: 'Pris',
       prisPendantLeChoix: 'Ce créneau vient d’être pris. Choisis-en un autre.',
+      reserveAuxAges: 'Réservé aux {{age}} ans et plus.',
       surDemande: 'Sur demande : le complexe te répond',
       tropTard: 'Trop tard ici',
       // eslint-disable-next-line max-len
@@ -19816,6 +19833,8 @@ export default {
       collectePrise: 'Réservation non aboutie',
       collectePriseTexte: 'Désolé, ta réservation n’a pas pu aboutir : quelqu’un a réservé le '
         + 'créneau avant que tu réunisses assez de joueurs.',
+      collecteTerrainRetire: 'Collecte arrêtée',
+      collecteTerrainRetireTexte: 'Le complexe a retiré ce terrain : ta collecte s’arrête, rien n’est réservé.',
       complete: 'La partie est complète.',
       completerProfil: 'Compléter mon profil',
       complexeParti: 'Ce complexe n’est plus sur FoundClub.',
@@ -19897,6 +19916,8 @@ export default {
       notePresent: 'Tu es noté présent.',
       onTInvite: 'On t’invite à jouer',
       presentsSur: '{{presents}} présents sur {{places}}',
+      presentsSurNombre_one: '{{count}} présent sur {{places}}',
+      presentsSurNombre_other: '{{count}} présents sur {{places}}',
       tInvite: '{{prenom}} t’invite à jouer',
       voirLaPartie: 'Voir la partie dans l’app',
       voirLeComplexe: 'Voir le complexe',
@@ -20067,10 +20088,12 @@ export default {
     },
     recherche: {
       apresMidi: '12 h – 18 h',
+      aucunCreneauFiltres: 'Aucun créneau pour ces filtres',
       aujourdhui: 'Aujourd’hui',
       autoriser: 'Autoriser ma position',
       autourDeLaVille: 'Chercher autour de {{ville}}',
       autourDeMoi: 'Autour de moi',
+      bientotReservable: 'Bientôt réservable',
       carte: 'Carte',
       carteVide: 'Aucun terrain libre ici. Élargis la distance.',
       champ: 'Complexe, ville ou sport',

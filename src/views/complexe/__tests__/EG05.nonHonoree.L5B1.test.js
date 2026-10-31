@@ -147,7 +147,7 @@ describe('RESA-L5B-1 E-G05 — commencée, moins de 7 jours (état 6)', () => {
     const arbre = await monter();
     const lus = lisibles(arbre);
     expect(lus).toEqual(expect.arrayContaining([
-      'Jouée', '12 réservations ici · 0 non honorée sur 3', 'Marquer non honorée',
+      'Jouée', '12 réservations ici · 0 non honorée (ban auto à 3)', 'Marquer non honorée',
     ]));
     expect(parRepere(arbre, 'fiche-annuler')).toBeNull();
   });
@@ -192,7 +192,7 @@ describe('RESA-L5B-1 E-G05 — non honorée, moins de 7 jours (état 7)', () => 
     expect(parRepere(arbre, 'pastille-etat-non_honoree')).not.toBeNull();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Marquée non honorée par toi le 13/10 à 21 h 30',
-      '12 réservations ici · 1 non honorée sur 3',
+      '12 réservations ici · 1 non honorée (ban auto à 3)',
       'Annuler le marquage',
     ]));
     expect(parRepere(arbre, 'fiche-marquer-non-honoree')).toBeNull();

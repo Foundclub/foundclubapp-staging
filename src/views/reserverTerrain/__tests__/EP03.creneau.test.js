@@ -53,6 +53,11 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
 }));
 
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
+// CORR-RESA (78 A) : l'écran lit le compte (l'âge) ; un adulte ici.
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: { birthdate: '1990-01-01', documentId: 'u-1' } }),
+}));
 jest.mock(
   '@/components/molecules/bottomModal/BottomModal',
   () => function FausseFeuille(/** @type {any} */ { children, isVisible }) {

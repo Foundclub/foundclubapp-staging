@@ -45,6 +45,8 @@ import {
 
 import texteInsecable from '@/utils/texteInsecable';
 
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
+
 const JOURS = [1, 2, 3, 4, 5, 6, 7];
 const DUREES = [60, 90, 120];
 const DUREE_MIN = 30;
@@ -138,6 +140,21 @@ function ComplexeCreneaux() {
   const [enregistre, setEnregistre] = useState(/** @type {any} */ (null));
   // RESA-L5B-1, partie B — les réservations à venir hors du modèle jugé (RESA-L2C), 0 sinon.
   const [horsHoraires, setHorsHoraires] = useState(0);
+  // CORR-RESA (81 A) : une plage ajoutée (ou retirée) n'est qu'un aperçu tant qu'on n'a pas
+  // enregistré ; quitter l'écran avant le demande (même garde que « Fermer une installation »).
+  const [modifie, setModifie] = useState(false);
+  useGardeDeSortie(navigation, {
+    actif: modifie,
+    textes: {
+      message: t(
+        'complexeGerant.creneaux.quitterMessage',
+        'Tu as des changements non enregistrés : ils seront perdus.',
+      ),
+      quitter: t('complexeGerant.creneaux.quitter', 'Quitter'),
+      rester: t('complexeGerant.creneaux.rester', 'Rester'),
+      titre: t('complexeGerant.creneaux.quitterTitre', 'Quitter sans enregistrer ?'),
+    },
+  });
   const [plage, setPlage] = useState({
     a: '23:00', autre: false, de: '17:00', duree: 60, jours: /** @type {number[]} */ ([]),
   });
@@ -190,6 +207,7 @@ function ComplexeCreneaux() {
     try {
       const corps = await apercu.mutateAsync({ complexeId, plan: candidat, terrainId });
       setPlan(corps?.data?.slotPlan || candidat);
+      setModifie(true);
       setResume(corps?.data?.creneaux || null);
       setHorsHoraires(Number(corps?.data?.reservationsHorsHoraires) || 0);
       return true;
@@ -294,6 +312,7 @@ function ComplexeCreneaux() {
       const creneaux = corps?.data?.creneaux || null;
       setResume(creneaux);
       setEnregistre(creneaux || {});
+      setModifie(false);
       setNeuf(false);
       setHorsHoraires(0);
     } catch (erreur) {

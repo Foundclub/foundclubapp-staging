@@ -32,6 +32,8 @@ function FeuilleRetrait({
   const apercu = useApercuRetrait();
   const retirer = useRetirerTerrain();
   const [compte, setCompte] = useState(/** @type {number | null} */ (null));
+  // CORR-RESA (69 A) : les collectes à venir que le retrait arrêtera (serveur `collectesTouchees`).
+  const [collectes, setCollectes] = useState(0);
   const [erreur, setErreur] = useState('');
   const terrainId = terrain?.documentId || null;
   const nom = String(terrain?.name || '');
@@ -40,9 +42,13 @@ function FeuilleRetrait({
   useEffect(() => {
     if (!terrainId) return;
     setCompte(null);
+    setCollectes(0);
     setErreur('');
     Promise.resolve(apercu.mutateAsync({ complexeId, terrainId }))
-      .then((reponse) => setCompte(Number(reponse?.data?.reservationsTouchees) || 0))
+      .then((reponse) => {
+        setCollectes(Number(reponse?.data?.collectesTouchees) || 0);
+        setCompte(Number(reponse?.data?.reservationsTouchees) || 0);
+      })
       .catch((refus) => setErreur(messageDeRefusResa(t, refus, repli)));
     // Une lecture par ouverture : la mutation et la traduction ne la relancent pas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,6 +79,15 @@ function FeuilleRetrait({
         ...SANS_ECHAPPEMENT,
       },
     );
+  }
+  if (compte !== null && collectes > 0) {
+    effet = `${effet} ${t('complexeReservations.retrait.collectes', {
+      count: collectes,
+      defaultValue_one: '{{count}} collecte en cours s’arrêtera et ses joueurs seront prévenus.',
+      defaultValue_other:
+        '{{count}} collectes en cours s’arrêteront et leurs joueurs seront prévenus.',
+      ...SANS_ECHAPPEMENT,
+    })}`;
   }
 
   return (

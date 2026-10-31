@@ -119,6 +119,16 @@ function PartenairesDuComplexe({ complexeId }) {
     'complexeMaPage.partenaires.lien',
     'Lien vers le site du partenaire (facultatif)',
   );
+  // CORR-RESA (76 A) : « Ajouter le partenaire » reste gris sans logo ni nom : leurs libellés
+  // le disent.
+  const libelleLogo = t(
+    'complexeMaPage.partenaires.logoObligatoire',
+    'Logo du partenaire (obligatoire)',
+  );
+  const libelleNom = t(
+    'complexeMaPage.partenaires.nomObligatoire',
+    'Nom du partenaire (obligatoire)',
+  );
 
   return (
     <View style={{ gap: 8 }} testID="page-partenaires">
@@ -179,7 +189,7 @@ function PartenairesDuComplexe({ complexeId }) {
             {libelleAjouter}
           </Text>
           <TouchableOpacity
-            accessibilityLabel={t('addSponsor.fields.logo', 'Logo du partenaire')}
+            accessibilityLabel={libelleLogo}
             accessibilityRole="button"
             onPress={choisirLeLogo}
             style={[Alignments.alignCenter, Alignments.justifyCenter, {
@@ -201,13 +211,13 @@ function PartenairesDuComplexe({ complexeId }) {
               <Text style={[Fonts.p3, Fonts.primary200, Fonts.textCenter, Spaces.padding[8]]}>
                 {envoi
                   ? t('complexeMaPage.envoi', 'Envoi…')
-                  : t('addSponsor.fields.logo', 'Logo du partenaire')}
+                  : libelleLogo}
               </Text>
             )}
           </TouchableOpacity>
           <Input
-            accessibilityLabel={t('addSponsor.fields.title.label', 'Nom du partenaire')}
-            label={t('addSponsor.fields.title.label', 'Nom du partenaire')}
+            accessibilityLabel={libelleNom}
+            label={libelleNom}
             maxLength={80}
             onChangeText={(valeur) => setNom(String(valeur))}
             value={nom}

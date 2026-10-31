@@ -42,9 +42,9 @@ describe('RESA-L5B-1 — l’état affiché (plan §1.2)', () => {
 
 describe('RESA-L5B-1 — « 1 non honorée sur 3 »', () => {
   it('sous le seuil du bannissement automatique', () => {
-    expect(nonHonoreesLisibles(t, 0, 3)).toBe('0 non honorée sur 3');
-    expect(nonHonoreesLisibles(t, 1, 3)).toBe('1 non honorée sur 3');
-    expect(nonHonoreesLisibles(t, 2, 3)).toBe('2 non honorées sur 3');
+    expect(nonHonoreesLisibles(t, 0, 3)).toBe('0 non honorée (ban auto à 3)');
+    expect(nonHonoreesLisibles(t, 1, 3)).toBe('1 non honorée (ban auto à 3)');
+    expect(nonHonoreesLisibles(t, 2, 3)).toBe('2 non honorées (ban auto à 3)');
   });
 
   it('seuil atteint, « Jamais » (0), ou seuil inconnu : le nombre seul', () => {

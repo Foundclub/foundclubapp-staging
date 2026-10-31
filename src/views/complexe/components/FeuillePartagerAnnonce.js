@@ -40,13 +40,20 @@ function FeuillePartagerAnnonce({ complexeId, onFait, onFermer }) {
   const { Colors, Fonts } = useTheme();
   const aujourdhui = useReservationsDuComplexe(complexeId, { ...FILTRES, vue: 'aujourdhui' });
   const aVenir = useReservationsDuComplexe(complexeId, { ...FILTRES, vue: 'a-venir' });
+  // CORR-RESA (115 A) : les COLLECTES qui ont une annonce ouverte (vue « annonces » du serveur). Un
+  // serveur d'avant la refuse : la feuille garde alors les réservations confirmées, sans erreur.
+  const annonces = useReservationsDuComplexe(complexeId, { vue: 'annonces' });
   const partager = usePartagerAnnonce();
   const [refus, setRefus] = useState('');
 
   const maintenant = Date.now();
-  const lignes = [...lignesDesPages(aujourdhui.data), ...lignesDesPages(aVenir.data)]
+  const vues = [aujourdhui.data, aVenir.data, annonces.isError ? null : annonces.data];
+  const lignes = vues.flatMap((page) => lignesDesPages(page))
+    .filter((/** @type {any} */ ligne, rang, toutes) => (
+      toutes.findIndex((/** @type {any} */ autre) => autre.documentId === ligne.documentId) === rang
+    ))
     .filter((/** @type {any} */ ligne) => peutPartagerLAnnonce(ligne, maintenant));
-  const chargement = Boolean(aujourdhui.isLoading || aVenir.isLoading);
+  const chargement = Boolean(aujourdhui.isLoading || aVenir.isLoading || annonces.isLoading);
   const enErreur = Boolean(aujourdhui.isError || aVenir.isError);
 
   const choisir = async (/** @type {string} */ reservationId) => {

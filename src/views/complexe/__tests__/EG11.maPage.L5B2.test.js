@@ -209,9 +209,9 @@ describe('E-G11 — Mon complexe (la page)', () => {
         'disabled' in n.props && typeof n.props.onPress === 'function'
       ))[0];
     expect(ajouter.props.disabled).toBe(true);
-    await appuyer(arbre, 'Logo du partenaire');
+    await appuyer(arbre, 'Logo du partenaire (obligatoire)');
     await act(async () => {
-      champ(arbre, 'Nom du partenaire').props.onChangeText('Boulangerie Roux');
+      champ(arbre, 'Nom du partenaire (obligatoire)').props.onChangeText('Boulangerie Roux');
     });
     await act(async () => {
       parRepere(arbre, 'partenaire-ajouter')

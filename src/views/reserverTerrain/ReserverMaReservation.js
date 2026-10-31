@@ -407,7 +407,13 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
 
   const prix = Number.isFinite(Number(reservation?.price?.amount))
     ? t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
-      prix: formatEuros(Number(reservation.price.amount)),
+      // CORR-RESA (84 A) : « 7 € par joueur », comme le résultat et le récapitulatif.
+      prix: reservation.price.unit === 'joueur'
+        ? t('reserverTerrain.prix.parJoueur', '{{prix}} par joueur', {
+          prix: formatEuros(Number(reservation.price.amount)),
+          ...SANS_ECHAPPEMENT,
+        })
+        : formatEuros(Number(reservation.price.amount)),
       ...SANS_ECHAPPEMENT,
     })
     : '';

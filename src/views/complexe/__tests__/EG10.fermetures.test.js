@@ -427,7 +427,8 @@ describe('RESA-FIN-APP (3) E-G10 — la phrase de l’aperçu suit le nombre', (
 describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
   const TRAVAUX = '2026-10-25|2026-10-26|travaux|';
 
-  it('une rouverte reste dans la liste, « Rouverte », sans Rouvrir ni Modifier', async () => {
+  // CORR-RESA (74 A) : la rouverte quitte « À venir » pour le repli « Rouverte (1) ».
+  it('une rouverte reste visible dans le repli, « Rouverte », sans Rouvrir ni Modifier', async () => {
     mockFermetures = {
       ...mockFermetures,
       data: [fermeture({
@@ -439,6 +440,9 @@ describe('RESA-FIN-APP-2 E-G10 — rouverte visible, « Modifier »', () => {
       })],
     };
     const arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('29/10 – 30/10 · Travaux');
+    expect(lisibles(arbre)).toContain('Rouverte (1)');
+    await toucher(arbre, 'fermetures-rouvertes');
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       '29/10 – 30/10 · Travaux', 'Rouverte',
     ]));

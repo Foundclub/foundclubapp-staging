@@ -197,7 +197,10 @@ function ReservationListContent({
     isLoading: isFeaturedLoading,
     refetch: refetchFeatured,
   } = useGetFeaturedReservations(10, {
-    enabled: screenActive && areFeaturedReservationsEnabled,
+    // CORR-RESA (71 A) : la lecture « à la une » n'est ouverte qu'au SuperAdmin (aucune carte de
+    // rôle ne la donne, permission-sync) ; les autres rôles ne la demandent plus (403 en fond).
+    enabled: screenActive && areFeaturedReservationsEnabled
+      && userData?.role?.name === USER_ROLES.superAdmin,
   });
 
   useEffect(() => {

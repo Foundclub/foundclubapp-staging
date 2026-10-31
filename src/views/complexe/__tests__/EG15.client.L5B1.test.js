@@ -94,7 +94,8 @@ const client = (autres = {}) => ({
 });
 
 /** Le libellé du champ « Raison » de la feuille « Bannir ». */
-const RAISON = 'Raison (privée, jamais montrée à Julien)';
+// CORR-RESA (76 A) : le libellé dit « obligatoire ».
+const RAISON = 'Raison (obligatoire, privée, jamais montrée à Julien)';
 
 const BAN_AUTO = {
   documentId: 'b-1',
