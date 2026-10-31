@@ -19,6 +19,7 @@ import {
   createManagerRequest,
   decideManagerRequest,
   detachAdminCollectiviteClub,
+  detachCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectiviteInvitations,
   getAdminCollectiviteLeads,
@@ -267,6 +268,21 @@ export const useCollectiviteClub = (collectiviteId, clubId, options = {}) => use
  * Relire la liste, les fiches et les plannings apres le choix accepte par la Ville.
  * @returns {any} La mutation react-query.
  */
+/**
+ * CORR-COLLECTIVITES 101 — « Détacher ce club », puis la relecture des clubs et des fiches.
+ * @returns {any} La mutation ; variables `{ collectiviteId, clubId }`.
+ */
+export const useDetachCollectiviteClub = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: detachCollectiviteClub,
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: collectiviteClubsQueryKey(variables.collectiviteId) });
+      await queryClient.invalidateQueries({ queryKey: ['collectivite'] });
+    },
+  });
+};
+
 export const useSetClubPlanningColor = () => {
   const queryClient = useQueryClient();
   return useMutation({

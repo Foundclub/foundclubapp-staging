@@ -30,6 +30,8 @@ const frTemoin = require('@/theme/strings/translations/fr');
 let mockChiffres;
 const mockLectures = jest.fn();
 
+/** CORR-COLLECTIVITES 101 — « Détacher ce club ». */
+const mockDetacher = jest.fn(async () => ({}));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
   useRoute: () => ({ params: { clubId: 'as-montrivage', collectiviteId: 'ville-de-recette' } }),
@@ -90,6 +92,8 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
   }),
+  // CORR-COLLECTIVITES 101 : « Détacher ce club ».
+  useDetachCollectiviteClub: () => ({ isPending: false, mutateAsync: mockDetacher }),
   useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 

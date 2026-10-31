@@ -5668,6 +5668,10 @@ export default {
       semaineUne: '{{nombre}} séance',
     },
     detail: {
+      detacher: 'Détacher ce club',
+      detacherOui: 'Oui, détacher',
+      detacherQuestion: 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
+      detacherQuestionOffre: 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.',
       acceptedMany: '{{nombre}} acceptées',
       acceptedOne: '{{nombre}} acceptée',
       address: 'Adresse',

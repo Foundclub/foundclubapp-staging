@@ -52,6 +52,7 @@ import {
   useCollectiviteChiffres,
   useCollectiviteClub,
   useCollectiviteInstallations,
+  useDetachCollectiviteClub,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 
@@ -204,6 +205,10 @@ function CollectiviteClubDetails() {
   const mine = useMyCollectivites();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
   const fiche = useCollectiviteClub(collectiviteId, clubId);
+  // CORR-COLLECTIVITES 101 (31/10, Adel A) : « Détacher ce club », avec une confirmation.
+  const detacher = useDetachCollectiviteClub();
+  const [confirmerDetacher, setConfirmerDetacher] = useState(false);
+  const [erreurDetacher, setErreurDetacher] = useState('');
   const club = /** @type {any} */ (fiche.data) || null;
   // COLL-C5 (03/10) : « Utilisation » lit la SAISON de la Ville (la clef de la page « Chiffres »).
   const saison = useCollectiviteChiffres(collectiviteId, 'saison');
@@ -776,6 +781,52 @@ function CollectiviteClubDetails() {
             )}
           </Text>
         </TouchableOpacity>
+        {/* CORR-COLLECTIVITES 101 (31/10, Adel A) : la Ville détache le club (le club est prévenu). */}
+        {confirmerDetacher ? (
+          <View accessibilityRole="alert" style={{ gap: 8 }} testID="fiche-club-detacher-confirmation">
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                offre.kind === 'collectivite'
+                  ? 'collectiviteClubs.detail.detacherQuestionOffre'
+                  : 'collectiviteClubs.detail.detacherQuestion',
+                offre.kind === 'collectivite'
+                  ? 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.'
+                  : 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
+                { club: club?.name || '', ...SANS_ECHAPPEMENT },
+              )}
+            </Text>
+            {erreurDetacher ? (
+              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreurDetacher}</Text>
+            ) : null}
+            <Button
+              disabled={detacher.isPending}
+              onPress={async () => {
+                setErreurDetacher('');
+                try {
+                  await detacher.mutateAsync({ clubId, collectiviteId });
+                  setConfirmerDetacher(false);
+                  navigation.navigate(RouteNames.CollectiviteClubs, { collectiviteId });
+                } catch (refus) {
+                  setErreurDetacher(getErrorMessage(/** @type {any} */ (refus)));
+                }
+              }}
+              title={t('collectiviteClubs.detail.detacherOui', 'Oui, détacher')}
+              variant="Danger"
+            />
+            <Button
+              onPress={() => setConfirmerDetacher(false)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+          </View>
+        ) : (
+          <Button
+            onPress={() => setConfirmerDetacher(true)}
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteClubs.detail.detacher', 'Détacher ce club')}
+            variant="Ghost"
+          />
+        )}
       </BlocDeFiche>
     );
   };

@@ -51,6 +51,17 @@ export const getCollectiviteClub = async (collectiviteId, clubId) => {
 };
 
 /**
+ * CORR-COLLECTIVITES 101 (31/10/2026) — « Détacher ce club » : la Ville détache un club rattaché
+ * (le club est prévenu ; l'offre offerte s'arrête). Policy du gestionnaire côté serveur.
+ * @param {{ collectiviteId: string, clubId: string }} params - La Ville et le club.
+ * @returns {Promise<any>} `{ data: { changed, ... } }`.
+ */
+export const detachCollectiviteClub = async ({ clubId, collectiviteId }) => {
+  const response = await client.delete(`/collectivites/${collectiviteId}/clubs/${clubId}`);
+  return response.data;
+};
+
+/**
  * Couleur de ce club dans les plannings de cette Ville ; null revient a l'automatique.
  * @param {{
  * collectiviteId: string, clubId: string, planningColor: string | null

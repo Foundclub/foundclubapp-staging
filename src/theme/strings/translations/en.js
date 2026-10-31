@@ -5281,6 +5281,10 @@ export default {
       semaineUne: '{{nombre}} session',
     },
     detail: {
+      detacher: 'Detach this club',
+      detacherOui: 'Yes, detach',
+      detacherQuestion: 'Detach {{club}}? It will no longer see your facilities. Its leaders are notified.',
+      detacherQuestionOffre: 'Detach {{club}}? It will no longer see your facilities, and the subscription offered by the city ends. Its leaders are notified.',
       acceptedMany: '{{nombre}} accepted',
       acceptedOne: '{{nombre}} accepted',
       address: 'Address',
