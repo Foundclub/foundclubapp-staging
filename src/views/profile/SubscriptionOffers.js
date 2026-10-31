@@ -259,6 +259,7 @@ function SubscriptionOffers({ navigation, route }) {
     clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
+    onboardingViews,
     subscriptionAccessLevel,
     subscriptionSummary,
     userData,
@@ -280,7 +281,20 @@ function SubscriptionOffers({ navigation, route }) {
   // transporte. La porte qui a envoye ici sait d'ou part la personne ; cet ecran
   // ne le sait pas, et l'ecran de succes encore moins. Absente, on garde le
   // retour a l'accueil.
-  const resumeRouteName = String(route?.params?.resumeRouteName || '').trim();
+  // CORR-INSCRIPTION p11 (recette du site, décision A) — sur le SITE, cet écran est servi par son
+  // adresse : le colis du sas (`initialParams` de PrivateNavigator) n'arrive jamais, et le coach
+  // qui
+  // finit son inscription restait sans sortie. Tant que l'inscription n'est pas finie (`views` non
+  // vide), l'écran se sait sas : sortie et retour d'achat vers la Bienvenue, qui finit
+  // l'inscription
+  // et propose le tour guidé (la page cadeau n'a pas d'adresse sur le site).
+  const estLeSasDuSite = Platform.OS === 'web'
+    && !route?.params?.skipRouteName
+    && Array.isArray(onboardingViews?.views)
+    && onboardingViews.views.length > 0;
+  const resumeRouteName = String(
+    route?.params?.resumeRouteName || (estLeSasDuSite ? RouteNames.Welcome : ''),
+  ).trim();
   const resumeRouteParams = route?.params?.resumeRouteParams;
 
   // D89 — MEME COLIS, DEUX CHAMPS DE PLUS, POUR LE SAS DE FIN D'INSCRIPTION.
@@ -290,11 +304,15 @@ function SubscriptionOffers({ navigation, route }) {
   // origine (`resumeRouteName`) sans etre un sas pour autant.
   // La porte de sortie n'existe que si une destination est nommee ⇒ un bouton
   // mort est impossible par construction, pas par precaution.
-  const skipRouteName = String(route?.params?.skipRouteName || '').trim();
+  const skipRouteName = String(
+    route?.params?.skipRouteName || (estLeSasDuSite ? RouteNames.Welcome : ''),
+  ).trim();
   const isOnboardingExit = Boolean(skipRouteName);
   // « Reprendre » promet une tache interrompue. En fin d'inscription il n'y a
   // rien a reprendre : le libelle du bouton de succes voyage donc avec le colis.
-  const resumeCtaLabel = String(route?.params?.resumeCtaLabel || '').trim();
+  const resumeCtaLabel = String(route?.params?.resumeCtaLabel || (
+    estLeSasDuSite ? t('privateNavigator.subscriptionOffers.resumeCta', 'Continuer') : ''
+  )).trim();
 
   const scrollRef = useRef(/** @type {any} */ (null));
   const [activeIndex, setActiveIndex] = useState(focusCardIndex);
@@ -1105,7 +1123,13 @@ function SubscriptionOffers({ navigation, route }) {
 
   // La carte se resserre sur les petits ecrans plutot que de deborder : la carte
   // suivante doit TOUJOURS depasser du bord, c'est elle qui dit « ca se balaie ».
-  const cardWidth = Math.min(CARD_MAX_WIDTH, Math.max(240, windowWidth - 64));
+  // CORR-INSCRIPTION p11 — sur ordinateur, la fenêtre compte aussi le menu de gauche : centrer sur
+  // sa largeur poussait les cartes à droite et écrasait Mensuel / Annuel. On centre sur la largeur
+  // MESURÉE du carrousel ; avant la mesure (premier rendu, téléphone), sur la fenêtre, comme avant.
+  const [largeurCarrousel, setLargeurCarrousel] = useState(0);
+  const largeurUtile = largeurCarrousel || windowWidth;
+  const cardWidth = Math.min(CARD_MAX_WIDTH, Math.max(240, largeurUtile - 64));
+  const carteAmeneeRef = useRef(false);
 
   /**
    * Fait defiler le carrousel jusqu'a la carte demandee.
@@ -1145,7 +1169,7 @@ function SubscriptionOffers({ navigation, route }) {
     return null;
   }
 
-  const sidePadding = Math.max(16, Math.round((windowWidth - cardWidth) / 2));
+  const sidePadding = Math.max(16, Math.round((largeurUtile - cardWidth) / 2));
   const isFreeLevel = subscriptionAccessLevel === 'FREE';
 
   const cardBaseStyle = {
@@ -1533,11 +1557,32 @@ function SubscriptionOffers({ navigation, route }) {
             contentContainerStyle={{ columnGap: CARD_GAP, paddingHorizontal: sidePadding }}
             decelerationRate="fast"
             horizontal
+            onLayout={(event) => {
+              setLargeurCarrousel(event.nativeEvent.layout.width);
+              // CORR-INSCRIPTION p11 — la carte active (Équipe par défaut) est amenée sous les yeux
+              // une fois le carrousel posé : sans ce geste, « Gratuit » restait affichée pendant
+              // que
+              // le point allumé et le bouton d'achat parlaient d'Équipe.
+              if (!carteAmeneeRef.current) {
+                carteAmeneeRef.current = true;
+                scrollRef.current?.scrollTo?.({
+                  animated: false,
+                  x: activeIndex * (cardWidth + CARD_GAP),
+                });
+              }
+            }}
             onMomentumScrollEnd={(event) => setActiveIndex(Math.max(0, Math.min(
               2,
               Math.round(event.nativeEvent.contentOffset.x / (cardWidth + CARD_GAP)),
             )))}
+            // CORR-INSCRIPTION p11 — le site ne connaît pas la fin d'élan (`onMomentumScrollEnd`) :
+            // le point allumé suit donc aussi le défilement lui-même.
+            onScroll={Platform.OS === 'web' ? (event) => setActiveIndex(Math.max(0, Math.min(
+              2,
+              Math.round(event.nativeEvent.contentOffset.x / (cardWidth + CARD_GAP)),
+            ))) : undefined}
             ref={scrollRef}
+            scrollEventThrottle={16}
             showsHorizontalScrollIndicator={false}
             snapToInterval={cardWidth + CARD_GAP}
             style={Spaces.marginTop[16]}

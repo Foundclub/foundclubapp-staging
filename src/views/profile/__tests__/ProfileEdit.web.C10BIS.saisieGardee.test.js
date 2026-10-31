@@ -309,3 +309,37 @@ describe('ProfileEdit (site) — la saisie survit a un rafraichissement (C10BIS 
     expect(mockChampsFormulaire.Prénom.value).toBe('Marie');
   });
 });
+
+// CORR-INSCRIPTION p21 (recette du site 30/10, décision A + ajout d'Adel) — « Modifier mon profil »
+// d'un parent : photo, nom, date, ville seulement, et un petit texte qui dit que c'est son compte
+// parent et qu'il modifie ses champs de sport en basculant sur son compte joueur.
+describe('CORR-INSCRIPTION p21 — profil d un parent', () => {
+  const parent = {
+    address: { label: 'Marseille', value: '5.37|43.29' },
+    birthdate: '15/01/1985',
+    documentId: 'parent-1',
+    firstname: 'Paola',
+    lastname: 'Recette',
+    phoneNumber: '+33622222222',
+    role: { name: 'Parent' },
+  };
+
+  it('ni catégorie, ni sport, ni recrutement ; la ville et le petit texte restent', async () => {
+    const arbre = await rendre(parent);
+    const textes = JSON.stringify(arbre.toJSON());
+    expect(textes).not.toContain('LISTE:Catégorie');
+    expect(textes).not.toContain('LISTE:Sport de préférence');
+    expect(textes).not.toContain('Ouvert au recrutement');
+    expect(textes).toContain('ADRESSE:Ville');
+    expect(textes).toContain('CHAMP:Prénom=Paola');
+    expect(textes).toContain('C’est ton profil de parent.');
+  });
+
+  it('un joueur garde tous ses champs, sans le petit texte', async () => {
+    const arbre = await rendre(joueurComplet);
+    const textes = JSON.stringify(arbre.toJSON());
+    expect(textes).toContain('LISTE:Sport de préférence');
+    expect(textes).toContain('Ouvert au recrutement');
+    expect(textes).not.toContain('C’est ton profil de parent.');
+  });
+});

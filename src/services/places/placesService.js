@@ -241,6 +241,49 @@ const searchByTypeWithFallback = async (search, types, index = 0) => {
 };
 
 /**
+ * CORR-INSCRIPTION p13 (recette du site, décision A) — l'ordre des communes. La base d'adresses
+ * rend
+ * « Marseille », puis le 13e, le 8e, le 15e arrondissement…, et des communes d'autres départements
+ * mêlées. On range : le département de la meilleure réponse d'abord, les autres ensuite ; dans
+ * chaque
+ * groupe, une ville puis ses arrondissements du 1er au dernier ; sinon l'ordre de la base.
+ * @param {Place[]} lieux - Les communes, dans l'ordre de la base.
+ * @returns {Place[]} Les mêmes, rangées.
+ */
+const rangerLesCommunes = (lieux) => {
+  if (!Array.isArray(lieux) || lieux.length < 2) return lieux;
+  const departement = (/** @type {any} */ lieu) => (
+    String(lieu?.properties?.context || '').split(',')[0].trim()
+    || String(lieu?.properties?.postcode || '').slice(0, 2)
+  );
+  const arrondissement = (/** @type {any} */ lieu) => {
+    const trouve = /(\d+)\s*(?:er|e|ème)\s+arrondissement/i.exec(String(lieu?.properties?.label || ''));
+    return trouve ? Number(trouve[1]) : 0;
+  };
+  const enTete = departement(lieux[0]);
+  /** @type {Map<string, number>} */
+  const premierRang = new Map();
+  const ranges = lieux.map((lieu, rang) => {
+    const nom = String(lieu?.properties?.city || lieu?.properties?.label || '');
+    const ville = `${departement(lieu)}|${nom}`;
+    if (!premierRang.has(ville)) premierRang.set(ville, rang);
+    return {
+      arrondissement: arrondissement(lieu),
+      autreDepartement: departement(lieu) === enTete ? 0 : 1,
+      lieu,
+      rang,
+      rangDeLaVille: /** @type {number} */ (premierRang.get(ville)),
+    };
+  });
+  return ranges
+    .sort((a, b) => (a.autreDepartement - b.autreDepartement)
+      || (a.rangDeLaVille - b.rangDeLaVille)
+      || (a.arrondissement - b.arrondissement)
+      || (a.rang - b.rang))
+    .map(({ lieu }) => lieu);
+};
+
+/**
  * Search for places
  * @param {string} search - The search query
  * @param {string} [type] - The type of place to search for
@@ -260,7 +303,7 @@ export const searchPlaces = async (search, type) => {
     // (« Vitrolles » ⇒ des sièges de clubs), des rues marquées `autocomplete` (« plan de cuques »)
     // et des doublons ; le tri de RESA-FIN-APP-2 (garder `autocomplete`) laissait rues et doublons.
     if (resolvedType === 'municipality') {
-      return await fetchPlacesByType(normalizedSearch, 'municipality');
+      return rangerLesCommunes(await fetchPlacesByType(normalizedSearch, 'municipality'));
     }
 
     try {

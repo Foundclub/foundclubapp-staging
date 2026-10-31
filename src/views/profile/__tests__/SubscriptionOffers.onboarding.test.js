@@ -506,3 +506,34 @@ describe('D89 ③ — CELUI QUI ACHETE : ou il arrive, et ce qu\'il lit', () => 
     expect(mockReplace.mock.calls[0][1].offerScope).toBe('CLUB');
   });
 });
+
+// CORR-INSCRIPTION p11 (recette du site 30/10, décision A) — sur le SITE, l'écran des offres est
+// servi par son adresse (/profile/subscription/offers) : le colis du sas, posé par le navigateur du
+// téléphone (`initialParams`), n'y arrive pas. Le coach qui finit son inscription restait donc sans
+// « Continuer gratuitement » ni retour. Tant que son inscription n'est pas finie, l'écran se sait
+// sas lui-même, et la sortie mène à la Bienvenue (la page cadeau n'a pas d'adresse sur le site).
+describe('CORR-INSCRIPTION p11 — le sas existe aussi sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osAvant = Platform.OS;
+  afterEach(() => { Platform.OS = osAvant; });
+
+  it('site, inscription pas finie, sans colis : la sortie mène à la Bienvenue', async () => {
+    Platform.OS = 'web';
+    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'X' }] } });
+    const portes = pressablesPortant(arbre, LIBELLE_PASSER);
+    expect(portes).toHaveLength(1);
+    await act(async () => { portes[0].props.onPress(); });
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.Welcome, undefined);
+  });
+
+  it('site, inscription finie : la surface profil reste sans porte de sortie', async () => {
+    Platform.OS = 'web';
+    const arbre = await rendre(undefined, { onboardingViews: { views: [] } });
+    expect(pressablesPortant(arbre, LIBELLE_PASSER)).toHaveLength(0);
+  });
+
+  it('téléphone sans colis : rien ne change', async () => {
+    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'X' }] } });
+    expect(pressablesPortant(arbre, LIBELLE_PASSER)).toHaveLength(0);
+  });
+});

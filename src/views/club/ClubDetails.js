@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { equipeDeSonAge } from '@/domains/category/ageEtCategorie';
 import { countClubTrainers } from '@/domains/club/clubStaff';
 import {
   collectiviteInitial,
@@ -37,6 +38,7 @@ import {
   emitGuidanceRefusal,
 } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { computeAge } from '@/domains/playerCard/cardModel';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
   extractSubscriptionDecisionFromError,
@@ -2592,6 +2594,8 @@ function ClubDetails({ navigation, route }) {
   // details (section · categorie · niveau). Plus d'ecusson du club repete sur chaque ligne.
   const equipesDeLaFeuille = useMemo(() => sortedClubTeams
     .map((teamItem) => ({
+      // CORR-INSCRIPTION p19 : la catégorie range la feuille selon l'âge de l'enfant.
+      categorie: teamItem?.category?.name || '',
       details: getTeamMetaSummary(teamItem),
       documentId: getTeamIdentity(teamItem),
       name: teamItem?.name || t('common.team', 'Équipe'),
@@ -4391,7 +4395,31 @@ function ClubDetails({ navigation, route }) {
           </Text>
 
           <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
-            {sortedClubTeams.map((teamItem) => {
+            {/* CORR-INSCRIPTION p19 (recette du site, décision A) : les équipes de son âge
+                d'abord ; les autres, grisées sous « Autres équipes », restent demandables
+                (un club surclasse). */}
+            {(() => {
+              const ageDuJoueur = computeAge(userData?.birthdate);
+              const deSonAge = (/** @type {any} */ equipe) => (
+                equipeDeSonAge(equipe?.category?.name, ageDuJoueur)
+              );
+              return [
+                ...sortedClubTeams.filter(deSonAge),
+                ...sortedClubTeams.filter((equipe) => !deSonAge(equipe)),
+              ];
+            })().flatMap((teamItem, rang, rangees) => {
+              const ageDuJoueur = computeAge(userData?.birthdate);
+              const horsDeSonAge = !equipeDeSonAge(teamItem?.category?.name, ageDuJoueur);
+              const precedenteDeSonAge = rang > 0
+                && equipeDeSonAge(rangees[rang - 1]?.category?.name, ageDuJoueur);
+              const entete = horsDeSonAge && (rang === 0 || precedenteDeSonAge) ? (
+                <Text
+                  key="autres-equipes"
+                  style={[Fonts.p2Bold, Fonts.neutral300, Spaces.marginTop[8]]}
+                >
+                  {t('clubDetails.playerTeamPicker.otherTeams', 'Autres équipes')}
+                </Text>
+              ) : null;
               const teamDocumentId = getTeamIdentity(teamItem);
               const isPending = hasPendingClubTeamRequest(teamDocumentId);
               const isCurrentTeam = isPlayerAlreadyInSelectedTeam(teamDocumentId);
@@ -4406,7 +4434,7 @@ function ClubDetails({ navigation, route }) {
                 actionLabel = t('clubDetails.actions.myTeam', 'Mon équipe');
               }
 
-              return (
+              const carte = (
                 <TouchableOpacity
                   disabled={isDisabled}
                   key={teamDocumentId || teamItem?.name}
@@ -4419,7 +4447,7 @@ function ClubDetails({ navigation, route }) {
                     Alignments.justifySpaceBetween,
                     Spaces.padding[16],
                     {
-                      opacity: isDisabled ? 0.65 : 1,
+                      opacity: isDisabled || horsDeSonAge ? 0.55 : 1,
                     },
                   ]}
                 >
@@ -4468,6 +4496,7 @@ function ClubDetails({ navigation, route }) {
                   />
                 </TouchableOpacity>
               );
+              return entete ? [entete, carte] : [carte];
             })}
           </View>
         </View>

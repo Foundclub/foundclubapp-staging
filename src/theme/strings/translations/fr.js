@@ -2915,6 +2915,8 @@ export default {
       noTeamYet: 'Pas encore d’équipe',
       onlyOneEligible: 'Choix fait pour toi : {{firstname}}, seul enfant qui peut demander'
         + ' une place ici.',
+      // CORR-INSCRIPTION p19 — les équipes hors de l'âge de l'enfant, grisées sous ce titre.
+      otherTeams: 'Autres équipes',
       pendingHereMany: '{{count}} demandes en attente ici',
       pendingHereOne: '1 demande en attente ici',
       pickerDescription: 'Choisis l’équipe. Ses responsables verront le prénom et l’âge'
@@ -3048,6 +3050,8 @@ export default {
     },
     playerTeamPicker: {
       description: 'Sélectionne ton équipe dans ce club pour envoyer une demande d’affiliation.',
+      // CORR-INSCRIPTION p19 — les équipes hors de son âge, grisées sous ce titre.
+      otherTeams: 'Autres équipes',
       selectAction: 'Choisir',
       title: 'Choisir mon équipe',
     },
@@ -14839,6 +14843,8 @@ export default {
   login: {
     actions: {
       login: 'Se connecter',
+      // CORR-INSCRIPTION p12 — le petit bouton du bas qui bascule sur « Crée ton compte ».
+      noAccount: 'Pas encore inscrit ? Créer ton compte',
       register: 'Créer un compte',
     },
     fields: {
@@ -17182,6 +17188,16 @@ export default {
       titleClub: 'Je ne trouve pas mon club',
       titleTeam: 'Je ne trouve pas mon équipe',
     },
+    // CORR-INSCRIPTION p15 — le joueur sans club : une carte, puis deux chemins.
+    noClub: {
+      action: 'Choisir',
+      // eslint-disable-next-line max-len
+      choiceDescription: 'Ton club existe mais n’est pas dans la liste, ou tu n’as pas encore de club ?',
+      noClub: 'Je n’ai pas de club',
+      notFound: 'Je ne trouve pas mon club',
+      subtitle: 'Signale ton club, ou continue sans club.',
+      title: 'Je ne trouve pas / je n’ai pas de club',
+    },
     results: {
       openClubFallback: 'Voir fiche club',
       openTeamFallback: 'Voir fiche équipe',
@@ -18630,6 +18646,12 @@ export default {
       required: 'Champ obligatoire',
       updateFailed: 'Impossible de mettre à jour ton profil.',
     },
+    // CORR-INSCRIPTION p21 — le petit texte du profil d'un parent.
+    notice: {
+      // eslint-disable-next-line max-len
+      parentBody: 'Ta catégorie, ton sport et ta visibilité se modifient sur ton compte joueur : bascule dessus pour les changer.',
+      parentTitle: 'C’est ton profil de parent.',
+    },
     parentalDeclaration: {
       required: 'Coche la case pour enregistrer un profil de moins de 15 ans.',
     },
@@ -19241,7 +19263,10 @@ export default {
   },
   register: {
     actions: {
+      // CORR-INSCRIPTION p12 — page identique à « Connecte-toi », sauf ces deux libellés.
+      haveAccount: 'Déjà inscrit ? Se connecter',
       register: 'Continuer',
+      submit: 'Créer ton compte',
     },
     fields: {
       phoneNumber: {

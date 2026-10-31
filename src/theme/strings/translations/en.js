@@ -2671,6 +2671,7 @@ export default {
       noneEligible: 'None of your children can request a place here right now.',
       noTeamYet: 'No team yet',
       onlyOneEligible: 'Selected for you: {{firstname}}, the only child who can request a place here.',
+      otherTeams: 'Other teams',
       pendingHereMany: '{{count}} requests pending here',
       pendingHereOne: '1 request pending here',
       pickerDescription: 'Choose the team. Its staff will see your child’s first name and age, and will be able to accept or decline.',
@@ -2790,6 +2791,7 @@ export default {
     },
     playerTeamPicker: {
       description: 'Select your team in this club to send a membership request.',
+      otherTeams: 'Other teams',
       selectAction: 'Choose',
       title: 'Choose my team',
     },
@@ -13981,6 +13983,7 @@ export default {
   login: {
     actions: {
       login: 'Log in',
+      noAccount: 'Not signed up yet? Create your account',
       register: 'Create an account',
     },
     fields: {
@@ -16434,6 +16437,14 @@ export default {
       titleClub: "I can't find my club",
       titleTeam: "I can't find my team",
     },
+    noClub: {
+      action: 'Choose',
+      choiceDescription: 'Your club exists but is not in the list, or you do not have a club yet?',
+      noClub: 'I don’t have a club',
+      notFound: 'I can’t find my club',
+      subtitle: 'Report your club, or go on without a club.',
+      title: 'I can’t find / don’t have a club',
+    },
     results: {
       openClubFallback: 'View club page',
       openTeamFallback: 'View team page',
@@ -17926,6 +17937,10 @@ export default {
       required: 'Required field',
       updateFailed: 'Unable to update your profile.',
     },
+    notice: {
+      parentBody: 'Your category, sport and visibility are edited on your player account: switch to it to change them.',
+      parentTitle: 'This is your parent profile.',
+    },
     parentalDeclaration: {
       required: 'Tick the box to save a profile of someone under 15.',
     },
@@ -18526,7 +18541,9 @@ export default {
   },
   register: {
     actions: {
+      haveAccount: 'Already signed up? Log in',
       register: 'Continue',
+      submit: 'Create your account',
     },
     fields: {
       phoneNumber: {
