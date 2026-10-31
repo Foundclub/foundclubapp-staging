@@ -4254,7 +4254,8 @@ export default {
       clientSecretEnter: 'Renseigne le client secret',
       clientSecretKeep: 'Laisser vide pour conserver le secret actuel',
       environmentLabel: 'Environnement',
-      environmentPlaceholder: 'production ou sandbox',
+      environmentProduction: 'Production',
+      environmentSandbox: 'Bac à sable (sandbox)',
       // eslint-disable-next-line max-len
       intro: 'À renseigner une seule fois pour le club. Toutes les campagnes s’y connectent ensuite d’un simple interrupteur.',
       slugLabel: 'Slug organisation',
@@ -14821,6 +14822,7 @@ export default {
       notConfigured: 'La connexion HelloAsso n’est pas encore configurée pour ce club.',
       oauthFailed: 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.',
       pending: 'La configuration HelloAsso existe, mais elle n’a pas encore été vérifiée.',
+      providerReason: 'Réponse de HelloAsso : {{reason}}',
       ready: 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.',
       webhookPending: 'Connexion validée. Le premier paiement doit encore confirmer le webhook.',
       // eslint-disable-next-line max-len

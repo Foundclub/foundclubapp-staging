@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
@@ -4183,14 +4184,22 @@ function ClubLicenses({ navigation, route }) {
             placeholder={t('clubLicenses.helloAssoSheet.slugPlaceholder', 'mon-club')}
             value={helloAssoConfig.organizationSlug}
           />
-          <HelloAssoField
-            label={t('clubLicenses.helloAssoSheet.environmentLabel', 'Environnement')}
-            onChangeText={(value) => handleHelloAssoFieldChange('environment', value)}
-            placeholder={t(
-              'clubLicenses.helloAssoSheet.environmentPlaceholder',
-              'production ou sandbox',
-            )}
-            value={helloAssoConfig.environment}
+          {/* HELLOASSO-TEST : deux valeurs possibles, donc deux pastilles ; un champ libre
+              envoyait toute faute de frappe vers le serveur de production. */}
+          <ChoiceChipGroup
+            onSelect={(value) => handleHelloAssoFieldChange('environment', value)}
+            options={[
+              {
+                label: t('clubLicenses.helloAssoSheet.environmentProduction', 'Production'),
+                value: 'production',
+              },
+              {
+                label: t('clubLicenses.helloAssoSheet.environmentSandbox', 'Bac à sable (sandbox)'),
+                value: 'sandbox',
+              },
+            ]}
+            selectedValue={helloAssoConfig.environment === 'sandbox' ? 'sandbox' : 'production'}
+            title={t('clubLicenses.helloAssoSheet.environmentLabel', 'Environnement')}
           />
           <HelloAssoField
             label="Client id"
