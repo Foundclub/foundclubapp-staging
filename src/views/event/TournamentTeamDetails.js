@@ -138,7 +138,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const { t } = useTranslation();
   const { eventId, teamId } = route?.params || {};
   const queryClient = useQueryClient();
-  const { userData } = useAuth();
+  const { accountRoleKey, userData } = useAuth();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -199,8 +199,10 @@ function TournamentTeamDetails({ navigation, route }) {
     && isTournamentActiveMemberStatus(currentMember?.responseStatus)
     && !currentMemberIsCaptain,
   );
+  // PARENT-TOURNOI-LECTURE-2 (31/10) : un compte Parent LIT l'équipe ; rejoindre lui est refusé.
   const canRequestJoinTeam = Boolean(
-    !teamIsLocked
+    accountRoleKey !== 'parent'
+    && !teamIsLocked
     && normalizeTournamentText(team?.sourceType) === 'custom_team'
     && team?.isOpenToJoinRequests === true
     && !canManageTeam
