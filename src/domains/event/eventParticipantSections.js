@@ -31,6 +31,8 @@
  */
 import { withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 
+import { buildConvocationRoster } from '@/views/matchCallUp/matchConvocationUtils';
+
 /**
  * @typedef {{
  *   id?: string | number;
@@ -568,4 +570,76 @@ export const buildParticipationsByStatus = ({
     notAnswered: notAnsweredPlayers,
     participating: participatingPlayers,
   };
+};
+
+/**
+ * Les clés d une personne, celles de la convocation comprises.
+ * @param {any} personne - Un joueur des sections, ou de la convocation.
+ * @returns {string[]} - `doc:…` / `id:…`, sans doublon nul.
+ */
+const clesDe = (personne) => [
+  getUserKey(personne),
+  personne?.convocationKey ? `doc:${personne.convocationKey}` : null,
+  personne?.convocationKey ? `id:${personne.convocationKey}` : null,
+].filter((cle) => typeof cle === 'string');
+
+/**
+ * Les réponses de la convocation publiée, par équipe : présents, absents, joueurs sans app.
+ * @param {any[]} convocationBranches - Les branches de la convocation (une par équipe).
+ * @returns {Map<string, { absent: any[], present: any[], sansApp: any[] }>} - Par équipe.
+ */
+const reponsesConvocationParEquipe = (convocationBranches) => {
+  const parEquipe = new Map();
+  (convocationBranches || []).forEach((branch) => {
+    const teamId = branch?.team?.documentId;
+    if (!teamId) return;
+    const equipe = parEquipe.get(teamId) || { absent: [], present: [], sansApp: [] };
+    buildConvocationRoster({ published: branch?.published, responses: branch?.responses })
+      .filter((row) => row.player)
+      .forEach((row) => {
+        if (row.isManual) {
+          equipe.sansApp.push({ ...row.player, sansApp: true });
+          return;
+        }
+        const liste = { absent: equipe.absent, present: equipe.present }[row.response];
+        if (liste) liste.push({ ...row.player, convocationKey: row.playerId });
+      });
+    parEquipe.set(teamId, equipe);
+  });
+  return parEquipe;
+};
+
+/**
+ * CORR-EVENEMENTS 121 — la fiche compte comme le fil de l équipe (`buildAnswerGroups`, même
+ * roster) : un joueur sans app convoqué est présent d office, et la réponse d un convoqué se
+ * lit dans la convocation. Celle d un enfant donnée par son parent n est pas une participation
+ * de l événement : la fiche disait « Absent·e·s · 0 » quand le fil disait « Absents · 1 Lina ».
+ * Une réponse déjà donnée sur l événement garde la main. Site et téléphone appellent CETTE
+ * fonction (témoins : EventDetailsWebComposition, EventDetailsAbsentsConvocation.CORR3).
+ * @param {any[]} sections - Les sections d équipe de `buildTeamParticipationSections`.
+ * @param {any[]} convocationBranches - Les branches de la convocation publiée.
+ * @returns {any[]} - Les mêmes sections, complétées des réponses de la convocation.
+ */
+export const withConvocationResponses = (sections, convocationBranches) => {
+  const parEquipe = reponsesConvocationParEquipe(convocationBranches);
+  return sections.map((section) => {
+    const reponses = parEquipe.get(section.key);
+    if (!reponses) return section;
+    const dejaRepondu = new Set([...section.participating, ...section.missing].flatMap(clesDe));
+    const nouveaux = (/** @type {any[]} */ liste) => liste.filter(
+      (personne) => !clesDe(personne).some((cle) => dejaRepondu.has(cle)),
+    );
+    const presents = nouveaux(reponses.present);
+    const absents = nouveaux(reponses.absent);
+    const reponduALaConvocation = new Set([...presents, ...absents].flatMap(clesDe));
+    return {
+      ...section,
+      missing: [...section.missing, ...absents],
+      notAnswered: section.notAnswered.filter(
+        (/** @type {any} */ personne) => !clesDe(personne)
+          .some((cle) => reponduALaConvocation.has(cle)),
+      ),
+      participating: [...section.participating, ...presents, ...reponses.sansApp],
+    };
+  });
 };

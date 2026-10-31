@@ -13,7 +13,11 @@ import {
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
-import { buildTeamParticipationSections, getEventTrainerKeys, getUserKey } from '@/domains/event/eventParticipantSections';
+import {
+  buildTeamParticipationSections,
+  getEventTrainerKeys,
+  withConvocationResponses,
+} from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import {
   getCurrentUserEventParticipationState,
@@ -100,7 +104,6 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 /* eslint-disable perfectionist/sort-imports */
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
-import { buildConvocationRoster } from '@/views/matchCallUp/matchConvocationUtils';
 import {
   formatTimeInZone,
   resolveAttendanceWindow,
@@ -1794,56 +1797,10 @@ function EventDetails({ navigation, route }) {
     t,
     trainerKeys: getEventTrainerKeys(event),
   });
-  // CORR-EVENEMENTS 121 (décision A) : la fiche compte comme le fil de l'équipe — un joueur
-  // sans app convoqué est présent d'office (`buildAnswerGroups`, même roster).
-  // CORR-EVENEMENTS-2 (121) : et la réponse d'un convoqué se lit dans la convocation, comme au
-  // fil. Celle d'un enfant donnée par son parent n'est pas une participation de l'événement :
-  // la fiche disait « Absent·e·s · 0 » quand le fil disait « Absents · 1 Lina ».
-  const reponsesConvocationParEquipe = useMemo(() => {
-    const parEquipe = new Map();
-    convocationBranches.forEach((branch) => {
-      const teamId = branch?.team?.documentId;
-      if (!teamId) return;
-      const equipe = parEquipe.get(teamId) || { absent: [], present: [], sansApp: [] };
-      buildConvocationRoster({ published: branch?.published, responses: branch?.responses })
-        .filter((row) => row.player)
-        .forEach((row) => {
-          if (row.isManual) {
-            equipe.sansApp.push({ ...row.player, sansApp: true });
-            return;
-          }
-          const liste = { absent: equipe.absent, present: equipe.present }[row.response];
-          if (liste) liste.push({ ...row.player, convocationKey: row.playerId });
-        });
-      parEquipe.set(teamId, equipe);
-    });
-    return parEquipe;
-  }, [convocationBranches]);
+  // CORR-EVENEMENTS 121 : la fiche compte comme le fil (réponses de la convocation, joueurs
+  // sans app) — la règle vit dans le domaine, le téléphone appelle la même.
   const participantSections = [
-    ...teamParticipationSections.map((section) => {
-      const reponses = reponsesConvocationParEquipe.get(section.key);
-      if (!reponses) return section;
-      const clesDe = (/** @type {any} */ personne) => [
-        getUserKey(personne),
-        personne?.convocationKey ? `doc:${personne.convocationKey}` : null,
-        personne?.convocationKey ? `id:${personne.convocationKey}` : null,
-      ].filter(Boolean);
-      const dejaRepondu = new Set([...section.participating, ...section.missing].flatMap(clesDe));
-      const nouveaux = (/** @type {any[]} */ liste) => liste.filter(
-        (personne) => !clesDe(personne).some((cle) => dejaRepondu.has(cle)),
-      );
-      const presents = nouveaux(reponses.present);
-      const absents = nouveaux(reponses.absent);
-      const reponduALaConvocation = new Set([...presents, ...absents].flatMap(clesDe));
-      return {
-        ...section,
-        missing: [...section.missing, ...absents],
-        notAnswered: section.notAnswered.filter(
-          (personne) => !clesDe(personne).some((cle) => reponduALaConvocation.has(cle)),
-        ),
-        participating: [...section.participating, ...presents, ...reponses.sansApp],
-      };
-    }),
+    ...withConvocationResponses(teamParticipationSections, convocationBranches),
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
   // 🔢 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur) — les trois tuiles de la colonne de

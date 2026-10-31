@@ -39,6 +39,7 @@ import {
   getTrainerKeySet,
   getUserKey,
   uniqueUsers,
+  withConvocationResponses,
 } from '@/domains/event/eventParticipantSections';
 import {
   getEventEditSupport,
@@ -4125,6 +4126,12 @@ function EventDetails({ navigation, route }) {
 
     return [];
   }, [compositionEditorTeam?.name, compositionTeamId, convocationPayload?.branches, convocationPayload?.published, convocationPayload?.team]);
+  // CORR-EVENEMENTS-3 (121) — la fiche compte comme le fil : la réponse donnée dans la
+  // convocation (celle d'un enfant par son parent) range le joueur. Même règle que le site.
+  const sectionsDEquipe = useMemo(
+    () => withConvocationResponses(teamParticipationSections, convocationBranches),
+    [convocationBranches, teamParticipationSections],
+  );
   const hasPublishedComposition = convocationBranches.length > 0;
   const publishedCompositionTeamCount = useMemo(
     () => convocationBranches.reduce((total, branch) => (
@@ -8618,7 +8625,7 @@ function EventDetails({ navigation, route }) {
                   participationsByStatus={participationsByStatus}
                   pendingParticipations={pendingParticipations}
                   rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
-                  teamParticipationSections={teamParticipationSections}
+                  teamParticipationSections={sectionsDEquipe}
                 />
               ) : null}
 
