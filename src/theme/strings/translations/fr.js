@@ -7383,11 +7383,15 @@ export default {
     demandes: {
       acceptees_one: '{{count}} acceptée',
       acceptees_other: '{{count}} acceptées',
+      annuleesParLeClub_one: '{{count}} annulée par le club',
+      annuleesParLeClub_other: '{{count}} annulées par le club',
       delai_one: 'Délai moyen de réponse : {{jours}} jour.',
       delai_other: 'Délai moyen de réponse : {{jours}} jours.',
       delaiInconnu: 'Délai moyen de réponse : —',
       enAttente_one: '{{count}} en attente',
       enAttente_other: '{{count}} en attente',
+      expireesSansReponse_one: '{{count}} expirée sans réponse',
+      expireesSansReponse_other: '{{count}} expirées sans réponse',
       recues_one: '{{count}} reçue',
       recues_other: '{{count}} reçues',
       refusees_one: '{{count}} refusée',
@@ -7412,12 +7416,14 @@ export default {
       // VILLE-T18B (e) : sans horaires (retirés), ce qui se mesure sans eux, jamais « — ».
       a11ySansTaux: '{{nom}} : {{heures}} réservées',
       // VILLE-TAUX-24H (12/10, Adel « Sur 24 h », « 2- B ») : le taux se calcule sur 24 h.
+      a11yPlage: '{{nom}} : {{heures}}, taux d’occupation {{taux}} de 8 h à 22 h',
       a11ySur24h: '{{nom}} : {{heures}}, taux d’occupation {{taux}} sur 24 h',
       aucune: 'Aucune installation pour l’instant.',
       reservees_one: '{{count}} séance · {{duree}} réservées sur la période.',
       reservees_other: '{{count}} séances · {{duree}} réservées sur la période.',
       taux: 'Taux d’occupation : {{taux}}.',
       taux24h: 'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
+      tauxPlage: 'Taux d’occupation : {{taux}}, calculé de 8 h à 22 h.',
       titre: 'Heures de séances, par installation',
     },
     // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
@@ -7425,6 +7431,7 @@ export default {
       a11y: 'Occupation : {{taux}}',
       occupation: 'occupation : {{taux}}',
       // VILLE-TAUX-24H (12/10) : sans horaires, le taux de la semaine se calcule sur 24 h.
+      occupationPlage: 'occupation : {{taux}} de 8 h à 22 h',
       occupationSur24h: 'occupation : {{taux}} sur 24 h',
     },
     lien: 'Chiffres et export',
@@ -16893,6 +16900,9 @@ export default {
       gerants: 'Gérants',
       gestionnaire: 'Gérant de la Ville',
       gestionnaires: 'Gérants de la Ville',
+      gestionnaireDeLaVille: 'Gestionnaire de la Ville',
+      gestionnairesDeLaVille: 'Gestionnaires de la Ville',
+      gestionnairesPuce: 'Gestionnaires',
       joueur: 'Joueur',
       joueurs: 'Joueurs',
       laVille: 'la Ville',

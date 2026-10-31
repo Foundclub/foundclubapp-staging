@@ -421,16 +421,25 @@ function CollectiviteChiffres() {
     // installation sur 24 h par jour et pose `sur24h` sur ses lignes ; la phrase du taux le dit,
     // toujours dans sa version courte. Un serveur d'avant le lot ne le pose pas : phrase d'avant.
     const sur24h = lignes.some((/** @type {any} */ l) => l?.sur24h === true);
-    const phraseTaux = sur24h
-      ? t(
+    // CORR-COLLECTIVITES 103 (31/10, Adel A) : le serveur compte de 8 h a 22 h (`plageOuverture`).
+    const surPlage = lignes.some((/** @type {any} */ l) => Boolean(l?.plageOuverture));
+    let phraseTaux = t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
+      taux: tauxLisible(tauxVille),
+      ...SANS_ECHAPPEMENT,
+    });
+    if (surPlage) {
+      phraseTaux = t(
+        'collectiviteChiffres.installations.tauxPlage',
+        'Taux d’occupation : {{taux}}, calculé de 8 h à 22 h.',
+        { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
+      );
+    } else if (sur24h) {
+      phraseTaux = t(
         'collectiviteChiffres.installations.taux24h',
         'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
         { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
-      )
-      : t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
-        taux: tauxLisible(tauxVille),
-        ...SANS_ECHAPPEMENT,
-      });
+      );
+    }
     return (
       <BlocDeChiffres
         testID="chiffres-installations"
@@ -449,9 +458,12 @@ function CollectiviteChiffres() {
                 { heures: dureeLisible(ligne?.minutes), nom: ligne?.name, ...SANS_ECHAPPEMENT },
               )
               : t(
-                ligne?.sur24h === true
-                  ? 'collectiviteChiffres.installations.a11ySur24h'
-                  : 'collectiviteChiffres.installations.a11y',
+                // eslint-disable-next-line no-nested-ternary -- trois serveurs : plage, 24 h, avant
+                ligne?.plageOuverture
+                  ? 'collectiviteChiffres.installations.a11yPlage'
+                  : ligne?.sur24h === true
+                    ? 'collectiviteChiffres.installations.a11ySur24h'
+                    : 'collectiviteChiffres.installations.a11y',
                 '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
                 {
                   heures: dureeLisible(ligne?.minutes),

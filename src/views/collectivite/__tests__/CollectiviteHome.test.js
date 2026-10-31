@@ -1387,3 +1387,22 @@ describe('SECVUE — le bloc « Sécurité et suivi » de l accueil', () => {
   });
 });
 /* eslint-enable max-len */
+
+// CORR-COLLECTIVITES 103 (31/10/2026, décision d'Adel A) — le taux se compte de 8 h à 22 h ; le
+// serveur pose `plageOuverture`. La ligne de l'accueil le dit, comme la page « Chiffres ».
+describe('CORR-COLLECTIVITES 103 — « Cette semaine » : le taux de 8 h à 22 h se dit', () => {
+  it('« 6 séances · occupation : 5 % de 8 h à 22 h »', async () => {
+    mockChiffresSemaine = {
+      data: {
+        installations: [{
+          capaciteMinutes: 11760, documentId: TILLEULS.documentId, minutes: 540, plageOuverture: '08:00-22:00', seances: 6, taux: 5,
+        }],
+      },
+      error: null,
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('6 séances · occupation : 5 % de 8 h à 22 h');
+  });
+});

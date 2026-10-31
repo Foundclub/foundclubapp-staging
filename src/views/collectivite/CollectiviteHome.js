@@ -952,6 +952,7 @@ function CollectiviteHome() {
         t,
         tauxDeLaSemaine(facilityId),
         ligneDeLaSemaine(facilityId)?.sur24h === true,
+        Boolean(ligneDeLaSemaine(facilityId)?.plageOuverture),
       );
       return `${libelleSeances(facilityId)} · ${occupation}`;
     }

@@ -79,14 +79,25 @@ export const tauxLisible = (taux) => {
  * serveur a compté l'installation sur 24 h par jour (pas d'horaires).
  * @param {Traduire} t - La traduction.
  * @param {unknown} taux - Le taux de la semaine, ou null.
+ * CORR-COLLECTIVITES 103 (31/10, Adel A) : « occupation : 5 % de 8 h à 22 h » quand le serveur pose
+ * `plageOuverture`.
  * @param {boolean} [sur24h] - Le `sur24h` de la ligne de « Chiffres ».
+ * @param {boolean} [surPlage] - La ligne porte `plageOuverture` (8 h – 22 h).
  * @returns {string} Le libellé.
  */
-export const phraseOccupation = (t, taux, sur24h = false) => t(
-  sur24h ? 'collectiviteChiffres.jauge.occupationSur24h' : 'collectiviteChiffres.jauge.occupation',
-  sur24h ? 'occupation : {{taux}} sur 24 h' : 'occupation : {{taux}}',
-  { taux: tauxLisible(taux), ...SANS_ECHAPPEMENT },
-);
+export const phraseOccupation = (t, taux, sur24h = false, surPlage = false) => {
+  if (surPlage) {
+    return t('collectiviteChiffres.jauge.occupationPlage', 'occupation : {{taux}} de 8 h à 22 h', {
+      taux: tauxLisible(taux),
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t(
+    sur24h ? 'collectiviteChiffres.jauge.occupationSur24h' : 'collectiviteChiffres.jauge.occupation',
+    sur24h ? 'occupation : {{taux}} sur 24 h' : 'occupation : {{taux}}',
+    { taux: tauxLisible(taux), ...SANS_ECHAPPEMENT },
+  );
+};
 
 /**
  * « 6 tenues · 1 annulée par le club · 2 touchées par une fermeture » (+ « · 2 à venir » quand la
@@ -172,6 +183,22 @@ export const phraseDemandes = (t, demandes) => {
       count: n('enAttente'),
       defaultValue_one: '{{count}} en attente',
       defaultValue_other: '{{count}} en attente',
+    }));
+  }
+  // CORR-COLLECTIVITES 104 (31/10, Adel A) : la somme tombe juste ; l acceptee puis annulee par le
+  // club (`sansSuite`) et l expiree sans reponse (`expirees`) se disent.
+  if (n('sansSuite') > 0) {
+    morceaux.push(t('collectiviteChiffres.demandes.annuleesParLeClub', {
+      count: n('sansSuite'),
+      defaultValue_one: '{{count}} annulée par le club',
+      defaultValue_other: '{{count}} annulées par le club',
+    }));
+  }
+  if (n('expirees') > 0) {
+    morceaux.push(t('collectiviteChiffres.demandes.expireesSansReponse', {
+      count: n('expirees'),
+      defaultValue_one: '{{count}} expirée sans réponse',
+      defaultValue_other: '{{count}} expirées sans réponse',
     }));
   }
   return morceaux.join(' · ');
