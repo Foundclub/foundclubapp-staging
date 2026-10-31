@@ -51,7 +51,8 @@ const runLint = () => {
     cwd: projectRoot,
     encoding: 'utf8',
     shell: process.platform === 'win32',
-    maxBuffer: 1024 * 1024 * 50,
+    // Le rapport JSON d'ESLint dépasse 50 Mo depuis la récolte du 31/10 (52 Mo) : coupé, il ne se lit plus.
+    maxBuffer: 1024 * 1024 * 200,
   });
 
   const stdout = result.stdout || '';
