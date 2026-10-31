@@ -665,7 +665,11 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
   // « Demain, tu joues ? » (témoin EP14.notification.test.js).
   if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
     const reservationId = toSafeString(payload.reservationId).trim();
-    if (!COMPLEXES_JOUEUR || !reservationId) return null;
+    // CORR-CHEMINS (30/10, point 48, Adel « A ») : sans écran à ouvrir (interrupteur éteint, ou pas
+    // de réservation), l'appui ouvre le détail de la notification au lieu de ne mener nulle part.
+    if (!COMPLEXES_JOUEUR || !reservationId) {
+      return adaptDestinationForCurrentPlatform(payload, notificationDetailsDestination(payload));
+    }
     const change = toSafeString(payload.change).trim();
     // RESA-L6B-2 (20/10/2026) — N-28, « Il me manque des joueurs » aux favoris (`change:
     // 'annonce'`, `annonceId`) : la page de l'annonce (E-P09 B), pour la rejoindre. Les autres
@@ -761,14 +765,15 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       // attente. Miroir exact de la porte du club (`CLUB_MEMBERSHIP_REQUEST` +
       // `requestType === 'claim'`, plus bas).
       // ⚠️ Sans `teamId` l ecran n a rien a lister : on retombe sur la fiche.
-      const requestTeamId = normalizeEntityId(payload.teamId);
-      if (type === NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST && requestTeamId) {
+      // CORR-CHEMINS (30/10, point 48, Adel « A ») : la liste de l'équipe est l'ancienne page « Ce
+      // flux a été migré vers Demandes » ; la demande s'ouvre dans Demandes, filtre équipe.
+      if (type === NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST) {
         return adaptDestinationForCurrentPlatform(payload, {
           params: {
-            params: { teamId: requestTeamId },
-            screen: RouteNames.TeamMembershipRequests,
+            initialFilter: 'team',
+            source: 'notification',
           },
-          route: RouteNames.TeamStack,
+          route: RouteNames.RequestsHub,
         });
       }
       return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));

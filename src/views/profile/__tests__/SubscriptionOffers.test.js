@@ -5,6 +5,8 @@ import {
   resetSubscriptionPriceReportForTests,
 } from '@/domains/subscription/useSubscriptionCatalog';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import SubscriptionOffers from '../SubscriptionOffers';
 
 // L33 — le carrousel est la SEULE surface de vente atteinte depuis un mur payant
@@ -1134,7 +1136,10 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     expect(texte).toContain('Cotisations du club');
   });
 
-  it('un joueur n\'atteint jamais cette surface de vente', async () => {
+  // CORR-CHEMINS (30/10, point 49, Adel « A ») : un joueur arrivé ici (notification d'abonnement,
+  // adresse tapée) ne voit plus une page vide : « Pas d'offre pour ton rôle », avec un retour.
+  // Toujours aucune offre ni aucun prix : la surface de vente reste fermée.
+  it('un joueur n\'atteint jamais cette surface de vente : un message et un retour', async () => {
     const arbre = await rendre({
       userData: {
         club: { documentId: 'club-1' },
@@ -1143,7 +1148,17 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
       },
     });
 
-    expect(arbre.toJSON()).toBeNull();
+    const texte = arbre.root.findAllByType(Text)
+      .map((noeud) => [].concat(noeud.props.children).join(''))
+      .join(' | ');
+    expect(texte).toContain('Pas d’offre pour ton rôle');
+    expect(texte).not.toContain('€');
+    const boutons = arbre.root.findAll((noeud) => typeof noeud.props?.onPress === 'function'
+      && typeof noeud.type !== 'string');
+    expect(boutons.length).toBeGreaterThan(0);
+    await act(async () => { boutons[0].props.onPress(); });
+    expect(mockNavigate)
+      .toHaveBeenCalledWith(RouteNames.ProfileStack, { screen: RouteNames.Profile });
   });
 });
 

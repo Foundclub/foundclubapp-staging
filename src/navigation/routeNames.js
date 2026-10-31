@@ -23,7 +23,7 @@
  * atteignables par URL/lien profond, mais aucun bouton de l'app n'y mene (aucun navigate()
  * ne les vise). A confirmer produit avant de cabler ou de retirer :
  *   `CMPlanning`, `FeaturedRequests`, `LeagueHome`, `MatchCenter`, `MatchDetails`,
- *   `MissingPlayersView`, `PersonalPlanningWeekFullscreen`, `PublicLicensePayment`,
+ *   `PersonalPlanningWeekFullscreen`, `PublicLicensePayment`,
  *   `RequestsDashboard`, `SubscriptionWebSuccess`, `TeamMembershipRequests`, `TeamStats`.
  * Les onglets-leurres `AuthStackAccount` / `AuthStackMessaging` / `AuthStackPlanning` sont
  * dans le meme cas mais c'est VOULU (cf. MOBILE_ONLY_SCREENS dans webRoutes.parity.test.js).
@@ -133,7 +133,6 @@ export const RouteNames = /** @type {const} */ ({
   MatchHistoryScreen: 'MatchHistoryScreen',
   MatchStatsEditor: 'MatchStatsEditor',
   MercatoFilters: 'MercatoFilters',
-  MissingPlayersView: 'MissingPlayersView',
   MultisportClubDetails: 'MultisportClubDetails',
   MultisportClubEdit: 'MultisportClubEdit',
   MyClubs: 'MyClubs',
@@ -164,7 +163,6 @@ export const RouteNames = /** @type {const} */ ({
   RequestsDashboard: 'RequestsDashboard',
   RequestsHub: 'RequestsHub',
   ReservationDetails: 'ReservationDetails',
-  ReservationEdit: 'ReservationEdit',
   ReservationFilters: 'ReservationFilters',
   // « Mes activites » (lot D35) : on publie depuis Rechercher, on gere ici.
   // Vit dans SearchStack, a cote de l accueil du membre connecte.

@@ -299,6 +299,9 @@ function EventDetails({ navigation, route }) {
 
   const canEdit = Boolean(canManageEvent(event));
   const hasEvent = Boolean(event);
+  // CORR-CHEMINS (30/10, point 41, Adel « A ») : le serveur rend aussi une fiche ANNULÉE ;
+  // elle reste lisible (titre, date, lieu) sous « Annulé le … », sans geste de réponse.
+  const isCancelled = String(event?.status || '') === 'cancelled';
   const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
   const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
   const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
@@ -2336,7 +2339,7 @@ function EventDetails({ navigation, route }) {
                     </div>
                   </>
                 )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: isCancelled ? 'none' : 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {peutPasserPresentApresCoup ? (
                     <div style={{ display: 'grid', gap: 8 }}>
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
@@ -2450,6 +2453,38 @@ function EventDetails({ navigation, route }) {
           </div>
         </section>
 
+        {isCancelled ? (
+          <section
+            data-testid="event-cancelled-banner"
+            role="status"
+            style={{
+              background: 'rgba(255, 92, 92, 0.12)',
+              border: '1px solid rgba(255, 92, 92, 0.4)',
+              borderRadius: 20,
+              color: textColor,
+              display: 'grid',
+              gap: 6,
+              padding: 18,
+            }}
+          >
+            <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18 }}>
+              {event?.updatedAt
+                ? t('eventDetails.annule.titreDate', 'Annulé le {{date}}', {
+                  date: new Date(event.updatedAt)
+                    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : t('eventDetails.annule.titre', 'Événement annulé')}
+            </div>
+            <div style={{ color: mutedTextColor }}>
+              {t(
+                'eventDetails.annule.texte',
+                'L’organisateur a annulé cet événement : il n’y a plus rien à répondre.',
+              )}
+            </div>
+          </section>
+        ) : null}
+
         {error && !isEventGone ? (
           <section style={{
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, padding: 22,
@@ -2535,7 +2570,7 @@ function EventDetails({ navigation, route }) {
           </section>
         ) : null}
 
-        {!isLoading && event ? (
+        {!isLoading && event && !isCancelled ? (
           <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
             {/* PARTWEB — `alignContent: 'start'` sur les DEUX colonnes : une grille
                 s'etire a la hauteur de la colonne voisine, et ses blocs avec — la

@@ -65,6 +65,8 @@ import CARD_BACKGROUND from '@/assets/background-card-event/card-match.png';
  * @param {string | null} [props.myApplicationStatus]
  * @param {(ad: any) => void} [props.onApply]
  * @param {(ad: any) => void} [props.onPress]
+ * @param {(ad: any) => void} [props.onShare] - CORR-CHEMINS 45 : partager l'annonce, pour qui ne
+ *   peut pas proposer de match (parent, joueur).
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchAdCard({
@@ -76,6 +78,7 @@ function FriendlyMatchAdCard({
   myApplicationStatus = null,
   onApply,
   onPress,
+  onShare,
 }) {
   const { Colors, Fonts, Images } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
@@ -209,6 +212,11 @@ function FriendlyMatchAdCard({
     isCtaInteractive = false;
   } else if (isApplying) {
     ctaLabel = t('friendlyMatch.adCard.cta.applying', 'Envoi...');
+  } else if (!canApply && onShare) {
+    // CORR-CHEMINS (30/10, point 45, consigne d'Adel) : qui ne peut pas proposer de match (parent,
+    // joueur) peut partager l'annonce, plutôt qu'un refus sans geste.
+    ctaLabel = t('friendlyMatch.adCard.cta.share', 'Partager l’annonce');
+    isCtaInteractive = true;
   } else if (!canApply) {
     ctaLabel = t('friendlyMatch.adCard.cta.staffOnly', 'Réservé aux entraîneurs et dirigeants');
     isCtaInteractive = false;
@@ -375,7 +383,9 @@ function FriendlyMatchAdCard({
         <View pointerEvents="auto" style={styles.footerRow}>
           {isOwner ? null : renderFooterButton({
             label: ctaLabel,
-            onPressButton: isCtaInteractive ? () => onApply?.(ad) : undefined,
+            onPressButton: isCtaInteractive
+              ? () => (canApply ? onApply : onShare)?.(ad)
+              : undefined,
           })}
           {isOwner ? null : renderFooterButton({
             isCompact: true,

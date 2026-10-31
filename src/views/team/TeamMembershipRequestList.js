@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -128,12 +128,13 @@ function TeamMembershipRequestList({ navigation, route }) {
     },
   });
 
+  // CORR-CHEMINS (30/10, point 48, Adel « A ») : plus aucun chemin ne mène ici (une adresse tapée,
+  // une vieille notification) ; la page cède sa place à Demandes, au bon filtre.
   useEffect(() => {
-    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
     navigateToRequestsHub(navigation, {
       initialFilter: 'team',
       source: 'profile',
-    });
+    }, { remplacer: true });
   }, [navigation]);
 
   // handlers

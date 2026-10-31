@@ -92,9 +92,7 @@ const MOBILE_ONLY_SCREENS = {
   // passent par `navigateOrExplainOnWeb` : sur le site, « Bientot sur le site » au lieu d un
   // atterrissage muet sur l accueil. A retirer d ici quand le registre web les declare, puis
   // ajouter leurs motifs dans webRoutes.js (ex. /profile/children/link et /profile/parent).
-  [RouteNames.MyParentLink]:
-    'TODO(web) MyParentLink screen (the child accepts or removes the link) is built and'
-    + ' mounted in the app; waiting for its entry in web/src/routes/screenRegistry.tsx',
+  // CORR-CHEMINS (30/10, point 40) : MyParentLink est routé sur le site (/profile/parent).
   // RW-PARENT e1 (29/10) : ParentLinkInvite est route sur le site (/profile/children/link).
   // CARTECODE (26/10) — meme sequencement : l ecran « Confidentialite » est monte cote app, le
   // registre web (autre depot) ne le declare pas encore ; la ligne du profil passe par
@@ -209,15 +207,10 @@ const MOBILE_ONLY_SCREENS = {
  */
 const UNREGISTERED_WEB_PATTERNS = {
   // RESA-L6A (14/10/2026) — les écrans téléphone étaient morts (aucune porte) et sont retirés ; le
-  // site sert toujours BookingCalendar.web.js et MissingPlayersView.web.js à ces adresses.
+  // site sert toujours BookingCalendar.web.js à cette adresse. CORR-CHEMINS (30/10, point 50, Adel
+  // « 4- A ») : « joueurs recherchés » (MissingPlayersView.web.js), atteint par aucun chemin, retiré.
   [RouteNames.BookingCalendar]:
     'RESA-L6A : website-only screen (BookingCalendar.web.js); the dead phone screen was removed',
-  [RouteNames.MissingPlayersView]:
-    'RESA-L6A : website-only screen (MissingPlayersView.web.js); the dead phone screen was removed',
-  // ReservationEdit.web.js existe et est explicitement une variante web (adaptateur vers
-  // EventEdit). Il n'a jamais ete branche dans une stack.
-  [RouteNames.ReservationEdit]:
-    'ReservationEdit.web.js existe et vise le web, reste a l\'enregistrer (TODO webRoutes.js)',
 };
 
 module.exports = {

@@ -10094,6 +10094,12 @@ export default {
     anErrorOccurred: 'Une erreur est survenue.',
     // eslint-disable-next-line max-len
     announceTheEstimatedDelayYou: 'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.',
+    // CORR-CHEMINS (30/10, point 41) : une fiche annulée reste lisible, sous ce bandeau.
+    annule: {
+      texte: 'L’organisateur a annulé cet événement : il n’y a plus rien à répondre.',
+      titre: 'Événement annulé',
+      titreDate: 'Annulé le {{date}}',
+    },
     answerExpected: 'Réponse attendue',
     answerMyInvitation: 'Répondre à mon invitation',
     approve: 'Valider',
@@ -12892,6 +12898,8 @@ export default {
         declined: 'Proposition refusée',
         matched: 'Adversaire trouvé',
         pending: 'Proposition envoyée',
+        // CORR-CHEMINS (30/10, point 45) : parent ou joueur, qui ne peut pas proposer de match.
+        share: 'Partager l’annonce',
         staffOnly: 'Réservé aux entraîneurs et dirigeants',
       },
       distance: 'à {{km}} km',
@@ -22320,6 +22328,12 @@ export default {
     pager: {
       card: 'Carte {{position}} sur 3',
     },
+    // CORR-CHEMINS (30/10, point 49) : un rôle sans offre (joueur, parent) arrivé sur cette page.
+    pasPourTonRole: {
+      description: 'Les offres FoundClub concernent les entraîneur·e·s et les dirigeant·e·s de club.',
+      retour: 'Retour à mon compte',
+      title: 'Pas d’offre pour ton rôle',
+    },
     plans: {
       club: 'Club',
     },
@@ -27252,6 +27266,13 @@ export default {
   webNavigationGuard: {
     // eslint-disable-next-line max-len
     message: "Cet écran n'est pas encore disponible sur le site : ouvre-le depuis l'application FoundClub.",
+    // CORR-CHEMINS (30/10, point 47 « B ») : l'écran vit dans l'app ; la boutique est proposée.
+    surLApp: {
+      fermer: 'Plus tard',
+      message: "Cet écran se trouve dans l'application FoundClub, gratuite sur l'App Store et Google Play.",
+      ouvrir: "Télécharger l'app",
+      title: 'Disponible sur l’app',
+    },
     title: 'Bientôt sur le site',
   },
   welcome: {

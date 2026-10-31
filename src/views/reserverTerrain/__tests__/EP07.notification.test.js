@@ -70,13 +70,14 @@ describe('RESA-L6A — la notification du joueur mène à « Ma réservation »'
     });
   });
 
-  it('sans réservation, ou interrupteur éteint : l’appui ne mène nulle part', () => {
+  // CORR-CHEMINS (30/10, point 48, Adel « A ») : plus jamais « nulle part » ; le détail.
+  it('sans réservation, ou interrupteur éteint : l’appui ouvre le détail', () => {
     expect(charger(true).resolveNotificationDestination({
       data: { change: 'acceptee' }, type: ETIQUETTE_SERVEUR,
-    })).toBeNull();
+    })?.route).toBe(RouteNames.NotificationDetails);
     expect(charger(false).resolveNotificationDestination({
       data: { change: 'acceptee', reservationId: 'r-1' }, type: ETIQUETTE_SERVEUR,
-    })).toBeNull();
+    })?.route).toBe(RouteNames.NotificationDetails);
   });
 
   it('l’icône du stade ; acceptée en vert, refusée ou annulée en rouge', () => {

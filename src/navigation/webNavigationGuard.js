@@ -1,7 +1,23 @@
 import i18next from 'i18next';
-import { Alert, Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 
 import { isWebRouteSupported } from '@/navigation/webRoutes';
+
+import { DEFAULT_STORE_URL_BY_PLATFORM } from '@/services/appUpdate/appUpdateGateRules';
+
+/**
+ * La boutique du visiteur : l'App Store sur un appareil Apple, Google Play ailleurs.
+ * ponytail: lue sur le `userAgent` ; un ordinateur sous Windows ou Linux reçoit la page
+ * Google Play (elle sait envoyer l'app vers un téléphone). Sortie : une page du site qui
+ * montre les deux boutiques, si Adel la demande.
+ * @returns {string} L'adresse de la boutique.
+ */
+const boutiqueDuVisiteur = () => {
+  const agent = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+  return /iPhone|iPad|iPod|Macintosh/.test(agent)
+    ? DEFAULT_STORE_URL_BY_PLATFORM.ios
+    : DEFAULT_STORE_URL_BY_PLATFORM.android;
+};
 
 /**
  * Garde-fou contre l atterrissage silencieux sur « / ».
@@ -27,12 +43,22 @@ import { isWebRouteSupported } from '@/navigation/webRoutes';
  */
 export const navigateOrExplainOnWeb = (navigation, routeName, params = undefined) => {
   if (Platform.OS === 'web' && !isWebRouteSupported(routeName)) {
+    // CORR-CHEMINS (30/10, point 47, Adel « B ») : plus de « Bientôt sur le site » ; l'écran vit
+    // dans l'application, et la boutique est à un geste.
     Alert.alert(
-      i18next.t('webNavigationGuard.title', 'Bientôt sur le site'),
+      i18next.t('webNavigationGuard.surLApp.title', 'Disponible sur l’app'),
       i18next.t(
-        'webNavigationGuard.message',
-        "Cet écran n'est pas encore disponible sur le site : ouvre-le depuis l'application FoundClub.", // eslint-disable-line max-len
+        'webNavigationGuard.surLApp.message',
+        "Cet écran se trouve dans l'application FoundClub, gratuite sur l'App Store et Google Play.", // eslint-disable-line max-len
       ),
+      [
+        { style: 'cancel', text: i18next.t('webNavigationGuard.surLApp.fermer', 'Plus tard') },
+        {
+          isPreferred: true,
+          onPress: () => { Linking.openURL(boutiqueDuVisiteur()).catch(() => {}); },
+          text: i18next.t('webNavigationGuard.surLApp.ouvrir', "Télécharger l'app"),
+        },
+      ],
     );
     return false;
   }

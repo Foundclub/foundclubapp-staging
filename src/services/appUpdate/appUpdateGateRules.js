@@ -18,7 +18,7 @@ import { resolveWebAppOrigin } from '@/utils/shareLinks';
 // depots (mesure du 2026-08-17). On ne l'invente pas — la recherche App Store
 // mene bien a la boutique, et le champ `iosStoreUrl` cote serveur permet de
 // poser le vrai lien sans republier l'app.
-const DEFAULT_STORE_URL_BY_PLATFORM = {
+export const DEFAULT_STORE_URL_BY_PLATFORM = {
   android: 'https://play.google.com/store/apps/details?id=com.foundclub',
   ios: 'https://apps.apple.com/fr/search?term=foundclub',
 };
