@@ -114,6 +114,7 @@ import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import MatchBilanCard from './components/MatchBilanCard';
 import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
+import VillePrevenueDialog from './components/VillePrevenueDialog';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { formatEventPlaceShort, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
@@ -234,6 +235,8 @@ function EventDetails({ navigation, route }) {
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
+  // CORR-COLLECTIVITES 94 (31/10, Adel A) : « La Ville est prévenue », dans la fenêtre de l'app.
+  const [villePrevenue, setVillePrevenue] = useState(/** @type {string | null} */ (null));
   const [isTrainingSettingsVisible, setIsTrainingSettingsVisible] = useState(false);
   const [trainingOpenLimitDraft, setTrainingOpenLimitDraft] = useState('');
   const creationCelebrationShownRef = useRef(false);
@@ -863,8 +866,10 @@ function EventDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['planning'] });
       const prevenue = reponse?.meta?.collectivitePrevenue;
-      if (prevenue && typeof window?.alert === 'function') {
-        window.alert(t(
+      // CORR-COLLECTIVITES 94 (31/10, Adel A) : la fenêtre de l'app, plus window.alert ; « OK »
+      // ferme puis revient en arrière (VillePrevenueDialog).
+      if (prevenue) {
+        setVillePrevenue(t(
           'useEventMutations.villePrevenue.corps',
           'La {{ville}} est prévenue : la place se libère.',
           {
@@ -872,6 +877,7 @@ function EventDetails({ navigation, route }) {
             ...SANS_ECHAPPEMENT,
           },
         ));
+        return;
       }
       navigation.goBack();
     },
@@ -3622,6 +3628,13 @@ function EventDetails({ navigation, route }) {
         isVisible={isJoinModalVisible}
         onClose={() => setIsJoinModalVisible(false)}
         onConfirm={handleConfirmDetectionParticipation}
+      />
+      <VillePrevenueDialog
+        message={villePrevenue}
+        onClose={() => {
+          setVillePrevenue(null);
+          navigation.goBack();
+        }}
       />
     </ScreenContainer>
   );
