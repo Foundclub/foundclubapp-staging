@@ -420,9 +420,15 @@ function EventWizardRecap({ navigation }) {
     () => shouldSkipEventWizardParticipantsStep(state),
     [state],
   );
+  // QUOTA-118 — le compteur que le serveur décompte : un match consomme MATCH_PUBLISH
+  // (admin is-event-trainer-create.ts, même détection par nom que `isMatch`).
   const eventPublishQuotaItem = useMemo(
-    () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
-    [freeUsageSummary, subscriptionAccessLevel],
+    () => getSubscriptionQuotaItem(
+      freeUsageSummary,
+      isMatch ? 'MATCH_PUBLISH' : 'EVENT_PUBLISH',
+      subscriptionAccessLevel,
+    ),
+    [freeUsageSummary, isMatch, subscriptionAccessLevel],
   );
 
   const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
