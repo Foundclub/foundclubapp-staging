@@ -23,6 +23,7 @@ const bootGuardLogger = createLogger('boot-guard');
 
 export const BOOT_REQUEST_BLOCKED_CODE = 'BOOT_REQUEST_BLOCKED';
 export const BOOT_REQUEST_NO_SESSION_CODE = 'BOOT_REQUEST_NO_SESSION';
+export const ROLE_REQUEST_REFUSED_CODE = 'ROLE_REQUEST_REFUSED';
 
 const GUARDED_PATHS = ['/app/bootstrap', '/firebase-auth/me'];
 
@@ -204,6 +205,45 @@ export const assertSessionRequestAllowed = (config, { hasToken }) => {
   }
 
   throw buildNoSessionError(path);
+};
+
+/**
+ * 👪 CORR-PARENT-APPELS (31/10, point 46 « A ») — les lectures que le serveur refuse au rôle
+ * Parent : sa carte (admin/src/index.ts) n'a ni user-history.findMine, ni league-team.mine, ni
+ * event-participation.find, ni license.getMine. 403 mesurés à la recette du 29/10 (profil,
+ * carte, événement, League, cotisations). Le refus est prononcé ICI, sans réseau, avec la
+ * forme du 403 du serveur : les écrans gardent ce qu'ils montraient.
+ * ponytail: liste recopiée de la carte Parent ; si un droit lui est ouvert, retirer sa ligne
+ * (témoin : services/client.CORRPARENTAPPELS.test.js).
+ */
+const PARENT_REFUSED_READS = [
+  '/user-histories/mine',
+  '/league-teams/mine',
+  '/event-participations',
+  '/licenses/me',
+];
+
+const isParentRefusedRead = (/** @type {string} */ path) => PARENT_REFUSED_READS.includes(path)
+  || path.startsWith('/licenses/me/');
+
+/**
+ * À appeler dans l'intercepteur de requête, AVANT de poser le jeton : un en-tête Authorization
+ * déjà posé parle pour une autre session, dont on ne connaît pas le rôle.
+ * @param {any} config
+ * @param {{ role: any }} options - Le rôle du compte actif (`auth.user.role`).
+ * @returns {void}
+ * @throws un refus de forme 403 quand le serveur refuserait cette lecture à ce rôle.
+ */
+export const assertRoleRequestAllowed = (config, { role }) => {
+  if (config?.headers?.Authorization) return;
+  if (String(role?.type || role?.name || '').toLowerCase() !== 'parent') return;
+  if (String(config?.method || 'get').toLowerCase() !== 'get') return;
+  if (!isParentRefusedRead(toRequestPath(config?.url))) return;
+
+  const error = {
+    code: ROLE_REQUEST_REFUSED_CODE, message: 'Forbidden', name: 'ForbiddenError', status: 403,
+  };
+  throw { ...error, response: { data: { error } } };
 };
 
 /**

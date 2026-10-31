@@ -28,8 +28,14 @@ describe('VILLE-T18D 6 — la porte du bloc « De la Ville » sur la fiche du cl
     expect(showsCityNewsBlock({ clubId: null, isMember: true })).toBe(false);
   });
 
-  it('un compte au rôle Parent : le bloc est posé, le serveur juge', () => {
-    expect(showsCityNewsBlock({ clubId: CLUB, isMember: false, isParentRole: true })).toBe(true);
+  // CORR-PARENT-APPELS (31/10, point 46 « A ») : le rôle Parent seul n'ouvre plus la porte (403
+  // sur les clubs où ses enfants ne jouent pas) ; il faut une équipe de ses enfants dans ce club.
+  it('un compte au rôle Parent : le bloc si un de ses enfants joue dans une équipe du club', () => {
+    const equipesDuClub = [{ documentId: 'u11' }];
+    expect(showsCityNewsBlock({ clubId: CLUB, equipesDesEnfants: ['u11'], equipesDuClub }))
+      .toBe(true);
+    expect(showsCityNewsBlock({ clubId: CLUB, equipesDesEnfants: [], equipesDuClub }))
+      .toBe(false);
   });
 
   it('un enfant MINEUR déclaré dans CE club : le bloc ; majeur ou ailleurs : rien', () => {
@@ -47,7 +53,7 @@ describe('VILLE-T18D 6 — la porte du bloc « De la Ville » sur la fiche du cl
     const source = readFileSync(join(__dirname, '..', 'ClubDetails.js'), 'utf8');
     expect(source).toMatch(/afficheLeBlocDeLaVille = showsCityNewsBlock\(\{[\s\S]{0,200}isMember,/);
     expect(source).toMatch(/\{afficheLeBlocDeLaVille \? \(\s*<BlocDeLaVille/);
-    expect(source).toMatch(/isParentRole: [^,\n]*USER_ROLES\.parent/);
+    expect(source).toMatch(/estCompteParent = [^;\n]*USER_ROLES\.parent/);
     expect(source).not.toMatch(/isMember && clubId \? \(\s*<BlocDeLaVille/);
   });
 });

@@ -185,6 +185,7 @@ jest.mock('@/services/club/clubService', () => ({
   updateClub: jest.fn(),
 }));
 
+jest.mock('@/domains/team/useParentTeams', () => () => ({ teamIds: [] }));
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useGetMyDeclaredChildren: () => ({ data: mockEnfants, error: undefined, isLoading: false }),
 }));

@@ -9,6 +9,7 @@ import {
 
 import {
   assertBootRequestAllowed,
+  assertRoleRequestAllowed,
   assertSessionRequestAllowed,
   recordBootRequestFailure,
   recordBootRequestSuccess,
@@ -40,6 +41,7 @@ const onRequest = (axiosConfig) => {
   // Rejette sans réseau les routes qui exigent une session quand il n'y a pas
   // de jeton : sans ça le serveur répond 403 et l'app recommence en boucle.
   assertSessionRequestAllowed(axiosConfig, { hasToken: Boolean(token) });
+  assertRoleRequestAllowed(axiosConfig, { role: getAuthRuntimeSnapshot()?.auth?.user?.role });
 
   const newConfig = { ...axiosConfig };
 

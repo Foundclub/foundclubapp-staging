@@ -199,6 +199,7 @@ jest.mock('@/services/club/clubService', () => ({
 // ENTIERE meurt avant le premier temoin — et le compteur `Tests:` reste
 // VERT pendant ce temps, seul `Test Suites:` le dit. Meme motif que les
 // doublures de services juste au-dessus.
+jest.mock('@/domains/team/useParentTeams', () => () => ({ teamIds: [] }));
 jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useGetMyDeclaredChildren: () => ({ data: [], error: undefined, isLoading: false }),
 }));

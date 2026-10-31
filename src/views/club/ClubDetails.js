@@ -45,6 +45,7 @@ import {
   formatCollectiviteOfferedBy,
   getCollectiviteOffer,
 } from '@/domains/subscription/subscriptionDecision';
+import useParentTeams from '@/domains/team/useParentTeams';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -1868,12 +1869,16 @@ function ClubDetails({ navigation, route }) {
     enabled: Boolean(isAuthenticated),
   });
   // VILLE-T18D 6 (« parent prevenu B ») — le bloc « De la Ville » : un membre, ou le parent d'un
-  // joueur mineur du club ; le serveur juge (can-read-club-news).
+  // joueur mineur du club ; le serveur juge (can-read-club-news). CORR-PARENT-APPELS : pour un
+  // compte Parent, seulement si un de ses enfants joue dans une equipe de ce club.
+  const estCompteParent = Boolean(isAuthenticated) && userData?.role?.name === USER_ROLES.parent;
+  const equipesDuParent = useParentTeams({ enabled: estCompteParent });
   const afficheLeBlocDeLaVille = showsCityNewsBlock({
     clubId,
     enfants: mesEnfantsBruts,
+    equipesDesEnfants: equipesDuParent.teamIds,
+    equipesDuClub: club?.teams,
     isMember,
-    isParentRole: isAuthenticated && userData?.role?.name === USER_ROLES.parent,
   });
   // ⛔ On ne remonte QUE des tranches : ni la matrice ni cette fiche n ont de
   // raison de manipuler le prenom ou la date de naissance d un mineur.

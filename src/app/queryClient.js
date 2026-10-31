@@ -9,6 +9,7 @@ import { extractSubscriptionDecisionFromError } from '@/domains/subscription/sub
 import {
   BOOT_REQUEST_BLOCKED_CODE,
   BOOT_REQUEST_NO_SESSION_CODE,
+  ROLE_REQUEST_REFUSED_CODE,
 } from '@/services/bootRequestGuard';
 
 import { isRequestTimeoutAbandon } from '@/utils/errors/apiError';
@@ -35,6 +36,7 @@ const getErrorMethod = (/** @type {any} */ error) => String(
 const isLocallyBlocked = (/** @type {any} */ error) => (
   error?.code === BOOT_REQUEST_BLOCKED_CODE
   || error?.code === BOOT_REQUEST_NO_SESSION_CODE
+  || error?.code === ROLE_REQUEST_REFUSED_CODE
 );
 
 /**

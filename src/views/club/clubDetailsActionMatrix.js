@@ -114,22 +114,27 @@ export const floatingActionsScrollPadding = (count, bottomInset) => {
  * BLOC « DE LA VILLE » (et son interrupteur D68 « Me prevenir ») ?
  *
  * Pour un membre, comme avant. Pour le PARENT d'un joueur mineur de CE club aussi : la serrure du
- * serveur (`can-read-club-news`) est le juge. Un compte au role Parent ouvre donc la porte et le
- * serveur repond : refuse, le bloc (qui attend sa reponse) ne s'affiche pas. Un compte d'un autre
- * role qui a declare un enfant MINEUR dans ce club l'ouvre aussi. Cette fonction decide d'une
- * PORTE, pas d'un droit.
+ * serveur (`can-read-club-news`) est le juge. Un compte qui a declare un enfant MINEUR dans ce
+ * club ouvre la porte. Cette fonction decide d'une PORTE, pas d'un droit.
+ * 👪 CORR-PARENT-APPELS (31/10, point 46 « A ») — un compte au role Parent ne l'ouvrait plus sur
+ * TOUTES les fiches (403 partout ou ses enfants ne jouent pas) : seulement si une equipe de ses
+ * enfants (`useParentTeams` : fiches declarees et comptes relies) est une equipe de ce club.
  * @param {object} params - Ce que la fiche sait.
  * @param {string | null | undefined} params.clubId - Le club affiche.
  * @param {any[]} [params.enfants] - Les fiches enfants du compte (`/declared-children/mine`).
+ * @param {string[]} [params.equipesDesEnfants] - Les equipes des enfants d'un compte Parent.
+ * @param {any[]} [params.equipesDuClub] - Les equipes du club affiche.
  * @param {boolean} [params.isMember] - Le compte est membre de ce club.
- * @param {boolean} [params.isParentRole] - Le compte, connecte, a le role Parent.
  * @returns {boolean} La fiche pose-t-elle le bloc ?
  */
 export const showsCityNewsBlock = ({
-  clubId, enfants, isMember = false, isParentRole = false,
+  clubId, enfants, equipesDesEnfants = [], equipesDuClub = [], isMember = false,
 }) => {
   if (!clubId) return false;
-  if (isMember || isParentRole) return true;
+  if (isMember) return true;
+  if ((Array.isArray(equipesDuClub) ? equipesDuClub : []).some((equipe) => (
+    equipesDesEnfants.includes(String(equipe?.documentId || ''))
+  ))) return true;
   return (Array.isArray(enfants) ? enfants : []).some((enfant) => (
     String(enfant?.club?.documentId || '') === String(clubId)
     && parentalPowerForAge(enfant?.age) !== 'none'
