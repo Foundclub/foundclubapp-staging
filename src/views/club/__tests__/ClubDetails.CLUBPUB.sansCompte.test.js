@@ -596,3 +596,52 @@ describe('PETITSCHOIX · T5 — les presidents masques comme les coachs', () => 
     expect(texteDe(monter().root)).toContain('Solene Pradel');
   });
 });
+
+// ---------------------------------------------------------------------------
+// CORR-INVITATION-VILLE · 59 (31/10, décision C) — la fiche publique d'un club NEUF répondait 404
+// (pas encore dans l'annuaire) : le visiteur lisait « Impossible de charger le club » et le message
+// technique. Sur ce 404 : « Fiche en préparation ». Une autre erreur garde son écran.
+// ---------------------------------------------------------------------------
+
+describe('CORR-INVITATION-VILLE · 59 — la fiche d’un club neuf, en 404', () => {
+  it('404 de la fiche publique : « Fiche en préparation », sans le message technique', () => {
+    devenirVisiteur();
+    mockClubQuery = {
+      ...mockClubQuery,
+      data: undefined,
+      error: Object.assign(new Error('Request failed with status code 404'), { response: { status: 404 } }),
+    };
+
+    const texte = texteDe(monter().root);
+    expect(texte).toContain('Fiche en préparation');
+    expect(texte).not.toContain('Impossible de charger le club');
+    expect(texte).not.toContain('status code 404');
+  });
+
+  it('GARDE — une autre erreur (500) garde « Impossible de charger le club »', () => {
+    devenirVisiteur();
+    mockClubQuery = {
+      ...mockClubQuery,
+      data: undefined,
+      error: Object.assign(new Error('Erreur serveur'), { response: { status: 500 } }),
+    };
+
+    const texte = texteDe(monter().root);
+    expect(texte).toContain('Impossible de charger le club');
+    expect(texte).not.toContain('Fiche en préparation');
+  });
+});
+
+describe('CORR-INVITATION-VILLE · 59 — connecté, la porte privée garde son écran', () => {
+  it('GARDE — un 404 de la porte privée (compte connecté) reste « Impossible de charger le club »', () => {
+    mockClubQuery = {
+      ...mockClubQuery,
+      data: undefined,
+      error: Object.assign(new Error('Not Found'), { response: { status: 404 } }),
+    };
+
+    const texte = texteDe(monter().root);
+    expect(texte).toContain('Impossible de charger le club');
+    expect(texte).not.toContain('Fiche en préparation');
+  });
+});

@@ -2771,6 +2771,11 @@ function ClubDetails({ navigation, route }) {
     || club.association.dissolved) ? club.association : null;
   const aProposRepliable = String(aPropos?.objectText || '').length > LONGUEUR_A_PROPOS_REPLIE;
   const isClubLoadingError = Boolean(error) && !club;
+  // CORR-INVITATION-VILLE 59 (31/10, décision C) — un club NEUF pas encore dans l'annuaire : sa
+  // fiche PUBLIQUE (visiteur, useGetClub) répond 404 (le serveur le rattrape depuis, cas de
+  // secours). « Fiche en préparation » plutôt que l'erreur technique. Connecté, la porte privée
+  // garde son écran : un 404 y veut dire autre chose.
+  const ficheEnPreparation = !isAuthenticated && /** @type {any} */ (error)?.response?.status === 404;
   const isClubNotFound = Boolean(clubId) && !isLoading && !error && !club;
 
   if (isInitialClubLoading) {
@@ -2807,13 +2812,20 @@ function ClubDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('clubDetails.state.loadError.title', 'Impossible de charger le club')}
+            {ficheEnPreparation
+              ? t('clubDetails.state.enPreparation.title', 'Fiche en préparation')
+              : t('clubDetails.state.loadError.title', 'Impossible de charger le club')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {error?.message || t(
-              'clubDetails.state.loadError.fallback',
-              'Réessaie dans quelques instants.',
-            )}
+            {ficheEnPreparation
+              ? t(
+                'clubDetails.state.enPreparation.body',
+                'La fiche de ce club se prépare. Réessaie dans une minute.',
+              )
+              : error?.message || t(
+                'clubDetails.state.loadError.fallback',
+                'Réessaie dans quelques instants.',
+              )}
           </Text>
           <Button
             onPress={() => refetch()}

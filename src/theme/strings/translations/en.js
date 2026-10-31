@@ -2820,6 +2820,11 @@ export default {
     },
     state: {
       backToClubs: 'Back to clubs',
+      // CORR-INVITATION-VILLE 59 (31/10) — new club, public page in 404.
+      enPreparation: {
+        body: "This club's page is being prepared. Try again in a minute.",
+        title: 'Page being prepared',
+      },
       loadError: {
         fallback: 'Try again in a few moments.',
         title: 'Unable to load the club',
@@ -4900,6 +4905,10 @@ export default {
         prenom: 'First name',
         titre: 'You',
       },
+    },
+    // CORR-INVITATION-VILLE (31/10) — the home card of an account invited by the town.
+    invitationVille: {
+      titre: 'The town invited you: sign up your club',
     },
     nousContacter: 'Contact us',
     porte: {
