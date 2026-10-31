@@ -143,13 +143,19 @@ jest.mock('@/services/level/levelQueries', () => ({
   useGetLevels: () => mockRequeteListeVide,
 }));
 
-jest.mock('@/components/templates/ScreenContainer', () => function ScreenContainerMock({ children }) {
-  return children;
-});
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) {
+    return children;
+  },
+);
 
-jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet', () => function PaywallMock() {
-  return null;
-});
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function PaywallMock() {
+    return null;
+  },
+);
 
 // D26 : le tunnel ouvre desormais des feuilles. `BottomModal` tire
 // `@gorhom/bottom-sheet`, qui tire `react-native-gesture-handler`, que Jest ne
@@ -163,9 +169,12 @@ jest.mock('@/components/molecules/inputStepper/InputStepper', () => function Inp
   return null;
 });
 
-jest.mock('@/components/molecules/dateTimeSelector/DateTimeSelector', () => function DateTimeSelectorMock() {
-  return null;
-});
+jest.mock(
+  '@/components/molecules/dateTimeSelector/DateTimeSelector',
+  () => function DateTimeSelectorMock() {
+    return null;
+  },
+);
 
 jest.mock('@/components/atoms/button/Button', () => function ButtonMock() {
   return null;
@@ -173,10 +182,13 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock() {
 
 // La doublure capture les props et rend `null` : le corps de l'etape n'est
 // jamais monte. C'est volontaire — ce filet decrit la LISTE, pas le contenu.
-jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function WizardStepLayoutMock(/** @type {any} */ props) {
-  mockWizardProps.push(props);
-  return null;
-});
+jest.mock(
+  '@/components/molecules/wizardStepLayout/WizardStepLayout',
+  () => function WizardStepLayoutMock(/** @type {any} */ props) {
+    mockWizardProps.push(props);
+    return null;
+  },
+);
 
 const tousModesFermes = {
   bank_transfer: false,
@@ -209,11 +221,15 @@ const campagneNeuveHelloAsso = Object.freeze({
  */
 const marcher = () => {
   mockWizardProps.length = 0;
-  const route = { params: { campaign: campagneNeuveHelloAsso, clubId: 'club-HA', createNew: true } };
+  const route = {
+    params: { campaign: campagneNeuveHelloAsso, clubId: 'club-HA', createNew: true },
+  };
   /** @type {any} */
   let arbre;
   act(() => {
-    arbre = renderer.create(<ClubLicenseCampaignSettings navigation={navigationFigee} route={route} />);
+    arbre = renderer.create(
+      <ClubLicenseCampaignSettings navigation={navigationFigee} route={route} />,
+    );
   });
   /** @type {string[]} */
   const titres = [];

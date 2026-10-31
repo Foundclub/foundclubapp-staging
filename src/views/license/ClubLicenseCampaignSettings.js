@@ -2039,7 +2039,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const currentCampaign = createNewCampaign ? routeCampaign : campaignQuery.data;
   const campaign = routeCampaignId ? (campaignByIdQuery.data || routeCampaign) : currentCampaign;
   // HELLOASSOASSIST — memes parametres que le hub : la liste est deja en cache.
-  const clubCampaignsQuery = useLicenseCampaigns(useMemo(() => ({ clubId }), [clubId]), { enabled: Boolean(clubId) });
+  const clubCampaignsParams = useMemo(() => ({ clubId }), [clubId]);
+  const clubCampaignsQuery = useLicenseCampaigns(clubCampaignsParams, { enabled: Boolean(clubId) });
   const clubQuery = useGetClub(clubId, { enabled: Boolean(clubId) });
   const sectionsQuery = useGetSections();
   const categoriesQuery = useGetCategories();
