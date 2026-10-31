@@ -517,9 +517,9 @@ describe('CORR-INSCRIPTION p11 — le sas existe aussi sur le site', () => {
   const osAvant = Platform.OS;
   afterEach(() => { Platform.OS = osAvant; });
 
-  it('site, inscription pas finie, aucun colis : « Continuer gratuitement » mène à la Bienvenue', async () => {
+  it('site, inscription pas finie, sans colis : la sortie mène à la Bienvenue', async () => {
     Platform.OS = 'web';
-    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'UserAddress' }] } });
+    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'X' }] } });
     const portes = pressablesPortant(arbre, LIBELLE_PASSER);
     expect(portes).toHaveLength(1);
     await act(async () => { portes[0].props.onPress(); });
@@ -533,7 +533,7 @@ describe('CORR-INSCRIPTION p11 — le sas existe aussi sur le site', () => {
   });
 
   it('téléphone sans colis : rien ne change', async () => {
-    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'UserAddress' }] } });
+    const arbre = await rendre(undefined, { onboardingViews: { views: [{ route: 'X' }] } });
     expect(pressablesPortant(arbre, LIBELLE_PASSER)).toHaveLength(0);
   });
 });

@@ -9,7 +9,8 @@ import UserLevel from '../UserLevel';
 // - Les niveaux venaient par ordre alphabétique ; ils vont du plus bas au plus haut.
 // - La catégorie venait d'une liste écrite dans l'écran (U7 … U23, Senior, Vétéran) ; elle vient du
 //   serveur (« U10 (10 ans) », « Sénior (+18 ans) »), comme dans « Modifier mon profil ».
-// - Rien n'était présélectionné ; la catégorie de son âge l'est (« Sénior » pour un adulte de 28 ans).
+// - Rien n'était présélectionné ; la catégorie de son âge l'est (« Sénior » pour un adulte de 28
+// ans).
 // Les listes ci-dessous sont celles que la recette rend le 30/10 (GET /levels, GET /categories).
 
 const mockUpdateMe = jest.fn();
@@ -72,8 +73,9 @@ jest.mock('@/services/auth/authService', () => ({
   updateMe: (/** @type {any} */ charge) => mockUpdateMe(charge),
 }));
 
-const NIVEAUX = ['Départemental', 'Départemental 1', 'Départemental 2', 'Départemental 3', 'National',
-  'National 1', 'National 2', 'National 3', 'Pré-National', 'Pré-régional', 'Régional', 'Régional 1',
+const NIVEAUX = ['Départemental', 'Départemental 1', 'Départemental 2', 'Départemental 3',
+  'National', 'National 1', 'National 2', 'National 3', 'Pré-National', 'Pré-régional',
+  'Régional', 'Régional 1',
   'Régional 2', 'Régional 3'];
 jest.mock('@/services/level/levelQueries', () => ({
   useGetLevels: () => ({
@@ -84,12 +86,16 @@ jest.mock('@/services/level/levelQueries', () => ({
   }),
 }));
 
-// Déjà rangées par `getCategories` (compareCategories), comme le serveur les fait arriver à l'écran.
+// Déjà rangées par `getCategories` (compareCategories), comme le serveur les fait arriver à
+// l'écran.
 const CATEGORIES_SERVEUR = ['U6 (6 ans)', 'U7 (7 ans)', 'U8 (8 ans)', 'U9 (9 ans)', 'U10 (10 ans)',
   'U11 (11 ans)', 'U12 (12 ans)', 'U13 (13 ans)', 'U14 (14 ans)', 'U15 (15 ans)', 'U16 (16 ans)',
-  'U17 (17 ans)', 'U18 (18 ans)', 'U19 (19 ans)', 'U20 (20 ans)', 'U21 (21 ans)', 'Sénior (+18 ans)'];
+  'U17 (17 ans)', 'U18 (18 ans)', 'U19 (19 ans)', 'U20 (20 ans)', 'U21 (21 ans)',
+  'Sénior (+18 ans)'];
 jest.mock('@/services/category/categoryQueries', () => ({
-  useGetCategories: () => ({ data: CATEGORIES_SERVEUR.map((name, i) => ({ documentId: `cat-${i}`, name })) }),
+  useGetCategories: () => ({
+    data: CATEGORIES_SERVEUR.map((name, i) => ({ documentId: `cat-${i}`, name })),
+  }),
 }));
 
 jest.mock('@/components/atoms/button/Button', () => {
@@ -106,12 +112,18 @@ jest.mock('@/components/atoms/button/Button', () => {
 
 jest.mock('@/components/templates/FormScreenContainer', () => {
   const { View: RNView } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <RNView>{children}</RNView> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <RNView>{children}</RNView>,
+  };
 });
 
 jest.mock('@/views/onboarding/components/OnboardingStickyFooter', () => {
   const { View: RNView } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <RNView>{children}</RNView> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <RNView>{children}</RNView>,
+  };
 });
 
 jest.mock('@/views/onboarding/components/OnboardingSkipLink', () => () => null);
@@ -141,6 +153,7 @@ jest.mock('@/views/onboarding/components/OnboardingChoiceChip', () => {
 });
 
 /**
+ * Monte un écran avec une navigation doublée.
  * @param {any} Ecran - L'écran à monter.
  * @returns {any} L'arbre rendu.
  */
@@ -151,6 +164,7 @@ const monter = (Ecran) => {
 };
 
 /**
+ * Les libellés des choix, dans l'ordre de l'écran.
  * @param {any} arbre - L'arbre rendu.
  * @param {string} role - `radio` ou `checkbox`.
  * @returns {string[]} Les libellés des choix, dans l'ordre de l'écran.
@@ -194,15 +208,20 @@ describe('CORR-INSCRIPTION p17 — catégorie', () => {
   });
 
   it('une catégorie déjà enregistrée garde la main', () => {
-    mockUserData.current = { birthdate: '1998-03-12', category: 'U21 (21 ans)', documentId: 'user-1' };
+    mockUserData.current = {
+      birthdate: '1998-03-12', category: 'U21 (21 ans)', documentId: 'user-1',
+    };
     const vus = choix(monter(UserCategory), 'checkbox');
     expect(vus.filter((libelle) => libelle.startsWith('[x] '))).toEqual(['[x] U21 (21 ans)']);
   });
 
-  it('une catégorie à l’ancien format (« Senior », « U11 ») se retrouve cochée dans la liste du serveur', () => {
-    mockUserData.current = { birthdate: '1998-03-12', category: 'Senior, U11', documentId: 'user-1' };
+  it('l’ancien format (« Senior », « U11 ») se retrouve coché dans la liste du serveur', () => {
+    mockUserData.current = {
+      birthdate: '1998-03-12', category: 'Senior, U11', documentId: 'user-1',
+    };
     const vus = choix(monter(UserCategory), 'checkbox');
-    expect(vus.filter((libelle) => libelle.startsWith('[x] '))).toEqual(['[x] U11 (11 ans)', '[x] Sénior (+18 ans)']);
+    expect(vus.filter((libelle) => libelle.startsWith('[x] ')))
+      .toEqual(['[x] U11 (11 ans)', '[x] Sénior (+18 ans)']);
   });
 
   it('« Continuer » enregistre le nom du serveur', async () => {

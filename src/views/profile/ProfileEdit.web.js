@@ -534,11 +534,15 @@ function ProfileEditWeb({ navigation, route }) {
                     isSearchable
                     label={t('profile.fields.category.label', 'Categorie')}
                     options={buildChoiceOptions(categories, formValues.category, categorySearch)}
-                    placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                    placeholder={t(
+                      'profile.fields.category.placeholder',
+                      'Sélectionner une catégorie',
+                    )}
                     searchValue={categorySearch}
                     setSearchValue={setCategorySearch}
                     setValue={(options) => {
-                      setFieldValue('category', options?.map((option) => option.value).join(', ') || '');
+                      const valeurs = options?.map((option) => option.value).join(', ');
+                      setFieldValue('category', valeurs || '');
                     }}
                     value={resolveChoiceValues(categories, formValues.category)}
                   />
@@ -565,7 +569,10 @@ function ProfileEditWeb({ navigation, route }) {
                     isSearchable
                     label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
                     options={buildChoiceOptions(activities, formValues.preferredSport, sportSearch)}
-                    placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+                    placeholder={t(
+                      'profile.fields.preferredSport.placeholder',
+                      'Sélectionner un sport',
+                    )}
                     searchValue={sportSearch}
                     setSearchValue={setSportSearch}
                     setValue={(option) => {
@@ -612,7 +619,14 @@ function ProfileEditWeb({ navigation, route }) {
                 />
 
                 {estParent ? null : (
-                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.paddingVertical[8]]}>
+                  <View
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Alignments.justifySpaceBetween,
+                      Spaces.paddingVertical[8],
+                    ]}
+                  >
                     <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
                       {t('profile.fields.isLookingForClub.label', 'Profil visible')}
                     </Text>

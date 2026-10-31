@@ -17,7 +17,8 @@ const NOMBRE_D_ETAPES = 3;
 
 /**
  * @typedef {import('../clubDetailsActionMatrix').EnfantDeLaFeuille} EnfantDeLaFeuille
- * @typedef {{ categorie?: string, details: string, documentId: string, name: string }} EquipeDeLaFeuille
+ * @typedef {{ categorie?: string, details: string, documentId: string, name: string }}
+ * EquipeDeLaFeuille
  * @typedef {{ enfant: EnfantDeLaFeuille, equipe: EquipeDeLaFeuille }} ChoixDeLaFeuille
  * @typedef {(choix: ChoixDeLaFeuille) => void} EnvoiDeLaFeuille
  */
@@ -270,15 +271,23 @@ function DemandePlaceEnfant({
               pendingChildRequestKey(ligne.documentId, enfant.documentId),
             );
             const horsDeSonAge = !equipeDeSonAge(ligne.categorie, enfant.age);
-            const entete = horsDeSonAge && (rang === 0 || equipeDeSonAge(rangees[rang - 1].categorie, enfant.age))
+            const precedenteDeSonAge = rang > 0
+              && equipeDeSonAge(rangees[rang - 1].categorie, enfant.age);
+            const entete = horsDeSonAge && (rang === 0 || precedenteDeSonAge)
               ? (
-                <Text key="autres-equipes" style={[Fonts.p2Bold, Fonts.neutral300, { marginTop: 8 }]}>
+                <Text
+                  key="autres-equipes"
+                  style={[Fonts.p2Bold, Fonts.neutral300, { marginTop: 8 }]}
+                >
                   {t('clubDetails.childInterest.otherTeams', 'Autres équipes')}
                 </Text>
               )
               : null;
             const carte = (
-              <View key={`equipe-${ligne.documentId}`} style={horsDeSonAge ? { opacity: 0.55 } : null}>
+              <View
+                key={`equipe-${ligne.documentId}`}
+                style={horsDeSonAge ? { opacity: 0.55 } : null}
+              >
                 <WizardOptionCard
                   accessibilityRole="radio"
                   disabled={dejaDemandee}

@@ -324,7 +324,7 @@ describe('CORR-INSCRIPTION p21 — profil d un parent', () => {
     role: { name: 'Parent' },
   };
 
-  it('ni catégorie, ni sport, ni « Ouvert au recrutement » ; la ville reste ; le petit texte est là', async () => {
+  it('ni catégorie, ni sport, ni recrutement ; la ville et le petit texte restent', async () => {
     const arbre = await rendre(parent);
     const textes = JSON.stringify(arbre.toJSON());
     expect(textes).not.toContain('LISTE:Catégorie');

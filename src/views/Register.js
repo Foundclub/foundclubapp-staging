@@ -115,7 +115,7 @@ function Register({ navigation }) {
               {authErrorMessage}
             </Text>
           ) : null}
-          {/* CORR-INSCRIPTION p12 : même page que « Connecte-toi », le petit bouton bascule en retour. */}
+          {/* CORR-INSCRIPTION p12 : même page que « Connecte-toi » ; le petit bouton y revient. */}
           {canShowCodeButton ? null : (
             <Button
               disabled={otpMutation.isPending}

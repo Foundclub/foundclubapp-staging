@@ -1381,7 +1381,8 @@ function UserAffiliationGuideContent({ navigation, route }) {
           accessibilityRole="button"
           onPress={(() => {
             if (isStaffAffiliationFlow) return handleOpenClubWizard;
-            return isPlayerClubSelectionStep ? () => setIsNoClubChoiceVisible(true) : handleOpenNotFoundModal;
+            if (isPlayerClubSelectionStep) return () => setIsNoClubChoiceVisible(true);
+            return handleOpenNotFoundModal;
           })()}
           style={[styles.addCard, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
         >
@@ -1407,11 +1408,16 @@ function UserAffiliationGuideContent({ navigation, route }) {
               {!isPlayerClubSelectionStep && isClubFlow
                 ? t('onboardingAffiliation.addClub.title', 'Ton club n\'est pas là ?')
                 : null}
-              {!isClubFlow ? t('onboardingAffiliation.addTeam.title', 'Ton équipe n\'est pas là ?') : null}
+              {!isClubFlow
+                ? t('onboardingAffiliation.addTeam.title', 'Ton équipe n\'est pas là ?')
+                : null}
             </Text>
             <Text style={[styles.addSubtitle, { color: Colors.neutral300 }]}>
               {isPlayerClubSelectionStep
-                ? t('onboardingAffiliation.noClub.subtitle', 'Signale ton club, ou continue sans club.')
+                ? t(
+                  'onboardingAffiliation.noClub.subtitle',
+                  'Signale ton club, ou continue sans club.',
+                )
                 : null}
               {!isPlayerClubSelectionStep && isClubFlow
                 ? t(
@@ -1511,9 +1517,10 @@ function UserAffiliationGuideContent({ navigation, route }) {
 
         {searchField}
 
-        {/* CORR-INSCRIPTION p14 (recette du site, décision A) : à l'étape club, la carte « Ton club
-            n'est pas là ? » vient sous la recherche ; en fin de liste, elle se perdait sous une liste
-            qui se rallonge sans fin. À l'étape équipe, elle reste en fin de liste. */}
+        {/* CORR-INSCRIPTION p14 (recette du site, décision A) : à l'étape club, la carte
+            « Ton club n'est pas là ? » vient sous la recherche ; en fin de liste, elle se
+            perdait sous une liste qui se rallonge sans fin. À l'étape équipe, elle reste en
+            fin de liste. */}
         {isClubFlow ? addMyClubCard : null}
 
         {isClubFlow ? quickChips : null}

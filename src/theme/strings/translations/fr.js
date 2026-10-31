@@ -17191,6 +17191,7 @@ export default {
     // CORR-INSCRIPTION p15 — le joueur sans club : une carte, puis deux chemins.
     noClub: {
       action: 'Choisir',
+      // eslint-disable-next-line max-len
       choiceDescription: 'Ton club existe mais n’est pas dans la liste, ou tu n’as pas encore de club ?',
       noClub: 'Je n’ai pas de club',
       notFound: 'Je ne trouve pas mon club',
@@ -18647,6 +18648,7 @@ export default {
     },
     // CORR-INSCRIPTION p21 — le petit texte du profil d'un parent.
     notice: {
+      // eslint-disable-next-line max-len
       parentBody: 'Ta catégorie, ton sport et ta visibilité se modifient sur ton compte joueur : bascule dessus pour les changer.',
       parentTitle: 'C’est ton profil de parent.',
     },

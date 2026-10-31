@@ -19,7 +19,9 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ options) => jest.requireActual('i18next').t(cle, options),
+    t: (/** @type {string} */ cle, /** @type {any} */ options) => (
+      jest.requireActual('i18next').t(cle, options)
+    ),
   }),
 }));
 
@@ -50,11 +52,14 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/components/organisms/otpForm/OTPForm', () => () => null);
-jest.mock('@/components/templates/FormScreenContainer', () => (
-  /** @type {any} */ { children }) => children);
+jest.mock(
+  '@/components/templates/FormScreenContainer',
+  () => (/** @type {any} */ { children }) => children,
+);
 jest.mock('@/components/organisms/phoneInput/PhoneInput', () => () => null);
 
 /**
+ * Les textes visibles de l'écran.
  * @param {import('react-test-renderer').ReactTestRenderer} arbre - L'écran rendu
  * @returns {string[]} Les textes visibles
  */
@@ -63,6 +68,7 @@ const textes = (arbre) => arbre.root.findAllByType(Text)
   .filter(Boolean);
 
 /**
+ * Le bouton qui porte ce texte.
  * @param {import('react-test-renderer').ReactTestRenderer} arbre - L'écran rendu
  * @param {string} libelle - Le texte du bouton
  * @returns {any} Le bouton qui porte ce texte
@@ -73,7 +79,7 @@ const bouton = (arbre, libelle) => arbre.root.findAll(
 )[0];
 
 describe('CORR-INSCRIPTION p12 — Connexion et création de compte', () => {
-  it('« Connecte-toi » : bouton « Se connecter », et un petit bouton qui bascule sur l’inscription', () => {
+  it('« Connecte-toi » : « Se connecter », et un petit bouton vers l’inscription', () => {
     const navigation = { navigate: jest.fn() };
     let arbre;
     act(() => { arbre = renderer.create(<Login navigation={navigation} />); });
@@ -85,7 +91,7 @@ describe('CORR-INSCRIPTION p12 — Connexion et création de compte', () => {
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Register);
   });
 
-  it('« Crée ton compte » : la même page, mais le bouton dit « Créer ton compte », et on peut revenir', () => {
+  it('« Crée ton compte » : même page, bouton « Créer ton compte », retour possible', () => {
     const navigation = { navigate: jest.fn() };
     let arbre;
     act(() => { arbre = renderer.create(<Register navigation={navigation} />); });

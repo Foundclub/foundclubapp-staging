@@ -241,9 +241,11 @@ const searchByTypeWithFallback = async (search, types, index = 0) => {
 };
 
 /**
- * CORR-INSCRIPTION p13 (recette du site, décision A) — l'ordre des communes. La base d'adresses rend
+ * CORR-INSCRIPTION p13 (recette du site, décision A) — l'ordre des communes. La base d'adresses
+ * rend
  * « Marseille », puis le 13e, le 8e, le 15e arrondissement…, et des communes d'autres départements
- * mêlées. On range : le département de la meilleure réponse d'abord, les autres ensuite ; dans chaque
+ * mêlées. On range : le département de la meilleure réponse d'abord, les autres ensuite ; dans
+ * chaque
  * groupe, une ville puis ses arrondissements du 1er au dernier ; sinon l'ordre de la base.
  * @param {Place[]} lieux - Les communes, dans l'ordre de la base.
  * @returns {Place[]} Les mêmes, rangées.
@@ -262,7 +264,8 @@ const rangerLesCommunes = (lieux) => {
   /** @type {Map<string, number>} */
   const premierRang = new Map();
   const ranges = lieux.map((lieu, rang) => {
-    const ville = `${departement(lieu)}|${String(lieu?.properties?.city || lieu?.properties?.label || '')}`;
+    const nom = String(lieu?.properties?.city || lieu?.properties?.label || '');
+    const ville = `${departement(lieu)}|${nom}`;
     if (!premierRang.has(ville)) premierRang.set(ville, rang);
     return {
       arrondissement: arrondissement(lieu),

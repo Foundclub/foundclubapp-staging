@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { equipeDeSonAge } from '@/domains/category/ageEtCategorie';
 import { countClubTrainers } from '@/domains/club/clubStaff';
 import {
   collectiviteInitial,
@@ -37,7 +38,6 @@ import {
   emitGuidanceRefusal,
 } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
-import { equipeDeSonAge } from '@/domains/category/ageEtCategorie';
 import { computeAge } from '@/domains/playerCard/cardModel';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -4395,20 +4395,31 @@ function ClubDetails({ navigation, route }) {
           </Text>
 
           <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
-            {/* CORR-INSCRIPTION p19 (recette du site, décision A) : les équipes de son âge d'abord ;
-                les autres, grisées sous « Autres équipes », restent demandables (un club surclasse). */}
+            {/* CORR-INSCRIPTION p19 (recette du site, décision A) : les équipes de son âge
+                d'abord ; les autres, grisées sous « Autres équipes », restent demandables
+                (un club surclasse). */}
             {(() => {
               const ageDuJoueur = computeAge(userData?.birthdate);
-              const deSonAge = (/** @type {any} */ equipe) => equipeDeSonAge(equipe?.category?.name, ageDuJoueur);
-              return [...sortedClubTeams.filter(deSonAge), ...sortedClubTeams.filter((e) => !deSonAge(e))];
+              const deSonAge = (/** @type {any} */ equipe) => (
+                equipeDeSonAge(equipe?.category?.name, ageDuJoueur)
+              );
+              return [
+                ...sortedClubTeams.filter(deSonAge),
+                ...sortedClubTeams.filter((equipe) => !deSonAge(equipe)),
+              ];
             })().flatMap((teamItem, rang, rangees) => {
-              const horsDeSonAge = !equipeDeSonAge(teamItem?.category?.name, computeAge(userData?.birthdate));
-              const entete = horsDeSonAge && (rang === 0
-                || equipeDeSonAge(rangees[rang - 1]?.category?.name, computeAge(userData?.birthdate))) ? (
-                  <Text key="autres-equipes" style={[Fonts.p2Bold, Fonts.neutral300, Spaces.marginTop[8]]}>
-                    {t('clubDetails.playerTeamPicker.otherTeams', 'Autres équipes')}
-                  </Text>
-                ) : null;
+              const ageDuJoueur = computeAge(userData?.birthdate);
+              const horsDeSonAge = !equipeDeSonAge(teamItem?.category?.name, ageDuJoueur);
+              const precedenteDeSonAge = rang > 0
+                && equipeDeSonAge(rangees[rang - 1]?.category?.name, ageDuJoueur);
+              const entete = horsDeSonAge && (rang === 0 || precedenteDeSonAge) ? (
+                <Text
+                  key="autres-equipes"
+                  style={[Fonts.p2Bold, Fonts.neutral300, Spaces.marginTop[8]]}
+                >
+                  {t('clubDetails.playerTeamPicker.otherTeams', 'Autres équipes')}
+                </Text>
+              ) : null;
               const teamDocumentId = getTeamIdentity(teamItem);
               const isPending = hasPendingClubTeamRequest(teamDocumentId);
               const isCurrentTeam = isPlayerAlreadyInSelectedTeam(teamDocumentId);

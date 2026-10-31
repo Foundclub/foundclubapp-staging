@@ -282,9 +282,11 @@ function SubscriptionOffers({ navigation, route }) {
   // ne le sait pas, et l'ecran de succes encore moins. Absente, on garde le
   // retour a l'accueil.
   // CORR-INSCRIPTION p11 (recette du site, décision A) — sur le SITE, cet écran est servi par son
-  // adresse : le colis du sas (`initialParams` de PrivateNavigator) n'arrive jamais, et le coach qui
+  // adresse : le colis du sas (`initialParams` de PrivateNavigator) n'arrive jamais, et le coach
+  // qui
   // finit son inscription restait sans sortie. Tant que l'inscription n'est pas finie (`views` non
-  // vide), l'écran se sait sas : sortie et retour d'achat vers la Bienvenue, qui finit l'inscription
+  // vide), l'écran se sait sas : sortie et retour d'achat vers la Bienvenue, qui finit
+  // l'inscription
   // et propose le tour guidé (la page cadeau n'a pas d'adresse sur le site).
   const estLeSasDuSite = Platform.OS === 'web'
     && !route?.params?.skipRouteName
@@ -1558,11 +1560,15 @@ function SubscriptionOffers({ navigation, route }) {
             onLayout={(event) => {
               setLargeurCarrousel(event.nativeEvent.layout.width);
               // CORR-INSCRIPTION p11 — la carte active (Équipe par défaut) est amenée sous les yeux
-              // une fois le carrousel posé : sans ce geste, « Gratuit » restait affichée pendant que
+              // une fois le carrousel posé : sans ce geste, « Gratuit » restait affichée pendant
+              // que
               // le point allumé et le bouton d'achat parlaient d'Équipe.
               if (!carteAmeneeRef.current) {
                 carteAmeneeRef.current = true;
-                scrollRef.current?.scrollTo?.({ animated: false, x: activeIndex * (cardWidth + CARD_GAP) });
+                scrollRef.current?.scrollTo?.({
+                  animated: false,
+                  x: activeIndex * (cardWidth + CARD_GAP),
+                });
               }
             }}
             onMomentumScrollEnd={(event) => setActiveIndex(Math.max(0, Math.min(

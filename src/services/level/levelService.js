@@ -39,9 +39,12 @@ export const getLevels = async () => {
 
 /**
  * CORR-INSCRIPTION p17 (recette du site, décision A) — les niveaux arrivent par ordre alphabétique
- * (« Départemental », « National », « Pré-National », « Régional »…). On les range du plus bas au plus
- * haut : départemental, pré-régional, régional, pré-national, national, puis le niveau professionnel ;
- * dans un étage, le 3 sous le 2 sous le 1, le nom sans numéro en premier. Un nom inconnu va à la fin.
+ * (« Départemental », « National », « Pré-National », « Régional »…). On les range du plus bas au
+ * plus
+ * haut : départemental, pré-régional, régional, pré-national, national, puis le niveau
+ * professionnel ;
+ * dans un étage, le 3 sous le 2 sous le 1, le nom sans numéro en premier. Un nom inconnu va à la
+ * fin.
  * @param {string} nom - Le nom du niveau, tel que le serveur le rend.
  * @returns {number} Son rang, du plus bas au plus haut.
  */

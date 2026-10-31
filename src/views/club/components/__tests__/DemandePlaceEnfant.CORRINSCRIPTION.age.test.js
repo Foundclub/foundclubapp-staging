@@ -5,7 +5,8 @@ import { equipeDeSonAge } from '@/domains/category/ageEtCategorie';
 
 import DemandePlaceEnfant from '../DemandePlaceEnfant';
 
-// CORR-INSCRIPTION p19 (recette du site 30/10, décision A) — une enfant de 10 ans se voyait proposer
+// CORR-INSCRIPTION p19 (recette du site 30/10, décision A) — une enfant de 10 ans se voyait
+// proposer
 // « Sénior +18 » au même rang que sa U11 ; un adulte de 28 ans demandait une U11 sans repère. Les
 // équipes de son âge viennent d'abord ; les autres, grisées sous « Autres équipes », restent
 // demandables (cacher a été écarté : un club qui surclasse ne recevrait plus la demande).
@@ -29,7 +30,7 @@ jest.mock('@/theme/themeContext', () => {
     __esModule: true,
     default: () => ({
       Alignments: rampe(),
-      Colors: new Proxy({}, { get: () => '#000000' }),
+      Colors: new Proxy({}, { get: (_cible, cle) => `couleur-${String(cle)}` }),
       Fonts: rampe(),
     }),
   };
@@ -72,7 +73,7 @@ describe('CORR-INSCRIPTION p19 — equipeDeSonAge', () => {
 });
 
 describe('CORR-INSCRIPTION p19 — la feuille du parent', () => {
-  it('Lina, 10 ans : U11 d’abord, puis « Autres équipes » et Seniors A', () => {
+  it('Lina, 10 ans : U11 d’abord, puis « Autres équipes » et Seniors', () => {
     let arbre;
     act(() => {
       arbre = renderer.create(
@@ -80,11 +81,17 @@ describe('CORR-INSCRIPTION p19 — la feuille du parent', () => {
           clesEnAttente={new Set()}
           clubName="RWDIRIG Tunnel Deux"
           enfantDeLaFiche="lina"
-          enfants={[{ age: 10, documentId: 'lina', firstname: 'Lina', reason: '' }]}
+          enfants={[{
+            age: 10, documentId: 'lina', firstname: 'Lina', reason: '',
+          }]}
           envoiEnCours={false}
           equipes={[
-            { categorie: 'Sénior (+18 ans)', details: 'Sénior', documentId: 'sen', name: 'Seniors A' },
-            { categorie: 'U11 (11 ans)', details: 'U11', documentId: 'u11', name: 'U11 Tunnel' },
+            {
+              categorie: 'Sénior (+18 ans)', details: 'Sénior', documentId: 'sen', name: 'Seniors',
+            },
+            {
+              categorie: 'U11 (11 ans)', details: 'U11', documentId: 'u11', name: 'U11 Tunnel',
+            },
           ]}
           onEnvoyer={jest.fn()}
         />,
@@ -100,6 +107,6 @@ describe('CORR-INSCRIPTION p19 — la feuille du parent', () => {
       .map((/** @type {any} */ n) => n.props.children)
       .filter((/** @type {any} */ c) => typeof c === 'string');
     const ordre = textes.filter((c) => c.startsWith('EQUIPE:') || c === 'Autres équipes');
-    expect(ordre).toEqual(['EQUIPE:U11 Tunnel', 'Autres équipes', 'EQUIPE:Seniors A']);
+    expect(ordre).toEqual(['EQUIPE:U11 Tunnel', 'Autres équipes', 'EQUIPE:Seniors']);
   });
 });

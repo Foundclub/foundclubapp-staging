@@ -38,7 +38,7 @@ const arr = (/** @type {number} */ n) => commune(
 describe('CORR-INSCRIPTION p13 — l’ordre des villes', () => {
   beforeEach(() => mockGet.mockReset());
 
-  it('la commune, puis ses arrondissements du 1er au dernier, puis les autres départements', async () => {
+  it('la commune, ses arrondissements du 1er au dernier, les autres départements', async () => {
     mockGet.mockResolvedValue({
       data: {
         features: [

@@ -95,7 +95,9 @@ function UserClubSearch({ navigation }) {
     onSuccess: () => {
       queryClient.setQueriesData(
         { queryKey: ['get-me'] },
-        (/** @type {any} */ profil) => (profil ? { ...profil, isLookingForClub: isLooking } : profil),
+        (/** @type {any} */ profil) => (
+          profil ? { ...profil, isLookingForClub: isLooking } : profil
+        ),
       );
       return continuerLeTunnel();
     },

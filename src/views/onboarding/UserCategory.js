@@ -80,7 +80,8 @@ function UserCategory({ navigation }) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   // CORR-INSCRIPTION p17 (décision A + ajout d'Adel « regarde en prod, les catégories sont nommées
-  // différemment ») : la liste vient du SERVEUR (« U10 (10 ans) », « Sénior (+18 ans) »), comme dans
+  // différemment ») : la liste vient du SERVEUR (« U10 (10 ans) », « Sénior (+18 ans) »), comme
+  // dans
   // « Modifier mon profil », déjà rangée U6 → U21 → Sénior. La liste écrite ici ne sert plus que de
   // repli quand le serveur ne répond pas.
   const { data: categoriesDuServeur } = useGetCategories();

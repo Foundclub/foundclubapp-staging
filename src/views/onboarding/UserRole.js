@@ -181,7 +181,9 @@ function UserRole({ navigation }) {
   useEffect(() => {
     if (!presidentRoleId || !lienDeLaVilleRetenu()) return;
     setRole((avant) => (
-      [playerRoleId, coachRoleId, presidentRoleId, parentRoleId].includes(avant) ? avant : presidentRoleId
+      [coachRoleId, parentRoleId, playerRoleId, presidentRoleId].includes(avant)
+        ? avant
+        : presidentRoleId
     ));
   }, [coachRoleId, parentRoleId, playerRoleId, presidentRoleId]);
   // FINITIONS5 (tournee 7, defaut 8) — « Continuer » ne part qu'avec un role

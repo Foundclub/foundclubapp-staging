@@ -645,7 +645,8 @@ describe('UserAffiliationGuide — refonte 6b', () => {
     expect(mockUseGetClubs.mock.calls.at(-1)[0].activity).toBeUndefined();
   });
 
-  it('carte « Ton club n\'est pas là ? » (coach, sous la recherche depuis CORR-INSCRIPTION p14), pas de gros bouton permanent', () => {
+  // CORR-INSCRIPTION p14 : la carte est désormais sous la recherche.
+  it('carte « Ton club n\'est pas là ? » (coach), pas de gros bouton permanent', () => {
     mockRoleKey.current = 'coach'; // CORR-INSCRIPTION p15 : ce texte reste celui du coach
     const rendered = renderScreen();
     const texts = collectTexts(rendered.tree);
@@ -1042,7 +1043,8 @@ describe('D80 — laisser le contact de son coach', () => {
 });
 
 // CORR-INSCRIPTION p14 et p15 (recette du site, 30/10).
-// p14 (décision A) : à l'étape club, la carte « Ton club n'est pas là ? » est sous la recherche, avant
+// p14 (décision A) : à l'étape club, la carte « Ton club n'est pas là ? » est sous la recherche,
+// avant
 // la liste, et plus en fin de liste.
 // p15 (consigne d'Adel) : le joueur touche « Je ne trouve pas / je n'ai pas de club », une petite
 // fenêtre s'ouvre avec les deux chemins : signaler son club, ou continuer sans club.
@@ -1053,7 +1055,9 @@ describe('CORR-INSCRIPTION p14-p15 — Trouve ton club', () => {
    * @returns {any[]} Les fenêtres montées, dans l'ordre.
    */
   const fenetres = (rendered) => rendered.tree.root
-    .findAll((/** @type {any} */ n) => typeof n.props?.close === 'function' && 'isVisible' in n.props);
+    .findAll((/** @type {any} */ n) => (
+      typeof n.props?.close === 'function' && 'isVisible' in n.props
+    ));
 
   /**
    * Cherche, dans les enfants (éléments React) d'une fenêtre, le bouton qui porte ce titre.
@@ -1066,7 +1070,9 @@ describe('CORR-INSCRIPTION p14-p15 — Trouve ton club', () => {
     if (Array.isArray(element)) {
       return element.map((e) => boutonDans(e, titre)).find(Boolean) || null;
     }
-    if (element.props?.title === titre && typeof element.props?.onPress === 'function') return element;
+    const estLeBouton = element.props?.title === titre
+      && typeof element.props?.onPress === 'function';
+    if (estLeBouton) return element;
     return boutonDans(element.props?.children, titre);
   };
 
@@ -1074,7 +1080,9 @@ describe('CORR-INSCRIPTION p14-p15 — Trouve ton club', () => {
     mockRoleKey.current = 'coach';
     const rendered = renderScreen();
     const cartes = rendered.tree.root.findAll(
-      (/** @type {any} */ n) => n.props?.testID === AFFILIATION_TEST_IDS.notFound && typeof n.type === 'string',
+      (/** @type {any} */ n) => (
+        n.props?.testID === AFFILIATION_TEST_IDS.notFound && typeof n.type === 'string'
+      ),
     );
     expect(cartes).toHaveLength(1);
     const liste = rendered.tree.root.findByType(FlatList);
@@ -1083,7 +1091,7 @@ describe('CORR-INSCRIPTION p14-p15 — Trouve ton club', () => {
     )).toHaveLength(0);
   });
 
-  it('p15 — le joueur lit « Je ne trouve pas / je n’ai pas de club », qui ouvre la fenêtre aux deux chemins', () => {
+  it('p15 — « Je ne trouve pas / je n’ai pas de club » ouvre la fenêtre aux deux chemins', () => {
     const rendered = renderScreen();
     expect(collectTexts(rendered.tree)).toContain('Je ne trouve pas / je n’ai pas de club');
     expect(fenetres(rendered).some((f) => f.props.isVisible)).toBe(false);

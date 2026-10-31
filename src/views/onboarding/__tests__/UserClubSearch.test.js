@@ -30,7 +30,10 @@ jest.mock('@tanstack/react-query', () => ({
       .then((data) => options.onSuccess?.(data))
       .catch((error) => options.onError?.(error)),
   }),
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries, setQueriesData: mockSetQueriesData }),
+  useQueryClient: () => ({
+    invalidateQueries: mockInvalidateQueries,
+    setQueriesData: mockSetQueriesData,
+  }),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -289,7 +292,7 @@ describe('CARTECODE-PARCOURS — la carte arrive à la fin de l inscription', ()
 // disait « INDISPONIBLE » juste après « Oui, ouvert ». La nouvelle valeur est posée dans le profil
 // en cache AVANT d'ouvrir la carte.
 describe('CORR-INSCRIPTION p18 — la carte lit le « oui » tout de suite', () => {
-  it('« Oui, ouvert » puis Continuer : le profil en cache dit ouvert avant la navigation', async () => {
+  it('« Oui, ouvert » puis Continuer : le cache dit ouvert avant la navigation', async () => {
     mockSetQueriesData.mockClear();
     const { navigation, tree } = rendre();
     await act(async () => { piluleIntitulee(tree, 'Oui, ouvert').props.onPress(); });
