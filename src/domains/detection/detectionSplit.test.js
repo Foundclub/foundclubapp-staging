@@ -3,6 +3,7 @@ import {
   buildDetectionSplitPayload,
   buildDraftPayloadWithSplit,
   countRequestedPositions,
+  isTeamMember,
   MAX_DETECTION_TEAMS,
   MEMBER_MODES,
   SPLIT_BY,
@@ -325,5 +326,15 @@ describe('C-D · repartition d une detection', () => {
 
       expect(payload.rounds).toEqual(rounds);
     });
+  });
+});
+
+// ENFANT-JOUEUR (Adel 30/10) — constate en recette : Lina « présent » sur la
+// fiche, et la repartition rangeait la fiche enfant parmi les candidats.
+describe('ENFANT-JOUEUR · la fiche enfant est un membre de l equipe', () => {
+  test('declared_child compte comme membre, comme un compte de l equipe', () => {
+    expect(isTeamMember({ participantSource: 'declared_child' })).toBe(true);
+    expect(isTeamMember({ participantSource: 'team_player' })).toBe(true);
+    expect(isTeamMember({ participantSource: 'external_participant' })).toBe(false);
   });
 });

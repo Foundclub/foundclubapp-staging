@@ -64,6 +64,16 @@ export const isManualCallUpPlayer = (player) => Boolean(player?.isManual)
   || getCompositionPlayerId(player).startsWith('manual_');
 
 /**
+ * ENFANT-JOUEUR (Adel 30/10) — une fiche enfant sans compte : un vrai joueur de
+ * l'equipe, dont le parent repond. Le serveur l'etiquette `declared_child`.
+ * @param {any} [player]
+ * @returns {boolean}
+ */
+export const isDeclaredChildCallUpPlayer = (player) => (
+  player?.participantSource === 'declared_child'
+);
+
+/**
  * Le motif qui rend ce joueur indisponible, s'il y en a un.
  *
  * ⚠️ Aucun champ serveur ne porte cette information aujourd'hui : la fonction
@@ -162,10 +172,12 @@ export const CALL_UP_RSVP_NONE = 'none';
  * @param {any} [input.event] La charge de `GET /events/:id` (`missings`,
  *   `participations`, `participationRequests`).
  * @param {any[]} [input.players] Les joueurs de la liste de selection.
+ * @param {Record<string, string>} [input.childAnswers] ENFANT-JOUEUR — la reponse
+ *   du parent par fiche enfant (`teamComposition.childAnswers`).
  * @returns {Map<string, string>} identifiant du joueur -> `absent` | `present` |
  *   `pending` | `none`.
  */
-export const buildRsvpAnswersByPlayerId = ({ event, players = [] }) => {
+export const buildRsvpAnswersByPlayerId = ({ childAnswers = {}, event, players = [] }) => {
   /** @type {Map<string, string>} */
   const answers = new Map();
   if (!event) return answers;
@@ -178,6 +190,10 @@ export const buildRsvpAnswersByPlayerId = ({ event, players = [] }) => {
     if (!player || isManualCallUpPlayer(player)) return;
     const playerId = getCompositionPlayerId(player);
     if (!playerId || answers.has(playerId)) return;
+    if (isDeclaredChildCallUpPlayer(player)) {
+      answers.set(playerId, childAnswers?.[playerId] || CALL_UP_RSVP_NONE);
+      return;
+    }
 
     const answer = resolveRsvpAnswer(getCurrentUserEventParticipationState({
       missings,

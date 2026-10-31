@@ -14150,6 +14150,7 @@ export default {
       },
       noSms: 'Let them know yourself',
       offAppTag: 'Off app',
+      parentAnswersTag: 'Parent answers',
       progress: '{{current}}/{{total}}',
       rsvp: {
         absent: 'Absent',

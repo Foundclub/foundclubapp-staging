@@ -50,7 +50,9 @@ const getPlayerId = (/** @type {any} */ player) => {
  * @param {any} player
  * @returns {boolean} vrai si le joueur appartient a l equipe organisatrice.
  */
-export const isTeamMember = (player) => player?.participantSource === 'team_player';
+// ENFANT-JOUEUR (Adel 30/10) — une fiche enfant de l'equipe est un membre, pas un candidat.
+export const isTeamMember = (player) => ['declared_child', 'team_player']
+  .includes(player?.participantSource);
 
 /**
  * Le poste demande en candidatant (admin le calcule deja : `appliedPosition`).
