@@ -10014,6 +10014,7 @@ export default {
         actions: {
           all: 'All events',
           future: 'This event and the following ones',
+          keep: 'Cancel nothing',
           thisEvent: 'This event',
         },
         description: 'This event is part of a series. What do you want to cancel?',

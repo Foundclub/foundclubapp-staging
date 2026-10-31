@@ -132,6 +132,23 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest
 
 jest.mock('@/platform/share', () => ({ share: jest.fn() }));
 
+// CORR-EVENEMENTS 119 : la feuille « série » s'ouvre par une BottomModal ; sa doublure rend
+// en-tête, corps et pied tels quels quand elle est visible.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function BottomModalDouble(/** @type {any} */ props) {
+    if (!props.isVisible) return null;
+    return react.createElement(
+      rn.View,
+      { testID: 'bottom-modal' },
+      props.headerComponent,
+      props.children,
+      props.footerComponent,
+    );
+  };
+});
+
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');
   const rn = jest.requireActual('react-native');
@@ -297,5 +314,56 @@ describe('RWDIRIG · annuler un événement depuis le site', () => {
     expect(root.findAll(
       (/** @type {any} */ n) => n.type === 'button' && n.props['aria-haspopup'] === 'menu',
     )).toHaveLength(0);
+  });
+});
+
+// CORR-EVENEMENTS point 119 (recette du site, 29/10) — dans une série, « Annuler » n'annulait
+// que la séance, sans le dire : le dirigeant croyait la saison arrêtée. Décision A : la feuille
+// à trois choix du téléphone (cette séance, les suivantes, toutes).
+describe('CORR-EVENEMENTS 119 · annuler une séance d une série', () => {
+  const presser = async (/** @type {any} */ root, /** @type {string} */ libelle) => {
+    const [cible] = root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+      && textOf(n) === libelle);
+    expect(cible).toBeDefined();
+    await act(async () => { cible.props.onPress(); });
+  };
+
+  test('🐞 une séance de série ouvre la feuille à trois choix, sans fenêtre du navigateur', async () => {
+    window.confirm = jest.fn(() => true);
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    expect(window.confirm).not.toHaveBeenCalled();
+    const feuille = textOf(root.findByProps({ testID: 'bottom-modal' }));
+    expect(feuille).toContain('Annulation d’un événement récurrent');
+    const choix = root.findByProps({ testID: 'bottom-modal' })
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')
+      .map(textOf);
+    expect(choix).toEqual(expect.arrayContaining([
+      'Cet événement', 'Cet événement et les suivants', 'Tous les événements', 'Ne rien annuler',
+    ]));
+    expect(mockCancelEvent).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['Cet événement', { documentId: 'event-1' }],
+    ['Cet événement et les suivants', { documentId: 'event-1', recurrenceMode: 'future' }],
+    ['Tous les événements', { documentId: 'event-1', recurrenceMode: 'all' }],
+  ])('« %s » envoie la bonne portée au serveur', async (libelle, attendu) => {
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    await presser(root, libelle);
+    expect(mockCancelEvent).toHaveBeenCalledWith(attendu);
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('« Ne rien annuler » ferme la feuille sans appel', async () => {
+    const root = mountScreen({ event: buildEvent({ recurrenceGroupId: 'serie-1' }) });
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => { bouton.props.onClick(); });
+    await presser(root, 'Ne rien annuler');
+    expect(root.findAllByProps({ testID: 'bottom-modal' })).toHaveLength(0);
+    expect(mockCancelEvent).not.toHaveBeenCalled();
   });
 });

@@ -10595,6 +10595,7 @@ export default {
         actions: {
           all: 'Tous les événements',
           future: 'Cet événement et les suivants',
+          keep: 'Ne rien annuler',
           thisEvent: 'Cet événement',
         },
         description: 'Cet événement fait partie d\'une série. Que veux-tu annuler ?',

@@ -105,6 +105,7 @@ import {
   resolveCallMode,
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
+import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
@@ -855,8 +856,9 @@ function EventDetails({ navigation, route }) {
   }, [annulerSeanceFermee, eventId, t]);
   // RWDIRIG (29/10, décision d'Adel « 4- A ») — « Annuler » de « Gérer l'événement », comme le
   // téléphone : confirmation, annulation, puis retour (useEventMutations.cancelEventMutation).
-  // ponytail: une seule séance, même dans une série ; le téléphone propose aussi « les suivantes »
-  // et « toutes », qu'un confirm du navigateur ne sait pas offrir (sortie : une vraie feuille).
+  // CORR-EVENEMENTS 119 (décision A) : dans une série, une vraie feuille propose, comme le
+  // téléphone, « cette séance », « les suivantes » ou « toutes » (CancelSeriesSheet).
+  const [feuilleAnnulationSerie, setFeuilleAnnulationSerie] = useState(false);
   const annulerEvenement = useMutation({
     mutationFn: cancelEvent,
     onSuccess: (/** @type {any} */ reponse) => {
@@ -877,12 +879,24 @@ function EventDetails({ navigation, route }) {
     },
   });
   const annulerLEvenement = useCallback(() => {
-    if (!eventId || typeof window?.confirm !== 'function') return;
+    if (!eventId) return;
+    if (event?.recurrenceGroupId) {
+      setFeuilleAnnulationSerie(true);
+      return;
+    }
+    if (typeof window?.confirm !== 'function') return;
     const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
       'eventDetails.modals.cancelEvent.description',
     )}`);
     if (ok) annulerEvenement.mutate({ documentId: eventId });
-  }, [annulerEvenement, eventId, t]);
+  }, [annulerEvenement, event?.recurrenceGroupId, eventId, t]);
+  const annulerAvecLaPortee = useCallback((/** @type {'single' | 'future' | 'all'} */ portee) => {
+    if (!eventId) return;
+    setFeuilleAnnulationSerie(false);
+    annulerEvenement.mutate(portee === 'single'
+      ? { documentId: eventId }
+      : { documentId: eventId, recurrenceMode: portee });
+  }, [annulerEvenement, eventId]);
   const matchEncartSummary = useMemo(() => {
     if (!isMatchEvent) return null;
     const summary = buildMatchHeaderScoreSummary({
@@ -3614,6 +3628,12 @@ function EventDetails({ navigation, route }) {
           </div>
         ) : null}
       </div>
+      <CancelSeriesSheet
+        isPending={annulerEvenement.isPending}
+        isVisible={feuilleAnnulationSerie}
+        onChoose={annulerAvecLaPortee}
+        onClose={() => setFeuilleAnnulationSerie(false)}
+      />
       <JoinEventModal
         clubName={event?.team?.club?.name || event?.club?.name || ''}
         errorMessage={actionError}
