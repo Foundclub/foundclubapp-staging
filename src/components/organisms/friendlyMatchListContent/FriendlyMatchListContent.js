@@ -29,6 +29,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import FriendlyMatchAdCard from '@/components/molecules/friendlyMatchAdCard/FriendlyMatchAdCard';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -86,6 +87,8 @@ function FriendlyMatchListContent({
   screenActive = true,
 }) {
   const { t } = useTranslation();
+  // CORR-RECHERCHE point 2 — l'en-tête de la recherche défile avec la liste.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   const isWeb = Platform.OS === 'web';
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -484,29 +487,30 @@ function FriendlyMatchListContent({
     );
   }
 
+  // CORR-RECHERCHE point 2 — les sous-onglets du staff passent DANS la liste : rien de figé au-dessus.
+  const ongletsDuStaff = isStaff ? (
+    <View style={[
+      Alignments.row,
+      Alignments.justifyCenter,
+      Spaces.gap[8],
+      Spaces.marginBottom[24],
+      {
+        backgroundColor: surfaceSoft,
+        borderColor: borderSoft,
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: isWeb ? 6 : 5,
+      },
+    ]}
+    >
+      {renderTab('annonces', t('friendlyMatchListContent.listings', 'Annonces'))}
+      {renderTab('mes-annonces', t('friendlyMatchListContent.myListings', 'Mes annonces'))}
+      {renderTab('candidatures', t('friendlyMatchListContent.myProposals', 'Mes propositions'))}
+    </View>
+  ) : null;
+
   return (
     <View style={[Alignments.fill, { width: '100%' }]}>
-      {isStaff ? (
-        <View style={[
-          Alignments.row,
-          Alignments.justifyCenter,
-          Spaces.gap[8],
-          Spaces.marginBottom[24],
-          {
-            backgroundColor: surfaceSoft,
-            borderColor: borderSoft,
-            borderRadius: 16,
-            borderWidth: 1,
-            padding: isWeb ? 6 : 5,
-          },
-        ]}
-        >
-          {renderTab('annonces', t('friendlyMatchListContent.listings', 'Annonces'))}
-          {renderTab('mes-annonces', t('friendlyMatchListContent.myListings', 'Mes annonces'))}
-          {renderTab('candidatures', t('friendlyMatchListContent.myProposals', 'Mes propositions'))}
-        </View>
-      ) : null}
-
       {/* C07 / Q2-16 : la liste reste montee pendant le chargement, sinon son
           en-tete (le champ de recherche) se demonte et le clavier se ferme. */}
       <FlatList
@@ -515,7 +519,13 @@ function FriendlyMatchListContent({
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item, index) => getAdKey(item) || String(index)}
         ListEmptyComponent={loading ? <Loader /> : emptyState}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={(
+          <>
+            {enTeteDeRecherche}
+            {ongletsDuStaff}
+            {listHeader}
+          </>
+        )}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
         onRefresh={handleRefresh}

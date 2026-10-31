@@ -215,3 +215,28 @@ describe('EventListContent — l en-tête de la liste (R17-EVT-1-BIS)', () => {
     expect(textes()).toContain('Événements à partir de');
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — l'en-tête de la recherche (logo,
+// onglets) défile avec la liste : la liste le pose en tête, AVANT sa propre bande.
+describe('EventListContent — CORR-RECHERCHE point 2 : l en-tete de la recherche', () => {
+  // eslint-disable-next-line global-require
+  const { EnTeteDeRechercheContext } = require('@/views/search/components/enTeteDeRecherche');
+  const reclamer = jest.fn(() => () => {});
+
+  test('🔴 pose l en-tete de la recherche en tete de la liste, et le reclame', () => {
+    act(() => {
+      monte = renderer.create(
+        <EnTeteDeRechercheContext.Provider
+          value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer }}
+        >
+          <EventListContent entete={<Text>Événements de la Ville</Text>} showFilters />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+
+    const lus = textes();
+    expect(lus).toContain('temoin-entete-recherche');
+    expect(lus.indexOf('temoin-entete-recherche')).toBeLessThan(lus.indexOf('Événements de la Ville'));
+    expect(reclamer).toHaveBeenCalled();
+  });
+});

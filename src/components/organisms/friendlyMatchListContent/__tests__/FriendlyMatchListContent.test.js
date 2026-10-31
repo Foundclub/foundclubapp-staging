@@ -319,3 +319,40 @@ describe('FriendlyMatchListContent — GERER-ANNONCE : « mes » = les equipes q
     expect(mockGetMyFriendlyMatchApplications).toHaveBeenCalledWith(['team-entrainee']);
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — rien ne reste figé au-dessus de la
+// liste : l'en-tête de la recherche et les sous-onglets du staff défilent AVEC elle.
+describe('FriendlyMatchListContent — CORR-RECHERCHE point 2 : tout defile', () => {
+  // eslint-disable-next-line global-require
+  const { FlatList, Text } = require('react-native');
+  // eslint-disable-next-line global-require
+  const { EnTeteDeRechercheContext } = require('@/views/search/components/enTeteDeRecherche');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchAds.mockResolvedValue({ data: [AD], meta: {} });
+    mockGetMyFriendlyMatchAds.mockResolvedValue([]);
+    mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  it('🔴 pose l en-tete de la recherche puis les sous-onglets DANS la liste', async () => {
+    mockUseAuth.mockReturnValue({ userData: { documentId: 'u-1', role: { name: 'Entraineur' } } });
+    const reclamer = jest.fn(() => () => {});
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <EnTeteDeRechercheContext.Provider
+          value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer }}
+        >
+          <FriendlyMatchListContent />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+    const liste = tree.root.findByType(FlatList);
+    const dansLaListe = collectText(liste.findAllByType(Text).map((n) => n.props.children));
+    expect(dansLaListe).toContain('temoin-entete-recherche');
+    expect(dansLaListe).toContain('Mes annonces');
+    expect(dansLaListe.indexOf('temoin-entete-recherche')).toBeLessThan(dansLaListe.indexOf('Mes annonces'));
+    expect(reclamer).toHaveBeenCalled();
+  });
+});

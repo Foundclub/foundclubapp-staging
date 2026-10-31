@@ -22,6 +22,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import ClubListContent from '@/components/organisms/clubListContent/ClubListContent';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
+import { EnTeteDeRechercheContext } from '@/views/search/components/enTeteDeRecherche';
 
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -85,6 +86,9 @@ const copier = async (texte) => {
  * « vous » : la mairie.
  * @returns {import('react').ReactElement} L ecran.
  */
+// CORR-RECHERCHE point 2 — ici, pas de coque de recherche à prévenir : la liste pose l'en-tête.
+const sansCoqueAPrevenir = () => () => {};
+
 function CollectiviteInviteClub() {
   const { t } = useTranslation();
   const {
@@ -373,6 +377,26 @@ function CollectiviteInviteClub() {
     </TouchableOpacity>
   );
 
+  // CORR-RECHERCHE point 2 — ce que la liste pose en tête de ce qui défile (voir enTeteDeRecherche.js).
+  const enTeteDeLaRecherche = useMemo(() => ({
+    enTete: (
+      <View style={{ gap: 12 }}>
+        {enTete(t(
+          'collectiviteRattachement.ajouter.title',
+          'Ajouter un club',
+        ))}
+        <Text style={[Fonts.p2, Fonts.neutral100]}>
+          {t(
+            'collectiviteRattachement.ajouter.introSearch',
+            'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
+          )}
+        </Text>
+      </View>
+    ),
+    reclamer: sansCoqueAPrevenir,
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `enTete` se refait à chaque rendu ; il ne lit que la Ville et `t`
+  }), [collectivite?.name, Fonts, t]);
+
   if (onglet === 'recherche') {
     // Sur le SITE mobile, la barre d'onglets flotte au-dessus du bas de l'écran : le lien du bas
     // garde sa place au-dessus d'elle (`dockClearance`, comme la liste). Sur ordinateur, le menu
@@ -403,23 +427,18 @@ function CollectiviteInviteClub() {
         ]}
       >
         <View style={[Alignments.fill, zoneDeRecherche]} testID="inviter-recherche">
-          {enTete(t(
-            'collectiviteRattachement.ajouter.title',
-            'Ajouter un club',
-          ))}
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {t(
-              'collectiviteRattachement.ajouter.introSearch',
-              'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
-            )}
-          </Text>
-          <View style={Alignments.fill}>
-            <ClubListContent
-              actionDeCarte={actionDeCarte}
-              paramsDeFiche={paramsDeFiche}
-              surDeuxColonnes
-            />
-          </View>
+          {/* CORR-RECHERCHE point 2 (décision A) — le titre et l'aide défilent AVEC la liste
+              (elle les pose en tête) : plus de boîte de 409 px. Le lien du bas reste fixé dessous,
+              toujours à l'écran (INVPAD, 20/10 : témoin invpad-ajouter-un-club.spec.ts, test 4). */}
+          <EnTeteDeRechercheContext.Provider value={enTeteDeLaRecherche}>
+            <View style={Alignments.fill}>
+              <ClubListContent
+                actionDeCarte={actionDeCarte}
+                paramsDeFiche={paramsDeFiche}
+                surDeuxColonnes
+              />
+            </View>
+          </EnTeteDeRechercheContext.Provider>
           {lienDiscret(
             'inviter-absent',
             t(

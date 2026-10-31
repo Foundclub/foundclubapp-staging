@@ -818,3 +818,58 @@ describe('RecrutementListContent — personne n atteint un onglet interdit à so
     expect(rendu).not.toContain('Mes candidatures');
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — sur Profils, 31 % de l'écran
+// restaient figés en haut (en-tête + sous-onglets) et 20 % en bas (« + Publier une offre »).
+// Tout passe DANS la liste qui défile : en-tête, sous-onglets, et le bouton en fin de liste.
+describe('RecrutementListContent — CORR-RECHERCHE point 2 : tout defile', () => {
+  // eslint-disable-next-line global-require
+  const { FlatList, Text } = require('react-native');
+  // eslint-disable-next-line global-require
+  const { EnTeteDeRechercheContext } = require('@/views/search/components/enTeteDeRecherche');
+
+  const rendreDansLaRecherche = async (userData, props = {}) => {
+    mockUserData = userData;
+    /** @type {any} */
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <EnTeteDeRechercheContext.Provider
+          value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer: () => () => {} }}
+        >
+          <RecrutementListContent {...props} />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+    return tree;
+  };
+
+  const textesDeLaListe = (/** @type {any} */ tree) => tree.root.findByType(FlatList)
+    .findAllByType(Text).map((/** @type {any} */ n) => texteDuNoeud(n));
+
+  it('🔴 Profils : en-tete, sous-onglets et bouton de publication sont DANS la liste', async () => {
+    const tree = await rendreDansLaRecherche(DIRIGEANT, { initialTab: 'profils' });
+    const lus = textesDeLaListe(tree);
+
+    expect(lus).toContain('temoin-entete-recherche');
+    expect(lus).toContain('Opportunités');
+    expect(lus).toContain('+ Publier une offre');
+    expect(lus.indexOf('temoin-entete-recherche')).toBeLessThan(lus.indexOf('Opportunités'));
+    expect(lus.indexOf('Lucas')).toBeLessThan(lus.indexOf('+ Publier une offre'));
+  });
+
+  it('🔴 Opportunités : en-tete et sous-onglets sont DANS la liste', async () => {
+    const tree = await rendreDansLaRecherche(DIRIGEANT, { initialTab: 'profils' });
+    await appuyerSur(tree, 'Opportunités');
+    const lus = textesDeLaListe(tree);
+
+    expect(lus).toContain('temoin-entete-recherche');
+    expect(lus).toContain('Candidatures');
+  });
+
+  it('🔴 Joueur : l en-tete est DANS la liste des annonces', async () => {
+    const tree = await rendreDansLaRecherche(JOUEUR, { initialTab: 'annonces' });
+
+    expect(textesDeLaListe(tree)).toContain('temoin-entete-recherche');
+  });
+});

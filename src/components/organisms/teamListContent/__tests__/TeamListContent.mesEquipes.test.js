@@ -662,3 +662,58 @@ describe('TeamListContent — l onglet « Equipe » d un joueur (lot U03)', () =
     }
   });
 });
+
+// CORR-RECHERCHE point 20 (recette du site, 30/10, décision B) — `/teams` ouvert par un JOUEUR
+// sans équipe ni club listait toute la table (basket, rugby… de clubs de démo) sous « Autres
+// équipes » (capture J42, rejouée le 31/10 : 67 équipes). La liste est bornée à SON sport.
+describe('TeamListContent — CORR-RECHERCHE point 20 : le joueur sans equipe voit son sport', () => {
+  const JOUEUR_SANS_EQUIPE = {
+    ...LE_JOUEUR, myTeams: [], preferredSport: 'Football', trainedTeams: [],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParentTeams.mockReturnValue({
+      childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+    });
+    mockParamsRecus.length = 0;
+    mockLignesServies.length = 0;
+  });
+
+  afterEach(async () => {
+    if (arbreMonte) {
+      await act(async () => {
+        arbreMonte.unmount();
+      });
+      arbreMonte = null;
+    }
+  });
+
+  it('demande les equipes de son sport, pas toute la table', async () => {
+    await monter({ userData: JOUEUR_SANS_EQUIPE });
+
+    expect(derniersParams().activityName).toBe('Football');
+  });
+
+  it('un joueur sans sport declare garde la liste d avant', async () => {
+    await monter({ userData: { ...JOUEUR_SANS_EQUIPE, preferredSport: '' } });
+
+    expect(derniersParams().activityName).toBeUndefined();
+  });
+
+  it('un joueur qui a deja une equipe ne change pas', async () => {
+    await monter({ userData: { ...LE_JOUEUR, preferredSport: 'Football' } });
+
+    expect(derniersParams().activityName).toBeUndefined();
+  });
+
+  it('le dirigeant avec club ne change pas', async () => {
+    await monter({
+      canManageTeam: true,
+      clubId: 'club-du-joueur',
+      userData: { ...LE_DIRIGEANT, preferredSport: 'Football' },
+    });
+
+    expect(derniersParams().activityName).toBeUndefined();
+  });
+});

@@ -823,3 +823,25 @@ describe('INVPAD — deux colonnes sur le site ordinateur, pour qui les demande'
     expect(caseDe('carte-club-Olympique')).toBeNull();
   });
 });
+
+// CORR-RECHERCHE point 2 (recette du site, 30/10, décision A) — sur le téléphone, l'onglet Club de
+// la recherche monte cette liste sous l'en-tête de la recherche : il défile désormais AVEC elle.
+describe('ClubListContent — CORR-RECHERCHE point 2 : l en-tete de la recherche', () => {
+  const { Text } = jest.requireActual('react-native');
+  const { EnTeteDeRechercheContext } = jest.requireActual('@/views/search/components/enTeteDeRecherche');
+
+  test('🔴 l en-tete de la recherche est dans l en-tete de la liste', async () => {
+    const reclamer = jest.fn(() => () => {});
+    demonter();
+    await act(async () => {
+      monte = renderer.create(
+        <EnTeteDeRechercheContext.Provider value={{ enTete: <Text>temoin-entete-recherche</Text>, reclamer }}>
+          <ClubListContent />
+        </EnTeteDeRechercheContext.Provider>,
+      );
+    });
+
+    expect(JSON.stringify(monte.toJSON())).toContain('temoin-entete-recherche');
+    expect(reclamer).toHaveBeenCalled();
+  });
+});

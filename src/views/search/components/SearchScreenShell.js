@@ -1,6 +1,8 @@
 import {
   useCallback,
+  useMemo,
   useRef,
+  useState,
 } from 'react';
 import { View } from 'react-native';
 
@@ -14,6 +16,7 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SearchTypeSwitcher from '@/components/molecules/searchTypeSwitcher/SearchTypeSwitcher';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { EnTeteDeRechercheContext } from '@/views/search/components/enTeteDeRecherche';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -62,6 +65,12 @@ function SearchScreenShell({
   } = useTheme();
   const { userData } = useAuth();
   const switcherTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
+  // CORR-RECHERCHE point 2 — combien de listes posent l'en-tête dans ce qu'elles font défiler.
+  const [porteurs, setPorteurs] = useState(0);
+  const reclamer = useCallback(() => {
+    setPorteurs((n) => n + 1);
+    return () => setPorteurs((n) => n - 1);
+  }, []);
 
   const emitTutorialLayout = useCallback((key, ref) => {
     if (!onTutorialLayout || !ref?.current) return;
@@ -123,32 +132,8 @@ function SearchScreenShell({
     [activeType, navigation, onTypeChange, userData],
   );
 
-  if (annuaire) {
-    // ANNUAIRE-E1 — l'annuaire garde les onglets et le contenu de l'écran, rien d'autre.
-    return (
-      <View>
-        <SearchTypeSwitcher
-          activeType={activeType}
-          onTypeChange={handleTypeChange}
-          types={types}
-        />
-        <View style={[Spaces.marginTop[4]]}>
-          {children}
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    // RECHERCHE-UNIQUE (25/09) — `boundedHeight` : sur le SITE, sans lui la liste
-    // prend la hauteur de TOUT son contenu et, n'ayant plus rien a faire defiler,
-    // reclame page apres page (banc du 25/09 : 8 pages sur 8 demandees d'un coup).
-    // Sans effet sur le telephone (ScreenContainer.js l'ignore).
-    <ScreenContainer
-      bgImage="bg2"
-      boundedHeight
-      contentContainerStyle={[Alignments.fill, Spaces.paddingBottom[24]]}
-    >
+  const enTete = useMemo(() => (
+    <View style={Spaces.paddingBottom[4]}>
       <View style={[
         Spaces.marginTop[16],
         Spaces.marginBottom[16],
@@ -203,10 +188,44 @@ function SearchScreenShell({
           />
         </View>
       )}
+    </View>
+  ), [Alignments, Spaces, activeType, emitTutorialLayout, handleTypeChange, tutorialSteps, types]);
+  const contexteEnTete = useMemo(() => ({ enTete, reclamer }), [enTete, reclamer]);
 
-      <View style={[Alignments.fill, Spaces.marginTop[4]]}>
-        {children}
+  if (annuaire) {
+    // ANNUAIRE-E1 — l'annuaire garde les onglets et le contenu de l'écran, rien d'autre.
+    return (
+      <View>
+        <SearchTypeSwitcher
+          activeType={activeType}
+          onTypeChange={handleTypeChange}
+          types={types}
+        />
+        <View style={[Spaces.marginTop[4]]}>
+          {children}
+        </View>
       </View>
+    );
+  }
+
+  return (
+    // RECHERCHE-UNIQUE (25/09) — `boundedHeight` : sur le SITE, sans lui la liste
+    // prend la hauteur de TOUT son contenu et, n'ayant plus rien a faire defiler,
+    // reclame page apres page (banc du 25/09 : 8 pages sur 8 demandees d'un coup).
+    // Sans effet sur le telephone (ScreenContainer.js l'ignore).
+    // CORR-RECHERCHE point 2 — la boîte bornée est désormais TOUTE la hauteur : l'en-tête défile
+    // dedans (voir enTeteDeRecherche.js), et plus de marge morte de 24 px sous la liste.
+    <ScreenContainer
+      bgImage="bg2"
+      boundedHeight
+      contentContainerStyle={[Alignments.fill]}
+    >
+      <EnTeteDeRechercheContext.Provider value={contexteEnTete}>
+        {porteurs === 0 ? enTete : null}
+        <View style={Alignments.fill}>
+          {children}
+        </View>
+      </EnTeteDeRechercheContext.Provider>
     </ScreenContainer>
   );
 }

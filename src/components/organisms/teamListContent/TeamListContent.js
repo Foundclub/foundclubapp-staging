@@ -189,8 +189,20 @@ function TeamListContent({
     [isParentTeamList, myProfileTeamIds, userData],
   );
 
+  // CORR-RECHERCHE point 20 (recette du site, 30/10, décision B) — `/teams` sans club, ouvert par
+  // un joueur sans équipe, listait toute la table (basket, rugby… de clubs de démo) sous « Autres
+  // équipes ». On la borne à SON sport ; sans sport déclaré, rien ne change.
+  // ponytail: le sport seul, pas la ville — `getTeams` n'a pas de filtre de ville ; le design (A)
+  // remplacera la liste par « Trouver une équipe ».
+  const sportDuJoueurSansEquipe = !clubId && !scopeToMyTeams && !isLeagueMode
+    && myProfileTeamIds.length === 0
+    && getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'player'
+    ? String(userData?.preferredSport || '').trim() || undefined
+    : undefined;
+
   const classicTeamQueryParams = useMemo(() => ({
     activities: teamFilters?.activities || undefined,
+    activityName: sportDuJoueurSansEquipe,
     category: Array.isArray(teamFilters?.category) && teamFilters?.category?.length
       ? teamFilters?.category
       : undefined,
@@ -209,6 +221,7 @@ function TeamListContent({
     debouncedSearch,
     myProfileTeamIds,
     scopeToMyTeams,
+    sportDuJoueurSansEquipe,
     teamFilters?.activities,
     teamFilters?.category,
     teamFilters?.level,
