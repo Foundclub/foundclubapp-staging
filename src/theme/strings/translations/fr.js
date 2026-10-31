@@ -11634,6 +11634,8 @@ export default {
     },
     errors: {
       datePast: "La date ou l'heure de début doit être dans le futur.",
+      // CORR-EVENEMENTS 127 : le message sous le champ de la date.
+      datePastUnderField: 'Cette date est passée : choisis un jour à venir.',
       genericCreate: "Erreur de création d'événement.",
       genericLoad: 'Impossible de charger cette étape.',
       invalidTimeRange: "L'heure de fin doit être après l'heure de début.",

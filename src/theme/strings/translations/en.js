@@ -10972,6 +10972,7 @@ export default {
     },
     errors: {
       datePast: 'The start date or time must be in the future.',
+      datePastUnderField: 'This date has passed: pick an upcoming day.',
       genericCreate: 'Error creating the event.',
       genericLoad: 'Unable to load this step.',
       invalidTimeRange: 'The end time must be after the start time.',
