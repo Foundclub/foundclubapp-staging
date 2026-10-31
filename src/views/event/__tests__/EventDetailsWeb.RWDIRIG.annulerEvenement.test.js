@@ -36,7 +36,8 @@ jest.mock('@tanstack/react-query', () => ({
         (error) => options?.onError?.(error, variables),
       );
     },
-    mutateAsync: jest.fn(),
+    // CORR-EVENEMENTS 130 : la feuille d'équipe passe par `mutateAsync`, qui appelle le service.
+    mutateAsync: (/** @type {any} */ variables) => Promise.resolve(options?.mutationFn?.(variables)),
   }),
   useQueryClient: () => ({
     invalidateQueries: jest.fn(),
@@ -125,8 +126,9 @@ jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
   deleteEventParticipation: jest.fn(),
 }));
 
+const mockCreateCustomTournamentTeam = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
-  createCustomTournamentTeam: jest.fn(),
+  createCustomTournamentTeam: (/** @type {any[]} */ ...args) => mockCreateCustomTournamentTeam(...args),
   registerClubTeamToTournament: jest.fn(),
   reviewTournamentTeamRegistration: jest.fn(),
 }));
@@ -469,5 +471,56 @@ describe('CORR-EVENEMENTS 128 · le programme d un stage sur la fiche', () => {
   test('un événement d un seul jour n a pas de bloc programme', () => {
     const root = mountScreen({ event: buildEvent() });
     expect(programme(root)).toBeUndefined();
+  });
+});
+
+// CORR-EVENEMENTS point 130 (recette du site, 30/10) — le nom d'une équipe de tournoi se tapait
+// dans une fenêtre grise du navigateur, et le parent voyait « Inscrire mon équipe » et « Créer une
+// équipe ». Décision A : une vraie feuille « Nom de l'équipe » pour tous, ces boutons cachés au parent.
+describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
+  const tournoi = () => buildEvent({
+    tournamentConfig: { allowCustomTeams: true },
+    tournamentTeams: [],
+    type: { name: 'Tournoi' },
+  });
+  const bouton = (/** @type {any} */ root, /** @type {string} */ libelle) => root.findAll(
+    (/** @type {any} */ n) => n.type === 'button' && textOf(n) === libelle,
+  )[0];
+
+  test('🐞 « Créer une équipe » ouvre une feuille, sans fenêtre du navigateur', async () => {
+    window.prompt = jest.fn(() => 'Les Lions');
+    const root = mountScreen({ event: tournoi() });
+    await act(async () => { bouton(root, 'Créer une équipe').props.onClick(); });
+
+    expect(window.prompt).not.toHaveBeenCalled();
+    const champ = root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Nom de l’équipe' && typeof n.props?.onChangeText === 'function')[0];
+    expect(champ).toBeDefined();
+    const creer = () => root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function' && textOf(n) === 'Créer mon équipe')[0];
+
+    // Vide : refusé, et dit.
+    await act(async () => { creer().props.onPress(); });
+    expect(mockCreateCustomTournamentTeam).not.toHaveBeenCalled();
+    expect(JSON.stringify(mounted.toJSON())).toContain('Ajoute un nom d’équipe avant de continuer.');
+
+    await act(async () => { champ.props.onChangeText('  Les Lions  '); });
+    await act(async () => { creer().props.onPress(); });
+    expect(mockCreateCustomTournamentTeam).toHaveBeenCalledWith('event-1', { name: 'Les Lions' });
+  });
+
+  test('🐞 le parent ne voit ni « Inscrire mon équipe » ni « Créer une équipe »', () => {
+    const root = mountScreen({
+      auth: {
+        canEditClub: () => false,
+        canEditEvent: () => false,
+        canManageEvent: () => false,
+        userData: {
+          documentId: 'parent-1', firstname: 'Papa', lastname: 'Test', role: { name: 'Parent' }, trainedTeams: [{ documentId: 'team-9', name: 'U9' }],
+        },
+      },
+      event: tournoi(),
+    });
+
+    expect(bouton(root, 'Créer une équipe')).toBeUndefined();
+    expect(bouton(root, 'Inscrire mon équipe')).toBeUndefined();
   });
 });

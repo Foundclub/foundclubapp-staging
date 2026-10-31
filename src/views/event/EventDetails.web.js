@@ -114,6 +114,7 @@ import EventChildRegistration, {
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentTeamSheet from './components/TournamentTeamSheet';
 import MatchBilanCard from './components/MatchBilanCard';
 import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
@@ -581,8 +582,11 @@ function EventDetails({ navigation, route }) {
       .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId)),
     [registeredTournamentSourceTeamIds, userData?.trainedTeams],
   );
+  // CORR-EVENEMENTS 130 (décision A) : un parent ne joue pas le tournoi ; ces deux gestes de
+  // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
+    && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
     && !currentUserTournamentTeam
@@ -590,6 +594,7 @@ function EventDetails({ navigation, route }) {
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
+    && !offreAuxEnfants
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
@@ -1690,17 +1695,21 @@ function EventDetails({ navigation, route }) {
     navigation.navigate(RouteNames.TournamentTeamDetails, { eventId, teamId: teamDocumentId });
   }, [eventId, navigation]);
 
-  const handleCreateTournamentTeam = useCallback(async () => {
-    const proposedName = window.prompt(t(
-      'eventDetails.tournamentTeamName',
-      'Nom de l équipe tournoi',
-    ));
-    const trimmedName = String(proposedName || '').trim();
-    if (!trimmedName) return;
+  // CORR-EVENEMENTS 130 (décision A) : plus de `window.prompt` — une vraie feuille
+  // (TournamentTeamSheet) demande le nom de l'équipe, ou l'équipe du club à inscrire.
+  const [feuilleEquipeTournoi, setFeuilleEquipeTournoi] = useState(
+    /** @type {'name' | 'choose' | null} */ (null),
+  );
+  const handleCreateTournamentTeam = useCallback(() => {
     setActionError('');
+    setFeuilleEquipeTournoi('name');
+  }, []);
+  const creerLEquipeDuTournoi = useCallback(async (/** @type {string} */ nom) => {
     try {
-      await createTournamentTeamMutation.mutateAsync({ name: trimmedName });
+      await createTournamentTeamMutation.mutateAsync({ name: nom });
+      setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
+      setFeuilleEquipeTournoi(null);
       setActionError(mutationError?.message || t(
         'eventDetails.unableToCreateThisTournament3',
         'Impossible de créer cette équipe tournoi.',
@@ -1708,32 +1717,24 @@ function EventDetails({ navigation, route }) {
     }
   }, [createTournamentTeamMutation, t]);
 
-  const handleRegisterTournamentTeam = useCallback(async () => {
+  const handleRegisterTournamentTeam = useCallback(() => {
     if (availableTournamentSourceTeams.length === 0) return;
-    const optionsText = availableTournamentSourceTeams
-      .map((team, index) => `${index + 1}. ${team?.name || t(
-        'eventDetails.teamFallback',
-        'Equipe',
-      )}`)
-      .join('\n');
-    const rawChoice = window.prompt(t(
-      'eventDetails.chooseATeamToRegister',
-      'Choisis une équipe à inscrire :\n{{optionsText}}',
-      { optionsText, ...SANS_ECHAPPEMENT },
-    ));
-    const choiceIndex = Number.parseInt(String(rawChoice || '').trim(), 10) - 1;
-    const sourceTeam = availableTournamentSourceTeams[choiceIndex];
-    if (!sourceTeam?.documentId) return;
     setActionError('');
+    setFeuilleEquipeTournoi('choose');
+  }, [availableTournamentSourceTeams]);
+  const inscrireLEquipeDuClub = useCallback(async (/** @type {any} */ sourceTeam) => {
+    if (!sourceTeam?.documentId) return;
     try {
       await registerTournamentTeamMutation.mutateAsync(sourceTeam.documentId);
+      setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
+      setFeuilleEquipeTournoi(null);
       setActionError(mutationError?.message || t(
         'eventDetails.unableToRegisterThisTeam2',
         'Impossible d inscrire cette équipe.',
       ));
     }
-  }, [availableTournamentSourceTeams, registerTournamentTeamMutation, t]);
+  }, [registerTournamentTeamMutation, t]);
 
   const handleReviewTournamentTeam = useCallback(async (teamDocumentId, status) => {
     setActionError('');
@@ -3771,6 +3772,14 @@ function EventDetails({ navigation, route }) {
           </div>
         ) : null}
       </div>
+      <TournamentTeamSheet
+        isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
+        mode={feuilleEquipeTournoi}
+        onChoose={inscrireLEquipeDuClub}
+        onClose={() => setFeuilleEquipeTournoi(null)}
+        onCreate={creerLEquipeDuTournoi}
+        teams={availableTournamentSourceTeams}
+      />
       <CancelSeriesSheet
         isPending={annulerEvenement.isPending}
         isVisible={feuilleAnnulationSerie}
