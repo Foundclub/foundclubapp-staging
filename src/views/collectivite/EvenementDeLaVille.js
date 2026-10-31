@@ -261,10 +261,17 @@ function EvenementDeLaVille() {
         </View>
         {deLaVille && evenement.actualite?.publishedAt ? (
           <Text style={[Fonts.p3, Fonts.neutral200]} testID="evenement-actualite-date">
-            {t('collectiviteEvenement.fiche.actualitePubliee', 'Actualité publiée : {{quand}}', {
-              interpolation: { escapeValue: false },
-              quand: publicationDateLabel(t, evenement.actualite.publishedAt),
-            })}
+            {/* CORR-COLLECTIVITES 108 (31/10, Adel A) : annulé, la ligne parle de l'annonce de
+                l'annulation (le serveur pointe alors `actualite` sur elle). */}
+            {annule
+              ? t('collectiviteEvenement.fiche.annulationPubliee', 'Annonce de l’annulation publiée : {{quand}}', {
+                interpolation: { escapeValue: false },
+                quand: publicationDateLabel(t, evenement.actualite.publishedAt),
+              })
+              : t('collectiviteEvenement.fiche.actualitePubliee', 'Actualité publiée : {{quand}}', {
+                interpolation: { escapeValue: false },
+                quand: publicationDateLabel(t, evenement.actualite.publishedAt),
+              })}
           </Text>
         ) : null}
         {blocageActif && !annule ? (

@@ -762,6 +762,18 @@ function PlanningWeekFullscreen() {
         fermeture?.kind !== 'block'
         && closureCoversDay(fermeture, format(currentDate, 'yyyy-MM-dd'))
       ));
+    // CORR-COLLECTIVITES 106 (31/10, Adel A) : une fermeture dans la plage affichée ; la semaine
+    // n est pas « libre toute la semaine ».
+    const debutPlage = String(planningRange.from).slice(0, 10);
+    const finPlage = String(planningRange.to).slice(0, 10);
+    const fermetureDansLaPlage = vue !== VUES.jour
+      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((/** @type {any} */ fermeture) => (
+        fermeture?.kind !== 'block'
+        && fermeture?.startDate
+        && fermeture?.endDate
+        && fermeture.startDate <= finPlage
+        && debutPlage <= fermeture.endDate
+      ));
     let suite;
     if (jourFerme) {
       suite = t('collectiviteCreneaux.planning.fermeJour', 'fermeture ce jour-là');
@@ -773,9 +785,10 @@ function PlanningWeekFullscreen() {
         ...SANS_ECHAPPEMENT,
       });
     } else if (pic === 0) {
-      suite = vue === VUES.jour
-        ? t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée')
-        : t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine');
+      if (vue === VUES.jour) suite = t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
+      else if (fermetureDansLaPlage) {
+        suite = t('collectiviteCreneaux.planning.libreHorsFermeture', 'libre en dehors de la fermeture');
+      } else suite = t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine');
     } else {
       suite = t('collectiviteCreneaux.planning.placesLibres', {
         count: capacite - pic,
@@ -795,7 +808,7 @@ function PlanningWeekFullscreen() {
       texte: `${equipes} · ${suite}`,
     };
   // eslint-disable-next-line max-len
-  }, [blocsDeLaPage, currentDate, data?.meta?.closures, facilityPlanningSummary, isFacilitySource, readsAsOrganizer, t, vue]);
+  }, [blocsDeLaPage, currentDate, data?.meta?.closures, facilityPlanningSummary, isFacilitySource, planningRange.from, planningRange.to, readsAsOrganizer, t, vue]);
   const legende = useMemo(() => {
     if (!isFacilitySource) return [];
     const parClub = new Map();

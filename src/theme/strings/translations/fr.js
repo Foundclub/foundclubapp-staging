@@ -6407,6 +6407,7 @@ export default {
       // COLL-FIX2 (03/10) — un jour fermé (planche 25).
       fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
+      libreHorsFermeture: 'libre en dehors de la fermeture',
       libreSemaine: 'libre toute la semaine',
       // COLL-R-APP-PLANNING (12/10, COL-014) — demande sans réponse, son heure est passée.
       nonTrancheeDatePassee: 'Non tranchée, date passée',
@@ -6858,6 +6859,7 @@ export default {
     fermerLePanneau: 'Fermer le panneau',
     fiche: {
       actualitePubliee: 'Actualité publiée : {{quand}}',
+      annulationPubliee: 'Annonce de l’annulation publiée : {{quand}}',
       affiche: 'Affiche de « {{nom}} »',
       annule: 'Annulé',
       annuler: 'Annuler l’événement',
@@ -7099,7 +7101,9 @@ export default {
       prevenu: '{{clubs}} sera prévenu. Ses séances restent à sa charge.',
       prevenus: '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
       titreBloquer: 'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
+      titreBloquerNom: 'Bloquer « {{installation}} » {{jours}}, de {{debut}} à {{fin}} ?',
       titreFermer: 'Fermer {{installation}} {{jours}} ?',
+      titreFermerNom: 'Fermer « {{installation}} » {{jours}} ?',
     },
     erreurs: {
       dejaRouverte: 'Cette fermeture est déjà rouverte.',

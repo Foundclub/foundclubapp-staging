@@ -5866,6 +5866,7 @@ export default {
       // COLL-FIX2 (03/10) — a closed day (board 25).
       fermeJour: 'closed that day',
       libreJour: 'free all day',
+      libreHorsFermeture: 'free outside the closure',
       libreSemaine: 'free all week',
       // COLL-R-APP-PLANNING (12/10, COL-014) — a request never answered, its time has passed.
       nonTrancheeDatePassee: 'Not decided, date passed',
@@ -6287,6 +6288,7 @@ export default {
     fermerLePanneau: 'Close the panel',
     fiche: {
       actualitePubliee: 'News posted: {{quand}}',
+      annulationPubliee: 'Cancellation notice published: {{quand}}',
       affiche: 'Poster of “{{nom}}”',
       annule: 'Cancelled',
       annuler: 'Cancel the event',
@@ -6521,7 +6523,9 @@ export default {
       prevenu: '{{clubs}} will be notified. Its sessions remain its responsibility.',
       prevenus: '{{clubs}} will be notified. Their sessions remain their responsibility.',
       titreBloquer: 'Block {{installation}} {{jours}}, from {{debut}} to {{fin}}?',
+      titreBloquerNom: 'Block “{{installation}}” {{jours}}, from {{debut}} to {{fin}}?',
       titreFermer: 'Close {{installation}} {{jours}}?',
+      titreFermerNom: 'Close “{{installation}}” {{jours}}?',
     },
     erreurs: {
       dejaRouverte: 'This closure has already been reopened.',

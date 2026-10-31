@@ -551,3 +551,31 @@ describe('CORR-COLLECTIVITES 98 — la vitrine dit à qui partager', () => {
     expect(lus).toContain(phrase);
   });
 });
+
+// CORR-COLLECTIVITES 108 (31/10/2026, décision d'Adel A) — un événement annulé ne dit plus
+// « Actualité publiée : … » : la ligne parle de l'annonce de l'annulation.
+describe('CORR-COLLECTIVITES 108 — l’événement annulé dit son annonce', () => {
+  it('annulé : « Annonce de l’annulation publiée : … », plus « Actualité publiée »', async () => {
+    mockFiche = {
+      data: {
+        ...VUE_DE_LA_VILLE,
+        actualite: { documentId: 'actu-annulation', publishedAt: '2026-10-20T09:00:00.000Z' },
+        status: 'cancelled',
+      },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    const lus = textes(arbre);
+    expect(lus.some((texte) => texte.startsWith('Annonce de l’annulation publiée : '))).toBe(true);
+    expect(lus.some((texte) => texte.startsWith('Actualité publiée'))).toBe(false);
+  });
+
+  it('actif : « Actualité publiée : … », inchangé', async () => {
+    mockFiche = {
+      data: { ...VUE_DE_LA_VILLE, actualite: { documentId: 'actu-1', publishedAt: '2026-10-20T09:00:00.000Z' } },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    expect(textes(arbre).some((texte) => texte.startsWith('Actualité publiée : '))).toBe(true);
+  });
+});
