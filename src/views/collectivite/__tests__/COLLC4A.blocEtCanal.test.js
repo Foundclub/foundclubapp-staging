@@ -278,3 +278,21 @@ describe('COLL-C4A — planche 2 : le canal de la Ville, côté membre', () => {
       .toContain('Aucune actualité de la Ville pour l’instant.');
   });
 });
+
+// CORR-COLLECTIVITES 99 (31/10/2026, décision d'Adel A) — le lien vers une actualité RETIRÉE (d'une
+// notification, d'une ligne du fil) ouvrait le canal sans rien dire. Si l'actualité visée n'y est plus,
+// le canal le dit en tête : « Cette actualité a été retirée par la Ville. »
+describe('CORR-COLLECTIVITES 99 — une actualité retirée se dit', () => {
+  it('l’actualité visée n’est plus là : « Cette actualité a été retirée par la Ville. »', async () => {
+    mockParams = { actualiteId: 'actu-retiree' };
+    expect(textes(await monter(<CollectiviteActualitesCanal />))).toContain('Cette actualité a été retirée par la Ville.');
+  });
+
+  it('l’actualité visée est là, ou aucun lien : rien de plus', async () => {
+    const [premiere] = mockCanal.data.actualites;
+    mockParams = { actualiteId: premiere.documentId };
+    expect(textes(await monter(<CollectiviteActualitesCanal />))).not.toContain('Cette actualité a été retirée par la Ville.');
+    mockParams = {};
+    expect(textes(await monter(<CollectiviteActualitesCanal />))).not.toContain('Cette actualité a été retirée par la Ville.');
+  });
+});

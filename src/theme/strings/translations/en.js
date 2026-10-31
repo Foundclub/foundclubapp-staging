@@ -5154,6 +5154,7 @@ export default {
       lectureSeule: 'Read only',
       presentation: 'News from {{ville}}, for attached clubs. Only the city posts here.',
       presentationToutes: 'News from your clubs’ cities. Only the cities post here.',
+      retiree: 'This news item was withdrawn by the city.',
       vide: 'No city news yet.',
     },
     canaux: {

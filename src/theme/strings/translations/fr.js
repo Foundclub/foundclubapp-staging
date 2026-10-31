@@ -5540,6 +5540,7 @@ export default {
       lectureSeule: 'Lecture seule',
       presentation: 'Les actualités de {{ville}}, pour les clubs rattachés. Seule la Ville y écrit.',
       presentationToutes: 'Les actualités des Villes de tes clubs. Seules les Villes y écrivent.',
+      retiree: 'Cette actualité a été retirée par la Ville.',
       vide: 'Aucune actualité de la Ville pour l’instant.',
     },
     canaux: {
