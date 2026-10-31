@@ -17923,6 +17923,11 @@ export default {
       absent: 'Absent',
       present: 'Présent',
     },
+    // CORR-EVENEMENTS 120 : la convocation d'un match annulé.
+    cancelled: {
+      text: 'L’organisateur a annulé ce match : il n’y a plus rien à répondre.',
+      title: 'Match annulé',
+    },
     alerts: {
       error: {
         message: 'Impossible d’enregistrer ta réponse. Réessaie dans un instant.',

@@ -17300,6 +17300,10 @@ export default {
       absent: 'Absent',
       present: 'Present',
     },
+    cancelled: {
+      text: 'The organiser cancelled this match: there is nothing left to answer.',
+      title: 'Match cancelled',
+    },
     alerts: {
       error: {
         message: "Can't save your response. Try again in a moment.",
