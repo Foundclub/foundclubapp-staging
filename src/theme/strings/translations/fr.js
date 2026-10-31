@@ -6330,6 +6330,8 @@ export default {
       entrainementsPoses: 'Entraînements posés',
       modifier: 'Modifier le créneau',
       modifierSerie: 'Modifier la série',
+      noteCreneau: '« Modifier » et « Retirer le créneau » demandent « à partir du » : les dates '
+        + 'passées restent. Le club est prévenu.',
       noteSerie: '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
         + 'passées restent. Le club est prévenu.',
       origine: 'Origine',
@@ -6341,6 +6343,7 @@ export default {
       retablirPlusTard: 'Une erreur ? Vous pourrez rétablir le créneau depuis la liste.',
       retirer: 'Retirer le créneau',
       retirerCetteDate: 'Retirer cette date',
+      retirerCreneauTitre: 'Retirer le créneau à partir d’une date ?',
       retirerDatePerd: '{{qui}} n’aura pas de séance le {{date}} ; les autres dates restent. Le '
         + 'club est prévenu.',
       retirerDateTitre: 'Retirer une seule date ?',
@@ -12624,6 +12627,7 @@ export default {
       etat: {
         a_jour: 'À jour',
         en_retard: 'En retard',
+        non_conforme: 'Non conforme',
       },
       faitBouton: 'Noter le contrôle fait',
       faitLe: 'Fait le',

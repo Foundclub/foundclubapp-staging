@@ -5790,6 +5790,8 @@ export default {
       entrainementsPoses: 'Trainings set',
       modifier: 'Edit the slot',
       modifierSerie: 'Edit the series',
+      noteCreneau: '“Edit” and “Remove the slot” ask “from”: past dates stay. The club is '
+        + 'notified.',
       noteSerie: '“Edit” and “Remove the series” ask “from”: past dates stay. The club is '
         + 'notified.',
       origine: 'Origin',
@@ -5801,6 +5803,7 @@ export default {
       retablirPlusTard: 'A mistake? You can restore the slot from the list.',
       retirer: 'Withdraw the slot',
       retirerCetteDate: 'Remove this date',
+      retirerCreneauTitre: 'Remove the slot from a date?',
       retirerDatePerd: '{{qui}} will have no session on {{date}}; the other dates stay. The club '
         + 'is notified.',
       retirerDateTitre: 'Remove a single date?',
@@ -11888,6 +11891,7 @@ export default {
       etat: {
         a_jour: 'Up to date',
         en_retard: 'Overdue',
+        non_conforme: 'Not compliant',
       },
       faitBouton: 'Record the inspection as done',
       faitLe: 'Done on',

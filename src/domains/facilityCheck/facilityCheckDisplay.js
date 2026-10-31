@@ -94,13 +94,17 @@ export const seriesRows = (rows, series) => (Array.isArray(rows) ? rows : [])
  * (vert), « En retard » (rouge), et « bientôt » (orange) dit « Avant le 12/03 » sous 30 jours,
  * « Dans 3 mois » au-dela.
  * @param {any} t - La fonction de traduction (i18next).
- * @param {{ nextDue: string, state: string }} check - La ligne en cours.
+ * @param {{ nextDue: string, state: string, result?: string | null }} check - La ligne en cours.
  * @param {string} today - AAAA-MM-JJ (le jour du serveur).
  * @returns {{ label: string, tone: 'success' | 'warning' | 'error' }} La pastille.
  */
 export const checkPill = (t, check, today) => {
   if (check?.state === 'en_retard') {
     return { label: t('facilityReports.controles.etat.en_retard', 'En retard'), tone: 'error' };
+  }
+  // CORR-COLLECTIVITES 105 (31/10, Adel A) : un controle non conforme ne se dit plus « À jour ».
+  if (check?.result === 'non_conforme') {
+    return { label: t('facilityReports.controles.etat.non_conforme', 'Non conforme'), tone: 'warning' };
   }
   if (check?.state !== 'bientot') {
     return { label: t('facilityReports.controles.etat.a_jour', 'À jour'), tone: 'success' };

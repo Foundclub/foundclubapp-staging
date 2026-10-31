@@ -164,10 +164,11 @@ describe('R17Q1-5 — la Ville touche un créneau en série', () => {
       'Un mercredi sur deux, 17:30 – 19:00 · Gymnase des Tilleuls',
       'Prochaine séance',
       'mer. 21 oct.',
-      'Modifier la série',
+      // CORR-COLLECTIVITES 107 (31/10, Adel B) : « le créneau », jamais « la série ».
+      'Modifier le créneau',
       'Retirer le mer. 21 oct. seulement',
-      'Retirer la série',
-      '« Modifier » et « Retirer la série » demandent « à partir du » : les dates passées restent. Le club est prévenu.',
+      'Retirer le créneau',
+      '« Modifier » et « Retirer le créneau » demandent « à partir du » : les dates passées restent. Le club est prévenu.',
     ]));
   });
 
@@ -201,7 +202,7 @@ describe('R17Q1-5 — la Ville touche un créneau en série', () => {
       'Dates',
       'sam. 7 nov. · mar. 17 nov. · mer. 25 nov.',
       'Retirer le sam. 7 nov. seulement',
-      'Retirer la série',
+      'Retirer le créneau',
     ]));
   });
 });
@@ -209,9 +210,9 @@ describe('R17Q1-5 — la Ville touche un créneau en série', () => {
 describe('R17Q1-5 — « Retirer la série » à partir d’une date', () => {
   it('5. le titre et la phrase disent la série, pas « le créneau du  »', async () => {
     const arbre = await monter(TROIS_DATES);
-    await act(async () => { await presser(arbre, 'Retirer la série'); });
+    await act(async () => { await presser(arbre, 'Retirer le créneau'); });
     await tours();
-    expect(textes(arbre)).toContain('Retirer la série à partir d’une date ?');
+    expect(textes(arbre)).toContain('Retirer le créneau à partir d’une date ?');
     expect(textes(arbre).some((texte) => texte.startsWith('AS Montrivage · U17 perd 3 dates, 17:30 – 19:00, Gymnase des Tilleuls, à partir du'))).toBe(true);
   });
 });
