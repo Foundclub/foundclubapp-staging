@@ -522,7 +522,17 @@ function EventDetails({ navigation, route }) {
   });
   const offreAuxEnfants = offreDeParticipation === 'children';
   const rienARepondre = ['children', 'none'].includes(offreDeParticipation);
+  // CORR-EVENEMENTS 123 (décision A) : un membre convié répond « Présent / Absent », comme sur
+  // sa convocation (POST /events/:id/rsvp), au lieu d'une demande « Participer » sans « Absent ».
+  const repondPresentAbsent = !canEdit
+    && isSignedIn
+    && isConvenedMember
+    && !isTournamentEvent
+    && !rienARepondre
+    && !peutPasserPresentApresCoup
+    && !reponsesFermeesAuMembre;
   const afficherParticiper = !canEdit
+    && !repondPresentAbsent
     && !rienARepondre
     && !peutPasserPresentApresCoup
     && !reponsesFermeesAuMembre
@@ -1334,6 +1344,14 @@ function EventDetails({ navigation, route }) {
 
   const cancelParticipationMutation = useMutation({
     mutationFn: (requestId) => deleteEventParticipation(requestId),
+    onSuccess: invalidateEventQueries,
+  });
+  const rsvpMutation = useMutation({
+    mutationFn: (/** @type {'present' | 'absent'} */ reponse) => respondToEventRsvp(eventId, reponse),
+    onError: (/** @type {any} */ rsvpError) => setActionError(rsvpError?.message || t(
+      'playerConvocation.alerts.error.message',
+      'Impossible d’enregistrer ta réponse. Réessaie dans un instant.',
+    )),
     onSuccess: invalidateEventQueries,
   });
   // POINTAGE — « Je passe en present », apres coup.
@@ -2325,9 +2343,11 @@ function EventDetails({ navigation, route }) {
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
                       >
-                        Validation
-                        {' '}
-                        {event.validationMode === 'manual' ? 'manuelle' : 'auto'}
+                        {/* CORR-EVENEMENTS 126 : le serveur ne valide seul que les membres des
+                            équipes conviées ; extérieurs et enfants attendent l'organisateur. */}
+                        {event.validationMode === 'manual'
+                          ? t('eventDetails.validationPill.manual', 'Validation manuelle')
+                          : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
                       </span>
                     ) : null}
                     {event?.sessionStatus ? (
@@ -2411,6 +2431,31 @@ function EventDetails({ navigation, route }) {
                   ) : null}
                   {offreAuxEnfants && !canEdit ? (
                     <EventChildRegistration event={event} navigation={navigation} />
+                  ) : null}
+                  {repondPresentAbsent ? (
+                    [
+                      ['present', t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
+                      ['absent', t('playerConvocation.actions.absent', 'Absent'), participationState?.isMissing],
+                    ].map(([reponse, libelle, choisie]) => (
+                      <button
+                        aria-pressed={Boolean(choisie)}
+                        disabled={rsvpMutation.isPending}
+                        key={String(reponse)}
+                        onClick={() => {
+                          setActionError('');
+                          rsvpMutation.mutate(/** @type {'present' | 'absent'} */ (reponse));
+                        }}
+                        style={{
+                          ...(choisie ? primaryButtonStyle : outlineButtonStyle),
+                          cursor: rsvpMutation.isPending ? 'not-allowed' : 'pointer',
+                          opacity: rsvpMutation.isPending ? 0.7 : 1,
+                          padding: '12px 16px',
+                        }}
+                        type="button"
+                      >
+                        {libelle}
+                      </button>
+                    ))
                   ) : null}
                   {afficherParticiper ? (
                     <button
@@ -2919,7 +2964,8 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              {supportsEventComposition && (canEdit || canViewPublishedComposition) ? (
+              {/* CORR-EVENEMENTS 123 : le joueur ne voit ce bloc qu'une fois une composition publiée. */}
+              {supportsEventComposition && (canEdit || (canViewPublishedComposition && convocationBranches.length > 0)) ? (
                 <div
                   style={{
                     background: softSurfaceColor,
@@ -2934,6 +2980,7 @@ function EventDetails({ navigation, route }) {
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
                       {t('eventDetails.teamLineUp', "Composition d'equipes")}
                     </strong>
+                    {canEdit ? (
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {staffCompositionPayload?.draft
                         ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
@@ -2941,6 +2988,7 @@ function EventDetails({ navigation, route }) {
                           ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.')
                           : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
                     </span>
+                    ) : null}
                   </div>
 
                   {convocationBranches.length > 0 ? (

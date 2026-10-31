@@ -107,8 +107,11 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 const mockGoBack = jest.fn();
+const mockRespondToEventRsvp = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/event/eventService', () => ({
   cancelEvent: (/** @type {any} */ data) => mockCancelEvent(data),
+  // CORR-EVENEMENTS 123 : la réponse Présent / Absent du joueur convoqué.
+  respondToEventRsvp: (/** @type {any[]} */ ...args) => mockRespondToEventRsvp(...args),
   updateEvent: jest.fn(),
 }));
 
@@ -365,5 +368,55 @@ describe('CORR-EVENEMENTS 119 · annuler une séance d une série', () => {
     await presser(root, 'Ne rien annuler');
     expect(root.findAllByProps({ testID: 'bottom-modal' })).toHaveLength(0);
     expect(mockCancelEvent).not.toHaveBeenCalled();
+  });
+});
+
+// CORR-EVENEMENTS point 123 (recette du site, 30/10) — le joueur convoqué n'avait que
+// « Participer » (une demande), sans « Absent ». Décision A : deux boutons « Présent / Absent ».
+describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent', () => {
+  const JOUEUR = { documentId: 'joueur-1', firstname: 'Joris', lastname: 'Recette' };
+  const authJoueur = {
+    canEditClub: () => false,
+    canEditEvent: () => false,
+    canManageEvent: () => false,
+    userData: { ...JOUEUR, role: { name: 'Joueur' } },
+  };
+  const matchDuJoueur = () => buildEvent({
+    team: {
+      club: CLUB, documentId: 'team-1', name: 'U15', players: [JOUEUR], trainers: [COACH],
+    },
+    type: { name: 'Match' },
+  });
+  const bouton = (/** @type {any} */ root, /** @type {string} */ libelle) => root.findAll(
+    (/** @type {any} */ n) => n.type === 'button' && textOf(n) === libelle,
+  )[0];
+
+  test('🐞 « Présent » et « Absent » remplacent « Participer »', async () => {
+    const root = mountScreen({ auth: authJoueur, event: matchDuJoueur() });
+
+    expect(bouton(root, 'Participer')).toBeUndefined();
+    expect(bouton(root, 'Présent')).toBeDefined();
+    await act(async () => { bouton(root, 'Absent').props.onClick(); });
+    expect(mockRespondToEventRsvp).toHaveBeenCalledWith('event-1', 'absent');
+  });
+});
+
+// CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Validation auto » s'affichait, mais un
+// joueur extérieur et un enfant inscrit par son parent restaient « en attente ». Le serveur ne
+// valide seul que les membres des équipes conviées (event-participation.ts, « isInternalParticipant » ;
+// child-registration-rules.js : un enfant est toujours une demande hors réservation).
+// Décision A : dire la vraie règle à l'écran.
+describe('CORR-EVENEMENTS 126 · la pastille de validation dit la vraie règle', () => {
+  test('🐞 « Validation auto » précise qu elle ne vaut que pour les membres des équipes', () => {
+    mountScreen({ event: buildEvent({ validationMode: 'auto' }) });
+    const texte = JSON.stringify(mounted.toJSON());
+
+    expect(texte).toContain('Validation auto pour les membres des équipes');
+  });
+
+  test('« Validation manuelle » reste', () => {
+    mountScreen({ event: buildEvent({ validationMode: 'manual' }) });
+
+    expect(JSON.stringify(mounted.toJSON())).toContain('Validation manuelle');
   });
 });

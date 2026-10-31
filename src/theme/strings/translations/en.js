@@ -10409,6 +10409,10 @@ export default {
     updateTheActualDelayOr: 'Update the actual delay or reset the check-in.',
     validationAutomatic: 'automatic',
     validationManual: 'manual',
+    validationPill: {
+      auto: 'Automatic approval for team members',
+      manual: 'Manual approval',
+    },
     variableTimes: 'Variable times',
     view: 'View',
     visibleBranchEs: '{{count}} call-ups',

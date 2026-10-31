@@ -762,3 +762,33 @@ describe('CORR-EVENEMENTS 121 — la fiche compte le joueur sans app comme le fi
     expect(texte).toContain('sans l’app');
   });
 });
+
+// CORR-EVENEMENTS point 123 (recette du site, 30/10) — le joueur lisait dans « Composition
+// d'équipes » un texte de coach, et n'avait que « Participer », sans « Absent ». Décision A :
+// cacher le bloc au joueur tant que rien n'est publié, et deux boutons « Présent / Absent ».
+describe('CORR-EVENEMENTS 123 — le match vu par un joueur convoqué', () => {
+  const matchDuJoueur = () => buildEvent({
+    team: {
+      club: { documentId: CLUB_ID },
+      documentId: TEAM_ID,
+      name: 'U15',
+      players: [{ documentId: JOUEUR }],
+      trainers: [],
+    },
+    type: { name: 'Match' },
+  });
+
+  test('🐞 rien de publié : pas de bloc « Composition d équipes » pour le joueur', () => {
+    mountScreen({ auth: authJoueur(), event: matchDuJoueur() });
+
+    const texte = JSON.stringify(mounted.toJSON());
+    expect(texte).not.toContain('Tu peux déjà créer les équipes');
+    expect(texte).not.toContain("Composition d'equipes");
+  });
+
+  test('l entraîneur garde son bloc et sa consigne', () => {
+    mountScreen({ event: matchDuJoueur() });
+
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tu peux déjà créer les équipes');
+  });
+});

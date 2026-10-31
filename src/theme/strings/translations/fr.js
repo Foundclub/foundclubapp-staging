@@ -11018,6 +11018,11 @@ export default {
     updateTheActualDelayOr: 'Mets à jour le retard réel ou réinitialise le pointage.',
     validationAutomatic: 'automatique',
     validationManual: 'manuelle',
+    // CORR-EVENEMENTS 126 : la pastille de l'en-tête dit la vraie règle du serveur.
+    validationPill: {
+      auto: 'Validation auto pour les membres des équipes',
+      manual: 'Validation manuelle',
+    },
     variableTimes: 'Horaires variables',
     view: 'Voir',
     // FINITIONS (recette du 28/09) — « branche » est un mot de développeur : pour un
