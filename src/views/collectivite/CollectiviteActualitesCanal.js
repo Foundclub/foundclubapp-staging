@@ -50,6 +50,10 @@ function CollectiviteActualitesCanal() {
   const route = useRoute();
   const collectiviteId = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params)
     ?.collectiviteId || null;
+  // CORR-COLLECTIVITES 99 (31/10, Adel A) : l'actualité que le lien visait (notification, ligne du
+  // fil).
+  const actualiteVisee = /** @type {{ actualiteId?: string } | undefined} */ (route?.params)
+    ?.actualiteId || null;
   const lecture = useMesActualitesDeLaVille();
   const vues = useMarquerActualitesVues();
   const enAttente = lecture.data?.bandeau?.actualite?.documentId || null;
@@ -71,6 +75,27 @@ function CollectiviteActualitesCanal() {
       !collectiviteId || actualite?.collectivite?.documentId === collectiviteId
     ));
   // Le serveur rend la plus récente d'abord (collectivite-actualite.ts) : son ordre est gardé.
+  // CORR-COLLECTIVITES 99 : le serveur ne rend jamais une actualité retirée ; visée et absente,
+  // elle
+  // a été retirée (le lien venait d'une notification ou d'une ligne posées avant le retrait).
+  const visee = actualiteVisee && !lecture.isLoading && !lecture.error
+    && !(Array.isArray(lecture.data?.actualites) ? lecture.data.actualites : [])
+      .some((/** @type {any} */ actualite) => actualite?.documentId === actualiteVisee)
+    ? (
+      <View
+        accessibilityRole="alert"
+        style={[
+          Spaces.padding[12],
+          { backgroundColor: withAlpha(Colors.warning500, 0.12), borderRadius: 12 },
+        ]}
+        testID="canal-ville-retiree"
+      >
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('collectiviteActualites.canal.retiree', 'Cette actualité a été retirée par la Ville.')}
+        </Text>
+      </View>
+    )
+    : null;
 
   // Le titre de l'écran : le nom de LA Ville quand il n'y en a qu'une (planche : « Ville de
   // Montrivage »).
@@ -154,6 +179,7 @@ function CollectiviteActualitesCanal() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {visee}
         <View
           style={[
             Spaces.paddingHorizontal[12],

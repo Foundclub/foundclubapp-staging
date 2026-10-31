@@ -138,6 +138,20 @@ export const sousTitreDuFil = (t, { chat, clubsCount = 0, espaceVille = false })
 };
 
 /**
+ * CORR-COLLECTIVITES 88 (31/10, Adel A) — l'auteur dans l'aperçu de la liste des conversations : un
+ * message signé par la Ville dit « Ville de Montrivage », comme sa bulle, jamais le prénom de
+ * l'agent.
+ * @param {any} message - Le dernier message, avec `senderSignature`.
+ * @param {string} prenom - Le prénom calculé d'avant (`prenomDansLeFil`).
+ * @returns {string} L'auteur à afficher.
+ */
+export const auteurDeLApercu = (message, prenom) => {
+  const signature = message?.senderSignature;
+  if (signature?.voix === 'ville' && signature?.nom) return String(signature.nom);
+  return prenom;
+};
+
+/**
  * Qui écrit, et pour qui : « Ville de Montrivage · Karim B. » ou « Karim Benali · AS
  * Montrivage ». Null hors d'un fil de la Ville (le message n'a pas de signature).
  * @param {any} t - La traduction (i18next).

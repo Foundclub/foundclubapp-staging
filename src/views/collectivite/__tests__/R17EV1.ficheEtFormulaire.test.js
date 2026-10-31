@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -405,7 +406,9 @@ describe('R17-EVT-1 — l’écran du formulaire', () => {
     // VILLEEVT-CODE (4B) : une création publiée montre d'abord la vitrine ; « Voir la fiche » la remplace.
     expect(mockNavigation.replace).not.toHaveBeenCalled();
     await touche(arbre, 'bouton:Voir la fiche');
+    // CORR-COLLECTIVITES 97 (31/10, Adel A) : la fiche garde l'espace Ville.
     expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', {
+      espace: 'ville',
       evenementId: 'evt-neuf',
     });
   });
@@ -500,7 +503,7 @@ describe('VILLEEVT-CODE — la vitrine après la publication (4B)', () => {
     await act(async () => {
       await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
     });
-    expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', { evenementId: 'evt-1' });
+    expect(mockNavigation.replace).toHaveBeenCalledWith('EvenementDeLaVille', { espace: 'ville', evenementId: 'evt-1' });
   });
 });
 
@@ -525,5 +528,55 @@ describe('VILLEEVT-CODE — la fiche d’une date de série, ses places (2B, 3B)
     await touche(arbre, 'bouton:Annuler l’événement');
     await touche(arbre, 'bouton:Annuler cette date seulement');
     expect(mockAnnuler).toHaveBeenCalledWith('evt-1');
+  });
+});
+
+// CORR-COLLECTIVITES 98 (31/10/2026, décision d'Adel A) — « habitants » seulement pour un événement
+// public (niveau 3) ; réservé aux clubs ou à leurs membres, la vitrine dit « aux clubs ».
+describe('CORR-COLLECTIVITES 98 — la vitrine dit à qui partager', () => {
+  it.each([
+    ['clubs', 'Faites-le savoir : partagez-le aux clubs.'],
+    ['actualite', 'Faites-le savoir : partagez-le aux clubs.'],
+    ['public', 'Faites-le savoir : partagez-le aux clubs et aux habitants.'],
+  ])('niveau « %s » : %s', async (visibility, phrase) => {
+    mockParams = { collectiviteId: 'ville-montrivage' };
+    mockFiche = { data: null, isLoading: false };
+    mockPublier.mockImplementationOnce(async () => ({
+      data: { ...VUE_DE_LA_VILLE, documentId: 'evt-neuf', visibility },
+    }));
+    const arbre = await monter(<CollectiviteEvenement />);
+    await act(async () => {
+      await mockFormulaireProps.onPublier({ data: { name: 'Fête du sport' } });
+    });
+    const lus = textes(arbre);
+    expect(lus).toContain(phrase);
+  });
+});
+
+// CORR-COLLECTIVITES 108 (31/10/2026, décision d'Adel A) — un événement annulé ne dit plus
+// « Actualité publiée : … » : la ligne parle de l'annonce de l'annulation.
+describe('CORR-COLLECTIVITES 108 — l’événement annulé dit son annonce', () => {
+  it('annulé : « Annonce de l’annulation publiée : … », plus « Actualité publiée »', async () => {
+    mockFiche = {
+      data: {
+        ...VUE_DE_LA_VILLE,
+        actualite: { documentId: 'actu-annulation', publishedAt: '2026-10-20T09:00:00.000Z' },
+        status: 'cancelled',
+      },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    const lus = textes(arbre);
+    expect(lus.some((texte) => texte.startsWith('Annonce de l’annulation publiée : '))).toBe(true);
+    expect(lus.some((texte) => texte.startsWith('Actualité publiée'))).toBe(false);
+  });
+
+  it('actif : « Actualité publiée : … », inchangé', async () => {
+    mockFiche = {
+      data: { ...VUE_DE_LA_VILLE, actualite: { documentId: 'actu-1', publishedAt: '2026-10-20T09:00:00.000Z' } },
+      isLoading: false,
+    };
+    const arbre = await monter(<EvenementDeLaVille />);
+    expect(textes(arbre).some((texte) => texte.startsWith('Actualité publiée : '))).toBe(true);
   });
 });

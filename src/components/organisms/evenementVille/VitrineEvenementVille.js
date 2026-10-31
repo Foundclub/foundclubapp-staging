@@ -91,10 +91,17 @@ function VitrineEvenementVille({ evenement, onVoirLaFiche }) {
         </Text>
       </View>
       <Text style={[Fonts.p2, Fonts.neutral200]}>
-        {t(
-          'collectiviteEvenement.vitrine.sousTitre',
-          'Faites-le savoir : partagez-le aux clubs et aux habitants.',
-        )}
+        {/* CORR-COLLECTIVITES 98 (31/10, Adel A) : « habitants » seulement au niveau 3
+            (public). */}
+        {evenement?.visibility === 'public'
+          ? t(
+            'collectiviteEvenement.vitrine.sousTitre',
+            'Faites-le savoir : partagez-le aux clubs et aux habitants.',
+          )
+          : t(
+            'collectiviteEvenement.vitrine.sousTitreClubs',
+            'Faites-le savoir : partagez-le aux clubs.',
+          )}
       </Text>
       <View
         style={{

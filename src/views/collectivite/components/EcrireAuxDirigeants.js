@@ -96,6 +96,9 @@ function EcrireAuxDirigeants({
     navigation.navigate(RouteNames.Conversation, {
       chatId: conversation.documentId,
       chatType: CONVERSATION_CLUB,
+      // CORR-COLLECTIVITES 100 (31/10, Adel A) : la messagerie s'ouvre sur la Ville de ce fil
+      // (sa colonne la cherchait sans elle : « Aucune conversation »).
+      collectiviteId: String(collectiviteId),
       espace: 'ville',
       title: club.name || conversation.club?.name || '',
       ...(aEnvoyer ? { brouillon: aEnvoyer } : {}),
@@ -140,6 +143,9 @@ function EcrireAuxDirigeants({
       {getErrorMessage(/** @type {any} */ (erreur))}
     </Text>
   ) : null;
+  // CORR-COLLECTIVITES 100 : un club sans dirigeant inscrit (personne ne lirait le message).
+  const sansDirigeant = Array.isArray(/** @type {any} */ (club).leaders)
+    && /** @type {any} */ (club).leaders.length === 0;
 
   if (premierMessage !== null) {
     return (
@@ -168,6 +174,20 @@ function EcrireAuxDirigeants({
             'La conversation s’ouvre quand vous envoyez ce message.',
           )}
         </Text>
+        {/* CORR-COLLECTIVITES 100 (31/10, Adel A) : un club sans dirigeant inscrit ; le message ne
+            serait lu par personne. */}
+        {sansDirigeant ? (
+          <Text
+            accessibilityRole="alert"
+            style={[Fonts.p3Bold, Fonts.warning500]}
+            testID={`${testID}-personne`}
+          >
+            {t(
+              'collectiviteCanaux.privee.personneNeLira',
+              'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
+            )}
+          </Text>
+        ) : null}
         <Input
           multiline
           onChangeText={setPremierMessage}

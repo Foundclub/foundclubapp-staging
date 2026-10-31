@@ -83,6 +83,9 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn(async () => ({})) }));
+// CORR-COLLECTIVITES 102 : l'écran d'attente annule la demande par ce service (sans le vrai client
+// réseau).
+jest.mock('@/services/collectivite/collectiviteService', () => ({ cancelManagerRequest: jest.fn(async () => ({})) }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   // VILLE-INSCRIPTION (07/10) — les listes du référentiel, muettes ici : la saisie libre reste.

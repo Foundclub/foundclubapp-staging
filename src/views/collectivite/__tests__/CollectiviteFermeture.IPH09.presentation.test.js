@@ -268,7 +268,7 @@ test('IPH09 FC-005 : titre aéré et actions alignées à largeur égale, action
   const arbre = await rendre();
   await choisirDate('Du', '02/10/2026');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
-  expect(textes(arbre)).toContain('Fermer le Gymnase des Tilleuls le vendredi 2 octobre ?');
+  expect(textes(arbre)).toContain('Fermer « Gymnase des Tilleuls » le vendredi 2 octobre ?');
   const confirmation = arbre.root.findAll((n) => n.props.testID === 'fermeture-confirmation')[0];
   expect(StyleSheet.flatten(confirmation.props.style).paddingTop).toBeGreaterThanOrEqual(12);
   const actions = confirmation.findAll((n) => typeof n.props.onPress === 'function' && n.props.title);

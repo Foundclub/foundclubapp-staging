@@ -25,6 +25,7 @@ import {
   isOwnClubRequest,
   oldestPendingRequest,
   premiersPas,
+  rattachementsAVoir,
   seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
@@ -68,6 +69,9 @@ import {
   useCollectiviteWeek,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCollectiviteClubRequests,
+} from '@/services/collectivite/collectiviteRattachementQueries';
 import {
   useCollectiviteFacilityChecksSummary,
 } from '@/services/facilityCheck/facilityCheckQueries';
@@ -167,6 +171,9 @@ function CollectiviteHome() {
   const signalements = useCollectiviteFacilityReportsSummary(collectivite ? collectiviteId : null);
   // R17-CONTROLES (20/10, Q6 B) — les controles a refaire dans les 30 jours, ou en retard.
   const controles = useCollectiviteFacilityChecksSummary(collectivite ? collectiviteId : null);
+  // CORR-COLLECTIVITES 89 (31/10, Adel A) : un club qui demande à rejoindre la Ville l'attend aussi
+  // (même clef que l'onglet Clubs : une seule lecture).
+  const demandesDeClubs = useCollectiviteClubRequests(collectivite ? collectiviteId : null);
   // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
   // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
   const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
@@ -594,6 +601,34 @@ function CollectiviteHome() {
     </TouchableOpacity>
   ) : null;
 
+  // CORR-COLLECTIVITES 89 — « 1 club demande à rejoindre la Ville » : un appui ouvre Clubs.
+  const rattachements = rattachementsAVoir(demandesDeClubs.data);
+  const blocDesRattachements = rattachements.length ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => ouvrir(RouteNames.CollectiviteClubs)}
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        verreStyle,
+        { gap: 4 },
+      ]}
+      testID="collectivite-home-rattachements"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('collectiviteAccueil.attente.rattachements', {
+          ...SANS_ECHAPPEMENT,
+          count: rattachements.length,
+          defaultValue_one: '{{count}} club demande à rejoindre la Ville',
+          defaultValue_other: '{{count}} clubs demandent à rejoindre la Ville',
+        })}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.primary500]}>
+        {t('collectiviteAccueil.attente.rattachementsRepondre', 'Répondre dans Clubs')}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+
   // R17-CONTROLES (20/10, REC17-011 lot 2, Q6 B ; planche P11-securite-ou-ca-vit porte 1) —
   // « Contrôle à refaire avant le 12 mars » : le plus urgent des controles a refaire dans les 30
   // jours (ou en retard), « n contrôles à refaire » s il y en a plusieurs ; un appui ouvre l onglet
@@ -690,10 +725,13 @@ function CollectiviteHome() {
     }
     // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
     // à traiter) : elle seule attend.
-    if (!enTete && (blocDesSignalements || blocDesControles || blocDesFermetures)) {
+    const blocsATraiter = blocDesRattachements || blocDesSignalements
+      || blocDesControles || blocDesFermetures;
+    if (!enTete && blocsATraiter) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
+          {blocDesRattachements}
           {blocDesSignalements}
           {blocDesControles}
           {blocDesFermetures}
@@ -767,6 +805,7 @@ function CollectiviteHome() {
             () => ouvrir(RouteNames.CollectiviteRequests),
           )}
         </View>
+        {blocDesRattachements}
         {blocDesSignalements}
         {blocDesControles}
         {blocDesFermetures}
@@ -912,10 +951,29 @@ function CollectiviteHome() {
   const seancesSelonChiffres = (/** @type {string | undefined} */ facilityId) => (
     seancesDeLInstallation(chiffresSemaine.data, facilityId)
   );
-  const libelleSeances = (/** @type {string | undefined} */ facilityId) => {
+  const libelleSeances = (/** @type {string | undefined} */ facilityId, creneaux = 0) => {
     if (chiffresSemaine.isLoading) return '…';
     const total = seancesSelonChiffres(facilityId);
     if (total === null) return '—';
+    // CORR-COLLECTIVITES 90 (31/10, Adel B) : des créneaux de saison prennent la place sans être
+    // des
+    // séances ; deux chiffres, « 2 créneaux · aucune séance posée » (plus « Aucune séance » à côté
+    // de « complet »).
+    if (creneaux > 0) {
+      const lesCreneaux = t('collectiviteAccueil.semaine.creneaux', {
+        count: creneaux,
+        defaultValue_one: '{{count}} créneau',
+        defaultValue_other: '{{count}} créneaux',
+      });
+      const posees = total === 0
+        ? t('collectiviteAccueil.semaine.aucuneSeancePosee', 'aucune séance posée')
+        : t('collectiviteAccueil.semaine.seancesPosees', {
+          count: total,
+          defaultValue_one: '{{count}} séance posée',
+          defaultValue_other: '{{count}} séances posées',
+        });
+      return `${lesCreneaux} · ${posees}`;
+    }
     if (total === 0) return t('collectiviteAccueil.semaine.aucuneSeance', 'Aucune séance');
     if (total === 1) return t('collectiviteAccueil.semaine.uneSeance', '1 séance');
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
@@ -945,19 +1003,20 @@ function CollectiviteHome() {
     seancesSelonChiffres(facilityId) || 0
   );
 
-  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
-    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId);
+  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId, creneaux = 0) => {
+    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId, creneaux);
     if (!sansTauxMesurable(facilityId)) {
       const occupation = phraseOccupation(
         t,
         tauxDeLaSemaine(facilityId),
         ligneDeLaSemaine(facilityId)?.sur24h === true,
+        Boolean(ligneDeLaSemaine(facilityId)?.plageOuverture),
       );
-      return `${libelleSeances(facilityId)} · ${occupation}`;
+      return `${libelleSeances(facilityId, creneaux)} · ${occupation}`;
     }
     const minutes = ligneDeLaSemaine(facilityId)?.minutes;
-    if (typeof minutes !== 'number') return libelleSeances(facilityId);
-    return `${libelleSeances(facilityId)} · ${t(
+    if (typeof minutes !== 'number') return libelleSeances(facilityId, creneaux);
+    return `${libelleSeances(facilityId, creneaux)} · ${t(
       'collectiviteAccueil.semaine.reservees',
       '{{duree}} réservées cette semaine',
       { duree: dureeLisible(minutes), ...SANS_ECHAPPEMENT },
@@ -984,6 +1043,11 @@ function CollectiviteHome() {
           {semaine.map(({ installation, query }) => {
             const blocs = Array.isArray(query?.data?.data) ? query.data.data : [];
             const complet = firstFullMoment(blocs, installation?.maxSlots);
+            // CORR-COLLECTIVITES 90 : les créneaux de saison de la semaine (blocs `origin:
+            // 'slot'`).
+            const creneaux = blocs.filter(
+              (/** @type {any} */ bloc) => (bloc?.origin ?? bloc?.raw?.origin) === 'slot',
+            ).length;
             let etat = null;
             if (complet) {
               etat = (
@@ -1041,7 +1105,7 @@ function CollectiviteHome() {
                   />
                 )}
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {libelleDeLaSemaine(installation?.documentId)}
+                  {libelleDeLaSemaine(installation?.documentId, creneaux)}
                 </Text>
               </TouchableOpacity>
             );
@@ -1156,7 +1220,11 @@ function CollectiviteHome() {
   // ── EN-TÊTE ────────────────────────────────────────────────────────────────────────────
   // Dans l'espace de la Ville sur téléphone, la pile cache son en-tête : l'écran pose le sien
   // (logo, cloche, Mon compte). Le compte mixte y lit « ‹ son club » à la place du logo.
-  const enTeteEspace = Platform.OS !== 'web' && routeParams?.space === true;
+  // CORR-COLLECTIVITES 87 (31/10, Adel A) : sur le site étroit, le menu latéral est caché ;
+  // l'accueil
+  // pose la cloche et « Mon compte », comme dans l'app. En colonnes, le menu latéral les porte.
+  const enTeteEspace = (Platform.OS !== 'web' && routeParams?.space === true)
+    || (Platform.OS === 'web' && !enColonnes);
   const retour = routeParams?.returnLabel;
   let enTeteEcran = null;
   if (retour) {

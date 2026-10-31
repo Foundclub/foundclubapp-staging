@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Linking, Text, TouchableOpacity, View,
@@ -17,7 +18,10 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { FenetrePleinEcran } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
-import { useFacilityChecks } from '@/services/facilityCheck/facilityCheckQueries';
+import {
+  useFacilityChecks,
+  useRemoveFacilityCheck,
+} from '@/services/facilityCheck/facilityCheckQueries';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -39,6 +43,9 @@ function FacilityCheckPanel({
   const { t } = useTranslation();
   const { Colors, Fonts, Images } = useTheme();
   const carnet = useFacilityChecks(facilityId);
+  // CORR-COLLECTIVITES 52-bis (31/10) : « Retirer ce contrôle » (un double appui en notait deux).
+  const retrait = useRemoveFacilityCheck();
+  const [confirmerRetrait, setConfirmerRetrait] = useState(false);
   const lignes = seriesRows(carnet.data?.data, series);
   const enCours = lignes.find((ligne) => ligne.current) || null;
   const titre = lignes[0]?.label || t('facilityReports.controles.titre', 'Contrôles obligatoires');
@@ -100,6 +107,39 @@ function FacilityCheckPanel({
             title={t('facilityReports.controles.faitBouton', 'Noter le contrôle fait')}
             variant="Primary"
           />
+        ) : null}
+        {enCours && !confirmerRetrait ? (
+          <Button
+            onPress={() => setConfirmerRetrait(true)}
+            title={t('facilityReports.controles.retirerControle', 'Retirer ce contrôle')}
+            variant="Ghost"
+          />
+        ) : null}
+        {enCours && confirmerRetrait ? (
+          <View accessibilityRole="alert" style={{ gap: 8 }} testID="controle-retirer-confirmation">
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'facilityReports.controles.retirerControleQuestion',
+                'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient '
+                  + 'celui en cours.',
+              )}
+            </Text>
+            <Button
+              disabled={retrait.isPending}
+              onPress={async () => {
+                await retrait.mutateAsync({ checkId: enCours.documentId });
+                setConfirmerRetrait(false);
+                if (lignes.length <= 1) onClose();
+              }}
+              title={t('facilityReports.controles.retirerControleOui', 'Oui, retirer')}
+              variant="Danger"
+            />
+            <Button
+              onPress={() => setConfirmerRetrait(false)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+          </View>
         ) : null}
         <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00, { marginTop: 8 }]}>
           {t('facilityReports.controles.historique', 'Historique')}

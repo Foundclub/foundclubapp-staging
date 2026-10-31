@@ -365,7 +365,7 @@ test('CRFERM-4/7 « Toute la journée » par défaut ; désactivé, une heure au
   });
   expect(textes(arbre.root)).toContain('Fermer le gymnase');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
-  expect(textes(arbre.root)).toContain('Fermer le Gymnase des Tilleuls du vendredi 16 octobre à 14:00 au lundi 19 octobre à 12:00 ?');
+  expect(textes(arbre.root)).toContain('Fermer « Gymnase des Tilleuls » du vendredi 16 octobre à 14:00 au lundi 19 octobre à 12:00 ?');
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
   expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
     endDate: '2026-10-19',

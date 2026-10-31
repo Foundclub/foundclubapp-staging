@@ -8,7 +8,6 @@ import {
   ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
 import {
   CLOSURE_MAX_NAME_LENGTH,
   CLOSURE_REASONS,
@@ -1035,14 +1034,16 @@ function FormulaireDeFermeture({
     boutonPrincipal = avecHeures ? fermerLeLieu : fermerCesJours;
   }
 
+  // CORR-COLLECTIVITES 94 (31/10, Adel A) : le nom entre guillemets (« Fermer le RWCOLL Salle… »
+  // disait faux) ; les guillemets ne laissent pas de place à l article.
   const questionDeConfirmation = bloquer
     ? t(
-      'collectiviteFermetures.confirmer.titreBloquer',
-      'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
+      'collectiviteFermetures.confirmer.titreBloquerNom',
+      'Bloquer « {{installation}} » {{jours}}, de {{debut}} à {{fin}} ?',
       {
         debut: heureDebut,
         fin: heureFin,
-        installation: lieuAvecArticle(nom, t) || nom,
+        installation: nom,
         jours: joursLongs
           ? t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
             jour: joursLongs,
@@ -1052,17 +1053,20 @@ function FormulaireDeFermeture({
         ...SANS_ECHAPPEMENT,
       },
     )
-    : t('collectiviteFermetures.confirmer.titreFermer', 'Fermer {{installation}} {{jours}} ?', {
-      // COLL-FIX2 (T10) : « Fermer le Gymnase des Tilleuls … », comme la maquette.
-      installation: lieuAvecArticle(nom, t) || nom,
-      jours: plusieursJours
-        ? joursLongs
-        : t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
-          jour: joursLongs,
-          ...SANS_ECHAPPEMENT,
-        }),
-      ...SANS_ECHAPPEMENT,
-    });
+    : t(
+      'collectiviteFermetures.confirmer.titreFermerNom',
+      'Fermer « {{installation}} » {{jours}} ?',
+      {
+        installation: nom,
+        jours: plusieursJours
+          ? joursLongs
+          : t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
+            jour: joursLongs,
+            ...SANS_ECHAPPEMENT,
+          }),
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   // COLL-FIX2 (T10) : « AS Montrivage seront prévenus. Leurs séances » pour UN club.
   const quiEstPrevenu = nomsDesClubs.length
     ? t(

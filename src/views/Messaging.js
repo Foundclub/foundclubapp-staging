@@ -15,7 +15,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
-  CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
+  auteurDeLApercu, CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
@@ -757,8 +757,12 @@ function Messaging({ navigation, route }) {
     // contenu riche, epingle et pastille de non-lus cyan. Un SEUL bouton par ligne (l'avatar
     // n'en est plus un second, imbrique).
     const extrait = lastMessage ? extraitDuMessageCite(lastMessage, t) : { icone: '', texte: '' };
+    // CORR-COLLECTIVITES 88 (31/10, Adel A) : signé par la Ville, l'aperçu dit le nom de la Ville.
     const auteurDuDernier = lastMessage && !isMyMessage && !estUnTeteATete(chat?.type)
-      ? prenomDansLeFil({ chat, moiId: userData?.documentId, personne: lastMessage?.sender })
+      ? auteurDeLApercu(
+        lastMessage,
+        prenomDansLeFil({ chat, moiId: userData?.documentId, personne: lastMessage?.sender }),
+      )
       : '';
     const sourdine = withAlpha(Colors.neutral00, 0.58);
     const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({

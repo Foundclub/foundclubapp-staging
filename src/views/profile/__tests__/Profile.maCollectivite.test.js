@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -27,6 +28,8 @@ let mockRequetes = [];
 // PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants (`useMesEnfantsEnBref`, qui lit
 // trois services) : doublure commune, « aucun enfant ».
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+/** @type {any[]} */
+let mockDemandesGestionnaire = [];
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
   useMyFacilityReports: () => ({ data: null }),
 }));
@@ -117,6 +120,8 @@ jest.mock('@/views/reserverTerrain/components/NombreAVenir', () => () => null);
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteRequests: () => ({ data: mockRequetes }),
   useMyCollectivites: () => ({ data: mockCollectivites, isLoading: false }),
+  // CORR-COLLECTIVITES 102 : la demande de gestionnaire en attente allège le profil.
+  useMyManagerRequests: () => ({ data: mockDemandesGestionnaire }),
 }));
 
 jest.mock(
@@ -280,5 +285,27 @@ describe('COLL-ACCUEIL — planche 4 : « Mon compte », la porte secondaire', (
     const { libelles } = await monterProfil(role, collectivites);
     expect(libelles).not.toContain('Ville de Recette');
     expect(libelles.some((libelle) => libelle.startsWith('Ma collectivité'))).toBe(false);
+  });
+});
+
+// CORR-COLLECTIVITES 102 (31/10/2026, décision d'Adel A) — pendant l'attente d'une demande de
+// gestionnaire, le profil montrait des entrées de sport et le rôle « Membre ». Il est allégé : «
+// Demande
+// de gestionnaire · Ville de … » sous le nom, aucune rangée sportive.
+describe('CORR-COLLECTIVITES 102 — le profil d’un demandeur, allégé', () => {
+  afterEach(() => { mockDemandesGestionnaire = []; });
+
+  it('demande en attente : « Demande de gestionnaire · Ville de Recette », aucune rangée sportive', async () => {
+    mockDemandesGestionnaire = [{ collectivite: VILLE, documentId: 'dm-1', status: 'pending' }];
+    const { libelles } = await monterProfil(ROLE_AUTHENTICATED, []);
+    expect(libelles).toContain('Demande de gestionnaire · Ville de Recette');
+    expect(libelles).not.toContain('Membre');
+    SPORTIVES.forEach((rangee) => expect(libelles).not.toContain(rangee));
+  });
+
+  it('une demande refusée ne change rien', async () => {
+    mockDemandesGestionnaire = [{ collectivite: VILLE, documentId: 'dm-1', status: 'refused' }];
+    const { libelles } = await monterProfil(ROLE_AUTHENTICATED, []);
+    expect(libelles).not.toContain('Demande de gestionnaire · Ville de Recette');
   });
 });

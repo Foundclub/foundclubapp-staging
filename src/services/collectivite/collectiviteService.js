@@ -51,6 +51,17 @@ export const getCollectiviteClub = async (collectiviteId, clubId) => {
 };
 
 /**
+ * CORR-COLLECTIVITES 101 (31/10/2026) — « Détacher ce club » : la Ville détache un club rattaché
+ * (le club est prévenu ; l'offre offerte s'arrête). Policy du gestionnaire côté serveur.
+ * @param {{ collectiviteId: string, clubId: string }} params - La Ville et le club.
+ * @returns {Promise<any>} `{ data: { changed, ... } }`.
+ */
+export const detachCollectiviteClub = async ({ clubId, collectiviteId }) => {
+  const response = await client.delete(`/collectivites/${collectiviteId}/clubs/${clubId}`);
+  return response.data;
+};
+
+/**
  * Couleur de ce club dans les plannings de cette Ville ; null revient a l'automatique.
  * @param {{
  * collectiviteId: string, clubId: string, planningColor: string | null
@@ -474,6 +485,17 @@ export const createManagerRequest = async (data) => {
  */
 export const getMyManagerRequests = async () => {
   const response = await client.get('/collectivite-manager-requests/mine');
+  return response.data;
+};
+
+/**
+ * CORR-COLLECTIVITES 102 (31/10/2026, decision d Adel A) — « Annuler ma demande » : SA demande de
+ * gestionnaire, en attente (le serveur refuse toute autre).
+ * @param {string} requestId - documentId de la demande.
+ * @returns {Promise<any>} `{ data: demande }` (statut « cancelled »).
+ */
+export const cancelManagerRequest = async (requestId) => {
+  const response = await client.post(`/collectivite-manager-requests/${requestId}/cancel`);
   return response.data;
 };
 

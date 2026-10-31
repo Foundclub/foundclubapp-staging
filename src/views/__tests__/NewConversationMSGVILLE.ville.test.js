@@ -297,7 +297,9 @@ describe('MSG-VILLE-NOUVELLE — « Nouvelle conversation » au nom de la Ville'
       .toHaveBeenCalledWith('ville-1', expect.objectContaining({ club: null, q: '' }));
     expect(mockClientGet).not.toHaveBeenCalled();
     const texte = texteDe(arbre.root);
-    expect(texte).toContain('GÉRANTS DE LA VILLE');
+    // CORR-COLLECTIVITES 100 (31/10, Adel A) : « gestionnaire », le mot de tout l'espace Ville.
+    expect(texte).toContain('GESTIONNAIRES DE LA VILLE');
+    expect(texte).not.toMatch(/gérant/i);
     expect(texte).toContain('Nadia Roux');
     expect(texte).toContain('Au nom de Ville de Démouville');
     expect(parId(arbre, 'nouvelle-discussion-filtre-club-a')).toBeTruthy();

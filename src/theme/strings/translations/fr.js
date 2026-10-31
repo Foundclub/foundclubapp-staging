@@ -5091,6 +5091,9 @@ export default {
       erreurTitre: 'Les demandes n’ont pas pu être lues.',
       placesLibres: '{{nombre}} places libres',
       placesPrises: '{{prises}} places prises sur {{total}}',
+      rattachements_one: '{{count}} club demande à rejoindre la Ville',
+      rattachements_other: '{{count}} clubs demandent à rejoindre la Ville',
+      rattachementsRepondre: 'Répondre dans Clubs',
       rien: 'Rien ne vous attend : aucune demande, aucune fermeture prévue.',
       titre: 'Ce qui vous attend',
       unePlaceLibre: '1 place libre',
@@ -5114,6 +5117,7 @@ export default {
       voir: 'Voir les clubs',
     },
     compte: {
+      demandeEnCours: 'Demande de gestionnaire · {{ville}}',
       gestionnaire: 'Gestionnaire · {{ville}}',
       rangeeA11y: '{{nom}}, ma collectivité',
       rangeeA11yDemande: '{{nom}}, ma collectivité, 1 demande en attente',
@@ -5199,8 +5203,18 @@ export default {
         titre: 'Votre espace est ouvert',
       },
       attente: {
+        annuler: 'Annuler ma demande',
+        annulerOui: 'Oui, annuler',
+        annulerQuestion: 'Annuler votre demande pour {{ville}} ?',
         clubs: 'Retrouver le contact général des clubs rattachés.',
+        // eslint-disable-next-line max-len
+        dejaGereeAutres: 'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira à l’équipe FoundClub.',
+        // eslint-disable-next-line max-len
+        dejaGereeSeul: 'Cette Ville a déjà un gestionnaire : {{premier}}. Votre demande ira à l’équipe FoundClub.',
+        // eslint-disable-next-line max-len
+        dejaGereeUnAutre: 'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à l’équipe FoundClub.',
         demandes: 'Trancher les demandes de créneau des clubs, avec un message.',
+        garder: 'Garder ma demande',
         le: 'Demande envoyée le {{date}}',
         permettra: 'Ce que votre espace permettra',
         planning: 'Voir qui occupe vos installations, jour par jour.',
@@ -5353,7 +5367,10 @@ export default {
     semaine: {
       aucuneInstallation: 'Aucune installation pour l’instant.',
       aucuneSeance: 'Aucune séance',
+      aucuneSeancePosee: 'aucune séance posée',
       complet: 'complet {{moment}}',
+      creneaux_one: '{{count}} créneau',
+      creneaux_other: '{{count}} créneaux',
       // FINITIONS-VILLE (T20) : le lien mène à la liste des installations.
       installations: 'Installations',
       libre: 'libre',
@@ -5361,6 +5378,8 @@ export default {
       // VILLE-T18B (b) : une installation sans horaires (pas de taux).
       reservees: '{{duree}} réservées cette semaine',
       seances: '{{nombre}} séances',
+      seancesPosees_one: '{{count}} séance posée',
+      seancesPosees_other: '{{count}} séances posées',
       titre: 'Cette semaine',
       uneSeance: '1 séance',
     },
@@ -5431,6 +5450,8 @@ export default {
       ecrire: 'Écrire aux dirigeants',
       envoyer: 'Envoyer',
       // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).
+      // eslint-disable-next-line max-len
+      personneNeLira: 'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
       premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
       premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
       premierMessageTitreElide: 'Premier message aux dirigeants d’{{club}}',
@@ -5541,6 +5562,7 @@ export default {
       lectureSeule: 'Lecture seule',
       presentation: 'Les actualités de {{ville}}, pour les clubs rattachés. Seule la Ville y écrit.',
       presentationToutes: 'Les actualités des Villes de tes clubs. Seules les Villes y écrivent.',
+      retiree: 'Cette actualité a été retirée par la Ville.',
       vide: 'Aucune actualité de la Ville pour l’instant.',
     },
     canaux: {
@@ -5675,6 +5697,12 @@ export default {
       badgeOwn: 'Son propre abonnement',
       coachNotListed: 'L’entraîneur n’est pas listé : la Ville s’adresse aux dirigeants.',
       contact: 'Coordonnées du club',
+      detacher: 'Détacher ce club',
+      detacherOui: 'Oui, détacher',
+      // eslint-disable-next-line max-len
+      detacherQuestion: 'Détacher {{club}} ? Il ne verra plus vos installations. Ses dirigeants sont prévenus.',
+      // eslint-disable-next-line max-len
+      detacherQuestionOffre: 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement offert par la Ville s’arrête. Ses dirigeants sont prévenus.',
       email: 'E-mail',
       error: 'La fiche du club n’a pas pu être lue.',
       header: 'Fiche du club',
@@ -6338,8 +6366,7 @@ export default {
       entrainements_other: '{{count}} cette saison',
       entrainementsPoses: 'Entraînements posés',
       modifier: 'Modifier le créneau',
-      modifierSerie: 'Modifier la série',
-      noteSerie: '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
+      noteCreneau: '« Modifier » et « Retirer le créneau » demandent « à partir du » : les dates '
         + 'passées restent. Le club est prévenu.',
       origine: 'Origine',
       pasCeJour: 'Ce créneau n’a pas lieu ce jour-là.',
@@ -6350,13 +6377,12 @@ export default {
       retablirPlusTard: 'Une erreur ? Vous pourrez rétablir le créneau depuis la liste.',
       retirer: 'Retirer le créneau',
       retirerCetteDate: 'Retirer cette date',
+      retirerCreneauTitre: 'Retirer le créneau à partir d’une date ?',
       retirerDatePerd: '{{qui}} n’aura pas de séance le {{date}} ; les autres dates restent. Le '
         + 'club est prévenu.',
       retirerDateTitre: 'Retirer une seule date ?',
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
-      retirerSerie: 'Retirer la série',
       retirerSeriePerd: '{{qui}} perd {{rythme}}, {{installation}}, à partir du {{date}}.',
-      retirerSerieTitre: 'Retirer la série à partir d’une date ?',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
       retirerUneDate: 'Retirer le {{date}} seulement',
       unSurDeux: 'Un {{jour}} sur deux, {{heures}}',
@@ -6377,6 +6403,10 @@ export default {
       type: 'Type',
     },
     liste: {
+      archiver: 'Archiver l’installation',
+      archiverOui: 'Oui, archiver',
+      // eslint-disable-next-line max-len
+      archiverQuestion: 'Archiver « {{nom}} » ? Elle disparaît des listes et du planning ; son historique est gardé.',
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',
@@ -6412,6 +6442,7 @@ export default {
       enAttenteTroisJours_other: '{{count}} demandes en attente sur ces trois jours.',
       // COLL-FIX2 (03/10) — un jour fermé (planche 25).
       fermeJour: 'fermeture ce jour-là',
+      libreHorsFermeture: 'libre en dehors de la fermeture',
       libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
       // COLL-R-APP-PLANNING (12/10, COL-014) — demande sans réponse, son heure est passée.
@@ -6865,6 +6896,7 @@ export default {
     fiche: {
       actualitePubliee: 'Actualité publiée : {{quand}}',
       affiche: 'Affiche de « {{nom}} »',
+      annulationPubliee: 'Annonce de l’annulation publiée : {{quand}}',
       annule: 'Annulé',
       annuler: 'Annuler l’événement',
       etiquette: 'Événement de la Ville',
@@ -7036,6 +7068,7 @@ export default {
       partager: 'Partager',
       publie: 'C’est publié',
       sousTitre: 'Faites-le savoir : partagez-le aux clubs et aux habitants.',
+      sousTitreClubs: 'Faites-le savoir : partagez-le aux clubs.',
       voirFiche: 'Voir la fiche',
     },
   },
@@ -7103,8 +7136,8 @@ export default {
       // COLL-FIX2 (03/10) — un seul club prévenu (planche 25).
       prevenu: '{{clubs}} sera prévenu. Ses séances restent à sa charge.',
       prevenus: '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
-      titreBloquer: 'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
-      titreFermer: 'Fermer {{installation}} {{jours}} ?',
+      titreBloquerNom: 'Bloquer « {{installation}} » {{jours}}, de {{debut}} à {{fin}} ?',
+      titreFermerNom: 'Fermer « {{installation}} » {{jours}} ?',
     },
     erreurs: {
       dejaRouverte: 'Cette fermeture est déjà rouverte.',
@@ -7384,11 +7417,15 @@ export default {
     demandes: {
       acceptees_one: '{{count}} acceptée',
       acceptees_other: '{{count}} acceptées',
+      annuleesParLeClub_one: '{{count}} annulée par le club',
+      annuleesParLeClub_other: '{{count}} annulées par le club',
       delai_one: 'Délai moyen de réponse : {{jours}} jour.',
       delai_other: 'Délai moyen de réponse : {{jours}} jours.',
       delaiInconnu: 'Délai moyen de réponse : —',
       enAttente_one: '{{count}} en attente',
       enAttente_other: '{{count}} en attente',
+      expireesSansReponse_one: '{{count}} expirée sans réponse',
+      expireesSansReponse_other: '{{count}} expirées sans réponse',
       recues_one: '{{count}} reçue',
       recues_other: '{{count}} reçues',
       refusees_one: '{{count}} refusée',
@@ -7413,12 +7450,14 @@ export default {
       // VILLE-T18B (e) : sans horaires (retirés), ce qui se mesure sans eux, jamais « — ».
       a11ySansTaux: '{{nom}} : {{heures}} réservées',
       // VILLE-TAUX-24H (12/10, Adel « Sur 24 h », « 2- B ») : le taux se calcule sur 24 h.
+      a11yPlage: '{{nom}} : {{heures}}, taux d’occupation {{taux}} de 8 h à 22 h',
       a11ySur24h: '{{nom}} : {{heures}}, taux d’occupation {{taux}} sur 24 h',
       aucune: 'Aucune installation pour l’instant.',
       reservees_one: '{{count}} séance · {{duree}} réservées sur la période.',
       reservees_other: '{{count}} séances · {{duree}} réservées sur la période.',
       taux: 'Taux d’occupation : {{taux}}.',
       taux24h: 'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
+      tauxPlage: 'Taux d’occupation : {{taux}}, calculé de 8 h à 22 h.',
       titre: 'Heures de séances, par installation',
     },
     // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
@@ -7426,6 +7465,7 @@ export default {
       a11y: 'Occupation : {{taux}}',
       occupation: 'occupation : {{taux}}',
       // VILLE-TAUX-24H (12/10) : sans horaires, le taux de la semaine se calcule sur 24 h.
+      occupationPlage: 'occupation : {{taux}} de 8 h à 22 h',
       occupationSur24h: 'occupation : {{taux}} sur 24 h',
     },
     lien: 'Chiffres et export',
@@ -12650,6 +12690,7 @@ export default {
       etat: {
         a_jour: 'À jour',
         en_retard: 'En retard',
+        non_conforme: 'Non conforme',
       },
       faitBouton: 'Noter le contrôle fait',
       faitLe: 'Fait le',
@@ -12680,6 +12721,10 @@ export default {
         conforme: 'conforme',
         non_conforme: 'non conforme',
       },
+      retirerControle: 'Retirer ce contrôle',
+      retirerControleOui: 'Oui, retirer',
+      // eslint-disable-next-line max-len
+      retirerControleQuestion: 'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient celui en cours.',
       retirerRapport: 'Retirer le rapport',
       titre: 'Contrôles obligatoires',
       videTexte:
@@ -12692,7 +12737,7 @@ export default {
     membre: {
       ajouterPhoto: 'Ajouter une photo (facultatif)',
       autreChose: 'Signaler autre chose',
-      ceQueVoitLaVille: 'La Ville verra ton rôle et ton club, pas ton nom.',
+      ceQueVoitLaVilleRole: 'La Ville voit ton rôle et ton club ; ton nom si tu encadres.',
       compteur_one: '{{count}} en cours',
       compteur_other: '{{count}} en cours',
       consignePhoto:
@@ -12778,7 +12823,7 @@ export default {
       etatASurveiller_other:
         '{{count}} signalements « sécurité » sont ouverts depuis le {{date}} ; l’installation '
         + 'reste ouverte.',
-      etatEnService: 'Aucun signalement ouvert, aucune fermeture en cours.',
+      etatEnServiceSecurite: 'Aucun signalement de sécurité, aucune fermeture en cours.',
       etatFermee: 'Du {{debut}} au {{fin}}',
       etatFermeeMotif: 'Du {{debut}} au {{fin}} · {{motif}}',
       etatNonConforme: 'Contrôle non conforme : {{label}} ; l’installation reste ouverte.',
@@ -16905,9 +16950,9 @@ export default {
       dirigeants: 'Dirigeants',
       entraineur: 'Coach',
       entraineurs: 'Coachs',
-      gerants: 'Gérants',
-      gestionnaire: 'Gérant de la Ville',
-      gestionnaires: 'Gérants de la Ville',
+      gestionnaireDeLaVille: 'Gestionnaire de la Ville',
+      gestionnairesDeLaVille: 'Gestionnaires de la Ville',
+      gestionnairesPuce: 'Gestionnaires',
       joueur: 'Joueur',
       joueurs: 'Joueurs',
       laVille: 'la Ville',

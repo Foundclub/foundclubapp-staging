@@ -37,6 +37,9 @@ import {
   useMyCollectivites,
   useMyManagerRequests,
 } from '@/services/collectivite/collectiviteQueries';
+import { cancelManagerRequest } from '@/services/collectivite/collectiviteService';
+
+import { getErrorMessage } from '@/utils/errors/displayError';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
@@ -69,6 +72,48 @@ function CollectiviteSignupStatus() {
   const enAttente = pendingManagerRequests(demandes.data);
   const refusRecent = recentRefusedManagerRequest(demandes.data);
   const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
+
+  // CORR-COLLECTIVITES 102 (31/10, Adel A) : « Annuler ma demande », après confirmation.
+  const [aAnnuler, setAAnnuler] = useState(/** @type {string | null} */ (null));
+  const [annulation, setAnnulation] = useState({ enCours: false, erreur: '' });
+  const annulerLaDemande = async (/** @type {string} */ requestId) => {
+    setAnnulation({ enCours: true, erreur: '' });
+    try {
+      await cancelManagerRequest(requestId);
+      setAAnnuler(null);
+      setAnnulation({ enCours: false, erreur: '' });
+      demandes.refetch?.();
+    } catch (refus) {
+      setAnnulation({ enCours: false, erreur: getErrorMessage(/** @type {any} */ (refus)) });
+    }
+  };
+
+  // CORR-COLLECTIVITES 102 : « Karim B. », « Karim B. et 1 autre », « Karim B. et 3 autres ».
+  const phraseDejaGeree = (/** @type {{ premier: string, autres: number }} */ connus) => {
+    const autres = Number(connus?.autres) || 0;
+    const valeurs = { ...SANS_ECHAPPEMENT, nombre: autres, premier: connus?.premier || '' };
+    if (autres === 0) {
+      return t(
+        'collectiviteAccueil.demande.attente.dejaGereeSeul',
+        'Cette Ville a déjà un gestionnaire : {{premier}}. Votre demande ira à l’équipe FoundClub.',
+        valeurs,
+      );
+    }
+    if (autres === 1) {
+      return t(
+        'collectiviteAccueil.demande.attente.dejaGereeUnAutre',
+        'Cette Ville a déjà un gestionnaire : {{premier}} et 1 autre. Votre demande ira à '
+          + 'l’équipe FoundClub.',
+        valeurs,
+      );
+    }
+    return t(
+      'collectiviteAccueil.demande.attente.dejaGereeAutres',
+      'Cette Ville a déjà un gestionnaire : {{premier}} et {{nombre}} autres. Votre demande ira '
+        + 'à l’équipe FoundClub.',
+      valeurs,
+    );
+  };
 
   const relireDemandes = demandes.refetch;
   const relireVilles = villes.refetch;
@@ -156,6 +201,53 @@ function CollectiviteSignupStatus() {
           )}
         </Text>
       )}
+      {/* CORR-COLLECTIVITES 102 (31/10, Adel A) : la Ville a déjà un gestionnaire ; la demande ira
+          à l'équipe FoundClub. Et « Annuler ma demande », tant qu'elle attend. */}
+      {demande?.status === 'pending' && demande?.gestionnairesConnus?.premier ? (
+        <Text style={[Fonts.p2, Fonts.neutral100]}>
+          {phraseDejaGeree(demande.gestionnairesConnus)}
+        </Text>
+      ) : null}
+      {demande?.status === 'pending' && aAnnuler === demande?.documentId ? (
+        <View
+          accessibilityRole="alert"
+          style={{ gap: 8 }}
+          testID="collectivite-demande-annuler-confirmation"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t(
+              'collectiviteAccueil.demande.attente.annulerQuestion',
+              'Annuler votre demande pour {{ville}} ?',
+              { ...SANS_ECHAPPEMENT, ville: demande?.collectivite?.name || '' },
+            )}
+          </Text>
+          {annulation.erreur ? (
+            <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+              {annulation.erreur}
+            </Text>
+          ) : null}
+          <Button
+            disabled={annulation.enCours}
+            onPress={() => annulerLaDemande(demande.documentId)}
+            title={t('collectiviteAccueil.demande.attente.annulerOui', 'Oui, annuler')}
+            variant="Danger"
+          />
+          <Button
+            onPress={() => setAAnnuler(null)}
+            title={t('collectiviteAccueil.demande.attente.garder', 'Garder ma demande')}
+            variant="Ghost"
+          />
+        </View>
+      ) : null}
+      {demande?.status === 'pending' && aAnnuler !== demande?.documentId ? (
+        <View style={{ alignSelf: 'flex-start' }}>
+          <Button
+            onPress={() => setAAnnuler(demande.documentId)}
+            title={t('collectiviteAccueil.demande.attente.annuler', 'Annuler ma demande')}
+            variant="Ghost"
+          />
+        </View>
+      ) : null}
     </View>
   );
 

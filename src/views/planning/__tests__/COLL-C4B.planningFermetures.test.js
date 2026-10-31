@@ -515,3 +515,29 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// CORR-COLLECTIVITES 106 (31/10/2026, décision d'Adel A) — « Fermée du vendredi au samedi » puis
+// « libre toute la semaine » : la semaine sans séance mais avec une fermeture dit « libre en dehors
+// de la fermeture ».
+describe('CORR-COLLECTIVITES 106 — une semaine libre, sauf la fermeture', () => {
+  it('Semaine, aucune séance, une fermeture dans la semaine : « libre en dehors de la fermeture »', async () => {
+    gereLaVille();
+    mockVueRetenue = 'week';
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue({
+      ...reponse([]),
+      meta: { ...reponse([]).meta, closures: [FERMETURE_DU_JOUR] },
+    });
+    const arbre = await rendre();
+    const ligne = textes(arbre).find((/** @type {string} */ texte) => / à la fois · /.test(texte));
+    expect(ligne).toBe('2 équipes à la fois · libre en dehors de la fermeture');
+  });
+
+  it('Semaine, aucune séance, aucune fermeture : « libre toute la semaine », inchangé', async () => {
+    gereLaVille();
+    mockVueRetenue = 'week';
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue(reponse([]));
+    const arbre = await rendre();
+    const ligne = textes(arbre).find((/** @type {string} */ texte) => / à la fois · /.test(texte));
+    expect(ligne).toBe('2 équipes à la fois · libre toute la semaine');
+  });
+});

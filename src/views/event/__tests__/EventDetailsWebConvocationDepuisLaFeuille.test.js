@@ -40,6 +40,7 @@ jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => nu
 // CORR-EVENEMENTS 119 et 130 : les feuilles « série » et « équipe » tirent la BottomModal native (gorhom).
 jest.mock('@/views/event/components/CancelSeriesSheet', () => () => null);
 jest.mock('@/views/event/components/TournamentTeamSheet', () => () => null);
+jest.mock('@/views/event/components/VillePrevenueDialog', () => () => null);
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,

@@ -53,6 +53,8 @@ const mockInputProps = [];
 // COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
 jest.setTimeout(30000);
 // Le gabarit des tunnels lit les marges de l'écran (encoche, barre du bas).
+/** CORR-COLLECTIVITES 101 — « Détacher ce club ». */
+const mockDetacher = jest.fn(async () => ({}));
 jest.mock('react-native-safe-area-context', () => ({
   ...jest.requireActual('react-native-safe-area-context'),
   useSafeAreaInsets: () => ({
@@ -113,6 +115,8 @@ jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: j
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({ data: [], isError: false, isLoading: false }),
+  // CORR-COLLECTIVITES 101 : « Détacher ce club ».
+  useDetachCollectiviteClub: () => ({ isPending: false, mutateAsync: mockDetacher }),
   useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
   // COLL-C5 (03/10) : « Utilisation » lit la saison (temoin COLL-C5.utilisation).
   useCollectiviteChiffres: () => ({ data: null, error: null, isLoading: false }),

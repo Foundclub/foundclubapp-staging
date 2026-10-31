@@ -69,7 +69,10 @@ function CollectiviteEvenement() {
       : await publier.mutateAsync(corps.data);
     const id = reponse?.data?.documentId || evenementId;
     if (!evenementId && id) setPublie(reponse.data);
-    else if (id) navigation.replace(RouteNames.EvenementDeLaVille, { evenementId: id });
+    // CORR-COLLECTIVITES 97 (31/10, Adel A) : la fiche garde l'espace Ville (menu du site).
+    else if (id) {
+      navigation.replace(RouteNames.EvenementDeLaVille, { espace: 'ville', evenementId: id });
+    }
     return reponse;
   };
 
@@ -79,6 +82,7 @@ function CollectiviteEvenement() {
         <VitrineEvenementVille
           evenement={publie}
           onVoirLaFiche={() => navigation.replace(RouteNames.EvenementDeLaVille, {
+            espace: 'ville',
             evenementId: publie.documentId,
           })}
         />

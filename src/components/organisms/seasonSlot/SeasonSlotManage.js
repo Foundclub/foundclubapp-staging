@@ -210,10 +210,11 @@ function SeasonSlotManage({
     return (
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {/* CORR-COLLECTIVITES 107 (31/10, Adel B) : « le créneau », jamais « la série ». */}
           {enSerie
             ? t(
-              'collectiviteCreneaux.gerer.retirerSerieTitre',
-              'Retirer la série à partir d’une date ?',
+              'collectiviteCreneaux.gerer.retirerCreneauTitre',
+              'Retirer le créneau à partir d’une date ?',
             )
             : t('collectiviteCreneaux.gerer.retirerTitre', 'Retirer le créneau du {{jour}} ?', {
               jour: jour.toLocaleLowerCase(),
@@ -356,11 +357,10 @@ function SeasonSlotManage({
       <View style={{ gap: 8 }}>
         {gere ? (
           <>
+            {/* CORR-COLLECTIVITES 107 (31/10, Adel B) : un seul mot, toujours juste. */}
             <Button
               onPress={() => onModify(slot)}
-              title={enSerie
-                ? t('collectiviteCreneaux.gerer.modifierSerie', 'Modifier la série')
-                : t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
+              title={t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
               variant="Secondary"
             />
             {prochaine ? (
@@ -376,16 +376,14 @@ function SeasonSlotManage({
             ) : null}
             <Button
               onPress={() => setEtape('retirer')}
-              title={enSerie
-                ? t('collectiviteCreneaux.gerer.retirerSerie', 'Retirer la série')
-                : t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
+              title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
               variant="Danger"
             />
             {enSerie ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {t(
-                  'collectiviteCreneaux.gerer.noteSerie',
-                  '« Modifier » et « Retirer la série » demandent « à partir du » : les dates '
+                  'collectiviteCreneaux.gerer.noteCreneau',
+                  '« Modifier » et « Retirer le créneau » demandent « à partir du » : les dates '
                     + 'passées restent. Le club est prévenu.',
                 )}
               </Text>

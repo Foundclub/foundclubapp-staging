@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { Linking, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -21,6 +22,8 @@ import CollectiviteClubDetails from '../CollectiviteClubDetails';
 let mockFiche;
 const mockNavigate = jest.fn();
 
+/** CORR-COLLECTIVITES 101 — « Détacher ce club ». */
+const mockDetacher = jest.fn(async () => ({}));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
   useRoute: () => ({ params: { clubId: 'as-montrivage', collectiviteId: 'ville-de-recette' } }),
@@ -73,6 +76,8 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
   }),
+  // CORR-COLLECTIVITES 101 : « Détacher ce club ».
+  useDetachCollectiviteClub: () => ({ isPending: false, mutateAsync: mockDetacher }),
   useSetClubPlanningColor: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
@@ -303,3 +308,29 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+// CORR-COLLECTIVITES 101 (31/10/2026, décision d'Adel A) — la Ville ne pouvait pas détacher un
+// club,
+// même sans dirigeant. « Détacher ce club », avec une confirmation qui dit ce qui s'arrête ; puis
+// la
+// liste des clubs.
+describe('CORR-COLLECTIVITES 101 — « Détacher ce club »', () => {
+  it('le bouton, la confirmation, puis le geste et le retour à la liste', async () => {
+    mockDetacher.mockClear();
+    const arbre = await monter();
+    await act(async () => { boutonTitre(arbre, 'Détacher ce club').props.onPress(); });
+    expect(textes(arbre).some((texte) => texte.startsWith('Détacher AS Montrivage ?'))).toBe(true);
+    expect(mockDetacher).not.toHaveBeenCalled();
+    await act(async () => { await boutonTitre(arbre, 'Oui, détacher').props.onPress(); });
+    expect(mockDetacher).toHaveBeenCalledWith({ clubId: 'as-montrivage', collectiviteId: 'ville-de-recette' });
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteClubs', { collectiviteId: 'ville-de-recette' });
+  });
+
+  it('« Annuler » : rien n’est détaché', async () => {
+    mockDetacher.mockClear();
+    const arbre = await monter();
+    await act(async () => { boutonTitre(arbre, 'Détacher ce club').props.onPress(); });
+    await act(async () => { boutonTitre(arbre, 'Annuler').props.onPress(); });
+    expect(mockDetacher).not.toHaveBeenCalled();
+  });
+});

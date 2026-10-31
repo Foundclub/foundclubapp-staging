@@ -40,7 +40,11 @@ jest.mock('@/theme/themeContext', () => {
     }),
   };
 });
-jest.mock('@/services/facilityCheck/facilityCheckQueries', () => ({ useFacilityChecks: () => mockCarnet }));
+jest.mock('@/services/facilityCheck/facilityCheckQueries', () => ({
+  useFacilityChecks: () => mockCarnet,
+  // CORR-COLLECTIVITES 52-bis : « Retirer ce contrôle ».
+  useRemoveFacilityCheck: () => ({ isPending: false, mutateAsync: jest.fn() }),
+}));
 jest.mock('@/utils/imageUrl', () => ({ getImageUrl: (/** @type {string} */ url) => `https://cdn.test${url}` }));
 jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => function SkeletonMock({ children }) { return children; });
 jest.mock('@/components/organisms/seasonSlot/SeasonSlotForm', () => ({

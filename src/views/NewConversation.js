@@ -314,7 +314,8 @@ function NewConversation({ navigation, route }) {
   const fonctionsAuPluriel = {
     dirigeant: t('newConversation.ville.dirigeants', 'Dirigeants'),
     entraineur: t('newConversation.ville.entraineurs', 'Coachs'),
-    gestionnaire: t('newConversation.ville.gestionnaires', 'Gérants de la Ville'),
+    // CORR-COLLECTIVITES 100 (31/10, Adel A) : « gestionnaire », comme partout côté Ville.
+    gestionnaire: t('newConversation.ville.gestionnairesDeLaVille', 'Gestionnaires de la Ville'),
     joueur: t('newConversation.ville.joueurs', 'Joueurs'),
     parent: t('newConversation.ville.parents', 'Parents'),
   };
@@ -322,7 +323,7 @@ function NewConversation({ navigation, route }) {
   const fonctionsAuSingulier = {
     dirigeant: t('newConversation.ville.dirigeant', 'Dirigeant'),
     entraineur: t('newConversation.ville.entraineur', 'Coach'),
-    gestionnaire: t('newConversation.ville.gestionnaire', 'Gérant de la Ville'),
+    gestionnaire: t('newConversation.ville.gestionnaireDeLaVille', 'Gestionnaire de la Ville'),
     joueur: t('newConversation.ville.joueur', 'Joueur'),
     parent: t('newConversation.ville.parent', 'Parent'),
   };
@@ -683,13 +684,13 @@ function NewConversation({ navigation, route }) {
     ? t('messaging.addGroupMembers', 'Ajouter des membres')
     : t('messaging.newConversation', 'Nouvelle discussion');
 
-  // 🏛️ MSG-VILLE-NOUVELLE — côté Ville, les puces sont ses clubs ; « Gérants » (aucun
+  // 🏛️ MSG-VILLE-NOUVELLE — côté Ville, les puces sont ses clubs ; « Gestionnaires » (aucun
   // club ouvert) montre ses autres gestionnaires. Une Ville peut avoir des dizaines de
   // clubs : la rangée défile, et la recherche couvre tous les clubs.
   /** @type {any[]} */
   const filtresAffiches = modeVille
     ? [
-      { documentId: null, name: t('newConversation.ville.gerants', 'Gérants') },
+      { documentId: null, name: t('newConversation.ville.gestionnairesPuce', 'Gestionnaires') },
       ...clubsDeLaVille.map((/** @type {any} */ club) => ({
         documentId: String(club?.documentId || ''),
         name: String(club?.name || ''),

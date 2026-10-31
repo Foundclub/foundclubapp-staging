@@ -1387,3 +1387,101 @@ describe('SECVUE — le bloc « Sécurité et suivi » de l accueil', () => {
   });
 });
 /* eslint-enable max-len */
+
+/* eslint-disable max-len -- donnees de test CORR-COLLECTIVITES : les fixtures se lisent mieux sur une ligne */
+// CORR-COLLECTIVITES 103 (31/10/2026, décision d'Adel A) — le taux se compte de 8 h à 22 h ; le
+// serveur pose `plageOuverture`. La ligne de l'accueil le dit, comme la page « Chiffres ».
+describe('CORR-COLLECTIVITES 103 — « Cette semaine » : le taux de 8 h à 22 h se dit', () => {
+  it('« 6 séances · occupation : 5 % de 8 h à 22 h »', async () => {
+    mockChiffresSemaine = {
+      data: {
+        installations: [{
+          capaciteMinutes: 11760, documentId: TILLEULS.documentId, minutes: 540, plageOuverture: '08:00-22:00', seances: 6, taux: 5,
+        }],
+      },
+      error: null,
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('6 séances · occupation : 5 % de 8 h à 22 h');
+  });
+});
+
+// CORR-COLLECTIVITES 87 (31/10/2026, décision d'Adel A) — sur le site à 390 px, le menu latéral est
+// caché : l'accueil de la Ville n'avait ni cloche ni « Mon compte ». La cloche et l'avatar
+// s'affichent
+// en haut de l'accueil, comme dans l'app ; à 1280 px, le menu latéral les porte (pas de doublon).
+describe('CORR-COLLECTIVITES 87 — la cloche et le compte sur le site étroit', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const os = Platform.OS;
+  afterEach(() => { Platform.OS = os; });
+  const presents = (/** @type {any} */ arbre) => ({
+    cloche: arbre.root.findAll((/** @type {any} */ n) => n.type?.name === 'NotificationBadgeMock').length > 0,
+    compte: arbre.root.findAll((/** @type {any} */ n) => n.type?.name === 'ProfileButtonMock').length > 0,
+  });
+
+  it('site, 390 px : la cloche et l’avatar', async () => {
+    Platform.OS = 'web';
+    mockLargeur = 390;
+    expect(presents(await monter())).toEqual({ cloche: true, compte: true });
+  });
+
+  it('site, 1280 px : ni l’un ni l’autre (le menu latéral les porte)', async () => {
+    Platform.OS = 'web';
+    mockLargeur = 1280;
+    expect(presents(await monter())).toEqual({ cloche: false, compte: false });
+  });
+});
+
+// CORR-COLLECTIVITES 89 (31/10/2026, décision d'Adel A) — « Rien ne vous attend » alors qu'un club
+// demande à rejoindre : la demande compte dans « Ce qui vous attend », et mène à Clubs.
+/** @type {any[]} */
+let mockDemandesDeClubs = [];
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useCollectiviteClubRequests: () => ({ data: mockDemandesDeClubs, isLoading: false }),
+}));
+describe('CORR-COLLECTIVITES 89 — un club demande à rejoindre la Ville', () => {
+  afterEach(() => { mockDemandesDeClubs = []; });
+
+  it('plus « Rien ne vous attend » : « 1 club demande à rejoindre la Ville », qui ouvre Clubs', async () => {
+    mockDemandesDeClubs = [{
+      canAnswer: true, club: { name: 'Judo Club E' }, documentId: 'r1', kind: 'attach_request', state: 'pending',
+    }];
+    const arbre = await monter();
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'collectivite-home-rien')).toHaveLength(0);
+    expect(textes(arbre)).toContain('1 club demande à rejoindre la Ville');
+    const bloc = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'collectivite-home-rattachements'
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { bloc.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteClubs', expect.objectContaining({ collectiviteId: 'ville-montrivage' }));
+  });
+});
+
+// CORR-COLLECTIVITES 90 (31/10/2026, décision d'Adel B) — la carte d'une installation disait
+// « Aucune séance » à côté de « complet mar. 18:00 » : les créneaux de saison prennent la place
+// sans
+// être des séances. Deux chiffres : « 2 créneaux · aucune séance posée ».
+describe('CORR-COLLECTIVITES 90 — créneaux et séances posées, deux chiffres', () => {
+  const creneau = {
+    date: '2030-10-03', endTime: '19:30', origin: 'slot', startTime: '18:00',
+  };
+  it('2 créneaux, 0 séance selon « Chiffres » : « 2 créneaux · aucune séance posée »', async () => {
+    mockSemaine = [{ installation: TILLEULS, query: lu({ data: [creneau, { ...creneau, date: '2030-10-04' }], meta: { total: 2 } }) }];
+    mockChiffresSemaine = {
+      data: { installations: [{ documentId: TILLEULS.documentId, seances: 0, taux: 0 }] }, error: null, isLoading: false,
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('2 créneaux · aucune séance posée');
+    expect(lus).not.toContain('Aucune séance');
+  });
+
+  it('1 créneau, 3 séances : « 1 créneau · 3 séances posées · occupation : 7 % »', async () => {
+    mockSemaine = [{ installation: TILLEULS, query: lu({ data: [creneau], meta: { total: 1 } }) }];
+    mockChiffresSemaine = {
+      data: { installations: [{ documentId: TILLEULS.documentId, seances: 3, taux: 7 }] }, error: null, isLoading: false,
+    };
+    expect(textes(await monter())).toContain('1 créneau · 3 séances posées · occupation : 7 %');
+  });
+});
+/* eslint-enable max-len */

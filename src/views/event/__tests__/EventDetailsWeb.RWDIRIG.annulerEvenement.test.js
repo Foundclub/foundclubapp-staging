@@ -21,6 +21,7 @@ const mockCreateEventReport = jest.fn(() => Promise.resolve({ data: { id: 1 } })
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+jest.mock('@/views/event/components/VillePrevenueDialog', () => () => null);
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,
