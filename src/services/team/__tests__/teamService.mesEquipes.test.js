@@ -194,3 +194,28 @@ describe('getTeams — le filtre de la requete (filet E6, lot U03)', () => {
     });
   });
 });
+
+// CORR-RECHERCHE point 20 (recette du site, 30/10, décision B) — le sport du joueur part
+// par son NOM : le profil ne garde que le nom (« Football »). Recette lue le 31/10 :
+// `GET /teams?filters[activities][name][$eqi]=football` → 200, 24 équipes sur 67.
+describe('getTeams — CORR-RECHERCHE point 20 : filtre par nom de sport', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('pose activities.name en $eqi quand activityName est fourni', async () => {
+    mockGet.mockResolvedValue(reponse([EQUIPE]));
+
+    await getTeams({ activityName: 'Football' });
+
+    expect(filtresEnvoyes().activities).toEqual({ name: { $eqi: 'Football' } });
+  });
+
+  it('le sport choisi dans les filtres (documentId) l emporte sur le nom', async () => {
+    mockGet.mockResolvedValue(reponse([EQUIPE]));
+
+    await getTeams({ activities: 'act-basket', activityName: 'Football' });
+
+    expect(filtresEnvoyes().activities).toEqual({ documentId: 'act-basket' });
+  });
+});

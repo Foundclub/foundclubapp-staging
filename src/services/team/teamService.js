@@ -114,6 +114,7 @@ const teamSchema = Joi.object({
  *   section?: string;
  *   category?: string[];
  *   activities?: string;
+ *   activityName?: string;
  *   summary?: boolean;
  *   teamIds?: string[];
  * }} [params]
@@ -123,6 +124,7 @@ const teamSchema = Joi.object({
 export const getTeams = async (params = {}) => {
   const {
     activities,
+    activityName,
     category,
     clubId,
     clubIds,
@@ -223,9 +225,11 @@ export const getTeams = async (params = {}) => {
 
     const buildRequestParams = (useLegacyClubId = false) => ({
       filters: {
-        activities: activities ? {
-          documentId: activities,
-        } : undefined,
+        // CORR-RECHERCHE point 20 — `activityName` : le sport du profil, qui n'en garde que le nom.
+        // Le sport choisi dans les filtres (`activities`, un documentId) passe avant lui.
+        activities: (activities && { documentId: activities })
+          || (activityName && { name: { $eqi: activityName } })
+          || undefined,
         category: category?.length ? {
           documentId: {
             $in: category,
