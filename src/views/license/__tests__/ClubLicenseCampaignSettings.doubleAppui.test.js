@@ -108,6 +108,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
   upsertLicensePricingRule: jest.fn(async () => true),
   useCurrentLicenseCampaign: () => mockRequeteVide,
   useLicenseCampaign: () => mockRequeteVide,
+  useLicenseCampaigns: () => mockRequeteVide,
   /**
    * Reproduit l ORDRE MESURE de `@tanstack/query-core` 5.85.9 :
    * `isPending` retombe a `false` AVANT que le `onSuccess` passe a `mutate(...)`

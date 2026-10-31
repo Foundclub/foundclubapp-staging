@@ -330,6 +330,29 @@ describe('HELLOASSO — la feuille des reglages HelloAsso du club', () => {
     expect(texteDeLEcran(arbre)).toContain('metadata: Deserialized JSON type is not compatible');
   });
 
+  // HELLOASSOASSIST (31/10) — sur le hub, aucune campagne n est ouverte (`campaign` vaut null) :
+  // la feuille disait « pas encore configurée » pour un compte actif, tant qu on n avait pas
+  // rappuye sur « Vérifier la connexion ».
+  it('compte du club actif : la feuille le lit sans « Vérifier la connexion »', () => {
+    const arbre = monterHub({
+      campagnes: {
+        data: {
+          data: [CAMPAGNE_OUVERTE],
+          meta: {
+            helloAssoAccounts: {
+              multisport: null,
+              section: { readiness: 'webhook_pending', scope: 'section', status: 'active' },
+            },
+          },
+        },
+        isError: false,
+        isLoading: false,
+      },
+    });
+    appuyerSur(arbre, 'Réglages du club — HelloAsso');
+    expect(texteDeLEcran(arbre)).toContain('Le premier paiement doit encore confirmer le webhook');
+  });
+
   it('propose l environnement en deux pastilles, plus en champ libre', () => {
     const arbre = monterHub();
     appuyerSur(arbre, 'Réglages du club — HelloAsso');

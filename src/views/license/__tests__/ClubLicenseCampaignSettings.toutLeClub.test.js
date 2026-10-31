@@ -108,6 +108,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
   upsertLicensePricingRule: jest.fn(async () => true),
   useCurrentLicenseCampaign: () => mockRequeteVide,
   useLicenseCampaign: () => mockRequeteVide,
+  useLicenseCampaigns: () => mockRequeteVide,
   /**
    * @returns {any} Une mutation inerte : ce temoin n enregistre rien.
    */

@@ -123,6 +123,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
   upsertLicensePricingRule: jest.fn(),
   useCurrentLicenseCampaign: () => mockRequeteCampagneCourante,
   useLicenseCampaign: () => mockCampagneEditee.requete,
+  useLicenseCampaigns: () => mockRequeteVide,
   /**
    * Range la fonction de sauvegarde sans la jouer : c'est le test qui decide
    * quand la declencher, pour observer QUEL service elle appelle.
