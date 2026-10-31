@@ -2700,6 +2700,11 @@ export default {
   },
   clubDetails: {
     a11y: {
+      addActivity: 'Ajouter une activité',
+      addCoach: 'Ajouter un entraîneur',
+      addFacility: 'Ajouter une installation',
+      addManager: 'Ajouter un dirigeant',
+      addSponsor: 'Ajouter un partenaire',
       callClub: 'Appeler le club au {{phoneNumber}}',
       deleteSponsor: 'Supprimer le sponsor {{sponsorName}}',
       emailClub: 'Envoyer un e-mail à {{email}}',
@@ -13881,6 +13886,10 @@ export default {
       },
     },
   },
+  inputStepper: {
+    decrement: 'Un de moins',
+    increment: 'Un de plus',
+  },
   invitationLink: {
     clipboard: {
       body: "Si tu viens d'installer FoundClub depuis une invitation, "
@@ -19603,6 +19612,9 @@ export default {
     rejectEventTitle: 'Refuser la demande ?',
     rejectFeaturedMessage: 'Le demandeur sera notifié du refus.',
     rejectFeaturedTitle: 'Refuser la demande ?',
+    rejectMembershipConfirm: 'Refuser',
+    rejectMembershipMessage: 'Le refus est définitif. Le demandeur sera prévenu.',
+    rejectMembershipTitle: 'Refuser la demande de {{name}} ?',
     title: 'Demandes',
     types: {
       // PAR-L2L3 · L3 — la pastille d'une place demandée pour un enfant.
@@ -23666,6 +23678,10 @@ export default {
     title: 'Disponibilités (créneaux)',
   },
   teamDetails: {
+    a11y: {
+      addTrainer: 'Ajouter un entraîneur',
+      invitePlayers: 'Inviter des joueurs',
+    },
     actions: {
       contactTeam: 'Contacter',
       contactTrainer: "Contacter l'entraîneur·e",

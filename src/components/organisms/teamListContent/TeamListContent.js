@@ -403,7 +403,18 @@ function TeamListContent({
         // a rien a ajouter cote API.
         requestType: r.type === 'claim' ? 'claim' : 'join',
         type: 'club',
-      }));
+      }))
+      // CORR-ROBUSTESSE point 57 — deux demandes de même nature pour le même club : une
+      // seule carte (sinon deux cartes identiques, à la même clef).
+      .filter((
+        /** @type {any} */ carte,
+        /** @type {number} */ index,
+        /** @type {any[]} */ cartes,
+      ) => (
+        cartes.findIndex((/** @type {any} */ autre) => (
+          autre.documentId === carte.documentId && autre.requestType === carte.requestType
+        )) === index
+      ));
 
     scopedClassicTeams.forEach((/** @type {Team} */ team) => {
       const isTeamMine = isVisibleTeam(team);

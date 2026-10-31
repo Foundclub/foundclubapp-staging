@@ -545,6 +545,10 @@ function TournamentSettingsEdit({ navigation, route }) {
                       </Text>
                     </View>
                     <Switch
+                      accessibilityLabel={t(
+                        'tournamentSettingsEdit.thirdPlaceMatch',
+                        'Match pour la 3e place',
+                      )}
                       onValueChange={setThirdPlaceMatch}
                       thumbColor={Colors.neutral00}
                       trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
@@ -659,6 +663,10 @@ function TournamentSettingsEdit({ navigation, route }) {
                   </Text>
                 </View>
                 <Switch
+                  accessibilityLabel={t(
+                    'tournamentSettingsEdit.allowTemporaryTeams',
+                    'Autoriser les équipes éphémères',
+                  )}
                   onValueChange={setAllowCustomTeams}
                   thumbColor={Colors.neutral00}
                   trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
@@ -677,6 +685,10 @@ function TournamentSettingsEdit({ navigation, route }) {
                   </Text>
                 </View>
                 <Switch
+                  accessibilityLabel={t(
+                    'tournamentSettingsEdit.allowPlayersFromOtherClubs',
+                    'Autoriser les joueurs d autres clubs',
+                  )}
                   onValueChange={setAllowCrossClubPlayers}
                   thumbColor={Colors.neutral00}
                   trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}

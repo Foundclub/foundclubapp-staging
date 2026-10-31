@@ -165,3 +165,17 @@ test('BH01/P5-18 — la presence enregistree le dit, meme si « marquer lu » ec
   expect(alerte).toHaveBeenCalledWith('Notifications', 'Présence enregistrée.');
   alerte.mockRestore();
 });
+
+// CORR-ROBUSTESSE point 55 (recette du site, 30/10, « A ») — la ligne d'une notification se
+// touche, mais n'était annoncée ni comme bouton, ni par son contenu.
+test('point 55 — une ligne de notification est un bouton nommé (titre, texte)', () => {
+  const tree = monter();
+  const ligne = tree.root.findAllByType(TouchableOpacity)
+    .find((node) => node.props.accessibilityLabel
+      === 'Reponse attendue. Tu n as pas encore repondu a Entrainement U15.');
+
+  expect(ligne).toBeTruthy();
+  expect(ligne.props.accessibilityRole).toBe('button');
+  expect(boutonNomme(tree, 'Je participe').props.accessibilityRole).toBe('button');
+  expect(boutonNomme(tree, 'Je suis absent').props.accessibilityRole).toBe('button');
+});

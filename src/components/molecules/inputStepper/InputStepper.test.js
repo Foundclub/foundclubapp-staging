@@ -103,3 +103,27 @@ describe('D58 — le registre visuel du compteur', () => {
     expect(teinteDuChiffre).toBe(Colors.neutral00);
   });
 });
+
+// CORR-ROBUSTESSE point 55 (recette du site, 30/10) — sans nom fourni par l'écran, les boutons
+// « − / + » étaient annoncés « Précédent / Suivant » (les clefs de navigation des assistants).
+test('point 55 — sans nom fourni, « − / + » ne s annoncent plus précédent / suivant', () => {
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(createElement(InputStepper, {
+      label: 'Nombre de profils',
+      onDecrement: () => {},
+      onIncrement: () => {},
+      value: 2,
+    }));
+  });
+  const noms = arbre.root.findAll((/** @type {any} */ n) => n.props.accessibilityRole === 'button'
+    && typeof n.props.accessibilityLabel === 'string')
+    .map((/** @type {any} */ n) => n.props.accessibilityLabel);
+  act(() => arbre.unmount());
+
+  expect([...new Set(noms)]).toEqual([
+    'inputStepper.decrement : Nombre de profils',
+    'inputStepper.increment : Nombre de profils',
+  ]);
+});

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   Image, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -5,6 +6,10 @@ import {
 import useTheme from '@/theme/themeContext';
 // Components
 import Loader from '@/components/atoms/loader/Loader';
+
+// CORR-ROBUSTESSE point 52 — durée pendant laquelle un 2e appui est ignoré quand `onPress`
+// ne renvoie pas de promesse (un double clic du système dure au plus 500 ms).
+const DELAI_DOUBLE_APPUI_MS = 500;
 
 /**
  * Button component.
@@ -94,6 +99,45 @@ function Button({
   /** @type {import('react-native').TextStyle | null} */
   const iosLabelStyle = Platform.OS === 'ios' ? { lineHeight: undefined } : null;
   const isDisabled = isLoading || disabled;
+  // CORR-ROBUSTESSE point 52 (recette du site, 30/10) — deux appuis dans la même milliseconde
+  // créaient deux fiches, deux annulations, deux contrôles : `isLoading` (souvent `isPending`
+  // de react-query) n'arrive qu'au rendu suivant. Verrou synchrone : rouvert à la réponse
+  // quand `onPress` renvoie une promesse, sinon après DELAI_DOUBLE_APPUI_MS, ou dès que le
+  // bouton reçoit une autre action (un autre `onPress` ou un autre libellé : l'étape suivante
+  // d'un assistant, « Continuer » devenu « Envoyer »), qui n'est pas un double appui.
+  // ponytail: sur un bouton sans `isLoading`, un 2e appui repart si l'écran s'est redessiné
+  // entre-temps avec un nouveau `onPress` (fonction écrite dans le rendu), ou après 500 ms
+  // d'un `mutate()` sans promesse ; sortie : passer `isLoading`, ou renvoyer la promesse.
+  /** @type {import('react').MutableRefObject<{ onPress: any, title: any } | null>} */
+  const appuiEnCours = useRef(null);
+
+  /**
+   * Transmet l'appui une seule fois tant que le précédent n'est pas fini.
+   * @param {any} event
+   */
+  const handlePress = (event) => {
+    if (!onPress) return;
+    const verrou = appuiEnCours.current;
+    if (verrou && verrou.onPress === onPress && verrou.title === title) return;
+    const appui = { onPress, title };
+    appuiEnCours.current = appui;
+    const rouvrir = () => {
+      if (appuiEnCours.current === appui) appuiEnCours.current = null;
+    };
+    let resultat;
+    try {
+      resultat = /** @type {any} */ (onPress(event));
+    } catch (erreur) {
+      rouvrir();
+      throw erreur;
+    }
+    if (resultat && typeof resultat.then === 'function') {
+      // `finally` laisse un refus remonter comme avant (il n'est pas avalé ici).
+      resultat.finally(rouvrir);
+    } else {
+      setTimeout(rouvrir, DELAI_DOUBLE_APPUI_MS);
+    }
+  };
 
   /**
    * @param {any} event
@@ -108,7 +152,7 @@ function Button({
     }
 
     event?.preventDefault?.();
-    onPress(event);
+    handlePress(event);
   };
 
   return (
@@ -120,7 +164,7 @@ function Button({
       focusable={!isDisabled}
       hitSlop={hitSlop}
       onKeyDown={handleKeyDown}
-      onPress={onPress}
+      onPress={onPress ? handlePress : undefined}
       style={[
         ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
         sizeStyle,

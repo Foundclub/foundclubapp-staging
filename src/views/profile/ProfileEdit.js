@@ -722,6 +722,10 @@ function ProfileEdit({ navigation, route }) {
                         {t('profile.fields.isLookingForClub.label', 'Profil visible')}
                       </Text>
                       <Switch
+                        accessibilityLabel={t(
+                          'profile.fields.isLookingForClub.label',
+                          'Profil visible',
+                        )}
                         onValueChange={onChange}
                         trackColor={{ false: '#767577', true: '#81b0ff' }} // TODO: Use theme colors
                         value={value}

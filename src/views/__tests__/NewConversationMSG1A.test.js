@@ -373,3 +373,17 @@ describe('Q4-17 — le rôle réel du serveur s écrit « Entraineur » (sans ac
     }
   });
 });
+
+// CORR-ROBUSTESSE point 55 (recette du site, 30/10, « A ») — chaque personne se coche, mais la
+// ligne n'était annoncée ni comme case à cocher, ni par son nom.
+describe('point 55 — accessibilité des lignes de personnes', () => {
+  test('chaque ligne est une case à cocher nommée par la personne', async () => {
+    const arbre = await monter();
+    const ligne = arbre.root.findAll((/** @type {any} */ n) => typeof n.props.testID === 'string'
+      && n.props.testID.startsWith('nouvelle-discussion-personne-')
+      && n.props.accessibilityState !== undefined)[0];
+
+    expect(ligne.props.accessibilityRole).toBe('checkbox');
+    expect(String(ligne.props.accessibilityLabel)).toMatch(/^\S+ \S+/);
+  });
+});

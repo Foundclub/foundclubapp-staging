@@ -944,6 +944,10 @@ function TeamEdit({ navigation, route }) {
                           </Text>
                         </View>
                         <Switch
+                          accessibilityLabel={t(
+                            'teamEdit.membershipRequests.allowCoachToggle',
+                            "Autoriser l'entraîneur à traiter les demandes",
+                          )}
                           onValueChange={onChange}
                           thumbColor={value ? Colors.primary500 : Colors.neutral300}
                           trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}

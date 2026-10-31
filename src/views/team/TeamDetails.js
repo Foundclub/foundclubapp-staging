@@ -3249,6 +3249,10 @@ function TeamDetails({ navigation, route }) {
                     </Text>
                     {canAddTrainer ? (
                       <Button
+                        accessibilityLabel={t(
+                          'teamDetails.a11y.addTrainer',
+                          'Ajouter un entraîneur',
+                        )}
                         icon="plus"
                         isOption
                         onPress={handleAddTrainer}
@@ -3342,6 +3346,10 @@ function TeamDetails({ navigation, route }) {
                         d « inviter » — c est exactement ce que ce lot repare. */}
                     {canManageViewedTeam && (
                     <Button
+                      accessibilityLabel={t(
+                        'teamDetails.a11y.invitePlayers',
+                        'Inviter des joueurs',
+                      )}
                       icon="plus"
                       isOption
                       onPress={handleOpenInviteSheet}

@@ -293,6 +293,8 @@ function NotificationList() {
 
   const renderRightActions = useCallback((/** @type {NotificationItem} */ notification) => (
     <TouchableOpacity
+      accessibilityLabel={i18next.t('notificationList.delete.title', 'Supprimer')}
+      accessibilityRole="button"
       onPress={() => handleDelete(notification)}
       style={{
         alignItems: 'center',
@@ -309,6 +311,7 @@ function NotificationList() {
 
   const renderLeftActions = useCallback((/** @type {NotificationItem} */ notification) => (
     <TouchableOpacity
+      accessibilityRole="button"
       onPress={async () => {
         try {
           await markAsRead(String(notification.documentId || notification.id || ''));
@@ -396,6 +399,10 @@ function NotificationList() {
             ]}
           >
             <TouchableOpacity
+              // CORR-ROBUSTESSE point 55 — un bouton, nommé par le titre et le texte.
+              accessibilityLabel={[notification.title, notification.body]
+                .filter(Boolean).join('. ')}
+              accessibilityRole="button"
               activeOpacity={0.7}
               onPress={() => handlePressNotification(notification)}
               style={{
@@ -493,6 +500,7 @@ function NotificationList() {
                 }}
               >
                 <TouchableOpacity
+                  accessibilityRole="button"
                   activeOpacity={0.85}
                   onPress={() => sendRsvpFromNotification(notification, 'present')}
                   style={{
@@ -505,6 +513,7 @@ function NotificationList() {
                   <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Je participe</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                  accessibilityRole="button"
                   activeOpacity={0.85}
                   onPress={() => sendRsvpFromNotification(notification, 'absent')}
                   style={{
@@ -614,6 +623,7 @@ function NotificationList() {
         <View style={[Alignments.alignEnd, { minWidth: 72 }]}>
           {unreadCount > 0 ? (
             <TouchableOpacity
+              accessibilityRole="button"
               onPress={async () => {
                 try {
                   await markAllAsRead();

@@ -168,20 +168,15 @@ function FriendlyMatchSlotEditor({
             )}
           </Text>
 
+          {/* CORR-ROBUSTESSE point 57 — la ligne et la croix sont deux boutons FRÈRES : sur le
+              site, un <button> dans un <button> est invalide et peut faire partir le mauvais
+              geste. */}
           {safeSlots.map((/** @type {any} */ slot) => (
-            <TouchableOpacity
-              accessibilityHint={t(
-                'friendlyMatchSlotEditor.putsThisDateBackIn',
-                'Remet cette date dans le formulaire pour changer son horaire',
-              )}
-              accessibilityLabel={`${toReadableDay(slot.date)}, ${getSlotHoursLabel(slot)}`}
-              accessibilityRole="button"
+            <View
               key={slot.date}
-              onPress={() => handleEdit(slot)}
               style={[
                 Alignments.row,
                 Alignments.alignCenter,
-                Alignments.justifySpaceBetween,
                 Spaces.padding[12],
                 {
                   backgroundColor: withAlpha(Colors.primary900, 0.94),
@@ -192,21 +187,37 @@ function FriendlyMatchSlotEditor({
                 },
               ]}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
-                  {toReadableDay(slot.date)}
-                </Text>
-                <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-                  {getSlotHoursLabel(slot)}
-                </Text>
-              </View>
+              <TouchableOpacity
+                accessibilityHint={t(
+                  'friendlyMatchSlotEditor.putsThisDateBackIn',
+                  'Remet cette date dans le formulaire pour changer son horaire',
+                )}
+                accessibilityLabel={`${toReadableDay(slot.date)}, ${getSlotHoursLabel(slot)}`}
+                accessibilityRole="button"
+                onPress={() => handleEdit(slot)}
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Alignments.justifySpaceBetween,
+                  { flex: 1 },
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral100 }]}>
+                    {toReadableDay(slot.date)}
+                  </Text>
+                  <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
+                    {getSlotHoursLabel(slot)}
+                  </Text>
+                </View>
 
-              {/* Le mot « Modifier » et pas seulement un chevron : c est le meme
-                  vocabulaire que les rangees du recapitulatif, et il dit ce que
-                  l appui va faire. */}
-              <Text style={[Fonts.p4, Spaces.marginRight[8], { color: Colors.primary500 }]}>
-                Modifier
-              </Text>
+                {/* Le mot « Modifier » et pas seulement un chevron : c est le meme
+                    vocabulaire que les rangees du recapitulatif, et il dit ce que
+                    l appui va faire. */}
+                <Text style={[Fonts.p4, Spaces.marginRight[8], { color: Colors.primary500 }]}>
+                  Modifier
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 accessibilityLabel={t(
@@ -222,7 +233,7 @@ function FriendlyMatchSlotEditor({
               >
                 <SvgIcon color={Colors.neutral300} height={16} name="close" width={16} />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
       )}

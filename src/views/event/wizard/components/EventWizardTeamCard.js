@@ -129,6 +129,10 @@ function EventWizardTeamCard({
   return (
     <View style={{ position: 'relative' }}>
       <TouchableOpacity
+        // CORR-ROBUSTESSE point 55 — un bouton nommé, qui dit s'il est choisi.
+        accessibilityLabel={[team?.name, team?.club?.name].filter(Boolean).join(', ') || undefined}
+        accessibilityRole="button"
+        accessibilityState={{ disabled, selected: isSelected }}
         activeOpacity={0.92}
         disabled={disabled}
         onPress={onPress}

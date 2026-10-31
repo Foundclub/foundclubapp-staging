@@ -245,6 +245,10 @@ function EventWizardTournamentSettings({ navigation, route }) {
               </Text>
             </View>
             <Switch
+              accessibilityLabel={t(
+                'eventWizardTournamentSettings.allowTemporaryTeams',
+                'Autoriser les équipes éphémères',
+              )}
               onValueChange={setAllowCustomTeams}
               thumbColor={Colors.neutral00}
               trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
@@ -263,6 +267,10 @@ function EventWizardTournamentSettings({ navigation, route }) {
               </Text>
             </View>
             <Switch
+              accessibilityLabel={t(
+                'eventWizardTournamentSettings.allowPlayersFromOtherClubs',
+                'Autoriser les joueurs d autres clubs',
+              )}
               onValueChange={setAllowCrossClubPlayers}
               thumbColor={Colors.neutral00}
               trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
