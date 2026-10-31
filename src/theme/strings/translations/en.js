@@ -11943,6 +11943,9 @@ export default {
         conforme: 'compliant',
         non_conforme: 'non-compliant',
       },
+      retirerControle: 'Remove this check',
+      retirerControleOui: 'Yes, remove',
+      retirerControleQuestion: 'Remove this check? It leaves the log; the previous check becomes the current one again.',
       retirerRapport: 'Remove the report',
       titre: 'Mandatory inspections',
       videTexte:

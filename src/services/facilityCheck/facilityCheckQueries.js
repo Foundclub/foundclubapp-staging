@@ -5,6 +5,7 @@ import {
   getCollectiviteFacilityChecksSummary,
   listFacilityChecks,
   markFacilityCheckDone,
+  removeFacilityCheck,
 } from './facilityCheckService';
 
 /**
@@ -65,4 +66,12 @@ export const useCreateFacilityCheck = () => useGesteDuCarnet(
  */
 export const useMarkFacilityCheckDone = () => useGesteDuCarnet(
   ({ checkId, ...champs }) => markFacilityCheckDone(checkId, champs),
+);
+
+/**
+ * CORR-COLLECTIVITES 52-bis — « Retirer ce contrôle ».
+ * @returns {any} La mutation ; variables `{ checkId }`.
+ */
+export const useRemoveFacilityCheck = () => useGesteDuCarnet(
+  ({ checkId }) => removeFacilityCheck(checkId),
 );

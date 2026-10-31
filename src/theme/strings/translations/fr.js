@@ -12679,6 +12679,9 @@ export default {
         conforme: 'conforme',
         non_conforme: 'non conforme',
       },
+      retirerControle: 'Retirer ce contrôle',
+      retirerControleOui: 'Oui, retirer',
+      retirerControleQuestion: 'Retirer ce contrôle ? Il disparaît du carnet ; le contrôle d’avant redevient celui en cours.',
       retirerRapport: 'Retirer le rapport',
       titre: 'Contrôles obligatoires',
       videTexte:

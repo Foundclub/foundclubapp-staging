@@ -84,3 +84,13 @@ export const getCollectiviteFacilityChecksSummary = async (collectiviteId) => {
   const http = await client();
   return (await http.get(`/collectivites/${collectiviteId}/facility-checks/summary`)).data;
 };
+
+/**
+ * CORR-COLLECTIVITES 52-bis (31/10/2026) — « Retirer ce contrôle » : une ligne notée par erreur.
+ * @param {string} checkId - documentId de la ligne.
+ * @returns {Promise<any>} `{ data: { documentId } }`.
+ */
+export const removeFacilityCheck = async (checkId) => {
+  const http = await client();
+  return (await http.delete(`/facility-checks/${checkId}`)).data;
+};
