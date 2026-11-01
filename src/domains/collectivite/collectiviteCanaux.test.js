@@ -169,9 +169,10 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
         name: 'CollectiviteActualitesCanal',
         params: { actualiteId: 'actu-1', collectiviteId: 'ville-1' },
       });
+      // REPRISE-COLLECTIVITES 99 (01/11) : la Ville garde l'actualité visée (bandeau si retirée).
       expect(routeDeLaLigne({ espaceVille: true, message: ligne })).toEqual({
         name: 'CollectiviteActualites',
-        params: { collectiviteId: 'ville-1' },
+        params: { actualiteId: 'actu-1', collectiviteId: 'ville-1' },
       });
       expect(texteDeLaLigne(t, ligne)).toBe('Nouvelle actualité de la Ville : « Dojo fermé »');
       const arrivee = { message: 'X a rejoint le canal', sender: null };
