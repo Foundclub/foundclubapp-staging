@@ -989,7 +989,10 @@ export const getOnboardingViews = ({
     && !tunnelsOuvertsCetteSession.has(documentId)
     && pendingRoutes.length > 0
     && pendingRoutes.every((route) => ENTRY_CHECKPOINT_ROUTES.includes(route)
-      || SKIPPABLE_ONBOARDING_ROUTES.includes(route))
+      || (SKIPPABLE_ONBOARDING_ROUTES.includes(route)
+        // REPRISE-INSCRIPTION D-COACH-9 (01/11) : pour un entraîneur sans club, « Trouve ton
+        // club » ne se saute pas à la réouverture (la contre-recette finissait sur l'accueil).
+        && !(roleKey === 'coach' && route === RouteNames.UserAffiliationGuide)))
   ) {
     const pointDeControle = getEntryCheckpointViews({
       birthdate, parentalDeclarationAccepted, role,
