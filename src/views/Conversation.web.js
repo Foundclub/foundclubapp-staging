@@ -1265,9 +1265,11 @@ function ColonneDesConversations({
                 >
                   {getInitials(titre)}
                 </span>
+                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en `auto`,
+                    elle grandissait avec un texte long et poussait l'heure et la pastille dehors. */}
                 <span
                   style={{
-                    display: 'grid', flex: 1, gap: 4, minWidth: 0,
+                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
                   }}
                 >
                   <span
@@ -1282,6 +1284,7 @@ function ColonneDesConversations({
                       style={{
                         fontFamily: 'Montserrat-Bold, sans-serif',
                         fontSize: 16,
+                        minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',

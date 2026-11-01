@@ -849,3 +849,26 @@ describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
     );
   });
 });
+
+// REPRISE-MESSAGERIE (01/11) — D-COACH-4 et p114 : à 1 440 px, la date et la pastille d'une ligne
+// étaient coupées au bord droit de la colonne (« 30/1 ») ; l'étiquette de casquette poussait plus
+// loin encore. La colonne de texte d'une ligne ne doit jamais grandir avec un texte long.
+describe('REPRISE-MESSAGERIE — une ligne de la colonne tient dans sa largeur', () => {
+  test('le bloc de texte est une colonne qui se rétrécit, le titre se coupe avant l heure', async () => {
+    mockListeIPH09 = [{
+      documentId: 'fil-long',
+      groupName: 'Un nom de groupe vraiment très long pour la colonne des messages',
+      messages: [{ createdAt: '2026-10-30T10:00:00Z', message: 'Très long message '.repeat(12), sender: BRUNO }],
+      participants: [MOI, BRUNO],
+      type: 'group',
+      updatedAt: '2026-10-30T10:00:00Z',
+    }];
+    const { arbre } = await monter();
+    const ligne = parTestId(arbre, 'MSG1W-ligne-fil-long')[0];
+    const blocs = ligne.findAll((/** @type {any} */ n) => n.type === 'span' && n.props.style?.display === 'grid');
+    expect(blocs[0].props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+    const titre = ligne.findAll((/** @type {any} */ n) => n.type === 'span'
+      && n.props.style?.textOverflow === 'ellipsis' && n.props.style?.fontSize === 16)[0];
+    expect(titre.props.style.minWidth).toBe(0);
+  });
+});
