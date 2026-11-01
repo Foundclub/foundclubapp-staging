@@ -68,6 +68,14 @@ const birthdateDefaultValues = {
   year: '',
 };
 
+// REPRISE-INSCRIPTION (contre-recette Parent du 01/11) — sous 13 ans, le serveur refuse TOUT : rien
+// n'est enregistré. « Corriger ma date de naissance » remonte cet écran (sur le site, une page
+// neuve) : sans cette mémoire, prénom et nom revenaient vides et « Continuer » restait gris.
+// ponytail: mémoire de l'onglet (module), perdue au rechargement ; jamais dans l'adresse (données
+// d'un enfant).
+/** @type {{ valeurs: Record<string, string> | null }} */
+const saisieAvantCompteParent = { valeurs: null };
+
 const buildDefaultValues = (/** @type {boolean} */ collectsBirthdate) => (
   collectsBirthdate
     ? { ...nameDefaultValues, ...birthdateDefaultValues }
@@ -224,6 +232,7 @@ function UserName({ navigation }) {
       // pas une declaration a cocher, c est un compte PARENT a rattacher : on
       // ouvre l ecran qui explique comment, et qui n offre aucune echappatoire.
       if (isMinorParentAccountRequiredError(error)) {
+        saisieAvantCompteParent.valeurs = getValues();
         navigation.navigate(RouteNames.UserParentAccountRequired);
         return;
       }
@@ -237,6 +246,7 @@ function UserName({ navigation }) {
       ));
     },
     onSuccess: (updatedUser, submitted) => {
+      saisieAvantCompteParent.valeurs = null;
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
       // Le piege de la fusion : `needsParentalDeclaration` se calcule A PARTIR
@@ -287,6 +297,7 @@ function UserName({ navigation }) {
   const {
     control,
     formState: { errors: formErrors },
+    getValues,
     handleSubmit,
     reset,
     setError,
@@ -296,6 +307,7 @@ function UserName({ navigation }) {
       ...buildDefaultValues(collectsBirthdate),
       firstname: userData?.firstname || '',
       lastname: userData?.lastname || '',
+      ...(saisieAvantCompteParent.valeurs || {}),
     },
     mode: 'onBlur',
     resolver: joiResolver(collectsBirthdate ? identitySchema : nameOnlySchema),
@@ -319,6 +331,7 @@ function UserName({ navigation }) {
         month: String(parsedDate.getUTCMonth() + 1).padStart(2, '0'),
         year: String(parsedDate.getUTCFullYear()),
       } : {}),
+      ...(saisieAvantCompteParent.valeurs || {}),
     });
   }, [collectsBirthdate, reset, userData?.birthdate, userData?.firstname, userData?.lastname]);
 

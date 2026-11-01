@@ -573,6 +573,34 @@ describe('UserName — un moins de 13 ans est envoye vers « compte parent requi
     expect(alerte).not.toHaveBeenCalled();
     alerte.mockRestore();
   });
+
+  // REPRISE-INSCRIPTION (contre-recette Parent du 01/11) — après « Corriger ma date de naissance »,
+  // le site remonte l'écran : le serveur ayant tout refusé, prénom et nom revenaient vides et
+  // « Continuer » restait gris avec 14 ans. Ce qui a été tapé revient (prénom, nom, date).
+  it('après « Corriger ma date de naissance », l écran remonté garde prénom, nom et date tapés', async () => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    /** @type {any} */ (updateMe).mockRejectedValue(refusCompteParent());
+    const arbre = rendre('Joueur');
+    await saisir(arbre, 'Prénom', 'Zoé');
+    await saisir(arbre, 'Nom', 'Bonnet');
+    await saisir(arbre, 'JJ', '12');
+    await saisir(arbre, 'MM', '06');
+    await saisir(arbre, 'AAAA', '2015');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+    act(() => { arbre.unmount(); });
+
+    /** @type {any} */ (updateMe).mockResolvedValue({ documentId: 'user-1' });
+    const remonte = rendre('Joueur');
+    expect(champ(remonte, 'Prénom').props.value).toBe('Zoé');
+    expect(champ(remonte, 'Nom').props.value).toBe('Bonnet');
+    expect(champ(remonte, 'AAAA').props.value).toBe('2015');
+
+    await saisir(remonte, 'AAAA', '2012');
+    await act(async () => { bouton(remonte, LIBELLE_CTA).props.onPress(); });
+    expect(updateMe).toHaveBeenLastCalledWith(expect.objectContaining({
+      firstname: 'Zoé', lastname: 'Bonnet',
+    }));
+  });
 });
 
 // AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire »)
