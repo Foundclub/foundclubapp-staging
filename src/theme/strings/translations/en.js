@@ -9667,6 +9667,8 @@ export default {
       actions: {
         everyoneHere: "Everyone's here",
         markAll: 'Check in everyone',
+        markRemaining_one: 'Mark the last person on time',
+        markRemaining_other: 'Mark the {{count}} remaining on time',
         unmarkAll: 'Uncheck everyone',
       },
       answers: {
@@ -20839,6 +20841,8 @@ export default {
       writeToFallback: 'the staff member',
     },
     appel: {
+      absent_one: '{{count}} absent',
+      absent_other: '{{count}} absent',
       arrived_one: '{{count}} arrived on time',
       arrived_other: '{{count}} arrived on time',
       arrivedLate_one: '{{count}} arrived late',

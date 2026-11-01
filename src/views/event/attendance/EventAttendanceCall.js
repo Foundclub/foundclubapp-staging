@@ -188,6 +188,7 @@ function EventAttendanceCall() {
   // `items.length - presence.waiting` ne voyait que les `arrivedAt` ; une
   // absence posee a la main (D7bis) n en a pas et compte pourtant.
   const markedCount = useMemo(() => countCalled(items), [items]);
+  const restantsAPointer = useMemo(() => listUncalledIds(items).length, [items]);
 
   const teamName = event?.team?.name || '';
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
@@ -209,6 +210,13 @@ function EventAttendanceCall() {
     outOf: t('eventDetails.attendanceCall.footer.outOf', 'sur'),
     title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
+  const libelleDeMasse = markedCount === 0
+    ? mots.everyoneHere
+    : t('eventDetails.attendanceCall.actions.markRemaining', {
+      count: restantsAPointer,
+      defaultValue_one: 'Pointer la dernière personne à l’heure',
+      defaultValue_other: 'Pointer les {{count}} restant·e·s à l’heure',
+    });
 
   // 🏷️ D5 — « Clôturer l'appel · x sur N », SANS le compteur quand tout est
   // pointe : a ce moment-la « 15 sur 15 » n apprend plus rien et allonge un
@@ -425,25 +433,27 @@ function EventAttendanceCall() {
           « Tout dépointer » disparaissent : le chiffre vit maintenant dans la
           pastille de l entete, et « Tout dépointer » etait un geste
           destructeur de masse offert au meme rang qu un geste utile.
-          ⚠️ Le bouton reste affiche meme quand tout est pointe : il ne
-          disparait pas sous le doigt au dernier joueur. Il est simplement
-          sans effet, et `handleMarkAll` sort tout de suite. */}
-      <TouchableOpacity
-        accessibilityLabel={mots.everyoneHere}
-        accessibilityRole="button"
-        onPress={handleMarkAll}
-        style={[styles.massAction, {
-          backgroundColor: withAlpha(Colors.success500, 0.14),
-          borderColor: withAlpha(Colors.success500, 0.5),
-        }]}
-      >
-        <Image
-          resizeMode="contain"
-          source={Images.check}
-          style={[styles.massIcon, { tintColor: Colors.success500 }]}
-        />
-        <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>{mots.everyoneHere}</Text>
-      </TouchableOpacity>
+          REPRISE-EVENEMENTS 125 : « Tout le monde est là » à 1 / 2 se lisait comme un constat
+          faux. Le libellé reste tant que personne n'est pointé ; ensuite il compte les
+          restants ; il disparaît quand il n'y a plus personne à pointer. */}
+      {restantsAPointer > 0 ? (
+        <TouchableOpacity
+          accessibilityLabel={libelleDeMasse}
+          accessibilityRole="button"
+          onPress={handleMarkAll}
+          style={[styles.massAction, {
+            backgroundColor: withAlpha(Colors.success500, 0.14),
+            borderColor: withAlpha(Colors.success500, 0.5),
+          }]}
+        >
+          <Image
+            resizeMode="contain"
+            source={Images.check}
+            style={[styles.massIcon, { tintColor: Colors.success500 }]}
+          />
+          <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>{libelleDeMasse}</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {bulkMessage !== '' && (
         <Text style={[Fonts.p4, { color: Colors.warning500 }]}>{bulkMessage}</Text>

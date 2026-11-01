@@ -13,6 +13,7 @@ import {
   countCalled,
   countPresence,
   formatTimeInZone,
+  isCoachAbsence,
   listNeverSeen,
 } from './attendanceCallModel';
 
@@ -99,6 +100,8 @@ export function AttendanceCloseSheet({
   const { Colors, Fonts } = useTheme();
   const timezone = payloadData?.timezone;
   const presence = countPresence(items);
+  // REPRISE-EVENEMENTS 125 : le récap compte aussi l'absence posée par l'encadrant.
+  const absentsPointes = (items || []).filter(isCoachAbsence).length;
   const neverSeen = listNeverSeen(items);
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
   // FINITIONS12-STATS (8) : « pointé » = la regle du compteur du haut ; une absence posee a la
@@ -107,6 +110,11 @@ export function AttendanceCloseSheet({
 
   // 🗣️ Toutes les chaines de la feuille, au meme endroit.
   const mots = {
+    absent: t('stMatch.appel.absent', {
+      count: absentsPointes,
+      defaultValue_one: '{{count}} absent·e',
+      defaultValue_other: '{{count}} absent·e·s',
+    }),
     anonymous: t('eventDetails.attendanceCall.row.anonymous', 'Participant·e'),
     // 🐞 T9 (02/10, T9_P1_2b) — « 1 Arrivé·e·s », « 1 pointés · 1 jamais vus » : chaque nombre
     // s'accorde (0 et 1 au singulier).
@@ -182,7 +190,9 @@ export function AttendanceCloseSheet({
         </View>
       )}
       isVisible={isVisible}
-      snapPoints={['68%']}
+      // REPRISE-EVENEMENTS 125 : 68 % seulement pour la liste des jamais vus ; sans elle, la
+      // feuille prend la hauteur de son texte (le grand vide de la contre-recette).
+      snapPoints={neverSeen.length > 0 ? ['68%'] : undefined}
     >
       <View style={styles.body}>
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
@@ -190,6 +200,9 @@ export function AttendanceCloseSheet({
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
           {mots.arrivedLate}
+        </Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+          {mots.absent}
         </Text>
 
         {/* 🗣️ LA VERITE, PAS UNE PROMESSE : qui le fait, quand, et jusqu a

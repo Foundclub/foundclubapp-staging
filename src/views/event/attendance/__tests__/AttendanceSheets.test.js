@@ -608,15 +608,16 @@ describe('CORR-EVENEMENTS 125 · la clôture ne parle des non pointés que s il 
 // absence posee a la main EST un pointage (`countCalled`, la regle du compteur du haut) : la
 // cloture compte et nomme avec la meme.
 describe('FINITIONS12-STATS · point 8 — la cloture compte comme le compteur du haut', () => {
+  const absentALAppel = () => ({
+    ...ligne({ firstname: 'Hugo', userId: 'u1' }),
+    attendance: {
+      arrivedAt: null, lateMinutes: 0, note: null, source: 'coach_manual',
+    },
+    attendanceStatus: 'no_show',
+  });
+
   test('🐞 un absent pointe, un jamais vu : « 1 pointé · 1 jamais vu », un seul nomme', async () => {
-    const absentALAppel = {
-      ...ligne({ firstname: 'Hugo', userId: 'u1' }),
-      attendance: {
-        arrivedAt: null, lateMinutes: 0, note: null, source: 'coach_manual',
-      },
-      attendanceStatus: 'no_show',
-    };
-    const arbre = await monter([absentALAppel, ligne({ firstname: 'Recette', userId: 'u2' })]);
+    const arbre = await monter([absentALAppel(), ligne({ firstname: 'Recette', userId: 'u2' })]);
 
     await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
     const texte = aplatirTexte(arbre.toJSON());
@@ -627,6 +628,31 @@ describe('FINITIONS12-STATS · point 8 — la cloture compte comme le compteur d
     const liste = texte.slice(texte.indexOf('vers 20:13'));
     expect(liste).toContain('Recette');
     expect(liste).not.toContain('Hugo');
+  });
+
+  // REPRISE-EVENEMENTS 125 — le récap comptait les arrivées à l'heure et en retard, pas
+  // l'absent pointé ; et la feuille gardait 68 % de hauteur sans liste à montrer.
+  test('🐞 le récap compte l absent pointé', async () => {
+    const arbre = await monter([absentALAppel(), ligne({ firstname: 'Recette', userId: 'u2' })]);
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+
+    expect(aplatirTexte(arbre.toJSON())).toContain('1 absent·e');
+  });
+
+  test('🐞 personne de jamais vu : la feuille prend la hauteur de son contenu', async () => {
+    const arbre = await monter([
+      absentALAppel(),
+      ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Leo', userId: 'u3' }),
+    ]);
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+
+    const feuille = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('sheet-snap-'),
+      { deep: true },
+    );
+    const hauteurs = feuille.map((/** @type {any} */ noeud) => noeud.props.testID);
+    expect(hauteurs).toEqual(['sheet-snap-AUCUN']);
   });
 });
 
