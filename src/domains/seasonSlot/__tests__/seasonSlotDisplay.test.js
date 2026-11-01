@@ -119,8 +119,12 @@ describe('seasonSlotDisplay — complet, libre', () => {
     expect(resume.count).toBe(2);
     expect(momentLabel(/** @type {any} */ (resume.full))).toBe('jeu. 18:00 – 19:30');
     expect(summarizeInstallationWeek({ data: [bloc('18:00', '19:30')] }, 2))
-      .toEqual({ count: 1, full: null });
-    expect(summarizeInstallationWeek({ data: [] }, 2)).toEqual({ count: 0, full: null });
+      .toEqual({ count: 1, creneaux: 0, full: null });
+    expect(summarizeInstallationWeek({ data: [] }, 2)).toEqual({ count: 0, creneaux: 0, full: null });
+    // REPRISE-COLLECTIVITES 90 (01/11) : les créneaux de saison de la semaine (`origin: 'slot'`).
+    const creneau = { ...bloc('18:00', '19:30'), origin: 'slot' };
+    expect(summarizeInstallationWeek({ data: [creneau, creneau, bloc('10:00', '11:00')] }, 2).creneaux)
+      .toBe(2);
   });
 });
 

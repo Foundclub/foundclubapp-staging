@@ -393,3 +393,27 @@ describe('CORR-COLLECTIVITES 91 — « Archiver l’installation »', () => {
     expect(mockArchiver).toHaveBeenCalledWith({ collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' });
   });
 });
+
+// REPRISE-COLLECTIVITES 90 (01/11/2026, revue : « appliquer les deux chiffres aussi aux cartes de la
+// page Planning de la Ville ») — la carte disait « Cette semaine : aucune séance » à côté de
+// « complet mar. » : des créneaux de saison prennent la place sans être des séances.
+describe('REPRISE-COLLECTIVITES 90 — la carte de la page Planning dit créneaux et séances', () => {
+  it('2 créneaux, aucune séance posée, complet : les deux chiffres, puis le moment complet', () => {
+    mockSemaines = {
+      dojo: { count: 0, creneaux: 0, full: null },
+      'gym-tilleuls': {
+        count: 0,
+        creneaux: 2,
+        full: { end: new Date(2026, 9, 1, 19, 30), start: new Date(2026, 9, 1, 18, 0) },
+      },
+    };
+    const lus = textes(rendre());
+    expect(lus).toContain('Cette semaine : 2 créneaux · aucune séance posée · complet jeu. 18:00 – 19:30');
+    expect(lus).toContain('Cette semaine : aucune séance');
+  });
+
+  it('5 créneaux, 3 séances posées', () => {
+    mockSemaines = { dojo: { count: 3, creneaux: 5, full: null } };
+    expect(textes(rendre())).toContain('Cette semaine : 5 créneaux · 3 séances posées');
+  });
+});

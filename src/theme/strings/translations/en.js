@@ -5900,6 +5900,7 @@ export default {
       ouvrir: '{{nom}}: its slots and its schedule',
       plusActions: 'More actions for {{nom}}',
       semaineAucune: 'This week: no session',
+      semaineDetail: 'This week: {{detail}}',
       semaine_one: 'This week: {{count}} session',
       semaine_other: 'This week: {{count}} sessions',
       surtitre: 'My local authority',

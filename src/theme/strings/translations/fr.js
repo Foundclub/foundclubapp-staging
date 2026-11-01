@@ -6451,6 +6451,7 @@ export default {
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
       semaineAucune: 'Cette semaine : aucune séance',
+      semaineDetail: 'Cette semaine : {{detail}}',
       semaine_one: 'Cette semaine : {{count}} séance',
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',

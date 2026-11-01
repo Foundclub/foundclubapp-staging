@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
@@ -864,7 +865,21 @@ function FacilityList() {
     const adresse = getAddressLabel(item?.address, '').trim();
     const semaine = semaines[item?.documentId];
     let ligneSemaine = null;
-    if (semaine && !semaine.count) {
+    if (semaine?.creneaux > 0) {
+      // REPRISE-COLLECTIVITES 90 (01/11) : les deux chiffres de l'accueil, puis le moment complet.
+      ligneSemaine = [
+        t('collectiviteCreneaux.liste.semaineDetail', 'Cette semaine : {{detail}}', {
+          detail: phraseCreneauxEtSeances(t, semaine.creneaux, semaine.count),
+          ...SANS_ECHAPPEMENT,
+        }),
+        semaine.full
+          ? t('collectiviteCreneaux.liste.complet', 'complet {{moment}}', {
+            moment: momentLabel(semaine.full),
+            ...SANS_ECHAPPEMENT,
+          })
+          : null,
+      ].filter(Boolean).join(' · ');
+    } else if (semaine && !semaine.count) {
       ligneSemaine = t('collectiviteCreneaux.liste.semaineAucune', 'Cette semaine : aucune séance');
     } else if (semaine) {
       const seances = t('collectiviteCreneaux.liste.semaine', {

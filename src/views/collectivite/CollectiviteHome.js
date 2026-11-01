@@ -24,6 +24,7 @@ import {
   homeActionTarget,
   isOwnClubRequest,
   oldestPendingRequest,
+  phraseCreneauxEtSeances,
   premiersPas,
   rattachementsAVoir,
   seasonSlotsSeen,
@@ -959,21 +960,7 @@ function CollectiviteHome() {
     // des
     // séances ; deux chiffres, « 2 créneaux · aucune séance posée » (plus « Aucune séance » à côté
     // de « complet »).
-    if (creneaux > 0) {
-      const lesCreneaux = t('collectiviteAccueil.semaine.creneaux', {
-        count: creneaux,
-        defaultValue_one: '{{count}} créneau',
-        defaultValue_other: '{{count}} créneaux',
-      });
-      const posees = total === 0
-        ? t('collectiviteAccueil.semaine.aucuneSeancePosee', 'aucune séance posée')
-        : t('collectiviteAccueil.semaine.seancesPosees', {
-          count: total,
-          defaultValue_one: '{{count}} séance posée',
-          defaultValue_other: '{{count}} séances posées',
-        });
-      return `${lesCreneaux} · ${posees}`;
-    }
+    if (creneaux > 0) return phraseCreneauxEtSeances(t, creneaux, total);
     if (total === 0) return t('collectiviteAccueil.semaine.aucuneSeance', 'Aucune séance');
     if (total === 1) return t('collectiviteAccueil.semaine.uneSeance', '1 séance');
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });

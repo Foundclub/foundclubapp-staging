@@ -552,8 +552,15 @@ export const seasonSlotErrorMessage = (t, erreur) => {
  * @returns {{ count: number, full: { start: Date, end: Date } | null }} Le resume.
  */
 export const summarizeInstallationWeek = (reponse, capacite) => {
-  const blocs = normalizePlanningItems(Array.isArray(reponse?.data) ? reponse.data : []);
-  return { count: blocs.length, full: fullMomentsOfPlanning(blocs, capacite)[0] || null };
+  const lus = Array.isArray(reponse?.data) ? reponse.data : [];
+  const blocs = normalizePlanningItems(lus);
+  return {
+    count: blocs.length,
+    // REPRISE-COLLECTIVITES 90 (01/11) : les créneaux de saison (blocs `origin: 'slot'`), comme
+    // l'accueil de la Ville ; ils prennent la place sans être des séances.
+    creneaux: lus.filter((bloc) => (bloc?.origin ?? bloc?.raw?.origin) === 'slot').length,
+    full: fullMomentsOfPlanning(blocs, capacite)[0] || null,
+  };
 };
 
 /**
