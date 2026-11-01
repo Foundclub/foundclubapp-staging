@@ -43,6 +43,7 @@ import {
 } from './tournamentCompetitionComponents';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  getTournamentClosure,
   getTournamentCompetitionActions,
   getTournamentCompetitionStateLabel,
   getTournamentFormatLabel,
@@ -356,14 +357,8 @@ function TournamentManagement({ navigation, route }) {
     reviewMutation.mutate({ status, teamDocumentId });
   };
 
-  // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé (`sessionStatus` « closed », posé par
-  // `closeTournament`) se lit, il ne se pilote plus. Le serveur n'écrit pas de date de clôture :
-  // celle de l'archivage des équipes, la plus récente, en tient lieu.
-  const isClosed = String(event?.sessionStatus || '').toLowerCase() === 'closed';
-  const closedAt = tournamentTeams
-    .map((team) => Date.parse(team?.archivedAt || ''))
-    .filter(Number.isFinite)
-    .sort((gauche, droite) => droite - gauche)[0];
+  // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé se lit, il ne se pilote plus.
+  const { closedAt, isClosed } = getTournamentClosure({ ...event, tournamentTeams });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);

@@ -251,3 +251,19 @@ export const formatTournamentScore = (match) => {
   if (!hasScoreA || !hasScoreB) return '--';
   return `${Number(match.scoreA)} - ${Number(match.scoreB)}`;
 };
+
+/**
+ * CORR-EVENEMENTS 131 — un tournoi clôturé (`sessionStatus` « closed », posé par
+ * `closeTournament`) se lit, il ne se pilote plus. Le serveur n'écrit pas de date de clôture :
+ * celle de l'archivage des équipes, la plus récente, en tient lieu. Le pilotage et les deux
+ * fiches (site et téléphone) lisent CETTE règle.
+ * @param {any} event - L'événement tournoi, avec `sessionStatus` et `tournamentTeams`.
+ * @returns {{ closedAt: number | undefined, isClosed: boolean }} - L'état et sa date.
+ */
+export const getTournamentClosure = (event) => ({
+  closedAt: (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
+    .map((/** @type {any} */ team) => Date.parse(team?.archivedAt || ''))
+    .filter(Number.isFinite)
+    .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0],
+  isClosed: String(event?.sessionStatus || '').toLowerCase() === 'closed',
+});

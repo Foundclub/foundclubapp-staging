@@ -50,6 +50,7 @@ import TrainingReviewsCard, {
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  getTournamentClosure,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
@@ -567,14 +568,18 @@ function EventDetails({ navigation, route }) {
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
     [tournamentTeams, userData?.documentId],
   );
+  // REPRISE-EVENEMENTS 131 : un tournoi clôturé se lit seulement (la règle du pilotage) ;
+  // son équipe archivée ne se gère plus.
+  const clotureDuTournoi = getTournamentClosure(event);
+  const tournoiClos = isTournamentEvent && clotureDuTournoi.isClosed;
   const managedTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
-    if (!currentUserId) return null;
+    if (!currentUserId || tournoiClos) return null;
     return tournamentTeams.find((team) => (
       team?.captainUser?.documentId === currentUserId
       || (team?.adminUsers || []).some((adminUser) => adminUser?.documentId === currentUserId)
     )) || null;
-  }, [tournamentTeams, userData?.documentId]);
+  }, [tournamentTeams, tournoiClos, userData?.documentId]);
   const registeredTournamentSourceTeamIds = useMemo(
     () => new Set(
       tournamentTeams
@@ -592,6 +597,7 @@ function EventDetails({ navigation, route }) {
   // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
@@ -600,6 +606,7 @@ function EventDetails({ navigation, route }) {
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !offreAuxEnfants
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
@@ -3481,6 +3488,32 @@ function EventDetails({ navigation, route }) {
                       warning(s)
                     </span>
                   </div>
+                  {tournoiClos ? (
+                    <div
+                      data-testid="tournoi-cloture"
+                      role="status"
+                      style={{
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: 12,
+                        display: 'grid',
+                        gap: 4,
+                        padding: 12,
+                      }}
+                    >
+                      <strong style={{ color: textColor }}>
+                        {clotureDuTournoi.closedAt
+                          ? t('tournamentManagement.closedOn', 'Tournoi clôturé le {{date}}', {
+                            date: new Date(clotureDuTournoi.closedAt)
+                              .toLocaleDateString(localeDesFormats()),
+                            ...SANS_ECHAPPEMENT,
+                          })
+                          : t('tournamentManagement.closedBanner', 'Tournoi clôturé')}
+                      </strong>
+                      <span style={{ color: mutedTextColor }}>
+                        {t('tournamentManagement.closedReadOnly')}
+                      </span>
+                    </div>
+                  ) : null}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
                       onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
@@ -3503,7 +3536,7 @@ function EventDetails({ navigation, route }) {
                         'Voir la compétition',
                       )}
                     </button>
-                    {canEdit ? (
+                    {canEdit && !tournoiClos ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
                         style={primaryButtonStyle}

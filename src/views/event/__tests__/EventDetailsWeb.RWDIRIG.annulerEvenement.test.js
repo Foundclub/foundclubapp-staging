@@ -419,7 +419,8 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
 
     expect(bouton(root, 'Présent')).toBeDefined();
     expect(bouton(root, 'Annuler ma demande')).toBeUndefined();
-    expect(textOf(root)).not.toContain('Session fermée');
+    // La pastille rend « Session », « », « fermée » en trois morceaux.
+    expect(JSON.stringify(mounted.toJSON())).not.toContain('"Session"');
   });
 });
 
@@ -542,5 +543,31 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
 
     expect(bouton(root, 'Créer une équipe')).toBeUndefined();
     expect(bouton(root, 'Inscrire mon équipe')).toBeUndefined();
+  });
+
+  // REPRISE-EVENEMENTS 131 — la fiche d'un tournoi clôturé proposait encore « Modifier les
+  // paramètres », « Gérer mon équipe » et « Créer une équipe ». Décision A : lecture seule,
+  // avec un bandeau « Clôturé le … » (la date de l'archivage des équipes, comme au pilotage).
+  test('🐞 tournoi clôturé : plus aucun geste, un bandeau daté', () => {
+    const root = mountScreen({
+      event: {
+        ...tournoi(),
+        sessionStatus: 'closed',
+        tournamentTeams: [{
+          archivedAt: '2026-10-31T10:00:00.000Z',
+          captainUser: { documentId: COACH.documentId },
+          documentId: 'tt-1',
+          members: [],
+          name: 'Les Lions',
+          status: 'archived',
+        }],
+      },
+    });
+
+    expect(bouton(root, 'Modifier les paramètres')).toBeUndefined();
+    expect(bouton(root, 'Gérer mon équipe')).toBeUndefined();
+    expect(bouton(root, 'Créer une équipe')).toBeUndefined();
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi clôturé le');
+    expect(bouton(root, 'Piloter la compétition')).toBeDefined();
   });
 });

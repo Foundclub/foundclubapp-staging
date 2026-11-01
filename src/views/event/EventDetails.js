@@ -222,6 +222,7 @@ import {
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  getTournamentClosure,
   getTournamentMemberBuckets,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -1176,16 +1177,19 @@ function EventDetails({ navigation, route }) {
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
     [tournamentTeams, userData?.documentId],
   );
+  // REPRISE-EVENEMENTS 131 : un tournoi clôturé se lit seulement (la règle du pilotage et du
+  // site) ; son équipe archivée ne se gère plus.
+  const tournoiClos = isTournamentEvent && getTournamentClosure(event).isClosed;
   const managedTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
-    if (!currentUserId) return null;
+    if (!currentUserId || tournoiClos) return null;
 
     return tournamentTeams.find((team) => (
       team?.captainUser?.documentId === currentUserId
       // @ts-ignore: FIXME: Baseline TS regression
       || (team?.adminUsers || []).some((adminUser) => adminUser?.documentId === currentUserId)
     )) || null;
-  }, [tournamentTeams, userData?.documentId]);
+  }, [tournamentTeams, tournoiClos, userData?.documentId]);
   const registeredTournamentSourceTeamIds = useMemo(
     () => new Set(
       tournamentTeams
@@ -1202,6 +1206,7 @@ function EventDetails({ navigation, route }) {
   );
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !isStageDayEvent
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
@@ -1210,6 +1215,7 @@ function EventDetails({ navigation, route }) {
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !isStageDayEvent
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
@@ -5599,7 +5605,7 @@ function EventDetails({ navigation, route }) {
       });
     }
 
-    if (options.includeTournamentSettings && canEdit) {
+    if (options.includeTournamentSettings && canEdit && !tournoiClos) {
       chips.push({
         icon: 'filter',
         key: 'tournamentSettings',
