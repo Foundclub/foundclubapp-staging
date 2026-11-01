@@ -22,7 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 import { useGetCategories } from '@/services/category/categoryQueries';
-import { getCategorySortKey } from '@/services/category/categoryService';
+import { getCategorySortKey } from '@/domains/category/categorySort';
 
 /**
  * Player categories (age groups)

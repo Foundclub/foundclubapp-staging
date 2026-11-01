@@ -1,4 +1,4 @@
-import { getCategorySortKey } from '@/services/category/categoryService';
+import { getCategorySortKey } from '@/domains/category/categorySort';
 
 // CORR-INSCRIPTION (recette du site, 30/10) — l'âge face aux catégories : la catégorie de la
 // saison (présélection à l'inscription, p17) et l'équipe de son âge (rangement des équipes, p19).
