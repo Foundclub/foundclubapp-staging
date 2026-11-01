@@ -76,6 +76,9 @@ jest.mock('@/services/teamInvite/teamInviteShare', () => ({
 const COACH = {
   address: 'Montrivage',
   birthdate: '1990-01-01',
+  // REPRISE-INSCRIPTION D-COACH-9 : un entraîneur SANS club reprend à « Trouve ton club » ; ce
+  // témoin parle de la fin posée à la réouverture, il prend donc un entraîneur déjà dans un club.
+  club: { documentId: 'club-reprise' },
   documentId: 'coach-reprise',
   firstname: 'Julien',
   id: 8,

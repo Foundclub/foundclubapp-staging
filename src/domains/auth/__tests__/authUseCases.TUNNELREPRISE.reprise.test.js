@@ -106,3 +106,23 @@ describe('TUNNELREPRISE — une reouverture ne ramene plus aux etapes qui se pas
     expect(etapes(resultat)[0]).toBe(RouteNames.UserAddress);
   });
 });
+
+// REPRISE-INSCRIPTION D-COACH-9 (contre-recette du 01/11) — un entraîneur neuf qui rouvre son
+// navigateur après l'adresse voyait son inscription close sur l'accueil : « Trouve ton club » était
+// compté comme une étape qui se passe. Pour un entraîneur sans club, la reprise s'arrête dessus.
+// Le dirigeant garde l'accueil (« Gérer mon club » mène à la création du club, décision Chef 2).
+describe('REPRISE-INSCRIPTION D-COACH-9 — un entraîneur sans club reprend à « Trouve ton club »', () => {
+  it('entraîneur sans club, rouvert après l adresse : « Trouve ton club » est dû, rien n est fini', () => {
+    const resultat = getOnboardingViews({
+      ...IDENTITE, address: { label: 'Marseille' }, role: { name: USER_ROLES.coach },
+    });
+    // La reprise rouvre l'inscription (la photo, qui a « Passer », puis « Trouve ton club »).
+    expect(etapes(resultat)).toContain(RouteNames.UserAffiliationGuide);
+    expect(resultat.finieALaReouverture).not.toBe(true);
+  });
+
+  it('entraîneur qui a déjà un club : toujours l accueil', () => {
+    const resultat = getOnboardingViews({ ...IDENTITE, club: { documentId: 'club-1' }, role: { name: USER_ROLES.coach } });
+    expect(etapes(resultat)).toEqual([]);
+  });
+});
