@@ -44,3 +44,17 @@ test('un doublon suspecté rend toujours ses suggestions', async () => {
     suggestions: [{ name: 'A' }],
   });
 });
+
+test('🔴 sur le site, le doublon arrive sans « response » et rend ses suggestions', async () => {
+  // client.web.js rejette `response.data.error` tel quel : { status, name, message, details }.
+  mockPost.mockRejectedValue({
+    details: { code: 'CLUB_DUPLICATE_SUSPECTED', suggestions: [{ name: 'A' }] },
+    message: 'Club déjà présent',
+    name: 'ConflictError',
+    status: 409,
+  });
+  await expect(createSelfOnboardClub({ name: 'Club' })).resolves.toEqual({
+    duplicate: true,
+    suggestions: [{ name: 'A' }],
+  });
+});

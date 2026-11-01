@@ -1178,7 +1178,8 @@ function RecrutementListContent({
   const renderPlayerListHeader = () => (
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
       {renderAudienceTypeTabs()}
-      {renderPourMoi()}
+      {/* REPRISE-TEXTES : un parent n'a pas de sport, « Pour moi » ne le concerne pas. */}
+      {isParent ? null : renderPourMoi()}
       {isAuthenticated && !isParent && !criteres ? (
         <TouchableOpacity
           onPress={() => nav.navigate(RouteNames.ProfileStack, {

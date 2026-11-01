@@ -576,3 +576,19 @@ describe('REPRISE-25 — « Compléter mon profil » n est pas proposé à un pa
     expect(occurrences(tree, 'Compléter mon profil')).toBe(0);
   });
 });
+
+// Chef, 02/11 (tri du compte rendu REPRISE-TEXTES, « 2- A ») : le parent voyait encore la carte
+// « Pour moi : Ajoute ton sport à ton profil… », qui ne le concerne pas (il n a pas de sport).
+describe('REPRISE-25 bis — la carte « Pour moi » n est pas proposée à un parent', () => {
+  const AJOUTE_TON_SPORT = 'Ajoute ton sport à ton profil';
+
+  test('un joueur sans critères garde la carte « Pour moi »', async () => {
+    const tree = await rendrePour(JOUEUR_SANS_SPORT);
+    expect(occurrences(tree, AJOUTE_TON_SPORT)).toBe(1);
+  });
+
+  test('🔴 un parent ne la voit plus', async () => {
+    const tree = await rendrePour({ documentId: 'u-parent', role: { name: 'Parent' } });
+    expect(occurrences(tree, AJOUTE_TON_SPORT)).toBe(0);
+  });
+});
