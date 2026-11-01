@@ -100,7 +100,7 @@ import {
 } from '@/views/conversationWeb/filDuSite';
 // MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
 import {
-  auteurDeLApercu, estMineurConnu, filsDeLaMessagerie, titreDuFil,
+  auteurDeLApercu, estMineurConnu, filsDeLaMessagerie, personneNeLiraCeFil, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
 import {
   casquetteDuFil, casquettesMelees, libelleDeCasquette,
@@ -4930,7 +4930,7 @@ function Conversation({ navigation, route }) {
 
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
   // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
-  // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
+  // telephone, plus de liste sous le cadre (REPRISE-MESSAGERIE p100) : le bouton de l en-tete.
   // R17-CANAUX — « Toute la ville » : pas de « Dans ce canal » (personne ne voit qui le lit).
   const panneauDeDroite = filDeLaVille.afficheMembres && filDeLaVille.membres ? (
     <aside
@@ -4982,8 +4982,10 @@ function Conversation({ navigation, route }) {
       bgImage="bg2"
       contentWidth="full"
       responsivePadding
+      // REPRISE-MESSAGERIE p100 (01/11) : les 24 px du bas faisaient défiler la page de 20 px dans
+      // le vide sur téléphone ; ils servaient au panneau des membres, qui n'est plus sous le cadre.
       // @ts-ignore: FIXME: Baseline TS regression
-      style={{ paddingBottom: isDesktop ? 0 : 24 }}
+      style={{ paddingBottom: 0 }}
     >
       <div
         ref={cadreRef}
@@ -5493,6 +5495,22 @@ function Conversation({ navigation, route }) {
                 padding: '8px 12px 12px',
               }}
             >
+              {/* REPRISE-MESSAGERIE p100 (01/11) — le club n'a aucun dirigeant inscrit : on le dit
+                  au-dessus du champ, là où l'on écrit, plus seulement dans la liste des membres. */}
+              {personneNeLiraCeFil(filDeLaVille.membres) ? (
+                <p
+                  data-testid="REPRISE-personne-ne-lira"
+                  role="status"
+                  style={{
+                    color: PALETTE_DU_FIL.texteDoux, fontSize: 13, margin: 0, padding: '0 4px',
+                  }}
+                >
+                  {t(
+                    'collectiviteCanaux.privee.personneNeLira',
+                    'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
+                  )}
+                </p>
+              ) : null}
               {replyTarget ? (
                 <div
                   data-testid="MSG1W-barre-reponse"
@@ -5747,7 +5765,9 @@ function Conversation({ navigation, route }) {
 
         {isDesktop ? panneauDeDroite : null}
       </div>
-      {isDesktop ? null : panneauDeDroite}
+      {/* REPRISE-MESSAGERIE p100 (01/11) — sur un écran étroit, ce panneau passait SOUS le cadre à
+          hauteur d'écran : la page défilait de 436 px dans le vide. « Qui est dans cette
+          conversation », dans l'en-tête, ouvre déjà la même liste. */}
       <PollCreationModal
         isVisible={sondageOuvert}
         onClose={() => setSondageOuvert(false)}
