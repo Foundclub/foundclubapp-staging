@@ -21,6 +21,26 @@ import {
 import { isCompositionPerson } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
+import { getPositionValuesForSport } from '@/constants/positions';
+
+/**
+ * CORR-POSTE-SPORT (point 120) — le poste déclaré du profil, gardé seulement s'il est du sport
+ * du match : Hugo lisait « Meneur, Arrière » (basket) sur un match de football. Sans liste de
+ * postes pour ce sport (`generic`), rien ne se filtre.
+ * @param {string | undefined} position - Le ou les postes déclarés, séparés par des virgules.
+ * @param {string} sport - La clé tactique du sport du match.
+ * @returns {string} - Les postes du sport, séparés par « , », ou une chaîne vide.
+ */
+const posteDeclareDuSport = (position, sport) => {
+  if (sport === 'generic') return String(position || '');
+  const postesDuSport = getPositionValuesForSport(sport);
+  return String(position || '')
+    .split(',')
+    .map((poste) => poste.trim())
+    .filter((poste) => postesDuSport.includes(poste))
+    .join(', ');
+};
+
 /** Le joueur est sur le terrain. */
 export const CONVOCATION_ROLE_STARTER = 'starter';
 
@@ -335,7 +355,7 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     myPlacement?.label
     || reperePublie?.label
     || getMatchPositionLabels(sport)[slotIndex - 1]
-    || viewerPlayer?.position
+    || posteDeclareDuSport(viewerPlayer?.position, sport)
     || '',
   ).trim();
   const isList = estUneConvocationEnListe(published);

@@ -198,7 +198,11 @@ const PACK = {
   // 🧨 Les remplacants ne sont QUE la — jamais dans `snapshotPlayers`.
   reserveSnapshotPlayers: [
     {
-      documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', number: 7, position: 'Ailier',
+      documentId: 'joueur-2',
+      firstname: 'Leo',
+      lastname: 'Diarra',
+      number: 7,
+      position: 'Ailier droit',
     },
     {
       documentId: 'joueur-3', firstname: 'Yanis', lastname: 'Bosco', number: 11, position: 'Milieu',
@@ -251,7 +255,7 @@ describe('AD08 · TEMOIN 3 — 🎽 la carte du haut parle enfin du remplacant',
     const texte = texteVisible(rendre());
 
     // Une seule ligne de l'ecran peut produire cette phrase : `identityLine`.
-    expect(texte).toContain('Poste : Ailier · N°7');
+    expect(texte).toContain('Poste : Ailier droit · N°7');
     expect(texte).toContain('Remplaçant');
     expect(mockReplace).not.toHaveBeenCalled();
   });

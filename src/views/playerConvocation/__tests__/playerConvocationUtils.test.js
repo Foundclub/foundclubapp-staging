@@ -24,7 +24,11 @@ const packAvec = (/** @type {any} */ extra = {}) => ({
       documentId: 'joueur-1', firstname: 'Karim', lastname: 'Sylla', number: 1, position: 'Gardien',
     },
     {
-      documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', number: 7, position: 'Ailier',
+      documentId: 'joueur-2',
+      firstname: 'Leo',
+      lastname: 'Diarra',
+      number: 7,
+      position: 'Ailier droit',
     },
   ],
   sportContext: 'football',
@@ -75,7 +79,7 @@ describe('buildPlayerConvocationView', () => {
     expect(vue?.role).toBe(CONVOCATION_ROLE_SUBSTITUTE);
     // Sans repere, on retombe sur le poste DECLARE du joueur — jamais sur un
     // poste invente.
-    expect(vue?.positionLabel).toBe('Ailier');
+    expect(vue?.positionLabel).toBe('Ailier droit');
   });
 
   test('🔒 un joueur NON convoque ne recoit aucune vue', () => {
@@ -278,7 +282,11 @@ describe('AC08 — buildConvocationReserveList, le banc que personne ne voyait',
 const packBancSeul = () => ({
   reservePlayerIds: ['joueur-2'],
   reserveSnapshotPlayers: [{
-    documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', number: 7, position: 'Ailier',
+    documentId: 'joueur-2',
+    firstname: 'Leo',
+    lastname: 'Diarra',
+    number: 7,
+    position: 'Ailier droit',
   }],
   snapshotPlayers: [
     {
@@ -316,7 +324,7 @@ describe('AD08 — le remplacant a droit a sa propre carte d identite', () => {
     expect(vue?.jerseyNumber).toBe('7');
     // Sans repere sur le terrain, le poste vient du poste DECLARE — jamais
     // d'un poste invente.
-    expect(vue?.positionLabel).toBe('Ailier');
+    expect(vue?.positionLabel).toBe('Ailier droit');
   });
 
   test('⛔ et rien ne change pour un titulaire : sa fiche reste celle du terrain', () => {
@@ -334,5 +342,46 @@ describe('AD08 — le remplacant a droit a sa propre carte d identite', () => {
       convocation: chargeServeur(packBancSeul()),
       userId: 'coach-1',
     })).toBeNull();
+  });
+});
+
+// ==========================================================================
+// CORR-POSTE-SPORT (point 120, recette du site) — Hugo lisait « Meneur, Arrière » (ses postes
+// de basket) sur la convocation d'un match de FOOTBALL : le poste déclaré du profil était
+// recopié tel quel. Il est maintenant filtré par le sport du match ; un sport inconnu
+// (`generic`) ne filtre rien, faute de liste à laquelle se fier.
+// ==========================================================================
+
+describe('CORR-POSTE-SPORT — le poste déclaré est filtré par le sport du match', () => {
+  const vueDuRemplacant = (/** @type {string} */ position, sportContext = 'football') => (
+    buildPlayerConvocationView({
+      convocation: convocationAvec(packAvec({
+        reservePlayerIds: ['joueur-2'],
+        snapshotPlayers: [
+          { documentId: 'joueur-1', firstname: 'Karim', lastname: 'Sylla' },
+          {
+            documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', position,
+          },
+        ],
+        sportContext,
+      })),
+      userId: 'joueur-2',
+    })
+  );
+
+  test('🐞 des postes de basket sur un match de foot : aucun poste affiché', () => {
+    expect(vueDuRemplacant('Meneur, Arrière')?.positionLabel).toBe('');
+  });
+
+  test('🐞 un profil à deux sports : seul le poste du sport du match reste', () => {
+    expect(vueDuRemplacant('Meneur, Ailier droit')?.positionLabel).toBe('Ailier droit');
+  });
+
+  test('le même profil sur un match de basket garde ses postes de basket', () => {
+    expect(vueDuRemplacant('Meneur, Ailier droit', 'basketball')?.positionLabel).toBe('Meneur');
+  });
+
+  test('un sport inconnu ne filtre rien', () => {
+    expect(vueDuRemplacant('Meneur, Arrière', '')?.positionLabel).toBe('Meneur, Arrière');
   });
 });
