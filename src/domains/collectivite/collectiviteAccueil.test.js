@@ -1,6 +1,7 @@
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  aUneDemandeDeGestion,
   availableHomeActions,
   clubInitials,
   clubTotals,
@@ -9,7 +10,6 @@ import {
   formatWeekMoment,
   homeActionTarget,
   isOwnClubRequest,
-  aUneDemandeDeGestion,
   isVilleOnlyAccount,
   latestManagerRequest,
   managerRequestPayload,

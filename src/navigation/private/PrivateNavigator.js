@@ -8,7 +8,10 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { aUneDemandeDeGestion, isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
+import {
+  aUneDemandeDeGestion,
+  isVilleOnlyAccount,
+} from '@/domains/collectivite/collectiviteAccueil';
 import { lireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 

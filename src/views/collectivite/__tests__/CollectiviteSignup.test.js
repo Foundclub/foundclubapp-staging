@@ -658,7 +658,9 @@ describe('REPRISE-COLLECTIVITES 102 — la sortie après « Annuler ma demande �
   });
 
   it('une autre demande attend encore : c’est elle qui se lit', async () => {
-    const enAttente = { ...ANNULEE, createdAt: '2026-10-01T09:00:00.000Z', documentId: 'dm-1', status: 'pending' };
+    const enAttente = {
+      ...ANNULEE, createdAt: '2026-10-01T09:00:00.000Z', documentId: 'dm-1', status: 'pending',
+    };
     mockDemandes = { data: [ANNULEE, enAttente], isLoading: false, refetch: jest.fn() };
     const arbre = await monter(CollectiviteSignupStatus);
     expect(textes(arbre)).toContain('Demande en cours de vérification');

@@ -457,7 +457,8 @@ describe('REPRISE-COLLECTIVITES 103 — quelques séances ne font plus « 0 % »
     };
     mockChiffres = { ...mockChiffres, data: PLAGE };
     expect(textes(await monter())).toContain('Taux d’occupation : < 1 %, calculé de 8 h à 22 h.');
-    mockChiffres = { ...mockChiffres, data: { ...PLAGE, ville: { capaciteMinutes: 70560, minutes: 0, taux: 0 } } };
+    const sansSeance = { capaciteMinutes: 70560, minutes: 0, taux: 0 };
+    mockChiffres = { ...mockChiffres, data: { ...PLAGE, ville: sansSeance } };
     expect(textes(await monter())).toContain('Taux d’occupation : 0 %, calculé de 8 h à 22 h.');
   });
 });

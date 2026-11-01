@@ -354,7 +354,7 @@ describe('REPRISE-COLLECTIVITES 27 — le club que la Ville offre', () => {
     scopeType: 'CLUB',
   };
 
-  test('l’offre de la Ville, sans payeur nommé : « Offert par la Ville de Montrivage »', async () => {
+  test('l’offre de la Ville, sans payeur nommé : « Offert par la Ville de … »', async () => {
     const texte = await renderTextFor({
       entitlementsSummary: [offertParLaVille],
       subscriptionAccessLevel: 'CLUB',
@@ -365,7 +365,7 @@ describe('REPRISE-COLLECTIVITES 27 — le club que la Ville offre', () => {
     expect(texte).toContain('Offert par la Ville de Montrivage pour tout le club.');
   });
 
-  test('la Ville offre le club ET un dirigeant paie aussi : c’est la Ville qui est nommée', async () => {
+  test('la Ville offre le club ET un dirigeant paie : la Ville est nommée', async () => {
     const texte = await renderTextFor({
       entitlementsSummary: [
         { ...couvertPar({ scopeType: 'CLUB' })[0], scopeClubDocumentId: 'club-ville' },
