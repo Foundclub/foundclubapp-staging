@@ -90,6 +90,20 @@ describe('PAR-L9a — la notification « Réponse du club » ouvre la conversati
     expect(destination).not.toContain(RouteNames.NotificationDetails);
   });
 
+  // REPRISE-MESSAGERIE p63 (01/11, revue) — les avis envoyés AVANT le 31/10 n'ont pas la fiche :
+  // ils ouvraient encore « Statut : clubInterestResponse ». Leur texte, écrit par le serveur pour
+  // un enfant, mène à « Mes enfants ».
+  test.each([
+    ['accepté', 'Réponse concernant U11 Tunnel: C’est accepté : Lina rejoint l’équipe U11 Tunnel.'],
+    ['accepté (apostrophe droite)', "Réponse concernant U11: C'est accepté : Lina rejoint l'équipe U11."],
+    ['refusé', 'Réponse concernant U11 Tunnel: Le club n’a pas retenu la demande pour Lina.'],
+  ])('ancien avis pour un enfant (%s) : « Mes enfants », pas le détail', (_cas, body) => {
+    const destination = destinationDe({ body, documentId: 'notif-4', type: REPONSE });
+
+    expect(destination).toContain(RouteNames.MyChildren);
+    expect(destination).not.toContain(RouteNames.NotificationDetails);
+  });
+
   test('deux réponses de deux fils différents ne se confondent pas (clé d ouverture)', () => {
     expect(getNotificationOpenKey({ chatDocumentId: 'fil-a', type: REPONSE }))
       .not.toBe(getNotificationOpenKey({ chatDocumentId: 'fil-b', type: REPONSE }));

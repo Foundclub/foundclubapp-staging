@@ -10,7 +10,7 @@ import {
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
+import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -238,13 +238,16 @@ function ClubMembershipRequestList({ navigation, route }) {
   });
   const isMutating = acceptRequestMutation.isPending || rejectRequestMutation.isPending;
 
+  // REPRISE-MESSAGERIE p48 (01/11, revue Dirigeant) — comme l'ancienne page de l'équipe, celle
+  // du club cède sa place à Demandes (filtre Club). Sauf chez le SuperAdmin : la notification
+  // d'une revendication de club l'amène ici, et lui seul la tranche.
   useEffect(() => {
-    if (!REQUESTS_HUB_LEGACY_REDIRECT) return;
+    if (isSuperAdmin) return;
     navigateToRequestsHub(navigation, {
       initialFilter: 'club',
       source: 'profile',
-    });
-  }, [navigation]);
+    }, { remplacer: true });
+  }, [isSuperAdmin, navigation]);
 
   // handlers
   const handleEndReached = useCallback(() => {

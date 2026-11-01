@@ -17199,6 +17199,7 @@ export default {
         title: 'Demande refusée',
         unknownDate: 'Date indisponible',
       },
+      receivedAt: 'Reçue le',
       screenTitle: 'Notification',
       statusFallback: 'Information',
       title: 'Notification',

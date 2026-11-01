@@ -384,6 +384,19 @@ const eventTeamInvitationDestination = (payload) => {
   };
 };
 
+/** Les deux réponses que le serveur écrit pour un enfant (acceptée, refusée). */
+const TEXTE_D_UN_AVIS_POUR_UN_ENFANT = /C['’]est accepté : .+ rejoint l['’]équipe|Le club n['’]a pas retenu la demande pour /;
+
+/**
+ * Une « Réponse du club » d'avant le 31/10, envoyée au parent pour un enfant ?
+ * @param {NotificationPayload} payload La notification.
+ * @returns {boolean} Vrai si son texte est celui d'une réponse pour un enfant.
+ */
+const estUnAncienAvisPourUnEnfant = (payload) => TEXTE_D_UN_AVIS_POUR_UN_ENFANT.test(
+  [payload.responseText, payload.notificationBody, payload.body]
+    .filter((texte) => typeof texte === 'string').join(' '),
+);
+
 /**
  * @param {NotificationPayload} payload
  */
@@ -738,6 +751,16 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       }
       const interestChat = chatDestination(payload.chatId);
       if (interestChat) return adaptDestinationForCurrentPlatform(payload, interestChat);
+      // REPRISE-MESSAGERIE p63 (01/11) — les avis d'avant le 31/10 n'ont pas la fiche : on les
+      // reconnaît au texte que le serveur écrit pour un enfant, et ils ouvrent « Mes enfants ».
+      // ponytail: reconnaissance par le texte, seulement pour ces anciens avis ; les neufs portent
+      // childDocumentId. Sortie : retirer ce test quand ces avis auront quitté les cloches.
+      if (type === 'clubInterestResponse' && estUnAncienAvisPourUnEnfant(payload)) {
+        return adaptDestinationForCurrentPlatform(payload, {
+          params: { screen: RouteNames.MyChildren },
+          route: RouteNames.ProfileStack,
+        });
+      }
       if (type === 'clubInterestResponse') {
         return adaptDestinationForCurrentPlatform(payload, notificationDetailsDestination(payload));
       }

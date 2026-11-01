@@ -158,6 +158,15 @@ function NotificationDetails() {
     subtitleText = t('notifications.details.notFound', 'Notification introuvable.');
   }
   const shouldShowDetails = !isLoading && !isError && !isMissingNotification;
+  // REPRISE-MESSAGERIE D-COACH-1 (01/11, revue « pas bon ») — une notification sans écran à elle
+  // (« Hugo L. sera présent… », une « Réponse du club ») montrait son type brut en rouge, puis
+  // « Événement indisponible » et « Aucun motif ». Ces lignes ne parlent que d'un refus de
+  // participation : ailleurs, elles n'apparaissent que si la notification les porte.
+  const montrerLEvenement = isParticipationDeclined || Boolean(details.eventDetails);
+  const montrerLeMotif = isParticipationDeclined || Boolean(details.reason);
+  const libelleDeLaDate = isParticipationDeclined
+    ? t('notifications.details.participationDeclined.labels.decisionDate', 'Date')
+    : t('notifications.details.receivedAt', 'Reçue le');
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
@@ -224,36 +233,42 @@ function NotificationDetails() {
 
         {shouldShowDetails ? (
           <View style={[Spaces.marginTop[20], Spaces.gap[14]]}>
-            <View>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                {t('notifications.details.participationDeclined.labels.status', 'Statut')}
-              </Text>
-              <Text style={[Fonts.p2Bold, { color: Colors.error500, marginTop: 4 }]}>
-                {statusText || details.type || t('notifications.details.statusFallback', 'Information')}
-              </Text>
-            </View>
+            {isParticipationDeclined ? (
+              <View>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                  {t('notifications.details.participationDeclined.labels.status', 'Statut')}
+                </Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.error500, marginTop: 4 }]}>
+                  {statusText}
+                </Text>
+              </View>
+            ) : null}
+
+            {montrerLEvenement ? (
+              <View>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                  {t('notifications.details.participationDeclined.labels.event', 'Événement')}
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
+                  {eventLabel}
+                </Text>
+              </View>
+            ) : null}
+
+            {montrerLeMotif ? (
+              <View>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                  {t('notifications.details.participationDeclined.labels.reason', 'Motif')}
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
+                  {reasonText}
+                </Text>
+              </View>
+            ) : null}
 
             <View>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                {t('notifications.details.participationDeclined.labels.event', 'Événement')}
-              </Text>
-              <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
-                {eventLabel}
-              </Text>
-            </View>
-
-            <View>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                {t('notifications.details.participationDeclined.labels.reason', 'Motif')}
-              </Text>
-              <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
-                {reasonText}
-              </Text>
-            </View>
-
-            <View>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                {t('notifications.details.participationDeclined.labels.decisionDate', 'Date')}
+                {libelleDeLaDate}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
                 {formattedDecisionDate}
