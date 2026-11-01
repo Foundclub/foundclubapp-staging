@@ -54,7 +54,12 @@ jest.mock('@/components/atoms/button/Button', () => {
     return react.createElement(rn.TouchableOpacity, { accessibilityLabel: props.title, onPress: props.onPress }, react.createElement(rn.Text, null, props.title || ''));
   };
 });
-jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => () => null);
+// REPRISE-EVENEMENTS 130 : la doublure garde ses props, pour lire son style.
+const mockRetour = { props: /** @type {any} */ (null) };
+jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => (/** @type {any} */ props) => {
+  mockRetour.props = props;
+  return null;
+});
 jest.mock('@/components/atoms/tag/Tag', () => () => null);
 jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   const react = jest.requireActual('react');
@@ -158,5 +163,15 @@ describe('BH08 — fiche d un match de tournoi', () => {
 
     expect(mockSchedule).not.toHaveBeenCalled();
     expect(Alert.alert).toHaveBeenCalled();
+  });
+});
+
+// REPRISE-EVENEMENTS 130 — sur le site, le retour du match s'étirait en « grande barre vide » :
+// une vue web étire ses enfants. Le bouton garde sa taille, collé à gauche.
+describe('REPRISE-EVENEMENTS 130 — le retour du match', () => {
+  test('🐞 le bouton retour ne s étire pas sur toute la largeur', async () => {
+    await monter();
+
+    expect(mockRetour.props?.style).toEqual(expect.objectContaining({ alignSelf: 'flex-start' }));
   });
 });

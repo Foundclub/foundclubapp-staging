@@ -322,7 +322,8 @@ function TournamentSettingsEdit({ navigation, route }) {
       keyboardAvoiding
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
+        {/* REPRISE-EVENEMENTS 130 : même retour que la fiche d'un match, sans s'étirer. */}
+        <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
       </View>
       <WithDataWrapper
         data={event}

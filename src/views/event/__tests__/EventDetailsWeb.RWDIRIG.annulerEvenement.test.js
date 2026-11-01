@@ -545,6 +545,26 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
     expect(bouton(root, 'Inscrire mon équipe')).toBeUndefined();
   });
 
+  // REPRISE-EVENEMENTS 130 — « Réponse pour Lina » débordait à droite à 390 : le bloc était un
+  // élément de la rangée de boutons, à la largeur de son contenu.
+  test('🐞 le bloc des enfants prend toute la largeur de la rangée', () => {
+    const root = mountScreen({
+      auth: {
+        canEditClub: () => false,
+        canEditEvent: () => false,
+        canManageEvent: () => false,
+        userData: {
+          documentId: 'parent-1', firstname: 'Paola', lastname: 'Recette', role: { name: 'Parent' },
+        },
+      },
+      event: tournoi(),
+    });
+    const BlocDesEnfants = jest.requireMock('@/views/event/components/EventChildRegistration').default;
+
+    expect(root.findByType(BlocDesEnfants).parent?.props.style)
+      .toEqual(expect.objectContaining({ flexBasis: '100%', minWidth: 0 }));
+  });
+
   // REPRISE-EVENEMENTS 131 — la fiche d'un tournoi clôturé proposait encore « Modifier les
   // paramètres », « Gérer mon équipe » et « Créer une équipe ». Décision A : lecture seule,
   // avec un bandeau « Clôturé le … » (la date de l'archivage des équipes, comme au pilotage).

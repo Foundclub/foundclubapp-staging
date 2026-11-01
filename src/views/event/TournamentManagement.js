@@ -724,13 +724,19 @@ function TournamentManagement({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
+          {/* REPRISE-EVENEMENTS 130 : le lecteur (parent, joueur) lit le nom du tournoi ; la
+              phrase de pilotage ne s'adresse qu'à qui pilote. */}
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
+              {canManageTournament && !isClosed
+                ? t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')
+                : event?.name || t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
             </Text>
-            <Text style={[Fonts.p2, Fonts.primary100]}>
-              {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
-            </Text>
+            {canManageTournament && !isClosed ? (
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
+              </Text>
+            ) : null}
           </View>
 
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>

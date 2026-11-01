@@ -2444,8 +2444,11 @@ function EventDetails({ navigation, route }) {
                       </button>
                     </div>
                   ) : null}
+                  {/* REPRISE-EVENEMENTS 130 : pleine largeur, sinon il déborde à 390. */}
                   {offreAuxEnfants && !canEdit ? (
-                    <EventChildRegistration event={event} navigation={navigation} />
+                    <div style={{ flexBasis: '100%', minWidth: 0 }}>
+                      <EventChildRegistration event={event} navigation={navigation} />
+                    </div>
                   ) : null}
                   {repondPresentAbsent ? (
                     [
