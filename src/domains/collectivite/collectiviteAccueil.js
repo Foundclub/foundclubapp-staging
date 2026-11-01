@@ -260,6 +260,16 @@ export const phraseCreneauxEtSeances = (t, creneaux, seances) => {
 };
 
 /**
+ * REPRISE-COLLECTIVITES 102 (01/11/2026) — une demande de gestion qui compte encore : une demande
+ * ANNULÉE par son auteur n'en est plus une. Le compte sans rôle sportif qui a tout annulé revient
+ * au choix de son statut (`doitChoisirSonStatut`), au lieu de rester sur « où en est ma demande ».
+ * @param {unknown} demandes - `/collectivite-manager-requests/mine`.
+ * @returns {boolean} Vrai s'il reste une demande en attente ou tranchée.
+ */
+export const aUneDemandeDeGestion = (demandes) => (Array.isArray(demandes) ? demandes : [])
+  .some((demande) => demande?.status !== 'cancelled');
+
+/**
  * Un compte « Ville seule » : il gère (ou demande à gérer) une collectivité et n'a AUCUN
  * rôle sportif (rôle « Authenticated », clef `new`). Lui arrive sur l'espace de la Ville ;
  * un compte mixte (dirigeant, joueur, entraîneur, parent qui gère aussi une Ville) garde

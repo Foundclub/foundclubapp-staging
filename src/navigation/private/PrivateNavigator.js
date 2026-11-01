@@ -8,7 +8,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
+import { aUneDemandeDeGestion, isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
 import { lireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
@@ -78,8 +78,8 @@ function PrivateNavigator() {
   // pas) acceptée, ouvre l'écran « où en est ma demande », jamais le tunnel sportif.
   const demandesGestionnaire = useMyManagerRequests({ enabled: sansRoleSportif });
   const premiereVille = Array.isArray(villesGerees.data) ? villesGerees.data[0] : null;
-  const aDemandeAGerer = Array.isArray(demandesGestionnaire.data)
-    && demandesGestionnaire.data.length > 0;
+  // REPRISE-COLLECTIVITES 102 : une demande annulée ne compte plus (le choix du statut revient).
+  const aDemandeAGerer = aUneDemandeDeGestion(demandesGestionnaire.data);
   const villeSeule = sansRoleSportif && isVilleOnlyAccount({
     hasManagerRequest: aDemandeAGerer,
     managedCount: premiereVille?.documentId ? 1 : 0,

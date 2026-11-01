@@ -4870,6 +4870,11 @@ export default {
         texte: 'You now manage {{nom}} on FoundClub.',
         titre: 'Your space is open',
       },
+      annulee: {
+        choisir: 'Choose my status',
+        texte: 'Your request for {{ville}} is cancelled. Choose your status to continue, or send a new request.',
+        titre: 'Request cancelled',
+      },
       attente: {
         annuler: 'Cancel my request',
         annulerOui: 'Yes, cancel',

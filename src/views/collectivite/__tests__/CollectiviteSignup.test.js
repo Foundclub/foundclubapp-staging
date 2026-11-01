@@ -631,3 +631,36 @@ describe('CORR-COLLECTIVITES 102 — la demande en attente d’une Ville déjà 
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'bouton-Annuler ma demande').length).toBeGreaterThan(0);
   });
 });
+
+// REPRISE-COLLECTIVITES 102 (01/11/2026, contre-recette du 01/11 17:27) — après « Oui, annuler »
+// (200), l'écran restait « Demande en cours de vérification », même rechargé, sans aucune sortie.
+// Une demande annulée a sa sortie : choisir son statut, ou refaire une demande.
+describe('REPRISE-COLLECTIVITES 102 — la sortie après « Annuler ma demande »', () => {
+  const ANNULEE = {
+    collectivite: { documentId: 'ville-montrivage', name: 'Ville de Montrivage', type: 'commune' },
+    createdAt: '2026-11-01T16:27:00.000Z',
+    decidedAt: null,
+    documentId: 'dm-9',
+    gestionnairesConnus: null,
+    refusalReason: null,
+    status: 'cancelled',
+  };
+
+  it('la seule demande est annulée : « Demande annulée », plus « en cours de vérification »', async () => {
+    mockDemandes = { data: [ANNULEE], isLoading: false, refetch: jest.fn() };
+    const arbre = await monter(CollectiviteSignupStatus);
+    expect(textes(arbre)).toContain('Demande annulée');
+    expect(textes(arbre)).not.toContain('Demande en cours de vérification');
+    await appuyer(arbre, 'bouton-Choisir mon statut');
+    expect(mockNavigate).toHaveBeenCalledWith('UserRole');
+    await appuyer(arbre, 'bouton-Refaire une demande');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
+  });
+
+  it('une autre demande attend encore : c’est elle qui se lit', async () => {
+    const enAttente = { ...ANNULEE, createdAt: '2026-10-01T09:00:00.000Z', documentId: 'dm-1', status: 'pending' };
+    mockDemandes = { data: [ANNULEE, enAttente], isLoading: false, refetch: jest.fn() };
+    const arbre = await monter(CollectiviteSignupStatus);
+    expect(textes(arbre)).toContain('Demande en cours de vérification');
+  });
+});

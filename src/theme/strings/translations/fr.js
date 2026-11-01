@@ -5237,6 +5237,12 @@ export default {
         texte: 'Vous gérez désormais la {{nom}} sur FoundClub.',
         titre: 'Votre espace est ouvert',
       },
+      annulee: {
+        choisir: 'Choisir mon statut',
+        // eslint-disable-next-line max-len
+        texte: 'Votre demande pour {{ville}} est annulée. Choisissez votre statut pour continuer, ou refaites une demande.',
+        titre: 'Demande annulée',
+      },
       attente: {
         annuler: 'Annuler ma demande',
         annulerOui: 'Oui, annuler',
