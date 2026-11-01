@@ -334,3 +334,15 @@ describe('CORR-COLLECTIVITES 101 — « Détacher ce club »', () => {
     expect(mockDetacher).not.toHaveBeenCalled();
   });
 });
+
+// REPRISE-COLLECTIVITES 101 (01/11/2026, Adel « à modifier » ; revue : « le bouton est gris et
+// discret, on peut le prendre pour un bouton éteint ») — un geste qui arrête l'offre se voit : le
+// bouton est rouge (Danger), la confirmation pleine (DangerFilled).
+describe('REPRISE-COLLECTIVITES 101 — « Détacher ce club » se voit', () => {
+  it('le bouton est rouge, la confirmation pleine', async () => {
+    const arbre = await monter();
+    expect(boutonTitre(arbre, 'Détacher ce club').props.variant).toBe('Danger');
+    await act(async () => { boutonTitre(arbre, 'Détacher ce club').props.onPress(); });
+    expect(boutonTitre(arbre, 'Oui, détacher').props.variant).toBe('DangerFilled');
+  });
+});
