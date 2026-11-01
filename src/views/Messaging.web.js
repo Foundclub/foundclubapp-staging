@@ -23,7 +23,7 @@ function Messaging(props) {
   const { width } = useWindowDimensions();
   const { navigation, route } = props;
   if (width >= BREAKPOINTS.desktop && route?.params?.espace !== 'ville') {
-    return <MessagesDuSite navigation={navigation} />;
+    return <MessagesDuSite navigation={navigation} route={route} />;
   }
   // eslint-disable-next-line react/jsx-props-no-spreading -- la page recoit tout, telle quelle
   return <MessagingDuTelephone {...props} />;

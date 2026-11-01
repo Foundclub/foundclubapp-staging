@@ -195,6 +195,8 @@ jest.mock('@/components/templates/ScreenContainer', () => {
 });
 
 // eslint-disable-next-line import/first
+import { RouteNames } from '@/navigation/routeNames';
+// eslint-disable-next-line import/first
 import ConversationWeb from '../Conversation.web';
 
 // Les noms d evenements de la socket, ceux que l ecran ecoute.
@@ -765,5 +767,85 @@ describe('CORR-SOCLE point 4 — l en-tête de la colonne Messages tient en 56 p
     expect(recherches(enTete)).toHaveLength(0);
     expect(recherches(liste)).toHaveLength(1);
     expect(liste.type).toBe('nav');
+  });
+});
+
+// REPRISE-MESSAGERIE (01/11, revue) — la colonne Messages du site, sur ordinateur.
+describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
+  const lignesDeTexte = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.type === 'button' && String(n.props['data-testid'] || '').startsWith('MSG1W-ligne-')
+  )).map((/** @type {any} */ n) => texteDe(n));
+
+  // Point 88 (Adel « A ») : la liste du téléphone disait « Ville de Montrivage : … » ; la colonne
+  // du site disait encore « Karim : … », le prénom de l'agent.
+  test('88 — un message signé par la Ville : l aperçu dit le nom de la Ville', async () => {
+    mockListeIPH09 = [{
+      documentId: 'fil-ville',
+      groupName: 'Ville de Montrivage',
+      messages: [{
+        createdAt: '2026-10-31T10:00:00Z',
+        message: 'RETEST-COLL message de la Ville',
+        sender: BRUNO,
+        senderSignature: { nom: 'Ville de Montrivage', voix: 'ville' },
+      }],
+      participants: [MOI, BRUNO],
+      type: 'group',
+      updatedAt: '2026-10-31T10:00:00Z',
+    }];
+    const { arbre } = await monter();
+    const [ligne] = lignesDeTexte(arbre);
+    expect(ligne).toContain('Ville de Montrivage : RETEST-COLL message de la Ville');
+    expect(ligne).not.toContain('Bruno : ');
+  });
+
+  // Point 114 (Adel « B ») : dans l'espace du complexe, chaque fil porte sa casquette, comme sur
+  // le téléphone ; ailleurs, rien de neuf.
+  const LISTE_MELEE = [
+    {
+      documentId: 'canal-complexe',
+      groupName: 'Le Five',
+      messages: [],
+      participants: [MOI, BRUNO],
+      participantsCount: 40,
+      type: 'group',
+      updatedAt: '2026-10-31T10:00:00Z',
+    },
+    {
+      documentId: 'fil-equipe',
+      messages: [],
+      participants: [MOI, BRUNO],
+      team: { documentId: 'eq-1', name: 'U11' },
+      type: 'team',
+      updatedAt: '2026-10-31T09:00:00Z',
+    },
+  ];
+  const casquettes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    String(n.props?.['data-testid'] || '').startsWith('MSG1W-casquette-')
+  )).map((/** @type {any} */ n) => `${n.props['data-testid']}=${texteDe(n)}`);
+
+  test('114 — espace du complexe : « Complexe » et « Club » sur les lignes', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre } = await monter({ espace: 'complexe' });
+    expect(casquettes(arbre)).toEqual([
+      'MSG1W-casquette-canal-complexe=Complexe',
+      'MSG1W-casquette-fil-equipe=Club',
+    ]);
+  });
+
+  test('114 — hors de l espace du complexe : aucune étiquette', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre } = await monter();
+    expect(casquettes(arbre)).toEqual([]);
+  });
+
+  test('114 — ouvrir un fil depuis l espace du complexe garde l espace (et ses étiquettes)', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre, navigation } = await monter({ espace: 'complexe' });
+    const ligne = parTestId(arbre, 'MSG1W-ligne-canal-complexe')[0];
+    await act(async () => { ligne.props.onClick(); });
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      RouteNames.Conversation,
+      expect.objectContaining({ chatId: 'canal-complexe', espace: 'complexe' }),
+    );
   });
 });
