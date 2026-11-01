@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -432,14 +432,9 @@ function EventFilters({ navigation }) {
 
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
+      // REPRISE-MESSAGERIE p67 (01/11) : le message est déjà DANS la page ; la fenêtre en plus
+      // faisait un double message (grise sur le site).
       setVilleManquante(true);
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), t(
-        'eventFilters.cityAndRadiusAreRequired',
-        'La ville et le rayon sont obligatoires pour créer une alerte',
-      ));
       return;
     }
 
@@ -582,6 +577,15 @@ function EventFilters({ navigation }) {
         contentContainerStyle={[Spaces.gap[40]]}
         style={[Spaces.marginVertical[16]]}
       >
+        {/* REPRISE-MESSAGERIE p67 (01/11) — le site ne dessine pas l'en-tête du téléphone : sans ce
+            titre, rien ne disait qu'on crée une alerte. */}
+        {isAlertMode && Platform.OS === 'web' ? (
+          <Text accessibilityRole="header" style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {editAlertMode
+              ? t('eventFilters.editTheAlert', "Modifier l'alerte")
+              : t('eventFilters.createAnAlert', 'Créer une alerte')}
+          </Text>
+        ) : null}
         <Controller
           control={control}
           name="city"

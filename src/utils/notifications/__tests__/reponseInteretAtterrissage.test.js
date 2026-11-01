@@ -95,7 +95,7 @@ describe('PAR-L9a — la notification « Réponse du club » ouvre la conversati
   // un enfant, mène à « Mes enfants ».
   test.each([
     ['accepté', 'Réponse concernant U11 Tunnel: C’est accepté : Lina rejoint l’équipe U11 Tunnel.'],
-    ['accepté (apostrophe droite)', "Réponse concernant U11: C'est accepté : Lina rejoint l'équipe U11."],
+    ['apostrophe droite', "Réponse concernant U11: C'est accepté : Lina rejoint l'équipe U11."],
     ['refusé', 'Réponse concernant U11 Tunnel: Le club n’a pas retenu la demande pour Lina.'],
   ])('ancien avis pour un enfant (%s) : « Mes enfants », pas le détail', (_cas, body) => {
     const destination = destinationDe({ body, documentId: 'notif-4', type: REPONSE });
