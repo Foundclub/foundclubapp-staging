@@ -43,6 +43,15 @@ export const STATUTS_ACTIFS = Object.freeze([STATUTS.enAttente, STATUTS.confirme
  */
 export const ETATS_LUS = Object.freeze({ jouee: 'jouee', nonHonoree: 'non_honoree' });
 
+/**
+ * REPRISE-RESA (01/11/2026, D-GERANT-3) — les deux états d'une COLLECTE (serveur RESA-L3), que
+ * l'historique d'un client montre aussi : « En collecte », « Non aboutie ».
+ */
+export const STATUTS_COLLECTE = Object.freeze({
+  enCollecte: 'en_collecte',
+  nonAboutie: 'non_aboutie',
+});
+
 const MINUTE = 60 * 1000;
 const HEURE = 60 * MINUTE;
 const JOUR = 24 * HEURE;
@@ -59,6 +68,10 @@ export const libelleStatut = (t, statut) => {
       return t('complexeReservations.statut.jouee', 'Jouée');
     case ETATS_LUS.nonHonoree:
       return t('complexeReservations.statut.nonHonoree', 'Non honorée');
+    case STATUTS_COLLECTE.enCollecte:
+      return t('complexeReservations.statut.enCollecte', 'En collecte');
+    case STATUTS_COLLECTE.nonAboutie:
+      return t('complexeReservations.statut.nonAboutie', 'Non aboutie');
     case STATUTS.annulee:
       return t('complexeReservations.statut.annulee', 'Annulée');
     case STATUTS.confirmee:
