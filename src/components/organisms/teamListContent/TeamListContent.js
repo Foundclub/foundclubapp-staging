@@ -307,7 +307,17 @@ function TeamListContent({
 
   const teams = useMemo(() => {
     if (isLeagueMode) return (leagueData || []).filter(Boolean);
-    return classicData?.pages?.flatMap((page) => page?.data || [])?.filter(Boolean) || [];
+    // REPRISE-INSCRIPTION p20 : la pagination n'a pas d'ordre stable, une même équipe peut revenir
+    // sur deux pages (« Les Vétérans d'Aÿ-sur-Huveaune » en double) ; une seule fois à l'écran.
+    const vues = new Set();
+    return (classicData?.pages?.flatMap((page) => page?.data || []) || []).filter((equipe) => {
+      if (!equipe) return false;
+      const cle = equipe.documentId || equipe.id;
+      if (!cle) return true;
+      if (vues.has(cle)) return false;
+      vues.add(cle);
+      return true;
+    });
   }, [classicData, leagueData, isLeagueMode]);
 
   // D25 ① — « mes equipes » se lisait UNIQUEMENT dans le profil du compte, servi
@@ -540,8 +550,14 @@ function TeamListContent({
     // R06 — meme defaut que TeamWizardName : cet organisme est rendu par des
     // ecrans montes AUSSI sur le navigateur racine (TeamDetails, TeamList), ou
     // la route `Search` n'existe pas. La forme a trois niveaux marche partout.
+    // REPRISE-INSCRIPTION p20 : depuis « Mes équipes », le joueur cherche une ÉQUIPE : la liste
+    // des équipes (sur le site, l'accueil de la recherche renvoyait aux événements).
+    if (showOnlyMyTeams) {
+      /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, { screen: RouteNames.TeamList });
+      return;
+    }
     navigateToSearchHub(navigation, 'clubs');
-  }, [navigation]);
+  }, [navigation, showOnlyMyTeams]);
 
   // Carte pointillee « Nouvelle équipe » avec statut du quota (handoff 9a).
   // L10-C : quand le quota gratuit est deja epuise, ce point d'entree se grise
