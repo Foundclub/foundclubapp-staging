@@ -65,12 +65,16 @@ export const largeurJauge = (taux) => {
 
 /**
  * Le taux en mots : « 6 % », ou « — » quand l'installation n'a pas d'horaires.
- * @param {unknown} taux - Le taux du serveur.
+ * REPRISE-COLLECTIVITES 103 (01/11) : des séances posées dont le taux s'arrondit à 0 se disent
+ * « < 1 % », pas « 0 % » (4 h 30 sur 6 installations, 7 jours de 8 h à 22 h : 0,5 %).
+ * @param {unknown} taux - Le taux du serveur (arrondi à l'unité).
+ * @param {unknown} [minutes] - Les minutes de séances qu'il compte.
  * @returns {string} Le libellé.
  */
-export const tauxLisible = (taux) => {
+export const tauxLisible = (taux, minutes = 0) => {
   const valeur = nombre(taux);
-  return valeur === null ? '—' : `${valeur} %`;
+  if (valeur === null) return '—';
+  return valeur === 0 && (nombre(minutes) || 0) > 0 ? '< 1 %' : `${valeur} %`;
 };
 
 /**

@@ -34,6 +34,8 @@ describe('COLL-C5 — les chiffres en mots', () => {
     expect(largeurBarre(10, 0)).toBe(0);
     expect([largeurJauge(6), largeurJauge(130), largeurJauge(null)]).toEqual([6, 100, 0]);
     expect([tauxLisible(6), tauxLisible(null)]).toEqual(['6 %', '—']);
+    // REPRISE-COLLECTIVITES 103 (01/11) : des minutes posées, un taux arrondi à 0 : « < 1 % ».
+    expect([tauxLisible(0, 270), tauxLisible(0, 0), tauxLisible(0)]).toEqual(['< 1 %', '0 %', '0 %']);
   });
 
   it('« % séances tenues » : tenues / (tenues + annulées + fermeture) ; null sinon', () => {
