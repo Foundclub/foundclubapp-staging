@@ -713,6 +713,9 @@ function ProfileEdit({ navigation, route }) {
                       label={t('profile.fields.city.label', 'Ville')}
                       placeholder={t('profile.fields.city.placeholder', 'Rechercher une ville')}
                       setAddress={onChange}
+                      // REPRISE-INSCRIPTION p13 : un champ de commune. Sans type, des lieux-dits
+                      // d'autres départements se mêlaient aux arrondissements (20 résultats).
+                      type="municipality"
                     />
                   )}
                 />

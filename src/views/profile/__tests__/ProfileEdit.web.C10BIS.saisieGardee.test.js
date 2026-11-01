@@ -368,3 +368,13 @@ describe('REPRISE-INSCRIPTION p17 — catégories de « Modifier mon profil »',
       .toHaveBeenCalledWith(expect.objectContaining({ category: 'Sénior (+18 ans)' }));
   });
 });
+
+// REPRISE-INSCRIPTION p13 (contre-recette du 01/11) — le champ « Ville » de « Mes informations »
+// cherchait sans type : des lieux-dits d'autres départements (« Marseille 36150 Luçay-le-Libre »)
+// s'y mêlaient aux arrondissements, coupés à 20 (8e et 9e absents). C'est un champ de commune.
+describe('REPRISE-INSCRIPTION p13 — le champ Ville cherche des communes', () => {
+  it('le champ Ville demande des communes, comme l’étape « Où habites-tu ? »', async () => {
+    await rendre(joueurComplet);
+    expect(mockChampsFormulaire.Ville.type).toBe('municipality');
+  });
+});
