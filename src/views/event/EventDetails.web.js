@@ -2357,7 +2357,8 @@ function EventDetails({ navigation, route }) {
                           : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
                       </span>
                     ) : null}
-                    {event?.sessionStatus ? (
+                    {/* REPRISE-EVENEMENTS 123 : un réglage d'organisateur. */}
+                    {canEdit && event?.sessionStatus ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
@@ -2482,7 +2483,8 @@ function EventDetails({ navigation, route }) {
                       ) : joinButtonLabel}
                     </button>
                   ) : null}
-                  {!canEdit && activeParticipationRequestId ? (
+                  {/* REPRISE-EVENEMENTS 123 : Présent / Absent suffisent. */}
+                  {!canEdit && !repondPresentAbsent && activeParticipationRequestId ? (
                     <button
                       disabled={cancelParticipationMutation.isPending}
                       onClick={handleCancelParticipation}

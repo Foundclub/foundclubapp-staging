@@ -402,6 +402,25 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
     await act(async () => { bouton(root, 'Absent').props.onClick(); });
     expect(mockRespondToEventRsvp).toHaveBeenCalledWith('event-1', 'absent');
   });
+
+  // REPRISE-EVENEMENTS 123 — la contre-recette voyait encore « Session fermée » et
+  // « Annuler ma demande » sous Présent / Absent : deux façons de répondre, dont une de coach.
+  test('🐞 avec Présent / Absent : ni « Session fermée » ni « Annuler ma demande »', () => {
+    const root = mountScreen({
+      auth: authJoueur,
+      event: {
+        ...matchDuJoueur(),
+        participationRequests: [{
+          documentId: 'demande-1', isActive: true, participationStatus: 'pending', user: JOUEUR,
+        }],
+        sessionStatus: 'closed',
+      },
+    });
+
+    expect(bouton(root, 'Présent')).toBeDefined();
+    expect(bouton(root, 'Annuler ma demande')).toBeUndefined();
+    expect(textOf(root)).not.toContain('Session fermée');
+  });
 });
 
 // CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Validation auto » s'affichait, mais un
