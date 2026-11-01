@@ -89,9 +89,9 @@ jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => {
 // (motif de `AdminManagerRequests.test.js`).
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const { Pressable: Appui, Text: Texte, View: Vue } = jest.requireActual('react-native');
-  return function SegmentedControlMock({ onChange, options }) {
+  return function SegmentedControlMock({ fullLabels, onChange, options }) {
     return (
-      <Vue>
+      <Vue testID={fullLabels ? 'segmente-libelles-entiers' : 'segmente'}>
         {options.map((option) => (
           <Appui key={option.value} onPress={() => onChange(option.value)}>
             <Texte>{option.label}</Texte>
@@ -557,9 +557,23 @@ describe('CORR-EVENEMENTS 124 — retour de match du joueur', () => {
   test("🐞 « J'ai joué » sans réponse enregistrée : aucune pastille de temps allumée", async () => {
     const { arbre } = await monter({ data: { ...MATCH, response: null } });
     await presser(arbre, "J'ai joué");
-    ['Pas joué', 'Une mi-temps', 'Tout le match'].forEach((libelle) => {
+    ['Une mi-temps', 'Tout le match'].forEach((libelle) => {
       expect(appui(arbre, libelle).props.accessibilityState).toEqual({ checked: false });
     });
+  });
+
+  // REPRISE-EVENEMENTS 124 — la contre-recette lisait encore « Pas joué » sous « J'ai joué »
+  // (« J'étais là sans jouer » existe déjà), et des libellés coupés à 390 (« Une mi-tem… »).
+  test("🐞 sous « J'ai joué » : pas de « Pas joué », des libellés à la ligne", async () => {
+    const { arbre } = await monter({ data: { ...MATCH, response: null } });
+    await presser(arbre, "J'ai joué");
+
+    expect(textes(arbre)).not.toContain('Pas joué');
+    const miTemps = arbre.root.findAllByType(Text)
+      .find((texte) => [].concat(texte.props.children).join('') === 'Une mi-temps');
+    expect(miTemps?.props.numberOfLines).toBe(2);
+    const entiers = arbre.root.findAllByProps({ testID: 'segmente-libelles-entiers' });
+    expect(entiers.length).toBeGreaterThan(0);
   });
 
   test("🐞 un double clic sur « Envoyer » n'envoie qu'une fois", async () => {
