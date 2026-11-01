@@ -772,7 +772,7 @@ describe('CORR-SOCLE point 4 — l en-tête de la colonne Messages tient en 56 p
 // de la colonne Messages sortaient coupées au bord droit (« 30/1 »), et les noms longs étaient
 // tranchés net : la colonne de texte de chaque ligne était une grille sans colonne déclarée,
 // élargie par le texte le plus long. Elle est bornée à la ligne.
-describe('REPRISE-PLACE point 4 — chaque ligne de la colonne Messages tient dans sa largeur', () => {
+describe('REPRISE-PLACE point 4 — chaque ligne de la colonne Messages tient en largeur', () => {
   test('à 1 280 px, la colonne de texte de la ligne est bornée', async () => {
     mockListeIPH09 = [{ documentId: CHAT_ID, name: 'Seniors A', type: 'team' }];
     const { arbre } = await monter();

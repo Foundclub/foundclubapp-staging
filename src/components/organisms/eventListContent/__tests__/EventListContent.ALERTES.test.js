@@ -200,9 +200,12 @@ jest.mock('@/components/atoms/emptyState/EmptyState', () => {
   };
 });
 
+// REPRISE-PLACE : réglable par témoin (la réserve de la barre du bas, site et téléphone).
+/** @type {any} */
+let mockDock = { dockHeight: 0, sceneBottomInset: 0 };
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ dockHeight: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
 }));
 
 jest.mock('@/navigation/public/publicAuthNavigation', () => ({ openPublicAuthFlow: jest.fn() }));
@@ -1222,5 +1225,32 @@ describe('PAR-L10 — E22 : la feuille ouverte pour créer une alerte', () => {
     expect(boutonDeLibelle(tree, 'Réinitialiser')).toBeDefined();
     expect(parEtiquette(tree, 'Créer une alerte avec ces filtres')).toBeDefined();
     expect(texte).not.toContain('Créer cette alerte');
+  });
+});
+
+// REPRISE-PLACE (01/11, point 2, revue Joueur : « un vide d'environ 150 px reste sous la dernière
+// carte ») — sur le site, la fin de la liste réservait la barre du bas (144 px) alors que la coque
+// la réserve déjà (`dockClearance` 0). Elle ne garde que 12 px. Au téléphone, rien ne change.
+describe('REPRISE-PLACE — fin de la liste des événements sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const plateformeAvant = Platform.OS;
+  afterEach(() => {
+    Platform.OS = plateformeAvant;
+    mockDock = { dockHeight: 0, sceneBottomInset: 0 };
+  });
+  const finDeListe = (/** @type {any} */ tree) => tree.root.findAll((/** @type {any} */ n) => (
+    Array.isArray(n.props?.data) && n.props?.contentContainerStyle
+  ))[0].props.contentContainerStyle.paddingBottom;
+
+  it('site, coque qui réserve la barre : 12 px, pas 144', async () => {
+    Platform.OS = 'web';
+    mockDock = { dockClearance: 0, sceneBottomInset: 144 };
+    expect(finDeListe(await monter())).toBe(12);
+  });
+
+  it('téléphone : la réserve de la barre flottante reste', async () => {
+    Platform.OS = 'ios';
+    mockDock = { dockClearance: 96, sceneBottomInset: 108 };
+    expect(finDeListe(await monter())).toBe(108);
   });
 });

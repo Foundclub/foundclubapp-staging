@@ -205,12 +205,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   }, []);
 
   useEffect(() => {
-    // REPRISE-PLACE (01/11, D-GERANT-4) : sur le site, la page porte déjà sa carte « Choisis une
-    // ville » et « Autoriser ma position » ; la fenêtre ouverte d'office la recouvrait (et la
-    // carte d'un complexe dessous). Elle ne s'ouvre d'elle-même qu'au téléphone.
-    if (Platform.OS !== 'web' && screenActive && etatPosition === 'aDemander' && !ville) {
-      setFeuillePosition(true);
-    }
+    if (screenActive && etatPosition === 'aDemander' && !ville) setFeuillePosition(true);
     // La feuille ne se montre qu'une fois : à la première ouverture de l'onglet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenActive, etatPosition]);

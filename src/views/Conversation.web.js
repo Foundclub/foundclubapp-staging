@@ -1253,7 +1253,11 @@ function ColonneDesConversations({
                     plus long élargissait la ligne (date et pastille coupées au bord droit). */}
                 <span
                   style={{
-                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
+                    display: 'grid',
+                    flex: 1,
+                    gap: 4,
+                    gridTemplateColumns: 'minmax(0, 1fr)',
+                    minWidth: 0,
                   }}
                 >
                   <span

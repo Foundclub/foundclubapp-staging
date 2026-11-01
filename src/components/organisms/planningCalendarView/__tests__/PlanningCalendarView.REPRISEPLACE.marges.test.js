@@ -45,7 +45,9 @@ test('REPRISE-PLACE vue Mois : aucune marge latérale ajoutée à celle de l’�
   /** @type {any} */
   let arbre;
   await act(async () => {
-    arbre = renderer.create(<PlanningCalendarView currentDate={new Date(2026, 10, 4, 12)} events={[]} />);
+    arbre = renderer.create(
+      <PlanningCalendarView currentDate={new Date(2026, 10, 4, 12)} events={[]} />,
+    );
   });
   const marges = arbre.root.findAllByType(View)
     .map((/** @type {any} */ v) => StyleSheet.flatten(v.props.style) || {})

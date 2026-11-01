@@ -289,7 +289,8 @@ describe('REPRISE-PLACE — la carte d’événement ne dépasse pas le fil', ()
   test('276 px au plus, jamais plus que son parent', () => {
     const { StyleSheet } = jest.requireActual('react-native');
     const arbre = rendre();
-    const [carte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'bulle-evenement');
+    const [carte] = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'bulle-evenement');
     const style = StyleSheet.flatten(carte.props.style);
     expect(style.width).toBe(276);
     expect(style.maxWidth).toBe('100%');

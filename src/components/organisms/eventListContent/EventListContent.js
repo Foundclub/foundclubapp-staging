@@ -19,6 +19,7 @@ import {
   Alert,
   Image,
   InteractionManager,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -259,7 +260,7 @@ function EventListContent({
   // les filtres de la recherche d'événements, et la liste, elle, ne changeait pas.
   const [filtresDeLaFiche, setFiltresDeLaFiche] = useState({});
   const filtresDeLaListe = showFilters ? eventFilters : filtresDeLaFiche;
-  const { sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, sceneBottomInset } = useBottomDockLayout();
   const defaultFutureCutoffRef = useRef(startOfMinute(new Date()).toISOString());
   const explicitSearchText = useMemo(() => {
     let rawQuery = '';
@@ -680,7 +681,9 @@ function EventListContent({
     isDateRefreshPending,
   ]);
   const shouldShowMapToggle = enableMapMode && visibleEvents.length > 0;
-  const listBottomPadding = sceneBottomInset;
+  // REPRISE-PLACE (01/11, point 2) : sur le site, la coque réserve déjà la barre du bas
+  // (`dockClearance` 0) ; `sceneBottomInset` la recomptait : 144 px vides sous la dernière carte.
+  const listBottomPadding = Platform.OS === 'web' ? dockClearance + 12 : sceneBottomInset;
   const showLoadingPlaceholder = !hasResolvedActiveQuery
     || (isActiveQueryBusy && visibleEvents.length === 0);
   const showInlineLoadingHint = hasResolvedActiveQuery

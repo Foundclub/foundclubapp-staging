@@ -41,9 +41,6 @@ function useBottomDockLayout() {
     return () => window.removeEventListener('resize', measure);
   }, []);
   const webDockClearance = shellReservesDock ? 0 : Math.max(sceneBottomInset - 12, 0);
-  // REPRISE-PLACE (01/11, point 2) : la fin d'une liste du site réservait encore la barre du bas
-  // (144 px vides sous la dernière carte) alors que la coque la réserve déjà.
-  const webSceneBottomInset = shellReservesDock ? 12 + bottomInset : sceneBottomInset;
 
   return {
     bottomInset,
@@ -51,7 +48,7 @@ function useBottomDockLayout() {
       ? webDockClearance
       : getFloatingTabBarMetrics(bottomInset).clearance,
     floatingActionBottomOffset,
-    sceneBottomInset: Platform.OS === 'web' ? webSceneBottomInset : sceneBottomInset,
+    sceneBottomInset,
   };
 }
 

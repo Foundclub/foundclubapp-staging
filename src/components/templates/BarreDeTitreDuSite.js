@@ -58,7 +58,9 @@ function BarreDeTitreDuSite({ children, cleDuTitre }) {
         >
           <HeaderBackButton withDefaultMargin={false} />
           <Text
-            accessibilityRole="header"
+            // REPRISE-PLACE : un titre déclaré par l'écran (nom du club…) y est déjà un titre ;
+            // la barre ne le répète pas comme second titre de niveau 1.
+            accessibilityRole={titre ? undefined : 'header'}
             numberOfLines={1}
             style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Alignments.fill]}
           >
