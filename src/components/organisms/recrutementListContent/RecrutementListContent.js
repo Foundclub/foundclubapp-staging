@@ -8,6 +8,7 @@ import {
   ActivityIndicator, Alert, FlatList, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   criteresPourMoi,
@@ -197,6 +198,9 @@ function RecrutementListContent({
   const nav = /** @type {any} */ (navigation);
   const { userData } = /** @type {any} */ (useAuth());
   const isAuthenticated = Boolean(userData?.documentId);
+  // REPRISE-TEXTES (point 25) : le profil d'un parent n'a ni sport, ni section, ni catégorie ;
+  // « Compléter mon profil » l'enverrait vers des champs qui n'existent pas.
+  const isParent = getUserRoleKey(userData?.role?.name) === 'parent';
   const [{ recruitmentAdFilters }, appDispatch] = /** @type {any} */ (useAppContext());
   const recruitmentMode = getRecruitmentRoleMode(userData);
   const isCoachOrAdmin = recruitmentMode === 'staff';
@@ -1175,7 +1179,7 @@ function RecrutementListContent({
     <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
       {renderAudienceTypeTabs()}
       {renderPourMoi()}
-      {isAuthenticated && !criteres ? (
+      {isAuthenticated && !isParent && !criteres ? (
         <TouchableOpacity
           onPress={() => nav.navigate(RouteNames.ProfileStack, {
             screen: RouteNames.Profile,

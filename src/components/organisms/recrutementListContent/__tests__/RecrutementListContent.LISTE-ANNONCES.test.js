@@ -560,3 +560,19 @@ describe('A08 — « Pour moi » : critères écrits, tri serveur, « Autres ann
     expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', { screen: 'ProfileEdit' });
   });
 });
+
+// REPRISE-TEXTES, point 25 (revue du parent, 01/11) — sur l'onglet Recrutement, un parent voyait la
+// carte « Compléter mon profil : sport, section, catégorie », qui l'envoyait vers un profil de
+// parent qui n'a plus ces champs. ROUGE avant : la carte reste pour un joueur sans critères, et
+// disparaît pour un parent (Adel garde l'accès au recrutement, pas cette invitation sans issue).
+describe('REPRISE-25 — « Compléter mon profil » n est pas proposé à un parent', () => {
+  test('un joueur sans critères garde la carte', async () => {
+    const tree = await rendrePour(JOUEUR_SANS_SPORT);
+    expect(occurrences(tree, 'Compléter mon profil')).toBe(1);
+  });
+
+  test('🔴 un parent ne la voit plus', async () => {
+    const tree = await rendrePour({ documentId: 'u-parent', role: { name: 'Parent' } });
+    expect(occurrences(tree, 'Compléter mon profil')).toBe(0);
+  });
+});

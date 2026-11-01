@@ -724,7 +724,7 @@ describe('N7 item 4 (vague P, 23/08) — la bascule d entrainement vit dans la f
     // S11 (25/08) — la validation des externes est TOUJOURS manuelle : le
     // « auto » pose dans la donnee ci-dessus est desormais ignore a la lecture.
     // Le sujet du temoin ne change pas : la note porte bien le quota.
-    expect(textOf(rangee)).toContain('4 place(s) externes - validation manuelle');
+    expect(textOf(rangee)).toContain('4 places externes - validation manuelle');
     expect(typeof rangee.findAllByType(TouchableOpacity)[0].props.onPress).toBe('function');
   });
 
@@ -736,7 +736,7 @@ describe('N7 item 4 (vague P, 23/08) — la bascule d entrainement vit dans la f
 
     const rangee = rangeeBascule(root, "Ouvrir l'entraînement");
     expect(rangee).toBeTruthy();
-    expect(textOf(rangee)).toContain('3 place(s) externes - validation manuelle');
+    expect(textOf(rangee)).toContain('3 places externes - validation manuelle');
   });
 
   // ♻️ ADAPTE PAR P8 (vague P, 23/08) — ce temoin figeait un etat de TRANSIT.

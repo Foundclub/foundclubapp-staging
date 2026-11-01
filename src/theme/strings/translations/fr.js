@@ -191,12 +191,12 @@ export default {
     decline: 'Refuser',
     errorTitle: 'Erreur',
     fields: {
-      comment: 'Commentaire:',
-      initialSearch: 'Recherche initiale:',
-      name: 'Nom:',
-      phone: 'Téléphone:',
-      screen: 'Écran:',
-      target: 'Cible:',
+      comment: 'Commentaire :',
+      initialSearch: 'Recherche initiale :',
+      name: 'Nom :',
+      phone: 'Téléphone :',
+      screen: 'Écran :',
+      target: 'Cible :',
     },
     forClub: 'Pour le club :',
     managerToContact: 'Dirigeant à contacter',
@@ -248,9 +248,9 @@ export default {
       retry: 'Réessayer',
     },
     subtitle: {
-      claim: 'Revendique: {{clubName}}',
-      clubCreation: 'Club à onboarder: {{clubName}}',
-      search: 'Recherche: {{clubName}}',
+      claim: 'Revendique : {{clubName}}',
+      clubCreation: 'Club à onboarder : {{clubName}}',
+      search: 'Recherche : {{clubName}}',
     },
     unknownClub: 'Club inconnu',
     unknownClubLower: 'club inconnu',
@@ -520,7 +520,7 @@ export default {
       title: 'Aucune demande en attente',
     },
     managerToContact: 'Dirigeant à contacter',
-    phone: 'Téléphone:',
+    phone: 'Téléphone :',
     process: 'Traiter',
     requester: 'Demandeur',
     screenTitle: 'Clubs à onboarder',
@@ -553,7 +553,7 @@ export default {
     addressLabel: 'Adresse principale',
     addressPlaceholder: 'Rechercher une adresse',
     detailsLabel: 'Precision / complement',
-    detailsPlaceholder: 'Ex: entrée stade, batiment, gymnase...',
+    detailsPlaceholder: 'Ex : entrée stade, batiment, gymnase...',
     next: 'Suivant',
     noCity: 'Ville non remontée',
     // eslint-disable-next-line max-len
@@ -602,7 +602,7 @@ export default {
     // eslint-disable-next-line max-len
     nameHint: 'Le nom du club est le seul champ obligatoire du tunnel. Les autres étapes servent à construire une fiche complète, comme pour le wizard équipe.',
     nameLabel: 'Nom du club',
-    namePlaceholder: 'Ex: FC FoundClub Paris',
+    namePlaceholder: 'Ex : FC FoundClub Paris',
     next: 'Suivant',
     removeLogo: 'Retirer le logo',
     // eslint-disable-next-line max-len
@@ -626,7 +626,7 @@ export default {
   adminClubWizardRecap: {
     auditReason: {
       label: "Raison d'audit",
-      placeholder: 'Ex: Création initiale dans le dashboard admin',
+      placeholder: 'Ex : Création initiale dans le dashboard admin',
     },
     create: 'Créer le club',
     createError: 'Création impossible',
@@ -857,7 +857,7 @@ export default {
     },
     claim: {
       proofMissing: 'Preuve non renseignée',
-      reason: 'Motif:',
+      reason: 'Motif :',
     },
     close: 'Fermer',
     clubMissing: 'Club non renseigne',
@@ -882,7 +882,7 @@ export default {
       badge: '1er event',
       createdOn: 'Créé le',
       defaultName: 'Événement',
-      organizer: 'Organisateur:',
+      organizer: 'Organisateur :',
     },
     firstEvents: {
       // eslint-disable-next-line max-len
@@ -946,7 +946,7 @@ export default {
       failedMessage: 'Impossible d’exécuter la migration legacy.',
       previewed: 'Preview terminée',
       previewFailed: 'Preview impossible',
-      targetClub: 'Club cible: {{documentId}}\n',
+      targetClub: 'Club cible : {{documentId}}\n',
       title: 'Migration legacy',
     },
     manualEntitlement: {
@@ -987,7 +987,7 @@ export default {
     },
     phoneMissing: 'Téléphone non renseigne',
     quota: {
-      lastUsed: 'Dernier usage:',
+      lastUsed: 'Dernier usage :',
       remaining: 'reste',
     },
     reasonPlaceholder: 'reason obligatoire',
@@ -1026,7 +1026,7 @@ export default {
     },
     subscription: {
       noTransaction: 'Sans transaction',
-      payer: 'Payeur: {{name}}',
+      payer: 'Payeur : {{name}}',
       payerMissing: 'Payeur non renseigne',
     },
     subscriptionOps: {
@@ -1034,13 +1034,13 @@ export default {
       claimsToReview: 'Claims à revoir',
       // eslint-disable-next-line max-len
       description: 'Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le même back-office.',
-      freeQuotas: 'Quotas free',
+      freeQuotas: 'Quotas gratuits',
       legacyCandidates: 'Clubs legacy candidats',
-      noBillingEvents: 'Aucun billing event en preview',
-      noClaims: 'Aucun claim en preview',
+      noBillingEvents: 'Aucun événement de facturation dans l’aperçu',
+      noClaims: 'Aucune réclamation dans l’aperçu',
       noEntitlements: 'Aucun entitlement à afficher',
       noLegacyCandidates: 'Aucun candidat legacy',
-      noQuotas: 'Aucun quota en preview',
+      noQuotas: 'Aucun quota dans l’aperçu',
       noSubscriptions: 'Aucune subscription à afficher',
       recentEntitlements: 'Entitlements récents',
       recentSubscriptions: 'Subscriptions récentes',
@@ -1072,7 +1072,7 @@ export default {
       defaultName: 'Le tournoi de test',
       failedMessage: 'Impossible de générer le tournoi fictif.',
       failedTitle: 'Génération impossible',
-      warnings: '\n\nAttention: {{list}}',
+      warnings: '\n\nAttention : {{list}}',
     },
     title: 'Dashboard Admin',
     unknownClub: 'Club inconnu',
@@ -1111,8 +1111,8 @@ export default {
       loadingTitle: 'Chargement des litiges',
       retry: 'Réessayer',
     },
-    submissionA: 'Soumission A:',
-    submissionB: 'Soumission B:',
+    submissionA: 'Soumission A :',
+    submissionB: 'Soumission B :',
     successTitle: 'Succès',
     title: 'Litiges League',
   },
@@ -1155,7 +1155,7 @@ export default {
       retry: 'Réessayer',
     },
     tokens: {
-      allSubscribed: 'Tous les comptes locaux detectes sur cet appareil sont abonnés.',
+      allSubscribed: 'Tous les comptes locaux détectés sur cet appareil sont abonnés.',
       deviceInstallations: 'Installations détectées pour cet appareil',
       linkedAccounts_one: 'compte lié',
       linkedAccounts_other: 'comptes liés',
@@ -1228,7 +1228,7 @@ export default {
     active: 'Actif',
     addImage: 'Ajouter une image',
     buttonLabel: 'Label bouton',
-    buttonLabelPlaceholder: 'Ex: Ouvrir',
+    buttonLabelPlaceholder: 'Ex : Ouvrir',
     close: 'Fermer',
     createDraft: 'Créer le brouillon',
     editTitle: 'Éditer la campagne',
@@ -1236,7 +1236,7 @@ export default {
       body: 'Corps',
       bodyPlaceholder: 'Message principal affiché dans le popup',
       endAt: 'Fin (ISO, optionnel)',
-      eyebrowPlaceholder: 'Ex: Nouvelle fonctionnalité',
+      eyebrowPlaceholder: 'Ex : Nouvelle fonctionnalité',
       internalName: 'Nom interne',
       priority: 'Priorité (10-59)',
       startAt: 'Début (ISO, optionnel)',
@@ -1367,8 +1367,8 @@ export default {
     },
     legacyClub: 'Club legacy',
     legacyEmpty: 'Aucun club legacy dans l’aperçu.',
-    legacyMaxTeams: 'Legacy max équipes:',
-    legacySubscription: 'Legacy abonnement:',
+    legacyMaxTeams: 'Legacy max équipes :',
+    legacySubscription: 'Legacy abonnement :',
     legacyToMigrate: 'Legacy à migrer',
     migrationRequired: 'Migration requise',
     monetization: 'Monetisation',
@@ -2431,7 +2431,7 @@ export default {
     private: {
       description: 'Je réserve le terrain pour mon groupe',
       title: 'PRIVATISER',
-      totalPrice: 'Prix total:',
+      totalPrice: 'Prix total :',
     },
     selectedSlot: 'Créneau sélectionné :',
     shared: {
@@ -2500,7 +2500,7 @@ export default {
       title: 'Demande envoyée',
     },
     eventBatchCreated: {
-      body: '{{total}} événements sont maintenant enregistres.',
+      body: '{{total}} événements sont maintenant enregistrés.',
       title: 'Événements créés',
     },
     eventConvocationPublished: {
@@ -2631,7 +2631,7 @@ export default {
       title: 'Paiement confirmé',
     },
     officialLicenseUploaded: {
-      body: 'La copie officielle est disponible pour le membre concerne.',
+      body: 'La copie officielle est disponible pour le membre concerné.',
       title: 'Licence officielle ajoutée',
     },
     teamCreated: {
@@ -3068,9 +3068,9 @@ export default {
       description: 'Ton club est bien là, mais personne n’y a encore créé d’équipe. Dis-nous que tu l’attends : on contacte le club pour qu’il rejoigne FoundClub, et on te prévient dès qu’une équipe existe.',
       fields: {
         coachContact: 'Contact du coach (téléphone ou e-mail)',
-        coachContactPlaceholder: 'Ex: 06 12 34 56 78 ou coach@club.fr',
+        coachContactPlaceholder: 'Ex : 06 12 34 56 78 ou coach@club.fr',
         coachName: 'Nom de ton coach ou dirigeant',
-        coachNamePlaceholder: 'Ex: Karim Benali',
+        coachNamePlaceholder: 'Ex : Karim Benali',
       },
       // S02 — meme motif que `actions.bringClubOver` : ce bouton VALIDE le
       // formulaire de « C’est mon club ». Promettre ici « je te préviens » le
@@ -3258,7 +3258,7 @@ export default {
     amountField: {
       currency: 'Devise',
       defaultPrice: 'Prix par défaut ({{currency}})',
-      hint: 'Saisis simplement un montant, par exemple `250` ou `250,00`.',
+      hint: 'Saisis simplement un montant, par exemple 250 ou 250,00.',
     },
     audience: {
       acceptedParticipants: 'Participants acceptés de l’événement',
@@ -3272,8 +3272,8 @@ export default {
         title: 'Filtres avancés',
       },
       amountPerMember: 'MONTANT PAR MEMBRE ({{currency}})',
-      concernedToday_one: '{{count}} membre concerné aujourd hui',
-      concernedToday_other: '{{count}} membres concernés aujourd hui',
+      concernedToday_one: '{{count}} membre concerné aujourd’hui',
+      concernedToday_other: '{{count}} membres concernés aujourd’hui',
       exemption: 'Exemption',
       noTeams: 'Aucune équipe dans ce club pour le moment.',
       peopleConcerned_one: '{{count}} personne concernée.',
@@ -3472,7 +3472,7 @@ export default {
       frequency: 'Cadence',
       frequencySummary: 'Tous les {{days}} jours · {{max}} max',
       message: 'Message de relance',
-      messagePlaceholder: 'Rappel: ta cotisation reste à régler.',
+      messagePlaceholder: 'Rappel : ta cotisation reste à régler.',
       noStatus: 'Aucun statut',
       onDueDate: 'Le jour de l’échéance',
       preview: 'Aperçu du message',
@@ -3955,7 +3955,7 @@ export default {
       partiallyRefunded: 'Remboursement partiel',
       pending: 'En attente',
       refunded: 'Rembourse',
-      rejected: 'Rejete',
+      rejected: 'Rejeté',
     },
     pendingPayments: {
       declaredAmount: 'Montant déclare',
@@ -4188,7 +4188,7 @@ export default {
         description: 'Dossiers encore incomplets à traiter en priorité.',
         title: 'Documents manquants',
       },
-      missingCount: 'Manquants: {{missing}}',
+      missingCount: 'Manquants : {{missing}}',
       missingLabel: 'Manquant',
       noMissing: 'Aucun document manquant dans cet aperçu.',
       noRequested: 'Aucun document demande.',
@@ -4208,8 +4208,8 @@ export default {
       },
       submittedCount: 'Déposés : {{submitted}}',
       toCheck: 'Document à vérifier',
-      toReplaceCount: 'À remplacer: {{toReplace}}',
-      validatedCount: 'Valides: {{validated}}',
+      toReplaceCount: 'À remplacer : {{toReplace}}',
+      validatedCount: 'Valides : {{validated}}',
     },
     documentStatus: {
       missing: 'Document manquant',
@@ -4383,10 +4383,10 @@ export default {
       previewSummary_one: 'Aperçu sur {{loaded}} membre sur {{total}}. Affine avec la recherche ou les filtres.',
       // eslint-disable-next-line max-len
       previewSummary_other: 'Aperçu sur {{loaded}} membres sur {{total}}. Affine avec la recherche ou les filtres.',
-      quickView: 'Vue rapide: {{view}}',
+      quickView: 'Vue rapide : {{view}}',
       shownSummary_one: '{{shown}} membre affiché{{preview}}.',
       shownSummary_other: '{{shown}} membres affichés{{preview}}.',
-      status: 'Statut: {{status}}',
+      status: 'Statut : {{status}}',
     },
     members: {
       filters: 'Filtres',
@@ -4396,10 +4396,10 @@ export default {
     },
     overview: {
       audience: 'Public concerné',
-      collection: 'Encaissement: {{owner}}',
-      currency: 'Devise: {{currency}}',
-      defaultAmount: 'Montant par défaut: {{amount}}',
-      dueDate: 'Échéance: {{date}}',
+      collection: 'Encaissement : {{owner}}',
+      currency: 'Devise : {{currency}}',
+      defaultAmount: 'Montant par défaut : {{amount}}',
+      dueDate: 'Échéance : {{date}}',
       info: {
         // eslint-disable-next-line max-len
         description: 'Retrouve ici l’identité, la période et le positionnement de la campagne sélectionnée.',
@@ -4414,11 +4414,11 @@ export default {
       noPricingRule: 'Aucune règle tarifaire speciale.',
       onlinePayment: 'Paiement en ligne {{requirement}}',
       optional: 'optionnel',
-      paymentLink: 'Lien de paiement: {{url}}',
+      paymentLink: 'Lien de paiement : {{url}}',
       paymentMethods: 'Moyens de paiement',
       payments: {
         // eslint-disable-next-line max-len
-        description: 'Moyens de paiement autorises, gestion du paiement en ligne et organisation des échéances.',
+        description: 'Moyens de paiement autorisés, gestion du paiement en ligne et organisation des échéances.',
         title: 'Paiements et échéancier',
       },
       pendingPayments: 'Paiements à valider ({{pending}})',
@@ -4428,8 +4428,8 @@ export default {
         title: 'Tarification et public',
       },
       pricingRules: 'Règles tarifaires',
-      season: 'Saison: {{season}}',
-      status: 'Statut: {{status}}',
+      season: 'Saison : {{season}}',
+      status: 'Statut : {{status}}',
       unknownStatus: 'Inconnu',
     },
     paymentOwner: {
@@ -4488,7 +4488,7 @@ export default {
         description: 'Tu peux lancer une relance groupée ou suivre l’intensité des rappels déjà envoyés.',
         title: 'Activité de relance',
       },
-      lastReminder: 'Dernière relance:',
+      lastReminder: 'Dernière relance :',
       membersReminded: 'Membres relancés',
       noAutomation: 'Aucune relance automatique configurée.',
       none: 'Aucune',
@@ -4512,7 +4512,7 @@ export default {
       daysBefore: '{{days}} j avant échéance',
       disabled: 'Relances auto désactivées',
       every: 'Toutes les {{days}} j',
-      mainDueDate: 'Échéance principale: {{date}}',
+      mainDueDate: 'Échéance principale : {{date}}',
       maxCount_one: '{{max}} relance max',
       maxCount_other: '{{max}} relances max',
       onDueDate: 'Le jour de l’échéance',
@@ -4532,7 +4532,7 @@ export default {
       },
       step2: {
         // eslint-disable-next-line max-len
-        description: 'Active les paiements acceptes: espèce, chèque, virement, HelloAsso intègre ou lien externe.',
+        description: 'Active les paiements acceptes : espèce, chèque, virement, HelloAsso intègre ou lien externe.',
         title: 'Configurer les moyens de paiement',
       },
       step3: {
@@ -4621,7 +4621,7 @@ export default {
     },
     loadMore: 'Voir plus',
     refreshing: 'Actualisation des clubs...',
-    relevanceReason: 'Tri pertinence: {{reason}}',
+    relevanceReason: 'Tri pertinence : {{reason}}',
     sortedByRelevance: 'Trié par pertinence',
     viewport: {
       count: '{{total}}{{plus}} clubs dans la zone visible',
@@ -4833,6 +4833,7 @@ export default {
       duplicateHint: 'Rejoins-le s\'il s\'agit du tien, ou touche « Créer quand même » si c\'est un autre club.',
       duplicateTitle: 'Un club très proche existe déjà',
       email: 'Email',
+      refused: 'Ce compte ne peut pas créer de club. Pour inscrire un club, connecte-toi avec le compte de son dirigeant ou de son entraîneur.',
       error: 'Impossible de créer le club.',
       missing: 'Renseigne au moins le nom et l\'adresse du club.',
       name: 'Nom',
@@ -4907,7 +4908,7 @@ export default {
       },
       resync: {
         // eslint-disable-next-line max-len
-        message: 'Opération de maintenance: les cotisations manquantes seront rattachées sans dupliquer les dossiers déjà existants.',
+        message: 'Opération de maintenance : les cotisations manquantes seront rattachées sans dupliquer les dossiers déjà existants.',
         title: 'Resynchroniser les campagnes',
       },
       resyncDone: {
@@ -7637,7 +7638,7 @@ export default {
     myTeam: 'Mon équipe',
     pointsToPromotion: 'points pour la promotion',
     prestigeDivision: 'Division 1 prestige.',
-    seasonLabel: '| Saison:',
+    seasonLabel: '| Saison :',
   },
   // RESA-L5B-2 (20/10/2026) — les affiches du complexe (E-G13, planche RA7, serveur RESA-L4).
   complexeAffiches: {
@@ -8655,8 +8656,8 @@ export default {
     nonHonorees_one: '{{count}} non honorée',
     nonHonorees_other: '{{count}} non honorées',
     occupation: 'Occupation',
-    parHeure: 'Par heure · V2',
-    parHeureDit: 'Jours × heures : la carte de chaleur viendra en V2.',
+    parHeure: 'Par heure · bientôt',
+    parHeureDit: 'Jours × heures : la carte de chaleur arrive bientôt.',
     parties_one: '{{count}} partie',
     parties_other: '{{count}} parties',
     periodes: {
@@ -9247,7 +9248,7 @@ export default {
         optionPlaceholder: 'Option {{index}}',
         optionsLabel: 'Options',
         questionLabel: 'Question',
-        questionPlaceholder: 'Ex: Quel créneau te convient ?',
+        questionPlaceholder: 'Ex : Quel créneau te convient ?',
         removeOptionA11y: 'Supprimer l’option {{index}}',
         submit: 'Envoyer le sondage',
         subtitle: 'Pose une question, ajoute des options et lance le vote.',
@@ -9675,7 +9676,7 @@ export default {
       title: 'Aucune équipe',
     },
     submit: "Créer l'annonce",
-    teamLabel: 'Équipe:',
+    teamLabel: 'Équipe :',
     teamUnspecified: 'Non spécifié',
     title: {
       default: 'Créer une annonce',
@@ -9717,9 +9718,9 @@ export default {
   },
   createSquadWizard: {
     errors: {
-      generic: 'Erreur: {{message}}',
-      genericWithDetails: 'Erreur: {{message}}\n{{details}}',
-      invalidAddress: 'Adresse invalide: sélectionne une adresse avec des coordonnées.',
+      generic: 'Erreur : {{message}}',
+      genericWithDetails: 'Erreur : {{message}}\n{{details}}',
+      invalidAddress: 'Adresse invalide : sélectionne une adresse avec des coordonnées.',
       nameTaken: "Ce nom d'équipe est déjà pris. Merci de en choisir un autre.",
       noSession: 'Session introuvable. Recharge la page avant de créer une squad.',
       sourceTeamRequired: "Sélectionne l'équipe source pour créer une squad Football à 11.",
@@ -10159,7 +10160,7 @@ export default {
     detectionTrial: 'DÉTECTION / ESSAI',
     event: 'ÉVÉNEMENT',
     full: 'Complet',
-    invitedTeams: 'équipes invitées: {{teams}}',
+    invitedTeams: 'équipes invitées : {{teams}}',
     lastMinute: 'Dernière minute',
     locationNotSet: 'Lieu non défini',
     missingPlayers_one: 'Il manque {{count}} joueur {{countSuffix}}',
@@ -10651,7 +10652,7 @@ export default {
     },
     matchScore2: 'Score du match',
     matchStats: 'Stats du match',
-    maxTeams: 'Max équipes:',
+    maxTeams: 'Max équipes :',
     member: 'Membre',
     menu: {
       campaign: 'Créer la cotisation de cet événement',
@@ -10666,7 +10667,7 @@ export default {
       trainingVisibility: 'Accueillir des joueur·se·s de l’extérieur',
     },
     minBeforeTheStartOf: "{{earlyMinutes}} min avant le début de l'événement.",
-    mixedClubs: 'Mix clubs:',
+    mixedClubs: 'Mix clubs :',
     modals: {
       accept: {
         title: 'Es-tu sûr·e de vouloir accepter cette demande ?',
@@ -10804,7 +10805,7 @@ export default {
     },
     openTraining2: 'Entraînement ouvert',
     optional: 'Facultatif',
-    organisingClub: 'Club organisateur:',
+    organisingClub: 'Club organisateur :',
     organisingTeam: 'Équipe organisatrice',
     participants: 'Participants',
     participantsFilter: {
@@ -10940,7 +10941,7 @@ export default {
     seeTheTournament: 'Voir le tournoi',
     seeTheTrainingCamp: 'Voir le stage',
     // eslint-disable-next-line max-len
-    selectAClubTeamThe: 'Sélectionne une équipe club. L’application creera une équipe éphémère de tournoi sans toucher à ton effectif permanent.',
+    selectAClubTeamThe: 'Sélectionne une équipe club. L’application créera une équipe éphémère de tournoi sans toucher à ton effectif permanent.',
     // eslint-disable-next-line max-len
     selectATournamentTeamThat: 'Sélectionne une équipe tournoi qui accepte actuellement de nouvelles demandes.',
     selectThePositionYouWant: 'Sélectionne le poste auquel tu veux participer.',
@@ -10957,8 +10958,8 @@ export default {
     signInToSeeHint: 'Il est peut-être réservé aux membres de son équipe.',
     signInToTakePart: 'Se connecter pour participer',
     sourceTeam: 'Équipe source',
-    sourceTeam2: 'Équipe source:',
-    squadSize: 'Effectif:',
+    sourceTeam2: 'Équipe source :',
+    squadSize: 'Effectif :',
     staffNote: 'Note staff',
     stage: {
       day: 'Jour',
@@ -10998,7 +10999,7 @@ export default {
     standaloneTournament: 'Tournoi autonome',
     startBySavingTheMatch: 'Commence par enregistrer le score du match.',
     statsWillBeAvailableAt: 'Les stats seront disponibles à la fin du match.',
-    status: 'Statut:',
+    status: 'Statut :',
     // FINITIONS (recette du 28/09) — un vrai pluriel, et la cédille.
     substitutesCount_one: '{{count}} remplaçant',
     substitutesCount_other: '{{count}} remplaçants',
@@ -11013,7 +11014,7 @@ export default {
       teams: 'Équipes',
     },
     takePart: 'Participer',
-    teamApproval: 'Validation des équipes:',
+    teamApproval: 'Validation des équipes :',
     teamFallback: 'Équipe',
     teamLineUp: 'Composition d’équipes',
     teamLineUpPublished: "Composition d'équipes publiée",
@@ -11028,7 +11029,7 @@ export default {
     teamSPublished_other: '{{count}} équipes publiées',
     teamToCreate: 'Équipe à créer : {{teamName}}.',
     temporaryTeam: 'Équipe éphémère',
-    temporaryTeams: 'Équipes éphémères:',
+    temporaryTeams: 'Équipes éphémères :',
     theCoachHasnTLeft: "Le coach n'a pas encore laissé d'avis individuel pour ce match.",
     theCoachPublishedIndividualFeedback: 'Le coach a publié un retour individuel pour ton match.',
     // eslint-disable-next-line max-len
@@ -11077,6 +11078,8 @@ export default {
       teams: 'Équipes',
       title: 'OÙ EN EST LE TOURNOI',
     },
+    tournamentTeamMembers_one: '{{count}} membre - demandes ouvertes',
+    tournamentTeamMembers_other: '{{count}} membres - demandes ouvertes',
     tournamentTeam: 'Équipe tournoi',
     tournamentTeamName: 'Nom de l’équipe tournoi',
     tournamentTeams: {
@@ -11155,7 +11158,7 @@ export default {
     youHaveMinLeftTo: 'Il te reste {{minutesLeft}} min pour signaler ton arrivée ou ton retard.',
     yourActualArrivalHasBeen: 'Ton arrivée réelle a bien été enregistrée.',
     // eslint-disable-next-line max-len
-    yourAnswerIsAboutYour: 'Ta réponse concerne ton équipe tournoi, pas le RSVP classique de l’événement.',
+    yourAnswerIsAboutYour: 'Ta réponse concerne ton équipe du tournoi, pas ta réponse habituelle à l’événement.',
     youReCalledUp: 'Tu es convoqué',
     youReCalledUpStarter: 'Tu es convoqué · Titulaire',
     youReCalledUpSubstitute: 'Tu es convoqué · Remplaçant',
@@ -11176,6 +11179,19 @@ export default {
     youSaidYouWereThere: 'Tu as indique que tu étais la sans jouer.',
   },
   eventDetectionSlots: {
+    candidatesCount_one: '{{count}} candidature',
+    candidatesCount_other: '{{count}} candidatures',
+    openCount_one: '{{count}} ouvert',
+    openCount_other: '{{count}} ouverts',
+    pendingCount: '{{count}} en attente',
+    placesCount_one: '{{count}} place',
+    placesCount_other: '{{count}} places',
+    positionsCount_one: '{{count}} poste',
+    positionsCount_other: '{{count}} postes',
+    requestsCount_one: '{{count}} demande',
+    requestsCount_other: '{{count}} demandes',
+    validatedCount_one: '{{count}}/{{quantity}} validée',
+    validatedCount_other: '{{count}}/{{quantity}} validées',
     alreadyRegistered: 'Déjà inscrit',
     full: 'Complet',
     participationApproved: 'Participation validée',
@@ -11278,7 +11294,7 @@ export default {
       },
       pricePerPerson: {
         label: 'Prix par personne (€)',
-        placeholder: 'Ex: 10',
+        placeholder: 'Ex : 10',
       },
       recurrenceDay: {
         label: 'Jour de la récurrence',
@@ -11322,7 +11338,7 @@ export default {
       },
       totalPlayers: {
         label: 'Nombre total de joueurs',
-        placeholder: 'Ex: 10',
+        placeholder: 'Ex : 10',
       },
       trainingTotalPlayers: {
         label: 'Joueurs attendus (interne)',
@@ -11433,7 +11449,7 @@ export default {
     // eslint-disable-next-line max-len
     theFeaturingRequestIsMade: 'La demande de mise à la une se fait depuis la fiche de l’événement après création.',
     // eslint-disable-next-line max-len
-    theScopeBelowDecidesWhether: 'La portée ci-dessous determine si la mise à jour s’applique à cet événement seulement, aux suivants, ou à toute la série.',
+    theScopeBelowDecidesWhether: 'La portée ci-dessous détermine si la mise à jour s’applique à cet événement seulement, aux suivants, ou à toute la série.',
     // eslint-disable-next-line max-len
     theWebVersionNowAlso: 'La version web couvre maintenant aussi les invitations d’équipes et les tâches annexes, au plus proche du flow mobile.',
     theWholeSeries: 'Toute la série',
@@ -11621,13 +11637,15 @@ export default {
     event: 'Événement',
     openTheEvent: 'Ouvrir l’événement',
     sharedEvent: 'Événement partagé',
-    team: 'Équipe:',
+    team: 'Équipe :',
   },
   eventTasksEditor: {
     add: 'Ajouter',
     automaticApproval: 'Validation automatique',
     cancel: 'Annuler',
     customTitle: 'Titre personnalisé.',
+    placesCount_one: '{{count}} place',
+    placesCount_other: '{{count}} places',
     delete: 'Supprimer',
     displayedTitle: 'Titre affiché',
     extraTasks: 'Tâches annexes',
@@ -11682,6 +11700,8 @@ export default {
     selectOneOrMoreMembers: 'Sélectionne un ou plusieurs membres pour les affecter directement à cette tâche.',
     taskFull: 'Tâche complète',
     thisTask: 'cette tâche',
+    placesLeft_one: '{{count}} place restante',
+    placesLeft_other: '{{count}} places restantes',
     thisTaskIsAlreadyFull: 'Cette tâche est déjà complété',
     unableToApproveThisAssignment: 'Impossible de valider cette assignation.',
     unableToAssignTheseMembers: 'Impossible d’assigner ces membres à la tâche.',
@@ -11694,6 +11714,8 @@ export default {
   },
   eventTeamAudiencesEditor: {
     add: 'Ajouter',
+    selectedMembers_one: '{{count}} membre',
+    selectedMembers_other: '{{count}} membres',
     allMembers: 'Tous les membres',
     cancel: 'Annuler',
     // eslint-disable-next-line max-len
@@ -11719,11 +11741,13 @@ export default {
     selectedMembers: 'Membres sélectionnés',
     teamFallback: 'Équipe',
     teamInvitations: "Invitations d'équipe",
-    teamName: 'Nom de lequipe',
+    teamName: 'Nom de l’équipe',
   },
   eventTeamAudiencesSection: {
     accept: 'Accepter',
     accepted: 'Acceptée',
+    selectedMembers_one: '{{count}} membre',
+    selectedMembers_other: '{{count}} membres',
     allMembers: 'Tous les membres',
     cancelled: 'Annulée',
     cancelTheInvitation: "Annuler l'invitation",
@@ -11800,7 +11824,7 @@ export default {
         tasks: 'Tâches annexes',
         title: 'Options avancées',
       },
-      capacity: 'Participants max: {{value}}',
+      capacity: 'Participants max : {{value}}',
       capacityTitle: 'Capacité',
       capacityValue: '{{count}} joueurs',
       completedCount: '{{done}}/5 infos clés complétées',
@@ -11824,13 +11848,13 @@ export default {
         warningTitle: 'Événement créé',
       },
       freeQuota: {
-        description: '{{remaining}}/{{total}} publication gratuite restante avant paywall.',
+        description: 'Publications gratuites restantes : {{remaining}} sur {{total}}.',
         // eslint-disable-next-line max-len
-        hint: 'Une fois cet avantage utilise, les prochaines publications seront bloquées côté serveur et renverront vers ton abonnement.',
-        title: 'Quota événement gratuit',
+        hint: 'Une fois cet avantage utilisé, les prochaines publications demanderont un abonnement.',
+        title: 'Publication gratuite',
       },
       incomplete: 'à compléter',
-      internalValidationMode: 'Membres internes: {{value}}',
+      internalValidationMode: 'Membres internes : {{value}}',
       invitedTeamsTitle: 'équipes invitées',
       invitesCount_one: '{{count}} équipe invitée',
       invitesCount_other: '{{count}} équipes invitées',
@@ -11838,18 +11862,18 @@ export default {
       notSet: 'Non renseigné',
       organizationTitle: 'Organisation',
       participationTitle: 'Participation',
-      perDayLocations: 'Lieux personnalises par jour',
+      perDayLocations: 'Lieux personnalisés par jour',
       presenceArrivalsOff: 'Pas de suivi des arrivées',
       presenceArrivalsOn: 'Suivi des arrivées',
       presenceRsvpOff: 'Pas de réponses Présent / Absent',
       presenceRsvpOn: 'Réponses Présent / Absent',
       presenceTitle: 'Présences',
-      pricePerPerson: 'Prix par personne: {{value}}',
+      pricePerPerson: 'Prix par personne : {{value}}',
       quickOverviewTitle: 'Vue d\'ensemble',
       ready: 'Prêt à créer',
       recurrenceCount_one: '{{count}} occurrence prévue',
       recurrenceCount_other: '{{count}} occurrences prévues',
-      reservationMode: 'Mode de réservation: {{value}}',
+      reservationMode: 'Mode de réservation : {{value}}',
       saufVacances_one: 'Sauf vacances scolaires : {{count}} séance retirée',
       saufVacances_other: 'Sauf vacances scolaires : {{count}} séances retirées',
       sections: {
@@ -11865,17 +11889,17 @@ export default {
         visibility: 'Visibilité',
       },
       timeLabel: 'Horaire',
-      totalPlayers: 'Joueurs attendus: {{value}}',
+      totalPlayers: 'Joueurs attendus : {{value}}',
       totalPlayersTitle: 'Joueurs attendus',
       // FINITIONS15 point 9a : la clef manquait, le récap montrait le texte de secours sans accent.
       trainingCapacityPrivate: 'Capacité illimitée (entraînement privé)',
-      validationMode: 'Validation: {{value}}',
+      validationMode: 'Validation : {{value}}',
       whenWhereTitle: 'Quand et lieu',
     },
     stage: {
       applyToAll: 'Appliquer à tous',
-      applyToAllHelper: 'Réinitialise les horaires personnalises et reapplique la base du stage.',
-      customHours: 'Horaires personnalises',
+      applyToAllHelper: 'Réinitialise les horaires personnalisés et réapplique la base du stage.',
+      customHours: 'Horaires personnalisés',
       customizeHours: 'Personnaliser les horaires',
       customizeLocation: 'Personnaliser le lieu',
       customLocation: 'Lieu personnalisé',
@@ -11889,7 +11913,7 @@ export default {
       defaultStartTime: 'Heure de début',
       endDate: 'Date de fin',
       errors: {
-        locationOverrideRequired: 'Complète le lieu personnalise pour chaque jour concerne.',
+        locationOverrideRequired: 'Complète le lieu personnalisé pour chaque jour concerné.',
         noActiveDays: 'Active au moins une journée pour continuer.',
       },
       inheritedHours: 'Horaires hérités du stage',
@@ -12148,14 +12172,14 @@ export default {
         matchCallUpHint: 'Tu pourras encore la modifier, puis la publier depuis la fiche du match.',
         matchCallUpSubtitle: 'Coche les joueurs que tu convoques.',
         matchCallUpTitle: 'Convocation',
-        modeHintFixed: 'Mode capacité fixe: nombre de places limite.',
-        modeHintUnlimited: 'Mode illimité: aucun plafond de participants.',
+        modeHintFixed: 'Mode capacité fixe : nombre de places limite.',
+        modeHintUnlimited: 'Mode illimité : aucun plafond de participants.',
         modeLabel: 'Mode de capacité',
         playersUnit: 'joueurs max',
-        previewCapacity: 'Capacité: {{value}}',
-        previewMode: 'Mode: {{value}}',
+        previewCapacity: 'Capacité : {{value}}',
+        previewMode: 'Mode : {{value}}',
         previewTitle: 'Aperçu',
-        previewTotalPlayers: 'Joueurs attendus: {{value}}',
+        previewTotalPlayers: 'Joueurs attendus : {{value}}',
         quickPresets: 'Valeurs rapides',
         subtitle: 'Choisis une capacité max, ou laisse l’événement en accès illimité.',
         subtitleQuestion: "Combien de joueurs peuvent s'inscrire ?",
@@ -12227,8 +12251,8 @@ export default {
     },
     tournamentProgram: {
       applyToAll: 'Appliquer à tous',
-      applyToAllHelper: 'Réinitialise les horaires personnalises et reapplique la base du tournoi.',
-      customHours: 'Horaires personnalises',
+      applyToAllHelper: 'Réinitialise les horaires personnalisés et réapplique la base du tournoi.',
+      customHours: 'Horaires personnalisés',
       customizeHours: 'Personnaliser les horaires',
       customizeLocation: 'Personnaliser le lieu',
       customLocation: 'Lieu personnalisé',
@@ -12243,7 +12267,7 @@ export default {
       defaultStartTime: 'Heure de début',
       endDate: 'Date de fin',
       errors: {
-        locationOverrideRequired: 'Complète le lieu personnalise pour chaque jour concerne.',
+        locationOverrideRequired: 'Complète le lieu personnalisé pour chaque jour concerné.',
         noActiveDays: 'Active au moins une journée de tournoi pour continuer.',
       },
       inheritedHours: 'Horaires hérités du tournoi',
@@ -12264,7 +12288,7 @@ export default {
   eventWizardRecap: {
     allowed: 'Autorise',
     allowedPlural: 'Autorisées',
-    bracketLine: 'Tableau final: {{value}}',
+    bracketLine: 'Tableau final : {{value}}',
     directQualification: 'Directs',
     disabledPlural: 'Désactivées',
     featuredCm: 'À la une multisport',
@@ -12276,30 +12300,30 @@ export default {
     formatGroupsFinal: 'Poules + finale',
     formatGroupsOnly: 'Poules uniquement',
     formatLeague: 'Championnat',
-    formatLine: 'Format: {{value}}',
+    formatLine: 'Format : {{value}}',
     formatStraightKnockout: 'Phase finale directe',
     generationAutomatic: 'Automatique',
-    generationLine: 'Génération matchs: {{value}}',
+    generationLine: 'Génération matchs : {{value}}',
     generationManual: 'Manuelle',
-    groupsLine: 'Poules: {{value}}',
-    maxTeams: 'Max équipes: {{value}}',
-    mixedClubs: 'Mix clubs: {{value}}',
+    groupsLine: 'Poules : {{value}}',
+    maxTeams: 'Max équipes : {{value}}',
+    mixedClubs: 'Mix clubs : {{value}}',
     noGroups: 'Aucune',
     noSpecificRuleEntered: 'Aucune règle spécifique renseignée.',
     notAllowed: 'Non autorisé',
     oneStanding: '1 classement',
-    pointsLine: 'Points: V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}',
-    qualifiedLine: 'Qualifiés: {{value}}',
+    pointsLine: 'Points : V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}',
+    qualifiedLine: 'Qualifiés : {{value}}',
     qualifiedPerGroup: '{{qualified}} / poule',
-    seedingLine: 'Tirage: {{value}}',
+    seedingLine: 'Tirage : {{value}}',
     seedingManual: 'Manuel',
     seedingRandom: 'Aléatoire',
     seedingSnake: 'Serpentin',
-    squadSize: 'Effectif: {{min}} - {{max}}',
+    squadSize: 'Effectif : {{min}} - {{max}}',
     standaloneFrame: 'Cadre autonome',
     standaloneTournament: 'Tournoi autonome',
-    teamApproval: 'Validation des équipes: {{value}}',
-    temporaryTeams: 'Équipes éphémères: {{value}}',
+    teamApproval: 'Validation des équipes : {{value}}',
+    temporaryTeams: 'Équipes éphémères : {{value}}',
     thirdPlaceMatchEnabled: 'Petite finale activée',
     tournamentSettings: 'Paramètres tournoi',
     tournamentStructure: 'Structure du tournoi',
@@ -12335,7 +12359,7 @@ export default {
     standaloneTournament: 'Tournoi autonome',
     teamTournament: "Tournoi d'une équipe",
     // eslint-disable-next-line max-len
-    theTeamIsRegisteredAutomatically: "L'équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans le roster tournoi.",
+    theTeamIsRegisteredAutomatically: 'L’équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans l’effectif du tournoi.',
     // eslint-disable-next-line max-len
     thisInformationReplacesTheSource: 'Ces informations remplacent l’équipe source pour classer le tournoi et guider les inscriptions.',
     tournamentFrame: 'Cadre du tournoi',
@@ -12345,7 +12369,7 @@ export default {
   },
   eventWizardTournamentSettings: {
     // eslint-disable-next-line max-len
-    addTheInstructionsToShow: 'Ajoute les consignes à afficher sur la fiche tournoi: tenue, format, conditions d’inscription ou arbitrage.',
+    addTheInstructionsToShow: 'Ajoute les consignes à afficher sur la fiche tournoi : tenue, format, conditions d’inscription ou arbitrage.',
     // eslint-disable-next-line max-len
     allowedTeamsAreRegisteredDirectly: 'Les équipes autorisées sont inscrites directement sans file de validation.',
     allowPlayersFromOtherClubs: 'Autoriser les joueurs d’autres clubs',
@@ -12405,7 +12429,7 @@ export default {
     // eslint-disable-next-line max-len
     setTheNumberOfGroups: 'Configure le nombre de poules et la façon dont les équipes passent au tableau final ou au classement.',
     // eslint-disable-next-line max-len
-    setTheTournamentSSports: 'Définis la structure sportive du tournoi: poules, tableau final, génération des matchs et règles de classement.',
+    setTheTournamentSSports: 'Définis la structure sportive du tournoi : poules, tableau final, génération des matchs et règles de classement.',
     // eslint-disable-next-line max-len
     setWhetherTheScheduleIs: 'Définis si le calendrier se génère automatiquement et comment le classement attribue les points.',
     snakeDistributionAcrossTheGroups: 'Répartition serpent entre les poules puis le tableau.',
@@ -12416,7 +12440,7 @@ export default {
     theOrganiserKeepsTheSeed: 'L’organisateur garde l’ordre de seed pour le tirage.',
     thirdPlaceMatch: 'Match pour la 3e place',
     tournamentStructure: 'Structure du tournoi',
-    useAStandardBracketSize: 'Utilise une taille de tableau standard: 2, 4, 8, 16 ou 32.',
+    useAStandardBracketSize: 'Utilise une taille de tableau standard : 2, 4, 8, 16 ou 32.',
     win: 'Victoire',
   },
   eventWizardType: {
@@ -12537,8 +12561,8 @@ export default {
       planningColor: 'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
     },
     placeholders: {
-      address: 'Ex: 12 Rue du Stade...',
-      name: 'Ex: Terrain Honneur, Salle A...',
+      address: 'Ex : 12 Rue du Stade...',
+      name: 'Ex : Terrain Honneur, Salle A...',
     },
     state: {
       backToList: 'Retour aux installations',
@@ -12603,8 +12627,8 @@ export default {
       shared: 'Partagée',
     },
     capacity: {
-      hintPlural: 'Capacité simultanée: {{count}} équipes',
-      hintSingular: 'Capacité simultanée: {{count}} équipe',
+      hintPlural: 'Capacité simultanée : {{count}} équipes',
+      hintSingular: 'Capacité simultanée : {{count}} équipe',
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
@@ -12649,7 +12673,7 @@ export default {
       allSharedFacilities: 'Toutes partagées',
       capacityAvailable: 'Places encore libres au moment le plus chargé : {{count}}.',
       // eslint-disable-next-line max-len
-      capacityReachedOverflow: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorises et notifieront les dirigeants.',
+      capacityReachedOverflow: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorisés et notifieront les dirigeants.',
       // eslint-disable-next-line max-len
       capacityReachedStrict: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements passeront en demande en attente.',
       capacityTitle: 'Capacité installation',
@@ -12991,13 +13015,13 @@ export default {
       history: 'Historique',
       pending: 'En attente',
     },
-    requester: 'Demandeur:',
-    status: 'Statut:',
+    requester: 'Demandeur :',
+    status: 'Statut :',
     unknown: 'Inconnu',
   },
   featuredRequestsScreen: {
     request: {
-      date: 'Date:{{date}}',
+      date: 'Date :{{date}}',
       eventFallback: 'Événement',
     },
     tutorial: {
@@ -14306,6 +14330,8 @@ export default {
       title: "Prêt à l'action ?",
     },
     opponentFallback: 'Adversaire',
+    refusedDescription: 'Ton profil ne donne pas accès à la League.',
+    refusedTitle: 'Cette page n’est pas ouverte à ton profil.',
     retry: 'Réessayer',
     signals: {
       invitedHelper: "Une squad t'attend déjà. Réponds pour rejoindre la compétition.",
@@ -14317,12 +14343,12 @@ export default {
       viewRequest: 'Voir la demande',
     },
     stats: {
-      bestStreak: ' | Meilleure série: x',
+      bestStreak: ' | Meilleure série : x',
       cta: 'VOIR LES STATISTIQUES DE LA SQUAD',
-      lastResultLoss: 'Dernier résultat: défaite',
+      lastResultLoss: 'Dernier résultat : défaite',
       losses: 'DÉFAITES',
-      nextBonus: 'Prochain bonus: +{{nextStreakBonus}}',
-      nextWin: 'Prochaine victoire: +20 pts',
+      nextBonus: 'Prochain bonus : +{{nextStreakBonus}}',
+      nextWin: 'Prochaine victoire : +20 pts',
       pointsToPromotion: '{{points}} pts avant promotion',
       prestigeDivision: 'Division 1 prestige',
       streak: 'SÉRIE',
@@ -14798,7 +14824,7 @@ export default {
     cancellationPenalty: {
       moderate: 'Pénalité de -50 ELO matchmaking applicable.',
       none: 'Aucune pénalité (annulation > 48h avant le match).',
-      severe: 'ATTENTION: Forfait. Pénalité de -200 ELO matchmaking et défaite attribuée.',
+      severe: 'ATTENTION : Forfait. Pénalité de -200 ELO matchmaking et défaite attribuée.',
     },
   },
   leaguePlatformGate: {
@@ -15011,7 +15037,7 @@ export default {
       ready: 'Prêt',
       refunded: 'Remboursée',
       refused: 'Refusé',
-      rejected: 'Rejete',
+      rejected: 'Rejeté',
       scheduled: 'Programmée',
       submitted: 'Déposé',
       toReplace: 'À remplacer',
@@ -15060,6 +15086,7 @@ export default {
       },
     },
     or: 'ou',
+    codeSubtitle: 'Entre le code reçu par SMS.',
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Connecte-toi',
   },
@@ -15108,11 +15135,11 @@ export default {
       absentWarning: {
         cancel: 'Revoir ma sélection',
         confirm: 'Convoquer quand même',
-        message_one: '{{names}} a répondu qu’il ne serait pas là.',
-        message_other: '{{names}} ont répondu qu’ils ne seraient pas là.',
+        message_one: '{{names}} a dit ne pas venir.',
+        message_other: '{{names}} ont dit ne pas venir.',
         note: 'Rien ne t’en empêche : la convocation partira quand même.',
-        title_one: '1 joueur a dit ABSENT',
-        title_other: '{{count}} joueurs ont dit ABSENT',
+        title_one: '1 réponse « Absent »',
+        title_other: '{{count}} réponses « Absent »',
       },
       addPlayer: {
         subtitle: "Nom, prénom et numéro, pour un joueur sans l'app",
@@ -15249,7 +15276,7 @@ export default {
       starting: 'Lancement...',
       subtitle: 'Rechercher match',
       undefinedArea: 'Zone indéfinie',
-      venue: 'Lieu:',
+      venue: 'Lieu :',
     },
     days: {
       friday: 'Vendredi',
@@ -15330,7 +15357,7 @@ export default {
     },
     opponent: {
       approximateArea: 'Zone approximative',
-      locationModes: ' • Nous: {{mine}} / Eux: {{theirs}}',
+      locationModes: ' • Nous : {{mine}} / Eux : {{theirs}}',
       mysteryUpper: 'ADVERSAIRE MYSTERE',
       standardRadius: 'Rayon standard',
       standardRadiusTitle: 'Rayon Standard',
@@ -15391,11 +15418,11 @@ export default {
       unavailable: 'Match Center indisponible',
     },
     stats: {
-      bestStreak: ' | Meilleure série: x',
+      bestStreak: ' | Meilleure série : x',
       currentSeason: 'SAISON EN COURS',
-      lastResultLoss: 'Dernier résultat: défaite',
-      nextBonus: 'Prochain bonus: +{{nextStreakBonus}}',
-      nextWin: 'Prochaine victoire: +20 pts',
+      lastResultLoss: 'Dernier résultat : défaite',
+      nextBonus: 'Prochain bonus : +{{nextStreakBonus}}',
+      nextWin: 'Prochaine victoire : +20 pts',
       pointsToPromotion: '{{points}} pts avant promotion',
       prestigeDivision: 'Division 1 prestige',
       streak: 'Série',
@@ -15847,7 +15874,7 @@ export default {
     noPlayerFeedbackYet: 'Pas encore de retour joueur',
     noPlayerForReport: 'Aucun joueur disponible pour ce rapport.',
     // eslint-disable-next-line max-len
-    noPlayerForReportHint: 'Publie d’abord la composition d’équipe ou vérifie le roster de l’équipe pour alimenter cette liste.',
+    noPlayerForReportHint: 'Publie d’abord la composition d’équipe ou vérifie l’effectif de l’équipe pour alimenter cette liste.',
     noReminderNeeded: 'Aucune relance nécessaire pour ce match.',
     officialScoreAwaited: 'Le score officiel est encore attendu depuis la synchronisation externe.',
     // eslint-disable-next-line max-len
@@ -16152,10 +16179,10 @@ export default {
     editAlertTitle: "Modifier l'alerte",
     headerTitle: 'Filtres profils',
     placeholders: {
-      activity: 'Ex: Football, Tennis...',
-      category: 'Ex: U11, U13...',
-      position: 'Ex: Attaquant',
-      positions: 'Ex: Attaquant, Gardien...',
+      activity: 'Ex : Football, Tennis...',
+      category: 'Ex : U11, U13...',
+      position: 'Ex : Attaquant',
+      positions: 'Ex : Attaquant, Gardien...',
     },
     previewMatch_one: 'correspond',
     previewMatch_other: 'correspondent',
@@ -16360,11 +16387,11 @@ export default {
         managerPhone: {
           help: 'Ce numéro sera utilisé pour rattacher le dirigeant à la section.',
           label: 'Numéro du dirigeant (optionnel)',
-          placeholder: 'Ex: 0612345678',
+          placeholder: 'Ex : 0612345678',
         },
         name: {
           label: 'Nom de la section *',
-          placeholder: 'Ex: Football, Basketball',
+          placeholder: 'Ex : Football, Basketball',
         },
         sport: {
           label: 'Sport',
@@ -16589,7 +16616,7 @@ export default {
     numberOptional: 'Numéro (optionnel)',
     oneTeamMustRemain: 'Il doit rester au moins une équipe dans cette composition.',
     // eslint-disable-next-line max-len
-    openPositionsHint: 'Les postes encore libres peuvent rester vides: ils seront complétés automatiquement quand de nouveaux joueurs acceptes arriveront.',
+    openPositionsHint: 'Les postes encore libres peuvent rester vides : ils seront complétés automatiquement quand de nouveaux joueurs acceptes arriveront.',
     openSlot: 'Libre',
     // eslint-disable-next-line max-len
     openSpotsHint: 'Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.',
@@ -16909,7 +16936,7 @@ export default {
       title: 'Relances du club',
     },
     share: {
-      message: 'Paiement cotisation FoundClub: {{payerLink}}',
+      message: 'Paiement cotisation FoundClub : {{payerLink}}',
     },
   },
   myLicenses: {
@@ -16928,6 +16955,8 @@ export default {
     },
     error: {
       description: 'Impossible de charger tes cotisations pour le moment.',
+      refusedDescription: 'Ton profil ne donne pas accès aux cotisations.',
+      refusedTitle: 'Cette page n’est pas ouverte à ton profil.',
       retry: 'Réessayer',
       title: 'Cotisations indisponibles',
     },
@@ -17401,12 +17430,12 @@ export default {
     },
     modal: {
       commentLabel: 'Commentaire (optionnel)',
-      commentPlaceholder: 'Ex: ville, catégorie, orthographe probable...',
+      commentPlaceholder: 'Ex : ville, catégorie, orthographe probable...',
       description: 'Donne un maximum de contexte pour aider les superadmins.',
       nameLabelClub: 'Nom du club recherché *',
       nameLabelTeam: "Nom de l'équipe recherchée *",
-      namePlaceholderClub: 'Ex: Olympique ...',
-      namePlaceholderTeam: 'Ex: U17 Nationaux ...',
+      namePlaceholderClub: 'Ex : Olympique ...',
+      namePlaceholderTeam: 'Ex : U17 Nationaux ...',
       send: 'Envoyer',
       titleClub: 'Je ne trouve pas mon club',
       titleTeam: 'Je ne trouve pas mon équipe',
@@ -17459,10 +17488,10 @@ export default {
     teamNotCreated: {
       coachContactHint: 'Indique un téléphone ou un e-mail pour joindre ton coach.',
       coachContactLabel: 'Contact du coach (téléphone ou e-mail)',
-      coachContactPlaceholder: 'Ex: 06 12 34 56 78 ou coach@club.fr',
+      coachContactPlaceholder: 'Ex : 06 12 34 56 78 ou coach@club.fr',
       coachNameHint: 'Indique le nom de ton coach ou dirigeant.',
       coachNameLabel: 'Nom de ton coach ou dirigeant',
-      coachNamePlaceholder: 'Ex: Karim Benali',
+      coachNamePlaceholder: 'Ex : Karim Benali',
       // eslint-disable-next-line max-len
       description: "Tu ne peux pas encore rejoindre : ce sera possible dès que le club ou ton coach aura créé l'équipe sur FoundClub. Laisse le contact de ton coach ou dirigeant, on l'invite à la créer.",
       // eslint-disable-next-line max-len
@@ -18395,7 +18424,7 @@ export default {
     loadingThePoll: 'Chargement du sondage…',
     member: 'Membre',
     messaging: 'Messagerie',
-    multipleVotesAllowed: 'Votes multiples autorises',
+    multipleVotesAllowed: 'Votes multiples autorisés',
     noVoteForThisOption: 'Aucun vote pour cette option.',
     oneChoicePerParticipant: 'Un seul choix par participant',
     poll: 'Sondage',
@@ -18809,8 +18838,8 @@ export default {
       },
       paywall: {
         recommended: 'Offre recommandée',
-        remaining: 'Usages gratuits restants: {{count}}.',
-        requiredPlan: 'Offre requise: {{plans}}.',
+        remaining: 'Usages gratuits restants : {{count}}.',
+        requiredPlan: 'Offre requise : {{plans}}.',
       },
       quota: {
         labels: {
@@ -18881,7 +18910,7 @@ export default {
   },
   profileEdit: {
     errors: {
-      birthdateFormat: 'Format attendu: JJ/MM/AAAA',
+      birthdateFormat: 'Format attendu : JJ/MM/AAAA',
       required: 'Champ obligatoire',
       updateFailed: 'Impossible de mettre à jour ton profil.',
     },
@@ -18911,15 +18940,15 @@ export default {
     allMasculine: 'Tous',
     allSports: 'Tous les sports',
     category: 'Catégorie',
-    categoryPlaceholder: 'Ex: Seniors, U17...',
+    categoryPlaceholder: 'Ex : Seniors, U17...',
     city: 'Ville',
     cityPlaceholder: 'Entre une ville',
     position: 'Poste',
-    positionPlaceholder: 'Ex: Ailier, Gardien...',
+    positionPlaceholder: 'Ex : Ailier, Gardien...',
     radius: 'Dans un rayon autour de : {{radius}} km',
     radiusLabel: 'Rayon de recherche',
     sport: 'Sport',
-    sportPlaceholder: 'Ex: Football, Tennis...',
+    sportPlaceholder: 'Ex : Football, Tennis...',
   },
   proposalMessageBubble: {
     actions: {
@@ -18969,10 +18998,10 @@ export default {
       },
     },
     campaign: {
-      deadline: 'Date limite:',
+      deadline: 'Date limite :',
       deadlineNotSet: 'Non définie',
       seasonFallback: 'Cotisation en cours',
-      team: 'Équipe:',
+      team: 'Équipe :',
       title: 'Campagne',
     },
     declareModal: {
@@ -19181,7 +19210,7 @@ export default {
       checking: 'Vérification de la détection en cours.',
       confirm: 'Participer',
       dateAtHour: '{{date}} à {{hour}}',
-      summaryClub: 'Club concerne : {{club}}',
+      summaryClub: 'Club concerné : {{club}}',
       summaryDate: 'Date de la détection : {{date}}',
       summaryPosition: 'Poste vise : {{position}}',
       title: 'Tu participes à une détection',
@@ -19289,11 +19318,11 @@ export default {
     },
     form: {
       availability: 'Disponibilités',
-      availabilityPlaceholder: 'Ex: soirs de semaine, mercredi, week-end...',
+      availabilityPlaceholder: 'Ex : soirs de semaine, mercredi, week-end...',
       category: 'Catégorie',
       categoryPlaceholder: 'Sélectionner une catégorie',
       certifications: 'Certifications souhaitées',
-      certificationsPlaceholder: 'Ex: BMF, BPJEPS, formation jeunes',
+      certificationsPlaceholder: 'Ex : BMF, BPJEPS, formation jeunes',
       coachExperience: 'Expérience attendue',
       coachRole: 'Rôle entraîneur',
       coachRoleOther: 'Autre rôle',
@@ -19310,7 +19339,7 @@ export default {
       missions: 'Missions',
       missionsPlaceholder: "Cadre, responsabilités, projet d'équipe...",
       position: 'Poste',
-      positionPlaceholder: 'Ex: Attaquant, Gardien...',
+      positionPlaceholder: 'Ex : Attaquant, Gardien...',
       quantityCoach: 'Nombre de profils recherchés',
       quantityPlayers: 'Nombre de joueurs recherches',
       section: 'Section',
@@ -19343,7 +19372,7 @@ export default {
       },
       city: {
         label: 'Ville',
-        placeholder: 'Ex: Marseille',
+        placeholder: 'Ex : Marseille',
       },
       level: {
         label: 'Niveau',
@@ -19352,7 +19381,7 @@ export default {
       position: {
         label: 'Poste',
         placeholder: 'Sélectionner un poste',
-        placeholderFallback: 'Ex: Avant-centre',
+        placeholderFallback: 'Ex : Avant-centre',
       },
       section: {
         label: 'Section',
@@ -19620,9 +19649,9 @@ export default {
   requestsDashboard: {
     item: {
       eventFallback: 'Événement',
-      locationLabel: 'Lieu:',
+      locationLabel: 'Lieu :',
       locationUndefined: 'Non défini',
-      teamLabel: 'Équipe:',
+      teamLabel: 'Équipe :',
       teamUnknown: 'Équipe inconnue',
     },
     loadError: {
@@ -19724,7 +19753,7 @@ export default {
       defaultRefusalReason: 'Créneau complet, dépassement refuse par le dirigeant.',
       eventLabel: 'Événement',
       refusalModalDescription: 'Explique pourquoi cette exception installation est refusée.',
-      refusalModalPlaceholder: 'Exemple: capacité déjà atteinte pour ce créneau.',
+      refusalModalPlaceholder: 'Exemple : capacité déjà atteinte pour ce créneau.',
       refusalModalTitle: 'Refuser la demande',
       refusalReasonRequired: 'Ajoute un motif pour refuser cette demande d’installation.',
       summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
@@ -19816,7 +19845,7 @@ export default {
     },
     filterByActivity: 'Filtrer par activité',
     fromDate: 'Réservations à partir de',
-    relevanceReason: 'Tri pertinence: {{reason}}',
+    relevanceReason: 'Tri pertinence : {{reason}}',
     sortedByRelevance: 'Tri par pertinence',
   },
   reservationModeModal: {
@@ -20966,7 +20995,7 @@ export default {
   squad: {
     filters: {
       city: 'Ville de référence',
-      cityPlaceholder: 'Ex: Marseille',
+      cityPlaceholder: 'Ex : Marseille',
       clear: 'Effacer',
       title: 'Filtres Squad',
     },
@@ -21104,7 +21133,7 @@ export default {
         addSlot: 'Ajouter un créneau',
         invitePlayer: 'Inviter un joueur',
         manageSlots: 'Gérer les créneaux',
-        nextSlot: 'Prochain créneau: {{nextSlotLongLabel}}',
+        nextSlot: 'Prochain créneau : {{nextSlotLongLabel}}',
         noSlot: 'Ajoute un premier créneau pour rendre la squad active.',
         title: 'Pilote ta squad',
         titlePending: 'Ta squad attend ta validation',
@@ -21236,7 +21265,7 @@ export default {
       successTitle: 'Synchronisation terminée',
     },
     roster: {
-      activeHint: 'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.',
+      activeHint: 'Le groupe est actif : pense à traiter les demandes et inviter les bons profils.',
       // eslint-disable-next-line max-len
       introCaptain: 'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.',
       introMember: 'Vois qui compose déjà la squad et identifie rapidement les capitaines.',
@@ -21365,7 +21394,7 @@ export default {
       homeBase: 'QG (Adresse principale)',
       homeBasePlaceholder: 'Rechercher une adresse',
       name: 'Nom de la Squad',
-      namePlaceholder: 'Ex: Les Invincibles',
+      namePlaceholder: 'Ex : Les Invincibles',
       radius: 'Rayon de déplacement',
       radiusHint: "Distance max pour tes matchs à l'extérieur",
       selectPlaceholder: 'Sélectionner',
@@ -21455,7 +21484,7 @@ export default {
       taken: 'Ce nom est déjà pris. Choisis un autre nom.',
     },
     continue: 'Continuer',
-    placeholder: 'Ex: FC Les Champions',
+    placeholder: 'Ex : FC Les Champions',
     suggestions: 'Suggestions disponibles',
     title: 'Quel est le nom de ta squad ?',
   },
@@ -21494,9 +21523,9 @@ export default {
     wantsToJoin: 'Souhaite rejoindre ta squad.',
   },
   squadSearchScreen: {
-    activeFilters: 'Filtres actifs:',
+    activeFilters: 'Filtres actifs :',
     categoryFallback: 'Catégorie',
-    detectedStatuses: 'Statuts detectes:',
+    detectedStatuses: 'Statuts détectés :',
     editFilters: 'Modifier les filtres',
     empty: {
       hint: "Essaie avec d'autres filtres ou un autre nom de squad.",
@@ -22077,7 +22106,7 @@ export default {
       // eslint-disable-next-line max-len
       subscriptionSourceNotFound: 'Nous n’avons pas retrouvé l’abonnement à changer sur ce compte. Ton achat est bien enregistré par le store : ouvre « Mon abonnement » puis « Restaurer mes achats ».',
       // eslint-disable-next-line max-len
-      teamAlreadyCovered: 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere sa place actuelle.',
+      teamAlreadyCovered: 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libère sa place actuelle.',
       // eslint-disable-next-line max-len
       teamCoveredByClubPlan: "Cette équipe est déjà couverte par l'offre Club de son club : tu as déjà ces droits, inutile de payer une offre Équipe pour elle.",
       // eslint-disable-next-line max-len
@@ -22375,7 +22404,7 @@ export default {
     requiredPlanLabels: {
       team: 'Équipe',
     },
-    requiredPlanSuffix: ' Offre conseillée: {{requiredPlanText}}.',
+    requiredPlanSuffix: ' Offre conseillée : {{requiredPlanText}}.',
     requiredPlanText: {
       many: '{{others}} ou {{last}}',
       two: '{{first}} ou {{second}}',
@@ -23006,7 +23035,7 @@ export default {
       noEditableFields: 'Aucun champ détecté',
       noMediaSelected: 'Aucun média sélectionné.',
       none: 'Aucun',
-      rawFallbackHint: 'Champs non totalement supportés en mode guide:',
+      rawFallbackHint: 'Champs non totalement supportés en mode guide :',
       rawFallbackTitle: 'Fallback JSON avancé',
       reasonLabel: 'Raison (optionnelle sauf règles sensibles)',
       reasonPlaceholder: 'Ajouter un contexte d\'audit',
@@ -23037,7 +23066,7 @@ export default {
       selectedEntries_one: 'entrée sélectionnée',
       selectedEntries_other: 'entrées sélectionnées',
       total: 'Total',
-      updatedPrefix: 'Maj:',
+      updatedPrefix: 'Maj :',
     },
     media: {
       camera: 'Caméra',
@@ -23057,7 +23086,7 @@ export default {
     fields: {
       maxPrice: {
         label: 'Prix maximum par personne',
-        placeholder: 'Ex: 20',
+        placeholder: 'Ex : 20',
       },
       startTime: {
         label: 'À partir de',
@@ -23163,7 +23192,7 @@ export default {
       empty: '0 élément',
       fields: '{{count}} champs',
       items: '{{count}} éléments',
-      itemsWithExample: '{{count}} éléments (ex: {{firstLabel}})',
+      itemsWithExample: '{{count}} éléments (ex : {{firstLabel}})',
     },
     untitled: 'Sans titre',
   },
@@ -23439,7 +23468,7 @@ export default {
     description: 'Supervise les campagnes, les connexions HelloAsso, les paiements et les anomalies de cotisation depuis un cockpit support unique.',
     disableHelloAsso: 'Désactiver HelloAsso',
     environment: 'Environnement',
-    external: 'Externe:',
+    external: 'Externe :',
     filters: {
       all: 'Tous',
       campaignStatus: 'Statut campagne',
@@ -23482,7 +23511,7 @@ export default {
     // eslint-disable-next-line max-len
     partialData: 'Certaines listes dépassent 100 éléments. Le cockpit montre pour l’instant les 100 plus récentes données par famille.',
     payment: 'Paiement',
-    paymentLabel: 'Paiement:',
+    paymentLabel: 'Paiement :',
     paymentRechecked: 'La revérification du paiement est terminée.',
     paymentRecheckError: 'Impossible de revérifier ce paiement.',
     paymentsCockpit: 'Cockpit paiements',
@@ -23630,7 +23659,7 @@ export default {
     unsavedLineup: 'Tu as des modifications non enregistrées sur cette composition. Tu peux sauvegarder le brouillon avant de quitter, ou fermer sans enregistrer.',
     versionAlreadyPublished: 'Une version est déjà publiée',
     versionVisibleToPlayers: 'Cette version est celle visible par les joueurs.',
-    visibleVersion: 'Version visible: v{{version}} publiée le {{publishedAt}}',
+    visibleVersion: 'Version visible : v{{version}} publiée le {{publishedAt}}',
   },
   tacticalSelection: {
     add: 'Ajouter',
@@ -24097,7 +24126,7 @@ export default {
       warningsTitle: 'Avertissements',
     },
     externalSync: {
-      provider: 'Provider: {{provider}}',
+      provider: 'Provider : {{provider}}',
       resolution: {
         direct: 'Lien compétition direct',
         normalizedDirect: 'Lien source normalisé',
@@ -24112,7 +24141,7 @@ export default {
         securedApiMonthly: 'API sécurisée mensuelle',
         securedApiScoped: 'API sécurisée ciblée',
         securedApiTeam: 'API sécurisée équipe',
-        skippedPreview: 'non chargé en preview',
+        skippedPreview: 'non chargé dans l’aperçu',
         standings: 'Classement',
         unavailable: 'indisponible',
       },
@@ -24136,7 +24165,7 @@ export default {
       problemType: 'Type de problème',
       reportTitle: 'Signaler un problème',
       selectTeam: 'Sélectionne ton équipe',
-      urlError: 'Erreur lors de la configuration: ',
+      urlError: 'Erreur lors de la configuration : ',
     },
     ffbbForm: {
       urlPlaceholder: 'https://epreuves.fff.fr/... ou https://competitions.ffbb.com/...',
@@ -24380,7 +24409,7 @@ export default {
       allowCoachHint: 'Si ce réglage est désactivé, seul le dirigeant pourra accepter ou refuser les demandes pour cette équipe.',
       allowCoachToggle: "Autoriser l'entraîneur à traiter les demandes",
       // eslint-disable-next-line max-len
-      allSelectedHint: "Aucun filtre précis n'est appliqué: tous les entraîneurs de l'équipe pourront traiter les demandes.",
+      allSelectedHint: "Aucun filtre précis n'est appliqué : tous les entraîneurs de l'équipe pourront traiter les demandes.",
       authorizedManagers: 'Entraîneurs autorisés',
       // eslint-disable-next-line max-len
       authorizedManagersHint: 'Seuls les entraîneurs sélectionnés pourront gérer les demandes. Le dirigeant gardera toujours une vue complète.',
@@ -25374,7 +25403,7 @@ export default {
     filterPending: 'En attente',
     // CORR-EVENEMENTS 133 : les textes du cockpit, avec leurs accents.
     filterRosterToReview: 'Effectifs à revoir',
-    filterWarning: 'Warnings roster',
+    filterWarning: 'Alertes d’effectif',
     formatLine: 'Format : {{format}}',
     fromTeam: 'Depuis {{teamName}}',
     generateTheKnockoutStage: 'Générer la phase finale',
@@ -25386,17 +25415,17 @@ export default {
     matchesCount_other: '{{count}} matchs',
     matchesGenerated_one: '{{count}} match créé.',
     matchesGenerated_other: '{{count}} matchs créés.',
-    matchGenerationMode: 'Génération des matchs: {{mode}}',
+    matchGenerationMode: 'Génération des matchs : {{mode}}',
     noMatchGenerated: 'Aucun match créé.',
     // eslint-disable-next-line max-len
     noMatchGeneratedHint: 'Chaque poule doit compter au moins 2 équipes : réduis le nombre de poules dans les paramètres.',
     noMatchGeneratedYet: 'Aucun match généré pour le moment.',
     noTeamMatchesThisFilter: 'Aucune équipe ne correspond à ce filtre pour le moment.',
     openTheTeam: 'Ouvrir l’équipe',
-    pointsSummary: 'Points: V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}',
+    pointsSummary: 'Points : V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}',
     publish: 'Publier',
     publishTheCompetition: 'Publier la compétition',
-    qualifiedPerGroup: 'Qualifiés / poule: {{qualified}}',
+    qualifiedPerGroup: 'Qualifiés / poule : {{qualified}}',
     registeredTeams: 'Équipes inscrites',
     rosterAlertsCount_one: '{{count}} effectif à revoir',
     rosterAlertsCount_other: '{{count}} effectifs à revoir',
@@ -25410,10 +25439,10 @@ export default {
     rosterToReview: 'Effectif à revoir',
     rosterTotal_one: '{{count}} joueur',
     rosterTotal_other: '{{count}} joueurs',
-    rosterWarning: 'Warning roster',
+    rosterWarning: 'Alerte d’effectif',
     // eslint-disable-next-line max-len
     runTheDrawGenerateThe: 'Organise le tirage, génère les matchs, puis publie la compétition quand la structure est prête.',
-    seeding: 'Tirage: {{seeding}}',
+    seeding: 'Tirage : {{seeding}}',
     seedingManual: 'Manuel',
     seedingRandom: 'Aléatoire',
     seedingSnake: 'Serpentin',
@@ -25430,7 +25459,7 @@ export default {
     tabOverview: 'Vue d’ensemble',
     tabStandings: 'Classements',
     tabTeams: 'Équipes',
-    teamApprovalMode: 'Validation des équipes: {{mode}}',
+    teamApprovalMode: 'Validation des équipes : {{mode}}',
     temporaryTeamCreatedByA: 'Équipe éphémère créée par un joueur',
     // eslint-disable-next-line max-len
     theSportsStructureIsNow: 'La structure sportive est maintenant verrouillée. Les horaires, installations et scores restent modifiables.',
@@ -25496,7 +25525,7 @@ export default {
     adjustTheTournamentSGlobal: 'Ajuste les règles globales du tournoi sans toucher aux équipes permanentes du club.',
     allowPlayersFromOtherClubs: 'Autoriser les joueurs d’autres clubs',
     // eslint-disable-next-line max-len
-    allowsAdditionsFromOutsideThe: 'Autorise les ajouts hors club organisateur dans les rosters tournoi.',
+    allowsAdditionsFromOutsideThe: 'Autorise les ajouts hors club organisateur dans les effectifs du tournoi.',
     allowTemporaryTeams: 'Autoriser les équipes éphémères',
     automatic: 'Automatique',
     best3rds: 'Meilleurs 3es',
@@ -25561,14 +25590,14 @@ export default {
     tournamentRules: 'Règles du tournoi',
     tournamentSettings: 'Paramètres du tournoi',
     unableToUpdateTheTournament: 'Impossible de mettre à jour les paramètres du tournoi.',
-    useAStandardBracketSize: 'Utilise une taille de tableau standard: 2, 4, 8, 16 ou 32.',
+    useAStandardBracketSize: 'Utilise une taille de tableau standard : 2, 4, 8, 16 ou 32.',
     win: 'Victoire',
   },
   tournamentTeamDetails: {
     absent: 'Absent',
     accept: 'Accepter',
     // eslint-disable-next-line max-len
-    acceptedRequestsThenMoveInto: 'Les demandes acceptées passent ensuite dans le roster actif avec un statut initial en attente.',
+    acceptedRequestsThenMoveInto: 'Les demandes acceptées passent ensuite dans l’effectif actif avec un statut initial en attente.',
     acceptThisRequest: 'Veux-tu accepter cette demande ?',
     // eslint-disable-next-line max-len
     activeMembersMakeUpThe: "Les membres actifs composent l'équipe tournoi. Cette composition ne modifie jamais l'équipe club permanente.",
@@ -25591,7 +25620,7 @@ export default {
     // eslint-disable-next-line max-len
     incomingRequestsAreDisabledOnly: 'Les demandes entrantes sont désactivées. Seules tes invitations manuelles sont possibles.',
     inheritedFromTheClubTeam: "Hérité de l'équipe club",
-    invitationAddsYou: "Cette invitation t'ajoute au roster tournoi uniquement si tu l'acceptes.",
+    invitationAddsYou: 'Cette invitation t’ajoute à l’effectif du tournoi uniquement si tu l’acceptes.',
     invitationReceived: 'Invitation reçue',
     invitationSent: 'Invitation envoyée',
     invite: 'Inviter',
@@ -25604,11 +25633,11 @@ export default {
     leaveTheTeam: "Quitter l'équipe",
     leaveThisTeam: 'Quitter cette équipe ?',
     makeCaptain: 'Nommer capitaine',
-    maximumSquadSizeExceeded: 'Effectif maximum dépassé: {{totalCount}}/{{maxRosterSize}}',
+    maximumSquadSizeExceeded: 'Effectif maximum dépassé : {{totalCount}}/{{maxRosterSize}}',
     me: 'Moi',
     member: 'Membre',
     myTournamentAnswer: 'Ma réponse tournoi',
-    noActiveMemberInThe: 'Aucun membre actif dans le roster pour le moment.',
+    noActiveMemberInThe: 'Aucun membre actif dans l’effectif pour le moment.',
     noOtherPlayerAvailableTo: 'Aucun autre joueur disponible à inviter pour le moment.',
     noPendingRequestForNow: 'Aucune demande en attente pour le moment.',
     noProfileAvailableToInvite: 'Aucun profil disponible à inviter pour cette recherche.',
@@ -25641,14 +25670,14 @@ export default {
     // eslint-disable-next-line max-len
     theNewCaptainWillManage: 'Le nouveau capitaine gérera cette équipe éphémère uniquement dans le cadre du tournoi.',
     // eslint-disable-next-line max-len
-    theseProfilesArenTPart: "Ces profils ne font pas encore partie du roster actif tant qu'ils n'ont pas accepté.",
+    theseProfilesArenTPart: 'Ces profils ne font pas encore partie de l’effectif actif tant qu’ils n’ont pas accepté.',
     // eslint-disable-next-line max-len
     theTournamentIsClosedTeam: "Le tournoi est fermé. Les modifications d'équipe et les nouvelles réponses sont maintenant bloquées.",
     thisActionOnlyRemovesThe: 'Cette action ne retire le joueur que de cette équipe de tournoi.',
     // eslint-disable-next-line max-len
-    thisTeamStaysAcceptedBut: "Cette équipe reste acceptée, mais un warning roster est maintenant visible pour l'organisateur.",
+    thisTeamStaysAcceptedBut: 'Cette équipe reste acceptée, mais une alerte d’effectif est maintenant visible pour l’organisateur.',
     // eslint-disable-next-line max-len
-    thisTemporaryTeamIsArchived: "Cette équipe éphémère est archivée. Le roster reste lisible mais n'est plus modifiable.",
+    thisTemporaryTeamIsArchived: 'Cette équipe éphémère est archivée. L’effectif reste lisible mais n’est plus modifiable.',
     tournamentClosed: 'Tournoi clôturé',
     tournamentInvitation: 'Invitation tournoi',
     tournamentTeam: 'Équipe tournoi',
@@ -26881,23 +26910,23 @@ export default {
   },
   useMatchmakingStateMachine: {
     // eslint-disable-next-line max-len
-    criteria: 'Critère prioritaire: ELO matchmaking similaire, écart max actuel {{autoEloCap}} pts.',
+    criteria: 'Critère prioritaire : ELO matchmaking similaire, écart max actuel {{autoEloCap}} pts.',
     status: {
       // eslint-disable-next-line max-len
-      activeSoftCaps: "Statut: recherche active.\n{{criteriaLineV3}}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +{{extraDistanceKm}} km.\n{{zoneLineV3}}",
+      activeSoftCaps: "Statut : recherche active.\n{{criteriaLineV3}}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +{{extraDistanceKm}} km.\n{{zoneLineV3}}",
       // eslint-disable-next-line max-len
-      candidateExpansionIn: 'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: élargissement ELO matchmaking dans {{delay}}.',
+      candidateExpansionIn: 'Statut : adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite : élargissement ELO matchmaking dans {{delay}}.',
       // eslint-disable-next-line max-len
-      candidateWidened: 'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: recherche ELO matchmaking élargie en cours.',
+      candidateWidened: 'Statut : adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite : recherche ELO matchmaking élargie en cours.',
       initialising: 'Initialisation...',
       // eslint-disable-next-line max-len
-      preciseSearch: 'Statut: recherche précise en cours.\n{{criteriaLineV3}}\nProchain élargissement ELO matchmaking dans {{delay}}.\n{{zoneLineV3}}',
+      preciseSearch: 'Statut : recherche précise en cours.\n{{criteriaLineV3}}\nProchain élargissement ELO matchmaking dans {{delay}}.\n{{zoneLineV3}}',
       // eslint-disable-next-line max-len
-      wideSearch: 'Statut: recherche large en cours.\n{{criteriaLineV3}}\nRayon auto conserve; les grands écarts passent en opt-in.\n{{zoneLineV3}}',
+      wideSearch: 'Statut : recherche large en cours.\n{{criteriaLineV3}}\nRayon auto conserve; les grands écarts passent en opt-in.\n{{zoneLineV3}}',
     },
     zone: {
-      city: 'Zone: {{city}}.',
-      cityRadius: 'Zone: {{city}} - rayon {{safeRadius}} km.',
+      city: 'Zone : {{city}}.',
+      cityRadius: 'Zone : {{city}} - rayon {{safeRadius}} km.',
       fallbackCity: 'ta zone',
     },
   },
@@ -27367,7 +27396,7 @@ export default {
     confirmTheLeagueTermsBefore: 'Confirme le cadre League avant d’envoyer la proposition.',
     confirmThese4PointsTo: 'Confirme ces 4 points pour envoyer la proposition à ton adversaire.',
     continue: 'Continuer',
-    eGZ5Aix12: 'Ex: Z5 Aix, 12 rue des Sports Marseille',
+    eGZ5Aix12: 'Ex : Z5 Aix, 12 rue des Sports Marseille',
     endAuto: 'Fin (auto)',
     enterASingleVenueOr: 'Renseigne un seul lieu ou une seule adresse pour cette proposition.',
     enterTheVenueNameOr: 'Renseigne le nom du lieu ou son adresse en un seul champ.',

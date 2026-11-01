@@ -94,7 +94,9 @@ function Register({ navigation }) {
             </View>
             <View style={[Spaces.gap[16], Alignments.fullWidth]}>
               <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
-              <Text style={[Fonts.p1, Fonts.neutral00]}>{t('register.subtitle')}</Text>
+              <Text style={[Fonts.p1, Fonts.neutral00]}>
+                {canShowCodeButton ? t('login.codeSubtitle') : t('register.subtitle')}
+              </Text>
             </View>
           </View>
           {canShowCodeButton

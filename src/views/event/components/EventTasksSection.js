@@ -482,7 +482,9 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
             >
               <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
                 {activeRemainingSlots > 0
-                  ? `${activeRemainingSlots} place(s) restante(s)`
+                  ? t('eventTasksSection.placesLeft', '{{count}} places restantes', {
+                    count: activeRemainingSlots,
+                  })
                   : t('eventTasksSection.thisTaskIsAlreadyFull', 'Cette tâche est déjà complété')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>

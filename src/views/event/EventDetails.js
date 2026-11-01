@@ -5714,12 +5714,19 @@ function EventDetails({ navigation, route }) {
     // `handleCloseTraining` / `setIsTrainingOpenModalVisible`.
     if (canManageTrainingVisibility) {
       const validationLabel = trainingOpenConfig.externalParticipantValidationMode === 'auto'
-        ? 'automatique'
-        : 'manuelle';
+        ? t('eventDetails.validationAutomatic', 'automatique')
+        : t('eventDetails.validationManual', 'manuelle');
       let quotaNote = null;
       if (trainingOpenConfig.externalParticipantLimit !== null) {
-        const quotaLine = `${trainingOpenConfig.externalParticipantLimit} place(s) externes`
-          + ` - validation ${validationLabel}`;
+        const quotaLine = t(
+          'eventDetails.externalSpotsSetting',
+          '{{limit}} places externes - validation {{mode}}',
+          {
+            count: trainingOpenConfig.externalParticipantLimit,
+            limit: trainingOpenConfig.externalParticipantLimit,
+            mode: validationLabel,
+          },
+        );
         quotaNote = trainingOpenConfig.isOpenTraining
           ? quotaLine
           : t(
@@ -9105,7 +9112,17 @@ function EventDetails({ navigation, route }) {
               )}
             </Text>
             <Text style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}>
-              {`${detectionSlots.length} poste(s) - ${detectionSlotsSummary.totalRequested} place(s) - ${detectionSlotsSummary.totalOpen} ouvert(s)`}
+              {[
+                t('eventDetectionSlots.positionsCount', '{{count}} postes', {
+                  count: detectionSlots.length,
+                }),
+                t('eventDetectionSlots.placesCount', '{{count}} places', {
+                  count: detectionSlotsSummary.totalRequested,
+                }),
+                t('eventDetectionSlots.openCount', '{{count}} ouverts', {
+                  count: detectionSlotsSummary.totalOpen,
+                }),
+              ].join(' - ')}
             </Text>
           </View>
         )}
@@ -9567,7 +9584,11 @@ function EventDetails({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}</Text>
                       <Text style={[Fonts.p4, Fonts.primary100]}>
-                        {`${rosterSummary.totalCount || 0} membre(s) - demandes ouvertes`}
+                        {t(
+                          'eventDetails.tournamentTeamMembers',
+                          '{{count}} membres - demandes ouvertes',
+                          { count: rosterSummary.totalCount || 0 },
+                        )}
                       </Text>
                     </View>
                     <Tag

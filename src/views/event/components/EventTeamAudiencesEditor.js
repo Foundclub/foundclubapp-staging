@@ -400,7 +400,9 @@ function EventTeamAudiencesEditor({
                       -
                       {' '}
                       {audience?.selectionMode === 'SELECTED_MEMBERS'
-                        ? `${selectedMembers.length} membre(s)`
+                        ? t('eventTeamAudiencesEditor.selectedMembers', '{{count}} membres', {
+                          count: selectedMembers.length,
+                        })
                         : t('eventTeamAudiencesEditor.allMembers', 'Tous les membres')}
                     </Text>
                   </View>

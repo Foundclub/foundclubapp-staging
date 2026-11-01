@@ -2437,7 +2437,12 @@ function EventDetails({ navigation, route }) {
                     </div>
                   ) : null}
                   {offreAuxEnfants && !canEdit ? (
-                    <EventChildRegistration event={event} navigation={navigation} />
+                    // REPRISE-TEXTES (point 24) : dans cette rangée flexible, le bloc
+                    // prenait sa largeur naturelle et débordait de la colonne
+                    // (« Réponse pour Lina » coupé, « Absent » caché).
+                    <div style={{ minWidth: 0, width: '100%' }}>
+                      <EventChildRegistration event={event} navigation={navigation} />
+                    </div>
                   ) : null}
                   {repondPresentAbsent ? (
                     [
@@ -3416,12 +3421,14 @@ function EventDetails({ navigation, route }) {
                   >
                     <span>
                       {t('eventDetails.teamApproval', 'Validation des equipes:')}
+                      {' '}
                       {event?.tournamentConfig?.registrationMode === 'auto'
                         ? t('eventDetails.automatic', 'Automatique')
                         : t('eventDetails.manual', 'Manuelle')}
                     </span>
                     <span>
                       {t('eventDetails.maxTeams', 'Max equipes:')}
+                      {' '}
                       {event?.tournamentConfig?.maxTeams ?? t(
                         'eventDetails.unlimited',
                         'Non limite',
@@ -3429,19 +3436,23 @@ function EventDetails({ navigation, route }) {
                     </span>
                     <span>
                       {t('eventDetails.squadSize', 'Effectif:')}
+                      {' '}
                       {event?.tournamentConfig?.minRosterSize ?? t('eventDetails.open2', 'Libre')}
                       {' '}
                       -
+                      {' '}
                       {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
                     </span>
                     <span>
                       {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
+                      {' '}
                       {event?.tournamentConfig?.allowCustomTeams !== false
                         ? t('eventDetails.allowed', 'Autorisees')
                         : t('eventDetails.disabled', 'Desactivees')}
                     </span>
                     <span>
                       {t('eventDetails.mixedClubs', 'Mix clubs:')}
+                      {' '}
                       {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorise') : t('eventDetails.notAllowed', 'Non autorise')}
                     </span>
                   </div>
@@ -3474,9 +3485,9 @@ function EventDetails({ navigation, route }) {
                       )}
                     </span>
                     <span>
-                      {tournamentTeamCounters.warning}
-                      {' '}
-                      warning(s)
+                      {t('tournamentManagement.rosterAlertsCount', '{{count}} effectifs à revoir', {
+                        count: tournamentTeamCounters.warning,
+                      })}
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>

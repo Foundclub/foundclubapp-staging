@@ -106,6 +106,21 @@ function EventDetectionSlots({
     );
   }
 
+  // REPRISE-TEXTES : les compteurs s'accordent (« 1 poste », « 2 postes »), plus de
+  // « poste(s) ». Le repli, s'il servait, est la forme plurielle.
+  const REPLIS = {
+    candidatesCount: '{{count}} candidatures',
+    openCount: '{{count}} ouverts',
+    pendingCount: '{{count}} en attente',
+    placesCount: '{{count}} places',
+    positionsCount: '{{count}} postes',
+    requestsCount: '{{count}} demandes',
+    validatedCount: '{{count}}/{{quantity}} validées',
+  };
+  const compte = (cle, count, extra = {}) => (
+    t(`eventDetectionSlots.${cle}`, REPLIS[cle], { count, ...extra })
+  );
+
   const renderMetricChip = (text, tone = 'default') => {
     let toneStyle = {
       backgroundColor: 'rgba(255,255,255,0.04)',
@@ -170,10 +185,15 @@ function EventDetectionSlots({
             {t('eventDetectionSlots.playersPickASpecificPosition', 'Les joueurs choisissent un poste precis. Les places se remplissent quand tu valides les candidatures.')}
           </Text>
           <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
-            {renderMetricChip(`${summary.totalPositions} poste(s)`, 'primary')}
-            {renderMetricChip(`${summary.totalRequested} place(s)`)}
-            {renderMetricChip(`${summary.totalOpen} ouvert(s)`, summary.totalOpen > 0 ? 'primary' : 'warning')}
-            {summary.totalCandidates > 0 ? renderMetricChip(`${summary.totalCandidates} candidature(s)`) : null}
+            {renderMetricChip(compte('positionsCount', summary.totalPositions), 'primary')}
+            {renderMetricChip(compte('placesCount', summary.totalRequested))}
+            {renderMetricChip(
+              compte('openCount', summary.totalOpen),
+              summary.totalOpen > 0 ? 'primary' : 'warning',
+            )}
+            {summary.totalCandidates > 0
+              ? renderMetricChip(compte('candidatesCount', summary.totalCandidates))
+              : null}
           </View>
         </View>
 
@@ -265,9 +285,9 @@ function EventDetectionSlots({
               </View>
 
               <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
-                {renderMetricChip(`${slot.acceptedCount}/${slot.quantity} valide`)}
-                {renderMetricChip(`${slot.pendingCount} attente`)}
-                {renderMetricChip(`${slot.candidatesCount} demande(s)`)}
+                {renderMetricChip(compte('validatedCount', slot.acceptedCount, { quantity: slot.quantity }))}
+                {renderMetricChip(compte('pendingCount', slot.pendingCount))}
+                {renderMetricChip(compte('requestsCount', slot.candidatesCount))}
               </View>
 
               {!canEdit ? (

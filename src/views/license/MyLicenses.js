@@ -34,6 +34,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useMyLicenses } from '@/services/license/licenseQueries';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
+
 import { formatLicenseMoney, LicenseEmptyState } from './licenseDesignSystem';
 import {
   campaignTitleOf,
@@ -303,11 +305,14 @@ function MyLicenses({ navigation }) {
   }
 
   if (query.isError) {
+    // REPRISE-TEXTES (point 25) : un refus (403) n'est pas une panne,
+    // « Réessayer » n'y changerait rien.
+    const refuse = getErrorStatus(query.error) === 403;
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
         <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
         <LicenseEmptyState
-          action={(
+          action={refuse ? null : (
             <Button
               onPress={() => query.refetch()}
               title={t(
@@ -316,12 +321,19 @@ function MyLicenses({ navigation }) {
               )}
               variant="Secondary"
             />
-)}
-          description={t(
-            'myLicenses.error.description',
-            'Impossible de charger tes cotisations pour le moment.',
           )}
-          title={t('myLicenses.error.title', 'Cotisations indisponibles')}
+          description={refuse
+            ? t(
+              'myLicenses.error.refusedDescription',
+              'Ton profil ne donne pas accès aux cotisations.',
+            )
+            : t(
+              'myLicenses.error.description',
+              'Impossible de charger tes cotisations pour le moment.',
+            )}
+          title={refuse
+            ? t('myLicenses.error.refusedTitle', 'Cette page n’est pas ouverte à ton profil.')
+            : t('myLicenses.error.title', 'Cotisations indisponibles')}
         />
       </ScreenContainer>
     );

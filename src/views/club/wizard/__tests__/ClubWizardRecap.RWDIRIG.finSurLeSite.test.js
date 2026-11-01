@@ -271,3 +271,32 @@ it('🔴 sur le site, après « Créer mon club », l étape suivante, pas la li
   expect(push).toHaveBeenCalledWith('/onboarding/welcome?clubId=club-neuf', undefined);
   expect(replace).not.toHaveBeenCalledWith('/clubs', undefined);
 });
+
+// REPRISE-TEXTES (contre-recette Collectivité, 01/11) — un compte de collectivité qui suit le lien
+// de la Ville jusqu'au récapitulatif reçoit un refus du serveur (403 POST /clubs/self-onboard) :
+// l'alerte disait « Erreur / Forbidden ». ROUGE avant : la phrase dit pourquoi, en français.
+it('🔴 un refus du serveur à la création du club se dit en français', async () => {
+  mockCreerClub.mockImplementation(async () => {
+    throw Object.assign(new Error('Forbidden'), { response: { status: 403 }, status: 403 });
+  });
+  const { navigation } = fabriquerNavigationDuSite();
+  await act(async () => {
+    create(
+      <ClubWizardRecap
+        navigation={/** @type {any} */ (navigation)}
+        route={/** @type {any} */ ({ params: { entry: 'onboarding' } })}
+      />,
+    );
+  });
+  await act(async () => {
+    mockProprietesEtape[mockProprietesEtape.length - 1].onNext();
+  });
+
+  const messages = /** @type {any} */ (Alert.alert).mock.calls
+    .map((/** @type {any[]} */ appel) => appel[1]);
+  expect(messages).not.toContain('Forbidden');
+  expect(messages).toContain(
+    'Ce compte ne peut pas créer de club. Pour inscrire un club, connecte-toi avec le compte '
+      + 'de son dirigeant ou de son entraîneur.',
+  );
+});
