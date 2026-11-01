@@ -164,11 +164,23 @@ function EventWizardParticipants({ navigation, route }) {
   const { data: fullOrganizerTeam, isLoading: isLoadingSquad } = useGetTeam(organizerTeamId, {
     enabled: shouldOfferCallUp && Boolean(organizerTeamId),
   });
+  // REPRISE-EVENEMENTS D-COACH-12 : une fiche enfant (inscrite par son parent) n'est pas dans
+  // `players` mais dans `declaredChildren` — rendue à l'encadrement, comptée par la fiche de
+  // l'équipe (TeamDetails) et convocable depuis la fiche du match (ENFANT-JOUEUR).
   const squadPlayers = useMemo(() => {
+    const enfants = (Array.isArray(fullOrganizerTeam?.declaredChildren)
+      ? fullOrganizerTeam.declaredChildren
+      : []).filter((/** @type {any} */ enfant) => enfant?.participantSource === 'declared_child');
+    const vus = new Set();
     /** @type {any[]} */
-    const source = fullOrganizerTeam?.players || [];
-    return source.filter((player) => Boolean(getCompositionPlayerId(player)));
-  }, [fullOrganizerTeam?.players]);
+    const source = [...(fullOrganizerTeam?.players || []), ...enfants];
+    return source.filter((player) => {
+      const id = getCompositionPlayerId(player);
+      if (!id || vus.has(id)) return false;
+      vus.add(id);
+      return true;
+    });
+  }, [fullOrganizerTeam?.declaredChildren, fullOrganizerTeam?.players]);
 
   const [calledUpIds, setCalledUpIds] = useState(
     /** @type {string[]} */ (Array.isArray(state.matchCallUpPlayerIds)
