@@ -1,6 +1,8 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { creerQueryClientDeTest } from '../../testSupport/queryClientDeTest';
 
 // ==========================================================================
@@ -194,8 +196,6 @@ jest.mock('@/components/templates/ScreenContainer', () => {
   };
 });
 
-// eslint-disable-next-line import/first
-import { RouteNames } from '@/navigation/routeNames';
 // eslint-disable-next-line import/first
 import ConversationWeb from '../Conversation.web';
 
@@ -838,7 +838,7 @@ describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
     expect(casquettes(arbre)).toEqual([]);
   });
 
-  test('114 — ouvrir un fil depuis l espace du complexe garde l espace (et ses étiquettes)', async () => {
+  test('114 — ouvrir un fil depuis l espace du complexe garde l espace', async () => {
     mockListeIPH09 = LISTE_MELEE;
     const { arbre, navigation } = await monter({ espace: 'complexe' });
     const ligne = parTestId(arbre, 'MSG1W-ligne-canal-complexe')[0];
@@ -854,18 +854,22 @@ describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
 // étaient coupées au bord droit de la colonne (« 30/1 ») ; l'étiquette de casquette poussait plus
 // loin encore. La colonne de texte d'une ligne ne doit jamais grandir avec un texte long.
 describe('REPRISE-MESSAGERIE — une ligne de la colonne tient dans sa largeur', () => {
-  test('le bloc de texte est une colonne qui se rétrécit, le titre se coupe avant l heure', async () => {
+  test('le bloc de texte se rétrécit, le titre se coupe avant l heure', async () => {
     mockListeIPH09 = [{
       documentId: 'fil-long',
       groupName: 'Un nom de groupe vraiment très long pour la colonne des messages',
-      messages: [{ createdAt: '2026-10-30T10:00:00Z', message: 'Très long message '.repeat(12), sender: BRUNO }],
+      messages: [{
+        createdAt: '2026-10-30T10:00:00Z', message: 'Très long message '.repeat(12), sender: BRUNO,
+      }],
       participants: [MOI, BRUNO],
       type: 'group',
       updatedAt: '2026-10-30T10:00:00Z',
     }];
     const { arbre } = await monter();
     const ligne = parTestId(arbre, 'MSG1W-ligne-fil-long')[0];
-    const blocs = ligne.findAll((/** @type {any} */ n) => n.type === 'span' && n.props.style?.display === 'grid');
+    const blocs = ligne.findAll((/** @type {any} */ n) => (
+      n.type === 'span' && n.props.style?.display === 'grid'
+    ));
     expect(blocs[0].props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
     const titre = ligne.findAll((/** @type {any} */ n) => n.type === 'span'
       && n.props.style?.textOverflow === 'ellipsis' && n.props.style?.fontSize === 16)[0];

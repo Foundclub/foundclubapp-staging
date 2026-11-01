@@ -198,7 +198,12 @@ describe('REPRISE-MESSAGERIE p100 — personne ne lira cette conversation', () =
     chat: { type },
     groupes: [
       { cle: 'ville', membres: [{ firstname: 'Karim' }], nom: 'Ville de Montrivage' },
-      { cle: 'club', club: { documentId: 'c1', name: 'AS Test' }, membres: dirigeants, nom: 'AS Test' },
+      {
+        cle: 'club',
+        club: { documentId: 'c1', name: 'AS Test' },
+        membres: dirigeants,
+        nom: 'AS Test',
+      },
     ],
   });
 

@@ -8,7 +8,9 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 describe('RW-PARENT3 : le détail d une notification a son adresse sur le site', () => {
   test('clubInterestResponse sans fil porte notificationId', () => {
     const destination = resolveNotificationDestination({
-      body: "C'est accepté : Lina rejoint l'équipe U11 Tunnel.",
+      // REPRISE-MESSAGERIE p63 (01/11) : la réponse POUR UN ENFANT mène désormais à « Mes enfants »
+      // (reponseInteretAtterrissage.test.js) ; ici, une réponse du club à un adulte.
+      body: 'Merci pour ton intérêt, on revient vers toi.',
       notificationId: 'notif-42',
       title: 'Réponse du club',
       type: 'clubInterestResponse',

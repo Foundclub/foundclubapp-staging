@@ -1265,11 +1265,15 @@ function ColonneDesConversations({
                 >
                   {getInitials(titre)}
                 </span>
-                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en `auto`,
-                    elle grandissait avec un texte long et poussait l'heure et la pastille dehors. */}
+                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en
+                    `auto`, elle grandissait avec un texte long et poussait l'heure dehors. */}
                 <span
                   style={{
-                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
+                    display: 'grid',
+                    flex: 1,
+                    gap: 4,
+                    gridTemplateColumns: 'minmax(0, 1fr)',
+                    minWidth: 0,
                   }}
                 >
                   <span
@@ -5498,8 +5502,8 @@ function Conversation({ navigation, route }) {
                 padding: '8px 12px 12px',
               }}
             >
-              {/* REPRISE-MESSAGERIE p100 (01/11) — le club n'a aucun dirigeant inscrit : on le dit
-                  au-dessus du champ, là où l'on écrit, plus seulement dans la liste des membres. */}
+              {/* REPRISE-MESSAGERIE p100 (01/11) — le club n'a aucun dirigeant inscrit : on le
+                  dit au-dessus du champ, là où l'on écrit, plus seulement dans ses membres. */}
               {personneNeLiraCeFil(filDeLaVille.membres) ? (
                 <p
                   data-testid="REPRISE-personne-ne-lira"
@@ -5510,7 +5514,8 @@ function Conversation({ navigation, route }) {
                 >
                   {t(
                     'collectiviteCanaux.privee.personneNeLira',
-                    'Ce club n’a aucun dirigeant inscrit : personne ne lira ce message pour l’instant.',
+                    'Ce club n’a aucun dirigeant inscrit : '
+                      + 'personne ne lira ce message pour l’instant.',
                   )}
                 </p>
               ) : null}
