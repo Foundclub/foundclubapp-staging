@@ -131,7 +131,7 @@ describe('FINITIONS9 · point 5 — le balayage des valeurs de fr.js', () => {
     ['remindReport.alreadyRemindedOn', 'Déjà relancé le {{date}}.'],
     ['remindReport.nobodyReminded', "Personne n'a été relancé"],
     ['eventDetails.theTeamSMatch10', "Le match de l'équipe : {{teamRating}}/10"],
-    ['eventDetails.temporaryTeams', 'Équipes éphémères:'],
+    ['eventDetails.temporaryTeams', 'Équipes éphémères :'],
     ['clubLicenses.actions.settings', 'Paramètres'],
     ['teamDetails.alerts.invitePlayers.downloadApp', "Télécharge l'application ici"],
     ['downloadRemoteFile.errors.empty', 'Le fichier téléchargé est vide.'],

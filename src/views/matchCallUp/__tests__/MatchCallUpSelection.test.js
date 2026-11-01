@@ -950,7 +950,7 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
       await appuyerSur(arbre, 'Suivant');
 
       const texte = texteVisible(arbre);
-      expect(texte).toContain('1 joueur a dit ABSENT');
+      expect(texte).toContain('1 réponse « Absent »');
       expect(texte).toContain('Hugo Fofana');
       // ⛔ Rien n'est parti : on previent AVANT.
       expect(mockNavigate).not.toHaveBeenCalled();
@@ -975,7 +975,7 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     await appuyerSur(arbre, 'Suivant');
 
     const texte = texteVisible(arbre);
-    expect(texte).toContain('2 joueurs ont dit ABSENT');
+    expect(texte).toContain('2 réponses « Absent »');
     expect(texte).toContain('Hugo Fofana');
     expect(texte).toContain('Ilan Ravel');
   });
@@ -1010,7 +1010,7 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     await appuyerSur(arbre, 'Revoir ma sélection');
 
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(texteVisible(arbre)).not.toContain('joueur a dit ABSENT');
+    expect(texteVisible(arbre)).not.toContain('réponse « Absent »');
     // La selection est intacte : on revient la corriger, on ne la perd pas.
     expect(rangeeJoueur(arbre, 'Hugo Fofana').props.accessibilityState.selected).toBe(true);
   });

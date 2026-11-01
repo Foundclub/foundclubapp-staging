@@ -117,6 +117,7 @@ function EventDetectionSlots({
     requestsCount: '{{count}} demandes',
     validatedCount: '{{count}}/{{quantity}} validées',
   };
+  /** @type {(cle: keyof typeof REPLIS, count: number, extra?: object) => string} */
   const compte = (cle, count, extra = {}) => (
     t(`eventDetectionSlots.${cle}`, REPLIS[cle], { count, ...extra })
   );

@@ -242,8 +242,9 @@ export const getTournamentCompetitionActions = (dashboard) => {
 // REPRISE-TEXTES (point 24) : le serveur écrivait « Journee » dans `roundLabel` jusqu'au 01/11.
 // ponytail: les matchs déjà créés gardent ce texte en base, on le répare à l'affichage. Sortie :
 // une reprise des données (recette puis production), puis retirer ce remplacement.
-export const formatTournamentRoundLabel = (label) => String(label || '')
-  .replace(/\bJournee\b/g, 'Journée');
+export const formatTournamentRoundLabel = (
+  /** @type {string | null | undefined} */ label,
+) => String(label || '').replace(/\bJournee\b/g, 'Journée');
 
 export const formatTournamentScore = (match) => {
   const hasScoreA = match?.scoreA !== null

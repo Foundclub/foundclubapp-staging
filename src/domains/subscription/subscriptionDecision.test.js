@@ -76,7 +76,7 @@ describe('subscriptionDecision', () => {
     expect(mapSubscriptionDecisionToPaywall(decision).paywallKey).toBe('composition-required');
     expect(getSubscriptionPaywallContent(decision)).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La composition d’équipe est réservée à l’offre Équipe. Offre conseillée: Équipe ou Club.',
+      description: 'La composition d’équipe est réservée à l’offre Équipe. Offre conseillée : Équipe ou Club.',
       title: 'Composition réservée',
     });
     expect(getSubscriptionQuotaSheetContent(decision)).toMatchObject({
@@ -98,7 +98,7 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
       description: 'La création de campagnes de cotisation demande une offre active.'
-        + ' Offre conseillée: Équipe ou Club.',
+        + ' Offre conseillée : Équipe ou Club.',
       title: 'Cotisations réservées',
     });
     expect(getSubscriptionPaywallContent({
@@ -109,7 +109,7 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
       description: 'La gestion des installations du club est réservée à l’offre Club.'
-        + ' Offre conseillée: Club.',
+        + ' Offre conseillée : Club.',
       title: 'Installations réservées',
     });
     expect(getSubscriptionPaywallContent({
@@ -120,7 +120,7 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
       description: 'La gestion des sponsors du club est réservée à l’offre Club.'
-        + ' Offre conseillée: Club.',
+        + ' Offre conseillée : Club.',
       title: 'Sponsors réservés',
     });
     expect(getSubscriptionPaywallContent({
@@ -131,7 +131,7 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
       description: 'La gestion des rôles et des droits du club est réservée à l’offre Club.'
-        + ' Offre conseillée: Club.',
+        + ' Offre conseillée : Club.',
       title: 'Rôles club reserves',
     });
   });
@@ -166,7 +166,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Cette action demande une offre FoundClub active. Offre conseillée: Club.',
+      description: 'Cette action demande une offre FoundClub active. Offre conseillée : Club.',
       title: 'Abonnement FoundClub requis',
     });
   });
@@ -205,7 +205,7 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'Tu as atteint la limite gratuite de publication d’événements. Offre conseillée: Équipe ou Club.',
+      description: 'Tu as atteint la limite gratuite de publication d’événements. Offre conseillée : Équipe ou Club.',
       title: 'Publication d’événement limitée',
     });
   });
