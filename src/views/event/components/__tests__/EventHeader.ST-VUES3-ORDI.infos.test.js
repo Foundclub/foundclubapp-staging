@@ -132,3 +132,21 @@ describe('ST-VUES3-ORDI · écran 1 — le bloc d infos d un match, comme la pla
     expect(lus).toContain(ADRESSE_LONGUE);
   });
 });
+
+// REPRISE-EVENEMENTS 128 — sur le téléphone aussi, un stage de 31 jours ne disait que son
+// premier jour.
+describe('REPRISE-EVENEMENTS 128 — l en-tête d un stage', () => {
+  test('🐞 un stage de plusieurs jours dit son dernier jour', () => {
+    const lus = textes(monter({
+      event: {
+        ...MATCH,
+        date: '2026-11-30T05:00:00.000Z',
+        eventFormat: 'stage_parent',
+        stageEndDate: '2026-12-30',
+        type: { documentId: 'type-3', name: 'Stage' },
+      },
+    }));
+
+    expect(lus.some((ligne) => /^lun 30\/11\/2026 – mer 30\/12\/2026$/i.test(ligne))).toBe(true);
+  });
+});

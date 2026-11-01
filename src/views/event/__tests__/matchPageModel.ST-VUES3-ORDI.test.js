@@ -33,6 +33,27 @@ describe('ST-VUES3-ORDI · le bloc d infos (écran 1, point 2)', () => {
     }, 'fr-FR')).toBe('Sam. 5 sept. · 19:00 – 20:00');
   });
 
+  // REPRISE-EVENEMENTS 128 — un stage de 31 jours s'annonçait « Lun. 30 nov. · 06:00 – 07:00 » :
+  // l'en-tête taisait sa fin.
+  test('🐞 un stage de plusieurs jours dit aussi son dernier jour', () => {
+    expect(formatEventWhenLine({
+      date: '2026-11-30T12:00:00.000Z',
+      endTime: '07:00:00.000',
+      eventFormat: 'stage_parent',
+      stageEndDate: '2026-12-30',
+      startTime: '06:00:00.000',
+    }, 'fr-FR')).toBe('Lun. 30 nov. – mer. 30 déc. · 06:00 – 07:00');
+  });
+
+  test('un stage d un seul jour garde sa ligne d un jour', () => {
+    expect(formatEventWhenLine({
+      date: '2026-11-30T12:00:00.000Z',
+      eventFormat: 'stage_parent',
+      stageEndDate: '2026-11-30',
+      startTime: '09:00:00.000',
+    }, 'fr-FR')).toBe('Lun. 30 nov. · 09:00');
+  });
+
   test('sans heure saisie, l heure de la date ; sans date, rien', () => {
     const iso = '2026-09-05T17:00:00.000Z';
     const jour = jourCourt(iso);

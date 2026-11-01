@@ -50,7 +50,35 @@ export const formatEventWhenLine = (event, locale = localeDesFormats()) => {
   const start = hhmm(event?.startTime)
     || date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   const end = hhmm(event?.startTime) ? hhmm(event?.endTime) : '';
-  return `${day} · ${end ? `${start} – ${end}` : start}`;
+  return `${day}${dernierJourDuStage(event, locale)} · ${end ? `${start} – ${end}` : start}`;
+};
+
+/**
+ * REPRISE-EVENEMENTS 128 — le dernier jour d'un stage de plusieurs jours : l'en-tête (site et
+ * téléphone) n'annonçait que le premier.
+ * @param {any} event - L'événement.
+ * @returns {Date | null} Le dernier jour, ou `null` (pas un stage, ou un seul jour).
+ */
+export const getStageLastDay = (event) => {
+  if (String(event?.eventFormat || '').toLowerCase() !== 'stage_parent') return null;
+  // La date de fin est un jour (« 2026-12-30 ») : midi évite de changer de jour selon le fuseau.
+  const fin = new Date(`${String(event?.stageEndDate || '').substring(0, 10)}T12:00:00`);
+  const premier = new Date(String(event?.date || ''));
+  if (Number.isNaN(fin.getTime()) || fin.toDateString() === premier.toDateString()) return null;
+  return fin;
+};
+
+/**
+ * « – mer. 30 déc. » après le premier jour d'un stage, sinon rien.
+ * @param {any} event - L'événement.
+ * @param {string} locale - Les formats de l'appareil.
+ * @returns {string} Le dernier jour précédé d'un tiret, ou vide.
+ */
+const dernierJourDuStage = (event, locale) => {
+  const fin = getStageLastDay(event);
+  if (!fin) return '';
+  const jour = fin.toLocaleDateString(locale, { day: 'numeric', month: 'short', weekday: 'short' });
+  return ` – ${jour}`;
 };
 
 /**
