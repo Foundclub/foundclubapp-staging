@@ -20,7 +20,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 import { useGetLevels } from '@/services/level/levelQueries';
-import { compareLevels } from '@/services/level/levelService';
 
 /**
  * User best level selection screen
@@ -135,8 +134,8 @@ function UserLevel({ navigation }) {
     navigation.navigate(getNextOnboardingRoute(RouteNames.UserLevel) || getPostOnboardingHomeRoute());
   };
 
-  // CORR-INSCRIPTION p17 : du plus bas au plus haut, plus par ordre alphabétique.
-  const sortedLevels = [...(levels || [])].sort(compareLevels);
+  // CORR-INSCRIPTION p17 : du plus bas au plus haut, rangés par `getLevels` (levelService).
+  const sortedLevels = levels || [];
 
   return (
     <FormScreenContainer

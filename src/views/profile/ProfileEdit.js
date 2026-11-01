@@ -9,6 +9,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
+import { categoriesDeSonAge, versLesNomsDuServeur } from '@/domains/category/ageEtCategorie';
 import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -255,7 +256,7 @@ function ProfileEdit({ navigation, route }) {
         avatar,
         bestLevel: data.bestLevel,
         birthdate: formatBirthdateToSend(data.birthdate || ''),
-        category: data.category,
+        category: versLesNomsDuServeur(data.category, categories),
         // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
         clearFields: listClearedProfileFields(loadedValues, { ...data, avatar }),
         firstname: data.firstname,
@@ -526,7 +527,11 @@ function ProfileEdit({ navigation, route }) {
                       isSearchable
                       label={t('profile.fields.category.label', 'Catégorie')}
                       onBlur={onBlur}
-                      options={buildChoiceOptions(categories, value, categorySearch)}
+                      options={buildChoiceOptions(
+                        categoriesDeSonAge(categories, watchedBirthdate, value),
+                        versLesNomsDuServeur(value, categories),
+                        categorySearch,
+                      )}
                       placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
                       ref={ref}
                       searchValue={categorySearch}
@@ -536,7 +541,10 @@ function ProfileEdit({ navigation, route }) {
                       onChange(options?.map((o) => o.value).join(', ') || '');
                     }
                   }
-                      value={resolveChoiceValues(categories, value)}
+                      value={resolveChoiceValues(
+                        categories,
+                        versLesNomsDuServeur(value, categories),
+                      )}
                     />
                   )}
                 />

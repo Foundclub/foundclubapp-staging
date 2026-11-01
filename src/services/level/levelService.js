@@ -30,7 +30,9 @@ export const getLevels = async () => {
     const validationResult = await schema.validateAsync(response.data, {
       allowUnknown: true,
     });
-    return validationResult.data;
+    // REPRISE-INSCRIPTION p17 : du plus bas au plus haut pour TOUS les écrans (inscription,
+    // « Modifier mon profil », équipes), et plus seulement à l'inscription.
+    return [...validationResult.data].sort(compareLevels);
   } catch (error) {
     const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
     throw new Error(`Failed to fetch levels: ${errorToDisplay}`);

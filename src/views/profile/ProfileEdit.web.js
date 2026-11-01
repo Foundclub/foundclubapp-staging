@@ -15,6 +15,7 @@ import {
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { categoriesDeSonAge, versLesNomsDuServeur } from '@/domains/category/ageEtCategorie';
 import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -332,7 +333,7 @@ function ProfileEditWeb({ navigation, route }) {
       avatar,
       bestLevel: formValues.bestLevel,
       birthdate: formatBirthdateToSend(formValues.birthdate || ''),
-      category: formValues.category,
+      category: versLesNomsDuServeur(formValues.category, categories),
       // C10BIS · P11-01 / P11-05 — ce que la personne a vide part pour etre efface.
       clearFields: listClearedProfileFields(loadedValues, { ...formValues, avatar }),
       firstname: formValues.firstname,
@@ -533,7 +534,12 @@ function ProfileEditWeb({ navigation, route }) {
                     isMulti
                     isSearchable
                     label={t('profile.fields.category.label', 'Categorie')}
-                    options={buildChoiceOptions(categories, formValues.category, categorySearch)}
+                    // REPRISE-INSCRIPTION p17 : celles de son âge, anciennes valeurs au nom du serveur.
+                    options={buildChoiceOptions(
+                      categoriesDeSonAge(categories, formValues.birthdate, formValues.category),
+                      versLesNomsDuServeur(formValues.category, categories),
+                      categorySearch,
+                    )}
                     placeholder={t(
                       'profile.fields.category.placeholder',
                       'Sélectionner une catégorie',
@@ -544,7 +550,10 @@ function ProfileEditWeb({ navigation, route }) {
                       const valeurs = options?.map((option) => option.value).join(', ');
                       setFieldValue('category', valeurs || '');
                     }}
-                    value={resolveChoiceValues(categories, formValues.category)}
+                    value={resolveChoiceValues(
+                      categories,
+                      versLesNomsDuServeur(formValues.category, categories),
+                    )}
                   />
                 )}
 

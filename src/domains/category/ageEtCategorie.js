@@ -42,3 +42,59 @@ export const equipeDeSonAge = (nomDeCategorie, age) => {
   if (cle.group === 2) return ans >= 35;
   return true;
 };
+
+/**
+ * REPRISE-INSCRIPTION p17 (01/11) — les catégories qu'un joueur peut jouer cette saison : la sienne
+ * et celles au-dessus (surclassement) ; Sénior dès U17 ; un adulte : Sénior et Vétéran, plus U6 à
+ * U21. Une catégorie déjà choisie reste toujours proposée, une catégorie inconnue aussi. Sans date
+ * de naissance lisible : toutes.
+ * @param {{ name?: string }[] | undefined} categories - La liste du serveur.
+ * @param {string | null | undefined} dateDeNaissance - « AAAA-MM-JJ » ou « JJ/MM/AAAA ».
+ * @param {string} [dejaChoisies] - Les catégories enregistrées, séparées par des virgules.
+ * @param {Date} [maintenant]
+ * @returns {{ name?: string }[] | undefined} Les catégories à proposer.
+ */
+export const categoriesDeSonAge = (
+  categories,
+  dateDeNaissance,
+  dejaChoisies = '',
+  maintenant = new Date(),
+) => {
+  const saison = categorieDeLaSaison(dateDeNaissance, maintenant);
+  if (!Array.isArray(categories) || !saison) return categories;
+  const cible = getCategorySortKey(saison);
+  const cle = (/** @type {string} */ nom) => {
+    const { group, rank } = getCategorySortKey(nom);
+    return `${group}:${rank}`;
+  };
+  const choisies = new Set(String(dejaChoisies || '').split(',').map((v) => cle(v.trim())));
+  return categories.filter((categorie) => {
+    const { group, rank } = getCategorySortKey(categorie?.name || '');
+    if (group === 3 || choisies.has(cle(categorie?.name || ''))) return true;
+    if (cible.group >= 1) return group >= 1;
+    if (group === 0) return rank >= cible.rank;
+    return group === 1 && cible.rank >= 17;
+  });
+};
+
+/**
+ * REPRISE-INSCRIPTION p17 — les catégories enregistrées, écrites avec les noms du serveur :
+ * « Senior » (ancienne liste de l'inscription) devient « Sénior (+18 ans) », sans doublon.
+ * @param {string | null | undefined} valeurs - Les catégories, séparées par des virgules.
+ * @param {{ name?: string }[] | undefined} categories - La liste du serveur.
+ * @returns {string} Les mêmes, séparées par « , ».
+ */
+export const versLesNomsDuServeur = (valeurs, categories) => {
+  const liste = Array.isArray(categories) ? categories : [];
+  const noms = String(valeurs || '').split(',').map((v) => v.trim()).filter(Boolean)
+    .map((valeur) => {
+      const { group, rank } = getCategorySortKey(valeur);
+      if (group === 3) return valeur;
+      const meme = liste.find((categorie) => {
+        const autre = getCategorySortKey(categorie?.name || '');
+        return autre.group === group && autre.rank === rank;
+      });
+      return meme?.name || valeur;
+    });
+  return [...new Set(noms)].join(', ');
+};

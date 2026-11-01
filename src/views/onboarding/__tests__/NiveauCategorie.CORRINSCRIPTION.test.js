@@ -79,7 +79,9 @@ const NIVEAUX = ['Départemental', 'Départemental 1', 'Départemental 2', 'Dép
   'Régional 2', 'Régional 3'];
 jest.mock('@/services/level/levelQueries', () => ({
   useGetLevels: () => ({
-    data: NIVEAUX.map((name, i) => ({ documentId: `lvl-${i}`, name })),
+    // REPRISE-INSCRIPTION : le rangement se fait dans getLevels ; l'écran le reçoit rangé.
+    data: NIVEAUX.map((name, i) => ({ documentId: `lvl-${i}`, name }))
+      .sort(jest.requireActual('@/services/level/levelService').compareLevels),
     error: null,
     isLoading: false,
     refetch: jest.fn(),
@@ -192,10 +194,11 @@ describe('CORR-INSCRIPTION p17 — niveau', () => {
 });
 
 describe('CORR-INSCRIPTION p17 — catégorie', () => {
-  it('la liste du serveur, et « Sénior » présélectionné pour un adulte de 28 ans', () => {
+  it('adulte de 28 ans : Sénior seul proposé, et présélectionné', () => {
     mockUserData.current = { birthdate: '1998-03-12', documentId: 'user-1' };
     const vus = choix(monter(UserCategory), 'checkbox');
-    expect(vus).toHaveLength(CATEGORIES_SERVEUR.length);
+    // REPRISE-INSCRIPTION p17 : un adulte ne voit plus U6 à U21.
+    expect(vus).toEqual(['[x] Sénior (+18 ans)']);
     expect(vus.filter((libelle) => libelle.startsWith('[x] '))).toEqual(['[x] Sénior (+18 ans)']);
   });
 
