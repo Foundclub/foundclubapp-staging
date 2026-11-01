@@ -534,7 +534,8 @@ function ProfileEditWeb({ navigation, route }) {
                     isMulti
                     isSearchable
                     label={t('profile.fields.category.label', 'Categorie')}
-                    // REPRISE-INSCRIPTION p17 : celles de son âge, anciennes valeurs au nom du serveur.
+                    // REPRISE-INSCRIPTION p17 : celles de son âge, anciennes valeurs au nom
+                    // du serveur.
                     options={buildChoiceOptions(
                       categoriesDeSonAge(categories, formValues.birthdate, formValues.category),
                       versLesNomsDuServeur(formValues.category, categories),

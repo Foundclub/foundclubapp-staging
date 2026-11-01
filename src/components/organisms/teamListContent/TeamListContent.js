@@ -553,7 +553,9 @@ function TeamListContent({
     // REPRISE-INSCRIPTION p20 : depuis « Mes équipes », le joueur cherche une ÉQUIPE : la liste
     // des équipes (sur le site, l'accueil de la recherche renvoyait aux événements).
     if (showOnlyMyTeams) {
-      /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, { screen: RouteNames.TeamList });
+      /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+        screen: RouteNames.TeamList,
+      });
       return;
     }
     navigateToSearchHub(navigation, 'clubs');

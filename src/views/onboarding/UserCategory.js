@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { categorieDeLaSaison, categoriesDeSonAge } from '@/domains/category/ageEtCategorie';
+import { getCategorySortKey } from '@/domains/category/categorySort';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -22,7 +23,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 import { useGetCategories } from '@/services/category/categoryQueries';
-import { getCategorySortKey } from '@/domains/category/categorySort';
 
 /**
  * Player categories (age groups)

@@ -85,7 +85,8 @@ describe('CORR-INSCRIPTION p13 — l’ordre des villes', () => {
 
 // REPRISE-INSCRIPTION (01/11) — la contre-recette voyait encore 13e, 8e, 15e… à l'inscription : la
 // base d'adresses donne à chaque arrondissement SA ville (« city: Marseille 13e Arrondissement »),
-// relevé le 01/11 sur data.geopf.fr. Le regroupement par ville les prenait pour des communes à part.
+// relevé le 01/11 sur data.geopf.fr. Le regroupement par ville les prenait pour des communes
+// à part.
 describe('REPRISE-INSCRIPTION p13 — la réponse réelle de la base d’adresses', () => {
   beforeEach(() => mockGet.mockReset());
 

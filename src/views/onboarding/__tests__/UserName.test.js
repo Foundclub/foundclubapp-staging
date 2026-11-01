@@ -577,7 +577,7 @@ describe('UserName — un moins de 13 ans est envoye vers « compte parent requi
   // REPRISE-INSCRIPTION (contre-recette Parent du 01/11) — après « Corriger ma date de naissance »,
   // le site remonte l'écran : le serveur ayant tout refusé, prénom et nom revenaient vides et
   // « Continuer » restait gris avec 14 ans. Ce qui a été tapé revient (prénom, nom, date).
-  it('après « Corriger ma date de naissance », l écran remonté garde prénom, nom et date tapés', async () => {
+  it('après « Corriger ma date », l écran remonté garde prénom, nom et date tapés', async () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     /** @type {any} */ (updateMe).mockRejectedValue(refusCompteParent());
     const arbre = rendre('Joueur');

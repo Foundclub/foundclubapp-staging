@@ -353,7 +353,7 @@ describe('CORR-INSCRIPTION p21 — profil d un parent', () => {
 // U6 à U21, et « Senior » (ancienne liste de l'inscription) devient « Sénior (+18 ans) », y compris
 // dans ce qui est enregistré.
 describe('REPRISE-INSCRIPTION p17 — catégories de « Modifier mon profil »', () => {
-  it('adulte : Sénior seul proposé ; « Senior » coché et enregistré au nom du serveur', async () => {
+  it('adulte : Sénior seul ; « Senior » coché et enregistré au nom du serveur', async () => {
     const arbre = await rendre(joueurComplet);
     const champ = mockChampsFormulaire['Catégorie'];
     expect(champ.options.map((/** @type {any} */ o) => o.value)).toEqual(['Sénior (+18 ans)']);
@@ -361,7 +361,8 @@ describe('REPRISE-INSCRIPTION p17 — catégories de « Modifier mon profil »',
     const { Text: TexteRN } = jest.requireActual('react-native');
     const enregistrer = arbre.root.findAll(
       (/** @type {any} */ n) => typeof n.props.onPress === 'function'
-        && n.findAllByType(TexteRN).some((/** @type {any} */ t) => t.props.children === 'Continuer'),
+        && n.findAllByType(TexteRN)
+          .some((/** @type {any} */ t) => t.props.children === 'Continuer'),
     )[0];
     await act(async () => { enregistrer.props.onPress(); });
     expect(mockUpdateMe)

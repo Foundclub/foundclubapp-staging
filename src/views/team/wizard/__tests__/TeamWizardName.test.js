@@ -480,14 +480,18 @@ describe('EQUIPES — Q2 : le droit se verifie a l ENTREE du tunnel', () => {
 // REPRISE-INSCRIPTION (contre-recette du 01/11, défaut 14 du coach) — l'entraîneur qui crée une
 // équipe devait se cocher lui-même à l'étape « Entraîneurs » ; il y est coché d'office. Il peut se
 // décocher (la présélection ne revient pas). Un dirigeant, lui, choisit qui entraîne.
-describe('REPRISE-INSCRIPTION — l’entraîneur est coché d’office comme entraîneur de l’équipe', () => {
+describe('REPRISE-INSCRIPTION — l’entraîneur coché d’office dans son équipe', () => {
   const { useTeamWizard } = jest.requireActual('../TeamWizardContext');
   /** @type {any} */
   let etat;
-  const Sonde = () => {
+  /**
+   * Lit l'état de l'assistant.
+   * @returns {null} Rien à l'écran.
+   */
+  function Sonde() {
     etat = useTeamWizard().state;
     return null;
-  };
+  }
   const monter = () => {
     const pilote = {
       getParent: () => null, goBack: () => {}, navigate: () => {}, reset: () => {},
