@@ -476,3 +476,48 @@ describe('EQUIPES — Q2 : le droit se verifie a l ENTREE du tunnel', () => {
     expect(afficherLEcran({ params: { clubId: 'club-1' } }).gabarit.nextLabel).toBeDefined();
   });
 });
+
+// REPRISE-INSCRIPTION (contre-recette du 01/11, défaut 14 du coach) — l'entraîneur qui crée une
+// équipe devait se cocher lui-même à l'étape « Entraîneurs » ; il y est coché d'office. Il peut se
+// décocher (la présélection ne revient pas). Un dirigeant, lui, choisit qui entraîne.
+describe('REPRISE-INSCRIPTION — l’entraîneur est coché d’office comme entraîneur de l’équipe', () => {
+  const { useTeamWizard } = jest.requireActual('../TeamWizardContext');
+  /** @type {any} */
+  let etat;
+  const Sonde = () => {
+    etat = useTeamWizard().state;
+    return null;
+  };
+  const monter = () => {
+    const pilote = {
+      getParent: () => null, goBack: () => {}, navigate: () => {}, reset: () => {},
+    };
+    act(() => {
+      arbre = renderer.create(createElement(
+        TeamWizardProvider,
+        null,
+        createElement(TeamWizardName, {
+          navigation: /** @type {any} */ (pilote),
+          route: /** @type {any} */ ({ params: { clubId: 'club-1' } }),
+        }),
+        createElement(Sonde),
+      ));
+    });
+  };
+
+  test('un entraîneur : lui-même dans les entraîneurs dès l’ouverture', () => {
+    mockCompte.club = { documentId: 'club-1', name: 'FC Test' };
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test' };
+    monter();
+    expect(etat.trainers).toEqual(['moi']);
+  });
+
+  test('un dirigeant : personne n’est coché d’office', () => {
+    mockCompte.club = { documentId: 'club-1', name: 'SMUC' };
+    (/** @type {any} */ (mockCompte)).role = { name: 'Dirigeant', type: 'president' };
+    mockReseau.club = { documentId: 'club-1', name: 'SMUC' };
+    monter();
+    expect(etat.trainers).toEqual([]);
+    (/** @type {any} */ (mockCompte)).role = { name: 'Entraineur', type: 'coach' };
+  });
+});
