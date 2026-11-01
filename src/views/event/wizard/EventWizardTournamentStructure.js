@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -16,6 +17,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
+import { getTournamentGroupBounds } from '../tournamentUtils';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardExitRoute,
@@ -177,7 +179,15 @@ function EventWizardTournamentStructure({ navigation, route }) {
 
   const usesGroups = formatMode === 'groups_only' || formatMode === 'groups_to_knockout' || formatMode === 'round_robin';
   const usesKnockout = formatMode === 'groups_to_knockout' || formatMode === 'knockout_only';
-  const isInvalid = usesKnockout && knockoutSize > 0 && ![16, 2, 32, 4, 8].includes(knockoutSize);
+  // REPRISE-EVENEMENTS 129 : la borne des réglages du tournoi, dès la création — le nombre
+  // d'équipes est le maximum choisi à l'étape précédente.
+  const teamCountForGroups = state.tournamentMaxTeams || 0;
+  const { isGroupCountTooHigh, maxGroupCount } = getTournamentGroupBounds({
+    formatMode, groupCount, teamCount: teamCountForGroups,
+  });
+  const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0
+    && ![16, 2, 32, 4, 8].includes(knockoutSize);
+  const isInvalid = isKnockoutSizeInvalid || isGroupCountTooHigh;
 
   const handleNext = () => {
     dispatch({
@@ -292,6 +302,19 @@ function EventWizardTournamentStructure({ navigation, route }) {
                   style={tournamentDs.styles.input}
                   value={groupCountText}
                 />
+                {isGroupCountTooHigh ? (
+                  <Text style={[Fonts.p3, Fonts.error500]}>
+                    {t('tournamentSettingsEdit.tooManyGroups', {
+                      count: maxGroupCount,
+                      defaultValue_one: 'Au plus {{count}} poule pour {{teams}} équipes : '
+                        + 'chaque poule doit compter 2 équipes.',
+                      defaultValue_other: 'Au plus {{count}} poules pour {{teams}} équipes : '
+                        + 'chaque poule doit compter 2 équipes.',
+                      teams: teamCountForGroups,
+                      ...SANS_ECHAPPEMENT,
+                    })}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
             <View style={[Alignments.row, Spaces.gap[12]]}>

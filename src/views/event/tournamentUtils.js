@@ -267,3 +267,30 @@ export const getTournamentClosure = (event) => ({
     .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0],
   isClosed: String(event?.sessionStatus || '').toLowerCase() === 'closed',
 });
+
+/**
+ * CORR-EVENEMENTS 129 (décision B) — un effectif minimum saisi vaut au moins 1. Les réglages du
+ * tournoi et l'assistant de création lisent CETTE règle (REPRISE-EVENEMENTS 129).
+ * @param {string | number | null | undefined} minRosterText - L'effectif minimum saisi.
+ * @returns {boolean} - Vrai si une valeur est saisie et qu'elle vaut moins de 1.
+ */
+export const isTournamentMinRosterTooLow = (minRosterText) => {
+  const saisi = String(minRosterText ?? '').trim();
+  return saisi !== '' && !(Number.parseInt(saisi, 10) >= 1);
+};
+
+/**
+ * CORR-EVENEMENTS 129 (décision B) — une poule compte au moins 2 équipes : au plus
+ * équipes ÷ 2 poules. Sans format à poules (ou en championnat), rien à borner.
+ * @param {{ formatMode: string, groupCount: number, teamCount: number }} reglages - Le format,
+ *   le nombre de poules demandé et le nombre d'équipes (acceptées, sinon le maximum prévu).
+ * @returns {{ isGroupCountTooHigh: boolean, maxGroupCount: number }} - Le plafond et le verdict.
+ */
+export const getTournamentGroupBounds = ({ formatMode, groupCount, teamCount }) => {
+  const maxGroupCount = Math.max(1, Math.floor(teamCount / 2));
+  const usesGroups = ['groups_only', 'groups_to_knockout'].includes(formatMode);
+  return {
+    isGroupCountTooHigh: usesGroups && teamCount >= 2 && groupCount > maxGroupCount,
+    maxGroupCount,
+  };
+};
