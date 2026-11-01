@@ -390,7 +390,8 @@ function ClubEdit({ navigation, route }) {
             <View style={[Alignments.fill, Spaces.gap[24]]}>
               {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
                   déjà 24. */}
-              <View style={[Alignments.row]}>
+              {/* REPRISE-PLACE (01/11, point 5) : le « + » dépasse de 12 px et touchait la barre. */}
+              <View style={[Alignments.row, Spaces.paddingTop[12]]}>
                 <SelectAvatar
                   containerStyle={{
                     // width est calculee a partir du MEME ratio, et non laissee

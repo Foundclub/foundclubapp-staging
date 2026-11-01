@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -434,12 +433,9 @@ function FacilitySelector({
             ) : null}
 
             {!isLoadingFacilities && facilities.length > 0 ? (
-              <ScrollView
-                contentContainerStyle={[Spaces.gap[12], { paddingBottom: 2, paddingRight: 2 }]}
-                nestedScrollEnabled
-                showsVerticalScrollIndicator={facilities.length > 3}
-                style={{ maxHeight: 280 }}
-              >
+              // REPRISE-PLACE (01/11, point 3) : une boîte de 280 px qui défilait seule DANS
+              // l'assistant (carte du bas coupée) ; posée à plat, c'est l'assistant qui défile.
+              <View style={[Spaces.gap[12], { paddingBottom: 2, paddingRight: 2 }]}>
                 {facilities.map((facility) => {
                   const id = facility.documentId || facility.id;
                   const isSelected = facilityId === id;
@@ -543,7 +539,7 @@ function FacilitySelector({
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
             ) : null}
           </View>
 

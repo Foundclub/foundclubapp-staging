@@ -352,6 +352,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   contenu: {
+    // REPRISE-PLACE (01/11, point 1) : à 390 px, le fil du site n'offre que 252 px.
+    maxWidth: '100%',
     width: 276,
   },
   lien: {

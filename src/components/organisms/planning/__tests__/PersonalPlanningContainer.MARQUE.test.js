@@ -95,3 +95,18 @@ test('MARQUE-PARENT le créneau de l enfant qui attend la mairie arrive à la gr
   expect(creneau.title).toContain('Hugo');
   expect(creneau.raw.pendingDecider).toBe('mairie');
 });
+
+// REPRISE-PLACE (01/11, point 6, revue Parent « faire tenir Semaine en entier ») — à 390 px sur le
+// site, « Semaine » sortait coupé en « Semai… » : le sélecteur de vue garde ses largeurs égales et
+// prend les marges serrées (`fitLabels`, 6 px au lieu de 16).
+test('REPRISE-PLACE le sélecteur de vue (Semaine / 3 jours / Mois) serre ses marges', () => {
+  mockUseQuery.mockReturnValue({ data: { data: [] }, isError: false, isLoading: false });
+  act(() => {
+    arbre = renderer.create(<PersonalPlanningContainer />);
+  });
+  const [selecteur] = arbre.root.findAll((/** @type {any} */ n) => (
+    Array.isArray(n.props?.options) && typeof n.props?.onChange === 'function'
+  ));
+  expect(selecteur.props.centerContent).toBe(true);
+  expect(selecteur.props.fitLabels).toBe(true);
+});

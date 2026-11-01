@@ -1223,7 +1223,9 @@ function ColonneDesConversations({
                   display: 'flex',
                   gap: 12,
                   minHeight: 72,
-                  padding: '8px 14px',
+                  // REPRISE-PLACE (01/11, point 4) : 44 px à droite, la place du « ⋮ » qui se pose
+                  // sur la ligne au survol (il recouvrait la date de la conversation ouverte).
+                  padding: '8px 44px 8px 14px',
                   textAlign: 'left',
                   width: '100%',
                 }}
@@ -1247,9 +1249,11 @@ function ColonneDesConversations({
                 >
                   {getInitials(titre)}
                 </span>
+                {/* REPRISE-PLACE (01/11, point 4, D-COACH-4) : sans colonne déclarée, le texte le
+                    plus long élargissait la ligne (date et pastille coupées au bord droit). */}
                 <span
                   style={{
-                    display: 'grid', flex: 1, gap: 4, minWidth: 0,
+                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
                   }}
                 >
                   <span

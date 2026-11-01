@@ -65,6 +65,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -1351,6 +1352,11 @@ function ClubDetails({ navigation, route }) {
     // fonction partagee compare desormais en texte.
     return Boolean(clubId) && isClubMember(clubId);
   }, [clubId, isClubMember, userData]);
+  // REPRISE-PLACE (01/11, point 7, revue « titre de la fiche du club » et « rallumer l'onglet du
+  // club ») — sur le site : le nom du club dans la barre fine ; son propre club allume l'onglet du
+  // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Un club d'un autre
+  // garde « aucun onglet » (choix A du chef, en attente d'Adel). Le téléphone ne lit pas ce magasin.
+  useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : null, titre: club?.name || null });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
   // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
@@ -1727,6 +1733,9 @@ function ClubDetails({ navigation, route }) {
             title: titreEnvoye,
             tone: 'success',
           });
+          // REPRISE-PLACE (01/11, point 26, revue Parent) : le bandeau se pose en haut de la page,
+          // on venait de cliquer en bas : on ne le voyait pas. La page remonte jusqu'à lui.
+          if (typeof window !== 'undefined') window.scrollTo?.({ behavior: 'smooth', top: 0 });
           return;
         }
         Alert.alert(titreEnvoye, phraseEnvoyee, [
@@ -2207,7 +2216,9 @@ function ClubDetails({ navigation, route }) {
       zIndex: 24,
     },
   ];
-  if (actionsEnColonne) {
+  if (Platform.OS === 'web' && !annuaire) {
+    styleDuPiedDesActions = [Spaces.gap[12], Spaces.paddingTop[12]];
+  } else if (actionsEnColonne) {
     styleDuPiedDesActions = [
       Spaces.gap[12],
       { position: /** @type {any} */ ('sticky'), top: 24, width: 320 },
@@ -2913,6 +2924,280 @@ function ClubDetails({ navigation, route }) {
   // sous-page, et seulement elle. Le pied d'actions flottant, qui monterait avec lui, n'y existe
   // pas : la sous-page exige `canEdit` (président membre du club), pour qui la matrice n'allume
   // aucun de ses boutons. La fiche publique et le hub, où vit le pied, ne bougent pas.
+  // REPRISE-PLACE (01/11, point 26, revue Parent : « le bloc des boutons reste collé au-dessus de
+  // la barre du bas, une deuxième zone figée ») — sur le SITE, hors annuaire, le pied d'actions
+  // vient au bout du défilement : seule la barre du bas reste figée. Le téléphone garde son pied
+  // flottant (décision Z01). Témoin : __tests__/ClubDetails.unSeulPied.test.js.
+  const piedDesActionsDansLeDefilement = Platform.OS === 'web' && !annuaire;
+  const piedDesActions = hasFloatingClubActions ? (
+    <View
+      pointerEvents="box-none"
+      style={styleDuPiedDesActions}
+      testID="club-details-actions-footer"
+    >
+      {/* D98 — le joueur passe EN PREMIER et en Primary : c'est le cas
+          majoritaire d'une fiche club trouvee depuis Google. « Je dirige ce
+          club » reste, en Secondary, parce qu'un dirigeant sait ce qu'il
+          cherche alors qu'un joueur, lui, repartait faute de porte.
+          Les deux motifs entrent dans le MEME parcours de connexion. */}
+      {showPublicPlayerLogin ? (
+        <Button
+          onPress={() => openClubAuthFlow('club-public-player-login')}
+          style={floatingClubActionButtonStyle}
+          title={t('clubDetails.actions.playAtClub', 'Je joue dans ce club')}
+          variant="Primary"
+        />
+      ) : null}
+
+      {showPublicClaimLogin ? (
+        <Button
+          onPress={() => openClubAuthFlow('club-public-claim-login')}
+          style={floatingClubActionButtonStyle}
+          title={t('clubDetails.actions.manageClub', 'Je dirige ce club')}
+          variant="Secondary"
+        />
+      ) : null}
+
+      {showPlayerClubAction ? (
+        <Button
+          disabled={hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending}
+          onPress={handleOpenPlayerTeamPicker}
+          style={[
+            floatingClubActionButtonStyle,
+            (hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending)
+              ? { opacity: 0.7 }
+              : null,
+          ]}
+          title={hasPendingViewedClubTeamRequest
+            ? t('clubDetails.actions.requestPending', 'Demande en attente')
+            : t('clubDetails.actions.joinClubMember', 'Je fais partie de ce club')}
+          variant="Primary"
+        />
+      ) : null}
+
+      {showPlayerNoTeamAction ? (
+        <Button
+          disabled={hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending}
+          onPress={handleOpenPlayerNoTeamRequest}
+          style={[
+            floatingClubActionButtonStyle,
+            (hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending)
+              ? { opacity: 0.7 }
+              : null,
+          ]}
+          title={hasPendingPlayerNoTeamRequest
+            ? t('clubDetails.actions.requestPending', 'Demande en attente')
+            : t('clubDetails.actions.bringClubOver', 'C’est mon club')}
+          variant="Primary"
+        />
+      ) : null}
+
+      {showClubPartneringAction ? (
+        <Button
+          disabled={hasPendingClubPartneringRequest || createClubRequestMutation.isPending}
+          onPress={handleOpenClubPartnerRequest}
+          style={[
+            floatingClubActionButtonStyle,
+            (hasPendingClubPartneringRequest || createClubRequestMutation.isPending)
+              ? { opacity: 0.7 }
+              : null,
+          ]}
+          title={hasPendingClubPartneringRequest
+            ? t('clubDetails.actions.requestPending', 'Demande en attente')
+            : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
+          variant="Primary"
+        />
+      ) : null}
+
+      {/* 👨‍👧 PARENT P2 — « DEMANDER A REJOINDRE AU NOM DE MON ENFANT ».
+          (2026-09-10, demande d'Adel : « il doit pouvoir rejoindre un club
+          au nom de son enfant ».)
+
+          ⛔ CE N'EST PAS UNE DEMANDE D'ADHESION, et la difference est
+          structurelle : `club-membership-request` porte un COMPTE, et son
+          acceptation mute ce compte (role, club). Un enfant de moins de
+          13 ans n'a pas de compte — le serveur le refuse — donc la demande
+          signee par le parent rattacherait LE PARENT au club.
+          On reutilise donc le rail d'INTERET, tel quel : il ne rattache
+          personne (« sans affiliation automatique », dit son tiroir), il
+          previent les dirigeants du club, et ils repondent au PARENT. C'est
+          le partage tranche en C9 du plan : le parent demande, le club
+          decide, le rattachement reste un geste separe.
+
+          👶 PARENT P3 (11/09) — la demande PORTE l'enfant desormais (decision
+          d'Adel « 1- a ») : le bouton ouvre la feuille des equipes en mode
+          « pour un enfant », et la place demandee arrive chez les responsables
+          de l'equipe avec le prenom et l'age de l'enfant. */}
+      {showChildInterestAction ? (
+        <Button
+          disabled={createClubInterestRequestMutation.isPending}
+          onPress={handlePressChildInterest}
+          style={[
+            floatingClubActionButtonStyle,
+            createClubInterestRequestMutation.isPending ? { opacity: 0.7 } : null,
+          ]}
+          testID="club-details-child-interest"
+          title={
+            // 👶 PAR-L4 (design parent E10) — « pour un enfant » : la feuille demande
+            // POUR QUI. Avant, un seul enfant admissible donnait un bouton a son prenom,
+            // et le parent croyait qu'on choisissait a sa place (recette PAR-009).
+            // Le prenom n'apparait que pour l'enfant venu de SA fiche. Forme OBJET
+            // (`{ defaultValue, ...variables }`) : la seule que les temoins de la fiche
+            // club savent interpoler.
+            enfantDeLaFiche
+              ? t('clubDetails.actions.askPlaceForNamedChild', {
+                defaultValue: 'Demander une place pour {{firstname}}',
+                firstname: enfantDeLaFiche.firstname,
+                ...SANS_ECHAPPEMENT,
+              })
+              : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant')
+          }
+          variant="Primary"
+        />
+      ) : null}
+
+      {/* 🔒 E17 — 13 a 17 ans : on EXPLIQUE l'absence de la porte au lieu de
+          la faire disparaitre sans un mot. Un ado de 16 ans qui ne pourrait
+          pas dire lui-meme qu'il vient a l'entrainement, « ca ne tient pas
+          debout » (plan, E17). A 18 ans il n'y a plus rien a dire : le lien
+          parental est eteint, et l'app se tait. */}
+      {showTeenSelfRequestHint ? (
+        <Text
+          style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
+          testID="club-details-teen-self-request-hint"
+        >
+          {t(
+            'clubDetails.hints.teenAsksAlone',
+            'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
+          )}
+        </Text>
+      ) : null}
+
+      {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles
+          se rangent avec les autres portes « je m'attache a ce club »,
+          avant les portes d'interet qui, elles, restent en Secondary. */}
+      {/* TUTOE-2 : ancre invisible du guide (M1 sans club), le bouton garde son ombre.
+          GUIDE-TEXTES : une ancre par libellé, la bulle nomme le bouton affiché. */}
+      {showJoinClubAction ? (
+        <TourTarget id={isClubWithoutVisibleOwner ? 'club.itsMine' : 'club.askToJoin'}>
+          <Button
+            disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
+            onPress={handleAskToJoinClub}
+            style={[
+              floatingClubActionButtonStyle,
+              (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
+                ? { opacity: 0.7 }
+                : null,
+            ]}
+            title={(() => {
+              if (hasPendingClubRequest || joinRequestPending) {
+                return t('clubDetails.actions.requestPending', 'Demande en attente');
+              }
+              if (isClubWithoutVisibleOwner) {
+                return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
+              }
+              return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
+            })()}
+            variant="Primary"
+          />
+        </TourTarget>
+      ) : null}
+
+      {showContactAdminClaimAction ? (
+        <Button
+          disabled={hasPendingClubRequest}
+          onPress={handleClaimClub}
+          style={[
+            floatingClubActionButtonStyle,
+            hasPendingClubRequest ? { opacity: 0.6 } : null,
+          ]}
+          title={
+            hasPendingClubRequest
+              ? t('clubDetails.actions.requestPending', 'Demande en attente')
+              : t('clubDetails.actions.join')
+          }
+          variant="Primary"
+        />
+      ) : null}
+
+      {showEmptyClubClaimAction ? (
+        <Button
+          disabled={hasPendingClubRequest}
+          onPress={handleClaimClub}
+          style={[
+            floatingClubActionButtonStyle,
+            hasPendingClubRequest ? { opacity: 0.6 } : null,
+          ]}
+          title={hasPendingClubRequest
+            ? t('clubDetails.actions.requestPending', 'Demande en attente')
+            : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
+          variant={hasPendingClubRequest ? 'Secondary' : 'Primary'}
+        />
+      ) : null}
+
+      {/* V01 — LA SECONDE PORTE d'un club QUI A des equipes. Elle vit a
+          cote de la porte primaire, jamais a sa place : « je fais partie de
+          ce club » et « interesse par le club » ne sont pas la meme phrase,
+          et personne ne doit avoir a signer la premiere pour dire la
+          seconde. */}
+      {showClubInterestAction ? (
+        <Button
+          disabled={hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending}
+          onPress={handleOpenClubInterestTeamPicker}
+          style={[
+            floatingClubActionButtonStyle,
+            floatingClubInterestButtonStyle,
+            (hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending)
+              ? { opacity: 0.7 }
+              : null,
+          ]}
+          title={hasPendingEveryClubInterestOption
+            ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
+            : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
+          variant="Secondary"
+        />
+      ) : null}
+
+      {/* 👪 PARENT-FINITIONS 2 (design parent E10) — deux portes cote a cote, celle de la
+          place (l'enfant) et celle-ci (l'adulte) : la ligne dit laquelle est pour le parent.
+          Sans la porte de la place, il n'y a rien a distinguer. */}
+      {showClubInterestAction && showChildInterestAction ? (
+        <Text
+          style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
+          testID="club-details-adult-interest-hint"
+        >
+          {t(
+            'clubDetails.clubInterest.forYouHint',
+            'Pour toi : une prise de contact avec le club.',
+          )}
+        </Text>
+      ) : null}
+
+      {/* S02 — LA SECONDE PORTE, toujours en dernier et en Secondary : elle
+          est le repli de celui qui ne peut pas signer la premiere. « C'est
+          mon club » dit ce qu'on DECLARE ; celle-ci dit ce qu'on OBTIENT. */}
+      {showClubArrivalInterestAction ? (
+        <Button
+          disabled={clubArrivalInterestIsBusy}
+          isLoading={createClubArrivalInterestMutation.isPending}
+          onPress={handlePressClubArrivalInterest}
+          style={[
+            floatingClubActionButtonStyle,
+            floatingClubInterestButtonStyle,
+            hasPendingClubArrivalInterest ? { opacity: 0.7 } : null,
+          ]}
+          title={hasPendingClubArrivalInterest
+            ? t('clubDetails.actions.clubArrivalInterestPending', 'Tu seras prévenu·e')
+            : t(
+              'clubDetails.actions.clubArrivalInterest',
+              'Prévenez-moi quand ce club arrive',
+            )}
+          variant="Secondary"
+        />
+      ) : null}
+    </View>
+  ) : null;
+
   // Témoin : __tests__/ClubDetails.ANDROIDBAR3BIS.clavier.test.js.
   return (
     <CadreDeLaFiche
@@ -2924,7 +3209,10 @@ function ClubDetails({ navigation, route }) {
         annuaire={annuaire}
         contentContainerStyle={[
           Spaces.gap[32],
-          { paddingBottom: actionsEnColonne ? 40 : floatingClubActionsScrollPaddingBottom },
+          {
+            paddingBottom: actionsEnColonne || piedDesActionsDansLeDefilement
+              ? 40 : floatingClubActionsScrollPaddingBottom,
+          },
         ]}
         refreshControl={(
           <RefreshControl
@@ -3017,9 +3305,11 @@ function ClubDetails({ navigation, route }) {
               Spaces.gap[16],
               Spaces.paddingHorizontal[24],
               Spaces.paddingBottom[40],
-              // CORR-SOCLE (30/10, point 5) : le logo dépasse de 24 ; 64 laissait 40 px vides
-              // au-dessus (la rampe n'a pas de jeton 48).
-              Spaces.marginTop[44],
+              // CORR-SOCLE (30/10, point 5) puis REPRISE-PLACE (01/11) : 44 laissait encore une
+              // bande vide sous la barre de titre (revue : « grand vide ») ; le logo ne dépasse
+              // plus que de 12 (ci-dessous) : sous les 24 px du haut de la page, le logo est à
+              // 24 px de la barre, la carte à 36.
+              Spaces.marginTop[12],
               { overflow: 'visible' },
             ]}
             >
@@ -3046,7 +3336,7 @@ function ClubDetails({ navigation, route }) {
                   </Text>
                 </TouchableOpacity>
               ) : null}
-              <View style={{ marginTop: -24, zIndex: 1 }}>
+              <View style={{ marginTop: -12, zIndex: 1 }}>
                 <ClubLogoMark
                   club={club}
                   logoStyle={[
@@ -4149,6 +4439,7 @@ function ClubDetails({ navigation, route }) {
             </>
           )}
         </WithDataWrapper>
+        {piedDesActionsDansLeDefilement ? piedDesActions : null}
       </DefilementDeLaFiche>
       {/* Z01 : « C'est mon club ! » et son jumeau du dirigeant ont quitte CE */}
       {/* pied de page — ils vivent desormais dans le pied flottant unique, */}
@@ -4706,274 +4997,7 @@ function ClubDetails({ navigation, route }) {
           </View>
         </View>
       </BottomModal>
-      {hasFloatingClubActions ? (
-        <View
-          pointerEvents="box-none"
-          style={styleDuPiedDesActions}
-          testID="club-details-actions-footer"
-        >
-          {/* D98 — le joueur passe EN PREMIER et en Primary : c'est le cas
-              majoritaire d'une fiche club trouvee depuis Google. « Je dirige ce
-              club » reste, en Secondary, parce qu'un dirigeant sait ce qu'il
-              cherche alors qu'un joueur, lui, repartait faute de porte.
-              Les deux motifs entrent dans le MEME parcours de connexion. */}
-          {showPublicPlayerLogin ? (
-            <Button
-              onPress={() => openClubAuthFlow('club-public-player-login')}
-              style={floatingClubActionButtonStyle}
-              title={t('clubDetails.actions.playAtClub', 'Je joue dans ce club')}
-              variant="Primary"
-            />
-          ) : null}
-
-          {showPublicClaimLogin ? (
-            <Button
-              onPress={() => openClubAuthFlow('club-public-claim-login')}
-              style={floatingClubActionButtonStyle}
-              title={t('clubDetails.actions.manageClub', 'Je dirige ce club')}
-              variant="Secondary"
-            />
-          ) : null}
-
-          {showPlayerClubAction ? (
-            <Button
-              disabled={hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending}
-              onPress={handleOpenPlayerTeamPicker}
-              style={[
-                floatingClubActionButtonStyle,
-                (hasPendingViewedClubTeamRequest || createTeamMembershipRequestMutation.isPending)
-                  ? { opacity: 0.7 }
-                  : null,
-              ]}
-              title={hasPendingViewedClubTeamRequest
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.joinClubMember', 'Je fais partie de ce club')}
-              variant="Primary"
-            />
-          ) : null}
-
-          {showPlayerNoTeamAction ? (
-            <Button
-              disabled={hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending}
-              onPress={handleOpenPlayerNoTeamRequest}
-              style={[
-                floatingClubActionButtonStyle,
-                (hasPendingPlayerNoTeamRequest || createPlayerNoTeamRequestMutation.isPending)
-                  ? { opacity: 0.7 }
-                  : null,
-              ]}
-              title={hasPendingPlayerNoTeamRequest
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.bringClubOver', 'C’est mon club')}
-              variant="Primary"
-            />
-          ) : null}
-
-          {showClubPartneringAction ? (
-            <Button
-              disabled={hasPendingClubPartneringRequest || createClubRequestMutation.isPending}
-              onPress={handleOpenClubPartnerRequest}
-              style={[
-                floatingClubActionButtonStyle,
-                (hasPendingClubPartneringRequest || createClubRequestMutation.isPending)
-                  ? { opacity: 0.7 }
-                  : null,
-              ]}
-              title={hasPendingClubPartneringRequest
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
-              variant="Primary"
-            />
-          ) : null}
-
-          {/* 👨‍👧 PARENT P2 — « DEMANDER A REJOINDRE AU NOM DE MON ENFANT ».
-              (2026-09-10, demande d'Adel : « il doit pouvoir rejoindre un club
-              au nom de son enfant ».)
-
-              ⛔ CE N'EST PAS UNE DEMANDE D'ADHESION, et la difference est
-              structurelle : `club-membership-request` porte un COMPTE, et son
-              acceptation mute ce compte (role, club). Un enfant de moins de
-              13 ans n'a pas de compte — le serveur le refuse — donc la demande
-              signee par le parent rattacherait LE PARENT au club.
-              On reutilise donc le rail d'INTERET, tel quel : il ne rattache
-              personne (« sans affiliation automatique », dit son tiroir), il
-              previent les dirigeants du club, et ils repondent au PARENT. C'est
-              le partage tranche en C9 du plan : le parent demande, le club
-              decide, le rattachement reste un geste separe.
-
-              👶 PARENT P3 (11/09) — la demande PORTE l'enfant desormais (decision
-              d'Adel « 1- a ») : le bouton ouvre la feuille des equipes en mode
-              « pour un enfant », et la place demandee arrive chez les responsables
-              de l'equipe avec le prenom et l'age de l'enfant. */}
-          {showChildInterestAction ? (
-            <Button
-              disabled={createClubInterestRequestMutation.isPending}
-              onPress={handlePressChildInterest}
-              style={[
-                floatingClubActionButtonStyle,
-                createClubInterestRequestMutation.isPending ? { opacity: 0.7 } : null,
-              ]}
-              testID="club-details-child-interest"
-              title={
-                // 👶 PAR-L4 (design parent E10) — « pour un enfant » : la feuille demande
-                // POUR QUI. Avant, un seul enfant admissible donnait un bouton a son prenom,
-                // et le parent croyait qu'on choisissait a sa place (recette PAR-009).
-                // Le prenom n'apparait que pour l'enfant venu de SA fiche. Forme OBJET
-                // (`{ defaultValue, ...variables }`) : la seule que les temoins de la fiche
-                // club savent interpoler.
-                enfantDeLaFiche
-                  ? t('clubDetails.actions.askPlaceForNamedChild', {
-                    defaultValue: 'Demander une place pour {{firstname}}',
-                    firstname: enfantDeLaFiche.firstname,
-                    ...SANS_ECHAPPEMENT,
-                  })
-                  : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant')
-              }
-              variant="Primary"
-            />
-          ) : null}
-
-          {/* 🔒 E17 — 13 a 17 ans : on EXPLIQUE l'absence de la porte au lieu de
-              la faire disparaitre sans un mot. Un ado de 16 ans qui ne pourrait
-              pas dire lui-meme qu'il vient a l'entrainement, « ca ne tient pas
-              debout » (plan, E17). A 18 ans il n'y a plus rien a dire : le lien
-              parental est eteint, et l'app se tait. */}
-          {showTeenSelfRequestHint ? (
-            <Text
-              style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
-              testID="club-details-teen-self-request-hint"
-            >
-              {t(
-                'clubDetails.hints.teenAsksAlone',
-                'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
-              )}
-            </Text>
-          ) : null}
-
-          {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles
-              se rangent avec les autres portes « je m'attache a ce club »,
-              avant les portes d'interet qui, elles, restent en Secondary. */}
-          {/* TUTOE-2 : ancre invisible du guide (M1 sans club), le bouton garde son ombre.
-              GUIDE-TEXTES : une ancre par libellé, la bulle nomme le bouton affiché. */}
-          {showJoinClubAction ? (
-            <TourTarget id={isClubWithoutVisibleOwner ? 'club.itsMine' : 'club.askToJoin'}>
-              <Button
-                disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
-                onPress={handleAskToJoinClub}
-                style={[
-                  floatingClubActionButtonStyle,
-                  (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
-                    ? { opacity: 0.7 }
-                    : null,
-                ]}
-                title={(() => {
-                  if (hasPendingClubRequest || joinRequestPending) {
-                    return t('clubDetails.actions.requestPending', 'Demande en attente');
-                  }
-                  if (isClubWithoutVisibleOwner) {
-                    return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
-                  }
-                  return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
-                })()}
-                variant="Primary"
-              />
-            </TourTarget>
-          ) : null}
-
-          {showContactAdminClaimAction ? (
-            <Button
-              disabled={hasPendingClubRequest}
-              onPress={handleClaimClub}
-              style={[
-                floatingClubActionButtonStyle,
-                hasPendingClubRequest ? { opacity: 0.6 } : null,
-              ]}
-              title={
-                hasPendingClubRequest
-                  ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                  : t('clubDetails.actions.join')
-              }
-              variant="Primary"
-            />
-          ) : null}
-
-          {showEmptyClubClaimAction ? (
-            <Button
-              disabled={hasPendingClubRequest}
-              onPress={handleClaimClub}
-              style={[
-                floatingClubActionButtonStyle,
-                hasPendingClubRequest ? { opacity: 0.6 } : null,
-              ]}
-              title={hasPendingClubRequest
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
-              variant={hasPendingClubRequest ? 'Secondary' : 'Primary'}
-            />
-          ) : null}
-
-          {/* V01 — LA SECONDE PORTE d'un club QUI A des equipes. Elle vit a
-              cote de la porte primaire, jamais a sa place : « je fais partie de
-              ce club » et « interesse par le club » ne sont pas la meme phrase,
-              et personne ne doit avoir a signer la premiere pour dire la
-              seconde. */}
-          {showClubInterestAction ? (
-            <Button
-              disabled={hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending}
-              onPress={handleOpenClubInterestTeamPicker}
-              style={[
-                floatingClubActionButtonStyle,
-                floatingClubInterestButtonStyle,
-                (hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending)
-                  ? { opacity: 0.7 }
-                  : null,
-              ]}
-              title={hasPendingEveryClubInterestOption
-                ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
-                : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
-              variant="Secondary"
-            />
-          ) : null}
-
-          {/* 👪 PARENT-FINITIONS 2 (design parent E10) — deux portes cote a cote, celle de la
-              place (l'enfant) et celle-ci (l'adulte) : la ligne dit laquelle est pour le parent.
-              Sans la porte de la place, il n'y a rien a distinguer. */}
-          {showClubInterestAction && showChildInterestAction ? (
-            <Text
-              style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
-              testID="club-details-adult-interest-hint"
-            >
-              {t(
-                'clubDetails.clubInterest.forYouHint',
-                'Pour toi : une prise de contact avec le club.',
-              )}
-            </Text>
-          ) : null}
-
-          {/* S02 — LA SECONDE PORTE, toujours en dernier et en Secondary : elle
-              est le repli de celui qui ne peut pas signer la premiere. « C'est
-              mon club » dit ce qu'on DECLARE ; celle-ci dit ce qu'on OBTIENT. */}
-          {showClubArrivalInterestAction ? (
-            <Button
-              disabled={clubArrivalInterestIsBusy}
-              isLoading={createClubArrivalInterestMutation.isPending}
-              onPress={handlePressClubArrivalInterest}
-              style={[
-                floatingClubActionButtonStyle,
-                floatingClubInterestButtonStyle,
-                hasPendingClubArrivalInterest ? { opacity: 0.7 } : null,
-              ]}
-              title={hasPendingClubArrivalInterest
-                ? t('clubDetails.actions.clubArrivalInterestPending', 'Tu seras prévenu·e')
-                : t(
-                  'clubDetails.actions.clubArrivalInterest',
-                  'Prévenez-moi quand ce club arrive',
-                )}
-              variant="Secondary"
-            />
-          ) : null}
-        </View>
-      ) : null}
+      {piedDesActionsDansLeDefilement ? null : piedDesActions}
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={club?.documentId || clubId || null}

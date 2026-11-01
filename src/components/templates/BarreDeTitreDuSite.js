@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { usePageDuSite } from '@/components/templates/pageDuSite';
 
 /**
  * CORR-SOCLE (30/10/2026, point 7 de la recette du site, décision d'Adel « A ») — sur le
@@ -30,6 +31,9 @@ function BarreDeTitreDuSite({ children, cleDuTitre }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  // REPRISE-PLACE (01/11, point 7) : le titre que l'écran déclare (nom du club, du joueur…)
+  // l'emporte sur la clé du registre.
+  const { titre } = usePageDuSite();
 
   return (
     <BarreDeTitreDuSiteContext.Provider value>
@@ -58,7 +62,7 @@ function BarreDeTitreDuSite({ children, cleDuTitre }) {
             numberOfLines={1}
             style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Alignments.fill]}
           >
-            {cleDuTitre ? t(cleDuTitre) : ''}
+            {titre || (cleDuTitre ? t(cleDuTitre) : '')}
           </Text>
           <View style={{ width: 44 }} />
         </View>

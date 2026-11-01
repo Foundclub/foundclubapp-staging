@@ -428,25 +428,27 @@ function CollectiviteInviteClub() {
       >
         <View style={[Alignments.fill, zoneDeRecherche]} testID="inviter-recherche">
           {/* CORR-RECHERCHE point 2 (décision A) — le titre et l'aide défilent AVEC la liste
-              (elle les pose en tête) : plus de boîte de 409 px. Le lien du bas reste fixé dessous,
-              toujours à l'écran (INVPAD, 20/10 : témoin invpad-ajouter-un-club.spec.ts, test 4). */}
+              (elle les pose en tête) : plus de boîte de 409 px. REPRISE-PLACE (01/11, règle d'Adel
+              « 2- B » du 30/10, plus récente que INVPAD du 20/10) : le lien du bas défile aussi, en
+              fin de liste ; seule la barre d'onglets reste figée (témoin du site
+              invpad-ajouter-un-club.spec.ts, test 4, revu). */}
           <EnTeteDeRechercheContext.Provider value={enTeteDeLaRecherche}>
             <View style={Alignments.fill}>
               <ClubListContent
                 actionDeCarte={actionDeCarte}
                 paramsDeFiche={paramsDeFiche}
+                pied={lienDiscret(
+                  'inviter-absent',
+                  t(
+                    'collectiviteRattachement.ajouter.notOnFoundClub',
+                    'Le club n’est pas sur FoundClub ?',
+                  ),
+                  () => setOnglet('lien'),
+                )}
                 surDeuxColonnes
               />
             </View>
           </EnTeteDeRechercheContext.Provider>
-          {lienDiscret(
-            'inviter-absent',
-            t(
-              'collectiviteRattachement.ajouter.notOnFoundClub',
-              'Le club n’est pas sur FoundClub ?',
-            ),
-            () => setOnglet('lien'),
-          )}
         </View>
       </ScreenContainer>
     );

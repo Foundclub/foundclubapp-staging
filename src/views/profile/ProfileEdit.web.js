@@ -423,7 +423,9 @@ function ProfileEditWeb({ navigation, route }) {
                     </Text>
                   </View>
                 ) : null}
-                <View style={[Alignments.row]}>
+                {/* REPRISE-PLACE (01/11, point 5) : le « + » de la photo dépasse de 12 px vers le
+                    haut et touchait la barre de titre ; 12 px d'air le dégagent. */}
+                <View style={[Alignments.row, Spaces.paddingTop[12]]}>
                   <SelectAvatar
                     currentAvatar={avatar}
                     onAvatarSelected={(/** @type {any} */ choisi) => {

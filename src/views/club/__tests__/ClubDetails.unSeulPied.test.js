@@ -757,3 +757,24 @@ describe('FINITIONS5 · le pied ne laisse plus voir la fiche, et ses libelles re
     expect(placeDuLibelle(bouton)).toBeGreaterThanOrEqual(polices.p1Bold.lineHeight);
   });
 });
+
+// REPRISE-PLACE (01/11, point 26, revue Parent : « le bloc des boutons Demander une place /
+// Intéressé par le club reste collé au-dessus de la barre du bas, une deuxième zone figée ») —
+// sur le SITE (hors annuaire), le pied unique vient au bout du défilement ; la règle d'Adel ne
+// garde figée que la barre du bas. Le téléphone garde son pied flottant (témoins ci-dessus).
+describe('REPRISE-PLACE — sur le site, le pied d’actions défile avec la fiche', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const plateformeAvant = Platform.OS;
+  afterEach(() => { Platform.OS = plateformeAvant; });
+
+  it('un seul pied, DANS le défilement, sans position absolue', () => {
+    Platform.OS = 'web';
+    devenirEntraineur();
+    const arbre = monter();
+    const pieds = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === PIED_ACTIONS
+      && typeof n.type !== 'string');
+    expect(pieds).toHaveLength(1);
+    expect(aPourAncetre(pieds[0], (ancetre) => ancetre.type === ScrollView)).toBe(true);
+    expect(boutonsHorsDefilement(arbre)).toHaveLength(0);
+  });
+});

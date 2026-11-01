@@ -91,3 +91,25 @@ describe('CORR-SOCLE — barre de titre fine du site', () => {
     ))).toBe(0);
   });
 });
+
+// REPRISE-PLACE (01/11, point 7, revue « mettre le nom de la page dans la barre fine ») — la fiche
+// d'un club n'avait qu'une flèche : l'écran déclare son titre (le nom du club), la barre l'affiche.
+describe('REPRISE-PLACE — le titre déclaré par l’écran', () => {
+  test('un titre déclaré remplace la clé ; l’écran parti, la clé revient', () => {
+    const { useDeclarerPageDuSite } = jest.requireActual('../pageDuSite');
+    /**
+     * Un écran qui déclare son titre.
+     * @returns {import('react').ReactElement} Son texte.
+     */
+    function FicheDuClub() {
+      useDeclarerPageDuSite({ titre: 'RWDIRIG Tunnel Deux' });
+      return <Text>FICHE</Text>;
+    }
+    const arbre = rendre(
+      <BarreDeTitreDuSite cleDuTitre=""><FicheDuClub /></BarreDeTitreDuSite>,
+    );
+    expect(textes(arbre)).toEqual(['RETOUR', 'RWDIRIG Tunnel Deux', 'FICHE']);
+    act(() => arbre.update(<BarreDeTitreDuSite cleDuTitre="profile.titles.edit" />));
+    expect(textes(arbre)).toEqual(['RETOUR', '«profile.titles.edit»']);
+  });
+});

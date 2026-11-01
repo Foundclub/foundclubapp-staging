@@ -369,8 +369,10 @@ function Welcome({ navigation }) {
       // Sans ce mode, le conteneur en ajoutait un SECOND : `insets.bottom` était
       // compté deux fois, soit ~34 pt de vide sous le bouton du bas.
       bottomInsetMode="edge-to-edge"
+      // REPRISE-PLACE (01/11, point 6) : le conteneur pose déjà la marge latérale (20 à 390 px) ;
+      // les 24 ajoutés ici donnaient 44 px de chaque côté.
       contentContainerStyle={[
-        Spaces.padding[24],
+        Spaces.paddingVertical[24],
         Alignments.justifySpaceBetween,
         Alignments.column,
         Alignments.fill,

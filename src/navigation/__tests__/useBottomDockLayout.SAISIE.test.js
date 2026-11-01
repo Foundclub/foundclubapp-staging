@@ -91,3 +91,12 @@ test('le contrat natif, les listes et les actions fixes ne changent pas', () => 
     dockClearance: 98, floatingActionBottomOffset: 146, sceneBottomInset: 144,
   });
 });
+
+// REPRISE-PLACE (01/11, point 2, revue Joueur : « un vide d'environ 150 px reste sous la dernière
+// carte ») — sur le site, la fin d'une liste réservait encore la barre du bas (144 px) alors que
+// la coque la réserve déjà : `sceneBottomInset` suit `dockClearance` (12 px de fin de liste).
+// Hors coque et au téléphone, rien ne change (témoins ci-dessus).
+test('REPRISE-PLACE : une coque web qui réserve le bas ne réclame pas de fin de liste en plus', () => {
+  expect(lire().sceneBottomInset).toBe(12);
+  expect(lire('0px', false).sceneBottomInset).toBe(144);
+});

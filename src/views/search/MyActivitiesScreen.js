@@ -403,7 +403,8 @@ function MyActivitiesScreen({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Alignments.fill, Spaces.paddingHorizontal[16]]}
+      // REPRISE-PLACE (01/11, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
+      contentContainerStyle={[Alignments.fill]}
     >
       <View style={[Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>

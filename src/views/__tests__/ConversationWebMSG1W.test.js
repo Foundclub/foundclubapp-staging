@@ -767,3 +767,23 @@ describe('CORR-SOCLE point 4 — l en-tête de la colonne Messages tient en 56 p
     expect(liste.type).toBe('nav');
   });
 });
+
+// 📐 REPRISE-PLACE (01/11, point 4 et D-COACH-4) — à 1 440 px, la date et la pastille des lignes
+// de la colonne Messages sortaient coupées au bord droit (« 30/1 »), et les noms longs étaient
+// tranchés net : la colonne de texte de chaque ligne était une grille sans colonne déclarée,
+// élargie par le texte le plus long. Elle est bornée à la ligne.
+describe('REPRISE-PLACE point 4 — chaque ligne de la colonne Messages tient dans sa largeur', () => {
+  test('à 1 280 px, la colonne de texte de la ligne est bornée', async () => {
+    mockListeIPH09 = [{ documentId: CHAT_ID, name: 'Seniors A', type: 'team' }];
+    const { arbre } = await monter();
+    const lignes = parTestId(arbre, `MSG1W-ligne-${CHAT_ID}`);
+    expect(lignes.length).toBeGreaterThan(0);
+    const textes = lignes[0].findAll((/** @type {any} */ n) => n.type === 'span'
+      && n.props?.style?.display === 'grid');
+    expect(textes.length).toBeGreaterThan(0);
+    expect(textes[0].props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+    // Le « ⋮ » (28 px, à 8 px du bord) se pose sur la ligne au survol : sa place est réservée,
+    // la date et la pastille ne passent plus dessous (revue Joueur, point 4).
+    expect(lignes[0].props.style.padding).toBe('8px 44px 8px 14px');
+  });
+});

@@ -481,3 +481,21 @@ describe('BH16 P13-17 — un complexe arrive sans liste de créneaux', () => {
     expect(arbre.toJSON()).not.toBeNull();
   });
 });
+
+// REPRISE-PLACE (01/11, D-GERANT-4, mesure du chef : « le panneau Autorise ta position recouvre
+// la carte du complexe et bloque le clic ») — sur le SITE, la page porte déjà sa carte « Choisis
+// une ville » avec « Autoriser ma position » ; la fenêtre ouverte d'office la recouvrait et la
+// répétait. Elle ne s'ouvre plus d'elle-même sur le site ; le téléphone garde sa feuille (ci-dessus).
+describe('REPRISE-PLACE — sur le site, pas de fenêtre de position à l’arrivée', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const plateformeAvant = Platform.OS;
+  beforeEach(() => { mockPositionAccordee = null; });
+  afterEach(() => { Platform.OS = plateformeAvant; });
+
+  it('position pas encore accordée : la carte de la page, sans fenêtre par-dessus', async () => {
+    Platform.OS = 'web';
+    const arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('Des terrains autour de toi');
+    expect(lisibles(arbre)).toContain('Autoriser ma position');
+  });
+});

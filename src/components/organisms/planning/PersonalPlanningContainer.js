@@ -201,8 +201,10 @@ function PersonalPlanningContainer({
       <View style={[Alignments.alignCenter, Spaces.marginBottom[16], { width: '100%' }]}>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { width: '100%' }]}>
           <View style={{ flex: 1 }}>
+            {/* REPRISE-PLACE (01/11, point 6) : « Semaine » sortait coupé à 390 px sur le site. */}
             <SegmentedControl
               centerContent
+              fitLabels
               onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
