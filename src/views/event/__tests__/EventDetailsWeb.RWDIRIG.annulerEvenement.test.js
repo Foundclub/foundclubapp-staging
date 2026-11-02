@@ -481,6 +481,7 @@ describe('FIN-EVENEMENTS p131 · un tournoi clôturé', () => {
 
     expect(texte).not.toContain('"aria-haspopup":"menu"');
     expect(texte).not.toContain('"Modifier"');
+    expect(texte).not.toContain('Composition d’équipes');
   });
 
   test('🐞 un tournoi « Privé » neuf n’est pas clôturé : menu gardé, sans bandeau', () => {

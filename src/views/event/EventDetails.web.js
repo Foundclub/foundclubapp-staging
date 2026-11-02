@@ -3030,7 +3030,8 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               {/* CORR-EVENEMENTS 123 : le joueur ne voit ce bloc qu'une fois une composition publiée. */}
-              {supportsEventComposition && (canEdit || (canViewPublishedComposition && convocationBranches.length > 0)) ? (
+              {/* FIN-EVENEMENTS p131 : sur un tournoi clôturé, plus de composition à créer. */}
+              {supportsEventComposition && ((canEdit && !tournoiClos) || (canViewPublishedComposition && convocationBranches.length > 0)) ? (
                 <div
                   style={{
                     background: softSurfaceColor,
