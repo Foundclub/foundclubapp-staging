@@ -421,9 +421,8 @@ test('CRFERM-4/8 le même jour, la fin suit le début ; « Modifier » une plage
 });
 
 // RET-VILLE 2 (02/11, Adel « 1- A ») — un seul bouton « Fermer » sur l'accueil. L'écran prend un ou
-// plusieurs jours, des heures facultatives, un motif OU un nom. Un seul jour avec des heures, sans
-// actualité, c'est ce que faisait « Bloquer un créneau » : il s'écrit comme un blocage, sinon la
-// semaine du planning griserait toute la journée (`kind !== 'block'`, PlanningWeekTimelineViewV2).
+// plusieurs jours, des heures facultatives, un motif OU un nom. RET-FERMETURE-HEURES (03/11, Adel,
+// option C) : il écrit toujours une fermeture ; la semaine du planning ne grise que ses heures.
 describe('RET-VILLE 2 — un seul « Fermer »', () => {
   const FORUM = 'Forum des associations';
   const preparer = async () => {
@@ -471,7 +470,7 @@ describe('RET-VILLE 2 — un seul « Fermer »', () => {
     });
   });
 
-  test('un seul jour avec des heures, sans actualité : comme un blocage, avec le nom', async () => {
+  test('un seul jour avec des heures, sans actualité : une fermeture, avec le nom', async () => {
     const arbre = await preparer();
     await lesHeures(arbre);
     await nommer(arbre);
@@ -479,26 +478,27 @@ describe('RET-VILLE 2 — un seul « Fermer »', () => {
     expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
       endDate: '2026-10-16',
       endTime: '13:00',
-      kind: 'block',
+      kind: 'closure',
       label: FORUM,
       message: null,
-      reason: null,
+      publishActualite: false,
+      reason: 'autre',
       startDate: '2026-10-16',
       startTime: '09:00',
     });
   });
 
-  test('le même jour avec un motif seul : le blocage prend le motif pour nom (le serveur en veut un)', async () => {
+  test('le même jour avec un motif seul : une fermeture, sans nom', async () => {
     const arbre = await preparer();
     await lesHeures(arbre);
     await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
     await envoyer(arbre);
     expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', expect.objectContaining({
-      kind: 'block', label: 'Manifestation', reason: 'manifestation',
+      kind: 'closure', label: null, publishActualite: false, reason: 'manifestation',
     }));
   });
 
-  test('le même jour avec l actualité cochée : une fermeture, seule à publier', async () => {
+  test('le même jour avec l actualité cochée : une fermeture qui publie', async () => {
     const arbre = await preparer();
     await lesHeures(arbre);
     await nommer(arbre);

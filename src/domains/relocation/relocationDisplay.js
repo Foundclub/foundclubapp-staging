@@ -122,6 +122,33 @@ export const closedThatDayText = (t, fermeture, nomDuLieu) => {
   const motif = closureMotif(t, fermeture);
   const nom = String(nomDuLieu || '').trim();
   const valeurs = { ...SANS_ECHAPPEMENT, motif: motif ? ` (${motif})` : '' };
+  // RET-FERMETURE-HEURES (03/11) : fermée quelques heures, la phrase les dit.
+  if (fermeture.startTime || fermeture.endTime) {
+    const jours = closureDaysLabel(t, { ...fermeture, kind: 'closure' }, { long: true });
+    const quand = fermeture.startDate === fermeture.endDate
+      ? t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
+        jour: jours, ...SANS_ECHAPPEMENT,
+      })
+      : jours;
+    const lieuDit = nom ? lieuAvecArticle(nom, t) : '';
+    const avecHeures = {
+      ...valeurs, lieu: `${lieuDit.charAt(0).toLocaleUpperCase()}${lieuDit.slice(1)}`, quand,
+    };
+    if (!nom) {
+      return t(
+        'deplacerSeance.ou.fermeHeuresSansNom',
+        'L’installation est fermée {{quand}}{{motif}}.',
+        avecHeures,
+      );
+    }
+    return genreDuLieu(nom) === 'feminin'
+      ? t(
+        'deplacerSeance.ou.fermeHeuresFeminin',
+        '{{lieu}} est fermée {{quand}}{{motif}}.',
+        avecHeures,
+      )
+      : t('deplacerSeance.ou.fermeHeures', '{{lieu}} est fermé {{quand}}{{motif}}.', avecHeures);
+  }
   if (!nom) {
     return t(
       'deplacerSeance.ou.fermeCeJourSansNom',

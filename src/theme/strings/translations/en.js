@@ -6376,6 +6376,7 @@ export default {
       occupationComplet: 'Full at these times',
       occupationErreur: 'Could not check',
       occupationFermee: 'Closure that day',
+      occupationFermeeHeures: 'Closure at these times',
       occupationLibre: 'Free at these times',
       occupationPlusieurs: '{{nombre}} sessions at these times',
       occupationUne: '1 session at these times',
@@ -6780,6 +6781,9 @@ export default {
       fermeCeJour: '{{lieu}} is closed that day{{motif}}.',
       fermeCeJourFeminin: '{{lieu}} is closed that day{{motif}}.',
       fermeCeJourSansNom: 'The facility is closed that day{{motif}}.',
+      fermeHeures: '{{lieu}} is closed {{quand}}{{motif}}.',
+      fermeHeuresFeminin: '{{lieu}} is closed {{quand}}{{motif}}.',
+      fermeHeuresSansNom: 'The facility is closed {{quand}}{{motif}}.',
       impossibles: 'Not possible at this time',
       libres: 'Free at this time',
       titre: 'Where to move it?',
@@ -11327,6 +11331,12 @@ export default {
           bloqueMasculin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
           ferme: 'This facility is closed {{quand}}{{motif}}. Choose another day or another facility.',
           fermeFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          // eslint-disable-next-line max-len
+          fermeHeures: 'This facility is closed {{quand}}{{motif}}. Choose another time or another facility.',
+          // eslint-disable-next-line max-len
+          fermeHeuresFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
+          // eslint-disable-next-line max-len
+          fermeHeuresMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
           fermeMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
           sansDetail: 'The town has closed this facility at that time. Choose another day or another facility.',
         },

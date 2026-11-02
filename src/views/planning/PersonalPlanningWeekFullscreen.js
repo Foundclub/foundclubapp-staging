@@ -43,11 +43,11 @@ import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import {
   closureBandLabel,
   closureBandsForRange,
-  closureCoversDay,
   closureDaysLabel,
   closureHoursLabel,
   closuresOfBanner,
   closureTagLabel,
+  closureTakesWholeDay,
   closureTouchesBlock,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { hoursLabel, shortDay } from '@/domains/relocation/relocationDisplay';
@@ -759,8 +759,7 @@ function PlanningWeekFullscreen() {
     // « 1 place libre au plus chargé ». La fermeture le dit, pas une place.
     const jourFerme = vue === VUES.jour
       && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((/** @type {any} */ fermeture) => (
-        fermeture?.kind !== 'block'
-        && closureCoversDay(fermeture, format(currentDate, 'yyyy-MM-dd'))
+        closureTakesWholeDay(fermeture, format(currentDate, 'yyyy-MM-dd'))
       ));
     // CORR-COLLECTIVITES 106 (31/10, Adel A) : une fermeture dans la plage affichée ; la semaine
     // n est pas « libre toute la semaine ».

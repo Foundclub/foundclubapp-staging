@@ -842,7 +842,8 @@ export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
     .forEach((fermeture) => {
       const rouverte = fermeture.status === 'reopened';
       const cle = [
-        fermeture.startDate, fermeture.endDate, fermeture.reason, fermeture.label || '',
+        fermeture.startDate, fermeture.endDate, fermeture.startTime || '', fermeture.endTime || '',
+        fermeture.reason, fermeture.label || '',
         ...(rouverte ? ['rouverte'] : []),
       ].join('|');
       const nom = terrains.find((terrain) => terrain.documentId === fermeture.terrainId)?.name;

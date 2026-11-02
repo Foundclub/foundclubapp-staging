@@ -336,8 +336,23 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 );
 
 /**
- * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle de toute la journee
- * d abord (elle ferme tout), sinon le premier blocage du jour.
+ * RET-FERMETURE-HEURES (03/11, Adel) — cette fermeture prend-elle TOUT ce jour ? Une fermeture
+ * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle qui prend toute la
+ * non, avant et après l'installation reste ouverte. Un blocage ne prend jamais que ses heures.
+ * @param {any} fermeture - La fermeture.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {boolean} Vrai si tout le jour est fermé.
+ */
+export const closureTakesWholeDay = (fermeture, jour) => (
+  closureCoversDay(fermeture, jour)
+  && fermeture?.kind !== 'block'
+  && !(jour === fermeture.startDate && fermeture.startTime)
+  && !(jour === fermeture.endDate && fermeture.endTime)
+);
+
+/**
+ * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle qui prend toute la
+ * journee d abord (elle ferme tout), sinon la première du jour.
  * @param {any[]} fermetures - `meta.closures` (et le brouillon du panneau).
  * @param {string} jour - AAAA-MM-JJ.
  * @returns {any | null} La fermeture, ou null si le jour est ouvert.
@@ -345,7 +360,9 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 export const closureOfDay = (fermetures, jour) => {
   const couvrantes = (Array.isArray(fermetures) ? fermetures : [])
     .filter((fermeture) => closureCoversDay(fermeture, jour));
-  return couvrantes.find((fermeture) => fermeture?.kind !== 'block') || couvrantes[0] || null;
+  return couvrantes.find((fermeture) => closureTakesWholeDay(fermeture, jour))
+    || couvrantes[0]
+    || null;
 };
 
 /**
@@ -455,6 +472,8 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
       ).toISOString();
       return {
         closureBand: fermeture,
+        // RET-FERMETURE-HEURES : la grille couvre la colonne seulement si tout le jour est pris.
+        closureJourEntier: closureTakesWholeDay(fermeture, iso),
         documentId: null,
         endAt: instant(a),
         hasExplicitTime: true,
@@ -522,12 +541,17 @@ export const closureRefusalText = (t, fermeture, nomDuLieu = null) => {
       generique: 'Cette installation est fermée',
       masculin: '{{lieu}} est fermé',
     };
-  const suite = blocage
+  // RET-FERMETURE-HEURES : fermée quelques heures, une autre heure convient aussi.
+  const desHeures = !blocage && Boolean(fermeture.startTime || fermeture.endTime);
+  const suite = blocage || desHeures
     ? ' {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.'
     : ' {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.';
   const suffixe = { feminin: 'Feminin', generique: '', masculin: 'Masculin' }[genre];
+  let cle = 'ferme';
+  if (blocage) cle = 'bloque';
+  else if (desHeures) cle = 'fermeHeures';
   return t(
-    `eventWizard.steps.location.fermeture.${blocage ? 'bloque' : 'ferme'}${suffixe}`,
+    `eventWizard.steps.location.fermeture.${cle}${suffixe}`,
     `${sujets[genre]}${suite}`,
     valeurs,
   );
@@ -592,22 +616,25 @@ export const closureBannerText = (t, fermeture, { facilityType = null, withDays 
         heures: closureHoursLabel(t, fermeture),
       });
   } else if (fermeture?.startDate && fermeture.startDate === fermeture.endDate) {
-    titre = withDays && jour
+    // RET-FERMETURE-HEURES : « fermé le mardi 3 novembre de 09:00 à 13:00 », pas « ce jour-là ».
+    const desHeures = Boolean(fermeture.startTime || fermeture.endTime);
+    const valeursDuJour = desHeures ? { ...valeurs, jour: valeurs.jours } : valeurs;
+    titre = (withDays && jour) || desHeures
       ? phraseForFacilityType(lieu, {
         feminine: t(
           'collectiviteFermetures.bandeau.fermeLeFeminin',
           'La {{lieu}} est fermée le {{jour}}',
-          valeurs,
+          valeursDuJour,
         ),
         generic: t(
           'collectiviteFermetures.bandeau.fermeLe',
           'L’installation est fermée le {{jour}}',
-          valeurs,
+          valeursDuJour,
         ),
         masculine: t(
           'collectiviteFermetures.bandeau.fermeLeMasculin',
           'Le {{lieu}} est fermé le {{jour}}',
-          valeurs,
+          valeursDuJour,
         ),
       })
       : phraseForFacilityType(lieu, {

@@ -6964,6 +6964,7 @@ export default {
       occupationComplet: 'Complet sur ces heures',
       occupationErreur: 'Impossible de vérifier',
       occupationFermee: 'Fermeture ce jour-là',
+      occupationFermeeHeures: 'Fermeture sur ces heures',
       occupationLibre: 'Libre sur ces heures',
       occupationPlusieurs: '{{nombre}} séances sur ces heures',
       occupationUne: '1 séance sur ces heures',
@@ -7377,6 +7378,9 @@ export default {
       fermeCeJour: '{{lieu}} est fermé ce jour-là{{motif}}.',
       fermeCeJourFeminin: '{{lieu}} est fermée ce jour-là{{motif}}.',
       fermeCeJourSansNom: 'L’installation est fermée ce jour-là{{motif}}.',
+      fermeHeures: '{{lieu}} est fermé {{quand}}{{motif}}.',
+      fermeHeuresFeminin: '{{lieu}} est fermée {{quand}}{{motif}}.',
+      fermeHeuresSansNom: 'L’installation est fermée {{quand}}{{motif}}.',
       impossibles: 'Pas possible à cette heure',
       libres: 'Libres à cette heure',
       titre: 'Où la déplacer ?',
@@ -12024,6 +12028,12 @@ export default {
           ferme: 'Cette installation est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
           // eslint-disable-next-line max-len
           fermeFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeures: 'Cette installation est fermée {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeuresFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeuresMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
           // eslint-disable-next-line max-len
           fermeMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
           // eslint-disable-next-line max-len

@@ -504,15 +504,8 @@ function FormulaireDeFermeture({
       if (modification) {
         await modifier.mutateAsync({ closureId: existante.documentId, data });
       } else {
-        // RET-VILLE 2 : un seul jour avec des heures, sans actualité, c'est l'ancien « Bloquer un
-        // créneau ». Il s'écrit comme lui : une fermeture griserait toute la journée au planning.
-        // ponytail: le même jour AVEC actualité reste une fermeture (seule à publier, côté
-        // serveur), donc grisée ; sortie : lire ses heures dans la semaine du planning.
-        const commeUnBlocage = !bloquer && avecHeures && !plusieursJours && !publier;
         await fermer.mutateAsync({
-          data: commeUnBlocage ? {
-            ...data, kind: 'block', label: nomDuBlocage, reason: motifRetenu,
-          } : {
+          data: {
             ...data,
             kind: bloquer ? 'block' : 'closure',
             ...(bloquer ? {} : { publishActualite: publier }),
