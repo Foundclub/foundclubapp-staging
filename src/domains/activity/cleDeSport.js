@@ -85,3 +85,25 @@ export const regrouperLesSports = (sports) => {
     };
   });
 };
+
+// ponytail: une liste écrite à la main (décision d'Adel du 30/09, A09) ; voie de sortie = la trier
+// par les recherches réelles quand on les mesurera.
+/** Les sports populaires, dans l'ordre d'Adel (des clés : `cleDeSport`). */
+export const SPORTS_POPULAIRES = ['football', 'basketball', 'handball', 'rugby', 'volleyball'];
+
+/**
+ * REPRISE-DONNEES p110 (01/11) — l'ordre d'une liste de sports partout où elle s'affiche à plat :
+ * les populaires d'abord, dans l'ordre d'Adel, puis le reste de A à Z sans tenir compte des accents
+ * ni de la casse (« Échecs » près d'« Escrime », plus après « Yoga » comme le rend le serveur).
+ * @param {{ name?: unknown }} a Un sport.
+ * @param {{ name?: unknown }} b Un autre.
+ * @returns {number} Négatif si `a` passe avant `b`.
+ */
+export const comparerLesSports = (a, b) => {
+  const rang = (/** @type {{ name?: unknown }} */ sport) => {
+    const index = SPORTS_POPULAIRES.indexOf(cleDeSport(sport?.name));
+    return index === -1 ? SPORTS_POPULAIRES.length : index;
+  };
+  return (rang(a) - rang(b))
+    || String(a?.name ?? '').localeCompare(String(b?.name ?? ''), 'fr', { sensitivity: 'base' });
+};

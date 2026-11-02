@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { compacterNomDeSport, regrouperLesSports } from '@/domains/activity/cleDeSport';
+import {
+  compacterNomDeSport, regrouperLesSports, SPORTS_POPULAIRES,
+} from '@/domains/activity/cleDeSport';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -34,9 +36,9 @@ export { compacterNomDeSport };
  * lignes tant que la base n'est pas fusionnée (admin `search/services/sport-key.ts`).
  */
 
-// ponytail: une liste écrite à la main (décision d'Adel) ; voie de sortie = la trier par les
-// recherches réelles quand on les mesurera.
-export const SPORTS_POPULAIRES = ['football', 'basketball', 'handball', 'rugby', 'volleyball'];
+// La liste des populaires vit avec les autres règles des sports (REPRISE-DONNEES p110 : les listes
+// à plat la suivent aussi) ; elle reste exportée d'ici pour ses appelants.
+export { SPORTS_POPULAIRES };
 
 /**
  * Les sports retenus, toujours en liste : les formulaires rangent tantôt un texte, tantôt une
