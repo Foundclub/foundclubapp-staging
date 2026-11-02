@@ -15,6 +15,7 @@ import NotificationBadge from '../NotificationBadge';
 // l'utilisateur, c'est le signal d'arrivee qui accompagne l'animation.
 
 const mockEtat = { unreadCount: 0 };
+const mockRelireLeCompteur = jest.fn();
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -54,6 +55,7 @@ jest.mock('@/hooks/useNotificationController', () => {
       markAllAsRead: marquerTout,
       markAsRead: marquerUne,
       notifications: aucune,
+      refreshUnreadCount: mockRelireLeCompteur,
       unreadCount: mockEtat.unreadCount,
     }),
   };
@@ -64,7 +66,7 @@ jest.mock('@/components/organisms/notificationPopup/NotificationPopup', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return function PanneauMock(/** @type {any} */ props) {
     if (!props.isVisible) return null;
-    return reactActuel.createElement(TexteRN, null, 'temoin-panneau-ouvert');
+    return reactActuel.createElement(TexteRN, null, `temoin-panneau-ouvert:${props.unreadCount}`);
   };
 });
 
@@ -127,6 +129,21 @@ afterEach(() => {
     });
   });
   vibrer.mockRestore();
+});
+
+// FIN-CLOCHE (02/11/2026, point 64) — le panneau dit le chiffre de la cloche, relu à l'ouverture :
+// la liste qu'il charge alors est fraîche, le compteur doit l'être autant.
+describe('NotificationBadge — FIN-CLOCHE : un seul compteur', () => {
+  it('donne son chiffre au panneau et le relit quand on ouvre', () => {
+    mockEtat.unreadCount = 376;
+    mockRelireLeCompteur.mockClear();
+    const arbre = monter();
+    expect(mockRelireLeCompteur).not.toHaveBeenCalled();
+    toucherLaCloche(arbre);
+    expect(mockRelireLeCompteur).toHaveBeenCalledTimes(1);
+    expect(textes(arbre)).toContain('temoin-panneau-ouvert:376');
+    expect(textes(arbre)).toContain('99+');
+  });
 });
 
 describe('NotificationBadge — ce qui ne doit pas bouger', () => {

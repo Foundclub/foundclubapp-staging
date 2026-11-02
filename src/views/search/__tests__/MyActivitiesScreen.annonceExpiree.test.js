@@ -73,6 +73,11 @@ jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({
   __esModule: true,
   default: () => null,
 }));
+const mockInvalidateQueries = jest.fn();
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+}));
+
 jest.mock('@/services/notification/notificationService', () => ({
   markApplicationResponsesAsRead: () => Promise.resolve({ ok: true, updated: 0 }),
 }));

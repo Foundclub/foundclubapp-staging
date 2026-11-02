@@ -23,6 +23,11 @@ import MyActivitiesScreen from '../MyActivitiesScreen';
 
 jest.setTimeout(30000);
 
+const mockInvalidateQueries = jest.fn();
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+}));
+
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -274,6 +279,21 @@ describe('A12 — le JOUEUR ouvre « Mes candidatures », une seule liste', () =
     expect(navigation.navigate).toHaveBeenCalledWith('RecruitmentAdDetails', {
       ad: candidatureEnAttente, adId: 'ad-attente', isOwner: false,
     });
+  });
+});
+
+// FIN-CLOCHE (02/11/2026) — ce marquage lit des notifications : la cloche se relit tout de suite,
+// et seulement s'il a lu quelque chose.
+describe('FIN-CLOCHE — la cloche suit le marquage de « Mes candidatures »', () => {
+  it.each([[2, 1], [0, 0]])('%s reponses marquees : %s relecture', async (updated, relectures) => {
+    mockInvalidateQueries.mockClear();
+    mockMarkApplicationResponsesAsRead.mockResolvedValue({ ok: true, updated });
+    mockGetMyApplications.mockResolvedValue([candidatureAcceptee]);
+    await renderFor(JOUEUR);
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(relectures);
+    if (relectures) {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+    }
   });
 });
 

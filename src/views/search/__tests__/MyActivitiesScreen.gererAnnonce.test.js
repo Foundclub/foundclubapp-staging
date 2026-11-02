@@ -103,6 +103,11 @@ jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({
 
 // MES-CANDIDATURES (A13) : l'ecran marque vues les reponses a mes candidatures. Doublure
 // ENTIERE, pour la meme raison que les services ci-dessus (client HTTP sans API_URL).
+const mockInvalidateQueries = jest.fn();
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+}));
+
 jest.mock('@/services/notification/notificationService', () => ({
   markApplicationResponsesAsRead: () => Promise.resolve({ ok: true, updated: 0 }),
 }));
