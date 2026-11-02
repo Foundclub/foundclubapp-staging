@@ -3718,14 +3718,14 @@ function EventDetails({ navigation, route }) {
                             }}
                             >
                               <span>
-                                {rosterSummary.totalCount}
-                                {' '}
-                                roster
+                                {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+                                  count: rosterSummary.totalCount,
+                                })}
                               </span>
                               <span>
-                                {rosterSummary.presentCount}
-                                {' '}
-                                {t('eventDetails.present2', 'presents')}
+                                {t('tournamentManagement.rosterPresent', '{{count}} présents', {
+                                  count: rosterSummary.presentCount,
+                                })}
                               </span>
                               <span>
                                 {rosterSummary.pendingCount}
@@ -3754,7 +3754,11 @@ function EventDetails({ navigation, route }) {
                                   )}
                                 </span>
                               ) : null}
-                              {hasRosterWarning ? <span style={{ color: '#ffd54a' }}>Warning roster</span> : null}
+                              {hasRosterWarning ? (
+                                <span style={{ color: '#ffd54a' }}>
+                                  {t('tournamentManagement.rosterToReview', 'Effectif à revoir')}
+                                </span>
+                              ) : null}
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               <button

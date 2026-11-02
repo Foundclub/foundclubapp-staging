@@ -2393,6 +2393,8 @@ export default {
         create: 'Impossible de créer cette réservation.',
         facilities: 'Impossible de charger les installations.',
         incomplete: 'Choisis une installation, un créneau et une durée.',
+        refused: 'Ton compte ne peut pas réserver cette installation pour l’instant : '
+          + 'rien n’a été réservé.',
       },
       eyebrow: 'Réservations',
       finalize: 'Finalise ta réservation du {{date}}.',
@@ -25407,6 +25409,7 @@ export default {
     closedReadOnly: 'Les poules, les matchs et les classements restent consultables ; plus rien ne se modifie.',
     closedTag: 'Clôturé',
     closeTheTournament: 'Clôturer le tournoi',
+    competition: 'Compétition',
     competitionActions: 'Actions compétition',
     competitionPublished: 'Compétition publiée',
     competitionView: 'Lecture compétition',
@@ -25509,6 +25512,7 @@ export default {
     // eslint-disable-next-line max-len
     enterTwoValidScoresFor: 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.',
     facility: 'Installation',
+    facilityLine: 'Installation : {{name}}',
     forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.',
     forfeitOf: 'Forfait {{teamName}}',
     forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.',
@@ -25536,6 +25540,7 @@ export default {
     unableToApproveThisScore: 'Impossible de valider ce score.',
     unableToSaveThisScore: 'Impossible d’enregistrer ce score.',
     unableToScheduleThisMatch: 'Impossible de programmer ce match.',
+    winnerLine: 'Vainqueur : {{name}}',
   },
   tournamentSettingsEdit: {
     accessReservedForTheOrganiser: 'Accès réservé à l’organisateur',

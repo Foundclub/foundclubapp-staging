@@ -162,7 +162,10 @@ export function TournamentMatchCard({
 
       {match?.facility?.name ? (
         <Text style={[Fonts.p4, Fonts.neutral200]}>
-          {`Installation: ${match.facility.name}`}
+          {t('tournamentMatchDetails.facilityLine', 'Installation : {{name}}', {
+            name: match.facility.name,
+            ...SANS_ECHAPPEMENT,
+          })}
         </Text>
       ) : null}
 

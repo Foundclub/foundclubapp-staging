@@ -7766,7 +7766,7 @@ function EventDetails({ navigation, route }) {
                 ) : null}
                 {hasRosterWarning ? (
                   // @ts-ignore: FIXME: Baseline TS regression
-                  <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text="Warning roster" textColor="gold500" />
+                  <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterToReview', 'Effectif à revoir')} textColor="gold500" />
                 ) : null}
               </View>
 
