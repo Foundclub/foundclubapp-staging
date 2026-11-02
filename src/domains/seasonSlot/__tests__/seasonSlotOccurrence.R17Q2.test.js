@@ -56,9 +56,9 @@ describe('R17-QUAND-2 — « sauf vacances » dans la règle de l’app', () => 
 });
 
 // RET-PLANNING fiche 19 — ANCIENNE APP. `seasonSlotDisplay.js` ne connaît pas `punctualDates` : le
-// serveur rend aussi ces dates dans `skippedDates` (RET19/9 et 13, côté admin). Ici, l'autre moitié :
-// une date de `skippedDates` ne se dessine pas, sans autre changement dans l'app.
-describe('RET-PLANNING fiche 19 — une date sautée par un ponctuel, lue par l’app telle quelle', () => {
+// serveur rend aussi ces dates dans `skippedDates` (RET19/9 et 13, côté admin). Ici, l'autre
+// moitié : une date de `skippedDates` ne se dessine pas, sans autre changement dans l'app.
+describe('RET-PLANNING fiche 19 — une date sautée, lue par l’app telle quelle', () => {
   const SERIE = {
     exceptPunctual: true,
     punctualDates: ['2026-10-14'],
