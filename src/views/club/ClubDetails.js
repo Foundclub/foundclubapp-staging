@@ -65,7 +65,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
+import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -1354,9 +1354,10 @@ function ClubDetails({ navigation, route }) {
   }, [clubId, isClubMember, userData]);
   // REPRISE-PLACE (01/11, point 7, revue « titre de la fiche du club » et « rallumer l'onglet du
   // club ») — sur le site : le nom du club dans la barre fine ; son propre club allume l'onglet du
-  // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Un club d'un autre
-  // garde « aucun onglet » (choix A du chef, réversible). Le téléphone ne lit pas ce magasin.
-  useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : null, titre: club?.name || null });
+  // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Le club d'un autre
+  // garde l'onglet d'où l'on vient, aucun sans origine connue (FIN-PLACE, Adel « 1- C »). Le
+  // téléphone ne lit pas ce magasin.
+  useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : lireOngletDOrigine(), titre: club?.name || null });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
   // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
