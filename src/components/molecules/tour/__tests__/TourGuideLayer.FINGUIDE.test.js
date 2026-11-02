@@ -195,21 +195,21 @@ describe('point 3 — clavier ouvert dans le tunnel équipe', () => {
     expect(style.top + style.maxHeight).toBeLessThanOrEqual(KEYBOARD_TOP);
   });
 
-  it('petit iPhone (352 pt visibles) : la bulle réduite tient au-dessus du clavier', async () => {
+  it('iPhone 8 (407 pt visibles) : la bulle réduite tient au-dessus du clavier', async () => {
+    WIZARD_RECTS();
+    mockTour = activeTour(step('tw1'));
+    const tree = await renderLayer();
+    await openKeyboard(407);
+    await flush();
+    const style = styleOf(hostBubbleOf(tree));
+    expect(style.top + style.maxHeight).toBeLessThanOrEqual(407);
+  });
+
+  it('plus petit (352 pt visibles) : le champ passe d’abord, la bulle attend le clavier fermé', async () => {
     WIZARD_RECTS();
     mockTour = activeTour(step('tw1'));
     const tree = await renderLayer();
     await openKeyboard(352);
-    await flush();
-    const style = styleOf(hostBubbleOf(tree));
-    expect(style.top + style.maxHeight).toBeLessThanOrEqual(352);
-  });
-
-  it('plus petit encore : le champ passe d’abord, la bulle attend le clavier fermé', async () => {
-    WIZARD_RECTS();
-    mockTour = activeTour(step('tw1'));
-    const tree = await renderLayer();
-    await openKeyboard(202);
     await flush();
     expect(hostBubbleOf(tree)).toBeUndefined();
   });

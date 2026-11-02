@@ -157,8 +157,9 @@ export const headerBottomOf = (rects, screenHeight) => {
 };
 
 // Hauteur visible au-dessus du clavier sous laquelle la bulle réduite prendrait la place du champ
-// (en-tête + bulle + champ + « Suivant » ; le plus petit iPhone, 568 pt avec son clavier, garde 352).
-const MIN_VISIBLE_FOR_BUBBLE = 340;
+// (barre d'état + en-tête + bulle + champ + « Suivant »). Mesuré à l'émulateur : 340 en 360×640
+// coupe encore le champ ; 407 sur un iPhone 8, 352 sur le plus petit iPhone, sans bulle.
+const MIN_VISIBLE_FOR_BUBBLE = 400;
 
 /**
  * FIN-GUIDE, point 3 : la bulle réduite tient-elle au-dessus du clavier avec le champ ? Sinon le

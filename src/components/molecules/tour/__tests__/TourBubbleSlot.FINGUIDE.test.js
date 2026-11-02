@@ -75,7 +75,7 @@ describe('TourBubbleSlot et le clavier', () => {
       expect.any(Function),
       expect.any(Function),
     );
-    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalled();
     const { y } = scrollTo.mock.calls[0][0];
     expect(y).toBeGreaterThan(0);
     expect(y).toBeLessThan(306);

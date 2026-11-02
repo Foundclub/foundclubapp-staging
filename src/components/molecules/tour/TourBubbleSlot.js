@@ -13,8 +13,9 @@ export const TOUR_BUBBLE_SLOT_HEIGHT = 112;
 // du champ, posée au-dessus du texte qu'on tape. Sous ce repère, le champ reste entier.
 const COMPACT_BUBBLE_ROOM = 84;
 const FIELD_LABEL_ROOM = 32;
-// Le temps que la place s'efface et que le conteneur évite le clavier, avant de mesurer.
-const SCROLL_DELAY_MS = 80;
+// Le temps que la place s'efface et que le conteneur évite le clavier, avant de mesurer ; un 2ᵉ
+// passage pour un téléphone lent : avant que la liste ait rétréci, le défilement voulu est refusé.
+const SCROLL_DELAYS_MS = [80, 400];
 
 /**
  * Place réservée à la bulle du guide sous le titre d'un écran (GUIDE-FINITIONS-3,
@@ -41,7 +42,7 @@ function TourBubbleSlot({ scrollRef }) {
 
   useEffect(() => {
     if (!isActive || !isKeyboardOpen) return undefined;
-    const timer = setTimeout(() => {
+    const scrollToInput = () => {
       const input = /** @type {any} */ (TextInput.State.currentlyFocusedInput?.());
       const list = scrollRef?.current;
       const content = list?.getInnerViewRef?.();
@@ -49,8 +50,9 @@ function TourBubbleSlot({ scrollRef }) {
       input.measureLayout(content, (/** @type {number} */ _x, /** @type {number} */ y) => {
         list.scrollTo({ animated: true, y: Math.max(0, y - room) });
       }, () => {});
-    }, SCROLL_DELAY_MS);
-    return () => clearTimeout(timer);
+    };
+    const timers = SCROLL_DELAYS_MS.map((delay) => setTimeout(scrollToInput, delay));
+    return () => timers.forEach(clearTimeout);
   }, [isActive, isKeyboardOpen, room, scrollRef]);
 
   if (!isActive) return null;

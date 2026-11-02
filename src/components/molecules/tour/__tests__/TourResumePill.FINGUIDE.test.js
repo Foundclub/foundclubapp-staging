@@ -62,7 +62,7 @@ describe('TourResumePill redessinée', () => {
       && typeof node.props.children === 'string').map((node) => node.props.children).join(' | ');
     expect(texts).toMatch(/Mission 2\/4/);
     expect(texts).toMatch(/Inviter tes joueur·se·s/);
-    expect(texts).toMatch(/25 %/);
+    expect(texts).toMatch(/25\s%/);
   });
 
   it('toute la carte reprend le guide, la cible fait au moins 44 pt', () => {

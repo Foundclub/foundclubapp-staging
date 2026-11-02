@@ -101,7 +101,7 @@ function TourResumePill() {
             </Text>
             {/* Le tout sur la même ligne : sur un petit écran, rien n'est coupé, elle passe à la suivante. */}
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              {[where, tour.currentMission?.title, `${gauge} %`].filter(Boolean).join(' · ')}
+              {[where, tour.currentMission?.title, `${gauge}\u00A0%`].filter(Boolean).join(' · ')}
             </Text>
           </View>
         </TouchableOpacity>
