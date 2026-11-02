@@ -298,3 +298,20 @@ describe('CORR-COLLECTIVITES 99 — une actualité retirée se dit', () => {
     expect(textes(await monter(<CollectiviteActualitesCanal />))).not.toContain('Cette actualité a été retirée par la Ville.');
   });
 });
+
+// REPRISE-PLACE (01/11, point 6, revue Collectivité « passer le canal côté membre à 24 px des deux
+// côtés ») — les cartes faisaient 92 % de la largeur, calées à gauche : 24 px à gauche, 52 à
+// droite à 390 px. Elles prennent toute la largeur du canal (560 px au plus sur ordinateur).
+describe('REPRISE-PLACE — canal des actualités, côté membre : marges égales', () => {
+  it('chaque carte prend toute la largeur du canal', async () => {
+    const { StyleSheet } = jest.requireActual('react-native');
+    const arbre = await monter(<CollectiviteActualitesCanal />);
+    const cadres = arbre.root.findAllByType(ActualiteCarte)
+      .map((/** @type {any} */ n) => StyleSheet.flatten(n.parent.props.style));
+    expect(cadres.length).toBeGreaterThan(0);
+    cadres.forEach((/** @type {any} */ cadre) => {
+      expect(cadre.width).toBe('100%');
+      expect(cadre.maxWidth).toBe(560);
+    });
+  });
+});

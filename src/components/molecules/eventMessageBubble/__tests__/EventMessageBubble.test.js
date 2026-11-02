@@ -281,3 +281,18 @@ describe('Q1-12 — match amical partagé, vu par l équipe invitée', () => {
     expect(textes(rendre())).toContain('VS Valbrune U13');
   });
 });
+
+// REPRISE-PLACE (01/11, point 1, revue Joueur : « faire rentrer aussi dans la largeur ») — à 390 px
+// sur le site, la carte d'un événement (276 px) dépassait sa bulle (252 px) et son bouton
+// « Ouvrir l'événement » sortait au bord. Elle garde 276 px quand la place existe.
+describe('REPRISE-PLACE — la carte d’événement ne dépasse pas le fil', () => {
+  test('276 px au plus, jamais plus que son parent', () => {
+    const { StyleSheet } = jest.requireActual('react-native');
+    const arbre = rendre();
+    const [carte] = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'bulle-evenement');
+    const style = StyleSheet.flatten(carte.props.style);
+    expect(style.width).toBe(276);
+    expect(style.maxWidth).toBe('100%');
+  });
+});

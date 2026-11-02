@@ -576,7 +576,9 @@ function PlanningCalendarView({
 
   return (
     <View style={Alignments.fill}>
-      <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[12], Alignments.alignEnd]}>
+      {/* REPRISE-PLACE (01/11, point 6) : le conteneur d'écran pose déjà les 24 px latéraux ;
+          les 24 ajoutés ici et sous le calendrier rentraient les cartes à 48 px du bord. */}
+      <View style={[Spaces.marginBottom[12], Alignments.alignEnd]}>
         <TouchableOpacity
           onPress={() => handleDateChange(todayKey)}
           style={[
@@ -631,7 +633,7 @@ function PlanningCalendarView({
         }}
       />
 
-      <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[24], Alignments.fill]}>
+      <View style={[Spaces.marginTop[24], Alignments.fill]}>
         <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[16]]}>
           {format(parseISO(selectedDate), 'EEEE d MMMM yyyy', { locale: fr })}
         </Text>

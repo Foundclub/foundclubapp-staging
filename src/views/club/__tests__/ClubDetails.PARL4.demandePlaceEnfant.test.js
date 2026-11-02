@@ -967,3 +967,26 @@ describe('PARENT-FINITIONS 2 — la ligne d aide sous « Intéressé par le club
     expect(texte).not.toContain(AIDE);
   });
 });
+
+// REPRISE-PLACE (01/11, point 26, revue Parent : « le bandeau s'affiche tout en haut alors qu'on
+// vient de cliquer en bas : au moment de l'envoi on ne voit rien ») — sur le SITE, la page remonte
+// jusqu'au bandeau « Demande envoyée ».
+describe('REPRISE-PLACE — sur le site, la page remonte jusqu’au bandeau', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const plateformeAvant = Platform.OS;
+  const remonterAvant = global.window.scrollTo;
+  afterEach(() => {
+    Platform.OS = plateformeAvant;
+    global.window.scrollTo = remonterAvant;
+  });
+
+  it('demande envoyée : la page remonte en haut', async () => {
+    Platform.OS = 'web';
+    const remonter = jest.fn();
+    global.window.scrollTo = remonter;
+    const arbre = monter();
+    await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
+    await appuyer(envoyer(arbre));
+    expect(remonter).toHaveBeenCalledWith({ behavior: 'smooth', top: 0 });
+  });
+});

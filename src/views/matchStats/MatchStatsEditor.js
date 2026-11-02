@@ -1449,38 +1449,51 @@ function MatchStatsEditor({ navigation, route }) {
           />
         </View>
       );
-      let secondButton = null;
-      if (isEditingPublished && !isReviewRequired) {
-        secondButton = (
-          <View style={Alignments.fill}>
-            <Button
-              onPress={cancelEditing}
-              title={t('matchStatsEditor.cancel', 'Annuler')}
-              variant="Secondary"
-            />
-          </View>
-        );
-      } else if (showsDraftButton) {
-        secondButton = (
-          <View style={Alignments.fill}>
-            <Button
-              disabled={hasConsistencyIssues || isBusy}
-              isLoading={saveDraftMutation.isPending}
-              onPress={handleSaveDraft}
-              title={draftLabel}
-              variant="Secondary"
-            />
-          </View>
-        );
-      }
-      actions = (
-        <>
-          {secondButton}
-          {publishButton}
-        </>
-      );
+      actions = publishButton;
     }
   }
+
+  // REPRISE-PLACE (02/11, décision d'Adel au point 3 : « pour la feuille de match une barre du
+  // bas réduite à un seul bouton », revue Entraîneur) — la barre ne garde que « Publier ».
+  // « Brouillon » (ou « Annuler » quand on modifie une feuille publiée) reste une fonction : un
+  // lien discret au bout de la feuille, juste au-dessus de la barre, au style du « Passer cette
+  // étape » des tunnels.
+  // Témoin : __tests__/STMATCHEditeurRelance.test.js (REPRISE-PLACE).
+  let lienSecondaire = null;
+  if (isReady && !isReadOnly) {
+    if (isEditingPublished && !isReviewRequired) {
+      lienSecondaire = {
+        desactive: false,
+        libelle: t('matchStatsEditor.cancel', 'Annuler'),
+        onPress: cancelEditing,
+        testID: 'feuille-annuler',
+      };
+    } else if (showsDraftButton) {
+      lienSecondaire = {
+        desactive: hasConsistencyIssues || isBusy,
+        libelle: draftLabel,
+        onPress: handleSaveDraft,
+        testID: 'feuille-brouillon',
+      };
+    }
+  }
+  const lienDuBas = lienSecondaire ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ busy: saveDraftMutation.isPending, disabled: lienSecondaire.desactive }}
+      disabled={lienSecondaire.desactive}
+      onPress={lienSecondaire.onPress}
+      style={[
+        SpacesAny.paddingVertical[8],
+        { justifyContent: 'center', minHeight: 44, opacity: lienSecondaire.desactive ? 0.5 : 1 },
+      ]}
+      testID={lienSecondaire.testID}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.primary500, Fonts.textCenter]}>
+        {lienSecondaire.libelle}
+      </Text>
+    </Pressable>
+  ) : null;
 
   // ── La confirmation à deux boutons (état 7) ──
   // 📐 ST-MATCH10-BIS (point 2) — qui est prévenu de quoi : le parent d'un mineur reçoit SON
@@ -1639,6 +1652,7 @@ function MatchStatsEditor({ navigation, route }) {
           <>
             {renderAlerts()}
             {ordinateur ? renderDesktopColumns() : renderPhoneTab()}
+            {lienDuBas}
           </>
         ) : null}
       </ScrollView>

@@ -587,3 +587,17 @@ describe('BULLE — rien ne change pour les autres lecteurs', () => {
     expect(mockServeur.lectures).toBe(0);
   });
 });
+
+// REPRISE-PLACE (01/11, point 1, revue Joueur) — à 390 px sur le site, la carte de composition
+// ou de
+// convocation (264 / 276 px) dépassait sa bulle (252 px). Elle ne dépasse plus son parent.
+describe('REPRISE-PLACE — la carte de composition ne dépasse pas le fil', () => {
+  test('264 ou 276 px au plus, jamais plus que la bulle', async () => {
+    const { StyleSheet } = jest.requireActual('react-native');
+    const { arbre } = await monterDansLeFil();
+    const cartes = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && [264, 276].includes(StyleSheet.flatten(n.props?.style)?.width));
+    expect(cartes.length).toBeGreaterThan(0);
+    expect(StyleSheet.flatten(cartes[0].props.style).maxWidth).toBe('100%');
+  });
+});

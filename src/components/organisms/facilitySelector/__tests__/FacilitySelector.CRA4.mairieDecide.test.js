@@ -200,3 +200,15 @@ describe('COLL-R-APP-CREATION — l étape « Lieu » dit que la mairie décider
     expect(lus).not.toContain(HORS_CRENEAU);
   });
 });
+
+// REPRISE-PLACE (01/11, point 3, revue Entraîneur : « dans l'étape Lieu, la liste des installations
+// défile encore dans une boîte encadrée, la carte du bas coupée ») — la liste était une boîte de
+// 280 px qui défilait seule, DANS l'assistant qui défile déjà. Elle est posée à plat : c'est
+// l'assistant qui défile, toutes les cartes entières.
+describe('REPRISE-PLACE — la liste des installations ne défile plus à part', () => {
+  it('aucune boîte qui défile dans le sélecteur', () => {
+    const { ScrollView } = jest.requireActual('react-native');
+    const arbre = monter();
+    expect(arbre.root.findAllByType(ScrollView)).toHaveLength(0);
+  });
+});

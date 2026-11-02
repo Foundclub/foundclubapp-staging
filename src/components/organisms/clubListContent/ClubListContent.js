@@ -145,6 +145,7 @@ const mergeClubCollections = (...collections) => {
  *  childDocumentId?: string;
  *  enableMapMode?: boolean;
  *  paramsDeFiche?: Record<string, unknown>;
+ *  pied?: import('react').ReactNode;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
  *  surDeuxColonnes?: boolean;
@@ -162,6 +163,8 @@ const mergeClubCollections = (...collections) => {
  *   `surDeuxColonnes` (INVPAD, 20/10, posé par la seule Ville dans « Ajouter un club ») : sur le
  *   SITE, dès 1 024 px (la borne de l'annuaire), la liste qui défile range ses cartes sur deux
  *   colonnes. Absent, ou sur le téléphone, rien ne change.
+ *   `pied` (CORR-RECHERCHE point 2, posé par la seule Ville dans « Ajouter un club ») : rendu en
+ *   fin de liste, il défile avec elle au lieu de rester figé dessous. Absent, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
@@ -170,6 +173,7 @@ function ClubListContent({
   childDocumentId = undefined,
   enableMapMode = false,
   paramsDeFiche = undefined,
+  pied = null,
   refreshSignal = 0,
   screenActive = true,
   surDeuxColonnes = false,
@@ -184,7 +188,10 @@ function ClubListContent({
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { width: largeurEcran } = useWindowDimensions();
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  // REPRISE-PLACE (01/11, point 2) : sur le site, la coque réserve déjà la barre du bas
+  // (`dockClearance` 0) ; `sceneBottomInset` la recomptait : 144 px vides en fin de liste.
+  const reserveDeFin = Platform.OS === 'web' ? dockClearance + 12 : sceneBottomInset;
 
   const [isMultisportDeferredEnabled, setIsMultisportDeferredEnabled] = useState(false);
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
@@ -430,8 +437,8 @@ function ClubListContent({
 
   const shouldShowMapToggle = enableMapMode && (displayedClubs.length > 0 || isViewportListMode);
   const listBottomPadding = shouldShowMapToggle
-    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
-    : sceneBottomInset;
+    ? Math.max(reserveDeFin, floatingActionBottomOffset + 84)
+    : reserveDeFin;
   const viewportMeta = viewportClubPages?.pages?.[0]?.meta || null;
   const viewportTotalInBounds = Number(viewportMeta?.totalInBounds);
   const viewportDisplayCount = Number.isFinite(viewportTotalInBounds) && viewportTotalInBounds > 0
@@ -1038,6 +1045,7 @@ function ClubListContent({
             key={deuxColonnes ? 'deux-colonnes' : 'une-colonne'}
             keyExtractor={cleDeCarte}
             ListEmptyComponent={renderEmptyList}
+            ListFooterComponent={pied}
             ListHeaderComponent={(
               <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
                 {enTeteDeRecherche}

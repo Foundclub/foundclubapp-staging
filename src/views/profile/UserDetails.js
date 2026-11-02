@@ -2,7 +2,7 @@
 import { differenceInYears, format } from 'date-fns';
 import i18next from 'i18next';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,6 +34,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import VideoCvPlayer from '@/components/molecules/videoCv/VideoCvPlayer';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import CoachFeedbackList, {
   CoachFeedbackViewBody,
@@ -933,6 +935,18 @@ function UserDetails({ navigation, route }) {
   // seule page d'ou les retours sont retires (ils sont prives), et le bloc
   // proprietaire plus bas n'etait plus atteint par un joueur depuis D39.
   // Placee APRES tous les hooks, comme l'aiguillage qui suit.
+  // REPRISE-PLACE (01/11, point 7, revue « Voir mon profil » : barre de retour vide et le titre
+  // répété dessous) — sur le site, le titre de la fiche passe dans la barre fine, et le gros titre
+  // de la page n'est plus répété sous elle. Au téléphone (pas de barre du site), rien ne change.
+  // Ses deux hooks AVANT les aiguillages ci-dessous (« Mes stats », retours du coach…).
+  const profilDeParentPourLaBarre = (isOwnerView && isParentMode === true) || (isOwnerView
+    && getUserRoleKey(user?.role?.type || user?.role?.name) === 'parent');
+  let titreDeLaFiche = t('userDetails.title', 'Infos profil');
+  if (isParentOfMinorViewer && user?.firstname) titreDeLaFiche = String(user.firstname);
+  else if (profilDeParentPourLaBarre) titreDeLaFiche = t('profile.titles.unified', 'Mon profil');
+  const sousUneBarreDuSite = useContext(BarreDeTitreDuSiteContext);
+  useDeclarerPageDuSite({ titre: titreDeLaFiche });
+
   // ST-VUES — LA PAGE « MES STATS ». Placee apres tous les hooks, comme la vue
   // des retours du coach qui la suit.
   if (isMyStatsView) {
@@ -1232,13 +1246,11 @@ function UserDetails({ navigation, route }) {
       >
         {/* STATS-FIX2 · 8-22 (T10, ecran 22) — la fiche de SON enfant porte son prenom (planche
             22 : « Hugo », et « Mon enfant » sur la carte), pas « INFOS PROFIL · JOUEUR ». */}
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {isParentOfMinorViewer && user?.firstname
-            ? String(user.firstname).toUpperCase()
-            : (estMonProfilDeParent
-              ? t('profile.titles.unified', 'Mon profil')
-              : t('userDetails.title', 'Infos profil')).toUpperCase()}
-        </Text>
+        {sousUneBarreDuSite ? null : (
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {titreDeLaFiche.toUpperCase()}
+          </Text>
+        )}
         <View
           style={[
             ApplicationStyle.separator,

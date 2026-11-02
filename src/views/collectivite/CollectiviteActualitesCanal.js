@@ -142,7 +142,9 @@ function CollectiviteActualitesCanal() {
     contenu = actualites.map((/** @type {any} */ actualite) => (
       <View
         key={actualite?.documentId}
-        style={{ alignSelf: 'flex-start', maxWidth: 560, width: '92%' }}
+        // REPRISE-PLACE (01/11, point 6) : à 92 %, calées à gauche, les cartes laissaient 52 px à
+        // droite pour 24 à gauche à 390 px.
+        style={{ alignSelf: 'flex-start', maxWidth: 560, width: '100%' }}
       >
         <ActualiteCarte actualite={actualite} testID="canal-ville-actualite" />
       </View>
