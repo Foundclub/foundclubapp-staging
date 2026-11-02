@@ -337,8 +337,9 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 
 /**
  * RET-FERMETURE-HEURES (03/11, Adel) — cette fermeture prend-elle TOUT ce jour ? Une fermeture
- * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle qui prend toute la
- * non, avant et après l'installation reste ouverte. Un blocage ne prend jamais que ses heures.
+ * sans heures, ou un jour du milieu : oui. Son premier jour avec une heure, son dernier avec la
+ * sienne : non, avant et après l'installation reste ouverte. Un blocage ne prend jamais que ses
+ * heures.
  * @param {any} fermeture - La fermeture.
  * @param {string} jour - AAAA-MM-JJ.
  * @returns {boolean} Vrai si tout le jour est fermé.
