@@ -7,7 +7,7 @@ import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
+import { getUserRoleKey, resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -196,7 +196,11 @@ function TeamWizardName({ navigation, route }) {
 
   useEffect(() => {
     const nextClubId = routeClubId || accountClubId;
-    const nextPreselectedTrainerId = routePreselectedTrainerId;
+    // REPRISE-INSCRIPTION (contre-recette du 01/11) : l'entraîneur qui crée une équipe y est
+    // coché d'office comme entraîneur ; il peut se décocher, la présélection ne revient pas.
+    const estEntraineur = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'coach';
+    const nextPreselectedTrainerId = routePreselectedTrainerId
+      || (estEntraineur ? String(userData?.documentId || '') : '');
     const isOtherRouteClub = Boolean(routeClubId) && routeClubId !== state.clubId;
     const shouldInitClubId = Boolean(nextClubId) && (!state.clubId || isOtherRouteClub);
     const shouldInitTrainerId = Boolean(nextPreselectedTrainerId)
@@ -222,6 +226,9 @@ function TeamWizardName({ navigation, route }) {
     state.clubId,
     state.preselectedTrainerId,
     state.trainers,
+    userData?.documentId,
+    userData?.role?.name,
+    userData?.role?.type,
   ]);
 
   const handleNext = () => {

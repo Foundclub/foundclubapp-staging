@@ -8,7 +8,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
-import { categorieDeLaSaison } from '@/domains/category/ageEtCategorie';
+import { categorieDeLaSaison, categoriesDeSonAge } from '@/domains/category/ageEtCategorie';
+import { getCategorySortKey } from '@/domains/category/categorySort';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -22,7 +23,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 import { useGetCategories } from '@/services/category/categoryQueries';
-import { getCategorySortKey } from '@/services/category/categoryService';
 
 /**
  * Player categories (age groups)
@@ -86,7 +86,12 @@ function UserCategory({ navigation }) {
   // repli quand le serveur ne répond pas.
   const { data: categoriesDuServeur } = useGetCategories();
   // Une clé stable : l'effet de présélection ne dépend pas de l'identité du tableau rendu.
-  const nomsDuServeur = (Array.isArray(categoriesDuServeur) ? categoriesDuServeur : [])
+  // REPRISE-INSCRIPTION p17 : seulement celles de son âge (un adulte ne voit plus U6 à U21).
+  const nomsDuServeur = (categoriesDeSonAge(
+    Array.isArray(categoriesDuServeur) ? categoriesDuServeur : [],
+    userData?.birthdate,
+    userData?.category,
+  ) || [])
     .map((categorie) => categorie?.name)
     .filter(Boolean)
     .join('|');

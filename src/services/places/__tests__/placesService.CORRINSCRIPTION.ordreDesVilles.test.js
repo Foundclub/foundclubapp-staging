@@ -82,3 +82,40 @@ describe('CORR-INSCRIPTION p13 — l’ordre des villes', () => {
     expect(lieux.map((lieu) => lieu.properties.label)).toEqual(['Vitrolles', 'Velaux']);
   });
 });
+
+// REPRISE-INSCRIPTION (01/11) — la contre-recette voyait encore 13e, 8e, 15e… à l'inscription : la
+// base d'adresses donne à chaque arrondissement SA ville (« city: Marseille 13e Arrondissement »),
+// relevé le 01/11 sur data.geopf.fr. Le regroupement par ville les prenait pour des communes
+// à part.
+describe('REPRISE-INSCRIPTION p13 — la réponse réelle de la base d’adresses', () => {
+  beforeEach(() => mockGet.mockReset());
+
+  it('chaque arrondissement porte sa propre ville : 1er → 16e', async () => {
+    const vraiArr = (/** @type {number} */ n) => commune(
+      `Marseille ${n}${n === 1 ? 'er' : 'e'} Arrondissement`,
+      `130${String(n).padStart(2, '0')}`,
+      BDR,
+    );
+    mockGet.mockResolvedValue({
+      data: {
+        features: [
+          commune('Marseille', '13001', BDR),
+          ...[13, 8, 15, 9, 12, 14, 10, 11, 3, 4, 5, 6, 1, 7, 2, 16].map(vraiArr),
+          commune('Marseille-en-Beauvaisis', '60690', '60, Oise, Hauts-de-France'),
+          commune('Marseillette', '11800', '11, Aude, Occitanie'),
+        ],
+      },
+    });
+
+    const lieux = await searchPlaces('Marseille', 'municipality');
+
+    expect(lieux.map((lieu) => lieu.properties.label)).toEqual([
+      'Marseille',
+      ...Array.from({ length: 16 }, (_v, i) => (
+        `Marseille ${i + 1}${i === 0 ? 'er' : 'e'} Arrondissement`
+      )),
+      'Marseille-en-Beauvaisis',
+      'Marseillette',
+    ]);
+  });
+});

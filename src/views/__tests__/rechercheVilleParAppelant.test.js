@@ -472,7 +472,8 @@ describe('D32 — taper une ville rend des propositions, sur les CINQ appelants'
     const arbre = monter(<ProfileEdit navigation={{ goBack: jest.fn(), navigate: jest.fn() }} />);
     const affiche = await chercherUneVille(arbre, PLACEHOLDER_PROFIL);
 
-    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', undefined);
+    // REPRISE-INSCRIPTION p13 (01/11) : le champ Ville du profil cherche des communes.
+    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', 'municipality');
     expect(affiche).toContain('Lyon (69000)');
   });
 
@@ -482,7 +483,8 @@ describe('D32 — taper une ville rend des propositions, sur les CINQ appelants'
     );
     const affiche = await chercherUneVille(arbre, PLACEHOLDER_PROFIL);
 
-    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', undefined);
+    // REPRISE-INSCRIPTION p13 (01/11) : le champ Ville du profil cherche des communes.
+    expect(mockSearchPlaces).toHaveBeenCalledWith('lyon', 'municipality');
     expect(affiche).toContain('Lyon (69000)');
   });
 

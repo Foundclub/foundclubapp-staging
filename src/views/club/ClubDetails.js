@@ -4493,18 +4493,29 @@ function ClubDetails({ navigation, route }) {
                     Alignments.alignCenter,
                     Alignments.justifySpaceBetween,
                     Spaces.padding[16],
+                    // REPRISE-INSCRIPTION p19 : un écart entre le texte et « Choisir », et des
+                    // colonnes qui rétrécissent (minWidth 0) : sur le site, le bouton recouvrait
+                    // la fin de « Sénior (+18 ans) ».
+                    Spaces.gap[12],
                     {
                       opacity: isDisabled || horsDeSonAge ? 0.55 : 1,
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                  <View
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[12],
+                      { flex: 1, minWidth: 0 },
+                    ]}
+                  >
                     <ClubLogoMark
                       club={teamItem?.club || club}
                       name={teamItem?.club?.name || club?.name || teamItem?.name}
                       size={60}
                     />
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       {/* MARQUEE — le nom de l equipe se lit en entier */}
                       <MarqueeText
                         style={[Fonts.p1Bold, Fonts.neutral00]}

@@ -264,7 +264,10 @@ const rangerLesCommunes = (lieux) => {
   /** @type {Map<string, number>} */
   const premierRang = new Map();
   const ranges = lieux.map((lieu, rang) => {
-    const nom = String(lieu?.properties?.city || lieu?.properties?.label || '');
+    // REPRISE-INSCRIPTION (01/11) : la base d'adresses donne à chaque arrondissement SA ville
+    // (« Marseille 13e Arrondissement ») ; la ville d'un arrondissement est son nom sans le numéro.
+    const nom = String(lieu?.properties?.label || lieu?.properties?.city || '')
+      .replace(/\s+\d+\s*(?:er|e|ème)\s+arrondissement.*$/i, '');
     const ville = `${departement(lieu)}|${nom}`;
     if (!premierRang.has(ville)) premierRang.set(ville, rang);
     return {

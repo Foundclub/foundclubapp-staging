@@ -89,7 +89,12 @@ jest.mock('@/services/activity/activityQueries', () => ({
   useGetActivities: () => ({ data: [{ documentId: 'act-1', name: 'Football' }] }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
-  useGetCategories: () => ({ data: [{ documentId: 'cat-1', name: 'U13 (13 ans)' }] }),
+  useGetCategories: () => ({
+    data: [
+      { documentId: 'cat-1', name: 'U13 (13 ans)' },
+      { documentId: 'cat-2', name: 'Sénior (+18 ans)' },
+    ],
+  }),
 }));
 
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -341,5 +346,36 @@ describe('CORR-INSCRIPTION p21 — profil d un parent', () => {
     expect(textes).toContain('LISTE:Sport de préférence');
     expect(textes).toContain('Ouvert au recrutement');
     expect(textes).not.toContain('C’est ton profil de parent.');
+  });
+});
+
+// REPRISE-INSCRIPTION p17 (01/11) — « Modifier mon profil » : un adulte ne se voit plus proposer
+// U6 à U21, et « Senior » (ancienne liste de l'inscription) devient « Sénior (+18 ans) », y compris
+// dans ce qui est enregistré.
+describe('REPRISE-INSCRIPTION p17 — catégories de « Modifier mon profil »', () => {
+  it('adulte : Sénior seul ; « Senior » coché et enregistré au nom du serveur', async () => {
+    const arbre = await rendre(joueurComplet);
+    const champ = mockChampsFormulaire['Catégorie'];
+    expect(champ.options.map((/** @type {any} */ o) => o.value)).toEqual(['Sénior (+18 ans)']);
+    expect(champ.value).toEqual(['Sénior (+18 ans)']);
+    const { Text: TexteRN } = jest.requireActual('react-native');
+    const enregistrer = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props.onPress === 'function'
+        && n.findAllByType(TexteRN)
+          .some((/** @type {any} */ t) => t.props.children === 'Continuer'),
+    )[0];
+    await act(async () => { enregistrer.props.onPress(); });
+    expect(mockUpdateMe)
+      .toHaveBeenCalledWith(expect.objectContaining({ category: 'Sénior (+18 ans)' }));
+  });
+});
+
+// REPRISE-INSCRIPTION p13 (contre-recette du 01/11) — le champ « Ville » de « Mes informations »
+// cherchait sans type : des lieux-dits d'autres départements (« Marseille 36150 Luçay-le-Libre »)
+// s'y mêlaient aux arrondissements, coupés à 20 (8e et 9e absents). C'est un champ de commune.
+describe('REPRISE-INSCRIPTION p13 — le champ Ville cherche des communes', () => {
+  it('le champ Ville demande des communes, comme l’étape « Où habites-tu ? »', async () => {
+    await rendre(joueurComplet);
+    expect(mockChampsFormulaire.Ville.type).toBe('municipality');
   });
 });

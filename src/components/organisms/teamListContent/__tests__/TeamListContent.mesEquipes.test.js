@@ -717,3 +717,54 @@ describe('TeamListContent — CORR-RECHERCHE point 20 : le joueur sans equipe vo
     expect(derniersParams().activityName).toBeUndefined();
   });
 });
+
+// REPRISE-INSCRIPTION p20 (revue du 01/11) — « Rechercher une équipe », sur « Mes équipes » d'un
+// joueur sans équipe, ouvrait la recherche d'événements (le site renvoie l'accueil de la recherche
+// vers les événements) : il mène à la liste des équipes. Et une même équipe servie sur deux pages
+// (pagination sans tri) ne s'affiche qu'une fois (« Les Vétérans d'Aÿ-sur-Huveaune » en double).
+describe('REPRISE-INSCRIPTION p20 — Mes équipes d’un joueur sans équipe', () => {
+  const JOUEUR_SANS_EQUIPE = {
+    ...LE_JOUEUR, myTeams: [], preferredSport: 'Football', trainedTeams: [],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockParentTeams.mockReturnValue({
+      childrenByTeam: {}, error: null, isLoading: false, refetch: jest.fn(), teamIds: [],
+    });
+  });
+
+  afterEach(async () => {
+    if (arbreMonte) {
+      await act(async () => { arbreMonte.unmount(); });
+      arbreMonte = null;
+    }
+  });
+
+  it('« Rechercher une équipe » mène à la liste des équipes', async () => {
+    const arbre = await monter({ showOnlyMyTeams: true, userData: JOUEUR_SANS_EQUIPE });
+    const bouton = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props.onPress === 'function'
+        && n.props.title === 'Rechercher une équipe',
+    )[0];
+    await act(async () => { bouton.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('TeamStack', { screen: 'TeamList' });
+  });
+
+  it('une équipe servie deux fois ne s’affiche qu’une fois', async () => {
+    const compter = (/** @type {any} */ arbre) => texteVisible(arbre).split(' | ')
+      .filter((texte) => texte === 'Equipe etrangere 1').length;
+    // Une carte peut porter son nom plusieurs fois (titre, défilement) : on compare à la normale.
+    const normale = compter(await monter({ userData: JOUEUR_SANS_EQUIPE }));
+    await act(async () => { arbreMonte.unmount(); });
+    arbreMonte = null;
+    mockTableDesEquipes.unshift({ ...mockTableDesEquipes[0] });
+    try {
+      expect(normale).toBeGreaterThan(0);
+      expect(compter(await monter({ userData: JOUEUR_SANS_EQUIPE }))).toBe(normale);
+    } finally {
+      mockTableDesEquipes.shift();
+    }
+  });
+});
