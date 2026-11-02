@@ -1249,15 +1249,11 @@ function ColonneDesConversations({
                 >
                   {getInitials(titre)}
                 </span>
-                {/* REPRISE-PLACE (01/11, point 4, D-COACH-4) : sans colonne déclarée, le texte le
-                    plus long élargissait la ligne (date et pastille coupées au bord droit). */}
+                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en `auto`,
+                    elle grandissait avec un texte long et poussait l'heure et la pastille dehors. */}
                 <span
                   style={{
-                    display: 'grid',
-                    flex: 1,
-                    gap: 4,
-                    gridTemplateColumns: 'minmax(0, 1fr)',
-                    minWidth: 0,
+                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
                   }}
                 >
                   <span

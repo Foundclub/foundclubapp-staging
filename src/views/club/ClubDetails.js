@@ -1355,8 +1355,7 @@ function ClubDetails({ navigation, route }) {
   // REPRISE-PLACE (01/11, point 7, revue « titre de la fiche du club » et « rallumer l'onglet du
   // club ») — sur le site : le nom du club dans la barre fine ; son propre club allume l'onglet du
   // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Un club d'un autre
-  // garde « aucun onglet » (choix A du chef, en attente d'Adel). Le téléphone ne lit pas ce
-  // magasin.
+  // garde « aucun onglet » (choix A du chef, réversible). Le téléphone ne lit pas ce magasin.
   useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : null, titre: club?.name || null });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
