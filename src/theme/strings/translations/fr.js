@@ -10328,6 +10328,11 @@ export default {
         title: 'RETARD CONSTATÉ',
       },
       markedSection: 'DÉJÀ POINTÉS',
+      noAccount: {
+        empty: 'Personne à pointer ici : l’appel ne liste que les personnes qui ont un compte.',
+        note: 'Leur présence ne se pointe pas encore à l’appel.',
+        title: 'Convoqués sans compte',
+      },
       presence: {
         arrived: 'Arrivé·e·s',
         late: 'En retard',
@@ -10761,8 +10766,11 @@ export default {
       done: 'Appel terminé',
       expectedOne: '{{count}} attendu',
       expectedOther: '{{count}} attendus',
+      markedOne: '{{count}} personne pointée',
+      markedOther: '{{count}} personnes pointées',
       opensAt: 'Ouvre à {{time}}',
       opensSoon: 'Pas encore ouvert',
+      resume: 'Reprendre l’appel',
       title: 'Faire l’appel',
       window: 'L’appel est ouvert dès la création de l’événement, '
         + 'et se ferme 2 h après la fin.',

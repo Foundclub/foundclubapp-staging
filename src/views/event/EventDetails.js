@@ -180,6 +180,8 @@ import { toUtcFromZonedLocal } from '@/utils/parisTime';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import {
+  compterAttendus,
+  countCalled,
   formatTimeInZone,
   resolveAttendanceWindow,
   resolveCallMode,
@@ -1567,15 +1569,6 @@ function EventDetails({ navigation, route }) {
 
     return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
   }, [attendanceCallWindow, attendancePayload?.data, isAttendanceError, serverClockMs]);
-
-  // D2 — « N attendus » = l audience entiere : c est ce que la maquette
-  // additionne (18 + 2 + 2). `null` quand la charge n est pas la — on ne dit
-  // pas « 0 attendu » a la place de « je ne sais pas ».
-  const nextActionExpectedCount = useMemo(() => {
-    const items = attendancePayload?.data?.items;
-
-    return Array.isArray(items) ? items.length : null;
-  }, [attendancePayload?.data?.items]);
 
   const nextActionOpensAtLabel = formatTimeInZone(
     attendanceCallWindow.opensAtMs,
@@ -8414,7 +8407,11 @@ function EventDetails({ navigation, route }) {
                   de la page est de la consultation. */}
               {showNextActionCard ? (
                 <EventNextActionCard
-                  expectedCount={nextActionExpectedCount}
+                  expectedCount={compterAttendus(
+                    attendancePayload?.data?.items,
+                    convocationPayload,
+                  )}
+                  markedCount={countCalled(attendancePayload?.data?.items)}
                   mode={nextActionMode}
                   onPress={openAttendanceCall}
                   opensAtLabel={nextActionOpensAtLabel}

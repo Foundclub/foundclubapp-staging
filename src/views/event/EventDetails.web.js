@@ -107,6 +107,8 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
 import {
+  compterAttendus,
+  countCalled,
   formatTimeInZone,
   resolveAttendanceWindow,
   resolveCallMode,
@@ -2767,7 +2769,11 @@ function EventDetails({ navigation, route }) {
 
               {showNextActionCard ? (
                 <EventNextActionCard
-                  expectedCount={nextActionExpectedCount}
+                  expectedCount={compterAttendus(
+                    attendancePayload?.data?.items,
+                    convocationPayload,
+                  )}
+                  markedCount={countCalled(attendancePayload?.data?.items)}
                   mode={nextActionMode}
                   onPress={openAttendanceCall}
                   opensAtLabel={nextActionOpensAtLabel}

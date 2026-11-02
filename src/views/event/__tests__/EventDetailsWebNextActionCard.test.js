@@ -364,6 +364,23 @@ describe('P9 · ecran 1 — la carte « Faire l appel » sur l Apercu du site', 
     expect(texte).toContain('appel est ouvert dès la création de l’événement');
   });
 
+  test('FIN-EVENEMENTS 3 : deux convoqués sans compte comptent parmi les attendus', () => {
+    mockConvocationQuery.data = /** @type {any} */ ({
+      branches: [{
+        published: {
+          manualPlayers: [{ documentId: 'manuel-paul', firstname: 'Paul', isManual: true }],
+          snapshotPlayers: [{
+            documentId: 'fiche-lina', firstname: 'Lina', participantSource: 'declared_child',
+          }],
+          teams: [{ placements: [{ playerId: 'manuel-paul' }, { playerId: 'fiche-lina' }] }],
+        },
+      }],
+    });
+    const root = mountScreen({ attendance: buildAttendance({ itemCount: 0 }) });
+
+    expect(textOf(parTestID(root, 'event-next-action-expected')[0])).toContain('2 attendus');
+  });
+
   test('fenetre ouverte : le clic mene a l ecran d appel, avec le bon evenement', () => {
     const root = mountScreen({ attendance: buildAttendance() });
 

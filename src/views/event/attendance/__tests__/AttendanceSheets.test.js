@@ -26,6 +26,8 @@ const mockNavigate = jest.fn();
 let mockEvent;
 /** @type {any} */
 let mockAttendance;
+/** @type {any} */
+const mockConvocation = null;
 
 const mockAbsenceMutate = jest.fn();
 const mockBulkMutate = jest.fn();
@@ -74,6 +76,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEvent: () => ({ data: mockEvent, isFetching: false }),
   useGetEventAttendance: () => ({ data: mockAttendance, isFetching: false, refetch: jest.fn() }),
+  useGetEventConvocation: () => ({ data: mockConvocation }),
 }));
 
 // 🪤 Surtout PAS de `requireActual` : le hook tire `eventService`, donc
@@ -337,7 +340,9 @@ describe('L5-A · 2D — la cloture ne ment pas sur ce qu elle fait', () => {
     expect(mockCoachArrivalMutate).not.toHaveBeenCalled();
     expect(mockLateMutate).not.toHaveBeenCalled();
     expect(mockResetMutate).not.toHaveBeenCalled();
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    // FIN-EVENEMENTS 4 : retour à la fiche du match, jamais à l'accueil.
+    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'evt-1' });
   });
 
   test('la feuille declare sa hauteur — sans quoi en-tete et pied ne tiennent pas', async () => {

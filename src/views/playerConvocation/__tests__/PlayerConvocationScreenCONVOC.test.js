@@ -19,7 +19,11 @@ import PlayerConvocationScreen from '../PlayerConvocationScreen';
 // garde la reponse comme le vrai (`event.participations` / `event.missings`).
 
 const mockNavigation = { goBack: jest.fn(), navigate: jest.fn(), replace: jest.fn() };
-const mockServeur = { lectures: 0, reponse: 'pending' };
+const mockServeur = {
+  lectures: 0,
+  reponse: 'pending',
+  statut: /** @type {string | undefined} */ (undefined),
+};
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -44,7 +48,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
 
 jest.mock('@/services/event/eventService', () => ({
   getEventAttendance: jest.fn(),
-  getEventById: jest.fn(() => Promise.resolve({ documentId: 'evt-1' })),
+  getEventById: jest.fn(() => Promise.resolve({ documentId: 'evt-1', status: mockServeur.statut })),
   getEventByIdForEdit: jest.fn(),
   getEventConvocation: jest.fn(() => {
     mockServeur.lectures += 1;
@@ -201,6 +205,7 @@ const ouvrir = async () => {
 beforeEach(() => {
   mockServeur.lectures = 0;
   mockServeur.reponse = 'pending';
+  mockServeur.statut = undefined;
   queryClient = creerQueryClientDeTest();
 });
 
@@ -225,6 +230,17 @@ describe('CONVOC — « Tu es convoqué » dit la réponse déjà donnée', () =
     expect(texteVisible(arbre)).not.toContain('Tu as répondu');
     expect(varianteDu(arbre, 'Présent')).toBe('Secondary');
     expect(varianteDu(arbre, 'Absent')).toBe('Secondary');
+    act(() => arbre.unmount());
+  });
+
+  it('FIN-EVENEMENTS 1 — match annulé : la réponse d’avant ne s’écrit plus', async () => {
+    mockServeur.reponse = 'present';
+    mockServeur.statut = 'cancelled';
+    const arbre = await ouvrir();
+    await attendre(() => texteVisible(arbre).includes('Match annulé'));
+
+    expect(texteVisible(arbre)).toContain('Match annulé');
+    expect(texteVisible(arbre)).not.toContain('Tu as répondu');
     act(() => arbre.unmount());
   });
 

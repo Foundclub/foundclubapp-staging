@@ -81,6 +81,7 @@ const monter = (/** @type {any} */ props = {}) => {
     arbre = renderer.create(
       <EventNextActionCard
         expectedCount={props.expectedCount ?? null}
+        markedCount={props.markedCount}
         mode={props.mode ?? 'before'}
         onPress={props.onPress ?? jest.fn()}
         opensAtLabel={props.opensAtLabel ?? ''}
@@ -200,5 +201,40 @@ describe('N5 — la carte « prochaine action »', () => {
     expect(tot).toContain('Ouvre à 17:30');
 
     jest.useRealTimers();
+  });
+});
+
+describe('FIN-EVENEMENTS 4 — la carte dit que l appel est commencé', () => {
+  test('🐞 quelqu un de pointé : « Reprendre l’appel », le compte, le bouton ouvre', () => {
+    const onPress = jest.fn();
+    const root = monter({
+      expectedCount: 2, markedCount: 1, mode: 'open', onPress,
+    });
+    const textes = textesVisibles(root);
+
+    expect(textes).toEqual(expect.arrayContaining(['Reprendre l’appel', '1 personne pointée']));
+    expect(textes).not.toContain('Faire l’appel');
+    act(() => { leBouton(root).props.onPress(); });
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  test('plusieurs pointées : le compte s accorde', () => {
+    const textes = textesVisibles(monter({ expectedCount: 3, markedCount: 2, mode: 'open' }));
+
+    expect(textes).toContain('2 personnes pointées');
+  });
+
+  test('personne de pointé : la carte reste « Faire l’appel », sans compte', () => {
+    const textes = textesVisibles(monter({ expectedCount: 2, markedCount: 0, mode: 'open' }));
+
+    expect(textes).toContain('Faire l’appel');
+    expect(textes.join(' ')).not.toContain('pointée');
+  });
+
+  test('appel fermé : « Appel terminé » reste, même avec des pointés', () => {
+    const textes = textesVisibles(monter({ expectedCount: 2, markedCount: 2, mode: 'closed' }));
+
+    expect(textes).toContain('Appel terminé');
+    expect(textes).not.toContain('Reprendre l’appel');
   });
 });
