@@ -23,6 +23,19 @@ jest.mock('@/services/notification/notificationService', () => ({
 let demonter = null;
 
 /**
+ * Laisse passer le temps et finir les lectures en cours.
+ * @param {number} ms - Le temps à faire passer.
+ * @returns {Promise<void>} Fini.
+ */
+const laisserPasser = async (ms) => {
+  await act(async () => { jest.advanceTimersByTime(ms); });
+  for (let tour = 0; tour < 5; tour += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await act(async () => { jest.advanceTimersByTime(10); });
+  }
+};
+
+/**
  * Monte le contrôleur sur une cloche déjà remplie par le démarrage.
  * @returns {Promise<{ controleur: () => any }>} Le contrôleur.
  */
@@ -67,10 +80,7 @@ test('le chiffre du démarrage s affiche, puis la minuterie le remplace par celu
   const { controleur } = await monterApresLeDemarrage();
   expect(controleur().unreadCount).toBe(376);
 
-  await act(async () => {
-    jest.advanceTimersByTime(1100);
-    await Promise.resolve();
-  });
+  await laisserPasser(1100);
 
   expect(getUnreadCount).toHaveBeenCalled();
   expect(controleur().unreadCount).toBe(375);
@@ -79,10 +89,8 @@ test('le chiffre du démarrage s affiche, puis la minuterie le remplace par celu
 test('ouvrir le panneau relit le chiffre tout de suite, même frais', async () => {
   const { controleur } = await monterApresLeDemarrage();
 
-  await act(async () => {
-    controleur().refreshUnreadCount();
-    await Promise.resolve();
-  });
+  await act(async () => { controleur().refreshUnreadCount(); });
+  await laisserPasser(10);
 
   expect(getUnreadCount).toHaveBeenCalledTimes(1);
   expect(controleur().unreadCount).toBe(375);

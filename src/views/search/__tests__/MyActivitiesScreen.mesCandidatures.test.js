@@ -24,9 +24,11 @@ import MyActivitiesScreen from '../MyActivitiesScreen';
 jest.setTimeout(30000);
 
 const mockInvalidateQueries = jest.fn();
-jest.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
-}));
+jest.mock('@tanstack/react-query', () => {
+  // Une seule identite, comme le vrai client : l'ecran le met dans ses dependances.
+  const client = { invalidateQueries: (...args) => mockInvalidateQueries(...args) };
+  return { useQueryClient: () => client };
+});
 
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next

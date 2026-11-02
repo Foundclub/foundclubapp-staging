@@ -66,7 +66,12 @@ jest.mock('@/components/organisms/notificationPopup/NotificationPopup', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return function PanneauMock(/** @type {any} */ props) {
     if (!props.isVisible) return null;
-    return reactActuel.createElement(TexteRN, null, `temoin-panneau-ouvert:${props.unreadCount}`);
+    return reactActuel.createElement(
+      reactActuel.Fragment,
+      null,
+      reactActuel.createElement(TexteRN, null, 'temoin-panneau-ouvert'),
+      reactActuel.createElement(TexteRN, null, `temoin-chiffre:${props.unreadCount}`),
+    );
   };
 });
 
@@ -141,7 +146,7 @@ describe('NotificationBadge — FIN-CLOCHE : un seul compteur', () => {
     expect(mockRelireLeCompteur).not.toHaveBeenCalled();
     toucherLaCloche(arbre);
     expect(mockRelireLeCompteur).toHaveBeenCalledTimes(1);
-    expect(textes(arbre)).toContain('temoin-panneau-ouvert:376');
+    expect(textes(arbre)).toContain('temoin-chiffre:376');
     expect(textes(arbre)).toContain('99+');
   });
 });
