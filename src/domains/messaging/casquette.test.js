@@ -27,6 +27,12 @@ describe('CORR-MESSAGERIE p114 — la casquette d une ligne', () => {
     [{ type: 'collectiviteNewsPublished' }, 'ville'],
     [{ type: 'complexeReservationGerant' }, 'complexe'],
     [{ type: 'newEvent' }, 'club'],
+    // FIN-MESSAGERIE p88 (02/11) : les titres réels d'un fil de la Ville, relevés en recette.
+    [{ data: { groupName: 'Ville de Montrivage · RWDIRIG Tunnel Deux' }, type: 'newGroupMessage' }, 'ville'],
+    [{ data: { groupName: 'Dirigeants des clubs · Ville de Montrivage' }, type: 'newGroupMessage' }, 'ville'],
+    [{ data: { groupName: 'Toute la ville · Ville de Montrivage' }, type: 'newGroupMessage' }, 'ville'],
+    [{ data: { groupName: 'Les parents des U11' }, type: 'newGroupMessage' }, 'club'],
+    [{ data: { groupName: 'A · B' }, type: 'newTeamMessage' }, 'club'],
   ])('notification %j : %s', (notification, attendu) => {
     expect(casquetteDeLaNotification(notification)).toBe(attendu);
   });

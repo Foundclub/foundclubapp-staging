@@ -1,4 +1,5 @@
 import renderer, { act } from 'react-test-renderer';
+import { StyleSheet } from 'react-native';
 
 import Messaging from '../Messaging';
 
@@ -236,6 +237,24 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
    * @returns {string}
    */
   const toutLeTexte = (arbre) => JSON.stringify(arbre.toJSON());
+
+  // FIN-MESSAGERIE p88 (02/11) — à 390, « Ville de Montrivage : » passait sur deux lignes dans une
+  // colonne étroite, et le message restait seul à droite.
+  test('l auteur de l aperçu tient sur UNE ligne, et cède de la place au message', async () => {
+    const arbre = await monterAvec([{
+      ...CHATS[0],
+      messages: [{
+        createdAt: '2026-10-07T10:00:00.000Z',
+        message: 'Un message assez long pour remplir la ligne',
+        sender: { documentId: 'karim', firstname: 'Ville de Montrivage' },
+      }],
+    }]);
+    const auteur = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text'
+      && [n.props.children].flat().join('').startsWith('Ville de Montrivage'))[0];
+
+    expect(auteur.props.numberOfLines).toBe(1);
+    expect(StyleSheet.flatten(auteur.props.style).maxWidth).toBe('60%');
+  });
 
   test(
     'LI1 — groupe : « Prénom : », icône du contenu riche, pastille de non-lus cyan avec le nombre',

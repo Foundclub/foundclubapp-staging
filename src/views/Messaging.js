@@ -931,10 +931,13 @@ function Messaging({ navigation, route }) {
                     />
                   ) : null}
                   {auteurDuDernier ? (
+                    // FIN-MESSAGERIE p88 (02/11) : une seule ligne ; un nom long (« Ville de … ») passait
+                    // sur deux lignes et laissait un trou avant le message.
                     <Text
+                      numberOfLines={1}
                       style={[
                         stylesDeLaListe.apercuTexte,
-                        { color: withAlpha(Colors.neutral00, 0.8) },
+                        { color: withAlpha(Colors.neutral00, 0.8), flexShrink: 0, maxWidth: '60%' },
                       ]}
                     >
                       {`${auteurDuDernier}\u00A0:`}

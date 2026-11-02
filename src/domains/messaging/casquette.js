@@ -31,13 +31,25 @@ export const casquetteDuFil = (chat) => {
 };
 
 /**
+ * FIN-MESSAGERIE p88 (02/11) — l'avis d'un message ne dit pas le type de son fil. Le serveur titre
+ * ceux de la Ville « Ville de … · club », « Dirigeants des clubs · Ville de … », « Toute la ville ·
+ * … » (`collectivite-channels.notificationTitle`).
+ * ponytail: un groupe libre nommé « A · B » prendrait l'étiquette Ville. Sortie : le type du fil
+ * dans les données de l'avis, côté serveur.
+ * @param {any} notification - La notification.
+ * @returns {boolean} Vrai pour un message d'un fil de la Ville.
+ */
+const estUnMessageDeLaVille = (notification) => notification?.type === 'newGroupMessage'
+  && String(notification?.data?.groupName || '').includes(' · ');
+
+/**
  * La casquette d'une notification.
  * @param {any} notification - La notification.
  * @returns {Casquette} Sa casquette : la Ville et le complexe par leur type, le club sinon.
  */
 export const casquetteDeLaNotification = (notification) => {
   const type = String(notification?.type || '');
-  if (type.startsWith('collectivite')) return 'ville';
+  if (type.startsWith('collectivite') || estUnMessageDeLaVille(notification)) return 'ville';
   if (estTypeDuGerant(type)) return 'complexe';
   return 'club';
 };
