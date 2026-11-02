@@ -143,8 +143,9 @@ function CollectiviteActualitesCanal() {
       <View
         key={actualite?.documentId}
         // REPRISE-PLACE (01/11, point 6) : à 92 %, calées à gauche, les cartes laissaient 52 px à
-        // droite pour 24 à gauche à 390 px.
-        style={{ alignSelf: 'flex-start', maxWidth: 560, width: '100%' }}
+        // droite pour 24 à gauche à 390 px. FIN-COLLECTIVITES p99 (02/11, feuille d'Adel) : à 1440,
+        // toute la largeur aussi, comme côté Ville.
+        style={{ width: '100%' }}
       >
         <ActualiteCarte actualite={actualite} testID="canal-ville-actualite" />
       </View>

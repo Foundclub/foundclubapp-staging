@@ -450,6 +450,18 @@ describe('FacilityForm — ce que le formulaire accepte et refuse (Joi)', () => 
 });
 
 describe('FacilityForm — bornes de capacite', () => {
+  // FIN-COLLECTIVITES 2 (02/11, relevé d'accessibilité p55) : les deux boutons du compteur
+  // s'annonçaient « - » et « + » ; le titre affiché ne change pas.
+  it('les boutons du compteur portent un nom parlant', async () => {
+    await monterEcran();
+
+    const nomDe = (/** @type {string} */ titre) => [...mockButtonProps]
+      .reverse()
+      .find((props) => props.title === titre)?.accessibilityLabel;
+    expect(nomDe('-')).toBe('Une équipe de moins à la fois');
+    expect(nomDe('+')).toBe('Une équipe de plus à la fois');
+  });
+
   it('borne basse : 12 appuis sur « - » ne descendent pas sous 1', async () => {
     const arbre = await monterEcran();
     await remplirLeMinimumValide();

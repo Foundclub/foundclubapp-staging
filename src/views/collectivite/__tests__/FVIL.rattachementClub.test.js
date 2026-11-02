@@ -116,6 +116,32 @@ beforeEach(() => {
 });
 
 describe('FVIL lot 5 · le rattachement vu du club', () => {
+  it('FIN-COLLECTIVITES 1 : détaché puis nouvelle proposition, la carte ne redit pas l’ancien accord', async () => {
+    mockDemandes.data = [
+      ...mockDemandes.data,
+      {
+        canAnswer: false, collectivite: MONTRIVAGE, createdAt: '2026-10-01T12:00:00.000Z', documentId: 'a1', kind: 'attach_request', respondedAt: '2026-10-02T12:00:00.000Z', state: 'accepted',
+      },
+    ];
+    const arbre = await monter(<RattachementDuClub clubId="club-k" enabled />);
+    const lus = textes(arbre);
+    expect(lus).toContain('La Ville de Montrivage propose de rattacher ton club');
+    expect(lus).not.toContain('La Ville de Montrivage a accepté ta demande.');
+    expect(lus).not.toContain('Ton club n’est plus rattaché à la Ville de Montrivage.');
+  });
+
+  it('FIN-COLLECTIVITES 1 : détaché sans proposition, la carte dit qu’il n’est plus rattaché', async () => {
+    mockDemandes.data = [
+      {
+        canAnswer: false, collectivite: MONTRIVAGE, createdAt: '2026-10-01T12:00:00.000Z', documentId: 'p9', kind: 'proposal', respondedAt: '2026-10-02T12:00:00.000Z', state: 'accepted',
+      },
+    ];
+    const arbre = await monter(<RattachementDuClub clubId="club-k" enabled />);
+    const lus = textes(arbre);
+    expect(lus).toContain('Ton club n’est plus rattaché à la Ville de Montrivage.');
+    expect(lus).not.toContain('Tu as accepté la demande de la Ville de Montrivage.');
+  });
+
   it('R1 refuser la demande de la Ville : la phrase dit qu’elle pourra la renvoyer (« refus B »)', async () => {
     const arbre = await monter(<RattachementDuClub clubId="club-k" enabled />);
     await act(async () => { boutons(arbre, 'Refuser')[0].props.onPress(); });
