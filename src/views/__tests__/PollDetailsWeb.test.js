@@ -20,7 +20,9 @@ import renderer, { act } from 'react-test-renderer';
 // doit pas casser ces temoins.
 
 const mockChatQuery = { data: null };
-const mockMessagesQuery = { data: null, isLoading: false };
+const mockMessagesQuery = {
+  data: null, fetchNextPage: jest.fn(), hasNextPage: false, isFetchingNextPage: false, isLoading: false,
+};
 const mockUseAuth = jest.fn();
 const mockVotePoll = jest.fn();
 
@@ -94,6 +96,9 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
   useGetChatById: () => ({ data: mockChatQuery.data }),
   useGetChatMessages: () => ({
     data: mockMessagesQuery.data,
+    fetchNextPage: mockMessagesQuery.fetchNextPage,
+    hasNextPage: mockMessagesQuery.hasNextPage,
+    isFetchingNextPage: mockMessagesQuery.isFetchingNextPage,
     isLoading: mockMessagesQuery.isLoading,
   }),
 }));
@@ -215,6 +220,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockChatQuery.data = null;
   mockMessagesQuery.data = null;
+  mockMessagesQuery.hasNextPage = false;
+  mockMessagesQuery.isFetchingNextPage = false;
   mockMessagesQuery.isLoading = false;
 });
 
@@ -357,5 +364,84 @@ describe('BH04 / P6-15 — sondage encore en synchronisation', () => {
     window.alert = ancienne;
     expect(mockVotePoll).not.toHaveBeenCalled();
     expect(alerte).toHaveBeenCalledWith('Le sondage est en cours de synchronisation.');
+  });
+});
+
+// FIN-MESSAGERIE (02/11, recette Dirigeant) — l'adresse /polls/<id>?chatId=… porte l'identifiant du
+// message dans `pollId` : sans `messageId` en plus, l'écran disait « Sondage introuvable ».
+describe('FIN-MESSAGERIE — un sondage ouvert par son adresse', () => {
+  /**
+   * L'écran monté comme par une adresse tapée : `pollId` et `chatId`, rien d'autre.
+   * @param {any[]} [pages] Les pages de messages déjà lues.
+   * @returns {any} La racine du rendu.
+   */
+  const ouvrirParLAdresse = (pages) => {
+    mockChatQuery.data = { participants: PARTICIPANTS };
+    mockMessagesQuery.data = pages ? { pages } : null;
+    mockUseAuth.mockReturnValue({
+      userData: { documentId: 'user-1', firstname: 'Adel', lastname: 'F' },
+    });
+    act(() => {
+      mounted = renderer.create(
+        <PollDetailsWeb
+          navigation={{ goBack: jest.fn() }}
+          route={{ params: { chatId: CHAT_ID, pollId: MESSAGE_ID } }}
+        />,
+      );
+    });
+    return mounted.root;
+  };
+  const PAGE_AVEC_LE_SONDAGE = { data: [{ composition: buildPoll(), documentId: MESSAGE_ID }] };
+  const PAGE_SANS_LE_SONDAGE = { data: [{ documentId: 'autre-message' }] };
+
+  test('sans messageId, le sondage s ouvre et on peut y voter', async () => {
+    const root = ouvrirParLAdresse([PAGE_AVEC_LE_SONDAGE]);
+
+    expect(textOf(root)).toContain('Quel creneau pour le match ?');
+    expect(textOf(root)).not.toContain('Sondage introuvable');
+
+    await click(root, 'Voter');
+    expect(mockVotePoll).toHaveBeenCalledWith(MESSAGE_ID, 'opt-1');
+  });
+
+  test('un sondage plus loin dans le fil : on lit la page suivante, sans dire « introuvable »', () => {
+    mockMessagesQuery.hasNextPage = true;
+    const root = ouvrirParLAdresse([PAGE_SANS_LE_SONDAGE]);
+
+    expect(mockMessagesQuery.fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(textOf(root)).toContain('Chargement du sondage');
+    expect(textOf(root)).not.toContain('Sondage introuvable');
+  });
+
+  test('une page déjà en cours de lecture n est pas redemandée', () => {
+    mockMessagesQuery.hasNextPage = true;
+    mockMessagesQuery.isFetchingNextPage = true;
+    ouvrirParLAdresse([PAGE_SANS_LE_SONDAGE]);
+
+    expect(mockMessagesQuery.fetchNextPage).not.toHaveBeenCalled();
+  });
+
+  test('tout le fil lu sans le trouver : « Sondage introuvable », sans chargement', () => {
+    const root = ouvrirParLAdresse([PAGE_SANS_LE_SONDAGE]);
+
+    expect(mockMessagesQuery.fetchNextPage).not.toHaveBeenCalled();
+    expect(textOf(root)).toContain('Sondage introuvable');
+    expect(textOf(root)).not.toContain('Chargement du sondage');
+  });
+
+  test('un fil très long : la recherche s arrête à 25 pages et le dit', () => {
+    mockMessagesQuery.hasNextPage = true;
+    const root = ouvrirParLAdresse(Array.from({ length: 25 }, () => PAGE_SANS_LE_SONDAGE));
+
+    expect(mockMessagesQuery.fetchNextPage).not.toHaveBeenCalled();
+    expect(textOf(root)).toContain('Sondage introuvable');
+  });
+
+  test('pendant le premier chargement : « Chargement », pas encore « introuvable »', () => {
+    mockMessagesQuery.isLoading = true;
+    const root = ouvrirParLAdresse();
+
+    expect(textOf(root)).toContain('Chargement du sondage');
+    expect(textOf(root)).not.toContain('Sondage introuvable');
   });
 });

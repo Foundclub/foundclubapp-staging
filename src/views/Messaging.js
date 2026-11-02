@@ -938,11 +938,15 @@ function Messaging({ navigation, route }) {
                       size={16}
                     />
                   ) : null}
-                  {auteurDuDernier ? (
+                  {/* FIN-MESSAGERIE p88 (02/11) : une seule ligne ; un nom long (« Ville de … ») passait sur
+                      deux lignes et laissait un trou avant le message. Sans icône entre les deux, le nom
+                      et le message forment un seul texte, coupé une seule fois. */}
+                  {auteurDuDernier && extrait.icone ? (
                     <Text
+                      numberOfLines={1}
                       style={[
                         stylesDeLaListe.apercuTexte,
-                        { color: withAlpha(Colors.neutral00, 0.8) },
+                        { color: withAlpha(Colors.neutral00, 0.8), flexShrink: 0, maxWidth: '60%' },
                       ]}
                     >
                       {`${auteurDuDernier}\u00A0:`}
@@ -959,6 +963,11 @@ function Messaging({ navigation, route }) {
                       { color: sourdine },
                     ]}
                   >
+                    {auteurDuDernier && !extrait.icone ? (
+                      <Text style={{ color: withAlpha(Colors.neutral00, 0.8) }}>
+                        {`${auteurDuDernier} : `}
+                      </Text>
+                    ) : null}
                     {/* 🔔 MSG1BA (§3.17) — une notice de groupe en apercu : « Vous avez… ». */}
                     {lastMessage?.systemNotice
                       ? texteDeLaNotice(

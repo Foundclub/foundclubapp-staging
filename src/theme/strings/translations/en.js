@@ -16491,6 +16491,8 @@ export default {
         unknownDate: 'Date unavailable',
       },
       receivedAt: 'Received on',
+      reservation: 'Booking',
+      viewPlanning: 'View my planning',
       screenTitle: 'Notification',
       statusFallback: 'Information',
       title: 'Notification',

@@ -78,6 +78,11 @@ jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => 
   };
 });
 
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: {} }),
+}));
+
 jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressInput', () => {
   // eslint-disable-next-line global-require
   const { View } = require('react-native');
@@ -618,20 +623,24 @@ describe('CORR-MESSAGERIE p67 — le chemin de création d une alerte', () => {
     expect(appels).toBe(0);
   });
 
-  it('site : l écran porte son titre « Créer une alerte » en haut de la page', async () => {
+  // FIN-MESSAGERIE p67 (02/11, revue) — le titre monte dans la barre fine du site, avec son retour.
+  it('site : l écran donne « Créer une alerte » à la barre fine, pas de 2e titre dans la page', async () => {
     // eslint-disable-next-line global-require
-    const { Platform } = require('react-native');
-    const avant = Platform.OS;
-    Platform.OS = 'web';
-    try {
-      const tree = await monterEnCreation();
-      const titres = tree.root.findAll(
-        (/** @type {any} */ n) => n.props?.accessibilityRole === 'header' && n.type === 'Text',
-      );
-      expect(titres.map((/** @type {any} */ n) => [n.props.children].flat().join('')))
-        .toContain('Créer une alerte');
-    } finally {
-      Platform.OS = avant;
-    }
+    const { lirePageDuSite } = require('@/components/templates/pageDuSite');
+    const tree = await monterEnCreation();
+
+    expect(lirePageDuSite().titre).toBe('Créer une alerte');
+    const titres = tree.root.findAll(
+      (/** @type {any} */ n) => n.props?.accessibilityRole === 'header' && n.type === 'Text',
+    );
+    expect(titres).toHaveLength(0);
+  });
+
+  it('le champ Ville propose des villes avant la frappe, plus rien dès qu on tape', async () => {
+    const tree = await monterEnCreation();
+    const champ = tree.root.findByProps({ testID: 'adresse' });
+
+    expect(champ.props.optionsSupplementaires('').length).toBeGreaterThan(0);
+    expect(champ.props.optionsSupplementaires('Mar')).toEqual([]);
   });
 });

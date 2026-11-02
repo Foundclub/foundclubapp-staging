@@ -237,6 +237,32 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
    */
   const toutLeTexte = (arbre) => JSON.stringify(arbre.toJSON());
 
+  // FIN-MESSAGERIE p88 (02/11) — à 390, « Ville de Montrivage : » passait sur deux lignes dans une
+  // colonne étroite, et le message restait seul à droite.
+  test('le nom et le message de l aperçu forment UNE ligne, coupée une seule fois', async () => {
+    const arbre = await monterAvec([{
+      ...CHATS[0],
+      messages: [{
+        createdAt: '2026-10-07T10:00:00.000Z',
+        message: 'Un message assez long pour remplir la ligne',
+        sender: { documentId: 'karim', firstname: 'Ville de Montrivage' },
+      }],
+    }]);
+    // Le nom est DANS le texte de l'aperçu : une seule ligne, une seule coupure à la fin.
+    /** @type {any[]} */
+    const lignes = [];
+    const parcourir = (/** @type {any} */ noeud) => {
+      if (!noeud || typeof noeud === 'string') return;
+      if (noeud.type === 'Text' && noeud.props.numberOfLines === 1
+        && JSON.stringify(noeud.children).includes('Ville de Montrivage')) lignes.push(noeud);
+      (noeud.children || []).forEach(parcourir);
+    };
+    [arbre.toJSON()].flat().forEach(parcourir);
+
+    expect(lignes).toHaveLength(1);
+    expect(JSON.stringify(lignes[0].children)).toContain('Un message assez long');
+  });
+
   test(
     'LI1 — groupe : « Prénom : », icône du contenu riche, pastille de non-lus cyan avec le nombre',
     async () => {
