@@ -31,16 +31,27 @@ export const casquetteDuFil = (chat) => {
 };
 
 /**
- * FIN-MESSAGERIE p88 (02/11) — l'avis d'un message ne dit pas le type de son fil. Le serveur titre
- * ceux de la Ville « Ville de … · club », « Dirigeants des clubs · Ville de … », « Toute la ville ·
- * … » (`collectivite-channels.notificationTitle`).
- * ponytail: un groupe libre nommé « A · B » prendrait l'étiquette Ville. Sortie : le type du fil
- * dans les données de l'avis, côté serveur.
+ * FIN-MESSAGERIE p88 (02/11) — l'avis d'un message de la Ville porte le type de son fil
+ * (`chatType`, serveur `sendNotificationCollectivite`). Le titre seul ne suffit pas : « · » se
+ * trouve aussi dans un groupe libre de club, un groupe de complexe, l'assistance.
+ * Les avis plus anciens n'ont pas ce type. Repli strict : signés au nom de la Ville (un nom sans
+ * nom de famille) ET ce nom est un morceau entier du titre, « Ville de … · club » ou « Toute la
+ * ville · Ville de … ».
+ * ponytail: un compte sans nom de famille qui écrit dans un groupe contenant son prénom comme morceau
+ * (« Foot · U11 » signé « Foot ») passerait ; le repli ne sert qu'aux avis d'avant le déploiement,
+ * à retirer quand ils auront disparu de la cloche.
  * @param {any} notification - La notification.
  * @returns {boolean} Vrai pour un message d'un fil de la Ville.
  */
-const estUnMessageDeLaVille = (notification) => notification?.type === 'newGroupMessage'
-  && String(notification?.data?.groupName || '').includes(' · ');
+const estUnMessageDeLaVille = (notification) => {
+  if (notification?.type !== 'newGroupMessage') return false;
+  const {
+    chatType, firstname, groupName, lastname,
+  } = notification?.data || {};
+  if (chatType) return String(chatType).startsWith('collectivite');
+  const morceaux = String(groupName || '').split(' · ');
+  return Boolean(firstname) && !lastname && morceaux.length > 1 && morceaux.includes(firstname);
+};
 
 /**
  * La casquette d'une notification.
