@@ -27,7 +27,7 @@ const VARIANTE_DU_STYLE = { cancel: 'Secondary', destructive: 'DangerFilled' };
 
 /**
  * La fenêtre de l'app, et sa file d'attente (une fenêtre à la fois, dans l'ordre).
- * @returns {JSX.Element | null} La fenêtre du moment.
+ * @returns {import('react').ReactElement | null} La fenêtre du moment.
  */
 function FenetreDeLApp() {
   const { t } = useTranslation();

@@ -188,6 +188,13 @@ export const useRestoreSeasonSlot = () => useGesteCreneau(
 );
 
 /**
+ * Résumé d une installation pour la semaine (récolte REPRISE : `creneaux` vient de
+ * REPRISE-COLLECTIVITES 90).
+ * @typedef {{ count: number, creneaux: number, full: { start: Date, end: Date } | null }}
+ *   ResumeDeSemaine
+ */
+
+/**
  * La semaine de chaque installation de la Ville, pour sa carte (design P4, « Cette semaine :
  * 9 seances · complet jeu. 18:00 – 19:30 ») : UNE lecture du planning par installation, sous
  * la meme clef que le planning plein ecran (le cache est partage). Le taux reste au lot C5.
@@ -196,7 +203,7 @@ export const useRestoreSeasonSlot = () => useGesteCreneau(
  * MOMENT complet. Avant : les blocs du planning, creneaux compris (T13 : 14 contre 10).
  * @param {any[]} installations - Les installations (documentId, maxSlots).
  * @param {string | null} [collectiviteId] - La Ville (sa lecture « Chiffres » de la semaine).
- * @returns {Record<string, { count: number, full: { start: Date, end: Date } | null }>} Par
+ * @returns {Record<string, ResumeDeSemaine>} Par
  *   documentId ; une installation encore en lecture n y figure pas.
  */
 export const useInstallationsWeekSummary = (installations, collectiviteId = null) => {
@@ -213,7 +220,7 @@ export const useInstallationsWeekSummary = (installations, collectiviteId = null
     })),
   });
   const chiffres = useCollectiviteChiffres(lignes.length ? collectiviteId : null, 'semaine');
-  /** @type {Record<string, { count: number, full: { start: Date, end: Date } | null }>} */
+  /** @type {Record<string, ResumeDeSemaine>} */
   const resumes = {};
   lignes.forEach((installation, index) => {
     const reponse = lectures[index]?.data;

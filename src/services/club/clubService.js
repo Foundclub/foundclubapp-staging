@@ -1040,7 +1040,7 @@ export const createSelfOnboardClub = async (payload) => {
     // 409 : doublon suspecté → on renvoie les suggestions au tunnel (choix explicite).
     // REPRISE-TEXTES : sur le site, le client rejette directement `{ status, message, details }`
     // du serveur, sans `response` ; on lit les deux formes.
-    const status = error?.response?.status ?? error?.status;
+    const status = error?.response?.status ?? (/** @type {any} */ (error))?.status;
     const details = error?.response?.data?.error?.details ?? (/** @type {any} */ (error))?.details;
     if (status === 409 && details?.code === 'CLUB_DUPLICATE_SUSPECTED') {
       return {

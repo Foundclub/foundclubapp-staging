@@ -36,7 +36,7 @@ export const getActivities = async (params = {}) => {
     });
     // REPRISE-DONNEES p110 — le serveur trie sur les octets (« Échecs » après « Yoga ») : on rend
     // les populaires d'abord, puis de A à Z, sauf si l'appelant a demandé son propre tri.
-    return params.sort
+    return (/** @type {any} */ (params)).sort
       ? validationResult.data
       : [...validationResult.data].sort(comparerLesSports);
   } catch (error) {

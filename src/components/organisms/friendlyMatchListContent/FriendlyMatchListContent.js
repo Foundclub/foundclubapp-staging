@@ -288,7 +288,7 @@ function FriendlyMatchListContent({
     SharePlatform.share({
       message: `${t('friendlyMatch.adCard.accessibilityLabelPrefix', 'Match amical')} : ${url}`,
       url,
-    }).then((resultat) => {
+    }).then((/** @type {any} */ resultat) => {
       if (resultat?.action !== 'copie') return;
       setLienCopieId(targetAdId);
       const oublier = () => setLienCopieId((courant) => (courant === targetAdId ? null : courant));
