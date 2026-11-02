@@ -98,6 +98,7 @@ import {
 } from '@/utils/clubCertification';
 import { lireLeMomentCourt } from '@/utils/date';
 import { getEntityDocumentId } from '@/utils/entityId';
+import { confirmerDansLApp, demanderDansLApp } from '@/utils/fenetreDeLApp';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import getImageUrl from '@/utils/imageUrl';
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
@@ -877,9 +878,10 @@ function EventDetails({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['planning'] });
     },
   });
-  const annulerLaSeanceFermee = useCallback(() => {
+  // REPRISE-ROBUSTESSE : confirmations et question dans la fenêtre de l'app (plus de boîte grise).
+  const annulerLaSeanceFermee = useCallback(async () => {
     if (!eventId || typeof window?.confirm !== 'function') return;
-    const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
+    const ok = await confirmerDansLApp(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
       'eventDetails.modals.cancelEvent.description',
     )}`);
     if (ok) annulerSeanceFermee.mutate({ documentId: eventId });
@@ -922,14 +924,14 @@ function EventDetails({ navigation, route }) {
       navigation.goBack();
     },
   });
-  const annulerLEvenement = useCallback(() => {
+  const annulerLEvenement = useCallback(async () => {
     if (!eventId) return;
     if (event?.recurrenceGroupId) {
       setFeuilleAnnulationSerie(true);
       return;
     }
     if (typeof window?.confirm !== 'function') return;
-    const ok = window.confirm(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
+    const ok = await confirmerDansLApp(`${t('eventDetails.modals.cancelEvent.title')}\n\n${t(
       'eventDetails.modals.cancelEvent.description',
     )}`);
     if (ok) annulerEvenement.mutate({ documentId: eventId });
@@ -1708,9 +1710,9 @@ function EventDetails({ navigation, route }) {
       ));
     },
   });
-  const handleReportEvent = useCallback(() => {
+  const handleReportEvent = useCallback(async () => {
     if (!eventId || reportEventMutation.isPending) return;
-    const reason = String(window.prompt(t(
+    const reason = String(await demanderDansLApp(t(
       'eventDetails.modals.reportEvent.description',
       'Merci de nous indiquer la raison pour laquelle tu signales cet événement.',
     )) || '').trim();

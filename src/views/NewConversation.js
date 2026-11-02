@@ -843,6 +843,10 @@ function NewConversation({ navigation, route }) {
               </View>
             </TouchableOpacity>
             <TextInput
+              accessibilityLabel={t(
+                'newConversation.groupNamePlaceholder',
+                'Nom du groupe (facultatif)',
+              )}
               autoFocus
               maxLength={40}
               onChangeText={setNomDuGroupe}
@@ -931,6 +935,7 @@ function NewConversation({ navigation, route }) {
                     ...SANS_ECHAPPEMENT,
                     name: nomComplet(personne),
                   })}
+                  accessibilityRole="button"
                   key={id}
                   onPress={() => toggleSelection(/** @type {User} */ (personne))}
                   style={stylesDuChoix.tuile}
@@ -999,6 +1004,9 @@ function NewConversation({ navigation, route }) {
             style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral300]}
           />
           <TextInput
+            accessibilityLabel={modeVille
+              ? t('newConversation.ville.chercher', 'Chercher un nom dans les clubs de la Ville…')
+              : t('messaging.searchUserPlaceholder', 'Rechercher un membre...')}
             onChangeText={setSearchQuery}
             placeholder={modeVille
               ? t('newConversation.ville.chercher', 'Chercher un nom dans les clubs de la Ville…')
@@ -1072,6 +1080,7 @@ function NewConversation({ navigation, route }) {
                 ...SANS_ECHAPPEMENT,
                 name: nomComplet(personne),
               })}
+              accessibilityRole="button"
               onPress={() => toggleSelection(/** @type {User} */ (personne))}
               style={stylesDuChoix.choisi}
               testID={`selection-retirer-${getUserIdentifier(personne)}`}

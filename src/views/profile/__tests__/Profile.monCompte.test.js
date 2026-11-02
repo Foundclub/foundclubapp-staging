@@ -289,11 +289,13 @@ describe('E6 — « Mon compte » : ce qui ne bouge pas', () => {
 describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandonne', () => {
   // CARTECODE Q1 C : « Confidentialité » (compte privé) suit « Personnes bloquées ».
   const COMPTE = ['Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Nous contacter'];
+  // REPRISE-ROBUSTESSE 55 (01/11) : le lien « Supprimer mon compte », sous la liste, est un vrai
+  // bouton ; il ferme donc chaque liste.
 
   it.each([
     ['player', [
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
-      'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion',
+      'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
     // TUTOE (27/10) : le guide Entraîneur se relance d'ici (règle 7 du pack).
     ['coach', [
@@ -301,25 +303,25 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
       'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
       'Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Guide entraîneur·e',
-      'Nous contacter', 'Déconnexion',
+      'Nous contacter', 'Déconnexion', 'Supprimer mon compte',
     ]],
     ['president', [
       'Voir le détail des offres',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
-      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion',
+      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
     ['superAdmin', [
       'Voir le détail des offres',
       'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Historique sportif',
       'Mes enfants', 'Gérer mes alertes', ...COMPTE,
-      'Dashboard admin classique', 'Dashboard League', 'Déconnexion',
+      'Dashboard admin classique', 'Dashboard League', 'Déconnexion', 'Supprimer mon compte',
     ]],
     // Le parent n'avait ni l'une ni l'autre sur l'accueil (P0) : rien ne change pour lui.
     // PAR-L7 (13/10, design parent E02, D1 A) — SA FAMILLE D'ABORD : « Mes enfants » ouvre la
     // section, puis son profil, ses alertes, et sa carte de collection en dernier (planche 1).
     ['parent', [
       'Mes enfants', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
-      'Ma carte de collection', ...COMPTE, 'Déconnexion',
+      'Ma carte de collection', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
   ])('%s', (role, attendu) => {
     const { arbre } = monter(/** @type {any} */ (role));

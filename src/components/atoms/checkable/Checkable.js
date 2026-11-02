@@ -74,6 +74,7 @@ function Checkable({
     // `accessibilityState` a partir de ses propres props et l'injecte par
     // cloneElement, ce qui ecraserait un accessibilityState pose sur l'enfant.
     <TouchableWithoutFeedback
+      accessibilityLabel={text || undefined}
       accessibilityRole={type === 'square' ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: Boolean(isChecked), disabled: !canBePressed }}
       onPress={() => {
@@ -112,13 +113,16 @@ function Checkable({
           {text}
         </Text>
         )}
+        {/* REPRISE-ROBUSTESSE 55 : la coche n'est qu'un dessin ; la case, c'est la ligne. */}
         <BouncyCheckbox
+          aria-hidden
           bounceEffectIn={disableBounceAnimation ? 1 : undefined}
           bounceEffectOut={disableBounceAnimation ? 1 : undefined}
           bounceVelocityIn={disableBounceAnimation ? 0 : undefined}
           bounceVelocityOut={disableBounceAnimation ? 0 : undefined}
           disableText
           fillColor={customFillColor || (type === 'circle' ? Colors.neutral00 : 'transparent')}
+          focusable={false}
           iconComponent={(isChecked || type === 'circle') ? iconComponent : null}
           innerIconStyle={{
             borderColor: isChecked ? Colors.primary500 : Colors.neutral00,

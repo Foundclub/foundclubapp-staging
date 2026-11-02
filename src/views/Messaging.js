@@ -1140,6 +1140,7 @@ function Messaging({ navigation, route }) {
           >
             <TouchableOpacity
               accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
+              accessibilityRole="button"
               activeOpacity={0.85}
               onPress={() => navigation.navigate(RouteNames.NewConversation, {
                 chatScope: chatScopeFilter,

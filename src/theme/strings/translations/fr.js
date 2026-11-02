@@ -23914,6 +23914,8 @@ export default {
     a11y: {
       addTrainer: 'Ajouter un entraîneur',
       invitePlayers: 'Inviter des joueurs',
+      removePlayer: 'Retirer le joueur {{name}}',
+      removeTrainer: 'Retirer l’entraîneur {{name}}',
     },
     actions: {
       contactTeam: 'Contacter',
