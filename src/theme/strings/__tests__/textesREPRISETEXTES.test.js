@@ -84,3 +84,17 @@ test('🔴 aucun « (s) » écrit en dur dans les écrans d’événements corri
   });
   expect(fautes).toEqual([]);
 });
+
+test('🔴 point 47 : les deux tuiles d’entraînement de l’accueil ne portent plus le même nom', () => {
+  // Sans programme suivi, « training-mine » et « training-find » s'appelaient toutes deux
+  // « Choisir un entraînement » : deux portes au même nom, on ne savait pas laquelle prendre.
+  [fr, en].forEach((dict) => {
+    const mine = valeur(dict, 'training.home.myCard.emptyTitle');
+    const find = valeur(dict, 'training.home.findCard.title');
+    expect(typeof mine).toBe('string');
+    expect(typeof find).toBe('string');
+    expect(mine).not.toBe(find);
+  });
+  expect(valeur(fr, 'training.home.myCard.emptyTitle')).toBe('Commencer mon entraînement');
+  expect(valeur(fr, 'training.home.findCard.title')).toBe('Voir les programmes');
+});

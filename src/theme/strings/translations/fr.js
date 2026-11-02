@@ -25961,7 +25961,7 @@ export default {
       countdown_other: 'dans {{count}} jours',
       findCard: {
         subtitle: 'Les programmes publiés',
-        title: 'Choisir un entraînement',
+        title: 'Voir les programmes',
       },
       logbookCard: {
         subtitle: 'Toutes tes mesures, prêtes à coller.',
@@ -25970,7 +25970,7 @@ export default {
       myCard: {
         emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, '
           + 'sur plusieurs journées.',
-        emptyTitle: 'Choisir un entraînement',
+        emptyTitle: 'Commencer mon entraînement',
         // Le lieu et la durée viennent du serveur ; le compte de préparatifs n'apparaît
         // que si la journée en porte, sinon la phrase se coupe d'elle-même.
         subtitle: '{{day}} · {{place}} · {{duration}} min',

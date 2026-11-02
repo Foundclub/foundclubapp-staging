@@ -24857,7 +24857,7 @@ export default {
       countdown_other: 'in {{count}} days',
       findCard: {
         subtitle: 'Published programmes',
-        title: 'Choose a training programme',
+        title: 'Browse programmes',
       },
       logbookCard: {
         subtitle: 'All your measurements, ready to paste.',
@@ -24865,7 +24865,7 @@ export default {
       },
       myCard: {
         emptySubtitle: 'A set of athletic tests, with a partner, over several days.',
-        emptyTitle: 'Choose a training programme',
+        emptyTitle: 'Start my training',
         subtitle: '{{day}} · {{place}} · {{duration}} min',
         title: '{{program}} — {{day}} {{countdown}}',
         today: 'today',
