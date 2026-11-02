@@ -1,6 +1,8 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { buildWebPath } from '@/navigation/webRoutes';
+
 import NotificationDetails from '../NotificationDetails';
 
 /**
@@ -179,7 +181,8 @@ describe('FIN-MESSAGERIE p48 — « sera présent » mène au planning', () => {
 
     act(() => { bouton.props.onPress(); });
 
-    expect(mockNavigate).toHaveBeenCalledWith('MyEventList');
+    expect(mockNavigate).toHaveBeenCalledWith('HomeTab', { screen: 'MyEventList' }, { pop: true });
+    expect(buildWebPath('HomeTab', { screen: 'MyEventList' })).toBe('/events/mine');
   });
 
   test('une autre notification n a ni bloc « Réservation » ni bouton vers le planning', () => {

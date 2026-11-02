@@ -311,7 +311,12 @@ function NotificationDetails() {
       {estUneReservation ? (
         <View style={[Spaces.marginTop[16]]}>
           <Button
-            onPress={() => navigation.navigate(RouteNames.MyEventList)}
+            // Un onglet : depuis la racine, il se nomme par `HomeTab` (filet allerDansLOnglet).
+            onPress={() => navigation.navigate(
+              RouteNames.HomeTab,
+              { screen: RouteNames.MyEventList },
+              { pop: true },
+            )}
             title={t('notifications.details.viewPlanning', 'Voir mon planning')}
             variant="Secondary"
           />
