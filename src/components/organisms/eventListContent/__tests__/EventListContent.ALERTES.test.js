@@ -1162,13 +1162,19 @@ describe('PAR-L10 — E22 : la feuille ouverte pour créer une alerte', () => {
     mockClient.post.mockRejectedValueOnce(REFUS_DE_DROIT);
     const tree = await ouvrirLaFeuilleDeCreation();
     await choisirLaVille(tree, MONTRIVAGE);
+    const rayon = tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'rayon')[0];
+    await act(async () => { rayon.props.onValueChange(31); });
 
     await appuyerSur(tree, 'Créer cette alerte');
 
     const texte = texteVisible(tree);
     expect(texte).toContain('L\'alerte n\'a pas été créée.');
     expect(texte).toContain('Ton compte ne peut pas encore créer d\'alerte.');
-    expect(texte).toContain('Montrivage · 20 km');
+    // FIN-EVENEMENTS p134 : plus de résumé « Montrivage · 31 km », le champ remplace la rangée.
+    // Ce champ est doublé ici : autocompleteAddressInput.test.js prouve qu'il montre la ville.
+    const champ = tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'adresse')[0];
+    expect(champ.props.address).toEqual(MONTRIVAGE);
+    expect(texte).toContain('Dans un rayon autour de : 31 km');
     expect(texte).not.toContain('Alerte créée');
     expect(appelsFiltres()).toEqual([]);
 
@@ -1176,6 +1182,7 @@ describe('PAR-L10 — E22 : la feuille ouverte pour créer une alerte', () => {
 
     expect(mockClient.post).toHaveBeenCalledTimes(2);
     expect(mockClient.post.mock.calls[1][1].data.filters.city).toEqual(MONTRIVAGE);
+    expect(mockClient.post.mock.calls[1][1].data.filters.radius).toBe(31);
     expect(mockRetour.showBanner).toHaveBeenLastCalledWith(expect.objectContaining({
       title: 'Alerte créée',
     }));
