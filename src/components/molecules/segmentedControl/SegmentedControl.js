@@ -187,6 +187,9 @@ function SegmentedControl({
       minWidth: 0,
     },
     segmentFitEqualWidth: {
+      // FIN-PLACE (02/11/2026) : le site ne sait pas retrecir un texte (`adjustsFontSizeToFit`) :
+      // chaque segment y part de la largeur de son libelle, le reste de la rangee se partage.
+      ...(isWeb ? { flexBasis: 'auto' } : null),
       paddingHorizontal: segmentFitHorizontalPadding,
     },
     // RESA-BASCULE : la position inerte de la planche RB-3 (`.pos.inerte`, opacite 0,5).

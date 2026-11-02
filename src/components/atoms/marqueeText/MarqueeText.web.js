@@ -111,6 +111,9 @@ const styles = StyleSheet.create({
     // place (flex, marges), `style` porte la police. Sans `flexShrink`, un nom
     // long pousserait la pastille de certification hors de la carte.
     flexShrink: 1,
+    // FIN-PLACE (02/11/2026) : dans une colonne centree, sans ce plafond, l enveloppe prend la
+    // largeur de sa ligne sans retour et la page deborde (222 px a 390, fiche d equipe).
+    maxWidth: '100%',
     overflow: 'hidden',
   },
 });

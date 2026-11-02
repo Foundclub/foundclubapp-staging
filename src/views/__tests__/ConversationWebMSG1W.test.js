@@ -852,6 +852,25 @@ describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
     ]);
   });
 
+  // FIN-PLACE (02/11/2026) — à 1440, « Complexe Test FoundClub » était coupé en « Complexe T… » : la
+  // casquette et la date se partageaient la ligne du nom. La casquette descend sur la 2e ligne.
+  test('FIN-PLACE — la casquette n est pas sur la ligne du nom', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre } = await monter({ espace: 'complexe' });
+    const puces = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.type === 'string' && String(n.props?.['data-testid'] || '').startsWith('MSG1W-casquette-')
+    ));
+    expect(puces).toHaveLength(2);
+    puces.forEach((/** @type {any} */ puce) => {
+      expect(puce.parent.props.style.justifyContent).toBeUndefined();
+    });
+    // Et le nom passe sur 2 lignes : il ne se coupe plus sur une seule.
+    const nom = arbre.root.findAll((/** @type {any} */ n) => (
+      n.type === 'span' && n.props.style?.WebkitLineClamp === 2
+    ));
+    expect(nom.length).toBeGreaterThan(0);
+  });
+
   test('114 — hors de l espace du complexe : aucune étiquette', async () => {
     mockListeIPH09 = LISTE_MELEE;
     const { arbre } = await monter();

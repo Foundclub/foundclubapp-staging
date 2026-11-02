@@ -1287,18 +1287,34 @@ function ColonneDesConversations({
                       justifyContent: 'space-between',
                     }}
                   >
+                    {/* FIN-PLACE (02/11/2026) : un nom long passe sur 2 lignes, au lieu de « Complexe T… ». */}
                     <span
                       style={{
+                        display: '-webkit-box',
                         fontFamily: 'Montserrat-Bold, sans-serif',
                         fontSize: 16,
                         minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 2,
                       }}
                     >
                       {titre}
                     </span>
+                    <span
+                      style={{
+                        color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
+                        flexShrink: 0,
+                        fontFamily: nonLus ? 'Montserrat-Bold, sans-serif' : undefined,
+                        fontSize: 12.5,
+                      }}
+                    >
+                      {dernier ? formatChatTimestamp(dernier.createdAt) : ''}
+                    </span>
+                  </span>
+                  <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
+                    {/* FIN-PLACE (02/11/2026) : sur la ligne du nom, la casquette le coupait (« Complexe T… »). */}
                     {casquette ? (
                       <span
                         data-testid={`MSG1W-casquette-${id}`}
@@ -1316,18 +1332,6 @@ function ColonneDesConversations({
                         {libelleDeCasquette(t, casquette)}
                       </span>
                     ) : null}
-                    <span
-                      style={{
-                        color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
-                        flexShrink: 0,
-                        fontFamily: nonLus ? 'Montserrat-Bold, sans-serif' : undefined,
-                        fontSize: 12.5,
-                      }}
-                    >
-                      {dernier ? formatChatTimestamp(dernier.createdAt) : ''}
-                    </span>
-                  </span>
-                  <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
                     {deMoi ? (
                       <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="checkDouble" size={16} />
                     ) : null}
