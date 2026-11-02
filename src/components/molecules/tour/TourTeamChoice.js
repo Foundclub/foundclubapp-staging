@@ -44,7 +44,7 @@ function TourTeamChoice() {
   const [selectedId, setSelectedId] = useState(/** @type {string | null} */ (null));
 
   const clubId = resolveMyClubDocumentId(userData) || undefined;
-  const clubQuery = /** @type {any} */ (useGetClub(clubId, { enabled: Boolean(clubId) }));
+  const clubQuery = /** @type {any} */ (useGetClub(String(clubId || ''), { enabled: Boolean(clubId) }));
   const isSettled = Boolean(clubQuery.isFetched || clubQuery.isError);
   const teams = useMemo(
     () => (Array.isArray(clubQuery.data?.teams) ? clubQuery.data.teams : []),

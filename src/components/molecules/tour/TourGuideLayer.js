@@ -404,7 +404,7 @@ function TourGuideLayer() {
   // laissait qu'une fente au champ. La place s'efface (TourBubbleSlot), le champ remonte, et la
   // bulle, réduite à sa consigne, se pose sous l'en-tête. Le bas utile s'arrête au clavier.
   const isCompact = Boolean(keyboard && currentStep?.bubbleSlot && !sheetGuide);
-  const isBubbleGiven = !isCompact || compactBubbleFits(keyboard.screenY);
+  const isBubbleGiven = !keyboard || !isCompact || compactBubbleFits(keyboard.screenY);
   // Étape `bubbleSlot` : la bulle se pose dans la place que l'écran lui a gardée
   // sous son titre (tunnel équipe, composition), sinon comme avant.
   const slotRect = currentStep?.bubbleSlot && !sheetGuide && !isCompact ? rects[SLOT_ID] : null;

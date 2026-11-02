@@ -111,7 +111,7 @@ export const isTeamTrainer = (team, user) => {
  */
 export const isOrphanTeam = (team, user) => !isMyTeam(team, user)
   && (Array.isArray(team?.trainers) ? team.trainers : [])
-    .filter((trainer) => !isDeletedAccount(trainer)).length === 0;
+    .filter((/** @type {any} */ trainer) => !isDeletedAccount(trainer)).length === 0;
 
 /**
  * La premiere equipe de la liste que ce compte entraine (guide TUTOE :
