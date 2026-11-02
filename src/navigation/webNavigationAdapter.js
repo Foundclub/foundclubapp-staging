@@ -193,7 +193,7 @@ export const createWebNavigationAdapter = ({
       }
       replace(buildWebPath(routeName, nextParams), carryParams(routeName, nextParams));
     },
-    reset: (resetState = {}) => {
+    reset: (/** @type {{ index?: number, routes?: any[] }} */ resetState = {}) => {
       const resetTarget = resolveResetTarget(resetState);
       if (!resetTarget) {
         return;
