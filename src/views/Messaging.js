@@ -195,6 +195,7 @@ function Messaging({ navigation, route }) {
   // FIN-PLACE (02/11/2026, D-COACH-11) : sur le site, le bouton monte dans la ligne du titre ; en
   // flottant, il couvrait les « ⋮ » et les dates des lignes, dès l'arrivée sur la page.
   const boutonQuiFlotte = canCreateConversation && !isWeb;
+  const libelleNouvelleConversation = t('messaging.newConversation', 'Nouvelle conversation');
   const ouvrirNouvelleConversation = () => navigation.navigate(RouteNames.NewConversation, {
     chatScope: chatScopeFilter,
     ...(espaceVille ? { collectiviteId: villeId, espace: 'ville' } : {}),
@@ -1109,7 +1110,7 @@ function Messaging({ navigation, route }) {
                         </Text>
                         {canCreateConversation && !boutonQuiFlotte ? (
                           <TouchableOpacity
-                            accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
+                            accessibilityLabel={libelleNouvelleConversation}
                             accessibilityRole="button"
                             activeOpacity={0.85}
                             onPress={ouvrirNouvelleConversation}

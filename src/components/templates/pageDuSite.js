@@ -28,7 +28,8 @@ const poser = (suivante) => {
   abonnes.forEach((prevenir) => prevenir());
 };
 
-// FIN-PLACE (02/11/2026, décision d'Adel « 1- C ») — le dernier vrai onglet allumé : la fiche du club
+// FIN-PLACE (02/11/2026, décision d'Adel « 1- C ») — le dernier vrai onglet allumé : la fiche du
+// club
 // d'un autre garde celui d'où vient la personne. En mémoire : adresse tapée, lien direct ou page
 // rechargée repartent de rien, donc aucun onglet.
 // ponytail: un écran sans onglet traversé en chemin (profil) ne compte pas ; pour remonter toute

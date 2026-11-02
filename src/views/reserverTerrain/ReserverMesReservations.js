@@ -420,9 +420,12 @@ function ReserverMesReservations() {
         >
           {enTete}
           <View style={[Alignments.fill, Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
-            {/* FIN-PLACE (02/11/2026) : sans volet à droite, la liste (et son écran vide) prend la page. */}
+            {/* FIN-PLACE (02/11/2026) : sans volet à droite, la liste (et son écran vide) prend
+               la page. */}
             <View
-              style={{ gap: 16, paddingBottom: 24, width: ficheDuVolet ? LISTE_ORDINATEUR : '100%' }}
+              style={{
+                gap: 16, paddingBottom: 24, width: ficheDuVolet ? LISTE_ORDINATEUR : '100%',
+              }}
               testID="mes-reservations-liste"
             >
               {puces}

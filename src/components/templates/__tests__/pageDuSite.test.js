@@ -35,10 +35,11 @@ describe('REPRISE-PLACE — la page du site (titre de la barre, onglet allumé)'
   });
 });
 
-// FIN-PLACE (02/11, décision d'Adel « 1- C ») — sur la fiche du club d'un autre, l'onglet allumé est
+// FIN-PLACE (02/11, décision d'Adel « 1- C ») — sur la fiche du club d'un autre, l'onglet allumé
+// est
 // celui d'où vient la personne ; adresse tapée ou lien direct : aucun.
 describe('FIN-PLACE — l’onglet d’où vient la personne', () => {
-  test('sans page visitée : aucun ; ensuite, le dernier vrai onglet, jamais « utility » ni la League', () => {
+  test('sans page visitée : aucun ; ensuite, le dernier vrai onglet du club', () => {
     expect(lireOngletDOrigine()).toBeNull();
     noterOngletAllume('main-planning');
     expect(lireOngletDOrigine()).toBe('main-planning');

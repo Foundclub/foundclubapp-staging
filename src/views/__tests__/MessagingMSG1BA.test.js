@@ -478,9 +478,11 @@ describe('CORR-MESSAGERIE 100b — la marge du bas de la liste ne recompte pas l
   const margeDuBas = () => mockListProps[mockListProps.length - 1]
     ?.contentContainerStyle?.paddingBottom;
 
-  // FIN-PLACE (02/11, D-COACH-11, décision plus récente que ce témoin) : sur le site, le bouton monte
-  // dans la ligne du titre : il n'y a plus de place à lui garder, et toujours pas de barre à recompter.
-  test('site, la coque réserve la barre et le bouton ne flotte plus : aucune marge en plus', async () => {
+  // FIN-PLACE (02/11, D-COACH-11, décision plus récente que ce témoin) : sur le site, le bouton
+  // monte
+  // dans la ligne du titre : il n'y a plus de place à lui garder, et toujours pas de barre à
+  // recompter.
+  test('site, le bouton ne flotte plus : aucune marge en plus', async () => {
     Platform.OS = 'web';
     mockDock = { dockClearance: 0, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
     await monter({ collectiviteId: 'ville-1', espace: 'ville' });

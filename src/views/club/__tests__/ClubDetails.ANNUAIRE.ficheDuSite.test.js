@@ -661,7 +661,9 @@ describe('FIN-PLACE — l écusson est dans la carte du club', () => {
   it('la rangée d une équipe rétrécit : son chevron reste dans la carte', () => {
     mockClubQuery.data = { ...CLUB_SANS_EQUIPE, teams: [{ documentId: 't-1', name: 'U13 A' }] };
     const racine = monter().root;
-    const chevron = racine.findAll((/** @type {any} */ n) => n.type === Text && n.props.children === '›')[0];
+    const chevron = racine.findAll((/** @type {any} */ n) => (
+      n.type === Text && n.props.children === '›'
+    ))[0];
     const rangee = chevron.parent.findAllByType(View)[0];
     expect(StyleSheet.flatten(rangee.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
   });

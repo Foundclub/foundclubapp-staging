@@ -1244,7 +1244,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     flexShrink: 1,
-    // FIN-PLACE (02/11/2026) : deux pastilles côte à côte se coupaient (« DÉTECTION / E… », « LI… »).
+    // FIN-PLACE (02/11/2026) : deux pastilles côte à côte se coupaient (« DÉTECTION / E… », « LI…
+    // »).
     flexWrap: 'wrap',
     gap: 8,
   },

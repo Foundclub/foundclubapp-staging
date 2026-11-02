@@ -1357,7 +1357,10 @@ function ClubDetails({ navigation, route }) {
   // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Le club d'un autre
   // garde l'onglet d'où l'on vient, aucun sans origine connue (FIN-PLACE, Adel « 1- C »). Le
   // téléphone ne lit pas ce magasin.
-  useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : lireOngletDOrigine(), titre: club?.name || null });
+  useDeclarerPageDuSite({
+    onglet: isMember ? 'main-team' : lireOngletDOrigine(),
+    titre: club?.name || null,
+  });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
   // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
@@ -4121,8 +4124,16 @@ function ClubDetails({ navigation, route }) {
                             Spaces.padding[8],
                             Spaces.gap[16]]}
                         >
-                          {/* FIN-PLACE (02/11/2026) : sans plancher à 0, une ligne longue poussait le chevron hors de l'écran (9 px à 390). */}
-                          <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 1, minWidth: 0 }]}>
+                          {/* FIN-PLACE (02/11/2026) : sans plancher à 0, une ligne longue
+                             poussait le chevron hors de l'écran (9 px à 390). */}
+                          <View
+                            style={[
+                              Alignments.row,
+                              Spaces.gap[16],
+                              Alignments.alignCenter,
+                              { flex: 1, minWidth: 0 },
+                            ]}
+                          >
                             <ClubLogoMark
                               club={team?.club || club}
                               isNeutral

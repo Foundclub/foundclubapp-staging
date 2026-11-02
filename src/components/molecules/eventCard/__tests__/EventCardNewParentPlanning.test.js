@@ -136,7 +136,8 @@ describe('PARENT-PLANNING / 3 — la carte d un evenement de l enfant', () => {
   });
 });
 
-// FIN-PLACE (02/11/2026, contre-recette parent) — « DÉTECTION / E… » et « LI… » : deux pastilles qui
+// FIN-PLACE (02/11/2026, contre-recette parent) — « DÉTECTION / E… » et « LI… » : deux pastilles
+// qui
 // se partageaient la place à côté de la date, coupées toutes les deux. La rangée passe à la ligne.
 describe('FIN-PLACE — les pastilles de la carte ne se coupent pas', () => {
   test('la rangée des pastilles passe à la ligne', () => {

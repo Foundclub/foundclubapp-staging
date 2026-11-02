@@ -263,7 +263,8 @@ describe('E-P10 — sur ordinateur (OR3, gabarit A) : la liste à gauche, la fic
 });
 
 // FIN-PLACE (02/11/2026) — à 1440, « Aucune réservation à venir » était centré dans la colonne de
-// la liste (à gauche), alors qu'aucun volet n'occupe la droite : sans volet, la colonne prend la page.
+// la liste (à gauche), alors qu'aucun volet n'occupe la droite : sans volet, la colonne prend la
+// page.
 describe('FIN-PLACE — sur ordinateur, sans réservation, la liste prend toute la page', () => {
   const largeurDeLaListe = (/** @type {any} */ arbre) => (
     arbre.root.findByProps({ testID: 'mes-reservations-liste' }).props.style.width

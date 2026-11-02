@@ -1287,7 +1287,8 @@ function ColonneDesConversations({
                       justifyContent: 'space-between',
                     }}
                   >
-                    {/* FIN-PLACE (02/11/2026) : un nom long passe sur 2 lignes, au lieu de « Complexe T… ». */}
+                    {/* FIN-PLACE (02/11/2026) : un nom long passe sur 2 lignes, au lieu de «
+                       Complexe T… ». */}
                     <span
                       style={{
                         display: '-webkit-box',
@@ -1314,7 +1315,8 @@ function ColonneDesConversations({
                     </span>
                   </span>
                   <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
-                    {/* FIN-PLACE (02/11/2026) : sur la ligne du nom, la casquette le coupait (« Complexe T… »). */}
+                    {/* FIN-PLACE (02/11/2026) : sur la ligne du nom, la casquette le coupait («
+                       Complexe T… »). */}
                     {casquette ? (
                       <span
                         data-testid={`MSG1W-casquette-${id}`}

@@ -852,13 +852,15 @@ describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
     ]);
   });
 
-  // FIN-PLACE (02/11/2026) — à 1440, « Complexe Test FoundClub » était coupé en « Complexe T… » : la
+  // FIN-PLACE (02/11/2026) — à 1440, « Complexe Test FoundClub » était coupé en « Complexe T… » :
+  // la
   // casquette et la date se partageaient la ligne du nom. La casquette descend sur la 2e ligne.
   test('FIN-PLACE — la casquette n est pas sur la ligne du nom', async () => {
     mockListeIPH09 = LISTE_MELEE;
     const { arbre } = await monter({ espace: 'complexe' });
     const puces = arbre.root.findAll((/** @type {any} */ n) => (
-      typeof n.type === 'string' && String(n.props?.['data-testid'] || '').startsWith('MSG1W-casquette-')
+      typeof n.type === 'string'
+      && String(n.props?.['data-testid'] || '').startsWith('MSG1W-casquette-')
     ));
     expect(puces).toHaveLength(2);
     puces.forEach((/** @type {any} */ puce) => {
