@@ -174,6 +174,27 @@ describe('DATESDABORD — le bloc « Date et horaire » partagé', () => {
     expect(appels.repetition).toEqual([null]);
   });
 
+  test('🐞 RET-PLANNING fiche 19 : la case « Sauf créneaux ponctuels » dans « Répéter »', () => {
+    const onBasculer = jest.fn();
+    monter({
+      ponctuels: { actif: false, onBasculer, testID: 'case-ponctuels' },
+      repetition: {
+        actif: true,
+        au: new Date(2026, 11, 15),
+        du: MARDI,
+        frequence: 'week',
+        intervalleTexte: '1',
+        jours: [2],
+      },
+    });
+    act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());
+    act(() => arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'case-ponctuels'
+      && typeof n.props.onPress === 'function')[0].props.onPress());
+
+    expect(onBasculer).toHaveBeenCalledTimes(1);
+    expect(textesRendus()).toContain('Sauf créneaux ponctuels');
+  });
+
   test('le titre de la feuille se règle (« Répéter le créneau » à la Ville)', () => {
     monter({ titreRepeter: 'Répéter le créneau' });
     act(() => arbre.root.findByProps({ testID: 'date-et-horaire-repeter' }).props.onPress());

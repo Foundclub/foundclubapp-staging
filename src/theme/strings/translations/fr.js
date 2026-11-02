@@ -6562,6 +6562,10 @@ export default {
       periode: 'Une période',
       periodeDetail: 'Chaque {{jour}}, du … au …',
       phraseCompacte: '{{quand}} ({{seances}}). Le club est prévenu.',
+      ponctuels: {
+        case: 'Sauf créneaux ponctuels',
+        detail: 'Les dates déjà prises par un ponctuel sautent, et le club est prévenu.',
+      },
       premiereDate: 'Première date',
       prochaines: 'Prochaines dates : {{dates}}',
       recap: 'Quand',

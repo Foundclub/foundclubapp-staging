@@ -6001,6 +6001,10 @@ export default {
       periode: 'A period',
       periodeDetail: 'Every {{jour}}, from … to …',
       phraseCompacte: '{{quand}} ({{seances}}). The club is notified.',
+      ponctuels: {
+        case: 'Except one-off slots',
+        detail: 'Dates already taken by a one-off slot are skipped, and the club is told.',
+      },
       premiereDate: 'First date',
       prochaines: 'Next dates: {{dates}}',
       recap: 'When',

@@ -612,6 +612,8 @@ function SeasonSlotForm({
   // (décochées : un stage pendant les vacances ; `null` = pas touchées) ; la liste des dates
   // retirées, dépliée.
   const [saufVacances, setSaufVacances] = useState(slot?.exceptHolidays === true);
+  // RET-PLANNING fiche 19 — « Sauf créneaux ponctuels » : une série seulement.
+  const [saufPonctuels, setSaufPonctuels] = useState(slot?.exceptPunctual === true);
   const [vacancesGardees, setVacancesGardees] = useState(/** @type {string[] | null} */ (null));
   const [vacancesDepliees, setVacancesDepliees] = useState(false);
   const quand = {
@@ -731,6 +733,7 @@ function SeasonSlotForm({
       ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
       ...formeDeLApercu,
       ...(saufVacances ? { exceptHolidays: '1' } : {}),
+      ...(saufPonctuels && formeChoisie !== 'dates' ? { exceptPunctual: '1' } : {}),
       ...(saufVacances && vacancesGardees?.length
         ? { keepHolidays: vacancesGardees.join(',') }
         : {}),
@@ -944,6 +947,7 @@ function SeasonSlotForm({
     const champs = {};
     if (saufVacances !== avant) champs.exceptHolidays = saufVacances;
     if (saufVacances && vacancesGardees !== null) champs.keepHolidays = vacancesGardees;
+    if (saufPonctuels !== (slot?.exceptPunctual === true)) champs.exceptPunctual = saufPonctuels;
     return champs;
   };
 
@@ -987,6 +991,7 @@ function SeasonSlotForm({
             ...corpsDuQuand(quand),
             // R17-QUAND-2 — « Sauf vacances scolaires », et les périodes gardées.
             ...(avecVacances ? { exceptHolidays: true } : {}),
+            ...(saufPonctuels && formeChoisie !== 'dates' ? { exceptPunctual: true } : {}),
             ...(avecVacances && gardees.length ? { keepHolidays: gardees } : {}),
             ...(equipe ? { team: equipe } : {}),
             ...(plateau ? { plateau } : {}),
@@ -1966,6 +1971,14 @@ function SeasonSlotForm({
           pleines={heuresPleines}
           repetition={repetitionDuModele}
           titreRepeter={t('collectiviteCreneaux.quand.repeterLeCreneau', 'Répéter le créneau')}
+          ponctuels={{
+            actif: saufPonctuels,
+            onBasculer: () => {
+              setSaufPonctuels((avant) => !avant);
+              toucherLaSaisie();
+            },
+            testID: 'quand-sauf-ponctuels',
+          }}
           // DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case R17-QUAND-2,
           // dans « Répéter » (le même modèle que l'événement).
           vacances={vacances ? {
@@ -2225,6 +2238,42 @@ function SeasonSlotForm({
                   {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{zoneDesVacances}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+          {/* RET-PLANNING fiche 19 : une série seulement, à côté de « Sauf vacances ». */}
+          {formeChoisie !== 'dates' && !avecLeModele ? (
+            <TouchableOpacity
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: saufPonctuels }}
+              onPress={() => {
+                setSaufPonctuels((avant) => !avant);
+                toucherLaSaisie();
+              }}
+              style={[Alignments.row, {
+                alignItems: 'flex-start',
+                backgroundColor: withAlpha(Colors.primary500, 0.08),
+                borderColor: Colors.primary500,
+                borderRadius: 12,
+                borderWidth: 1,
+                gap: 12,
+                minHeight: 48,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }]}
+              testID="quand-sauf-ponctuels"
+            >
+              {coche(saufPonctuels)}
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('collectiviteCreneaux.quand.ponctuels.case', 'Sauf créneaux ponctuels')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'collectiviteCreneaux.quand.ponctuels.detail',
+                    'Les dates déjà prises par un ponctuel sautent, et le club est prévenu.',
+                  )}
+                </Text>
               </View>
             </TouchableOpacity>
           ) : null}

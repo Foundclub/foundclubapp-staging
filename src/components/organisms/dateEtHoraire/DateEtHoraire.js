@@ -223,6 +223,7 @@ export const buildRecurrenceIntervalLabel = (t, frequency, interval) => {
  *   repetition?: Repetition | null,
  *   sansRepetition?: boolean,
  *   titreRepeter?: string | null,
+ *   ponctuels?: { actif: boolean, onBasculer: () => void, testID?: string } | null,
  *   vacances?: { actif: boolean, onBasculer: () => void, testID?: string, zone: string } | null,
  *   sousLaDate?: import('react').ReactNode,
  *   sousLesHeures?: import('react').ReactNode,
@@ -260,6 +261,7 @@ function DateEtHoraire({
   sousLaDate = null,
   sousLesHeures = null,
   testIDDate = undefined,
+  ponctuels = null,
   titreRepeter = null,
   vacances = null,
   webZIndex = undefined,
@@ -643,6 +645,52 @@ function DateEtHoraire({
                     {t('collectiviteCreneaux.quand.vacances.case', 'Sauf vacances scolaires')}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>{vacances.zone}</Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
+            {/* RET-PLANNING fiche 19 : à côté de « Sauf vacances scolaires ». */}
+            {isRecurrent && ponctuels ? (
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: ponctuels.actif }}
+                onPress={ponctuels.onBasculer}
+                style={[Alignments.row, {
+                  alignItems: 'center',
+                  backgroundColor: withAlpha(Colors.primary500, 0.08),
+                  borderColor: ponctuels.actif ? Colors.primary500 : chipBorder,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  gap: 12,
+                  minHeight: 48,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                }]}
+                testID={ponctuels.testID || 'date-et-horaire-sauf-ponctuels'}
+              >
+                <View
+                  style={[Alignments.center, {
+                    backgroundColor: ponctuels.actif ? Colors.primary500 : 'transparent',
+                    borderColor: ponctuels.actif ? Colors.primary500 : Colors.primary200,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    height: 24,
+                    width: 24,
+                  }]}
+                >
+                  {ponctuels.actif ? (
+                    <SvgIcon color={Colors.primary900} height={14} name="check" width={14} />
+                  ) : null}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {t('collectiviteCreneaux.quand.ponctuels.case', 'Sauf créneaux ponctuels')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'collectiviteCreneaux.quand.ponctuels.detail',
+                      'Les dates déjà prises par un ponctuel sautent, et le club est prévenu.',
+                    )}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ) : null}

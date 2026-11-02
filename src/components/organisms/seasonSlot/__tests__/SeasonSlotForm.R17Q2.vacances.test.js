@@ -252,6 +252,43 @@ const bouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => arbre.
   (/** @type {any} */ n) => n.type === TouchableOpacity && n.findAllByType(Text).some((/** @type {any} */ x) => texte(x) === titre),
 )[0];
 
+describe('RET-PLANNING fiche 19 — « Sauf créneaux ponctuels » dans « Quand ? »', () => {
+  const casePonctuels = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props.testID === 'quand-sauf-ponctuels'
+      && typeof n.props.onPress === 'function',
+  )[0];
+
+  test('🐞 la case se coche, l’aperçu le sait, et ce qui part le dit', async () => {
+    const arbre = await monter();
+    await jusquAuQuand(arbre);
+    const cocher = casePonctuels(arbre);
+    expect(cocher).toBeDefined();
+    expect(cocher.props.accessibilityRole).toBe('checkbox');
+    expect(lus(arbre)).toContain('Sauf créneaux ponctuels');
+
+    await appeler(() => cocher.props.onPress());
+    expect(casePonctuels(arbre).props.accessibilityState).toEqual({ checked: true });
+    expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith(
+      'salle-t18',
+      expect.objectContaining({ exceptPunctual: '1' }),
+    );
+
+    await avancer(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', expect.objectContaining({
+      exceptPunctual: true,
+    }));
+  });
+
+  test('case non cochée : le champ ne part pas (le corps d’avant)', async () => {
+    const arbre = await monter();
+    await jusquAuQuand(arbre);
+    await avancer(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    expect(attributeSeasonSlot.mock.calls[0][1]).not.toHaveProperty('exceptPunctual');
+  });
+});
+
 describe('R17Q2-3 — « Sauf vacances scolaires » dans « Quand ? »', () => {
   test('1. la case sous les formes, la zone dessous ; cochée : 29 mercredis, 8 retirés, et ce qui part au serveur', async () => {
     const arbre = await monter();
