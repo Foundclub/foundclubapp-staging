@@ -221,8 +221,10 @@ function EventTasksEditor({
                 ) : null}
               </View>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {task?.requiredCount || 1}
-                {' place(s) - '}
+                {t('eventTasksEditor.placesCount', '{{count}} places', {
+                  count: task?.requiredCount || 1,
+                })}
+                {' - '}
                 {task?.validationMode === 'MANUAL' ? t('eventTasksEditor.manualApproval', 'Validation manuelle') : t('eventTasksEditor.automaticApproval', 'Validation automatique')}
               </Text>
               {task?.description ? (

@@ -227,7 +227,7 @@ const selecteur = (tree, placeholder) => tree.root.findAll(
   { deep: false },
 )[0];
 
-const POSTE = 'Ex: Attaquant, Gardien...';
+const POSTE = 'Ex : Attaquant, Gardien...';
 
 /**
  * Monte l'écran plein des filtres de profils.

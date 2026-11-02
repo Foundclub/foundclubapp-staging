@@ -219,7 +219,14 @@ function PollDetails({ navigation, route }) {
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 {t('pollDetails.messaging', 'Messagerie')}
               </span>
-              <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
+              <h1
+                style={{
+                  color: 'inherit',
+                  fontFamily: 'Montserrat-Black, sans-serif',
+                  fontSize: isTablet ? 34 : 28,
+                  margin: 0,
+                }}
+              >
                 {t('pollDetails.pollDetails', 'Detail du sondage')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
@@ -260,7 +267,14 @@ function PollDetails({ navigation, route }) {
                   <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     Question
                   </span>
-                  <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 28, margin: 0 }}>
+                  <h2
+                    style={{
+                      color: 'inherit',
+                      fontFamily: 'Montserrat-Bold, sans-serif',
+                      fontSize: 28,
+                      margin: 0,
+                    }}
+                  >
                     {String(poll?.question || t('pollDetails.poll', 'Sondage'))}
                   </h2>
                   <p style={{ color: mutedTextColor, margin: 0 }}>

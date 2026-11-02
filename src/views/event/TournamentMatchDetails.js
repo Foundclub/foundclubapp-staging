@@ -34,7 +34,11 @@ import {
 } from '@/services/tournamentCompetition/tournamentCompetitionService';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentMatchStatusMeta, normalizeTournamentText } from './tournamentUtils';
+import {
+  formatTournamentRoundLabel,
+  getTournamentMatchStatusMeta,
+  normalizeTournamentText,
+} from './tournamentUtils';
 
 const formatDateValue = (value) => {
   if (!value) return '';
@@ -309,7 +313,7 @@ function TournamentMatchDetails({ navigation, route }) {
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {match?.roundLabel || t(
+              {formatTournamentRoundLabel(match?.roundLabel) || t(
                 'tournamentMatchDetails.tournamentMatch',
                 'Match tournoi',
               )}

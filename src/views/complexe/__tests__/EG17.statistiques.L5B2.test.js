@@ -103,7 +103,9 @@ describe('E-G17 — les statistiques du complexe', () => {
     const arbre = await monter();
     const vus = lisibles(arbre);
     const rang = (/** @type {string} */ texte) => vus.indexOf(texte);
-    const blocs = ['OCCUPATION', 'RÉSERVATIONS', 'FAVORIS', 'CLIENTS FIDÈLES', 'PAR HEURE · V2'];
+    const blocs = [
+      'OCCUPATION', 'RÉSERVATIONS', 'FAVORIS', 'CLIENTS FIDÈLES', 'PAR HEURE · BIENTÔT',
+    ];
     blocs.forEach((bloc) => expect(rang(bloc)).toBeGreaterThan(-1));
     blocs.slice(1).forEach((bloc, i) => expect(rang(bloc)).toBeGreaterThan(rang(blocs[i])));
     expect(vus).toEqual(expect.arrayContaining([

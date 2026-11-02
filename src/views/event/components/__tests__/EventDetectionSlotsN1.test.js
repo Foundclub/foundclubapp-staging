@@ -233,9 +233,15 @@ describe('N1 · (a) caracterisation — ce que le composant fait AUJOURD HUI', (
     });
     const contenu = texteDe(racine.toJSON());
 
-    expect(contenu).toContain('2 poste(s)');
-    expect(contenu).toContain('5 place(s)');
-    expect(contenu).toContain('1 ouvert(s)');
+    // REPRISE-TEXTES : les pastilles s'accordent par des clés (« 1 poste », « 2 postes ») ;
+    // la doublure de traduction rend le repli pluriel, sans choisir la forme.
+    expect(contenu).toContain('2 postes');
+    expect(contenu).toContain('5 places');
+    expect(askedKeys).toEqual(expect.arrayContaining([
+      'eventDetectionSlots.positionsCount',
+      'eventDetectionSlots.placesCount',
+      'eventDetectionSlots.openCount',
+    ]));
   });
 
   test('avec des postes, chaque poste porte son nom et son reste', () => {

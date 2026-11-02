@@ -142,7 +142,9 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                     -
                     {' '}
                     {audience?.selectionMode === 'SELECTED_MEMBERS'
-                      ? `${selectedMembers.length} membre(s)`
+                      ? t('eventTeamAudiencesSection.selectedMembers', '{{count}} membres', {
+                        count: selectedMembers.length,
+                      })
                       : t('eventTeamAudiencesSection.allMembers', 'Tous les membres')}
                   </Text>
                 </View>

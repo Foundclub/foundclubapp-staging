@@ -17,6 +17,7 @@ import Tag from '@/components/atoms/tag/Tag';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  formatTournamentRoundLabel,
   formatTournamentScore,
   getTournamentMatchStatusMeta,
 } from './tournamentUtils';
@@ -124,7 +125,7 @@ export function TournamentMatchCard({
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-            {match?.roundLabel || match?.group?.label || t(
+            {formatTournamentRoundLabel(match?.roundLabel) || match?.group?.label || t(
               'tournamentCompetitionComponents.tournamentMatch',
               'Match tournoi',
             )}

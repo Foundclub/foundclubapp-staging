@@ -257,7 +257,14 @@ function BookingCalendar({ navigation, route }) {
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 {t('bookingCalendar.web.eyebrow', 'Réservations')}
               </span>
-              <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
+              <h1
+                style={{
+                  color: 'inherit',
+                  fontFamily: 'Montserrat-Black, sans-serif',
+                  fontSize: isTablet ? 34 : 28,
+                  margin: 0,
+                }}
+              >
                 {t('bookingCalendar.web.title', 'Réserver une installation')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 640 }}>
@@ -317,7 +324,14 @@ function BookingCalendar({ navigation, route }) {
 
               {facility ? (
                 <div style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 22, display: 'grid', gap: 8, padding: isTablet ? 22 : 18 }}>
-                  <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22, margin: 0 }}>
+                  <h2
+                    style={{
+                      color: 'inherit',
+                      fontFamily: 'Montserrat-Bold, sans-serif',
+                      fontSize: 22,
+                      margin: 0,
+                    }}
+                  >
                     {facility?.name}
                   </h2>
                   {getFacilityMeta(facility) ? (
@@ -387,7 +401,14 @@ function BookingCalendar({ navigation, route }) {
 
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ alignItems: 'baseline', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
-                  <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22, margin: 0 }}>
+                  <h2
+                    style={{
+                      color: 'inherit',
+                      fontFamily: 'Montserrat-Bold, sans-serif',
+                      fontSize: 22,
+                      margin: 0,
+                    }}
+                  >
                     {t('bookingCalendar.web.slotsOf', 'Créneaux du')}
                     {' '}
                     {formatFullDate(selectedDate)}
@@ -464,7 +485,14 @@ function BookingCalendar({ navigation, route }) {
                 <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   Configuration
                 </span>
-                <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 24, margin: 0 }}>
+                <h2
+                  style={{
+                    color: 'inherit',
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 24,
+                    margin: 0,
+                  }}
+                >
                   {selectedSlot ? `${selectedSlot.time}${endTime ? ` - ${endTime}` : ''}` : t(
                     'bookingCalendar.web.chooseSlot',
                     'Choisis un créneau',

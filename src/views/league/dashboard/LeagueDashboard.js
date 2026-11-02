@@ -45,6 +45,7 @@ import {
 } from '@/services/leagueTeam/leagueTeamService';
 
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId';
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 import { isLeagueCaptain } from '@/utils/league/captains';
 import {
@@ -374,6 +375,9 @@ function LeagueDashboard() {
   const [pendingSquads, setPendingSquads] = useState(/** @type {Team[]} */ ([]));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  // REPRISE-TEXTES (point 25) : un refus (403) n'est pas une panne,
+  // « Réessayer » n'y changerait rien.
+  const [loadRefused, setLoadRefused] = useState(false);
   const [isSquadSelectorVisible, setIsSquadSelectorVisible] = useState(false);
   const [conversationFallbackState, setConversationFallbackState] = useState(/** @type {any | null} */ (null));
   const lastDashboardFocusLoadAtRef = useRef(0);
@@ -428,6 +432,7 @@ function LeagueDashboard() {
     const requestId = dashboardRequestRef.current;
     setLoading(true);
     setLoadError('');
+    setLoadRefused(false);
     try {
       const userId = getEntityDocumentId(userData);
       const context = await loadLeagueTeamContextWithCache(queryClient, userId);
@@ -462,10 +467,14 @@ function LeagueDashboard() {
       setUserTeam(null);
       setMatchHistory([]);
       setRankingData([]);
-      setLoadError(t(
-        'leagueDashboard.loadError',
-        'Impossible de charger le dashboard League pour le moment.',
-      ));
+      const refuse = getErrorStatus(error) === 403;
+      setLoadRefused(refuse);
+      setLoadError(refuse
+        ? t('leagueDashboard.refusedDescription', 'Ton profil ne donne pas accès à la League.')
+        : t(
+          'leagueDashboard.loadError',
+          'Impossible de charger le dashboard League pour le moment.',
+        ));
     } finally {
       if (requestId === dashboardRequestRef.current) setLoading(false);
     }
@@ -512,6 +521,7 @@ function LeagueDashboard() {
     setActiveSquadId(squadId);
     setLoading(true);
     setLoadError('');
+    setLoadRefused(false);
     try {
       await hydrateSquadDashboard(squad);
       navigation.navigate(RouteNames.LeagueMatchTab, {
@@ -1586,10 +1596,12 @@ function LeagueDashboard() {
   if (loadError && !userTeam) {
     return (
       <LeagueStateView
-        actionLabel={t('leagueDashboard.retry', 'Réessayer')}
+        actionLabel={loadRefused ? undefined : t('leagueDashboard.retry', 'Réessayer')}
         description={loadError}
-        onAction={() => loadDashboard()}
-        title={t('leagueDashboard.unavailable', 'Dashboard indisponible')}
+        onAction={loadRefused ? undefined : () => loadDashboard()}
+        title={loadRefused
+          ? t('leagueDashboard.refusedTitle', 'Cette page n’est pas ouverte à ton profil.')
+          : t('leagueDashboard.unavailable', 'Dashboard indisponible')}
       />
     );
   }

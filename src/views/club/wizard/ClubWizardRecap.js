@@ -25,6 +25,7 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { cheminFicheAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import { createSelfOnboardClub } from '@/services/club/clubService';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { buildPublicWebUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
 // L'alias plateforme est « unknown » pour perfectionist mais « internal » pour import/order.
@@ -330,9 +331,17 @@ function ClubWizardRecap({ navigation, route }) {
         lienDeLaVille,
       );
     } catch (error) {
+      // REPRISE-TEXTES : un refus (403, compte de collectivité par exemple) disait « Forbidden ».
+      const refuse = getErrorStatus(error) === 403;
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || t('clubWizard.recap.error', 'Impossible de créer le club.'),
+        refuse
+          ? t(
+            'clubWizard.recap.refused',
+            'Ce compte ne peut pas créer de club. Pour inscrire un club, '
+              + 'connecte-toi avec le compte de son dirigeant ou de son entraîneur.',
+          )
+          : error?.message || t('clubWizard.recap.error', 'Impossible de créer le club.'),
       );
     } finally {
       setIsSubmitting(false);

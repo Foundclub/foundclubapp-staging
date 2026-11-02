@@ -261,7 +261,7 @@ describe('T03 — a la creation, tout le club est concerne par defaut', () => {
     const arbre = await monterSurLEtapePublic();
 
     // 3 membres au club : c est ce compte-la qu il faut lire AVANT de signer.
-    expect(textesAffiches(arbre)).toContain('3 membres concernés aujourd hui');
+    expect(textesAffiches(arbre)).toContain('3 membres concernés aujourd’hui');
   }, 30000);
 
   it('temoin 3 — cocher par defaut ne cache pas le choix : le selecteur de role reste a un geste', async () => {

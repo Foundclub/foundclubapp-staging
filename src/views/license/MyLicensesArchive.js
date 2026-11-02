@@ -27,6 +27,7 @@ import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 
 import { useMyLicenses } from '@/services/license/licenseQueries';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import { formatLicenseMoney, LicenseEmptyState } from './licenseDesignSystem';
@@ -134,22 +135,32 @@ function MyLicensesArchive({ navigation }) {
 
   // BH11 P5-23 : une panne n est pas « aucune saison » ; memes mots que « Mes cotisations ».
   if (query.isError) {
+    // REPRISE-TEXTES (point 25) : un refus (403) n'est pas une panne,
+    // « Réessayer » n'y changerait rien.
+    const refuse = getErrorStatus(query.error) === 403;
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
         <MemberTopBar onBack={goBack} title={t('myLicensesArchive.title', 'Saisons passées')} />
         <LicenseEmptyState
-          action={(
+          action={refuse ? null : (
             <Button
               onPress={() => query.refetch()}
               title={t('myLicenses.error.retry', 'Réessayer')}
               variant="Secondary"
             />
           )}
-          description={t(
-            'myLicenses.error.description',
-            'Impossible de charger tes cotisations pour le moment.',
-          )}
-          title={t('myLicenses.error.title', 'Cotisations indisponibles')}
+          description={refuse
+            ? t(
+              'myLicenses.error.refusedDescription',
+              'Ton profil ne donne pas accès aux cotisations.',
+            )
+            : t(
+              'myLicenses.error.description',
+              'Impossible de charger tes cotisations pour le moment.',
+            )}
+          title={refuse
+            ? t('myLicenses.error.refusedTitle', 'Cette page n’est pas ouverte à ton profil.')
+            : t('myLicenses.error.title', 'Cotisations indisponibles')}
         />
       </ScreenContainer>
     );

@@ -26,7 +26,6 @@ import {
 import { getAppBootstrap } from '@/services/bootstrap/bootstrapService';
 import { shareTeamInviteLink } from '@/services/teamInvite/teamInviteShare';
 
-import { displayErrorAlert } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
 import { markBootStep } from '@/utils/performance/bootPerformance';
 import {
@@ -161,11 +160,10 @@ const useAuth = () => {
   const queryClient = useQueryClient();
 
   // api calls
+  // REPRISE-TEXTES (points 23, D-GERANT-2) : pas de fenêtre en plus. Login et Register affichent
+  // déjà `mutation.error` en phrase française sous le champ ; l'alerte doublait le message.
   const otpMutation = useMutation({
     mutationFn: signInWithPhoneNumber,
-    onError: (/** @type {any} */ error) => {
-      displayErrorAlert(error, 'OTP_ERROR');
-    },
     onSuccess: (/** @type {any} */ data) => {
       setConfirm(data);
     },
@@ -173,9 +171,6 @@ const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onError: (/** @type {any} */ error) => {
-      displayErrorAlert(error, 'OTP_ERROR');
-    },
     onSuccess: async (/** @type {any} */ data) => {
       authLogger.debug('Login mutation succeeded', { userDocumentId: data?.user?.documentId });
       // Ensure OTP confirmation state cannot leak to another account flow

@@ -195,7 +195,7 @@ describe('S7 - la carte « Mon planning » et l equipe invitee du meme club', ()
       item: evenement({ invitedTeams: [EQUIPE_DU_MEME_CLUB, EQUIPE_D_EN_FACE] }),
     });
 
-    expect(lignesDe(tree).join('\n')).toContain('équipes invitées: U15 B, US Blaisoise U15');
+    expect(lignesDe(tree).join('\n')).toContain('équipes invitées : U15 B, US Blaisoise U15');
   });
 
   // -- LE TEMOIN DU BUG ----------------------------------------------------

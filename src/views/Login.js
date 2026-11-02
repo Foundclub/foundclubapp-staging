@@ -104,7 +104,9 @@ function Login({ navigation }) {
             </View>
             <View style={[Spaces.gap[16], Alignments.fullWidth]}>
               <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('login.title')}</Text>
-              <Text style={[Fonts.p1, Fonts.neutral00]}>{t('login.subtitle')}</Text>
+              <Text style={[Fonts.p1, Fonts.neutral00]}>
+                {canShowCodeButton ? t('login.codeSubtitle') : t('login.subtitle')}
+              </Text>
             </View>
           </View>
           {isAddingAccount && (

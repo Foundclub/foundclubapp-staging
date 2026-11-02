@@ -239,7 +239,7 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => func
   return null;
 });
 
-const INVITE_ADRESSE = 'Ex: 12 Rue du Stade...';
+const INVITE_ADRESSE = 'Ex : 12 Rue du Stade...';
 const LIBELLE_LUMINY = 'Avenue de Luminy 13009 Marseille';
 const REFUS_ADRESSE = 'Sélectionnez une adresse géolocalisée dans la liste.';
 

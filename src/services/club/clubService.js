@@ -1038,8 +1038,10 @@ export const createSelfOnboardClub = async (payload) => {
     };
   } catch (error) {
     // 409 : doublon suspecté → on renvoie les suggestions au tunnel (choix explicite).
-    const status = error?.response?.status;
-    const details = error?.response?.data?.error?.details;
+    // REPRISE-TEXTES : sur le site, le client rejette directement `{ status, message, details }`
+    // du serveur, sans `response` ; on lit les deux formes.
+    const status = error?.response?.status ?? error?.status;
+    const details = error?.response?.data?.error?.details ?? (/** @type {any} */ (error))?.details;
     if (status === 409 && details?.code === 'CLUB_DUPLICATE_SUSPECTED') {
       return {
         duplicate: true,
@@ -1049,6 +1051,7 @@ export const createSelfOnboardClub = async (payload) => {
     const message = error?.response?.data?.error?.message
       || (error && typeof error === 'object' && 'message' in error ? error.message : null)
       || i18next.t('clubService.errors.createClubFailed', 'Impossible de créer le club.');
-    throw new Error(String(message));
+    // REPRISE-TEXTES : le statut voyage avec l'erreur, pour qu'un refus (403) se dise en clair.
+    throw Object.assign(new Error(String(message)), { status });
   }
 };
