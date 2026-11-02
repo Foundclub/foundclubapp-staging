@@ -1,7 +1,10 @@
+import { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
+import { PiedFlottantContext } from '@/components/atoms/piedFlottant/PiedFlottant';
 
 // D15 - REGISTRE DU PACK D'INSCRIPTION : une etape facultative porte UN SEUL
 // bouton plein, et dessous ce lien en TEXTE. Il remplace le second bouton
@@ -23,6 +26,8 @@ import useTheme from '@/theme/themeContext';
 function OnboardingSkipLink({ hint, label, onPress }) {
   const { ApplicationStyle, Colors, Spaces } = useTheme();
   const { t } = useTranslation();
+  // BOUTONS-FLOTTANTS (03/11) : au-dessus du contenu qui défile, le lien porte son propre fond.
+  const auDessusDuContenu = useContext(PiedFlottantContext);
 
   const visibleLabel = label || t('onboarding.actions.skipStep', 'Passer cette étape');
   const accessibilityHint = hint || t(
@@ -45,7 +50,13 @@ function OnboardingSkipLink({ hint, label, onPress }) {
       // plancher d'accessibilite du projet (`MIN_TOUCH_TARGET`).
       hitSlop={ApplicationStyle.hitSlop?.min44From24}
       onPress={onPress}
-      style={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[4]]}
+      style={[
+        Spaces.paddingHorizontal[16],
+        Spaces.paddingVertical[4],
+        auDessusDuContenu
+          ? { alignSelf: 'center', backgroundColor: Colors.primary900, borderRadius: 12 }
+          : null,
+      ]}
       testID="onboarding-skip-link"
     >
       <Text style={[styles.label, { color: Colors.primary500 }]}>{visibleLabel}</Text>
