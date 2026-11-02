@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 
+import { poserGardienDesFleches } from '@/navigation/gardienDesFleches';
+
 /**
  * 🚪 SAIS (08/10, tournée T20 lot 2) — LA GARDE « QUITTER SANS ENREGISTRER ? », sortie telle
  * quelle de « Demander un créneau » (VILLE-T18C, ClubSlotRequest) pour servir aussi « Fermer une
@@ -9,8 +11,9 @@ import { Alert, Platform } from 'react-native';
  * REPRISE-RESA (01/11/2026, point 81) : sur le site, quitter l'écran par un lien de la page (le
  * menu) ou fermer / recharger l'onglet ne passe pas par `beforeRemove` : la garde écoute aussi la
  * page tant que la saisie est modifiée.
- * ponytail: sur le site, la flèche « retour » du NAVIGATEUR ne demande toujours pas (BrowserRouter
- * n'offre pas de blocage ; sortie : passer le site à un routeur de données et `useBlocker`).
+ * FIN-RESA (02/11/2026, p81) : les flèches du NAVIGATEUR demandent aussi, par gardienDesFleches.
+ * ponytail: elle compte sur `history.state.idx`, le numéro d'entrée posé par React Router ;
+ * sortie : un routeur de données et `useBlocker`.
  * @param {any} navigation - La navigation de l'écran ; `null` : aucune garde (panneau
  *   d'ordinateur).
  * @param {{
@@ -32,6 +35,8 @@ export default function useGardeDeSortie(navigation, {
   actif, enregistrer, retenir, textes,
 }) {
   const sortieLibre = useRef(false);
+  const entreeIci = useRef(/** @type {number | undefined} */ (undefined));
+  const enRetour = useRef(false);
   const {
     enregistrer: oui, message, quitter, rester, titre,
   } = textes;
@@ -104,11 +109,38 @@ export default function useGardeDeSortie(navigation, {
       // Chrome (depuis la 119), Firefox et Safari demandent sur `preventDefault`.
       evenement.preventDefault();
     };
+    // FIN-RESA (p81) — une flèche du navigateur : l'entrée a déjà changé quand `popstate` arrive.
+    // Le routeur n'en sait rien (gardienDesFleches) : on revient sur notre entrée, on demande, et
+    // « Quitter » refait le même saut, qu'il entend cette fois. Une entrée sans numéro est une
+    // adresse ouverte par une notification (notifications.web.js) : elle passe, comme avant.
+    if (!enRetour.current) entreeIci.current = window.history?.state?.idx;
+    const surFleche = (/** @type {any} */ evenement) => {
+      const ici = entreeIci.current;
+      const arrivee = window.history?.state?.idx;
+      if (sortieLibre.current || typeof ici !== 'number' || typeof arrivee !== 'number') return;
+      evenement.stopImmediatePropagation();
+      if (arrivee === ici) {
+        enRetour.current = false;
+        return;
+      }
+      const dejaDemande = enRetour.current;
+      enRetour.current = true;
+      window.history.go(ici - arrivee);
+      if (dejaDemande) return;
+      const impossible = retenir?.();
+      if (impossible) {
+        Alert.alert(impossible.titre, impossible.message);
+        return;
+      }
+      demander(() => window.history.go(arrivee - ici));
+    };
     document.addEventListener('click', surClic, true);
     window.addEventListener('beforeunload', surDepart);
+    const retirerGardien = poserGardienDesFleches(surFleche);
     return () => {
       document.removeEventListener('click', surClic, true);
       window.removeEventListener('beforeunload', surDepart);
+      retirerGardien();
     };
   }, [actif, demander, navigation, retenir]);
 
