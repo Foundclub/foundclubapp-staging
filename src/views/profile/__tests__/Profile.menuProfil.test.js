@@ -26,6 +26,9 @@ let mockUserData;
 // MSG-SUPPORT (20/10) — « Écrire à l'assistance » ouvre MA conversation avec l'équipe
 // (le serveur la crée à la première ouverture) : doublure du service, pas de réseau.
 const mockOuvrirAssistance = jest.fn();
+// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
+
 jest.mock('@/services/chat/assistanceService', () => ({
   ouvrirMaConversationAssistance: (/** @type {any[]} */ ...args) => mockOuvrirAssistance(...args),
 }));

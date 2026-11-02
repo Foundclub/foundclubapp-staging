@@ -23,6 +23,9 @@ let mockUserData;
 let mockIsParentMode = false;
 
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
+// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
+
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
   useMyFacilityReports: () => ({ data: null }),
 }));

@@ -25,6 +25,9 @@ let mockAuth = null;
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
 /** @type {any} */
 let mockMesSignalements = { data: null };
+// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
+
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({
   useMyFacilityReports: () => mockMesSignalements,
 }));
@@ -295,12 +298,14 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
 
   it.each([
     ['player', [
+      'Mes réservations', 'Mes complexes favoris',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
       'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
     // TUTOE (27/10) : le guide Entraîneur se relance d'ici (règle 7 du pack).
     ['coach', [
       'Voir le détail des offres',
+      'Mes réservations', 'Mes complexes favoris',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
       'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
       'Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Guide entraîneur·e',
@@ -308,11 +313,13 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
     ]],
     ['president', [
       'Voir le détail des offres',
+      'Mes réservations', 'Mes complexes favoris',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
       'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
     ['superAdmin', [
       'Voir le détail des offres',
+      'Mes réservations', 'Mes complexes favoris',
       'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Historique sportif',
       'Mes enfants', 'Gérer mes alertes', ...COMPTE,
       'Dashboard admin classique', 'Dashboard League', 'Déconnexion', 'Supprimer mon compte',
@@ -321,7 +328,8 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
     // section, puis son profil, ses alertes, et sa carte de collection en dernier (planche 1).
     ['parent', [
       'Mes enfants', 'Mes cotisations', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
-      'Ma carte de collection', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
+      'Ma carte de collection', 'Mes réservations', 'Mes complexes favoris',
+      ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
   ])('%s', (role, attendu) => {
     const { arbre } = monter(/** @type {any} */ (role));
