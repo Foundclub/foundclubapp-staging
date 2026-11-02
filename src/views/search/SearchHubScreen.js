@@ -73,7 +73,8 @@ const DEFAULT_EVENT_FILTERS = Object.freeze({
  * listes : une liste déjà visitée l'ayant réclamé, la coque ne l'affiche plus elle-même.
  * @returns {import('react').ReactElement}
  */
-function ReservationBientotDisponible() {
+// REPRISE-CHEMINS (02/11, CORR-RECHERCHE-2) : exporté pour l'adresse /search/reservations du site.
+export function ReservationBientotDisponible() {
   const { Colors } = useTheme();
   const enTete = useEnTeteDeRecherche();
   return (

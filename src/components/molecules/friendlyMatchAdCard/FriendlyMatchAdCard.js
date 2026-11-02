@@ -62,6 +62,7 @@ import CARD_BACKGROUND from '@/assets/background-card-event/card-match.png';
  * @param {number | null} [props.distanceKm]
  * @param {boolean} [props.isApplying]
  * @param {boolean} [props.isOwner]
+ * @param {boolean} [props.lienCopie] - REPRISE-CHEMINS 45 : le lien vient d'être copié.
  * @param {string | null} [props.myApplicationStatus]
  * @param {(ad: any) => void} [props.onApply]
  * @param {(ad: any) => void} [props.onPress]
@@ -75,6 +76,7 @@ function FriendlyMatchAdCard({
   distanceKm = null,
   isApplying = false,
   isOwner = false,
+  lienCopie = false,
   myApplicationStatus = null,
   onApply,
   onPress,
@@ -212,6 +214,10 @@ function FriendlyMatchAdCard({
     isCtaInteractive = false;
   } else if (isApplying) {
     ctaLabel = t('friendlyMatch.adCard.cta.applying', 'Envoi...');
+  } else if (!canApply && onShare && lienCopie) {
+    // REPRISE-CHEMINS (02/11, point 45) : le navigateur ne savait pas partager, le lien est copié.
+    ctaLabel = t('friendlyMatch.adCard.cta.lienCopie', 'Lien copié');
+    isCtaInteractive = false;
   } else if (!canApply && onShare) {
     // CORR-CHEMINS (30/10, point 45, consigne d'Adel) : qui ne peut pas proposer de match (parent,
     // joueur) peut partager l'annonce, plutôt qu'un refus sans geste.

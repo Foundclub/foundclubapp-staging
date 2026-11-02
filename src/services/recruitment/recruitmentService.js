@@ -416,6 +416,14 @@ export const getRecruitmentAds = async (filters = {}) => {
     const { page = 1, pageSize = 20 } = filters;
     const params = /** @type {any} */ ({
       filters: {
+        // REPRISE-CHEMINS (02/11, point 58) : la règle d'échéance de la recherche du serveur
+        // (search.ts, CORR-ROBUSTESSE) : sans événement, une annonce expirée ne sort plus ; une
+        // annonce liée à un événement garde sa règle (c'est l'événement qui la ferme).
+        $or: [
+          { expirationDate: { $null: true } },
+          { expirationDate: { $gte: new Date().toISOString() } },
+          { event: { id: { $notNull: true } } },
+        ],
         isActive: true,
       },
       pagination: {

@@ -560,6 +560,7 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
         closed: 'Annonce clôturée',
         confirmed: 'Match confirmé',
         declined: 'Proposition refusée',
+        lienCopie: 'Lien copié',
         matched: 'Adversaire trouvé',
         pending: 'Proposition envoyée',
         share: 'Partager l’annonce',
@@ -676,6 +677,16 @@ describe('CORR-CHEMINS 45 — partager l annonce quand on ne peut pas proposer d
   it('un entraîneur garde « Proposer un match »', () => {
     const arbre = rendre({ canApply: true, onApply: jest.fn(), onShare: jest.fn() });
     expect(textesVisibles(arbre)).toContain('Proposer un match');
+    expect(textesVisibles(arbre)).not.toContain('Partager l’annonce');
+  });
+});
+
+// REPRISE-CHEMINS (02/11, point 45) : après une copie du lien (navigateur sans partage), le bouton
+// dit « Lien copié » ; il ne relance rien tant qu'il le dit.
+describe('REPRISE-CHEMINS 45 — « Lien copié » sur la carte', () => {
+  it('🔴 le bouton dit « Lien copié » après la copie', () => {
+    const arbre = rendre({ canApply: false, lienCopie: true, onShare: jest.fn() });
+    expect(textesVisibles(arbre)).toContain('Lien copié');
     expect(textesVisibles(arbre)).not.toContain('Partager l’annonce');
   });
 });

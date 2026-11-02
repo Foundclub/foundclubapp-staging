@@ -13073,6 +13073,8 @@ export default {
         closed: 'Annonce clôturée',
         confirmed: 'Match confirmé',
         declined: 'Proposition refusée',
+        // REPRISE-CHEMINS (02/11, point 45) : navigateur sans partage, le lien est copié.
+        lienCopie: 'Lien copié',
         matched: 'Adversaire trouvé',
         pending: 'Proposition envoyée',
         // CORR-CHEMINS (30/10, point 45) : parent ou joueur, qui ne peut pas proposer de match.

@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Platform,
-  Share,
   Text,
   TouchableOpacity,
   View,
@@ -46,6 +45,10 @@ import { createLogger } from '@/utils/logger/logger';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
+// L'alias plateforme est « unknown » pour perfectionist mais « internal » pour import/order.
+import SharePlatform from '@/platform/share';
+
+// eslint-disable-next-line perfectionist/sort-imports
 import FriendlyMatchFiltersSheet, {
   countFriendlyMatchFilters,
   EMPTY_FRIENDLY_MATCH_FILTERS,
@@ -120,6 +123,8 @@ function FriendlyMatchListContent({
   const [myAds, setMyAds] = useState(/** @type {any[]} */ ([]));
   const [myApplications, setMyApplications] = useState(/** @type {any[]} */ ([]));
   const [loading, setLoading] = useState(false);
+  // REPRISE-CHEMINS (02/11, point 45) : l'annonce dont le lien vient d'être copié.
+  const [lienCopieId, setLienCopieId] = useState(/** @type {string | null} */ (null));
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -278,9 +283,16 @@ function FriendlyMatchListContent({
     const chemin = buildWebPath(RouteNames.FriendlyMatchAdDetails, { adId: targetAdId });
     const url = buildPublicWebUrl({ path: chemin });
     if (!url) return;
-    Share.share({
+    // REPRISE-CHEMINS (02/11, point 45) : la fenêtre de partage du téléphone ou du navigateur ;
+    // un navigateur qui ne sait pas partager copie le lien, et la carte dit « Lien copié » (3 s).
+    SharePlatform.share({
       message: `${t('friendlyMatch.adCard.accessibilityLabelPrefix', 'Match amical')} : ${url}`,
       url,
+    }).then((resultat) => {
+      if (resultat?.action !== 'copie') return;
+      setLienCopieId(targetAdId);
+      const oublier = () => setLienCopieId((courant) => (courant === targetAdId ? null : courant));
+      setTimeout(oublier, 3000);
     }).catch(() => {});
   }, [t]);
 
@@ -536,6 +548,7 @@ function FriendlyMatchListContent({
             canApply={canApply}
             distanceKm={item.distanceKm}
             isOwner={activeTab === 'mes-annonces'}
+            lienCopie={lienCopieId === getAdKey(item)}
             myApplicationStatus={item.applicationStatus || null}
             onApply={handleApplyPress}
             onPress={handleAdPress}

@@ -12302,6 +12302,7 @@ export default {
         closed: 'Ad closed',
         confirmed: 'Match confirmed',
         declined: 'Proposal declined',
+        lienCopie: 'Link copied',
         matched: 'Opponent found',
         pending: 'Proposal sent',
         share: 'Share this listing',

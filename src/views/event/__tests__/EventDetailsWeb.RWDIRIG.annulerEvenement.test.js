@@ -614,3 +614,35 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
     expect(bouton(root, 'Piloter la compétition')).toBeDefined();
   });
 });
+
+// REPRISE-CHEMINS (02/11, point 41, revue « modifier ») : sur le site, une fiche annulée montre le
+// bandeau « Annulé » EN TÊTE (avant la carte de l'événement), et plus « Gérer l'événement », ni
+// « Tu participes », ni « Aucune réponse ».
+describe('REPRISE-CHEMINS 41 · une fiche annulée, sur le site', () => {
+  const annulee = () => buildEvent({
+    isActive: false, status: 'cancelled', updatedAt: '2026-10-29T18:00:00.000Z',
+  });
+  const sections = (/** @type {any} */ root) => root.findAll(
+    (/** @type {any} */ n) => typeof n.type === 'string'
+      && (n.props['data-testid'] === 'event-cancelled-banner'
+        || n.props['data-event-section'] === 'overview'),
+  ).map((/** @type {any} */ n) => n.props['data-testid'] || n.props['data-event-section']);
+
+  test('🔴 le bandeau vient avant la carte, sans « Gérer l événement »', () => {
+    const root = mountScreen({ event: annulee() });
+    expect(sections(root)).toEqual(['event-cancelled-banner', 'overview']);
+    expect(root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && n.props['aria-haspopup'] === 'menu',
+    )).toHaveLength(0);
+    const texte = textOf(root);
+    expect(texte).not.toMatch(/Tu participes|Aucune réponse/);
+    // La recette du site (02/11) : sans le menu, le bouton « Modifier » seul revenait.
+    expect(root.findAll((/** @type {any} */ n) => n.type === 'button' && textOf(n) === 'Modifier'))
+      .toHaveLength(0);
+  });
+
+  test('une fiche active garde « Gérer l événement » et pas de bandeau', () => {
+    const root = mountScreen({ event: buildEvent() });
+    expect(sections(root)).toEqual(['overview']);
+  });
+});
