@@ -85,6 +85,8 @@ const startAndOpen = () => {
   act(() => { tour.startTour('coach'); });
   expect(tour.currentStep.id).toBe('open');
   act(() => { tour.completeCurrentStep(); });
+  // FIN-GUIDE : la question de M1 (« Non, je crée la mienne »), posée à qui a un club.
+  if (tour.currentStep?.id === 'm1-choice') act(() => { tour.completeCurrentStep(); });
 };
 
 const doMission1 = () => {
@@ -127,10 +129,12 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.missionPosition).toEqual({ index: 1, isBonus: false, total: 4 });
   });
 
-  it('un coach qui a déjà une équipe commence par « Retrouve ton équipe »', () => {
+  // FIN-GUIDE, point 1 (Adel, 02/11) : déjà coach ⇒ mission 1 validée, on passe à la suite.
+  it('un coach qui a déjà une équipe a sa mission 1 validée et commence par M2', () => {
     mockUserData = { ...mockUserData, trainedTeams: [{ documentId: 't-1' }] };
     startAndOpen();
-    expect(tour.currentStep.id).toBe('m1-find');
+    expect(tour.missionStatus.coach_m1).toBe('done');
+    expect(tour.currentStep.id).toBe('m2-card');
   });
 
   // TUTOE-CALIBRAGE (27/10, décision du chef) : une équipe où le coach est
@@ -152,13 +156,13 @@ describe('guide Entraîneur — démarrage', () => {
     expect(tour.currentStep.id).toBe('m1-dock');
   });
 
-  it('équipe entraînée dans son club : « Retrouve ton équipe » vise une équipe entraînée', () => {
+  it('équipe entraînée dans son club : M2 vise cette équipe', () => {
     mockUserData = {
       ...mockUserData,
       trainedTeams: [{ club: { documentId: 'club-1' }, documentId: 't-ici' }],
     };
     startAndOpen();
-    expect(tour.currentStep.id).toBe('m1-find');
+    expect(tour.currentStep.id).toBe('m2-card');
     expect(tour.currentStep.targets).toEqual(['teams.trained.0']);
   });
 
@@ -205,8 +209,11 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     route(RouteNames.TeamDetails);
     interaction('team.actions.open');
     interaction('teamActions.shareLink');
-    // Feuille de partage fermée sans envoi : retour à l'étape « lien ».
+    // Feuille de partage fermée sans envoi : le guide demande (FIN-GUIDE, point 4) ; rouvrir le
+    // menu revient à l'étape « lien ».
     interaction('team.invite.dismissed');
+    expect(tour.currentStep.id).toBe('m2-sent');
+    interaction('team.actions.open');
     expect(tour.currentStep.id).toBe('m2-share');
     interaction('teamActions.shareLink');
     action('team.invite.shared');

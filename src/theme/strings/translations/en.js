@@ -24063,6 +24063,7 @@ export default {
         example: 'The example match is erased: nothing was sent.',
         footer: 'Find this guide again in My account › Coach guide.',
         friendly: 'Friendly match ad published',
+        invited: 'Invitation sent',
         link: 'Invitation link shared',
         real: 'REAL',
         sessions_one: '{{count}} session scheduled',
@@ -24079,6 +24080,14 @@ export default {
       kicker: 'Coach guide',
       'm1-back': 'Go back: tap the arrow at the top left, or swipe your finger in from the left '
         + 'edge of the screen.',
+      'm1-choice': {
+        body: 'Your club is already on FoundClub. Pick your team: your request goes to the club. '
+          + 'Otherwise, create your own.',
+        loading: "Looking at your club's teams…",
+        no: "No, I'll create mine",
+        title: 'Do you coach one of these teams?',
+        yes: 'Yes, this is my team',
+      },
       'm1-csearch': "Type your club's name, then open its page.",
       'm1-cw': 'Create your club: fill in each screen, then Next.',
       'm1-dock': 'Start with your team. Open the Teams tab.',
@@ -24095,6 +24104,10 @@ export default {
       'm1-sheet': 'Your club already has teams: you could join one. Here, create your own.',
       'm1-wait': 'Your request to join your club is waiting for a club manager. The guide is waiting too: once they accept, resume it here and you will create your team. Meanwhile, feel free to explore the app.',
       'm1-wait-pill': 'Waiting for the club · Resume',
+      'm1-wait-team': 'Your request to join your team is waiting for the club. The guide is '
+        + 'waiting too: once accepted, your mission 1 is complete. Meanwhile, feel free to explore '
+        + 'the app.',
+      'm1-wait-team-pill': 'Waiting for your team · Resume',
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",

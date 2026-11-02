@@ -77,6 +77,10 @@ const M1_ESCAPES = [
   {
     completes: true, goto: 'm2-card', key: 'team.created', type: 'action',
   },
+  // FIN-GUIDE, point 1 : équipe reprise ou reconnue dans la question de M1.
+  {
+    completes: true, goto: 'm2-card', key: 'team.trained', type: 'action',
+  },
   ...[
     ['tw2', RouteNames.TeamWizardDescription],
     ['tw3', RouteNames.TeamWizardSection],
@@ -128,6 +132,17 @@ const isJoinPending = (ctx) => {
     .some((/** @type {any} */ request) => request?.state === 'pending');
 };
 /**
+ * Demande pour rejoindre une équipe qui attend le club (FIN-GUIDE, point 1). Une ligne
+ * `invite`, c'est le staff qui l'invite : ce n'est pas sa demande.
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const isTeamJoinPending = (ctx) => (Array.isArray(ctx?.userData?.teamMembershipRequests)
+  ? ctx.userData.teamMembershipRequests
+  : [])
+  .some((/** @type {any} */ request) => request?.state === 'pending'
+    && request?.direction !== 'invite');
+/**
  * Branche « trouve ton club » : ni équipe, ni club (au départ comme maintenant),
  * ni demande en attente. Sinon la bulle « Pas de club ? » s'affichait sur le
  * tunnel équipe d'un coach qui avait déjà son club (N3, capture K4).
@@ -164,7 +179,16 @@ const trainsTeamInClub = (userData) => (Array.isArray(userData?.trainedTeams)
  * @returns {boolean}
  */
 const hasTeamNow = (ctx) => Boolean(ctx?.created?.['team.created'])
+  || Boolean(ctx?.created?.['team.trained'])
   || trainsTeamInClub(ctx?.userData);
+/**
+ * FIN-GUIDE, point 1 : la question « Es-tu entraîneur·e d'une de ces équipes ? » se pose à qui a
+ * un club, n'entraîne rien et n'attend aucune réponse.
+ * @param {any} ctx
+ * @returns {boolean}
+ */
+const canAskTeamChoice = (ctx) => !hadTeam(ctx) && !hasTeamNow(ctx) && hasClubNow(ctx)
+  && !isTeamJoinPending(ctx);
 
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
@@ -270,6 +294,22 @@ const wizardStep = (id, missionId, nextRoute, resumeFrom, text) => ({
   get text() { return text(); },
 });
 
+/**
+ * FIN-GUIDE, point 4 : on peut inviter sans passer par le lien du menu (« + » de la fiche, feuille
+ * d'invitation). Une invitation envoyée valide M2 ; un lien repartagé ou un SMS, on demande.
+ * @type {any[]}
+ */
+const M2_ELSEWHERE = [
+  {
+    completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
+  },
+  {
+    completes: true, goto: 'm3-dock', key: 'team.invite.shared', type: 'action',
+  },
+  { goto: 'm2-sent', key: 'team.invite.dismissed', type: 'interaction' },
+  { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
+];
+
 const STEPS = [
   {
     id: 'open',
@@ -279,20 +319,34 @@ const STEPS = [
 
   // ── M1 · Créer ton équipe ────────────────────────────────────────────────
   {
-    // Coach qui a déjà une équipe : « Retrouve ton équipe ».
-    advanceOn: withM1Escapes({ key: RouteNames.TeamDetails, type: 'route' }),
-    completesMission: true,
-    // Vue de l'accueil (carte pas à l'écran) : on montre l'onglet Équipes.
-    fallback: {
-      targets: ['dock.teams'],
-      get text() { return t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.'); },
-    },
-    id: 'm1-find',
+    // FIN-GUIDE, point 1 (Adel, 02/11) : « si y'a des équipes ça pose la question, sinon créer la
+    // vôtre ». Écran plein cadre `TourTeamChoice` ; un club sans équipe passe tout de suite à la
+    // suite. Le coach déjà entraîneur d'une équipe n'arrive jamais ici : M1 est validée au départ.
+    advanceOn: withM1Escapes({ goto: 'm1-wait-team', key: 'team.requested', type: 'action' }),
+    id: 'm1-choice',
+    kind: 'teamChoice',
+    missionId: 'coach_m1',
+    when: canAskTeamChoice,
+  },
+  {
+    // La demande attend le club : même attente que `m1-wait`, sans bloquer. Acceptée, M1 se valide
+    // seule (`liveMission`) ; refusée, la reprise repose la question.
+    advanceOn: withM1Escapes(),
+    id: 'm1-wait-team',
     missionId: 'coach_m1',
     navTarget: teamHubTarget,
-    targets: ['teams.trained.0'],
-    get text() { return t('m1-find', 'Ton équipe est déjà là : ouvre-la.'); },
-    when: hadTeam,
+    get nextLabel() { return t('understood', 'Compris'); },
+    get pausedLabel() { return t('m1-wait-team-pill', 'En attente de ton équipe · Reprendre'); },
+    pauseOnNext: true,
+    resumeFrom: 'm1-choice',
+    get text() {
+      return t(
+        'm1-wait-team',
+        'Ta demande pour rejoindre ton équipe attend la réponse du club. Le guide t’attend : dès '
+          + 'qu’elle est acceptée, ta mission 1 est validée. En attendant, explore l’app librement.',
+      );
+    },
+    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && isTeamJoinPending(ctx),
   },
   {
     advanceOn: withM1Escapes({ key: RouteNames.MyTeamList, type: 'route' }),
@@ -301,7 +355,7 @@ const STEPS = [
     navTarget: homeTarget,
     targets: ['dock.teams'],
     get text() { return t('m1-dock', 'Commence par ton équipe. Ouvre l’onglet Équipes.'); },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx),
+    when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !isTeamJoinPending(ctx),
   },
   {
     // L1 GUIDE-ATTENTE (décision « 1- A » de l'audit : le guide attend, et le dit).
@@ -318,7 +372,8 @@ const STEPS = [
     get nextLabel() { return t('understood', 'Compris'); },
     get pausedLabel() { return t('m1-wait-pill', 'En attente du club · Reprendre'); },
     pauseOnNext: true,
-    resumeFrom: 'm1-dock',
+    // Club accepté : la question de M1 d'abord (son équipe existe peut-être déjà).
+    resumeFrom: 'm1-choice',
     get text() {
       return t(
         'm1-wait',
@@ -336,6 +391,10 @@ const STEPS = [
       // « Ton adhésion est en attente » : le guide attend avec lui, pas de tw1.
       {
         goto: 'm1-wait', key: RouteNames.TeamWizardName, type: 'route', when: isJoinPending,
+      },
+      // Club rejoint dans le guide, question posée : tout droit au tunnel (FIN-GUIDE).
+      {
+        goto: 'tw1', key: RouteNames.TeamWizardName, type: 'route', when: joinedInGuide,
       },
       { key: RouteNames.TeamWizardName, type: 'route' },
     ]),
@@ -415,7 +474,13 @@ const STEPS = [
     when: joinedInGuide,
   },
   {
-    advanceOn: withM1Escapes({ not: RouteNames.Club, type: 'route' }),
+    // FIN-GUIDE, point 1 : un club rejoint a peut-être déjà ses équipes : la question d'abord.
+    advanceOn: withM1Escapes([
+      {
+        goto: 'm1-choice', not: RouteNames.Club, type: 'route', when: canAskTeamChoice,
+      },
+      { not: RouteNames.Club, type: 'route' },
+    ]),
     id: 'm1-back',
     missionId: 'coach_m1',
     resumeFrom: 'm1-dock2',
@@ -535,6 +600,11 @@ const STEPS = [
   // ── M2 · Inviter tes joueur·se·s ─────────────────────────────────────────
   {
     advanceOn: { key: RouteNames.TeamDetails, type: 'route' },
+    // FIN-GUIDE, point 1 : M1 validée d'emblée, on est encore sur l'accueil : on montre le chemin.
+    fallback: {
+      targets: ['dock.teams'],
+      get text() { return t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.'); },
+    },
     id: 'm2-card',
     missionId: 'coach_m2',
     navTarget: teamHubTarget,
@@ -542,7 +612,7 @@ const STEPS = [
     get text() { return t('m2-card', 'Fais entrer tes joueur·se·s : ouvre ton équipe.'); },
   },
   {
-    advanceOn: { key: 'team.actions.open', type: 'interaction' },
+    advanceOn: [{ key: 'team.actions.open', type: 'interaction' }, ...M2_ELSEWHERE],
     id: 'm2-more',
     missionId: 'coach_m2',
     resumeFrom: 'm2-card',
@@ -550,7 +620,7 @@ const STEPS = [
     get text() { return t('m2-more', 'Les actions de l’équipe sont rangées dans ce menu.'); },
   },
   {
-    advanceOn: { key: 'teamActions.shareLink', type: 'interaction' },
+    advanceOn: [{ key: 'teamActions.shareLink', type: 'interaction' }, ...M2_ELSEWHERE],
     bubblePlacement: 'top',
     // Menu refermé (reprise, retour) : on remontre le bouton ⋮ au lieu d'une
     // bulle « en haut » posée dessus (GUIDE-ENTETE, émulateur 28/10).
@@ -566,16 +636,25 @@ const STEPS = [
   },
   {
     // Feuille de partage du système : bulle compacte en haut, sans voile.
+    // FIN-GUIDE, point 4 (Adel, 02/11 : « on revient sur l'app, rien ne se passe ») : l'iPhone peut
+    // rendre « annulé » pour un lien pourtant parti, ou ne rien rendre. Tout ce qui n'est pas un
+    // envoi certain demande (`m2-sent`), et le bouton de la bulle laisse toujours une issue.
     advanceOn: [
       { key: 'team.invite.shared', type: 'action' },
-      { goto: 'm2-share', key: 'team.invite.dismissed', type: 'interaction' },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
+      },
+      { goto: 'm2-sent', key: 'team.invite.dismissed', type: 'interaction' },
       // Android ne dit pas si le lien est parti (teamInviteShare) : on demande.
       { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
     ],
+    // La fiche garde son titre et ses onglets lisibles (capture 4 d'Adel).
+    belowTargets: ['team.tabs'],
     bubblePlacement: 'top',
     completesMission: true,
     id: 'm2-pick',
     missionId: 'coach_m2',
+    get nextLabel() { return t('m2-sent-next', 'C’est envoyé'); },
     resumeFrom: 'm2-card',
     get text() {
       return t(
@@ -587,7 +666,18 @@ const STEPS = [
   {
     // GUIDE-FINITIONS-3 n° 22 : sur Android, fermer la feuille sans envoyer
     // validait M2. Le coach confirme ; sinon il rouvre le menu (retour à m2-share).
-    advanceOn: { goto: 'm2-share', key: 'team.actions.open', type: 'interaction' },
+    advanceOn: [
+      { goto: 'm2-share', key: 'team.actions.open', type: 'interaction' },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.shared', type: 'action',
+      },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
+      },
+    ],
+    // La fiche garde ses onglets lisibles, comme « Envoie-le » (capture 4 d'Adel).
+    belowTargets: ['team.tabs'],
+    bubblePlacement: 'top',
     completesMission: true,
     id: 'm2-sent',
     missionId: 'coach_m2',
@@ -1118,18 +1208,28 @@ export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
    * doit pas faire sauter la suite de la branche « sans club »).
-   * @param {{ userData: any }} context - Personne connectée.
+   * @param {{ created?: Record<string, any>; userData: any }} context - Personne connectée, et ce
+   *   qu'elle vient de créer (profil pas encore relu, FIN-GUIDE point 2).
    * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean; joinPending: boolean }}
    *   Drapeaux.
    */
-  buildFlags: ({ userData }) => ({
+  buildFlags: ({ created, userData }) => ({
     firstName: String(userData?.firstname || userData?.firstName || ''),
     hadClub: Boolean(userData?.club?.documentId),
     // n° 20 : l'ouverture ne dit pas « trouve ton club » à qui attend déjà le sien.
     joinPending: isJoinPending({ userData }),
     // Seules les équipes qu'il entraîne (décision du chef, 27/10), dans son club courant.
-    hadTeam: trainsTeamInClub(userData),
+    hadTeam: trainsTeamInClub(userData) || Boolean(created?.['team.created']),
   }),
+  /**
+   * FIN-GUIDE, point 1 : déjà coach d'une équipe ⇒ mission 1 validée, au départ ou dès que le
+   * profil relu le dit (demande acceptée, guide gardé sur le téléphone).
+   * @param {any} ctx - Contexte du guide.
+   * @returns {{ goto: string; missionId: string } | null} Mission à valider, étape qui suit.
+   */
+  liveMission: (ctx) => (hadTeam(ctx) || trainsTeamInClub(ctx?.userData)
+    ? { goto: 'm2-card', missionId: 'coach_m1' }
+    : null),
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
   missions: MISSIONS,
   steps: [...STEPS, ...REVIEW_STEPS],

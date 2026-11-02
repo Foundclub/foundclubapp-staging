@@ -47,7 +47,10 @@ function Welcome({ navigation }) {
     || roleKey === 'president'
     || roleKey === 'superAdmin';
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
-  const shouldOfferGuidedTour = roleKey === 'coach' || roleKey === 'president';
+  // FIN-GUIDE (decision du chef, 02/11) : le site n'a pas de guide (`startTour` y refuse) ; il ne
+  // le promet donc pas.
+  const shouldOfferGuidedTour = (roleKey === 'coach' || roleKey === 'president')
+    && Platform.OS !== 'web';
 
   /**
    * 👨‍👧 LES QUATRE PHRASES DE BIENVENUE, POUR LA BONNE PERSONNE.
@@ -437,16 +440,18 @@ function Welcome({ navigation }) {
             )}
             {/* Pont sous le bouton : il desamorce un tour guide obligatoire en
                 disant ce qu'il coute (rien) et ce qu'il produit. */}
-            <Text style={[Fonts.p3Bold, Fonts.primary200, Fonts.textCenter]}>
-              {t(
-                roleKey === 'president'
-                  ? 'welcome.subscription.presidentBridge'
-                  : 'welcome.subscription.coachBridge',
-                roleKey === 'president'
-                  ? 'Gratuit · 2 min — tu configures ton club en chemin'
-                  : 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin',
-              )}
-            </Text>
+            {shouldOfferGuidedTour ? (
+              <Text style={[Fonts.p3Bold, Fonts.primary200, Fonts.textCenter]}>
+                {t(
+                  roleKey === 'president'
+                    ? 'welcome.subscription.presidentBridge'
+                    : 'welcome.subscription.coachBridge',
+                  roleKey === 'president'
+                    ? 'Gratuit · 2 min — tu configures ton club en chemin'
+                    : 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin',
+                )}
+              </Text>
+            ) : null}
           </View>
         </>
       ) : (

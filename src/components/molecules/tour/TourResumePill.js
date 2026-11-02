@@ -17,6 +17,9 @@ import { useTour } from '@/context/useTour';
  * compte » et rester sur l'écran de connexion. Dans le flux, elle ne couvre
  * rien et part avec l'accueil (déconnexion, ajout de compte).
  *
+ * FIN-GUIDE, point 5 (capture 5 d'Adel) : une carte de la largeur de la page, alignée sur les
+ * cartes de l'accueil et posée sous son titre : la mission, sa jauge, et toute la carte reprend.
+ *
  * ponytail: seulement sur l'accueil (là où l'app s'ouvre, donc là où la reprise
  * après fermeture se fait) ; la relance reste aussi dans Mon compte › Aide.
  * Sortie : la poser dans d'autres écrans au même endroit du flux si la recette
@@ -37,6 +40,7 @@ function TourResumePill() {
     ? `${position.isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission')} `
       + `${position.index}/${position.total}`
     : null;
+  const gauge = tour.gauge || 0;
   const confirmQuit = () => Alert.alert(
     t('tourGuide.quitConfirm.title', 'Arrêter le guide ?'),
     t(
@@ -54,49 +58,71 @@ function TourResumePill() {
   return (
     <View
       style={{
-        alignItems: 'center',
-        alignSelf: 'flex-start',
-        backgroundColor: withAlpha(Colors.chatSheet, 0.97),
+        backgroundColor: withAlpha(Colors.primary500, 0.08),
         borderColor: withAlpha(Colors.primary500, 0.35),
-        borderRadius: 999,
+        borderRadius: 20,
         borderWidth: 1,
-        columnGap: 4,
-        flexDirection: 'row',
-        marginHorizontal: 16,
-        paddingLeft: 14,
-        paddingVertical: 4,
+        overflow: 'hidden',
       }}
+      testID="tour.resumePill"
     >
-      <TouchableOpacity
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={tour.resumeTour}
-        style={{ flexShrink: 1, justifyContent: 'center', minHeight: 36 }}
-      >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          {/* L1 GUIDE-ATTENTE : une étape d'attente dit ce qu'elle attend. */}
-          {tour.currentStep?.pausedLabel || t('tourGuide.resume', 'Reprendre le tour')}
-        </Text>
-        <View style={{ columnGap: 6, flexDirection: 'row', flexWrap: 'wrap' }}>
-          {where ? <Text style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>{where}</Text> : null}
-          {where && tour.currentMission?.title ? (
-            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300, flexShrink: 1 }]}>
-              {tour.currentMission.title}
+      <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.7}
+          onPress={() => tour.resumeTour()}
+          style={{
+            alignItems: 'center',
+            columnGap: 12,
+            flex: 1,
+            flexDirection: 'row',
+            minHeight: 64,
+            paddingLeft: 14,
+            paddingVertical: 10,
+          }}
+          testID="tour.resumePill.resume"
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: withAlpha(Colors.primary500, 0.16),
+              borderRadius: 12,
+              height: 40,
+              justifyContent: 'center',
+              width: 40,
+            }}
+          >
+            <SvgIcon color={Colors.primary500} height={18} name="flag" width={18} />
+          </View>
+          <View style={{ flex: 1, rowGap: 2 }}>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+              {/* L1 GUIDE-ATTENTE : une étape d'attente dit ce qu'elle attend. */}
+              {(!tour.isWaitOver && tour.currentStep?.pausedLabel)
+                || t('tourGuide.resume', 'Reprendre le tour')}
             </Text>
-          ) : null}
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>{`${tour.gauge || 0} %`}</Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        accessibilityLabel={t('tourGuide.quit', 'Arrêter le guide')}
-        accessibilityRole="button"
-        onPress={confirmQuit}
-        style={{
-          alignItems: 'center', justifyContent: 'center', minHeight: 44, minWidth: 44,
-        }}
-      >
-        <SvgIcon color={Colors.neutral400} height={12} name="close" width={12} />
-      </TouchableOpacity>
+            {/* Le tout sur la même ligne : sur un petit écran, rien n'est coupé, elle passe à la suivante. */}
+            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {[where, tour.currentMission?.title, `${gauge}\u00A0%`].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityLabel={t('tourGuide.quit', 'Arrêter le guide')}
+          accessibilityRole="button"
+          onPress={confirmQuit}
+          style={{
+            alignItems: 'center', justifyContent: 'center', minHeight: 44, minWidth: 44,
+          }}
+        >
+          <SvgIcon color={Colors.neutral300} height={12} name="close" width={12} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.08), height: 3 }}>
+        <View
+          style={{ backgroundColor: Colors.primary500, height: 3, width: `${gauge}%` }}
+          testID="tour.resumePill.gauge"
+        />
+      </View>
     </View>
   );
 }
