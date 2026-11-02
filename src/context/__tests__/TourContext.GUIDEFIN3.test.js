@@ -166,6 +166,8 @@ describe('Réserve du n° 6 — « Passer cette mission » quand une équipe exi
     renderProvider();
     act(() => { tour.startTour('coach'); });
     act(() => { tour.completeCurrentStep(); });
+    // FIN-GUIDE : « Non, je crée la mienne ».
+    act(() => { tour.completeCurrentStep(); });
     route(RouteNames.MyTeamList);
     route(RouteNames.TeamWizardName);
     expect(stepId()).toBe('tw1');

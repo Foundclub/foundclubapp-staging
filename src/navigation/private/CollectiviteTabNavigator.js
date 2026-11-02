@@ -19,6 +19,8 @@ import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
 
 import { useCollectiviteRequests } from '@/services/collectivite/collectiviteQueries';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 const Tab = createBottomTabNavigator();
 
 /**
@@ -68,7 +70,7 @@ function CollectiviteTabNavigator() {
           }}
         >
           <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

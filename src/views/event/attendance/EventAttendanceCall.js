@@ -15,7 +15,13 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
-import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
+import { RouteNames } from '@/navigation/routeNames';
+
+import {
+  useGetEvent,
+  useGetEventAttendance,
+  useGetEventConvocation,
+} from '@/services/event/eventQueries';
 
 import texteInsecable from '@/utils/texteInsecable';
 
@@ -27,6 +33,7 @@ import {
   formatShortDateInZone,
   formatTimeInZone,
   isMarked,
+  listConvoquesSansCompte,
   listUncalledIds,
   resolveAttendanceWindow,
   resolveCallMode,
@@ -83,6 +90,7 @@ const styles = StyleSheet.create({
   pill: {
     borderRadius: 100, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4,
   },
+  sansCompte: { gap: 4 },
   screen: { flex: 1 },
   scroll: { gap: 16, paddingBottom: 24, paddingHorizontal: 16 },
   signalledRow: {
@@ -145,6 +153,7 @@ function EventAttendanceCall() {
     data: attendancePayload,
     isError: isAttendanceError,
   } = useGetEventAttendance(eventId, { refetchOnMount: 'always' });
+  const { data: convocation } = useGetEventConvocation(eventId);
 
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
@@ -189,6 +198,7 @@ function EventAttendanceCall() {
   // absence posee a la main (D7bis) n en a pas et compte pourtant.
   const markedCount = useMemo(() => countCalled(items), [items]);
   const restantsAPointer = useMemo(() => listUncalledIds(items).length, [items]);
+  const sansCompte = useMemo(() => listConvoquesSansCompte(convocation), [convocation]);
 
   const teamName = event?.team?.name || '';
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
@@ -483,6 +493,35 @@ function EventAttendanceCall() {
           />
         ))}
       </View>
+
+      {/* FIN-EVENEMENTS 3 : la feuille du serveur ne liste que des comptes. L ecran le dit, et
+          nomme les convoques qu il ne peut pas pointer, plutot qu un 0 / 0 muet. */}
+      {items.length === 0 ? (
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+          {t(
+            'eventDetails.attendanceCall.noAccount.empty',
+            'Personne à pointer ici : l’appel ne liste que les personnes qui ont un compte.',
+          )}
+        </Text>
+      ) : null}
+      {sansCompte.length > 0 ? (
+        <View style={styles.sansCompte}>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+            {t('eventDetails.attendanceCall.noAccount.title', 'Convoqués sans compte')}
+          </Text>
+          {sansCompte.map((/** @type {any} */ { player, playerId }) => (
+            <Text key={playerId} style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {[player?.firstname, player?.lastname].filter(Boolean).join(' ')}
+            </Text>
+          ))}
+          <Text style={[Fonts.p4, { color: Colors.neutral400 }]}>
+            {t(
+              'eventDetails.attendanceCall.noAccount.note',
+              'Leur présence ne se pointe pas encore à l’appel.',
+            )}
+          </Text>
+        </View>
+      ) : null}
     </>
   );
 
@@ -527,7 +566,7 @@ function EventAttendanceCall() {
         {payloadData && mode !== 'open' ? renderBeforeWindow() : null}
       </ScrollView>
 
-      {mode === 'open' && (
+      {mode === 'open' && items.length > 0 && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
           {/* 🚪 D5 — LE PIED NE BLOQUE PAS UN APPEL PARTIEL.
               Le pack hesitait a exiger que tout le monde soit pointe. Un appel
@@ -566,7 +605,12 @@ function EventAttendanceCall() {
         isVisible={openSheet === 'close'}
         items={items}
         onClose={() => setOpenSheet('')}
-        onConfirm={() => { setOpenSheet(''); navigation.goBack(); }}
+        // FIN-EVENEMENTS 4 : sur le site, `goBack` depuis une page ouverte par son adresse mene a
+        // l accueil (webNavigationAdapter). `popTo` rend a la fiche, sans repasser par l appel.
+        onConfirm={() => {
+          setOpenSheet('');
+          /** @type {any} */ (navigation).popTo(RouteNames.EventDetails, { eventId });
+        }}
         payloadData={payloadData}
         sweepAtMs={resolveNoShowSweepMs(resolveEventEndMs({ event, payloadData }))}
         t={t}

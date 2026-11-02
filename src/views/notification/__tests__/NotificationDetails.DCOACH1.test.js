@@ -1,6 +1,8 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { buildWebPath } from '@/navigation/webRoutes';
+
 import NotificationDetails from '../NotificationDetails';
 
 /**
@@ -14,16 +16,19 @@ import NotificationDetails from '../NotificationDetails';
  */
 
 const mockRoute = { params: {} };
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn(), navigate: jest.fn() }),
+  useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn(), navigate: mockNavigate }),
   useRoute: () => mockRoute,
 }));
 
+const mockInvalidateQueries = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: undefined, isError: false, isLoading: false, refetch: jest.fn(),
   }),
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -50,7 +55,7 @@ jest.mock('@/components/atoms/button/Button', () => {
   const react = jest.requireActual('react');
   const rn = jest.requireActual('react-native');
   return function BoutonDouble(/** @type {any} */ props) {
-    return react.createElement(rn.Text, null, props.title);
+    return react.createElement(rn.Text, { onPress: props.onPress }, props.title);
   };
 });
 
@@ -67,6 +72,9 @@ jest.mock('@/services/notification/notificationService', () => ({
   markAsRead: jest.fn(async () => undefined),
 }));
 
+/** @type {any} */
+let ficheOuverte;
+
 /**
  * Le texte visible de la fiche, ouverte sur cette notification.
  * @param {Record<string, unknown>} notification La notification passée par la liste.
@@ -77,9 +85,30 @@ const ficheDe = (notification) => {
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(<NotificationDetails />); });
+  ficheOuverte = arbre;
   return arbre.root.findAllByType(Text).map((noeud) => [noeud.props.children].flat().join(''))
     .join(' | ');
 };
+
+// FIN-CLOCHE (02/11/2026) — ouvrir une fiche la marque lue : la cloche et le panneau se relisent
+// une fois le serveur à jour, sinon ils restent en retard jusqu'à leur prochaine lecture.
+describe('FIN-CLOCHE — la fiche lue relit la cloche', () => {
+  test('une notification non lue : marquée, puis relecture', async () => {
+    mockInvalidateQueries.mockClear();
+    mockRoute.params = {
+      notification: {
+        body: 'Corps',
+        createdAt: '2026-10-30T03:29:00.000Z',
+        documentId: 'n-9',
+        read: false,
+        title: 'Titre',
+        type: 'complexeStatut',
+      },
+    };
+    await act(async () => { renderer.create(<NotificationDetails />); });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+  });
+});
 
 describe('fiche d une notification — le refus de participation (inchangé)', () => {
   test('le refus garde son statut, son événement, son motif et sa date de décision', () => {
@@ -119,5 +148,54 @@ describe('REPRISE-MESSAGERIE D-COACH-1 — une notification sans écran à elle'
     expect(texte).not.toContain('| Événement |');
     expect(texte).not.toContain('| Motif |');
     expect(texte).toContain('| Reçue le | 30 oct. 2026');
+  });
+});
+
+// FIN-MESSAGERIE p48 (02/11, Adel) — « sera présent » doit mener quelque part. Écrans de
+// réservation
+// éteints, et le planning ne montre que les événements (mesuré, compte Tournee) : la fiche dit le
+// créneau elle-même et ouvre le planning.
+describe('FIN-MESSAGERIE p48 — « sera présent » mène au planning', () => {
+  const SERA_PRESENT = {
+    body: 'Hugo L. sera présent samedi 10 h (2/4).',
+    createdAt: '2026-10-30T03:29:00.000Z',
+    data: {
+      complexeName: 'Complexe Test FoundClub',
+      terrainName: 'Terrain de l’Étoile',
+      whenLabel: 'samedi 07/11, 10 h',
+    },
+    documentId: 'n-3',
+    read: true,
+    title: 'Nouvelle réponse',
+    type: 'complexeReservationJoueur',
+  };
+
+  test('la fiche dit le créneau : terrain, complexe, jour', () => {
+    expect(ficheDe(SERA_PRESENT))
+      .toContain('| Réservation | Terrain de l’Étoile · Complexe Test FoundClub · samedi 07/11, 10 h |');
+  });
+
+  test('« Voir mon planning » ouvre le planning', () => {
+    ficheDe(SERA_PRESENT);
+    const bouton = ficheOuverte.root.findAllByType(Text)
+      .find((/** @type {any} */ noeud) => noeud.props.children === 'Voir mon planning');
+
+    act(() => { bouton.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('HomeTab', { screen: 'MyEventList' }, { pop: true });
+    expect(buildWebPath('HomeTab', { screen: 'MyEventList' })).toBe('/events/mine');
+  });
+
+  test('une autre notification n a ni bloc « Réservation » ni bouton vers le planning', () => {
+    const texte = ficheDe({
+      body: 'Merci pour ton intérêt.',
+      documentId: 'n-4',
+      read: true,
+      title: 'Réponse du club',
+      type: 'clubInterestResponse',
+    });
+
+    expect(texte).not.toContain('Réservation');
+    expect(texte).not.toContain('Voir mon planning');
   });
 });

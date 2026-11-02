@@ -176,6 +176,8 @@ describe('Mission essentielle que l’écran refuse (bloquant n° 6)', () => {
     act(() => { tour.startTour('coach'); });
     expect(tour.currentStep?.kind).toBe('opening');
     act(() => { tour.completeCurrentStep(); });
+    // FIN-GUIDE : « Non, je crée la mienne ».
+    act(() => { tour.completeCurrentStep(); });
     expect(tour.currentStep?.id).toBe('m1-dock');
   };
 

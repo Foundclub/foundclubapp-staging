@@ -690,6 +690,20 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
     expect(trouver(tree, 'adresse').props.label).toBeUndefined();
   });
 
+  it('🐞 FIN-EVENEMENTS p134 : pour créer une alerte, une seule ligne « Ville »', async () => {
+    const { tree } = await rendreAvecEtoile({
+      onCreateAlert: jest.fn(() => Promise.resolve('creee')),
+      pourUneAlerte: true,
+    });
+    const rangees = tree.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.accessibilityLabel === 'string'
+      && noeud.props.accessibilityLabel.startsWith('Ville :')
+    ));
+
+    expect(rangees).toHaveLength(0);
+    expect(trouver(tree, 'adresse').props.label).toBe('Ville');
+  });
+
   it('une ville déjà choisie dans la recherche garde la priorité', async () => {
     const LYON = { label: 'Lyon', value: '4.83|45.76' };
     const { tree } = await rendreAvecEtoile({

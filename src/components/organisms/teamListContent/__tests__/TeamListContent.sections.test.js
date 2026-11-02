@@ -33,6 +33,11 @@ jest.mock('@/domains/team/useParentTeams', () => ({
 jest.setTimeout(30000);
 
 const mockUseAuth = jest.fn();
+jest.mock('@/components/organisms/teamListContent/AnnulerMaDemande', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),
@@ -532,7 +537,11 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
     it('teinte la bordure de la carte selon l\'etat, et elle seule', async () => {
       const tree = await renderList();
 
-      expect(surfaceStyle(findCard(tree, 'U11 Mixte')).borderColor).toBe('couleur-alerte');
+      // FIN-INSCRIPTION p3 : la carte d'une demande a son bouton « Annuler » à côté de la zone
+      // qui ouvre l'équipe ; l'enveloppe entoure donc les deux.
+      const surfaceEnAttente = tree.root.findAllByType(ClubCardSurface)
+        .find((/** @type {any} */ surface) => cardTexts(surface).includes('U11 Mixte'));
+      expect(flattenStyle(surfaceEnAttente.props.style).borderColor).toBe('couleur-alerte');
       // Sans etat, la bordure reste celle de ClubCardSurface (cyan 25 %), donc
       // la carte ne la surcharge pas.
       expect(surfaceStyle(findCard(tree, 'U15 Masculins')).borderColor).toBeUndefined();

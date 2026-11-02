@@ -70,6 +70,7 @@ import {
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
+  resolveOnboardingOriginAfterTeam,
   shouldFetchFullUser,
   USER_ROLES,
 } from './authUseCases';
@@ -432,7 +433,13 @@ const useAuth = () => {
       });
     }
 
-    if (Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))) {
+    // FIN-CLOCHE (02/11) : le bootstrap évite la PREMIÈRE lecture, il n'écrase plus le compteur. Sa
+    // réponse reste en cache 30 s + 4 min, purgée dans un seul processus du serveur : après
+    // « Tout lire », une relecture sur un autre rendait l'ancien chiffre à la cloche.
+    if (
+      Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))
+      && queryClient.getQueryData(UNREAD_COUNT_QUERY_KEY) === undefined
+    ) {
       queryClient.setQueryData(UNREAD_COUNT_QUERY_KEY, {
         count: Number(bootstrapData.unreadNotificationsCount || 0),
       });
@@ -917,6 +924,14 @@ const useAuth = () => {
     });
   }, [onboardingViews, subscriptionAccessLevel, userData?.documentId, userRoleKey]);
 
+  // FIN-GUIDE, point 2 : équipe créée pendant l'inscription ⇒ le tunnel reprend jusqu'au sas qui
+  // lance le guide. Inscription finie : rien, et `getNextOnboardingRoute` n'est pas appelé (il
+  // note le tunnel comme ouvert).
+  const getRouteAfterTeamCreated = useCallback(() => {
+    const origin = resolveOnboardingOriginAfterTeam(onboardingViews?.views);
+    return origin ? getNextOnboardingRoute(origin) : undefined;
+  }, [getNextOnboardingRoute, onboardingViews]);
+
   const isNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
 
   const canPublishGovernedClubContent = useMemo(() => {
@@ -1008,6 +1023,7 @@ const useAuth = () => {
     getAuthTokens,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    getRouteAfterTeamCreated,
     getSubscriptionAccessLevelForClub,
     governedPublishingBlockReason,
     hasClubAccess,

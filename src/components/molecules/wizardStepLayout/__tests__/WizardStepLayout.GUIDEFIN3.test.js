@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { Keyboard } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import WizardStepLayout from '../WizardStepLayout';
@@ -135,5 +136,29 @@ describe('R2-2 — place de la bulle sous la consigne du tunnel', () => {
       currentStep: { bubbleSlot: true, id: 'tw7' }, isGuide: true, tourStatus: 'paused',
     };
     expect(place(rendre({}))).toHaveLength(0);
+  });
+});
+
+// FIN-GUIDE, point 3 : sur un petit écran, clavier ouvert, « Passer cette étape » prenait les 56 pt
+// du champ qu'on remplit.
+describe('FIN-GUIDE — « Passer » attend que le clavier se ferme', () => {
+  const lePasser = (arbre) => JSON.stringify(arbre.toJSON()).includes('Passer');
+
+  it('clavier ouvert : le lien part ; fermé : il revient', () => {
+    mockTour = { currentStep: null, isGuide: false, tourStatus: null };
+    const ecoutes = {};
+    const espion = jest.spyOn(Keyboard, 'addListener').mockImplementation((nom, rappel) => {
+      ecoutes[nom] = rappel;
+      return { remove: () => {} };
+    });
+    const arbre = rendre({ onSkip: () => {}, showSkip: true, skipLabel: 'Passer' });
+    expect(lePasser(arbre)).toBe(true);
+    const montee = ecoutes.keyboardDidShow || ecoutes.keyboardWillShow;
+    act(() => montee({ endCoordinates: { height: 300, screenY: 500 } }));
+    expect(lePasser(arbre)).toBe(false);
+    const fermee = ecoutes.keyboardDidHide || ecoutes.keyboardWillHide;
+    act(() => fermee());
+    expect(lePasser(arbre)).toBe(true);
+    espion.mockRestore();
   });
 });

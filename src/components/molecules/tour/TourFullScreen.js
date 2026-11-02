@@ -182,22 +182,27 @@ function TourFullScreen({ kind }) {
             + '?', { name, ...SANS_ECHAPPEMENT })}
         </Text>
         <View style={{ alignItems: 'center', columnGap: 16, flexDirection: 'row' }}>
-          <GaugeRing size={92} value={0} />
+          {/* FIN-GUIDE, point 1 : déjà coach d'une équipe, la mission 1 est validée d'emblée. */}
+          <GaugeRing size={92} value={gauge} />
           <Text style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}>
             {t('tourCatalog.coach.open.gauge', '{{count}} missions. Chacune fait monter ta jauge '
               + 'de 25 %.', { count: essentials.length })}
           </Text>
         </View>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, index) => (
-            <MissionRow
-              detail={mission.openingDetail?.(flags)}
-              key={mission.id}
-              label={mission.title}
-              marker={String(index + 1)}
-              right="+25 %"
-            />
-          ))}
+          {essentials.map((/** @type {any} */ mission, index) => {
+            const isDone = missionStatus?.[mission.id] === 'done';
+            return (
+              <MissionRow
+                detail={isDone ? null : mission.openingDetail?.(flags)}
+                done={isDone}
+                key={mission.id}
+                label={mission.title}
+                marker={String(index + 1)}
+                right={isDone ? undefined : '+25 %'}
+              />
+            );
+          })}
         </View>
         <View style={{ columnGap: 8, flexDirection: 'row' }}>
           <View style={{
@@ -345,11 +350,14 @@ function TourFullScreen({ kind }) {
             || t('tourCatalog.coach.close.yourTeam', 'Ton équipe'),
           ...SANS_ECHAPPEMENT,
         })
-        // n° 29 : l'équipe d'un coach qui l'avait déjà (M1 « Retrouve ton équipe »).
-        : (flags?.hadTeam
+        // n° 29 : l'équipe d'un coach qui l'avait déjà, ou reconnue dans la question de M1.
+        : ((flags?.hadTeam || created?.['team.trained'])
           && t('tourCatalog.coach.close.teamReady', 'Ton équipe, déjà prête')) || null,
       created?.['team.invite.shared']
         ? t('tourCatalog.coach.close.link', "Lien d'invitation partagé")
+        : null,
+      created?.['team.invite.sent']
+        ? t('tourCatalog.coach.close.invited', 'Invitation envoyée')
         : null,
       created?.['event.created']
         // n° 29 : pluriel d'i18next (`sessions_one` / `sessions_other`), plus de « (s) ».

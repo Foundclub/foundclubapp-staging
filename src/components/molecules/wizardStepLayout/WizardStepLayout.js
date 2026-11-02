@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -14,6 +14,7 @@ import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import useKeyboardFrame from '@/hooks/useKeyboardFrame';
 import { BREAKPOINTS } from '@/responsive/breakpoints';
 
 /**
@@ -146,6 +147,10 @@ function WizardStepLayout({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const scrollRef = useRef(/** @type {any} */ (null));
+  // FIN-GUIDE, point 3 : on ne passe pas une étape en pleine saisie, et sur un petit écran ces
+  // 56 pt sont ceux du champ qu'on remplit. Le lien revient quand le clavier se ferme.
+  const isKeyboardOpen = Boolean(useKeyboardFrame());
   const siteEtroit = Platform.OS === 'web' && width < BREAKPOINTS.desktop;
   // Un nom de grammaire inconnu retombe sur l'existant : un tunnel ne peut pas
   // perdre son en-tete a cause d'une faute de frappe.
@@ -323,6 +328,7 @@ function WizardStepLayout({
               contentContainerStyle={[Spaces.paddingBottom[16]]}
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
+              ref={scrollRef}
               showsVerticalScrollIndicator={false}
             >
               {/* CORR-SOCLE (point 3) : barre, titre et consigne défilent avec le contenu. */}
@@ -371,7 +377,7 @@ function WizardStepLayout({
                 ) : null}
                 {/* GUIDE-FINITIONS-3 R2-2 : la bulle du guide se pose ici, sous le titre
                     et la consigne (« Sélectionne au moins un·e entraîneur·e », A09). */}
-                <TourBubbleSlot />
+                <TourBubbleSlot scrollRef={scrollRef} />
               </View>
               {/* Guide (TUTOE) : ancres invisibles communes à tous les tunnels. */}
               <TourTarget id="teamWizard.field">{children}</TourTarget>
@@ -392,7 +398,7 @@ function WizardStepLayout({
               />
             </TourTarget>
           ) : null}
-          {showSkip ? (
+          {showSkip && !isKeyboardOpen ? (
             <TourTarget id="teamWizard.skip">
               <TouchableOpacity
                 accessibilityRole="button"

@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo } from 'react';
@@ -52,6 +52,7 @@ function NotificationDetails() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const navigation = useNavigation();
   const route = useRoute();
   const routeParams = isObject(route?.params) ? route.params : {};
@@ -95,10 +96,13 @@ function NotificationDetails() {
     const notificationId = toEntityId(notification.documentId || notification.id || data.notificationId);
     const title = toStringSafe(notification.title || data.notificationTitle || data.title).trim();
     const type = toStringSafe(notification.type || data.type).trim();
+    const creneau = [data.terrainName, data.complexeName, data.whenLabel]
+      .map((morceau) => toStringSafe(morceau).trim()).filter(Boolean).join(' · ');
 
     return {
       body,
       createdAt,
+      creneau,
       eventDetails,
       eventId,
       notificationId,
@@ -113,8 +117,11 @@ function NotificationDetails() {
   useEffect(() => {
     if (!canMarkNotificationAsRead) return;
     if (!details.notificationId || details.read) return;
-    markAsRead(details.notificationId).catch(() => undefined);
-  }, [canMarkNotificationAsRead, details.notificationId, details.read]);
+    // FIN-CLOCHE (02/11) : une fiche lue fait baisser la cloche et le panneau tout de suite.
+    markAsRead(details.notificationId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+      .catch(() => undefined);
+  }, [canMarkNotificationAsRead, details.notificationId, details.read, queryClient]);
 
   const formattedDecisionDate = useMemo(() => {
     if (!details.createdAt) {
@@ -164,6 +171,10 @@ function NotificationDetails() {
   // participation : ailleurs, elles n'apparaissent que si la notification les porte.
   const montrerLEvenement = isParticipationDeclined || Boolean(details.eventDetails);
   const montrerLeMotif = isParticipationDeclined || Boolean(details.reason);
+  // FIN-MESSAGERIE p48 (02/11) : écrans de réservation éteints (COMPLEXES_JOUEUR), et le planning
+  // ne
+  // montre que les événements : la fiche dit le créneau elle-même, puis ouvre le planning.
+  const estUneReservation = details.type === 'complexeReservationJoueur';
   const libelleDeLaDate = isParticipationDeclined
     ? t('notifications.details.participationDeclined.labels.decisionDate', 'Date')
     : t('notifications.details.receivedAt', 'Reçue le');
@@ -222,7 +233,7 @@ function NotificationDetails() {
         </Text>
 
         {isError || isMissingNotification ? (
-          <View style={[Spaces.marginTop[20]]}>
+          <View style={[Spaces.marginTop[16]]}>
             <Button
               onPress={() => refetch()}
               title={t('common.retry', 'Réessayer')}
@@ -232,7 +243,7 @@ function NotificationDetails() {
         ) : null}
 
         {shouldShowDetails ? (
-          <View style={[Spaces.marginTop[20], Spaces.gap[14]]}>
+          <View style={[Spaces.marginTop[16], Spaces.gap[12]]}>
             {isParticipationDeclined ? (
               <View>
                 <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
@@ -266,6 +277,17 @@ function NotificationDetails() {
               </View>
             ) : null}
 
+            {estUneReservation && details.creneau ? (
+              <View>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                  {t('notifications.details.reservation', 'Réservation')}
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
+                  {details.creneau}
+                </Text>
+              </View>
+            ) : null}
+
             <View>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
                 {libelleDeLaDate}
@@ -279,10 +301,24 @@ function NotificationDetails() {
       </View>
 
       {details.eventId ? (
-        <View style={[Spaces.marginTop[20]]}>
+        <View style={[Spaces.marginTop[16]]}>
           <Button
             onPress={handleOpenEvent}
             title={t('notifications.details.participationDeclined.actions.viewEvent', 'Voir événement')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+      {estUneReservation ? (
+        <View style={[Spaces.marginTop[16]]}>
+          <Button
+            // Un onglet : depuis la racine, il se nomme par `HomeTab` (filet allerDansLOnglet).
+            onPress={() => navigation.navigate(
+              RouteNames.HomeTab,
+              { screen: RouteNames.MyEventList },
+              { pop: true },
+            )}
+            title={t('notifications.details.viewPlanning', 'Voir mon planning')}
             variant="Secondary"
           />
         </View>

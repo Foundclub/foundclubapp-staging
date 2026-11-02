@@ -170,6 +170,38 @@ beforeEach(() => {
 // a zero SANS reseau (useMessaging, effet « entering/leaving chat »). Le total
 // en cache vaut donc 3 des le montage. L accuse, lui, porte ce que le SERVEUR
 // sait : 5 ici, parce qu un autre membre a ecrit dans chat-2 entre-temps.
+// FIN-CLOCHE (02/11/2026) — lire un fil lit aussi ses avis : le serveur dit combien, la cloche
+// et le panneau se relisent. Un serveur ancien ne le dit pas : rien ne bouge, comme avant.
+describe('FIN-CLOCHE — l accuse de lecture relit la cloche quand des avis ont ete lus', () => {
+  const lire = async (/** @type {any} */ accuse) => {
+    const { client, messagerie } = await monter();
+    const relire = jest.spyOn(client, 'invalidateQueries').mockResolvedValue(undefined);
+    act(() => {
+      messagerie().sendReadReceipt('chat-1', 'message-9');
+    });
+    const emission = mockSocket.emissions.find((e) => e.event === 'read-message');
+    act(() => {
+      emission?.ack(accuse);
+    });
+    return relire.mock.calls.filter(([filtre]) => filtre?.queryKey?.[0] === 'notifications');
+  };
+
+  test('3 avis lus : la cloche et le panneau se relisent', async () => {
+    const appels = await lire({
+      notificationsRead: 3, ok: true, unreadCount: 0, unreadTotal: 3,
+    });
+    expect(appels).toEqual([[{ queryKey: ['notifications'] }]]);
+  });
+
+  test.each([
+    ['aucun avis lu', { notificationsRead: 0, ok: true, unreadTotal: 3 }],
+    ['un serveur ancien', { ok: true, unreadTotal: 3 }],
+    ['un echec', { notificationsRead: 3, ok: false }],
+  ])('%s : aucune lecture de plus', async (_cas, accuse) => {
+    expect(await lire(accuse)).toEqual([]);
+  });
+});
+
 describe('MSG2 — ouvrir un fil fait baisser la pastille, avec le compte du SERVEUR', () => {
   test('depart : entrer dans le fil a deja retire ses 4 messages, sans reseau', async () => {
     const { client } = await monter();

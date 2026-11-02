@@ -35,6 +35,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import {
   describePersonName,
   describeTeamInvitationRefusal,
@@ -176,6 +177,8 @@ function TeamInviteSheetBody({
       );
     },
     onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
+      // FIN-GUIDE, point 4 : une invitation envoyée valide la mission « Inviter » du guide.
+      emitGuidanceAction('team.invite.sent', { teamId: invitedTeamId });
       const invitedId = String(variables?.userId || '').trim();
       if (invitedId) {
         setInvitedMemberIds((previous) => (

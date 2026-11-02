@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Platform, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Welcome from '../Welcome';
@@ -235,6 +235,44 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
 });
 
 // D59 ② — le chemin en 3 etapes (pack `pw-welcome2.jsx`, frame 12c).
+// FIN-GUIDE (02/11, decision du chef, question 2 du lot) : le site n'a pas de guide. Le bouton
+// « Demarrer le tour guide » y menait a l'accueil sans rien lancer, sous une promesse sans suite.
+describe('Welcome — sur le site, aucune promesse de guide', () => {
+  const PONTS = [
+    'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin',
+    'Gratuit · 2 min — tu configures ton club en chemin',
+  ];
+  let plateforme;
+  beforeEach(() => { plateforme = jest.replaceProperty(Platform, 'OS', 'web'); });
+  afterEach(() => plateforme.restore());
+
+  it.each(['coach', 'president'])('%s : « Continuer », sans le bouton du guide ni le pont', (role) => {
+    mockRole.current = role;
+    const { tree } = rendre();
+    const rendus = textes(tree);
+
+    expect(rendus).toContain('Continuer');
+    expect(rendus).not.toContain('Démarrer le tour guidé');
+    PONTS.forEach((pont) => expect(rendus).not.toContain(pont));
+  });
+
+  it('« Continuer » finit l inscription et mene a l accueil, sans demander de guide', () => {
+    const { navigation, tree } = rendre();
+
+    act(() => { pressableParTexte(tree, 'Continuer').props.onPress(); });
+
+    expect(mockStartTour).not.toHaveBeenCalled();
+    expect(mockMarkOnboardingComplete).toHaveBeenCalledWith('user-d23');
+    expect(navigation.replace).toHaveBeenCalledWith('HomeTab', undefined);
+  });
+
+  it('temoin : les offres restent affichees', () => {
+    const { tree } = rendre();
+
+    expect(textes(tree)).toContain('Commence sans payer');
+  });
+});
+
 describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', () => {
   /**
    * Toutes les couleurs de fond posees par l'ecran, aplaties.

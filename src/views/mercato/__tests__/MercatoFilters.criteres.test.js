@@ -82,8 +82,13 @@ jest.mock('@/components/organisms/autocompleteAddressInput/autocompleteAddressIn
   const { View } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { address, setAddress }) => (
-      <View address={address} setAddress={setAddress} testID="adresse" />
+    default: (/** @type {any} */ { address, optionsSupplementaires, setAddress }) => (
+      <View
+        address={address}
+        optionsSupplementaires={optionsSupplementaires}
+        setAddress={setAddress}
+        testID="adresse"
+      />
     ),
   };
 });

@@ -108,9 +108,12 @@ const SURFACE = {
  * sa famille d'abord. L'ordre de la planche 1 : « Mes enfants », son profil (voir, modifier), ses
  * alertes, puis sa carte de collection. Une rangée absente de cette liste garde sa place d'avant,
  * après elles ; les rangées de la Ville restent EN TÊTE (COLL 1c : pour un agent municipal, c'est
- * LA raison d'ouvrir l'app). Les autres rôles gardent leur ordre.
+ * LA raison d'ouvrir l'app). Les autres rôles gardent leur ordre. FIN-PARENT (02/11) : les
+ * cotisations de ses enfants suivent « Mes enfants ».
  */
-const ORDRE_DU_PARENT = Object.freeze(['myChildren', 'view', 'edit', 'alerts', 'myCard']);
+const ORDRE_DU_PARENT = Object.freeze([
+  'myChildren', 'myLicenses', 'view', 'edit', 'alerts', 'myCard',
+]);
 
 /**
  * Le rang d'une rangée dans « Mon compte » d'un parent (plus petit = plus haut).
@@ -975,9 +978,9 @@ function Profile({ navigation, route }) {
     }]),
     // 🏠 A17 (lot ACCUEIL, décision d'Adel du 30/09, option A) — LES DEUX LIGNES QUI
     // MANQUAIENT. La rubrique « Mon profil » a quitté l'accueil ; ses cases vivent
-    // ici, avec les MÊMES règles de rôle que là-bas : ni historique ni cotisation
-    // pour le parent (P0 — il ne joue pas, il ne cotise pas pour lui), pas de
-    // cotisation pour le super admin (D72 — il ne paie rien).
+    // ici, avec les MÊMES règles de rôle que là-bas : pas d'historique pour le parent (P0 — il
+    // ne joue pas), pas de cotisation pour le super admin (D72 — il ne paie rien). FIN-PARENT
+    // (02/11, Adel « 3d enfants ») : « Mes cotisations » revient au parent, pour ses enfants.
     ...(currentRoleKey === 'parent' ? [] : [{
       icon: Images.clock,
       key: 'sportsHistory',
@@ -985,7 +988,7 @@ function Profile({ navigation, route }) {
       // Sans `returnRoute`, l'assistant referme sur « Mon compte » (`goBack`).
       onPress: () => navigation.navigate(RouteNames.HistoryWizardCategory, { resetContext: true }),
     }]),
-    ...(currentRoleKey === 'parent' || isSuperAdmin ? [] : [{
+    ...(isSuperAdmin ? [] : [{
       icon: Images.euroCircle,
       key: 'myLicenses',
       label: t('profile.actions.myLicenses'),

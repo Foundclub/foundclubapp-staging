@@ -16,6 +16,8 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
 
+import { buildConvocationRoster } from '../../matchCallUp/matchConvocationUtils';
+
 const MINUTE_MS = 60 * 1000;
 const DAY_MINUTES = 24 * 60;
 
@@ -444,6 +446,41 @@ export const countPresence = (items) => (items || []).reduce((totals, item) => {
   if (item?.isLate || lateMinutes > 0) return { ...totals, late: totals.late + 1 };
   return { ...totals, arrived: totals.arrived + 1 };
 }, { arrived: 0, late: 0, waiting: 0 });
+
+/**
+ * FIN-EVENEMENTS 3 — LES CONVOQUES SANS COMPTE : un joueur sans app, une fiche d enfant.
+ *
+ * La feuille de presence du serveur ne liste que des COMPTES (`buildAttendanceAudience`, et
+ * `event-attendance` pointe un `user`) : un match qui ne convoque qu eux disait « 0 attendu ».
+ * ponytail: lu dans la convocation publiee, donc un entrainement n en sait rien et ils ne se
+ * pointent pas. Sortie : les rendre dans `GET /events/:id/attendance`, avec un pointage a eux.
+ * @param {any} convocation - La charge de `GET /events/:id/convocation`.
+ * @returns {ReturnType<typeof buildConvocationRoster>}
+ */
+export const listConvoquesSansCompte = (convocation) => {
+  const branches = Array.isArray(convocation?.branches) ? convocation.branches : [convocation];
+  const parId = new Map();
+  branches.forEach((/** @type {any} */ branch) => {
+    buildConvocationRoster({ published: branch?.published }).forEach((/** @type {any} */ row) => {
+      const sansCompte = row.isManual
+        || row.player?.isManual
+        || row.player?.participantSource === 'declared_child';
+      if (sansCompte) parId.set(row.playerId, row);
+    });
+  });
+  return [...parId.values()];
+};
+
+/**
+ * « N attendus » : la feuille de presence, plus les convoques sans compte.
+ * @param {any[] | undefined} items - Les lignes de la feuille ; absentes tant qu elle n est pas
+ *   lue.
+ * @param {any} convocation - La charge de `GET /events/:id/convocation`.
+ * @returns {number | null} - `null` : on ne dit pas « 0 attendu » a la place de « je ne sais pas ».
+ */
+export const compterAttendus = (items, convocation) => (
+  Array.isArray(items) ? items.length + listConvoquesSansCompte(convocation).length : null
+);
 
 /**
  * Les personnes que le coach n a jamais vues — celles que la cloture nomme.

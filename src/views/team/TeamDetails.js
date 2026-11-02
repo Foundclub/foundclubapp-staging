@@ -2993,35 +2993,38 @@ function TeamDetails({ navigation, route }) {
       </View>
 
       {(showPerformanceTabs || showStatsTab) ? (
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.fullWidth,
-            Spaces.paddingHorizontal[4],
-            Spaces.paddingVertical[4],
-            {
-              backgroundColor: 'rgba(23, 56, 68, 0.78)',
-              borderColor: `${Colors.primary500}55`,
-              borderRadius: 22,
-              borderWidth: 1,
-              elevation: 20,
-              zIndex: 20,
-            },
-            Spaces.gap[4],
-          ]}
-        >
-          {renderTab('infos', t('teamDetails.tabs.infos', 'Infos'))}
-          {showStandingsTab
-            ? renderTab('standings', t('teamDetails.tabs.standings', 'Classement'))
-            : null}
-          {showCalendarTab
-            ? renderTab('calendar', t('teamDetails.tabs.calendar', 'Calendrier'))
-            : null}
-          {showStatsTab
-            ? renderTab('stats', t('teamDetails.tabs.stats', 'Stats'))
-            : null}
-        </View>
+        // FIN-GUIDE, point 4 : la bulle de « Envoie-le » se pose sous ces onglets.
+        <TourTarget id="team.tabs">
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.fullWidth,
+              Spaces.paddingHorizontal[4],
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: 'rgba(23, 56, 68, 0.78)',
+                borderColor: `${Colors.primary500}55`,
+                borderRadius: 22,
+                borderWidth: 1,
+                elevation: 20,
+                zIndex: 20,
+              },
+              Spaces.gap[4],
+            ]}
+          >
+            {renderTab('infos', t('teamDetails.tabs.infos', 'Infos'))}
+            {showStandingsTab
+              ? renderTab('standings', t('teamDetails.tabs.standings', 'Classement'))
+              : null}
+            {showCalendarTab
+              ? renderTab('calendar', t('teamDetails.tabs.calendar', 'Calendrier'))
+              : null}
+            {showStatsTab
+              ? renderTab('stats', t('teamDetails.tabs.stats', 'Stats'))
+              : null}
+          </View>
+        </TourTarget>
       ) : null}
 
       <ScrollView

@@ -244,7 +244,8 @@ function CollectiviteSignupStatus() {
           <Button
             onPress={() => setAAnnuler(demande.documentId)}
             title={t('collectiviteAccueil.demande.attente.annuler', 'Annuler ma demande')}
-            variant="Ghost"
+            // FIN-COLLECTIVITES p102 (02/11, feuille d'Adel) : Ghost se lisait gris, sans contour.
+            variant="Secondary"
           />
         </View>
       ) : null}

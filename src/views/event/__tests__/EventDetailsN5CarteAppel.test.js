@@ -27,6 +27,7 @@ const mockSetOptions = jest.fn();
 const mockNavigate = jest.fn();
 const mockEventQuery = { data: null };
 const mockAttendanceQuery = { data: null };
+const mockConvocationQuery = { data: null };
 
 // 🧨 R9 — CE MOCK N EST PAS DECORATIF. `teamMembershipRequestService`
 // importe `@/services/client`, qui JETTE AU CHARGEMENT quand `.env` est absent
@@ -125,7 +126,7 @@ jest.mock('@/services/event/eventQueries', () => ({
     // FINITIONS4 (D7) : une charge d appel en ERREUR ne montre plus de carte.
     isError: mockAttendanceQuery.isError === true,
   }),
-  useGetEventConvocation: () => emptyQuery(),
+  useGetEventConvocation: () => ({ ...emptyQuery(), data: mockConvocationQuery.data }),
   useGetEventTeamComposition: () => emptyQuery(),
 }));
 
@@ -497,6 +498,19 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 }));
 
 describe('N5 — la carte « Faire l appel » sur l Aperçu', () => {
+  test('FIN-EVENEMENTS 3 : un convoqué sans compte compte parmi les attendus', () => {
+    mockConvocationQuery.data = /** @type {any} */ ({
+      published: {
+        manualPlayers: [{ documentId: 'manuel-paul', firstname: 'Paul', isManual: true }],
+        teams: [{ placements: [{ playerId: 'manuel-paul' }] }],
+      },
+    });
+    const root = monter();
+    mockConvocationQuery.data = null;
+
+    expect(textesVisibles(root)).toContain('23 attendus');
+  });
+
   test('dans la fenetre : le coach appuie, et l ecran d appel s ouvre', () => {
     const root = monter();
 

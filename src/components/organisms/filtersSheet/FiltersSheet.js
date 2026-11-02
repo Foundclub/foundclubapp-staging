@@ -50,7 +50,12 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * — la création d'une alerte. Sans lui, le bouton est celui d'avant, au noeud près.
  */
 
-/** @typedef {{ key: string, label: string, value: string, content: import('react').ReactNode }} FilterRow */
+/**
+ * @typedef {{
+ *  key: string, label: string, value: string, content: import('react').ReactNode,
+ *  sansEntete?: boolean,
+ * }} FilterRow `sansEntete` : pas de rangée à déplier, le contenu se lit directement.
+ */
 
 // Hauteur fixe de la feuille. Elle est OBLIGATOIRE : c'est elle qui bascule
 // `BottomModal` sur sa mise en page a pied colle (cf. le commentaire ci-dessus).
@@ -197,37 +202,41 @@ function FiltersSheet({
             index === rows.length - 1 ? Spaces.marginBottom[16] : null,
           ]}
         >
-          <TouchableOpacity
-            accessibilityLabel={`${rangee.label} : ${rangee.value}`}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: rangeeOuverte === rangee.key }}
-            onPress={() => setRangeeOuverte(rangeeOuverte === rangee.key ? '' : rangee.key)}
-            style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              Spaces.gap[8],
-              Spaces.paddingHorizontal[16],
-              {
-                backgroundColor: surface,
-                borderColor: bordure,
-                borderRadius: 14,
-                borderWidth: 1,
-                minHeight: 52,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>{rangee.label}</Text>
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}
-            >
-              {rangee.value}
-            </Text>
-            <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>›</Text>
-          </TouchableOpacity>
-          {rangeeOuverte === rangee.key ? (
-            <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>{rangee.content}</View>
-          ) : null}
+          {rangee.sansEntete ? rangee.content : (
+            <>
+              <TouchableOpacity
+                accessibilityLabel={`${rangee.label} : ${rangee.value}`}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: rangeeOuverte === rangee.key }}
+                onPress={() => setRangeeOuverte(rangeeOuverte === rangee.key ? '' : rangee.key)}
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.gap[8],
+                  Spaces.paddingHorizontal[16],
+                  {
+                    backgroundColor: surface,
+                    borderColor: bordure,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    minHeight: 52,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>{rangee.label}</Text>
+                <Text
+                  numberOfLines={1}
+                  style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}
+                >
+                  {rangee.value}
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>›</Text>
+              </TouchableOpacity>
+              {rangeeOuverte === rangee.key ? (
+                <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>{rangee.content}</View>
+              ) : null}
+            </>
+          )}
         </View>
       ))}
     </BottomModal>

@@ -73,6 +73,13 @@ jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({
   __esModule: true,
   default: () => null,
 }));
+const mockInvalidateQueries = jest.fn();
+jest.mock('@tanstack/react-query', () => {
+  // Une seule identite, comme le vrai client : l'ecran le met dans ses dependances.
+  const client = { invalidateQueries: (...args) => mockInvalidateQueries(...args) };
+  return { useQueryClient: () => client };
+});
+
 jest.mock('@/services/notification/notificationService', () => ({
   markApplicationResponsesAsRead: () => Promise.resolve({ ok: true, updated: 0 }),
 }));

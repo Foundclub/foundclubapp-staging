@@ -68,6 +68,25 @@ const getFacilityAddressLabel = (facility) => {
     || '';
 };
 
+/**
+ * FIN-TEXTES : ce qu'on dit quand le serveur refuse la réservation. Seul un 400 porte une phrase
+ * écrite pour l'utilisateur (créneau déjà pris) ; un 403 disait « Forbidden », une panne son
+ * anglais.
+ * @param {{ message?: string, status?: number }} error - L'erreur du client du site.
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @returns {string} La phrase à afficher.
+ */
+const messageDuRefus = (error, t) => {
+  if (error?.status === 403) {
+    return t(
+      'bookingCalendar.web.errors.refused',
+      'Ton compte ne peut pas réserver cette installation pour l’instant : rien n’a été réservé.',
+    );
+  }
+  if (error?.status === 400 && error?.message) return error.message;
+  return t('bookingCalendar.web.errors.create', 'Impossible de créer cette réservation.');
+};
+
 function BookingCalendar({ navigation, route }) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
@@ -216,10 +235,7 @@ function BookingCalendar({ navigation, route }) {
         targetPlayers: mode === 'shared' ? Number(targetPlayers) : undefined,
       });
     } catch (error) {
-      setSubmitError(error?.message || t(
-        'bookingCalendar.web.errors.create',
-        'Impossible de créer cette réservation.',
-      ));
+      setSubmitError(messageDuRefus(error, t));
     }
   };
 

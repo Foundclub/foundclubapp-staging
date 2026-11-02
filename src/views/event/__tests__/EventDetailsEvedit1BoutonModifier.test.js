@@ -581,6 +581,42 @@ describe('D3 — un TOURNOI se comporte pareil', () => {
 // ---------------------------------------------------------------------------
 // ⛔ CE QUI NE CHANGE PAS — la moitie du temoin qui protege les autres
 // ---------------------------------------------------------------------------
+describe('FIN-EVENEMENTS p131 — un tournoi clôturé, sur le téléphone', () => {
+  const TOURNOI_CLOS = () => buildEvent({
+    name: 'Tournoi de la Toussaint',
+    sessionStatus: 'closed',
+    tournamentTeams: [{
+      archivedAt: '2026-10-31T10:00:00.000Z',
+      documentId: 'tt-lions',
+      members: [],
+      name: 'Les Lions',
+      status: 'archived',
+    }],
+    type: { name: 'Tournoi' },
+  });
+  const AUTH = {
+    canEditEvent: () => true,
+    canManageEvent: () => true,
+    userData: { documentId: 'user-1', role: { name: 'Entraineur' } },
+  };
+  const leBandeau = (/** @type {any} */ racine) => racine
+    .findAll((/** @type {any} */ noeud) => noeud?.props?.testID === 'tournoi-cloture');
+
+  test('🐞 le bandeau daté est là, et plus de menu « Gérer l’événement »', () => {
+    const racine = mountScreen({ auth: AUTH, event: TOURNOI_CLOS() });
+
+    expect(leBandeau(racine).length).toBeGreaterThan(0);
+    expect(boutonDeGestion()).toBeNull();
+  });
+
+  test('protégé : un tournoi en cours garde son menu, sans bandeau', () => {
+    const racine = mountScreen({ auth: AUTH, event: TOURNOI() });
+
+    expect(leBandeau(racine)).toHaveLength(0);
+    expect(boutonDeGestion()).not.toBeNull();
+  });
+});
+
 describe('D3 — tout le reste ouvre exactement comme avant', () => {
   test('un ENTRAINEMENT ouvre l ecran, sans aucun message', () => {
     toucherModifier(buildEvent());

@@ -18,6 +18,8 @@ import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
 
 import { useComplexeChoisi, useReservationsDuComplexe } from '@/services/complexe/complexeQueries';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 const Tab = createBottomTabNavigator();
 
 /**
@@ -75,7 +77,7 @@ function ComplexeTabNavigator() {
           }}
         >
           <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

@@ -30,9 +30,13 @@ import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import useAuth from '@/domains/auth/useAuth';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useMyLicenses } from '@/services/license/licenseQueries';
+import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
+import { useChildrenLicenses, useMyLicenses } from '@/services/license/licenseQueries';
+import { useParentLinksAsParent } from '@/services/parentLink/parentLinkQueries';
 
 import { getErrorStatus } from '@/utils/errors/displayError';
 
@@ -61,6 +65,16 @@ import {
   MemberTopBar,
   memberType,
 } from './memberLicenseUi';
+
+/**
+ * Le retour de la liste : la pile s il y en a une, sinon l accueil.
+ * @param {any} navigation
+ * @returns {() => void} Le geste.
+ */
+const useGoBack = (navigation) => useCallback(() => {
+  if (navigation.canGoBack?.()) navigation.goBack();
+  else navigation.navigate(RouteNames.HomeTab);
+}, [navigation]);
 
 /**
  * LA CARTE DE TOTAL — un seul total transversal, en haut de l ecran.
@@ -141,7 +155,7 @@ function TotalCard({ assignments }) {
  * meme club se distinguent par leur campagne — le club descend en sous-titre.
  * @param {object} props
  * @param {any} props.assignment
- * @param {() => void} props.onPress
+ * @param {() => void} [props.onPress] Sans geste, la carte se lit seulement (FIN-PARENT).
  * @returns {import('react').ReactElement}
  */
 function AssignmentCard({ assignment, onPress }) {
@@ -158,11 +172,13 @@ function AssignmentCard({ assignment, onPress }) {
   let amountStyle = Fonts.neutral00;
   if (isWaived || isCancelled) amountStyle = Fonts.neutral300;
   else if (remaining <= 0) amountStyle = Fonts.success500;
+  const Carte = onPress ? Pressable : View;
 
   return (
-    <Pressable
+    <Carte
       accessibilityLabel={`${campaignTitleOf(assignment)} — ${cardSubtitleOf(assignment)}`}
-      accessibilityRole="button"
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessible
       onPress={onPress}
       style={{
         backgroundColor: Colors.primary700,
@@ -202,7 +218,7 @@ function AssignmentCard({ assignment, onPress }) {
             {describeAssignmentContext(assignment)}
           </Text>
         </View>
-        <GlyphIcon color={Colors.primary500} name="chevronRight" size={20} />
+        {onPress ? <GlyphIcon color={Colors.primary500} name="chevronRight" size={20} /> : null}
       </View>
       {/* ⛔ Pas de barre quand il n y a rien a progresser (cotisation exemptee). */}
       {isWaived ? null : <MemberProgressBar height={6} ratio={getPaidRatio(assignment)} />}
@@ -215,7 +231,7 @@ function AssignmentCard({ assignment, onPress }) {
           })}
         </Text>
       ) : null}
-    </Pressable>
+    </Carte>
   );
 }
 
@@ -265,12 +281,136 @@ function ListSkeleton() {
 }
 
 /**
+ * FIN-PARENT (02/11, Adel « 3d enfants ») — « MES COTISATIONS » D UN COMPTE PARENT : celles de SES
+ * enfants, en lecture.
+ *
+ * ⛔ `/licenses/me` lui est refuse, et le detail d une cotisation aussi : la carte ne s ouvre pas.
+ * Le serveur ne lui rend pas non plus le jeton de paiement.
+ * 👪 Une fiche sans compte n a pas de cotisation : `license-assignment.user` est un compte, et une
+ * campagne ne vise que les comptes de l equipe. L ecran la nomme quand meme : un enfant absent de
+ * la liste laisserait croire a un oubli.
+ * @param {object} props
+ * @param {any} props.navigation
+ * @returns {import('react').ReactElement}
+ */
+function ChildrenLicenses({ navigation }) {
+  const { t } = useTranslation();
+  const { Alignments, Fonts } = useTheme();
+  const type = memberType(Fonts);
+  const goBack = useGoBack(navigation);
+  const liens = useParentLinksAsParent();
+  const fiches = useGetMyDeclaredChildren();
+  const comptes = useMemo(() => liens.data?.children || [], [liens.data]);
+  const licences = useChildrenLicenses(useMemo(
+    () => comptes.map((compte) => compte?.documentId).filter(Boolean),
+    [comptes],
+  ));
+  const enfants = useMemo(() => [
+    ...comptes.map((compte) => ({
+      cle: compte.documentId,
+      // Une saison passee ou une cotisation retiree ne se dessine pas ici (`splitSeasons`).
+      cotisation: splitSeasons([licences.data?.[compte.documentId]].filter(Boolean)).active[0],
+      personne: compte,
+    })),
+    ...(fiches.data || []).filter((fiche) => !fiche?.account).map((fiche) => ({
+      cle: fiche.documentId,
+      cotisation: null,
+      personne: fiche,
+    })),
+  ], [comptes, fiches.data, licences.data]);
+  const cotisations = enfants.map((enfant) => enfant.cotisation).filter(Boolean);
+  const titre = <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />;
+
+  if (liens.isLoading || fiches.isLoading || licences.isLoading) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        {titre}
+        <ListSkeleton />
+      </ScreenContainer>
+    );
+  }
+
+  if (liens.isError || fiches.isError || licences.isError) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        {titre}
+        <LicenseEmptyState
+          action={(
+            <Button
+              onPress={() => [liens, fiches, licences].forEach((requete) => {
+                if (requete.isError) requete.refetch();
+              })}
+              title={t('myLicenses.error.retry', 'Réessayer')}
+              variant="Secondary"
+            />
+          )}
+          description={t(
+            'myLicenses.error.description',
+            'Impossible de charger tes cotisations pour le moment.',
+          )}
+          title={t('myLicenses.error.title', 'Cotisations indisponibles')}
+        />
+      </ScreenContainer>
+    );
+  }
+
+  if (!enfants.length) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+        {titre}
+        <LicenseEmptyState
+          action={(
+            <Button
+              onPress={() => navigation.navigate(RouteNames.ProfileStack, {
+                screen: RouteNames.MyChildren,
+              })}
+              title={t('myLicenses.children.open', 'Mes enfants')}
+              variant="Secondary"
+            />
+          )}
+          description={t('myLicenses.children.empty', 'Aucun enfant déclaré pour l’instant.')}
+          title={t('myLicenses.title', 'Mes cotisations')}
+        />
+      </ScreenContainer>
+    );
+  }
+
+  return (
+    <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+      {titre}
+      <ScrollView
+        contentContainerStyle={{ gap: memberSpacing.section, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        style={Alignments.fill}
+      >
+        <Text style={[type.subtitle, Fonts.neutral300]}>
+          {t('myLicenses.children.intro', 'Les cotisations de tes enfants.')}
+        </Text>
+        {cotisations.length ? <TotalCard assignments={cotisations} /> : null}
+        {enfants.map(({ cle, cotisation, personne }) => (
+          <View key={cle} style={{ gap: memberSpacing.rowGap }}>
+            <MemberOverline
+              title={[personne?.firstname, personne?.lastname].filter(Boolean).join(' ')}
+            />
+            {cotisation ? <AssignmentCard assignment={cotisation} /> : (
+              <Text style={[type.meta, Fonts.neutral300]}>
+                {t('myLicenses.children.none', 'Aucune cotisation pour l’instant.')}
+              </Text>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+    </ScreenContainer>
+  );
+}
+
+/**
  * ECRAN 1 — « Mes cotisations ».
  * @param {object} props
  * @param {any} props.navigation
  * @returns {import('react').ReactElement}
  */
-function MyLicenses({ navigation }) {
+function OwnLicenses({ navigation }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
@@ -290,10 +430,7 @@ function MyLicenses({ navigation }) {
     navigation.navigate(RouteNames.MyLicense, { assignmentId: licenseKeyOf(assignment) });
   }, [navigation]);
 
-  const goBack = useCallback(() => {
-    if (navigation.canGoBack?.()) navigation.goBack();
-    else navigation.navigate(RouteNames.HomeTab);
-  }, [navigation]);
+  const goBack = useGoBack(navigation);
 
   if (query.isLoading) {
     return (
@@ -448,6 +585,19 @@ function MyLicenses({ navigation }) {
       </ScrollView>
     </ScreenContainer>
   );
+}
+
+/**
+ * « Mes cotisations » : les siennes, ou celles de ses enfants pour un compte Parent.
+ * @param {object} props
+ * @param {any} props.navigation
+ * @returns {import('react').ReactElement}
+ */
+function MyLicenses({ navigation }) {
+  const { accountRoleKey } = useAuth();
+  return accountRoleKey === 'parent'
+    ? <ChildrenLicenses navigation={navigation} />
+    : <OwnLicenses navigation={navigation} />;
 }
 
 export default MyLicenses;

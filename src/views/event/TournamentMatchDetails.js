@@ -358,9 +358,19 @@ function TournamentMatchDetails({ navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral100]}>
               {scheduledDate && startTime ? `${scheduledDate} - ${startTime}${endTime ? ` / ${endTime}` : ''}` : t('tournamentMatchDetails.timeToBeSet', 'Horaire à définir')}
             </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>{`Installation: ${currentFacilityName}`}</Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t('tournamentMatchDetails.facilityLine', 'Installation : {{name}}', {
+                name: currentFacilityName,
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
             {match?.winner?.name ? (
-              <Text style={[Fonts.p3, Fonts.success500]}>{`Vainqueur: ${match.winner.name}`}</Text>
+              <Text style={[Fonts.p3, Fonts.success500]}>
+                {t('tournamentMatchDetails.winnerLine', 'Vainqueur : {{name}}', {
+                  name: match.winner.name,
+                  ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
             ) : null}
           </View>
 

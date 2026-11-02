@@ -2,6 +2,8 @@
 import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { lirePageDuSite } from '@/components/templates/pageDuSite';
+
 import TournamentManagement from '../TournamentManagement';
 
 // CORR-EVENEMENTS (recette du site, 30/10) — le cockpit du tournoi n'avait AUCUN test (E6).
@@ -212,5 +214,35 @@ describe('CORR-EVENEMENTS 133 — le cockpit parle français', () => {
     expect(rendu).toContain('Équipes');
     expect(rendu).toContain('Aléatoire');
     expect(rendu).not.toMatch(/poule\(s\)|match\(s\)|"Equipes"|Aleatoire|Warnings|roster/);
+  });
+});
+
+// FIN-TEXTES (02/11, PARENT 130) — le titre de l'écran était juste, mais la barre fine du site
+// disait encore « Pilotage du tournoi » au lecteur : elle lit la clé du registre tant que l'écran
+// ne déclare rien.
+describe('FIN-TEXTES 130 — la barre fine du site', () => {
+  afterEach(() => { mockPeutGerer.value = true; });
+
+  test('🔴 un parent y lit le nom du tournoi', async () => {
+    mockPeutGerer.value = false;
+    const donnees = tableau();
+    await monter({ ...donnees, event: { ...donnees.event, name: 'Tournoi de Noël' } });
+
+    expect(lirePageDuSite().titre).toBe('Tournoi de Noël');
+  });
+
+  test('🔴 sans nom de tournoi, le parent lit « Compétition », jamais le pilotage', async () => {
+    mockPeutGerer.value = false;
+    const donnees = tableau();
+    const arbre = await monter({ ...donnees, event: { ...donnees.event, name: '' } });
+
+    expect(lirePageDuSite().titre).toBe('Compétition');
+    expect(texte(arbre)).not.toContain('Pilotage du tournoi');
+  });
+
+  test('l organisateur garde la barre de pilotage du registre', async () => {
+    await monter(tableau());
+
+    expect(lirePageDuSite().titre).toBeNull();
   });
 });

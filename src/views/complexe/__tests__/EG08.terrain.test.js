@@ -24,10 +24,15 @@ import {
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 const mockGoBack = jest.fn();
+const mockCanGoBack = jest.fn(() => true);
 let mockParams = /** @type {any} */ ({ complexeId: 'cx-five' });
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    goBack: mockGoBack, navigate: mockNavigate, replace: mockReplace, setOptions: jest.fn(),
+    canGoBack: mockCanGoBack,
+    goBack: mockGoBack,
+    navigate: mockNavigate,
+    replace: mockReplace,
+    setOptions: jest.fn(),
   }),
   useRoute: () => ({ params: mockParams }),
 }));
@@ -377,6 +382,24 @@ describe('RESA-L5A2 E-G08 — modifier un terrain qui a des réservations', () =
     });
     expect(mockRetirer).toHaveBeenCalledWith({ complexeId: 'cx-five', terrainId: 't-1' });
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  // FIN-RESA (02/11/2026) : fiche ouverte par son adresse (première page de l'onglet), le retour
+  // du site menait à l'accueil, en mode Dirigeant pour un gérant qui dirige aussi un club.
+  it('« Retirer » sur une fiche sans page précédente : la liste des installations', async () => {
+    mockCanGoBack.mockReturnValueOnce(false);
+    mockTerrains = { data: [terrainDeTemoin()], isLoading: false };
+    const arbre = await monter();
+    await appuyer(arbre, 'Retirer ce terrain');
+    const confirmer = parRepere(arbre, 'retrait-confirmer')
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')[0];
+    await act(async () => {
+      await confirmer.props.onPress();
+    });
+    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenLastCalledWith(RouteNames.ComplexeInstallations, {
+      complexeId: 'cx-five',
+    });
   });
 });
 

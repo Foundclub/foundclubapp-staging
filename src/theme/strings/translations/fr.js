@@ -2393,6 +2393,8 @@ export default {
         create: 'Impossible de créer cette réservation.',
         facilities: 'Impossible de charger les installations.',
         incomplete: 'Choisis une installation, un créneau et une durée.',
+        refused: 'Ton compte ne peut pas réserver cette installation pour l’instant : '
+          + 'rien n’a été réservé.',
       },
       eyebrow: 'Réservations',
       finalize: 'Finalise ta réservation du {{date}}.',
@@ -6141,6 +6143,7 @@ export default {
       attached: 'Ton club est rattaché à {{ville}}.',
       cancelMine: 'Annuler ma demande',
       kicker: 'Rattachement à la Ville',
+      noLongerAttached: 'Ton club n’est plus rattaché à {{ville}}.',
       pending: 'Ta demande de rattachement à {{ville}} attend sa réponse.',
       // eslint-disable-next-line max-len
       proposalGains: 'Rattaché, ton club voit les installations et les créneaux de la Ville, peut y demander des créneaux et reçoit ses actualités.',
@@ -10328,6 +10331,11 @@ export default {
         title: 'RETARD CONSTATÉ',
       },
       markedSection: 'DÉJÀ POINTÉS',
+      noAccount: {
+        empty: 'Personne à pointer ici : l’appel ne liste que les personnes qui ont un compte.',
+        note: 'Leur présence ne se pointe pas encore à l’appel.',
+        title: 'Convoqués sans compte',
+      },
       presence: {
         arrived: 'Arrivé·e·s',
         late: 'En retard',
@@ -10761,8 +10769,11 @@ export default {
       done: 'Appel terminé',
       expectedOne: '{{count}} attendu',
       expectedOther: '{{count}} attendus',
+      markedOne: '{{count}} personne pointée',
+      markedOther: '{{count}} personnes pointées',
       opensAt: 'Ouvre à {{time}}',
       opensSoon: 'Pas encore ouvert',
+      resume: 'Reprendre l’appel',
       title: 'Faire l’appel',
       window: 'L’appel est ouvert dès la création de l’événement, '
         + 'et se ferme 2 h après la fin.',
@@ -12492,7 +12503,9 @@ export default {
       save: 'Enregistrer',
     },
     capacity: {
+      moins: 'Une équipe de moins à la fois',
       plural: 'équipes à la fois',
+      plus: 'Une équipe de plus à la fois',
       singular: 'équipe à la fois',
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
@@ -16964,6 +16977,12 @@ export default {
       instalments_one: '{{count}} échéance',
       instalments_other: '{{count}} échéances',
     },
+    children: {
+      empty: 'Aucun enfant déclaré pour l’instant.',
+      intro: 'Les cotisations de tes enfants.',
+      none: 'Aucune cotisation pour l’instant.',
+      open: 'Mes enfants',
+    },
     empty: {
       description: 'Aucune cotisation n’est encore rattachée à ton compte.',
     },
@@ -17243,6 +17262,8 @@ export default {
         unknownDate: 'Date indisponible',
       },
       receivedAt: 'Reçue le',
+      reservation: 'Réservation',
+      viewPlanning: 'Voir mon planning',
       screenTitle: 'Notification',
       statusFallback: 'Information',
       title: 'Notification',
@@ -24527,6 +24548,16 @@ export default {
       pending: 'EN ATTENTE',
       player: 'PRATIQUANT·E / JOUEUR·SE',
     },
+    cancelRequest: {
+      action: 'Annuler ma demande',
+      actionLabel: 'Annuler ma demande pour rejoindre {{team}}',
+      confirm: 'Oui, annuler',
+      confirmMessage: 'Ta demande pour rejoindre {{team}} sera retirée. Tu pourras en refaire une plus tard.',
+      confirmTitle: 'Annuler ta demande ?',
+      errorMessage: 'Impossible d\'annuler ta demande pour le moment. Réessaie dans un instant.',
+      errorTitle: 'Demande non annulée',
+      keep: 'Garder ma demande',
+    },
     fields: {
       category: 'Catégorie',
       level: 'Niveau',
@@ -25073,6 +25104,7 @@ export default {
         example: 'Le match d’exemple est effacé : rien n’a été envoyé.',
         footer: 'Retrouve ce guide dans Mon compte › Guide entraîneur·e.',
         friendly: 'Annonce de match amical publiée',
+        invited: 'Invitation envoyée',
         link: "Lien d'invitation partagé",
         real: 'RÉEL',
         sessions_one: '{{count}} séance programmée',
@@ -25089,6 +25121,14 @@ export default {
       kicker: 'Guide entraîneur·e',
       'm1-back': 'Reviens en arrière : touche la flèche en haut à gauche, ou glisse ton doigt '
         + 'depuis le bord gauche de l’écran.',
+      'm1-choice': {
+        body: 'Ton club est déjà sur FoundClub. Choisis ton équipe : ta demande part au club. '
+          + 'Sinon, tu crées la tienne.',
+        loading: 'Je regarde les équipes de ton club…',
+        no: 'Non, je crée la mienne',
+        title: 'Es-tu entraîneur·e d’une de ces équipes ?',
+        yes: 'Oui, c’est mon équipe',
+      },
       'm1-csearch': 'Tape le nom de ton club, puis ouvre sa fiche.',
       'm1-cw': 'Crée ton club : remplis chaque écran, puis Suivant.',
       'm1-dock': 'Commence par ton équipe. Ouvre l’onglet Équipes.',
@@ -25107,6 +25147,10 @@ export default {
         + 'Le guide t’attend : dès qu’il accepte, reprends-le ici, tu créeras ton équipe. '
         + 'En attendant, explore l’app librement.',
       'm1-wait-pill': 'En attente du club · Reprendre',
+      'm1-wait-team': 'Ta demande pour rejoindre ton équipe attend la réponse du club. Le guide '
+        + 't’attend : dès qu’elle est acceptée, ta mission 1 est validée. En attendant, explore '
+        + 'l’app librement.',
+      'm1-wait-team-pill': 'En attente de ton équipe · Reprendre',
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
@@ -25407,6 +25451,7 @@ export default {
     closedReadOnly: 'Les poules, les matchs et les classements restent consultables ; plus rien ne se modifie.',
     closedTag: 'Clôturé',
     closeTheTournament: 'Clôturer le tournoi',
+    competition: 'Compétition',
     competitionActions: 'Actions compétition',
     competitionPublished: 'Compétition publiée',
     competitionView: 'Lecture compétition',
@@ -25509,6 +25554,7 @@ export default {
     // eslint-disable-next-line max-len
     enterTwoValidScoresFor: 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.',
     facility: 'Installation',
+    facilityLine: 'Installation : {{name}}',
     forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.',
     forfeitOf: 'Forfait {{teamName}}',
     forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.',
@@ -25536,6 +25582,7 @@ export default {
     unableToApproveThisScore: 'Impossible de valider ce score.',
     unableToSaveThisScore: 'Impossible d’enregistrer ce score.',
     unableToScheduleThisMatch: 'Impossible de programmer ce match.',
+    winnerLine: 'Vainqueur : {{name}}',
   },
   tournamentSettingsEdit: {
     accessReservedForTheOrganiser: 'Accès réservé à l’organisateur',

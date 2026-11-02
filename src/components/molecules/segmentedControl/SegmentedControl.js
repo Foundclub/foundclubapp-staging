@@ -22,6 +22,8 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 // 🔠 S5 (vague S) — LE PLANCHER DE RETRECISSEMENT DU MODE UNE-LIGNE.
 //
 // 0,72 est la valeur deja retenue 17 fois dans ce depot pour le meme besoin
@@ -334,7 +336,7 @@ function SegmentedControl({
         </Text>
         {option.badge && option.badge > 0 ? (
           <View style={styles.pastille} testID={`segment-pastille-${option.value}`}>
-            <Text style={styles.pastilleTexte}>{option.badge > 99 ? '99+' : option.badge}</Text>
+            <Text style={styles.pastilleTexte}>{formatUnreadBadge(option.badge)}</Text>
           </View>
         ) : null}
       </TouchableOpacity>

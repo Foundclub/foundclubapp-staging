@@ -1,4 +1,6 @@
-import { Linking, Text, TouchableOpacity } from 'react-native';
+import {
+  Linking, Platform, Text, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import LegalFooter from '../LegalFooter';
@@ -156,6 +158,32 @@ describe('LegalFooter — le prop restore reste un vrai interrupteur', () => {
     const tree = render({ restore: false });
 
     expect(findPressableByLabel(tree, 'Restaurer mes achats')).toBeUndefined();
+  });
+});
+
+describe('FIN-TEXTES p33 — « Restaurer mes achats » n existe pas sur le site', () => {
+  const plateformeDorigine = Platform.OS;
+
+  afterEach(() => {
+    Platform.OS = plateformeDorigine;
+  });
+
+  it('le site ne montre pas le lien, les liens legaux restent', () => {
+    Platform.OS = 'web';
+
+    const tree = render({});
+    const texts = tree.root.findAllByType(Text)
+      .flatMap((/** @type {any} */ node) => collectTexts(node.props.children));
+
+    expect(findPressableByLabel(tree, 'Restaurer mes achats')).toBeUndefined();
+    expect(texts).toContain('Conditions générales');
+    expect(texts).toContain('Confidentialité');
+  });
+
+  it.each(['ios', 'android'])('le telephone %s le garde : Apple l exige', (plateforme) => {
+    Platform.OS = plateforme;
+
+    expect(findPressableByLabel(render({}), 'Restaurer mes achats')).toBeDefined();
   });
 });
 

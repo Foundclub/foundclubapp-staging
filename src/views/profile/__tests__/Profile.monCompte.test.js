@@ -284,8 +284,9 @@ describe('E6 — « Mon compte » : ce qui ne bouge pas', () => {
 // A17 + A21 (décision d'Adel du 30/09, option A) : les rubriques « Mon profil » et
 // « Compte » quittent l'accueil pour « Mon compte ». Celui-ci gagne les deux
 // lignes qui lui manquaient — « Historique sportif » et « Mes cotisations » —,
-// avec les MÊMES règles de rôle qu'à l'accueil : pas d'historique ni de
-// cotisation pour le parent (P0), pas de cotisation pour le super admin (D72).
+// avec les MÊMES règles de rôle qu'à l'accueil : pas d'historique pour le parent
+// (P0), pas de cotisation pour le super admin (D72). FIN-PARENT (02/11, Adel
+// « 3d enfants ») : le parent retrouve « Mes cotisations », celles de ses enfants.
 describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandonne', () => {
   // CARTECODE Q1 C : « Confidentialité » (compte privé) suit « Personnes bloquées ».
   const COMPTE = ['Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Nous contacter'];
@@ -316,11 +317,10 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
       'Mes enfants', 'Gérer mes alertes', ...COMPTE,
       'Dashboard admin classique', 'Dashboard League', 'Déconnexion', 'Supprimer mon compte',
     ]],
-    // Le parent n'avait ni l'une ni l'autre sur l'accueil (P0) : rien ne change pour lui.
     // PAR-L7 (13/10, design parent E02, D1 A) — SA FAMILLE D'ABORD : « Mes enfants » ouvre la
     // section, puis son profil, ses alertes, et sa carte de collection en dernier (planche 1).
     ['parent', [
-      'Mes enfants', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
+      'Mes enfants', 'Mes cotisations', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
       'Ma carte de collection', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
   ])('%s', (role, attendu) => {
@@ -379,7 +379,7 @@ describe('A17 + A21 — aucune destination de l accueil n est perdue', () => {
     ['Historique sportif', ['player', 'coach', 'president', 'superAdmin'], 'Historique sportif',
       ouvre(RouteNames.HistoryWizardCategory, { resetContext: true })],
     ['Gérer mes alertes', TOUS, 'Gérer mes alertes', ouvre(RouteNames.SearchAlerts)],
-    ['Mes cotisations', ['player', 'coach', 'president'], 'Mes cotisations',
+    ['Mes cotisations', ['player', 'coach', 'president', 'parent'], 'Mes cotisations',
       ouvre(RouteNames.MyLicenses)],
     ['Changer de compte', TOUS, 'Changer de compte', ({ arbre }) => {
       expect(rangees(arbre)).toContain('Ajouter un compte');

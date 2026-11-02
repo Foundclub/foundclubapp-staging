@@ -228,6 +228,9 @@ export const getFriendlyMatchAds = async (filters = {}) => {
     params: {
       filters: {
         isActive: true,
+        // FIN-EVENEMENTS 2 : le ménage du serveur passe une fois par heure (coupé sur la recette) ;
+        // une annonce dont la dernière date est passée ne se liste pas en l'attendant.
+        lastCandidateDate: { $gte: new Date().toISOString() },
         ...(status ? { status } : {}),
         ...(searchFilter || {}),
       },

@@ -36,6 +36,11 @@ jest.mock('@/domains/team/useParentTeams', () => ({
 jest.setTimeout(30000);
 
 const mockUseAuth = jest.fn();
+jest.mock('@/components/organisms/teamListContent/AnnulerMaDemande', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),

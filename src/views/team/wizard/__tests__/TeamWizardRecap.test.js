@@ -73,6 +73,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     freeUsageSummary: mockCompte.freeUsageSummary,
+    getRouteAfterTeamCreated: () => mockCompte.routeApresEquipe,
     subscriptionAccessLevel: mockCompte.subscriptionAccessLevel,
     userData: mockCompte,
   }),
@@ -270,6 +271,36 @@ afterEach(() => {
   mockReponse.team = null;
   mockCompte.freeUsageSummary = [];
   mockCompte.subscriptionAccessLevel = 'FREE';
+});
+
+// FIN-GUIDE, point 2 (Adel, 02/11) : inscription, « C'est mon club », « Créer ma première équipe »
+// :
+// après la création, le didacticiel ne se lançait pas, le sas `Welcome` étant sauté.
+describe('FIN-GUIDE — la sortie du tunnel équipe', () => {
+  afterEach(() => { delete mockCompte.routeApresEquipe; });
+
+  test('pendant l inscription : il reprend le tunnel, jusqu au sas qui lance le guide', async () => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockCompte.routeApresEquipe = 'Welcome';
+    afficherLEcran();
+    mockReponse.team = { documentId: 'eq-neuve', name: 'U15 Filles' };
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    expect(racine.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Welcome' }] });
+  });
+
+  test('temoin : inscription finie, il repart sur « Mes equipes »', async () => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    afficherLEcran();
+    mockReponse.team = { documentId: 'eq-neuve', name: 'U15 Filles' };
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    expect(racine.reset.mock.calls[0][0].routes[0].name).toBe('HomeTab');
+  });
 });
 
 describe('D25 — etape 8/8 « Recapitulatif »', () => {

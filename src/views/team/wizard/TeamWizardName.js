@@ -12,7 +12,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
-import { isMyTeam } from '@/domains/team/teamMembership';
+import { isMyTeam, isOrphanTeam } from '@/domains/team/teamMembership';
 import { isDeletedAccount } from '@/domains/user/deletedAccount';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -33,6 +33,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimTeamAsCoach } from '@/services/team/teamService';
+
+import { useTour } from '@/context/useTour';
 
 const sanitizeRouteParam = (/** @type {any} */ value) => {
   const normalizedValue = String(value || '').trim();
@@ -92,7 +94,11 @@ function TeamWizardName({ navigation, route }) {
     },
     [clubQuery.data],
   );
-  const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed;
+  // FIN-GUIDE, point 1 : dans la mission 1 du guide, la question vient d'être posée
+  // (TourTeamChoice).
+  const { currentMission, tourStatus } = useTour();
+  const askedByGuide = tourStatus === 'active' && currentMission?.id === 'coach_m1';
+  const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed && !askedByGuide;
 
   // 🔴 Q2 (recette d Adel du 28/08) — LE REFUS ARRIVE ICI, PAS A LA 8/8.
   //
@@ -430,9 +436,7 @@ function TeamWizardName({ navigation, route }) {
               const isMine = isMyTeam(team, userData);
               const activeTrainers = (Array.isArray(team?.trainers) ? team.trainers : [])
                 .filter((/** @type {any} */ trainer) => !isDeletedAccount(trainer));
-              // Orpheline seulement si ce n'est pas mon equipe et qu'aucun
-              // entraineur actif n'est presente par l'API.
-              const isOrphan = !isMine && activeTrainers.length === 0;
+              const isOrphan = isOrphanTeam(team, userData);
               const isClaimingThis = claimTeamMutation.isPending
                 && claimTeamMutation.variables === team?.documentId;
               let subtitle;

@@ -13,6 +13,24 @@ const normalizeIdList = (/** @type {any} */ values) => (
     : []
 );
 
+// FIN-INSCRIPTION p1 : le serveur rend l'adresse en objet, et normalizeString la réduisait à null.
+// La session ne garde que ce que les écrans lisent : la ville et son code (carte de joueur, Ville
+// du profil), `value` (alerte, geohash du profil), lat / lng (distance des matchs amicaux, mêmes
+// coordonnées que `value`). ponytail: un `label` ancien peut nommer une rue (le champ cherchait
+// sans type avant le 01/11) ; il reste, car la ligne Ville le lit. Sortie : le réduire à la
+// commune.
+const CHAMPS_ADRESSE_LUS = ['city', 'description', 'label', 'lat', 'lng', 'municipality',
+  'postcode', 'town', 'value', 'zipCode'];
+
+const sanitizeAddress = (/** @type {any} */ address) => {
+  if (!address || typeof address !== 'object') return normalizeString(address);
+  return Object.fromEntries(
+    CHAMPS_ADRESSE_LUS
+      .filter((champ) => address[champ] !== undefined)
+      .map((champ) => [champ, address[champ]]),
+  );
+};
+
 const sanitizeImageSummary = (/** @type {any} */ image) => {
   if (!image) return null;
   return {
@@ -161,7 +179,7 @@ const sanitizeClubMembershipRequest = (/** @type {any} */ request) => {
 };
 
 const buildUserSignature = (/** @type {any} */ user) => JSON.stringify({
-  address: normalizeString(user?.address),
+  address: sanitizeAddress(user?.address),
   avatarUrl: normalizeString(user?.avatar?.url),
   bestLevel: normalizeString(user?.bestLevel),
   birthdate: normalizeString(user?.birthdate),
@@ -260,7 +278,7 @@ export const sanitizeUser = (user) => {
   ];
 
   return {
-    address: normalizeString(user?.address),
+    address: sanitizeAddress(user?.address),
     avatar: sanitizeImageSummary(user?.avatar),
     bestLevel: normalizeString(user?.bestLevel),
     birthdate: normalizeString(user?.birthdate),

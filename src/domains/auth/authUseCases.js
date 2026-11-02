@@ -1002,6 +1002,25 @@ export const getOnboardingViews = ({
       : pointDeControle;
   }
 
+  // FIN-CHEMINS (02/11, D-COACH-9) : un entraîneur sans club rouvert reprend à la première étape
+  // DUE. Ville et photo ont un « Passer », qui n'enregistre rien : avant « Trouve ton club », elles
+  // comptent comme faites (la règle du dessus), au lieu de les faire repasser une à une.
+  // ponytail: une ville jamais vue ne se redemande pas à la reprise ; elle reste dans le profil.
+  if (
+    roleKey === 'coach'
+    && firstname
+    && lastname
+    && onboardingStartedHere
+    && !tunnelsOuvertsCetteSession.has(documentId)
+  ) {
+    const indexDuGuide = filteredViews.findIndex(
+      (view) => view.canShow && view.route === RouteNames.UserAffiliationGuide,
+    );
+    filteredViews.slice(0, Math.max(indexDuGuide, 0)).forEach((view) => {
+      if (SKIPPABLE_ONBOARDING_ROUTES.includes(view.route)) Object.assign(view, { canShow: false });
+    });
+  }
+
   const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,
@@ -1026,6 +1045,22 @@ export const resolveNextOnboardingRoute = ({ currentRoute, views }) => {
   const currentIndex = views?.find((view) => view.route === currentRoute)?.index || 0;
   return views?.find((view) => view.canShow && view.index > currentIndex)?.route;
 };
+
+/**
+ * FIN-GUIDE, point 2 (Adel, 02/11) — D'OÙ REPREND LE TUNNEL QUAND L'ÉQUIPE EST CRÉÉE ?
+ *
+ * Le tunnel équipe s'ouvre depuis l'inscription (« Créer ma première équipe », fiche de son club)
+ * mais n'en fait pas partie : il repartait droit sur l'accueil, en sautant `Welcome`, seul écran
+ * qui termine l'inscription et lance le guide. L'étape d'origine vient du parcours, jamais d'une
+ * supposition : une étape absente vaudrait l'index 0 à `resolveNextOnboardingRoute`, et le tunnel
+ * entier recommencerait (dirigeant : son parcours s'arrête au club).
+ * @param {{ route: string }[]} [views] - Le parcours ; vide quand l'inscription est finie.
+ * @returns {string | undefined} L'étape après laquelle reprendre, ou rien à reprendre.
+ */
+export const resolveOnboardingOriginAfterTeam = (views) => (
+  [RouteNames.UserTrainedTeams, RouteNames.UserAffiliationGuide]
+    .find((route) => views?.some((view) => view.route === route))
+);
 
 /**
  * Les étapes du tunnel qui envoient vers un écran EXTÉRIEUR au tunnel

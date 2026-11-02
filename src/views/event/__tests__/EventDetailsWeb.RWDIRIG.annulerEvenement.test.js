@@ -21,7 +21,12 @@ const mockCreateEventReport = jest.fn(() => Promise.resolve({ data: { id: 1 } })
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
-jest.mock('@/views/event/components/VillePrevenueDialog', () => () => null);
+/** @type {{ props: any }} */
+const mockVillePrevenue = { props: null };
+jest.mock('@/views/event/components/VillePrevenueDialog', () => (/** @type {any} */ props) => {
+  mockVillePrevenue.props = props;
+  return null;
+});
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,
@@ -109,6 +114,7 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 const mockGoBack = jest.fn();
+const mockReplace = jest.fn();
 const mockRespondToEventRsvp = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/event/eventService', () => ({
   cancelEvent: (/** @type {any} */ data) => mockCancelEvent(data),
@@ -209,7 +215,7 @@ const buildEvent = (/** @type {any} */ overrides = {}) => ({
 /** @type {any} */
 let mounted = null;
 
-const mountScreen = (/** @type {any} */ { auth = null, event } = {}) => {
+const mountScreen = (/** @type {any} */ { auth = null, event, routeParams = {} } = {}) => {
   mockEventQuery.data = event;
   mockUseAuth.mockReturnValue(auth || {
     canEditClub: () => true,
@@ -226,9 +232,10 @@ const mountScreen = (/** @type {any} */ { auth = null, event } = {}) => {
           addListener: () => () => {},
           goBack: mockGoBack,
           navigate: mockNavigate,
+          replace: mockReplace,
           setOptions: jest.fn(),
         }}
-        route={{ params: { eventId: 'event-1' } }}
+        route={{ params: { eventId: 'event-1', ...routeParams } }}
       />,
     );
   });
@@ -452,6 +459,62 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
 // valide seul que les membres des équipes conviées (event-participation.ts, « isInternalParticipant » ;
 // child-registration-rules.js : un enfant est toujours une demande hors réservation).
 // Décision A : dire la vraie règle à l'écran.
+describe('FIN-EVENEMENTS p131 · un tournoi clôturé', () => {
+  const TOURNOI_CLOS = () => buildEvent({
+    name: 'Tournoi de la Toussaint',
+    sessionStatus: 'closed',
+    tournamentTeams: [{
+      archivedAt: '2026-10-31T10:00:00.000Z',
+      documentId: 'tt-lions',
+      members: [],
+      name: 'Les Lions',
+      status: 'archived',
+    }],
+    type: { name: 'Tournoi' },
+  });
+  const texteDe = () => JSON.stringify(mounted.toJSON());
+
+  test('🐞 le bandeau daté est en haut de la fiche, avant la carte de l événement', () => {
+    mountScreen({ event: TOURNOI_CLOS() });
+    const texte = texteDe();
+
+    expect(texte).toContain('tournoi-cloture');
+    expect(texte.indexOf('tournoi-cloture')).toBeLessThan(texte.indexOf('"data-event-section":"overview"'));
+  });
+
+  test('🐞 ni « Gérer l’événement » ni « Modifier »', () => {
+    mountScreen({ event: TOURNOI_CLOS() });
+    const texte = texteDe();
+
+    expect(texte).not.toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('"Modifier"');
+    expect(texte).not.toMatch(/Composition d.[eé]quipes/);
+  });
+
+  test('🐞 un tournoi « Privé » neuf n’est pas clôturé : menu gardé, sans bandeau', () => {
+    mountScreen({
+      event: buildEvent({
+        name: 'Tournoi privé', sessionStatus: 'closed', tournamentTeams: [], type: { name: 'Tournoi' },
+      }),
+    });
+    const texte = texteDe();
+
+    expect(texte).toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('tournoi-cloture');
+  });
+
+  test('protégé : un tournoi en cours garde « Gérer l’événement », sans bandeau', () => {
+    mountScreen({
+      event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }),
+    });
+    const texte = texteDe();
+
+    expect(texte).toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('tournoi-cloture');
+    expect(texte).toMatch(/Composition d.[eé]quipes/);
+  });
+});
+
 describe('CORR-EVENEMENTS 126 · la pastille de validation dit la vraie règle', () => {
   test('🐞 « Validation auto » précise qu elle ne vaut que pour les membres des équipes', () => {
     mountScreen({ event: buildEvent({ validationMode: 'auto' }) });
@@ -644,5 +707,49 @@ describe('REPRISE-CHEMINS 41 · une fiche annulée, sur le site', () => {
   test('une fiche active garde « Gérer l événement » et pas de bandeau', () => {
     const root = mountScreen({ event: buildEvent() });
     expect(sections(root)).toEqual(['overview']);
+  });
+});
+
+// FIN-CHEMINS (02/11, 94, contre-recette 07:0x) — sur le site, la séance qu'on vient de créer a
+// l'assistant derrière elle dans l'historique : « C'est annulé · OK » y ramenait. Comme la sortie
+// du téléphone après une création (`handleBackAfterCreation`) : « Mes événements ». ROUGE avant.
+describe('FIN-CHEMINS 94 · annuler la séance qu on vient de créer', () => {
+  const annulerLaSeance = async (/** @type {any} */ root) => {
+    window.confirm = jest.fn(() => true);
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => {
+      bouton.props.onClick();
+    });
+  };
+
+  test('🔴 sans Ville : « Mes événements », pas l assistant', async () => {
+    const root = mountScreen({ event: buildEvent(), routeParams: { fromEventCreation: true } });
+    await annulerLaSeance(root);
+    expect(mockReplace).toHaveBeenCalledWith('MyEventList');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('🔴 Ville prévenue : « OK » mène à « Mes événements », pas à l assistant', async () => {
+    mockCancelEvent.mockImplementationOnce(() => Promise.resolve({
+      data: {}, meta: { collectivitePrevenue: { collectiviteName: 'Ville de Montrivage' } },
+    }));
+    const root = mountScreen({ event: buildEvent(), routeParams: { fromEventCreation: true } });
+    await annulerLaSeance(root);
+    expect(mockVillePrevenue.props.message).toContain('Ville de Montrivage');
+    expect(mockReplace).not.toHaveBeenCalled();
+    act(() => mockVillePrevenue.props.onClose());
+    expect(mockReplace).toHaveBeenCalledWith('MyEventList');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('🔒 une séance ouverte d ailleurs : « OK » revient en arrière', async () => {
+    mockCancelEvent.mockImplementationOnce(() => Promise.resolve({
+      data: {}, meta: { collectivitePrevenue: { collectiviteName: 'Ville de Montrivage' } },
+    }));
+    const root = mountScreen({ event: buildEvent() });
+    await annulerLaSeance(root);
+    act(() => mockVillePrevenue.props.onClose());
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

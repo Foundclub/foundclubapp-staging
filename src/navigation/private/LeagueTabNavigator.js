@@ -15,6 +15,7 @@ import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import { useGetLeagueTeamContext } from '@/services/leagueTeam/leagueTeamQueries';
 
 import { isLeagueCaptain } from '@/utils/league/captains';
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 // screens
 import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
 import Messaging from '@/views/Messaging';
@@ -97,7 +98,7 @@ export default function LeagueTabNavigator() {
           <Text
             style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}
           >
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

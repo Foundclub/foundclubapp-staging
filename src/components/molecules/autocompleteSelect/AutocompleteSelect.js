@@ -640,6 +640,8 @@ const AutocompleteSelect = forwardRef(
             {/* Search input */}
             {props.isSearchable ? (
               <Input
+                // FIN-COLLECTIVITES p55 (02/11) : le texte d'attente s'efface à la frappe.
+                accessibilityLabel={t('modals.actions.search')}
                 autoCapitalize="none"
                 autoComplete="off"
                 autoCorrect={false}

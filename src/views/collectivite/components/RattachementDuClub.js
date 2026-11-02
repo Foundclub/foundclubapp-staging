@@ -173,7 +173,10 @@ function RattachementDuClub({ clubId, enabled }) {
     demande?.kind === 'proposal' && demande?.canAnswer
   );
   const propositions = lignes.filter(aRepondre);
-  const courante = demandeCouranteDuClub(lignes.filter((demande) => !aRepondre(demande)));
+  // FIN-COLLECTIVITES 1 (02/11) : une nouvelle demande de la Ville à trancher ; l'ancien accord,
+  // détaché depuis, ne s'affiche pas à côté.
+  const courante = demandeCouranteDuClub(lignes.filter((demande) => !aRepondre(demande)
+    && !(propositions.length > 0 && demande?.state === 'accepted')));
   const annulerMaDemande = (/** @type {any} */ demande) => {
     if (!clubId || !demande?.collectiviteId) return;
     setErreurs((/** @type {Record<string, string>} */ avant) => ({

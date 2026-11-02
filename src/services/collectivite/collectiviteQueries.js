@@ -277,10 +277,16 @@ export const useDetachCollectiviteClub = () => {
   return useMutation({
     mutationFn: detachCollectiviteClub,
     onSuccess: async (_data, variables) => {
+      // FIN-COLLECTIVITES 4 (02/11) : la fiche du club est encore à l'écran et le serveur ne la
+      // rend plus (2 × 404 en console). Tout se relit, sauf elle : périmée, relue à sa prochaine
+      // ouverture.
+      const fiche = collectiviteClubQueryKey(variables.collectiviteId, variables.clubId);
+      const estLaFiche = (/** @type {any} */ cle) => fiche
+        .every((morceau, rang) => cle[rang] === morceau);
+      await queryClient.invalidateQueries({ queryKey: fiche, refetchType: 'none' });
       await queryClient.invalidateQueries({
-        queryKey: collectiviteClubsQueryKey(variables.collectiviteId),
+        predicate: ({ queryKey }) => queryKey[0] === 'collectivite' && !estLaFiche(queryKey),
       });
-      await queryClient.invalidateQueries({ queryKey: ['collectivite'] });
     },
   });
 };

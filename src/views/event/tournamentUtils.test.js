@@ -164,6 +164,15 @@ describe('getTournamentClosure', () => {
     })).toEqual({ closedAt: Date.parse('2026-10-31T10:00:00.000Z'), isClosed: true });
   });
 
+  test('🐞 FIN-EVENEMENTS : un tournoi « Privé » neuf n’est pas clôturé', () => {
+    expect(getTournamentClosure({ sessionStatus: 'closed', tournamentTeams: [] }))
+      .toEqual({ closedAt: undefined, isClosed: false });
+    expect(getTournamentClosure({
+      sessionStatus: 'closed',
+      tournamentTeams: [{ archivedAt: null, status: 'accepted' }],
+    })).toEqual({ closedAt: undefined, isClosed: false });
+  });
+
   test('ouvert, ou sans équipe archivée : ni clôture ni date', () => {
     expect(getTournamentClosure({ sessionStatus: 'open', tournamentTeams: [] }))
       .toEqual({ closedAt: undefined, isClosed: false });

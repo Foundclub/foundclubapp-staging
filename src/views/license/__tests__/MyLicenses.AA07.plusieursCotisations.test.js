@@ -36,6 +36,15 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useMyLicenses: () => mockMesCotisations,
 }));
 
+// FIN-PARENT (02/11) : l ecran lit le role du compte, et sa branche Parent ses enfants ; ce temoin
+// parle d un compte qui n est pas Parent.
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ accountRoleKey: 'player' }),
+}));
+jest.mock('@/services/parentLink/parentLinkQueries', () => ({}));
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({}));
+
 // S9-bis — `MemberTopBar` reutilise desormais `HeaderBackButton`, le composant
 // de retour des 65 autres ecrans. Il appelle `useNavigation()` en interne (pour
 // pouvoir se passer d un `onPress`), ce qui exige un navigateur autour. C est le

@@ -211,12 +211,20 @@ describe('TourGuideLayer — hors du mode connecté', () => {
   });
 });
 
-describe('TourGuideLayer — « équipe déjà là » vue de l’accueil', () => {
+describe('TourGuideLayer — une étape dont la cible n’est pas à l’écran montre le chemin', () => {
+  const stepWithFallback = {
+    fallback: { targets: ['dock.teams'], text: 'Ouvre l’onglet Équipes.' },
+    id: 'avec-repli',
+    missionId: 'coach_m2',
+    targets: ['teams.trained.0'],
+    text: 'Ouvre ton équipe.',
+  };
+
   it('sans la carte d’équipe à l’écran, la découpe montre l’onglet Équipes', async () => {
     mountTarget('dock.teams', {
       height: 60, width: 80, x: 160, y: 760,
     });
-    mockTour = activeTour(COACH_GUIDE.steps.find((step) => step.id === 'm1-find'));
+    mockTour = activeTour(stepWithFallback);
     const tree = await renderLayer();
     const [frame] = framesOf(tree);
     expect(frame).toBeDefined();
@@ -230,7 +238,7 @@ describe('TourGuideLayer — « équipe déjà là » vue de l’accueil', () =>
     mountTarget('teams.trained.0', {
       height: 200, width: 358, x: 16, y: 300,
     });
-    mockTour = activeTour(COACH_GUIDE.steps.find((step) => step.id === 'm1-find'));
+    mockTour = activeTour(stepWithFallback);
     const tree = await renderLayer();
     expect(styleOf(framesOf(tree)[0])).toMatchObject({ top: 300 + STATUS_BAR - 6 });
   });

@@ -60,6 +60,24 @@ export const buildTeamInviteMessage = ({
 );
 
 /**
+ * Guide Entraîneur (TUTOE, M2) : ce que la feuille de partage a rendu. Android ne distingue pas
+ * l'abandon (toujours « partagé ») : le guide demande au lieu de conclure (GUIDE-FINITIONS-3,
+ * n° 22). Sur iPhone, `sharedAction` est un envoi certain ; le reste, le guide le demande aussi.
+ * @param {{ action?: string } | undefined} result - Le retour de la feuille.
+ * @param {string} teamId - L'équipe.
+ * @returns {void}
+ */
+const signalShareResult = (result, teamId) => {
+  if (Platform.OS === 'android') {
+    emitGuidanceInteraction('team.invite.returned', { teamId });
+  } else if (result && result.action !== Share.dismissedAction) {
+    emitGuidanceAction('team.invite.shared', { teamId });
+  } else {
+    emitGuidanceInteraction('team.invite.dismissed');
+  }
+};
+
+/**
  * Prépare le lien du staff (code serveur) et ouvre la feuille de partage.
  * Sans réseau, le lien part SANS code : il ouvre toujours l'équipe, et la personne
  * pourra demander à la rejoindre.
@@ -86,16 +104,7 @@ export const shareTeamInviteLink = async ({
     title: String(teamName || ''),
     url,
   }).catch(() => undefined);
-  // Guide Entraîneur (TUTOE, M2) : feuille fermée sans envoi ⇒ on reste à
-  // l'étape « lien ». Android ne distingue pas l'abandon (toujours « partagé ») :
-  // le guide demande au lieu de conclure (GUIDE-FINITIONS-3, n° 22).
-  if (Platform.OS === 'android') {
-    emitGuidanceInteraction('team.invite.returned', { teamId });
-  } else if (result && result.action !== Share.dismissedAction) {
-    emitGuidanceAction('team.invite.shared', { teamId });
-  } else {
-    emitGuidanceInteraction('team.invite.dismissed');
-  }
+  signalShareResult(result, teamId);
 
   return { code, url };
 };
@@ -112,13 +121,15 @@ export const shareExistingTeamInvite = async ({
 }) => {
   const url = buildTeamInviteUrl({ code, teamId });
   if (!url) return null;
-  await SharePlatform.share({
+  const result = await SharePlatform.share({
     message: buildTeamInviteMessage({
       clubName, inviterName, teamName, url,
     }),
     title: String(teamName || ''),
     url,
   }).catch(() => undefined);
+  // FIN-GUIDE, point 4 : ce repartage ne disait rien au guide, resté sur « Envoie-le ».
+  signalShareResult(result, teamId);
   return url;
 };
 
@@ -136,4 +147,6 @@ export const openInviteSms = async ({ message, phoneNumber, url }) => {
   } catch (_error) {
     await SharePlatform.share({ message, url }).catch(() => undefined);
   }
+  // FIN-GUIDE, point 4 : l'app ne sait pas si le SMS est parti ; le guide demande.
+  emitGuidanceInteraction('team.invite.returned');
 };

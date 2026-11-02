@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Linking, Text, TouchableOpacity, View,
+  Alert, Linking, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
@@ -21,7 +21,8 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
  * @param {boolean} [props.pricesNotice] - Affiche « Prix TTC. Renouvellement automatique… »
  *   (defaut true). Faux sous une offre qui ne se renouvelle pas (offerte, posee
  *   a la main) : la phrase y serait fausse (recette du 29/09, tournee 4).
- * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true).
+ * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true) ;
+ *   jamais sur le site (FIN-TEXTES p33) : il ne restaure que les achats des magasins.
  * @param {object | Array<object>} [props.style] - Style additionnel du conteneur.
  * @returns {import('react').ReactElement}
  */
@@ -124,7 +125,7 @@ function LegalFooter({ pricesNotice = true, restore = true, style }) {
           <Text style={linkTextStyle}>{t('legalFooter.privacy', 'Confidentialité')}</Text>
         </TouchableOpacity>
       </View>
-      {restore ? (
+      {restore && Platform.OS !== 'web' ? (
         <TouchableOpacity
           accessibilityRole="button"
           disabled={restoreMutation.isPending}

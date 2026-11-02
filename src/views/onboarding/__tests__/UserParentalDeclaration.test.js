@@ -398,11 +398,21 @@ test('AGE-OBLIGATOIRE ② ancien compte : les deux sorties de compte sont la', a
   expect(boutonNomme(arbre, 'Se déconnecter')).toBeDefined();
 });
 
-test('AGE-OBLIGATOIRE ② inscription neuve : aucune sortie de compte', async () => {
+// FIN-CHEMINS (02/11, chef « 1. B ») : ce témoin exigeait « aucune sortie » en inscription neuve,
+// sans décision derrière. Depuis que /profile ne s'ouvre plus sans l'accord, un mineur dont le
+// parent refuse n'avait plus aucune issue dans l'onglet de son inscription.
+test('FIN-CHEMINS inscription neuve : « Se déconnecter » seul', async () => {
   const arbre = await rendre();
 
+  expect(boutonNomme(arbre, 'Se déconnecter')).toBeDefined();
   expect(boutonNomme(arbre, 'Changer de compte')).toBeUndefined();
+});
+
+test('FIN-CHEMINS carte de collection : aucune sortie, elle a son retour', async () => {
+  const arbre = await rendre({ returnRoute: 'PlayerCard', source: 'player_card' });
+
   expect(boutonNomme(arbre, 'Se déconnecter')).toBeUndefined();
+  expect(boutonNomme(arbre, 'Changer de compte')).toBeUndefined();
 });
 
 // ---------------------------------------------------------------------------
