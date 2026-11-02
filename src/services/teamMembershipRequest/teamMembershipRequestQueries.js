@@ -4,7 +4,10 @@ import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
-import { deleteTeamMembershipRequest, getTeamMembershipRequests } from './teamMembershipRequestService';
+import {
+  deleteTeamMembershipRequest,
+  getTeamMembershipRequests,
+} from './teamMembershipRequestService';
 
 /**
  * Retire sa propre demande pour rejoindre une équipe, puis relit ce qu'une demande envoyée change.

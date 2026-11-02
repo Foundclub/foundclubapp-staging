@@ -1301,7 +1301,8 @@ function RequestsHub({ navigation, route }) {
         isLoading={requestsQuery.isLoading}
         wrapperStyle={[Alignments.fill, Spaces.gap[16], Spaces.paddingTop[16]]}
       >
-        {/* FIN-MESSAGERIE p48 (02/11) : sur le site, la barre fine porte déjà le retour et le titre. */}
+        {/* FIN-MESSAGERIE p48 (02/11) : sur le site, la barre fine porte déjà le retour et le
+           titre. */}
         {sousUneBarreDuSite ? null : (
           <>
             <View style={[Alignments.row, Alignments.alignCenter]}>

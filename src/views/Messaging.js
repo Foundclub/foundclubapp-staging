@@ -938,8 +938,10 @@ function Messaging({ navigation, route }) {
                       size={16}
                     />
                   ) : null}
-                  {/* FIN-MESSAGERIE p88 (02/11) : une seule ligne ; un nom long (« Ville de … ») passait sur
-                      deux lignes et laissait un trou avant le message. Sans icône entre les deux, le nom
+                  {/* FIN-MESSAGERIE p88 (02/11) : une seule ligne ; un nom long (« Ville de … »)
+                     passait sur
+                      deux lignes et laissait un trou avant le message. Sans icône entre les deux,
+                      le nom
                       et le message forment un seul texte, coupé une seule fois. */}
                   {auteurDuDernier && extrait.icone ? (
                     <Text

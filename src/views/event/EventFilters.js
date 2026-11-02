@@ -26,9 +26,9 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
-import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -606,11 +606,11 @@ function EventFilters({ navigation }) {
               address={/** @type {Option | undefined} */ (value || undefined)}
               error={getFieldError({ errors: formErrors, fieldName: 'address' })}
               label={t('clubFilters.fields.city.label')}
+              optionsSupplementaires={villesAvantLaFrappe}
               placeholder={t(
                 'clubFilters.fields.city.placeholderChoisir',
                 'Choisir une ville (ex. : Marseille)',
               )}
-              optionsSupplementaires={villesAvantLaFrappe}
               setAddress={(adresse) => {
                 setVilleManquante(false);
                 onChange(adresse);

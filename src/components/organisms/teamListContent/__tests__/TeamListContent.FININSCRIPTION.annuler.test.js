@@ -309,7 +309,8 @@ describe('TeamListContent - FIN-INSCRIPTION, annuler ma demande', () => {
     expect(mockAnnuler).not.toHaveBeenCalled();
     const [titre, message, boutons] = alerte.mock.calls[0];
     expect(titre).toBe('Annuler ta demande ?');
-    // Le nom de l'équipe s'interpole sur le vrai site (capture paire-p3-3) ; le double de t ne le fait pas.
+    // Le nom de l'équipe s'interpole sur le vrai site (capture paire-p3-3) ; le double de t ne le
+    // fait pas.
     expect(message).toContain('Ta demande pour rejoindre');
     expect(boutons.find((/** @type {any} */ b) => b.style === 'cancel').text)
       .toBe('Garder ma demande');

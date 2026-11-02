@@ -17,7 +17,8 @@ const normalizeIdList = (/** @type {any} */ values) => (
 // La session ne garde que ce que les écrans lisent : la ville et son code (carte de joueur, Ville
 // du profil), `value` (alerte, geohash du profil), lat / lng (distance des matchs amicaux, mêmes
 // coordonnées que `value`). ponytail: un `label` ancien peut nommer une rue (le champ cherchait
-// sans type avant le 01/11) ; il reste, car la ligne Ville le lit. Sortie : le réduire à la commune.
+// sans type avant le 01/11) ; il reste, car la ligne Ville le lit. Sortie : le réduire à la
+// commune.
 const CHAMPS_ADRESSE_LUS = ['city', 'description', 'label', 'lat', 'lng', 'municipality',
   'postcode', 'town', 'value', 'zipCode'];
 

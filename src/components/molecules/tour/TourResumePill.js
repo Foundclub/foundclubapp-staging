@@ -100,7 +100,8 @@ function TourResumePill() {
               {(!tour.isWaitOver && tour.currentStep?.pausedLabel)
                 || t('tourGuide.resume', 'Reprendre le tour')}
             </Text>
-            {/* Le tout sur la même ligne : sur un petit écran, rien n'est coupé, elle passe à la suivante. */}
+            {/* Le tout sur la même ligne : sur un petit écran, rien n'est coupé, elle passe à la
+               suivante. */}
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
               {[where, tour.currentMission?.title, `${gauge}\u00A0%`].filter(Boolean).join(' · ')}
             </Text>

@@ -42,8 +42,8 @@ import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import AnnulerMaDemande from '@/components/organisms/teamListContent/AnnulerMaDemande';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import AnnulerMaDemande from '@/components/organisms/teamListContent/AnnulerMaDemande';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';

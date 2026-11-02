@@ -94,7 +94,8 @@ function TeamWizardName({ navigation, route }) {
     },
     [clubQuery.data],
   );
-  // FIN-GUIDE, point 1 : dans la mission 1 du guide, la question vient d'être posée (TourTeamChoice).
+  // FIN-GUIDE, point 1 : dans la mission 1 du guide, la question vient d'être posée
+  // (TourTeamChoice).
   const { currentMission, tourStatus } = useTour();
   const askedByGuide = tourStatus === 'active' && currentMission?.id === 'coach_m1';
   const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed && !askedByGuide;

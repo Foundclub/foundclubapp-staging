@@ -1,8 +1,9 @@
 import { RouteNames } from '@/navigation/routeNames';
 
-import { resolveOnboardingOriginAfterTeam, resolveNextOnboardingRoute } from '../authUseCases';
+import { resolveNextOnboardingRoute, resolveOnboardingOriginAfterTeam } from '../authUseCases';
 
-// FIN-GUIDE, point 2 (Adel, 02/11) : inscription, « C'est mon club », « Créer ma première équipe » :
+// FIN-GUIDE, point 2 (Adel, 02/11) : inscription, « C'est mon club », « Créer ma première équipe »
+// :
 // après la création, le didacticiel ne se lançait pas. Cause racine : `TeamWizardRecap` repartait
 // droit sur l'accueil, sans passer par `Welcome`, seul écran qui lance le guide. Le tunnel doit
 // reprendre après son étape « équipes », sans jamais recommencer au début : une étape inconnue

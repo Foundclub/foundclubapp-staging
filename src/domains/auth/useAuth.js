@@ -65,12 +65,12 @@ import {
   hasClubAccess as hasClubAccessForUser,
   isClubMember as isClubMemberForUser,
   markOnboardingComplete,
-  resolveOnboardingOriginAfterTeam,
   markOnboardingStarted,
   onboardingCompleteKey,
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
+  resolveOnboardingOriginAfterTeam,
   shouldFetchFullUser,
   USER_ROLES,
 } from './authUseCases';

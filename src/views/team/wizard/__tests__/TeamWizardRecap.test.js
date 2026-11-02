@@ -273,7 +273,8 @@ afterEach(() => {
   mockCompte.subscriptionAccessLevel = 'FREE';
 });
 
-// FIN-GUIDE, point 2 (Adel, 02/11) : inscription, « C'est mon club », « Créer ma première équipe » :
+// FIN-GUIDE, point 2 (Adel, 02/11) : inscription, « C'est mon club », « Créer ma première équipe »
+// :
 // après la création, le didacticiel ne se lançait pas, le sas `Welcome` étant sauté.
 describe('FIN-GUIDE — la sortie du tunnel équipe', () => {
   afterEach(() => { delete mockCompte.routeApresEquipe; });

@@ -151,7 +151,8 @@ describe('REPRISE-MESSAGERIE D-COACH-1 — une notification sans écran à elle'
   });
 });
 
-// FIN-MESSAGERIE p48 (02/11, Adel) — « sera présent » doit mener quelque part. Écrans de réservation
+// FIN-MESSAGERIE p48 (02/11, Adel) — « sera présent » doit mener quelque part. Écrans de
+// réservation
 // éteints, et le planning ne montre que les événements (mesuré, compte Tournee) : la fiche dit le
 // créneau elle-même et ouvre le planning.
 describe('FIN-MESSAGERIE p48 — « sera présent » mène au planning', () => {

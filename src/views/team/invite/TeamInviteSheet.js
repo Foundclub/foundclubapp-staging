@@ -35,6 +35,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import {
   describePersonName,
   describeTeamInvitationRefusal,
@@ -46,7 +47,6 @@ import {
   isPlausibleInvitePhone,
   selectSheetSuggestions,
 } from '@/domains/team/teamInviteSuggestions';
-import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';

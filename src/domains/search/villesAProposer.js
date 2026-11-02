@@ -69,7 +69,7 @@ const villesAProposer = (ville) => {
   const lesPlusProches = [...GRANDES_VILLES]
     .sort((a, b) => Number(getDistanceKm(ville, a)) - Number(getDistanceKm(ville, b)))
     .slice(0, NOMBRE_DE_VILLES - 1);
-  return [/** @type {any} */ (ville), ...lesPlusProches];
+  return [(ville), ...lesPlusProches];
 };
 
 export default villesAProposer;

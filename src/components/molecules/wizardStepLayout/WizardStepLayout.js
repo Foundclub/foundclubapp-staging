@@ -15,7 +15,6 @@ import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import useKeyboardFrame from '@/hooks/useKeyboardFrame';
-
 import { BREAKPOINTS } from '@/responsive/breakpoints';
 
 /**

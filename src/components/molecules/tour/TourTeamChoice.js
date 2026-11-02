@@ -22,7 +22,9 @@ import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOpti
 
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimTeamAsCoach } from '@/services/team/teamService';
-import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+import {
+  createTeamMembershipRequest,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { useTour } from '@/context/useTour';
 

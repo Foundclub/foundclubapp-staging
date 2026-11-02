@@ -1,7 +1,7 @@
 /* eslint-disable max-len -- des phrases entieres */
+import { getOnboardingViews, markOnboardingStarted, USER_ROLES } from '@/domains/auth/authUseCases';
 import { storage } from '@/store/appContext';
 
-import { getOnboardingViews, markOnboardingStarted, USER_ROLES } from '@/domains/auth/authUseCases';
 import { RouteNames } from '@/navigation/routeNames';
 
 // FIN-CHEMINS (02/11, D-COACH-9, contre-recette 07:11) — un entraîneur neuf fermé sur « Trouve ton

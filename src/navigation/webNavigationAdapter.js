@@ -198,8 +198,10 @@ export const createWebNavigationAdapter = ({
       if (!resetTarget) {
         return;
       }
-      // FIN-CHEMINS (02/11, 94) : une pile posée sous l'écran visible se perdait, et le retour tombait
-      // dans ce qu'on venait de quitter : après une création, « Plus tard » sur l'affiche revenait à
+      // FIN-CHEMINS (02/11, 94) : une pile posée sous l'écran visible se perdait, et le retour
+      // tombait
+      // dans ce qu'on venait de quitter : après une création, « Plus tard » sur l'affiche revenait
+      // à
       // l'étape 7 de l'assistant au lieu de la fiche. L'écran du dessous reprend l'entrée courante.
       // ponytail: seul l'écran juste en dessous est reposé, et ce qui précédait (l'assistant) reste
       // plus loin dans l'historique du navigateur, qu'un site ne vide pas.

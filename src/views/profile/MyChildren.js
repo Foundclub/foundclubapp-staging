@@ -17,6 +17,7 @@ import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   ChildRegistrationCancelBanner,
@@ -33,7 +34,6 @@ import {
   effacerLAnnonce,
   useAnnonceDeLaFiche,
 } from '@/views/profile/parent/annonceDeLaFiche';
-import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import { situationDeLAnnulation } from '@/views/profile/parent/annulationDeLaDemande';
 import BandeauDAnnulation from '@/views/profile/parent/BandeauDAnnulation';
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';

@@ -101,8 +101,8 @@ function NotificationDetails() {
 
     return {
       body,
-      creneau,
       createdAt,
+      creneau,
       eventDetails,
       eventId,
       notificationId,
@@ -171,7 +171,8 @@ function NotificationDetails() {
   // participation : ailleurs, elles n'apparaissent que si la notification les porte.
   const montrerLEvenement = isParticipationDeclined || Boolean(details.eventDetails);
   const montrerLeMotif = isParticipationDeclined || Boolean(details.reason);
-  // FIN-MESSAGERIE p48 (02/11) : écrans de réservation éteints (COMPLEXES_JOUEUR), et le planning ne
+  // FIN-MESSAGERIE p48 (02/11) : écrans de réservation éteints (COMPLEXES_JOUEUR), et le planning
+  // ne
   // montre que les événements : la fiche dit le créneau elle-même, puis ouvre le planning.
   const estUneReservation = details.type === 'complexeReservationJoueur';
   const libelleDeLaDate = isParticipationDeclined

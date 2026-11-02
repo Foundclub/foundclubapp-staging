@@ -37,7 +37,8 @@ export const casquetteDuFil = (chat) => {
  * Les avis plus anciens n'ont pas ce type. Repli strict : signés au nom de la Ville (un nom sans
  * nom de famille) ET ce nom est un morceau entier du titre, « Ville de … · club » ou « Toute la
  * ville · Ville de … ».
- * ponytail: un compte sans nom de famille qui écrit dans un groupe contenant son prénom comme morceau
+ * ponytail: un compte sans nom de famille qui écrit dans un groupe contenant son prénom comme
+ *   morceau
  * (« Foot · U11 » signé « Foot ») passerait ; le repli ne sert qu'aux avis d'avant le déploiement,
  * à retirer quand ils auront disparu de la cloche.
  * @param {any} notification - La notification.
