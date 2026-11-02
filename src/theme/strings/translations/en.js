@@ -16471,6 +16471,7 @@ export default {
         title: 'Request declined',
         unknownDate: 'Date unavailable',
       },
+      receivedAt: 'Received on',
       screenTitle: 'Notification',
       statusFallback: 'Information',
       title: 'Notification',

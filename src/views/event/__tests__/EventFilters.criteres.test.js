@@ -604,4 +604,34 @@ describe('CORR-MESSAGERIE p67 — le chemin de création d une alerte', () => {
     expect(texteVisible(tree))
       .toContain('La ville et le rayon sont obligatoires pour créer une alerte');
   });
+
+  // REPRISE-MESSAGERIE p67 (01/11, revue) — le même message partait AUSSI dans la fenêtre grise
+  // du navigateur (double message), et l'écran des filtres ne disait pas qu'on crée une alerte.
+  it('sans ville, le message est dans la page SEULEMENT : pas de fenêtre en plus', async () => {
+    // eslint-disable-next-line global-require
+    const { Alert } = require('react-native');
+    const fenetre = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const tree = await monterEnCreation();
+    await appuyerSur(tree, "Créer l'alerte");
+    const appels = fenetre.mock.calls.length;
+    fenetre.mockRestore();
+    expect(appels).toBe(0);
+  });
+
+  it('site : l écran porte son titre « Créer une alerte » en haut de la page', async () => {
+    // eslint-disable-next-line global-require
+    const { Platform } = require('react-native');
+    const avant = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      const tree = await monterEnCreation();
+      const titres = tree.root.findAll(
+        (/** @type {any} */ n) => n.props?.accessibilityRole === 'header' && n.type === 'Text',
+      );
+      expect(titres.map((/** @type {any} */ n) => [n.props.children].flat().join('')))
+        .toContain('Créer une alerte');
+    } finally {
+      Platform.OS = avant;
+    }
+  });
 });

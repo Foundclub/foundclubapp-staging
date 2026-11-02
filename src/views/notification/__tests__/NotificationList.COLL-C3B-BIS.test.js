@@ -191,7 +191,7 @@ const avisDeLaVille = (/** @type {string} */ documentId) => ({
 const etiquettesVille = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .filter((/** @type {any} */ noeud) => [noeud.props.children].flat().join('') === 'Ville');
 
-test('p114 — Ville et club mêlés : « Ville » sur la notification de la Ville, seulement', () => {
+test('p114 — Ville et club mêlés : « Ville » sur la notification de la Ville', () => {
   mockNotifications.list = [
     avisDeLaVille('n-ville'),
     notification('n-club', { ...VILLE, decision: 'approved' }, 'Créneau accepté'),
@@ -202,4 +202,19 @@ test('p114 — Ville et club mêlés : « Ville » sur la notification de la Vil
 test('p114 — une seule casquette : aucune étiquette', () => {
   mockNotifications.list = [avisDeLaVille('n-1'), avisDeLaVille('n-2')];
   expect(etiquettesVille(monter())).toHaveLength(0);
+});
+
+// REPRISE-MESSAGERIE p114 (01/11, revue Collectivité) — « Étiqueter aussi les avis du club » :
+// seule la Ville portait son étiquette, la notification du club n'en avait aucune.
+const etiquettesClub = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+  .filter((/** @type {any} */ noeud) => [noeud.props.children].flat().join('') === 'Club');
+
+test('p114 — Ville et club mêlés : « Club » sur la notification du club aussi', () => {
+  mockNotifications.list = [
+    avisDeLaVille('n-ville'),
+    notification('n-club', { ...VILLE, decision: 'approved' }, 'Créneau accepté'),
+  ];
+  const arbre = monter();
+  expect(etiquettesVille(arbre)).toHaveLength(1);
+  expect(etiquettesClub(arbre)).toHaveLength(1);
 });

@@ -1,6 +1,8 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { creerQueryClientDeTest } from '../../testSupport/queryClientDeTest';
 
 // ==========================================================================
@@ -785,5 +787,112 @@ describe('REPRISE-PLACE point 4 — chaque ligne de la colonne Messages tient en
     // Le « ⋮ » (28 px, à 8 px du bord) se pose sur la ligne au survol : sa place est réservée,
     // la date et la pastille ne passent plus dessous (revue Joueur, point 4).
     expect(lignes[0].props.style.padding).toBe('8px 44px 8px 14px');
+  });
+});
+
+// REPRISE-MESSAGERIE (01/11, revue) — la colonne Messages du site, sur ordinateur.
+describe('REPRISE-MESSAGERIE — la colonne Messages du site', () => {
+  const lignesDeTexte = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.type === 'button' && String(n.props['data-testid'] || '').startsWith('MSG1W-ligne-')
+  )).map((/** @type {any} */ n) => texteDe(n));
+
+  // Point 88 (Adel « A ») : la liste du téléphone disait « Ville de Montrivage : … » ; la colonne
+  // du site disait encore « Karim : … », le prénom de l'agent.
+  test('88 — un message signé par la Ville : l aperçu dit le nom de la Ville', async () => {
+    mockListeIPH09 = [{
+      documentId: 'fil-ville',
+      groupName: 'Ville de Montrivage',
+      messages: [{
+        createdAt: '2026-10-31T10:00:00Z',
+        message: 'RETEST-COLL message de la Ville',
+        sender: BRUNO,
+        senderSignature: { nom: 'Ville de Montrivage', voix: 'ville' },
+      }],
+      participants: [MOI, BRUNO],
+      type: 'group',
+      updatedAt: '2026-10-31T10:00:00Z',
+    }];
+    const { arbre } = await monter();
+    const [ligne] = lignesDeTexte(arbre);
+    expect(ligne).toContain('Ville de Montrivage : RETEST-COLL message de la Ville');
+    expect(ligne).not.toContain('Bruno : ');
+  });
+
+  // Point 114 (Adel « B ») : dans l'espace du complexe, chaque fil porte sa casquette, comme sur
+  // le téléphone ; ailleurs, rien de neuf.
+  const LISTE_MELEE = [
+    {
+      documentId: 'canal-complexe',
+      groupName: 'Le Five',
+      messages: [],
+      participants: [MOI, BRUNO],
+      participantsCount: 40,
+      type: 'group',
+      updatedAt: '2026-10-31T10:00:00Z',
+    },
+    {
+      documentId: 'fil-equipe',
+      messages: [],
+      participants: [MOI, BRUNO],
+      team: { documentId: 'eq-1', name: 'U11' },
+      type: 'team',
+      updatedAt: '2026-10-31T09:00:00Z',
+    },
+  ];
+  const casquettes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    String(n.props?.['data-testid'] || '').startsWith('MSG1W-casquette-')
+  )).map((/** @type {any} */ n) => `${n.props['data-testid']}=${texteDe(n)}`);
+
+  test('114 — espace du complexe : « Complexe » et « Club » sur les lignes', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre } = await monter({ espace: 'complexe' });
+    expect(casquettes(arbre)).toEqual([
+      'MSG1W-casquette-canal-complexe=Complexe',
+      'MSG1W-casquette-fil-equipe=Club',
+    ]);
+  });
+
+  test('114 — hors de l espace du complexe : aucune étiquette', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre } = await monter();
+    expect(casquettes(arbre)).toEqual([]);
+  });
+
+  test('114 — ouvrir un fil depuis l espace du complexe garde l espace', async () => {
+    mockListeIPH09 = LISTE_MELEE;
+    const { arbre, navigation } = await monter({ espace: 'complexe' });
+    const ligne = parTestId(arbre, 'MSG1W-ligne-canal-complexe')[0];
+    await act(async () => { ligne.props.onClick(); });
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      RouteNames.Conversation,
+      expect.objectContaining({ chatId: 'canal-complexe', espace: 'complexe' }),
+    );
+  });
+});
+
+// REPRISE-MESSAGERIE (01/11) — D-COACH-4 et p114 : à 1 440 px, la date et la pastille d'une ligne
+// étaient coupées au bord droit de la colonne (« 30/1 ») ; l'étiquette de casquette poussait plus
+// loin encore. La colonne de texte d'une ligne ne doit jamais grandir avec un texte long.
+describe('REPRISE-MESSAGERIE — une ligne de la colonne tient dans sa largeur', () => {
+  test('le bloc de texte se rétrécit, le titre se coupe avant l heure', async () => {
+    mockListeIPH09 = [{
+      documentId: 'fil-long',
+      groupName: 'Un nom de groupe vraiment très long pour la colonne des messages',
+      messages: [{
+        createdAt: '2026-10-30T10:00:00Z', message: 'Très long message '.repeat(12), sender: BRUNO,
+      }],
+      participants: [MOI, BRUNO],
+      type: 'group',
+      updatedAt: '2026-10-30T10:00:00Z',
+    }];
+    const { arbre } = await monter();
+    const ligne = parTestId(arbre, 'MSG1W-ligne-fil-long')[0];
+    const blocs = ligne.findAll((/** @type {any} */ n) => (
+      n.type === 'span' && n.props.style?.display === 'grid'
+    ));
+    expect(blocs[0].props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+    const titre = ligne.findAll((/** @type {any} */ n) => n.type === 'span'
+      && n.props.style?.textOverflow === 'ellipsis' && n.props.style?.fontSize === 16)[0];
+    expect(titre.props.style.minWidth).toBe(0);
   });
 });

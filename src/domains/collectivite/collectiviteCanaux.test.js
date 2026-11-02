@@ -5,6 +5,7 @@ import {
   estFilDeLaVille,
   estRefusDuFilDeLaVille,
   filsDeLaMessagerie,
+  personneNeLiraCeFil,
   peutEcrireDansLeFil,
   placeholderDuFil,
   routeDeLaLigne,
@@ -188,5 +189,38 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
     })).toBe(true);
     expect(estRefusDuFilDeLaVille({ response: { status: 500 } })).toBe(false);
     expect(estRefusDuFilDeLaVille(null)).toBe(false);
+  });
+});
+
+// REPRISE-MESSAGERIE p100 (01/11, revue Collectivité) — « Aucun dirigeant sur l'app » n'était dit
+// que dans le panneau des membres, loin du champ d'écriture : la Ville écrivait dans le vide.
+describe('REPRISE-MESSAGERIE p100 — personne ne lira cette conversation', () => {
+  const fil = (/** @type {string} */ type, /** @type {any[]} */ dirigeants) => ({
+    chat: { type },
+    groupes: [
+      { cle: 'ville', membres: [{ firstname: 'Karim' }], nom: 'Ville de Montrivage' },
+      {
+        cle: 'club',
+        club: { documentId: 'c1', name: 'AS Test' },
+        membres: dirigeants,
+        nom: 'AS Test',
+      },
+    ],
+  });
+
+  test('conversation avec un club sans dirigeant inscrit : personne ne la lira', () => {
+    expect(personneNeLiraCeFil(fil(CONVERSATION_CLUB, []))).toBe(true);
+  });
+
+  test('le club a un dirigeant : il la lira', () => {
+    expect(personneNeLiraCeFil(fil(CONVERSATION_CLUB, [{ firstname: 'Dina' }]))).toBe(false);
+  });
+
+  test('le canal des dirigeants (un club vide parmi d autres) : pas d avertissement', () => {
+    expect(personneNeLiraCeFil(fil(CANAL_DIRIGEANTS, []))).toBe(false);
+  });
+
+  test('membres pas encore lus : pas d avertissement', () => {
+    expect(personneNeLiraCeFil(null)).toBe(false);
   });
 });

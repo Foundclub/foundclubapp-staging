@@ -138,6 +138,22 @@ export const sousTitreDuFil = (t, { chat, clubsCount = 0, espaceVille = false })
 };
 
 /**
+ * REPRISE-MESSAGERIE p100 (01/11) — la conversation de la Ville avec un club qui n'a aucun
+ * dirigeant inscrit : personne ne lira ce qui s'y écrit. Le canal des dirigeants (plusieurs clubs)
+ * n'est pas concerné.
+ * @param {any} fil - Les membres du fil (`chat`, `groupes` : la Ville, puis le club).
+ * @returns {boolean} Vrai si le club du fil n'a personne pour lire.
+ */
+export const personneNeLiraCeFil = (fil) => {
+  if (fil?.chat?.type !== CONVERSATION_CLUB) return false;
+  const clubs = (Array.isArray(fil?.groupes) ? fil.groupes : [])
+    .filter((/** @type {any} */ groupe) => groupe?.cle === 'club');
+  return clubs.length > 0 && clubs.every((/** @type {any} */ groupe) => (
+    !Array.isArray(groupe?.membres) || groupe.membres.length === 0
+  ));
+};
+
+/**
  * CORR-COLLECTIVITES 88 (31/10, Adel A) — l'auteur dans l'aperçu de la liste des conversations : un
  * message signé par la Ville dit « Ville de Montrivage », comme sa bulle, jamais le prénom de
  * l'agent.

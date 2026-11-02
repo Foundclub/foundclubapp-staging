@@ -447,7 +447,17 @@ function NotificationList() {
                   >
                     {notification.title}
                   </Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral300, marginLeft: 8 }]}>
+                  {/* REPRISE-MESSAGERIE p114 (01/11) : le point bleu couvrait l'heure. */}
+                  <Text
+                    style={[
+                      Fonts.p3,
+                      {
+                        color: Colors.neutral300,
+                        marginLeft: 8,
+                        marginRight: notification.read ? 0 : 12,
+                      },
+                    ]}
+                  >
                     {formatNotificationRelativeTime(notification.createdAt || new Date())}
                   </Text>
                 </View>
@@ -459,12 +469,15 @@ function NotificationList() {
                 </Text>
                 {/* RESA-L5A2 (RB, état 4) : une notification du complexe, en mode joueur aussi. */}
                 {estNotificationDuComplexe(notification.type) ? <PastilleModeComplexe /> : null}
-                {etiquettesDeCasquette && casquetteDeLaNotification(notification) === 'ville' ? (
-                  <Tag
-                    style={{ alignSelf: 'flex-start', marginTop: 8 }}
-                    text={libelleDeCasquette(t, 'ville')}
-                  />
-                ) : null}
+                {/* REPRISE-MESSAGERIE p114 (01/11) : le club porte aussi son étiquette ; le
+                    complexe garde « Mode complexe ». */}
+                {etiquettesDeCasquette
+                  && casquetteDeLaNotification(notification) !== 'complexe' ? (
+                    <Tag
+                      style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                      text={libelleDeCasquette(t, casquetteDeLaNotification(notification))}
+                    />
+                  ) : null}
                 {isDeclinedParticipation ? (
                   <Text
                     style={[

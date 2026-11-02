@@ -100,8 +100,11 @@ import {
 } from '@/views/conversationWeb/filDuSite';
 // MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
 import {
-  estMineurConnu, filsDeLaMessagerie, titreDuFil,
+  auteurDeLApercu, estMineurConnu, filsDeLaMessagerie, personneNeLiraCeFil, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  casquetteDuFil, casquettesMelees, libelleDeCasquette,
+} from '@/domains/messaging/casquette';
 
 import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
@@ -808,13 +811,16 @@ const DESSIN_RETOUR = (
  * recherche, « Toutes / Classique / League », les canaux de la Ville en tete, mes epingles en
  * tete (et « Épingler » dans le menu), les pages suivantes. L ordre et le filtre sont les regles
  * partagees `trierLesFils` / `filtrerLesFils`.
- * @param {{ chatId: string, gestes: { archiveChatAsync: (id: string) => Promise<any>,
- *   pinChatAsync: (id: string) => Promise<any>, unarchiveChatAsync: (id: string) => Promise<any>,
- *   unpinChatAsync: (id: string) => Promise<any> }, navigation: any, t: any }} props
+ * REPRISE-MESSAGERIE p114 (01/11, Adel « B ») — dans l'espace du complexe (`espace`), chaque
+ * ligne porte sa casquette (« Club », « Complexe », « Ville ») quand la liste en mêle deux, comme
+ * sur le téléphone ; ouvrir un fil garde l'espace, donc les étiquettes.
+ * @param {{ chatId: string, espace?: string, gestes: { archiveChatAsync: (id: string) =>
+ *   Promise<any>, pinChatAsync: (id: string) => Promise<any>, unarchiveChatAsync: (id: string) =>
+ *   Promise<any>, unpinChatAsync: (id: string) => Promise<any> }, navigation: any, t: any }} props
  * @returns {import('react').ReactElement} La colonne.
  */
 function ColonneDesConversations({
-  chatId, gestes, navigation, t,
+  chatId, espace = '', gestes, navigation, t,
 }) {
   const { allMyTeams, userData } = useAuth();
   const meId = String(userData?.documentId || '');
@@ -927,6 +933,8 @@ function ColonneDesConversations({
     enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { mineur, monClubId }),
     { nomDuFil, portee, recherche },
   );
+  const espaceDuComplexe = espace === 'complexe';
+  const etiquettesDeCasquette = espaceDuComplexe && casquettesMelees(fils.map(casquetteDuFil));
   let listeVide = t('messaging.noData', 'Aucune conversation trouvée.');
   if (recherche.trim()) listeVide = t('messaging.noSearchResults', 'Aucune conversation trouvée.');
   else if (portee === 'league') {
@@ -1194,9 +1202,15 @@ function ColonneDesConversations({
           const nonLus = formatThreadUnreadBadge(fil?.unreadCount);
           const ouvert = id === chatId;
           const epingle = estEpinglePourMoi(fil, meId);
+          // REPRISE-MESSAGERIE p88 (01/11) : signé par la Ville, l'aperçu dit le nom de la Ville,
+          // comme la liste du téléphone (« Ville de Montrivage : … », plus le prénom de l'agent).
           const prenom = !deMoi && fil?.type !== 'whisper'
-            ? prenomDansLeFil({ chat: fil, moiId: meId, personne: dernier?.sender })
+            ? auteurDeLApercu(
+              dernier,
+              prenomDansLeFil({ chat: fil, moiId: meId, personne: dernier?.sender }),
+            )
             : '';
+          const casquette = etiquettesDeCasquette ? casquetteDuFil(fil) : null;
           return (
             <div className="ARCH-ligne" key={`ligne-${id}`} style={{ position: 'relative' }}>
               <button
@@ -1204,7 +1218,11 @@ function ColonneDesConversations({
                 data-testid={`MSG1W-ligne-${id}`}
                 onClick={() => {
                   if (ouvert) return;
-                  navigation.navigate(RouteNames.Conversation, { chatId: id, chatType: fil?.type });
+                  navigation.navigate(RouteNames.Conversation, {
+                    chatId: id,
+                    chatType: fil?.type,
+                    ...(espaceDuComplexe ? { espace } : {}),
+                  });
                 }}
                 // ARCHIVEES — le clic droit ouvre le menu de la ligne, la ou on a clique.
                 onContextMenu={(event) => {
@@ -1249,11 +1267,15 @@ function ColonneDesConversations({
                 >
                   {getInitials(titre)}
                 </span>
-                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en `auto`,
-                    elle grandissait avec un texte long et poussait l'heure et la pastille dehors. */}
+                {/* REPRISE-MESSAGERIE (01/11, D-COACH-4) : une colonne qui se rétrécit ; en
+                    `auto`, elle grandissait avec un texte long et poussait l'heure dehors. */}
                 <span
                   style={{
-                    display: 'grid', flex: 1, gap: 4, gridTemplateColumns: 'minmax(0, 1fr)', minWidth: 0,
+                    display: 'grid',
+                    flex: 1,
+                    gap: 4,
+                    gridTemplateColumns: 'minmax(0, 1fr)',
+                    minWidth: 0,
                   }}
                 >
                   <span
@@ -1268,6 +1290,7 @@ function ColonneDesConversations({
                       style={{
                         fontFamily: 'Montserrat-Bold, sans-serif',
                         fontSize: 16,
+                        minWidth: 0,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -1275,6 +1298,23 @@ function ColonneDesConversations({
                     >
                       {titre}
                     </span>
+                    {casquette ? (
+                      <span
+                        data-testid={`MSG1W-casquette-${id}`}
+                        // La puce du téléphone (Messaging.js) : fond blanc à 12 %, texte gras.
+                        style={{
+                          background: withAlpha(colors.neutral00, 0.12),
+                          borderRadius: 4,
+                          color: PALETTE_DU_FIL.texte,
+                          flexShrink: 0,
+                          fontFamily: 'Montserrat-Bold, sans-serif',
+                          fontSize: 10,
+                          padding: '2px 8px',
+                        }}
+                      >
+                        {libelleDeCasquette(t, casquette)}
+                      </span>
+                    ) : null}
                     <span
                       style={{
                         color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
@@ -4899,7 +4939,7 @@ function Conversation({ navigation, route }) {
 
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
   // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
-  // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
+  // telephone, plus de liste sous le cadre (REPRISE-MESSAGERIE p100) : le bouton de l en-tete.
   // R17-CANAUX — « Toute la ville » : pas de « Dans ce canal » (personne ne voit qui le lit).
   const panneauDeDroite = filDeLaVille.afficheMembres && filDeLaVille.membres ? (
     <aside
@@ -4951,8 +4991,10 @@ function Conversation({ navigation, route }) {
       bgImage="bg2"
       contentWidth="full"
       responsivePadding
+      // REPRISE-MESSAGERIE p100 (01/11) : les 24 px du bas faisaient défiler la page de 20 px dans
+      // le vide sur téléphone ; ils servaient au panneau des membres, qui n'est plus sous le cadre.
       // @ts-ignore: FIXME: Baseline TS regression
-      style={{ paddingBottom: isDesktop ? 0 : 24 }}
+      style={{ paddingBottom: 0 }}
     >
       <div
         ref={cadreRef}
@@ -4971,6 +5013,7 @@ function Conversation({ navigation, route }) {
         {avecColonneDesMessages ? (
           <ColonneDesConversations
             chatId={chatId}
+            espace={route?.params?.espace}
             gestes={{
               archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
             }}
@@ -5461,6 +5504,23 @@ function Conversation({ navigation, route }) {
                 padding: '8px 12px 12px',
               }}
             >
+              {/* REPRISE-MESSAGERIE p100 (01/11) — le club n'a aucun dirigeant inscrit : on le
+                  dit au-dessus du champ, là où l'on écrit, plus seulement dans ses membres. */}
+              {personneNeLiraCeFil(filDeLaVille.membres) ? (
+                <p
+                  data-testid="REPRISE-personne-ne-lira"
+                  role="status"
+                  style={{
+                    color: PALETTE_DU_FIL.texteDoux, fontSize: 13, margin: 0, padding: '0 4px',
+                  }}
+                >
+                  {t(
+                    'collectiviteCanaux.privee.personneNeLira',
+                    'Ce club n’a aucun dirigeant inscrit : '
+                      + 'personne ne lira ce message pour l’instant.',
+                  )}
+                </p>
+              ) : null}
               {replyTarget ? (
                 <div
                   data-testid="MSG1W-barre-reponse"
@@ -5715,7 +5775,9 @@ function Conversation({ navigation, route }) {
 
         {isDesktop ? panneauDeDroite : null}
       </div>
-      {isDesktop ? null : panneauDeDroite}
+      {/* REPRISE-MESSAGERIE p100 (01/11) — sur un écran étroit, ce panneau passait SOUS le cadre à
+          hauteur d'écran : la page défilait de 436 px dans le vide. « Qui est dans cette
+          conversation », dans l'en-tête, ouvre déjà la même liste. */}
       <PollCreationModal
         isVisible={sondageOuvert}
         onClose={() => setSondageOuvert(false)}
@@ -6450,10 +6512,10 @@ function Conversation({ navigation, route }) {
  * 🧭 SMF (T20, 08/10) — `/messages` SUR ORDINATEUR : la colonne « Messages » a gauche (la MEME
  * que celle d un fil ouvert) et, a droite, la place du fil. La page du telephone (Messaging.js)
  * y montrait une 2e liste, differente (SITE_M14a). L aiguillage est dans Messaging.web.js.
- * @param {{ navigation: any }} props - La navigation.
+ * @param {{ navigation: any, route?: any }} props - La navigation, et la route (son espace).
  * @returns {import('react').ReactElement} La page.
  */
-export function MessagesDuSite({ navigation }) {
+export function MessagesDuSite({ navigation, route }) {
   const { t } = useTranslation();
   const {
     archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
@@ -6480,6 +6542,7 @@ export function MessagesDuSite({ navigation }) {
       >
         <ColonneDesConversations
           chatId=""
+          espace={route?.params?.espace}
           gestes={{
             archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
           }}
