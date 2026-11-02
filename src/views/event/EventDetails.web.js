@@ -1502,7 +1502,9 @@ function EventDetails({ navigation, route }) {
   ];
   // RWDIRIG (29/10, « 4- A ») : le menu vaut pour tous les types, pour que « Annuler » soit joignable.
   // REPRISE-CHEMINS (02/11, point 41) : une fiche annulée n'a plus rien à gérer.
-  const showManageMenu = Boolean(canEdit && manageMenuItems.length > 1 && !isCancelled);
+  const showManageMenu = Boolean(
+    canEdit && manageMenuItems.length > 1 && !isCancelled && !tournoiClos,
+  );
   const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
@@ -2160,6 +2162,33 @@ function EventDetails({ navigation, route }) {
             </div>
           </section>
         ) : null}
+        {/* FIN-EVENEMENTS p131 : le bandeau en TÊTE de la fiche, comme « Annulé le … ». */}
+        {tournoiClos ? (
+          <section
+            data-testid="tournoi-cloture"
+            role="status"
+            style={{
+              background: softSurfaceColor,
+              border: `1px solid ${borderColor}`,
+              borderRadius: 20,
+              color: textColor,
+              display: 'grid',
+              gap: 6,
+              padding: 18,
+            }}
+          >
+            <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18 }}>
+              {t('tournamentManagement.closedOn', 'Tournoi clôturé le {{date}}', {
+                date: new Date(clotureDuTournoi.closedAt ?? 0)
+                  .toLocaleDateString(localeDesFormats()),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </div>
+            <div style={{ color: mutedTextColor }}>
+              {t('tournamentManagement.closedReadOnly')}
+            </div>
+          </section>
+        ) : null}
         <section
           data-event-section="overview"
           style={{
@@ -2346,8 +2375,9 @@ function EventDetails({ navigation, route }) {
                         ) : null}
                       </div>
                     ) : null}
-                    {/* REPRISE-CHEMINS (02/11, point 41) : rien à modifier si annulée. */}
-                    {canEdit && !showManageMenu && !isCancelled ? (
+                    {/* REPRISE-CHEMINS (02/11, point 41) : rien à modifier si annulée.
+                        FIN-EVENEMENTS p131 : ni sur un tournoi clôturé. */}
+                    {canEdit && !showManageMenu && !isCancelled && !tournoiClos ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
                         style={primaryButtonStyle}
@@ -2780,79 +2810,6 @@ function EventDetails({ navigation, route }) {
                 />
               ) : null}
 
-              {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
-                  ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
-                  tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes
-                  portes que la liste : des noms visibles et des équipes. */}
-              {showTrainingParticipants ? (
-                <div
-                  data-event-section="training-participants"
-                  style={{
-                    background: softSurfaceColor,
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 16,
-                    display: 'grid',
-                    gap: 12,
-                    padding: 16,
-                  }}
-                >
-                  <span style={miniTitreStyle}>
-                    {t('eventDetails.participants', 'Participants')}
-                  </span>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gap: 8,
-                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    }}
-                  >
-                    {[
-                      {
-                        cle: 'participating',
-                        couleur: Colors?.success200 || '#8ae9cd',
-                        libelle: t('eventDetails.participationStatus.participating', 'Présent·e·s'),
-                        valeur: participantTotals.participating,
-                      },
-                      {
-                        cle: 'missing',
-                        couleur: textColor,
-                        libelle: t('eventDetails.participationStatus.missing', 'Absent·e·s'),
-                        valeur: participantTotals.missing,
-                      },
-                      {
-                        cle: 'notAnswered',
-                        couleur: textColor,
-                        libelle: libelleSansReponse,
-                        valeur: participantTotals.notAnswered,
-                      },
-                    ].map((tuile) => (
-                      <div
-                        key={tuile.cle}
-                        style={{
-                          background: 'rgba(23, 56, 68, 0.5)',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 16,
-                          display: 'grid',
-                          gap: 2,
-                          minWidth: 0,
-                          padding: 12,
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: tuile.couleur,
-                            fontFamily: 'Montserrat-Black, sans-serif',
-                            fontSize: 24,
-                          }}
-                        >
-                          {tuile.valeur}
-                        </span>
-                        <span style={{ color: mutedTextColor, fontSize: 12 }}>{tuile.libelle}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
               {trainingDescription ? (
                 <div
                   data-event-section="training-description"
@@ -3197,6 +3154,77 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
+              {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
+                  ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
+                  tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes
+                  portes que la liste : des noms visibles et des équipes.
+                  FIN-EVENEMENTS p123 : les tuiles passent sous le seul titre « Participants ». */}
+              {showTrainingParticipants ? (
+                <div
+                  data-event-section="training-participants"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 12,
+                    padding: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 8,
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    }}
+                  >
+                    {[
+                      {
+                        cle: 'participating',
+                        couleur: Colors?.success200 || '#8ae9cd',
+                        libelle: t('eventDetails.participationStatus.participating', 'Présent·e·s'),
+                        valeur: participantTotals.participating,
+                      },
+                      {
+                        cle: 'missing',
+                        couleur: textColor,
+                        libelle: t('eventDetails.participationStatus.missing', 'Absent·e·s'),
+                        valeur: participantTotals.missing,
+                      },
+                      {
+                        cle: 'notAnswered',
+                        couleur: textColor,
+                        libelle: libelleSansReponse,
+                        valeur: participantTotals.notAnswered,
+                      },
+                    ].map((tuile) => (
+                      <div
+                        key={tuile.cle}
+                        style={{
+                          background: 'rgba(23, 56, 68, 0.5)',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: 16,
+                          display: 'grid',
+                          gap: 2,
+                          minWidth: 0,
+                          padding: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: tuile.couleur,
+                            fontFamily: 'Montserrat-Black, sans-serif',
+                            fontSize: 24,
+                          }}
+                        >
+                          {tuile.valeur}
+                        </span>
+                        <span style={{ color: mutedTextColor, fontSize: 12 }}>{tuile.libelle}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {renderParticipantsSection()}
 
               {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
@@ -3522,32 +3550,6 @@ function EventDetails({ navigation, route }) {
                       })}
                     </span>
                   </div>
-                  {tournoiClos ? (
-                    <div
-                      data-testid="tournoi-cloture"
-                      role="status"
-                      style={{
-                        border: `1px solid ${borderColor}`,
-                        borderRadius: 12,
-                        display: 'grid',
-                        gap: 4,
-                        padding: 12,
-                      }}
-                    >
-                      <strong style={{ color: textColor }}>
-                        {clotureDuTournoi.closedAt
-                          ? t('tournamentManagement.closedOn', 'Tournoi clôturé le {{date}}', {
-                            date: new Date(clotureDuTournoi.closedAt)
-                              .toLocaleDateString(localeDesFormats()),
-                            ...SANS_ECHAPPEMENT,
-                          })
-                          : t('tournamentManagement.closedBanner', 'Tournoi clôturé')}
-                      </strong>
-                      <span style={{ color: mutedTextColor }}>
-                        {t('tournamentManagement.closedReadOnly')}
-                      </span>
-                    </div>
-                  ) : null}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
                       onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}

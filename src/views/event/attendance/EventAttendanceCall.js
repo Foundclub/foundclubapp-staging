@@ -605,10 +605,11 @@ function EventAttendanceCall() {
         isVisible={openSheet === 'close'}
         items={items}
         onClose={() => setOpenSheet('')}
-        // FIN-EVENEMENTS 4 : sans historique, `goBack` laissait l accueil. Retour a la fiche.
+        // FIN-EVENEMENTS 4 : sur le site, `goBack` depuis une page ouverte par son adresse mene a
+        // l accueil (webNavigationAdapter). `popTo` rend a la fiche, sans repasser par l appel.
         onConfirm={() => {
           setOpenSheet('');
-          navigation.navigate(RouteNames.EventDetails, { eventId });
+          /** @type {any} */ (navigation).popTo(RouteNames.EventDetails, { eventId });
         }}
         payloadData={payloadData}
         sweepAtMs={resolveNoShowSweepMs(resolveEventEndMs({ event, payloadData }))}

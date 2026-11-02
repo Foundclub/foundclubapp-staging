@@ -445,6 +445,14 @@ describe('ST-VUES3-ORDI · point 6 — la colonne de gauche d un entraînement, 
     expect(texteRendu(arbre)).toContain('Participants 2 Présent·e·s 1 Absent·e·s 0 Pas renseigné');
   });
 
+  test('🐞 FIN-EVENEMENTS p123 : un seul bloc « Participants », les tuiles au-dessus des noms', () => {
+    const texte = texteRendu(monter({ event: SEANCE }));
+
+    expect(occurrences(texte, 'Participants')).toBe(1);
+    expect(texte.indexOf('Présent·e·s')).toBeGreaterThan(texte.indexOf('Participants'));
+    expect(texte.indexOf('Description')).toBeLessThan(texte.indexOf('Participants'));
+  });
+
   test('🔴 la carte « Description » est à gauche, et la description ne s écrit qu une fois', () => {
     const texte = texteRendu(monter({ event: SEANCE }));
 

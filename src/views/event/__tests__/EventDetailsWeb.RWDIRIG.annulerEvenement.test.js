@@ -452,6 +452,60 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
 // valide seul que les membres des équipes conviées (event-participation.ts, « isInternalParticipant » ;
 // child-registration-rules.js : un enfant est toujours une demande hors réservation).
 // Décision A : dire la vraie règle à l'écran.
+describe('FIN-EVENEMENTS p131 · un tournoi clôturé', () => {
+  const TOURNOI_CLOS = () => buildEvent({
+    name: 'Tournoi de la Toussaint',
+    sessionStatus: 'closed',
+    tournamentTeams: [{
+      archivedAt: '2026-10-31T10:00:00.000Z',
+      documentId: 'tt-lions',
+      members: [],
+      name: 'Les Lions',
+      status: 'archived',
+    }],
+    type: { name: 'Tournoi' },
+  });
+  const texteDe = () => JSON.stringify(mounted.toJSON());
+
+  test('🐞 le bandeau daté est en haut de la fiche, avant la carte de l événement', () => {
+    mountScreen({ event: TOURNOI_CLOS() });
+    const texte = texteDe();
+
+    expect(texte).toContain('tournoi-cloture');
+    expect(texte.indexOf('tournoi-cloture')).toBeLessThan(texte.indexOf('"data-event-section":"overview"'));
+  });
+
+  test('🐞 ni « Gérer l’événement » ni « Modifier »', () => {
+    mountScreen({ event: TOURNOI_CLOS() });
+    const texte = texteDe();
+
+    expect(texte).not.toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('"Modifier"');
+  });
+
+  test('🐞 un tournoi « Privé » neuf n’est pas clôturé : menu gardé, sans bandeau', () => {
+    mountScreen({
+      event: buildEvent({
+        name: 'Tournoi privé', sessionStatus: 'closed', tournamentTeams: [], type: { name: 'Tournoi' },
+      }),
+    });
+    const texte = texteDe();
+
+    expect(texte).toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('tournoi-cloture');
+  });
+
+  test('protégé : un tournoi en cours garde « Gérer l’événement », sans bandeau', () => {
+    mountScreen({
+      event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }),
+    });
+    const texte = texteDe();
+
+    expect(texte).toContain('"aria-haspopup":"menu"');
+    expect(texte).not.toContain('tournoi-cloture');
+  });
+});
+
 describe('CORR-EVENEMENTS 126 · la pastille de validation dit la vraie règle', () => {
   test('🐞 « Validation auto » précise qu elle ne vaut que pour les membres des équipes', () => {
     mountScreen({ event: buildEvent({ validationMode: 'auto' }) });

@@ -1181,6 +1181,7 @@ function EventDetails({ navigation, route }) {
   );
   // REPRISE-EVENEMENTS 131 : un tournoi clôturé se lit seulement (la règle du pilotage et du
   // site) ; son équipe archivée ne se gère plus.
+  const clotureDuTournoi = getTournamentClosure(event).closedAt;
   const tournoiClos = isTournamentEvent && getTournamentClosure(event).isClosed;
   const managedTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
@@ -5768,7 +5769,8 @@ function EventDetails({ navigation, route }) {
   const manageChips = buildManageChips({
     includeTournamentSettings: isTournamentEvent && !isStageDayEvent,
   });
-  const hasManageActions = manageChips.length > 0;
+  // FIN-EVENEMENTS p131 : un tournoi clôturé se lit seulement, sur la fiche comme au pilotage.
+  const hasManageActions = manageChips.length > 0 && !tournoiClos;
 
   // ───────────────────────────────────────────────────────────────────────────
   // L4-A — LES ONGLETS DU MATCH (maquette planche 04, cadres 4A et 4B).
@@ -8354,6 +8356,26 @@ function EventDetails({ navigation, route }) {
               event={event}
               matchScoreSummary={matchEncartSummary}
             />
+            {tournoiClos ? (
+              <View
+                accessibilityRole="summary"
+                style={[Spaces.gap[8], Spaces.padding[16], ApplicationStyle.borderRadius16, {
+                  borderColor: withAlpha(Colors.neutral00, 0.13),
+                  borderWidth: 1,
+                }]}
+                testID="tournoi-cloture"
+              >
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                  {t('tournamentManagement.closedOn', 'Tournoi clôturé le {{date}}', {
+                    date: new Date(clotureDuTournoi ?? 0).toLocaleDateString(localeDesFormats()),
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  {t('tournamentManagement.closedReadOnly')}
+                </Text>
+              </View>
+            ) : null}
             {/* COLL-C4B (02/10) — D16 : la Ville a ferme l installation ce jour-la
                 (`facilityClosure` de la fiche). Le bandeau et les deux gestes du CLUB
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}

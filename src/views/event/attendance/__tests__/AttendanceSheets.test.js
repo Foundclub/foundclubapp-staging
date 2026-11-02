@@ -35,7 +35,8 @@ const mockCoachArrivalMutate = jest.fn();
 const mockLateMutate = jest.fn();
 const mockResetMutate = jest.fn();
 
-const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate };
+const mockPopTo = jest.fn();
+const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate, popTo: mockPopTo };
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -342,7 +343,7 @@ describe('L5-A · 2D — la cloture ne ment pas sur ce qu elle fait', () => {
     expect(mockResetMutate).not.toHaveBeenCalled();
     // FIN-EVENEMENTS 4 : retour à la fiche du match, jamais à l'accueil.
     expect(mockGoBack).not.toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'evt-1' });
+    expect(mockPopTo).toHaveBeenCalledWith('EventDetails', { eventId: 'evt-1' });
   });
 
   test('la feuille declare sa hauteur — sans quoi en-tete et pied ne tiennent pas', async () => {
