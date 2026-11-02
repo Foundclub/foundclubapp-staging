@@ -1,16 +1,19 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
 import { useRoute } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Platform, ScrollView, Text, TouchableOpacity, View,
+  Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
+import villesAProposer from '@/domains/search/villesAProposer';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -20,6 +23,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -101,6 +105,17 @@ function MercatoFilters({ navigation }) {
   } = useTheme();
   const [{ mercatoFilters }, appDispatch] = useAppContext();
   const { userData } = useAuth();
+  // FIN-MESSAGERIE p67 (02/11) : sur le site, le titre va dans la barre fine, avec son retour.
+  const titreDeLAlerte = editAlertMode
+    ? t('mercatoFilters.editAlertTitle', "Modifier l'alerte")
+    : t('searchAlerts.create.title', 'Créer une alerte');
+  useDeclarerPageDuSite({ titre: isAlertMode ? titreDeLAlerte : null });
+
+  // FIN-MESSAGERIE p67 (02/11) : avant la frappe, le champ Ville n'est plus une liste vide.
+  const villesAvantLaFrappe = useCallback(
+    (/** @type {string} */ recherche) => (recherche ? [] : villesAProposer(userData?.address)),
+    [userData?.address],
+  );
   const { getGeohashForPointAndRadius } = usePlaces();
   const insets = useSafeAreaInsets();
 
@@ -498,15 +513,6 @@ function MercatoFilters({ navigation }) {
         contentContainerStyle={[Spaces.gap[40]]}
         style={[Spaces.marginVertical[16]]}
       >
-        {/* REPRISE-MESSAGERIE p67 (01/11) — le site ne dessine pas l'en-tête du téléphone : sans ce
-            titre, rien ne disait qu'on crée une alerte. */}
-        {isAlertMode && Platform.OS === 'web' ? (
-          <Text accessibilityRole="header" style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {editAlertMode
-              ? t('mercatoFilters.editAlertTitle', "Modifier l'alerte")
-              : t('searchAlerts.create.title', 'Créer une alerte')}
-          </Text>
-        ) : null}
         <Controller
           control={control}
           name="city"
@@ -523,6 +529,7 @@ function MercatoFilters({ navigation }) {
                 'clubFilters.fields.city.placeholderChoisir',
                 'Choisir une ville (ex. : Marseille)',
               )}
+              optionsSupplementaires={villesAvantLaFrappe}
               setAddress={(nextValue) => {
                 setVilleManquante(false);
                 onChange(nextValue);
