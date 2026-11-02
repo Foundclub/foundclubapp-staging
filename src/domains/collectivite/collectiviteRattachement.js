@@ -212,6 +212,15 @@ export const ligneDeDemandeDuClub = (t, demande) => {
       valeurs,
     );
   }
+  // FIN-COLLECTIVITES 1 (02/11) : tant que le club est rattaché, le serveur rend `attached`
+  // (stateOf) ; accepter rattache d'abord. `accepted` veut donc dire détaché depuis.
+  if (demande?.state === 'accepted') {
+    return t(
+      'collectiviteRattachement.club.noLongerAttached',
+      'Ton club n’est plus rattaché à {{ville}}.',
+      valeurs,
+    );
+  }
   if (demande?.kind === 'proposal') {
     if (demande?.state === 'refused') {
       return t(
@@ -232,9 +241,6 @@ export const ligneDeDemandeDuClub = (t, demande) => {
       '{{sujet}} n’a pas accepté ta demande de rattachement.',
       valeurs,
     );
-  }
-  if (demande?.state === 'accepted') {
-    return t('collectiviteRattachement.club.accepted', '{{sujet}} a accepté ta demande.', valeurs);
   }
   return t(
     'collectiviteRattachement.club.pending',

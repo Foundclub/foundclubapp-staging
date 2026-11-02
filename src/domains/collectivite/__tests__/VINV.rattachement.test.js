@@ -62,6 +62,10 @@ describe('VINV · R3 — le club lit ses demandes, au « tu »', () => {
     [{ kind: 'attach_request', state: 'refused' }, 'La Ville de Montrivage n’a pas accepté ta demande de rattachement.'],
     [{ kind: 'proposal', state: 'attached' }, 'Ton club est rattaché à la Ville de Montrivage.'],
     [{ kind: 'proposal', state: 'refused' }, 'Tu as refusé la demande de la Ville de Montrivage.'],
+    // FIN-COLLECTIVITES 1 (02/11) : le serveur rend « attached » tant que le club est rattaché ;
+    // « accepted » veut donc dire détaché depuis, quel que soit le sens de la demande.
+    [{ kind: 'attach_request', state: 'accepted' }, 'Ton club n’est plus rattaché à la Ville de Montrivage.'],
+    [{ kind: 'proposal', state: 'accepted' }, 'Ton club n’est plus rattaché à la Ville de Montrivage.'],
   ])('%j', (demande, attendu) => {
     expect(ligneDeDemandeDuClub(t, { ...demande, collectivite: ville })).toBe(attendu);
   });

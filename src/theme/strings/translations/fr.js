@@ -6141,6 +6141,7 @@ export default {
       attached: 'Ton club est rattaché à {{ville}}.',
       cancelMine: 'Annuler ma demande',
       kicker: 'Rattachement à la Ville',
+      noLongerAttached: 'Ton club n’est plus rattaché à {{ville}}.',
       pending: 'Ta demande de rattachement à {{ville}} attend sa réponse.',
       // eslint-disable-next-line max-len
       proposalGains: 'Rattaché, ton club voit les installations et les créneaux de la Ville, peut y demander des créneaux et reçoit ses actualités.',
@@ -12492,7 +12493,9 @@ export default {
       save: 'Enregistrer',
     },
     capacity: {
+      moins: 'Une équipe de moins à la fois',
       plural: 'équipes à la fois',
+      plus: 'Une équipe de plus à la fois',
       singular: 'équipe à la fois',
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',

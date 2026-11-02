@@ -6972,6 +6972,7 @@ export default {
       attached: 'Your club is attached to {{ville}}.',
       cancelMine: 'Cancel my request',
       kicker: 'Attachment to the town',
+      noLongerAttached: 'Your club is no longer attached to {{ville}}.',
       pending: 'Your request to be attached to {{ville}} is waiting for its answer.',
       proposalGains: "Once attached, your club sees the town's facilities and slots, can request slots there and receives its news.",
       proposalOffer: "With {{ville}}, your club gets FoundClub's Club offer, paid for by the town.",
@@ -11749,7 +11750,9 @@ export default {
       save: 'Save',
     },
     capacity: {
+      moins: 'One team fewer at a time',
       plural: 'teams at a time',
+      plus: 'One team more at a time',
       singular: 'team at a time',
       teamPlural: 'simultaneous teams',
       teamSingular: 'simultaneous team',

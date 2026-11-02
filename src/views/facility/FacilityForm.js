@@ -1006,6 +1006,10 @@ function FacilityForm() {
               ]}
             >
               <Button
+                accessibilityLabel={t(
+                  'facilityForm.capacity.moins',
+                  'Une équipe de moins à la fois',
+                )}
                 onPress={() => onChange(Math.max(1, safeValue - 1))}
                 size="small"
                 style={STEPPER_BUTTON_STYLE}
@@ -1027,6 +1031,10 @@ function FacilityForm() {
                 </Text>
               </View>
               <Button
+                accessibilityLabel={t(
+                  'facilityForm.capacity.plus',
+                  'Une équipe de plus à la fois',
+                )}
                 onPress={() => onChange(Math.min(10, safeValue + 1))}
                 size="small"
                 style={STEPPER_BUTTON_STYLE}

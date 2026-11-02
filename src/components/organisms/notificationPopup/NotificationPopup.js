@@ -12,10 +12,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  casquetteDeLaNotification,
+  casquettesMelees,
+  libelleDeCasquette,
+} from '@/domains/messaging/casquette';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import Tag from '@/components/atoms/tag/Tag';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
@@ -52,6 +58,9 @@ function NotificationPopup({
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const recentNotifications = safeNotifications.slice(0, 8);
   const unreadCount = safeNotifications.filter((n) => !n.read).length;
+  // FIN-COLLECTIVITES 3 (02/11, point 114) : la règle de la page Notifications. Ville et club
+  // mêlés, chacun porte son étiquette ; le complexe a sa propre pastille, sur la page.
+  const etiquettesDeCasquette = casquettesMelees(safeNotifications.map(casquetteDeLaNotification));
   const shouldShowLoading = Boolean(isLoading) && recentNotifications.length === 0;
   // VILLE-NOTIFS (07/10) — une lecture en echec se dit : elle ne se deguise plus en « Aucune
   // notification » (la cloche disait 4, le panneau rien). Deja des notifications : on les garde.
@@ -207,9 +216,13 @@ function NotificationPopup({
       let couleurIcone = textPrimary;
       if (ton === 'succes') couleurIcone = Colors?.success500 || textPrimary;
       if (ton === 'refus') couleurIcone = Colors?.error300 || textPrimary;
+      const casquette = casquetteDeLaNotification(notif);
+      const etiquette = etiquettesDeCasquette && casquette !== 'complexe'
+        ? libelleDeCasquette(t, casquette)
+        : '';
       return (
         <TouchableOpacity
-          accessibilityLabel={`${notif.title || t(
+          accessibilityLabel={`${etiquette ? `${etiquette} : ` : ''}${notif.title || t(
             'notificationPopup.defaultTitle',
             'Notification',
           )}. ${notif.body || ''}`.trim()}
@@ -255,6 +268,9 @@ function NotificationPopup({
             <Text numberOfLines={1} style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary }]}>
               {notif.body}
             </Text>
+            {etiquette ? (
+              <Tag style={{ alignSelf: 'flex-start', marginTop: 4 }} text={etiquette} />
+            ) : null}
           </View>
 
           {!notif.read ? (
