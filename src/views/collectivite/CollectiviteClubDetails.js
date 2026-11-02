@@ -741,8 +741,8 @@ function CollectiviteClubDetails() {
   const ville = collectivite?.name
     ? formatCollectiviteOfferedBy(collectivite.name)
     : t('collectiviteClubs.detail.theCity', 'la Ville');
-  // RET-VILLE 24 (02/11, Adel « A ») : la carte se garde quand la Ville paie ; l'abonnement d'un club
-  // qui paie lui-même ne la regarde pas. Ça change D70, qui voulait le renvoi vers FoundClub partout.
+  // RET-VILLE 24 (02/11, Adel « A ») : la carte se garde quand la Ville paie ; l'abonnement d'un
+  // club qui paie lui-même ne la regarde pas. Ça change D70 (le renvoi vers FoundClub partout).
   const renderOffre = () => {
     const offre = club?.offer || {};
     if (offre.kind !== 'collectivite') return null;

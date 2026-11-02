@@ -504,7 +504,10 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     const lus = textes(arbre);
     expect(lus).toContain('Mercredi 17:30 – 19:00 : complet');
     expect(lus).toContain('Déjà là : AS Montrivage · U15, Montrivage FC · Senior B.');
-    expect(lus).toContain('Complet : AS Montrivage · U15 et Montrivage FC · Senior B y sont déjà. Si vous attribuez, 3 équipes partageront 2 places.');
+    expect(lus).toContain(
+      'Complet : AS Montrivage · U15 et Montrivage FC · Senior B y sont déjà. '
+      + 'Si vous attribuez, 3 équipes partageront 2 places.',
+    );
     expect(parTexte(arbre, 'Changer l’heure')).toBeDefined();
 
     await appuyer(parTexte(arbre, 'Attribuer quand même'));

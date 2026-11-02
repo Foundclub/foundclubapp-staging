@@ -416,8 +416,8 @@ function InstallationCreneaux() {
             : undefined}
           description={t(
             'collectiviteCreneaux.creneaux.videTexte',
-            'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste ponctuel : '
-            + 'le club y pose ses entraînements sans rien vous demander.',
+            'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste '
+            + 'ponctuel : le club y pose ses entraînements sans rien vous demander.',
           )}
           onAction={canManage ? () => attribuer() : undefined}
           title={t('collectiviteCreneaux.creneaux.vide', 'Aucun créneau attribué')}

@@ -364,6 +364,7 @@ test('CRFERM-4/7 « Toute la journée » par défaut ; désactivé, une heure au
     endDate: '2026-10-19', endTime: '12:00', kind: 'closure', startDate: '2026-10-16', startTime: '14:00',
   });
   expect(textes(arbre.root)).toContain('Fermer le gymnase');
+  await appuyer(parTestID(arbre, 'fermeture-motif-travaux'));
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre.root)).toContain('Fermer « Gymnase des Tilleuls » du vendredi 16 octobre à 14:00 au lundi 19 octobre à 12:00 ?');
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
@@ -417,6 +418,122 @@ test('CRFERM-4/8 le même jour, la fin suit le début ; « Modifier » une plage
   expect(modifyFacilityClosure).toHaveBeenCalledWith('fermeture-1', expect.objectContaining({
     endTime: null, startTime: null,
   }));
+});
+
+// RET-VILLE 2 (02/11, Adel « 1- A ») — un seul bouton « Fermer » sur l'accueil. L'écran prend un ou
+// plusieurs jours, des heures facultatives, un motif OU un nom. Un seul jour avec des heures, sans
+// actualité, c'est ce que faisait « Bloquer un créneau » : il s'écrit comme un blocage, sinon la
+// semaine du planning griserait toute la journée (`kind !== 'block'`, PlanningWeekTimelineViewV2).
+describe('RET-VILLE 2 — un seul « Fermer »', () => {
+  const FORUM = 'Forum des associations';
+  const preparer = async () => {
+    mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
+    const arbre = await rendre();
+    await changer(date('Du'), '16/10/2026');
+    return arbre;
+  };
+  const nommer = async (/** @type {any} */ arbre) => {
+    await appuyer(parTestID(arbre, 'fermeture-deplier'));
+    await changer(champ('Nom (facultatif)'), FORUM);
+  };
+  const lesHeures = async (/** @type {any} */ arbre) => {
+    await act(async () => { arbre.root.findAllByType(Switch)[0].props.onValueChange(false); });
+    await attendre();
+    await changer(champ('Heure de début'), '09:00');
+    await changer(champ('Heure de fin'), '13:00');
+  };
+  const envoyer = async (/** @type {any} */ arbre) => {
+    await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+    await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  };
+
+  test('aucun motif d avance : le bouton attend un motif ou un nom', async () => {
+    const arbre = await preparer();
+    expect(textes(arbre.root)).toContain('Choisissez un motif ou écrivez un nom.');
+    expect(parTestID(arbre, 'fermeture-envoyer').props.disabled).toBe(true);
+    await nommer(arbre);
+    expect(parTestID(arbre, 'fermeture-envoyer').props.disabled).toBeFalsy();
+  });
+
+  test('un nom seul sur plusieurs jours : une fermeture, motif « autre » (le serveur en exige un)', async () => {
+    const arbre = await preparer();
+    await changer(date('Au'), '19/10/2026');
+    await nommer(arbre);
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
+      endDate: '2026-10-19',
+      kind: 'closure',
+      label: FORUM,
+      message: null,
+      publishActualite: false,
+      reason: 'autre',
+      startDate: '2026-10-16',
+    });
+  });
+
+  test('un seul jour avec des heures, sans actualité : comme un blocage, avec le nom', async () => {
+    const arbre = await preparer();
+    await lesHeures(arbre);
+    await nommer(arbre);
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
+      endDate: '2026-10-16',
+      endTime: '13:00',
+      kind: 'block',
+      label: FORUM,
+      message: null,
+      reason: null,
+      startDate: '2026-10-16',
+      startTime: '09:00',
+    });
+  });
+
+  test('le même jour avec un motif seul : le blocage prend le motif pour nom (le serveur en veut un)', async () => {
+    const arbre = await preparer();
+    await lesHeures(arbre);
+    await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', expect.objectContaining({
+      kind: 'block', label: 'Manifestation', reason: 'manifestation',
+    }));
+  });
+
+  test('le même jour avec l actualité cochée : une fermeture, seule à publier', async () => {
+    const arbre = await preparer();
+    await lesHeures(arbre);
+    await nommer(arbre);
+    await appuyer(parTestID(arbre, 'fermeture-publier'));
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', expect.objectContaining({
+      kind: 'closure', label: FORUM, publishActualite: true, reason: 'autre', startTime: '09:00',
+    }));
+  });
+
+  test('toute la journée sur un jour : une fermeture, comme avant', async () => {
+    const arbre = await preparer();
+    await appuyer(parTestID(arbre, 'fermeture-motif-travaux'));
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', expect.objectContaining({
+      kind: 'closure', reason: 'travaux',
+    }));
+  });
+
+  test('venu du planning (mode bloquer) : le blocage reste un blocage', async () => {
+    mockParams = {
+      collectiviteId: 'ville-montrivage',
+      date: '2026-10-16',
+      endTime: '13:00',
+      facilityId: 'gym-tilleuls',
+      mode: 'bloquer',
+      startTime: '09:00',
+    };
+    const arbre = await rendre();
+    await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+    await envoyer(arbre);
+    expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', expect.objectContaining({
+      kind: 'block', label: 'Manifestation', startTime: '09:00',
+    }));
+  });
 });
 
 test('CRFERM-4/9 rien de touché sans geste : la touche « Changer » n est jamais là sans choix, et aucune zone de toucher sous 44 px', async () => {

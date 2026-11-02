@@ -831,20 +831,15 @@ function CollectiviteHome() {
           ),
           titre: t('collectiviteAccueil.actions.assignSlot.titre', 'Attribuer un créneau'),
         };
-      case 'blockSlot':
-        return {
-          dit: t('collectiviteAccueil.actions.blockSlot.dit', 'Forum, manifestation de la Ville.'),
-          titre: t('collectiviteAccueil.actions.blockSlot.titre', 'Bloquer un créneau'),
-        };
       case 'closeInstallation':
         return {
           dit: t(
             'collectiviteAccueil.actions.closeInstallation.dit',
-            'Vacances, travaux : les clubs sont prévenus.',
+            'Vacances, travaux, forum : les clubs sont prévenus.',
           ),
           titre: t(
             'collectiviteAccueil.actions.closeInstallation.titre',
-            'Fermer une installation',
+            'Fermer',
           ),
         };
       case 'inviteClub':
@@ -890,12 +885,11 @@ function CollectiviteHome() {
                 // parts égales, l'icône à gauche du titre. FINITIONS16 21 (T15, 1 280 px) : la
                 // carte fait 150 px ; un cadre serré laisse 94 px au titre, il tient sur deux
                 // lignes (« Attribuer un » = 90,6 px en Montserrat gras 14).
-                // R17-EVT-1-BIS (i) (20/10) : 7 actions, DEUX rangées (4 puis 3) ; une seule
-                // repliait les libellés sur 3 lignes à 1 360 px. Un quart chacune, les 3 dernières
-                // s élargissent.
+                // R17-EVT-1-BIS (i) (20/10) : DEUX rangées ; une seule repliait les libellés sur 3
+                // lignes à 1 360 px. RET-VILLE 2 et 21 (02/11) : 5 actions, 3 puis 2.
                 enColonnes ? {
                   alignItems: 'center',
-                  flexBasis: '22%',
+                  flexBasis: '30%',
                   flexDirection: 'row',
                   gap: 8,
                   minHeight: 56,

@@ -1,31 +1,31 @@
+/* eslint-disable max-len */
+import i18next from 'i18next';
+
+import en from '@/theme/strings/translations/en';
+import fr from '@/theme/strings/translations/fr';
+
 import { phraseDuComplet } from '../seasonSlotDisplay';
 
-const i18next = require('i18next');
-
-const en = require('@/theme/strings/translations/en');
-const fr = require('@/theme/strings/translations/fr');
-
-// RET-VILLE 17 (02/11, Adel « A ») — « Attribuer met 2 équipes pour 1 places, aux dates choisies » ne
-// se comprenait pas, et le pluriel suivait le mauvais nombre. Les noms et les nombres varient.
+// RET-VILLE 17 (02/11, Adel « A ») — « Attribuer met 2 équipes pour 1 places, aux dates choisies »
+// ne se comprenait pas, et le pluriel suivait le mauvais nombre. Les noms et les nombres varient.
 
 const QUI = {
   AS: { club: { name: 'AS Montrivage' }, team: { name: 'U15' } },
   FC: { club: { name: 'FoundClub' } },
   MF: { club: { name: 'Montrivage FC' } },
 };
-const langue = i18next.default || i18next;
 
 describe('RET-VILLE 17 — ce que dit le message du complet', () => {
   beforeAll(async () => {
-    await langue.init({
+    await i18next.init({
       compatibilityJSON: 'v4',
       fallbackLng: 'fr',
       lng: 'fr',
-      resources: { en: { translation: en.default }, fr: { translation: fr.default } },
+      resources: { en: { translation: en }, fr: { translation: fr } },
     });
   });
   const dire = (/** @type {any[]} */ occupants, /** @type {number} */ equipes, /** @type {number} */ places) => (
-    phraseDuComplet(langue.t.bind(langue), { equipes, occupants, places })
+    phraseDuComplet(i18next.t.bind(i18next), { equipes, occupants, places })
   );
 
   it.each([
@@ -38,9 +38,9 @@ describe('RET-VILLE 17 — ce que dit le message du complet', () => {
   });
 
   it('en anglais aussi, avec les pluriels justes', async () => {
-    await langue.changeLanguage('en');
+    await i18next.changeLanguage('en');
     expect(dire([QUI.FC], 2, 1)).toBe('Full: FoundClub is already there. If you assign, 2 teams will share 1 place.');
     expect(dire([QUI.AS, QUI.MF], 3, 2)).toBe('Full: AS Montrivage · U15 and Montrivage FC are already there. If you assign, 3 teams will share 2 places.');
-    await langue.changeLanguage('fr');
+    await i18next.changeLanguage('fr');
   });
 });

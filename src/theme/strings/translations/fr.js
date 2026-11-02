@@ -5101,13 +5101,9 @@ export default {
         dit: 'Une installation, un jour, un club, toute la saison.',
         titre: 'Attribuer un créneau',
       },
-      blockSlot: {
-        dit: 'Forum, manifestation de la Ville.',
-        titre: 'Bloquer un créneau',
-      },
       closeInstallation: {
-        dit: 'Vacances, travaux : les clubs sont prévenus.',
-        titre: 'Fermer une installation',
+        dit: 'Vacances, travaux, forum : les clubs sont prévenus.',
+        titre: 'Fermer',
       },
       inviteClub: {
         dit: 'Le trouver sur FoundClub, ou l’inviter.',
@@ -7237,7 +7233,7 @@ export default {
         heures: 'Choisissez les heures.',
         installation: 'Choisissez l’installation.',
         jour: 'Choisissez le jour.',
-        motif: 'Choisissez un motif.',
+        motif: 'Choisissez un motif ou écrivez un nom.',
       },
       mot: 'Un mot pour les clubs (facultatif)',
       motExemple: 'Réfection du sol',

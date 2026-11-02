@@ -283,7 +283,8 @@ function FormulaireDeFermeture({
     heureDebut: String(existante?.startTime || params.startTime || '').slice(0, 5),
     heureFin: String(existante?.endTime || params.endTime || '').slice(0, 5),
     mot: existante?.message || params.message || '',
-    motif: existante?.reason || params.motif || (bloquer ? null : 'travaux'),
+    // RET-VILLE 2 (02/11, Adel « 1- A ») : plus de motif d'avance, un nom seul suffit aussi.
+    motif: existante?.reason || params.motif || null,
     nom: existante?.label || '',
   }));
   const [facilityId, setFacilityId] = useState(depart.facilityId);
@@ -374,7 +375,8 @@ function FormulaireDeFermeture({
   const modifier = useModifyFacilityClosure();
   const enCours = fermer.isPending || modifier.isPending || fermerDepuisSignalement.isPending;
   // SAIS : un blocage d avant n a qu un nom (aucun motif) ; il se modifie tel quel.
-  const motifOuNom = bloquer ? Boolean(motifRetenu || nomRetenu) : Boolean(motif);
+  // RET-VILLE 2 : une fermeture aussi se contente d'un nom.
+  const motifOuNom = Boolean(motifRetenu || nomRetenu);
   const pret = Boolean(facilityId) && datesLisibles && heuresLisibles && motifOuNom;
 
   // SAIS (T20 lot 2) — UNE phrase, celle d « Attribuer » (SeasonSlotForm), pour les dates comme
@@ -404,7 +406,10 @@ function FormulaireDeFermeture({
     } else if (!heuresLisibles) {
       ceQuiManque = t('collectiviteFermetures.form.manque.heures', 'Choisissez les heures.');
     } else if (!motifOuNom) {
-      ceQuiManque = t('collectiviteFermetures.form.manque.motif', 'Choisissez un motif.');
+      ceQuiManque = t(
+        'collectiviteFermetures.form.manque.motif',
+        'Choisissez un motif ou écrivez un nom.',
+      );
     }
   }
 
@@ -463,7 +468,8 @@ function FormulaireDeFermeture({
       message: mot.trim() || null,
       startDate: jourDebut,
     };
-    data.reason = motifRetenu;
+    // RET-VILLE 2 : le serveur veut un motif pour une fermeture ; « autre » laisse parler le nom.
+    data.reason = motifRetenu || (!bloquer && nomRetenu ? 'autre' : null);
     if (bloquer) {
       data.startTime = heureDebut;
       data.endTime = heureFin;
@@ -498,8 +504,15 @@ function FormulaireDeFermeture({
       if (modification) {
         await modifier.mutateAsync({ closureId: existante.documentId, data });
       } else {
+        // RET-VILLE 2 : un seul jour avec des heures, sans actualité, c'est l'ancien « Bloquer un
+        // créneau ». Il s'écrit comme lui : une fermeture griserait toute la journée au planning.
+        // ponytail: le même jour AVEC actualité reste une fermeture (seule à publier, côté
+        // serveur), donc grisée ; sortie : lire ses heures dans la semaine du planning.
+        const commeUnBlocage = !bloquer && avecHeures && !plusieursJours && !publier;
         await fermer.mutateAsync({
-          data: {
+          data: commeUnBlocage ? {
+            ...data, kind: 'block', label: nomDuBlocage, reason: motifRetenu,
+          } : {
             ...data,
             kind: bloquer ? 'block' : 'closure',
             ...(bloquer ? {} : { publishActualite: publier }),

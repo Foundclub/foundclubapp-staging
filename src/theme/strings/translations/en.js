@@ -4741,13 +4741,9 @@ export default {
         dit: 'A facility, a day, a club, the whole season.',
         titre: 'Assign a slot',
       },
-      blockSlot: {
-        dit: 'Forum, town event.',
-        titre: 'Block a slot',
-      },
       closeInstallation: {
-        dit: 'Holidays, works: the clubs are told.',
-        titre: 'Close a facility',
+        dit: 'Holidays, works, a forum: clubs are told.',
+        titre: 'Close',
       },
       inviteClub: {
         dit: 'Find it on FoundClub, or invite it.',
@@ -6644,7 +6640,7 @@ export default {
         heures: 'Choose the times.',
         installation: 'Choose the facility.',
         jour: 'Choose the day.',
-        motif: 'Choose a reason.',
+        motif: 'Choose a reason or write a name.',
       },
       mot: 'A note for the clubs (optional)',
       motExemple: 'Floor renovation',

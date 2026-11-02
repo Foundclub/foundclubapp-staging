@@ -348,7 +348,7 @@ test('SAIS-2/5 un bouton grisé dit ce qui manque, dans l ordre de l écran', as
   expect(textes(arbre)).toContain('Choisissez les heures.');
   await saisir('De', '09:00');
   await saisir('À', '13:00');
-  expect(textes(arbre)).toContain('Choisissez un motif.');
+  expect(textes(arbre)).toContain('Choisissez un motif ou écrivez un nom.');
   await appuyer(parTestID(arbre, 'fermeture-motif-autre'));
   expect(parTestID(arbre, 'fermeture-envoyer').props.disabled).toBe(false);
   expect(textes(arbre).filter((ligne) => ligne.startsWith('Choisissez'))).toEqual([]);

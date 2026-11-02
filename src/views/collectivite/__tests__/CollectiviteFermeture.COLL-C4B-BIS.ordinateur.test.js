@@ -267,7 +267,7 @@ test('C4B-BIS-1/5 le PANNEAU : titre de la planche, sans choix d installation ; 
     endTime: null,
     kind: 'closure',
     label: null,
-    reason: 'travaux',
+    reason: null,
     startDate: '2026-10-02',
     startTime: null,
   });
