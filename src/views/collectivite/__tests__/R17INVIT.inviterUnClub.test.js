@@ -35,6 +35,8 @@ let mockDemandes;
 /** @type {any[]} */
 let mockClubs;
 /** @type {any} */
+let mockClubsDeLaVille;
+/** @type {any} */
 let mockListeProps;
 const mockNavigate = jest.fn();
 const mockProposer = {
@@ -103,6 +105,7 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
   useAnswerCollectiviteAttachRequest: () => mockRepondre,
   useCancelCollectiviteProposal: () => mockAnnuler,
   useCollectiviteClubRequests: () => mockDemandes,
+  useCollectiviteClubsRattaches: () => mockClubsDeLaVille,
   useProposeCollectiviteClub: () => mockProposer,
 }));
 
@@ -225,6 +228,7 @@ beforeEach(() => {
   mockDemandes = {
     data: [], error: null, isError: false, isLoading: false,
   };
+  mockClubsDeLaVille = { data: [], error: null, isLoading: false };
 });
 
 describe('R17INVIT · I1 — la recherche habituelle, sans onglets', () => {
@@ -450,5 +454,32 @@ describe('CORR-RECHERCHE point 2 — tout defile avec la recherche', () => {
     expect(liste.findAll((/** @type {any} */ n) => n.props?.testID === 'inviter-absent')).toHaveLength(0);
     expect(dans(arbre, 'inviter-recherche').findAll((/** @type {any} */ n) => n.props?.testID === 'inviter-absent').length)
       .toBeGreaterThan(0);
+  });
+});
+
+// REPRISE-COLLECTIVITES additif (02/11/2026) — vu en recette par REPRISE-PLACE et par la revue :
+// AS Montrivage, Montrivage Basket, Montrivage FC et T20 Club Karim, rattachés à la Ville de
+// Montrivage, gardaient « Ce club fait partie de ma collectivité ». Leur rattachement n'a pas de
+// ligne « attached » dans les demandes : la liste des clubs de la Ville fait foi.
+describe('REPRISE-COLLECTIVITES — un club déjà rattaché n’est plus proposé', () => {
+  it('dans « Clubs rattachés », sans demande : « Déjà rattaché à la Ville », et plus le bouton', async () => {
+    mockClubsDeLaVille = { data: [{ documentId: 'as-a', name: 'AS Montrivage' }], error: null, isLoading: false };
+    const arbre = await monter();
+    expect(textes(dans(arbre, 'carte-as-a'))).toContain('Déjà rattaché à la Ville');
+    expect(boutons(dans(arbre, 'carte-as-a'), LE_BOUTON)).toHaveLength(0);
+    // jumeau : un club que la Ville n'a pas garde son bouton.
+    expect(boutons(dans(arbre, 'carte-judo-e'), LE_BOUTON)).toHaveLength(1);
+  });
+
+  it('pendant la lecture des clubs de la Ville : aucun bouton (pas de « fait partie » qui clignote)', async () => {
+    mockClubsDeLaVille = { data: undefined, error: null, isLoading: true };
+    const arbre = await monter();
+    expect(boutons(arbre, LE_BOUTON)).toHaveLength(0);
+  });
+
+  it('lecture des clubs en échec : le geste d’avant reste (le serveur refuse un doublon)', async () => {
+    mockClubsDeLaVille = { data: undefined, error: new Error('500'), isLoading: false };
+    const arbre = await monter();
+    expect(boutons(arbre, LE_BOUTON)).toHaveLength(mockClubs.length);
   });
 });

@@ -46,9 +46,15 @@ export const villeSujet = (nom) => {
  * @param {any} demandes - `GET /collectivites/:id/club-requests` (les deux sens).
  * @param {string} clubId - documentId du club de la carte.
  * @param {string} [codeDeRefus] - Le code du refus du serveur au dernier appui, s'il y en a un.
+ * @param {any} [clubsDeLaVille] - `GET /collectivites/:id/clubs` : un club qui y est est
+ *   `rattache`, même sans ligne de demande (REPRISE-COLLECTIVITES, 02/11 : rattaché par le lien,
+ *   par l'équipe FoundClub ou avant les demandes).
  * @returns {GesteDeLaVille} Le geste.
  */
-export const gesteDeLaVille = (demandes, clubId, codeDeRefus = '') => {
+export const gesteDeLaVille = (demandes, clubId, codeDeRefus = '', clubsDeLaVille = []) => {
+  const dansSesClubs = (Array.isArray(clubsDeLaVille) ? clubsDeLaVille : [])
+    .some((club) => club?.documentId === clubId);
+  if (dansSesClubs) return 'rattache';
   if (codeDeRefus === 'COLLECTIVITE_CLUB_ALREADY_ATTACHED') return 'ailleurs';
   if (codeDeRefus === 'COLLECTIVITE_CLUB_WITHOUT_LEADER') return 'sansDirigeant';
   const lignes = (Array.isArray(demandes) ? demandes : [])

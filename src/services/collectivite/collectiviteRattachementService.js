@@ -41,6 +41,16 @@ export const searchCollectiviteClubs = async (collectiviteId, q) => corps(
 );
 
 /**
+ * REPRISE-COLLECTIVITES (02/11/2026) — les clubs rattachés à la Ville, la même lecture que
+ * `getCollectiviteClubs` (collectiviteService), ici pour ne pas charger le client à l'import.
+ * @param {string} collectiviteId - documentId.
+ * @returns {Promise<any>} `{ data: [...] }`.
+ */
+export const getCollectiviteClubsRattaches = async (collectiviteId) => corps(
+  (await client()).get(`/collectivites/${enc(collectiviteId)}/clubs`),
+);
+
+/**
  * Les demandes de rattachement de la Ville, dans les deux sens.
  * @param {string} collectiviteId - documentId.
  * @returns {Promise<any>} `{ data: [...] }`.

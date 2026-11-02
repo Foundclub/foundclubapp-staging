@@ -11,6 +11,7 @@ import {
   useAnswerCollectiviteAttachRequest,
   useCancelCollectiviteProposal,
   useCollectiviteClubRequests,
+  useCollectiviteClubsRattaches,
   useProposeCollectiviteClub,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 
@@ -48,6 +49,9 @@ function AjouterUnClub({ club, collectiviteId, onInviterParLien }) {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const demandes = useCollectiviteClubRequests(collectiviteId);
+  // REPRISE-COLLECTIVITES (02/11) : ses clubs rattachés font foi (même lecture, même cache que
+  // « Clubs rattachés ») ; tant qu'elle se lit, rien, pour ne pas proposer un club déjà à elle.
+  const clubsDeLaVille = useCollectiviteClubsRattaches(collectiviteId);
   const proposer = useProposeCollectiviteClub();
   const annuler = useCancelCollectiviteProposal();
   const repondre = useAnswerCollectiviteAttachRequest();
@@ -55,11 +59,17 @@ function AjouterUnClub({ club, collectiviteId, onInviterParLien }) {
 
   const clubId = club?.documentId;
   if (!collectiviteId || !clubId || !Array.isArray(demandes.data)) return null;
+  if (clubsDeLaVille.isLoading) return null;
 
   const lignes = demandes.data.filter((demande) => demande?.club?.documentId === clubId);
   const proposition = lignes.find((demande) => demande?.kind === 'proposal');
   const demandeDuClub = lignes.find((demande) => demande?.kind === 'attach_request');
-  const geste = gesteDeLaVille(demandes.data, clubId, refus ? getServerErrorCode(refus) : '');
+  const geste = gesteDeLaVille(
+    demandes.data,
+    clubId,
+    refus ? getServerErrorCode(refus) : '',
+    clubsDeLaVille.data,
+  );
   const surErreur = { onError: (/** @type {any} */ erreur) => setRefus(erreur) };
 
   const envoyer = () => {
