@@ -173,7 +173,8 @@ function PlayerConvocationScreen() {
   const answer = getPlayerConvocationResponse(convocation, viewerId);
   // CONVOC — « Tu as repondu Present », comme la fiche de l'evenement le dit
   // (`EventAnswerButtons`). Sans reponse, on n'affirme rien.
-  const answerLabel = answer === 'present' || answer === 'absent'
+  // FIN-EVENEMENTS 1 : un match annulé n'attend plus de réponse, l'ancienne ne s'écrit plus.
+  const answerLabel = !estAnnule && (answer === 'present' || answer === 'absent')
     ? t(`playerConvocation.answer.${answer}`)
     : '';
 

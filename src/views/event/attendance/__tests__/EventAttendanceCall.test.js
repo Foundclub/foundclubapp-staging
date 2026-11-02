@@ -34,6 +34,8 @@ let mockRouteParams = { eventId: 'evt-1' };
 let mockEvent;
 /** @type {any} */
 let mockAttendance;
+/** @type {any} */
+let mockConvocation = null;
 
 const mockAbsenceMutate = jest.fn();
 const mockBulkMutate = jest.fn();
@@ -74,6 +76,7 @@ jest.mock('@/services/event/eventQueries', () => ({
     isFetching: false,
     refetch: jest.fn(),
   }),
+  useGetEventConvocation: () => ({ data: mockConvocation }),
 }));
 
 // 🪤 PIEGE DE COPIE DE TRAVAIL : surtout PAS de `requireActual` ici. Le hook
@@ -345,6 +348,7 @@ beforeEach(() => {
     team: { documentId: 'team-1', name: 'Seniors A' },
   };
   mockAttendance = null;
+  mockConvocation = null;
 });
 
 describe('L5-A · 2A — avant l heure, le bouton dit quand ca ouvre', () => {
@@ -936,5 +940,61 @@ describe('REPRISE-EVENEMENTS 125 — le bouton de masse dit vrai', () => {
 
     expect(appuyable(arbre, 'Tout le monde est là')).toBeFalsy();
     expect(appuyable(arbre, BOUTON_RESTANTS)).toBeFalsy();
+  });
+});
+
+describe('FIN-EVENEMENTS 3 — les convoqués sans compte', () => {
+  const OUVERT = '2026-08-19T18:10:00.000Z';
+  const CONVOCATION = {
+    branches: [{
+      published: {
+        manualPlayers: [{
+          documentId: 'manuel-paul', firstname: 'Paul', isManual: true, lastname: 'Contre',
+        }],
+        snapshotPlayers: [{
+          documentId: 'fiche-lina',
+          firstname: 'Lina',
+          lastname: 'Recette',
+          participantSource: 'declared_child',
+        }],
+        teams: [{ placements: [{ playerId: 'manuel-paul' }, { playerId: 'fiche-lina' }] }],
+      },
+    }],
+  };
+  const MUET = 'Pointe au moins une personne';
+
+  test('🐞 personne à pointer : leurs noms se lisent, sans bouton muet', async () => {
+    mockAttendance = reponseAttendance({ items: [], serverNow: OUVERT });
+    mockConvocation = CONVOCATION;
+    const arbre = await monter();
+    const texte = JSON.stringify(arbre.toJSON());
+
+    expect(texte).toContain('Paul Contre');
+    expect(texte).toContain('Lina Recette');
+    expect(texte).toContain('Personne à pointer ici');
+    expect(texte).not.toContain(MUET);
+    expect(appuyable(arbre, "Clôturer l'appel")).toBeFalsy();
+  });
+
+  test('🐞 rien à pointer et personne de convoqué (entraînement) : l’écran le dit', async () => {
+    mockAttendance = reponseAttendance({ items: [], serverNow: OUVERT });
+    const arbre = await monter();
+    const texte = JSON.stringify(arbre.toJSON());
+
+    expect(texte).toContain('Personne à pointer ici');
+    expect(texte).not.toContain(MUET);
+  });
+
+  test('avec des comptes à pointer : la clôture reste, les sans-compte à part', async () => {
+    mockAttendance = reponseAttendance({
+      items: [ligne({ firstname: 'Hugo', userId: 'hugo' })], serverNow: OUVERT,
+    });
+    mockConvocation = CONVOCATION;
+    const arbre = await monter();
+    const texte = JSON.stringify(arbre.toJSON());
+
+    expect(texte).toContain('Paul Contre');
+    expect(texte).not.toContain('Personne à pointer ici');
+    expect(appuyable(arbre, "Clôturer l'appel")).toBeTruthy();
   });
 });

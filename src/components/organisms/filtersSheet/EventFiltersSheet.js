@@ -391,9 +391,12 @@ function EventFiltersSheet({
     {
       content: (
         <View style={[Spaces.gap[12]]}>
-          {/* REPRISE-EVENEMENTS 134 : pas de libellé — la rangée s'appelle déjà « Ville ». */}
+          {/* REPRISE-EVENEMENTS 134 : pas de libellé — la rangée s'appelle déjà « Ville ».
+              FIN-EVENEMENTS p134 : pour créer une alerte, la ville est obligatoire : le champ
+              remplace la rangée et porte le libellé. */}
           <AutocompleteAddressInput
             address={city}
+            label={modeCreation ? t('clubFilters.fields.city.label', 'Ville') : undefined}
             placeholder={t(
               'clubFilters.fields.city.placeholderChoisir',
               'Choisir une ville (ex. : Marseille)',
@@ -429,6 +432,7 @@ function EventFiltersSheet({
       ),
       key: 'city',
       label: t('clubFilters.fields.city.label', 'Ville'),
+      sansEntete: modeCreation,
       value: libelleVille,
     },
     rangeeMultiple({

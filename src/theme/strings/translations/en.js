@@ -9750,6 +9750,11 @@ export default {
         title: 'LATENESS RECORDED',
       },
       markedSection: 'ALREADY CHECKED IN',
+      noAccount: {
+        empty: 'No one to check in here: roll call only lists people who have an account.',
+        note: 'Their attendance can’t be checked in at roll call yet.',
+        title: 'Called up without an account',
+      },
       presence: {
         arrived: 'Arrived',
         late: 'Late',
@@ -10168,8 +10173,11 @@ export default {
       done: 'Roll call complete',
       expectedOne: '{{count}} expected',
       expectedOther: '{{count}} expected',
+      markedOne: '{{count}} person checked in',
+      markedOther: '{{count}} people checked in',
       opensAt: 'Opens at {{time}}',
       opensSoon: 'Not open yet',
+      resume: 'Resume roll call',
       title: 'Take the roll call',
       window: 'Roll call opens as soon as the event is created, and closes 2h after it ends.',
     },

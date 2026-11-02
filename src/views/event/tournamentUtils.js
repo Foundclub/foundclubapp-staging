@@ -264,16 +264,22 @@ export const formatTournamentScore = (match) => {
  * `closeTournament`) se lit, il ne se pilote plus. Le serveur n'écrit pas de date de clôture :
  * celle de l'archivage des équipes, la plus récente, en tient lieu. Le pilotage et les deux
  * fiches (site et téléphone) lisent CETTE règle.
+ * FIN-EVENEMENTS (NOTE-132) : `sessionStatus` « closed » veut AUSSI dire « Privé », choisi à la
+ * création. Sans équipe archivée, rien ne prouve une clôture : la fiche d'un tournoi privé neuf
+ * ne dit pas « clôturé » et garde son menu, donc « Annuler ».
+ * ponytail: un tournoi clôturé sans aucune équipe se lit comme privé (le serveur refuse quand
+ * même ses gestes). Sortie : une date de clôture écrite par le serveur (NOTE-132, option B).
  * @param {any} event - L'événement tournoi, avec `sessionStatus` et `tournamentTeams`.
  * @returns {{ closedAt: number | undefined, isClosed: boolean }} - L'état et sa date.
  */
-export const getTournamentClosure = (event) => ({
-  closedAt: (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
+export const getTournamentClosure = (event) => {
+  const closedAt = (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
     .map((/** @type {any} */ team) => Date.parse(team?.archivedAt || ''))
     .filter(Number.isFinite)
-    .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0],
-  isClosed: String(event?.sessionStatus || '').toLowerCase() === 'closed',
-});
+    .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0];
+  const estFerme = String(event?.sessionStatus || '').toLowerCase() === 'closed';
+  return { closedAt, isClosed: estFerme && closedAt !== undefined };
+};
 
 /**
  * CORR-EVENEMENTS 129 (décision B) — un effectif minimum saisi vaut au moins 1. Les réglages du

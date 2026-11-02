@@ -34,6 +34,7 @@ import Button from '@/components/atoms/button/Button';
  * @param {number | null} [props.expectedCount] - Combien de personnes sont attendues,
  *   ou `null` quand on ne le sait pas encore (la ligne disparait alors : on
  *   n annonce pas « 0 attendu » a la place de « je ne sais pas »).
+ * @param {number} [props.markedCount] - Combien sont deja pointes : l appel est alors commence.
  * @param {'before' | 'closed' | 'loading' | 'open' | 'unavailable'} [props.mode] - L etat de
  *   la fenetre d appel ; `loading` / `unavailable` : la charge d appel n est pas
  *   encore la, ou n a pas pu etre lue (FINITIONS4, D7).
@@ -44,6 +45,7 @@ import Button from '@/components/atoms/button/Button';
  */
 function EventNextActionCard({
   expectedCount = null,
+  markedCount = 0,
   mode = 'before',
   onPress,
   opensAtLabel = '',
@@ -61,12 +63,17 @@ function EventNextActionCard({
   // charge desormais (le bouton porte son indicateur), et si la charge n a pas
   // pu etre lue, elle ne dit rien plutot qu une heure fausse.
   const enChargement = mode === 'loading';
+  // FIN-EVENEMENTS 4 : le serveur n a pas de notion de cloture, les pointages sont enregistres au
+  // fil de l eau. Ce qui se sait, c est que l appel est commence, et la carte le dit.
+  const estCommence = estOuvert && markedCount > 0;
+  const reprendre = t('eventDetails.nextAction.resume', 'Reprendre l’appel');
 
   if (mode === 'unavailable') return null;
 
   const libelleDuBouton = () => {
     // Le libelle lui-meme ne porte aucune heure pendant le chargement : meme un
     // rendu qui ignorerait l indicateur ne peut pas afficher l heure du repli.
+    if (estCommence) return reprendre;
     if (estOuvert || enChargement) return t('eventDetails.nextAction.action', 'Faire l’appel');
     if (estTermine) return t('eventDetails.nextAction.done', 'Appel terminé');
 
@@ -88,6 +95,11 @@ function EventNextActionCard({
   };
 
   const attendus = ligneDesAttendus();
+  const cleDesPointes = markedCount > 1 ? 'markedOther' : 'markedOne';
+  const pointes = t(
+    `eventDetails.nextAction.${cleDesPointes}`,
+    markedCount > 1 ? '{{count}} personnes pointées' : '{{count}} personne pointée',
+  ).replace('{{count}}', String(markedCount));
 
   return (
     <View
@@ -106,11 +118,16 @@ function EventNextActionCard({
           style={[Fonts.h4Bold, estTermine ? Fonts.neutral300 : Fonts.neutral00]}
           testID="event-next-action-title"
         >
-          {t('eventDetails.nextAction.title', 'Faire l’appel')}
+          {estCommence ? reprendre : t('eventDetails.nextAction.title', 'Faire l’appel')}
         </Text>
         {attendus ? (
           <Text style={[Fonts.p2, Fonts.neutral200]} testID="event-next-action-expected">
             {attendus}
+          </Text>
+        ) : null}
+        {estCommence ? (
+          <Text style={[Fonts.p2, Fonts.neutral200]} testID="event-next-action-marked">
+            {pointes}
           </Text>
         ) : null}
       </View>
