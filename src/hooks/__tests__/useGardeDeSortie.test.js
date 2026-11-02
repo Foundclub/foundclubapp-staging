@@ -1,5 +1,10 @@
+import fs from 'fs';
+import path from 'path';
+
 import { Alert, Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { entendreFleche } from '@/navigation/gardienDesFleches';
 
 import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 
@@ -220,5 +225,133 @@ describe('useGardeDeSortie — le site (REPRISE-RESA 81)', () => {
     await monter(null, true);
     expect(page.surDocument.click).toBeUndefined();
     expect(page.surFenetre.beforeunload).toBeUndefined();
+    global.window.history = { go: jest.fn(), state: { idx: 4 } };
+    const fleche = { stopImmediatePropagation: jest.fn() };
+    entendreFleche(fleche);
+    expect(fleche.stopImmediatePropagation).not.toHaveBeenCalled();
+    expect(global.window.history.go).not.toHaveBeenCalled();
+  });
+
+  describe('la flèche du navigateur (FIN-RESA, p81)', () => {
+    const histoire = window.history;
+    /**
+     * L'entrée d'historique change, puis `popstate` arrive : le geste du navigateur.
+     * @param {number | undefined} idx - Le numéro de l'entrée d'arrivée.
+     * @returns {any} L'événement.
+     */
+    const arriverSur = (idx) => {
+      global.window.history.state = idx === undefined ? {} : { idx };
+      const evenement = { stopImmediatePropagation: jest.fn() };
+      entendreFleche(evenement);
+      return evenement;
+    };
+    beforeEach(() => {
+      global.window.history = { go: jest.fn(), state: { idx: 5 } };
+    });
+    afterEach(() => {
+      global.window.history = histoire;
+    });
+
+    it('inscrite au chargement, en capture, et le site la charge avant son routeur', () => {
+      jest.isolateModules(() => {
+        jest.requireActual('@/navigation/gardienDesFleches');
+      });
+      const pose = page.window.addEventListener.mock.calls.find(([nom]) => nom === 'popstate');
+      expect(pose[2]).toBe(true);
+      const fichier = path.join(__dirname, '../../app/AppProviders.web.js');
+      const demarrage = fs.readFileSync(fichier, 'utf8');
+      expect(demarrage).toContain("import '@/navigation/gardienDesFleches';");
+    });
+
+    it('retour : le routeur n’entend rien, on revient, la question', async () => {
+      await monter(fausseNavigation(), true);
+      const retour = arriverSur(4);
+      expect(retour.stopImmediatePropagation).toHaveBeenCalled();
+      expect(window.history.go).toHaveBeenCalledWith(1);
+      const [titre, , boutons] = Alert.alert.mock.calls[0];
+      expect(titre).toBe('Quitter sans enregistrer ?');
+      // Notre propre retour sur l'entrée : ni routeur, ni seconde question, ni autre saut.
+      const revenu = arriverSur(5);
+      expect(revenu.stopImmediatePropagation).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(window.history.go).toHaveBeenCalledTimes(1);
+      expect(boutons[0].onPress).toBeUndefined();
+    });
+
+    it('« Quitter » refait le même saut, et le routeur l’entend', async () => {
+      await monter(fausseNavigation(), true);
+      arriverSur(4);
+      arriverSur(5);
+      const [, , boutons] = Alert.alert.mock.calls[0];
+      boutons[1].onPress();
+      expect(window.history.go).toHaveBeenLastCalledWith(-1);
+      expect(arriverSur(4).stopImmediatePropagation).not.toHaveBeenCalled();
+    });
+
+    it('la flèche « suivant », plusieurs pages : même saut, dans le bon sens', async () => {
+      await monter(fausseNavigation(), true);
+      arriverSur(7);
+      expect(window.history.go).toHaveBeenCalledWith(-2);
+      arriverSur(5);
+      Alert.alert.mock.calls[0][2][1].onPress();
+      expect(window.history.go).toHaveBeenLastCalledWith(2);
+    });
+
+    it('un deuxième retour avant d’être revenu : on corrige, sans seconde question', async () => {
+      await monter(fausseNavigation(), true);
+      arriverSur(4);
+      arriverSur(3);
+      expect(window.history.go).toHaveBeenLastCalledWith(2);
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+    });
+
+    it('une sortie impossible (`retenir`) : elle est dite, sans proposer de quitter', async () => {
+      /**
+       * L'écran du témoin, envoi en cours.
+       * @returns {null} Rien.
+       */
+      function Ecran() {
+        useGardeDeSortie(fausseNavigation(), {
+          actif: true,
+          retenir: () => ({ message: 'Patiente.', titre: 'Envoi en cours' }),
+          textes: TEXTES,
+        });
+        return null;
+      }
+      await act(async () => {
+        renderer.create(<Ecran />);
+      });
+      const retour = arriverSur(4);
+      expect(retour.stopImmediatePropagation).toHaveBeenCalled();
+      expect(window.history.go).toHaveBeenCalledWith(1);
+      expect(Alert.alert).toHaveBeenCalledWith('Envoi en cours', 'Patiente.');
+    });
+
+    it('une adresse ouverte par une notification (sans numéro) : le routeur passe', async () => {
+      await monter(fausseNavigation(), true);
+      const notification = arriverSur(undefined);
+      expect(notification.stopImmediatePropagation).not.toHaveBeenCalled();
+      expect(window.history.go).not.toHaveBeenCalled();
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
+
+    it('une sortie voulue (`sortieLibre`) : le routeur passe, sans question', async () => {
+      /** @type {any} */
+      let sortieLibre;
+      /**
+       * L'écran du témoin, qui retient `sortieLibre`.
+       * @returns {null} Rien.
+       */
+      function Ecran() {
+        sortieLibre = useGardeDeSortie(fausseNavigation(), { actif: true, textes: TEXTES });
+        return null;
+      }
+      await act(async () => {
+        renderer.create(<Ecran />);
+      });
+      sortieLibre.current = true;
+      expect(arriverSur(4).stopImmediatePropagation).not.toHaveBeenCalled();
+      expect(Alert.alert).not.toHaveBeenCalled();
+    });
   });
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import SharedAppProviders from './AppProviders.shared';
+import '@/navigation/gardienDesFleches';
 
 /**
  * Web runtime provider stack.
