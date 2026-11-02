@@ -14,7 +14,10 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
-import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
+import {
+  etiquetteDuPlanning,
+  installationDuPlanning,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   closureBandLabel,
@@ -178,10 +181,12 @@ function PlanningCalendarDay({
   });
   const uniqueColors = [...seancesParCouleur.keys()].slice(0, 3);
   // Avec les nombres, « +n » compte les seances des couleurs qui n ont pas de pastille.
+  // RET-PLANNING fiche 15 : avec des points, il compte les couleurs (les clubs) en plus : un seul
+  // club avec 5 seances disait « +2 » a cote de son unique point.
   const extraCount = compterLesSeances
     ? dayEvents.length - uniqueColors.reduce((total, couleur) => (
       total + (seancesParCouleur.get(couleur) || 0)), 0)
-    : Math.max(0, dayEvents.length - 3);
+    : seancesParCouleur.size - uniqueColors.length;
   const libelleDuJour = [
     libelleDeFermeture,
     compterLesSeances && dayEvents.length ? compterLesSeances(dayEvents.length) : null,
@@ -305,6 +310,7 @@ function PlanningCalendarView({
   compterLesSeances = null,
   currentDate: propDate,
   events = [],
+  legendeDesPoints = false,
   onDateSelect,
   onEventPress,
 }) {
@@ -393,6 +399,14 @@ function PlanningCalendarView({
           >
             {etiquetteDuPlanning(t, evenementVille)}
           </Text>
+          {installationDuPlanning(evenementVille) ? (
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p3, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+            >
+              {installationDuPlanning(evenementVille)}
+            </Text>
+          ) : null}
           <Text numberOfLines={2} style={[Fonts.p2Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}>
             {evenementVille.name}
           </Text>
@@ -492,6 +506,7 @@ function PlanningCalendarView({
     ApplicationStyle.backgroundColor.primary700,
     ApplicationStyle.borderRadius24,
     Colors.neutral00,
+    Colors.neutral200,
     Colors.neutral300,
     Colors.gold500,
     Colors.primary100,
@@ -632,6 +647,15 @@ function PlanningCalendarView({
           todayTextColor: Colors.primary500,
         }}
       />
+
+      {legendeDesPoints ? (
+        <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[8]]}>
+          {t(
+            'planning.legendeDesPoints',
+            'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
+          )}
+        </Text>
+      ) : null}
 
       <View style={[Spaces.marginTop[24], Alignments.fill]}>
         <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[16]]}>

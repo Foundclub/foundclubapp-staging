@@ -489,12 +489,32 @@ export const seanceToucheeLabel = (t, seance) => {
  * L'étiquette du bloc clair sur un planning (planche P10-planning-ordi) : « Ville · toute
  * l'installation » s'il prend la place (bloc plein), « Ville · à côté » sinon (contour).
  * @param {any} t - i18next.
- * @param {{ takesPlace?: boolean }} evenement - L'événement.
+ * RET-PLANNING fiche 8 (Adel « A ») : la Ville par son nom, « Ville de Démouville · toute
+ * l'installation », quand le serveur le donne.
+ * @param {{ collectivite?: { name?: string|null }|null, takesPlace?: boolean }} evenement
+ *   - L'événement.
  * @returns {string} L'étiquette.
  */
-export const etiquetteDuPlanning = (t, evenement) => (evenement?.takesPlace
-  ? t('collectiviteEvenement.planning.toute', 'Ville · toute l’installation')
-  : t('collectiviteEvenement.planning.aCote', 'Ville · à côté'));
+export const etiquetteDuPlanning = (t, evenement) => {
+  const ville = String(evenement?.collectivite?.name || '').trim();
+  if (ville) {
+    const options = { interpolation: { escapeValue: false }, ville };
+    const texte = evenement?.takesPlace
+      ? t('collectiviteEvenement.planning.touteDe', '{{ville}} · toute l’installation', options)
+      : t('collectiviteEvenement.planning.aCoteDe', '{{ville}} · à côté', options);
+    return texte.replace('{{ville}}', ville);
+  }
+  return evenement?.takesPlace
+    ? t('collectiviteEvenement.planning.toute', 'Ville · toute l’installation')
+    : t('collectiviteEvenement.planning.aCote', 'Ville · à côté');
+};
+
+/**
+ * RET-PLANNING fiche 8 : le nom de l'installation, sous l'étiquette de la carte du planning.
+ * @param {{ facility?: { name?: string|null }|null }} evenement - L'événement.
+ * @returns {string} Le nom, ou '' pour un événement hors d'une installation.
+ */
+export const installationDuPlanning = (evenement) => String(evenement?.facility?.name || '').trim();
 
 const AAAAMMJJ = /^\d{4}-\d{2}-\d{2}$/;
 

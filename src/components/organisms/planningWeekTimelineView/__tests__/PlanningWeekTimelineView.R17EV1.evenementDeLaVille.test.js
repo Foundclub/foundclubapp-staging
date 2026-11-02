@@ -142,7 +142,38 @@ const textesDe = (/** @type {any} */ noeud) => {
   return textes.map((/** @type {any} */ n) => n.props.children);
 };
 
+const montrerLaSemaine = async () => {
+  /** @type {any} */
+  let arbre;
+  await act(async () => {
+    arbre = renderer.create(
+      <PlanningWeekTimelineView
+        cardDisplayProfile="clubFocused"
+        currentDate={SAMEDI}
+        events={normalizePlanningItems([SEANCE])}
+        firstHour={8}
+        mode="week"
+        showUntimedSection={false}
+      />,
+    );
+  });
+  arbresMontes.push(arbre);
+  return arbre;
+};
+
 describe('R17-EVT-1 — l’événement de la Ville sur le planning d’une installation', () => {
+  it('🐞 RET-PLANNING fiche 8 : la Ville, puis l’installation, sans couper', async () => {
+    const arbre = await monter([{
+      ...FETE, collectivite: { name: 'Ville de Démouville' }, facility: { name: 'Gymnase Cosec' },
+    }]);
+    const bloc = blocDe(arbre, 'Fête du sport');
+    const lus = textesDe(bloc);
+
+    expect(lus[0]).toBe('Ville de Démouville · toute l’installation');
+    expect(lus[1]).toBe('Gymnase Cosec');
+    expect(bloc.findAllByType(Text)[0].props.numberOfLines).toBeGreaterThan(1);
+  });
+
   it('toute l’installation : un bloc PLEIN, clair, la Ville, les heures, le nom', async () => {
     const arbre = await monter([FETE]);
     const bloc = blocDe(arbre, 'Fête du sport');
@@ -157,6 +188,17 @@ describe('R17-EVT-1 — l’événement de la Ville sur le planning d’une inst
       '10:00 – 17:00',
       'Fête du sport',
     ]);
+  });
+
+  it('🐞 RET-PLANNING fiche 14 : le nombre du jour est à côté du numéro', async () => {
+    const arbre = await montrerLaSemaine();
+    const nombre = arbre.root.findAll((/** @type {any} */ n) => n.type === Text
+      && n.props.testID === 'jour-nombre-2026-10-24')[0];
+
+    expect(nombre).toBeDefined();
+    expect(String(nombre.props.children)).toBe('1');
+    const conteneur = nombre.parent.parent;
+    expect(StyleSheet.flatten(conteneur.props.style).position).not.toBe('absolute');
   });
 
   it('à côté : un bloc en CONTOUR clair', async () => {

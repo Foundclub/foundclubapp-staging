@@ -4,7 +4,7 @@ import {
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ImageBackground, Modal, Text, TouchableOpacity, View,
+  ImageBackground, Modal, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -83,15 +83,23 @@ const ENTRE_DEUX = /** @type {const} */ ({ gap: 8, justifyContent: 'space-betwee
  */
 export const HAUTEUR_DE_LA_FEUILLE = 0.85;
 
+const CLUBS_POUR_LA_RECHERCHE = 6;
+const sansAccents = (/** @type {unknown} */ texte) => String(texte || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 /**
- * Une puce a choisir (design `chip-c`) : un bouton radio.
- * @param {{ actif: boolean, libelle: string, onPress: () => void, testID?: string }} props
+ * Une puce a choisir (design `chip-c`) : un bouton radio. RET-PLANNING fiche 16 : celle d un club
+ * porte son logo, ou son initiale.
+ * @param {{ actif: boolean, club?: { logoUrl?: string | null, name: string } | null,
+ *   libelle: string, onPress: () => void, testID?: string }} props - La puce.
  * @returns {import('react').ReactElement} La puce.
  */
 export function PuceDeChoix({
-  actif, libelle, onPress, testID,
+  actif, club = null, libelle, onPress, testID,
 }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   return (
     <TouchableOpacity
       accessibilityRole="radio"
@@ -99,6 +107,7 @@ export function PuceDeChoix({
       onPress={onPress}
       style={[
         Spaces.paddingHorizontal[12],
+        club ? [Alignments.row, Alignments.alignCenter, { gap: 8 }] : null,
         {
           backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.04),
           borderColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.18),
@@ -111,6 +120,11 @@ export function PuceDeChoix({
       ]}
       testID={testID}
     >
+      {club ? (
+        <View testID="club-marque">
+          <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={24} />
+        </View>
+      ) : null}
       {/* VILLE-T18A — une puce epouse son texte GRAS : sous Android 16, « AS Montrivage » choisi
           devenait « AS » (capture T18 G29a). Espaces insecables : le libelle reste entier. */}
       <Text style={[Fonts.p3Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>
@@ -189,7 +203,9 @@ function LigneDeChoix({
         ) : null}
       </View>
       {club ? (
-        <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+        <View testID="club-marque">
+          <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+        </View>
       ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{libelle}</Text>
@@ -537,6 +553,7 @@ function SeasonSlotForm({
   const plateaux = Array.isArray(meta.facility?.plateaux) ? meta.facility.plateaux : [];
   const capacite = Math.max(1, Number(installation?.maxSlots) || 1);
 
+  const [rechercheClub, setRechercheClub] = useState('');
   const [club, setClub] = useState(
     fixedClubId || slot?.club?.documentId || (clubs.length === 1 ? clubs[0].documentId : null),
   );
@@ -1390,6 +1407,7 @@ function SeasonSlotForm({
     const puce = (
       <PuceDeChoix
         actif={option.actif}
+        club={option.club}
         key={option.key}
         libelle={option.libelleCourt || option.libelle}
         onPress={option.onPress}
@@ -1831,19 +1849,64 @@ function SeasonSlotForm({
                 </View>
               );
             }
-            return listeDeChoix((fixedClubId
+            // RET-PLANNING fiche 16 (Adel « A ») : une recherche à partir de 6 clubs. Le club déjà
+            // choisi reste à l'écran, quelle que soit la recherche.
+            const chercheUnClub = !fixedClubId && clubs.length >= CLUBS_POUR_LA_RECHERCHE;
+            const cherche = sansAccents(rechercheClub.trim());
+            const clubsProposes = (fixedClubId
               ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
-              : clubs).map((ligne) => ({
-              actif: ligne.documentId === club,
-              club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
-              key: ligne.documentId,
-              libelle: ligne.name,
-              onPress: () => {
-                setClub(ligne.documentId);
-                setEquipe(null);
-                toucherLaSaisie();
-              },
-            })));
+              : clubs).filter((ligne) => (
+              !chercheUnClub
+              || !cherche
+              || ligne.documentId === club
+              || sansAccents(ligne.name).includes(cherche)
+            ));
+            return (
+              <View style={{ gap: 8 }}>
+                {chercheUnClub ? (
+                  <TextInput
+                    accessibilityLabel={t(
+                      'collectiviteCreneaux.attribuer.rechercherClub',
+                      'Rechercher un club',
+                    )}
+                    onChangeText={setRechercheClub}
+                    placeholder={t(
+                      'collectiviteCreneaux.attribuer.rechercherClub',
+                      'Rechercher un club',
+                    )}
+                    placeholderTextColor={Colors.neutral400}
+                    style={[Fonts.p2, Fonts.neutral00, {
+                      borderColor: withAlpha(Colors.neutral00, 0.18),
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      minHeight: 44,
+                      paddingHorizontal: 12,
+                    }]}
+                    testID="recherche-club"
+                    value={rechercheClub}
+                  />
+                ) : null}
+                {clubsProposes.length === 0 ? (
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'collectiviteCreneaux.attribuer.aucunClubTrouve',
+                      'Aucun club ne correspond à cette recherche.',
+                    )}
+                  </Text>
+                ) : null}
+                {listeDeChoix(clubsProposes.map((ligne) => ({
+                  actif: ligne.documentId === club,
+                  club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
+                  key: ligne.documentId,
+                  libelle: ligne.name,
+                  onPress: () => {
+                    setClub(ligne.documentId);
+                    setEquipe(null);
+                    toucherLaSaisie();
+                  },
+                })))}
+              </View>
+            );
           })()}
         </View>
       )}

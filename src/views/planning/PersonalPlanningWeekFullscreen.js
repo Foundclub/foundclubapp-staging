@@ -1399,6 +1399,8 @@ function PlanningWeekFullscreen() {
             currentDate={currentDate}
             // R17-EVT-1-BIS (b) : les événements de la Ville de CETTE installation (repère clair).
             events={[...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
+            // RET-PLANNING fiche 15 : sur le planning d'une installation, un point = un club.
+            legendeDesPoints={Boolean(facilityId)}
             onDateSelect={setCurrentDate}
             onEventPress={ouvrirUnBloc}
           />

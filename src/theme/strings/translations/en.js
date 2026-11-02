@@ -5742,6 +5742,7 @@ export default {
       aPartirDu: 'From',
       attribuerA: 'Assign to',
       aucunClub: 'No club is attached to the town: invite one from “Clubs”.',
+      aucunClubTrouve: 'No club matches this search.',
       aucuneLibre: 'No free time this {{jour}}.',
       changerHeure: 'Change the time',
       club: 'Club',
@@ -5771,6 +5772,7 @@ export default {
       prevenu: '{{club}} will be notified, and will see this slot in its schedule.',
       prevenuChangement: '{{club}} will be notified of the change.',
       quandMeme: 'Assign anyway',
+      rechercherClub: 'Search for a club',
       toutLeClub: 'The whole club',
       valider: 'Assign the slot',
       voirLibres: 'See the free times on {{jour}}',
@@ -6414,8 +6416,10 @@ export default {
     },
     planning: {
       aCote: 'Town · next to it',
+      aCoteDe: '{{ville}} · nearby',
       aria: 'Town event: {{nom}}, {{heures}}, {{place}}',
       toute: 'Town · whole facility',
+      touteDe: '{{ville}} · entire facility',
     },
     publier: 'Publish the event',
     quand: {
@@ -17213,6 +17217,7 @@ export default {
     labels: {
       noTime: 'No time set',
     },
+    legendeDesPoints: 'One dot per club, 3 at most: its sessions and assigned slots. “+2”: 2 more clubs.',
     mode: {
       monthDescription: 'Overall view of the month',
       monthShort: 'Month',

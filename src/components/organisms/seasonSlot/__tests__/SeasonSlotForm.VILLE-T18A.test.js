@@ -164,7 +164,7 @@ const monter = async (/** @type {any} */ props = {}) => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
         <SeasonSlotForm
-          clubs={[{ documentId: 'basket', name: 'Montrivage Basket' }]}
+          clubs={props.clubs || [{ documentId: 'basket', name: 'Montrivage Basket' }]}
           facilityId="salle-t18"
           initial={{ weekday: 2 }}
           onCancel={jest.fn()}
@@ -303,4 +303,37 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => function Botto
       {footerComponent}
     </>
   ) : null;
+});
+
+describe('RET-PLANNING fiche 16 — « Pour qui ? » : logos et recherche', () => {
+  const CLUB_LOGO = { documentId: 'logo', logoUrl: 'https://x/l.png', name: 'Club au logo' };
+  const CLUBS = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Échos'].map((name, index) => ({
+    documentId: `club-${index}`, name,
+  }));
+  const recherche = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'recherche-club',
+  )[0];
+
+  it('🐞 la puce d’un club porte son logo, ou son initiale', async () => {
+    const arbre = await monter({ clubs: [CLUB_LOGO, CLUBS[0]] });
+    const marques = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'club-marque');
+
+    expect(marques.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('5 clubs : pas de recherche', async () => {
+    const arbre = await monter({ clubs: CLUBS });
+
+    expect(recherche(arbre)).toBeUndefined();
+  });
+
+  it('🐞 6 clubs : la recherche filtre, sans tenir compte des accents', async () => {
+    const arbre = await monter({ clubs: [...CLUBS, CLUB_LOGO] });
+
+    expect(recherche(arbre)).toBeDefined();
+    await act(async () => { recherche(arbre).props.onChangeText('echos'); });
+    const lus = textes(arbre);
+    expect(lus).toContain('Échos');
+    expect(lus).not.toContain('Alpha');
+  });
 });
