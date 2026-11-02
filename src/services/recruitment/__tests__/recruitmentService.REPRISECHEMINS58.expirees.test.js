@@ -1,10 +1,10 @@
 import { getRecruitmentAds } from '../recruitmentService';
 
-// REPRISE-CHEMINS (02/11, point 58, revue « modifier ») : la contre-recette voyait encore deux cartes
-// « Annonce expirée » avec « Postuler ». La recherche du serveur les retire déjà (CORR-ROBUSTESSE,
-// search.ts) ; mais la liste SIMPLE (aucun filtre ni texte) passe par GET /recruitment-ads, qui ne les
-// retirait pas. Même règle que le serveur et la carte : sans événement, expirée une fois passée ; une
-// annonce liée à un événement garde sa règle (c'est l'événement qui la ferme).
+// REPRISE-CHEMINS (02/11, point 58, revue « modifier ») : la contre-recette voyait encore deux
+// cartes « Annonce expirée » avec « Postuler ». La recherche du serveur les retire déjà
+// (CORR-ROBUSTESSE, search.ts) ; mais la liste SIMPLE (aucun filtre ni texte) passe par
+// GET /recruitment-ads, qui ne les retirait pas. Même règle que le serveur et la carte : sans
+// événement, expirée une fois passée ; une annonce liée à un événement garde sa règle.
 const mockGet = jest.fn();
 jest.mock('@/services/client', () => ({
   __esModule: true,

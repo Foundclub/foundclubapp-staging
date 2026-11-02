@@ -2327,7 +2327,7 @@ function EventDetails({ navigation, route }) {
                         ) : null}
                       </div>
                     ) : null}
-                    {/* REPRISE-CHEMINS (02/11, point 41) : rien à modifier sur une fiche annulée. */}
+                    {/* REPRISE-CHEMINS (02/11, point 41) : rien à modifier si annulée. */}
                     {canEdit && !showManageMenu && !isCancelled ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}

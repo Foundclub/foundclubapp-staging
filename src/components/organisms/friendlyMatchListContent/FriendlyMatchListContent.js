@@ -291,7 +291,8 @@ function FriendlyMatchListContent({
     }).then((resultat) => {
       if (resultat?.action !== 'copie') return;
       setLienCopieId(targetAdId);
-      setTimeout(() => setLienCopieId((courant) => (courant === targetAdId ? null : courant)), 3000);
+      const oublier = () => setLienCopieId((courant) => (courant === targetAdId ? null : courant));
+      setTimeout(oublier, 3000);
     }).catch(() => {});
   }, [t]);
 

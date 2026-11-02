@@ -57,11 +57,13 @@ describe('SVF 5c — un lien partagé depuis le site ne s écrit qu une fois', (
 describe('REPRISE-CHEMINS 45 — le partage du site dit s il a copié', () => {
   it('🔴 sans partage du navigateur : { action: copie }', async () => {
     poserNavigateur({ clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
-    await expect(share({ message: 'Match amical', url: LIEN })).resolves.toEqual({ action: 'copie' });
+    await expect(share({ message: 'Match amical', url: LIEN }))
+      .resolves.toEqual({ action: 'copie' });
   });
 
   it('avec le partage du navigateur : { action: partage }', async () => {
     poserNavigateur({ share: jest.fn().mockResolvedValue(undefined) });
-    await expect(share({ message: 'Match amical', url: LIEN })).resolves.toEqual({ action: 'partage' });
+    await expect(share({ message: 'Match amical', url: LIEN }))
+      .resolves.toEqual({ action: 'partage' });
   });
 });

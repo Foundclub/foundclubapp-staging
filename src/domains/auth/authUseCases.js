@@ -1195,6 +1195,21 @@ export const resolveOnboardingExitRoute = ({
  */
 const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
 
+/**
+ * REPRISE-CHEMINS (02/11, D-COACH-9) — une inscription a-t-elle COMMENCÉ sur cet appareil ? Le site
+ * ne reprend que celle-là à l'accueil (un ancien compte ouvert ailleurs garde son accueil).
+ * Lecture prudente : un stockage illisible vaut « non ».
+ * @param {string} documentId - Le compte.
+ * @returns {boolean} Vrai si l'inscription a commencé ici.
+ */
+export const isOnboardingStartedHere = (documentId) => {
+  try {
+    return documentId ? storage.getBoolean(onboardingStartedKey(documentId)) === true : false;
+  } catch {
+    return false;
+  }
+};
+
 // TUNNELREPRISE — les inscriptions ouvertes dans CE lancement de l'app (memoire, pas stockage) :
 // ce qui distingue « je continue mon tunnel » de « je rouvre l'app » (`getOnboardingViews`).
 // RWDIRIG3 (30/10, chef « Q2 ») — sur le SITE, recharger l'onglet n'est pas une reouverture :
