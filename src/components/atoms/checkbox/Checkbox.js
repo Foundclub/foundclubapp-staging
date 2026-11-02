@@ -7,15 +7,22 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 /**
  *
  * @param root0
+ * @param root0.accessibilityLabel
  * @param root0.disabled
  * @param root0.onValueChange
  * @param root0.value
  */
-function Checkbox({ disabled, onValueChange, value }) {
+function Checkbox({
+  accessibilityLabel = /** @type {string | undefined} */ (undefined),
+  disabled,
+  onValueChange,
+  value,
+}) {
   const { Colors } = useTheme();
 
   return (
     <TouchableOpacity
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: Boolean(value), disabled: Boolean(disabled) }}
       disabled={disabled}
