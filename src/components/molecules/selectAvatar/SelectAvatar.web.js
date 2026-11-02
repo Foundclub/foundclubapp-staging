@@ -6,6 +6,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import { confirmerDansLApp } from '@/utils/fenetreDeLApp';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
@@ -74,12 +75,13 @@ function SelectAvatar({
     inputRef.current?.click();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!onDelete) return;
 
+    // REPRISE-ROBUSTESSE : la question dans la fenêtre de l'app, plus la boîte du navigateur.
     const confirmed = typeof window === 'undefined'
       ? true
-      : window.confirm(t('profile.actions.confirmDeleteAvatar'));
+      : await confirmerDansLApp(t('profile.actions.confirmDeleteAvatar'));
 
     if (confirmed) {
       onDelete();

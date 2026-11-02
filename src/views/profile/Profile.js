@@ -1524,7 +1524,7 @@ function Profile({ navigation, route }) {
 
         {/* Pied fixe : lien discret, toujours visible sous la liste (design 13c). */}
         <View style={[Alignments.fullWidth, Alignments.alignCenter, { paddingTop: 12 }]}>
-          <TouchableOpacity onPress={handleDeleteAccount}>
+          <TouchableOpacity accessibilityRole="button" onPress={handleDeleteAccount}>
             <Text style={[Fonts.p2, Fonts.neutral300, Fonts.underlineText]}>
               {t('profile.actions.deleteAccount')}
             </Text>

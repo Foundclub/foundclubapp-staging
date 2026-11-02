@@ -151,7 +151,8 @@ const Input = forwardRef(
               }
               <TextInputComponent
                 accessibilityHint={props.accessibilityHint}
-                accessibilityLabel={props.accessibilityLabel}
+                // REPRISE-ROBUSTESSE 55 : sans nom donné, l'étiquette visible nomme le champ.
+                accessibilityLabel={props.accessibilityLabel ?? props.label}
                 accessibilityRole={props.accessibilityRole}
                 autoCapitalize={props.autoCapitalize}
                 autoComplete={props.autoComplete}

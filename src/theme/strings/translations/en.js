@@ -22714,6 +22714,8 @@ export default {
     a11y: {
       addTrainer: 'Add a coach',
       invitePlayers: 'Invite players',
+      removePlayer: 'Remove player {{name}}',
+      removeTrainer: 'Remove coach {{name}}',
     },
     actions: {
       contactTeam: 'Contact',

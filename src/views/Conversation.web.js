@@ -168,6 +168,7 @@ import {
   isVideoAttachment,
 } from '@/utils/documentAttachment';
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
+import { confirmerDansLApp } from '@/utils/fenetreDeLApp'
 import { getImageUrl } from '@/utils/imageUrl'
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
@@ -2076,8 +2077,9 @@ function Conversation({ navigation, route }) {
   }, [chatId, queryClient])
 
   // @ts-ignore: FIXME: Baseline TS regression
-  const requestWebLeagueLegalAcceptance = useCallback((scope, targetDocumentId, metadata = {}) => {
-    const confirmed = window.confirm(
+  const requestWebLeagueLegalAcceptance = useCallback(async (scope, targetDocumentId, metadata = {}) => {
+    // REPRISE-ROBUSTESSE : les confirmations du fil s'ouvrent dans la fenêtre de l'app.
+    const confirmed = await confirmerDansLApp(
       i18next.t(
         'conversation.web.league.legalConfirm',
         "FoundClub League met en relation les équipes mais n'organise pas la rencontre. Confirmes-tu accepter les risques sportifs, vérifier ton assurance et respecter les règles du lieu ?", // eslint-disable-line max-len
@@ -2740,7 +2742,7 @@ function Conversation({ navigation, route }) {
       }, chatData?.league_match?.location)
 
       if (leagueMatchId) {
-        const legalAcceptance = requestWebLeagueLegalAcceptance(
+        const legalAcceptance = await requestWebLeagueLegalAcceptance(
           LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL,
           leagueMatchId,
           {
@@ -2797,8 +2799,7 @@ function Conversation({ navigation, route }) {
     if (!amical && areSameEntityId(message?.sender?.documentId, userData?.documentId)) return;
     if (amical && status === 'accepted') {
       const confirmation = buildFriendlyProposalConfirmation();
-      // eslint-disable-next-line no-alert -- la confirmation native du site, comme « Signaler »
-      if (!window.confirm(`${confirmation.title}\n\n${confirmation.body}`)) return;
+      if (!(await confirmerDansLApp(`${confirmation.title}\n\n${confirmation.body}`))) return;
     }
 
     try {
@@ -2807,7 +2808,7 @@ function Conversation({ navigation, route }) {
         await respondToFriendlyProposal(message.composition, action);
         await queryClient.invalidateQueries({ queryKey: ['friendly-match-ads'] });
       } else if (status === 'accepted' && matchId) {
-        const legalAcceptance = requestWebLeagueLegalAcceptance(
+        const legalAcceptance = await requestWebLeagueLegalAcceptance(
           LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
           matchId,
           {
@@ -2932,13 +2933,13 @@ function Conversation({ navigation, route }) {
   }, [chatId, retryFailedMessage])
 
   // @ts-ignore: FIXME: Baseline TS regression
-  const handleReportMessage = useCallback((message) => {
+  const handleReportMessage = useCallback(async (message) => {
     const messageId = getMessageId(message)
     if (!messageId || reportMessageMutation.isPending) return
-    if (!window.confirm(i18next.t(
+    if (!(await confirmerDansLApp(i18next.t(
       'conversation.web.report.confirm',
       'Signaler ce message à la moderation FoundClub ?',
-    ))) return
+    )))) return
     setReportedMessageId(messageId)
     reportMessageMutation.mutate({ message: messageId })
   }, [reportMessageMutation])

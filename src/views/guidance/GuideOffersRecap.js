@@ -597,8 +597,10 @@ function GuideOffersRecap({ navigation }) {
 
     return (
       <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityState={{ selected: isSelected }}
+        // REPRISE-ROBUSTESSE 57 : un choix parmi les offres (radio). En « button », le site en
+        // faisait un <button> qui contenait les boutons du palier : deux erreurs dans la console.
+        accessibilityRole="radio"
+        accessibilityState={{ checked: isSelected }}
         activeOpacity={0.9}
         key={offerKey}
         onPress={() => {

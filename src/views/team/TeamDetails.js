@@ -3304,6 +3304,11 @@ function TeamDetails({ navigation, route }) {
                         && trainer?.role?.name === USER_ROLES.coach ? (
                           <View style={[Alignments.row, Spaces.gap[8]]}>
                             <Button
+                              accessibilityLabel={t('teamDetails.a11y.removeTrainer', {
+                                defaultValue: 'Retirer l’entraîneur {{name}}',
+                                name: describePersonName(trainer),
+                                ...SANS_ECHAPPEMENT,
+                              })}
                               icon="trash"
                               isOption
                               onPress={() => handleDeleteTrainer(trainer.documentId || '')}
@@ -3401,6 +3406,11 @@ function TeamDetails({ navigation, route }) {
                           {canManageViewedTeam && (
                           <View style={[Alignments.row, Spaces.gap[8]]}>
                             <Button
+                              accessibilityLabel={t('teamDetails.a11y.removePlayer', {
+                                defaultValue: 'Retirer le joueur {{name}}',
+                                name: describePersonName(player),
+                                ...SANS_ECHAPPEMENT,
+                              })}
                               icon="trash"
                               isOption
                               onPress={() => handleRemovePlayer(player.documentId || '')}
