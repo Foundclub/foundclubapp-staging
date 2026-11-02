@@ -1199,13 +1199,23 @@ function SeasonSlotForm({
           ...SANS_ECHAPPEMENT,
         });
     }
+    const depassement = besoinDeConfirmer
+      && Number(place.teamsAfter) > Number(place.capacity || capacite)
+      ? phraseDuComplet(t, {
+        equipes: Number(place.teamsAfter),
+        occupants,
+        places: Number(place.capacity || capacite),
+      })
+      : null;
     const lignes = [];
-    if (occupants.length) {
+    // RET-VILLE 17 (03/11) : le message orange dit déjà qui y est, pas deux fois sur la carte ; et
+    // « Personne n'y est » contredirait son « Complet ».
+    if (!depassement && occupants.length) {
       lignes.push(t('collectiviteCreneaux.attribuer.dejaLa', 'Déjà là : {{qui}}.', {
         qui: occupants.map(slotWho).filter(Boolean).join(', '),
         ...SANS_ECHAPPEMENT,
       }));
-    } else {
+    } else if (!depassement) {
       lignes.push(t('collectiviteCreneaux.attribuer.personne', 'Personne n’y est.'));
     }
     if (place.next?.club) {
@@ -1215,14 +1225,6 @@ function SeasonSlotForm({
         ...SANS_ECHAPPEMENT,
       }));
     }
-    const depassement = besoinDeConfirmer
-      && Number(place.teamsAfter) > Number(place.capacity || capacite)
-      ? phraseDuComplet(t, {
-        equipes: Number(place.teamsAfter),
-        occupants,
-        places: Number(place.capacity || capacite),
-      })
-      : null;
     const couleur = besoinDeConfirmer ? Colors.warning500 : Colors.success500;
     return (
       <View
