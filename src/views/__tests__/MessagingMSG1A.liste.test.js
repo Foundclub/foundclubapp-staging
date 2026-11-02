@@ -1,5 +1,4 @@
 import renderer, { act } from 'react-test-renderer';
-import { StyleSheet } from 'react-native';
 
 import Messaging from '../Messaging';
 
@@ -240,7 +239,7 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
 
   // FIN-MESSAGERIE p88 (02/11) — à 390, « Ville de Montrivage : » passait sur deux lignes dans une
   // colonne étroite, et le message restait seul à droite.
-  test('l auteur de l aperçu tient sur UNE ligne, et cède de la place au message', async () => {
+  test('le nom et le message de l aperçu forment UNE ligne, coupée une seule fois', async () => {
     const arbre = await monterAvec([{
       ...CHATS[0],
       messages: [{
@@ -249,11 +248,19 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
         sender: { documentId: 'karim', firstname: 'Ville de Montrivage' },
       }],
     }]);
-    const auteur = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text'
-      && [n.props.children].flat().join('').startsWith('Ville de Montrivage'))[0];
+    // Le nom est DANS le texte de l'aperçu : une seule ligne, une seule coupure à la fin.
+    /** @type {any[]} */
+    const lignes = [];
+    const parcourir = (/** @type {any} */ noeud) => {
+      if (!noeud || typeof noeud === 'string') return;
+      if (noeud.type === 'Text' && noeud.props.numberOfLines === 1
+        && JSON.stringify(noeud.children).includes('Ville de Montrivage')) lignes.push(noeud);
+      (noeud.children || []).forEach(parcourir);
+    };
+    [arbre.toJSON()].flat().forEach(parcourir);
 
-    expect(auteur.props.numberOfLines).toBe(1);
-    expect(StyleSheet.flatten(auteur.props.style).maxWidth).toBe('60%');
+    expect(lignes).toHaveLength(1);
+    expect(JSON.stringify(lignes[0].children)).toContain('Un message assez long');
   });
 
   test(
