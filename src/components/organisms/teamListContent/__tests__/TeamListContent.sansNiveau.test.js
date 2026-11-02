@@ -28,6 +28,11 @@ jest.setTimeout(30000);
 let mockEquipes = /** @type {any[]} */ ([]);
 
 const mockUseAuth = jest.fn();
+jest.mock('@/components/organisms/teamListContent/AnnulerMaDemande', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),
