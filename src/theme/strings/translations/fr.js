@@ -25944,9 +25944,6 @@ export default {
         emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, '
           + 'sur plusieurs journées.',
         emptyTitle: 'Choisir un entraînement',
-        // REPRISE-CHEMINS (02/11, point 47) : la grande carte sans programme ; le catalogue voisin
-        // garde « Choisir un entraînement ».
-        sansProgramme: 'Mon entraînement',
         // Le lieu et la durée viennent du serveur ; le compte de préparatifs n'apparaît
         // que si la journée en porte, sinon la phrase se coupe d'elle-même.
         subtitle: '{{day}} · {{place}} · {{duration}} min',

@@ -2303,8 +2303,7 @@ function HomeHubContent({ auth, navigation, route }) {
             program: trainingEnrollment.program?.title || '',
             ...SANS_ECHAPPEMENT,
           })
-          // REPRISE-CHEMINS (02/11, point 47) : pas le titre du catalogue voisin.
-          : t('training.home.myCard.sansProgramme'),
+          : t('training.home.myCard.emptyTitle'),
       },
       {
         accentColor: Colors.primary500,
