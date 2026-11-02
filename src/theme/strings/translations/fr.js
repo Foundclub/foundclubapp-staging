@@ -10538,7 +10538,7 @@ export default {
       },
       remindSuccess: {
         description: 'Les joueur·se·s vont recevoir une notification pour leur rappeler de répondre à l\'événement.',
-        title: 'Ton relance a bien été envoyée',
+        title: 'Ta relance a bien été envoyée',
       },
       reportEvent: {
         description: 'Merci de nous indiquer la raison pour laquelle tu signales cet événement.',
