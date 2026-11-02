@@ -150,7 +150,7 @@ describe('GUIDE-RECOMMENCER — remise à zéro de la progression', () => {
     );
   });
 
-  it('équipe existante : M1 est reconnue (« Ton équipe est déjà là »), pas de tunnel', () => {
+  it('équipe existante : M1 est validée (FIN-GUIDE, point 1), pas de tunnel', () => {
     finishedGuide();
     mockUserData = {
       ...mockUserData,
@@ -160,9 +160,9 @@ describe('GUIDE-RECOMMENCER — remise à zéro de la progression', () => {
     renderProvider();
     act(() => { tour.restartTour('coach'); });
     expect(tour.flags.hadTeam).toBe(true);
+    expect(tour.missionStatus.coach_m1).toBe('done');
     pressNext();
-    expect(stepId()).toBe('m1-find');
-    expect(COACH_GUIDE.steps.find((step) => step.id === 'm1-find').completesMission).toBe(true);
+    expect(stepId()).toBe('m2-card');
   });
 
   it('quota d’événements après la remise à zéro : le refus s’affiche, M4 reste ouverte', () => {

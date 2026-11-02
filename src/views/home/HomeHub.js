@@ -2677,9 +2677,6 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
-        {/* TUTOE-CALIBRAGE (27/10) — guide en pause : « Reprendre le tour » DANS le flux,
-            jamais par-dessus l'écran (ne couvre ni feuille ni bouton). */}
-        <TourResumePill />
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
             actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
         <BandeauActualiteMembre
@@ -2773,6 +2770,11 @@ function HomeHubContent({ auth, navigation, route }) {
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel.toUpperCase()}</Text>
           </View>
         </OnboardingWrapper>
+
+        {/* TUTOE-CALIBRAGE (27/10) — guide en pause : « Reprendre le tour » DANS le flux,
+            jamais par-dessus l'écran (ne couvre ni feuille ni bouton). FIN-GUIDE, point 5 : sous
+            le titre, qu'elle ne pousse plus (capture 5 d'Adel). */}
+        <TourResumePill />
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
           {isPublishingGovernedBlocked ? (

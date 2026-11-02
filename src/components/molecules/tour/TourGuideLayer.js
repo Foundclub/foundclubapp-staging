@@ -28,6 +28,7 @@ import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   bubbleRoom,
   clipAboveDock,
+  compactBubbleFits,
   computeBlockers,
   headerBottomOf,
   isOnScreen,
@@ -39,6 +40,7 @@ import {
 } from '@/components/molecules/tour/tourGuideGeometry';
 
 import { useTour } from '@/context/useTour';
+import useKeyboardFrame from '@/hooks/useKeyboardFrame';
 import useReduceMotion from '@/hooks/useReduceMotion';
 
 /**
@@ -85,6 +87,8 @@ const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 const HEADER_IDS = ['header.back', 'screen.header'];
 // GUIDE-FINITIONS-3 R2-2 : place réservée par l'écran sous son titre (TourBubbleSlot).
 const SLOT_ID = 'tour.bubbleSlot';
+// FIN-GUIDE, point 3 : la liste d'un tunnel, qui doit rester à portée du doigt (petit écran).
+const WIZARD_LIST_ID = 'teamWizard.viewport';
 
 /**
  * Police de la bulle à l'échelle du téléphone, plafonnée.
@@ -158,6 +162,7 @@ function TourGuideLayer() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const windowSize = useWindowDimensions();
+  const keyboard = useKeyboardFrame();
   const [layerSize, setLayerSize] = useState(
     /** @type {{ height: number; width: number } | null} */ (null),
   );
@@ -221,7 +226,8 @@ function TourGuideLayer() {
     && tourStatus === 'active' && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
-      ...(currentStep.bubbleSlot ? [SLOT_ID] : []),
+      ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
+      ...(currentStep.belowTargets || []),
       ...(currentStep.fallback?.targets || []),
       ...(currentStep.subGuides || []).flatMap((/** @type {any} */ guide) => [
         guide.anchor,
@@ -357,6 +363,11 @@ function TourGuideLayer() {
       .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
       .map((rect) => toCutout(rect, width, height)),
   ];
+  // FIN-GUIDE, point 3 : petit écran, le champ d'un tunnel peut être sous le bord de la liste ; le
+  // voile ne doit pas empêcher de l'y chercher. La liste défile, elle reste sous le voile.
+  const touchable = currentStep?.bubbleSlot && rects[WIZARD_LIST_ID]
+    ? [...passThrough, toCutout(rects[WIZARD_LIST_ID], width, height)]
+    : passThrough;
   const primary = cutouts[0] || null;
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
@@ -386,15 +397,21 @@ function TourGuideLayer() {
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
   const headerBottom = headerBottomOf(
-    HEADER_IDS.map((id) => rects[id] || null),
+    [...HEADER_IDS, ...(currentStep?.belowTargets || [])].map((id) => rects[id] || null),
     height,
   );
+  // FIN-GUIDE, point 3 (capture 3 d'Adel) : clavier ouvert, la place réservée sous le titre ne
+  // laissait qu'une fente au champ. La place s'efface (TourBubbleSlot), le champ remonte, et la
+  // bulle, réduite à sa consigne, se pose sous l'en-tête. Le bas utile s'arrête au clavier.
+  const isCompact = Boolean(keyboard && currentStep?.bubbleSlot && !sheetGuide);
+  const isBubbleGiven = !isCompact || compactBubbleFits(keyboard.screenY);
   // Étape `bubbleSlot` : la bulle se pose dans la place que l'écran lui a gardée
   // sous son titre (tunnel équipe, composition), sinon comme avant.
-  const slotRect = currentStep?.bubbleSlot && !sheetGuide ? rects[SLOT_ID] : null;
+  const slotRect = currentStep?.bubbleSlot && !sheetGuide && !isCompact ? rects[SLOT_ID] : null;
   const slot = slotRect && isOnScreen(slotRect, width, height) ? slotRect : null;
+  const keyboardTop = keyboard ? keyboard.screenY - originRef.current.y : height;
   // Bas utile : la barre d'onglets flottante, sinon le bas sûr de l'écran.
-  const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height);
+  const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
   const position = slot
     ? {
       arrow: 'none', arrowX: 0, left: 14, top: slot.y, width: width - 28,
@@ -402,6 +419,7 @@ function TourGuideLayer() {
     : placeBubble({
       bottomLimit,
       bubbleHeight: wantedHeight,
+      compact: isCompact,
       headerBottom,
       height,
       insetTop: insets.top,
@@ -412,7 +430,12 @@ function TourGuideLayer() {
   // GUIDE-PETIT-ECRAN (décision A du chef, 29/10) : la bulle ne dépasse jamais
   // la place qu'on lui donne ; au-delà, son contenu défile dedans.
   const maxHeight = bubbleRoom({
-    bottomLimit, headerBottom, insetTop: insets.top, position, primary, slot,
+    bottomLimit,
+    headerBottom,
+    insetTop: insets.top,
+    position,
+    primary: isCompact ? null : primary,
+    slot,
   });
 
   // Journal de calibrage (développement seulement) : une ligne par état de
@@ -453,12 +476,20 @@ function TourGuideLayer() {
     return <RewardBanner insetTop={insets.top} reward={reward} title={currentMission?.title} />;
   }
 
+  // GUIDE-RELANCE (bloquant n° 6) : l'écran a refusé le geste ; sans voile.
+  if (tourStatus === 'active' && tour.blocked) return <TourBlockedCard />;
+
+  // FIN-GUIDE, point 1 : la question de la mission 1. Chargée au geste : elle tire le client HTTP,
+  // que la couche, montée partout, n'a pas à charger pour autant (voir `useTour.js`).
+  if (tourStatus === 'active' && currentStep?.kind === 'teamChoice') {
+    // eslint-disable-next-line global-require
+    const TourTeamChoice = require('@/components/molecules/tour/TourTeamChoice').default;
+    return <TourTeamChoice />;
+  }
+
   if (tourStatus === 'active' && currentStep?.kind) {
     return <TourFullScreen kind={currentStep.kind} />;
   }
-
-  // GUIDE-RELANCE (bloquant n° 6) : l'écran a refusé le geste ; sans voile.
-  if (tourStatus === 'active' && tour.blocked) return <TourBlockedCard />;
 
   if (!isStepVisible) return null;
 
@@ -472,7 +503,9 @@ function TourGuideLayer() {
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
-  const fontScale = Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
+  const fontScale = isCompact
+    ? 1
+    : Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
   /**
    * Trop haute pour sa place : la police rapetisse (seulement vers le bas, donc
    * sans aller-retour), au plus jusqu'à 1 ; ensuite le contenu défile.
@@ -583,7 +616,7 @@ function TourGuideLayer() {
               y={0}
             />
           </Svg>
-          {computeBlockers(passThrough, width, height).map((blocker) => (
+          {computeBlockers(touchable, width, height).map((blocker) => (
             <Pressable
               accessible={false}
               key={`${blocker.x}-${blocker.y}`}
@@ -636,6 +669,7 @@ function TourGuideLayer() {
         </View>
       ))}
 
+      {isBubbleGiven ? (
       <Animated.View
         accessibilityHint={essentialHint}
         accessibilityLiveRegion="polite"
@@ -691,6 +725,7 @@ function TourGuideLayer() {
           style={{ flexGrow: 0 }}
           testID={__DEV__ ? 'tour.bubble.scroll' : undefined}
         >
+          {isCompact ? null : (
           <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
             <View style={{
               alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,
@@ -760,6 +795,7 @@ function TourGuideLayer() {
               <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
             </TouchableOpacity>
           </View>
+          )}
           {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait
               tenir dans ~100 pt entre l'en-tête et le champ, arbitrage du chef 28/10). */}
           <View style={{ alignItems: 'center', columnGap: 10, flexDirection: 'row' }}>
@@ -803,6 +839,7 @@ function TourGuideLayer() {
           ) : null}
         </ScrollView>
       </Animated.View>
+      ) : null}
     </View>
   );
 }

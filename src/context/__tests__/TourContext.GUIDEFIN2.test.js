@@ -92,6 +92,8 @@ describe('n° 2 — demande en attente découverte avec le guide déjà sur m1-n
     renderProvider();
     act(() => { tour.startTour('coach'); });
     pressNext();
+    // FIN-GUIDE : un coach qui a un club répond « Non, je crée la mienne ».
+    if (stepId() === 'm1-choice') pressNext();
     route(RouteNames.MyTeamList);
     expect(stepId()).toBe('m1-new');
   };

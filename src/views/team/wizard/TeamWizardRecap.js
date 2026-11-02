@@ -83,6 +83,7 @@ function TeamWizardRecap({ navigation }) {
   const handleExitWizard = useTeamWizardExit(navigation);
   const {
     freeUsageSummary,
+    getRouteAfterTeamCreated,
     subscriptionAccessLevel,
     userData,
   } = useAuth();
@@ -186,6 +187,14 @@ function TeamWizardRecap({ navigation }) {
       const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;
       const targetScreen = isGold ? RouteNames.LeagueSquadTab : RouteNames.MyTeamList;
       const rootNavigation = navigation.getParent();
+
+      // FIN-GUIDE, point 2 : pendant l'inscription, le tunnel reprend jusqu'au sas `Welcome` (seul
+      // écran qui lance le guide) ; `reset` : le tunnel équipe ne reste pas sous le retour.
+      const onboardingRoute = getRouteAfterTeamCreated?.();
+      if (rootNavigation && onboardingRoute) {
+        rootNavigation.reset({ index: 0, routes: [{ name: onboardingRoute }] });
+        return;
+      }
 
       if (rootNavigation) {
         rootNavigation.reset({

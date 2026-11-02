@@ -156,6 +156,18 @@ export const headerBottomOf = (rects, screenHeight) => {
   return bottoms.length ? Math.max(...bottoms) : null;
 };
 
+// Hauteur visible au-dessus du clavier sous laquelle la bulle réduite prendrait la place du champ
+// (en-tête + bulle + champ + « Suivant » ; le plus petit iPhone, 568 pt avec son clavier, garde 352).
+const MIN_VISIBLE_FOR_BUBBLE = 340;
+
+/**
+ * FIN-GUIDE, point 3 : la bulle réduite tient-elle au-dessus du clavier avec le champ ? Sinon le
+ * champ passe d'abord : elle revient quand le clavier se ferme.
+ * @param {number} keyboardTop - Haut du clavier, repère de la fenêtre.
+ * @returns {boolean} Elle tient ?
+ */
+export const compactBubbleFits = (keyboardTop) => keyboardTop >= MIN_VISIBLE_FOR_BUBBLE;
+
 /**
  * Place la bulle (04_COUCHE_VISUELLE §2, « Placement ») : en haut, au centre
  * d'une très grande cible, ou du côté de la cible où il reste le plus de place.
@@ -171,13 +183,25 @@ export const headerBottomOf = (rects, screenHeight) => {
  * @param {number} args.insetTop - Encoche.
  * @param {number | null} [args.headerBottom] - Bas de l'en-tête ancré (`headerBottomOf`).
  * @param {number} [args.bottomLimit] - Bas utile (barre d'onglets, bas sûr) ; défaut : `height`.
+ * @param {boolean} [args.compact] - Clavier ouvert dans un tunnel : toujours sous l'en-tête, le
+ *   champ remonte de lui-même sous la bulle (FIN-GUIDE, point 3).
  * @returns {{ arrow: 'down' | 'none' | 'up'; arrowX: number; left: number; top: number;
  *   width: number }} Position.
  */
 export const placeBubble = ({
-  bottomLimit, bubbleHeight, headerBottom = null, height, insetTop, primary, top, width,
+  bottomLimit, bubbleHeight, compact = false, headerBottom = null, height, insetTop, primary, top,
+  width,
 }) => {
   const bottom = bottomLimit ?? height;
+  if (compact) {
+    return {
+      arrow: 'none',
+      arrowX: 0,
+      left: 14,
+      top: Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP),
+      width: width - 28,
+    };
+  }
   if (top || !primary) {
     let bubbleTop = Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP);
     // Jamais sur la cible (champ du tunnel, bouton ⋮ ou onglets sous l'en-tête) :

@@ -119,6 +119,9 @@ export function TourProvider({ children }) {
   const successTimerRef = useRef(/** @type {any} */ (null));
   const hydratedUserRef = useRef(/** @type {string | null} */ (null));
   const lastRouteRef = useRef(/** @type {string | null} */ (null));
+  // FIN-GUIDE, point 2 : équipe créée juste avant le départ du guide (inscription) ; le profil,
+  // servi par un cache, ne le dit pas encore.
+  const teamCreatedRef = useRef(/** @type {any} */ (null));
   // GUIDE-RECUL : étapes de la mission en cours et l'écran où chacune s'est
   // ouverte, pour revenir à la bonne au retour arrière.
   const historyRef = useRef(
@@ -136,6 +139,8 @@ export function TourProvider({ children }) {
         gauge: nextState.gauge || 0,
         missionStatus: nextState.missionStatus || {},
         profileKey: nextState.profileKey,
+        // FIN-GUIDE : l'id d'abord ; une étape ajoutée au catalogue décale les rangs.
+        stepId: getTourProfile(nextState.profileKey)?.steps?.[nextState.stepIndex]?.id,
         stepIndex: nextState.stepIndex,
         version: GUIDE_VERSION,
       }));
@@ -157,6 +162,7 @@ export function TourProvider({ children }) {
   useEffect(() => {
     if (hydratedUserRef.current === userId) return;
     hydratedUserRef.current = userId;
+    teamCreatedRef.current = null;
     clearSuccessTimer();
     setTourState(null);
     // GUIDE-REPRISE N1 (rejeu du 28/10, captures 09 et 54) : la marque n'existe que
@@ -171,7 +177,10 @@ export function TourProvider({ children }) {
       const saved = JSON.parse(raw);
       const profile = getTourProfile(saved?.profileKey);
       if (!profile || !Number.isFinite(Number(saved?.stepIndex))) return;
-      const stepIndex = Math.min(Number(saved.stepIndex), profile.steps.length - 1);
+      const savedIndex = saved.stepId ? indexOfStep(profile, saved.stepId) : -1;
+      const stepIndex = savedIndex !== -1
+        ? savedIndex
+        : Math.min(Number(saved.stepIndex), profile.steps.length - 1);
       if (isGuideProfile(profile)) {
         // Un état v2 d'un profil devenu guide à missions ne se rejoue pas : purge.
         if (saved.version !== GUIDE_VERSION) {
@@ -368,15 +377,28 @@ export function TourProvider({ children }) {
     if (isGuideProfile(profile)) {
       const fromMission = getMission(profile, options.fromMission);
       const essentialsDone = Boolean(fromMission && !fromMission.locked);
+      const created = teamCreatedRef.current ? { 'team.created': teamCreatedRef.current } : {};
+      const flags = typeof profile.buildFlags === 'function'
+        ? profile.buildFlags({ created, userData })
+        : {};
+      // FIN-GUIDE, point 1 : ce qui est déjà fait est validé dès le départ.
+      const doneAtStart = getMission(
+        profile,
+        profile.liveMission?.({ flags, userData })?.missionId,
+      );
+      let startMissions = /** @type {Record<string, string>} */ ({});
+      if (essentialsDone) {
+        startMissions = Object.fromEntries(profile.missions
+          .filter((/** @type {any} */ mission) => mission.locked)
+          .map((/** @type {any} */ mission) => [mission.id, 'done']));
+      } else if (doneAtStart) {
+        startMissions = { [doneAtStart.id]: 'done' };
+      }
       const base = {
-        created: {},
-        flags: typeof profile.buildFlags === 'function' ? profile.buildFlags({ userData }) : {},
-        gauge: essentialsDone ? 100 : 0,
-        missionStatus: essentialsDone
-          ? Object.fromEntries(profile.missions
-            .filter((/** @type {any} */ mission) => mission.locked)
-            .map((/** @type {any} */ mission) => [mission.id, 'done']))
-          : {},
+        created,
+        flags,
+        gauge: essentialsDone ? 100 : (Number(doneAtStart?.gaugeStep) || 0),
+        missionStatus: startMissions,
         profileKey,
         status: 'active',
         stepIndex: 0,
@@ -423,7 +445,7 @@ export function TourProvider({ children }) {
   // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : « Recommencer à zéro ».
   // Seule la PROGRESSION du guide repart de zéro (progression, bonus gardés, marque
   // « déjà lancé », reposée par `startTour`) ; rien de réel n'est effacé. Ce qui
-  // existe déjà est reconnu par les drapeaux de départ (équipe ⇒ « m1-find »).
+  // existe déjà est reconnu par les drapeaux de départ (équipe ⇒ M1 validée, FIN-GUIDE).
   const restartTour = useCallback((/** @type {string} */ profileKey) => {
     // Le site ne joue aucun guide : on n'efface rien pour ne rien relancer.
     if (Platform.OS === 'web') return false;
@@ -602,7 +624,11 @@ export function TourProvider({ children }) {
       const resumeIndex = (current.restored || waitOver) && step?.resumeFrom
         ? indexOfStep(profile, step.resumeFrom)
         : -1;
-      const index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
+      let index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
+      // Étape de reprise caduque elle aussi (FIN-GUIDE : pas de question sans club) : la suivante.
+      if (resumeIndex !== -1 && !isStepAvailable(profile.steps[index], guideContext(current))) {
+        index = nextAvailableIndex(profile, index, guideContext(current));
+      }
       const nextState = {
         ...current, restored: false, status: 'active', stepIndex: index,
       };
@@ -656,6 +682,9 @@ export function TourProvider({ children }) {
   useEffect(() => {
     const unsubscribe = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
       if (signal?.kind === 'route') lastRouteRef.current = signal.key;
+      if (signal?.kind === 'action' && signal.key === 'team.created') {
+        teamCreatedRef.current = signalMeta(signal);
+      }
       const { current } = tourStateRef;
       if (!current || current.status !== 'active') return;
       const profile = getTourProfile(current.profileKey);
@@ -709,6 +738,41 @@ export function TourProvider({ children }) {
     enterGuideStep(current, nextAvailableIndex(profile, current.stepIndex, guideContext(current)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
+
+  // FIN-GUIDE, point 1 (compte d'Adel, « Seniors A » à 0 % sur « Crée ton équipe ») : le profil
+  // relu dit qu'il entraîne une équipe (demande acceptée, guide gardé sur le téléphone) ⇒ la
+  // mission 1 est validée. Bandeau si le guide est à l'écran, en silence s'il est en pause.
+  // ponytail: le tunnel équipe en cours n'est pas interrompu ; il valide M1 à la création.
+  // Sortie : si la recette le demande, proposer d'en sortir.
+  const pendingLive = tourState?.profileKey;
+  useEffect(() => {
+    const { current } = tourStateRef;
+    if (!current || current.review || current.version !== GUIDE_VERSION) return;
+    const guide = getTourProfile(current.profileKey);
+    const live = guide?.liveMission?.(guideContext(current));
+    if (!live || current.missionStatus?.[live.missionId]) return;
+    const step = guide.steps[current.stepIndex];
+    const index = indexOfStep(guide, live.goto);
+    const inMission = step?.missionId === live.missionId;
+    const withTeam = { ...current, flags: { ...(current.flags || {}), hadTeam: true } };
+    if (current.status === 'active' && inMission) {
+      if (step.bubbleSlot) return;
+      applyGuideMatch(withTeam, { completes: true, index });
+      return;
+    }
+    if (current.status === 'success') return;
+    const mission = getMission(guide, live.missionId);
+    const silent = {
+      ...withTeam,
+      gauge: Math.min(100, (Number(current.gauge) || 0) + (Number(mission?.gaugeStep) || 0)),
+      missionStatus: { ...(current.missionStatus || {}), [live.missionId]: 'done' },
+      restored: inMission ? false : current.restored,
+      stepIndex: inMission ? index : current.stepIndex,
+    };
+    setTourState(silent);
+    persist(silent);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingLive, userData]);
 
   useEffect(() => () => clearSuccessTimer(), []);
 

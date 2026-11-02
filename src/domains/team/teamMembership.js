@@ -34,6 +34,7 @@
  */
 
 import { canUserEditClub } from '@/domains/auth/authUseCases';
+import { isDeletedAccount } from '@/domains/user/deletedAccount';
 
 /**
  * L'identifiant d'un objet relation, qu'il arrive entier ou deja reduit a son id.
@@ -100,6 +101,17 @@ export const isTeamTrainer = (team, user) => {
   const userDocumentId = toDocumentId(user);
   return Boolean(userDocumentId) && toDocumentIds(team?.trainers).includes(userDocumentId);
 };
+
+/**
+ * Equipe sans entraineur actif, qu'un coach peut reprendre (`claimTeamAsCoach`) : le serveur n'en
+ * presente aucun, et ce n'est pas son equipe. Juge commun du choix du tunnel et du guide.
+ * @param {any} team L'equipe, telle que le club la rend.
+ * @param {any} user Le compte connecte.
+ * @returns {boolean} true si l'equipe est a reprendre.
+ */
+export const isOrphanTeam = (team, user) => !isMyTeam(team, user)
+  && (Array.isArray(team?.trainers) ? team.trainers : [])
+    .filter((trainer) => !isDeletedAccount(trainer)).length === 0;
 
 /**
  * La premiere equipe de la liste que ce compte entraine (guide TUTOE :

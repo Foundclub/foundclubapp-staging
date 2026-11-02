@@ -190,6 +190,9 @@ describe('L1 GUIDE-ATTENTE — demande d’adhésion en attente : le guide atten
     };
     rerender();
     act(() => { tour.resumeTour(); });
+    // FIN-GUIDE, point 1 : son club a peut-être déjà ses équipes : la question d'abord.
+    expect(stepId()).toBe('m1-choice');
+    pressNext();
     expect(stepId()).toBe('m1-dock');
     route(RouteNames.MyTeamList);
     expect(stepId()).toBe('m1-new');

@@ -25073,6 +25073,7 @@ export default {
         example: 'Le match d’exemple est effacé : rien n’a été envoyé.',
         footer: 'Retrouve ce guide dans Mon compte › Guide entraîneur·e.',
         friendly: 'Annonce de match amical publiée',
+        invited: 'Invitation envoyée',
         link: "Lien d'invitation partagé",
         real: 'RÉEL',
         sessions_one: '{{count}} séance programmée',
@@ -25089,6 +25090,14 @@ export default {
       kicker: 'Guide entraîneur·e',
       'm1-back': 'Reviens en arrière : touche la flèche en haut à gauche, ou glisse ton doigt '
         + 'depuis le bord gauche de l’écran.',
+      'm1-choice': {
+        body: 'Ton club est déjà sur FoundClub. Choisis ton équipe : ta demande part au club. '
+          + 'Sinon, tu crées la tienne.',
+        loading: 'Je regarde les équipes de ton club…',
+        no: 'Non, je crée la mienne',
+        title: 'Es-tu entraîneur·e d’une de ces équipes ?',
+        yes: 'Oui, c’est mon équipe',
+      },
       'm1-csearch': 'Tape le nom de ton club, puis ouvre sa fiche.',
       'm1-cw': 'Crée ton club : remplis chaque écran, puis Suivant.',
       'm1-dock': 'Commence par ton équipe. Ouvre l’onglet Équipes.',
@@ -25107,6 +25116,10 @@ export default {
         + 'Le guide t’attend : dès qu’il accepte, reprends-le ici, tu créeras ton équipe. '
         + 'En attendant, explore l’app librement.',
       'm1-wait-pill': 'En attente du club · Reprendre',
+      'm1-wait-team': 'Ta demande pour rejoindre ton équipe attend la réponse du club. Le guide '
+        + 't’attend : dès qu’elle est acceptée, ta mission 1 est validée. En attendant, explore '
+        + 'l’app librement.',
+      'm1-wait-team-pill': 'En attente de ton équipe · Reprendre',
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',

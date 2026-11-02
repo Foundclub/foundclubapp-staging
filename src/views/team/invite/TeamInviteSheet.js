@@ -46,6 +46,7 @@ import {
   isPlausibleInvitePhone,
   selectSheetSuggestions,
 } from '@/domains/team/teamInviteSuggestions';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -176,6 +177,8 @@ function TeamInviteSheetBody({
       );
     },
     onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
+      // FIN-GUIDE, point 4 : une invitation envoyée valide la mission « Inviter » du guide.
+      emitGuidanceAction('team.invite.sent', { teamId: invitedTeamId });
       const invitedId = String(variables?.userId || '').trim();
       if (invitedId) {
         setInvitedMemberIds((previous) => (

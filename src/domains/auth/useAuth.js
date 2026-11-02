@@ -65,6 +65,7 @@ import {
   hasClubAccess as hasClubAccessForUser,
   isClubMember as isClubMemberForUser,
   markOnboardingComplete,
+  resolveOnboardingOriginAfterTeam,
   markOnboardingStarted,
   onboardingCompleteKey,
   profileFieldToDisplay,
@@ -917,6 +918,14 @@ const useAuth = () => {
     });
   }, [onboardingViews, subscriptionAccessLevel, userData?.documentId, userRoleKey]);
 
+  // FIN-GUIDE, point 2 : équipe créée pendant l'inscription ⇒ le tunnel reprend jusqu'au sas qui
+  // lance le guide. Inscription finie : rien, et `getNextOnboardingRoute` n'est pas appelé (il
+  // note le tunnel comme ouvert).
+  const getRouteAfterTeamCreated = useCallback(() => {
+    const origin = resolveOnboardingOriginAfterTeam(onboardingViews?.views);
+    return origin ? getNextOnboardingRoute(origin) : undefined;
+  }, [getNextOnboardingRoute, onboardingViews]);
+
   const isNonPartnerCoach = nonPartnerCoachPublishingAccess?.isNonPartnerCoach === true;
 
   const canPublishGovernedClubContent = useMemo(() => {
@@ -1008,6 +1017,7 @@ const useAuth = () => {
     getAuthTokens,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    getRouteAfterTeamCreated,
     getSubscriptionAccessLevelForClub,
     governedPublishingBlockReason,
     hasClubAccess,
