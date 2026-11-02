@@ -1002,6 +1002,25 @@ export const getOnboardingViews = ({
       : pointDeControle;
   }
 
+  // FIN-CHEMINS (02/11, D-COACH-9) : un entraîneur sans club rouvert reprend à la première étape
+  // DUE. Ville et photo ont un « Passer », qui n'enregistre rien : avant « Trouve ton club », elles
+  // comptent comme faites (la règle du dessus), au lieu de les faire repasser une à une.
+  // ponytail: une ville jamais vue ne se redemande pas à la reprise ; elle reste dans le profil.
+  if (
+    roleKey === 'coach'
+    && firstname
+    && lastname
+    && onboardingStartedHere
+    && !tunnelsOuvertsCetteSession.has(documentId)
+  ) {
+    const indexDuGuide = filteredViews.findIndex(
+      (view) => view.canShow && view.route === RouteNames.UserAffiliationGuide,
+    );
+    filteredViews.slice(0, Math.max(indexDuGuide, 0)).forEach((view) => {
+      if (SKIPPABLE_ONBOARDING_ROUTES.includes(view.route)) Object.assign(view, { canShow: false });
+    });
+  }
+
   const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useNavigation } from '@react-navigation/native';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,6 +33,7 @@ import {
   effacerLAnnonce,
   useAnnonceDeLaFiche,
 } from '@/views/profile/parent/annonceDeLaFiche';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import { situationDeLAnnulation } from '@/views/profile/parent/annulationDeLaDemande';
 import BandeauDAnnulation from '@/views/profile/parent/BandeauDAnnulation';
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
@@ -532,6 +533,8 @@ function MyChildren({ route } = {}) {
   const [menuDe, setMenuDe] = useState(/** @type {any} */ (null));
   const fermerLeMenu = useCallback(() => setMenuDe(null), []);
   // E06 — « Comment ça marche ? » : les explications quittent la liste pour une feuille.
+  // FIN-CHEMINS (02/11, p63) : la barre fine du site porte déjà le titre.
+  const titreDansLaBarre = useContext(BarreDeTitreDuSiteContext);
   const [aideOuverte, setAideOuverte] = useState(false);
   const fermerLAide = useCallback(() => setAideOuverte(false), []);
   // Le dernier geste réussi (« La fiche d'Anissa est supprimée. »), dit en tête de la liste.
@@ -565,7 +568,7 @@ function MyChildren({ route } = {}) {
       <ScreenContainer
         bgImage="bg2"
         bottomInsetMode="screen"
-        contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+        contentContainerStyle={[Spaces.paddingTop[titreDansLaBarre ? 16 : 0], Spaces.paddingBottom[24], Alignments.fill]}
       >
         <ScrollView
           contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
@@ -646,13 +649,17 @@ function MyChildren({ route } = {}) {
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      contentContainerStyle={[Spaces.paddingTop[titreDansLaBarre ? 16 : 0], Spaces.paddingBottom[24], Alignments.fill]}
     >
       <View style={[Alignments.alignCenter, { gap: 8 }]}>
-        <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
-          {t('myChildren.screen.title', 'Mes enfants').toUpperCase()}
-        </Text>
-        <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
+        {titreDansLaBarre ? null : (
+          <>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
+              {t('myChildren.screen.title', 'Mes enfants').toUpperCase()}
+            </Text>
+            <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
+          </>
+        )}
         {total > 0 ? (
           <Text
             style={[Fonts.p3Bold, Fonts.primary300, { letterSpacing: 1 }]}
