@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Tag from '@/components/atoms/tag/Tag';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -359,6 +360,10 @@ function TournamentManagement({ navigation, route }) {
 
   // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé se lit, il ne se pilote plus.
   const { closedAt, isClosed } = getTournamentClosure({ ...event, tournamentTeams });
+  // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
+  // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
+  const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
+  useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDuLecteur });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);
@@ -730,7 +735,7 @@ function TournamentManagement({ navigation, route }) {
             <Text style={[Fonts.h2, Fonts.neutral00]}>
               {canManageTournament && !isClosed
                 ? t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')
-                : event?.name || t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
+                : titreDuLecteur}
             </Text>
             {canManageTournament && !isClosed ? (
               <Text style={[Fonts.p2, Fonts.primary100]}>
