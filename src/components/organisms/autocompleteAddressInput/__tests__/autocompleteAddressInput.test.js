@@ -208,6 +208,15 @@ describe('AutocompleteAddressInput — la recherche de ville, de l\'appui aux pr
     expect(texteVisible(arbre)).toContain('Rechercher une ville');
   });
 
+  it('FIN-EVENEMENTS p134 : la ville choisie se lit dans le champ fermé', () => {
+    const arbre = monter({
+      address: { label: 'Montrivage', value: '5.37|43.29' },
+      setAddress: jest.fn(),
+    });
+    expect(texteVisible(arbre)).toContain('Montrivage');
+    expect(texteVisible(arbre)).not.toContain('Rechercher une ville');
+  });
+
   it('OUVRE la feuille quand on appuie sur le champ', async () => {
     const arbre = monter();
     expect(arbre.root.findAllByProps({ testID: 'feuille' }).length).toBe(0);
