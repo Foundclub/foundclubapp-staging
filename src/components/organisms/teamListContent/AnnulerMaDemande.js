@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import Button from '@/components/atoms/button/Button';
 
 import {
@@ -37,7 +39,7 @@ function AnnulerMaDemande({ requestId, teamName }) {
       t(
         'teamList.cancelRequest.confirmMessage',
         'Ta demande pour rejoindre {{team}} sera retirée. Tu pourras en refaire une plus tard.',
-        { team: teamName },
+        { team: teamName, ...SANS_ECHAPPEMENT },
       ),
       [
         { style: 'cancel', text: t('teamList.cancelRequest.keep', 'Garder ma demande') },
@@ -55,7 +57,7 @@ function AnnulerMaDemande({ requestId, teamName }) {
       accessibilityLabel={t(
         'teamList.cancelRequest.actionLabel',
         'Annuler ma demande pour rejoindre {{team}}',
-        { team: teamName },
+        { team: teamName, ...SANS_ECHAPPEMENT },
       )}
       isLoading={annulation.isPending}
       onPress={demanderConfirmation}
