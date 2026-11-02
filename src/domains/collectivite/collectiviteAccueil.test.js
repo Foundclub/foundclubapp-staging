@@ -1,6 +1,7 @@
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  aUneDemandeDeGestion,
   availableHomeActions,
   clubInitials,
   clubTotals,
@@ -261,5 +262,17 @@ describe('COLL-ACCUEIL — les premiers pas (planche P1v3)', () => {
     ));
     expect(premiersPas({ clubsVus: true, installationsCount: 1 }, avecCreneaux).etapes
       .map((etape) => etape.key)).toEqual(['installations', 'clubs', 'creneaux', 'actualite']);
+  });
+});
+
+// REPRISE-COLLECTIVITES 102 (01/11/2026) — une demande annulée n'est plus une demande : le compte
+// sans rôle sportif qui a tout annulé revient au choix de son statut, comme un compte neuf.
+describe('REPRISE-COLLECTIVITES 102 — une demande annulée ne compte plus', () => {
+  it('annulée seule : aucune demande ; en attente ou refusée : une demande', () => {
+    expect(aUneDemandeDeGestion([{ status: 'cancelled' }])).toBe(false);
+    expect(aUneDemandeDeGestion([])).toBe(false);
+    expect(aUneDemandeDeGestion(undefined)).toBe(false);
+    expect(aUneDemandeDeGestion([{ status: 'cancelled' }, { status: 'pending' }])).toBe(true);
+    expect(aUneDemandeDeGestion([{ status: 'refused' }])).toBe(true);
   });
 });

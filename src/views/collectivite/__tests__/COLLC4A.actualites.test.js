@@ -448,3 +448,22 @@ describe('FINITIONS-VILLE — une seule pastille choisie dans l’espace Ville',
     expect(fond(autre)).not.toBe(couleurs.primary500);
   });
 });
+
+// REPRISE-COLLECTIVITES 99 (01/11/2026, revue : « afficher le même bandeau quand la Ville ouvre le
+// lien d'une actualité qu'elle a retirée ») — côté Ville, le lien menait à la liste sans rien dire.
+describe('REPRISE-COLLECTIVITES 99 — la Ville ouvre le lien d’une actualité retirée', () => {
+  it('l’actualité visée n’est plus dans la liste : le bandeau « retirée »', async () => {
+    mockParams = { ...VILLE, actualiteId: 'actu-retiree' };
+    const arbre = await monter(<CollectiviteActualites />);
+    expect(textes(arbre)).toContain('Cette actualité a été retirée par la Ville.');
+  });
+
+  it('l’actualité visée est encore là, ou aucune n’est visée : pas de bandeau', async () => {
+    mockParams = { ...VILLE, actualiteId: SUBVENTIONS.documentId };
+    expect(textes(await monter(<CollectiviteActualites />)))
+      .not.toContain('Cette actualité a été retirée par la Ville.');
+    mockParams = { ...VILLE };
+    expect(textes(await monter(<CollectiviteActualites />)))
+      .not.toContain('Cette actualité a été retirée par la Ville.');
+  });
+});

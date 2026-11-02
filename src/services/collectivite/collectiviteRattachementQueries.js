@@ -6,6 +6,7 @@ import {
   cancelCollectiviteProposal,
   getClubCollectiviteRequests,
   getCollectiviteClubRequests,
+  getCollectiviteClubsRattaches,
   getMaCollectivite,
   getMesCollectivites,
   notifyMairie,
@@ -82,6 +83,20 @@ export const useCollectiviteClubRequests = (collectiviteId) => useQuery({
   queryFn: async () => unwrapRows(await getCollectiviteClubRequests(String(collectiviteId))),
   queryKey: collectiviteClubRequestsQueryKey(collectiviteId),
   staleTime: 60_000,
+});
+
+/**
+ * REPRISE-COLLECTIVITES (02/11/2026) — les clubs rattachés à la Ville, sous la clef de
+ * `useCollectiviteClubs` (`['collectivite', id, 'clubs']`, collectiviteQueries) : une seule
+ * lecture et un seul cache avec « Clubs rattachés ».
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useCollectiviteClubsRattaches = (collectiviteId) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => unwrapRows(await getCollectiviteClubsRattaches(String(collectiviteId))),
+  queryKey: ['collectivite', collectiviteId, 'clubs'],
+  staleTime: 5 * 60 * 1000,
 });
 
 /**

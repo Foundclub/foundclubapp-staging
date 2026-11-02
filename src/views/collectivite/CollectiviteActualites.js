@@ -92,6 +92,12 @@ function CollectiviteActualites() {
   };
 
   const liste = Array.isArray(actualites.data) ? actualites.data : [];
+  // REPRISE-COLLECTIVITES 99 (01/11, revue) : le lien d'une ligne ou d'une notification vise une
+  // actualité ; absente de la liste, la Ville l'a retirée. Même bandeau que le canal des membres.
+  const actualiteVisee = /** @type {{ actualiteId?: string } | undefined} */ (route?.params)
+    ?.actualiteId || null;
+  const viseeRetiree = Boolean(actualiteVisee) && !actualites.isLoading && !actualites.error
+    && !liste.some((/** @type {any} */ actualite) => actualite?.documentId === actualiteVisee);
   let contenu;
   if (actualites.isLoading) {
     contenu = <Loader />;
@@ -188,6 +194,23 @@ function CollectiviteActualites() {
           title={t('collectiviteActualites.publier', 'Publier une actualité')}
           variant="Primary"
         />
+        {viseeRetiree ? (
+          <View
+            accessibilityRole="alert"
+            style={[
+              Spaces.padding[12],
+              { backgroundColor: withAlpha(Colors.warning500, 0.12), borderRadius: 12 },
+            ]}
+            testID="collectivite-actualites-retiree"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t(
+                'collectiviteActualites.canal.retiree',
+                'Cette actualité a été retirée par la Ville.',
+              )}
+            </Text>
+          </View>
+        ) : null}
         {contenu}
       </ScrollView>
     </ScreenContainer>

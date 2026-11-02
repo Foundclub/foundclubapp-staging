@@ -86,3 +86,24 @@ describe('R17INVIT · G4 — la liste des demandes de la Ville le dit aussi', ()
       .toBe('Envoyée au club : ses dirigeants acceptent ou refusent.');
   });
 });
+
+// REPRISE-COLLECTIVITES additif (02/11/2026) — « Ajouter un club » proposait encore les clubs DÉJÀ
+// rattachés à la Ville : un rattachement fait par le lien, par l'équipe FoundClub ou avant les
+// demandes n'a pas de ligne « attached » dans les demandes. La liste des clubs de la Ville
+// fait foi.
+describe('REPRISE-COLLECTIVITES — un club déjà rattaché, sans ligne de demande', () => {
+  const clubsDeLaVille = [{ documentId: 'judo-e', name: 'Judo Club E' }];
+
+  it('dans les clubs de la Ville : « rattache », même sans demande', () => {
+    expect(gesteDeLaVille([], 'judo-e', '', clubsDeLaVille)).toBe('rattache');
+    expect(gesteDeLaVille([ligne({ state: 'refused' })], 'judo-e', '', clubsDeLaVille))
+      .toBe('rattache');
+  });
+
+  it('jumeau : un autre club, ou pas de liste, garde son geste', () => {
+    expect(gesteDeLaVille([], 'tennis-f', '', clubsDeLaVille)).toBe('envoyer');
+    expect(gesteDeLaVille([], 'judo-e', '')).toBe('envoyer');
+    const sansListe = /** @type {any} */ (null);
+    expect(gesteDeLaVille([], 'judo-e', '', sansListe)).toBe('envoyer');
+  });
+});

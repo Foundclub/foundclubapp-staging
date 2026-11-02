@@ -424,20 +424,20 @@ function CollectiviteChiffres() {
     // CORR-COLLECTIVITES 103 (31/10, Adel A) : le serveur compte de 8 h a 22 h (`plageOuverture`).
     const surPlage = lignes.some((/** @type {any} */ l) => Boolean(l?.plageOuverture));
     let phraseTaux = t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
-      taux: tauxLisible(tauxVille),
+      taux: tauxLisible(tauxVille, data?.ville?.minutes),
       ...SANS_ECHAPPEMENT,
     });
     if (surPlage) {
       phraseTaux = t(
         'collectiviteChiffres.installations.tauxPlage',
         'Taux d’occupation : {{taux}}, calculé de 8 h à 22 h.',
-        { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
+        { taux: tauxLisible(tauxVille, data?.ville?.minutes), ...SANS_ECHAPPEMENT },
       );
     } else if (sur24h) {
       phraseTaux = t(
         'collectiviteChiffres.installations.taux24h',
         'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
-        { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
+        { taux: tauxLisible(tauxVille, data?.ville?.minutes), ...SANS_ECHAPPEMENT },
       );
     }
     return (
@@ -468,7 +468,7 @@ function CollectiviteChiffres() {
                 {
                   heures: dureeLisible(ligne?.minutes),
                   nom: ligne?.name,
-                  taux: tauxLisible(ligne?.taux),
+                  taux: tauxLisible(ligne?.taux, ligne?.minutes),
                   ...SANS_ECHAPPEMENT,
                 },
               )}

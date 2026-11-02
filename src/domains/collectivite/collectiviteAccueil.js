@@ -235,6 +235,41 @@ export const isOwnClubRequest = (demande, userData) => {
 };
 
 /**
+ * CORR-COLLECTIVITES 90 (31/10, Adel B), REPRISE-COLLECTIVITES 90 (01/11) — des créneaux de saison
+ * prennent la place sans être des séances : « 2 créneaux · aucune séance posée ». Même phrase sur
+ * l'accueil de la Ville et sur les cartes de sa page Planning.
+ * @param {any} t - La traduction (i18next).
+ * @param {number} creneaux - Les créneaux de saison de la semaine (plus de 0).
+ * @param {number} seances - Les séances posées.
+ * @returns {string} La phrase.
+ */
+export const phraseCreneauxEtSeances = (t, creneaux, seances) => {
+  const lesCreneaux = t('collectiviteAccueil.semaine.creneaux', {
+    count: creneaux,
+    defaultValue_one: '{{count}} créneau',
+    defaultValue_other: '{{count}} créneaux',
+  });
+  const posees = seances === 0
+    ? t('collectiviteAccueil.semaine.aucuneSeancePosee', 'aucune séance posée')
+    : t('collectiviteAccueil.semaine.seancesPosees', {
+      count: seances,
+      defaultValue_one: '{{count}} séance posée',
+      defaultValue_other: '{{count}} séances posées',
+    });
+  return `${lesCreneaux} · ${posees}`;
+};
+
+/**
+ * REPRISE-COLLECTIVITES 102 (01/11/2026) — une demande de gestion qui compte encore : une demande
+ * ANNULÉE par son auteur n'en est plus une. Le compte sans rôle sportif qui a tout annulé revient
+ * au choix de son statut (`doitChoisirSonStatut`), au lieu de rester sur « où en est ma demande ».
+ * @param {unknown} demandes - `/collectivite-manager-requests/mine`.
+ * @returns {boolean} Vrai s'il reste une demande en attente ou tranchée.
+ */
+export const aUneDemandeDeGestion = (demandes) => (Array.isArray(demandes) ? demandes : [])
+  .some((demande) => demande?.status !== 'cancelled');
+
+/**
  * Un compte « Ville seule » : il gère (ou demande à gérer) une collectivité et n'a AUCUN
  * rôle sportif (rôle « Authenticated », clef `new`). Lui arrive sur l'espace de la Ville ;
  * un compte mixte (dirigeant, joueur, entraîneur, parent qui gère aussi une Ville) garde

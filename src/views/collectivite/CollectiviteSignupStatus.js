@@ -386,6 +386,41 @@ function CollectiviteSignupStatus() {
         {enAttente.map(suiviDeDemande)}
       </View>
     );
+  } else if (derniere?.status === 'cancelled' && enAttente.length === 0) {
+    // REPRISE-COLLECTIVITES 102 (01/11) : la demande est annulée, l'écran le dit et ouvre deux
+    // sorties (avant : « Demande en cours de vérification », sans sortie).
+    contenu = (
+      <View style={{ gap: 20 }} testID="collectivite-demande-annulee">
+        <View style={{ gap: 4 }}>
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+            {t('collectivite.home.kicker', 'Ma collectivité').toUpperCase()}
+          </Text>
+          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+            {t('collectiviteAccueil.demande.annulee.titre', 'Demande annulée')}
+          </Text>
+        </View>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'collectiviteAccueil.demande.annulee.texte',
+            'Votre demande pour {{ville}} est annulée. Choisissez votre statut pour continuer, ou '
+              + 'refaites une demande.',
+            { ville: derniere?.collectivite?.name || '', ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+        <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
+          <Button
+            onPress={() => navigation.navigate(RouteNames.UserRole)}
+            title={t('collectiviteAccueil.demande.annulee.choisir', 'Choisir mon statut')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.CollectiviteSignup)}
+            title={t('collectiviteAccueil.demande.refusee.refaire', 'Refaire une demande')}
+            variant="Secondary"
+          />
+        </View>
+      </View>
+    );
   } else if (derniere) {
     // État 6 : en attente. Où en est la demande, et ce que l'espace permettra.
     const promesses = [

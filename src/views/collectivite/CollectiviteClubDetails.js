@@ -820,7 +820,7 @@ function CollectiviteClubDetails() {
                 }
               }}
               title={t('collectiviteClubs.detail.detacherOui', 'Oui, détacher')}
-              variant="Danger"
+              variant="DangerFilled"
             />
             <Button
               onPress={() => setConfirmerDetacher(false)}
@@ -833,7 +833,9 @@ function CollectiviteClubDetails() {
             onPress={() => setConfirmerDetacher(true)}
             style={{ alignSelf: 'flex-start' }}
             title={t('collectiviteClubs.detail.detacher', 'Détacher ce club')}
-            variant="Ghost"
+            // REPRISE-COLLECTIVITES 101 (01/11) : rouge, pas gris (on le prenait pour un bouton
+            // éteint) ; la confirmation est pleine.
+            variant="Danger"
           />
         )}
       </BlocDeFiche>

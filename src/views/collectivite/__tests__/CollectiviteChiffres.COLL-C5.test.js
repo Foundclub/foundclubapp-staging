@@ -441,3 +441,24 @@ describe('CORR-COLLECTIVITES 103 — le taux calculé de 8 h à 22 h se dit', ()
     ]);
   });
 });
+
+// REPRISE-COLLECTIVITES 103 (01/11/2026, Adel : « tester pour voir si avec quelques séances ça
+// marque toujours 0 % ») — mesuré en recette : 4 h 30 de séances sur 6 installations, 7 jours de
+// 8 h à 22 h, la moyenne de la Ville s'arrondit à 0 % (le Gymnase des Tilleuls seul : 2 %). Des
+// séances posées ne se disent plus « 0 % » : « < 1 % ».
+describe('REPRISE-COLLECTIVITES 103 — quelques séances ne font plus « 0 % »', () => {
+  it('séances posées, taux arrondi à 0 : « < 1 % » ; sans séance : « 0 % »', async () => {
+    const PLAGE = {
+      ...SEMAINE,
+      installations: SEMAINE.installations.map((/** @type {any} */ l) => ({
+        ...l, plageOuverture: '08:00-22:00', taux: 0,
+      })),
+      ville: { capaciteMinutes: 70560, minutes: 270, taux: 0 },
+    };
+    mockChiffres = { ...mockChiffres, data: PLAGE };
+    expect(textes(await monter())).toContain('Taux d’occupation : < 1 %, calculé de 8 h à 22 h.');
+    const sansSeance = { capaciteMinutes: 70560, minutes: 0, taux: 0 };
+    mockChiffres = { ...mockChiffres, data: { ...PLAGE, ville: sansSeance } };
+    expect(textes(await monter())).toContain('Taux d’occupation : 0 %, calculé de 8 h à 22 h.');
+  });
+});

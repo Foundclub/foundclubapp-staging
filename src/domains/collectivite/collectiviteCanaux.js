@@ -231,9 +231,12 @@ export const routeDeLaLigne = ({ espaceVille = false, message }) => {
   const collectiviteId = String(notice?.collectivite?.documentId || '');
   const actualiteId = String(notice?.actualite?.documentId || '');
   if (!collectiviteId || !actualiteId) return null;
-  return espaceVille
-    ? { name: RouteNames.CollectiviteActualites, params: { collectiviteId } }
-    : { name: RouteNames.CollectiviteActualitesCanal, params: { actualiteId, collectiviteId } };
+  // REPRISE-COLLECTIVITES 99 (01/11) : la Ville garde l'actualité visée, comme le membre (sa liste
+  // dit « retirée » quand elle n'y est plus).
+  return {
+    name: espaceVille ? RouteNames.CollectiviteActualites : RouteNames.CollectiviteActualitesCanal,
+    params: { actualiteId, collectiviteId },
+  };
 };
 
 /**

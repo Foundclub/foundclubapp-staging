@@ -338,3 +338,44 @@ describe('SubscriptionQuotaBanner — « deja couvert » (D59 ⑤)', () => {
     expect(texte).not.toContain('Déjà couvert');
   });
 });
+
+// REPRISE-COLLECTIVITES 27 (01/11/2026, décision d'Adel A, revue : « afficher “Offert par la Ville
+// de Montrivage” à la place de l'encadré dans l'assistant ») — le serveur rend un droit offert par
+// la Ville avec `offeredBy` et `paidBy: null` (bootstrap de la recette, relevé le 01/11) : le
+// bandeau exigeait un payeur nommé, donc il taisait la Ville, ou nommait un autre payeur.
+describe('REPRISE-COLLECTIVITES 27 — le club que la Ville offre', () => {
+  const COACH = {
+    club: { documentId: 'club-ville' }, documentId: 'u-3', role: { name: 'Entraineur' },
+  };
+  const offertParLaVille = {
+    offeredBy: { documentId: 'ville-1', name: 'Ville de Montrivage' },
+    paidBy: null,
+    scopeClubDocumentId: 'club-ville',
+    scopeType: 'CLUB',
+  };
+
+  test('l’offre de la Ville, sans payeur nommé : « Offert par la Ville de … »', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: [offertParLaVille],
+      subscriptionAccessLevel: 'CLUB',
+      subscriptionSummary: { activePlanCodes: [] },
+      userData: COACH,
+    });
+    expect(texte).toContain("Déjà couvert — tu n'as rien à payer");
+    expect(texte).toContain('Offert par la Ville de Montrivage pour tout le club.');
+  });
+
+  test('la Ville offre le club ET un dirigeant paie : la Ville est nommée', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: [
+        { ...couvertPar({ scopeType: 'CLUB' })[0], scopeClubDocumentId: 'club-ville' },
+        offertParLaVille,
+      ],
+      subscriptionAccessLevel: 'CLUB',
+      subscriptionSummary: { activePlanCodes: [] },
+      userData: COACH,
+    });
+    expect(texte).toContain('Offert par la Ville de Montrivage pour tout le club.');
+    expect(texte).not.toContain('paie l\'offre');
+  });
+});

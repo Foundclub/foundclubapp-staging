@@ -8,6 +8,8 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  formatCollectiviteOfferedBy,
+  getCollectiviteOffer,
   getCoveringEntitlement,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
@@ -110,6 +112,14 @@ function SubscriptionQuotaBanner({
     ],
   );
 
+  // REPRISE-COLLECTIVITES 27 (01/11, Adel A) : le club affiché, offert par une Ville. Le serveur
+  // rend ce droit avec `offeredBy` et sans payeur (`paidBy: null`) : `getCoveringEntitlement`, qui
+  // exige un payeur nommé, ne le voit pas ; la Ville passe devant tout autre payeur.
+  const offreDeLaVille = getCollectiviteOffer({
+    clubDocumentId: activeClubDocumentId,
+    entitlementsSummary,
+  });
+
   if (!canShowSubscriptionQuota) {
     return null;
   }
@@ -137,13 +147,13 @@ function SubscriptionQuotaBanner({
   // `getCoveringEntitlement`, qui exige les TROIS a la fois — niveau d'acces
   // connu et non gratuit, aucun plan paye par elle, et un tiers NOMME qui paie.
   // Sans nom de payeur, pas de bandeau : on ne peut pas expliquer la couverture.
-  if (coveringEntitlement) {
+  if (coveringEntitlement || offreDeLaVille) {
     const paidBy = coveringEntitlement?.paidBy || {};
     const firstname = String(paidBy?.firstname || '').trim();
     const lastnameInitial = String(paidBy?.lastname || '').trim().charAt(0).toUpperCase();
     const displayName = lastnameInitial ? `${firstname} ${lastnameInitial}.` : firstname;
     const scopeType = String(coveringEntitlement?.scopeType || '').trim().toUpperCase();
-    const isClubScope = scopeType === 'CLUB';
+    const isClubScope = Boolean(offreDeLaVille) || scopeType === 'CLUB';
     const offerName = isClubScope ? t('subscriptionQuotaBanner.covered.offerClub', 'Club') : t(
       'subscriptionQuotaBanner.covered.offerTeam',
       'Équipe',
@@ -158,7 +168,9 @@ function SubscriptionQuotaBanner({
 
     // CORR-TEXTES (point 27) : quand la Ville paie, on le dit (« Offert par la
     // Ville de … »), au lieu de nommer le dirigeant comme s'il payait.
-    const offertPar = String(coveringEntitlement?.offeredBy?.name || '').trim();
+    const offertPar = offreDeLaVille
+      ? formatCollectiviteOfferedBy(offreDeLaVille.name)
+      : String(coveringEntitlement?.offeredBy?.name || '').trim();
     const phraseCouverture = offertPar
       ? t('subscriptionQuotaBanner.covered.offeredBy', {
         coveredThing,

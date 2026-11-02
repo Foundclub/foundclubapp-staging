@@ -5239,6 +5239,12 @@ export default {
         texte: 'Vous gérez désormais la {{nom}} sur FoundClub.',
         titre: 'Votre espace est ouvert',
       },
+      annulee: {
+        choisir: 'Choisir mon statut',
+        // eslint-disable-next-line max-len
+        texte: 'Votre demande pour {{ville}} est annulée. Choisissez votre statut pour continuer, ou refaites une demande.',
+        titre: 'Demande annulée',
+      },
       attente: {
         annuler: 'Annuler ma demande',
         annulerOui: 'Oui, annuler',
@@ -6453,6 +6459,7 @@ export default {
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
       semaineAucune: 'Cette semaine : aucune séance',
+      semaineDetail: 'Cette semaine : {{detail}}',
       semaine_one: 'Cette semaine : {{count}} séance',
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',
