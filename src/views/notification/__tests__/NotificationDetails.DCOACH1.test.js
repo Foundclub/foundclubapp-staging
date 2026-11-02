@@ -22,10 +22,10 @@ jest.mock('@react-navigation/native', () => ({
 
 const mockInvalidateQueries = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
   useQuery: () => ({
     data: undefined, isError: false, isLoading: false, refetch: jest.fn(),
   }),
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 jest.mock('@/theme/themeContext', () => {

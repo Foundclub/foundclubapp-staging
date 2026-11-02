@@ -14,7 +14,7 @@ import { getChatLastMessage, getUnreadStatus } from './messagingUseCases';
 // OU plus recent : on borne ici aussi. 🧨 Sur l ONGLET le nombre reste un NOMBRE :
 // PrivateTabNavigator n affiche la pastille que si `badge > 0`, et une chaine
 // « 99+ » vaudrait false — la pastille disparaitrait au moment ou elle compte le plus.
-export { UNREAD_BADGE_CAP, formatUnreadBadge as formatThreadUnreadBadge };
+export { formatUnreadBadge as formatThreadUnreadBadge, UNREAD_BADGE_CAP };
 
 /**
  * Ramene un compte brut a ce que la pastille de l onglet sait afficher.
@@ -110,8 +110,8 @@ const getServerUnreadTotal = (queryClient) => {
  *   3. l ancien calcul — si le serveur ne compte pas du tout. L app peut
  *      partir AVANT le serveur : rien ne casse, la pastille compte des
  *      conversations comme avant.
- * @param {Record<string, any>} [queryOptions] - FIN-CLOCHE : options de la liste (le menu du site la
- *   relit a son rythme, il n a pas de push pour le prevenir).
+ * @param {Record<string, any>} [queryOptions] - FIN-CLOCHE : options de la liste (le menu du
+ *   site la relit a son rythme, il n a pas de push pour le prevenir).
  * @returns {{ unreadCount: number }} Object containing unread messages count
  */
 const useUnreadMessages = (queryOptions = {}) => {

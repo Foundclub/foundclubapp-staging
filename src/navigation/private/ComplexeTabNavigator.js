@@ -10,8 +10,6 @@ import useAuth from '@/domains/auth/useAuth';
 import { totalDesPages } from '@/domains/complexe/complexeReservation';
 import { ecrireModeComplexe, rouvrirSurLeComplexe } from '@/domains/complexe/modeComplexe';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
-
-import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 import useTheme from '@/theme/themeContext';
 
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
@@ -19,6 +17,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
 
 import { useComplexeChoisi, useReservationsDuComplexe } from '@/services/complexe/complexeQueries';
+
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 
 const Tab = createBottomTabNavigator();
 

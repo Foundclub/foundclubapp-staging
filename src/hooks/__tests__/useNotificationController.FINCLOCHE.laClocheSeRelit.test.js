@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 

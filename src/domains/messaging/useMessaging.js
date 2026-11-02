@@ -1454,7 +1454,8 @@ const useMessaging = (currentChatId) => {
       }, (/** @type {any} */ ack) => {
         // MSG2 — le serveur repond avec le compte recalcule APRES l ecriture du
         // curseur. Un serveur ancien ne repond pas : l echo relit alors la liste.
-        // FIN-CLOCHE (02/11) : lire un fil lit aussi ses avis ; le prefixe couvre la cloche et le panneau.
+        // FIN-CLOCHE (02/11) : lire un fil lit aussi ses avis ; le prefixe couvre la cloche
+        // et le panneau.
         if (ack?.ok && Number(ack?.notificationsRead) > 0) {
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
         }

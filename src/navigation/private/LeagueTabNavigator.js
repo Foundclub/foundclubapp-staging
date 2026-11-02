@@ -12,11 +12,10 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 
-import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
-
 import { useGetLeagueTeamContext } from '@/services/leagueTeam/leagueTeamQueries';
 
 import { isLeagueCaptain } from '@/utils/league/captains';
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 // screens
 import MatchCenterScreen from '@/views/league/match/MatchCenterScreen';
 import Messaging from '@/views/Messaging';

@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
@@ -51,6 +52,10 @@ const monter = async () => {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } });
   // eslint-disable-next-line global-require
   const useAuth = require('../useAuth').default;
+  /**
+   * La sonde qui porte useAuth.
+   * @returns {null} Rien à afficher.
+   */
   function Sonde() {
     useAuth();
     return null;

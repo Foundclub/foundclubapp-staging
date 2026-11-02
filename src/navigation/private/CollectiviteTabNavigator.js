@@ -7,8 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { collectiviteTabs } from '@/domains/collectivite/collectiviteAccueil';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
-
-import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 import useTheme from '@/theme/themeContext';
 
 import {
@@ -20,6 +18,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
 
 import { useCollectiviteRequests } from '@/services/collectivite/collectiviteQueries';
+
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 
 const Tab = createBottomTabNavigator();
 

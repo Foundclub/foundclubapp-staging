@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import { createElement } from 'react';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
