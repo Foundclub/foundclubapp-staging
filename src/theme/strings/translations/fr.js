@@ -24529,6 +24529,16 @@ export default {
       pending: 'EN ATTENTE',
       player: 'PRATIQUANT·E / JOUEUR·SE',
     },
+    cancelRequest: {
+      action: 'Annuler ma demande',
+      actionLabel: 'Annuler ma demande pour rejoindre {{team}}',
+      confirm: 'Oui, annuler',
+      confirmMessage: 'Ta demande pour rejoindre {{team}} sera retirée. Tu pourras en refaire une plus tard.',
+      confirmTitle: 'Annuler ta demande ?',
+      errorMessage: 'Impossible d\'annuler ta demande pour le moment. Réessaie dans un instant.',
+      errorTitle: 'Demande non annulée',
+      keep: 'Garder ma demande',
+    },
     fields: {
       category: 'Catégorie',
       level: 'Niveau',

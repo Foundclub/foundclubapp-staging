@@ -42,6 +42,7 @@ import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import AnnulerMaDemande from '@/components/organisms/teamListContent/AnnulerMaDemande';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -1094,6 +1095,35 @@ function TeamListContent({
       );
     }
 
+    const surfaceStyle = [
+      styles.richCard,
+      { paddingHorizontal: cardPadding, paddingVertical: cardPadding },
+      // La bordure cyan 25 % vient de ClubCardSurface. Seuls les etats
+      // « en attente » / « invitation » la teintent, pour que la couleur
+      // de la carte porte la meme information que son badge.
+      stateLabel ? { borderColor: cardAccentColor } : null,
+    ];
+
+    // FIN-INSCRIPTION p3 : la demande d'équipe se retire depuis sa carte. Le bouton vit À CÔTÉ de
+    // la zone qui ouvre l'équipe, pas dedans : un bouton dans un bouton ne se lit pas au clavier.
+    if (stateVariant === 'pending' && item?.type !== 'club' && item?.requestId) {
+      return (
+        <View style={Spaces.marginVertical[12]}>
+          <ClubCardSurface style={surfaceStyle}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.92}
+              onPress={() => handleTeamSelect(item)}
+              style={styles.richCardLink}
+            >
+              {renderClassicContent()}
+            </TouchableOpacity>
+            <AnnulerMaDemande requestId={item.requestId} teamName={item.name} />
+          </ClubCardSurface>
+        </View>
+      );
+    }
+
     return (
       <View style={[{ position: 'relative' }]}>
         <TouchableOpacity
@@ -1102,16 +1132,7 @@ function TeamListContent({
           onPress={() => handleTeamSelect(item)}
           style={Spaces.marginVertical[12]}
         >
-          <ClubCardSurface
-            style={[
-              styles.richCard,
-              { paddingHorizontal: cardPadding, paddingVertical: cardPadding },
-              // La bordure cyan 25 % vient de ClubCardSurface. Seuls les etats
-              // « en attente » / « invitation » la teintent, pour que la couleur
-              // de la carte porte la meme information que son badge.
-              stateLabel ? { borderColor: cardAccentColor } : null,
-            ]}
-          >
+          <ClubCardSurface style={surfaceStyle}>
             {renderClassicContent()}
           </ClubCardSurface>
         </TouchableOpacity>
@@ -1541,6 +1562,9 @@ const styles = StyleSheet.create({
   // ClubCardSurface : ici, uniquement les cotes propres a la carte d'equipe.
   richCard: {
     borderRadius: 20,
+    gap: 12,
+  },
+  richCardLink: {
     gap: 12,
   },
   statCell: {

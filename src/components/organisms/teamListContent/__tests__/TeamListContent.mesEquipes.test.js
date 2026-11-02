@@ -44,6 +44,11 @@ jest.mock('@/domains/team/useParentTeams', () => ({
   __esModule: true,
   default: (options) => mockParentTeams(options),
 }));
+jest.mock('@/components/organisms/teamListContent/AnnulerMaDemande', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockUseAuth(),

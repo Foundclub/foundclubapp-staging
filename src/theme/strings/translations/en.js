@@ -23435,6 +23435,16 @@ export default {
       pending: 'PENDING',
       player: 'PLAYER / PARTICIPANT',
     },
+    cancelRequest: {
+      action: 'Cancel my request',
+      actionLabel: 'Cancel my request to join {{team}}',
+      confirm: 'Yes, cancel',
+      confirmMessage: 'Your request to join {{team}} will be withdrawn. You can send a new one later.',
+      confirmTitle: 'Cancel your request?',
+      errorMessage: 'We could not cancel your request right now. Please try again in a moment.',
+      errorTitle: 'Request not cancelled',
+      keep: 'Keep my request',
+    },
     fields: {
       category: 'Category',
       level: 'Level',

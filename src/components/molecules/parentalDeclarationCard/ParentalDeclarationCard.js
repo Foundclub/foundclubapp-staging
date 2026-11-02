@@ -93,6 +93,7 @@ function ParentalDeclarationCard({
 
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
         <Checkbox
+          accessibilityLabel={checkboxLabel}
           disabled={disabled}
           onValueChange={onChange}
           value={checked}
