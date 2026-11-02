@@ -18,6 +18,15 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useMyLicenses: () => mockMesCotisations,
 }));
 
+// FIN-PARENT (02/11) : l ecran lit le role du compte, et sa branche Parent ses enfants ; ce temoin
+// parle d un compte qui n est pas Parent.
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ accountRoleKey: 'player' }),
+}));
+jest.mock('@/services/parentLink/parentLinkQueries', () => ({}));
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({}));
+
 const mockNavigationContexte = { goBack: jest.fn(), navigate: jest.fn() };
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigationContexte,

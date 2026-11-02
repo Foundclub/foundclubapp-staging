@@ -14,6 +14,7 @@ import {
   duplicateLicenseCampaign,
   generateLicenseAssignments,
   generateLicenseReceipt,
+  getChildrenCurrentLicenses,
   getCMLicenseAssignments,
   getCMLicenseCampaigns,
   getCMLicenseDashboard,
@@ -171,6 +172,17 @@ export const useMyLicenseAssignment = (/** @type {any} */ assignmentId, /** @typ
   enabled: Boolean(assignmentId) && (options.enabled ?? true),
   queryFn: () => getMyLicenseAssignment(assignmentId),
   queryKey: licenseKeys.mineAssignment(assignmentId),
+  staleTime: 20_000,
+  ...options,
+});
+
+export const useChildrenLicenses = (
+  /** @type {string[]} */ childIds,
+  /** @type {any} */ options = {},
+) => useQuery({
+  enabled: childIds.length > 0 && (options.enabled ?? true),
+  queryFn: () => getChildrenCurrentLicenses(childIds),
+  queryKey: ['licenses', 'children', ...childIds],
   staleTime: 20_000,
   ...options,
 });
