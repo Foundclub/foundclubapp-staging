@@ -16201,6 +16201,12 @@ export default {
       instalments_one: '{{count}} instalment',
       instalments_other: '{{count}} instalments',
     },
+    children: {
+      empty: 'No child declared yet.',
+      intro: "Your children's fees.",
+      none: 'No fees yet.',
+      open: 'My children',
+    },
     empty: {
       description: 'No fee is linked to your account yet.',
     },

@@ -8,6 +8,9 @@ import { getApiBaseUrl } from '@/config/runtimeUrls';
 import client from '../client';
 
 const unwrap = (/** @type {any} */ response) => response?.data?.data ?? response?.data;
+const statusOf = (/** @type {any} */ e) => Number(
+  e?.status ?? e?.response?.status ?? e?.response?.data?.error?.status,
+);
 const unwrapFetchJson = async (response) => {
   const text = await response.text();
   // BH11 P2-20 : une page HTML (413, 502) n est pas du JSON ; on garde le code HTTP.
@@ -221,12 +224,29 @@ export const getUserCurrentLicense = async (/** @type {any} */ userId) => {
   try {
     return unwrap(await client.get(`/licenses/users/${userId}/current`));
   } catch (erreur) {
-    const e = /** @type {any} */ (erreur);
-    const code = Number(e?.status ?? e?.response?.status ?? e?.response?.data?.error?.status);
-    if (code === 404) return null;
+    if (statusOf(erreur) === 404) return null;
     throw erreur;
   }
 };
+/**
+ * FIN-PARENT (02/11, Adel « 3d enfants ») — la cotisation de chacun des enfants d'un parent.
+ * Le serveur relit le lien et l'âge à chaque appel (`resolveOfficialLicenseViewer`) : un 403 veut
+ * dire que ce lien vient de s'éteindre (18 ans), pas une panne.
+ * ponytail: une seule cotisation par enfant, la courante ; un enfant dans deux clubs n'en montre
+ * qu'une. Sortie : une route serveur qui rend toutes celles de l'enfant.
+ * @param {string[]} childIds - Les comptes de ses enfants (`/parent-links/as-parent`).
+ * @returns {Promise<Record<string, any>>} La cotisation de chacun, ou `null`.
+ */
+export const getChildrenCurrentLicenses = async (/** @type {string[]} */ childIds) => (
+  Object.fromEntries(await Promise.all(childIds.map(async (childId) => {
+    try {
+      return [childId, await getUserCurrentLicense(childId)];
+    } catch (erreur) {
+      if (statusOf(erreur) === 403) return [childId, null];
+      throw erreur;
+    }
+  })))
+);
 export const createLicenseCheckout = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/checkout`, payload));
 export const declareExternalLicensePayment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/external-payment-declared`, payload));
 export const getPublicLicensePayment = async (/** @type {any} */ token) => unwrap(await client.get(`/licenses/pay/${token}`));

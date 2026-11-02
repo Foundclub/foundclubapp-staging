@@ -16964,6 +16964,12 @@ export default {
       instalments_one: '{{count}} échéance',
       instalments_other: '{{count}} échéances',
     },
+    children: {
+      empty: 'Aucun enfant déclaré pour l’instant.',
+      intro: 'Les cotisations de tes enfants.',
+      none: 'Aucune cotisation pour l’instant.',
+      open: 'Mes enfants',
+    },
     empty: {
       description: 'Aucune cotisation n’est encore rattachée à ton compte.',
     },
