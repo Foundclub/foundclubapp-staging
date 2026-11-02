@@ -766,7 +766,10 @@ function ComplexeTerrain() {
         onFermer={() => setARetirer(null)}
         onRetire={() => {
           setARetirer(null);
-          navigation.goBack();
+          // FIN-RESA : fiche ouverte par son adresse, pas de page précédente ; le retour du site
+          // mène à l'accueil, en mode Dirigeant pour un gérant qui dirige aussi un club.
+          if (navigation.canGoBack()) navigation.goBack();
+          else navigation.replace(RouteNames.ComplexeInstallations, { complexeId });
         }}
         terrain={aRetirer}
       />
