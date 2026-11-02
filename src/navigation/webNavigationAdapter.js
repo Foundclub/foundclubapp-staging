@@ -154,9 +154,7 @@ export const createWebNavigationAdapter = ({
       }
 
       if (type === 'RESET') {
-        const resetTarget = resolveResetTarget(payload);
-        if (!resetTarget) return;
-        adapter.replace(resetTarget.routeName, resetTarget.params);
+        adapter.reset(payload);
       }
     },
     getParent: () => parentNavigation || adapter,
@@ -195,9 +193,20 @@ export const createWebNavigationAdapter = ({
       }
       replace(buildWebPath(routeName, nextParams), carryParams(routeName, nextParams));
     },
-    reset: (resetState = {}) => {
+    reset: (/** @type {{ index?: number, routes?: any[] }} */ resetState = {}) => {
       const resetTarget = resolveResetTarget(resetState);
       if (!resetTarget) {
+        return;
+      }
+      // FIN-CHEMINS (02/11, 94) : une pile posée sous l'écran visible se perdait, et le retour tombait
+      // dans ce qu'on venait de quitter : après une création, « Plus tard » sur l'affiche revenait à
+      // l'étape 7 de l'assistant au lieu de la fiche. L'écran du dessous reprend l'entrée courante.
+      // ponytail: seul l'écran juste en dessous est reposé, et ce qui précédait (l'assistant) reste
+      // plus loin dans l'historique du navigateur, qu'un site ne vide pas.
+      const dessous = resetState?.routes?.[(resetState?.index ?? 0) - 1];
+      if (dessous?.name) {
+        adapter.replace(dessous.name, dessous.params || {});
+        adapter.push(resetTarget.routeName, resetTarget.params);
         return;
       }
       adapter.replace(resetTarget.routeName, resetTarget.params);

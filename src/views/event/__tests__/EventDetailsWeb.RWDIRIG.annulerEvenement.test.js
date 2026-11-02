@@ -21,7 +21,12 @@ const mockCreateEventReport = jest.fn(() => Promise.resolve({ data: { id: 1 } })
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
-jest.mock('@/views/event/components/VillePrevenueDialog', () => () => null);
+/** @type {{ props: any }} */
+const mockVillePrevenue = { props: null };
+jest.mock('@/views/event/components/VillePrevenueDialog', () => (/** @type {any} */ props) => {
+  mockVillePrevenue.props = props;
+  return null;
+});
 
 jest.mock('@/views/event/components/EventChildRegistration', () => ({
   __esModule: true,
@@ -109,6 +114,7 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
 
 const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 const mockGoBack = jest.fn();
+const mockReplace = jest.fn();
 const mockRespondToEventRsvp = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/event/eventService', () => ({
   cancelEvent: (/** @type {any} */ data) => mockCancelEvent(data),
@@ -209,7 +215,7 @@ const buildEvent = (/** @type {any} */ overrides = {}) => ({
 /** @type {any} */
 let mounted = null;
 
-const mountScreen = (/** @type {any} */ { auth = null, event } = {}) => {
+const mountScreen = (/** @type {any} */ { auth = null, event, routeParams = {} } = {}) => {
   mockEventQuery.data = event;
   mockUseAuth.mockReturnValue(auth || {
     canEditClub: () => true,
@@ -226,9 +232,10 @@ const mountScreen = (/** @type {any} */ { auth = null, event } = {}) => {
           addListener: () => () => {},
           goBack: mockGoBack,
           navigate: mockNavigate,
+          replace: mockReplace,
           setOptions: jest.fn(),
         }}
-        route={{ params: { eventId: 'event-1' } }}
+        route={{ params: { eventId: 'event-1', ...routeParams } }}
       />,
     );
   });
@@ -700,5 +707,49 @@ describe('REPRISE-CHEMINS 41 · une fiche annulée, sur le site', () => {
   test('une fiche active garde « Gérer l événement » et pas de bandeau', () => {
     const root = mountScreen({ event: buildEvent() });
     expect(sections(root)).toEqual(['overview']);
+  });
+});
+
+// FIN-CHEMINS (02/11, 94, contre-recette 07:0x) — sur le site, la séance qu'on vient de créer a
+// l'assistant derrière elle dans l'historique : « C'est annulé · OK » y ramenait. Comme la sortie
+// du téléphone après une création (`handleBackAfterCreation`) : « Mes événements ». ROUGE avant.
+describe('FIN-CHEMINS 94 · annuler la séance qu on vient de créer', () => {
+  const annulerLaSeance = async (/** @type {any} */ root) => {
+    window.confirm = jest.fn(() => true);
+    const bouton = annuler(ouvrirMenu(root));
+    await act(async () => {
+      bouton.props.onClick();
+    });
+  };
+
+  test('🔴 sans Ville : « Mes événements », pas l assistant', async () => {
+    const root = mountScreen({ event: buildEvent(), routeParams: { fromEventCreation: true } });
+    await annulerLaSeance(root);
+    expect(mockReplace).toHaveBeenCalledWith('MyEventList');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('🔴 Ville prévenue : « OK » mène à « Mes événements », pas à l assistant', async () => {
+    mockCancelEvent.mockImplementationOnce(() => Promise.resolve({
+      data: {}, meta: { collectivitePrevenue: { collectiviteName: 'Ville de Montrivage' } },
+    }));
+    const root = mountScreen({ event: buildEvent(), routeParams: { fromEventCreation: true } });
+    await annulerLaSeance(root);
+    expect(mockVillePrevenue.props.message).toContain('Ville de Montrivage');
+    expect(mockReplace).not.toHaveBeenCalled();
+    act(() => mockVillePrevenue.props.onClose());
+    expect(mockReplace).toHaveBeenCalledWith('MyEventList');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('🔒 une séance ouverte d ailleurs : « OK » revient en arrière', async () => {
+    mockCancelEvent.mockImplementationOnce(() => Promise.resolve({
+      data: {}, meta: { collectivitePrevenue: { collectiviteName: 'Ville de Montrivage' } },
+    }));
+    const root = mountScreen({ event: buildEvent() });
+    await annulerLaSeance(root);
+    act(() => mockVillePrevenue.props.onClose());
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

@@ -904,6 +904,17 @@ function EventDetails({ navigation, route }) {
         .sort((gauche, droite) => new Date(gauche?.date || 0) - new Date(droite?.date || 0))
       : []
   ), [event?.childStageEvents, event?.eventFormat]);
+  // FIN-CHEMINS (02/11, 94) : le site garde l'assistant de création dans l'historique, juste derrière
+  // la séance qu'il vient de créer. Comme le téléphone après une création : « Mes événements ».
+  // ponytail: le bouton « précédent » du navigateur peut encore y revenir ; le site ne vide pas
+  // l'historique. Sortie : un assistant dont les étapes se remplacent au lieu de s'empiler.
+  const quitterApresLAnnulation = () => {
+    if (fromEventCreation) {
+      navigation.replace(RouteNames.MyEventList);
+      return;
+    }
+    navigation.goBack();
+  };
   const annulerEvenement = useMutation({
     mutationFn: cancelEvent,
     onSuccess: (/** @type {any} */ reponse) => {
@@ -923,7 +934,7 @@ function EventDetails({ navigation, route }) {
         ));
         return;
       }
-      navigation.goBack();
+      quitterApresLAnnulation();
     },
   });
   const annulerLEvenement = useCallback(async () => {
@@ -3883,7 +3894,7 @@ function EventDetails({ navigation, route }) {
         message={villePrevenue}
         onClose={() => {
           setVillePrevenue(null);
-          navigation.goBack();
+          quitterApresLAnnulation();
         }}
       />
     </ScreenContainer>
