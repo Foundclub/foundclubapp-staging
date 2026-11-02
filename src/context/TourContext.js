@@ -781,6 +781,11 @@ export function TourProvider({ children }) {
   const isGuide = isGuideProfile(profile);
   const currentMission = isGuide ? getMission(profile, currentStep?.missionId) : null;
 
+  // FIN-GUIDE : l'attente est finie (club ou équipe qui a répondu) : la pastille ne dit plus « En
+  // attente ». Recalculé au rendu : la réponse arrive avec le profil relu, le guide en pause.
+  const isWaitOver = Boolean(isGuide && tourState?.status === 'paused' && currentStep?.pausedLabel
+    && !isStepAvailable(currentStep, guideContext(tourState)));
+
   const value = useMemo(() => ({
     blocked: tourState?.blocked || null,
     completeCurrentStep,
@@ -797,6 +802,7 @@ export function TourProvider({ children }) {
     isLockedStep: Boolean(currentMission?.locked),
     isReview: Boolean(tourState?.review),
     isTourActive: Boolean(tourState),
+    isWaitOver,
     missionPosition: isGuide ? missionPosition(profile, currentStep?.missionId) : null,
     missions: isGuide ? profile.missions : [],
     missionStatus: tourState?.missionStatus || {},
@@ -821,6 +827,7 @@ export function TourProvider({ children }) {
     finishGuide,
     guideDone,
     isGuide,
+    isWaitOver,
     pauseTour,
     profile,
     restartTour,

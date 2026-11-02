@@ -97,7 +97,8 @@ function TourResumePill() {
           <View style={{ flex: 1, rowGap: 2 }}>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
               {/* L1 GUIDE-ATTENTE : une étape d'attente dit ce qu'elle attend. */}
-              {tour.currentStep?.pausedLabel || t('tourGuide.resume', 'Reprendre le tour')}
+              {(!tour.isWaitOver && tour.currentStep?.pausedLabel)
+                || t('tourGuide.resume', 'Reprendre le tour')}
             </Text>
             {/* Le tout sur la même ligne : sur un petit écran, rien n'est coupé, elle passe à la suivante. */}
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>

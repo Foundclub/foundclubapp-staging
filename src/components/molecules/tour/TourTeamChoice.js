@@ -40,7 +40,7 @@ function TourTeamChoice() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { refetchUserData, userData } = /** @type {any} */ (useAuth());
-  const { completeCurrentStep, pauseTour } = useTour();
+  const { completeCurrentStep, currentMission, missionPosition, pauseTour } = useTour();
   const [selectedId, setSelectedId] = useState(/** @type {string | null} */ (null));
 
   const clubId = resolveMyClubDocumentId(userData) || undefined;
@@ -145,8 +145,9 @@ function TourTeamChoice() {
           textTransform: 'uppercase',
         }]}
         >
-          {t('tourGuide.mission', 'Mission')}
-          {' 1'}
+          {`${t('tourGuide.mission', 'Mission')} ${missionPosition?.index || 1}`
+            + `/${missionPosition?.total || 4}`
+            + `${currentMission?.title ? ` · ${currentMission.title}` : ''}`}
         </Text>
         <Text style={[Fonts.h1Black, { color: Colors.neutral00, fontSize: 25, lineHeight: 32 }]}>
           {t('tourCatalog.coach.m1-choice.title', 'Es-tu entraîneur·e d’une de ces équipes ?')}

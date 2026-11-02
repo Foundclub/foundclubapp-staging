@@ -217,6 +217,20 @@ describe('point 1 — la question « Es-tu entraîneur d’une de ces équipes ?
     expect(stepId()).toBe('m2-card');
   });
 
+  it('réponse arrivée pendant la pause : la pastille ne dit plus « En attente »', () => {
+    mockUserData = { ...mockUserData, teamMembershipRequests: [PENDING_TEAM] };
+    start();
+    pressNext();
+    pressNext();
+    expect(tour.isWaitOver).toBe(false);
+    mockUserData = {
+      ...mockUserData,
+      teamMembershipRequests: [{ ...PENDING_TEAM, state: 'refused' }],
+    };
+    rerender();
+    expect(tour.isWaitOver).toBe(true);
+  });
+
   it('refusée pendant la pause : la question revient à la reprise', () => {
     mockUserData = { ...mockUserData, teamMembershipRequests: [PENDING_TEAM] };
     start();

@@ -63,13 +63,13 @@ describe('n° 24 — la pastille dit où en est le guide', () => {
     mount();
     expect(texts()).toContain('Mission 2/4');
     expect(texts()).toContain('Inviter tes joueur·se·s');
-    expect(texts()).toContain('25 %');
+    expect(texts()).toContain('25\u00A0%');
   });
 
   it('en pause sur l’ouverture (pas encore de mission) : la jauge seule', () => {
     mockTour = pausedTour({ currentMission: null, gauge: 0, missionPosition: null });
     mount();
-    expect(texts()).toContain('0 %');
+    expect(texts()).toContain('0\u00A0%');
     expect(texts()).not.toContain('Mission');
   });
 });

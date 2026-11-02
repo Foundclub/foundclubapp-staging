@@ -76,6 +76,24 @@ describe('TourResumePill redessinée', () => {
   });
 });
 
+describe('Attente finie', () => {
+  const title = () => tree.root.findAll((node) => typeof node.type === 'string'
+    && typeof node.props.children === 'string').map((node) => node.props.children)[0];
+
+  it('en attente : elle le dit ; réponse arrivée : « Reprendre le tour »', () => {
+    mockTour = pausedTour({ currentStep: { pausedLabel: 'En attente de ton équipe · Reprendre' } });
+    mount();
+    expect(title()).toMatch(/En attente/);
+    act(() => tree.unmount());
+    mockTour = pausedTour({
+      currentStep: { pausedLabel: 'En attente de ton équipe · Reprendre' },
+      isWaitOver: true,
+    });
+    mount();
+    expect(title()).toBe('Reprendre le tour');
+  });
+});
+
 describe('Place dans l’accueil', () => {
   it('sous le titre ACCUEIL, plus au-dessus : elle ne le pousse plus', () => {
     const source = readFileSync(
