@@ -855,14 +855,6 @@ function CollectiviteHome() {
           ),
           titre: t('collectiviteAccueil.actions.inviteClub.titre', 'Inviter un club'),
         };
-      case 'publishNews':
-        return {
-          dit: t(
-            'collectiviteAccueil.actions.publishNews.dit',
-            'Lue par tous les membres de vos clubs.',
-          ),
-          titre: t('collectiviteAccueil.actions.publishNews.titre', 'Publier une actualité'),
-        };
       default:
         return {
           dit: t('collectiviteAccueil.actions.addInstallation.dit', 'Gymnase, terrain, salle.'),

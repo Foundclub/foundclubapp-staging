@@ -430,7 +430,7 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
 
     expect(mockAlerte).not.toHaveBeenCalled();
     expect(textes(arbre))
-      .toContain('Attribuer met 3 équipes pour 2 places, chaque mercredi de la saison.');
+      .toContain('Complet : AS Montrivage · U15 et Montrivage FC · Senior B y sont déjà. Si vous attribuez, 3 équipes partageront 2 places.');
     expect(textes(arbre).join(' ')).not.toContain('deja pleine');
     expect(parTexte(arbre, 'Attribuer quand même')).toBeDefined();
     expect(parTexte(arbre, 'Changer l’heure')).toBeDefined();

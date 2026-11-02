@@ -257,14 +257,21 @@ describe('COLL-CLUBS — planche 2 : la fiche d’un club, côté mairie', () =>
     expect(Linking.openURL).toHaveBeenCalledWith('mailto:contact@foundclubpro.com');
   });
 
-  it('un club qui paie lui-même : son propre abonnement, sans montant ; partenaires', async () => {
+  it('un club qui paie lui-même : pas de carte « L’offre », sans montant ; partenaires', async () => {
     mockFiche = {
       data: MONTRIVAGE_FC, error: null, isLoading: false, refetch: jest.fn(),
     };
-    const lus = textes(await monter());
+    const arbre = await monter();
+    const lus = textes(arbre);
+    // RET-VILLE 24 (02/11, Adel « A ») : l'abonnement d'un club qui paie lui-même ne regarde pas la
+    // Ville. D70 change d'attendu : plus de carte ni de renvoi vers FoundClub, plus de pastille ;
+    // « Détacher ce club » reste sur la fiche.
+    expect(titresDesBlocs(arbre)).not.toContain('L’offre');
+    expect(lus).not.toContain('Son propre abonnement');
+    expect(lus).not.toContain('Son propre abonnement.');
+    expect(lus).not.toContain('Pour la changer, écrivez à l’équipe FoundClub.');
+    expect(boutonTitre(arbre, 'Détacher ce club')).toBeTruthy();
     expect(lus).toEqual(expect.arrayContaining([
-      'Son propre abonnement',
-      'Son propre abonnement.',
       'Boulangerie Martin',
       'Le club ne rend pas public le nom de ses dirigeants.',
       'Aucune demande en attente.',
@@ -272,6 +279,15 @@ describe('COLL-CLUBS — planche 2 : la fiche d’un club, côté mairie', () =>
       'contact@foundclubpro.example.invalid',
     ]));
     expect(lus.some((texte) => /€|formule|tarif/i.test(texte))).toBe(false);
+  });
+
+  it('la Ville paie : la carte reste, et « Détacher ce club » n’est plus dedans', async () => {
+    const arbre = await monter();
+    expect(titresDesBlocs(arbre)).toContain('L’offre');
+    const carte = parTestID(arbre, 'fiche-club-offre');
+    const dansLaCarte = carte.findAll((/** @type {any} */ n) => n.props?.title === 'Détacher ce club');
+    expect(dansLaCarte).toHaveLength(0);
+    expect(boutonTitre(arbre, 'Détacher ce club')).toBeTruthy();
   });
 
   it('erreur : le dire, et « Réessayer » relit la fiche', async () => {

@@ -190,7 +190,7 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
     expect(lus).toEqual(expect.arrayContaining([
       'Inviter un club absent de FoundClub',
       LIEN,
-      'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment : l’ancien ne marche plus.',
+      'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment avec le bouton ci-dessous : l’ancien ne marche plus.',
     ]));
   });
 

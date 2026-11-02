@@ -30,10 +30,8 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
   {
     icon: 'calendar', key: 'assignSlot', lot: 'C2a + C2b', route: 'CollectiviteInstallations',
   },
-  // Les actualités de la Ville (lot C4a, 02/10 : le formulaire « Nouvelle actualité »).
-  {
-    icon: 'send', key: 'publishNews', lot: 'C4a', route: 'CollectiviteActualiteForm',
-  },
+  // RET-VILLE 21 (02/11, Adel « A ») : plus de « Publier une actualité » ici, le bloc « Actualités
+  // de la Ville » de l'accueil la garde, même pour une Ville sans actualité.
   // Fermer une installation, bloquer un créneau (lot C4b, 02/10 : le formulaire de la fermeture).
   {
     icon: 'close',

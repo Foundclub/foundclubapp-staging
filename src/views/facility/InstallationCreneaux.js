@@ -416,8 +416,8 @@ function InstallationCreneaux() {
             : undefined}
           description={t(
             'collectiviteCreneaux.creneaux.videTexte',
-            'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
-              + 'choisies : le club y pose ses entraînements sans rien vous demander.',
+            'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste ponctuel : '
+            + 'le club y pose ses entraînements sans rien vous demander.',
           )}
           onAction={canManage ? () => attribuer() : undefined}
           title={t('collectiviteCreneaux.creneaux.vide', 'Aucun créneau attribué')}
@@ -486,7 +486,7 @@ function InstallationCreneaux() {
               accessibilityRole="header"
               style={[Fonts.p2Bold, Fonts.primary200, Spaces.marginTop[8]]}
             >
-              {t('collectiviteCreneaux.quand.groupeDates', 'Dates choisies')}
+              {t('collectiviteCreneaux.quand.groupeDates', 'Créneaux ponctuels')}
             </Text>
             {aDates.map(carteDeCreneau)}
           </View>

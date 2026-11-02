@@ -17,6 +17,7 @@ import {
   isoWeekdayOf,
   isTime,
   overCapacityPreviewOf,
+  phraseDuComplet,
   SEASON_SLOT_WEEKDAYS,
   seasonSlotErrorMessage,
   slotOccursOn,
@@ -1028,24 +1029,6 @@ function SeasonSlotForm({
   const nomDuJour = jour && !joursDifferents
     ? weekdayName(Number(jour), { inSentence: true })
     : '';
-  const quandDuDepassement = (() => {
-    if (formeChoisie === 'dates') {
-      return t('collectiviteCreneaux.quand.aLeursDates', 'aux dates choisies');
-    }
-    if (formeChoisie === 'deuxSemaines') {
-      return t('collectiviteCreneaux.quand.unSurDeuxCourt', 'un {{jour}} sur deux', {
-        jour: nomDuJour, ...SANS_ECHAPPEMENT,
-      });
-    }
-    if (formeChoisie === 'periode') {
-      return t('collectiviteCreneaux.quand.chaqueDeLaPeriode', 'chaque {{jour}} de la période', {
-        jour: nomDuJour, ...SANS_ECHAPPEMENT,
-      });
-    }
-    return t('collectiviteCreneaux.quand.chaqueDeLaSaison', 'chaque {{jour}} de la saison', {
-      jour: nomDuJour, ...SANS_ECHAPPEMENT,
-    });
-  })();
   const listeDeDates = (/** @type {string[]} */ jours, /** @type {number} */ max = 4) => {
     const lus = jours.slice(0, max).map((jourCivil) => formatDay(jourCivil, { withYear: false }));
     return jours.length > max
@@ -1054,12 +1037,12 @@ function SeasonSlotForm({
       })
       : lus.join(' · ');
   };
-  // « 37 mercredis » / « 3 dates choisies ».
+  // « 37 mercredis » / « 3 créneaux ponctuels ».
   const titreDesSeances = formeChoisie === 'dates'
     ? t('collectiviteCreneaux.quand.datesChoisies', {
       count: seancesVues.length,
-      defaultValue_one: '{{count}} date choisie',
-      defaultValue_other: '{{count}} dates choisies',
+      defaultValue_one: '{{count}} créneau ponctuel',
+      defaultValue_other: '{{count}} créneaux ponctuels',
     })
     : t('collectiviteCreneaux.quand.seances', {
       count: seancesVues.length,
@@ -1234,14 +1217,10 @@ function SeasonSlotForm({
     }
     const depassement = besoinDeConfirmer
       && Number(place.teamsAfter) > Number(place.capacity || capacite)
-      ? t('collectiviteCreneaux.attribuer.depassement', {
-        capacite: Number(place.capacity || capacite),
-        count: Number(place.teamsAfter),
-        defaultValue_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, {{quand}}.',
-        defaultValue_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, {{quand}}.',
-        // R17-QUAND-1 — « chaque mercredi de la saison » n'est vrai que pour toute la saison.
-        quand: quandDuDepassement,
-        ...SANS_ECHAPPEMENT,
+      ? phraseDuComplet(t, {
+        equipes: Number(place.teamsAfter),
+        occupants,
+        places: Number(place.capacity || capacite),
       })
       : null;
     const couleur = besoinDeConfirmer ? Colors.warning500 : Colors.success500;
@@ -1470,7 +1449,7 @@ function SeasonSlotForm({
   // R17-QUAND-1 — le rythme dit la forme choisie : « chaque mercredi » n'est plus toujours vrai.
   const rythme = (/** @type {string} */ suite) => {
     if (formeChoisie === 'dates') {
-      return t('collectiviteCreneaux.quand.rythmeDates', 'Dates choisies · {{suite}}', {
+      return t('collectiviteCreneaux.quand.rythmeDates', 'Créneaux ponctuels · {{suite}}', {
         suite, ...SANS_ECHAPPEMENT,
       });
     }
@@ -1681,7 +1660,7 @@ function SeasonSlotForm({
       actif: formeChoisie === 'dates',
       detail: t('collectiviteCreneaux.quand.datesDetail', 'Les jours que vous cochez'),
       key: 'quand-dates',
-      libelle: t('collectiviteCreneaux.quand.dates', 'Des dates choisies'),
+      libelle: t('collectiviteCreneaux.quand.dates', 'Des créneaux ponctuels'),
       onPress: () => choisirForme('dates'),
       testID: 'quand-dates',
     },

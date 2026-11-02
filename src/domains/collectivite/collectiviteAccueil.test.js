@@ -25,9 +25,9 @@ import {
 
 describe('COLL-ACCUEIL — les actions de l accueil', () => {
   // R17-EVT-1 (20/10, planche P11-evenement-ou-ca-vit) : « Ajouter un événement », en 7e.
-  it('sept actions, dans l ordre de la planche', () => {
+  it('six actions, dans l ordre de la planche', () => {
     expect(COLLECTIVITE_HOME_ACTIONS.map((action) => action.key)).toEqual([
-      'assignSlot', 'publishNews', 'closeInstallation',
+      'assignSlot', 'closeInstallation',
       'blockSlot', 'inviteClub', 'addInstallation', 'addEvent',
     ]);
   });
@@ -38,7 +38,7 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » aussi.
     // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Inviter un club » (C-CLUBS).
     expect(affichees.map((action) => action.key)).toEqual([
-      'assignSlot', 'publishNews', 'closeInstallation',
+      'assignSlot', 'closeInstallation',
       'blockSlot', 'inviteClub', 'addInstallation', 'addEvent',
     ]);
     affichees.forEach((action) => {
@@ -48,7 +48,7 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
 
   it('« Attribuer un créneau » : une installation ⇒ ses créneaux ; sinon la liste', () => {
     const attribuer = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'assignSlot');
-    const publier = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'publishNews');
+    const inviter = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'inviteClub');
     expect(homeActionTarget(/** @type {any} */ (attribuer), [{ documentId: 'tilleuls' }])).toEqual({
       params: { facilityId: 'tilleuls' }, route: 'CollectiviteInstallation',
     });
@@ -58,8 +58,8 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     expect(homeActionTarget(/** @type {any} */ (attribuer), undefined))
       .toEqual({ params: {}, route: 'CollectiviteInstallations' });
     // Les autres actions ne regardent pas les installations.
-    expect(homeActionTarget(/** @type {any} */ (publier), [{ documentId: 'tilleuls' }]))
-      .toEqual({ params: {}, route: 'CollectiviteActualiteForm' });
+    expect(homeActionTarget(/** @type {any} */ (inviter), [{ documentId: 'tilleuls' }]))
+      .toEqual({ params: {}, route: 'CollectiviteInviteClub' });
   });
 });
 
