@@ -351,6 +351,16 @@ describe('COLL-ACCUEIL · sur le site, un compte Ville seule saute le statut', (
       expect(mockReset).not.toHaveBeenCalled();
     });
   });
+
+  // REPRISE-102BIS (02/11, contre-recette recette 19) : « Choisir mon statut » après une demande
+  // annulée ramenait à la demande. Une demande annulée ne compte plus (aUneDemandeDeGestion).
+  test('sa seule demande est annulée : il choisit son statut, sans renvoi', async () => {
+    await surLeSite(async () => {
+      mockDemandesGestion = [{ documentId: 'dm-1', status: 'cancelled' }];
+      await monter();
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+  });
 });
 
 // FINITIONS16 · POINT 21 (tournee T15, photo SITE_C08_AGE0 ; planche 8, P1-inscription-ordi

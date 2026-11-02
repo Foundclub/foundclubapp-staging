@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getRoleDocumentIdByKey, markOnboardingStarted } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
 import { lienDeLaVilleRetenu } from '@/domains/collectivite/lienDeLaVille';
 import useTheme from '@/theme/themeContext';
 
@@ -86,7 +87,9 @@ function UserRole({ navigation }) {
   const villes = useMyCollectivites({ enabled: sansRoleSportif });
   const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
   const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
-  const aDemande = Array.isArray(demandesDeGestion.data) && demandesDeGestion.data.length > 0;
+  // REPRISE-102BIS (02/11) : une demande annulée ne compte plus, comme sur l'accueil du site et
+  // au téléphone ; sinon « Choisir mon statut », après l'annulation, ramenait à la demande.
+  const aDemande = aUneDemandeDeGestion(demandesDeGestion.data);
   useEffect(() => {
     if (!sansRoleSportif) return;
     if (villeGeree?.documentId) {
