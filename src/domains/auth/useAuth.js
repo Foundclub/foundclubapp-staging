@@ -204,6 +204,10 @@ const useAuth = () => {
       await logout();
     },
     onSuccess: () => {
+      // REPRISE-CHEMINS (02/11) : la session sort D'ABORD (les requêtes du compte s'éteignent),
+      // le cache est vidé ensuite. Dans l'autre ordre, bootstrap et profil se recréaient avec le
+      // jeton encore dans le magasin et repartaient sans en-tête : deux 403 après « Déconnexion ».
+      appDispatch({ type: 'LOGOUT_CURRENT_SESSION' });
       queryClient.clear();
       // Clear all read message data
       const allKeys = storage.getAllKeys();
@@ -212,7 +216,6 @@ const useAuth = () => {
           storage.delete(key);
         }
       });
-      appDispatch({ type: 'LOGOUT_CURRENT_SESSION' });
     },
   });
 

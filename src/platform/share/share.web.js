@@ -35,18 +35,20 @@ const normalizeWebSharePayload = (payload = {}) => {
   return normalized;
 };
 
+// REPRISE-CHEMINS (02/11, point 45) : le partage rend ce qu'il a fait, pour que l'écran puisse
+// dire « Lien copié » quand le navigateur ne sait pas partager.
 export const share = async (payload = {}) => {
   const normalizedPayload = normalizeWebSharePayload(payload);
 
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     await navigator.share(normalizedPayload);
-    return;
+    return { action: 'partage' };
   }
 
   const text = buildShareText(payload);
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText && text) {
     await navigator.clipboard.writeText(text);
-    return;
+    return { action: 'copie' };
   }
 
   throw new Error(i18next.t(

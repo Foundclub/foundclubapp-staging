@@ -1490,7 +1490,8 @@ function EventDetails({ navigation, route }) {
     }] : []),
   ];
   // RWDIRIG (29/10, « 4- A ») : le menu vaut pour tous les types, pour que « Annuler » soit joignable.
-  const showManageMenu = Boolean(canEdit && manageMenuItems.length > 1);
+  // REPRISE-CHEMINS (02/11, point 41) : une fiche annulée n'a plus rien à gérer.
+  const showManageMenu = Boolean(canEdit && manageMenuItems.length > 1 && !isCancelled);
   const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
@@ -1543,9 +1544,12 @@ function EventDetails({ navigation, route }) {
   // rien a repondre (`rienARepondre`, point 1) et aucune reponse a lui. Aucune planche ne lui
   // montre de statut, le telephone n'en affiche pas : l'encart se tait. Une reponse qu'il aurait
   // quand meme (demande, participation, absence) reste dite.
-  const masquerMonStatut = rienARepondre && !['accepted', 'missing', 'pending'].includes(
+  // REPRISE-CHEMINS (02/11, point 41) : une fiche annulée ne dit plus « Tu participes » ni « Aucune
+  // réponse » : le bandeau « Annulé » en tête dit l'état.
+  const aUneReponse = ['accepted', 'missing', 'pending'].includes(
     String(participationState?.effectiveStatus || '').trim().toLowerCase(),
   );
+  const masquerMonStatut = isCancelled || (rienARepondre && !aUneReponse);
 
   const handleJoin = useCallback(async () => {
     setActionError('');
@@ -2104,6 +2108,39 @@ function EventDetails({ navigation, route }) {
             </button>
           </section>
         ) : null}
+        {/* REPRISE-CHEMINS (02/11, point 41) : le bandeau en TÊTE de la fiche, avant la carte (la
+            revue le trouvait sous le pli à 390 px). */}
+        {isCancelled ? (
+          <section
+            data-testid="event-cancelled-banner"
+            role="status"
+            style={{
+              background: 'rgba(255, 92, 92, 0.12)',
+              border: '1px solid rgba(255, 92, 92, 0.4)',
+              borderRadius: 20,
+              color: textColor,
+              display: 'grid',
+              gap: 6,
+              padding: 18,
+            }}
+          >
+            <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18 }}>
+              {event?.updatedAt
+                ? t('eventDetails.annule.titreDate', 'Annulé le {{date}}', {
+                  date: new Date(event.updatedAt)
+                    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : t('eventDetails.annule.titre', 'Événement annulé')}
+            </div>
+            <div style={{ color: mutedTextColor }}>
+              {t(
+                'eventDetails.annule.texte',
+                'L’organisateur a annulé cet événement : il n’y a plus rien à répondre.',
+              )}
+            </div>
+          </section>
+        ) : null}
         <section
           data-event-section="overview"
           style={{
@@ -2539,38 +2576,6 @@ function EventDetails({ navigation, route }) {
             ) : null}
           </div>
         </section>
-
-        {isCancelled ? (
-          <section
-            data-testid="event-cancelled-banner"
-            role="status"
-            style={{
-              background: 'rgba(255, 92, 92, 0.12)',
-              border: '1px solid rgba(255, 92, 92, 0.4)',
-              borderRadius: 20,
-              color: textColor,
-              display: 'grid',
-              gap: 6,
-              padding: 18,
-            }}
-          >
-            <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18 }}>
-              {event?.updatedAt
-                ? t('eventDetails.annule.titreDate', 'Annulé le {{date}}', {
-                  date: new Date(event.updatedAt)
-                    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
-                  ...SANS_ECHAPPEMENT,
-                })
-                : t('eventDetails.annule.titre', 'Événement annulé')}
-            </div>
-            <div style={{ color: mutedTextColor }}>
-              {t(
-                'eventDetails.annule.texte',
-                'L’organisateur a annulé cet événement : il n’y a plus rien à répondre.',
-              )}
-            </div>
-          </section>
-        ) : null}
 
         {error && !isEventGone ? (
           <section style={{

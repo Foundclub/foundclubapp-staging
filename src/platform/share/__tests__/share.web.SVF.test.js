@@ -50,3 +50,18 @@ describe('SVF 5c — un lien partagé depuis le site ne s écrit qu une fois', (
     expect(copie).toBe(`Invitation\n\n${message}`);
   });
 });
+
+// REPRISE-CHEMINS (02/11, point 45, revue « modifier ») : quand le navigateur ne sait pas partager,
+// le lien part au presse-papiers ; l'écran doit pouvoir dire « Lien copié ». Le partage rend donc
+// ce qu'il a fait : `copie` (presse-papiers) ou `partage` (fenêtre de partage).
+describe('REPRISE-CHEMINS 45 — le partage du site dit s il a copié', () => {
+  it('🔴 sans partage du navigateur : { action: copie }', async () => {
+    poserNavigateur({ clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } });
+    await expect(share({ message: 'Match amical', url: LIEN })).resolves.toEqual({ action: 'copie' });
+  });
+
+  it('avec le partage du navigateur : { action: partage }', async () => {
+    poserNavigateur({ share: jest.fn().mockResolvedValue(undefined) });
+    await expect(share({ message: 'Match amical', url: LIEN })).resolves.toEqual({ action: 'partage' });
+  });
+});

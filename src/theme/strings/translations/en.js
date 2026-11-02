@@ -12268,6 +12268,7 @@ export default {
         closed: 'Ad closed',
         confirmed: 'Match confirmed',
         declined: 'Proposal declined',
+        lienCopie: 'Link copied',
         matched: 'Opponent found',
         pending: 'Proposal sent',
         share: 'Share this listing',
@@ -24837,6 +24838,7 @@ export default {
       myCard: {
         emptySubtitle: 'A set of athletic tests, with a partner, over several days.',
         emptyTitle: 'Choose a training programme',
+        sansProgramme: 'My training',
         subtitle: '{{day}} · {{place}} · {{duration}} min',
         title: '{{program}} — {{day}} {{countdown}}',
         today: 'today',

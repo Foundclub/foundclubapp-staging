@@ -221,6 +221,9 @@ const PARENT_REFUSED_READS = [
   '/league-teams/mine',
   '/event-participations',
   '/licenses/me',
+  // REPRISE-CHEMINS (02/11, point 46) : « mes candidatures » de l'onglet Recrutement ; la carte
+  // Parent n'a pas recruitment-application.mine (un parent ne postule pas).
+  '/me/recruitment-applications',
 ];
 
 const isParentRefusedRead = (/** @type {string} */ path) => PARENT_REFUSED_READS.includes(path)

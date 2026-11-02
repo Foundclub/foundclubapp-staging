@@ -137,3 +137,21 @@ describe('les trois cartes de la section, et ou elles menent', () => {
     expect(MEMO).toContain("icon: 'clock'");
   });
 });
+
+// REPRISE-CHEMINS (02/11, point 47, revue « modifier ») : la grande carte d'un joueur sans
+// programme et la carte du catalogue disaient toutes deux « Choisir un entraînement », côte à
+// côte. La grande carte dit « Mon entraînement » ; le catalogue garde « Choisir un entraînement ».
+describe('REPRISE-CHEMINS 47 — deux cartes voisines, deux titres', () => {
+  const fr = jest.requireActual('@/theme/strings/translations/fr').default;
+  const SOURCE = fs.readFileSync(path.resolve(__dirname, '..', 'HomeHub.js'), 'utf8');
+  const MEMO = SOURCE.slice(
+    SOURCE.indexOf('const trainingCards = useMemo('),
+    SOURCE.indexOf('const searchCards = useMemo('),
+  );
+
+  it('🔴 sans programme, la grande carte ne reprend pas le titre du catalogue', () => {
+    expect(MEMO).toContain("t('training.home.myCard.sansProgramme')");
+    expect(MEMO).not.toContain("t('training.home.myCard.emptyTitle')");
+    expect(fr.training.home.myCard.sansProgramme).not.toBe(fr.training.home.findCard.title);
+  });
+});

@@ -42,6 +42,9 @@ const LECTURES_REFUSEES = [
   '/event-participations',
   '/licenses/me',
   '/licenses/me/affectation-1',
+  // REPRISE-CHEMINS (02/11, point 46, revue « modifier ») : l'onglet Recrutement lisait encore
+  // « mes candidatures » pour un parent (403 muet) ; un parent ne postule pas.
+  '/me/recruitment-applications',
 ];
 
 const PARENT = { auth: { user: { role: { name: 'Parent', type: 'parent' } } } };
