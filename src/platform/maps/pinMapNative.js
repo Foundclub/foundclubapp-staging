@@ -32,7 +32,9 @@ const MAP_ID = 'pin-map-native';
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
-function PinMapNative({ height, onRegionChangeComplete, regionHint = null }) {
+function PinMapNative({
+  height, onEtat, onRegionChangeComplete, regionHint = null,
+}) {
   const { Alignments, Colors } = useTheme();
   const webViewRef = useRef(/** @type {any} */ (null));
   const [chargee, setChargee] = useState(false);
@@ -67,6 +69,10 @@ function PinMapNative({ height, onRegionChangeComplete, regionHint = null }) {
       webViewRef.current?.injectJavaScript(buildSearchMapSyncScript(MAP_ID, etat));
     }
   }, [chargee, etat]);
+
+  useEffect(() => {
+    if (prete) onEtat?.('ready');
+  }, [onEtat, prete]);
 
   const handleMessage = (/** @type {any} */ event) => {
     const message = parseSearchMapBridgeMessage(event?.nativeEvent?.data);

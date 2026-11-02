@@ -17,12 +17,15 @@ export const renderMap = () => null;
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
-export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint = null } = {}) => {
+export const renderPinMap = ({
+  height = 360, onEtat, onRegionChangeComplete, regionHint = null,
+} = {}) => {
   // eslint-disable-next-line global-require
   const PinMapNative = require('./pinMapNative').default;
   return (
     <PinMapNative
       height={height}
+      onEtat={onEtat}
       onRegionChangeComplete={onRegionChangeComplete}
       regionHint={regionHint}
     />
