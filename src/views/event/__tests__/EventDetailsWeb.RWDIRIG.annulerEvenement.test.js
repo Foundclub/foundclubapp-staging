@@ -547,6 +547,9 @@ describe('REPRISE-CHEMINS 41 · une fiche annulée, sur le site', () => {
     )).toHaveLength(0);
     const texte = textOf(root);
     expect(texte).not.toMatch(/Tu participes|Aucune réponse/);
+    // La recette du site (02/11) : sans le menu, le bouton « Modifier » seul revenait.
+    expect(root.findAll((/** @type {any} */ n) => n.type === 'button' && textOf(n) === 'Modifier'))
+      .toHaveLength(0);
   });
 
   test('une fiche active garde « Gérer l événement » et pas de bandeau', () => {
