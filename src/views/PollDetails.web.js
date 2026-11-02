@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -25,6 +27,14 @@ const flattenMessages = (pages) => {
   if (!Array.isArray(pages)) return [];
   return pages.flatMap((page) => (Array.isArray(page?.data) ? page.data : []));
 };
+
+/**
+ * FIN-MESSAGERIE (02/11) : une adresse tapée n'a que la première page du fil (20 messages) en
+ * mémoire ; on lit les suivantes pour trouver un sondage plus ancien.
+ * ponytail: le serveur ne sait pas rendre un message seul ; au-delà de 25 pages (500 messages),
+ * l'écran dit « introuvable ». Sortie : une route GET /chat-messages/:id côté admin.
+ */
+const PAGES_LUES_AU_PLUS = 25;
 
 const getMessageId = (message) => String(message?.documentId || message?.id || '').trim();
 
@@ -67,10 +77,16 @@ function PollDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const { userData } = useAuth();
   const { Colors } = useTheme();
-  const { chatId = '', messageId = '', poll: initialPoll = null } = route?.params || {};
+  const {
+    chatId = '', messageId: messageIdDuFil = '', poll: initialPoll = null, pollId = '',
+  } = route?.params || {};
+  // FIN-MESSAGERIE (02/11) : l'adresse /polls/<id> porte l'identifiant du message dans `pollId`.
+  const messageId = messageIdDuFil || pollId;
   const { votePoll } = useMessaging(chatId);
   const { data: chatData } = useGetChatById(chatId);
-  const { data: messagesPages, isLoading } = useGetChatMessages({ chatId });
+  const {
+    data: messagesPages, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading,
+  } = useGetChatMessages({ chatId });
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
 
   const pollMessage = useMemo(() => {
@@ -89,6 +105,12 @@ function PollDetails({ navigation, route }) {
     return null;
   }, [initialPoll, pollMessage?.composition]);
   const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
+  const chercheEncore = !poll && Boolean(messageId) && Boolean(hasNextPage)
+    && (messagesPages?.pages?.length || 0) < PAGES_LUES_AU_PLUS;
+
+  useEffect(() => {
+    if (chercheEncore && !isFetchingNextPage) fetchNextPage();
+  }, [chercheEncore, fetchNextPage, isFetchingNextPage]);
 
   const voterDirectory = useMemo(() => {
     const map = new Map();
@@ -245,13 +267,13 @@ function PollDetails({ navigation, route }) {
             </button>
           </div>
 
-          {isLoading && !poll ? (
+          {(isLoading || chercheEncore) && !poll ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, color: mutedTextColor, padding: 20 }}>
               {t('pollDetails.loadingThePoll', 'Chargement du sondage…')}
             </div>
           ) : null}
 
-          {!poll ? (
+          {!poll && !isLoading && !chercheEncore ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
               <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
                 {t('pollDetails.pollNotFound', 'Sondage introuvable')}
