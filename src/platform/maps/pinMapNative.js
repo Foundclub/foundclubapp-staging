@@ -28,6 +28,7 @@ const MAP_ID = 'pin-map-native';
  * Chargé SEULEMENT par `maps.native.js`, à l'ouverture (voir l'en-tête de `renderPinMap`).
  * @param {object} props
  * @param {number} props.height
+ * @param {(etat: string) => void} [props.onEtat] - RET-FENETRES (fiche 12) : « ready » quand la carte est là.
  * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}

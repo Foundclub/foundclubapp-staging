@@ -477,6 +477,7 @@ export const renderMap = ({
  * déplacement (`onRegionChangeComplete`).
  * @param {object} props
  * @param {number} [props.height]
+ * @param {(etat: string) => void} [props.onEtat] - RET-FENETRES (fiche 12) : l'état de la carte.
  * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
