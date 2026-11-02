@@ -5,37 +5,28 @@ import {
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
+import { formatUnreadBadge, UNREAD_BADGE_CAP } from '@/utils/notifications/unreadBadge';
+
 import useAuth from '../auth/useAuth';
 import { getChatLastMessage, getUnreadStatus } from './messagingUseCases';
 
-// AE06 — la pastille ne dira jamais plus que ca. Le serveur borne deja, mais
-// une app peut parler a un serveur plus vieux OU plus recent : on borne ici
-// aussi. 🧨 Sur l ONGLET le nombre reste un NOMBRE : PrivateTabNavigator
-// n affiche la pastille que si `badge > 0`, et une chaine « 99+ » vaudrait
-// false — la pastille disparaitrait au moment ou elle compte le plus.
-export const UNREAD_BADGE_CAP = 99;
-
-/**
- * Le nombre a peindre A COTE du point « Non lu » d une conversation.
- * Contrairement a l onglet, la liste a la place d ecrire « 99+ ».
- * @param {unknown} count - Le compte rendu par le serveur pour ce fil.
- * @returns {string} Le libelle, ou '' quand il n y a rien a dire.
- */
-export const formatThreadUnreadBadge = (count) => {
-  const parsed = Number(count);
-  if (!Number.isFinite(parsed) || parsed <= 0) return '';
-  return parsed > UNREAD_BADGE_CAP ? `${UNREAD_BADGE_CAP}+` : String(Math.floor(parsed));
-};
+// AE06 — le serveur borne deja, mais une app peut parler a un serveur plus vieux
+// OU plus recent : on borne ici aussi. 🧨 Sur l ONGLET le nombre reste un NOMBRE :
+// PrivateTabNavigator n affiche la pastille que si `badge > 0`, et une chaine
+// « 99+ » vaudrait false — la pastille disparaitrait au moment ou elle compte le plus.
+export { UNREAD_BADGE_CAP, formatUnreadBadge as formatThreadUnreadBadge };
 
 /**
  * Ramene un compte brut a ce que la pastille de l onglet sait afficher.
+ * FIN-CLOCHE (02/11/2026) : un de plus que le plafond, pour que `formatUnreadBadge` ecrive
+ * « 99+ » ; borne a 99, l onglet ecrivait « 99 » pour 376 messages.
  * @param {unknown} value - Un compte brut.
  * @returns {number} Le meme compte, entier, positif et borne.
  */
 const toBoundedCount = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-  return Math.min(Math.floor(parsed), UNREAD_BADGE_CAP);
+  return Math.min(Math.floor(parsed), UNREAD_BADGE_CAP + 1);
 };
 
 /**
@@ -119,9 +110,11 @@ const getServerUnreadTotal = (queryClient) => {
  *   3. l ancien calcul — si le serveur ne compte pas du tout. L app peut
  *      partir AVANT le serveur : rien ne casse, la pastille compte des
  *      conversations comme avant.
+ * @param {Record<string, any>} [queryOptions] - FIN-CLOCHE : options de la liste (le menu du site la
+ *   relit a son rythme, il n a pas de push pour le prevenir).
  * @returns {{ unreadCount: number }} Object containing unread messages count
  */
-const useUnreadMessages = () => {
+const useUnreadMessages = (queryOptions = {}) => {
   const queryClient = useQueryClient();
   const [unreadCount, setUnreadCount] = useState(0);
   const { allMyTeams, userData } = useAuth();
@@ -143,7 +136,7 @@ const useUnreadMessages = () => {
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
     currentUserTeamIds: safeTeamIds,
-  });
+  }, queryOptions);
 
   const countUnreadMessages = useCallback(() => {
     // 1. Le total du serveur, quand il le dit.

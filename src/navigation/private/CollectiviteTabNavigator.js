@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { collectiviteTabs } from '@/domains/collectivite/collectiviteAccueil';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 import useTheme from '@/theme/themeContext';
 
 import {
@@ -68,7 +70,7 @@ function CollectiviteTabNavigator() {
           }}
         >
           <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

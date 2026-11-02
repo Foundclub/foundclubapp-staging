@@ -12,6 +12,8 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 import { useGetLeagueTeamContext } from '@/services/leagueTeam/leagueTeamQueries';
 
 import { isLeagueCaptain } from '@/utils/league/captains';
@@ -97,7 +99,7 @@ export default function LeagueTabNavigator() {
           <Text
             style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}
           >
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

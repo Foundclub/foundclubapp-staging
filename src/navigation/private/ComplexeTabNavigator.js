@@ -10,6 +10,8 @@ import useAuth from '@/domains/auth/useAuth';
 import { totalDesPages } from '@/domains/complexe/complexeReservation';
 import { ecrireModeComplexe, rouvrirSurLeComplexe } from '@/domains/complexe/modeComplexe';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
+
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 import useTheme from '@/theme/themeContext';
 
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
@@ -75,7 +77,7 @@ function ComplexeTabNavigator() {
           }}
         >
           <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 10 }}>
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

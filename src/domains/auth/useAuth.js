@@ -432,7 +432,13 @@ const useAuth = () => {
       });
     }
 
-    if (Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))) {
+    // FIN-CLOCHE (02/11) : le bootstrap évite la PREMIÈRE lecture, il n'écrase plus le compteur. Sa
+    // réponse reste en cache 30 s + 4 min, purgée dans un seul processus du serveur : après
+    // « Tout lire », une relecture sur un autre rendait l'ancien chiffre à la cloche.
+    if (
+      Number.isFinite(Number(bootstrapData?.unreadNotificationsCount))
+      && queryClient.getQueryData(UNREAD_COUNT_QUERY_KEY) === undefined
+    ) {
       queryClient.setQueryData(UNREAD_COUNT_QUERY_KEY, {
         count: Number(bootstrapData.unreadNotificationsCount || 0),
       });
