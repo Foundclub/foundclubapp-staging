@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -35,6 +35,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { CODE_DEMANDE_DISPARUE } from '@/views/profile/parent/annulationDeLaDemande';
 import InterestConversationSheet from '@/views/requests/InterestConversationSheet';
@@ -194,6 +195,7 @@ const phraseDArriveeDansLeFil = ({
  */
 function RequestsHub({ navigation, route }) {
   const { t } = useTranslation();
+  const sousUneBarreDuSite = useContext(BarreDeTitreDuSiteContext);
   const {
     Alignments,
     ApplicationStyle,
@@ -1299,16 +1301,21 @@ function RequestsHub({ navigation, route }) {
         isLoading={requestsQuery.isLoading}
         wrapperStyle={[Alignments.fill, Spaces.gap[16], Spaces.paddingTop[16]]}
       >
-        <View style={[Alignments.row, Alignments.alignCenter]}>
-          <HeaderBackButton
-            onPress={handleBackPress}
-            withDefaultMargin={false}
-          />
-        </View>
+        {/* FIN-MESSAGERIE p48 (02/11) : sur le site, la barre fine porte déjà le retour et le titre. */}
+        {sousUneBarreDuSite ? null : (
+          <>
+            <View style={[Alignments.row, Alignments.alignCenter]}>
+              <HeaderBackButton
+                onPress={handleBackPress}
+                withDefaultMargin={false}
+              />
+            </View>
 
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('requestsHub.title', 'Demandes')}
-        </Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('requestsHub.title', 'Demandes')}
+            </Text>
+          </>
+        )}
         <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginBottom[8]]}>
           {filterChips.map((chip) => {
             const isActive = chip.key === activeFilter;

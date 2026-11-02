@@ -95,9 +95,12 @@ function NotificationDetails() {
     const notificationId = toEntityId(notification.documentId || notification.id || data.notificationId);
     const title = toStringSafe(notification.title || data.notificationTitle || data.title).trim();
     const type = toStringSafe(notification.type || data.type).trim();
+    const creneau = [data.terrainName, data.complexeName, data.whenLabel]
+      .map((morceau) => toStringSafe(morceau).trim()).filter(Boolean).join(' · ');
 
     return {
       body,
+      creneau,
       createdAt,
       eventDetails,
       eventId,
@@ -164,6 +167,9 @@ function NotificationDetails() {
   // participation : ailleurs, elles n'apparaissent que si la notification les porte.
   const montrerLEvenement = isParticipationDeclined || Boolean(details.eventDetails);
   const montrerLeMotif = isParticipationDeclined || Boolean(details.reason);
+  // FIN-MESSAGERIE p48 (02/11) : écrans de réservation éteints (COMPLEXES_JOUEUR), et le planning ne
+  // montre que les événements : la fiche dit le créneau elle-même, puis ouvre le planning.
+  const estUneReservation = details.type === 'complexeReservationJoueur';
   const libelleDeLaDate = isParticipationDeclined
     ? t('notifications.details.participationDeclined.labels.decisionDate', 'Date')
     : t('notifications.details.receivedAt', 'Reçue le');
@@ -222,7 +228,7 @@ function NotificationDetails() {
         </Text>
 
         {isError || isMissingNotification ? (
-          <View style={[Spaces.marginTop[20]]}>
+          <View style={[Spaces.marginTop[16]]}>
             <Button
               onPress={() => refetch()}
               title={t('common.retry', 'Réessayer')}
@@ -232,7 +238,7 @@ function NotificationDetails() {
         ) : null}
 
         {shouldShowDetails ? (
-          <View style={[Spaces.marginTop[20], Spaces.gap[14]]}>
+          <View style={[Spaces.marginTop[16], Spaces.gap[12]]}>
             {isParticipationDeclined ? (
               <View>
                 <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
@@ -266,6 +272,17 @@ function NotificationDetails() {
               </View>
             ) : null}
 
+            {estUneReservation && details.creneau ? (
+              <View>
+                <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
+                  {t('notifications.details.reservation', 'Réservation')}
+                </Text>
+                <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
+                  {details.creneau}
+                </Text>
+              </View>
+            ) : null}
+
             <View>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
                 {libelleDeLaDate}
@@ -279,10 +296,19 @@ function NotificationDetails() {
       </View>
 
       {details.eventId ? (
-        <View style={[Spaces.marginTop[20]]}>
+        <View style={[Spaces.marginTop[16]]}>
           <Button
             onPress={handleOpenEvent}
             title={t('notifications.details.participationDeclined.actions.viewEvent', 'Voir événement')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+      {estUneReservation ? (
+        <View style={[Spaces.marginTop[16]]}>
+          <Button
+            onPress={() => navigation.navigate(RouteNames.MyEventList)}
+            title={t('notifications.details.viewPlanning', 'Voir mon planning')}
             variant="Secondary"
           />
         </View>

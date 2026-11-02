@@ -17243,6 +17243,8 @@ export default {
         unknownDate: 'Date indisponible',
       },
       receivedAt: 'Reçue le',
+      reservation: 'Réservation',
+      viewPlanning: 'Voir mon planning',
       screenTitle: 'Notification',
       statusFallback: 'Information',
       title: 'Notification',

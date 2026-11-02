@@ -506,3 +506,36 @@ describe('DEMR / T4 — des relectures maitrisees', () => {
     expect(pagesDemandees).toEqual([1]);
   });
 });
+
+// FIN-MESSAGERIE p48 (02/11, revue) — sur le site, Demandes a sa barre fine (registre) : la flèche
+// seule puis le grand titre n'y sont plus. Au téléphone, rien ne change.
+describe('FIN-MESSAGERIE p48 — Demandes sous la barre fine du site', () => {
+  const nombreDeTitres = () => arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text'
+    && [n.props.children].flat().join('') === 'Demandes').length;
+
+  test('hors de la barre : le grand titre reste', async () => {
+    await monter();
+
+    expect(nombreDeTitres()).toBe(1);
+  });
+
+  test('sous la barre : ni flèche ni grand titre', async () => {
+    // eslint-disable-next-line global-require
+    const { BarreDeTitreDuSiteContext } = require('@/components/templates/BarreDeTitreDuSite');
+    // eslint-disable-next-line global-require
+    const HeaderBackButton = require('@/components/atoms/headerBackButton/HeaderBackButton').default;
+    await act(async () => {
+      arbre = renderer.create(
+        <BarreDeTitreDuSiteContext.Provider value>
+          <QueryClientProvider client={client}>
+            <RequestsHub navigation={navigation} route={{ params: {} }} />
+          </QueryClientProvider>
+        </BarreDeTitreDuSiteContext.Provider>,
+      );
+    });
+    await vider();
+
+    expect(nombreDeTitres()).toBe(0);
+    expect(arbre.root.findAllByType(HeaderBackButton)).toHaveLength(0);
+  });
+});
