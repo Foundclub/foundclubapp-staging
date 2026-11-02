@@ -25395,6 +25395,13 @@ export default {
     mission: 'Mission',
     missionDone: 'Mission réussie · {{title}}',
     next: 'Suivant',
+    offer: {
+      decline: 'Ne plus me le proposer',
+      message: '4 missions, environ 2 min. Tu le retrouves aussi dans Mon compte › Guide '
+        + 'entraîneur·e.',
+      start: 'Lancer le guide',
+      title: 'Prends l’app en main avec le guide',
+    },
     pause: 'Mettre le guide en pause',
     quit: 'Arrêter le guide',
     quitConfirm: {
