@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useEffect, useMemo } from 'react';
@@ -52,6 +52,7 @@ function NotificationDetails() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const navigation = useNavigation();
   const route = useRoute();
   const routeParams = isObject(route?.params) ? route.params : {};
@@ -116,8 +117,11 @@ function NotificationDetails() {
   useEffect(() => {
     if (!canMarkNotificationAsRead) return;
     if (!details.notificationId || details.read) return;
-    markAsRead(details.notificationId).catch(() => undefined);
-  }, [canMarkNotificationAsRead, details.notificationId, details.read]);
+    // FIN-CLOCHE (02/11) : une fiche lue fait baisser la cloche et le panneau tout de suite.
+    markAsRead(details.notificationId)
+      .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+      .catch(() => undefined);
+  }, [canMarkNotificationAsRead, details.notificationId, details.read, queryClient]);
 
   const formattedDecisionDate = useMemo(() => {
     if (!details.createdAt) {

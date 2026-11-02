@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import NotificationPopup from '@/components/organisms/notificationPopup/NotificationPopup';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 import {
   getWebUnreadBadgeDelayMs,
   getWebUnreadPollMs,
@@ -96,6 +97,7 @@ function NotificationBadge({
     markAsRead,
     notifications,
     refreshNotifications,
+    refreshUnreadCount,
     unreadCount,
   } = useNotificationController({
     notificationsEnabled: shouldLoadNotifications,
@@ -144,6 +146,8 @@ function NotificationBadge({
       onPress();
     } else {
       setIsPopupVisible(true);
+      // FIN-CLOCHE (02/11) : le panneau charge une liste fraîche ; son chiffre le sera autant.
+      refreshUnreadCount();
     }
   };
 
@@ -204,7 +208,7 @@ function NotificationBadge({
             ]}
           >
             <Text style={[styles.badgeText, { color: Colors.neutral00 }]}>
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {formatUnreadBadge(unreadCount)}
             </Text>
           </Animated.View>
           )}
@@ -221,6 +225,7 @@ function NotificationBadge({
         onMarkAllAsRead={markAllAsRead}
         onMarkAsRead={markAsRead}
         onRetry={refreshNotifications}
+        unreadCount={unreadCount}
       />
       )}
     </>

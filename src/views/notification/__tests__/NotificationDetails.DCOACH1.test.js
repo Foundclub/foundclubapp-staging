@@ -21,10 +21,12 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => mockRoute,
 }));
 
+const mockInvalidateQueries = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({
     data: undefined, isError: false, isLoading: false, refetch: jest.fn(),
   }),
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -85,6 +87,26 @@ const ficheDe = (notification) => {
   return arbre.root.findAllByType(Text).map((noeud) => [noeud.props.children].flat().join(''))
     .join(' | ');
 };
+
+// FIN-CLOCHE (02/11/2026) — ouvrir une fiche la marque lue : la cloche et le panneau se relisent
+// une fois le serveur à jour, sinon ils restent en retard jusqu'à leur prochaine lecture.
+describe('FIN-CLOCHE — la fiche lue relit la cloche', () => {
+  test('une notification non lue : marquée, puis relecture', async () => {
+    mockInvalidateQueries.mockClear();
+    mockRoute.params = {
+      notification: {
+        body: 'Corps',
+        createdAt: '2026-10-30T03:29:00.000Z',
+        documentId: 'n-9',
+        read: false,
+        title: 'Titre',
+        type: 'complexeStatut',
+      },
+    };
+    await act(async () => { renderer.create(<NotificationDetails />); });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['notifications'] });
+  });
+});
 
 describe('fiche d une notification — le refus de participation (inchangé)', () => {
   test('le refus garde son statut, son événement, son motif et sa date de décision', () => {

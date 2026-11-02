@@ -13,6 +13,8 @@ import useAuth from '@/domains/auth/useAuth';
 // hooks
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 import { useClubScope } from '@/context/ClubScopeContext';
 // utils and misc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -109,7 +111,7 @@ function PrivateTabNavigator() {
               fontSize: 10,
             }}
           >
-            {badge}
+            {formatUnreadBadge(badge)}
           </Text>
         </View>
       ) : null}

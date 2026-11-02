@@ -355,6 +355,10 @@ export const useNotificationController = (options = {}) => {
         refreshUnreadCountIfStale(queryClient);
       }
     },
+    // FIN-CLOCHE (02/11) : ouvrir le panneau relit le chiffre, sans le délai de 45 s des retours.
+    refreshUnreadCount: () => {
+      queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
+    },
     unreadCount: (/** @type {UnreadCountData | undefined} */ (unreadCountData))?.count || 0,
   };
 };

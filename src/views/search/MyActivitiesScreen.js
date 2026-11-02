@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -70,6 +71,7 @@ const getManagedTeamIds = (userData) => getManagedTeams(userData).map(documentKe
  */
 function MyActivitiesScreen({ navigation }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   // Les memes mots que les quatre listes de Recrutement (lot L42) : une panne
   // serveur n est PAS une liste vide, et elle doit se lire pareil partout.
   const UNREACHABLE_TITLE = t(
@@ -168,6 +170,12 @@ function MyActivitiesScreen({ navigation }) {
         .every((resultat) => resultat.status === 'fulfilled')) {
         Promise.resolve()
           .then(() => markApplicationResponsesAsRead())
+          .then((reponse) => {
+            // FIN-CLOCHE (02/11) : ce marquage lit des notifications, la cloche doit le voir.
+            if (Number(reponse?.updated) > 0) {
+              queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            }
+          })
           .catch((error) => {
             console.warn('[MyActivitiesScreen] mark responses seen failed:', error);
           });
@@ -180,7 +188,7 @@ function MyActivitiesScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isStaff, managedTeamIds, ownerFilters, userData]);
+  }, [isStaff, managedTeamIds, ownerFilters, queryClient, userData]);
 
   useFocusEffect(useCallback(() => {
     fetchActivities();

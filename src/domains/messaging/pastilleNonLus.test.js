@@ -7,6 +7,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import { getChats } from '@/services/chat/chatService';
 
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
+
 import useUnreadMessages from './useUnreadMessages';
 
 // AC05 temoin 7 — « il manque une pastille rouge avec le NOMBRE de messages non
@@ -191,10 +193,11 @@ describe('AC05 temoin 7 — la pastille de l icone Messages porte un NOMBRE', ()
     arbre.unmount();
   });
 
-  test('AE06 — la pastille de l onglet porte un NOMBRE borne a 99, jamais un texte', async () => {
+  test('AE06 — la pastille de l onglet porte un NOMBRE borne, jamais un texte', async () => {
     // 🧨 PrivateTabNavigator.js n affiche la pastille que si `badge > 0` : une
-    // chaine « 99+ » vaudrait false et FERAIT DISPARAITRE la pastille. Le
-    // « 99+ » n existe que par conversation, dans la liste.
+    // chaine « 99+ » vaudrait false et FERAIT DISPARAITRE la pastille.
+    // FIN-CLOCHE (02/11/2026) : le nombre s arrete un au-dessus du plafond, et c est
+    // l ecriture qui dit « 99+ » : borne a 99, l onglet ecrivait « 99 » pour 150 messages.
     getChats.mockResolvedValue({
       ...REPONSE_AVEC_TOTAL,
       meta: { ...REPONSE_AVEC_TOTAL.meta, unreadTotal: 150 },
@@ -203,7 +206,8 @@ describe('AC05 temoin 7 — la pastille de l icone Messages porte un NOMBRE', ()
     const { arbre, valeur } = await monterLeCompteur();
 
     expect(typeof valeur).toBe('number');
-    expect(valeur).toBe(99);
+    expect(valeur).toBe(100);
+    expect(formatUnreadBadge(valeur)).toBe('99+');
     arbre.unmount();
   });
 
@@ -220,6 +224,6 @@ describe('AC05 temoin 7 — la pastille de l icone Messages porte un NOMBRE', ()
     expect(SOURCE_NAVIGATEUR).toContain('const { unreadCount } = useUnreadMessages();');
     expect(SOURCE_NAVIGATEUR).toContain('badge: unreadCount,');
     // La pastille affiche le nombre, pas un simple point.
-    expect(SOURCE_NAVIGATEUR).toContain('{badge}');
+    expect(SOURCE_NAVIGATEUR).toContain('{formatUnreadBadge(badge)}');
   });
 });

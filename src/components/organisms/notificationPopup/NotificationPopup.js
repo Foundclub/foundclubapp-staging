@@ -33,6 +33,7 @@ import {
   getNotificationIcon,
   getNotificationTone,
 } from '@/utils/notifications/notificationPresentation';
+import { formatUnreadBadge } from '@/utils/notifications/unreadBadge';
 
 /**
  * @param {NotificationPopupProps} props
@@ -47,6 +48,7 @@ function NotificationPopup({
   onMarkAllAsRead,
   onMarkAsRead,
   onRetry = undefined,
+  unreadCount = 0,
 }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -57,7 +59,8 @@ function NotificationPopup({
 
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const recentNotifications = safeNotifications.slice(0, 8);
-  const unreadCount = safeNotifications.filter((n) => !n.read).length;
+  // FIN-CLOCHE (02/11, point 64, Adel « A ») : `unreadCount` est le chiffre du serveur, celui de la
+  // cloche. Compter ici ne voyait que les 20 notifications chargées (12 pour 376 chez Hugo).
   // FIN-COLLECTIVITES 3 (02/11, point 114) : la règle de la page Notifications. Ville et club
   // mêlés, chacun porte son étiquette ; le complexe a sa propre pastille, sur la page.
   const etiquettesDeCasquette = casquettesMelees(safeNotifications.map(casquetteDeLaNotification));
@@ -343,7 +346,7 @@ function NotificationPopup({
                   }}
                 >
                   <Text style={{ color: inkOnPrimary, fontSize: 11, fontWeight: '600' }}>
-                    {unreadCount}
+                    {formatUnreadBadge(unreadCount)}
                   </Text>
                 </View>
               ) : null}
