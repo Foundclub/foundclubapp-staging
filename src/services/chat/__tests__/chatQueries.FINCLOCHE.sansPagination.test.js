@@ -1,8 +1,9 @@
 import { useGetChatMessages, useGetChats } from '../chatQueries';
 
-// FIN-CLOCHE p64 (récolte train 1, 02/11) — `useUnreadMessages` vit dans la coque du site (AppShell) :
+// FIN-CLOCHE p64 (récolte train 1, 02/11) — `useUnreadMessages` vit dans la coque du site :
 // une réponse de GET /chats sans `meta.pagination` y levait une TypeError qui écrasait TOUT le site
-// (« Une erreur est survenue »), 57 rouges à la porte complète. Sans pagination : pas de page suivante.
+// (« Une erreur est survenue »), 57 rouges à la porte complète.
+// Sans pagination : pas de page suivante.
 
 jest.mock('@tanstack/react-query', () => ({
   useInfiniteQuery: (/** @type {any} */ options) => options,
@@ -16,10 +17,14 @@ jest.mock('../chatService', () => ({
   getChats: jest.fn(),
 }));
 
-const lecteurs = /** @type {[string, (lastPage: any) => any][]} */ ([
-  ['useGetChats', /** @type {any} */ (useGetChats)({ currentUserId: 'u1' }).getNextPageParam],
-  ['useGetChatMessages', /** @type {any} */ (useGetChatMessages)({ chatId: 'c1' }).getNextPageParam],
-]);
+const lecteur = (/** @type {any} */ crochet, /** @type {any} */ parametres) => (
+  crochet(parametres).getNextPageParam
+);
+
+const lecteurs = [
+  ['useGetChats', lecteur(useGetChats, { currentUserId: 'u1' })],
+  ['useGetChatMessages', lecteur(useGetChatMessages, { chatId: 'c1' })],
+];
 
 describe.each(lecteurs)('%s, page suivante', (_nom, pageSuivante) => {
   test.each([

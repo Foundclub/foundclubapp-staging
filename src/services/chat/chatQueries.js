@@ -10,8 +10,8 @@ import {
 } from './chatService';
 
 /**
- * La page suivante d'une liste ; sans pagination dans la réponse, aucune. `useUnreadMessages` vit dans
- * la coque du site : lever ici écrasait tout le site (FIN-CLOCHE p64).
+ * La page suivante d'une liste ; sans pagination dans la réponse, aucune.
+ * `useUnreadMessages` vit dans la coque du site : lever ici écrasait tout le site (FIN-CLOCHE p64).
  * @param {any} lastPage La dernière page reçue.
  * @returns {number | undefined} Le numéro de la page suivante.
  */
@@ -50,7 +50,7 @@ export const useGetChats = (params, options = {}) => {
 
   return useInfiniteQuery({
     enabled: Boolean(params?.currentUserId) && enabled,
-    getNextPageParam: pageSuivante,
+    getNextPageParam: (lastPage) => pageSuivante(lastPage),
     initialPageParam: 1,
     queryFn: ({ pageParam = 1 }) => getChats(pageParam, params?.pageSize),
     // MSG1/N3 — `chatScope` N'EST PAS dans la clef, et c'est voulu.
@@ -156,7 +156,7 @@ export const useGetChatMessages = (params, options = {}) => {
 
   return useInfiniteQuery({
     enabled: !!params?.chatId && enabled,
-    getNextPageParam: pageSuivante,
+    getNextPageParam: (lastPage) => pageSuivante(lastPage),
     initialPageParam: 1,
     queryFn: ({ pageParam = 1 }) => getChatMessages(params?.chatId, pageParam, params?.pageSize),
     queryKey: buildNormalizedQueryKey(['chat-messages', params?.chatId], {
