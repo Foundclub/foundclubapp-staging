@@ -1,5 +1,8 @@
-import { TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { Platform, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 
 import Messaging from '../Messaging';
 
@@ -235,5 +238,35 @@ describe('MSG-VILLE-NOUVELLE — le bouton « Nouvelle conversation » de la Vil
   test('Q4-17 — le rôle réel du serveur s écrit « Entraineur » : le bouton est là', async () => {
     mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
     expect(bouton(await monter({ chatScope: 'classic' }))).toHaveLength(1);
+  });
+});
+
+// FIN-PLACE (02/11/2026, D-COACH-11) — à 390 sur le site, le bouton rond couvrait les « ⋮ » et les
+// dates, dès l'arrivée sur la page et en défilant. Il monte dans la ligne du titre, comme à
+// l'ordinateur : plus rien ne flotte au-dessus des lignes. Le téléphone ne change pas.
+describe('FIN-PLACE — D-COACH-11, le bouton rond sur le site', () => {
+  const plateforme = Platform.OS;
+  afterEach(() => {
+    Platform.OS = plateforme;
+  });
+
+  test('site : le bouton est là, et plus rien ne flotte', async () => {
+    Platform.OS = 'web';
+    mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
+    const arbre = await monter({});
+    // La doublure de FlashList ne monte pas l'en-tête : on le lit dans ses props.
+    const contient = (/** @type {any} */ el) => {
+      if (Array.isArray(el)) return el.some(contient);
+      if (!el || typeof el !== 'object') return false;
+      return el.props?.testID === 'messaging-nouvelle-conversation' || contient(el.props?.children);
+    };
+    expect(contient(arbre.root.findByType(FlashList).props.ListHeaderComponent)).toBe(true);
+    expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(0);
+  });
+
+  test('téléphone : le bouton rond flotte toujours', async () => {
+    mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
+    const arbre = await monter({});
+    expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(1);
   });
 });
