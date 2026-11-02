@@ -549,9 +549,11 @@ export const seasonSlotErrorMessage = (t, erreur) => {
  * moment complet.
  * @param {any} reponse - La reponse du planning (`{ data: blocs }`).
  * @param {number} capacite - maxSlots.
- * @returns {{ count: number, full: { start: Date, end: Date } | null }} Le resume.
+ * @returns {{ count: number, creneaux: number, full: { start: Date, end: Date } | null }}
+ *   Le resume.
  */
 export const summarizeInstallationWeek = (reponse, capacite) => {
+  /** @type {any[]} */
   const lus = Array.isArray(reponse?.data) ? reponse.data : [];
   const blocs = normalizePlanningItems(lus);
   return {

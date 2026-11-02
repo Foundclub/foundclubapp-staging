@@ -238,7 +238,7 @@ export const isOwnClubRequest = (demande, userData) => {
  * CORR-COLLECTIVITES 90 (31/10, Adel B), REPRISE-COLLECTIVITES 90 (01/11) — des créneaux de saison
  * prennent la place sans être des séances : « 2 créneaux · aucune séance posée ». Même phrase sur
  * l'accueil de la Ville et sur les cartes de sa page Planning.
- * @param {(cle: string, ...args: any[]) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {number} creneaux - Les créneaux de saison de la semaine (plus de 0).
  * @param {number} seances - Les séances posées.
  * @returns {string} La phrase.
