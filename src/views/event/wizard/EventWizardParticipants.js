@@ -168,9 +168,10 @@ function EventWizardParticipants({ navigation, route }) {
   // `players` mais dans `declaredChildren` — rendue à l'encadrement, comptée par la fiche de
   // l'équipe (TeamDetails) et convocable depuis la fiche du match (ENFANT-JOUEUR).
   const squadPlayers = useMemo(() => {
-    const enfants = (Array.isArray(fullOrganizerTeam?.declaredChildren)
-      ? fullOrganizerTeam.declaredChildren
-      : []).filter((/** @type {any} */ enfant) => enfant?.participantSource === 'declared_child');
+    // `declaredChildren` n'est pas dans le type `Team` : le serveur ne le rend qu'à l'encadrement.
+    const enfantsDuServeur = /** @type {any} */ (fullOrganizerTeam)?.declaredChildren;
+    const enfants = (Array.isArray(enfantsDuServeur) ? enfantsDuServeur : [])
+      .filter((/** @type {any} */ enfant) => enfant?.participantSource === 'declared_child');
     const vus = new Set();
     /** @type {any[]} */
     const source = [...(fullOrganizerTeam?.players || []), ...enfants];
@@ -180,7 +181,7 @@ function EventWizardParticipants({ navigation, route }) {
       vus.add(id);
       return true;
     });
-  }, [fullOrganizerTeam?.declaredChildren, fullOrganizerTeam?.players]);
+  }, [fullOrganizerTeam]);
 
   const [calledUpIds, setCalledUpIds] = useState(
     /** @type {string[]} */ (Array.isArray(state.matchCallUpPlayerIds)

@@ -183,10 +183,10 @@ function EventWizardTournamentStructure({ navigation, route }) {
   // d'équipes est le maximum choisi à l'étape précédente.
   const teamCountForGroups = state.tournamentMaxTeams || 0;
   const { isGroupCountTooHigh, maxGroupCount } = getTournamentGroupBounds({
-    formatMode, groupCount, teamCount: teamCountForGroups,
+    formatMode, groupCount: groupCount || 1, teamCount: teamCountForGroups,
   });
-  const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0
-    && ![16, 2, 32, 4, 8].includes(knockoutSize);
+  const isKnockoutSizeInvalid = usesKnockout && (knockoutSize || 0) > 0
+    && ![16, 2, 32, 4, 8].includes(knockoutSize || 0);
   const isInvalid = isKnockoutSizeInvalid || isGroupCountTooHigh;
 
   const handleNext = () => {
