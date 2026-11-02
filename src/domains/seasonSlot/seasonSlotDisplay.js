@@ -379,6 +379,7 @@ export const phraseDuComplet = (t, { equipes, occupants, places }) => {
     defaultValue_one: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} place.',
     defaultValue_other: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} places.',
     equipes,
+    interpolation,
   });
   return `${complet} ${partage}`;
 };
