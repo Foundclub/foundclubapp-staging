@@ -222,7 +222,12 @@ function UserParentalDeclaration({ navigation, route }) {
           title={t('userParentalDeclaration.actions.continue', 'Continuer')}
           variant="Primary"
         />
-        {isEntryCheckpoint ? <OnboardingAccountExits /> : null}
+        {/* FIN-CHEMINS (02/11, chef « 1. B ») : /profile ne s'ouvre plus sans l'accord, et un
+            mineur dont le parent refuse n'avait plus d'issue.
+            La carte de collection a son propre retour. */}
+        {route?.params?.returnRoute
+          ? null
+          : <OnboardingAccountExits deconnexionSeule={!isEntryCheckpoint} />}
       </View>
     </FormScreenContainer>
   );

@@ -26,9 +26,14 @@ import Button from '@/components/atoms/button/Button';
  * la liste du Profil. Au-dela de deux comptes on passe de l'un a l'autre ; la
  * liste complete reste dans le Profil une fois entre. Voie de sortie : extraire
  * le panneau de bascule de `Profile.js` en composant, et le monter ici.
- * @returns {import('react').ReactElement} Les deux sorties.
+ *
+ * FIN-CHEMINS (02/11, chef « 1. B ») - `deconnexionSeule` : en inscription neuve, l'accord
+ * parental n'a que la sortie, sans bascule vers un autre compte.
+ * @param {object} [props] - Les options.
+ * @param {boolean} [props.deconnexionSeule] - Ne montrer que « Se deconnecter ».
+ * @returns {import('react').ReactElement} Les sorties.
  */
-function OnboardingAccountExits() {
+function OnboardingAccountExits({ deconnexionSeule = false } = {}) {
   const { Spaces } = useTheme();
   const { t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
@@ -55,11 +60,13 @@ function OnboardingAccountExits() {
 
   return (
     <View style={[Spaces.gap[8]]}>
-      <Button
-        onPress={handleChangeAccount}
-        title={t('ageObligatoire.exits.switchAccount', 'Changer de compte')}
-        variant="SecondaryLight"
-      />
+      {deconnexionSeule ? null : (
+        <Button
+          onPress={handleChangeAccount}
+          title={t('ageObligatoire.exits.switchAccount', 'Changer de compte')}
+          variant="SecondaryLight"
+        />
+      )}
       <Button
         disabled={logoutMutation.isPending}
         isLoading={logoutMutation.isPending}
