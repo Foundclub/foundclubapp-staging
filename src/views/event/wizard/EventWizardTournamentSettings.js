@@ -15,6 +15,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import { RouteNames } from '@/navigation/routeNames';
 
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
+import { isTournamentMinRosterTooLow } from '../tournamentUtils';
 import { useEventWizard } from './EventWizardContext';
 import {
   getEventWizardExitRoute,
@@ -86,6 +87,9 @@ function EventWizardTournamentSettings({ navigation, route }) {
     && maxRosterSize
     && minRosterSize > maxRosterSize,
   );
+  // REPRISE-EVENEMENTS 129 : la règle des réglages du tournoi, dès la création. Sans elle, un 0
+  // était jeté sans un mot (`parseOptionalInteger`) et le tournoi naissait sans minimum.
+  const isMinRosterTooLow = isTournamentMinRosterTooLow(minRosterText);
 
   const handleNext = () => {
     dispatch({
@@ -143,7 +147,7 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={isRosterRangeInvalid}
+      isNextDisabled={isRosterRangeInvalid || isMinRosterTooLow}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
@@ -209,6 +213,14 @@ function EventWizardTournamentSettings({ navigation, route }) {
             </View>
           </View>
 
+          {isMinRosterTooLow ? (
+            <Text style={[Fonts.p3, Fonts.error500]}>
+              {t(
+                'tournamentSettingsEdit.minSquadAtLeastOne',
+                'L’effectif minimum est d’au moins 1 joueur.',
+              )}
+            </Text>
+          ) : null}
           {isRosterRangeInvalid ? (
             <Text style={[Fonts.p3, Fonts.error500]}>
               {t(

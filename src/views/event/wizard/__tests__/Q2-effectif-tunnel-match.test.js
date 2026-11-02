@@ -284,3 +284,30 @@ describe("Q2 — l'effectif du match pendant qu'il vole encore", () => {
     demonter();
   });
 });
+
+// REPRISE-EVENEMENTS D-COACH-12 — U11 Tunnel affichait « Convocation 0 sur 0 · Cette équipe
+// n'a encore aucun joueur » : Lina est une fiche enfant (inscrite par son parent), rendue par
+// GET /teams/:id dans `declaredChildren`, pas dans `players`. La fiche de l'équipe la compte
+// (TeamDetails, PAR-006) ; la convocation du match aussi (ENFANT-JOUEUR).
+describe('REPRISE-EVENEMENTS D-COACH-12 — l’étape Participants compte les enfants', () => {
+  test('🐞 une équipe d’une enfant inscrite par son parent : 1 joueuse, convocable', () => {
+    mockRequeteEffectif.isLoading = false;
+    mockRequeteEffectif.data = {
+      ...EQUIPE_SANS_JOUEUR,
+      declaredChildren: [{
+        documentId: 'lina',
+        firstname: 'Lina',
+        lastname: 'Recette',
+        participantSource: 'declared_child',
+      }],
+    };
+
+    const { demonter, textes } = monterEtapeParticipants();
+    const rendus = textes();
+
+    expect(rendus.some((texte) => texte.includes('aucun joueur'))).toBe(false);
+    expect(rendus).toContain('Lina Recette');
+
+    demonter();
+  });
+});

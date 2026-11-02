@@ -299,7 +299,8 @@ function TournamentMatchDetails({ navigation, route }) {
       keyboardAvoiding
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
+        {/* REPRISE-EVENEMENTS 130 : une vue web étire ses enfants ; le bouton garde sa taille. */}
+        <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
       </View>
       <WithDataWrapper
         data={match}

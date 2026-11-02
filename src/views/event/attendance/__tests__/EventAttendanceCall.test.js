@@ -321,6 +321,10 @@ const appuyable = (arbre, texte) => arbre.root.findAll(
   { deep: true },
 )[0];
 
+// REPRISE-EVENEMENTS 125 — le libellé du bouton de masse une fois quelqu'un pointé (la
+// doublure de `t` rend la clé quand le repli est un objet de pluriels).
+const BOUTON_RESTANTS = 'eventDetails.attendanceCall.actions.markRemaining';
+
 afterEach(async () => {
   // Demonte TOUT ce qui a ete monte : c est ce demontage qui execute le
   // `clearInterval` de l ecran. Sans lui, le processus Jest ne s eteint pas.
@@ -548,7 +552,8 @@ describe('L5-A · « Tout le monde est là » passe par l envoi groupe', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
+    // REPRISE-EVENEMENTS 125 : une fois quelqu'un pointé, le bouton compte les restants.
+    await act(async () => { appuyable(arbre, BOUTON_RESTANTS).props.onPress(); });
 
     expect(mockBulkMutate).toHaveBeenCalledTimes(1);
     const envoi = mockBulkMutate.mock.calls[0][0];
@@ -797,7 +802,7 @@ describe('L5-A · 🔴 D7bis — l encadrant declare quelqu un absent', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
+    await act(async () => { appuyable(arbre, BOUTON_RESTANTS).props.onPress(); });
 
     // 🔒 C est le cas que `listUncalledIds` protege : une absence n a pas
     // d `arrivedAt`, un filtre base dessus l aurait reecrite « a l heure ».
@@ -898,5 +903,38 @@ describe('FINITIONS4 D7 — la feuille d appel pas encore chargee n invente pas 
 
     expect(texte).not.toContain('Ouvre à');
     expect(texte).not.toContain('Fermé depuis');
+  });
+});
+
+// REPRISE-EVENEMENTS 125 — le bouton vert « Tout le monde est là » restait affiché à 1 / 2 :
+// il se lisait comme un constat faux. Il dit maintenant ce qu'il fait (« Pointer les N
+// restant·e·s à l'heure ») dès qu'un pointage est fait, et disparaît quand il n'y a plus
+// personne à pointer.
+describe('REPRISE-EVENEMENTS 125 — le bouton de masse dit vrai', () => {
+  const OUVERT = '2026-08-19T18:10:00.000Z';
+  const arrive = (/** @type {string} */ userId, /** @type {string} */ firstname) => ligne({
+    arrivedAt: '2026-08-19T18:00:00.000Z', attendanceStatus: 'present', firstname, userId,
+  });
+
+  test('🐞 1 pointé sur 2 : plus de « Tout le monde est là », il compte les restants', async () => {
+    mockAttendance = reponseAttendance({
+      items: [arrive('u1', 'Lina'), ligne({ firstname: 'Paul', userId: 'u2' })],
+      serverNow: OUVERT,
+    });
+    const arbre = await monter();
+
+    expect(appuyable(arbre, 'Tout le monde est là')).toBeFalsy();
+    expect(appuyable(arbre, BOUTON_RESTANTS)).toBeTruthy();
+  });
+
+  test('🐞 tout est pointé : plus de bouton de masse', async () => {
+    mockAttendance = reponseAttendance({
+      items: [arrive('u1', 'Lina'), arrive('u2', 'Paul')],
+      serverNow: OUVERT,
+    });
+    const arbre = await monter();
+
+    expect(appuyable(arbre, 'Tout le monde est là')).toBeFalsy();
+    expect(appuyable(arbre, BOUTON_RESTANTS)).toBeFalsy();
   });
 });

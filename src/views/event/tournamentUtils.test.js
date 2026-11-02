@@ -1,5 +1,6 @@
 import {
   formatTournamentScore,
+  getTournamentClosure,
   getTournamentCompetitionActions,
   getTournamentCompetitionStateLabel,
   getTournamentFormatLabel,
@@ -147,5 +148,25 @@ describe('tournamentUtils', () => {
       label: 'Validé',
       tone: '#0f0',
     });
+  });
+});
+
+// REPRISE-EVENEMENTS 131 — la règle de clôture lue par le pilotage et les deux fiches.
+describe('getTournamentClosure', () => {
+  test('clôturé : la date est celle de l’archivage le plus récent', () => {
+    expect(getTournamentClosure({
+      sessionStatus: 'closed',
+      tournamentTeams: [
+        { archivedAt: '2026-10-30T10:00:00.000Z' },
+        { archivedAt: '2026-10-31T10:00:00.000Z' },
+        { archivedAt: null },
+      ],
+    })).toEqual({ closedAt: Date.parse('2026-10-31T10:00:00.000Z'), isClosed: true });
+  });
+
+  test('ouvert, ou sans équipe archivée : ni clôture ni date', () => {
+    expect(getTournamentClosure({ sessionStatus: 'open', tournamentTeams: [] }))
+      .toEqual({ closedAt: undefined, isClosed: false });
+    expect(getTournamentClosure(null)).toEqual({ closedAt: undefined, isClosed: false });
   });
 });

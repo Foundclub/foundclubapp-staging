@@ -1689,6 +1689,8 @@ function EventListContent({
         onCreateAlert={peutProposerUneAlerte ? creerAlerteEvenement : undefined}
         pourUneAlerte={feuillePourAlerte}
         raisonDuRefus={raisonDuRefusDAlerte}
+        // REPRISE-EVENEMENTS 134 : la ville du profil préremplit une alerte (`{ label, value }`).
+        villeDuProfil={userData?.address?.value ? userData.address : undefined}
       />
 
       {peutProposerUneAlerte ? (

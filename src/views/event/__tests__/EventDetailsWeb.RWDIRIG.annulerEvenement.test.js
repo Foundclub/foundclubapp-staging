@@ -402,6 +402,49 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
     await act(async () => { bouton(root, 'Absent').props.onClick(); });
     expect(mockRespondToEventRsvp).toHaveBeenCalledWith('event-1', 'absent');
   });
+
+  // REPRISE-EVENEMENTS 123 — la contre-recette voyait encore « Session fermée » et
+  // « Annuler ma demande » sous Présent / Absent : deux façons de répondre, dont une de coach.
+  test('🐞 avec Présent / Absent : ni « Session fermée » ni « Annuler ma demande »', () => {
+    const root = mountScreen({
+      auth: authJoueur,
+      event: {
+        ...matchDuJoueur(),
+        participationRequests: [{
+          documentId: 'demande-1', isActive: true, participationStatus: 'pending', user: JOUEUR,
+        }],
+        sessionStatus: 'closed',
+      },
+    });
+
+    expect(bouton(root, 'Présent')).toBeDefined();
+    expect(bouton(root, 'Annuler ma demande')).toBeUndefined();
+    // La pastille rend « Session », « », « fermée » en trois morceaux.
+    expect(JSON.stringify(mounted.toJSON())).not.toContain('"Session"');
+  });
+
+  // REPRISE-EVENEMENTS 123 (additif) — au-dessus de Présent / Absent, « Mon statut » disait
+  // « En attente de validation » (la vieille demande) : il dit maintenant la réponse.
+  test('🐞 « Mon statut » dit la réponse Présent / Absent, pas la demande en attente', () => {
+    mountScreen({
+      auth: authJoueur,
+      event: {
+        ...matchDuJoueur(),
+        participationRequests: [{
+          documentId: 'demande-1', isActive: true, participationStatus: 'pending', user: JOUEUR,
+        }],
+      },
+    });
+    const sansReponse = JSON.stringify(mounted.toJSON());
+    expect(sansReponse).not.toContain('En attente de validation');
+    expect(sansReponse).toContain('Aucune réponse');
+  });
+
+  test('🐞 « Mon statut » d un joueur absent dit « Absent », comme son bouton', () => {
+    mountScreen({ auth: authJoueur, event: { ...matchDuJoueur(), missings: [JOUEUR] } });
+
+    expect(JSON.stringify(mounted.toJSON())).not.toContain('Tu es signalé absent');
+  });
 });
 
 // CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Validation auto » s'affichait, mais un
@@ -523,5 +566,51 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
 
     expect(bouton(root, 'Créer une équipe')).toBeUndefined();
     expect(bouton(root, 'Inscrire mon équipe')).toBeUndefined();
+  });
+
+  // REPRISE-EVENEMENTS 130 — « Réponse pour Lina » débordait à droite à 390 : le bloc était un
+  // élément de la rangée de boutons, à la largeur de son contenu.
+  test('🐞 le bloc des enfants prend toute la largeur de la rangée', () => {
+    const root = mountScreen({
+      auth: {
+        canEditClub: () => false,
+        canEditEvent: () => false,
+        canManageEvent: () => false,
+        userData: {
+          documentId: 'parent-1', firstname: 'Paola', lastname: 'Recette', role: { name: 'Parent' },
+        },
+      },
+      event: tournoi(),
+    });
+    const BlocDesEnfants = jest.requireMock('@/views/event/components/EventChildRegistration').default;
+
+    expect(root.findByType(BlocDesEnfants).parent?.props.style)
+      .toEqual(expect.objectContaining({ flexBasis: '100%', minWidth: 0 }));
+  });
+
+  // REPRISE-EVENEMENTS 131 — la fiche d'un tournoi clôturé proposait encore « Modifier les
+  // paramètres », « Gérer mon équipe » et « Créer une équipe ». Décision A : lecture seule,
+  // avec un bandeau « Clôturé le … » (la date de l'archivage des équipes, comme au pilotage).
+  test('🐞 tournoi clôturé : plus aucun geste, un bandeau daté', () => {
+    const root = mountScreen({
+      event: {
+        ...tournoi(),
+        sessionStatus: 'closed',
+        tournamentTeams: [{
+          archivedAt: '2026-10-31T10:00:00.000Z',
+          captainUser: { documentId: COACH.documentId },
+          documentId: 'tt-1',
+          members: [],
+          name: 'Les Lions',
+          status: 'archived',
+        }],
+      },
+    });
+
+    expect(bouton(root, 'Modifier les paramètres')).toBeUndefined();
+    expect(bouton(root, 'Gérer mon équipe')).toBeUndefined();
+    expect(bouton(root, 'Créer une équipe')).toBeUndefined();
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi clôturé le');
+    expect(bouton(root, 'Piloter la compétition')).toBeDefined();
   });
 });

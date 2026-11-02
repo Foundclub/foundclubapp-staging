@@ -45,14 +45,15 @@ export const getFigureKeys = (sport, isGoalkeeper) => {
 };
 
 /**
- * Les trois pastilles du temps de jeu, qui remplissent le compteur.
+ * Les deux pastilles du temps de jeu, qui remplissent le compteur. REPRISE-EVENEMENTS 124 :
+ * plus de « Pas joué » — on ne les voit qu'après « J'ai joué », et « J'étais là sans jouer »
+ * est déjà un choix à part.
  * @param {string} sport Le sport normalisé.
- * @returns {Array<{ key: 'full' | 'half' | 'none', minutes: number }>} Les pastilles.
+ * @returns {Array<{ key: 'full' | 'half', minutes: number }>} Les pastilles.
  */
 export const getMinutesPresets = (sport) => {
   const full = normalizeSport(sport) === 'basketball' ? 40 : 90;
   return [
-    { key: 'none', minutes: 0 },
     { key: 'half', minutes: full / 2 },
     { key: 'full', minutes: full },
   ];

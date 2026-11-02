@@ -38,6 +38,7 @@ import {
   formatEventPlaceShort,
   formatEventTeamLine,
   formatEventWhenLine,
+  getStageLastDay,
 } from '../eventInfoLines';
 import MatchScoreEncart from './MatchScoreEncart';
 /* eslint-enable perfectionist/sort-imports */
@@ -341,6 +342,10 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                     (piege paye par FINITIONS le 29/09). Insecable, il tient comme un mot. */}
                 <Text style={[Fonts.p2, Fonts.neutral00]}>
                   {texteInsecable(formatDateWithDayPrefix(event.date))}
+                  {/* REPRISE-EVENEMENTS 128 : un stage de plusieurs jours dit son dernier jour. */}
+                  {getStageLastDay(event)
+                    ? ` – ${texteInsecable(formatDateWithDayPrefix(getStageLastDay(event)))}`
+                    : null}
                 </Text>
               </View>
 

@@ -510,6 +510,30 @@ describe('CORR-EVENEMENTS-2 122 — le banc en lecture seule', () => {
     expect(texteRendu(arbre)).not.toContain('Maintiens un joueur puis glisse-le');
   });
 
+  // REPRISE-EVENEMENTS D-COACH-10 — « Ouvrir » rouvrait toujours sur « Actions », même
+  // quand « Banc » était l'onglet choisi : il fallait le rechoisir.
+  test('🐞 fermé puis rouvert, le volet revient sur l’onglet choisi', () => {
+    const lecteur = { canEdit: false, players: [LINA, PAUL], readOnly: true };
+    const arbre = monter(parametresEvenement(lecteur));
+    const ongletChoisi = () => ['Banc', 'Actions'].find((libelle) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.accessibilityRole === 'tab'
+        && n.props?.accessibilityLabel === libelle && n.props?.accessibilityState?.selected,
+    ).length > 0);
+    // « Fermer » / « Ouvrir » n'ont pas de nom accessible : on les trouve par leur texte.
+    const appuyerSurTexte = (/** @type {string} */ texte) => act(() => {
+      arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+        && n.findAll((/** @type {any} */ e) => e.children?.[0] === texte).length > 0)[0]
+        .props.onPress();
+    });
+    appuyerSur(arbre, 'Banc');
+    expect(ongletChoisi()).toBe('Banc');
+    appuyerSurTexte('Fermer');
+    expect(ongletChoisi()).toBeUndefined();
+    appuyerSurTexte('Ouvrir');
+
+    expect(ongletChoisi()).toBe('Banc');
+  });
+
   test('en édition, le banc garde sa consigne', () => {
     const arbre = monter(parametresEvenement({ players: [LINA, PAUL] }));
     appuyerSur(arbre, 'Banc');

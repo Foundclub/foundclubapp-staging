@@ -43,6 +43,7 @@ import {
 } from './tournamentCompetitionComponents';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  getTournamentClosure,
   getTournamentCompetitionActions,
   getTournamentCompetitionStateLabel,
   getTournamentFormatLabel,
@@ -356,14 +357,8 @@ function TournamentManagement({ navigation, route }) {
     reviewMutation.mutate({ status, teamDocumentId });
   };
 
-  // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé (`sessionStatus` « closed », posé par
-  // `closeTournament`) se lit, il ne se pilote plus. Le serveur n'écrit pas de date de clôture :
-  // celle de l'archivage des équipes, la plus récente, en tient lieu.
-  const isClosed = String(event?.sessionStatus || '').toLowerCase() === 'closed';
-  const closedAt = tournamentTeams
-    .map((team) => Date.parse(team?.archivedAt || ''))
-    .filter(Number.isFinite)
-    .sort((gauche, droite) => droite - gauche)[0];
+  // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé se lit, il ne se pilote plus.
+  const { closedAt, isClosed } = getTournamentClosure({ ...event, tournamentTeams });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);
@@ -729,13 +724,19 @@ function TournamentManagement({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
+          {/* REPRISE-EVENEMENTS 130 : le lecteur (parent, joueur) lit le nom du tournoi ; la
+              phrase de pilotage ne s'adresse qu'à qui pilote. */}
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
+              {canManageTournament && !isClosed
+                ? t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')
+                : event?.name || t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
             </Text>
-            <Text style={[Fonts.p2, Fonts.primary100]}>
-              {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
-            </Text>
+            {canManageTournament && !isClosed ? (
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
+              </Text>
+            ) : null}
           </View>
 
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>

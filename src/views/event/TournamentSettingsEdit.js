@@ -25,7 +25,11 @@ import { useGetEvent } from '@/services/event/eventQueries';
 import { updateEvent } from '@/services/event/eventService';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentRosterSummary } from './tournamentUtils';
+import {
+  getTournamentGroupBounds,
+  getTournamentRosterSummary,
+  isTournamentMinRosterTooLow,
+} from './tournamentUtils';
 
 const parseOptionalInteger = (value) => {
   const normalized = String(value || '').trim();
@@ -168,17 +172,16 @@ function TournamentSettingsEdit({ navigation, route }) {
   const isRosterRangeInvalid = Boolean(minRosterSize && maxRosterSize && minRosterSize > maxRosterSize);
   // CORR-EVENEMENTS 129 (décision B) : des réglages qui peuvent marcher. Un effectif minimum
   // saisi vaut au moins 1 ; une poule compte au moins 2 équipes (les acceptées, sinon le maximum).
-  const minRosterTyped = String(minRosterText || '').trim();
-  const isMinRosterTooLow = minRosterTyped !== '' && !(Number.parseInt(minRosterTyped, 10) >= 1);
+  const isMinRosterTooLow = isTournamentMinRosterTooLow(minRosterText);
   const acceptedTeamCount = (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
     .filter((team) => String(team?.status || '').toLowerCase() === 'accepted').length;
   const teamCountForGroups = acceptedTeamCount >= 2 ? acceptedTeamCount : (maxTeams || 0);
-  const maxGroupCount = Math.max(1, Math.floor(teamCountForGroups / 2));
+  const { isGroupCountTooHigh, maxGroupCount } = getTournamentGroupBounds({
+    formatMode, groupCount, teamCount: teamCountForGroups,
+  });
   const usesGroups = ['groups_only', 'groups_to_knockout', 'round_robin'].includes(formatMode);
   const usesKnockout = ['groups_to_knockout', 'knockout_only'].includes(formatMode);
   const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0 && ![16, 2, 32, 4, 8].includes(knockoutSize);
-  const isGroupCountTooHigh = usesGroups && formatMode !== 'round_robin'
-    && teamCountForGroups >= 2 && groupCount > maxGroupCount;
   const hasInvalidSettings = isRosterRangeInvalid || isKnockoutSizeInvalid
     || isMinRosterTooLow || isGroupCountTooHigh;
   const canManageTournament = Boolean(canManageEvent(event));
@@ -322,7 +325,8 @@ function TournamentSettingsEdit({ navigation, route }) {
       keyboardAvoiding
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
+        {/* REPRISE-EVENEMENTS 130 : même retour que la fiche d'un match, sans s'étirer. */}
+        <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
       </View>
       <WithDataWrapper
         data={event}

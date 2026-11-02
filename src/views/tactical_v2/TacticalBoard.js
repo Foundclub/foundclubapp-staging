@@ -1556,7 +1556,8 @@ function TacticalBoard() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={isPanelOpen ? closePanel : () => openPanel('actions')}
+              // REPRISE-EVENEMENTS D-COACH-10 : rouvrir sur l'onglet choisi, comme la poignée.
+              onPress={isPanelOpen ? closePanel : () => openPanel(activePanel || 'bench')}
               style={styles.panelCloseButton}
             >
               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>

@@ -402,6 +402,10 @@ describe('C-B ecran 7 — le coach voit les reponses de ses convoques', () => {
 
     expect(texte).toContain('Sofiane Dib');
     expect(texte).toContain('Hors app — il ne peut pas répondre');
+    // REPRISE-EVENEMENTS 121 — le fil le compte présent (`buildAnswerGroups`) : la pastille
+    // aussi. Le serveur l'écarte de ses `counts` (event-composition.ts, `manualIds`).
+    expect(texte).toContain('2 présents');
+    expect(texte).toContain('1 en attente');
   });
 
   test('sans compo publiee, l ecran le dit au lieu d afficher des zeros muets', async () => {

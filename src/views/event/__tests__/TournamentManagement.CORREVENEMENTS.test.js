@@ -46,7 +46,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => ({ canManageEvent: () => true }) }));
+// REPRISE-EVENEMENTS 130 : `mockPeutGerer` bascule l'organisateur en simple lecteur (parent).
+const mockPeutGerer = { value: true };
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ canManageEvent: () => mockPeutGerer.value }),
+}));
 jest.mock('@/components/atoms/button/Button', () => {
   const react = jest.requireActual('react');
   const rn = jest.requireActual('react-native');
@@ -168,6 +173,28 @@ describe('CORR-EVENEMENTS 131 — un tournoi clôturé se lit, il ne se pilote p
     expect(boutons(arbre)).not.toEqual(expect.arrayContaining(['Tirer les poules']));
     expect(boutons(arbre)).not.toContain('Modifier les paramètres');
     expect(boutons(arbre)).not.toContain('Clôturer le tournoi');
+  });
+});
+
+// REPRISE-EVENEMENTS 130 — un parent lisait « Pilotage du tournoi : tire les poules, génère
+// les matchs… », une phrase d'organisateur. Le lecteur lit le nom du tournoi.
+describe('REPRISE-EVENEMENTS 130 — le titre du lecteur', () => {
+  afterEach(() => { mockPeutGerer.value = true; });
+
+  test('🐞 un parent lit le nom du tournoi, pas « Pilotage du tournoi »', async () => {
+    mockPeutGerer.value = false;
+    const donnees = tableau();
+    const arbre = await monter({ ...donnees, event: { ...donnees.event, name: 'Tournoi de Noël' } });
+
+    expect(texte(arbre)).toContain('Tournoi de Noël');
+    expect(texte(arbre)).not.toContain('Pilotage du tournoi');
+    expect(texte(arbre)).not.toContain('Tire les poules');
+  });
+
+  test('l organisateur garde son titre de pilotage', async () => {
+    const arbre = await monter(tableau());
+
+    expect(texte(arbre)).toContain('Pilotage du tournoi');
   });
 });
 

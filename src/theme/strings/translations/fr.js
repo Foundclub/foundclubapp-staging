@@ -10254,6 +10254,8 @@ export default {
       actions: {
         everyoneHere: 'Tout le monde est là',
         markAll: 'Tout pointer',
+        markRemaining_one: 'Pointer la dernière personne à l’heure',
+        markRemaining_other: 'Pointer les {{count}} restant·e·s à l’heure',
         unmarkAll: 'Tout dépointer',
       },
       answers: {
@@ -21672,6 +21674,8 @@ export default {
       writeToFallback: "l'encadrant",
     },
     appel: {
+      absent_one: '{{count}} absent·e',
+      absent_other: '{{count}} absent·e·s',
       arrived_one: '{{count}} arrivé·e à l’heure',
       arrived_other: '{{count}} arrivé·e·s à l’heure',
       arrivedLate_one: '{{count}} arrivé·e en retard',

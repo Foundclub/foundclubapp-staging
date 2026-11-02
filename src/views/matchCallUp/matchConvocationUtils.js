@@ -177,11 +177,16 @@ export const getConvocationCounts = ({ responses = null, roster = [] } = {}) => 
   const countLocal = (/** @type {string} */ value) => rows
     .filter((row) => row?.response === value).length;
 
+  // REPRISE-EVENEMENTS 121 — un joueur sans app est présent d'office, comme au fil
+  // (`buildAnswerGroups`). Le serveur l'écarte de ses `counts` : il s'ajoute sans doublon.
+  const sansApp = rows.filter((row) => row?.isManual).length;
+
   return {
     absent: hasServerCounts ? readServer('absent') : countLocal(CONVOCATION_RESPONSE_ABSENT),
     calledUp: rows.length,
     pending: hasServerCounts ? readServer('pending') : countLocal(CONVOCATION_RESPONSE_PENDING),
-    present: hasServerCounts ? readServer('present') : countLocal(CONVOCATION_RESPONSE_PRESENT),
+    present: sansApp
+      + (hasServerCounts ? readServer('present') : countLocal(CONVOCATION_RESPONSE_PRESENT)),
   };
 };
 

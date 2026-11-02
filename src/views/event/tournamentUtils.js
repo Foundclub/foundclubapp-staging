@@ -258,3 +258,46 @@ export const formatTournamentScore = (match) => {
   if (!hasScoreA || !hasScoreB) return '--';
   return `${Number(match.scoreA)} - ${Number(match.scoreB)}`;
 };
+
+/**
+ * CORR-EVENEMENTS 131 — un tournoi clôturé (`sessionStatus` « closed », posé par
+ * `closeTournament`) se lit, il ne se pilote plus. Le serveur n'écrit pas de date de clôture :
+ * celle de l'archivage des équipes, la plus récente, en tient lieu. Le pilotage et les deux
+ * fiches (site et téléphone) lisent CETTE règle.
+ * @param {any} event - L'événement tournoi, avec `sessionStatus` et `tournamentTeams`.
+ * @returns {{ closedAt: number | undefined, isClosed: boolean }} - L'état et sa date.
+ */
+export const getTournamentClosure = (event) => ({
+  closedAt: (Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [])
+    .map((/** @type {any} */ team) => Date.parse(team?.archivedAt || ''))
+    .filter(Number.isFinite)
+    .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0],
+  isClosed: String(event?.sessionStatus || '').toLowerCase() === 'closed',
+});
+
+/**
+ * CORR-EVENEMENTS 129 (décision B) — un effectif minimum saisi vaut au moins 1. Les réglages du
+ * tournoi et l'assistant de création lisent CETTE règle (REPRISE-EVENEMENTS 129).
+ * @param {string | number | null | undefined} minRosterText - L'effectif minimum saisi.
+ * @returns {boolean} - Vrai si une valeur est saisie et qu'elle vaut moins de 1.
+ */
+export const isTournamentMinRosterTooLow = (minRosterText) => {
+  const saisi = String(minRosterText ?? '').trim();
+  return saisi !== '' && !(Number.parseInt(saisi, 10) >= 1);
+};
+
+/**
+ * CORR-EVENEMENTS 129 (décision B) — une poule compte au moins 2 équipes : au plus
+ * équipes ÷ 2 poules. Sans format à poules (ou en championnat), rien à borner.
+ * @param {{ formatMode: string, groupCount: number, teamCount: number }} reglages - Le format,
+ *   le nombre de poules demandé et le nombre d'équipes (acceptées, sinon le maximum prévu).
+ * @returns {{ isGroupCountTooHigh: boolean, maxGroupCount: number }} - Le plafond et le verdict.
+ */
+export const getTournamentGroupBounds = ({ formatMode, groupCount, teamCount }) => {
+  const maxGroupCount = Math.max(1, Math.floor(teamCount / 2));
+  const usesGroups = ['groups_only', 'groups_to_knockout'].includes(formatMode);
+  return {
+    isGroupCountTooHigh: usesGroups && teamCount >= 2 && groupCount > maxGroupCount,
+    maxGroupCount,
+  };
+};

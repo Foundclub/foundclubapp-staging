@@ -558,7 +558,7 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
    * @returns {Promise<{ tree: any, onApply: jest.Mock, onClose: jest.Mock }>} Le rendu.
    */
   const rendreAvecEtoile = async ({
-    filters = {}, onCreateAlert = undefined, pourUneAlerte = false,
+    filters = {}, onCreateAlert = undefined, pourUneAlerte = false, villeDuProfil = undefined,
   } = {}) => {
     const onApply = jest.fn();
     const onClose = jest.fn();
@@ -573,6 +573,7 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
           onClose={onClose}
           onCreateAlert={onCreateAlert}
           pourUneAlerte={pourUneAlerte}
+          villeDuProfil={villeDuProfil}
         />,
       );
     });
@@ -668,6 +669,34 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
     expect(texte).toContain('Choisis une ville, puis touche « Créer cette alerte ».');
     expect(texte).toContain('Créer cette alerte');
     expect(texte).toContain('Voir les résultats sans créer d\'alerte');
+  });
+
+  // REPRISE-EVENEMENTS 134 (décision A : préremplir la ville du profil) — la contre-recette
+  // voyait un champ vide « Choisir une ville (ex. : Marseille) » sous DEUX lignes « Ville ».
+  it('🐞 ouverte pour une alerte : la ville du profil est préremplie, sans note', async () => {
+    const { tree } = await rendreAvecEtoile({
+      onCreateAlert: jest.fn(() => Promise.resolve('creee')),
+      pourUneAlerte: true,
+      villeDuProfil: MARSEILLE,
+    });
+
+    expect(trouver(tree, 'adresse').props.address).toEqual(MARSEILLE);
+    expect(texteVisible(tree)).not.toContain('Choisis une ville');
+  });
+
+  it('🐞 la rangée Ville ne répète pas « Ville » au-dessus du champ', async () => {
+    const { tree } = await rendreAvecEtoile({ pourUneAlerte: true });
+
+    expect(trouver(tree, 'adresse').props.label).toBeUndefined();
+  });
+
+  it('une ville déjà choisie dans la recherche garde la priorité', async () => {
+    const LYON = { label: 'Lyon', value: '4.83|45.76' };
+    const { tree } = await rendreAvecEtoile({
+      filters: { city: LYON }, pourUneAlerte: true, villeDuProfil: MARSEILLE,
+    });
+
+    expect(trouver(tree, 'adresse').props.address).toEqual(LYON);
   });
 });
 

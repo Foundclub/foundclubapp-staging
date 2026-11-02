@@ -110,6 +110,7 @@ const libelleDeLaSelection = (options, valeurs, repli) => {
  *  onClose: () => void;
  *  onCreateAlert?: (filters: Record<string, any>) => Promise<string>;
  *  pourUneAlerte?: boolean;
+ *  villeDuProfil?: { label: string, value: string };
  *  raisonDuRefus?: string;
  * }} props `pourUneAlerte` : ouverte pour creer une alerte, la feuille s'ouvre
  *   sur la rangee Ville, dit qu'une ville est necessaire et cree l'alerte.
@@ -124,6 +125,7 @@ function EventFiltersSheet({
   onCreateAlert = undefined,
   pourUneAlerte = false,
   raisonDuRefus = '',
+  villeDuProfil = undefined,
 }) {
   const { t } = useTranslation();
   const TOUS_SPORTS = t('eventFiltersSheet.allSports', 'Tous les sports');
@@ -168,7 +170,11 @@ function EventFiltersSheet({
     if (!isVisible) return;
     setActivity(enTableau(filters?.activity));
     setCategory(enTableau(filters?.category));
-    setCity(filters?.city?.value ? filters.city : undefined);
+    // REPRISE-EVENEMENTS 134 (décision A) : pour une alerte, la ville du profil remplit le champ
+    // vide ; une ville déjà choisie dans la recherche garde la priorité.
+    const villeDeDepart = filters?.city?.value ? filters.city : undefined;
+    const villeDAlerte = pourUneAlerte && villeDuProfil?.value ? villeDuProfil : undefined;
+    setCity(villeDeDepart || villeDAlerte);
     setClub(filters?.club || null);
     setLevel(enTableau(filters?.level));
     setRadius(Number(filters?.radius) || RAYON_PAR_DEFAUT);
@@ -179,8 +185,10 @@ function EventFiltersSheet({
     setRechercheNiveau('');
     setRechercheType('');
     setRechercheEquipe('');
-    setNoteAlerte(pourUneAlerte ? StatutAlerte.villeManquante : '');
-  }, [filters, isVisible, pourUneAlerte, setNoteAlerte]);
+    setNoteAlerte(pourUneAlerte && !villeDeDepart && !villeDAlerte
+      ? StatutAlerte.villeManquante
+      : '');
+  }, [filters, isVisible, pourUneAlerte, setNoteAlerte, villeDuProfil]);
 
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
@@ -383,9 +391,9 @@ function EventFiltersSheet({
     {
       content: (
         <View style={[Spaces.gap[12]]}>
+          {/* REPRISE-EVENEMENTS 134 : pas de libellé — la rangée s'appelle déjà « Ville ». */}
           <AutocompleteAddressInput
             address={city}
-            label={t('clubFilters.fields.city.label', 'Ville')}
             placeholder={t(
               'clubFilters.fields.city.placeholderChoisir',
               'Choisir une ville (ex. : Marseille)',

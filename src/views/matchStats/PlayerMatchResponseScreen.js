@@ -676,7 +676,6 @@ function PlayerMatchResponseScreen({ navigation, route }) {
             const label = {
               full: t('playerMatchResponseScreen.wholeMatch', 'Tout le match'),
               half: t('playerMatchResponseScreen.oneHalf', 'Une mi-temps'),
-              none: t('playerMatchResponseScreen.didNotPlay', 'Pas joué'),
             }[preset.key];
             return (
               <Pressable
@@ -700,8 +699,12 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                 ]}
               >
                 <Text
-                  numberOfLines={1}
-                  style={[Fonts.p3Bold, isActive ? Fonts.primary900 : Fonts.neutral00]}
+                  numberOfLines={2}
+                  style={[
+                    Fonts.p3Bold,
+                    Fonts.textCenter,
+                    isActive ? Fonts.primary900 : Fonts.neutral00,
+                  ]}
                 >
                   {label}
                 </Text>
@@ -842,6 +845,8 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     <View style={Spaces.gap[16]}>
       <SegmentedControl
         centerContent
+        // REPRISE-EVENEMENTS 124 : à 390, « Je connais mes chiffres » était coupé.
+        fullLabels
         onChange={(value) => setDoesKnowStats(value === 'known')}
         options={[
           {

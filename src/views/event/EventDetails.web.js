@@ -50,6 +50,7 @@ import TrainingReviewsCard, {
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  getTournamentClosure,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
@@ -567,14 +568,18 @@ function EventDetails({ navigation, route }) {
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
     [tournamentTeams, userData?.documentId],
   );
+  // REPRISE-EVENEMENTS 131 : un tournoi clôturé se lit seulement (la règle du pilotage) ;
+  // son équipe archivée ne se gère plus.
+  const clotureDuTournoi = getTournamentClosure(event);
+  const tournoiClos = isTournamentEvent && clotureDuTournoi.isClosed;
   const managedTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
-    if (!currentUserId) return null;
+    if (!currentUserId || tournoiClos) return null;
     return tournamentTeams.find((team) => (
       team?.captainUser?.documentId === currentUserId
       || (team?.adminUsers || []).some((adminUser) => adminUser?.documentId === currentUserId)
     )) || null;
-  }, [tournamentTeams, userData?.documentId]);
+  }, [tournamentTeams, tournoiClos, userData?.documentId]);
   const registeredTournamentSourceTeamIds = useMemo(
     () => new Set(
       tournamentTeams
@@ -592,6 +597,7 @@ function EventDetails({ navigation, route }) {
   // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
@@ -600,6 +606,7 @@ function EventDetails({ navigation, route }) {
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
+    && !tournoiClos
     && !offreAuxEnfants
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
@@ -1536,8 +1543,16 @@ function EventDetails({ navigation, route }) {
     'eventDetails.joinThisEvent',
     'Rejoindre cet événement',
   );
+  // REPRISE-EVENEMENTS 123 (additif) : avec Présent / Absent, « Mon statut » dit la réponse
+  // (les mêmes mots que les boutons) — plus « En attente de validation » d'une vieille demande.
+  let reponseDuMembre = t('eventDetails.noAnswer', 'Aucune réponse');
+  if (participationState?.isParticipating) {
+    reponseDuMembre = t('playerConvocation.actions.present', 'Présent');
+  } else if (participationState?.isMissing) {
+    reponseDuMembre = t('playerConvocation.actions.absent', 'Absent');
+  }
   const statusDetailLabel = (isSignedIn
-    ? participationLabel
+    ? (repondPresentAbsent ? reponseDuMembre : participationLabel)
     : t('eventDetails.signInToAnswerThis', 'Connecte-toi pour répondre à cet événement.'));
   // FINITIONS16 · POINT 7 (T15) — Papa Test lisait « Mon statut — Aucune réponse » : il n'a
   // rien a repondre (`rienARepondre`, point 1) et aucune reponse a lui. Aucune planche ne lui
@@ -2357,7 +2372,8 @@ function EventDetails({ navigation, route }) {
                           : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
                       </span>
                     ) : null}
-                    {event?.sessionStatus ? (
+                    {/* REPRISE-EVENEMENTS 123 : un réglage d'organisateur. */}
+                    {canEdit && event?.sessionStatus ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
@@ -2436,11 +2452,12 @@ function EventDetails({ navigation, route }) {
                       </button>
                     </div>
                   ) : null}
+                  {/* REPRISE-EVENEMENTS 130 : pleine largeur, sinon il déborde à 390. */}
                   {offreAuxEnfants && !canEdit ? (
                     // REPRISE-TEXTES (point 24) : dans cette rangée flexible, le bloc
                     // prenait sa largeur naturelle et débordait de la colonne
                     // (« Réponse pour Lina » coupé, « Absent » caché).
-                    <div style={{ minWidth: 0, width: '100%' }}>
+                    <div style={{ flexBasis: '100%', minWidth: 0, width: '100%' }}>
                       <EventChildRegistration event={event} navigation={navigation} />
                     </div>
                   ) : null}
@@ -2487,7 +2504,8 @@ function EventDetails({ navigation, route }) {
                       ) : joinButtonLabel}
                     </button>
                   ) : null}
-                  {!canEdit && activeParticipationRequestId ? (
+                  {/* REPRISE-EVENEMENTS 123 : Présent / Absent suffisent. */}
+                  {!canEdit && !repondPresentAbsent && activeParticipationRequestId ? (
                     <button
                       disabled={cancelParticipationMutation.isPending}
                       onClick={handleCancelParticipation}
@@ -3490,6 +3508,32 @@ function EventDetails({ navigation, route }) {
                       })}
                     </span>
                   </div>
+                  {tournoiClos ? (
+                    <div
+                      data-testid="tournoi-cloture"
+                      role="status"
+                      style={{
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: 12,
+                        display: 'grid',
+                        gap: 4,
+                        padding: 12,
+                      }}
+                    >
+                      <strong style={{ color: textColor }}>
+                        {clotureDuTournoi.closedAt
+                          ? t('tournamentManagement.closedOn', 'Tournoi clôturé le {{date}}', {
+                            date: new Date(clotureDuTournoi.closedAt)
+                              .toLocaleDateString(localeDesFormats()),
+                            ...SANS_ECHAPPEMENT,
+                          })
+                          : t('tournamentManagement.closedBanner', 'Tournoi clôturé')}
+                      </strong>
+                      <span style={{ color: mutedTextColor }}>
+                        {t('tournamentManagement.closedReadOnly')}
+                      </span>
+                    </div>
+                  ) : null}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
                       onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
@@ -3512,7 +3556,7 @@ function EventDetails({ navigation, route }) {
                         'Voir la compétition',
                       )}
                     </button>
-                    {canEdit ? (
+                    {canEdit && !tournoiClos ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
                         style={primaryButtonStyle}
