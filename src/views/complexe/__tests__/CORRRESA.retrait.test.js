@@ -46,13 +46,14 @@ const monter = async () => {
 };
 
 describe('CORR-RESA (69 A) — retirer un terrain qui porte une collecte', () => {
-  it('0 réservation, 1 collecte : la phrase dit que la collecte s’arrêtera', async () => {
+  // REPRISE-RESA (01/11/2026, revue du point 69) : « Aucune réservation à venir » avant la collecte
+  // se lisait mal ; sans réservation, la feuille ne dit que la collecte.
+  it('0 réservation, 1 collecte : seulement la collecte qui s’arrêtera', async () => {
     mockApercu = { data: { collectesTouchees: 1, reservationsTouchees: 0 } };
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain(
-      'Aucune réservation à venir sur ce terrain. '
-      + '1 collecte en cours s’arrêtera et ses joueurs seront prévenus.',
-    );
+    expect(lisibles(arbre))
+      .toContain('1 collecte en cours s’arrêtera et ses joueurs seront prévenus.');
+    expect(lisibles(arbre).some((texte) => texte.includes('Aucune réservation'))).toBe(false);
   });
 
   it('2 réservations, 3 collectes : les deux phrases, au pluriel', async () => {

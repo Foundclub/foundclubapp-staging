@@ -81,13 +81,16 @@ function FeuilleRetrait({
     );
   }
   if (compte !== null && collectes > 0) {
-    effet = `${effet} ${t('complexeReservations.retrait.collectes', {
+    const phraseCollectes = t('complexeReservations.retrait.collectes', {
       count: collectes,
       defaultValue_one: '{{count}} collecte en cours s’arrêtera et ses joueurs seront prévenus.',
       defaultValue_other:
         '{{count}} collectes en cours s’arrêteront et leurs joueurs seront prévenus.',
       ...SANS_ECHAPPEMENT,
-    })}`;
+    });
+    // REPRISE-RESA (69) : sans réservation, « Aucune réservation à venir » avant la collecte
+    // se lisait mal.
+    effet = compte === 0 ? phraseCollectes : `${effet} ${phraseCollectes}`;
   }
 
   return (

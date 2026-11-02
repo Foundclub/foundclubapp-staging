@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { ETATS_LUS, libelleStatut, STATUTS } from '@/domains/complexe/complexeReservation';
+import {
+  ETATS_LUS, libelleStatut, STATUTS, STATUTS_COLLECTE,
+} from '@/domains/complexe/complexeReservation';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +24,12 @@ const allureDe = (statut) => {
       return { cle: 'success700', glyphe: 'circleCheck', pointille: false };
     case ETATS_LUS.nonHonoree:
       return { cle: 'error700', glyphe: 'flag', pointille: false };
+    // REPRISE-RESA (D-GERANT-3) : une collecte en cours (les joueurs se comptent), une collecte
+    // arrêtée (rien n'est réservé).
+    case STATUTS_COLLECTE.enCollecte:
+      return { cle: 'primary200', glyphe: 'clock', pointille: false };
+    case STATUTS_COLLECTE.nonAboutie:
+      return { cle: 'error500', glyphe: 'ban', pointille: false };
     case STATUTS.annulee:
     case STATUTS.refusee:
       return { cle: 'error500', glyphe: 'ban', pointille: false };

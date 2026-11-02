@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 /**
  * 🚪 SAIS (08/10, tournée T20 lot 2) — LA GARDE « QUITTER SANS ENREGISTRER ? », sortie telle
  * quelle de « Demander un créneau » (VILLE-T18C, ClubSlotRequest) pour servir aussi « Fermer une
  * installation » et « Bloquer un créneau » : un Retour sur une saisie modifiée demande avant de la
  * perdre ; « Quitter » rejoue la sortie sans redemander.
- * ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (même
- * limite qu'AdminCollectiviteForm) ; la flèche de l'écran, si.
+ * REPRISE-RESA (01/11/2026, point 81) : sur le site, quitter l'écran par un lien de la page (le
+ * menu) ou fermer / recharger l'onglet ne passe pas par `beforeRemove` : la garde écoute aussi la
+ * page tant que la saisie est modifiée.
+ * ponytail: sur le site, la flèche « retour » du NAVIGATEUR ne demande toujours pas (BrowserRouter
+ * n'offre pas de blocage ; sortie : passer le site à un routeur de données et `useBlocker`).
  * @param {any} navigation - La navigation de l'écran ; `null` : aucune garde (panneau
  *   d'ordinateur).
  * @param {{
@@ -70,6 +73,44 @@ export default function useGardeDeSortie(navigation, {
     evenement.preventDefault();
     demander(() => navigation.dispatch?.(evenement.data.action));
   }), [actif, demander, navigation, retenir]);
+
+  // REPRISE-RESA (81) — le site : un clic sur un lien interne de la page est retenu (capturé avant
+  // le routeur), la question posée, et « Quitter » rejoue le clic ; fermer ou recharger l'onglet
+  // fait demander le navigateur. Rien sans navigation (panneau d'ordinateur) ni saisie modifiée.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !navigation || !actif || typeof document === 'undefined') {
+      return undefined;
+    }
+    const surClic = (/** @type {any} */ evenement) => {
+      if (sortieLibre.current || evenement.defaultPrevented || evenement.button !== 0
+        || evenement.metaKey || evenement.ctrlKey || evenement.shiftKey || evenement.altKey) return;
+      const lien = evenement.target?.closest?.('a[href]');
+      if (!lien || (lien.target && lien.target !== '_self')) return;
+      const cible = new URL(lien.href, window.location.href);
+      const ici = new URL(window.location.href);
+      if (cible.origin !== ici.origin) return;
+      if (`${cible.pathname}${cible.search}` === `${ici.pathname}${ici.search}`) return;
+      evenement.preventDefault();
+      evenement.stopPropagation();
+      const impossible = retenir?.();
+      if (impossible) {
+        Alert.alert(impossible.titre, impossible.message);
+        return;
+      }
+      demander(() => lien.click());
+    };
+    const surDepart = (/** @type {any} */ evenement) => {
+      if (sortieLibre.current) return;
+      // Chrome (depuis la 119), Firefox et Safari demandent sur `preventDefault`.
+      evenement.preventDefault();
+    };
+    document.addEventListener('click', surClic, true);
+    window.addEventListener('beforeunload', surDepart);
+    return () => {
+      document.removeEventListener('click', surClic, true);
+      window.removeEventListener('beforeunload', surDepart);
+    };
+  }, [actif, demander, navigation, retenir]);
 
   // PETITSCHOIX/16 — un autre onglet ne retire pas l'écran de sa pile, mais le coach le quitte :
   // même question. Seulement en mode « enregistrer », et seulement pour l'écran au premier plan.
