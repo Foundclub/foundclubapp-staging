@@ -464,10 +464,12 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
     const boutonsDuDefilement = defilement.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button')
       .map((n) => textes(n).join(''));
 
+    // REPRISE-PLACE (02/11, Adel : « une barre du bas réduite à un seul bouton ») : « Publier »
+    // reste seul dans la barre collante ; « Brouillon » devient le lien du bout de la feuille.
     expect(dansLeDefilement).not.toContain('Publier');
-    expect(boutonsDuDefilement).not.toContain('Brouillon');
+    expect(boutonsDuDefilement).toContain('Brouillon');
     const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
-    expect(textes(barre)).toEqual(['Brouillon', 'Publier']);
+    expect(textes(barre)).toEqual(['Publier']);
   });
 
   test('État 2 · Joueurs : la ligne de Hugo reprend SA réponse (90 min, 1 but) — défaut 19', async () => {
@@ -1098,5 +1100,23 @@ describe('CORR-SOCLE point 3 — feuille de match : place rendue', () => {
     const racine = await monter(feuilleU15());
     const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
     expect(StyleSheet.flatten(barre.props.style).paddingBottom).toBe(108);
+  });
+});
+
+// 📐 REPRISE-PLACE (02/11, décision d'Adel au point 3 : « pour la feuille de match une barre du bas
+// réduite à un seul bouton », revue Entraîneur) — la barre du bas ne garde que « Publier ».
+// « Brouillon » reste une fonction : un lien discret en fin de feuille, au-dessus de la barre,
+// qui enregistre toujours le brouillon.
+describe('REPRISE-PLACE — feuille de match : un seul bouton dans la barre du bas', () => {
+  test('la barre ne porte que « Publier » ; « Brouillon » est au bout de la feuille et enregistre', async () => {
+    const racine = await monter(feuilleU15());
+    const barre = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0];
+    expect(textes(barre)).toEqual(['Publier']);
+
+    const [defilement] = racine.findAllByType(ScrollView);
+    const lien = defilement.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-brouillon');
+    expect(lien.length).toBeGreaterThan(0);
+    await appuyerSur(racine, 'Brouillon');
+    expect(mockSaveDraft).toHaveBeenCalledTimes(1);
   });
 });
