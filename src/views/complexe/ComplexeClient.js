@@ -414,7 +414,7 @@ function ComplexeClient({
                     complexeId, reservationId: reservation.documentId,
                   })}
                   style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, {
-                    gap: 8, minHeight: 44,
+                    gap: 8, minHeight: 44, paddingVertical: 8,
                   }]}
                   testID={`client-historique-${reservation.documentId}`}
                 >

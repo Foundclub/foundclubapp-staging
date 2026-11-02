@@ -81,6 +81,7 @@ const monter = (props = {}) => {
     arbre = renderer.create(
       <SegmentedControl
         centerContent
+        fitLabels={props.fitLabels}
         grand={props.grand}
         onChange={props.onChange || jest.fn()}
         options={props.options || MODES}
@@ -207,5 +208,25 @@ describe('RESA-BASCULE — ajout 2 : `radio`, le rôle « bouton radio »', () =
       });
     });
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+// FIN-PLACE (02/11/2026) — feuille de match à 390 : « Score et b… ». `adjustsFontSizeToFit`
+// n'existe
+// pas sur le site : `fitLabels` n'y faisait que réduire la marge. Chaque segment y prend donc la
+// largeur de son libellé, et le reste de la rangée est partagé.
+describe('FIN-PLACE — `fitLabels` sur le site', () => {
+  it('site : la largeur part du libellé, pas d un tiers égal', () => {
+    Platform.OS = 'web';
+    segments(monter({ fitLabels: true })).forEach((s) => expect(style(s).flexBasis).toBe('auto'));
+  });
+
+  it('téléphone, ou sans `fitLabels` : des largeurs égales, comme avant', () => {
+    Platform.OS = 'ios';
+    segments(monter({ fitLabels: true })).forEach((s) => {
+      expect(style(s).flexBasis).toBeUndefined();
+    });
+    Platform.OS = 'web';
+    segments(monter()).forEach((s) => expect(style(s).flexBasis).toBeUndefined());
   });
 });

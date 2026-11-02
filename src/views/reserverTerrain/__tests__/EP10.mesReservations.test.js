@@ -262,6 +262,22 @@ describe('E-P10 — sur ordinateur (OR3, gabarit A) : la liste à gauche, la fic
   });
 });
 
+// FIN-PLACE (02/11/2026) — à 1440, « Aucune réservation à venir » était centré dans la colonne de
+// la liste (à gauche), alors qu'aucun volet n'occupe la droite : sans volet, la colonne prend la
+// page.
+describe('FIN-PLACE — sur ordinateur, sans réservation, la liste prend toute la page', () => {
+  const largeurDeLaListe = (/** @type {any} */ arbre) => (
+    arbre.root.findByProps({ testID: 'mes-reservations-liste' }).props.style.width
+  );
+
+  it('rien à montrer : toute la largeur ; une réservation : la colonne, et son volet', async () => {
+    mockOrdinateur = true;
+    expect(largeurDeLaListe(await monter())).not.toBe('100%');
+    mockLectures = { 'a-venir': lue([]), passees: lue([]), refusees: lue([]) };
+    expect(largeurDeLaListe(await monter())).toBe('100%');
+  });
+});
+
 // RESA-FIN-APP-2 (22/10/2026) — E-P10, tournée 2 : « À » au lieu de « À venir », et « Refusées
 // et annulées » qui sortait de l'écran. Plan E-P10 §9 : « onglets défilants ». Ce témoin fige ce
 // que le plan demande : les quatre onglets dans UNE rangée qui défile, chaque libellé en un seul

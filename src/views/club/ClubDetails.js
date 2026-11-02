@@ -65,7 +65,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
+import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -1354,9 +1354,13 @@ function ClubDetails({ navigation, route }) {
   }, [clubId, isClubMember, userData]);
   // REPRISE-PLACE (01/11, point 7, revue « titre de la fiche du club » et « rallumer l'onglet du
   // club ») — sur le site : le nom du club dans la barre fine ; son propre club allume l'onglet du
-  // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Un club d'un autre
-  // garde « aucun onglet » (choix A du chef, réversible). Le téléphone ne lit pas ce magasin.
-  useDeclarerPageDuSite({ onglet: isMember ? 'main-team' : null, titre: club?.name || null });
+  // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Le club d'un autre
+  // garde l'onglet d'où l'on vient, aucun sans origine connue (FIN-PLACE, Adel « 1- C »). Le
+  // téléphone ne lit pas ce magasin.
+  useDeclarerPageDuSite({
+    onglet: isMember ? 'main-team' : lireOngletDOrigine(),
+    titre: club?.name || null,
+  });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
   // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
@@ -3305,11 +3309,9 @@ function ClubDetails({ navigation, route }) {
               Spaces.gap[16],
               Spaces.paddingHorizontal[24],
               Spaces.paddingBottom[40],
-              // CORR-SOCLE (30/10, point 5) puis REPRISE-PLACE (01/11) : 44 laissait encore une
-              // bande vide sous la barre de titre (revue : « grand vide ») ; le logo ne dépasse
-              // plus que de 12 (ci-dessous) : sous les 24 px du haut de la page, le logo est à
-              // 24 px de la barre, la carte à 36.
-              Spaces.marginTop[12],
+              // CORR-SOCLE (30/10, point 5), REPRISE-PLACE (01/11) puis FIN-PLACE (02/11) : plus de
+              // bande vide sous la barre de titre, et l'écusson est DANS la carte (il dépassait de
+              // 12 et son haut touchait le bord) : carte à 24 px de la barre, écusson à 40.
               { overflow: 'visible' },
             ]}
             >
@@ -3336,7 +3338,7 @@ function ClubDetails({ navigation, route }) {
                   </Text>
                 </TouchableOpacity>
               ) : null}
-              <View style={{ marginTop: -12, zIndex: 1 }}>
+              <View style={{ marginTop: 16, zIndex: 1 }} testID="fiche-club-ecusson">
                 <ClubLogoMark
                   club={club}
                   logoStyle={[
@@ -4122,14 +4124,23 @@ function ClubDetails({ navigation, route }) {
                             Spaces.padding[8],
                             Spaces.gap[16]]}
                         >
-                          <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter]}>
+                          {/* FIN-PLACE (02/11/2026) : sans plancher à 0, une ligne longue
+                             poussait le chevron hors de l'écran (9 px à 390). */}
+                          <View
+                            style={[
+                              Alignments.row,
+                              Spaces.gap[16],
+                              Alignments.alignCenter,
+                              { flex: 1, minWidth: 0 },
+                            ]}
+                          >
                             <ClubLogoMark
                               club={team?.club || club}
                               isNeutral
                               name={team?.club?.name || club?.name || team?.name}
                               size={60}
                             />
-                            <View style={{ flex: 1 }}>
+                            <View style={{ flex: 1, minWidth: 0 }}>
                               {/* MARQUEE — le nom de l equipe se lit en entier */}
                               <MarqueeText
                                 style={[Fonts.p1Bold, Fonts.neutral00]}

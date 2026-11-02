@@ -192,6 +192,14 @@ function Messaging({ navigation, route }) {
   const roleQuiOuvreUneConversation = ['coach', 'president', 'superAdmin']
     .includes(getUserRoleKey(userData?.role?.name));
   const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
+  // FIN-PLACE (02/11/2026, D-COACH-11) : sur le site, le bouton monte dans la ligne du titre ; en
+  // flottant, il couvrait les « ⋮ » et les dates des lignes, dès l'arrivée sur la page.
+  const boutonQuiFlotte = canCreateConversation && !isWeb;
+  const libelleNouvelleConversation = t('messaging.newConversation', 'Nouvelle conversation');
+  const ouvrirNouvelleConversation = () => navigation.navigate(RouteNames.NewConversation, {
+    chatScope: chatScopeFilter,
+    ...(espaceVille ? { collectiviteId: villeId, espace: 'ville' } : {}),
+  });
   const floatingButtonBottom = floatingActionBottomOffset;
   // CORR-MESSAGERIE 100b (31/10) — sur le site, la coque réserve déjà la barre du bas (le
   // socle : `dockClearance` vaut 0) ; la liste la recomptait et la page défilait de 235 px
@@ -199,7 +207,7 @@ function Messaging({ navigation, route }) {
   const reserveDeLaCoque = Platform.OS === 'web'
     ? Math.max(sceneBottomInset - (dockClearance ?? sceneBottomInset), 0)
     : 0;
-  const chatListBottomInset = Math.max((canCreateConversation
+  const chatListBottomInset = Math.max((boutonQuiFlotte
     ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
     : sceneBottomInset) - reserveDeLaCoque, 0);
   const listOpenLoggedRef = useRef(false);
@@ -1088,16 +1096,42 @@ function Messaging({ navigation, route }) {
                   ListHeaderComponent={(
                     <>
                       {/* MSG1A (§3.13, decision d'Adel « titre Messages ») — 28 en gras. */}
-                      <Text
+                      <View
                         style={[
-                          stylesDeLaListe.titreDeLaPage,
-                          Fonts.neutral00,
+                          Alignments.row,
+                          Alignments.alignCenter,
+                          Alignments.justifySpaceBetween,
                           Spaces.marginTop[16],
                           Spaces.marginBottom[24],
                         ]}
                       >
-                        {t('messaging.title')}
-                      </Text>
+                        <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00]}>
+                          {t('messaging.title')}
+                        </Text>
+                        {canCreateConversation && !boutonQuiFlotte ? (
+                          <TouchableOpacity
+                            accessibilityLabel={libelleNouvelleConversation}
+                            accessibilityRole="button"
+                            activeOpacity={0.85}
+                            onPress={ouvrirNouvelleConversation}
+                            style={{
+                              alignItems: 'center',
+                              backgroundColor: Colors.primary500,
+                              borderRadius: 22,
+                              height: 44,
+                              justifyContent: 'center',
+                              width: 44,
+                            }}
+                            testID="messaging-nouvelle-conversation"
+                          >
+                            <Image
+                              resizeMode="contain"
+                              source={Images.plus}
+                              style={{ height: 18, tintColor: Colors.primary900, width: 18 }}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
                       {espaceVille ? null : renderChatScopeFilter()}
                       {renderSearch()}
                       <CanauxDeLaVille
@@ -1134,7 +1168,7 @@ function Messaging({ navigation, route }) {
           </View>
         </OnboardingWrapper>
 
-        {canCreateConversation ? (
+        {boutonQuiFlotte ? (
           <WebFloatingOverlay
             style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
           >
@@ -1142,10 +1176,7 @@ function Messaging({ navigation, route }) {
               accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
               accessibilityRole="button"
               activeOpacity={0.85}
-              onPress={() => navigation.navigate(RouteNames.NewConversation, {
-                chatScope: chatScopeFilter,
-                ...(espaceVille ? { collectiviteId: villeId, espace: 'ville' } : {}),
-              })}
+              onPress={ouvrirNouvelleConversation}
               style={[
                 ApplicationStyle.shadow200,
                 {

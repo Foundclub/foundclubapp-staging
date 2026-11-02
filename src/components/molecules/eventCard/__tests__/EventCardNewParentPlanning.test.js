@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
@@ -133,5 +133,16 @@ describe('PARENT-PLANNING / 3 — la carte d un evenement de l enfant', () => {
     const racine = rendre({});
     expect(pastilles(racine)).toHaveLength(0);
     expect(racine.findAllByType(EventAnswerButtons)).toHaveLength(1);
+  });
+});
+
+// FIN-PLACE (02/11/2026, contre-recette parent) — « DÉTECTION / E… » et « LI… » : deux pastilles
+// qui
+// se partageaient la place à côté de la date, coupées toutes les deux. La rangée passe à la ligne.
+describe('FIN-PLACE — les pastilles de la carte ne se coupent pas', () => {
+  test('la rangée des pastilles passe à la ligne', () => {
+    const racine = rendre({ childLabel: 'Lina' });
+    const rangee = pastilles(racine)[0].parent;
+    expect(StyleSheet.flatten(rangee.props.style).flexWrap).toBe('wrap');
   });
 });

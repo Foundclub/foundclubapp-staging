@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeClient from '@/views/complexe/ComplexeClient';
@@ -114,5 +115,15 @@ describe('REPRISE-RESA (D-GERANT-3) — l’historique d’un client dit l’ét
     expect(lisibles({ root: arretee })).toContain('Non aboutie');
     expect(parRepere({ root: enCours }, 'pastille-etat-en_collecte')).not.toBeNull();
     expect(parRepere({ root: arretee }, 'pastille-etat-non_aboutie')).not.toBeNull();
+  });
+});
+
+// FIN-PLACE (02/11/2026) — à 390, la pastille passée à la ligne touchait la ligne suivante : une
+// ligne d'historique garde sa respiration, sur une ligne comme sur deux.
+describe('FIN-PLACE — une ligne d’historique ne touche pas la suivante', () => {
+  it('chaque ligne porte sa marge haute et basse', async () => {
+    const arbre = await monter();
+    const style = StyleSheet.flatten(parRepere(arbre, 'client-historique-r-arretee').props.style);
+    expect(style.paddingVertical).toBeGreaterThanOrEqual(8);
   });
 });

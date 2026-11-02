@@ -1,5 +1,9 @@
-import { Alert, Text } from 'react-native';
+import {
+  Alert, StyleSheet, Text, View,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { lirePageDuSite, noterOngletAllume } from '@/components/templates/pageDuSite';
 
 import ClubDetails from '../ClubDetails';
 // ANNUAIRE-E1 (29/09) — LA FICHE CLUB DE L'APP, MONTÉE SUR L'ANNUAIRE DU SITE.
@@ -641,5 +645,36 @@ describe('ANNUAIRE-E1 · sur l annuaire du site (`annuaire`)', () => {
     ['0612345678', 'president.dupont@gmail.com', 'Killian', 'Mercier'].forEach((fuite) => {
       expect(texte).not.toContain(fuite);
     });
+  });
+});
+
+// FIN-PLACE (02/11/2026, parent) — l'écusson dépassait de 12 au-dessus de la carte : son haut
+// touchait le bord. Il est maintenant DANS la carte.
+describe('FIN-PLACE — l écusson est dans la carte du club', () => {
+  it('aucune marge négative au-dessus de l écusson', () => {
+    mockClubQuery.data = CLUB_SANS_EQUIPE;
+    const ecusson = monter().root.findByProps({ testID: 'fiche-club-ecusson' });
+    expect(ecusson.props.style.marginTop).toBeGreaterThan(0);
+  });
+
+  // Et une ligne longue ne pousse plus le chevron hors de l'écran (9 px à 390, Montrivage FC).
+  it('la rangée d une équipe rétrécit : son chevron reste dans la carte', () => {
+    mockClubQuery.data = { ...CLUB_SANS_EQUIPE, teams: [{ documentId: 't-1', name: 'U13 A' }] };
+    const racine = monter().root;
+    const chevron = racine.findAll((/** @type {any} */ n) => (
+      n.type === Text && n.props.children === '›'
+    ))[0];
+    const rangee = chevron.parent.findAllByType(View)[0];
+    expect(StyleSheet.flatten(rangee.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+  });
+});
+
+// FIN-PLACE (02/11, décision d'Adel « 1- C ») — le club d'un autre allume l'onglet d'où on vient.
+describe('FIN-PLACE — l onglet allumé sur le club d un autre', () => {
+  it('sa fiche déclare l onglet d où vient la personne', () => {
+    noterOngletAllume('main-planning');
+    mockClubQuery.data = CLUB_SANS_EQUIPE;
+    monter();
+    expect(lirePageDuSite().onglet).toBe('main-planning');
   });
 });

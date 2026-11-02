@@ -28,6 +28,30 @@ const poser = (suivante) => {
   abonnes.forEach((prevenir) => prevenir());
 };
 
+// FIN-PLACE (02/11/2026, décision d'Adel « 1- C ») — le dernier vrai onglet allumé : la fiche du
+// club
+// d'un autre garde celui d'où vient la personne. En mémoire : adresse tapée, lien direct ou page
+// rechargée repartent de rien, donc aucun onglet.
+// ponytail: un écran sans onglet traversé en chemin (profil) ne compte pas ; pour remonter toute
+// l'histoire de navigation, il faudrait passer l'origine dans la route.
+/** @type {string | null} */
+let ongletDOrigine = null;
+
+/**
+ * Note l'onglet allumé par la coque du site ; seuls les onglets du club comptent.
+ * @param {string | null | undefined} onglet - L'onglet allumé.
+ * @returns {void}
+ */
+export const noterOngletAllume = (onglet) => {
+  if (onglet?.startsWith('main-')) ongletDOrigine = onglet;
+};
+
+/**
+ * L'onglet d'où vient la personne.
+ * @returns {string | null} L'onglet, `null` sans origine connue.
+ */
+export const lireOngletDOrigine = () => ongletDOrigine;
+
 /**
  * La page déclarée en ce moment.
  * @returns {PageDuSite} Le titre et l'onglet, `null` quand l'écran n'a rien dit.

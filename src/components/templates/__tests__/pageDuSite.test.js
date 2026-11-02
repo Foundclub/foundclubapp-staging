@@ -2,7 +2,9 @@ import { createElement } from 'react';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { lirePageDuSite, useDeclarerPageDuSite } from '../pageDuSite';
+import {
+  lireOngletDOrigine, lirePageDuSite, noterOngletAllume, useDeclarerPageDuSite,
+} from '../pageDuSite';
 
 // REPRISE-PLACE (01/11, point 7 de la recette du site, revue « mettre le nom de la page dans la
 // barre fine » et « rallumer l'onglet du club ») — un écran déclare le titre de sa barre fine et
@@ -30,5 +32,22 @@ describe('REPRISE-PLACE — la page du site (titre de la barre, onglet allumé)'
     expect(lirePageDuSite()).toEqual({ onglet: null, titre: 'AS Montrivage' });
     act(() => arbre.unmount());
     expect(lirePageDuSite()).toEqual({ onglet: null, titre: null });
+  });
+});
+
+// FIN-PLACE (02/11, décision d'Adel « 1- C ») — sur la fiche du club d'un autre, l'onglet allumé
+// est
+// celui d'où vient la personne ; adresse tapée ou lien direct : aucun.
+describe('FIN-PLACE — l’onglet d’où vient la personne', () => {
+  test('sans page visitée : aucun ; ensuite, le dernier vrai onglet du club', () => {
+    expect(lireOngletDOrigine()).toBeNull();
+    noterOngletAllume('main-planning');
+    expect(lireOngletDOrigine()).toBe('main-planning');
+    noterOngletAllume('utility');
+    noterOngletAllume('gold-league');
+    noterOngletAllume(undefined);
+    expect(lireOngletDOrigine()).toBe('main-planning');
+    noterOngletAllume('main-home');
+    expect(lireOngletDOrigine()).toBe('main-home');
   });
 });
