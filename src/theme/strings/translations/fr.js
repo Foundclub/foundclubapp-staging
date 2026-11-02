@@ -6345,8 +6345,8 @@ export default {
       // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A).
       vacances: 'vacances : {{zone}}',
       vide: 'Aucun créneau attribué',
-      videTexte: 'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste ponctuel : '
-        + 'le club y pose ses entraînements sans rien vous demander.',
+      videTexte: 'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste '
+        + 'ponctuel : le club y pose ses entraînements sans rien vous demander.',
     },
     erreurs: {
       club: 'Ce club n’est pas rattaché à la Ville.',
