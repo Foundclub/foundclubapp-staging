@@ -188,7 +188,10 @@ function ClubListContent({
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { width: largeurEcran } = useWindowDimensions();
-  const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  // REPRISE-PLACE (01/11, point 2) : sur le site, la coque réserve déjà la barre du bas
+  // (`dockClearance` 0) ; `sceneBottomInset` la recomptait : 144 px vides en fin de liste.
+  const reserveDeFin = Platform.OS === 'web' ? dockClearance + 12 : sceneBottomInset;
 
   const [isMultisportDeferredEnabled, setIsMultisportDeferredEnabled] = useState(false);
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
@@ -434,8 +437,8 @@ function ClubListContent({
 
   const shouldShowMapToggle = enableMapMode && (displayedClubs.length > 0 || isViewportListMode);
   const listBottomPadding = shouldShowMapToggle
-    ? Math.max(sceneBottomInset, floatingActionBottomOffset + 84)
-    : sceneBottomInset;
+    ? Math.max(reserveDeFin, floatingActionBottomOffset + 84)
+    : reserveDeFin;
   const viewportMeta = viewportClubPages?.pages?.[0]?.meta || null;
   const viewportTotalInBounds = Number(viewportMeta?.totalInBounds);
   const viewportDisplayCount = Number.isFinite(viewportTotalInBounds) && viewportTotalInBounds > 0

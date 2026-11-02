@@ -175,9 +175,12 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   default: () => mockFenetre,
 }));
 
+// REPRISE-PLACE : réglable par témoin (la réserve de la barre du bas, site et téléphone).
+/** @type {any} */
+let mockDock = { floatingActionBottomOffset: 0, sceneBottomInset: 0 };
 jest.mock('@/navigation/useBottomDockLayout', () => ({
   __esModule: true,
-  default: () => ({ floatingActionBottomOffset: 0, sceneBottomInset: 0 }),
+  default: () => mockDock,
 }));
 
 jest.mock('@/navigation/navigationAvailability', () => ({
@@ -845,5 +848,32 @@ describe('ClubListContent — CORR-RECHERCHE point 2 : l en-tete de la recherche
 
     expect(JSON.stringify(monte.toJSON())).toContain('temoin-entete-recherche');
     expect(reclamer).toHaveBeenCalled();
+  });
+});
+
+
+// REPRISE-PLACE (01/11, point 2 ; témoin du site invpad-ajouter-un-club, test 4) — sur le site, la
+// fin de la liste des clubs réservait la barre du bas (144 px vides sous la dernière carte et sous
+// « Le club n'est pas sur FoundClub ? ») alors que la coque la réserve déjà. Elle garde 12 px.
+describe('REPRISE-PLACE — fin de la liste des clubs sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const plateformeAvant = Platform.OS;
+  afterEach(() => {
+    Platform.OS = plateformeAvant;
+    mockDock = { floatingActionBottomOffset: 0, sceneBottomInset: 0 };
+  });
+  const reserves = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.contentContainerStyle
+  )).map((/** @type {any} */ n) => [n.props.contentContainerStyle].flat()
+    .reduce((/** @type {any} */ acc, /** @type {any} */ x) => ({ ...acc, ...(x || {}) }), {})
+    .paddingBottom)
+    .filter((/** @type {any} */ v) => typeof v === 'number');
+
+  it('site, coque qui réserve la barre : 12 px, pas 144', async () => {
+    Platform.OS = 'web';
+    mockDock = { dockClearance: 0, floatingActionBottomOffset: 146, sceneBottomInset: 144 };
+    await monter();
+    expect(reserves(monte)).toContain(12);
+    expect(reserves(monte)).not.toContain(144);
   });
 });
