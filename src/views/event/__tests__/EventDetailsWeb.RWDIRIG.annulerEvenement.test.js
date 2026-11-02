@@ -422,6 +422,29 @@ describe('CORR-EVENEMENTS 123 · le joueur convoqué répond Présent ou Absent'
     // La pastille rend « Session », « », « fermée » en trois morceaux.
     expect(JSON.stringify(mounted.toJSON())).not.toContain('"Session"');
   });
+
+  // REPRISE-EVENEMENTS 123 (additif) — au-dessus de Présent / Absent, « Mon statut » disait
+  // « En attente de validation » (la vieille demande) : il dit maintenant la réponse.
+  test('🐞 « Mon statut » dit la réponse Présent / Absent, pas la demande en attente', () => {
+    mountScreen({
+      auth: authJoueur,
+      event: {
+        ...matchDuJoueur(),
+        participationRequests: [{
+          documentId: 'demande-1', isActive: true, participationStatus: 'pending', user: JOUEUR,
+        }],
+      },
+    });
+    const sansReponse = JSON.stringify(mounted.toJSON());
+    expect(sansReponse).not.toContain('En attente de validation');
+    expect(sansReponse).toContain('Aucune réponse');
+  });
+
+  test('🐞 « Mon statut » d un joueur absent dit « Absent », comme son bouton', () => {
+    mountScreen({ auth: authJoueur, event: { ...matchDuJoueur(), missings: [JOUEUR] } });
+
+    expect(JSON.stringify(mounted.toJSON())).not.toContain('Tu es signalé absent');
+  });
 });
 
 // CORR-EVENEMENTS point 126 (recette du site, 30/10) — « Validation auto » s'affichait, mais un

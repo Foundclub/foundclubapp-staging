@@ -1543,8 +1543,16 @@ function EventDetails({ navigation, route }) {
     'eventDetails.joinThisEvent',
     'Rejoindre cet événement',
   );
+  // REPRISE-EVENEMENTS 123 (additif) : avec Présent / Absent, « Mon statut » dit la réponse
+  // (les mêmes mots que les boutons) — plus « En attente de validation » d'une vieille demande.
+  let reponseDuMembre = t('eventDetails.noAnswer', 'Aucune réponse');
+  if (participationState?.isParticipating) {
+    reponseDuMembre = t('playerConvocation.actions.present', 'Présent');
+  } else if (participationState?.isMissing) {
+    reponseDuMembre = t('playerConvocation.actions.absent', 'Absent');
+  }
   const statusDetailLabel = (isSignedIn
-    ? participationLabel
+    ? (repondPresentAbsent ? reponseDuMembre : participationLabel)
     : t('eventDetails.signInToAnswerThis', 'Connecte-toi pour répondre à cet événement.'));
   // FINITIONS16 · POINT 7 (T15) — Papa Test lisait « Mon statut — Aucune réponse » : il n'a
   // rien a repondre (`rienARepondre`, point 1) et aucune reponse a lui. Aucune planche ne lui
