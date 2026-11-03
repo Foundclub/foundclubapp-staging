@@ -15,7 +15,10 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 const mockBouton = jest.fn(() => null);
-jest.mock('@/components/atoms/button/Button', () => (/** @type {any} */ ...args) => mockBouton(...args));
+jest.mock(
+  '@/components/atoms/button/Button',
+  () => (/** @type {any} */ ...args) => mockBouton(...args),
+);
 
 /**
  * Monte le bandeau.
