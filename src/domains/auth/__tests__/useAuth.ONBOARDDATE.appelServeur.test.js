@@ -169,6 +169,19 @@ test('ONBOARD-2 🔴 drapeau pose = serveur prevenu, une fois, sans date venue d
   expect(mockMarquerFini).toHaveBeenCalledWith();
 });
 
+test('FINGUIDE2 🔴 serveur prevenu = profil relu, sans attendre un lancement', async () => {
+  await monter();
+  // eslint-disable-next-line global-require
+  const { getMe } = require('@/services/auth/authService');
+  getMe.mockResolvedValue({ ...COACH, onboardingCompletedAt: '2026-11-03T08:00:00.000Z' });
+  const lecturesAvant = getMe.mock.calls.length;
+  // eslint-disable-next-line global-require
+  const { markOnboardingComplete } = require('../authUseCases');
+  await actuel.act(async () => { markOnboardingComplete(COACH.documentId); });
+  await actuel.act(async () => { await Promise.resolve(); });
+  expect(getMe.mock.calls.length).toBe(lecturesAvant + 1);
+});
+
 test('ONBOARD-3 🔴 au demarrage, drapeau sans date serveur : on reessaie', async () => {
   mockStockage.set(CLE, true);
   await monter();
