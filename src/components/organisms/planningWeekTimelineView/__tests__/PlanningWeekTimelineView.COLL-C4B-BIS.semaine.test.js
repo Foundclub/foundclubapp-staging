@@ -196,6 +196,23 @@ describe('COLL-C4B-BIS point 2 — la semaine hachuree (ordinateur)', () => {
     expect(plage.height).toBe(hauteurTotale - 2);
   });
 
+  it('RET-FERMETURE-HEURES : une fermeture de 18:00 a 20:00 ne couvre que ses heures', async () => {
+    const plage = {
+      ...PLAGE_VENDREDI,
+      closureBand: { ...PLAGE_VENDREDI.closureBand, endTime: '20:00', startTime: '18:00' },
+      closureJourEntier: false,
+      endAt: new Date(2026, 9, 9, 20, 0).toISOString(),
+      startAt: new Date(2026, 9, 9, 18, 0).toISOString(),
+    };
+    const arbre = await monter([MARDI, plage, VENDREDI_FC, VENDREDI_BASKET]);
+    await mesurer(arbre, 1000);
+    const regle = regleDesHeures(arbre);
+    const hauteurTotale = regle.reduce((total, cellule) => total + cellule.hauteur, 0);
+    const style = styleDuBloc(arbre, 'Fermé · travaux');
+    expect(style.top).toBeGreaterThan(1);
+    expect(style.height).toBeLessThan(hauteurTotale - 2);
+  });
+
   it('3. une semaine sans seance mais fermee : la plage se lit, de l ouverture a la fermeture', async () => {
     const arbre = await monter([PLAGE_VENDREDI]);
     const heures = regleDesHeures(arbre).map((cellule) => cellule.texte);

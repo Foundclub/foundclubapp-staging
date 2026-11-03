@@ -148,7 +148,11 @@ function ScreenContainer({
     {
       backgroundColor: backgroundImageUri ? 'transparent' : backgroundColor,
       // La coque réserve déjà le bas : ne pas lui ajouter une deuxième hauteur de fenêtre.
-      minHeight: 'calc(100dvh - var(--fc-shell-bottom-space, 0px))',
+      // RET-FENETRES (fiche 22) : sous la barre fine, la page lui laisse ses 56 px : sinon un pied
+      // fixe passe sous la barre d'onglets.
+      minHeight: sousUneBarreDeTitre
+        ? 'calc(100dvh - var(--fc-shell-bottom-space, 0px) - 56px)'
+        : 'calc(100dvh - var(--fc-shell-bottom-space, 0px))',
       paddingHorizontal: horizontalPadding,
       paddingTop: withHeaderPadding && !sousUneBarreDeTitre ? Math.max(insets.top, 20) : 0,
     },

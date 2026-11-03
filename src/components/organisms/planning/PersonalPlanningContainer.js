@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
+import { isValid, parseISO } from 'date-fns';
 import {
   memo, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -21,6 +22,7 @@ import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelin
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useMesReservationsAuPlanning } from '@/services/complexe/complexeJoueurQueries';
 import { getMyPlanning } from '@/services/event/eventService';
 import { keepPreviousPageData } from '@/services/queryOptions';
 
@@ -37,16 +39,19 @@ const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
 /**
  * Personal planning content.
  * @param {{
+ *   dateVisee?: string,
  *   datesAVenir?: Array<Date | null> | null,
  *   onDataResolved?: () => void, onSummaryPress?: () => void, withChildren?: boolean,
  * }} props - PARENT-PLANNING (06/10, « calendrier B ») : `withChildren` (un compte qui A des
  *   enfants, dit par la liste du planning) demande AUSSI leurs creneaux a venir ; sans elle,
  *   rien ne change. R17-VUE (19/10) : `datesAVenir`, les jours des evenements de la liste du
  *   dessous (null tant qu elle n est pas lue) ; ils disent ou s ouvrir quand 3 jours sont vides.
+ *   T3-RESA-PLANNING (03/11) : `dateVisee` (AAAA-MM-JJ), le jour a montrer a l arrivee, celui de
+ *   la reservation de « Voir mon planning ».
  * @returns {import('react').ReactElement}
  */
 function PersonalPlanningContainer({
-  datesAVenir, onDataResolved, onSummaryPress, withChildren = false,
+  datesAVenir, dateVisee, onDataResolved, onSummaryPress, withChildren = false,
 }) {
   const navigation = useNavigation();
   const { t } = useTranslation();
@@ -64,6 +69,13 @@ function PersonalPlanningContainer({
   const planningRange = useMemo(
     () => getPlanningRange(currentDate, viewMode),
     [currentDate, viewMode],
+  );
+  const {
+    creneaux: reservations, joursAVenir, lu: reservationsLues,
+  } = useMesReservationsAuPlanning(t, planningRange);
+  const datesDeLaListe = useMemo(
+    () => (datesAVenir ? [...datesAVenir, ...joursAVenir] : undefined),
+    [datesAVenir, joursAVenir],
   );
   const {
     data: eventsData, isError, isLoading, isPlaceholderData,
@@ -103,8 +115,10 @@ function PersonalPlanningContainer({
   const { enDecision, garderLeChoix } = useVueInitiale({
     actif: !isError && datesAVenir !== undefined,
     appliquer: appliquerLaVue,
-    datesDeLaListe: datesAVenir || undefined,
-    evenements: eventsData && !isPlaceholderData ? (eventsData.data || []) : undefined,
+    datesDeLaListe,
+    evenements: eventsData && !isPlaceholderData && reservationsLues
+      ? [...(eventsData.data || []), ...reservations]
+      : undefined,
     listeConnue: datesAVenir !== null,
     vueDeBase: '3days',
   });
@@ -116,6 +130,15 @@ function PersonalPlanningContainer({
     garderLeChoix();
     setCurrentDate(date);
   }, [garderLeChoix]);
+
+  // T3-RESA-PLANNING (03/11) : « Voir mon planning » ouvre le jour de la reservation, y compris
+  // sur un onglet deja monte ; un choix fait a la main ne revient pas en arriere ensuite.
+  useEffect(() => {
+    const jour = dateVisee ? parseISO(dateVisee) : null;
+    if (!jour || !isValid(jour)) return;
+    garderLeChoix();
+    setCurrentDate(jour);
+  }, [dateVisee, garderLeChoix]);
 
   const viewOptions = useMemo(() => ([
     { label: 'Semaine', value: 'week' },
@@ -139,9 +162,19 @@ function PersonalPlanningContainer({
     return <Loader />;
   }
 
-  const events = withViewerChildrenTitles(normalizePlanningItems(eventsData?.data || []), t);
+  const events = withViewerChildrenTitles(
+    normalizePlanningItems([...(eventsData?.data || []), ...reservations]),
+    t,
+  );
 
   const handleEventPress = (event) => {
+    // T3-RESA-PLANNING (03/11) : une reservation ouvre SA fiche, pas celle d un evenement.
+    if (event?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: event.documentId,
+      });
+      return;
+    }
     // R17-EVT-1-BIS (b) (20/10) : vue Mois, l événement de la Ville (sans documentId) ouvre SA
     // fiche, comme son bloc dans la grille.
     if (event?.raw?.evenementDeLaVille) {

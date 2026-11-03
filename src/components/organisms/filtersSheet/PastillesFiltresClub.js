@@ -1,6 +1,6 @@
 import Slider from '@react-native-community/slider';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +17,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 // eslint-disable-next-line max-len -- un chemin de module ne se coupe pas
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -45,12 +46,19 @@ const Curseur = /** @type {any} */ (Slider);
  * site. Seul l'emplacement du choix change :
  *   · téléphone (et site sous 1 024 px) : un panneau du bas (BottomModal) ;
  *   · site sur grand écran : une liste déroulante SOUS la pastille (≤ 420 px), jamais une fenêtre
- *     centrée — c'est la seule partie propre au site.
+ *     centrée — c'est la seule partie propre au site. RET-FENETRES (02/11, fiche 5) : elle sort de
+ *     la page, dans un calque fixé au-dessus de tout : dans le flux, les cartes passaient dessus.
  */
 
 // Au-delà, le site a la place d'une liste sous la pastille (planche « ordinateur »).
 const LARGEUR_LISTE_DEROULANTE = 1024;
 const LARGEUR_PANNEAU = 340;
+// Marges du panneau : sous la pastille, et au bord de la fenêtre.
+const ECART_SOUS_LA_PASTILLE = 8;
+const MARGE_AU_BORD = 16;
+// ponytail: en bas de page, le panneau garde cette hauteur quitte à dépasser ; la page défile, et
+// il la suit. Pour le faire passer au-dessus de la pastille, il faudrait mesurer sa vraie hauteur.
+const HAUTEUR_MINIMALE_DU_PANNEAU = 280;
 
 // A09 (30/09) — le choix du sport, sa ligne de choix et ses intertitres vivent désormais dans
 // `choixDuSport/ChoixDuSport.js` : LE même choix pour tous les filtres de sport de la recherche.
@@ -195,13 +203,36 @@ function ChoixDuLieu({
 function PastillesFiltresClub({ filters, onApply }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
-  const { width } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const { getGeohashForPointAndRadius } = usePlaces();
   const { data } = useGetActivities();
   const activites = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [ouvert, setOuvert] = useState(/** @type {'sport' | 'lieu' | null} */ (null));
   const enListeDeroulante = Platform.OS === 'web' && width >= LARGEUR_LISTE_DEROULANTE;
   const fermer = useCallback(() => setOuvert(null), []);
+  const pastilleSport = useRef(/** @type {any} */ (null));
+  const pastilleLieu = useRef(/** @type {any} */ (null));
+  const [ancre, setAncre] = useState(/** @type {{ bas: number, gauche: number } | null} */ (null));
+
+  // Le panneau ne suit plus la pastille tout seul : il la remesure quand la page bouge.
+  useEffect(() => {
+    if (!enListeDeroulante || !ouvert || typeof window === 'undefined') return undefined;
+    const mesurer = () => {
+      const pastille = (ouvert === 'sport' ? pastilleSport : pastilleLieu).current;
+      const boite = pastille?.getBoundingClientRect?.();
+      if (!boite) return;
+      setAncre((avant) => (avant?.bas === boite.bottom && avant?.gauche === boite.left
+        ? avant
+        : { bas: boite.bottom, gauche: boite.left }));
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    window.addEventListener('scroll', mesurer, true);
+    return () => {
+      window.removeEventListener('resize', mesurer);
+      window.removeEventListener('scroll', mesurer, true);
+    };
+  }, [enListeDeroulante, ouvert]);
 
   // Sur le site, la touche Échap referme le choix ouvert.
   useEffect(() => {
@@ -209,8 +240,9 @@ function PastillesFiltresClub({ filters, onApply }) {
     const surTouche = (/** @type {KeyboardEvent} */ evenement) => {
       if (evenement.key === 'Escape') fermer();
     };
-    document.addEventListener('keydown', surTouche);
-    return () => document.removeEventListener('keydown', surTouche);
+    // À la descente : un TextInput de react-native-web arrête la touche avant le document.
+    document.addEventListener('keydown', surTouche, true);
+    return () => document.removeEventListener('keydown', surTouche, true);
   }, [fermer, ouvert]);
 
   const activiteActuelle = String(filters?.activity || '');
@@ -294,68 +326,73 @@ function PastillesFiltresClub({ filters, onApply }) {
     </View>
   );
 
-  const listeDeroulante = (/** @type {'sport' | 'lieu'} */ pour) => (
-    enListeDeroulante && ouvert === pour ? (
-      <View
-        style={[
-          Spaces.gap[12],
-          Spaces.padding[12],
-          {
-            backgroundColor: Colors.primary800,
-            borderColor: Colors.primary700,
-            borderRadius: 16,
-            borderWidth: 1,
-            boxShadow: `0 18px 44px ${withAlpha(Colors.neutral900, 0.6)}`,
-            left: 0,
-            marginTop: 8,
-            maxWidth: LARGEUR_PANNEAU,
-            position: 'absolute',
-            top: '100%',
-            width: LARGEUR_PANNEAU,
-            zIndex: 3,
-          },
-        ]}
-        testID={testID}
+  const hautDuPanneau = (ancre?.bas || 0) + ECART_SOUS_LA_PASTILLE;
+  const listeDeroulante = enListeDeroulante && ouvert && ancre ? (
+    <>
+      {/* Un clic en dehors referme la liste. */}
+      <WebFloatingOverlay
+        style={{
+          bottom: 0, left: 0, right: 0, top: 0, zIndex: 1049,
+        }}
       >
-        {entete}
-        {contenu}
-      </View>
-    ) : null
-  );
-
-  return (
-    // Au-dessus de la liste qui suit : sans ce `zIndex`, la liste déroulante passerait DESSOUS
-    // les cartes (chaque boîte du site ouvre son propre plan d'empilement).
-    <View
-      style={[Spaces.gap[8], { flexDirection: 'row', flexWrap: 'wrap', zIndex: ouvert ? 5 : 1 }]}
-    >
-      {enListeDeroulante && ouvert ? (
-        // Un clic en dehors referme la liste.
         <Pressable
           accessibilityLabel={t('common.close', 'Fermer')}
           onPress={fermer}
-          style={{
-            bottom: 0, left: 0, position: /** @type {any} */ ('fixed'), right: 0, top: 0, zIndex: 2,
-          }}
+          style={{ height: '100%', width: '100%' }}
         />
-      ) : null}
-      <View style={{ maxWidth: '100%', zIndex: ouvert === 'sport' ? 3 : 1 }}>
+      </WebFloatingOverlay>
+      <WebFloatingOverlay
+        style={{
+          left: Math.min(ancre.gauche, width - LARGEUR_PANNEAU - MARGE_AU_BORD),
+          top: hautDuPanneau,
+          width: LARGEUR_PANNEAU,
+          zIndex: 1050,
+        }}
+      >
+        <View
+          style={[
+            Spaces.gap[12],
+            Spaces.padding[12],
+            {
+              backgroundColor: Colors.primary800,
+              borderColor: Colors.primary700,
+              borderRadius: 16,
+              borderWidth: 1,
+              boxShadow: `0 18px 44px ${withAlpha(Colors.neutral900, 0.6)}`,
+              maxHeight: Math.max(
+                HAUTEUR_MINIMALE_DU_PANNEAU,
+                height - hautDuPanneau - MARGE_AU_BORD,
+              ),
+              overflowY: /** @type {any} */ ('auto'),
+            },
+          ]}
+          testID={testID}
+        >
+          {entete}
+          {contenu}
+        </View>
+      </WebFloatingOverlay>
+    </>
+  ) : null;
+
+  return (
+    <View style={[Spaces.gap[8], { flexDirection: 'row', flexWrap: 'wrap' }]}>
+      {listeDeroulante}
+      <View ref={pastilleSport} style={{ maxWidth: '100%' }}>
         <Pastille
           accessibilityLabel={`${libelleDuSport} — ${libelleSport}`}
           libelle={libelleSport}
           onPress={() => setOuvert(ouvert === 'sport' ? null : 'sport')}
           ouverte={ouvert === 'sport'}
         />
-        {listeDeroulante('sport')}
       </View>
-      <View style={{ maxWidth: '100%', zIndex: ouvert === 'lieu' ? 3 : 1 }}>
+      <View ref={pastilleLieu} style={{ maxWidth: '100%' }}>
         <Pastille
           accessibilityLabel={`${libelleDuLieuChoisi} — ${libelleLieu}`}
           libelle={libelleLieu}
           onPress={() => setOuvert(ouvert === 'lieu' ? null : 'lieu')}
           ouverte={ouvert === 'lieu'}
         />
-        {listeDeroulante('lieu')}
       </View>
       {!enListeDeroulante ? (
         <BottomModal

@@ -618,7 +618,8 @@ const AutocompleteSelect = forwardRef(
                 style={[
                   Fonts.h3Bold,
                   Fonts.neutral00,
-                  Spaces.marginRight[16],
+                  // RET-FENETRES (02/11, fiche 6) : la place de la croix, à droite du titre.
+                  Spaces.marginRight[32],
                   { flex: 1 },
                 ]}
               >
@@ -626,7 +627,7 @@ const AutocompleteSelect = forwardRef(
               </Text>
             </View>
           )}
-          hideCloseButton
+          hideCloseButton={false}
           isVisible={areValuesVisible}
           scrollable
           snapPoints={modalSnapPoints}

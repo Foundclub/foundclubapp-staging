@@ -843,6 +843,10 @@ export const regrouperFermetures = (t, fermetures, terrains, aujourdhui) => {
       const rouverte = fermeture.status === 'reopened';
       const cle = [
         fermeture.startDate, fermeture.endDate, fermeture.reason, fermeture.label || '',
+        // RET-FERMETURE-HEURES (03/11) : deux plages du même jour ne sont pas le même geste.
+        ...(fermeture.startTime || fermeture.endTime
+          ? [fermeture.startTime || '', fermeture.endTime || '']
+          : []),
         ...(rouverte ? ['rouverte'] : []),
       ].join('|');
       const nom = terrains.find((terrain) => terrain.documentId === fermeture.terrainId)?.name;

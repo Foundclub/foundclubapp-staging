@@ -425,7 +425,7 @@ describe('COLL-C4B-BIS point 1 — sur ordinateur, le panneau a droite du planni
     await act(async () => { date('Du').onChange('04/03/2026'); });
     await attendre();
     expect(bandes()).toHaveLength(1);
-    expect(bandes()[0].title).toBe('Fermé · travaux');
+    expect(bandes()[0].title).toBe('Fermé');
     expect(seanceA().raw.closure).toEqual(expect.objectContaining({ kind: 'closure' }));
   });
 

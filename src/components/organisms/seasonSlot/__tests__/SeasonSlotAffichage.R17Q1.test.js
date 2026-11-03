@@ -103,11 +103,11 @@ describe('R17Q1-6 — la semaine type et la bande des dates choisies', () => {
     expect(deux.props.accessibilityLabel).toBe('AS Montrivage · U13, un mercredi sur deux 17:30 – 19:00');
   });
 
-  it('la bande « Dates choisies, hors semaine type » : qui, quand, combien ; rien sans dates choisies', () => {
+  it('la bande « Créneaux ponctuels » : qui, quand, combien ; rien sans dates choisies', () => {
     const onCreneau = jest.fn();
     const arbre = monter(<SeasonSlotDatesBand creneaux={[CHAQUE, UN_SUR_DEUX, TROIS_DATES]} onCreneau={onCreneau} />);
     expect(lus(arbre)).toEqual(expect.arrayContaining([
-      'Dates choisies, hors semaine type',
+      'Créneaux ponctuels',
       '1 créneau',
       'Montrivage Basket · U17 · 17:30 – 19:00',
       'sam. 7 nov. · mar. 17 nov. · mer. 25 nov.',

@@ -84,7 +84,11 @@ afterEach(async () => {
     while (montes.length) montes.pop().unmount();
   });
 });
-const monter = async (/** @type {any[]} */ seances, /** @type {any} */ compterLesSeances = null) => {
+const monter = async (
+  /** @type {any[]} */ seances,
+  /** @type {any} */ compterLesSeances = null,
+  /** @type {boolean} */ legendeDesPoints = false,
+) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
@@ -92,6 +96,7 @@ const monter = async (/** @type {any[]} */ seances, /** @type {any} */ compterLe
       <PlanningCalendarView
         compterLesSeances={compterLesSeances}
         currentDate={new Date(2026, 9, 10, 12, 0)}
+        legendeDesPoints={legendeDesPoints}
         // Comme la section (`blocsDuMois`) : la couleur se pose APRÈS la normalisation.
         events={normalizePlanningItems(seances).map((/** @type {any} */ e) => ({
           ...e, displayColor: seances.find((s) => s.documentId === e.documentId)?.displayColor,
@@ -144,5 +149,28 @@ describe('R17-PLANNING-2 écran 5 — une pastille par installation, avec son no
       [].concat(t.props.children).join('')));
     expect(lus).toContain('+3');
     expect(libelles(arbre)).toContain('7, 7 séances');
+  });
+});
+
+describe('RET-PLANNING fiche 15 — ce que comptent les points', () => {
+  const jsonDe = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+
+  test('🐞 un seul club, 5 séances : 1 point et pas de « +2 »', async () => {
+    const arbre = await monter(['a', 'b', 'c', 'd', 'e'].map((id) => seance(id, '2026-10-07', VERT)));
+
+    expect(jsonDe(arbre)).not.toContain('"+"');
+  });
+
+  test('🐞 5 clubs le même jour : 3 points et « +2 » clubs', async () => {
+    const arbre = await monter([BLEU, VERT, ORANGE, ROUGE, VIOLET]
+      .map((couleur, index) => seance(String(index), '2026-10-07', couleur)));
+
+    expect(jsonDe(arbre)).toContain('["+","2"]');
+  });
+
+  test('🐞 la légende se lit sous le calendrier quand l’écran la demande', async () => {
+    const LEGENDE = 'Un point par club';
+    expect(jsonDe(await monter(MOIS))).not.toContain(LEGENDE);
+    expect(jsonDe(await monter(MOIS, null, true))).toContain(LEGENDE);
   });
 });

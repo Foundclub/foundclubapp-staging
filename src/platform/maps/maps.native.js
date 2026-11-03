@@ -13,16 +13,20 @@ export const renderMap = () => null;
  * d'adresse qui porte ce lien — un import en tête de fichier ferait tomber leurs suites.
  * @param {object} props
  * @param {number} [props.height]
+ * @param {(etat: string) => void} [props.onEtat] - RET-FENETRES (fiche 12) : l'état de la carte.
  * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
-export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint = null } = {}) => {
+export const renderPinMap = ({
+  height = 360, onEtat, onRegionChangeComplete, regionHint = null,
+} = {}) => {
   // eslint-disable-next-line global-require
   const PinMapNative = require('./pinMapNative').default;
   return (
     <PinMapNative
       height={height}
+      onEtat={onEtat}
       onRegionChangeComplete={onRegionChangeComplete}
       regionHint={regionHint}
     />

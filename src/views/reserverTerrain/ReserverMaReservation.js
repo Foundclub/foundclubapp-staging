@@ -11,6 +11,7 @@ import {
   jourEtHeure,
   peutChercherDesJoueurs,
 } from '@/domains/complexe/partieDuJoueur';
+import { estAuPlanning } from '@/domains/complexe/reservationsDuJoueur';
 import {
   contenuDEchec,
   etatAffiche,
@@ -489,6 +490,20 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               }}
               size="sm"
               title={t('reserverTerrain.maReservation.agenda', 'Ajouter à l’agenda')}
+              variant="Secondary"
+            />
+          ) : null}
+          {/* T3-RESA-PLANNING (03/11, « 9- A ») : le planning, au jour de la partie. */}
+          {reservation?.date && estAuPlanning(reservation) ? (
+            <Button
+              icon="calendar"
+              onPress={() => navigation.navigate(
+                RouteNames.HomeTab,
+                { params: { date: reservation.date }, screen: RouteNames.MyEventList },
+                { pop: true },
+              )}
+              size="sm"
+              title={t('notifications.details.viewPlanning', 'Voir mon planning')}
               variant="Secondary"
             />
           ) : null}

@@ -74,7 +74,7 @@ function MyEventList({ navigation, route }) {
           />
         </ScreenContainer>
       ) : (
-        <ParticipantEventList navigation={navigation} />
+        <ParticipantEventList dateVisee={route?.params?.date} navigation={navigation} />
       )}
     </MyEventListTutorialBoundary>
   );

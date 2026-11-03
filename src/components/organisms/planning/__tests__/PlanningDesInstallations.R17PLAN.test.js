@@ -714,7 +714,9 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     const lusStade = stade.findAllByType(Text)
       .map((/** @type {any} */ n) => aplatir(n.props.children));
     expect(lusStade)
-      .toEqual(expect.arrayContaining(['Ville · toute l’installation', 'Fête du sport']));
+      .toEqual(expect.arrayContaining([
+        'Ville de Montrivage · toute l’installation', 'Stade municipal', 'Fête du sport',
+      ]));
     expect(lusStade.join(' ')).not.toMatch(/Bloqué par la Ville/);
     // Une seule case (le bouton, pas ses nœuds natifs).
     const case22 = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => (
@@ -753,7 +755,8 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
     await choisir(arbre, 'week');
     const lus = textes(arbre);
     expect(lus.indexOf('Fête du sport')).toBeGreaterThan(lus.indexOf('Jeudi 22'));
-    expect(lus).toContain('Stade municipal · 14:00 – 15:30');
+    // RET-PLANNING fiche 8 : l'installation a sa ligne, sous la Ville.
+    expect(lus).toEqual(expect.arrayContaining(['Stade municipal', '14:00 – 15:30']));
   });
 
   test('20 ROUGE-AVANT — Mois : le calendrier reçoit l’événement (son repère clair)', async () => {

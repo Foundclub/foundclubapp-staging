@@ -5,6 +5,7 @@ import {
   etatInitial,
   etiquetteDuPlanning,
   fermeturesSansLesEvenements,
+  installationDuPlanning,
   lieuLabel,
   occupationDesLieux,
   occupationLabel,
@@ -428,5 +429,25 @@ describe('C05 (Q2-08) — les blocs d un événement de la Ville sont à l heure
     // Paris est en UTC+1 le 27/10 (heure d hiver depuis le 25/10).
     expect(bloc.startAt).toBe('2026-10-27T08:00:00.000Z');
     expect(bloc.endAt).toBe('2026-10-27T10:00:00.000Z');
+  });
+});
+
+describe('RET-PLANNING fiche 8 — la carte du planning nomme la Ville et l’installation', () => {
+  const VILLE = { name: 'Ville de Démouville' };
+
+  it('🐞 le nom de la Ville, et ce que l’événement prend', () => {
+    expect(etiquetteDuPlanning(t, { collectivite: VILLE, takesPlace: true }))
+      .toBe('Ville de Démouville · toute l’installation');
+    expect(etiquetteDuPlanning(t, { collectivite: VILLE, takesPlace: false }))
+      .toBe('Ville de Démouville · à côté');
+  });
+
+  it('sans nom connu : l’étiquette d’avant', () => {
+    expect(etiquetteDuPlanning(t, { takesPlace: true })).toBe('Ville · toute l’installation');
+  });
+
+  it('🐞 le nom de l’installation, ou rien', () => {
+    expect(installationDuPlanning({ facility: { name: 'Gymnase Cosec' } })).toBe('Gymnase Cosec');
+    expect(installationDuPlanning({ facility: null })).toBe('');
   });
 });
