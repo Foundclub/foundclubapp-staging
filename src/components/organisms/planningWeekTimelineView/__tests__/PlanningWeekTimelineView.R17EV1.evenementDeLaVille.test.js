@@ -201,6 +201,23 @@ describe('R17-EVT-1 — l’événement de la Ville sur le planning d’une inst
     expect(StyleSheet.flatten(conteneur.props.style).position).not.toBe('absolute');
   });
 
+  it.each([
+    [7 * 39, 'column'],
+    [7 * 60, 'row'],
+  ])('🐞 RET-PLANNING fiche 14 : grille de %i px, le nombre et le numéro en %s', async (largeur, sens) => {
+    const arbre = await montrerLaSemaine();
+    const grille = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'planning-grille'
+      && typeof n.props.onLayout === 'function')[0];
+    await act(async () => {
+      grille.props.onLayout({ nativeEvent: { layout: { width: largeur } } });
+    });
+    const nombre = arbre.root.findAll((/** @type {any} */ n) => n.type === Text
+      && n.props.testID === 'jour-nombre-2026-10-24')[0];
+    const rangee = nombre.parent.parent.parent;
+
+    expect(StyleSheet.flatten(rangee.props.style).flexDirection).toBe(sens);
+  });
+
   it('à côté : un bloc en CONTOUR clair', async () => {
     const arbre = await monter([CROSS]);
     const bloc = blocDe(arbre, 'Cross des écoles');
