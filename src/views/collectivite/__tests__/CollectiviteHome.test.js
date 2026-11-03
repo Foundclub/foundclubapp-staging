@@ -49,7 +49,7 @@ let mockLargeur = 390;
 // reseau).
 /** @type {any} */
 let mockSignalements = { data: null };
-// T3-TICKETS-VILLE (03/11) : la porte de « Questions des clubs » (aucune question par défaut).
+// T3-TICKETS-VILLE (03/11) : la porte de « Tickets des clubs » (aucune question par défaut).
 /** @type {any} */
 let mockQuestionsDesClubs = { data: [], meta: { toHandleCount: 0 } };
 
@@ -1493,19 +1493,19 @@ describe('CORR-COLLECTIVITES 90 — créneaux et séances posées, deux chiffres
 });
 /* eslint-enable max-len */
 
-describe('T3-TICKETS-VILLE — la porte de « Questions des clubs »', () => {
+describe('T3-TICKETS-VILLE — la porte de « Tickets des clubs »', () => {
   afterEach(() => {
     mockQuestionsDesClubs = { data: [], meta: { toHandleCount: 0 } };
   });
 
   it('aucune question : pas de porte', async () => {
-    expect(textes(await monter()).join(' ')).not.toContain('Questions des clubs');
+    expect(textes(await monter()).join(' ')).not.toContain('Tickets des clubs');
   });
 
   it('à traiter : le nombre, et l appui ouvre la boîte de CETTE Ville', async () => {
     mockQuestionsDesClubs = { data: [{}, {}], meta: { toHandleCount: 2 } };
     const arbre = await monter();
-    expect(textes(arbre).join(' ')).toContain('2 questions de clubs à traiter');
+    expect(textes(arbre).join(' ')).toContain('2 tickets de clubs à traiter');
     act(() => arbre.root.findAll(
       (/** @type {any} */ n) => (
         n.props?.testID === 'collectivite-home-questions' && n.props?.onPress
@@ -1518,6 +1518,6 @@ describe('T3-TICKETS-VILLE — la porte de « Questions des clubs »', () => {
 
   it('rien à traiter mais un historique : la porte reste', async () => {
     mockQuestionsDesClubs = { data: [{}], meta: { toHandleCount: 0 } };
-    expect(textes(await monter()).join(' ')).toContain('Questions des clubs');
+    expect(textes(await monter()).join(' ')).toContain('Tickets des clubs');
   });
 });

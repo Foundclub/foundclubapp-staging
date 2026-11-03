@@ -571,7 +571,7 @@ function CollectiviteHome() {
     ? signalements.data.meta.toHandle
     : [];
   const nombreATraiter = Number(signalements.data?.meta?.toHandleCount) || aTraiter.length;
-  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — la porte de « Questions des clubs » : présente
+  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — la porte de « Tickets des clubs » : présente
   // dès qu'un club a écrit, même sans rien à traiter (l'historique reste atteignable).
   const nombreDeQuestions = Array.isArray(questionsDesClubs.data?.data)
     ? questionsDesClubs.data.data.length
@@ -587,7 +587,7 @@ function CollectiviteHome() {
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {questionsATraiter
           ? t('collectiviteQuestions.accueilATraiter', { count: questionsATraiter })
-          : t('collectiviteQuestions.titre', 'Questions des clubs')}
+          : t('collectiviteQuestions.titre', 'Tickets des clubs')}
       </Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>
         {t(

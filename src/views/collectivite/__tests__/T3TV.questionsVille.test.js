@@ -111,10 +111,10 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
   test('les deux onglets, avec le nom de la Ville ; Écrire est ouvert, avec les questions du club et leur statut', () => {
     const texte = monter(MaVille);
     expect(texte).toContain('Ville de Montrivage');
-    expect(texte).toContain('Écrire à ma Ville');
+    expect(texte).toContain('Ouvrir un ticket');
     expect(texte).toContain('Signaler un problème');
     expect(texte).toContain('Le ramassage change-t-il cet hiver ?');
-    expect(texte).toContain('Reçue');
+    expect(texte).toContain('Reçu');
     expect(mockQuestions).toHaveBeenCalledWith('club-1');
   });
 
@@ -126,29 +126,29 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
 
   test('envoyer : le texte tapé part, et ne se vide qu après l accord du serveur', () => {
     monter(MaVille);
-    expect(parTitre('Envoyer à ma Ville').props.disabled).toBe(true);
+    expect(parTitre('Envoyer le ticket').props.disabled).toBe(true);
     act(() => parTexteDe('ma-ville-texte').props.onChangeText('  Une question  '));
-    act(() => parTitre('Envoyer à ma Ville').props.onPress());
+    act(() => parTitre('Envoyer le ticket').props.onPress());
     expect(mockEnvoyer.mock.calls[0][0]).toBe('Une question');
     expect(parTexteDe('ma-ville-texte').props.value).toBe('  Une question  ');
     act(() => mockEnvoyer.mock.calls[0][1].onSuccess());
     expect(parTexteDe('ma-ville-texte').props.value).toBe('');
-    expect(JSON.stringify(arbre.toJSON())).toContain('C’est envoyé');
+    expect(JSON.stringify(arbre.toJSON())).toContain('Ticket envoyé');
   });
 
   test('un refus du serveur se dit, et le texte reste', () => {
     monter(MaVille);
     act(() => parTexteDe('ma-ville-texte').props.onChangeText('Une question'));
-    act(() => parTitre('Envoyer à ma Ville').props.onPress());
+    act(() => parTitre('Envoyer le ticket').props.onPress());
     act(() => mockEnvoyer.mock.calls[0][1].onError({ response: { data: { error: { details: { code: 'COLLECTIVITE_QUESTION_TOO_MANY_OPEN' } } }, status: 409 } }));
     expect(parTexteDe('ma-ville-texte').props.value).toBe('Une question');
-    expect(JSON.stringify(arbre.toJSON())).not.toContain('C’est envoyé');
+    expect(JSON.stringify(arbre.toJSON())).not.toContain('Ticket envoyé');
   });
 
   test('un refus sans code connu : la phrase générique, jamais une clé de traduction', () => {
     monter(MaVille);
     act(() => parTexteDe('ma-ville-texte').props.onChangeText('Une question'));
-    act(() => parTitre('Envoyer à ma Ville').props.onPress());
+    act(() => parTitre('Envoyer le ticket').props.onPress());
     act(() => mockEnvoyer.mock.calls[0][1].onError({}));
     const ecran = JSON.stringify(arbre.toJSON());
     expect(ecran).not.toContain('APIerrors');
@@ -171,7 +171,7 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
     mockVille = charge({ attached: null });
     const texte = monter(MaVille);
     expect(texte).toContain('RATTACHEMENT EXISTANT');
-    expect(texte).not.toContain('Envoyer à ma Ville');
+    expect(texte).not.toContain('Envoyer le ticket');
   });
 
   test('une panne n est pas « aucune question » ni « pas de Ville »', () => {
@@ -179,8 +179,8 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
       data: undefined, isError: true, isLoading: false, refetch: jest.fn(),
     }));
     const panne = monter(MaVille);
-    expect(panne).toContain('n’ont pas pu être chargées');
-    expect(panne).not.toContain('Aucune question');
+    expect(panne).toContain('n’ont pas pu être chargés');
+    expect(panne).not.toContain('Aucun ticket');
     act(() => arbre.unmount());
     mockVille = {
       data: undefined, isError: true, isLoading: false, refetch: jest.fn(),
@@ -195,7 +195,7 @@ describe('T3TV — la boîte de la Ville', () => {
   test('la liste dit le club et le statut, et une question s ouvre', () => {
     mockParams = { collectiviteId: 'ville-1' };
     const texte = monter(CollectiviteQuestions);
-    expect(texte).toContain('Questions des clubs');
+    expect(texte).toContain('Tickets des clubs');
     expect(texte).toContain('AS Montrivage');
     act(() => parTestId('question-q-1').props.onPress());
     expect(mockNaviguer).toHaveBeenCalledWith('CollectiviteQuestion', { questionId: 'q-1' });
@@ -212,7 +212,7 @@ describe('T3TV — une question', () => {
     mockParams = { questionId: 'q-1' };
     monter(CollectiviteQuestion);
     act(() => parTexteDe('question-votre-mot').props.onChangeText(' Lundi. '));
-    act(() => parTitre('Marquer comme traitée').props.onPress());
+    act(() => parTitre('Marquer comme traité').props.onPress());
     expect(mockPoser.mock.calls[0][0]).toEqual({ note: 'Lundi.', status: 'traitee' });
     expect(parTitre('Passer en cours')).toBeTruthy();
   });
@@ -220,20 +220,20 @@ describe('T3TV — une question', () => {
   test('le club lit, sans bouton, et lit le mot de la Ville', () => {
     mockFiche = charge({ data: { ...QUESTION, cityNote: 'Lundi.', status: 'traitee' }, meta: { canManage: false } });
     const texte = monter(CollectiviteQuestion);
-    expect(texte).toContain('Traitée');
+    expect(texte).toContain('Traité');
     expect(texte).toContain('Lundi.');
-    expect(parTitre('Marquer comme traitée')).toBeUndefined();
+    expect(parTitre('Marquer comme traité')).toBeUndefined();
   });
 
   test('traitée, la Ville n a plus de geste ; en cours, plus « Passer en cours »', () => {
     mockFiche = charge({ data: { ...QUESTION, status: 'traitee' }, meta: { canManage: true } });
     monter(CollectiviteQuestion);
-    expect(parTitre('Marquer comme traitée')).toBeUndefined();
+    expect(parTitre('Marquer comme traité')).toBeUndefined();
     act(() => arbre.unmount());
     mockFiche = charge({ data: { ...QUESTION, status: 'en_cours' }, meta: { canManage: true } });
     monter(CollectiviteQuestion);
     expect(parTitre('Passer en cours')).toBeUndefined();
-    expect(parTitre('Marquer comme traitée')).toBeTruthy();
+    expect(parTitre('Marquer comme traité')).toBeTruthy();
   });
 
   test('refusée : introuvable', () => {
@@ -244,6 +244,6 @@ describe('T3TV — une question', () => {
 
 test('T3TV — les adresses du site', () => {
   expect(buildWebPath('MaVille', { onglet: 'signaler' })).toContain('/ma-ville/signaler');
-  expect(buildWebPath('CollectiviteQuestions', { collectiviteId: 'v' })).toBe('/collectivite/v/questions');
-  expect(buildWebPath('CollectiviteQuestion', { questionId: 'q' })).toBe('/questions-a-la-ville/q');
+  expect(buildWebPath('CollectiviteQuestions', { collectiviteId: 'v' })).toBe('/collectivite/v/tickets');
+  expect(buildWebPath('CollectiviteQuestion', { questionId: 'q' })).toBe('/tickets-ville/q');
 });

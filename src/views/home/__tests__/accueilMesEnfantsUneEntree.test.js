@@ -487,7 +487,7 @@ describe('T3-TICKETS-VILLE — la section « Ma collectivité » de l accueil', 
     const { arbre, navigate } = monterLAccueil();
     expect(mockMaCollectivite).toHaveBeenCalledWith('club-1');
     expect(titres(arbre)).toEqual(
-      expect.arrayContaining(['Écrire à ma Ville', 'Signaler un problème']),
+      expect.arrayContaining(['Ouvrir un ticket', 'Signaler un problème']),
     );
     const carte = arbre.root.findAll(
       (/** @type {any} */ n) => (
@@ -503,7 +503,7 @@ describe('T3-TICKETS-VILLE — la section « Ma collectivité » de l accueil', 
     mockMaCollectivite.mockImplementation(() => ({ data: { attached: null }, isSuccess: true }));
     const liste = titres(monterLAccueil().arbre);
     expect(liste).toContain('Trouver ma Ville');
-    expect(liste).not.toContain('Écrire à ma Ville');
+    expect(liste).not.toContain('Ouvrir un ticket');
   });
 
   it('une panne ne fait pas croire qu il n y a pas de Ville, et un joueur ne voit rien', () => {
@@ -515,6 +515,6 @@ describe('T3-TICKETS-VILLE — la section « Ma collectivité » de l accueil', 
     mockMaCollectivite.mockClear();
     const joueur = titres(monterLAccueil().arbre);
     expect(mockMaCollectivite).toHaveBeenCalledWith(null);
-    expect(joueur).not.toContain('Écrire à ma Ville');
+    expect(joueur).not.toContain('Ouvrir un ticket');
   });
 });

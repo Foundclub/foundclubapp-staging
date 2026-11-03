@@ -66,7 +66,7 @@ function OngletEcrire({ clubId }) {
     historique = (
       <View style={{ gap: 8 }} testID="ma-ville-erreur">
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {t('maVille.erreurChargement', 'Tes questions n’ont pas pu être chargées.')}
+          {t('maVille.erreurChargement', 'Tes tickets n’ont pas pu être chargés.')}
         </Text>
         <Button
           onPress={() => questions.refetch?.()}
@@ -78,7 +78,7 @@ function OngletEcrire({ clubId }) {
     );
   } else if (liste.length === 0) {
     historique = (
-      <EmptyState title={t('maVille.aucuneQuestion', 'Aucune question pour l’instant.')} />
+      <EmptyState title={t('maVille.aucuneQuestion', 'Aucun ticket pour l’instant.')} />
     );
   } else {
     historique = liste.map((/** @type {any} */ question) => (
@@ -96,7 +96,7 @@ function OngletEcrire({ clubId }) {
   return (
     <View style={{ gap: 12 }} testID="ma-ville-ecrire">
       <Input
-        label={t('maVille.tonMessage', 'Ta question')}
+        label={t('maVille.tonMessage', 'Ton message')}
         maxLength={LONGUEUR_MAX}
         multiline
         onChangeText={(/** @type {string} */ valeur) => {
@@ -105,7 +105,7 @@ function OngletEcrire({ clubId }) {
         }}
         placeholder={t(
           'maVille.placeholder',
-          'Une question, une information, un besoin : écris-le ici.',
+          'Une information, un besoin, un souci : écris-le ici.',
         )}
         testID="ma-ville-texte"
         value={texte}
@@ -113,16 +113,16 @@ function OngletEcrire({ clubId }) {
       {refus ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{refus}</Text> : null}
       {envoye ? (
         <Text accessibilityLiveRegion="polite" style={[Fonts.p3Bold, Fonts.success500]}>
-          {t('maVille.envoye', 'C’est envoyé. Tu seras prévenu de la réponse.')}
+          {t('maVille.envoye', 'Ticket envoyé. Tu seras prévenu de la réponse.')}
         </Text>
       ) : null}
       <Button
         disabled={!texte.trim() || envoi.isPending}
         onPress={envoyer}
-        title={t('maVille.envoyer', 'Envoyer à ma Ville')}
+        title={t('maVille.envoyer', 'Envoyer le ticket')}
       />
       <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00, { marginTop: 8 }]}>
-        {t('maVille.mesQuestions', 'Les questions du club')}
+        {t('maVille.mesQuestions', 'Mes tickets')}
       </Text>
       {historique}
     </View>
@@ -227,7 +227,7 @@ function MaVille() {
   const ville = collectivite.data?.attached?.name || null;
 
   const ONGLETS = [
-    { cle: 'ecrire', titre: t('maVille.ongletEcrire', 'Écrire à ma Ville') },
+    { cle: 'ecrire', titre: t('maVille.ongletEcrire', 'Ouvrir un ticket') },
     { cle: 'signaler', titre: t('maVille.ongletSignaler', 'Signaler un problème') },
   ];
 

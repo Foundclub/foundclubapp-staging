@@ -34,7 +34,7 @@ function CollectiviteQuestions() {
     corps = (
       <View style={{ gap: 8 }} testID="questions-ville-erreur">
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {t('collectiviteQuestions.erreurChargement', 'Les questions n’ont pas pu être chargées.')}
+          {t('collectiviteQuestions.erreurChargement', 'Les tickets n’ont pas pu être chargés.')}
         </Text>
         <Button
           onPress={() => questions.refetch?.()}
@@ -68,7 +68,7 @@ function CollectiviteQuestions() {
         testID="questions-ville"
       >
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-          {t('collectiviteQuestions.titre', 'Questions des clubs')}
+          {t('collectiviteQuestions.titre', 'Tickets des clubs')}
         </Text>
         {corps}
       </ScrollView>

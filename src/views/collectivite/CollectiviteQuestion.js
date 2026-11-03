@@ -52,7 +52,7 @@ function CollectiviteQuestion() {
   else if (!question) {
     corps = (
       <EmptyState
-        title={t('APIerrors.COLLECTIVITE_QUESTION_NOT_FOUND', 'Cette question est introuvable.')}
+        title={t('APIerrors.COLLECTIVITE_QUESTION_NOT_FOUND', 'Ce ticket est introuvable.')}
       />
     );
   } else {
@@ -101,7 +101,7 @@ function CollectiviteQuestion() {
             <Button
               disabled={statut.isPending}
               onPress={() => poser('traitee')}
-              title={t('collectiviteQuestions.traiter', 'Marquer comme traitée')}
+              title={t('collectiviteQuestions.traiter', 'Marquer comme traité')}
             />
           </View>
         ) : null}
@@ -116,7 +116,7 @@ function CollectiviteQuestion() {
         testID="question-fiche"
       >
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-          {t('collectiviteQuestions.titreFiche', 'Question à la Ville')}
+          {t('collectiviteQuestions.titreFiche', 'Ticket à la Ville')}
         </Text>
         {corps}
       </ScrollView>

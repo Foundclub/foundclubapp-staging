@@ -1942,7 +1942,7 @@ function HomeHubContent({ auth, navigation, route }) {
         onPress: () => ouvrirMaVille('ecrire'),
         subtitle: villeDuClub,
         subtitleLines: 2,
-        title: t('maVille.ongletEcrire', 'Écrire à ma Ville'),
+        title: t('maVille.ongletEcrire', 'Ouvrir un ticket'),
       },
       {
         icon: 'stadium',
