@@ -130,7 +130,7 @@ function PollDetails({ navigation, route }) {
         avatarUrl: getImageUrl(user?.avatar?.url || ''),
         displayName: getDisplayName(user),
         // T3-PARENT-FIL — « Parent de Lina » à côté du nom.
-        mention: mentionDuFil(pollVoterProfiles?.get?.(userId)?.staffRole, t),
+        mention: mentionDuFil(/** @type {any} */ (pollVoterProfiles?.get?.(userId))?.staffRole, t),
       });
     });
     return map;
