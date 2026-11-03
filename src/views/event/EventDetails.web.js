@@ -2607,7 +2607,8 @@ function EventDetails({ navigation, route }) {
                   ) : null}
                   {/* T3-CHEMINS (03/11, chef « FT2 A ») : le serveur réserve createBooking au
                       SuperAdmin (SECU-RESA). Aux autres, ce calendrier refusait l'envoi. */}
-                  {isReservation && facilityId && getUserRoleKey(userData?.role?.name) === 'superAdmin' ? (
+                  {isReservation && facilityId
+                    && getUserRoleKey(userData?.role?.name) === 'superAdmin' ? (
                     <button
                       onClick={() => navigation.navigate(RouteNames.BookingCalendar, { facilityId })}
                       style={{ ...outlineButtonStyle, padding: '12px 16px' }}

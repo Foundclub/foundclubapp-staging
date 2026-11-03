@@ -41,7 +41,11 @@ test.each([
   [RouteNames.TeamEdit, { teamId: 't1' }, '/teams/t1'],
   [RouteNames.EventEdit, { eventId: 'e1' }, '/events/e1'],
   [RouteNames.TournamentSettingsEdit, { eventId: 'e1' }, '/events/e1'],
-  [RouteNames.CollectiviteInstallationForm, { collectiviteId: 'v1' }, '/collectivite/v1/installations'],
+  [
+    RouteNames.CollectiviteInstallationForm,
+    { collectiviteId: 'v1' },
+    '/collectivite/v1/installations',
+  ],
   [RouteNames.CollectiviteFermeture, { collectiviteId: 'v1' }, '/collectivite/v1'],
 ])('première page de %s : retour à son parent', (routeName, params, attendu) => {
   historique({ idx: 0 });

@@ -44,7 +44,9 @@ beforeEach(() => {
     value: {
       getItem: (/** @type {string} */ cle) => memoire[cle] ?? null,
       removeItem: (/** @type {string} */ cle) => { delete memoire[cle]; },
-      setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => { memoire[cle] = valeur; },
+      setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => {
+        memoire[cle] = valeur;
+      },
     },
   });
 });

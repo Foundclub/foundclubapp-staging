@@ -117,7 +117,10 @@ const PARENT_DE_PREMIERE_PAGE = {
   [RouteNames.AddCoach]: { param: 'clubId', routeName: RouteNames.Club },
   [RouteNames.ChildEdit]: { routeName: RouteNames.MyChildren },
   [RouteNames.ClubEdit]: { param: 'clubId', routeName: RouteNames.Club },
-  [RouteNames.CollectiviteFermeture]: { param: 'collectiviteId', routeName: RouteNames.CollectiviteHome },
+  [RouteNames.CollectiviteFermeture]: {
+    param: 'collectiviteId',
+    routeName: RouteNames.CollectiviteHome,
+  },
   [RouteNames.CollectiviteInstallationForm]: {
     param: 'collectiviteId',
     routeName: RouteNames.CollectiviteInstallations,
