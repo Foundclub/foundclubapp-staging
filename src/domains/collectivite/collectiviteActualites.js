@@ -2,6 +2,7 @@ import {
   collectiviteInitial,
   formatCollectiviteDay,
 } from '@/domains/collectivite/collectiviteDisplay';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * 📰 COLL-C4A (02/10/2026) — LES ACTUALITÉS DE LA VILLE, en fonctions PURES : aucun appel réseau,
@@ -18,8 +19,11 @@ export const ACTUALITE_CATEGORIES = Object.freeze([
   'fermeture', 'forum', 'subventions', 'travaux', 'autre',
 ]);
 
-/** Les destinataires : tous les membres, les dirigeants, ou les clubs d'une installation. */
-export const ACTUALITE_AUDIENCES = Object.freeze(['membres', 'dirigeants', 'installation']);
+/** Les destinataires : tous les membres, les dirigeants, les clubs d'une installation, des clubs précis. */
+export const ACTUALITE_AUDIENCES = Object.freeze(['membres', 'dirigeants', 'installation', 'clubs']);
+
+/** T3-ACTU-CIBLE — dans « des clubs précis », les rôles à qui elle s'adresse. */
+export const ACTUALITE_ROLES = Object.freeze(['dirigeants', 'entraineurs', 'membres']);
 
 // Mêmes bornes que le serveur (collectivite-actualite.ts) : c'est lui le juge.
 export const ACTUALITE_TITLE_MAX = 120;
@@ -48,10 +52,13 @@ export const categoryLabel = (t, categorie) => {
 /**
  * Le libellé d'un choix de destinataires (« Pour qui »).
  * @param {any} t - La traduction (i18next).
- * @param {unknown} audience - `membres`, `dirigeants` ou `installation`.
+ * @param {unknown} audience - `membres`, `dirigeants`, `installation` ou `clubs`.
  * @returns {string} Le libellé.
  */
 export const audienceLabel = (t, audience) => {
+  if (audience === 'clubs') {
+    return t('collectiviteActualites.audiences.clubs', 'Des clubs précis');
+  }
   if (audience === 'dirigeants') {
     return t('collectiviteActualites.audiences.dirigeants', 'Les dirigeants');
   }
@@ -60,6 +67,38 @@ export const audienceLabel = (t, audience) => {
   }
   return t('collectiviteActualites.audiences.membres', 'Tous les membres');
 };
+
+/**
+ * Le libellé d'un rôle coché dans « Des clubs précis ».
+ * @param {any} t - La traduction (i18next).
+ * @param {string} role - `dirigeants`, `entraineurs` ou `membres`.
+ * @returns {string} Le libellé.
+ */
+export const actualiteRoleLabel = (t, role) => {
+  if (role === 'dirigeants') return t('collectiviteActualites.roles.dirigeants', 'Dirigeants');
+  if (role === 'entraineurs') return t('collectiviteActualites.roles.entraineurs', 'Entraîneurs');
+  return t('collectiviteActualites.roles.membres', 'Joueurs et parents');
+};
+
+/**
+ * Les sports des clubs rattachés, sans doublon, dans l'ordre de l'alphabet.
+ * @param {Array<{ sports?: string[] }>} clubs - Les clubs.
+ * @returns {string[]} Les noms.
+ */
+export const sportsDesClubs = (clubs) => [...new Set(
+  clubs.flatMap((club) => (Array.isArray(club?.sports) ? club.sports : [])),
+)].sort((a, b) => a.localeCompare(b, 'fr'));
+
+/**
+ * Les clubs d'un sport, un club omnisports compris ; sans sport, tous.
+ * @template {{ sports?: string[] }} Club
+ * @param {Club[]} clubs - Les clubs.
+ * @param {string} sport - Le nom du sport, ou ''.
+ * @returns {Club[]} Ceux à afficher.
+ */
+export const clubsDuSport = (clubs, sport) => (sport
+  ? clubs.filter((club) => Array.isArray(club?.sports) && club.sports.includes(sport))
+  : clubs);
 
 /**
  * La couleur d'un type (planche : une fermeture prend la couleur d'attention, les subventions le
@@ -85,6 +124,11 @@ export const categoryTone = (categorie) => {
 export const recipientsLine = (t, { audience, clubsCount }) => {
   const nombre = Number.isInteger(clubsCount) ? Number(clubsCount) : 0;
   const un = nombre === 1;
+  if (audience === 'clubs') {
+    return un
+      ? t('collectiviteActualites.envoyee.clubsUn', 'Envoyée à 1 club choisi')
+      : t('collectiviteActualites.envoyee.clubs', 'Envoyée à {{nombre}} clubs choisis', { nombre });
+  }
   if (audience === 'dirigeants') {
     return un
       ? t('collectiviteActualites.envoyee.dirigeantsUn', 'Envoyée aux dirigeants d’1 club')
@@ -157,6 +201,57 @@ export const audiencePreview = (t, { audience, clubsCount }) => {
     'collectiviteActualites.apercu.notification',
     // eslint-disable-next-line max-len
     'Une notification part aux dirigeants, aux entraîneurs et aux membres qui l’ont activée. Personne n’y répond.',
+  )}`;
+};
+
+/**
+ * T3-ACTU-CIBLE — La phrase AVANT de publier pour « Des clubs précis » : le nombre de destinataires.
+ * « environ » dès que les joueurs et parents sont cochés : le serveur ne compte pas les parents sans
+ * club à eux. Des nombres, jamais une personne.
+ * @param {any} t - La traduction (i18next).
+ * @param {{ approximate?: boolean, clubsCoches: number, clubsCount?: unknown, personsCount?: unknown,
+ *   rolesCoches: number }} cible - Ce qui est coché, et ce qu'en dit le serveur.
+ * @returns {string} La phrase.
+ */
+export const clubsPrecisPreview = (t, {
+  approximate = false, clubsCoches, clubsCount, personsCount, rolesCoches,
+}) => {
+  if (clubsCoches === 0) {
+    return t('collectiviteActualites.apercu.clubsPrecis.cocherClubs', 'Cochez les clubs qui la recevront.');
+  }
+  if (rolesCoches === 0) {
+    return t('collectiviteActualites.apercu.clubsPrecis.cocherRoles', 'Cochez les rôles qui la recevront.');
+  }
+  if (!Number.isInteger(personsCount) || !Number.isInteger(clubsCount)) {
+    return t('collectiviteActualites.apercu.clubsPrecis.calcul', 'Nous comptons les personnes qui la recevront…');
+  }
+  const nombre = Number(personsCount);
+  if (nombre === 0) {
+    return t(
+      'collectiviteActualites.apercu.clubsPrecis.personne',
+      'Personne ne la recevra : ces clubs n’ont personne avec ces rôles pour l’instant.',
+    );
+  }
+  const personnes = nombre === 1
+    ? t('collectiviteActualites.apercu.clubsPrecis.personneUne', '1 personne')
+    : t('collectiviteActualites.apercu.clubsPrecis.personnes', '{{nombre}} personnes', { nombre });
+  const clubs = clubsCount === 1
+    ? t('collectiviteActualites.apercu.clubsPrecis.clubUn', '1 club')
+    : t('collectiviteActualites.apercu.clubsPrecis.clubs', '{{nombre}} clubs', { nombre: clubsCount });
+  const qui = approximate
+    ? t(
+      'collectiviteActualites.apercu.clubsPrecis.recueEnviron',
+      'Reçue par environ {{personnes}} dans {{clubs}}.',
+      { ...SANS_ECHAPPEMENT, clubs, personnes },
+    )
+    : t(
+      'collectiviteActualites.apercu.clubsPrecis.recue',
+      'Reçue par {{personnes}} dans {{clubs}}.',
+      { ...SANS_ECHAPPEMENT, clubs, personnes },
+    );
+  return `${qui} ${t(
+    'collectiviteActualites.apercu.clubsPrecis.notification',
+    'Une notification part aux dirigeants et entraîneurs cochés, et aux joueurs et parents qui l’ont activée. Personne n’y répond.',
   )}`;
 };
 
@@ -280,7 +375,8 @@ export const attachmentBadge = (fichier) => {
 
 /**
  * Les fautes du formulaire « Nouvelle actualité ». Vide = prêt à publier. Le serveur reste juge.
- * @param {{ audience: string, body?: string, facilityId?: string | null, title?: string }} form
+ * @param {{ audience: string, body?: string, clubIds?: string[], facilityId?: string | null,
+ *   roles?: string[], title?: string }} form
  * @returns {Record<string, 'required' | 'tooLong'>} Une clef par champ fautif.
  */
 export const actualiteFormErrors = (form) => {
@@ -291,13 +387,16 @@ export const actualiteFormErrors = (form) => {
   else if (titre.length > ACTUALITE_TITLE_MAX) fautes.title = 'tooLong';
   if (String(form?.body || '').trim().length > ACTUALITE_BODY_MAX) fautes.body = 'tooLong';
   if (form?.audience === 'installation' && !form?.facilityId) fautes.facility = 'required';
+  if (form?.audience === 'clubs' && !form?.clubIds?.length) fautes.clubs = 'required';
+  if (form?.audience === 'clubs' && !form?.roles?.length) fautes.roles = 'required';
   return fautes;
 };
 
 /**
  * Le corps envoyé au serveur (publier ou modifier) : liste blanche.
  * @param {{ attachments?: Array<{ id?: number }>, audience: string, body?: string,
- *   category: string, facilityId?: string | null, title?: string }} form
+ *   category: string, clubIds?: string[], facilityId?: string | null, roles?: string[],
+ *   title?: string }} form
  * @returns {Record<string, unknown>} Le corps.
  */
 export const toActualitePayload = (form) => ({
@@ -308,5 +407,6 @@ export const toActualitePayload = (form) => ({
   body: String(form?.body || '').trim(),
   category: form?.category,
   ...(form?.audience === 'installation' ? { facilityId: form?.facilityId || null } : {}),
+  ...(form?.audience === 'clubs' ? { clubIds: form?.clubIds || [], roles: form?.roles || [] } : {}),
   title: String(form?.title || '').trim(),
 });

@@ -18,11 +18,13 @@ import {
   ACTUALITE_AUDIENCES,
   ACTUALITE_BODY_MAX,
   ACTUALITE_CATEGORIES,
+  ACTUALITE_ROLES,
   ACTUALITE_TITLE_MAX,
   actualiteFormErrors,
   audienceLabel,
   audiencePreview,
   categoryLabel,
+  clubsPrecisPreview,
   isImageAttachment,
   pieceEnEnvoi,
   toActualitePayload,
@@ -42,6 +44,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ActualiteCarte, {
   PieceJointeActualite,
 } from '@/views/collectivite/components/ActualiteCarte';
+import ActualiteCiblageClubs from '@/views/collectivite/components/ActualiteCiblageClubs';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -122,6 +125,9 @@ function CollectiviteActualiteForm() {
   const [texte, setTexte] = useState('');
   const [audience, setAudience] = useState('membres');
   const [installationId, setInstallationId] = useState(/** @type {string | null} */ (null));
+  // T3-ACTU-CIBLE — « Des clubs précis » : aucun club d'office, les trois rôles d'office.
+  const [clubIds, setClubIds] = useState(/** @type {string[]} */ ([]));
+  const [roles, setRoles] = useState(/** @type {string[]} */ ([...ACTUALITE_ROLES]));
   const [pieces, setPieces] = useState(/** @type {any[]} */ ([]));
   const [prete, setPrete] = useState(!actualiteId);
   const [feuille, setFeuille] = useState(false);
@@ -153,13 +159,19 @@ function CollectiviteActualiteForm() {
     setTexte(existante.body || '');
     setAudience(existante.audience || 'membres');
     setInstallationId(existante.facility?.documentId || null);
+    if (existante.audience === 'clubs') {
+      setClubIds(Array.isArray(existante.audienceClubIds) ? existante.audienceClubIds : []);
+      setRoles(Array.isArray(existante.audienceRoles) ? existante.audienceRoles : []);
+    }
     setPieces(Array.isArray(existante.attachments) ? existante.attachments : []);
     setPrete(true);
   }, [existante, prete]);
 
   const destinataires = useActualiteRecipients(collectiviteId, {
     audience,
+    clubIds,
     facilityId: audience === 'installation' ? installationId : null,
+    roles,
   });
   const nombreDeClubs = Number.isInteger(destinataires.data?.clubsCount)
     ? destinataires.data.clubsCount
@@ -170,7 +182,9 @@ function CollectiviteActualiteForm() {
     audience,
     body: texte,
     category: categorie,
+    clubIds,
     facilityId: installationId,
+    roles,
     title: titre,
   };
   const fautes = actualiteFormErrors(formulaire);
@@ -565,16 +579,46 @@ function CollectiviteActualiteForm() {
             {t('collectiviteActualites.form.fautes.installation', 'Choisissez l’installation.')}
           </Text>
         ) : null}
+        {audience === 'clubs' ? (
+          <ActualiteCiblageClubs
+            clubIds={clubIds}
+            collectiviteId={collectiviteId}
+            onClubIds={setClubIds}
+            onRoles={setRoles}
+            roles={roles}
+          />
+        ) : null}
+        {tentee && fautes.clubs ? (
+          <Text style={[Fonts.p3, Fonts.error300]}>
+            {t('collectiviteActualites.form.fautes.clubs', 'Cochez au moins un club.')}
+          </Text>
+        ) : null}
+        {tentee && fautes.roles ? (
+          <Text style={[Fonts.p3, Fonts.error300]}>
+            {t('collectiviteActualites.form.fautes.roles', 'Cochez au moins un rôle.')}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
 
-  const phrase = audience === 'installation' && !installationId
-    ? t(
+  let phrase;
+  if (audience === 'clubs') {
+    phrase = clubsPrecisPreview(t, {
+      approximate: destinataires.data?.approximate === true,
+      clubsCoches: clubIds.length,
+      clubsCount: destinataires.data?.clubsCount,
+      personsCount: destinataires.data?.personsCount,
+      rolesCoches: roles.length,
+    });
+  } else if (audience === 'installation' && !installationId) {
+    phrase = t(
       'collectiviteActualites.form.choisirInstallation',
       'Choisissez l’installation : ses clubs la recevront.',
-    )
-    : audiencePreview(t, { audience, clubsCount: nombreDeClubs });
+    );
+  } else {
+    phrase = audiencePreview(t, { audience, clubsCount: nombreDeClubs });
+  }
   const pied = (
     <View style={{ gap: 12 }}>
       <Text style={[Fonts.p3, Fonts.neutral300]} testID="actualite-form-destinataires">

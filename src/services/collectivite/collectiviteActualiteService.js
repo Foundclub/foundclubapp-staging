@@ -56,12 +56,22 @@ export const getCollectiviteActualites = (collectiviteId) => lire(
 /**
  * Combien de clubs recevraient l'actualité, AVANT de publier.
  * @param {string} collectiviteId - documentId.
- * @param {{ audience: string, facilityId?: string | null }} cible - Les destinataires choisis.
- * @returns {Promise<any>} `{ data: { audience, clubsCount } }`.
+ * @param {{ audience: string, clubIds?: string[], facilityId?: string | null,
+ *   roles?: string[] }} cible - Les destinataires choisis.
+ * @returns {Promise<any>} `{ data: { audience, clubsCount } }` ; `clubs` : plus `personsCount` et
+ *   `approximate`.
  */
-export const getActualiteRecipients = (collectiviteId, { audience, facilityId }) => lire(
+export const getActualiteRecipients = (collectiviteId, {
+  audience, clubIds = [], facilityId, roles = [],
+}) => lire(
   `/collectivites/${collectiviteId}/actualites-destinataires`,
-  { params: { audience, ...(facilityId ? { facilityId } : {}) } },
+  {
+    params: {
+      audience,
+      ...(facilityId ? { facilityId } : {}),
+      ...(audience === 'clubs' ? { clubIds: clubIds.join(','), roles: roles.join(',') } : {}),
+    },
+  },
 );
 
 /**
