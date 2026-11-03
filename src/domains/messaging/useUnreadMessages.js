@@ -3,9 +3,9 @@ import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 
-import { useGetChats } from '@/services/chat/chatQueriesCompat';
-
 import { estMineurConnu } from '@/domains/collectivite/collectiviteCanaux';
+
+import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
 import { formatUnreadBadge, UNREAD_BADGE_CAP } from '@/utils/notifications/unreadBadge';
 
@@ -167,7 +167,8 @@ const useUnreadMessages = (queryOptions = {}) => {
     // 1. Le total du serveur, quand il le dit.
     const serverTotal = getServerUnreadTotal(queryClient);
     if (serverTotal !== null) {
-      return toBoundedCount(nonLusHorsDeLaVille(serverTotal, getServerUnreadVille(queryClient) || [], {
+      const filsDeLaVille = getServerUnreadVille(queryClient) || [];
+      return toBoundedCount(nonLusHorsDeLaVille(serverTotal, filsDeLaVille, {
         mineur: estMineurConnu(userData),
         monClubId: userData?.club?.documentId || null,
       }));
