@@ -5748,6 +5748,13 @@ export default {
       enregistrerQuandMeme: 'Save anyway',
       ensuite: '{{qui}} arrives at {{heure}}.',
       equipe: 'Team (optional)',
+      fermee: {
+        plusieurs: '{{nombre}} sessions out of {{total}} fall within a closure{{raison}}.',
+        questionAttribuer: 'Assign anyway?',
+        questionEnregistrer: 'Save anyway?',
+        titre: 'Are you sure?',
+        une: 'This facility is closed for this slot{{raison}}.',
+      },
       fin: 'End',
       heureFormat: 'A time is written HH:MM (for example 17:30).',
       heureOrdre: 'The end must come after the start.',
@@ -11344,11 +11351,8 @@ export default {
           bloqueMasculin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
           ferme: 'This facility is closed {{quand}}{{motif}}. Choose another day or another facility.',
           fermeFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeures: 'This facility is closed {{quand}}{{motif}}. Choose another time or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeuresFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeuresMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
           fermeMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
           sansDetail: 'The town has closed this facility at that time. Choose another day or another facility.',

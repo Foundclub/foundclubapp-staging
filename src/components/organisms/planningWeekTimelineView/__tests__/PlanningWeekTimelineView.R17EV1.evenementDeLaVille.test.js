@@ -204,7 +204,7 @@ describe('R17-EVT-1 — l’événement de la Ville sur le planning d’une inst
   it.each([
     [7 * 39, 'column'],
     [7 * 60, 'row'],
-  ])('🐞 RET-PLANNING fiche 14 : grille de %i px, le nombre et le numéro en %s', async (largeur, sens) => {
+  ])('🐞 RET-PLANNING fiche 14 : grille de %i px, nombre et numéro en %s', async (largeur, sens) => {
     const arbre = await montrerLaSemaine();
     const grille = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'planning-grille'
       && typeof n.props.onLayout === 'function')[0];

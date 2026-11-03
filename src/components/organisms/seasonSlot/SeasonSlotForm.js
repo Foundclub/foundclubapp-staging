@@ -705,6 +705,10 @@ function SeasonSlotForm({
   const quandJuste = repartition
     || (!erreurDuQuand && (formeChoisie === 'saison' || seances.length > 0));
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
+  // RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : l'envoi qui attend « Attribuer quand même ».
+  const [envoiSurFermeture, setEnvoiSurFermeture] = useState(
+    /** @type {{ quandMeme: boolean } | null} */ (null),
+  );
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // VILLE-T18A — « Voir les heures libres du <jour> » : la liste est ouverte.
   const [voirLibres, setVoirLibres] = useState(false);
@@ -1095,6 +1099,18 @@ function SeasonSlotForm({
       fermeture: noms.join(', '),
       ...SANS_ECHAPPEMENT,
     });
+  })();
+  // RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : la Ville garde le droit d'attribuer pendant
+  // une fermeture ; on lui demande de confirmer, en disant pourquoi. Le serveur ne change pas.
+  const envoyerOuDemander = (/** @type {boolean} */ quandMeme) => {
+    if (seancesFermees.length) setEnvoiSurFermeture({ quandMeme });
+    else envoyer(quandMeme);
+  };
+  const raisonDeLaFermeture = (() => {
+    const noms = [...new Set(seancesFermees.map((ligne) => ligne.label).filter(Boolean))];
+    const heures = [...new Set(seancesFermees.map((ligne) => ligne.heures))];
+    const details = heures.length === 1 && heures[0] ? [...noms, heures[0]] : noms;
+    return details.length ? ` (${details.join(', ')})` : '';
   })();
   // La ligne « Quand » du récapitulatif : la forme et ses bornes, puis le compte.
   const libelleDuQuand = (() => {
@@ -2523,6 +2539,77 @@ function SeasonSlotForm({
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
       ) : null}
 
+      {envoiSurFermeture ? (
+        <BottomModal
+          close={() => setEnvoiSurFermeture(null)}
+          isVisible
+          webPresentation="dialog"
+          {.../** @type {any} */ ({ webZIndex: tunnelPleinEcran ? 10000 : undefined })}
+        >
+          <View
+            accessibilityRole="alert"
+            style={{ gap: 16, paddingBottom: 16 }}
+            testID="confirmer-fermeture"
+          >
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('collectiviteCreneaux.attribuer.fermee.titre', 'Êtes-vous sûr ?')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {seancesFermees.length === 1
+                ? t(
+                  'collectiviteCreneaux.attribuer.fermee.une',
+                  'Cette installation est fermée sur ce créneau{{raison}}.',
+                  { raison: raisonDeLaFermeture, ...SANS_ECHAPPEMENT },
+                )
+                : t(
+                  'collectiviteCreneaux.attribuer.fermee.plusieurs',
+                  '{{nombre}} séances sur {{total}} tombent dans une fermeture{{raison}}.',
+                  {
+                    nombre: seancesFermees.length,
+                    raison: raisonDeLaFermeture,
+                    total: seancesVues.length,
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
+              {' '}
+              {modification
+                ? t(
+                  'collectiviteCreneaux.attribuer.fermee.questionEnregistrer',
+                  'Enregistrer quand même ?',
+                )
+                : t(
+                  'collectiviteCreneaux.attribuer.fermee.questionAttribuer',
+                  'Attribuer quand même ?',
+                )}
+            </Text>
+            <View style={{ gap: 8 }}>
+              <Button
+                onPress={() => {
+                  const { quandMeme } = envoiSurFermeture;
+                  setEnvoiSurFermeture(null);
+                  envoyer(quandMeme);
+                }}
+                testID="confirmer-fermeture-oui"
+                title={modification
+                  ? t(
+                    'collectiviteCreneaux.attribuer.enregistrerQuandMeme',
+                    'Enregistrer quand même',
+                  )
+                  : t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même')}
+                variant="Primary"
+              />
+              <Button
+                onPress={() => setEnvoiSurFermeture(null)}
+                testID="confirmer-fermeture-non"
+                textStyle={{ color: Colors.primary200 }}
+                title={t('common.cancel', 'Annuler')}
+                variant="Ghost"
+              />
+            </View>
+          </View>
+        </BottomModal>
+      ) : null}
+
       {tunnelPleinEcran ? null : (() => {
         if (!confirmationFinale) {
           return (
@@ -2539,7 +2626,7 @@ function SeasonSlotForm({
             <Button
               disabled={!pret}
               isLoading={envoiEnCours}
-              onPress={() => envoyer(besoinDeConfirmer)}
+              onPress={() => envoyerOuDemander(besoinDeConfirmer)}
               title={libelleDeConfirmation}
               variant="Primary"
             />
@@ -2585,7 +2672,7 @@ function SeasonSlotForm({
         nextLabel={confirmationFinale ? libelleDeConfirmation : t('common.next', 'Suivant')}
         onBack={etape > 0 ? reculer : undefined}
         onClose={onCancel}
-        onNext={confirmationFinale ? () => envoyer(besoinDeConfirmer) : avancer}
+        onNext={confirmationFinale ? () => envoyerOuDemander(besoinDeConfirmer) : avancer}
         onSkip={actionDuBas?.onPress}
         showSkip={Boolean(actionDuBas)}
         skipLabel={actionDuBas?.libelle}

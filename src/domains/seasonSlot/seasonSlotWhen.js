@@ -1,5 +1,5 @@
 import {
-  formatDay, slotOccurrences, slotShape, toMinutes, weekdayName,
+  formatDay, slotOccurrences, slotShape, timeRange, toMinutes, weekdayName,
 } from './seasonSlotDisplay';
 
 /**
@@ -122,7 +122,8 @@ export const seancesDuQuand = (creneau, aujourdhui) => (
  * @param {any[] | null | undefined} fermetures - Les fermetures actives (`useFacilityClosures`).
  * @param {string} debut - HH:MM.
  * @param {string} fin - HH:MM.
- * @returns {Array<{ date: string, label: string }>} Les séances fermées, et leur fermeture.
+ * @returns {Array<{ date: string, heures?: string, label: string }>} Les séances fermées, leur
+ * fermeture, et ses heures quand elle tient sur un jour (Q9 de RET-FERMETURE-HEURES).
  */
 export const fermeturesTouchees = (jours, fermetures, debut, fin) => {
   const de = toMinutes(debut) ?? 0;
@@ -141,7 +142,14 @@ export const fermeturesTouchees = (jours, fermetures, debut, fin) => {
       const ferme = blocage || jour === au ? heureA ?? 24 * 60 : 24 * 60;
       return de < ferme && ouvre < a;
     });
-    return fermeture ? [{ date: jour, label: String(fermeture.label || '') }] : [];
+    if (!fermeture) return [];
+    const unJour = jourCivil(fermeture.startDate) === jourCivil(fermeture.endDate)
+      && fermeture.startTime && fermeture.endTime;
+    return [{
+      date: jour,
+      label: String(fermeture.label || ''),
+      ...(unJour ? { heures: timeRange(fermeture.startTime, fermeture.endTime) } : {}),
+    }];
   });
 };
 

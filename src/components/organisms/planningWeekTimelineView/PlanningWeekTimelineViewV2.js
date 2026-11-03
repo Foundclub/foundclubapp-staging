@@ -1630,7 +1630,9 @@ function PlanningWeekTimelineView({
                 <View
                   style={[
                     styles.dayBadgeWrapper,
-                    nombreSousLeNumero ? [styles.dayBadgeWrapperEtroit, { minHeight: tailleDuNumero + 16 }] : null,
+                    nombreSousLeNumero
+                      ? [styles.dayBadgeWrapperEtroit, { minHeight: tailleDuNumero + 16 }]
+                      : null,
                   ]}
                 >
                   <View
@@ -1904,7 +1906,12 @@ const styles = StyleSheet.create({
   dayBadgeWrapperEtroit: { flexDirection: 'column', justifyContent: 'flex-start' },
   dayColumnHeader: { alignItems: 'center', flex: 1 },
   dayCountBadge: {
-    alignItems: 'center', borderRadius: 6, borderWidth: 1, height: 14, justifyContent: 'center', width: 14,
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 14,
+    justifyContent: 'center',
+    width: 14,
   },
   dayCountText: { color: '#FFFFFF', fontSize: 8, fontWeight: '700' },
   dayLabel: { fontSize: 11, marginBottom: 6, textTransform: 'uppercase' },
