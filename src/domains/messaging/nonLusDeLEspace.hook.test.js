@@ -42,10 +42,14 @@ const monter = async (reponse) => {
   /** @type {any} */ let valeur = null;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   /** @type {any} */ (getChats).mockResolvedValue(reponse);
-  const Sonde = () => {
+  /**
+   * Lit le hook pour le témoin.
+   * @returns {null} Rien à afficher.
+   */
+  function Sonde() {
     valeur = useUnreadMessages();
     return null;
-  };
+  }
   await act(async () => {
     renderer.create(createElement(QueryClientProvider, { client }, createElement(Sonde)));
     await new Promise((fin) => { setTimeout(fin, 20); });
@@ -67,7 +71,7 @@ describe('useUnreadMessages — la pastille de chaque espace', () => {
     expect(lire().nonLusDeLaVille('v1')).toBe(0);
   });
 
-  test('un serveur sans le détail : la Ville garde le total, elle compte trop mais ne rate rien', async () => {
+  test('sans le détail du serveur : la Ville garde le total, ne rate rien', async () => {
     const { lire } = await monter(page({ unreadTotal: 19 }));
 
     expect(lire().nonLusDeLaVille('v1')).toBe(19);

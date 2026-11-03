@@ -8,8 +8,12 @@ const fil = (documentId, type, unreadCount, extra = {}) => ({
   documentId, type, unreadCount, ...extra,
 });
 const CANAL = fil('canal', 'collectivite_dirigeants', 1, { collectivite: { documentId: 'v1' } });
-const AUTRE_VILLE = fil('autre', 'collectivite_dirigeants', 5, { collectivite: { documentId: 'v2' } });
-const TOUTE_LA_VILLE = fil('toute', 'collectivite_ville', 2, { collectivite: { documentId: 'v1' } });
+const AUTRE_VILLE = fil('autre', 'collectivite_dirigeants', 5, {
+  collectivite: { documentId: 'v2' },
+});
+const TOUTE_LA_VILLE = fil('toute', 'collectivite_ville', 2, {
+  collectivite: { documentId: 'v1' },
+});
 const CLUB_A = fil('club-a', 'collectivite_club', 3, {
   collectivite: { documentId: 'v1' }, collectiviteClub: { documentId: 'c-a' },
 });
@@ -77,6 +81,7 @@ describe('après une lecture', () => {
 
   test('un fil de club marqué non lu n y entre pas', () => {
     const meta = { unreadVille: [] };
-    expect(metaApresLecture(meta, 'equipe', 1, [{ documentId: 'equipe', type: 'team' }])).toBe(meta);
+    const fils = [{ documentId: 'equipe', type: 'team' }];
+    expect(metaApresLecture(meta, 'equipe', 1, fils)).toBe(meta);
   });
 });
