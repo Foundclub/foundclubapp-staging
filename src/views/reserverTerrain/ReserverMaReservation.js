@@ -492,6 +492,20 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
               variant="Secondary"
             />
           ) : null}
+          {/* T3-RESA-PLANNING (Adel « 9- A ») : le planning ouvert sur le jour de la partie. */}
+          {reservation.startsAt && ['confirmee', 'en_attente'].includes(reservation.status) ? (
+            <Button
+              icon="calendar"
+              onPress={() => navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+                contextLabel: t('planning.fullscreen.personal', 'Mon planning'),
+                date: reservation.startsAt,
+                sourceType: 'personal',
+              })}
+              size="sm"
+              title={t('notifications.details.viewPlanning', 'Voir mon planning')}
+              variant="Secondary"
+            />
+          ) : null}
           {!participant ? (
             <Button
               icon="envelope"

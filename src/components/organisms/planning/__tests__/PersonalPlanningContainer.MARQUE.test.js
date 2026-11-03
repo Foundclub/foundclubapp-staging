@@ -11,6 +11,11 @@ import renderer, { act } from 'react-test-renderer';
 const mockUseQuery = jest.fn();
 const mockTimelineProps = [];
 
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (/** @type {any} */ options) => mockUseQuery(options),
 }));

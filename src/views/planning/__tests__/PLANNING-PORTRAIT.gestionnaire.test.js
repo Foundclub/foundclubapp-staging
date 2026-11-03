@@ -38,6 +38,11 @@ const mockTimelineProps = [];
 /** @type {any} */
 let mockAuth;
 
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({ height: 390, width: 844 }),

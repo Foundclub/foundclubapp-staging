@@ -10,6 +10,11 @@ import { getMyPlanning } from '@/services/event/eventService';
 
 jest.setTimeout(30000);
 
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('@/utils/planning/planningSlots', () => ({
   ...jest.requireActual('@/utils/planning/planningSlots'),
   getPlanningDefaultDate: () => new Date(2026, 9, 21, 12, 0, 0),

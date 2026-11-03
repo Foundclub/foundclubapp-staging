@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { dansLaPlage, datesAVenirDesReservations } from '@/domains/complexe/reservationsAuPlanning';
 import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import useTheme from '@/theme/themeContext';
 
@@ -21,6 +22,7 @@ import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelin
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useReservationsAuPlanning } from '@/services/complexe/complexeJoueurQueries';
 import { getMyPlanning } from '@/services/event/eventService';
 import { keepPreviousPageData } from '@/services/queryOptions';
 
@@ -79,6 +81,21 @@ function PersonalPlanningContainer({
     staleTime: PERSONAL_PLANNING_STALE_MS,
   });
 
+  // T3-RESA-PLANNING (Adel « 9- A ») — ses reservations de terrain rejoignent la grille, y compris
+  // quand le calendrier est refuse (role Parent, 403) ; leurs jours comptent pour la vue d arrivee.
+  const reservations = useReservationsAuPlanning();
+  const reservationsDeLaVue = useMemo(
+    () => dansLaPlage(reservations, planningRange),
+    [planningRange, reservations],
+  );
+
+  const datesDeLaListe = useMemo(
+    () => (datesAVenir
+      ? [...datesAVenir, ...datesAVenirDesReservations(reservations)]
+      : undefined),
+    [datesAVenir, reservations],
+  );
+
   // PARENT-PLANNING (06/10) — un ECHEC libere aussi la liste du planning. Sur le site, elle
   // attend ce signal ; le role Parent n a pas le droit de lire ce calendrier (403) : sans
   // cette sortie, sa liste — les evenements de son enfant compris — ne partait jamais.
@@ -103,7 +120,7 @@ function PersonalPlanningContainer({
   const { enDecision, garderLeChoix } = useVueInitiale({
     actif: !isError && datesAVenir !== undefined,
     appliquer: appliquerLaVue,
-    datesDeLaListe: datesAVenir || undefined,
+    datesDeLaListe,
     evenements: eventsData && !isPlaceholderData ? (eventsData.data || []) : undefined,
     listeConnue: datesAVenir !== null,
     vueDeBase: '3days',
@@ -139,9 +156,18 @@ function PersonalPlanningContainer({
     return <Loader />;
   }
 
-  const events = withViewerChildrenTitles(normalizePlanningItems(eventsData?.data || []), t);
+  const events = withViewerChildrenTitles(
+    normalizePlanningItems([...(eventsData?.data || []), ...reservationsDeLaVue]),
+    t,
+  );
 
   const handleEventPress = (event) => {
+    if (event?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: event.raw.reservationTerrain.documentId,
+      });
+      return;
+    }
     // R17-EVT-1-BIS (b) (20/10) : vue Mois, l événement de la Ville (sans documentId) ouvre SA
     // fiche, comme son bloc dans la grille.
     if (event?.raw?.evenementDeLaVille) {

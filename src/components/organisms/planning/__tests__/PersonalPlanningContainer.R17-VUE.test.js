@@ -10,6 +10,11 @@ import { getMyPlanning } from '@/services/event/eventService';
 // (`ParticipantEventList`, `useGetEvents` trie par date) : aucune lecture de plus.
 
 // Mercredi 21 octobre 2026, midi.
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('@/utils/planning/planningSlots', () => ({
   ...jest.requireActual('@/utils/planning/planningSlots'),
   getPlanningDefaultDate: () => new Date(2026, 9, 21, 12, 0, 0),

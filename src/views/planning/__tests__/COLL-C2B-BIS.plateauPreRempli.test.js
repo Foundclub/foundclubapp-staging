@@ -46,6 +46,11 @@ const mockFormProps = [];
 
 // COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
 jest.setTimeout(30000);
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({ height: 844, width: 390 }),

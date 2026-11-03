@@ -39,6 +39,7 @@ import {
   blocsDesEvenements,
   fermeturesSansLesEvenements,
 } from '@/domains/collectivite/evenementDeLaVille';
+import { dansLaPlage } from '@/domains/complexe/reservationsAuPlanning';
 import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import {
   closureBandLabel,
@@ -91,6 +92,7 @@ import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirige
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGestesEvenementDeLaVille } from '@/services/collectivite/collectiviteEvenementQueries';
+import { useReservationsAuPlanning } from '@/services/complexe/complexeJoueurQueries';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
@@ -450,9 +452,16 @@ function PlanningWeekFullscreen() {
   // COLL-C2B (02/10) — design P5-jour : une place EN ATTENTE (contrat C2A §7, `pending`) se lit
   // « en attente » a sa place ; un MEMBRE voit son club en couleur et les autres en gris.
   // PARENT-PLANNING : le prenom de l enfant sur ses creneaux (les autres sources n en portent pas).
+  // T3-RESA-PLANNING (Adel « 9- A ») — « Mon planning » seulement : ses reservations de terrain.
+  const reservations = useReservationsAuPlanning();
   const normalizedEvents = useMemo(
-    () => withViewerChildrenTitles(normalizePlanningItems(data?.data || []), t),
-    [data, t],
+    () => withViewerChildrenTitles(normalizePlanningItems([
+      ...(data?.data || []),
+      ...(sourceType === FULLSCREEN_SOURCE_TYPES.personal
+        ? dansLaPlage(reservations, planningRange)
+        : []),
+    ]), t),
+    [data, planningRange, reservations, sourceType, t],
   );
   // 🎨 COLL-R-A6 (13/10, COL-019, D13 A) : la liste des clubs de la Ville est lue dès que la Ville
   // GÈRE l'installation (avant : seulement en ouvrant un bloc) — l'ordre de cette liste donne à
@@ -1179,6 +1188,12 @@ function PlanningWeekFullscreen() {
     setBrouillon(null);
   }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
+    if (bloc?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: bloc.raw.reservationTerrain.documentId,
+      });
+      return;
+    }
     // R17-EVT-1-BIS (b) (20/10) : vues Mois et Liste, l événement de la Ville ouvre SA fiche.
     if (bloc?.raw?.evenementDeLaVille) {
       ouvrirLEvenementDeLaVille(bloc.raw.evenementDeLaVille);
@@ -1287,6 +1302,12 @@ function PlanningWeekFullscreen() {
   }, [navigation]);
 
   const handleEventPress = useCallback((event) => {
+    if (event?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: event.raw.reservationTerrain.documentId,
+      });
+      return;
+    }
     if (!event?.documentId) return;
 
     // COLL-R-DEPLACER (14/10, COL-013, planche P5v4-deplacer-tel écran 1) — le bloc « à

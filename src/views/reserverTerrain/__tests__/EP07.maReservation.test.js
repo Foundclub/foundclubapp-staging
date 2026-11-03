@@ -141,6 +141,16 @@ describe('E-P07 — une réservation confirmée, avant le délai', () => {
     expect(lien).toContain('dates=20261016T160000Z/20261016T170000Z');
   });
 
+  it('T3-RESA-PLANNING : « Voir mon planning » ouvre le planning sur le jour de la partie', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Voir mon planning');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.PlanningWeekFullscreen, {
+      contextLabel: 'Mon planning',
+      date: maReservation().startsAt,
+      sourceType: 'personal',
+    });
+  });
+
   it('le complexe ouvre sa page (E-P02)', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'Le Five de Montrivage · Terrain 1');

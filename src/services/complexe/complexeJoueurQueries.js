@@ -1,6 +1,10 @@
 import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
+import { useMemo } from 'react';
+
+import { versElementsDePlanning } from '@/domains/complexe/reservationsAuPlanning';
+import { joueurDesComplexesAllume } from '@/domains/complexe/reservationsDuJoueur';
 
 import {
   ajouterAuxFavoris,
@@ -212,9 +216,11 @@ export const useAnnulerMaReservation = () => useGesteDuJoueur(
  * RESA-L6B-1 — E-P10 : SES réservations d'un onglet (la clef commence par celle de ses
  * réservations : un geste du joueur la relit).
  * @param {'a-venir' | 'passees' | 'refusees'} periode - L'onglet.
+ * @param {{ enabled?: boolean }} [options] - `enabled` : faux, rien n'est lu.
  * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les réservations.
  */
-export const useMesReservations = (periode) => useQuery({
+export const useMesReservations = (periode, { enabled = true } = {}) => useQuery({
+  enabled,
   queryFn: async () => {
     const liste = donnees(await lireMesReservations(periode));
     return Array.isArray(liste) ? liste : [];
@@ -222,6 +228,21 @@ export const useMesReservations = (periode) => useQuery({
   queryKey: [...MES_RESERVATIONS_CLEF, 'mine', periode],
   staleTime: DEMI_MINUTE,
 });
+
+/**
+ * T3-RESA-PLANNING (Adel « 9- A ») — ses réservations, en lignes de planning. Interrupteur éteint :
+ * rien n'est lu. Une lecture en échec laisse simplement le planning sans elles.
+ * @returns {any[]} Les lignes (`versElementsDePlanning`).
+ */
+export const useReservationsAuPlanning = () => {
+  const enabled = joueurDesComplexesAllume();
+  const aVenir = useMesReservations('a-venir', { enabled });
+  const passees = useMesReservations('passees', { enabled });
+  return useMemo(
+    () => versElementsDePlanning([...(aVenir.data || []), ...(passees.data || [])]),
+    [aVenir.data, passees.data],
+  );
+};
 
 /**
  * RESA-L6B-1 — E-P14 : répondre à la question de la veille.

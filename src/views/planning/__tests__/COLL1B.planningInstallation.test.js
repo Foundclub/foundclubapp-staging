@@ -33,6 +33,11 @@ const mockTimelineProps = [];
 
 // COLL1D (29/09) : l ecran lit la session (texte de capacite du membre). Un JOUEUR, ici ;
 // le vrai module charge les services (memoire piege-env-absent-worktree-import-service).
+// T3-RESA-PLANNING : ce témoin ne parle pas des réservations de terrain.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useReservationsAuPlanning: () => [],
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({ userData: { role: { name: 'Joueur', type: 'joueur' } } }),
