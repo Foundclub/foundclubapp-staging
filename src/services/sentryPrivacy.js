@@ -73,6 +73,21 @@ const scrubText = (text) => text
   .replace(PHONE_PATTERN, MASK);
 
 /**
+ * Nettoie tous les textes d'une valeur : le SDK range le corps d'une erreur serveur
+ * dans `extra.__serialized__`.
+ * @param {any} value - La valeur.
+ * @returns {any} La valeur nettoyée.
+ */
+const scrubDeep = (value) => {
+  if (typeof value === 'string') return scrubText(value);
+  if (Array.isArray(value)) return value.map(scrubDeep);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, scrubDeep(child)]));
+  }
+  return value;
+};
+
+/**
  * Nettoie le bloc `data` d'une ligne du fil ou d'une requête tracée.
  * @param {any} data - Le bloc.
  * @returns {void}
@@ -107,20 +122,22 @@ export const scrubSentryBreadcrumb = (breadcrumb) => {
 export const scrubSentryEvent = (event) => {
   try {
     event.breadcrumbs?.forEach(scrubSentryBreadcrumb);
-    event.spans?.forEach((span) => {
+    event.spans?.forEach((/** @type {any} */ span) => {
       scrubData(span.data);
       if (typeof span.description === 'string') span.description = scrubText(span.description);
     });
     scrubData(event.contexts?.trace?.data);
     if (event.request?.url) event.request.url = scrubUrl(event.request.url);
     delete event.request?.query_string;
+    if (event.extra) event.extra = scrubDeep(event.extra);
   } catch {
     // Une panne sans contexte vaut mieux qu'une panne perdue ou une donnée qui part.
     delete event.breadcrumbs;
+    delete event.extra;
     delete event.spans;
     delete event.request;
   }
-  event.exception?.values?.forEach((exception) => {
+  event.exception?.values?.forEach((/** @type {any} */ exception) => {
     if (typeof exception.value === 'string') exception.value = scrubText(exception.value);
   });
   if (typeof event.message === 'string') event.message = scrubText(event.message);

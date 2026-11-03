@@ -103,6 +103,23 @@ describe('ce qui part chez Sentry depuis l application', () => {
     expect(trace.spans[0].description).toBe(`GET ${API}?q=[retire]`);
   });
 
+  it('le corps d une erreur serveur, range par le SDK dans `extra`, est nettoye aussi', () => {
+    const evenement = scrubSentryEvent({
+      exception: { values: [{ type: 'Error', value: 'Object captured as exception' }] },
+      extra: {
+        __serialized__: {
+          details: { champs: [`refus pour ${EMAIL}`], url: `${API}?q=${RECHERCHE}` },
+          message: `numero ${TELEPHONE} refuse`,
+          name: 'ApplicationError',
+          status: 400,
+        },
+      },
+    });
+    aucuneDonneePersonnelle(evenement);
+    expect(evenement.extra.__serialized__.name).toBe('ApplicationError');
+    expect(evenement.extra.__serialized__.status).toBe(400);
+  });
+
   it('si le nettoyage casse, la panne part sans fil plutot que perdue', () => {
     const evenement = scrubSentryEvent({
       breadcrumbs: { forEach() { throw new Error('piege'); } },
