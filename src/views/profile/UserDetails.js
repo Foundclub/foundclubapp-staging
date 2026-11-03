@@ -38,6 +38,8 @@ import UserHistorySection from '@/components/organisms/userHistorySection/UserHi
 import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 import CoachFeedbackList, {
   CoachFeedbackViewBody,
   CoachWords,
@@ -369,6 +371,7 @@ function InfoItem({
  * @returns {import('react').ReactElement} User profile screen
  */
 function UserDetails({ navigation, route }) {
+  const enTeteFlottant = useEnteteFlottant(navigation);
   const routeUserId = route?.params?.userId;
   // D39 — « Voir mon profil comme les autres ». L'apercu emprunte CE rendu, le
   // meme que voient les autres : c'est la seule facon de ne pas mentir. Les
@@ -1201,76 +1204,15 @@ function UserDetails({ navigation, route }) {
         Alignments.column,
         Alignments.fill,
       ]}
+      {...enTeteFlottant.conteneur}
     >
-      {/* A18 — l'apercu le DIT : sans ce bandeau, rien ne distinguait la
-          vitrine de sa propre page. « Quitter » rend la main au profil.
-          Couleurs de la CHARTE seulement (Adel, 30/09 : pas le jaune de la
-          maquette de l'audit) : le cyan `primary500`, teinte par `withAlpha`. */}
-      {isSelfPreview ? (
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[12],
-            Spaces.paddingHorizontal[16],
-            Spaces.marginTop[8],
-            ApplicationStyle.borderRadius16,
-            {
-              backgroundColor: withAlpha(Colors.primary500, 0.12),
-              borderColor: withAlpha(Colors.primary500, 0.4),
-              borderWidth: 1,
-            },
-          ]}
-          testID="apercu-bandeau"
-        >
-          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-            {t('userDetails.preview.banner', "Aperçu : c'est ce que voient les autres.")}
-          </Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => navigation.goBack()}
-            style={[Alignments.justifyCenter, { minHeight: 44 }]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('userDetails.preview.exit', 'Quitter')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      <View
-        style={[
-          Alignments.justifyCenter,
-          Alignments.alignCenter,
-          Spaces.gap[8],
-          Spaces.marginTop[8],
-        ]}
-      >
-        {/* STATS-FIX2 · 8-22 (T10, ecran 22) — la fiche de SON enfant porte son prenom (planche
-            22 : « Hugo », et « Mon enfant » sur la carte), pas « INFOS PROFIL · JOUEUR ». */}
-        {sousUneBarreDuSite ? null : (
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {titreDeLaFiche.toUpperCase()}
-          </Text>
-        )}
-        <View
-          style={[
-            ApplicationStyle.separator,
-            ApplicationStyle.backgroundColor.neutral00,
-            { width: 88 },
-          ]}
-        />
-        {isParentOfMinorViewer ? null : (
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-            {/* PAR-L12 — en mode parent, le rôle LU est celui de la vue (comme l'accueil). */}
-            {enModeParent ? formatRoleLabel('Parent') : roleLabel}
-          </Text>
-        )}
-      </View>
-
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[24],
-          { paddingBottom: scrollBottomPadding },
+          {
+            paddingBottom: scrollBottomPadding,
+            paddingTop: enTeteFlottant.retraitDuDefilement,
+          },
         ]}
         refreshControl={(
           <RefreshControl
@@ -1281,6 +1223,71 @@ function UserDetails({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {/* A18 — l'apercu le DIT : sans ce bandeau, rien ne distinguait la
+            vitrine de sa propre page. « Quitter » rend la main au profil.
+            Couleurs de la CHARTE seulement (Adel, 30/09 : pas le jaune de la
+            maquette de l'audit) : le cyan `primary500`, teinte par `withAlpha`. */}
+        {isSelfPreview ? (
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[12],
+              Spaces.paddingHorizontal[16],
+              Spaces.marginTop[8],
+              ApplicationStyle.borderRadius16,
+              {
+                backgroundColor: withAlpha(Colors.primary500, 0.12),
+                borderColor: withAlpha(Colors.primary500, 0.4),
+                borderWidth: 1,
+              },
+            ]}
+            testID="apercu-bandeau"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+              {t('userDetails.preview.banner', "Aperçu : c'est ce que voient les autres.")}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => navigation.goBack()}
+              style={[Alignments.justifyCenter, { minHeight: 44 }]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('userDetails.preview.exit', 'Quitter')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <View
+          style={[
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginTop[8],
+          ]}
+        >
+          {/* STATS-FIX2 · 8-22 (T10, ecran 22) — la fiche de SON enfant porte son prenom (planche
+              22 : « Hugo », et « Mon enfant » sur la carte), pas « INFOS PROFIL · JOUEUR ». */}
+          {sousUneBarreDuSite ? null : (
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {titreDeLaFiche.toUpperCase()}
+            </Text>
+          )}
+          <View
+            style={[
+              ApplicationStyle.separator,
+              ApplicationStyle.backgroundColor.neutral00,
+              { width: 88 },
+            ]}
+          />
+          {isParentOfMinorViewer ? null : (
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {/* PAR-L12 — en mode parent, le rôle LU est celui de la vue (comme l'accueil). */}
+              {enModeParent ? formatRoleLabel('Parent') : roleLabel}
+            </Text>
+          )}
+        </View>
+
         <WithDataWrapper
           error={profileError}
           isLoading={isProfileLoading}

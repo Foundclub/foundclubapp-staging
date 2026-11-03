@@ -2659,17 +2659,47 @@ function HomeHubContent({ auth, navigation, route }) {
       contentWidth="wide"
       responsivePadding
     >
-      {/* GUIDE-ENTETE : la bulle du guide se pose sous le logo, la cloche et l’avatar. */}
-      <TourTarget id="screen.header">
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
-          <LeagueHeaderSwitch onPress={scrollToTop} />
-          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-            <NotificationBadge />
-            <ProfileButton hasAlert={cotisationAPayer} />
+      {/* GUIDE-ENTETE : la bulle du guide se pose sous la cloche et l’avatar.
+          T3-BANDEAU-HAUT (03/11, essai) : au téléphone, le logo défile ; la cloche et le profil
+          flottent à droite, chacun sur son fond, sans bloc derrière eux (BOUTONS-FLOTTANTS). Le
+          site garde sa rangée. */}
+      {Platform.OS === 'web' ? (
+        <TourTarget id="screen.header">
+          <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
+            <LeagueHeaderSwitch onPress={scrollToTop} />
+            <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+              <NotificationBadge />
+              <ProfileButton hasAlert={cotisationAPayer} />
+            </View>
           </View>
-        </View>
-      </TourTarget>
+        </TourTarget>
+      ) : (
+        <TourTarget
+          id="screen.header"
+          style={{
+            position: 'absolute', right: 0, top: 16, zIndex: 1,
+          }}
+        >
+          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: Colors.primary800,
+                borderRadius: 20,
+                height: 40,
+                justifyContent: 'center',
+                width: 40,
+              }}
+            >
+              <NotificationBadge withDefaultMargin={false} />
+            </View>
+            <View style={{ backgroundColor: Colors.primary800, borderRadius: 20 }}>
+              <ProfileButton hasAlert={cotisationAPayer} />
+            </View>
+          </View>
+        </TourTarget>
+      )}
 
       <ScrollView
         bounces={false}
@@ -2678,6 +2708,11 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {Platform.OS === 'web' ? null : (
+          <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter, { minHeight: 40 }]}>
+            <LeagueHeaderSwitch onPress={scrollToTop} />
+          </View>
+        )}
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
             actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
         <BandeauActualiteMembre

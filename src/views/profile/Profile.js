@@ -51,6 +51,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+
+import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 import useOuvrirLAssistance from '@/views/chat/useOuvrirLAssistance';
 import EntreeComplexe from '@/views/complexe/components/EntreeComplexe';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
@@ -132,6 +134,7 @@ const rangPourLeParent = (rangee) => {
  * @returns {import('react').ReactElement} Profile screen component
  */
 function Profile({ navigation, route }) {
+  const enTeteFlottant = useEnteteFlottant(navigation);
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -1464,18 +1467,11 @@ function Profile({ navigation, route }) {
           Spaces.paddingBottom[12],
           Alignments.fill,
         ]}
+        {...enTeteFlottant.conteneur}
       >
-        {/* En-tête : titre centré. La flèche retour ronde est fournie par le header natif de la stack. */}
-        <View style={[Alignments.alignCenter, { gap: 8 }]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
-            {t('profile.titles.profile').toUpperCase()}
-          </Text>
-          <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
-        </View>
-
         <ScrollView
           contentContainerStyle={{
-            flexGrow: 1, gap: 18, paddingBottom: 8, paddingTop: 20,
+            flexGrow: 1, gap: 18, paddingBottom: 8, paddingTop: enTeteFlottant.retraitDuDefilement,
           }}
           refreshControl={(
             <RefreshControl
@@ -1488,6 +1484,15 @@ function Profile({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
+          {/* En-tête : titre centré, qui défile (T3-BANDEAU-HAUT). La flèche retour ronde est
+              fournie par le header natif de la stack et reste en place. */}
+          <View style={[Alignments.alignCenter, { gap: 8, marginBottom: 2 }]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
+              {t('profile.titles.profile').toUpperCase()}
+            </Text>
+            <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
+          </View>
+
           <WithDataWrapper
             error={userDataError?.message}
             isLoading={userDataLoading}
