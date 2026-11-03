@@ -19648,6 +19648,7 @@ export default {
       telephoneSeulement: 'Phone only',
       terrain: 'Pitch',
       vide: 'No free pitch with these filters.',
+      videSansFiltre: 'No pitch available in this area for now.',
       villes: 'Towns',
       voirDemain: 'See tomorrow',
       voirLeComplexe: '{{nom}}: see the venue',
@@ -24368,6 +24369,12 @@ export default {
     mission: 'Mission',
     missionDone: 'Mission completed · {{title}}',
     next: 'Next',
+    offer: {
+      decline: 'Don’t suggest it again',
+      message: '4 missions, about 2 min. You can also find it in My account › Coach guide.',
+      start: 'Start the guide',
+      title: 'Get started with the guide',
+    },
     pause: 'Pause the guide',
     quit: 'Stop the guide',
     quitConfirm: {
