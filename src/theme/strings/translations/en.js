@@ -11351,11 +11351,8 @@ export default {
           bloqueMasculin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
           ferme: 'This facility is closed {{quand}}{{motif}}. Choose another day or another facility.',
           fermeFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeures: 'This facility is closed {{quand}}{{motif}}. Choose another time or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeuresFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
-          // eslint-disable-next-line max-len
           fermeHeuresMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another time or another facility.',
           fermeMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
           sansDetail: 'The town has closed this facility at that time. Choose another day or another facility.',

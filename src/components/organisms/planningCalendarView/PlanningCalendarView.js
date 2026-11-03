@@ -656,6 +656,7 @@ function PlanningCalendarView({
         <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[8]]}>
           {t(
             'planning.legendeDesPoints',
+            // eslint-disable-next-line max-len
             'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
           )}
         </Text>

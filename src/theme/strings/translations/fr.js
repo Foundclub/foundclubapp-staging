@@ -17866,6 +17866,7 @@ export default {
     labels: {
       noTime: 'Sans horaire',
     },
+    // eslint-disable-next-line max-len
     legendeDesPoints: 'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
     mode: {
       monthDescription: 'Vue globale du mois',
