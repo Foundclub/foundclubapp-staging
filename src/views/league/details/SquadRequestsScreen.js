@@ -15,6 +15,7 @@ import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -47,6 +48,7 @@ const getRequesterName = (/** @type {any} */ user) => {
  * @param {{ navigation: any, route: { params?: { teamId?: string } } }} props
  */
 function SquadRequestsScreen({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const teamId = route?.params?.teamId ? String(route.params.teamId) : '';
   const {
     Alignments,
@@ -307,9 +309,10 @@ function SquadRequestsScreen({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Alignments.fill,
-        Spaces.paddingVertical[16],
+        Spaces.paddingTop[16],
         Spaces.paddingHorizontal[4],
       ]}
     >
@@ -375,7 +378,10 @@ function SquadRequestsScreen({ navigation, route }) {
       </View>
 
       <FlashList
-        contentContainerStyle={{ paddingBottom: listBottomPadding, paddingTop: 4 }}
+        contentContainerStyle={{
+          paddingBottom: listBottomPadding + 16 + retraitBas,
+          paddingTop: 4,
+        }}
         data={requests}
         keyExtractor={(item, index) => String(getEntityDocumentId(item) || item?.id || `request-${index}`)}
         ListEmptyComponent={emptyState}

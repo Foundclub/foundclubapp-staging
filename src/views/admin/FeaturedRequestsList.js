@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -35,6 +36,7 @@ const getScopeLabel = (kind) => {
  *
  */
 function FeaturedRequestsList() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments,
     ApplicationStyle,
@@ -200,8 +202,9 @@ function FeaturedRequestsList() {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
-        Spaces.paddingVertical[24],
+        Spaces.paddingTop[24],
         Alignments.fill,
       ]}
     >
@@ -245,7 +248,7 @@ function FeaturedRequestsList() {
           </View>
 
           <FlashList
-            contentContainerStyle={{ paddingBottom: 24 }}
+            contentContainerStyle={{ paddingBottom: 48 + retraitBas }}
             data={requests}
             ItemSeparatorComponent={RequestItemSeparator}
             keyExtractor={(item) => item?.documentId || 'unknown'}

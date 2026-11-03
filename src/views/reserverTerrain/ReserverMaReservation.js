@@ -31,6 +31,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
 import BlocParticipants from '@/views/reserverTerrain/components/BlocParticipants';
 import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
@@ -98,6 +99,7 @@ const PARTIE_EN_COURS = Object.freeze(['confirmee', 'enAttente', 'enCollecte']);
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {}) {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -144,7 +146,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   ) : (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
@@ -152,7 +154,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 12,
           width: '100%',
         }}

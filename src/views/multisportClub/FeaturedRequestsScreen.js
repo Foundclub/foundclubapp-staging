@@ -21,6 +21,7 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -38,6 +39,7 @@ import useResolvedMultisportClub from './useResolvedMultisportClub';
  * @param root0.route
  */
 function FeaturedRequestsScreen({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { cmId } = route?.params ?? {};
   const { userData } = useAuth();
   const { t } = useTranslation();
@@ -256,14 +258,15 @@ function FeaturedRequestsScreen({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
+        bottomInsetMode="edge-to-edge"
         contentContainerStyle={[
-          Spaces.paddingVertical[24],
+          Spaces.paddingTop[24],
           Alignments.column,
           Alignments.fill,
         ]}
       >
         <ScrollView
-          contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[40]]}
+          contentContainerStyle={[Spaces.gap[16], { paddingBottom: 64 + retraitBas }]}
           refreshControl={(
             <RefreshControl
               onRefresh={handleRefresh}

@@ -12,6 +12,7 @@ import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { parentLinkErrorCode } from '@/services/parentLink/parentLinkErrors';
 import {
@@ -48,6 +49,7 @@ const nomDe = (personne) => `${personne?.firstname || ''} ${personne?.lastname |
  * @returns {import('react').ReactElement} L'écran.
  */
 function MyParentLink() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -97,10 +99,12 @@ function MyParentLink() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24]]}
+      bottomInsetMode="edge-to-edge"
+      contentContainerStyle={[Spaces.paddingTop[0]]}
     >
-      <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 20 }}>
+      <ScrollView
+        contentContainerStyle={{ gap: 16, paddingBottom: 48 + retraitBas, paddingTop: 20 }}
+      >
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('parentLink.child.title')}</Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>{t('parentLink.child.whatParentSees')}</Text>
 

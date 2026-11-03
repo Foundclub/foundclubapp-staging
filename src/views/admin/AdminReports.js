@@ -19,6 +19,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -91,6 +92,7 @@ const getSourceLabel = (value) => (value === 'message' ? 'Message' : i18next.t(
  * @returns {import('react').ReactElement}
  */
 function AdminReports() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments,
     ApplicationStyle,
@@ -272,9 +274,17 @@ function AdminReports() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" title={t('adminReports.title', 'Signalements')}>
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
+      title={t('adminReports.title', 'Signalements')}
+    >
       <FlatList
-        contentContainerStyle={[Spaces.padding[16], Spaces.gap[16], { paddingBottom: 24 }]}
+        contentContainerStyle={[
+          Spaces.padding[16],
+          Spaces.gap[16],
+          { paddingBottom: 24 + retraitBas },
+        ]}
         data={filteredReports}
         keyExtractor={(item, index) => item?.documentId || `${item?.source || 'report'}-${index}`}
         ListEmptyComponent={(

@@ -18,6 +18,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,6 +31,7 @@ import { cancelEvent, getEvents, updateEvent } from '@/services/event/eventServi
  * @param root0.route
  */
 function RequestsDashboard({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -213,7 +215,10 @@ function RequestsDashboard({ navigation, route }) {
       tutorialId={TutorialIds.REQUESTS_DASHBOARD}
       userId={userData?.documentId}
     >
-      <ScreenContainer title={t('requests.title', 'Demandes en attente')}>
+      <ScreenContainer
+        bottomInsetMode="edge-to-edge"
+        title={t('requests.title', 'Demandes en attente')}
+      >
         <OnboardingWrapper
           description={t(
             'requestsDashboard.onboarding.description',
@@ -300,6 +305,7 @@ function RequestsDashboard({ navigation, route }) {
             <FlatList
               contentContainerStyle={[
                 Spaces.padding[16],
+                { paddingBottom: 16 + retraitBas },
                 pendingEvents.length === 0 && Alignments.fill,
               ]}
               data={pendingEvents}

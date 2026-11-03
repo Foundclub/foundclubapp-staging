@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import {
   createPublicLicenseCheckout,
@@ -90,6 +91,7 @@ function DeclarePaymentModal({
  * @param root0.route
  */
 function PublicLicensePayment({ route }) {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -244,8 +246,8 @@ function PublicLicensePayment({ route }) {
   }
 
   return (
-    <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
-      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+    <ScreenContainer bottomInsetMode="edge-to-edge" withHeaderPadding>
+      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 + retraitBas }]} showsVerticalScrollIndicator={false}>
         <View style={[ApplicationStyle.card, {
           backgroundColor: Colors.primary700,
           borderColor: `${tone}99`,

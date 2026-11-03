@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 
@@ -57,6 +58,7 @@ const PICTO = 72;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverResultat() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images,
@@ -318,7 +320,7 @@ function ReserverResultat() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
@@ -326,7 +328,7 @@ function ReserverResultat() {
           alignSelf: 'center',
           gap: 20,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 48,
           width: '100%',
         }}

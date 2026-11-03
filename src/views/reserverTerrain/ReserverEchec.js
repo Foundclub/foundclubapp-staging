@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -37,6 +38,7 @@ const COLONNE = 560;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverEchec() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -134,7 +136,7 @@ function ReserverEchec() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
@@ -142,7 +144,7 @@ function ReserverEchec() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 48,
           width: '100%',
         }}

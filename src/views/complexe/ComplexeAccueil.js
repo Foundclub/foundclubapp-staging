@@ -40,6 +40,7 @@ import Button from '@/components/atoms/button/Button';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import JaugeOccupation from '@/views/collectivite/components/JaugeOccupation';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FriseDuJour from '@/views/complexe/components/FriseDuJour';
@@ -101,6 +102,7 @@ export const jourEtHeure = (instant) => {
  * @returns {import('react').ReactElement} L'écran.
  */
 function ComplexeAccueil() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -726,12 +728,12 @@ function ComplexeAccueil() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="edge-to-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       {enTete}
       <ScrollView
-        contentContainerStyle={{ gap: 24, paddingBottom: 24, paddingTop: 16 }}
+        contentContainerStyle={{ gap: 24, paddingBottom: 48 + retraitBas, paddingTop: 16 }}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}

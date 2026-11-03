@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Loader from '@/components/atoms/loader/Loader';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 import { FilDeLaVilleQuitte } from '@/views/collectivite/components/FilDeLaVille';
 
@@ -161,6 +162,7 @@ export function ListeDesMembresDuFil({ espaceVille = false, fil }) {
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteCanalMembres() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Fonts, Spaces } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -203,11 +205,11 @@ function CollectiviteCanalMembres() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="edge-to-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
-        contentContainerStyle={{ gap: 8, paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ gap: 8, paddingBottom: 48 + retraitBas, paddingTop: 12 }}
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
         testID="canal-membres"

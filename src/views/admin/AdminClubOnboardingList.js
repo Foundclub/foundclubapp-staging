@@ -14,6 +14,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,6 +31,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @returns {import('react').ReactElement}
  */
 function AdminClubOnboardingList() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -235,10 +237,11 @@ function AdminClubOnboardingList() {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       title={t('adminClubOnboardingList.screenTitle', 'Clubs à onboarder')}
     >
       <FlatList
-        contentContainerStyle={[Spaces.padding[16]]}
+        contentContainerStyle={[Spaces.padding[16], { paddingBottom: 16 + retraitBas }]}
         data={requests}
         keyExtractor={(item) => item.documentId}
         ListEmptyComponent={!isLoading ? (

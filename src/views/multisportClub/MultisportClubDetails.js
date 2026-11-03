@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -78,6 +79,7 @@ const isForbiddenError = (error) => (
  * @param {{ navigation: any; route: { params?: { cmId?: string } } }} props
  */
 function MultisportClubDetails({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { cmId } = route?.params ?? {};
   const { t } = useTranslation();
   const {
@@ -301,14 +303,15 @@ function MultisportClubDetails({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
-        Spaces.paddingVertical[24],
+        Spaces.paddingTop[24],
         Alignments.column,
         Alignments.fill,
       ]}
     >
       <ScrollView
-        contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
+        contentContainerStyle={[Spaces.gap[24], { paddingBottom: 64 + retraitBas }]}
         refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading} />}
         showsVerticalScrollIndicator={false}
       >

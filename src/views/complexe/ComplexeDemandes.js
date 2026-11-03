@@ -24,6 +24,7 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import DeuxVolets from '@/views/complexe/components/DeuxVolets';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
@@ -65,6 +66,7 @@ const TRAITEES = 'traitees';
  * @returns {import('react').ReactElement} L'écran.
  */
 function ComplexeDemandes() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -398,12 +400,12 @@ function ComplexeDemandes() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DeuxVolets actif={surOrdinateur} droite={volet}>
         <ScrollView
-          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 24 + retraitBas, paddingTop: 16 }}
           refreshControl={(
             <RefreshControl
               colors={[Colors.primary500]}

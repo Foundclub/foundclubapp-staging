@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -56,6 +57,7 @@ const ON_REPOND = Object.freeze(['collecte', 'complete', 'ouverte']);
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverInvitation() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -79,7 +81,7 @@ function ReserverInvitation() {
   const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
@@ -87,7 +89,7 @@ function ReserverInvitation() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 24,
           width: '100%',
         }}

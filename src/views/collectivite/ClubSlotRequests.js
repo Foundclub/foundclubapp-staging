@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -50,6 +51,7 @@ const LARGEUR_TABLEAU = 1024;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ClubSlotRequests() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -272,9 +274,9 @@ function ClubSlotRequests() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 16 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 24 + retraitBas, paddingTop: 16 }}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}

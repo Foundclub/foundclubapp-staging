@@ -1195,6 +1195,7 @@ function UserDetails({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[
         Spaces.gap[24],
         Spaces.paddingBottom[0],

@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActualiteCarte from '@/views/collectivite/components/ActualiteCarte';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,6 +40,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteActualites() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -171,11 +173,11 @@ function CollectiviteActualites() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="edge-to-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 48 + retraitBas, paddingTop: 12 }}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}

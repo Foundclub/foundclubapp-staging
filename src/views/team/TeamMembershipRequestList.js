@@ -23,6 +23,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -47,6 +48,7 @@ const extractApiErrorMessage = (error) => {
  * @returns {import('react').ReactElement} Team membership request list screen component
  */
 function TeamMembershipRequestList({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const routeParams = route?.params ?? {};
   let teamIds = [];
   if (Array.isArray(routeParams.teamIds)) {
@@ -453,8 +455,9 @@ function TeamMembershipRequestList({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
+        bottomInsetMode="edge-to-edge"
         contentContainerStyle={[
-          Spaces.paddingVertical[24],
+          Spaces.paddingTop[24],
           Alignments.justifySpaceBetween,
           Alignments.column,
           Alignments.fill,
@@ -512,6 +515,7 @@ function TeamMembershipRequestList({ navigation, route }) {
               ApplicationStyle.borderRadius2]}
             >
               <FlashList
+                contentContainerStyle={{ paddingBottom: 24 + retraitBas }}
                 data={requests}
                 keyExtractor={(item) => item?.documentId || 'unknown'}
                 ListEmptyComponent={renderEmptyList}

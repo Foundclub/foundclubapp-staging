@@ -17,6 +17,7 @@ import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import JaugeOccupation from '@/views/collectivite/components/JaugeOccupation';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 
@@ -57,6 +58,7 @@ const nombre = (valeur) => (Number.isFinite(Number(valeur)) ? Number(valeur) : 0
  * @returns {import('react').ReactElement} L'écran.
  */
 function ComplexeStatistiques() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -313,7 +315,7 @@ function ComplexeStatistiques() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
@@ -321,7 +323,7 @@ function ComplexeStatistiques() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? 1120 : 720,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 12,
           width: '100%',
         }}
