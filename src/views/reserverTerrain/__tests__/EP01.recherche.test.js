@@ -386,11 +386,11 @@ describe('E-P01 — les états', () => {
   it('vide sans filtre : la phrase honnête ; deux façons d’élargir', async () => {
     mockRecherche.data.complexes = [];
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain('Aucun complexe n’est encore inscrit dans cette zone.');
+    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
     expect(lisibles(arbre)).not.toContain('Aucun terrain libre avec ces filtres.');
     await appuyer(arbre, 'Élargir à 20 km');
     expect(derniersFiltres().rayon).toBe(20);
-    expect(lisibles(arbre)).toContain('Aucun complexe n’est encore inscrit dans cette zone.');
+    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
     await appuyer(arbre, 'Voir demain');
     expect(derniersFiltres().date).toBe('2026-10-15');
     expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
@@ -403,7 +403,7 @@ describe('E-P01 — les états', () => {
     await appuyer(arbre, 'Avant 12 h');
     await appuyer(arbre, 'Voir les terrains');
     expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
-    expect(lisibles(arbre)).not.toContain('Aucun complexe n’est encore inscrit dans cette zone.');
+    expect(lisibles(arbre)).not.toContain('Aucun terrain disponible pour l’instant dans cette zone.');
   });
 
   it('rien trouvé pour un nom : le texte est redit', async () => {
