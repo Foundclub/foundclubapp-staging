@@ -256,8 +256,6 @@ const personneRegardee = {
   role: { name: 'Joueur', type: 'player' },
 };
 
-const COULEURS = jest.requireActual('@/theme/colors').default();
-
 /**
  * Le pied flottant : le bloc pose en absolu qui porte « Bloquer cette personne ».
  * @param {any} arbre - L'arbre rendu.
@@ -289,12 +287,14 @@ beforeEach(() => {
 });
 
 describe('FINITIONS8 · point 3 — le pied ne recouvre plus la fiche', () => {
-  test('🚨 le pied a un fond OPAQUE : on ne lit plus la carte a travers « Bloquer »', async () => {
+  // BOUTONS-FLOTTANTS (03/11, demande d'Adel, plus recente que FINITIONS8) : plus de bloc derriere
+  // les boutons ; ce sont eux qui portent leur fond (PiedFlottant.BOUTONSFLOTTANTS.test.js).
+  test('🚨 le pied n a plus de fond : le contenu defile derriere les boutons', async () => {
     const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
     const pied = lePied(arbre);
 
     expect(pied).toBeDefined();
-    expect(StyleSheet.flatten(pied.props.style).backgroundColor).toBe(COULEURS.primary900);
+    expect(StyleSheet.flatten(pied.props.style).backgroundColor).toBeUndefined();
   });
 
   test.each([140, 190, 260])(

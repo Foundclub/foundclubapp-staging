@@ -60,6 +60,7 @@ import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerMode
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourOfferCard from '@/components/molecules/tour/TourOfferCard';
 import TourResumePill from '@/components/molecules/tour/TourResumePill';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
@@ -2775,6 +2776,8 @@ function HomeHubContent({ auth, navigation, route }) {
             jamais par-dessus l'écran (ne couvre ni feuille ni bouton). FIN-GUIDE, point 5 : sous
             le titre, qu'elle ne pousse plus (capture 5 d'Adel). */}
         <TourResumePill />
+        {/* FIN-GUIDE2 : le guide proposé à qui a quitté l'inscription sans voir Bienvenue. */}
+        {isPlayerMode || isParentMode ? null : <TourOfferCard />}
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
           {isPublishingGovernedBlocked ? (
