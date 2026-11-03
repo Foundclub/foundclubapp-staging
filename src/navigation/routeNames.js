@@ -420,8 +420,8 @@ export const RouteNames = /** @type {const} */ ({
   FacilityReportDetails: 'FacilityReportDetails',
   FacilityReportNew: 'FacilityReportNew',
   MyFacilityReports: 'MyFacilityReports',
-  // T3-TICKETS-VILLE (03/11/2026, fiche 20 option B) — « Ma collectivité » du dirigeant (écrire à sa
-  // Ville, signaler un problème), la boîte de la Ville, une question.
+  // T3-TICKETS-VILLE (03/11/2026, fiche 20 option B) — « Ma collectivité » du dirigeant (écrire à
+  // sa Ville, signaler un problème), la boîte de la Ville, une question.
   CollectiviteQuestion: 'CollectiviteQuestion',
   CollectiviteQuestions: 'CollectiviteQuestions',
   MaVille: 'MaVille',

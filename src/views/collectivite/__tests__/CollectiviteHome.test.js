@@ -1507,7 +1507,9 @@ describe('T3-TICKETS-VILLE — la porte de « Questions des clubs »', () => {
     const arbre = await monter();
     expect(textes(arbre).join(' ')).toContain('2 questions de clubs à traiter');
     act(() => arbre.root.findAll(
-      (/** @type {any} */ n) => n.props?.testID === 'collectivite-home-questions' && n.props?.onPress,
+      (/** @type {any} */ n) => (
+        n.props?.testID === 'collectivite-home-questions' && n.props?.onPress
+      ),
     )[0].props.onPress());
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteQuestions', expect.objectContaining({
       collectiviteId: expect.anything(),

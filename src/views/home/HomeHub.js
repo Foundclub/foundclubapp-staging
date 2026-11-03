@@ -1910,8 +1910,8 @@ function HomeHubContent({ auth, navigation, route }) {
     t,
   ]);
 
-  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — « Ma collectivité » pour tous les dirigeants : deux
-  // portes si le club a une Ville ; sinon une seule, vers le rattachement existant.
+  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — « Ma collectivité » pour tous les dirigeants :
+  // deux portes si le club a une Ville ; sinon une seule, vers le rattachement existant.
   const clubDuDirigeant = clubVerificationSummary?.clubDocumentId
     || userData?.club?.documentId
     || null;

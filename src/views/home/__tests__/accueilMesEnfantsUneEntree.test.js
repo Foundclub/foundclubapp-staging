@@ -486,9 +486,13 @@ describe('T3-TICKETS-VILLE — la section « Ma collectivité » de l accueil', 
     }));
     const { arbre, navigate } = monterLAccueil();
     expect(mockMaCollectivite).toHaveBeenCalledWith('club-1');
-    expect(titres(arbre)).toEqual(expect.arrayContaining(['Écrire à ma Ville', 'Signaler un problème']));
+    expect(titres(arbre)).toEqual(
+      expect.arrayContaining(['Écrire à ma Ville', 'Signaler un problème']),
+    );
     const carte = arbre.root.findAll(
-      (/** @type {any} */ n) => n.type === HomeActionCard && n.props.title === 'Signaler un problème',
+      (/** @type {any} */ n) => (
+        n.type === HomeActionCard && n.props.title === 'Signaler un problème'
+      ),
     )[0];
     act(() => carte.props.onPress());
     expect(navigate).toHaveBeenCalledWith('MaVille', { clubId: 'club-1', onglet: 'signaler' });

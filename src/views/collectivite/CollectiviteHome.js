@@ -76,7 +76,9 @@ import {
 import {
   useCollectiviteFacilityChecksSummary,
 } from '@/services/facilityCheck/facilityCheckQueries';
-import { useCollectiviteQuestions } from '@/services/collectivite/collectiviteQuestionQueries';
+import {
+  useCollectiviteQuestions,
+} from '@/services/collectivite/collectiviteQuestionQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useCollectiviteFacilityReportsSummary,
@@ -569,8 +571,8 @@ function CollectiviteHome() {
     ? signalements.data.meta.toHandle
     : [];
   const nombreATraiter = Number(signalements.data?.meta?.toHandleCount) || aTraiter.length;
-  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — la porte de « Questions des clubs » : présente dès
-  // qu'un club a écrit, même sans rien à traiter (l'historique reste atteignable).
+  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — la porte de « Questions des clubs » : présente
+  // dès qu'un club a écrit, même sans rien à traiter (l'historique reste atteignable).
   const nombreDeQuestions = Array.isArray(questionsDesClubs.data?.data)
     ? questionsDesClubs.data.data.length
     : 0;

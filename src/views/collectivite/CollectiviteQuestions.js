@@ -15,8 +15,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useCollectiviteQuestions } from '@/services/collectivite/collectiviteQuestionQueries';
 
 /**
- * T3-TICKETS-VILLE (03/11/2026, fiche 20 option B) — « QUESTIONS DES CLUBS », la boîte de la Ville :
- * les plus récentes d'abord, chacune avec son club et son statut. La Ville est vouvoyée.
+ * T3-TICKETS-VILLE (03/11/2026, fiche 20 option B) — « QUESTIONS DES CLUBS », la boîte de la
+ * Ville : les plus récentes d'abord, chacune avec son club et son statut. La Ville est vouvoyée.
  * Paramètre : `collectiviteId`.
  * @returns {import('react').ReactElement} L'écran.
  */
