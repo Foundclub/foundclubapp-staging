@@ -22,7 +22,9 @@ describe('T3-STADE — demander toute l installation', () => {
   });
 
   it('une série : rien, le serveur ne juge pas la demande date par date', () => {
-    const corps = payloadsDeLaDemande({ ...DEMANDE, dates: ['2026-11-03', '2026-11-10'], groupe: 'g' });
+    const corps = payloadsDeLaDemande({
+      ...DEMANDE, dates: ['2026-11-03', '2026-11-10'], groupe: 'g',
+    });
     expect(corps.map((un) => un.wholeFacility)).toEqual([undefined, undefined]);
   });
 });
