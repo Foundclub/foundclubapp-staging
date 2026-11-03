@@ -7,6 +7,7 @@ import {
   getAuthRuntimeSnapshot,
 } from '@/store/authRuntime';
 
+import { renouvelerJetonsSiBesoin } from '@/services/auth/renouvellementJeton';
 import {
   assertBootRequestAllowed,
   assertRoleRequestAllowed,
@@ -110,6 +111,7 @@ const onRejected = (error) => {
 
 const onFulfilled = (/** @type {import('axios').AxiosResponse} */ res) => {
   recordBootRequestSuccess(res?.config);
+  renouvelerJetonsSiBesoin(instance);
   return res;
 };
 
