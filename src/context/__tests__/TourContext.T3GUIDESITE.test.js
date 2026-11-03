@@ -128,6 +128,12 @@ describe('Interrupteur allumé : le guide part sur le site', () => {
 describe('Mission 4 sur le site', () => {
   beforeEach(() => { mockFlag = true; });
 
+  it.each(['tw1', 'tw2', 'm4-am1', 'rv-m3', 'rv-end'])('%s : le texte se lit à l affichage', (id) => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const etape = COACH_GUIDE.steps.find((step) => step.id === id);
+    expect(Object.getOwnPropertyDescriptor(etape, 'text').get).toEqual(expect.any(Function));
+  });
+
   it('saute l onglet « Club » : l annuaire public n a pas « Matchs amicaux »', () => {
     const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
     const etape = COACH_GUIDE.steps.find((step) => step.id === 'm4-tab-club');

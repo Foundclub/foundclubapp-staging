@@ -21,6 +21,7 @@ import {
   sanitizeFriendlyMatchTabForRole,
 } from '@/domains/search/friendlyMatchFlow';
 import { getManagedTeams } from '@/domains/team/teamMembership';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -297,6 +298,11 @@ function FriendlyMatchListContent({
   }, [t]);
 
   const handlePublishPress = useCallback(() => {
+    // T3-GUIDE-SITE : les écrans du tunnel existent sur le site ; seul son nom de pile n'y mène pas.
+    if (Platform.OS === 'web' && isGuideSupported()) {
+      navigation.navigate(RouteNames.FriendlyMatchWizardTeam);
+      return;
+    }
     navigateOrExplainOnWeb(navigation, RouteNames.FriendlyMatchWizardStack);
   }, [navigation]);
 
