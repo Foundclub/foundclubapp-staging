@@ -212,7 +212,7 @@ export const audiencePreview = (t, { audience, clubsCount }) => {
  * les parents sans club à eux. Des nombres, jamais une personne.
  * @param {any} t - La traduction (i18next).
  * @param {{ approximate?: boolean, clubsCoches: number, clubsCount?: unknown,
- *   personsCount?: unknown, rolesCoches: number }} cible - Ce qui est coché, et ce qu'en dit le serveur.
+ *   personsCount?: unknown, rolesCoches: number }} cible - Le choix, et ce qu’en dit le serveur.
  * @returns {string} La phrase.
  */
 export const clubsPrecisPreview = (t, {

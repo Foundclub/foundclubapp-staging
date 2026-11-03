@@ -20,7 +20,7 @@ import { useCollectiviteClubs } from '@/services/collectivite/collectiviteQuerie
 
 /**
  * 📰 T3-ACTU-CIBLE (03/11/2026, fiche 3 option B) — « Des clubs précis » : les clubs à cocher, le
- * tri par sport et les rôles. Le sport n'est qu'une aide pour cocher : seule la LISTE part au serveur.
+ * tri par sport et les rôles. Le sport n’aide qu’à cocher : seule la LISTE part au serveur.
  * Un fichier à part : le formulaire ne lit les clubs que si la Ville choisit cette pastille.
  * @param {{
  *   clubIds: string[];
