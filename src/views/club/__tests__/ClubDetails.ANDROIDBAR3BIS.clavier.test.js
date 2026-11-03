@@ -483,7 +483,7 @@ describe('ANDROIDBAR-3BIS — caractérisation : ce qui ne bouge pas', () => {
 
     expect(piedDessine(arbre)).toBe(true);
     expect(basDuDefilement(defilement)).toBe(avant);
-    // T3-BANDE-BAS (03/11, décision d'Adel) : la fiche descend jusqu'au bord de l'écran, plus de bande.
+    // T3-BANDE-BAS (03/11, décision d'Adel) : la fiche descend jusqu'au bord de l'écran.
     expect(avant).toBeCloseTo(ECRAN, 5);
   });
 
