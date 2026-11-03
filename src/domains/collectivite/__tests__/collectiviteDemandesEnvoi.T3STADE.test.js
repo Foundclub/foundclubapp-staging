@@ -1,7 +1,7 @@
 import { payloadsDeLaDemande } from '../collectiviteDemandesEnvoi';
 
-// T3-STADE (03/11/2026, Adel, fiche 11 B) — la demande de toute l'installation part sur une date ;
-// une série ne la porte pas.
+// T3-STADE (03/11/2026, Adel, fiche 11 B) — la demande de toute l'installation part sur une date,
+// ou sur chaque date d'une série.
 const DEMANDE = {
   clubId: 'club',
   debut: '18:00',
@@ -21,10 +21,10 @@ describe('T3-STADE — demander toute l installation', () => {
     })[0].wholeFacility).toBeUndefined();
   });
 
-  it('une série : rien, le serveur ne juge pas la demande date par date', () => {
+  it('une série : chaque date la porte, le serveur juge date par date', () => {
     const corps = payloadsDeLaDemande({
       ...DEMANDE, dates: ['2026-11-03', '2026-11-10'], groupe: 'g',
     });
-    expect(corps.map((un) => un.wholeFacility)).toEqual([undefined, undefined]);
+    expect(corps.map((un) => un.wholeFacility)).toEqual([true, true]);
   });
 });

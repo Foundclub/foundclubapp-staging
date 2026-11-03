@@ -6094,6 +6094,7 @@ export default {
     touteInstallation: {
       case: 'Request the whole facility',
       dit: 'The local authority decides. If it accepts, no other team at these times.',
+      demande: 'Whole facility requested',
     },
     acces: {
       texte: 'You do not manage this local authority.',
@@ -9620,6 +9621,7 @@ export default {
     trainingCamp: 'TRAINING CAMP',
   },
   eventDetails: {
+    facilityWhole: '{{nom}} · Whole facility',
     // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
     a11y: {
       reportEvent: 'Report the event',
@@ -11760,6 +11762,7 @@ export default {
     parent: {
       aide: 'A stadium’s pitch, for example: booking the whole stadium blocks its parts.',
       titre: 'Part of',
+      partieDe: 'Part of {{nom}}',
     },
     accessibility: {
       planningColor: 'Planning colour',

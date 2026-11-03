@@ -28,6 +28,7 @@ import {
   fullRanges,
   isoWeekdayOf,
   isTime,
+  occupantWho,
   toMinutes,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -196,9 +197,13 @@ function ClubSlotRequest({
         validFrom: jourIso,
         validUntil: hebdo ? finDeLaSerie(jourIso, jusquAIso) : jourIso,
         weekday: isoWeekdayOf(parse(jourIso, 'yyyy-MM-dd', new Date())),
+        ...(touteInstallation ? { wholeFacility: 'true' } : {}),
       }
       : null
-  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso, jusquAIso]);
+  ), [
+    clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso, jusquAIso,
+    touteInstallation,
+  ]);
   const apercu = useSeasonSlotPreview(installationId, parametresApercu);
   const place = apercu.data?.data || null;
   // Ce que le serveur fera : `direct`, `dirigeant`, `mairie`, `complet` ; absent (serveur
@@ -575,7 +580,7 @@ function ClubSlotRequest({
       )) === rang
     ));
     const noms = uniques.slice(0, 4).map((/** @type {any} */ occupant) => {
-      const nom = [occupant?.club?.name, occupant?.team?.name].filter(Boolean).join(' · ');
+      const nom = occupantWho(occupant);
       const tonClub = occupant?.club?.documentId && occupant.club.documentId === clubId
         ? t('collectiviteDemandes.club.tonClub', ' (ton club)')
         : '';
@@ -842,7 +847,7 @@ function ClubSlotRequest({
           </View>
         </View>
       ) : null}
-      {pourLaMairie && !hebdo && Number(installation?.maxSlots || 1) > 1 ? (
+      {pourLaMairie && Number(installation?.maxSlots || 1) > 1 ? (
         <CaseACocher
           actif={touteInstallation}
           dit={t(

@@ -275,8 +275,10 @@ export const occupantsParHoraire = (conflit) => {
       fin: fin ? format(fin, 'HH:mm') : '',
     };
     const cle = `${horaire.debut}|${horaire.fin}`;
-    const nom = [occupant?.club, occupant?.team].filter(Boolean).join(' · ');
-    if (!nom) return;
+    const qui = [occupant?.club, occupant?.team].filter(Boolean).join(' · ');
+    if (!qui) return;
+    // T3-STADE (03/11) : l'occupant d'une autre partie du lieu dit laquelle.
+    const nom = occupant?.part ? `${qui} (${occupant.part})` : qui;
     if (!groupes.has(cle)) groupes.set(cle, { ...horaire, noms: [] });
     const groupe = groupes.get(cle);
     if (groupe && !groupe.noms.includes(nom)) groupe.noms.push(nom);

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -475,7 +476,12 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                 ]}
               >
                 <Text style={[Fonts.p4, Fonts.neutral00]}>
-                  {facilityName}
+                  {event?.wholeFacility === true
+                    ? t('eventDetails.facilityWhole', '{{nom}} · Toute l’installation', {
+                      nom: facilityName,
+                      ...SANS_ECHAPPEMENT,
+                    })
+                    : facilityName}
                 </Text>
               </View>
             ) : null}

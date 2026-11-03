@@ -46,7 +46,7 @@ export const payloadsDeLaDemande = ({
   corps.endDate = formatDateTimeToSend(jourFr, fin);
   if (groupe && dates.length > 1) corps.recurrenceGroupId = groupe;
   if (String(mot || '').trim()) corps.facilityRequestNote = String(mot).trim();
-  // T3-STADE (03/11, Adel) : une seule date ; la série ne porte pas la demande (serveur).
-  if (touteInstallation && dates.length === 1) corps.wholeFacility = true;
+  // T3-STADE (03/11, Adel) : sur une date ou sur toute une série, le serveur juge chaque date.
+  if (touteInstallation) corps.wholeFacility = true;
   return corps;
 });

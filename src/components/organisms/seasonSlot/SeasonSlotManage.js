@@ -344,6 +344,10 @@ function SeasonSlotManage({
           t('collectiviteCreneaux.gerer.plateau', 'Plateau'),
           slot.plateau.name,
         ) : null}
+        {slot?.wholeFacility === true ? rangee(
+          t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation'),
+          t('common.yes', 'Oui'),
+        ) : null}
         {slot?.source === 'request' ? rangee(
           t('collectiviteCreneaux.gerer.origine', 'Origine'),
           t('collectiviteCreneaux.gerer.demandeAcceptee', 'Demande acceptée'),

@@ -1167,6 +1167,7 @@ function PlanningWeekFullscreen() {
       validFrom: brut.slot?.validFrom || null,
       validUntil: brut.slot?.validUntil || null,
       weekday: Number(brut.slot?.weekday) || null,
+      wholeFacility: brut.wholeFacility === true,
     };
   };
   const creneauOuvert = peutAttribuer && readOnlyBlock?.raw?.slot?.documentId
@@ -1966,6 +1967,11 @@ function PlanningWeekFullscreen() {
                   nom: readOnlyBlock.raw.plateau.name,
                   ...SANS_ECHAPPEMENT,
                 })}
+              </Text>
+            ) : null}
+            {readOnlyBlock.raw?.wholeFacility === true ? (
+              <Text style={[Fonts.p3, Fonts.primary200]} testID="fiche-toute-installation">
+                {t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation')}
               </Text>
             ) : null}
           </View>

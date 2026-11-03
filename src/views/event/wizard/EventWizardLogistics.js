@@ -709,24 +709,22 @@ function EventWizardLogistics({ navigation, route }) {
                     onEtat={recevoirLeJugement}
                   />
                   {/* T3-STADE (Adel) : « faire une demande pour avoir toute l'installation ». */}
-                  {!isRecurrent ? (
-                    <CaseACocher
-                      actif={state.wholeFacility === true}
-                      dit={t(
-                        'collectiviteDemandes.touteInstallation.dit',
-                        'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
-                      )}
-                      onBasculer={() => dispatch({
-                        payload: { wholeFacility: state.wholeFacility !== true },
-                        type: 'SET_LOGISTICS',
-                      })}
-                      testID="evenement-toute-installation"
-                      titre={t(
-                        'collectiviteDemandes.touteInstallation.case',
-                        'Demander toute l’installation',
-                      )}
-                    />
-                  ) : null}
+                  <CaseACocher
+                    actif={state.wholeFacility === true}
+                    dit={t(
+                      'collectiviteDemandes.touteInstallation.dit',
+                      'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
+                    )}
+                    onBasculer={() => dispatch({
+                      payload: { wholeFacility: state.wholeFacility !== true },
+                      type: 'SET_LOGISTICS',
+                    })}
+                    testID="evenement-toute-installation"
+                    titre={t(
+                      'collectiviteDemandes.touteInstallation.case',
+                      'Demander toute l’installation',
+                    )}
+                  />
                 </>
               ) : null}
             />

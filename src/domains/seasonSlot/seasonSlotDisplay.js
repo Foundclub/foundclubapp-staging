@@ -348,6 +348,17 @@ export const slotWho = (creneau) => [creneau?.club?.name, creneau?.team?.name]
   .join(' · ');
 
 /**
+ * T3-STADE (03/11, Adel) — un occupant et, s'il vient d'une autre partie du lieu, laquelle :
+ * « AS Foot (Terrain de foot) ».
+ * @param {any} occupant - L'occupant de l'aperçu (`part` : la partie, ou le tout).
+ * @returns {string} Le club et l'équipe, puis la partie entre parenthèses.
+ */
+export const occupantWho = (occupant) => {
+  const qui = slotWho(occupant);
+  return qui && occupant?.part ? `${qui} (${occupant.part})` : qui;
+};
+
+/**
  * Les creneaux ranges par jour de la semaine, puis par heure (le serveur trie deja).
  * @param {any[]} creneaux - Les creneaux.
  * @returns {Array<{ weekday: number, slots: any[] }>} Les jours qui en ont, du lundi au dimanche.

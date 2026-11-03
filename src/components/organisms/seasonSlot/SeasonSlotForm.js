@@ -16,6 +16,7 @@ import {
   fullRangesOfSlots,
   isoWeekdayOf,
   isTime,
+  occupantWho,
   overCapacityPreviewOf,
   SEASON_SLOT_WEEKDAYS,
   seasonSlotErrorMessage,
@@ -1224,7 +1225,7 @@ function SeasonSlotForm({
     const lignes = [];
     if (occupants.length) {
       lignes.push(t('collectiviteCreneaux.attribuer.dejaLa', 'Déjà là : {{qui}}.', {
-        qui: occupants.map(slotWho).filter(Boolean).join(', '),
+        qui: occupants.map(occupantWho).filter(Boolean).join(', '),
         ...SANS_ECHAPPEMENT,
       }));
     } else {
@@ -1233,7 +1234,7 @@ function SeasonSlotForm({
     if (place.next?.club) {
       lignes.push(t('collectiviteCreneaux.attribuer.ensuite', '{{qui}} arrive à {{heure}}.', {
         heure: String(place.next.startTime || '').slice(0, 5),
-        qui: slotWho(place.next),
+        qui: occupantWho(place.next),
         ...SANS_ECHAPPEMENT,
       }));
     }

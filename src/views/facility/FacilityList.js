@@ -690,6 +690,13 @@ function FacilityList() {
                 : t('facilityList.badges.overflowBlocked', 'Conflits : demande à valider'),
               'neutral',
             )}
+            {item?.parentFacility?.name ? renderMetaChip(
+              t('facilityForm.parent.partieDe', 'Partie de {{nom}}', {
+                nom: item.parentFacility.name,
+                ...SANS_ECHAPPEMENT,
+              }),
+              'neutral',
+            ) : null}
             {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagée'), 'neutral') : null}
             {item?.isReadOnly ? renderMetaChip(
               isCollectiviteFacility

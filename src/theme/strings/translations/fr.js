@@ -6661,6 +6661,7 @@ export default {
     touteInstallation: {
       case: 'Demander toute l’installation',
       dit: 'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
+      demande: 'Demande toute l’installation',
     },
     acces: {
       texte: 'Vous ne gérez pas cette collectivité.',
@@ -10195,6 +10196,7 @@ export default {
     trainingCamp: 'STAGE',
   },
   eventDetails: {
+    facilityWhole: '{{nom}} · Toute l’installation',
     // FINITIONS7 (02/10) — les noms que le lecteur d ecran annonce dans la barre du haut.
     a11y: {
       reportEvent: 'Signaler l’événement',
@@ -12504,6 +12506,7 @@ export default {
     parent: {
       aide: 'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
       titre: 'Fait partie de',
+      partieDe: 'Partie de {{nom}}',
     },
     accessibility: {
       planningColor: 'Couleur de planning',
