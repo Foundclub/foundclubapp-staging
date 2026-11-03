@@ -11286,6 +11286,7 @@ export default {
         visibilityGroup: 'Visibility',
         visibilityPrivate: 'Private',
         visibilityPrivateHint: 'Restricted to team members and invitees.',
+        visibilityPrivateTournamentHint: 'Restricted to the teams you invite, from the Teams tab of the tournament.',
         visibilityPublic: 'Public',
         visibilityPublicHint: 'Discoverable by everyone — recommended for a trial.',
       },

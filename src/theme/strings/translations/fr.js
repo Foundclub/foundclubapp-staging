@@ -11969,6 +11969,7 @@ export default {
         visibilityGroup: 'Visibilité',
         visibilityPrivate: 'Privé',
         visibilityPrivateHint: "Réservé aux membres de l'équipe et aux invités.",
+        visibilityPrivateTournamentHint: "Réservé aux équipes que tu invites, depuis l'onglet Équipes du tournoi.",
         visibilityPublic: 'Public',
         visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },

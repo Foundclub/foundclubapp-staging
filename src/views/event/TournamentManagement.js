@@ -42,6 +42,8 @@ import {
   TournamentMatchCard,
   TournamentStandingsTable,
 } from './tournamentCompetitionComponents';
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
+
 import TournamentInvitationRequest from './TournamentInvitationRequest';
 import TournamentInvites from './TournamentInvites';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
@@ -718,7 +720,7 @@ function TournamentManagement({ navigation, route }) {
   };
 
   // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ; un compte sans lien y demande à participer.
-  if (error?.status === 403) {
+  if (isAccessRefusalError(error)) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene">
         <TournamentInvitationRequest eventId={eventId} />
