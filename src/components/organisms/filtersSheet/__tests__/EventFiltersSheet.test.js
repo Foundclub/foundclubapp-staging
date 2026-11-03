@@ -736,13 +736,13 @@ describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports'
 });
 
 // T3-ACTU-CIBLE p67 — le vrai chemin du joueur (Recherche › « Choisir une ville ») ouvre cette
-// feuille : sa liste de villes restait vide avant la frappe, alors que /events/filters en proposait.
+// feuille : sa liste de villes restait vide avant la frappe ; /events/filters en proposait.
 describe('p67 — des villes à proposer avant la frappe', () => {
   it('🔴 sans ville au profil : les grandes villes, puis rien de plus dès la frappe', async () => {
     const { tree } = await rendre();
     await ouvrirRangee(tree, 'Ville');
     const { optionsSupplementaires } = trouver(tree, 'adresse').props;
-    expect(optionsSupplementaires('').map((/** @type {any} */ o) => o.label)[0]).toBe('Paris (75001)');
+    expect(optionsSupplementaires('')[0].label).toBe('Paris (75001)');
     expect(optionsSupplementaires('').length).toBeGreaterThan(1);
     expect(optionsSupplementaires('mar')).toEqual([]);
   });

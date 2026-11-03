@@ -113,12 +113,14 @@ describe('T3-ACTU-CIBLE — des clubs précis', () => {
   it('le libellé, la ligne de la liste', () => {
     expect(audienceLabel(t, 'clubs')).toBe('Des clubs précis');
     expect(recipientsLine(t, { audience: 'clubs', clubsCount: 1 })).toBe('Envoyée à 1 club choisi');
-    expect(recipientsLine(t, { audience: 'clubs', clubsCount: 3 })).toBe('Envoyée à 3 clubs choisis');
+    expect(recipientsLine(t, { audience: 'clubs', clubsCount: 3 }))
+      .toBe('Envoyée à 3 clubs choisis');
   });
 
   it('il faut un club et un rôle ; les autres audiences n en demandent pas', () => {
     const base = { audience: 'clubs', title: 'T' };
-    expect(actualiteFormErrors({ ...base, clubIds: [], roles: [] })).toEqual({ clubs: 'required', roles: 'required' });
+    expect(actualiteFormErrors({ ...base, clubIds: [], roles: [] }))
+      .toEqual({ clubs: 'required', roles: 'required' });
     expect(actualiteFormErrors({ ...base, clubIds: ['c'], roles: ['membres'] })).toEqual({});
     expect(actualiteFormErrors({ audience: 'membres', title: 'T' })).toEqual({});
   });
@@ -134,7 +136,7 @@ describe('T3-ACTU-CIBLE — des clubs précis', () => {
     expect('roles' in autre).toBe(false);
   });
 
-  it('les sports, sans doublon, sans accent mal rangé ; un club omnisports passe dans les deux', () => {
+  it('les sports, sans doublon, bien rangés ; un club omnisports passe dans les deux', () => {
     const clubs = [{ sports: ['Tennis', 'Équitation'] }, { sports: ['Football', 'Tennis'] }, {}];
     expect(sportsDesClubs(clubs)).toEqual(['Équitation', 'Football', 'Tennis']);
     expect(clubsDuSport(clubs, 'Tennis')).toEqual([clubs[0], clubs[1]]);
@@ -143,8 +145,10 @@ describe('T3-ACTU-CIBLE — des clubs précis', () => {
 
   it('la phrase avant l envoi', () => {
     const base = { clubsCoches: 2, rolesCoches: 3 };
-    expect(clubsPrecisPreview(t, { ...base, clubsCoches: 0 })).toBe('Cochez les clubs qui la recevront.');
-    expect(clubsPrecisPreview(t, { ...base, rolesCoches: 0 })).toBe('Cochez les rôles qui la recevront.');
+    expect(clubsPrecisPreview(t, { ...base, clubsCoches: 0 }))
+      .toBe('Cochez les clubs qui la recevront.');
+    expect(clubsPrecisPreview(t, { ...base, rolesCoches: 0 }))
+      .toBe('Cochez les rôles qui la recevront.');
     expect(clubsPrecisPreview(t, base)).toBe('Nous comptons les personnes qui la recevront…');
     expect(clubsPrecisPreview(t, { ...base, clubsCount: 2, personsCount: 0 }))
       .toMatch(/^Personne ne la recevra/);

@@ -19,8 +19,10 @@ export const ACTUALITE_CATEGORIES = Object.freeze([
   'fermeture', 'forum', 'subventions', 'travaux', 'autre',
 ]);
 
-/** Les destinataires : tous les membres, les dirigeants, les clubs d'une installation, des clubs précis. */
-export const ACTUALITE_AUDIENCES = Object.freeze(['membres', 'dirigeants', 'installation', 'clubs']);
+/** Les destinataires : tous les membres, les dirigeants, une installation, des clubs précis. */
+export const ACTUALITE_AUDIENCES = Object.freeze([
+  'membres', 'dirigeants', 'installation', 'clubs',
+]);
 
 /** T3-ACTU-CIBLE — dans « des clubs précis », les rôles à qui elle s'adresse. */
 export const ACTUALITE_ROLES = Object.freeze(['dirigeants', 'entraineurs', 'membres']);
@@ -205,25 +207,34 @@ export const audiencePreview = (t, { audience, clubsCount }) => {
 };
 
 /**
- * T3-ACTU-CIBLE — La phrase AVANT de publier pour « Des clubs précis » : le nombre de destinataires.
- * « environ » dès que les joueurs et parents sont cochés : le serveur ne compte pas les parents sans
- * club à eux. Des nombres, jamais une personne.
+ * T3-ACTU-CIBLE — La phrase AVANT de publier pour « Des clubs précis » : le nombre de
+ * destinataires. « environ » dès que les joueurs et parents sont cochés : le serveur ne compte pas
+ * les parents sans club à eux. Des nombres, jamais une personne.
  * @param {any} t - La traduction (i18next).
- * @param {{ approximate?: boolean, clubsCoches: number, clubsCount?: unknown, personsCount?: unknown,
- *   rolesCoches: number }} cible - Ce qui est coché, et ce qu'en dit le serveur.
+ * @param {{ approximate?: boolean, clubsCoches: number, clubsCount?: unknown,
+ *   personsCount?: unknown, rolesCoches: number }} cible - Ce qui est coché, et ce qu'en dit le serveur.
  * @returns {string} La phrase.
  */
 export const clubsPrecisPreview = (t, {
   approximate = false, clubsCoches, clubsCount, personsCount, rolesCoches,
 }) => {
   if (clubsCoches === 0) {
-    return t('collectiviteActualites.apercu.clubsPrecis.cocherClubs', 'Cochez les clubs qui la recevront.');
+    return t(
+      'collectiviteActualites.apercu.clubsPrecis.cocherClubs',
+      'Cochez les clubs qui la recevront.',
+    );
   }
   if (rolesCoches === 0) {
-    return t('collectiviteActualites.apercu.clubsPrecis.cocherRoles', 'Cochez les rôles qui la recevront.');
+    return t(
+      'collectiviteActualites.apercu.clubsPrecis.cocherRoles',
+      'Cochez les rôles qui la recevront.',
+    );
   }
   if (!Number.isInteger(personsCount) || !Number.isInteger(clubsCount)) {
-    return t('collectiviteActualites.apercu.clubsPrecis.calcul', 'Nous comptons les personnes qui la recevront…');
+    return t(
+      'collectiviteActualites.apercu.clubsPrecis.calcul',
+      'Nous comptons les personnes qui la recevront…',
+    );
   }
   const nombre = Number(personsCount);
   if (nombre === 0) {
@@ -237,7 +248,11 @@ export const clubsPrecisPreview = (t, {
     : t('collectiviteActualites.apercu.clubsPrecis.personnes', '{{nombre}} personnes', { nombre });
   const clubs = clubsCount === 1
     ? t('collectiviteActualites.apercu.clubsPrecis.clubUn', '1 club')
-    : t('collectiviteActualites.apercu.clubsPrecis.clubs', '{{nombre}} clubs', { nombre: clubsCount });
+    : t(
+      'collectiviteActualites.apercu.clubsPrecis.clubs',
+      '{{nombre}} clubs',
+      { nombre: clubsCount },
+    );
   const qui = approximate
     ? t(
       'collectiviteActualites.apercu.clubsPrecis.recueEnviron',
@@ -251,6 +266,7 @@ export const clubsPrecisPreview = (t, {
     );
   return `${qui} ${t(
     'collectiviteActualites.apercu.clubsPrecis.notification',
+    // eslint-disable-next-line max-len
     'Une notification part aux dirigeants et entraîneurs cochés, et aux joueurs et parents qui l’ont activée. Personne n’y répond.',
   )}`;
 };

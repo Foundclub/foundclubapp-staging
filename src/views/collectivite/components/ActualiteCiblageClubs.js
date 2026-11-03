@@ -19,8 +19,8 @@ import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGr
 import { useCollectiviteClubs } from '@/services/collectivite/collectiviteQueries';
 
 /**
- * 📰 T3-ACTU-CIBLE (03/11/2026, fiche 3 option B) — « Des clubs précis » : les clubs à cocher, le tri
- * par sport et les rôles. Le sport n'est qu'une aide pour cocher : seule la LISTE part au serveur.
+ * 📰 T3-ACTU-CIBLE (03/11/2026, fiche 3 option B) — « Des clubs précis » : les clubs à cocher, le
+ * tri par sport et les rôles. Le sport n'est qu'une aide pour cocher : seule la LISTE part au serveur.
  * Un fichier à part : le formulaire ne lit les clubs que si la Ville choisit cette pastille.
  * @param {{
  *   clubIds: string[];
@@ -71,7 +71,10 @@ function ActualiteCiblageClubs({
   } else if (tousLesClubs.length === 0) {
     liste = (
       <Text style={[Fonts.p3, Fonts.neutral300]}>
-        {t('collectiviteActualites.form.aucunClub', 'Aucun club n’est rattaché à votre collectivité.')}
+        {t(
+          'collectiviteActualites.form.aucunClub',
+          'Aucun club n’est rattaché à votre collectivité.',
+        )}
       </Text>
     );
   } else {
@@ -84,8 +87,16 @@ function ActualiteCiblageClubs({
           style={{ alignSelf: 'flex-start' }}
           testID="actualite-form-tout-cocher"
           title={toutEstCoche
-            ? t('collectiviteActualites.form.toutDecocher', 'Tout décocher ({{nombre}})', { nombre: affiches.length })
-            : t('collectiviteActualites.form.toutCocher', 'Tout cocher ({{nombre}})', { nombre: affiches.length })}
+            ? t(
+              'collectiviteActualites.form.toutDecocher',
+              'Tout décocher ({{nombre}})',
+              { nombre: affiches.length },
+            )
+            : t(
+              'collectiviteActualites.form.toutCocher',
+              'Tout cocher ({{nombre}})',
+              { nombre: affiches.length },
+            )}
           variant="SecondaryLight"
         />
         {/* Une colonne au téléphone, deux sur ordinateur, sans le demander à l'écran. */}
@@ -117,7 +128,7 @@ function ActualiteCiblageClubs({
                 }}
                 testID={`actualite-form-club-${id}`}
               >
-                {/* La case est un dessin ici : c'est la ligne entière qu'on touche et qu'on entend. */}
+                {/* La case n'est qu'un dessin : c'est la ligne qu'on touche et qu'on entend. */}
                 <View
                   accessibilityElementsHidden
                   aria-hidden
@@ -156,7 +167,10 @@ function ActualiteCiblageClubs({
       {liste}
       <ChoiceChipGroup
         onSelect={basculerRole}
-        options={ACTUALITE_ROLES.map((role) => ({ label: actualiteRoleLabel(t, role), value: role }))}
+        options={ACTUALITE_ROLES.map((role) => ({
+          label: actualiteRoleLabel(t, role),
+          value: role,
+        }))}
         selectedValues={roles}
         title={t('collectiviteActualites.form.quiDansCesClubs', 'Qui, dans ces clubs ?')}
       />

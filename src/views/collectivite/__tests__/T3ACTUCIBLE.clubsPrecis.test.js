@@ -169,7 +169,9 @@ const monter = async () => {
   return arbre;
 };
 const ecrireLeTitre = async (/** @type {any} */ arbre) => {
-  await act(async () => { parTestID(arbre, 'actualite-form-titre').props.onChangeText('Réunion'); });
+  await act(async () => {
+    parTestID(arbre, 'actualite-form-titre').props.onChangeText('Réunion');
+  });
 };
 
 beforeEach(() => {
@@ -195,7 +197,7 @@ describe('T3-ACTU-CIBLE — une 4e pastille, les 3 autres ne bougent pas', () =>
 });
 
 describe('T3-ACTU-CIBLE — le tri par sport', () => {
-  it('ne garde que les clubs du sport, un club omnisports compris, sans décocher les autres', async () => {
+  it('ne garde que les clubs du sport, omnisports compris, sans décocher les autres', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'actualite-form-pour-clubs');
     await appuyer(arbre, 'actualite-form-club-c-foot');
