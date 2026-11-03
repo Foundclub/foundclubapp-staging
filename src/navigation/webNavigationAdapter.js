@@ -1,3 +1,4 @@
+import { poserPlancherDeRetour } from './gardienDesFleches';
 import { RouteNames } from './routeNames';
 import { buildWebPath } from './webRoutes';
 
@@ -106,6 +107,38 @@ const estPremierePageDuSite = () => (
   typeof window !== 'undefined' && window.history?.state?.idx === 0
 );
 
+// T3-CHEMINS (03/11) — le retour d'une première page va au parent de l'écran quand son adresse le
+// donne sans ambiguïté (`param` : l'identifiant qu'il exige). Recensement : 129 écrans sur 291 ont
+// un Retour.
+// ponytail: les autres retombent sur l'accueil, assistants et écrans à plusieurs parents compris.
+// Sortie : compléter cette table.
+const PARENT_DE_PREMIERE_PAGE = {
+  [RouteNames.AddClubManager]: { param: 'clubId', routeName: RouteNames.Club },
+  [RouteNames.AddCoach]: { param: 'clubId', routeName: RouteNames.Club },
+  [RouteNames.ChildEdit]: { routeName: RouteNames.MyChildren },
+  [RouteNames.ClubEdit]: { param: 'clubId', routeName: RouteNames.Club },
+  [RouteNames.CollectiviteFermeture]: { param: 'collectiviteId', routeName: RouteNames.CollectiviteHome },
+  [RouteNames.CollectiviteInstallationForm]: {
+    param: 'collectiviteId',
+    routeName: RouteNames.CollectiviteInstallations,
+  },
+  [RouteNames.EventEdit]: { param: 'eventId', routeName: RouteNames.EventDetails },
+  [RouteNames.ProfileEdit]: { routeName: RouteNames.Profile },
+  [RouteNames.TeamEdit]: { param: 'teamId', routeName: RouteNames.TeamDetails },
+  [RouteNames.TournamentSettingsEdit]: { param: 'eventId', routeName: RouteNames.EventDetails },
+};
+
+const adresseDuParent = (
+  /** @type {string | undefined} */ routeName,
+  /** @type {any} */ params,
+) => {
+  const parent = /** @type {any} */ (PARENT_DE_PREMIERE_PAGE)[/** @type {any} */ (routeName)];
+  if (!parent) return '/';
+  if (!parent.param) return buildWebPath(parent.routeName, {});
+  const valeur = params?.[parent.param];
+  return valeur ? buildWebPath(parent.routeName, { [parent.param]: valeur }) : '/';
+};
+
 export const createWebNavigationAdapter = ({
   currentPath = '/',
   currentRouteName,
@@ -160,7 +193,7 @@ export const createWebNavigationAdapter = ({
     getParent: () => parentNavigation || adapter,
     goBack: () => {
       if (estPremierePageDuSite() && typeof replace === 'function') {
-        replace('/');
+        replace(adresseDuParent(currentRouteName, params));
         return;
       }
       if (typeof goBack === 'function') {
@@ -179,6 +212,7 @@ export const createWebNavigationAdapter = ({
     // Le site n'a pas de pile a depiler : l'entree courante est REMPLACEE par la
     // cible, donc le retour ne repasse pas par l'ecran qu'on quitte.
     popTo: (/** @type {string} */ routeName, nextParams = {}) => {
+      poserPlancherDeRetour();
       adapter.replace(routeName, nextParams);
     },
     push: (routeName, nextParams = {}) => {
@@ -198,6 +232,7 @@ export const createWebNavigationAdapter = ({
       if (!resetTarget) {
         return;
       }
+      poserPlancherDeRetour();
       // FIN-CHEMINS (02/11, 94) : une pile posée sous l'écran visible se perdait, et le retour
       // tombait
       // dans ce qu'on venait de quitter : après une création, « Plus tard » sur l'affiche revenait

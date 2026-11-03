@@ -8,6 +8,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Image, useWindowDimensions } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   resolveEventDisplayName,
@@ -2604,7 +2605,9 @@ function EventDetails({ navigation, route }) {
                       {cancelParticipationMutation.isPending ? t('eventDetails.cancelling', 'Annulation...') : t('eventDetails.cancelMyRequest', 'Annuler ma demande')}
                     </button>
                   ) : null}
-                  {isReservation && facilityId ? (
+                  {/* T3-CHEMINS (03/11, chef « FT2 A ») : le serveur réserve createBooking au
+                      SuperAdmin (SECU-RESA). Aux autres, ce calendrier refusait l'envoi. */}
+                  {isReservation && facilityId && getUserRoleKey(userData?.role?.name) === 'superAdmin' ? (
                     <button
                       onClick={() => navigation.navigate(RouteNames.BookingCalendar, { facilityId })}
                       style={{ ...outlineButtonStyle, padding: '12px 16px' }}

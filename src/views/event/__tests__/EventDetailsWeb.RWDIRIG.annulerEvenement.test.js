@@ -333,6 +333,31 @@ describe('RWDIRIG · annuler un événement depuis le site', () => {
 // CORR-EVENEMENTS point 119 (recette du site, 29/10) — dans une série, « Annuler » n'annulait
 // que la séance, sans le dire : le dirigeant croyait la saison arrêtée. Décision A : la feuille
 // à trois choix du téléphone (cette séance, les suivantes, toutes).
+// T3-CHEMINS (03/11, chef « FT2 A ») : le serveur réserve createBooking au SuperAdmin (SECU-RESA).
+// Rouge avant : le bouton invitait tout le monde à une réservation refusée à l'envoi.
+describe('T3-CHEMINS · « Ouvrir le calendrier » d une réservation', () => {
+  const RESERVATION = { facility: { documentId: 'terrain-1' }, type: { name: 'Réservation' } };
+  const auth = (/** @type {string} */ role) => ({
+    canEditClub: () => true,
+    canEditEvent: () => true,
+    canManageEvent: () => true,
+    freeUsageSummary: null,
+    subscriptionAccessLevel: 'FREE',
+    userData: { ...COACH, role: { name: role } },
+  });
+
+  test('un dirigeant ne le voit pas', () => {
+    mountScreen({ auth: auth('Dirigeant'), event: buildEvent(RESERVATION) });
+    expect(JSON.stringify(mounted.toJSON())).toContain('Réservation');
+    expect(JSON.stringify(mounted.toJSON())).not.toContain('Ouvrir le calendrier');
+  });
+
+  test('le SuperAdmin le garde', () => {
+    mountScreen({ auth: auth('SuperAdmin'), event: buildEvent(RESERVATION) });
+    expect(JSON.stringify(mounted.toJSON())).toContain('Ouvrir le calendrier');
+  });
+});
+
 describe('CORR-EVENEMENTS 119 · annuler une séance d une série', () => {
   const presser = async (/** @type {any} */ root, /** @type {string} */ libelle) => {
     const [cible] = root.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function'

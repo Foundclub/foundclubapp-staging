@@ -278,6 +278,27 @@ test('C4B-BIS-1/5 le PANNEAU : titre de la planche, sans choix d installation ; 
   expect(onCancel).toHaveBeenCalled();
 });
 
+// T3-CHEMINS (03/11) : une flèche du navigateur ou un lien du menu perdaient la saisie du panneau
+// en silence : il n'avait aucune garde. Rouge avant : `beforeRemove` n'était jamais écouté.
+test('T3-CHEMINS le PANNEAU garde sa saisie, sa croix ferme sans question', async () => {
+  mockNavigation.addListener = jest.fn(() => () => {});
+  const onCancel = jest.fn();
+  const arbre = await rendre(
+    <PanneauDeFermeture
+      collectiviteId="ville-montrivage"
+      facilityId="gym-tilleuls"
+      facilityName="Gymnase des Tilleuls"
+      mode="fermer"
+      onCancel={onCancel}
+      onDone={jest.fn()}
+      onDraftChange={jest.fn()}
+    />,
+  );
+  expect(mockNavigation.addListener).toHaveBeenCalledWith('beforeRemove', expect.any(Function));
+  await act(async () => { parTestID(arbre, 'fermeture-panneau-fermer').props.onPress(); });
+  expect(onCancel).toHaveBeenCalled();
+});
+
 // CRFERM (13/10, planche P4v4) : la boîte dit « type · capacité » (« Gymnase · 2 équipes à la
 // fois »), pour Fermer comme pour Bloquer ; les horaires d ouverture n y sont plus (une fermeture a
 // désormais ses propres heures, et les horaires ont quitté le formulaire de l installation le 07/10).

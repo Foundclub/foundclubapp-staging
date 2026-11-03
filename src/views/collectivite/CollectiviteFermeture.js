@@ -409,13 +409,15 @@ function FormulaireDeFermeture({
   }
 
   // SAIS (T20 lot 2) — au téléphone, un Retour sur une saisie modifiée demande avant de la perdre
-  // (la garde de « Demander un créneau »). Le panneau d ordinateur a sa croix : pas de garde.
+  // (la garde de « Demander un créneau »).
+  // T3-CHEMINS (03/11) : le panneau d ordinateur aussi. Sa croix ferme sans question, mais une
+  // flèche du navigateur ou un lien du menu y perdaient la saisie en silence.
   const saisieModifiee = publier || debut !== depart.debut || fin !== depart.fin
     || facilityId !== depart.facilityId || heureDebut !== depart.heureDebut
     || heureFin !== depart.heureFin || mot !== depart.mot || motif !== depart.motif
     || nomDeFermeture !== depart.nom
     || touteLaJournee !== (bloquer || !(existante?.startTime || existante?.endTime));
-  const sortieLibre = useGardeDeSortie(enPanneau ? null : navigation, {
+  const sortieLibre = useGardeDeSortie(navigation, {
     actif: saisieModifiee,
     textes: {
       message: t('collectiviteFermetures.form.quitterPerdu', 'Ce que vous avez saisi sera perdu.'),
