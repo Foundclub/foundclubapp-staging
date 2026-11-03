@@ -21,6 +21,7 @@ import AppNavigator from '@/navigation/appNavigator';
 import { navigationRef } from '@/navigation/navigationService';
 
 import { isInSentryExceptionsAllowList } from '@/services/sentryAllowList';
+import { scrubSentryBreadcrumb, scrubSentryEvent } from '@/services/sentryPrivacy';
 
 import {
   clearPersistedBootError,
@@ -114,13 +115,15 @@ markBootStep('app_module_loaded', {
 if (isSentryEnabled) {
   Sentry.init({
     attachStacktrace: true,
+    beforeBreadcrumb: scrubSentryBreadcrumb,
     beforeSend: (event) => {
       // Keep crash signals in staging to debug launch issues.
       if (__DEV__) {
         return null;
       }
-      return event;
+      return scrubSentryEvent(event);
     },
+    beforeSendTransaction: scrubSentryEvent,
     debug: __DEV__,
     dsn: sentryDsn,
     enableAutoSessionTracking: true,
