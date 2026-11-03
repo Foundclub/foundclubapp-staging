@@ -22,6 +22,7 @@ import {
   blocsDesEvenements,
   etiquetteDuPlanning,
   fermeturesSansLesEvenements,
+  installationDuPlanning,
 } from '@/domains/collectivite/evenementDeLaVille';
 import {
   closureBandLabel,
@@ -506,6 +507,14 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         >
           {etiquetteDuPlanning(t, evenement)}
         </Text>
+        {installationDuPlanning(evenement) ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+          >
+            {installationDuPlanning(evenement)}
+          </Text>
+        ) : null}
         <Text
           numberOfLines={2}
           style={[Fonts.p3Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
@@ -516,7 +525,9 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
           numberOfLines={1}
           style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
         >
-          {avecInstallation ? `${bloc.installation?.name || ''} · ${heures}` : heures}
+          {avecInstallation && !installationDuPlanning(evenement)
+            ? `${bloc.installation?.name || ''} · ${heures}`
+            : heures}
         </Text>
       </TouchableOpacity>
     );

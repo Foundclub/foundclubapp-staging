@@ -6286,6 +6286,7 @@ export default {
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+      aucunClubTrouve: 'Aucun club ne correspond à cette recherche.',
       aucuneLibre: 'Aucune heure libre ce {{jour}}.',
       changerHeure: 'Changer l’heure',
       club: 'Club',
@@ -6319,6 +6320,7 @@ export default {
       prevenu: '{{club}} sera prévenu, et verra ce créneau dans son planning.',
       prevenuChangement: '{{club}} sera prévenu du changement.',
       quandMeme: 'Attribuer quand même',
+      rechercherClub: 'Rechercher un club',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
       voirLibres: 'Voir les heures libres du {{jour}}',
@@ -6995,8 +6997,10 @@ export default {
     },
     planning: {
       aCote: 'Ville · à côté',
+      aCoteDe: '{{ville}} · à côté',
       aria: 'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
       toute: 'Ville · toute l’installation',
+      touteDe: '{{ville}} · toute l’installation',
     },
     publier: 'Publier l’événement',
     quand: {
@@ -17855,6 +17859,7 @@ export default {
     labels: {
       noTime: 'Sans horaire',
     },
+    legendeDesPoints: 'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
     mode: {
       monthDescription: 'Vue globale du mois',
       monthShort: 'Mois',

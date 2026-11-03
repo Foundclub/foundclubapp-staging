@@ -94,6 +94,22 @@ const libreDu24 = (/** @type {any} */ arbre) => arbre.root
   ?.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children))[0];
 
 describe('R17-EVT-1-BIS — la vue Liste et l’événement de la Ville', () => {
+  it('🐞 RET-PLANNING fiche 8 : la Ville par son nom, puis l’installation', async () => {
+    const arbre = await monter({
+      ...FETE, collectivite: { name: 'Ville de Démouville' }, facility: { name: 'Gymnase Cosec' },
+    }, jest.fn());
+    const carte = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && n.props.testID === 'liste-evenement-ville-evt-1')[0];
+
+    expect(carte.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children)))
+      .toEqual([
+        'Ville de Démouville · toute l’installation',
+        'Gymnase Cosec',
+        'Fête du sport',
+        '14:00 – 15:30',
+      ]);
+  });
+
   it('🔴 sa carte claire, qui s’ouvre ; ses heures sortent du libre', async () => {
     const onBlockPress = jest.fn();
     const arbre = await monter(FETE, onBlockPress);
@@ -101,7 +117,9 @@ describe('R17-EVT-1-BIS — la vue Liste et l’événement de la Ville', () => 
       && n.props.testID === 'liste-evenement-ville-evt-1');
     expect(carte).toHaveLength(1);
     expect(carte[0].findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children)))
-      .toEqual(['Ville · toute l’installation', 'Fête du sport', '14:00 – 15:30']);
+      .toEqual([
+        'Ville · toute l’installation', 'Stade municipal', 'Fête du sport', '14:00 – 15:30',
+      ]);
     expect(libreDu24(arbre)).toBe('Libre 08:00 – 14:00 · 15:30 – 22:00');
     await act(async () => {
       arbre.root.findAllByType(TouchableOpacity)

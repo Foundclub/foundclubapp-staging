@@ -26,7 +26,10 @@ import {
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
-import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
+import {
+  etiquetteDuPlanning,
+  installationDuPlanning,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { motDuBlocTouche } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -278,6 +281,9 @@ function PlanningWeekTimelineView({
   const mesurerLaGrille = useCallback((/** @type {any} */ evenement) => {
     setLargeurGrille(Math.round(evenement?.nativeEvent?.layout?.width || 0));
   }, []);
+  // RET-PLANNING fiche 14 : numéro + écart + nombre = 2 + 14 de plus que le rond. Sans cette place,
+  // le nombre passe sous le numéro : à côté, il finissait caché par le rond du lendemain.
+  const tailleDuNumero = compactFullscreen ? 24 : 32;
   const hourHeight = compactFullscreen ? 44 : DEFAULT_HOUR_HEIGHT;
   const collapsedHeight = compactFullscreen ? 12 : DEFAULT_COLLAPSED_HEIGHT;
   const minEventHeight = compactFullscreen ? 22 : DEFAULT_MIN_EVENT_HEIGHT;
@@ -293,6 +299,8 @@ function PlanningWeekTimelineView({
 
     return [currentDate, addDays(currentDate, 1), addDays(currentDate, 2)];
   }, [currentDate, mode]);
+  const nombreSousLeNumero = largeurGrille > 0
+    && largeurGrille / weekDays.length < tailleDuNumero + 16;
 
   const weekEvents = useMemo(() => {
     if (!events.length) return [];
@@ -849,8 +857,10 @@ function PlanningWeekTimelineView({
             width: `${width}%`,
           }]}
         >
+          {/* RET-PLANNING fiche 8 : le nom de la Ville allonge l'étiquette, la vue semaine est
+              étroite : elle passe à la ligne au lieu de couper. */}
           <Text
-            numberOfLines={1}
+            numberOfLines={3}
             style={[Fonts.p4Bold, {
               color: plein ? Colors.primary700 : Colors.primary100,
               fontSize: 9,
@@ -860,6 +870,17 @@ function PlanningWeekTimelineView({
           >
             {etiquette}
           </Text>
+          {installationDuPlanning(evenementVille) ? (
+            <Text
+              numberOfLines={2}
+              style={[Fonts.p4Bold, {
+                color: plein ? Colors.primary700 : Colors.primary100,
+                fontSize: 10,
+              }]}
+            >
+              {installationDuPlanning(evenementVille)}
+            </Text>
+          ) : null}
           {event.height > 34 ? (
             <Text
               numberOfLines={1}
@@ -1606,7 +1627,12 @@ function PlanningWeekTimelineView({
                 >
                   {format(day, 'EEE', { locale: fr }).replace('.', '')}
                 </Text>
-                <View style={styles.dayBadgeWrapper}>
+                <View
+                  style={[
+                    styles.dayBadgeWrapper,
+                    nombreSousLeNumero ? [styles.dayBadgeWrapperEtroit, { minHeight: tailleDuNumero + 16 }] : null,
+                  ]}
+                >
                   <View
                     style={[
                       styles.dayBadge,
@@ -1617,19 +1643,6 @@ function PlanningWeekTimelineView({
                     <Text style={[Fonts.h3, styles.dayBadgeText, { color: Colors.neutral00 }]}>
                       {format(day, 'd')}
                     </Text>
-                    {eventCount > 0 && !isTodayColumn ? (
-                      <View
-                        style={[
-                          styles.dayCountBadge,
-                          {
-                            backgroundColor: Colors.primary500,
-                            borderColor: Colors.neutral700,
-                          },
-                        ]}
-                      >
-                        <Text style={styles.dayCountText}>{eventCount}</Text>
-                      </View>
-                    ) : null}
                     {hasPendingEvent ? (
                       <View
                         style={[
@@ -1641,6 +1654,23 @@ function PlanningWeekTimelineView({
                       </View>
                     ) : null}
                   </View>
+                  {/* RET-PLANNING fiche 14 (Adel « A ») : à côté du numéro, plus sur lui : il le
+                      chevauchait dès 2 chiffres, sur tous les plannings. */}
+                  {eventCount > 0 && !isTodayColumn ? (
+                    <View
+                      style={[
+                        styles.dayCountBadge,
+                        {
+                          backgroundColor: Colors.primary500,
+                          borderColor: Colors.neutral700,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.dayCountText} testID={`jour-nombre-${dayKey}`}>
+                        {eventCount}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             );
@@ -1868,10 +1898,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderRadius: 999, height: 32, justifyContent: 'center', minWidth: 32, position: 'relative', width: 32,
   },
   dayBadgeText: { fontSize: 14, fontWeight: '700' },
-  dayBadgeWrapper: { alignItems: 'center', justifyContent: 'center', minHeight: 32 },
+  dayBadgeWrapper: {
+    alignItems: 'center', flexDirection: 'row', gap: 2, justifyContent: 'center', minHeight: 32,
+  },
+  dayBadgeWrapperEtroit: { flexDirection: 'column', justifyContent: 'flex-start' },
   dayColumnHeader: { alignItems: 'center', flex: 1 },
   dayCountBadge: {
-    alignItems: 'center', borderRadius: 6, borderWidth: 1, height: 14, justifyContent: 'center', position: 'absolute', right: -4, top: -4, width: 14,
+    alignItems: 'center', borderRadius: 6, borderWidth: 1, height: 14, justifyContent: 'center', width: 14,
   },
   dayCountText: { color: '#FFFFFF', fontSize: 8, fontWeight: '700' },
   dayLabel: { fontSize: 11, marginBottom: 6, textTransform: 'uppercase' },
