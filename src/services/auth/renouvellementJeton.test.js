@@ -122,6 +122,30 @@ describe.each([
     expect(mockDispatch).not.toHaveBeenCalled();
   });
 
+  it('401 sur le jeton mort d un compte en arrière-plan : le compte actif reste connecté', async () => {
+    const actif = fauxJeton(1, 'actif');
+    const mort = fauxJeton(40, 'mort');
+    mockSnapshot.current = { auth: session(actif, 'A'), authSessions: [session(actif, 'A'), session(mort, 'B')] };
+    adapter.mockImplementation((config) => (config.url.includes('renew-token')
+      ? repond(config, 401, { error: { status: 401 } })
+      : repond(config, 200, {})));
+    await client.get('/events');
+    await attendre();
+    expect(appelsRenouvellement(adapter)).toHaveLength(1);
+    expect(mockDispatch).not.toHaveBeenCalled();
+  });
+
+  it('401 sur le jeton du compte actif : déconnexion, comme pour tout autre appel', async () => {
+    const mort = fauxJeton(40, 'mort');
+    mockSnapshot.current = { auth: session(mort, 'A'), authSessions: [session(mort, 'A')] };
+    adapter.mockImplementation((config) => (config.url.includes('renew-token')
+      ? repond(config, 401, { error: { status: 401 } })
+      : repond(config, 200, {})));
+    await client.get('/events');
+    await attendre();
+    expect(mockDispatch).toHaveBeenCalledWith({ type: 'LOGOUT_CURRENT_SESSION' });
+  });
+
   it('plafond atteint (`jwt: null`) : le jeton reste, rien n est déconnecté', async () => {
     const vieux = fauxJeton(8);
     mockSnapshot.current = { auth: session(vieux, 'A'), authSessions: [session(vieux, 'A')] };
