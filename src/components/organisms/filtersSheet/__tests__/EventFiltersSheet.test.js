@@ -241,7 +241,7 @@ const trouver = (tree, testID) => tree.root.findAll(
  * @param {any} props Les props a surcharger.
  * @returns {Promise<{ tree: any, onApply: jest.Mock, onClose: jest.Mock }>} Le rendu.
  */
-const rendre = async ({ filters = {}, isVisible = true } = {}) => {
+const rendre = async ({ filters = {}, isVisible = true, villeDuProfil = undefined } = {}) => {
   const onApply = jest.fn();
   const onClose = jest.fn();
   /** @type {any} */
@@ -253,6 +253,7 @@ const rendre = async ({ filters = {}, isVisible = true } = {}) => {
         isVisible={isVisible}
         onApply={onApply}
         onClose={onClose}
+        villeDuProfil={villeDuProfil}
       />,
     );
   });
@@ -731,5 +732,27 @@ describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports'
     await choisirLeSport(tree, 'Équitation');
     await appuyerSur(tree, 'Voir les résultats');
     expect(onApply.mock.calls[0][0].activity).toEqual(['a-equit']);
+  });
+});
+
+// T3-ACTU-CIBLE p67 — le vrai chemin du joueur (Recherche › « Choisir une ville ») ouvre cette
+// feuille : sa liste de villes restait vide avant la frappe, alors que /events/filters en proposait.
+describe('p67 — des villes à proposer avant la frappe', () => {
+  it('🔴 sans ville au profil : les grandes villes, puis rien de plus dès la frappe', async () => {
+    const { tree } = await rendre();
+    await ouvrirRangee(tree, 'Ville');
+    const { optionsSupplementaires } = trouver(tree, 'adresse').props;
+    expect(optionsSupplementaires('').map((/** @type {any} */ o) => o.label)[0]).toBe('Paris (75001)');
+    expect(optionsSupplementaires('').length).toBeGreaterThan(1);
+    expect(optionsSupplementaires('mar')).toEqual([]);
+  });
+
+  it('🔴 avec une ville au profil : elle passe en tête', async () => {
+    const VILLE = {
+      label: 'Gardanne (13120)', lat: 43.45, lng: 5.47, value: '5.47|43.45',
+    };
+    const { tree } = await rendre({ villeDuProfil: VILLE });
+    await ouvrirRangee(tree, 'Ville');
+    expect(trouver(tree, 'adresse').props.optionsSupplementaires('')[0]).toEqual(VILLE);
   });
 });

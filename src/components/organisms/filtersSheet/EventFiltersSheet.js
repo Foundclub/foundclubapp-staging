@@ -1,11 +1,12 @@
 import Slider from '@react-native-community/slider';
 import {
-  useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import usePlaces from '@/domains/places/usePlaces';
+import villesAProposer from '@/domains/search/villesAProposer';
 import { StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
 import useTheme from '@/theme/themeContext';
 
@@ -110,7 +111,7 @@ const libelleDeLaSelection = (options, valeurs, repli) => {
  *  onClose: () => void;
  *  onCreateAlert?: (filters: Record<string, any>) => Promise<string>;
  *  pourUneAlerte?: boolean;
- *  villeDuProfil?: { label: string, value: string };
+ *  villeDuProfil?: { label: string, lat?: number, lng?: number, value: string };
  *  raisonDuRefus?: string;
  * }} props `pourUneAlerte` : ouverte pour creer une alerte, la feuille s'ouvre
  *   sur la rangee Ville, dit qu'une ville est necessaire et cree l'alerte.
@@ -134,6 +135,12 @@ function EventFiltersSheet({
   const TOUS = t('eventFiltersSheet.allMasculine', 'Tous');
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
+
+  // T3-ACTU-CIBLE p67 — comme l'écran plein /events/filters : avant la frappe, pas de liste vide.
+  const villesAvantLaFrappe = useCallback(
+    (/** @type {string} */ recherche) => (recherche ? [] : villesAProposer(villeDuProfil)),
+    [villeDuProfil],
+  );
 
   const [activity, setActivity] = useState(/** @type {string[]} */ ([]));
   const [category, setCategory] = useState(/** @type {string[]} */ ([]));
@@ -397,6 +404,7 @@ function EventFiltersSheet({
           <AutocompleteAddressInput
             address={city}
             label={modeCreation ? t('clubFilters.fields.city.label', 'Ville') : undefined}
+            optionsSupplementaires={villesAvantLaFrappe}
             placeholder={t(
               'clubFilters.fields.city.placeholderChoisir',
               'Choisir une ville (ex. : Marseille)',
