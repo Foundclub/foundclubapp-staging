@@ -5740,8 +5740,6 @@ export default {
   },
   collectiviteCreneaux: {
     attribuer: {
-      touteInstallation: 'The whole facility',
-      touteInstallationDit: 'No other team at these times.',
       aPartirDu: 'From',
       attribuerA: 'Assign to',
       aucunClub: 'No club is attached to the town: invite one from “Clubs”.',
@@ -5774,6 +5772,8 @@ export default {
       prevenu: '{{club}} will be notified, and will see this slot in its schedule.',
       prevenuChangement: '{{club}} will be notified of the change.',
       quandMeme: 'Assign anyway',
+      touteInstallation: 'The whole facility',
+      touteInstallationDit: 'No other team at these times.',
       toutLeClub: 'The whole club',
       valider: 'Assign the slot',
       voirLibres: 'See the free times on {{jour}}',
@@ -6091,11 +6091,6 @@ export default {
     },
   },
   collectiviteDemandes: {
-    touteInstallation: {
-      case: 'Request the whole facility',
-      dit: 'The local authority decides. If it accepts, no other team at these times.',
-      demande: 'Whole facility requested',
-    },
     acces: {
       texte: 'You do not manage this local authority.',
       titre: 'Access removed',
@@ -6179,6 +6174,11 @@ export default {
     consequence: {
       depasse: 'Accepting puts {{equipes}} for {{places}}.',
       libre: 'Accepting bothers nobody.',
+    },
+    touteInstallation: {
+      case: 'Request the whole facility',
+      demande: 'Whole facility requested',
+      dit: 'The local authority decides. If it accepts, no other team at these times.',
     },
     // COLL-C3B-BIS (03/10) — accepting a series date by date (board 33).
     dates: {
@@ -11759,11 +11759,6 @@ export default {
     noAddress: 'Address not provided',
   },
   facilityForm: {
-    parent: {
-      aide: 'A stadium’s pitch, for example: booking the whole stadium blocks its parts.',
-      titre: 'Part of',
-      partieDe: 'Part of {{nom}}',
-    },
     accessibility: {
       planningColor: 'Planning colour',
     },
@@ -11848,6 +11843,11 @@ export default {
       gpsActive: 'GPS active',
       planningColor: 'It helps spot the facility in the planning — it appears as a dot on its card.',
     },
+    parent: {
+      aide: 'A stadium’s pitch, for example: booking the whole stadium blocks its parts.',
+      partieDe: 'Part of {{nom}}',
+      titre: 'Part of',
+    },
     placeholders: {
       address: 'E.g. 12 Rue du Stade...',
       name: 'E.g. Terrain Honneur, Salle A...',
@@ -11876,15 +11876,15 @@ export default {
       changingRoom: 'Changing room',
       clubHouse: 'Club house',
       dojo: 'Dojo',
-      gym: 'Sports hall',
       footballPitch: 'Football pitch',
+      gym: 'Sports hall',
       multisportPitch: 'Multi-sport pitch',
       pitch: 'Pitch',
       pool: 'Swimming pool',
       rugbyPitch: 'Rugby pitch',
       skatepark: 'Skatepark',
-      stadium: 'Stadium',
       sportsHall: 'Sports hall',
+      stadium: 'Stadium',
       tennisCourt: 'Tennis court',
       videoRoom: 'Video room',
     },

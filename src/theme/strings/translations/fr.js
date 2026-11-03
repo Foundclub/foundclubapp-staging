@@ -6293,8 +6293,6 @@ export default {
   },
   collectiviteCreneaux: {
     attribuer: {
-      touteInstallation: 'Toute l’installation',
-      touteInstallationDit: 'Aucune autre équipe à ces heures.',
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
@@ -6327,6 +6325,8 @@ export default {
       prevenu: '{{club}} sera prévenu, et verra ce créneau dans son planning.',
       prevenuChangement: '{{club}} sera prévenu du changement.',
       quandMeme: 'Attribuer quand même',
+      touteInstallation: 'Toute l’installation',
+      touteInstallationDit: 'Aucune autre équipe à ces heures.',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
       voirLibres: 'Voir les heures libres du {{jour}}',
@@ -6658,11 +6658,6 @@ export default {
     },
   },
   collectiviteDemandes: {
-    touteInstallation: {
-      case: 'Demander toute l’installation',
-      dit: 'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
-      demande: 'Demande toute l’installation',
-    },
     acces: {
       texte: 'Vous ne gérez pas cette collectivité.',
       titre: 'Accès retiré',
@@ -6750,6 +6745,11 @@ export default {
     consequence: {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
+    },
+    touteInstallation: {
+      case: 'Demander toute l’installation',
+      demande: 'Demande toute l’installation',
+      dit: 'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
     },
     // COLL-C3B-BIS (03/10) — accepter une série date par date (planche 33).
     dates: {
@@ -12503,11 +12503,6 @@ export default {
     noAddress: 'Adresse non renseignée',
   },
   facilityForm: {
-    parent: {
-      aide: 'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
-      titre: 'Fait partie de',
-      partieDe: 'Partie de {{nom}}',
-    },
     accessibility: {
       planningColor: 'Couleur de planning',
     },
@@ -12522,6 +12517,11 @@ export default {
       singular: 'équipe à la fois',
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
+    },
+    parent: {
+      aide: 'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
+      partieDe: 'Partie de {{nom}}',
+      titre: 'Fait partie de',
     },
     // TEXTES-COLLECTIVITES (01/10, « ton A ») — le formulaire sert au club ET à la mairie :
     // la mairie, vouvoyée, a ses propres clefs ; un club n’est jamais vouvoyé par ricochet.
@@ -12626,15 +12626,15 @@ export default {
       changingRoom: 'Vestiaire',
       clubHouse: 'Club House',
       dojo: 'Dojo',
-      gym: 'Gymnase',
       footballPitch: 'Terrain de football',
+      gym: 'Gymnase',
       multisportPitch: 'Terrain multisport',
       pitch: 'Terrain',
       pool: 'Piscine',
       rugbyPitch: 'Terrain de rugby',
       skatepark: 'Skatepark',
-      stadium: 'Stade',
       sportsHall: 'Salle de sport',
+      stadium: 'Stade',
       tennisCourt: 'Court de tennis',
       videoRoom: 'Salle vidéo',
     },
