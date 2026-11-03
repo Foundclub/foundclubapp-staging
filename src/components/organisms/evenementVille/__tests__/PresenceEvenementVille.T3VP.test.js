@@ -222,8 +222,12 @@ describe('qui lit les réponses', () => {
 // T3-VILLE-PRESENCE, tranche 2 (03/11, Adel : « la réponse est oui ») : le parent répond pour lui
 // ET pour chacun de ses enfants ; Q8 A : un 13-17 ans répond lui-même, son parent lit.
 describe('le parent, pour ses enfants', () => {
-  const LINA = { documentId: 'fiche-lina', peutRepondre: true, prenom: 'Lina', reponse: null };
-  const NOAH = { documentId: 'u-noah', peutRepondre: false, prenom: 'Noah', reponse: null };
+  const LINA = {
+    documentId: 'fiche-lina', peutRepondre: true, prenom: 'Lina', reponse: null,
+  };
+  const NOAH = {
+    documentId: 'u-noah', peutRepondre: false, prenom: 'Noah', reponse: null,
+  };
   const boutonEnfant = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
     .findAll((/** @type {any} */ n) => n.props.testID === testID && n.props.onPress)[0];
   const parent = (/** @type {any[]} */ enfants, etat = 'ouverte') => fiche({
@@ -263,7 +267,9 @@ describe('le parent, pour ses enfants', () => {
       deLaVille: false,
       evenement: parent([
         NOAH,
-        { ...NOAH, documentId: 'u-ines', prenom: 'Inès', reponse: 'present' },
+        {
+          ...NOAH, documentId: 'u-ines', prenom: 'Inès', reponse: 'present',
+        },
       ]),
     });
     expect(boutonEnfant(arbre, 'presence-enfant-u-noah-present')).toBeUndefined();
@@ -295,7 +301,9 @@ describe('le parent, pour ses enfants', () => {
     mockGetReponses.mockResolvedValue({
       data: {
         club: 'AS Ville A',
-        reponses: [{ fonction: 'membre', nom: 'Lina', pourEnfant: true, reponse: 'present' }],
+        reponses: [{
+          fonction: 'membre', nom: 'Lina', pourEnfant: true, reponse: 'present',
+        }],
         totaux: { absent: 0, present: 1 },
         vue: 'club',
       },

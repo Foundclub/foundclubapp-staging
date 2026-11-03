@@ -119,7 +119,9 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
     if (!enfants.length) return null;
     const ouverte = presence.etat !== 'annulee' && presence.etat !== 'terminee';
     return enfants.map((/** @type {any} */ enfant) => {
-      const { documentId, peutRepondre, prenom, reponse: laSienne } = enfant;
+      const {
+        documentId, peutRepondre, prenom, reponse: laSienne,
+      } = enfant;
       const valeurs = {
         mot: laSienne ? motDeLaReponse(laSienne).toLowerCase() : '',
         prenom,
