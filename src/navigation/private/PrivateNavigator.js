@@ -1336,7 +1336,7 @@ function PrivateNavigator() {
           name={RouteNames.CollectiviteInviteClub}
           options={{
             ...commonOptions,
-            headerTitle: t('collectiviteClubs.invite.header', 'Inviter un club'),
+            headerTitle: t('collectiviteClubs.invite.header', 'Ajouter un club'),
           }}
         />
         <Stack.Screen

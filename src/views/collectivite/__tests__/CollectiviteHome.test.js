@@ -524,7 +524,7 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
 //     serveur la rend depuis C3B (`requesterFunction`), l'écran « Demandes » la disait déjà ;
 //   - les SIX actions de la planche, dans son ordre, chacune vers son VRAI écran : « Attribuer un
 //     créneau » (C2b : les créneaux de l'installation, ou la liste s'il y en a plusieurs) et
-//     « Inviter un club » (C-CLUBS) manquaient ;
+//     « Ajouter un club » (C-CLUBS) manquaient ;
 //   - sur ordinateur : les six actions en UNE rangée, l'icône à gauche du titre ; la colonne
 //     « Ce qui vous attend » montre la 2e demande en carte compacte, sans boutons.
 // ROUGES avant le lot.
@@ -562,7 +562,7 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     const arbre = await monter();
     expect(actionsAffichees(arbre)).toEqual(ORDRE_DE_LA_PLANCHE);
     expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Attribuer un créneau', 'Inviter un club', 'Ajouter un événement',
+      'Attribuer un créneau', 'Ajouter un club', 'Ajouter un événement',
     ]));
   });
 
@@ -589,7 +589,7 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
       .toHaveBeenLastCalledWith('CollectiviteEvenement', { collectiviteId: 'ville-montrivage' });
   });
 
-  it('« Inviter un club » ouvre l invitation de CETTE Ville (le lien, lot C-CLUBS)', async () => {
+  it('« Ajouter un club » ouvre l invitation de CETTE Ville (le lien, lot C-CLUBS)', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'collectivite-home-action-inviteClub');
     expect(mockNavigate)
@@ -1165,14 +1165,14 @@ describe('FINITIONS-VILLE — « Cette semaine » : des lignes qui s’ouvrent, 
   });
 });
 
-// 🏛️ R17-INVITER (19/10, tri du chef, point 4 « OUI ») — « Inviter un club » ouvre désormais la
+// 🏛️ R17-INVITER (19/10, tri du chef, point 4 « OUI ») — « Ajouter un club » ouvre désormais la
 // recherche de club habituelle (et le lien discret pour un club absent) : son sous-titre ne parle
 // plus du seul « club absent de FoundClub ».
-describe('R17-INVITER — le raccourci « Inviter un club »', () => {
+describe('R17-INVITER — le raccourci « Ajouter un club »', () => {
   it('dit ce qu’il ouvre : « Le trouver sur FoundClub, ou l’inviter. »', async () => {
     const arbre = await monter();
     const lus = textes(arbre);
-    expect(lus).toContain('Inviter un club');
+    expect(lus).toContain('Ajouter un club');
     expect(lus).toContain('Le trouver sur FoundClub, ou l’inviter.');
     expect(lus).not.toContain('Un club de la commune absent de FoundClub.');
   });

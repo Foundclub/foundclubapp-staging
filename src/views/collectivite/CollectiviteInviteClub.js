@@ -467,7 +467,7 @@ function CollectiviteInviteClub() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        {enTete(t('collectiviteClubs.invite.title', 'Inviter un club absent de FoundClub'))}
+        {enTete(t('collectiviteClubs.invite.title', 'Ajouter un club absent de FoundClub'))}
         <SegmentedControl
           onChange={(/** @type {string} */ valeur) => setOnglet(
             valeur === 'foundclub' ? 'foundclub' : 'lien',

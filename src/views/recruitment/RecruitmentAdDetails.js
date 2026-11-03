@@ -70,6 +70,7 @@ import {
   getClubCertificationPalette,
   isVerifiedClub,
 } from '@/utils/clubCertification';
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveRecruitmentAdLocation } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import {
@@ -720,25 +721,28 @@ function RecruitmentAdDetails() {
   };
 
   if (!ad) {
+    // T3-TEXTES (03/11) : une annonce disparue (404) n'est pas une panne à recharger, et le message
+    // brut du serveur (« Not Found ») n'est jamais montré.
+    const enPanne = Boolean(adError) && getErrorStatus(adError) !== 404;
     let adStatusTitle = t('recruitmentAdDetails.state.notFound', 'Annonce introuvable');
     if (isLoading) {
       adStatusTitle = t('recruitmentAdDetails.state.loading', 'Chargement...');
-    } else if (adError) {
+    } else if (enPanne) {
       adStatusTitle = t('recruitmentAdDetails.state.loadError', 'Chargement impossible');
     }
     return (
       <ScreenContainerView bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.padding[16], { gap: 12 }]}>
-          <Text style={[Fonts.h3, { color: adError ? Colors.error500 : Colors.neutral100 }]}>
+          <Text style={[Fonts.h3, { color: enPanne ? Colors.error500 : Colors.neutral100 }]}>
             {adStatusTitle}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-            {adError?.message || t(
+            {t(
               'recruitmentAdDetails.state.unavailableBody',
               'Cette annonce n est plus disponible ou n a pas pu être chargée.',
             )}
           </Text>
-          {adError ? (
+          {enPanne ? (
             <Button
               onPress={() => refetchAd()}
               title={t('recruitmentAdDetails.state.reload', 'Recharger')}

@@ -13,7 +13,7 @@ import CollectiviteInviteClub from '../CollectiviteInviteClub';
 //     « Partager… », et « Changer le lien » qui demande confirmation avant d'agir ;
 //   - « Par FoundClub » : le nom et le contact général du club, transmis à l'équipe FoundClub
 //     (le serveur enregistre une demande, aucun e-mail) ; rien ne part tant qu'un champ est vide ;
-//   - « Clubs rattachés » : « Inviter un club absent de FoundClub » ouvre cet écran, et SOUS la
+//   - « Clubs rattachés » : « Ajouter un club absent de FoundClub » ouvre cet écran, et SOUS la
 //     liste, les invitations en cours avec leur état (Envoyée, Inscrit, Rattaché) et « Relancer ».
 
 /** @type {any} */
@@ -188,7 +188,7 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
   it('par un lien : le lien de la Ville, sa page publique sur le site', async () => {
     const lus = textes(await monter(CollectiviteInviteClub));
     expect(lus).toEqual(expect.arrayContaining([
-      'Inviter un club absent de FoundClub',
+      'Ajouter un club absent de FoundClub',
       LIEN,
       'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment : l’ancien ne marche plus.',
     ]));
@@ -243,7 +243,6 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
   // ouvre cet écran (onglet « Déjà sur FoundClub »), où « Par FoundClub » invite un club absent.
   it('« Clubs rattachés » : « Ajouter un club » ouvre cet écran, depuis l’état vide', async () => {
     const arbre = await monter(CollectiviteClubs);
-    expect(bouton(arbre, 'Inviter un club')).toBeUndefined();
     await act(async () => { bouton(arbre, 'Ajouter un club').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInviteClub', {
       collectiviteId: 'ville-de-recette',
@@ -292,7 +291,7 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
     expect(relancer).toHaveLength(1);
     await act(async () => { relancer[0].props.onPress(); });
     expect(mockRelancer.mutate).toHaveBeenCalledWith({ collectiviteId: 'ville-de-recette', invitationId: 'i1' });
-    // COLL-R-A6 (13/10, D1 A′) : le bouton en pointillés « Inviter un club absent » a laissé la
+    // COLL-R-A6 (13/10, D1 A′) : le bouton en pointillés « Ajouter un club absent » a laissé la
     // place au seul « Ajouter un club » (au-dessus des clubs).
     expect(parTestID(arbre, 'collectivite-clubs-inviter')).toBeUndefined();
     await act(async () => { bouton(arbre, 'Ajouter un club').props.onPress(); });

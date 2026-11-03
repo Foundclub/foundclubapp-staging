@@ -4752,7 +4752,7 @@ export default {
       },
       inviteClub: {
         dit: 'Find it on FoundClub, or invite it.',
-        titre: 'Invite a club',
+        titre: 'Add a club',
       },
       publishNews: {
         dit: 'Read by every member of your clubs.',
@@ -5416,7 +5416,7 @@ export default {
       copy: 'Copy the link',
       copyFailed: 'Copy failed: select the link above.',
       foundclubIntro: 'FoundClub invites it on behalf of the town. Once registered, the FoundClub team attaches it to you.',
-      header: 'Invite a club',
+      header: 'Add a club',
       linkHint: 'The same link works for every club. You can change it at any time: the old one stops working.',
       linkIntro: 'A club is not on FoundClub yet? Send it the link of {{ville}}: it registers its club and asks to join you; you accept its request in your clubs.',
       linkLabel: 'The town’s invitation link',
@@ -5426,7 +5426,7 @@ export default {
       shareFailed: 'Sharing could not open: copy the link.',
       shareMessage: '{{ville}} invites you to register your club on FoundClub: {{adresse}}',
       shareTitle: 'Invitation from the town on FoundClub',
-      title: 'Invite a club that is not on FoundClub',
+      title: 'Add a club that is not on FoundClub',
     },
     join: {
       alreadyAttachedBody: 'It is already attached to {{ville}}.',
@@ -5465,9 +5465,9 @@ export default {
     list: {
       emptyHint: 'The FoundClub team attaches the clubs of the town. A club is missing? Add it.',
       error: 'The clubs could not be loaded.',
-      invite: 'Invite a club that is not on FoundClub',
-      inviteDesktop: 'Invite a missing club',
-      inviteShort: 'Invite a club',
+      invite: 'Add a club that is not on FoundClub',
+      inviteDesktop: 'Add a missing club',
+      inviteShort: 'Add a club',
       openHint: 'Opens the club page.',
       retry: 'Try again',
       titleError: 'Attached clubs',
@@ -6969,8 +6969,9 @@ export default {
     },
     club: {
       accept: 'Accept',
-      accepted: '{{sujet}} accepted your request.',
       attached: 'Your club is attached to {{ville}}.',
+      // eslint-disable-next-line max-len
+      attachedElsewhere: '{{sujet}} offers to attach your club, but it is already attached to another city.',
       cancelMine: 'Cancel my request',
       kicker: 'Attachment to the town',
       noLongerAttached: 'Your club is no longer attached to {{ville}}.',
@@ -6982,7 +6983,6 @@ export default {
       refuseConfirm: 'Decline the request from {{ville}}? Your club will not be attached; it can send it again later.',
       refused: '{{sujet}} did not accept your attachment request.',
       refuseYes: 'Yes, decline',
-      youAccepted: 'You accepted the request from {{ville}}.',
       youRefused: 'You declined the request from {{ville}}.',
     },
     demandes: {

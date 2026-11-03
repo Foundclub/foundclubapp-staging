@@ -59,7 +59,7 @@ import { useIsDesktop } from '@/responsive';
  * ⛔ Jamais une autre personne (SPEC §2 H) : le serveur ne rend ni membre, ni coordonnee
  * personnelle (temoins admin COLL1C C12 et COLL-CLUBS K2) ; cet ecran n affiche que ce qu il
  * recoit. Un nombre illisible s affiche « — », jamais 0.
- * COLL-CLUBS (planche 3) : « Inviter un club absent de FoundClub » (en bas de liste ; en tete
+ * COLL-CLUBS (planche 3) : « Ajouter un club absent de FoundClub » (en bas de liste ; en tete
  * sur ordinateur ; dans l etat vide), et SOUS la liste, les invitations en cours : envoyee,
  * inscrit, rattache, avec « Relancer ».
  * COLL-C4A2 (02/10) : sur chaque club, « Ecrire aux dirigeants » (D73, la conversation privee de

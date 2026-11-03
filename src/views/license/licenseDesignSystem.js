@@ -515,7 +515,7 @@ export function LicenseEmptyState({ action, description, title }) {
   return (
     <LicenseCard variant="muted">
       <View style={Spaces.gap[licenseSpacing.actionGap]}>
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{title}</Text>
+        {title ? <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{title}</Text> : null}
         <Text style={[Fonts.p2, Fonts.neutral200]}>{description}</Text>
         {action || null}
       </View>

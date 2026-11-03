@@ -229,9 +229,11 @@ export const ligneDeDemandeDuClub = (t, demande) => {
         valeurs,
       );
     }
+    // T3-TEXTES (03/11) : `accepted` est traité plus haut. Reste la proposition qui attend sans
+    // que le club puisse répondre (canAnswer faux) : il est déjà rattaché ailleurs.
     return t(
-      'collectiviteRattachement.club.youAccepted',
-      'Tu as accepté la demande de {{ville}}.',
+      'collectiviteRattachement.club.attachedElsewhere',
+      '{{sujet}} propose de rattacher ton club, mais il est déjà rattaché à une autre Ville.',
       valeurs,
     );
   }

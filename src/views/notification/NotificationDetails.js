@@ -223,12 +223,15 @@ function NotificationDetails() {
           },
         ]}
       >
-        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-          {isLoading
-            ? t('common.loading', 'Chargement...')
-            : cardTitle}
-        </Text>
-        <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 8 }]}>
+        {/* T3-TEXTES (03/11) : la barre dit déjà ce titre, la carte ne le répète pas. */}
+        {isLoading || cardTitle !== screenTitle ? (
+          <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+            {isLoading
+              ? t('common.loading', 'Chargement...')
+              : cardTitle}
+          </Text>
+        ) : null}
+        <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
           {subtitleText}
         </Text>
 
