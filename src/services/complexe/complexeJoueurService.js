@@ -11,12 +11,21 @@
  * ⚠️ NON LIVRÉ (ni recette ni production, 14/10) : tout ce qui appelle ce module est caché par
  * l'interrupteur `COMPLEXES_JOUEUR` (`src/config/fonctionsMasquees.js`).
  *
- * Le client HTTP est IMPORTÉ, jamais chargé par `require` : le site compile ce fichier et le
- * navigateur n'a pas `require` (témoin `views/reserverTerrain/__tests__/site.sansRequire.test.js`).
+ * Le client HTTP passe par `./complexeChargeurs`, comme `complexeService.js` : T3-RESA-PLANNING
+ * (03/11) fait lire ces routes par le planning, et un import en tête faisait tomber au chargement
+ * 25 suites de témoins sans `.env` (« API_URL is missing »). Le site prend le jumeau `.web.js`,
+ * sans `require` (témoin `views/reserverTerrain/__tests__/site.sansRequire.test.js`).
  *
  * Témoin : `__tests__/complexeJoueurService.test.js`.
  */
-import client from '../client';
+import { client as chargerLeClient } from './complexeChargeurs';
+
+/** Le client HTTP, chargé à l'appel de chaque route. */
+const client = {
+  delete: (/** @type {any[]} */ ...args) => chargerLeClient().delete(...args),
+  get: (/** @type {any[]} */ ...args) => chargerLeClient().get(...args),
+  post: (/** @type {any[]} */ ...args) => chargerLeClient().post(...args),
+};
 
 /**
  * Le corps d'une réponse.

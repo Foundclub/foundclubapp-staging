@@ -6,6 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import { joueurDesComplexesAllume } from '@/domains/complexe/reservationsDuJoueur';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -14,6 +15,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useMaReservation } from '@/services/complexe/complexeJoueurQueries';
 import {
   getNotificationById,
   markAsRead,
@@ -108,6 +110,7 @@ function NotificationDetails() {
       notificationId,
       read: Boolean(notification.read),
       reason,
+      reservationId: toEntityId(data.reservationId),
       status,
       title,
       type,
@@ -175,6 +178,12 @@ function NotificationDetails() {
   // ne
   // montre que les événements : la fiche dit le créneau elle-même, puis ouvre le planning.
   const estUneReservation = details.type === 'complexeReservationJoueur';
+  // T3-RESA-PLANNING (03/11, « 9- A ») : le bouton ouvre le planning au jour de la réservation,
+  // pour qu'elle soit à l'écran. Sans date lue (panne, réservation retirée) : le planning du jour.
+  const { data: reservation } = useMaReservation(
+    estUneReservation && joueurDesComplexesAllume() ? details.reservationId : null,
+  );
+  const jourDeLaReservation = reservation?.date || null;
   const libelleDeLaDate = isParticipationDeclined
     ? t('notifications.details.participationDeclined.labels.decisionDate', 'Date')
     : t('notifications.details.receivedAt', 'Reçue le');
@@ -315,7 +324,10 @@ function NotificationDetails() {
             // Un onglet : depuis la racine, il se nomme par `HomeTab` (filet allerDansLOnglet).
             onPress={() => navigation.navigate(
               RouteNames.HomeTab,
-              { screen: RouteNames.MyEventList },
+              {
+                ...(jourDeLaReservation ? { params: { date: jourDeLaReservation } } : {}),
+                screen: RouteNames.MyEventList,
+              },
               { pop: true },
             )}
             title={t('notifications.details.viewPlanning', 'Voir mon planning')}

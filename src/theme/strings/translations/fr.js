@@ -17869,6 +17869,10 @@ export default {
       weekShort: 'Semaine',
     },
     noEventsForDate: 'Aucun événement ce jour-là',
+    reservationTerrain: {
+      collecte: 'Collecte · {{complexe}}',
+      demande: 'Demande · {{complexe}}',
+    },
     status: {
       pendingParticipation: 'Demande en attente',
     },

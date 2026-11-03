@@ -17240,6 +17240,10 @@ export default {
       weekShort: 'Week',
     },
     noEventsForDate: 'No events on this day',
+    reservationTerrain: {
+      collecte: 'Collecting · {{complexe}}',
+      demande: 'Request · {{complexe}}',
+    },
     status: {
       pendingParticipation: 'Request pending',
     },
