@@ -298,6 +298,7 @@ function PlanningCalendarDay({
  * @param {{
  *   closures?: Array<any>;
  *   compterLesSeances?: ((count: number) => string) | null;
+ *   legendeDesPoints?: boolean;
  *   currentDate?: Date;
  *   events?: Array<any>;
  *   onDateSelect?: (date: Date) => void;
