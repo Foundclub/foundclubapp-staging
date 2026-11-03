@@ -1,5 +1,5 @@
 import { useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -39,6 +39,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import {
@@ -267,6 +268,7 @@ function BoutonDeSemaine({ etiquette, icone, onPress }) {
  */
 function CollectiviteChiffres() {
   const { t } = useTranslation();
+  const sousUneBarreDuSite = useContext(BarreDeTitreDuSiteContext);
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -597,14 +599,17 @@ function CollectiviteChiffres() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        <View style={{ gap: 2 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
-            {t('collectiviteChiffres.surtitre', 'Planning')}
-          </Text>
-          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('collectiviteChiffres.titre', 'Chiffres')}
-          </Text>
-        </View>
+        {/* RET-FENETRES (02/11, fiche 22) : sur le site, le titre est dans la barre fine. */}
+        {sousUneBarreDuSite ? null : (
+          <View style={{ gap: 2 }}>
+            <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+              {t('collectiviteChiffres.surtitre', 'Planning')}
+            </Text>
+            <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+              {t('collectiviteChiffres.titre', 'Chiffres')}
+            </Text>
+          </View>
+        )}
         <View
           style={[
             isDesktop ? Alignments.row : null,

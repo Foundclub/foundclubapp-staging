@@ -90,6 +90,21 @@ describe('CORR-SOCLE — barre de titre fine du site', () => {
       </BarreDeTitreDuSite>,
     ))).toBe(0);
   });
+
+  // RET-FENETRES (fiche 22) : la barre + une page d'une pleine hauteur = 56 px de trop, et le pied
+  // fixe du signalement passait sous la barre d'onglets (r17ss1, test 4).
+  test('sous la barre, le minimum de page lui laisse ses 56 px ; ailleurs, inchangé', () => {
+    const minimum = (/** @type {any} */ arbre) => aplatir(arbre.root.findAllByType(View)
+      .find((/** @type {any} */ v) => 'minHeight' in aplatir(v.props.style))
+      .props.style).minHeight;
+    expect(minimum(rendre(<ScreenContainerWeb><Text>A</Text></ScreenContainerWeb>)))
+      .toBe('calc(100dvh - var(--fc-shell-bottom-space, 0px))');
+    expect(minimum(rendre(
+      <BarreDeTitreDuSite cleDuTitre="">
+        <ScreenContainerWeb><Text>A</Text></ScreenContainerWeb>
+      </BarreDeTitreDuSite>,
+    ))).toBe('calc(100dvh - var(--fc-shell-bottom-space, 0px) - 56px)');
+  });
 });
 
 // REPRISE-PLACE (01/11, point 7, revue « mettre le nom de la page dans la barre fine ») — la fiche
