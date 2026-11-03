@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { Platform } from 'react-native';
 
 import { exampleMatch } from '@/domains/tour/tourExamples';
 
@@ -354,7 +355,11 @@ const STEPS = [
     missionId: 'coach_m1',
     navTarget: homeTarget,
     targets: ['dock.teams'],
-    get text() { return t('m1-dock', 'Commence par ton équipe. Ouvre l’onglet Équipes.'); },
+    get text() {
+      return Platform.OS === 'web'
+        ? t('m1-dock-site', 'Commence par ton équipe. Ouvre l’onglet entouré.')
+        : t('m1-dock', 'Commence par ton équipe. Ouvre l’onglet Équipes.');
+    },
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !isTeamJoinPending(ctx),
   },
   {
@@ -603,7 +608,11 @@ const STEPS = [
     // FIN-GUIDE, point 1 : M1 validée d'emblée, on est encore sur l'accueil : on montre le chemin.
     fallback: {
       targets: ['dock.teams'],
-      get text() { return t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.'); },
+      get text() {
+        return Platform.OS === 'web'
+          ? t('m1-find-dock-site', 'Ton équipe est déjà là : ouvre l’onglet entouré.')
+          : t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.');
+      },
     },
     id: 'm2-card',
     missionId: 'coach_m2',
@@ -900,6 +909,8 @@ const STEPS = [
     resumeFrom: 'm4-back',
     targets: ['search.tab.clubs'],
     get text() { return t('m4-tab-club', 'Les événements. Ouvre maintenant « Club ».'); },
+    // T3-GUIDE-SITE : sur le site, « Club » mène à l'annuaire public, sans « Matchs amicaux ».
+    when: () => Platform.OS !== 'web',
   },
   {
     advanceOn: { key: 'search.tab.amicaux', type: 'interaction' },
@@ -908,7 +919,11 @@ const STEPS = [
     missionId: 'coach_m4',
     resumeFrom: 'm4-back',
     targets: ['search.tab.amicaux'],
-    get text() { return t('m4-tab-fr', 'Les clubs. Dernier onglet : « Matchs amicaux ».'); },
+    get text() {
+      return Platform.OS === 'web'
+        ? t('m4-tab-fr-site', 'Les événements. Dernier onglet : « Matchs amicaux ».')
+        : t('m4-tab-fr', 'Les clubs. Dernier onglet : « Matchs amicaux ».');
+    },
   },
   {
     advanceOn: { key: RouteNames.FriendlyMatchWizardTeam, type: 'route' },

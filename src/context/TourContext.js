@@ -26,6 +26,7 @@ import {
 import { storage } from '@/store/appContext';
 
 import { navigate as navigateRoot } from '@/navigation/navigationService';
+import { RouteNames } from '@/navigation/routeNames';
 
 import { TourContext, useTour } from './useTour';
 
@@ -86,6 +87,23 @@ const getOfferDeclinedKey = (userId) => `tourOfferDeclined_${String(userId || 'a
 const isGuideProfile = (profile) => profile?.version === GUIDE_VERSION;
 
 /**
+ * T3-GUIDE-SITE : le site n'a pas d'onglets imbriqués. Il va à l'écran final, et son accueil est
+ * `HomeTab` là où celui du téléphone est `SearchHome`.
+ * @param {string} routeName - Route de la cible.
+ * @param {any} params - Paramètres, avec `screen` s'ils en imbriquent une autre.
+ * @returns {[string, any]} Route et paramètres du site.
+ */
+const flattenForSite = (routeName, params) => {
+  let route = routeName;
+  let rest = params;
+  while (rest?.screen) {
+    route = rest.screen;
+    rest = rest.params;
+  }
+  return [route === RouteNames.SearchHome ? RouteNames.HomeTab : route, rest];
+};
+
+/**
  * @param {any} target
  * @param {any} context
  * @param {{ pop?: boolean }} [options] - Options de navigation.
@@ -97,6 +115,10 @@ const navigateToTarget = (target, context, options) => {
   // GUIDE-BONUS (L5) : une cible `pop` revient en DÉPILANT (sinon react-navigation 7
   // empile un doublon de l'accueil au-dessus de l'écran quitté).
   const navOptions = options || (target.pop ? { pop: true } : null);
+  if (Platform.OS === 'web') {
+    const [siteRoute, siteParams] = flattenForSite(target.routeName, params);
+    return Boolean(navigateRoot(siteRoute, siteParams));
+  }
   return Boolean(navOptions
     ? navigateRoot(target.routeName, params, navOptions)
     : navigateRoot(target.routeName, params));

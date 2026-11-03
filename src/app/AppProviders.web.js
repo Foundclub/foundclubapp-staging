@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -12,8 +13,8 @@ const TourGuideLayer = GUIDE_SUR_LE_SITE
   ? React.lazy(() => import('@/components/molecules/tour/TourGuideLayer'))
   : null;
 
-// La couche se place en coordonnées de la fenêtre, comme les mesures des ancres. Au-dessus des
-// feuilles et des fenêtres du site, comme sur le téléphone.
+// La couche se place en coordonnées de la fenêtre, comme les mesures des ancres. Portée dans `body`
+// pour passer au-dessus des feuilles du site, elles aussi portées là, comme sur le téléphone.
 const GUIDE_LAYER_STYLE = {
   bottom: 0, left: 0, position: 'fixed', right: 0, top: 0, zIndex: 100000,
 };
@@ -33,14 +34,17 @@ function AppProvidersWeb({ children, queryClient }) {
       /** @type {any} */ (SharedAppProviders),
       { queryClient },
       children,
-      TourGuideLayer ? React.createElement(
-        View,
-        { pointerEvents: 'box-none', style: /** @type {any} */ (GUIDE_LAYER_STYLE) },
+      TourGuideLayer ? createPortal(
         React.createElement(
-          React.Suspense,
-          { fallback: null },
-          React.createElement(TourGuideLayer),
+          View,
+          { pointerEvents: 'box-none', style: /** @type {any} */ (GUIDE_LAYER_STYLE) },
+          React.createElement(
+            React.Suspense,
+            { fallback: null },
+            React.createElement(TourGuideLayer),
+          ),
         ),
+        document.body,
       ) : null,
     ),
   );

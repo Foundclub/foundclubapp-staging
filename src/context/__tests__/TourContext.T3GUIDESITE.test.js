@@ -12,7 +12,10 @@ jest.mock('@/config/fonctionsMasquees', () => Object.defineProperty(
   'GUIDE_SUR_LE_SITE',
   { get: () => mockFlag },
 ));
-jest.mock('@/navigation/navigationService', () => ({ navigate: jest.fn(() => true) }));
+const mockNavigate = jest.fn(() => true);
+jest.mock('@/navigation/navigationService', () => ({
+  navigate: (...args) => mockNavigate(...args),
+}));
 
 let mockUserData;
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -102,11 +105,35 @@ describe('Interrupteur allumé : le guide part sur le site', () => {
     expect(mockStore.get('tourGuideDone_coach-1')).toBe('1');
   });
 
+  it('le départ va à l accueil du site, pas à un onglet imbriqué du téléphone', () => {
+    mockNavigate.mockClear();
+    mount();
+    act(() => { tour.startTour('coach'); });
+    expect(mockNavigate).toHaveBeenCalled();
+    mockNavigate.mock.calls.forEach(([route, params]) => {
+      expect(route).not.toBe('SearchHome');
+      expect(params?.screen).toBeUndefined();
+    });
+  });
+
   it('un ancien tour v2 (dirigeant) reste refusé : sa bannière n est pas sur le site', () => {
     mount();
     let parti;
     act(() => { parti = tour.startTour('president'); });
     expect(parti).toBe(false);
     expect(tour.isTourActive).toBe(false);
+  });
+});
+
+describe('Mission 4 sur le site', () => {
+  beforeEach(() => { mockFlag = true; });
+
+  it('saute l onglet « Club » : l annuaire public n a pas « Matchs amicaux »', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const etape = COACH_GUIDE.steps.find((step) => step.id === 'm4-tab-club');
+    expect(etape.when({})).toBe(false);
+    const dernier = COACH_GUIDE.steps.find((step) => step.id === 'm4-tab-fr');
+    expect(dernier.text).toContain('Matchs amicaux');
+    expect(dernier.text).not.toContain('Les clubs');
   });
 });

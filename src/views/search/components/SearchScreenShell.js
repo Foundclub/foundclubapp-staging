@@ -1,13 +1,16 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import useTheme from '@/theme/themeContext';
 
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -17,6 +20,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SearchTypeSwitcher from '@/components/molecules/searchTypeSwitcher/SearchTypeSwitcher';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { EnTeteDeRechercheContext } from '@/views/search/components/enTeteDeRecherche';
+import { getSearchHubGuidanceSignalKey } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -59,6 +63,13 @@ function SearchScreenShell({
   tutorialSteps,
   types,
 }) {
+  // T3-GUIDE-SITE : sur le site, chaque onglet est sa propre page ; `SearchHubScreen`, qui prévient
+  // le guide sur le téléphone, n'y est pas monté.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isGuideSupported()) return;
+    emitGuidanceInteraction(getSearchHubGuidanceSignalKey(activeType));
+  }, [activeType]);
+
   const {
     Alignments,
     Spaces,
