@@ -21,7 +21,7 @@ import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
-import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
+import { libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
@@ -4106,10 +4106,7 @@ function Conversation({ navigation, route }) {
     // (la regle du telephone, « genre A »). Absent : rien ne s affiche.
     const cleDuRole = message?.sender?.staffRole
       || rolesDuStaff?.[getEntityDocumentId(message?.sender)];
-    const roleDuStaff = {
-      dirigeant: i18next.t('conversation.staffRole.dirigeant', 'Dirigeant'),
-      entraineur: i18next.t('conversation.staffRole.entraineur', 'Coach / Prof'),
-    }[String(cleDuRole || '')] || '';
+    const roleDuStaff = mentionDuFil(cleDuRole, i18next.t.bind(i18next));
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo

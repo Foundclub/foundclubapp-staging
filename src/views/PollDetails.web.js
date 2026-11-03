@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
@@ -128,10 +129,12 @@ function PollDetails({ navigation, route }) {
       map.set(userId, {
         avatarUrl: getImageUrl(user?.avatar?.url || ''),
         displayName: getDisplayName(user),
+        // T3-PARENT-FIL — « Parent de Lina » à côté du nom.
+        mention: mentionDuFil(pollVoterProfiles?.get?.(userId)?.staffRole, t),
       });
     });
     return map;
-  }, [chatData, messagesPages?.pages, pollVoterProfiles, userData]);
+  }, [chatData, messagesPages?.pages, pollVoterProfiles, t, userData]);
 
   const resolveVoterProfile = useCallback((voterId) => {
     return voterDirectory.get(String(voterId || '').trim()) || {
@@ -368,7 +371,7 @@ function PollDetails({ navigation, route }) {
                                     </span>
                                   </div>
                                 )}
-                                <span>{voter.displayName}</span>
+                                <span>{voter.mention ? `${voter.displayName} · ${voter.mention}` : voter.displayName}</span>
                               </div>
                             ))}
                           </div>

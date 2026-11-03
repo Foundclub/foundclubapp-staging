@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -258,6 +259,8 @@ function PollDetails({ navigation, route }) {
           || t('pollDetails.member', 'Membre'),
         firstname,
         lastname,
+        // T3-PARENT-FIL — « Parent de Lina » à côté du nom.
+        mention: mentionDuFil(pollVoterProfiles?.get?.(userId)?.staffRole, t),
       });
     });
     return directory;
@@ -576,7 +579,7 @@ function PollDetails({ navigation, route }) {
                           style={{ borderRadius: 18 }}
                         />
                         <Text style={[styles.nomDuVotant, { color: Colors.neutral00 }]}>
-                          {displayLabel}
+                          {voter.mention ? `${displayLabel} · ${voter.mention}` : displayLabel}
                         </Text>
                       </View>
                     );

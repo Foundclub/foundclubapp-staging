@@ -51,3 +51,24 @@ export const libelleDuRole = (nomDuRole, t, repli) => {
   });
   return libelles[clefDuRole(nomDuRole)] || (repli ?? t('conversation.group.member', 'Membre'));
 };
+
+/**
+ * MSG1A / T3-PARENT-FIL (NOTE-60) — LA MENTION À CÔTÉ DU NOM dans un fil : « Dirigeant », « Coach /
+ * Prof », ou « Parent de Lina » pour le parent d'un enfant de moins de 13 ans (clef du serveur
+ * `parent:Lina`). Clef absente ou inconnue : rien.
+ * @param {unknown} cle - `sender.staffRole` ou `chat.staffRoles[...]`.
+ * @param {(cle: string, repli: string, options?: Record<string, unknown>) => string} t
+ * @returns {string}
+ */
+export const mentionDuFil = (cle, t) => {
+  const valeur = String(cle || '');
+  if (valeur.startsWith('parent:')) {
+    return t('conversation.staffRole.parentDe', 'Parent de {{prenoms}}', {
+      prenoms: valeur.slice('parent:'.length),
+    });
+  }
+  return /** @type {Record<string, string>} */ ({
+    dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
+    entraineur: t('conversation.staffRole.entraineur', 'Coach / Prof'),
+  })[valeur] || '';
+};
