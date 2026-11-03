@@ -56,6 +56,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
@@ -239,6 +240,10 @@ const compareTeamsByAgeCategoryDesc = (teamA, teamB) => {
   const nameB = String(teamB?.name || '').trim();
   return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
 };
+
+// BOUTONS-FLOTTANTS (03/11) : connecté, la coque du site garde sa barre d'onglets sur l'annuaire.
+// ponytail: hauteur mesurée à 390 (haut à 774 pour 844), écrite ici ; sortie : la lire dans la coque.
+const BARRE_D_ONGLETS_DU_SITE = 70;
 
 // ANNUAIRE-E1 — sur l'annuaire du site, au-delà de cette largeur, les deux boutons « Je joue » /
 // « Je dirige » quittent le bas de l'écran pour une colonne à droite (planche « ordinateur »).
@@ -2225,13 +2230,6 @@ function ClubDetails({ navigation, route }) {
     styleDuPiedDesActions = [
       Spaces.gap[12],
       Spaces.padding[16],
-      {
-        bottom: 0,
-        left: 0,
-        position: /** @type {any} */ ('fixed'),
-        right: 0,
-        zIndex: 24,
-      },
     ];
   }
   const floatingClubActionButtonStyle = {
@@ -3194,6 +3192,24 @@ function ClubDetails({ navigation, route }) {
       ) : null}
     </PiedFlottant>
   ) : null;
+  // BOUTONS-FLOTTANTS (03/11, contre-recette finale) : sur l'annuaire, rendu dans le corps de la
+  // page : le flou de `.shell-main-immersive` enfermait son `position: fixed`, et le pied restait
+  // en bas de la page, sous la barre d'onglets.
+  let piedHorsDuDefilement = piedDesActionsDansLeDefilement ? null : piedDesActions;
+  if (piedHorsDuDefilement && annuaire && Platform.OS === 'web' && !actionsEnColonne) {
+    piedHorsDuDefilement = (
+      <WebFloatingOverlay
+        style={{
+          bottom: isAuthenticated ? BARRE_D_ONGLETS_DU_SITE : 0,
+          left: 0,
+          right: 0,
+          zIndex: 24,
+        }}
+      >
+        {piedDesActions}
+      </WebFloatingOverlay>
+    );
+  }
 
   // Témoin : __tests__/ClubDetails.ANDROIDBAR3BIS.clavier.test.js.
   return (
@@ -5012,7 +5028,7 @@ function ClubDetails({ navigation, route }) {
           </View>
         </View>
       </BottomModal>
-      {piedDesActionsDansLeDefilement ? null : piedDesActions}
+      {piedHorsDuDefilement}
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={club?.documentId || clubId || null}
