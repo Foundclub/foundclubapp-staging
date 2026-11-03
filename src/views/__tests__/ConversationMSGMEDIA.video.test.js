@@ -586,6 +586,42 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/match.mov');
   });
 
+  // VIDEO-RAME — le sélecteur iOS garde UN rappel : le rappeler deux fois arrête l'app
+  // (RCTTurboModule.mm, LOG(FATAL)). Or il copie la vidéo choisie APRÈS s'être refermé.
+  test('10 — VIDEO-RAME : la galerie en cours de copie ne s ouvre pas une seconde fois', async () => {
+    /** @type {(reponse: object) => void} */
+    let rendre = () => {};
+    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => { rendre = resolve; }));
+    monterLaConversation();
+
+    await appuyerSurLaTuile('photos');
+    expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(1);
+
+    await appuyerSurLaTuile('photos');
+    expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(1);
+    expect(textesDesBandeaux()).toContain('déjà en préparation');
+
+    await act(async () => { rendre({ didCancel: true }); });
+    mockLaunchImageLibrary.mockResolvedValue({ didCancel: true });
+    await appuyerSurLaTuile('photos');
+    expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(2);
+  });
+
+  test('11 — VIDEO-RAME : quitter et revenir pendant la copie ne rouvre pas la galerie', async () => {
+    /** @type {(reponse: object) => void} */
+    let rendre = () => {};
+    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => { rendre = resolve; }));
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+
+    /** @type {any} */ (aDemonter.pop())();
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+    expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(1);
+
+    await act(async () => { rendre({ didCancel: true }); });
+  });
+
   test('9 — une photo reste à sa place après l envoi', async () => {
     mockLaunchImageLibrary.mockResolvedValue({
       assets: [{

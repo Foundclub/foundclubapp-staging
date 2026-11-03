@@ -234,7 +234,9 @@ import { EVENTS } from '@/hooks/useSocket';
 import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
-import { annulerPreparationVideo, oublierFichierVideo, preparerVideo } from '@/platform/media/preparerVideo';
+import {
+  annulerPreparationVideo, oublierFichierVideo, ouvrirGalerieUneSeuleFois, preparerVideo,
+} from '@/platform/media/preparerVideo';
 import {
   readVideoMessageText, VIDEO_MAX_BYTES, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
@@ -2598,15 +2600,29 @@ function Conversation({ navigation, route }) {
     setReplyingTo(null);
   };
 
-  const handlePickMedia = async () => {
+  // VIDEO-RAME — la roue tourne aussi pendant que le téléphone copie le fichier choisi.
+  const ouvrirLaGalerie = useCallback(async () => {
+    setIsUploading(true);
     try {
-      logAttachmentDebug('handlePickMedia open picker');
-      const response = await launchImageLibrary({
+      const ouverture = await ouvrirGalerieUneSeuleFois(() => launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
         selectionLimit: 1,
         ...PHOTO_PICKER_LIMITS,
-      });
+      }));
+      if ('reponse' in ouverture) return ouverture.reponse;
+      showErrorBanner(ouverture.refus);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  }, [showErrorBanner]);
+
+  const handlePickMedia = async () => {
+    try {
+      logAttachmentDebug('handlePickMedia open picker');
+      const response = await ouvrirLaGalerie();
+      if (!response) return;
 
       if (response.didCancel) {
         logAttachmentDebug('handlePickMedia cancelled by user');
@@ -2869,14 +2885,8 @@ function Conversation({ navigation, route }) {
 
   const handleEditPickMedia = useCallback(async () => {
     try {
-      const response = await launchImageLibrary({
-        includeBase64: false,
-        mediaType: 'mixed',
-        selectionLimit: 1,
-        ...PHOTO_PICKER_LIMITS,
-      });
-
-      if (response.didCancel) return;
+      const response = await ouvrirLaGalerie();
+      if (!response || response.didCancel) return;
       if (response.errorCode) {
         showErrorBanner(response.errorMessage || i18n.t(
           'conversation.picker.selectionError',
@@ -2895,7 +2905,7 @@ function Conversation({ navigation, route }) {
         "Impossible d'ouvrir la galerie.",
       ));
     }
-  }, [appendEditAttachmentsFromAsset, showErrorBanner]);
+  }, [appendEditAttachmentsFromAsset, ouvrirLaGalerie, showErrorBanner]);
 
   const handleEditTakePhoto = useCallback(async () => {
     try {

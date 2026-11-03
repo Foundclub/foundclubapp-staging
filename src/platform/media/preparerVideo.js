@@ -23,6 +23,35 @@ import { isVideoMime, VIDEO_MAX_BYTES, videoSizeRefusal } from '@/platform/media
  * Témoin : platform/media/__tests__/VIDEO-RAME.preparerVideo.test.js.
  */
 
+/** La galerie ouverte, ou encore en train de copier le fichier choisi. */
+let galerieEnCours = false;
+
+/** @returns {string} Le refus d'une seconde vidéo pendant que la première se prépare. */
+const texteDejaEnPreparation = () => i18n.t('conversation.video.alreadyPreparing', {
+  defaultValue: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
+});
+
+/**
+ * VIDEO-RAME — Ouvre la galerie, jamais par-dessus elle-même. Le sélecteur iOS se referme PUIS
+ * copie le fichier choisi : plusieurs Go sans rien à l'écran. Ne gardant qu'UN rappel, il
+ * l'appellerait deux fois si on le rouvrait là, ce qui arrête l'app (RCTTurboModule.mm, LOG(FATAL)).
+ * La garde vit hors de l'écran : quitter puis revenir ne la remet pas à zéro.
+ * ponytail: les autres appelants de launchImageLibrary (photos, formulaires) ne passent pas ici ;
+ * leur copie est brève. Une vidéo en copie suivie d'une photo ailleurs reste possible.
+ * @template T
+ * @param {() => Promise<T>} ouvrir
+ * @returns {Promise<{ reponse: T } | { refus: string }>}
+ */
+export const ouvrirGalerieUneSeuleFois = async (ouvrir) => {
+  if (galerieEnCours) return { refus: texteDejaEnPreparation() };
+  galerieEnCours = true;
+  try {
+    return { reponse: await ouvrir() };
+  } finally {
+    galerieEnCours = false;
+  }
+};
+
 /** Côté le plus long d'une vidéo compressée, en pixels (720p : lisible plein écran). */
 export const VIDEO_COMPRESSION_MAX_SIDE = 1280;
 
@@ -35,6 +64,13 @@ const PLANCHER_OCTETS_PAR_SECONDE = (1200000 + 128000) / 8;
 // ponytail: ce débit est une moyenne visée, une image très fixe peut passer dessous. La marge de
 // 2 évite de refuser à tort ; entre 16 et 32 min, le téléphone peut encore travailler pour rien.
 const MARGE_DU_REFUS_D_AVANCE = 2;
+
+/**
+ * Le module natif, chargé à l'appel seulement.
+ * @returns {any}
+ */
+// eslint-disable-next-line global-require
+const moduleDeCompression = () => require('react-native-compressor');
 
 /**
  * La compression en cours : une seule à la fois sur le téléphone.
@@ -98,8 +134,7 @@ export const annulerPreparationVideo = () => {
   preparationEnCours = null;
   if (!id) return;
   try {
-    // eslint-disable-next-line global-require
-    require('react-native-compressor').Video.cancelCompression(id);
+    moduleDeCompression().Video.cancelCompression(id);
   } catch {
     // Le module absent n'a rien à arrêter.
   }
@@ -112,20 +147,13 @@ export const annulerPreparationVideo = () => {
  */
 export const preparerVideo = async (asset) => {
   if (!isVideoMime(asset?.type) || !asset?.uri) return { asset, compressee: false };
-  if (preparationEnCours) {
-    return {
-      refus: i18n.t('conversation.video.alreadyPreparing', {
-        defaultValue: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
-      }),
-    };
-  }
+  if (preparationEnCours) return { refus: texteDejaEnPreparation() };
   if (neTiendraPas(asset)) return { refus: videoSizeRefusal(asset.size) };
 
   const preparation = { annulee: false, id: '' };
   preparationEnCours = preparation;
   try {
-    // eslint-disable-next-line global-require
-    const { getFileSize, Video } = require('react-native-compressor');
+    const { getFileSize, Video } = moduleDeCompression();
     const uri = await Video.compress(String(asset.uri), {
       compressionMethod: 'auto',
       getCancellationId: (/** @type {string} */ id) => { preparation.id = id; },
