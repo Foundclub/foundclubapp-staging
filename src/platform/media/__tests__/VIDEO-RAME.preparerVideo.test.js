@@ -100,10 +100,14 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(resultat).toEqual({ refus: expect.stringContaining('150') });
   });
 
-  test('20 min en 1080p, 1 Go : même plancher, même refus d avance', async () => {
-    const resultat = await preparerVideo(video({ duration: 1200, size: 1024 * MO }));
-    expect(mockCompress).not.toHaveBeenCalled();
-    expect(resultat).toEqual({ refus: expect.any(String) });
+  test('20 min en 1080p, 1 Go : tentée, une image très fixe peut passer sous le plancher', async () => {
+    await preparerVideo(video({ duration: 1200, size: 1024 * MO }));
+    expect(mockCompress).toHaveBeenCalledTimes(1);
+  });
+
+  test('durée inconnue, 10 Go : tentée, on ne refuse pas ce qu on n a pas mesuré', async () => {
+    await preparerVideo(video({ duration: 0, size: 10240 * MO }));
+    expect(mockCompress).toHaveBeenCalledTimes(1);
   });
 
   test('une seule compression à la fois : la seconde est refusée, la première continue', async () => {
@@ -154,6 +158,17 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(mockUnlink).toHaveBeenCalledWith('/tmp/reduit.mp4');
   });
 
+  test('une compression annulée qui ne répond plus ne bloque pas la suivante', async () => {
+    mockCompress.mockImplementationOnce((_uri, options) => {
+      options.getCancellationId('id-muette');
+      return new Promise(() => {});
+    });
+    preparerVideo(video());
+    preparer.annulerPreparationVideo();
+
+    expect(await preparerVideo(video())).toMatchObject({ compressee: true });
+  });
+
   test('annuler sans compression en cours ne fait rien', () => {
     preparer.annulerPreparationVideo();
     expect(mockCancel).not.toHaveBeenCalled();
@@ -173,6 +188,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     mockUnlink.mockClear();
     await preparer.oublierFichierVideo('https://foundclub.app/uploads/a.mp4');
     await preparer.oublierFichierVideo('');
+    await preparer.oublierFichierVideo('file:///var/mobile/Documents/match.mov');
     expect(mockUnlink).not.toHaveBeenCalled();
   });
 

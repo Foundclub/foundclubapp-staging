@@ -22,10 +22,19 @@ let mockChatData;
 // node_modules : `virtual`). Par defaut elle echoue, comme sur un telephone sans le module.
 const mockCompress = jest.fn();
 const mockGetFileSize = jest.fn();
+const mockCancel = jest.fn();
+const mockUnlink = jest.fn();
 jest.mock('react-native-compressor', () => ({
   getFileSize: (/** @type {string} */ uri) => mockGetFileSize(uri),
-  Video: { compress: (/** @type {any[]} */ ...args) => mockCompress(...args) },
+  Video: {
+    cancelCompression: (/** @type {string} */ id) => mockCancel(id),
+    compress: (/** @type {any[]} */ ...args) => mockCompress(...args),
+  },
 }), { virtual: true });
+jest.mock('react-native-blob-util', () => ({
+  __esModule: true,
+  default: { fs: { unlink: (/** @type {string} */ path) => mockUnlink(path) } },
+}));
 
 // Le premier montage de l'écran entier prend jusqu'à 35 s à froid.
 jest.setTimeout(60000);
@@ -394,6 +403,9 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     mockCompress.mockReset();
     mockCompress.mockRejectedValue(new Error('module absent'));
     mockGetFileSize.mockReset();
+    mockCancel.mockReset();
+    mockUnlink.mockReset();
+    mockUnlink.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -511,5 +523,77 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
       name: 'match.mp4', type: 'video/mp4', uri: 'file:///cache/match-reduit.mp4',
     }));
     expect(/** @type {any} */ (mockSendMessage.mock.calls[0])[1]).toBe('Vidéo · 3:00');
+  });
+
+  // VIDEO-RAME (03/11) — la copie de la galerie, telle que l'iPhone la rend.
+  const VIDEO_LOURDE = {
+    duration: 180,
+    fileName: 'match.mov',
+    fileSize: 420 * 1024 * 1024,
+    height: 2160,
+    type: 'video/quicktime',
+    uri: 'file:///var/mobile/app/tmp/match.mov',
+    width: 3840,
+  };
+
+  test('6 — VIDEO-RAME : quitter la conversation arrête la compression, rien ne part', async () => {
+    mockCompress.mockImplementation((_uri, options) => {
+      options.getCancellationId('id-1');
+      return new Promise(() => {});
+    });
+    mockLaunchImageLibrary.mockResolvedValue({ assets: [VIDEO_LOURDE] });
+    monterLaConversation();
+
+    await appuyerSurLaTuile('photos');
+    expect(mockCompress).toHaveBeenCalledTimes(1);
+    expect(mockCancel).not.toHaveBeenCalled();
+
+    /** @type {any} */ (aDemonter.pop())();
+
+    expect(mockCancel).toHaveBeenCalledWith('id-1');
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  test('7 — VIDEO-RAME : après l envoi, ni la copie ni le fichier réduit ne restent', async () => {
+    mockCompress.mockResolvedValue('file:///var/mobile/app/tmp/reduit.mp4');
+    mockGetFileSize.mockResolvedValue(String(38 * 1024 * 1024));
+    mockLaunchImageLibrary.mockResolvedValue({ assets: [VIDEO_LOURDE] });
+    mockPost.mockResolvedValue({
+      data: [{
+        id: 10, mime: 'video/mp4', name: 'match.mp4', url: '/uploads/match.mp4',
+      }],
+    });
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/reduit.mp4');
+    expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/match.mov');
+  });
+
+  test('8 — VIDEO-RAME : une heure de 1080p est refusée sans compresser, sa copie est effacée', async () => {
+    mockLaunchImageLibrary.mockResolvedValue({
+      assets: [{
+        ...VIDEO_LOURDE, duration: 3600, fileSize: 10240 * 1024 * 1024, height: 1080, width: 1920,
+      }],
+    });
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+
+    expect(mockCompress).not.toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(textesDesBandeaux()).toContain('150');
+    expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/match.mov');
+  });
+
+  test('9 — une photo reste à sa place après l envoi', async () => {
+    mockLaunchImageLibrary.mockResolvedValue({
+      assets: [{
+        fileName: 'photo.jpg', fileSize: 1024, type: 'image/jpeg', uri: 'file:///var/mobile/app/tmp/photo.jpg',
+      }],
+    });
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+    expect(mockUnlink).not.toHaveBeenCalled();
   });
 });

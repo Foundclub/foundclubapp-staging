@@ -234,7 +234,7 @@ import { EVENTS } from '@/hooks/useSocket';
 import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
-import { preparerVideo } from '@/platform/media/preparerVideo';
+import { annulerPreparationVideo, oublierFichierVideo, preparerVideo } from '@/platform/media/preparerVideo';
 import {
   readVideoMessageText, VIDEO_MAX_BYTES, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
@@ -744,6 +744,7 @@ function Conversation({ navigation, route }) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
   const uploadInFlightRef = useRef(false);
+  const compressionDeCetEcranRef = useRef(false);
   // MSG1/N5 — la derniere fois qu'on a prevenu le serveur qu'on ecrit.
   const lastTypingStartSentAtRef = useRef(0);
   const closeConversationPrompt = useCallback(() => {
@@ -2510,9 +2511,11 @@ function Conversation({ navigation, route }) {
     return {
       duration: Number(selectedAsset?.duration) || 0,
       fileName: baseName || `media_${Date.now()}.${extension}`,
+      height: Number(selectedAsset?.height) || 0,
       size: Number(selectedAsset?.fileSize || selectedAsset?.size || 0) || 0,
       type: safeType,
       uri: selectedAsset?.uri,
+      width: Number(selectedAsset?.width) || 0,
     };
   }, [getAttachmentExtensionFromAsset]);
 
@@ -2521,17 +2524,35 @@ function Conversation({ navigation, route }) {
   const compresserSiVideo = useCallback(async (/** @type {AttachmentAsset} */ asset) => {
     if (!String(asset?.type || '').startsWith('video/')) return asset;
     setIsUploading(true);
+    compressionDeCetEcranRef.current = true;
     try {
       const preparation = await preparerVideo(asset);
-      if ('refus' in preparation) {
-        showErrorBanner(preparation.refus);
-        return null;
-      }
-      return /** @type {AttachmentAsset} */ (preparation.asset);
+      if ('asset' in preparation) return /** @type {AttachmentAsset} */ (preparation.asset);
+      // VIDEO-RAME — la copie laissée par la galerie ne servira plus.
+      await oublierFichierVideo(asset.uri);
+      if ('refus' in preparation) showErrorBanner(preparation.refus);
+      return null;
     } finally {
+      compressionDeCetEcranRef.current = false;
       setIsUploading(false);
     }
   }, [showErrorBanner]);
+
+  // VIDEO-RAME — quitter la conversation arrête SA compression : le téléphone ne travaille plus
+  // pour un envoi que personne n'attend, et revenir n'en lance pas une seconde par-dessus.
+  useEffect(() => () => {
+    if (compressionDeCetEcranRef.current) annulerPreparationVideo();
+  }, []);
+
+  // VIDEO-RAME — une vidéo traitée ne laisse ni sa copie ni son fichier réduit dans le téléphone.
+  const oublierFichiersVideo = useCallback(async (
+    /** @type {AttachmentAsset} */ prete,
+    /** @type {AttachmentAsset} */ choisie,
+  ) => {
+    if (!String(prete?.type || '').startsWith('video/')) return;
+    await oublierFichierVideo(prete.uri);
+    if (choisie?.uri !== prete.uri) await oublierFichierVideo(choisie?.uri);
+  }, []);
 
   const queueOrSendPickedAsset = async (
     /** @type {AttachmentAsset} */ selectedAsset,
@@ -2573,6 +2594,7 @@ function Conversation({ navigation, route }) {
     await uploadAndSendAttachment(normalizedAsset, {
       replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
     });
+    await oublierFichiersVideo(normalizedAsset, selectedAsset);
     setReplyingTo(null);
   };
 
@@ -2833,11 +2855,13 @@ function Conversation({ navigation, route }) {
       showErrorBanner(buildAttachmentUploadErrorMessage(error));
     } finally {
       setIsEditMessageUploadingAttachment(false);
+      await oublierFichiersVideo(normalizedAsset, selectedAsset);
     }
   }, [
     buildAttachmentUploadErrorMessage,
     compresserSiVideo,
     normalizePickedAsset,
+    oublierFichiersVideo,
     showErrorBanner,
     uploadAttachmentAsset,
     validateAttachmentAsset,

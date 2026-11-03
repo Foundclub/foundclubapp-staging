@@ -15,16 +15,38 @@ import { isVideoMime, VIDEO_MAX_BYTES, videoSizeRefusal } from '@/platform/media
  * jamais, et son absence (téléphone sans le module, témoins) se lit comme un échec de
  * compression, pas comme une panne de l'écran.
  * Témoin : platform/media/__tests__/MSGVIDZIP.preparerVideo.test.js.
+ *
+ * VIDEO-RAME (03/11) — iPhone : après une lourde vidéo, l'app rame puis iOS la ferme. La
+ * compression occupe le téléphone sans rien dire : on ne la lance pas pour rien, jamais deux à
+ * la fois, on sait l'arrêter, et ses fichiers ne restent pas (Conversation.js efface après
+ * l'envoi). Le plantage lui-même n'est pas établi : ceci réduit le risque, sans le supprimer.
+ * Témoin : platform/media/__tests__/VIDEO-RAME.preparerVideo.test.js.
  */
 
 /** Côté le plus long d'une vidéo compressée, en pixels (720p : lisible plein écran). */
 export const VIDEO_COMPRESSION_MAX_SIDE = 1280;
 
 /**
+ * Le débit visé au plus bas pour ce côté : 1,2 Mb/s d'image et 128 kb/s de son, en octets par
+ * seconde (`estimateBitrate`, react-native-compressor 1.19.4, iOS).
+ */
+const PLANCHER_OCTETS_PAR_SECONDE = (1200000 + 128000) / 8;
+
+// ponytail: ce débit est une moyenne visée, une image très fixe peut passer dessous. La marge de
+// 2 évite de refuser à tort ; entre 16 et 32 min, le téléphone peut encore travailler pour rien.
+const MARGE_DU_REFUS_D_AVANCE = 2;
+
+/**
+ * La compression en cours : une seule à la fois sur le téléphone.
+ * @type {{ annulee: boolean, id: string } | null}
+ */
+let preparationEnCours = null;
+
+/**
  * @typedef {{
  *   duration?: number, fileName?: string, size?: number, type?: string, uri?: any,
  * }} Media
- * @typedef {{ asset: Media, compressee: boolean } | { refus: string }} VideoPreparee
+ * @typedef {{ asset: Media, compressee: boolean } | { annulee: true } | { refus: string }} VideoPreparee
  */
 
 /**
@@ -35,23 +57,90 @@ export const VIDEO_COMPRESSION_MAX_SIDE = 1280;
 const enMp4 = (fileName) => `${String(fileName || 'video').replace(/\.[^./]+$/, '')}.mp4`;
 
 /**
+ * Trop longue pour tenir, même réduite ? Une taille, une durée ou une image inconnue : on tente.
+ * @param {Media & { height?: number, width?: number }} asset
+ * @returns {boolean}
+ */
+const neTiendraPas = (asset) => {
+  const coteLong = Math.max(Number(asset.width) || 0, Number(asset.height) || 0);
+  if (coteLong < VIDEO_COMPRESSION_MAX_SIDE || (Number(asset.size) || 0) <= VIDEO_MAX_BYTES) return false;
+  const plancher = (Number(asset.duration) || 0) * PLANCHER_OCTETS_PAR_SECONDE;
+  return plancher > VIDEO_MAX_BYTES * MARGE_DU_REFUS_D_AVANCE;
+};
+
+/**
+ * Efface un fichier temporaire de vidéo. Seuls les dossiers temporaires sont touchés : un document
+ * choisi ailleurs reste à sa place. Un échec ne gêne personne.
+ * @param {unknown} uri
+ * @returns {Promise<void>}
+ */
+export const oublierFichierVideo = async (uri) => {
+  const adresse = String(uri || '');
+  if (!/^file:\/\/.*\/(tmp|cache)\//i.test(adresse)) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { default: BlobUtil } = require('react-native-blob-util');
+    await BlobUtil.fs.unlink(decodeURI(adresse.replace(/^file:\/\//, '')));
+  } catch {
+    // Déjà parti, ou iOS le rangera : rien à dire à la personne.
+  }
+};
+
+/**
+ * Arrête la compression en cours (on a quitté la conversation). Rien ne partira.
+ * @returns {void}
+ */
+export const annulerPreparationVideo = () => {
+  if (!preparationEnCours) return;
+  const { id } = preparationEnCours;
+  preparationEnCours.annulee = true;
+  // La place se libère tout de suite : une compression qui ne répondrait plus ne bloque personne.
+  preparationEnCours = null;
+  if (!id) return;
+  try {
+    // eslint-disable-next-line global-require
+    require('react-native-compressor').Video.cancelCompression(id);
+  } catch {
+    // Le module absent n'a rien à arrêter.
+  }
+};
+
+/**
  * Prépare une pièce jointe avant l'envoi : une vidéo est compressée, le reste passe tel quel.
  * @param {Media} asset - La pièce jointe normalisée (Conversation.js, `normalizePickedAsset`).
  * @returns {Promise<VideoPreparee>}
  */
 export const preparerVideo = async (asset) => {
   if (!isVideoMime(asset?.type) || !asset?.uri) return { asset, compressee: false };
+  if (preparationEnCours) {
+    return {
+      refus: i18n.t('conversation.video.alreadyPreparing', {
+        defaultValue: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
+      }),
+    };
+  }
+  if (neTiendraPas(asset)) return { refus: videoSizeRefusal(asset.size) };
 
+  const preparation = { annulee: false, id: '' };
+  preparationEnCours = preparation;
   try {
     // eslint-disable-next-line global-require
     const { getFileSize, Video } = require('react-native-compressor');
     const uri = await Video.compress(String(asset.uri), {
       compressionMethod: 'auto',
+      getCancellationId: (/** @type {string} */ id) => { preparation.id = id; },
       maxSize: VIDEO_COMPRESSION_MAX_SIDE,
     });
+    if (preparation.annulee) {
+      await oublierFichierVideo(uri);
+      return { annulee: true };
+    }
     const size = Number(await getFileSize(uri)) || 0;
     const refus = videoSizeRefusal(size);
-    if (refus) return { refus };
+    if (refus) {
+      await oublierFichierVideo(uri);
+      return { refus };
+    }
     return {
       asset: {
         ...asset, fileName: enMp4(asset.fileName || ''), size, type: 'video/mp4', uri,
@@ -59,6 +148,8 @@ export const preparerVideo = async (asset) => {
       compressee: true,
     };
   } catch {
+    // Une compression annulée échoue aussi : l'original ne part pas à la place.
+    if (preparation.annulee) return { annulee: true };
     const taille = Number(asset.size) || 0;
     if (taille <= VIDEO_MAX_BYTES) return { asset, compressee: false };
     return {
@@ -67,6 +158,8 @@ export const preparerVideo = async (asset) => {
         max: Math.round(VIDEO_MAX_BYTES / BYTES_PER_MB),
       }),
     };
+  } finally {
+    if (preparationEnCours === preparation) preparationEnCours = null;
   }
 };
 

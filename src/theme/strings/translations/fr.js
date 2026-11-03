@@ -9372,6 +9372,7 @@ export default {
     },
     // MSG-MEDIA (29/10) — une vidéo dans la messagerie.
     video: {
+      alreadyPreparing: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
       close: 'Fermer la vidéo',
       label: 'Vidéo',
       openInBrowser: 'Ouvrir dans le navigateur',

@@ -8832,6 +8832,7 @@ export default {
     },
     // MSG-MEDIA (29/10) — a video in the chat.
     video: {
+      alreadyPreparing: 'A video is already being prepared. Try again once it has been sent.',
       close: 'Close the video',
       label: 'Video',
       openInBrowser: 'Open in the browser',
