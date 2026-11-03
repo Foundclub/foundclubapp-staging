@@ -59,7 +59,7 @@ export const modifierEvenement = async ({ collectiviteId, data, evenementId }) =
 
 /**
  * POST /collectivites/:id/evenements/:evenementId/annuler — « Annuler l'événement ».
- * @param {{ collectiviteId: string, evenementId: string }} params - Lequel.
+ * @param {{ collectiviteId: string, evenementId: string, serie?: boolean }} params - Lequel.
  * @returns {Promise<any>} `{ data: vue }`.
  */
 export const annulerEvenement = async ({ collectiviteId, evenementId, serie = false }) => {

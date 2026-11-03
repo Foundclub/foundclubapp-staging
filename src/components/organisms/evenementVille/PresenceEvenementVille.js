@@ -10,7 +10,7 @@ import {
   useReponsesEvenement,
 } from '@/services/collectivite/collectiviteEvenementQueries';
 
-const CHOIX = ['present', 'absent'];
+const CHOIX = /** @type {Array<'present'|'absent'>} */ (['present', 'absent']);
 
 /**
  * « 9 présents · 3 absents ».
