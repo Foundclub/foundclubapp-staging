@@ -17864,9 +17864,8 @@ export default {
     },
     noEventsForDate: 'Aucun événement ce jour-là',
     reservationTerrain: {
-      collecte: 'Réservation en collecte',
-      confirmee: 'Réservation',
-      demande: 'Demande de réservation',
+      collecte: 'Collecte · {{complexe}}',
+      demande: 'Demande · {{complexe}}',
     },
     status: {
       pendingParticipation: 'Demande en attente',

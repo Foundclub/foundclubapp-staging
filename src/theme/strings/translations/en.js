@@ -17235,9 +17235,8 @@ export default {
     },
     noEventsForDate: 'No events on this day',
     reservationTerrain: {
-      collecte: 'Booking collecting players',
-      confirmee: 'Booking',
-      demande: 'Booking request',
+      collecte: 'Collecting · {{complexe}}',
+      demande: 'Request · {{complexe}}',
     },
     status: {
       pendingParticipation: 'Request pending',

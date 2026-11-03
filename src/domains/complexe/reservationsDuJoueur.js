@@ -1,4 +1,5 @@
 import { ajouterJours, jourDeParis } from '@/domains/complexe/reserverTerrain';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { getPlanningItemDate } from '@/utils/planning/planningSlots';
 
@@ -156,7 +157,7 @@ export const joursDeMesReservationsAVenir = (reservations) => (
  * réservation de la fenêtre lue, avec `reservationTerrain` pour ouvrir SA fiche et non celle d'un
  * événement. Calculé ici et non versé par `/users/me/planning` : un serveur qui verse ces blocs les
  * montrerait aussi aux anciennes apps des stores, où toucher ouvrirait un événement introuvable.
- * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
  * @param {any} reservations - Les réservations lues (`lireMesReservations`).
  * @param {{ from: string, to: string }} plage - La fenêtre lue (AAAA-MM-JJ), bornes comprises.
  * @returns {any[]} Les blocs, à la forme d'un créneau du planning.
@@ -173,11 +174,20 @@ export const creneauxDeMesReservations = (t, reservations, plage) => (
       && toutes.findIndex((autre) => autre?.documentId === reservation.documentId) === rang;
   })
   .map((reservation) => {
-    let typeLabel = t('planning.reservationTerrain.confirmee', 'Réservation');
+    // Le nom d'abord : un créneau d'une heure n'affiche que sa première ligne (vu au navigateur,
+    // « Réservation » seul ne disait pas où aller). Aucun `typeLabel` : il passerait devant.
+    const complexe = reservation.complexe?.name || '';
+    let title = complexe;
     if (reservation.status === 'en_attente') {
-      typeLabel = t('planning.reservationTerrain.demande', 'Demande de réservation');
+      title = t('planning.reservationTerrain.demande', 'Demande · {{complexe}}', {
+        complexe,
+        ...SANS_ECHAPPEMENT,
+      });
     } else if (reservation.status === 'en_collecte') {
-      typeLabel = t('planning.reservationTerrain.collecte', 'Réservation en collecte');
+      title = t('planning.reservationTerrain.collecte', 'Collecte · {{complexe}}', {
+        complexe,
+        ...SANS_ECHAPPEMENT,
+      });
     }
     return {
       documentId: reservation.documentId,
@@ -188,7 +198,6 @@ export const creneauxDeMesReservations = (t, reservations, plage) => (
       reservationTerrain: reservation,
       startAt: reservation.startsAt,
       startTime: reservation.from,
-      title: reservation.complexe?.name || null,
-      typeLabel,
+      title,
     };
   });

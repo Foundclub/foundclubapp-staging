@@ -114,7 +114,11 @@ describe('E-P10 — « Mes réservations »', () => {
 // T3-RESA-PLANNING (03/11, Adel « 9- A ») — la réservation entre au planning du joueur.
 describe('créneaux de mes réservations au planning', () => {
   const PLAGE = { from: '2026-11-02', to: '2026-11-08' };
-  const t = (/** @type {string} */ _cle, /** @type {string} */ repli) => repli;
+  const t = (
+    /** @type {string} */ _cle,
+    /** @type {string} */ repli,
+    /** @type {any} */ options,
+  ) => repli.replace('{{complexe}}', options?.complexe);
   const reservation = (/** @type {object} */ champs = {}) => ({
     complexe: { name: 'Complexe Test' },
     date: '2026-11-05',
@@ -138,8 +142,9 @@ describe('créneaux de mes réservations au planning', () => {
       startAt: '2026-11-05T18:00:00.000Z',
       startTime: '19:00',
       title: 'Complexe Test',
-      typeLabel: 'Réservation',
     });
+    // Un `typeLabel` passerait devant le nom, seule ligne d'un créneau d'une heure.
+    expect(bloc.typeLabel).toBeUndefined();
     expect(bloc.reservationTerrain.documentId).toBe('resa-1');
     expect(bloc.participationStatus).toBeNull();
   });
@@ -165,11 +170,11 @@ describe('créneaux de mes réservations au planning', () => {
         documentId: 'absent', myResponse: 'absent', role: 'participant',
       }),
     ], PLAGE);
-    expect(blocs.map((bloc) => [bloc.documentId, bloc.typeLabel, bloc.participationStatus]))
+    expect(blocs.map((bloc) => [bloc.documentId, bloc.title, bloc.participationStatus]))
       .toEqual([
-        ['demande', 'Demande de réservation', 'pending'],
-        ['collecte', 'Réservation en collecte', null],
-        ['present', 'Réservation', null],
+        ['demande', 'Demande · Complexe Test', 'pending'],
+        ['collecte', 'Collecte · Complexe Test', null],
+        ['present', 'Complexe Test', null],
       ]);
   });
 
