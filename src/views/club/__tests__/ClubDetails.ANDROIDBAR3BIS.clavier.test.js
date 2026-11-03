@@ -101,6 +101,11 @@ jest.mock('react-i18next', () => ({
 
 // Les retraits MESURÉS (Pixel 9, Android 16, 3 boutons) : barre de navigation 48 dp, barre
 // d'état 142 px.
+// T3-BANDE-BAS : le vrai retrait, le pied flottant en dépend sur la vraie barre à 3 boutons.
+jest.mock('@/components/templates/useRetraitBasDuDefilement', () => jest.requireActual(
+  '@/components/templates/useRetraitBasDuDefilement',
+));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
     bottom: 48, left: 0, right: 0, top: 142 / 2.625,
@@ -485,6 +490,24 @@ describe('ANDROIDBAR-3BIS — caractérisation : ce qui ne bouge pas', () => {
     expect(basDuDefilement(defilement)).toBe(avant);
     // T3-BANDE-BAS (03/11, décision d'Adel) : la fiche descend jusqu'au bord de l'écran.
     expect(avant).toBeCloseTo(ECRAN, 5);
+  });
+
+  it('API 35, 3 boutons : le pied flottant garde sa marge au-dessus de la barre', () => {
+    telephone('android', 35);
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = null;
+    const arbre = monter();
+    /** @type {any} */
+    let noeud = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === PIED)[0];
+    /** @type {any} */
+    let style = {};
+    while (noeud && style.bottom !== 0) {
+      style = Object.assign({}, ...[noeud.props?.style].flat(Infinity).filter(Boolean));
+      noeud = noeud.parent;
+    }
+
+    // Mesuré à l'émulateur : sans cette marge, le bouton mordait de 4 dp sur la barre (48 dp).
+    expect(style.paddingBottom).toBe(48 + 12);
   });
 
   it('iPhone, hub du dirigeant : aucun évitement du clavier', () => {

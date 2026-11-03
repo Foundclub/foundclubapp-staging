@@ -2201,7 +2201,8 @@ function ClubDetails({ navigation, route }) {
     showChildInterestAction,
   ].filter(Boolean).length;
   const hasFloatingClubActions = floatingClubActionsCount > 0;
-  const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
+  // T3-BANDE-BAS : le cadre ne pose plus de plancher sur le téléphone, la marge vient d'ici.
+  const floatingClubActionsBottomInset = Math.max(insets.bottom, retraitBas + 12);
   const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
     ? floatingActionsScrollPadding(floatingClubActionsCount, floatingClubActionsBottomInset)
     : retraitBas + 40;
