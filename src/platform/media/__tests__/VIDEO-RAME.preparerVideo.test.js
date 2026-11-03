@@ -67,7 +67,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     mockGetFileSize.mockResolvedValue(String(20 * MO));
   });
 
-  test('juste au-dessus de la limite (151 Mo, 30 s) : compressée, le fichier réduit part', async () => {
+  test('juste au-dessus de la limite (151 Mo, 30 s) : compressée, elle part', async () => {
     const resultat = await preparerVideo(video({ size: 151 * MO }));
     expect(mockCompress).toHaveBeenCalledTimes(1);
     expect(resultat).toMatchObject({ compressee: true });
@@ -81,7 +81,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(resultat).toMatchObject({ compressee: true });
   });
 
-  test('longue mais de petite taille d image (20 min en 640 px) : tentée, elle peut tenir', async () => {
+  test('longue mais petite image (20 min en 640 px) : tentée, elle peut tenir', async () => {
     const resultat = await preparerVideo(video({
       duration: 1200, height: 360, size: 400 * MO, width: 640,
     }));
@@ -100,7 +100,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(resultat).toEqual({ refus: expect.stringContaining('150') });
   });
 
-  test('20 min en 1080p, 1 Go : tentée, une image très fixe peut passer sous le plancher', async () => {
+  test('20 min en 1080p, 1 Go : tentée, une image fixe peut passer dessous', async () => {
     await preparerVideo(video({ duration: 1200, size: 1024 * MO }));
     expect(mockCompress).toHaveBeenCalledTimes(1);
   });
@@ -110,7 +110,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(mockCompress).toHaveBeenCalledTimes(1);
   });
 
-  test('une seule compression à la fois : la seconde est refusée, la première continue', async () => {
+  test('une seule compression à la fois : la seconde est refusée', async () => {
     const enCours = compressionEnCours();
     const premiere = preparerVideo(video());
     const seconde = await preparerVideo(video({ fileName: 'autre.mov', uri: 'file:///tmp/autre.mov' }));
@@ -181,7 +181,7 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(mockUnlink).toHaveBeenCalledWith('/tmp/reduit.mp4');
   });
 
-  test('oublierFichierVideo efface le fichier temporaire, jamais une adresse distante', async () => {
+  test('oublierFichierVideo efface un temporaire, jamais une adresse distante', async () => {
     await preparer.oublierFichierVideo('file:///tmp/reduit%20bis.mp4');
     expect(mockUnlink).toHaveBeenCalledWith('/tmp/reduit bis.mp4');
 

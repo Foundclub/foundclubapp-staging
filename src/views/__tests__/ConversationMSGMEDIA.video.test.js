@@ -571,7 +571,7 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/match.mov');
   });
 
-  test('8 — VIDEO-RAME : une heure de 1080p est refusée sans compresser, sa copie est effacée', async () => {
+  test('8 — VIDEO-RAME : une heure de 1080p refusée sans compresser, copie effacée', async () => {
     mockLaunchImageLibrary.mockResolvedValue({
       assets: [{
         ...VIDEO_LOURDE, duration: 3600, fileSize: 10240 * 1024 * 1024, height: 1080, width: 1920,
@@ -588,10 +588,15 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
 
   // VIDEO-RAME — le sélecteur iOS garde UN rappel : le rappeler deux fois arrête l'app
   // (RCTTurboModule.mm, LOG(FATAL)). Or il copie la vidéo choisie APRÈS s'être refermé.
-  test('10 — VIDEO-RAME : la galerie en cours de copie ne s ouvre pas une seconde fois', async () => {
-    /** @type {(reponse: object) => void} */
+  test('10 — VIDEO-RAME : la galerie en copie ne s ouvre pas une seconde fois', async () => {
+    /**
+     * Rend la réponse de la galerie.
+     * @type {(reponse: object) => void}
+     */
     let rendre = () => {};
-    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => { rendre = resolve; }));
+    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => {
+      rendre = resolve;
+    }));
     monterLaConversation();
 
     await appuyerSurLaTuile('photos');
@@ -607,10 +612,15 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(2);
   });
 
-  test('11 — VIDEO-RAME : quitter et revenir pendant la copie ne rouvre pas la galerie', async () => {
-    /** @type {(reponse: object) => void} */
+  test('11 — VIDEO-RAME : quitter et revenir pendant la copie ne la rouvre pas', async () => {
+    /**
+     * Rend la réponse de la galerie.
+     * @type {(reponse: object) => void}
+     */
     let rendre = () => {};
-    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => { rendre = resolve; }));
+    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => {
+      rendre = resolve;
+    }));
     monterLaConversation();
     await appuyerSurLaTuile('photos');
 

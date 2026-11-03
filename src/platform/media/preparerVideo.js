@@ -26,7 +26,10 @@ import { isVideoMime, VIDEO_MAX_BYTES, videoSizeRefusal } from '@/platform/media
 /** La galerie ouverte, ou encore en train de copier le fichier choisi. */
 let galerieEnCours = false;
 
-/** @returns {string} Le refus d'une seconde vidéo pendant que la première se prépare. */
+/**
+ * Le refus d'une seconde vidéo pendant que la première se prépare.
+ * @returns {string}
+ */
 const texteDejaEnPreparation = () => i18n.t('conversation.video.alreadyPreparing', {
   defaultValue: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
 });
@@ -34,7 +37,8 @@ const texteDejaEnPreparation = () => i18n.t('conversation.video.alreadyPreparing
 /**
  * VIDEO-RAME — Ouvre la galerie, jamais par-dessus elle-même. Le sélecteur iOS se referme PUIS
  * copie le fichier choisi : plusieurs Go sans rien à l'écran. Ne gardant qu'UN rappel, il
- * l'appellerait deux fois si on le rouvrait là, ce qui arrête l'app (RCTTurboModule.mm, LOG(FATAL)).
+ * l'appellerait deux fois si on le rouvrait là, ce qui arrête l'app (RCTTurboModule.mm,
+ * LOG(FATAL)).
  * La garde vit hors de l'écran : quitter puis revenir ne la remet pas à zéro.
  * ponytail: les autres appelants de launchImageLibrary (photos, formulaires) ne passent pas ici ;
  * leur copie est brève. Une vidéo en copie suivie d'une photo ailleurs reste possible.
@@ -82,7 +86,9 @@ let preparationEnCours = null;
  * @typedef {{
  *   duration?: number, fileName?: string, size?: number, type?: string, uri?: any,
  * }} Media
- * @typedef {{ asset: Media, compressee: boolean } | { annulee: true } | { refus: string }} VideoPreparee
+ * @typedef {(
+ *   { asset: Media, compressee: boolean } | { annulee: true } | { refus: string }
+ * )} VideoPreparee
  */
 
 /**
@@ -99,7 +105,8 @@ const enMp4 = (fileName) => `${String(fileName || 'video').replace(/\.[^./]+$/, 
  */
 const neTiendraPas = (asset) => {
   const coteLong = Math.max(Number(asset.width) || 0, Number(asset.height) || 0);
-  if (coteLong < VIDEO_COMPRESSION_MAX_SIDE || (Number(asset.size) || 0) <= VIDEO_MAX_BYTES) return false;
+  if (coteLong < VIDEO_COMPRESSION_MAX_SIDE) return false;
+  if ((Number(asset.size) || 0) <= VIDEO_MAX_BYTES) return false;
   const plancher = (Number(asset.duration) || 0) * PLANCHER_OCTETS_PAR_SECONDE;
   return plancher > VIDEO_MAX_BYTES * MARGE_DU_REFUS_D_AVANCE;
 };
