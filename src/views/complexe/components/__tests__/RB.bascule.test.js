@@ -363,9 +363,9 @@ describe('RESA-L5A1 RB — l’interrupteur COMPLEXES_GERANT cache tout', () => 
     'utf8',
   );
 
-  it('il est ÉTEINT', () => {
+  it('il est ALLUMÉ, RESA-OUVERTURE', () => {
     const { COMPLEXES_GERANT } = jest.requireActual('@/config/fonctionsMasquees');
-    expect(COMPLEXES_GERANT).toBe(false);
+    expect(COMPLEXES_GERANT).toBe(true);
   });
 
   it('« Mon compte » ne montre l’entrée que s’il est allumé', () => {

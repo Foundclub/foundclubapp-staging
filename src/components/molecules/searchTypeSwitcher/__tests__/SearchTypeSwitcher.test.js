@@ -21,6 +21,12 @@ import SearchTypeSwitcher from '../SearchTypeSwitcher';
 // Deux etages : ce qui ne doit pas bouger, puis ce que D35 change. Le premier
 // etage etait deja vert AVANT le lot.
 
+// RESA-OUVERTURE (Adel « 5- B », 02/11) : ce témoin garde la branche éteinte de l'interrupteur.
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  COMPLEXES_JOUEUR: false,
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
@@ -119,7 +125,7 @@ const pastilles = (arbre) => {
   // rend. On ne garde que la plus exterieure — sinon le dock parait compter le
   // double, et le decompte est precisement ce que ce filet protege.
   const aUnAncetrePastille = (/** @type {any} */ noeud) => {
-    for (let parent = noeud.parent; parent; parent = parent.parent) {
+    for (let { parent } = noeud; parent; parent = parent.parent) {
       if (estPastille(parent)) return true;
     }
     return false;

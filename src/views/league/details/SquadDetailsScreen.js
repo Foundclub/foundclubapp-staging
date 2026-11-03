@@ -22,6 +22,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -3334,26 +3335,33 @@ function SquadDetailsScreen({ navigation, route }) {
 
       </ScrollView>
       {shouldShowFixedJoinButton ? (
-        <View
+        <PiedFlottant
           style={{
-            backgroundColor: 'rgba(3, 15, 25, 0.94)',
-            borderColor: `${Colors.primary500}33`,
-            borderRadius: 24,
-            borderWidth: 1,
             bottom: fixedButtonBottomOffset,
-            elevation: 12,
             left: 0,
             paddingHorizontal: 12,
             paddingVertical: 10,
             position: 'absolute',
             right: 0,
-            shadowColor: Colors.primary900,
-            shadowOffset: { height: 8, width: 0 },
-            shadowOpacity: 0.28,
-            shadowRadius: 18,
           }}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.primary100, marginBottom: 8, textAlign: 'center' }]}>
+          {/* BOUTONS-FLOTTANTS (03/11) : plus de bloc, le texte d'aide porte son propre fond. */}
+          <Text
+            style={[
+              Fonts.p4Bold,
+              {
+                alignSelf: 'center',
+                backgroundColor: Colors.primary900,
+                borderRadius: 12,
+                color: Colors.primary100,
+                marginBottom: 8,
+                overflow: 'hidden',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                textAlign: 'center',
+              },
+            ]}
+          >
             {fixedJoinButtonHelperText}
           </Text>
           <Button
@@ -3364,7 +3372,7 @@ function SquadDetailsScreen({ navigation, route }) {
             title={fixedJoinButtonTitle}
             variant="Primary"
           />
-        </View>
+        </PiedFlottant>
       ) : null}
       <BottomModal
         close={handleCloseCaptainAssignment}
