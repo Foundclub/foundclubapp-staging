@@ -51,8 +51,6 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
-import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 import useOuvrirLAssistance from '@/views/chat/useOuvrirLAssistance';
 import EntreeComplexe from '@/views/complexe/components/EntreeComplexe';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
@@ -78,6 +76,7 @@ import {
   PARENTAL_POWER_ENDS_AGE,
 } from '@/constants/parentalDeclaration';
 import { useTour } from '@/context/useTour';
+import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 import { getItem, removeItem, setItem } from '@/platform/storage';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
@@ -1467,7 +1466,8 @@ function Profile({ navigation, route }) {
           Spaces.paddingBottom[12],
           Alignments.fill,
         ]}
-        {...enTeteFlottant.conteneur}
+        style={enTeteFlottant.conteneur.style}
+        withHeaderPadding={enTeteFlottant.conteneur.withHeaderPadding}
       >
         <ScrollView
           contentContainerStyle={{

@@ -38,8 +38,6 @@ import UserHistorySection from '@/components/organisms/userHistorySection/UserHi
 import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-
-import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 import CoachFeedbackList, {
   CoachFeedbackViewBody,
   CoachWords,
@@ -87,6 +85,7 @@ import { formatHeight } from '@/utils/heightCentimeters';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
+import useEnteteFlottant from '@/hooks/useEnteteFlottant';
 
 const isFlagEnabled = (rawValue, defaultValue = false) => {
   if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
@@ -1204,7 +1203,8 @@ function UserDetails({ navigation, route }) {
         Alignments.column,
         Alignments.fill,
       ]}
-      {...enTeteFlottant.conteneur}
+      style={enTeteFlottant.conteneur.style}
+      withHeaderPadding={enTeteFlottant.conteneur.withHeaderPadding}
     >
       <ScrollView
         contentContainerStyle={[

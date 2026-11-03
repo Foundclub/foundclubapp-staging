@@ -2709,7 +2709,10 @@ function HomeHubContent({ auth, navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         {Platform.OS === 'web' ? null : (
-          <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter, { minHeight: 40 }]}>
+          <View
+            style={[Spaces.marginTop[16],
+              Alignments.row, Alignments.alignCenter, { minHeight: 40 }]}
+          >
             <LeagueHeaderSwitch onPress={scrollToTop} />
           </View>
         )}

@@ -43,6 +43,10 @@ const decouper = (source, debutDuRendu) => {
 const lancer = (/** @type {any} */ hook, /** @type {any} */ navigation, hauteur = 110) => {
   /** @type {any} */
   let valeur = null;
+  /**
+   * Lit le hook pendant le rendu.
+   * @returns {null} Rien à afficher.
+   */
   function Sonde() {
     valeur = hook(navigation);
     return null;
@@ -96,7 +100,7 @@ describe('la brique', () => {
 describe('les 3 écrans de l essai', () => {
   test('Mon compte : le titre défile', () => {
     const { avant, liste } = decouper(lire('views/profile/Profile.js'), '<ScreenContainer');
-    expect(avant).toContain('{...enTeteFlottant.conteneur}');
+    expect(avant).toContain('withHeaderPadding={enTeteFlottant.conteneur.withHeaderPadding}');
     expect(avant).not.toContain("t('profile.titles.profile')");
     expect(liste).toContain("t('profile.titles.profile')");
     expect(liste).toContain('enTeteFlottant.retraitDuDefilement');
@@ -104,7 +108,7 @@ describe('les 3 écrans de l essai', () => {
 
   test('Infos profil : le titre, le rôle et le bandeau d aperçu défilent', () => {
     const { avant, liste } = decouper(lire('views/profile/UserDetails.js'), '<ScreenContainer');
-    expect(avant).toContain('{...enTeteFlottant.conteneur}');
+    expect(avant).toContain('withHeaderPadding={enTeteFlottant.conteneur.withHeaderPadding}');
     expect(avant).not.toContain('titreDeLaFiche.toUpperCase()');
     expect(avant).not.toContain('apercu-bandeau');
     expect(liste).toContain('titreDeLaFiche.toUpperCase()');
@@ -112,8 +116,8 @@ describe('les 3 écrans de l essai', () => {
     expect(liste).toContain('enTeteFlottant.retraitDuDefilement');
   });
 
-  test('Accueil : au téléphone, le logo défile ; la cloche et le profil restent hors de la liste', () => {
-    const { avant, liste, apres } = decouper(lire('views/home/HomeHub.js'), '<ScreenContainerView');
+  test('Accueil : au téléphone, le logo défile ; cloche et profil restent hors liste', () => {
+    const { apres, avant, liste } = decouper(lire('views/home/HomeHub.js'), '<ScreenContainerView');
     expect(liste).toContain('<LeagueHeaderSwitch onPress={scrollToTop} />');
     expect(liste).not.toContain('<NotificationBadge');
     expect(liste).not.toContain('<ProfileButton');
