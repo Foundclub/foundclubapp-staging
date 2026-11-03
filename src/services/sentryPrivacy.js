@@ -19,6 +19,7 @@ const KEPT_VALUES = /^(fields|locale|pagination|populate|sort|status)(\[|$)/;
 const MASK = '[retire]';
 const EMAIL_PATTERN = /[^\s@()<>"',;:]+@[^\s@()<>"',;:]+/g;
 const PHONE_PATTERN = /(?:\+|\b00)\d[\d .-]{7,}\d|\b0[1-9](?:[ .-]?\d{2}){4}\b/g;
+const DROPPED_DATA = new Set(['arguments', 'http.fragment']);
 const URL_WITH_QUERY = /(?:https?:\/\/|\/api\/)[^\s"'?#]*[?#][^\s"']*/g;
 
 /**
@@ -59,7 +60,8 @@ export const scrubUrl = (url) => {
   const [withoutFragment] = url.split('#');
   const separator = withoutFragment.indexOf('?');
   if (separator < 0) return withoutFragment;
-  return `${withoutFragment.slice(0, separator)}?${scrubQuery(withoutFragment.slice(separator + 1))}`;
+  const query = scrubQuery(withoutFragment.slice(separator + 1));
+  return `${withoutFragment.slice(0, separator)}?${query}`;
 };
 
 /**
@@ -90,17 +92,28 @@ const scrubDeep = (value) => {
 /**
  * Nettoie le bloc `data` d'une ligne du fil ou d'une requête tracée.
  * @param {any} data - Le bloc.
- * @returns {void}
+ * @returns {any} Le bloc nettoyé.
  */
 const scrubData = (data) => {
-  if (!data) return;
-  delete data.arguments;
-  delete data['http.fragment'];
-  if (typeof data['http.query'] === 'string') {
-    data['http.query'] = scrubQuery(data['http.query'].replace(/^\?/, ''));
-  }
-  if (data.url) data.url = scrubUrl(data.url);
+  const kept = Object.entries(data).filter(([key]) => !DROPPED_DATA.has(key));
+  return Object.fromEntries(kept.map(([key, value]) => {
+    if (key === 'url') return [key, scrubUrl(value)];
+    if (key === 'http.query' && typeof value === 'string') {
+      return [key, scrubQuery(value.replace(/^\?/, ''))];
+    }
+    return [key, value];
+  }));
 };
+
+/**
+ * Nettoie un champ de texte libre, s'il existe.
+ * @param {any} holder - L'objet qui le porte.
+ * @param {string} key - Le nom du champ.
+ * @returns {any} Une copie nettoyée, ou l'objet tel quel.
+ */
+const withScrubbedText = (holder, key) => (
+  typeof holder[key] === 'string' ? { ...holder, [key]: scrubText(holder[key]) } : holder
+);
 
 /**
  * Nettoie une ligne du fil d'actions, avant qu'elle n'entre dans le fil natif.
@@ -108,9 +121,34 @@ const scrubData = (data) => {
  * @returns {any} La ligne nettoyée.
  */
 export const scrubSentryBreadcrumb = (breadcrumb) => {
-  scrubData(breadcrumb.data);
-  if (typeof breadcrumb.message === 'string') breadcrumb.message = scrubText(breadcrumb.message);
-  return breadcrumb;
+  const scrubbed = withScrubbedText(breadcrumb, 'message');
+  return breadcrumb.data ? { ...scrubbed, data: scrubData(breadcrumb.data) } : scrubbed;
+};
+
+/**
+ * Nettoie ce qui accompagne une erreur ou une trace.
+ * @param {any} event - L'événement.
+ * @returns {any} Une copie nettoyée.
+ */
+const scrubDetails = (event) => {
+  const scrubbed = { ...event };
+  if (event.breadcrumbs) scrubbed.breadcrumbs = event.breadcrumbs.map(scrubSentryBreadcrumb);
+  if (event.spans) {
+    scrubbed.spans = event.spans.map((/** @type {any} */ span) => (
+      scrubSentryBreadcrumb(withScrubbedText(span, 'description'))
+    ));
+  }
+  const trace = event.contexts?.trace;
+  if (trace?.data) {
+    scrubbed.contexts = { ...event.contexts, trace: { ...trace, data: scrubData(trace.data) } };
+  }
+  if (event.request) {
+    scrubbed.request = { ...event.request };
+    delete scrubbed.request.query_string;
+    if (event.request.url) scrubbed.request.url = scrubUrl(event.request.url);
+  }
+  if (event.extra) scrubbed.extra = scrubDeep(event.extra);
+  return scrubbed;
 };
 
 /**
@@ -120,26 +158,24 @@ export const scrubSentryBreadcrumb = (breadcrumb) => {
  * @returns {any} L'événement nettoyé, jamais perdu.
  */
 export const scrubSentryEvent = (event) => {
+  let scrubbed;
   try {
-    event.breadcrumbs?.forEach(scrubSentryBreadcrumb);
-    event.spans?.forEach((/** @type {any} */ span) => {
-      scrubData(span.data);
-      if (typeof span.description === 'string') span.description = scrubText(span.description);
-    });
-    scrubData(event.contexts?.trace?.data);
-    if (event.request?.url) event.request.url = scrubUrl(event.request.url);
-    delete event.request?.query_string;
-    if (event.extra) event.extra = scrubDeep(event.extra);
+    scrubbed = scrubDetails(event);
   } catch {
     // Une panne sans contexte vaut mieux qu'une panne perdue ou une donnée qui part.
-    delete event.breadcrumbs;
-    delete event.extra;
-    delete event.spans;
-    delete event.request;
+    scrubbed = { ...event };
+    delete scrubbed.breadcrumbs;
+    delete scrubbed.extra;
+    delete scrubbed.request;
+    delete scrubbed.spans;
   }
-  event.exception?.values?.forEach((/** @type {any} */ exception) => {
-    if (typeof exception.value === 'string') exception.value = scrubText(exception.value);
-  });
-  if (typeof event.message === 'string') event.message = scrubText(event.message);
-  return event;
+  if (scrubbed.exception?.values) {
+    scrubbed.exception = {
+      ...scrubbed.exception,
+      values: scrubbed.exception.values.map((/** @type {any} */ exception) => (
+        withScrubbedText(exception, 'value')
+      )),
+    };
+  }
+  return withScrubbedText(scrubbed, 'message');
 };

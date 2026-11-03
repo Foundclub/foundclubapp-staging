@@ -35,10 +35,14 @@ const aucuneDonneePersonnelle = (objet) => {
 };
 
 describe('ce qui part chez Sentry depuis l application', () => {
-  it('une recherche par numero, le cas mesure en production, ne laisse pas le numero', () => {
+  it('une recherche par numero, le cas mesure en production, ne laisse rien', () => {
     const fil = scrubSentryBreadcrumb({
       category: 'xhr',
-      data: { method: 'GET', status_code: 200, url: `${API}?q=${TELEPHONE}&pagination[page]=2` },
+      data: {
+        method: 'GET',
+        status_code: 200,
+        url: `${API}?q=${TELEPHONE}&pagination[page]=2`,
+      },
       type: 'http',
     });
     aucuneDonneePersonnelle(fil);
@@ -46,20 +50,21 @@ describe('ce qui part chez Sentry depuis l application', () => {
     expect(fil.data.status_code).toBe(200);
   });
 
-  it('une valeur encodee ne passe pas plus : le filtre lit le nom, pas la forme de la valeur', () => {
-    aucuneDonneePersonnelle(scrubUrl(`${API}?q=${ENCODE}&search=${RECHERCHE}&mail=${encodeURIComponent(EMAIL)}`));
+  it('une valeur encodee ne passe pas plus : le filtre lit le nom, pas la valeur', () => {
+    const mail = encodeURIComponent(EMAIL);
+    aucuneDonneePersonnelle(scrubUrl(`${API}?q=${ENCODE}&search=${RECHERCHE}&mail=${mail}`));
   });
 
   it('de quoi reparer reste : le chemin, les noms, la structure de la requete', () => {
-    const adresse = `${API}?sort[name]=asc&populate%5Bclub%5D%5Bfields%5D%5B0%5D=name&filters[type][name][$ne]=${RECHERCHE}`;
-    expect(scrubUrl(adresse)).toBe(
-      `${API}?sort[name]=asc&populate%5Bclub%5D%5Bfields%5D%5B0%5D=name&filters[type][name][$ne]=[retire]`,
-    );
+    const structure = 'sort[name]=asc&populate%5Bclub%5D%5Bfields%5D%5B0%5D=name';
+    const adresse = `${API}?${structure}&filters[type][name][$ne]=${RECHERCHE}`;
+    expect(scrubUrl(adresse)).toBe(`${API}?${structure}&filters[type][name][$ne]=[retire]`);
   });
 
   it('un filtre glisse dans un populate ne passe pas pour de la structure', () => {
-    const adresse = `${API}?populate[club][filters][email][$eq]=${EMAIL}&populate%5Bx%5D%5Bfilters%5D%5Bphone%5D=${ENCODE}`;
-    aucuneDonneePersonnelle(scrubUrl(adresse));
+    const lisible = `populate[club][filters][email][$eq]=${EMAIL}`;
+    const encode = `populate%5Bx%5D%5Bfilters%5D%5Bphone%5D=${ENCODE}`;
+    aucuneDonneePersonnelle(scrubUrl(`${API}?${lisible}&${encode}`));
   });
 
   it('le fragment disparait, une adresse sans parametre ne bouge pas', () => {
@@ -68,7 +73,7 @@ describe('ce qui part chez Sentry depuis l application', () => {
     expect(scrubUrl(undefined)).toBeUndefined();
   });
 
-  it('un journal console : plus d arguments bruts, contacts et adresses nettoyes dans le message', () => {
+  it('un journal console : plus d arguments bruts, message nettoye', () => {
     const fil = scrubSentryBreadcrumb({
       category: 'console',
       data: { arguments: [{ phone: TELEPHONE }], logger: 'console' },
@@ -81,7 +86,10 @@ describe('ce qui part chez Sentry depuis l application', () => {
 
   it('un evenement complet, fil venu du natif compris, part propre', () => {
     const evenement = scrubSentryEvent({
-      breadcrumbs: [{ category: 'http', data: { url: `${API}?q=${TELEPHONE}`, 'http.query': `q=${TELEPHONE}` } }],
+      breadcrumbs: [{
+        category: 'http',
+        data: { 'http.query': `q=${TELEPHONE}`, url: `${API}?q=${TELEPHONE}` },
+      }],
       exception: { values: [{ type: 'Error', value: `refus pour ${EMAIL}` }] },
       message: `panne ${TELEPHONE}`,
       request: { url: `${API}?q=${TELEPHONE}` },
@@ -94,7 +102,11 @@ describe('ce qui part chez Sentry depuis l application', () => {
     const trace = scrubSentryEvent({
       contexts: { trace: { data: { url: `${API}?q=${TELEPHONE}` } } },
       spans: [{
-        data: { 'http.fragment': `t=${TELEPHONE}`, 'http.query': `q=${TELEPHONE}`, url: `${API}?q=${TELEPHONE}` },
+        data: {
+          'http.fragment': `t=${TELEPHONE}`,
+          'http.query': `q=${TELEPHONE}`,
+          url: `${API}?q=${TELEPHONE}`,
+        },
         description: `GET ${API}?q=${TELEPHONE}`,
       }],
       type: 'transaction',
@@ -116,8 +128,9 @@ describe('ce qui part chez Sentry depuis l application', () => {
       },
     });
     aucuneDonneePersonnelle(evenement);
-    expect(evenement.extra.__serialized__.name).toBe('ApplicationError');
-    expect(evenement.extra.__serialized__.status).toBe(400);
+    const [corps] = Object.values(evenement.extra);
+    expect(corps.name).toBe('ApplicationError');
+    expect(corps.status).toBe(400);
   });
 
   it('si le nettoyage casse, la panne part sans fil plutot que perdue', () => {
