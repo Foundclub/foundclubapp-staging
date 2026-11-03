@@ -20,8 +20,8 @@ import { carteDeRecherche, complexePublic } from '@/testSupport/temoinReserver';
 //     ⇒ E-P02, ou E-P03 par un créneau ; toucher l'épingle déjà choisie ⇒ E-P02 ;
 //   · sur ordinateur (OR2) : la liste à gauche, la carte à droite, pas de bascule ; toucher une
 //     épingle met sa carte en tête de liste ;
-//   · les états : chargement, aucune proposition (« Aucun terrain libre ici. Élargis la
-//     distance. »), position refusée (la carte reste utilisable par ville), erreur.
+//   · les états : chargement, aucune proposition (« Aucun terrain disponible pour l’instant
+//     dans cette zone. », ou « Aucun terrain libre ici… » si un filtre est posé), position refusée (la carte reste utilisable par ville), erreur.
 // La carte elle-même (Leaflet dans une WebView ou une iframe) est doublée : ses props sont lues.
 
 // La place de la barre d'onglets flottante : useBottomDockLayout tire @react-navigation/stack, que
@@ -355,11 +355,11 @@ describe('RESA-CARTE — E-P01, la bascule Liste / Carte (téléphone)', () => {
 });
 
 describe('RESA-CARTE — E-P01, les états de la vue Carte', () => {
-  it('aucune proposition : « Aucun terrain libre ici… » et « Élargir »', async () => {
+  it('aucune proposition sans filtre : la phrase honnête et « Élargir »', async () => {
     mockRecherche = lue([]);
     const arbre = await monter();
     await passerEnCarte(arbre);
-    expect(lisibles(arbre)).toContain('Aucun terrain libre ici. Élargis la distance.');
+    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
     await toucher(pressable(arbre, 'Élargir à 20 km'));
     expect(derniersFiltres()).toEqual(expect.objectContaining({ rayon: 20 }));
   });

@@ -14,7 +14,7 @@ import { createFoundClubQueryClient } from '@/app/queryClient';
 // complexe » (« Foot à 5, padel, tennis… ») sur le modèle de « Je représente une collectivité » :
 // aucun rôle sportif posé, aucune question de sport, il mène au tunnel EXISTANT
 // (`ComplexeDevenirGerant`, RESA-L5A1).
-//   · interrupteur `COMPLEXES_GERANT` ÉTEINT (l'état livré) : l'écran est celui de staging ;
+//   · interrupteur `COMPLEXES_GERANT` ÉTEINT : l'écran est celui de staging ;
 //   · ALLUMÉ : le choix existe, exclusif des rôles et de la mairie.
 // Harnais repris de `UserRole.FINITIONS5.test.js` (le témoin caractérisant de l'écran).
 
@@ -245,9 +245,9 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-describe('RESA-INSCRIPTION · interrupteur ÉTEINT (l’état livré) : l’écran de staging', () => {
-  test('l’interrupteur du dépôt est bien éteint', () => {
-    expect(jest.requireActual('@/config/fonctionsMasquees').COMPLEXES_GERANT).toBe(false);
+describe('RESA-INSCRIPTION · interrupteur ÉTEINT : l’écran de staging', () => {
+  test('l’interrupteur du dépôt est allumé, RESA-OUVERTURE', () => {
+    expect(jest.requireActual('@/config/fonctionsMasquees').COMPLEXES_GERANT).toBe(true);
   });
 
   test('5 rangées (4 rôles + la mairie), un seul intertitre, aucun complexe', async () => {

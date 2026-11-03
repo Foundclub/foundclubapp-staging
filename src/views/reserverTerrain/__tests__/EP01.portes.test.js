@@ -8,8 +8,7 @@ import renderer, { act } from 'react-test-renderer';
 //   1. l'onglet « Réservations » du dock s'ACTIVE au lieu d'ouvrir la feuille « Bientôt » ;
 //   2. le panneau « Réservations » de la recherche monte la recherche de terrains (E-P01), et lui
 //      dit s'il est l'onglet visible ;
-//   3. la case « Réservations » de l'accueil, elle, RESTE retirée (`RESERVATIONS_SUR_ACCUEIL`,
-//      GO d'Adel) : ce lot ne la rallume pas.
+//   3. la case « Réservations » de l'accueil est allumée depuis RESA-OUVERTURE.
 
 jest.mock('@/config/fonctionsMasquees', () => ({
   ...jest.requireActual('@/config/fonctionsMasquees'),
@@ -127,8 +126,8 @@ describe('RESA-L6A — les portes de la recherche de terrains, interrupteur allu
     expect(mockRecherche.props.screenActive).toBe(false);
   });
 
-  it('la case « Réservations » de l’accueil RESTE retirée (GO d’Adel, pas ce lot)', () => {
-    expect(RESERVATIONS_SUR_ACCUEIL).toBe(false);
-    expect(CARTES_ACCUEIL_MASQUEES).toContain('search-reservations');
+  it('la case « Réservations » de l’accueil est allumée, RESA-OUVERTURE', () => {
+    expect(RESERVATIONS_SUR_ACCUEIL).toBe(true);
+    expect(CARTES_ACCUEIL_MASQUEES).not.toContain('search-reservations');
   });
 });

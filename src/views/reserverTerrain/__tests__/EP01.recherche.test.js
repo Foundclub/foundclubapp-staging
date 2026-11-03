@@ -381,14 +381,29 @@ describe('E-P01 — les états', () => {
     );
   });
 
-  it('vide : deux façons d’élargir', async () => {
+  // RESA-OUVERTURE (03/11/2026, chef, sur « 5- B ») : sans filtre posé, « avec ces filtres » ne
+  // voulait rien dire. La distance n'est pas un filtre : l'élargir garde la phrase.
+  it('vide sans filtre : la phrase honnête ; deux façons d’élargir', async () => {
     mockRecherche.data.complexes = [];
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
+    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
+    expect(lisibles(arbre)).not.toContain('Aucun terrain libre avec ces filtres.');
     await appuyer(arbre, 'Élargir à 20 km');
     expect(derniersFiltres().rayon).toBe(20);
+    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
     await appuyer(arbre, 'Voir demain');
     expect(derniersFiltres().date).toBe('2026-10-15');
+    expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
+  });
+
+  it('vide avec un filtre posé : la phrase des filtres reste', async () => {
+    mockRecherche.data.complexes = [];
+    const arbre = await monter();
+    await appuyer(arbre, 'Filtrer');
+    await appuyer(arbre, 'Avant 12 h');
+    await appuyer(arbre, 'Voir les terrains');
+    expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
+    expect(lisibles(arbre)).not.toContain('Aucun terrain disponible pour l’instant dans cette zone.');
   });
 
   it('rien trouvé pour un nom : le texte est redit', async () => {

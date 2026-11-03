@@ -63,6 +63,12 @@ function mockPanneauEnregistreur(type) {
   };
 }
 
+// RESA-OUVERTURE (Adel « 5- B », 02/11) : ce témoin garde la branche éteinte de l'interrupteur.
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  COMPLEXES_JOUEUR: false,
+}));
+
 jest.mock(
   '@/components/organisms/clubListContent/ClubListContent',
   () => mockPanneauEnregistreur('clubs'),

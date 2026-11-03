@@ -221,7 +221,7 @@ const toutesLesCartes = (role) => accueilDe(role).flat();
 const ATTENDU = {
   coach: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['search-events', 'search-clubs', 'search-profiles', 'search-amicaux'],
+    ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     [],
     ['profile-subscription'],
     ['training-mine', 'training-find', 'training-logbook'],
@@ -238,28 +238,34 @@ const ATTENDU = {
   // RETIREE — elle ouvrait le MEME ecran que « Club », deux cases plus bas.
   parent: [
     [],
-    ['search-my-children', 'search-events', 'search-clubs'],
+    ['search-my-children', 'search-events', 'search-clubs', 'search-reservations'],
     [],
     [],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   player: [
     [],
-    ['search-events', 'search-clubs', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [
+      'search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities',
+      'search-amicaux',
+    ],
     [],
     [],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   president: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['search-events', 'search-clubs', 'search-profiles', 'search-amicaux'],
+    ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     [],
     ['profile-subscription'],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
-    ['search-events', 'search-clubs', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [
+      'search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities',
+      'search-amicaux',
+    ],
     [],
     [],
     ['training-mine', 'training-find', 'training-logbook'],
@@ -275,13 +281,14 @@ describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => 
     // 🏠 LOT ACCUEIL (30/09) : 23 → 14, 23 → 14, 16 → 8, 11 → 6, 20 → 12.
     // Retirees : League (1), Reservations (1), « Mon profil » sauf « Mon
     // abonnement », et « Compte » (2) — toutes rangees dans « Mon compte ».
-    ['president', 14],
-    ['coach', 14],
-    ['player', 8],
+    // RESA-OUVERTURE (Adel « 5- B », 02/11) : +1, la case « Réservations ».
+    ['president', 15],
+    ['coach', 15],
+    ['player', 9],
     // 🧹 11/09 : 12 → 11. La case « Chercher un club pour mon enfant » est
     // retiree : elle doublait « Club ».
-    ['parent', 6],
-    ['superAdmin', 12],
+    ['parent', 7],
+    ['superAdmin', 13],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
   });
@@ -516,9 +523,9 @@ describe('A02 + A07 + A17 + A21 — ce que l accueil ne montre plus', () => {
     });
   });
 
-  it('A07 — aucun role ne voit plus la case « Reservations »', () => {
+  it('A07 — chaque role voit la case « Reservations », RESA-OUVERTURE', () => {
     ROLES.forEach((role) => {
-      expect(toutesLesCartes(/** @type {any} */ (role))).not.toContain('search-reservations');
+      expect(toutesLesCartes(/** @type {any} */ (role))).toContain('search-reservations');
     });
   });
 
