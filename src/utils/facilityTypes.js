@@ -32,6 +32,8 @@ const LIBELLE_PAR_VALEUR = {
   'Salle de sport': () => i18next.t('facilityForm.types.sportsHall', 'Salle de sport'),
   'Terrain multisport': () => i18next.t('facilityForm.types.multisportPitch', 'Terrain multisport'),
   Skatepark: () => i18next.t('facilityForm.types.skatepark', 'Skatepark'),
+  Stade: () => i18next.t('facilityForm.types.stadium', 'Stade'),
+  'Terrain de football': () => i18next.t('facilityForm.types.footballPitch', 'Terrain de football'),
 };
 
 // FINITIONS11-COLL (03/10, planche 25) — le GENRE du nom de chaque type, pour accorder une phrase :
@@ -51,6 +53,8 @@ const GENRE_PAR_VALEUR = {
   'Salle de sport': 'feminin',
   'Terrain multisport': 'masculin',
   Skatepark: 'masculin',
+  Stade: 'masculin',
+  'Terrain de football': 'masculin',
 };
 /* eslint-enable perfectionist/sort-objects */
 

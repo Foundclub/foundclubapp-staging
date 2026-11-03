@@ -16,6 +16,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import CaseACocher from '@/components/atoms/caseACocher/CaseACocher';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import TourTarget from '@/components/molecules/tour/TourTarget';
@@ -695,17 +696,38 @@ function EventWizardLogistics({ navigation, route }) {
               } : null}
               // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.
               sousLesHeures={avecJugement ? (
-                <JugementDuCreneau
-                  date={date}
-                  debut={startTime}
-                  etat={{
-                    ...state,
-                    isRecurrent,
-                    recurrenceEndDate,
-                  }}
-                  fin={endTime}
-                  onEtat={recevoirLeJugement}
-                />
+                <>
+                  <JugementDuCreneau
+                    date={date}
+                    debut={startTime}
+                    etat={{
+                      ...state,
+                      isRecurrent,
+                      recurrenceEndDate,
+                    }}
+                    fin={endTime}
+                    onEtat={recevoirLeJugement}
+                  />
+                  {/* T3-STADE (Adel) : « faire une demande pour avoir toute l'installation ». */}
+                  {!isRecurrent ? (
+                    <CaseACocher
+                      actif={state.wholeFacility === true}
+                      dit={t(
+                        'collectiviteDemandes.touteInstallation.dit',
+                        'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
+                      )}
+                      onBasculer={() => dispatch({
+                        payload: { wholeFacility: state.wholeFacility !== true },
+                        type: 'SET_LOGISTICS',
+                      })}
+                      testID="evenement-toute-installation"
+                      titre={t(
+                        'collectiviteDemandes.touteInstallation.case',
+                        'Demander toute l’installation',
+                      )}
+                    />
+                  ) : null}
+                </>
               ) : null}
             />
           </TourTarget>

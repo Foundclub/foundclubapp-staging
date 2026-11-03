@@ -35,6 +35,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import CaseACocher from '@/components/atoms/caseACocher/CaseACocher';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
@@ -134,6 +135,8 @@ function ClubSlotRequest({
   const [debut, setDebut] = useState(params.startTime || '');
   const [fin, setFin] = useState(params.endTime || '');
   const [mot, setMot] = useState('');
+  // T3-STADE (03/11, Adel, fiche 11 B) : « faire une demande pour avoir toute l'installation ».
+  const [touteInstallation, setTouteInstallation] = useState(false);
   // VILLE-T18C (07/10) — la fin choisie d'une série (« Jusqu’au », JJ/MM/AAAA) ; vide : la saison.
   const [jusquA, setJusquA] = useState('');
   const [envoi, setEnvoi] = useState(false);
@@ -263,6 +266,7 @@ function ClubSlotRequest({
         groupe: hebdo ? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}` : null,
         mot,
         teamId: equipe,
+        touteInstallation,
         type: typeEntrainement.documentId,
         typeName: typeEntrainement.name,
       });
@@ -837,6 +841,21 @@ function ClubSlotRequest({
             ))}
           </View>
         </View>
+      ) : null}
+      {pourLaMairie && !hebdo && Number(installation?.maxSlots || 1) > 1 ? (
+        <CaseACocher
+          actif={touteInstallation}
+          dit={t(
+            'collectiviteDemandes.touteInstallation.dit',
+            'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
+          )}
+          onBasculer={() => setTouteInstallation(!touteInstallation)}
+          testID="demande-toute-installation"
+          titre={t(
+            'collectiviteDemandes.touteInstallation.case',
+            'Demander toute l’installation',
+          )}
+        />
       ) : null}
       {pourLaMairie ? (
         <Input

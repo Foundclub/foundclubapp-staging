@@ -237,6 +237,8 @@ function eventWizardReducer(state, action) {
         // horaire » dans sa phrase de prévention.
         facilityShared: Boolean(action.payload.facilityShared),
         location: action.payload.location,
+        // T3-STADE : la demande de toute l'installation ne suit pas un autre lieu.
+        wholeFacility: action.payload.facility === state.facility ? state.wholeFacility : false,
       };
     case 'SET_LOGISTICS':
       return {

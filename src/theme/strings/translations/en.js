@@ -5740,6 +5740,8 @@ export default {
   },
   collectiviteCreneaux: {
     attribuer: {
+      touteInstallation: 'The whole facility',
+      touteInstallationDit: 'No other team at these times.',
       aPartirDu: 'From',
       attribuerA: 'Assign to',
       aucunClub: 'No club is attached to the town: invite one from “Clubs”.',
@@ -6089,6 +6091,10 @@ export default {
     },
   },
   collectiviteDemandes: {
+    touteInstallation: {
+      case: 'Request the whole facility',
+      dit: 'The local authority decides. If it accepts, no other team at these times.',
+    },
     acces: {
       texte: 'You do not manage this local authority.',
       titre: 'Access removed',
@@ -11751,6 +11757,10 @@ export default {
     noAddress: 'Address not provided',
   },
   facilityForm: {
+    parent: {
+      aide: 'A stadium’s pitch, for example: booking the whole stadium blocks its parts.',
+      titre: 'Part of',
+    },
     accessibility: {
       planningColor: 'Planning colour',
     },
@@ -11864,11 +11874,13 @@ export default {
       clubHouse: 'Club house',
       dojo: 'Dojo',
       gym: 'Sports hall',
+      footballPitch: 'Football pitch',
       multisportPitch: 'Multi-sport pitch',
       pitch: 'Pitch',
       pool: 'Swimming pool',
       rugbyPitch: 'Rugby pitch',
       skatepark: 'Skatepark',
+      stadium: 'Stadium',
       sportsHall: 'Sports hall',
       tennisCourt: 'Tennis court',
       videoRoom: 'Video room',

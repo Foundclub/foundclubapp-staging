@@ -14,7 +14,17 @@ import { createEventPayload, formatDateTimeToSend } from '@/domains/event/eventU
  * @returns {Array<Record<string, any>>} Les corps de POST /events.
  */
 export const payloadsDeLaDemande = ({
-  clubId, dates, debut, facilityId, fin, groupe = null, mot = '', teamId, type, typeName,
+  clubId,
+  dates,
+  debut,
+  facilityId,
+  fin,
+  groupe = null,
+  mot = '',
+  teamId,
+  touteInstallation = false,
+  type,
+  typeName,
 }) => dates.map((jour) => {
   const [annee, mois, date] = jour.split('-');
   const jourFr = `${date}/${mois}/${annee}`;
@@ -36,5 +46,7 @@ export const payloadsDeLaDemande = ({
   corps.endDate = formatDateTimeToSend(jourFr, fin);
   if (groupe && dates.length > 1) corps.recurrenceGroupId = groupe;
   if (String(mot || '').trim()) corps.facilityRequestNote = String(mot).trim();
+  // T3-STADE (03/11, Adel) : une seule date ; la série ne porte pas la demande (serveur).
+  if (touteInstallation && dates.length === 1) corps.wholeFacility = true;
   return corps;
 });

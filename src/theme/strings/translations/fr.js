@@ -6293,6 +6293,8 @@ export default {
   },
   collectiviteCreneaux: {
     attribuer: {
+      touteInstallation: 'Toute l’installation',
+      touteInstallationDit: 'Aucune autre équipe à ces heures.',
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
@@ -6656,6 +6658,10 @@ export default {
     },
   },
   collectiviteDemandes: {
+    touteInstallation: {
+      case: 'Demander toute l’installation',
+      dit: 'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
+    },
     acces: {
       texte: 'Vous ne gérez pas cette collectivité.',
       titre: 'Accès retiré',
@@ -12495,6 +12501,10 @@ export default {
     noAddress: 'Adresse non renseignée',
   },
   facilityForm: {
+    parent: {
+      aide: 'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
+      titre: 'Fait partie de',
+    },
     accessibility: {
       planningColor: 'Couleur de planning',
     },
@@ -12614,11 +12624,13 @@ export default {
       clubHouse: 'Club House',
       dojo: 'Dojo',
       gym: 'Gymnase',
+      footballPitch: 'Terrain de football',
       multisportPitch: 'Terrain multisport',
       pitch: 'Terrain',
       pool: 'Piscine',
       rugbyPitch: 'Terrain de rugby',
       skatepark: 'Skatepark',
+      stadium: 'Stade',
       sportsHall: 'Salle de sport',
       tennisCourt: 'Court de tennis',
       videoRoom: 'Salle vidéo',
