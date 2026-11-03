@@ -357,6 +357,20 @@ function PlanningWeekTimelineView({
       for (let hour = startHour; hour <= inclusiveEnd; hour += 1) values.add(hour);
     });
 
+    // RET-FERMETURE-HEURES (03/11, Adel) : fermé quelques heures, le reste du jour se réserve ; ses
+    // heures doivent se voir, sinon 8 h et 18 h n'ont pas de case.
+    // ponytail: jusqu'à 22 h, la grille ne connaît pas la fermeture de l'installation ; sortie : la
+    // lui passer comme `firstHour`.
+    const fermeeQuelquesHeures = timedEvents.some((/** @type {any} */ event) => (
+      event?.raw?.closureBand && event.raw.closureBand.kind !== 'block'
+      && event.raw.closureJourEntier === false
+    ));
+    if (fermeeQuelquesHeures) {
+      for (let hour = typeof firstHour === 'number' ? firstHour : 8; hour < 22; hour += 1) {
+        values.add(hour);
+      }
+    }
+
     if (mode === 'day') {
       freeSlotAnnotations.forEach((annotation) => {
         for (let hour = Math.floor(annotation.startMinutes / 60);
@@ -365,7 +379,7 @@ function PlanningWeekTimelineView({
     }
 
     return values;
-  }, [freeSlotAnnotations, heuresOuvrantes, mode]);
+  }, [firstHour, freeSlotAnnotations, heuresOuvrantes, mode, timedEvents]);
 
   const timelineBlocks = useMemo(() => {
     const blocks = [];

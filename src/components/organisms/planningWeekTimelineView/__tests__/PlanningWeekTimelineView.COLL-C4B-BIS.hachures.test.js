@@ -241,6 +241,9 @@ describe('COLL-C4B-BIS point 5 — un jour ferme n a aucune heure libre', () => 
     expect(cases).not.toContain('heure-libre-2026-10-07-17');
     expect(cases).not.toContain('heure-libre-2026-10-07-18');
     expect(cases).toContain('heure-libre-2026-10-07-19');
+    // Le reste du jour se réserve, avant comme après : ses heures ont leur case.
+    expect(cases).toContain('heure-libre-2026-10-07-8');
+    expect(cases).toContain('heure-libre-2026-10-07-21');
   });
 
   it('blocage de 17:00 a 19:00 : ses heures ne sont pas libres, les autres oui', async () => {
