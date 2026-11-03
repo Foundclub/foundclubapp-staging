@@ -123,6 +123,9 @@ export const getChats = async (page = 1, pageSize = 20) => {
           total: Number(rawPagination.total || rawData.length),
         },
         ...(Number.isFinite(rawUnreadTotal) ? { unreadTotal: rawUnreadTotal } : {}),
+        ...(Array.isArray(response?.data?.meta?.unreadVille)
+          ? { unreadVille: response.data.meta.unreadVille }
+          : {}),
       },
     };
   }

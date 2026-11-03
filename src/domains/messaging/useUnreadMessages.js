@@ -5,10 +5,13 @@ import {
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
 
+import { estMineurConnu } from '@/domains/collectivite/collectiviteCanaux';
+
 import { formatUnreadBadge, UNREAD_BADGE_CAP } from '@/utils/notifications/unreadBadge';
 
 import useAuth from '../auth/useAuth';
 import { getChatLastMessage, getUnreadStatus } from './messagingUseCases';
+import { nonLusDansLaVille, nonLusHorsDeLaVille } from './nonLusDeLEspace';
 
 // AE06 — le serveur borne deja, mais une app peut parler a un serveur plus vieux
 // OU plus recent : on borne ici aussi. 🧨 Sur l ONGLET le nombre reste un NOMBRE :
@@ -87,6 +90,25 @@ const getServerUnreadTotal = (queryClient) => {
 };
 
 /**
+ * T3-PASTILLE — le détail des fils de la Ville, s'il est dans la réponse.
+ * @param {import('@tanstack/react-query').QueryClient} queryClient
+ * @returns {any[] | null} Le détail, ou null avec un serveur qui ne le donne pas.
+ */
+const getServerUnreadVille = (queryClient) => {
+  const queryEntries = queryClient.getQueriesData({ queryKey: ['chats'] });
+
+  for (let index = 0; index < queryEntries.length; index += 1) {
+    const queryData = /** @type {any} */ (queryEntries[index][1]);
+    const meta = Array.isArray(queryData?.pages)
+      ? queryData.pages[0]?.meta
+      : queryData?.meta;
+    if (Array.isArray(meta?.unreadVille)) return meta.unreadVille;
+  }
+
+  return null;
+};
+
+/**
  * Hook to manage unread messages across cached chats.
  *
  * AC05 — Adel : « il manque une pastille rouge avec le nombre de messages non
@@ -112,11 +134,14 @@ const getServerUnreadTotal = (queryClient) => {
  *      conversations comme avant.
  * @param {Record<string, any>} [queryOptions] - FIN-CLOCHE : options de la liste (le menu du
  *   site la relit a son rythme, il n a pas de push pour le prevenir).
- * @returns {{ unreadCount: number }} Object containing unread messages count
+ * @returns {{ nonLusDeLaVille: (collectiviteId: string | null) => number, unreadCount: number }}
+ *   T3-PASTILLE : `unreadCount` hors de la Ville, `nonLusDeLaVille` dans son espace. Sans le détail
+ *   du serveur, la Ville garde le total : elle compte trop, elle ne rate rien.
  */
 const useUnreadMessages = (queryOptions = {}) => {
   const queryClient = useQueryClient();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [filsVille, setFilsVille] = useState(/** @type {any[] | null} */ (null));
   const { allMyTeams, userData } = useAuth();
   const safeTeamIds = useMemo(
     () => (Array.isArray(allMyTeams)
@@ -142,7 +167,10 @@ const useUnreadMessages = (queryOptions = {}) => {
     // 1. Le total du serveur, quand il le dit.
     const serverTotal = getServerUnreadTotal(queryClient);
     if (serverTotal !== null) {
-      return toBoundedCount(serverTotal);
+      return toBoundedCount(nonLusHorsDeLaVille(serverTotal, getServerUnreadVille(queryClient) || [], {
+        mineur: estMineurConnu(userData),
+        monClubId: userData?.club?.documentId || null,
+      }));
     }
 
     const chats = getCachedChats(queryClient);
@@ -177,23 +205,37 @@ const useUnreadMessages = (queryOptions = {}) => {
         new Date(lastMessage.createdAt).toISOString(),
       ) ? total + 1 : total;
     }, 0);
-  }, [queryClient, userData?.documentId]);
+  }, [queryClient, userData]);
 
   useEffect(() => {
-    setUnreadCount(countUnreadMessages());
+    const relire = () => {
+      setUnreadCount(countUnreadMessages());
+      const suivants = getServerUnreadVille(queryClient);
+      setFilsVille((avant) => (
+        JSON.stringify(avant) === JSON.stringify(suivants) ? avant : suivants
+      ));
+    };
+    relire();
 
     const unsubscribe = queryClient.getQueryCache().subscribe((/** @type {any} */ event) => {
       if (!Array.isArray(event?.query?.queryKey) || event.query.queryKey[0] !== 'chats') {
         return;
       }
 
-      setUnreadCount(countUnreadMessages());
+      relire();
     });
 
     return unsubscribe;
   }, [countUnreadMessages, queryClient]);
 
-  return { unreadCount };
+  const nonLusDeLaVille = useCallback(
+    (/** @type {string | null} */ collectiviteId) => (filsVille
+      ? toBoundedCount(nonLusDansLaVille(filsVille, collectiviteId))
+      : unreadCount),
+    [filsVille, unreadCount],
+  );
+
+  return { nonLusDeLaVille, unreadCount };
 };
 
 export default useUnreadMessages;

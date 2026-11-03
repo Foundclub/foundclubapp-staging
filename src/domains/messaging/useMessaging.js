@@ -13,6 +13,7 @@ import {
   getUnreadStatus,
   shouldRefetchUnreadOnMessage,
 } from '@/domains/messaging/messagingUseCases';
+import { metaApresLecture } from '@/domains/messaging/nonLusDeLEspace';
 import {
   getMyPollOptionIds,
   isAnonymousPollNamingNoOne,
@@ -121,9 +122,10 @@ export const applyOptimisticChatRead = (oldData, chatDocumentId) => {
       : null;
 
     const previousTotal = Number(page?.meta?.unreadTotal);
+    const metaLue = metaApresLecture(page?.meta, safeChatId, 0);
     const nextMeta = (cleared > 0 && Number.isFinite(previousTotal))
-      ? { ...page.meta, unreadTotal: Math.max(0, previousTotal - cleared) }
-      : page?.meta;
+      ? { ...metaLue, unreadTotal: Math.max(0, previousTotal - cleared) }
+      : metaLue;
 
     return {
       ...page,
@@ -186,7 +188,12 @@ export const applyServerChatReadCounts = (oldData, chatDocumentId, ack) => {
     return {
       ...page,
       ...(chats ? { data: changed ? nextChats : chats } : {}),
-      ...(index === 0 ? { meta: { ...(page?.meta || {}), unreadTotal: total } } : {}),
+      ...(index === 0 ? {
+        meta: {
+          ...(metaApresLecture(page?.meta, safeChatId, chatCount, chats || []) || {}),
+          unreadTotal: total,
+        },
+      } : {}),
     };
   };
 
