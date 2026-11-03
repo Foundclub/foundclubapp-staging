@@ -225,6 +225,67 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(mockUnlink).not.toHaveBeenCalled();
   });
 
+  describe('M0031 — la copie de la galerie ne répond jamais', () => {
+    const QUINZE_MINUTES = 15 * 60 * 1000;
+    const COPIE = {
+      assets: [{ type: 'video/quicktime', uri: 'file:///tmp/tardive.mov' }],
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    /**
+     * Laisse passer le temps et les promesses en attente.
+     * @param {number} duree
+     * @returns {Promise<void>}
+     */
+    const laisserPasser = async (duree) => {
+      await jest.advanceTimersByTimeAsync(duree);
+    };
+
+    test('passé le délai : un message, et la galerie se rouvre', async () => {
+      const resultat = preparer.ouvrirGalerieUneSeuleFois(() => new Promise(() => {}));
+
+      await laisserPasser(QUINZE_MINUTES - 1);
+      const pendant = await preparer.ouvrirGalerieUneSeuleFois(async () => 'seconde');
+      expect(pendant).toEqual({ refus: expect.stringContaining('préparation') });
+
+      await laisserPasser(1);
+      expect(await resultat).toEqual({ refus: expect.stringContaining('récupérer') });
+
+      expect(await preparer.ouvrirGalerieUneSeuleFois(async () => 'seconde'))
+        .toEqual({ reponse: 'seconde' });
+    });
+
+    test('une réponse revenue après le délai ne part pas et ne reste pas', async () => {
+      /**
+       * Rend la réponse de la galerie.
+       * @type {(reponse: object) => void}
+       */
+      let rendre = () => {};
+      const resultat = preparer.ouvrirGalerieUneSeuleFois(() => new Promise((resolve) => {
+        rendre = resolve;
+      }));
+      await laisserPasser(QUINZE_MINUTES);
+      await resultat;
+
+      rendre(COPIE);
+      await laisserPasser(0);
+      expect(mockUnlink).toHaveBeenCalledWith('/tmp/tardive.mov');
+    });
+
+    test('une réponse à temps passe, sans minuteur qui traîne', async () => {
+      const resultat = await preparer.ouvrirGalerieUneSeuleFois(async () => COPIE);
+      expect(resultat).toEqual({ reponse: COPIE });
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
+
   test('un effacement qui échoue ne casse pas l envoi', async () => {
     mockUnlink.mockRejectedValue(new Error('absent'));
     await expect(preparer.oublierFichierVideo('file:///tmp/a.mp4')).resolves.toBeUndefined();

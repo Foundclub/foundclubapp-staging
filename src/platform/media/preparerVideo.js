@@ -26,6 +26,12 @@ import { isVideoMime, VIDEO_MAX_BYTES, videoSizeRefusal } from '@/platform/media
 /** La galerie ouverte, ou encore en train de copier le fichier choisi. */
 let galerieEnCours = false;
 
+/** Au-delà, on ne croit plus la copie : 6,48 Go venus d'iCloud prennent de longues minutes. */
+const DELAI_DE_LA_GALERIE_MS = 15 * 60 * 1000;
+
+/** Ce que rend le délai, pour ne pas le confondre avec une réponse de la galerie. */
+const GALERIE_SANS_REPONSE = Symbol('galerie sans réponse');
+
 /**
  * Le refus d'une seconde vidéo pendant que la première se prépare.
  * @returns {string}
@@ -33,28 +39,6 @@ let galerieEnCours = false;
 const texteDejaEnPreparation = () => i18n.t('conversation.video.alreadyPreparing', {
   defaultValue: 'Une vidéo est déjà en préparation. Réessaie quand elle sera partie.',
 });
-
-/**
- * VIDEO-RAME — Ouvre la galerie, jamais par-dessus elle-même. Le sélecteur iOS se referme PUIS
- * copie le fichier choisi : plusieurs Go sans rien à l'écran. Ne gardant qu'UN rappel, il
- * l'appellerait deux fois si on le rouvrait là, ce qui arrête l'app (RCTTurboModule.mm,
- * LOG(FATAL)).
- * La garde vit hors de l'écran : quitter puis revenir ne la remet pas à zéro.
- * ponytail: les autres appelants de launchImageLibrary (photos, formulaires) ne passent pas ici ;
- * leur copie est brève. Une vidéo en copie suivie d'une photo ailleurs reste possible.
- * @template T
- * @param {() => Promise<T>} ouvrir
- * @returns {Promise<{ reponse: T } | { refus: string }>}
- */
-export const ouvrirGalerieUneSeuleFois = async (ouvrir) => {
-  if (galerieEnCours) return { refus: texteDejaEnPreparation() };
-  galerieEnCours = true;
-  try {
-    return { reponse: await ouvrir() };
-  } finally {
-    galerieEnCours = false;
-  }
-};
 
 /** Côté le plus long d'une vidéo compressée, en pixels (720p : lisible plein écran). */
 export const VIDEO_COMPRESSION_MAX_SIDE = 1280;
@@ -141,6 +125,53 @@ export const oublierFichierVideo = async (uri) => {
     await BlobUtil.fs.unlink(decodeURI(adresse.replace(/^file:\/\//, '')));
   } catch {
     // Déjà parti, ou iOS le rangera : rien à dire à la personne.
+  }
+};
+
+/**
+ * VIDEO-RAME — Ouvre la galerie, jamais par-dessus elle-même. Le sélecteur iOS se referme PUIS
+ * copie le fichier choisi : plusieurs Go sans rien à l'écran. Ne gardant qu'UN rappel, il
+ * l'appellerait deux fois si on le rouvrait là, ce qui arrête l'app (RCTTurboModule.mm,
+ * LOG(FATAL)). Lu dans le code, jamais joué sur un iPhone.
+ * La garde vit hors de l'écran : quitter puis revenir ne la remet pas à zéro.
+ *
+ * M0031 : une copie qui ne répond jamais ne bloque pas les médias jusqu'à la fermeture de l'app.
+ * ponytail: on ne sait pas ce que fait encore le sélecteur. Passé le délai, une copie très lente
+ * qui reviendrait pendant une nouvelle sélection redonnerait le double rappel ; et le délai court
+ * aussi pendant qu'on parcourt la galerie. Sortie : la garde native, le jour où on la patche.
+ * ponytail: les autres appelants de launchImageLibrary (photos, formulaires) ne passent pas ici ;
+ * leur copie est brève. Une vidéo en copie suivie d'une photo ailleurs reste possible.
+ * @template T
+ * @param {() => Promise<T>} ouvrir
+ * @returns {Promise<{ reponse: T } | { refus: string }>}
+ */
+export const ouvrirGalerieUneSeuleFois = async (ouvrir) => {
+  if (galerieEnCours) return { refus: texteDejaEnPreparation() };
+  galerieEnCours = true;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let minuteur;
+  try {
+    const ouverture = ouvrir();
+    const delai = new Promise((resolve) => {
+      minuteur = setTimeout(() => resolve(GALERIE_SANS_REPONSE), DELAI_DE_LA_GALERIE_MS);
+    });
+    const reponse = /** @type {T} */ (await Promise.race([ouverture, delai]));
+    if (reponse !== GALERIE_SANS_REPONSE) return { reponse };
+    // Revenue trop tard, elle ne sert plus : personne ne l'attend à l'écran.
+    Promise.resolve(ouverture)
+      .then((/** @type {any} */ tardive) => {
+        const fichier = tardive?.assets?.[0];
+        return isVideoMime(fichier?.type) ? oublierFichierVideo(fichier?.uri) : undefined;
+      })
+      .catch(() => {});
+    return {
+      refus: i18n.t('conversation.video.pickTimeout', {
+        defaultValue: 'Le téléphone n a pas pu récupérer ce fichier. Réessaie.',
+      }),
+    };
+  } finally {
+    clearTimeout(minuteur);
+    galerieEnCours = false;
   }
 };
 

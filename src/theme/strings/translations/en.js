@@ -8836,6 +8836,7 @@ export default {
       close: 'Close the video',
       label: 'Video',
       openInBrowser: 'Open in the browser',
+      pickTimeout: 'Your phone could not get this file. Try again.',
       play: 'Play the video',
       preparing: 'Preparing the video… {{pourcent}}%',
       preparingFile: 'Preparing the file…',

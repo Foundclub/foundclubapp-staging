@@ -9376,6 +9376,7 @@ export default {
       close: 'Fermer la vidéo',
       label: 'Vidéo',
       openInBrowser: 'Ouvrir dans le navigateur',
+      pickTimeout: 'Le téléphone n\'a pas pu récupérer ce fichier. Réessaie.',
       play: 'Lire la vidéo',
       preparing: 'Préparation de la vidéo… {{pourcent}} %',
       preparingFile: 'Préparation du fichier…',
