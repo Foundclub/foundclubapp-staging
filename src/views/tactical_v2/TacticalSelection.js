@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
@@ -840,16 +841,7 @@ function TacticalSelection() {
       </View>
 
       {/* Footer */}
-      <View
-        style={[
-          styles.footer,
-          {
-            backgroundColor: Colors.neutral900,
-            borderColor: Colors.neutral700,
-            bottom: footerBottomInset,
-          },
-        ]}
-      >
+      <PiedFlottant style={[styles.footer, { bottom: footerBottomInset }]}>
         <Button
           disabled={selectedIds.size === 0 || isResolvingTeam || isTeamResolutionBlocked}
           onPress={handleValidate}
@@ -860,7 +852,7 @@ function TacticalSelection() {
               : t('tacticalSelection.validateWithSize', 'Valider ({{size}})', { size: selectedIds.size })}
           variant="Primary"
         />
-      </View>
+      </PiedFlottant>
 
       {/* Add Manual Player Modal */}
       <Modal animationType="fade" onRequestClose={() => setModalVisible(false)} transparent visible={modalVisible && !isTeamDefaultMode}>
@@ -1035,17 +1027,10 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   footer: {
-    borderRadius: 22,
-    borderWidth: 1,
-    elevation: 10,
     left: 24,
     padding: 14,
     position: 'absolute',
     right: 24,
-    shadowColor: '#000',
-    shadowOffset: { height: 10, width: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
   },
   header: {
     alignItems: 'center',

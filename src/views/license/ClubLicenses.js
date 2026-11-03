@@ -19,6 +19,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
@@ -4465,14 +4466,11 @@ function ClubLicenses({ navigation, route }) {
         </ScrollView>
 
         {isSetupMode ? (
-          <View
+          <PiedFlottant
             onLayout={handleSetupFooterLayout}
             style={[
               Spaces.paddingTop[12],
               {
-                backgroundColor: `${Colors.neutral900}E8`,
-                borderTopColor: `${Colors.primary500}33`,
-                borderTopWidth: 1,
                 bottom: 0,
                 left: -24,
                 paddingBottom: Math.max(insets.bottom, 16),
@@ -4492,7 +4490,7 @@ function ClubLicenses({ navigation, route }) {
               onPress={handleSetupContinue}
               title={t('clubLicenses.setupFooter.continue', 'Continuer')}
             />
-          </View>
+          </PiedFlottant>
         ) : null}
       </View>
       {renderCampaignActionsSheet()}

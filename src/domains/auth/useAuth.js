@@ -542,11 +542,17 @@ const useAuth = () => {
     finInscriptionEnvoyee.add(onboardingDocumentId);
     // Jamais d'erreur qui remonte a l'ecran : l'appel part dans une promesse, son echec se
     // journalise.
-    const appel = Promise.resolve().then(() => markOnboardingCompletedOnServer());
+    // FIN-GUIDE2 : le profil est relu, la proposition du guide lit cette date sans attendre un
+    // prochain lancement.
+    const appel = Promise.resolve()
+      .then(() => markOnboardingCompletedOnServer())
+      .then(() => refetchUserData());
     appel.catch((/** @type {any} */ error) => {
       authLogger.warn('Onboarding completion not saved on server', error?.message || error);
     });
-  }, [onboardingCompleteVersion, onboardingCompletedAtServeur, onboardingDocumentId]);
+  }, [
+    onboardingCompleteVersion, onboardingCompletedAtServeur, onboardingDocumentId, refetchUserData,
+  ]);
 
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined

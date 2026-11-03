@@ -703,40 +703,19 @@ describe('FINITIONS5 · le pied ne laisse plus voir la fiche, et ses libelles re
 
   const boutonNomme = (arbre, titre) => tousLesBoutons(arbre).find((bouton) => bouton.props.title === titre);
 
-  it('le pied a un FOND, du haut des boutons jusqu’en bas de l’écran', () => {
+  // BOUTONS-FLOTTANTS (03/11, demande d'Adel, plus recente que FINITIONS5 du 01/10 et F6-5 du
+  // 02/10) : plus de bloc derriere les boutons, le contenu defile derriere eux. Ce sont les boutons
+  // qui portent leur fond, grises compris (PiedFlottant.BOUTONSFLOTTANTS.test.js).
+  it('le pied n’a plus de fond ; les boutons ne bougent pas', () => {
     devenirEntraineur();
     mockClubQuery.data = CLUB_AVEC_EQUIPE;
     const arbre = monter();
     const pied = arbre.root.findAll((noeud) => noeud.props?.testID === PIED_ACTIONS)[0];
     const style = StyleSheet.flatten(pied.props.style);
 
-    expect(style.backgroundColor).toBeTruthy();
-    expect(style.backgroundColor).not.toBe('transparent');
+    expect(style.backgroundColor).toBeUndefined();
     expect(style.bottom).toBe(0);
-    // Les boutons ne bougent pas : ils restent a la meme hauteur qu'avant.
     expect(style.paddingBottom).toBe(RESERVE_BASSE);
-  });
-
-  // FINITIONS6 · F6-5 (tournee 8, D5 PARTIEL) — le fond etait TRANSLUCIDE
-  // (`primary900` a 0,92) : « Mixte · Sénior (+18 ans) · National 1 » et
-  // « Sports / Football » se devinaient entre et a travers les deux « Demande en
-  // attente » grises. Meme couleur, sans transparence.
-  it('FINITIONS6 · 🚨 le fond du pied est OPAQUE : rien ne se devine au travers', () => {
-    devenirEntraineur();
-    mockClubQuery.data = CLUB_AVEC_EQUIPE;
-    const arbre = monter();
-    const pied = arbre.root.findAll((noeud) => noeud.props?.testID === PIED_ACTIONS)[0];
-    const { backgroundColor } = StyleSheet.flatten(pied.props.style);
-    const alpha = (() => {
-      const hexa = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(backgroundColor));
-      if (hexa) return parseInt(hexa[1], 16) / 255;
-      const rgba = /^rgba\(.*,\s*([\d.]+)\s*\)$/i.exec(String(backgroundColor));
-      if (rgba) return Number(rgba[1]);
-      return 1;
-    })();
-
-    expect(alpha).toBe(1);
-    expect(backgroundColor).toBe(couleurs.primary900);
   });
 
   it('« Intéressé par le club » a la place d’une ligne entière (Android ne rétrécit plus)', () => {
@@ -772,7 +751,7 @@ describe('REPRISE-PLACE — sur le site, le pied d’actions défile avec la fic
     devenirEntraineur();
     const arbre = monter();
     const pieds = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === PIED_ACTIONS
-      && typeof n.type !== 'string');
+      && typeof n.type !== 'string' && n.type?.name !== 'PiedFlottant');
     expect(pieds).toHaveLength(1);
     expect(aPourAncetre(pieds[0], (ancetre) => ancetre.type === ScrollView)).toBe(true);
     expect(boutonsHorsDefilement(arbre)).toHaveLength(0);
