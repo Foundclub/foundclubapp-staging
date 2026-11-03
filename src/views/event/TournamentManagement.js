@@ -7,6 +7,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -22,6 +23,8 @@ import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { BREAKPOINTS } from '@/responsive';
 
 import { useGetTournamentDashboard } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
 import {
@@ -57,6 +60,9 @@ import {
 
 // I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
 // l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
+// La barre fine à 390 : 238 px pour le titre (fenêtre - marges - retour - vide), environ 22 signes.
+const SIGNES_DE_LA_BARRE_ETROITE = 22;
+
 const TAB_OPTIONS = [
   {
     get label() { return i18next.t('tournamentManagement.tabOverview', 'Vue d ensemble'); },
@@ -119,6 +125,7 @@ const TEAM_FILTER_OPTIONS = [
  */
 function TournamentManagement({ navigation, route }) {
   const { t } = useTranslation();
+  const { width: largeurDeLaFenetre } = useWindowDimensions();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
   const { canManageEvent } = useAuth();
@@ -363,11 +370,16 @@ function TournamentManagement({ navigation, route }) {
   // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
   // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
   const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
-  // T3-PLACE (03/11) : un nom long se coupait dans la barre et se répétait juste dessous.
+  // T3-PLACE (03/11) : à 390, un nom long se coupait dans la barre et se répétait juste dessous.
+  // ponytail: « il tient » est estimé en signes, pas mesuré ; sortie : mesurer le texte de la barre.
+  const nomTropLongPourLaBarre = largeurDeLaFenetre < BREAKPOINTS.tablet
+    && titreDuLecteur.length > SIGNES_DE_LA_BARRE_ETROITE;
   useDeclarerPageDuSite({
     titre: canManageTournament && !isClosed
       ? null
-      : t('tournamentManagement.competition', 'Compétition'),
+      : (nomTropLongPourLaBarre
+        ? t('tournamentManagement.competition', 'Compétition')
+        : titreDuLecteur),
   });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
