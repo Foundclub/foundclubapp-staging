@@ -472,7 +472,10 @@ describe('T3-ACTU-CIBLE — des clubs précis', () => {
 
   it('« Modifier » repart de la liste et des rôles de la vue', () => {
     const etat = etatDepuisLaVue({
-      audience: 'clubs', audienceClubIds: ['c-omni'], audienceRoles: ['entraineurs'], visibility: 'actualite',
+      audience: 'clubs',
+      audienceClubIds: ['c-omni'],
+      audienceRoles: ['entraineurs'],
+      visibility: 'actualite',
     });
     expect(etat.audience).toBe('clubs');
     expect(etat.clubIds).toEqual(['c-omni']);

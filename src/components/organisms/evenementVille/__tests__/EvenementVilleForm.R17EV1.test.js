@@ -992,7 +992,7 @@ describe('T3-ACTU-CIBLE — « Des clubs précis »', () => {
     expect(mockDestinataires).not.toHaveBeenCalled();
   });
 
-  it('🔴 le tunnel : sans club, l’étape ne s’ouvre pas ; le nombre se lit ; le corps part', async () => {
+  it('🔴 le tunnel : sans club, l’étape reste ; le nombre se lit ; le corps part', async () => {
     const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
     const arbre = await monter({ onPublier });
     await remplirJusquaQui(arbre);
