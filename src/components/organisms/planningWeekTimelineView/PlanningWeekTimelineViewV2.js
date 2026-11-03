@@ -1087,7 +1087,13 @@ function PlanningWeekTimelineView({
       : null;
     const montreVacances = Boolean(saufVacances) && !isTiny && tient(tailleSeule);
     const montreTertiaire = canShowTertiary && tient(9);
-    const libelleHeure = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    // T3-FINITIONS-VILLE (M0144) : une carte d'une heure n'a pas la place du mot seul : il passe devant
+    // l'heure, sinon le pointillé orange ne dit pas pourquoi.
+    const heureDeLaCarte = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    const motAvecLHeure = aDeplacer && !aDeplacerSeul && !canShowSecondary;
+    const libelleHeure = motAvecLHeure && heureDeLaCarte
+      ? `${motDeFermeture} · ${heureDeLaCarte}`
+      : heureDeLaCarte;
     const montreHeure = Boolean(libelleHeure) && tient(9);
     const montreMeta = canShowMeta && tient(8);
 

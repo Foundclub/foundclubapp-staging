@@ -212,6 +212,20 @@ describe('T3-FINITIONS-VILLE — ce que la grille dit sans qu on touche', () => 
     expect(lus(arbre).join(' ')).toContain('fermé');
   });
 
+  it('M0144 : une carte d une heure, sans ligne libre : le mot passe devant l heure', async () => {
+    const arbre = await monter([bloc({
+      documentId: 'evt-courte',
+      endAt: new Date(2026, 9, 7, 19, 0).toISOString(),
+      endTime: '19:00:00.000',
+      facilityClosure: { kind: 'closure', startDate: '2026-10-07' },
+      startAt: new Date(2026, 9, 7, 18, 0).toISOString(),
+      startTime: '18:00:00.000',
+      team: null,
+      title: 'Entraînement',
+    })]);
+    expect(lus(arbre).join(' ')).toContain('fermé');
+  });
+
   it('M0138 : un créneau « sauf vacances » le dit sur sa carte ; les autres non', async () => {
     const arbre = await monter([
       bloc({ documentId: 'evt-sv', slot: { exceptHolidays: true } }),
