@@ -29,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import VideoCvPlayer from '@/components/molecules/videoCv/VideoCvPlayer';
@@ -1841,19 +1842,17 @@ function UserDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
 
-      {/* FINITIONS8 (point 3) : le pied flottait SANS FOND, la carte se lisait a travers
-          « Bloquer ». Meme fond que le pied de la fiche club (FINITIONS5 / F6-5) : `primary900`,
-          OPAQUE, du haut des boutons au bas de l'ecran. Les boutons ne bougent pas : leur
-          retrait bas devient une marge interieure. */}
+      {/* BOUTONS-FLOTTANTS (03/11, demande d'Adel) : plus de bloc derriere les boutons. Le fond
+          de FINITIONS8 (02/10) devait empecher de lire la carte a travers « Bloquer » : c'est le
+          bouton qui porte le sien (voir PiedFlottant). */}
       {canContact || canBlock ? (
-        <View
+        <PiedFlottant
           onLayout={handleFooterLayout}
           style={[
             Alignments.absolute,
             Spaces.paddingHorizontal[16],
             Spaces.gap[12],
             {
-              backgroundColor: Colors.primary900,
               bottom: 0,
               left: 0,
               paddingBottom: insets.bottom + 24,
@@ -1885,7 +1884,7 @@ function UserDetails({ navigation, route }) {
               variant="SecondaryLight"
             />
           ) : null}
-        </View>
+        </PiedFlottant>
       ) : null}
     </ScreenContainer>
   );

@@ -54,6 +54,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -2197,20 +2198,13 @@ function ClubDetails({ navigation, route }) {
     : 40;
   // ANNUAIRE-E1 — sur l'annuaire du site, la fiche n'a plus d'écran à elle : « en bas » veut dire
   // en bas de la FENÊTRE (fixé), et, sur grand écran, une colonne à droite qui suit la page.
-  // FINITIONS5 (tournee 7, defaut 5) — sur le telephone, le pied flottait SANS
-  // FOND : deux « Demande en attente » desactives (opacite 0,7 x 0,5) laissaient
-  // lire « Sports / Football » au travers. Le pied porte desormais un fond, du
-  // haut des boutons au bas de l'ecran — la recette du pied de l'annuaire du
-  // site ci-dessous (`primary900` a 0,92). Les boutons ne bougent pas : le
-  // retrait bas devient une marge interieure.
-  // FINITIONS6 · F6-5 (tournee 8) — a 0,92 le fond restait TRANSLUCIDE : les cartes
-  // d'equipe et « Sports / Football » se devinaient a travers les deux « Demande en
-  // attente » grises. Meme couleur, OPAQUE.
+  // BOUTONS-FLOTTANTS (03/11, demande d'Adel) — plus de bloc derriere les boutons. Celui de
+  // FINITIONS5 (01/10) et F6-5 (02/10) empechait de lire « Sports / Football » a travers deux
+  // « Demande en attente » grises : c'est le bouton qui porte son fond (voir PiedFlottant).
   let styleDuPiedDesActions = [
     Alignments.absolute,
     Spaces.gap[12],
     {
-      backgroundColor: Colors.primary900,
       bottom: 0,
       elevation: 24,
       left: 0,
@@ -2232,7 +2226,6 @@ function ClubDetails({ navigation, route }) {
       Spaces.gap[12],
       Spaces.padding[16],
       {
-        backgroundColor: withAlpha(Colors.primary900, 0.92),
         bottom: 0,
         left: 0,
         position: /** @type {any} */ ('fixed'),
@@ -2934,8 +2927,8 @@ function ClubDetails({ navigation, route }) {
   // flottant (décision Z01). Témoin : __tests__/ClubDetails.unSeulPied.test.js.
   const piedDesActionsDansLeDefilement = Platform.OS === 'web' && !annuaire;
   const piedDesActions = hasFloatingClubActions ? (
-    <View
-      pointerEvents="box-none"
+    <PiedFlottant
+      flottant={!piedDesActionsDansLeDefilement && !actionsEnColonne}
       style={styleDuPiedDesActions}
       testID="club-details-actions-footer"
     >
@@ -3199,7 +3192,7 @@ function ClubDetails({ navigation, route }) {
           variant="Secondary"
         />
       ) : null}
-    </View>
+    </PiedFlottant>
   ) : null;
 
   // Témoin : __tests__/ClubDetails.ANDROIDBAR3BIS.clavier.test.js.

@@ -3,6 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
+
 import { BREAKPOINTS } from '@/responsive';
 
 const CONTENT_WIDTHS = {
@@ -77,11 +79,6 @@ function OnboardingStickyFooter({ children, contentWidth = 'form' }) {
     },
     shouldUseFixedFooter
       ? {
-        backgroundColor: 'rgba(9, 24, 35, 0.96)',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        borderRadius: 20,
-        borderTopWidth: 1,
-        boxShadow: '0 16px 48px rgba(4, 12, 20, 0.28)',
         paddingBottom: 16,
         paddingHorizontal: 16,
       }
@@ -93,10 +90,10 @@ function OnboardingStickyFooter({ children, contentWidth = 'form' }) {
       {shouldUseFixedFooter ? <View style={{ height: DESKTOP_FOOTER_CLEARANCE }} /> : null}
       {shouldUseFixedFooter ? (
         <View pointerEvents="box-none" style={fixedShellStyle}>
-          <View style={fixedFrameStyle}>
-            <View style={footerContentStyle}>
+          <View pointerEvents="box-none" style={fixedFrameStyle}>
+            <PiedFlottant style={footerContentStyle}>
               {children}
-            </View>
+            </PiedFlottant>
           </View>
         </View>
       ) : (
