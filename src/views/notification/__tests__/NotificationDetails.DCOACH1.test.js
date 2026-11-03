@@ -205,8 +205,8 @@ describe('T3-TEXTES : le titre de la notification, une seule fois', () => {
   beforeEach(() => {
     mockRoute.params = {
       notification: {
-        data: { type: 'complexeReservationJoueur' },
         body: 'Mathis R. sera présent samedi 18 h (2/4).',
+        data: { type: 'complexeReservationJoueur' },
         title: 'Nouvelle réponse',
       },
     };

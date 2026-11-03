@@ -48,7 +48,7 @@ describe('T3-TEXTES : la ligne du rattachement, côté club', () => {
     ['fr', fr],
     ['en', en],
   ])('%s : les 2 clés mortes sont parties, la neuve est là', (_nom, langue) => {
-    const club = (langue.translation ?? langue).collectiviteRattachement.club;
+    const { club } = (langue.translation ?? langue).collectiviteRattachement;
     expect(club.accepted).toBeUndefined();
     expect(club.youAccepted).toBeUndefined();
     expect(typeof club.attachedElsewhere).toBe('string');
