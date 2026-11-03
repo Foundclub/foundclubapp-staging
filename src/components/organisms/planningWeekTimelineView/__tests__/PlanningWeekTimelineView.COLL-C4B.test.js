@@ -100,8 +100,8 @@ const monter = async (/** @type {any[]} */ blocs, /** @type {any} */ props = {})
         events={normalizePlanningItems(blocs)}
         fermetureEnMinutes={props.fermetureEnMinutes}
         mode="day"
-        onFreeSlotPress={props.onFreeSlotPress}
         onEventPress={props.onEventPress}
+        onFreeSlotPress={props.onFreeSlotPress}
         onReadOnlyEventPress={props.onReadOnlyEventPress}
         showHeader={false}
         showUntimedSection={false}

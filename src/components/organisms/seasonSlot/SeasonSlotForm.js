@@ -2053,8 +2053,8 @@ function SeasonSlotForm({
           // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
           // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
           // de jours ne reviennent pas.
-          // T3-FINITIONS-VILLE (point 3) : la carte « Complet » aussi, au-dessus des heures : la grille
-          // ouverte la poussait sous le bord à 390.
+          // T3-FINITIONS-VILLE (point 3) : la carte « Complet » aussi, au-dessus des heures : la
+          // grille ouverte la poussait sous le bord à 390.
           sousLaDate={pleinesDuJourChoisi.length || carteAuDessusDesHeures ? (
             <>
               {pleinesDuJourChoisi.length ? (

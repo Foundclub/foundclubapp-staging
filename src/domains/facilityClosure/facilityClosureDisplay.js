@@ -59,8 +59,8 @@ export const reasonLabel = (t, reason) => {
  * @returns {string} Le mot.
  */
 export const motDuBlocTouche = (t, raw) => {
-  // T3-FINITIONS-VILLE (M0144) : sur Mon planning (`facilityClosure`), le mot vaut pour tous, joueur
-  // compris : l état, pas le geste. Le bouton « à déplacer » reste sur la carte de la liste.
+  // T3-FINITIONS-VILLE (M0144) : sur Mon planning (`facilityClosure`), le mot vaut pour tous,
+  // joueur compris : l état, pas le geste. Le bouton « à déplacer » reste sur la carte de la liste.
   if (raw?.facilityClosure) {
     return raw.facilityClosure.kind === 'block'
       ? t('collectiviteFermetures.planning.motBloque', 'bloqué')
@@ -169,8 +169,8 @@ export const closureHoursLabel = (t, fermeture) => {
 
 /**
  * T3-FINITIONS-VILLE (03/11, point 2) : les heures d UN jour d une fermeture sur plusieurs jours,
- * « dès 09:00 » le premier, « Toute la journée » au milieu, « jusqu’à 13:00 » le dernier. Le libellé
- * de la fermeture entière (`closureHoursLabel`) reste celui de sa fiche.
+ * « dès 09:00 » le premier, « Toute la journée » au milieu, « jusqu’à 13:00 » le dernier. Le
+ * libellé de la fermeture entière (`closureHoursLabel`) reste celui de sa fiche.
  * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ kind?: string, startDate?: string|null, endDate?: string|null,
  *   startTime?: string|null, endTime?: string|null }} fermeture - La fermeture.

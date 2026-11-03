@@ -3,8 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import FacilityClosureBanner from '../FacilityClosureBanner';
 
-// T3-FINITIONS-VILLE (03/11, point 7) — trois bandeaux poussaient le calendrier du Mois sous le bord
-// (mi-écran à 1440, plus bas à 390). `replie` : la plus proche, puis « Voir les 2 autres fermetures ».
+// T3-FINITIONS-VILLE (03/11, point 7) — trois bandeaux poussaient le calendrier du Mois sous le
+// bord (mi-écran à 1440, plus bas à 390). `replie` : la plus proche, puis un bouton.
 jest.mock('react-i18next', () => {
   const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
@@ -12,7 +12,8 @@ jest.mock('react-i18next', () => {
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ troisieme) => {
         const options = typeof repli === 'object' ? repli : troisieme;
         const segments = cle.split('.');
-        const parent = segments.slice(0, -1).reduce((n, s) => (n == null ? undefined : n[s]), catalogue);
+        const parent = segments.slice(0, -1)
+          .reduce((n, s) => (n == null ? undefined : n[s]), catalogue);
         const dernier = segments[segments.length - 1];
         const suffixe = options?.count === 1 ? '_one' : '_other';
         const valeur = parent?.[dernier] ?? parent?.[`${dernier}${suffixe}`];
@@ -35,7 +36,11 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/components/atoms/SvgIcon/SvgIcon', () => ({ SvgIcon: () => null }));
 
 const FERMETURES = ['24', '26', '30'].map((jour) => ({
-  documentId: `f-${jour}`, endDate: `2026-11-${jour}`, kind: 'closure', reason: 'travaux', startDate: `2026-11-${jour}`,
+  documentId: `f-${jour}`,
+  endDate: `2026-11-${jour}`,
+  kind: 'closure',
+  reason: 'travaux',
+  startDate: `2026-11-${jour}`,
 }));
 const monter = async (/** @type {any} */ props) => {
   /** @type {any} */

@@ -67,7 +67,10 @@ function FacilityClosureBanner({
       ) : null;
     }
     const autres = liste.length - 1;
-    let libelleDesAutres = t('collectiviteFermetures.bandeau.masquerAutres', 'Masquer les autres fermetures');
+    let libelleDesAutres = t(
+      'collectiviteFermetures.bandeau.masquerAutres',
+      'Masquer les autres fermetures',
+    );
     if (!deplie) {
       libelleDesAutres = t('collectiviteFermetures.bandeau.voirAutres', {
         count: autres,

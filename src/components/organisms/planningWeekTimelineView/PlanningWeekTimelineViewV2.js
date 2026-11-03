@@ -782,7 +782,9 @@ function PlanningWeekTimelineView({
         creneaux: motCreneaux, seances: motSeances,
       });
     }
-    const aDeplacer = event.events.some((/** @type {any} */ e) => e.raw?.closure || e.raw?.facilityClosure);
+    const aDeplacer = event.events.some(
+      (/** @type {any} */ e) => e.raw?.closure || e.raw?.facilityClosure,
+    );
     return (
       <TouchableOpacity
         accessibilityLabel={[`${nombre} ${mot}`, ...seances.map((/** @type {any} */ e) => (

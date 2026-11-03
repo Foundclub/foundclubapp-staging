@@ -119,7 +119,7 @@ function ClubLogoMark({
   const resolvedLogoUrl = resolveLogoUrl({ club, logoUrl });
   const resolvedClubName = resolveClubName({ club, name });
   const logoRatio = useLogoRatio(resolvedLogoUrl ? getImageUrl(resolvedLogoUrl) || '' : '');
-  // T3-FINITIONS-VILLE (point 9) : un logo qui ne se charge pas laissait son fond blanc, un carré vide.
+  // T3-FINITIONS-VILLE (point 9) : un logo qui ne se charge pas laissait un carré blanc vide.
   const [logoEnEchec, setLogoEnEchec] = useState(/** @type {string | null} */ (null));
 
   if (resolvedLogoUrl && logoEnEchec !== resolvedLogoUrl) {

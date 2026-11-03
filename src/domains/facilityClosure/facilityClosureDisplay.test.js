@@ -5,9 +5,9 @@ import {
   closureCoversDay,
   closureHoursLabel,
   closureHoursOfDay,
-  motDuBlocTouche,
   closureOfDay,
   closureTouchesBlock,
+  motDuBlocTouche,
   touchedSessionLine,
 } from './facilityClosureDisplay';
 
