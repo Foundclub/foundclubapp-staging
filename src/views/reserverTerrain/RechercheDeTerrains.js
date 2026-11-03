@@ -756,6 +756,15 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
         'Aucun terrain libre ici. Élargis la distance.',
       );
     }
+    // RESA-OUVERTURE (03/11/2026) : sans filtre posé, liste et carte le disent ; la distance n'est
+    // pas un filtre. ponytail: le serveur retire aussi un complexe sans créneau libre ce jour-là,
+    // la phrase peut donc le taire ; sortie : qu'il dise combien de complexes sont dans la zone.
+    if (!sport && !jour && !heure && !cadre) {
+      titreDuVide = t(
+        'reserverTerrain.recherche.videSansFiltre',
+        'Aucun complexe n’est encore inscrit dans cette zone.',
+      );
+    }
     corps = texteValide ? (
       <View style={carteDeBloc}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>

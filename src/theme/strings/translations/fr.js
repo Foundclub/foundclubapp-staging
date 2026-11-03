@@ -20345,6 +20345,7 @@ export default {
       telephoneSeulement: 'Téléphone seulement',
       terrain: 'Terrain',
       vide: 'Aucun terrain libre avec ces filtres.',
+      videSansFiltre: 'Aucun complexe n’est encore inscrit dans cette zone.',
       villes: 'Villes',
       voirDemain: 'Voir demain',
       voirLeComplexe: '{{nom}} : voir le complexe',
