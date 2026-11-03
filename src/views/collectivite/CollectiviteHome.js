@@ -71,14 +71,14 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import {
+  useCollectiviteQuestions,
+} from '@/services/collectivite/collectiviteQuestionQueries';
+import {
   useCollectiviteClubRequests,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 import {
   useCollectiviteFacilityChecksSummary,
 } from '@/services/facilityCheck/facilityCheckQueries';
-import {
-  useCollectiviteQuestions,
-} from '@/services/collectivite/collectiviteQuestionQueries';
 import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useCollectiviteFacilityReportsSummary,
