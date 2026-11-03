@@ -5,7 +5,10 @@ import { parse } from '@babel/parser';
 import { Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
+// jest.setup.js pose une doublure à 0 : ce témoin-ci lit la vraie valeur.
+const { default: useRetraitBasDuDefilement } = jest.requireActual(
+  '@/components/templates/useRetraitBasDuDefilement',
+);
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({

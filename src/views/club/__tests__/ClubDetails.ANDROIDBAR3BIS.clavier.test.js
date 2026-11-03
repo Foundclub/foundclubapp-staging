@@ -483,8 +483,8 @@ describe('ANDROIDBAR-3BIS — caractérisation : ce qui ne bouge pas', () => {
 
     expect(piedDessine(arbre)).toBe(true);
     expect(basDuDefilement(defilement)).toBe(avant);
-    // Rien entre l'écran et la fiche n'a pris de marge : le bas reste celui d'hier.
-    expect(avant).toBeCloseTo(ECRAN - 48 - 24, 5);
+    // T3-BANDE-BAS (03/11, décision d'Adel) : la fiche descend jusqu'au bord de l'écran, plus de bande.
+    expect(avant).toBeCloseTo(ECRAN, 5);
   });
 
   it('iPhone, hub du dirigeant : aucun évitement du clavier', () => {
