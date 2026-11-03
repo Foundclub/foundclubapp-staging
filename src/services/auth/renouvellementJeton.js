@@ -68,7 +68,7 @@ const renouvelerUnJeton = async (/** @type {any} */ client, /** @type {string} *
   });
   const jeton = reponse?.data?.jwt;
   if (typeof jeton !== 'string' || !jeton) return false;
-  if (getAuthRuntimeSnapshot()?.auth?.token === ancienJeton) {
+  if (/** @type {any} */ (getAuthRuntimeSnapshot())?.auth?.token === ancienJeton) {
     recopierDonneesDuCompte(ancienJeton, jeton);
   }
   dispatchAuthRuntimeAction({ payload: { ancienJeton, jeton }, type: 'RENEW_SESSION_TOKEN' });
@@ -83,7 +83,7 @@ export const renouvelerJetonsSiBesoin = (client) => {
   const maintenantMs = Date.now();
   if (renouvellementEnCours || maintenantMs < prochainEssaiMs) return;
 
-  const { auth, authSessions } = getAuthRuntimeSnapshot() || {};
+  const { auth, authSessions } = /** @type {any} */ (getAuthRuntimeSnapshot()) || {};
   const jetons = [...new Set([auth, ...(authSessions || [])].map((session) => session?.token))]
     .filter((jeton) => jeton && aRenouveler(jeton, maintenantMs));
   if (!jetons.length) return;

@@ -133,7 +133,7 @@ export default function appReducer(state, action) {
     // ne ressuscite pas.
     case 'RENEW_SESSION_TOKEN': {
       const { ancienJeton, jeton } = action.payload;
-      const renouveler = (session) => (
+      const renouveler = (/** @type {any} */ session) => (
         session?.token === ancienJeton ? { ...session, token: jeton } : session
       );
       return {
