@@ -601,14 +601,20 @@ function Profile({ navigation, route }) {
     switch (badgeAccessLevel) {
       case 'CLUB':
         return {
-          container: { backgroundColor: 'rgba(133,103,255,0.16)', borderColor: 'rgba(133,103,255,0.55)' },
+          container: {
+            backgroundColor: 'rgba(133,103,255,0.16)',
+            borderColor: 'rgba(133,103,255,0.55)',
+          },
           label: t('profile.subscription.states.club'),
           showClock: false,
           textColor: Colors.violet200,
         };
       case 'CLUB_UNVERIFIED':
         return {
-          container: { backgroundColor: 'rgba(133,103,255,0.10)', borderColor: 'rgba(133,103,255,0.45)' },
+          container: {
+            backgroundColor: 'rgba(133,103,255,0.10)',
+            borderColor: 'rgba(133,103,255,0.45)',
+          },
           label: t('profile.subscription.states.clubUnverified'),
           // R10 — plus de sablier : les deux etats Club ouvrent les memes droits,
           // et l'horloge suggerait au client une attente qui ne le concerne pas.
@@ -617,14 +623,20 @@ function Profile({ navigation, route }) {
         };
       case 'TEAM':
         return {
-          container: { backgroundColor: 'rgba(1,179,244,0.12)', borderColor: 'rgba(1,179,244,0.45)' },
+          container: {
+            backgroundColor: 'rgba(1,179,244,0.12)',
+            borderColor: 'rgba(1,179,244,0.45)',
+          },
           label: t('profile.subscription.states.team'),
           showClock: false,
           textColor: Colors.primary200,
         };
       default:
         return {
-          container: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.22)' },
+          container: {
+            backgroundColor: 'rgba(255,255,255,0.08)',
+            borderColor: 'rgba(255,255,255,0.22)',
+          },
           label: t('profile.subscription.states.free'),
           showClock: false,
           textColor: Colors.neutral200,
@@ -700,7 +712,14 @@ function Profile({ navigation, route }) {
 
     return (
       <View key={item.quotaType} style={{ gap: 6 }}>
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { gap: 8 }]}>
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifySpaceBetween,
+            { gap: 8 },
+          ]}
+        >
           <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Bold', fontSize: 12.5 }}>
             {label}
           </Text>
@@ -734,7 +753,14 @@ function Profile({ navigation, route }) {
       padding: 16,
     }}
     >
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, { gap: 12 }]}>
+      <View
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween,
+          { gap: 12 },
+        ]}
+      >
         <Text style={{ color: Colors.neutral00, fontFamily: 'Montserrat-Black', fontSize: 15 }}>
           {t('profile.subscription.title')}
         </Text>
