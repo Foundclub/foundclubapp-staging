@@ -13,11 +13,9 @@ jest.mock('@/theme/themeContext', () => {
   const Colors = generateColors();
   return { __esModule: true, default: () => ({ Colors, Fonts: generateFonts(Colors) }) };
 });
-jest.mock('@/components/atoms/button/Button', () => (/** @type {any} */ props) => {
-  // eslint-disable-next-line global-require
-  const { Text } = require('react-native');
-  return <Text {...props}>{props.title}</Text>;
-});
+
+const mockBouton = jest.fn(() => null);
+jest.mock('@/components/atoms/button/Button', () => (/** @type {any} */ ...args) => mockBouton(...args));
 
 /**
  * Monte le bandeau.
@@ -47,7 +45,9 @@ describe('VIDEO-RAME — le bandeau de préparation', () => {
     const ecran = monter(40, onCancel);
     expect(texteDe(ecran)).toContain('Préparation de la vidéo… 40 %');
 
-    act(() => { ecran.root.findAll((n) => n.props.title === 'Annuler')[0].props.onPress(); });
+    const [bouton] = /** @type {any} */ (mockBouton.mock.calls.at(-1));
+    expect(bouton.title).toBe('Annuler');
+    act(() => { bouton.onPress(); });
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
