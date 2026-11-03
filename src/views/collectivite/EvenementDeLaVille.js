@@ -16,6 +16,7 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import PresenceEvenementVille from '@/components/organisms/evenementVille/PresenceEvenementVille';
 import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -289,6 +290,8 @@ function EvenementDeLaVille() {
         {evenement.description ? (
           <Text style={[Fonts.p2, Fonts.neutral100]}>{evenement.description}</Text>
         ) : null}
+        {/* T3-VILLE-PRESENCE (03/11, fiche 9 A) : répondre pour soi ; ce que la Ville et le dirigeant lisent. */}
+        <PresenceEvenementVille deLaVille={deLaVille} evenement={evenement} />
         {deLaVille && !annule ? (
           <View style={{ gap: 12 }}>
             <Button

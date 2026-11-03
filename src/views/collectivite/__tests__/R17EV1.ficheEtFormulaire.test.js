@@ -108,6 +108,8 @@ jest.mock('@/domains/collectivite/collectiviteDisplay', () => ({
     return trouvee || null;
   },
 }));
+// T3-VILLE-PRESENCE (03/11) : la section a son propre témoin (PresenceEvenementVille.T3VP.test.js).
+jest.mock('@/components/organisms/evenementVille/PresenceEvenementVille', () => () => null);
 jest.mock(
   '@/components/organisms/evenementVille/EvenementVilleForm',
   () => function FormulaireMock(/** @type {any} */ props) {
