@@ -3,7 +3,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
-import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { closureRangesOfDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
@@ -578,6 +578,9 @@ const picSimultane = (fenetres) => fenetres.reduce((pic, fenetre) => Math.max(
     .length,
 ), 0);
 
+// Une fermeture sans heures prend tout le jour : de minuit à minuit.
+const TOUTE_LA_JOURNEE = { closing: 24 * 60, opening: 0 };
+
 /**
  * 🏟️ R17-EVT-1-BIS (d) (20/10/2026, tri du chef) — « OÙ ? » : l'occupation de chaque
  * installation aux jours et heures choisis, lue sur son planning (comme le planning de toutes les
@@ -605,11 +608,19 @@ export const occupationDesLieux = ({
   }
   const fermeturesDeLaVille = (Array.isArray(fermetures) ? fermetures : [])
     .filter((fermeture) => fermeture?.kind !== 'block');
+  const enMinutes = (/** @type {unknown} */ heure, /** @type {number} */ sinon) => {
+    const [h, m] = String(heure || '').split(':').map(Number);
+    return Number.isInteger(h) && Number.isInteger(m) ? h * 60 + m : sinon;
+  };
+  const debutDeLaFenetre = enMinutes(fenetre?.heureDebut, 0);
+  const finDeLaFenetre = enMinutes(fenetre?.heureFin, 24 * 60);
   const lieux = Array.isArray(installations) ? installations : [];
   return Object.fromEntries(lieux.map((lieu, rang) => {
+    // RET-FERMETURE-HEURES (03/11) : une fermeture avec heures ne gêne que sur ces heures.
     const fermeture = fermeturesDeLaVille.find((une) => (
       une?.facility?.documentId === lieu?.documentId
-      && jours.some((jour) => closureCoversDay(une, jour)))) || null;
+      && jours.some((jour) => closureRangesOfDay([une], jour, TOUTE_LA_JOURNEE)
+        .some((plage) => plage.start < finDeLaFenetre && debutDeLaFenetre < plage.end)))) || null;
     const lecture = lectures?.[rang];
     // VILLEEVT-CODE (ligne 5) : une lecture en échec n'est pas « libre » : « Impossible de vérifier ».
     if (!lecture) {
@@ -650,6 +661,9 @@ export const occupationDesLieux = ({
  */
 export const occupationLabel = (t, occupation) => {
   if (!occupation) return '';
+  if (occupation.fermeture?.startTime || occupation.fermeture?.endTime) {
+    return t('collectiviteEvenement.ou.occupationFermeeHeures', 'Fermeture sur ces heures');
+  }
   if (occupation.fermeture) {
     return t('collectiviteEvenement.ou.occupationFermee', 'Fermeture ce jour-là');
   }

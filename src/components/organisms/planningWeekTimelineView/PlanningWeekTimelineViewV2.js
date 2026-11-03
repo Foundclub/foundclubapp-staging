@@ -191,6 +191,17 @@ function EventBlock({
 }
 
 /**
+ * COLL-C4B-BIS : une JOURNEE fermee couvre toute la colonne. RET-FERMETURE-HEURES (03/11, Adel) :
+ * une fermeture avec heures ne prend que ses heures (`closureBandsForRange` le dit), comme un
+ * blocage.
+ * @param {any} event - Un élément du planning.
+ * @returns {boolean} Vrai pour la plage d'un jour fermé en entier.
+ */
+const estJourneeFermee = (event) => Boolean(event?.raw?.closureBand)
+  && event.raw.closureBand.kind !== 'block'
+  && event.raw.closureJourEntier !== false;
+
+/**
  * La grille du planning : une semaine, trois jours, ou un jour.
  * @param {object} root0
  * @param {string} [root0.cardDisplayProfile] - 'default', 'teamFocused' ou 'clubFocused'.
@@ -323,7 +334,7 @@ function PlanningWeekTimelineView({
   // replie, la plage les couvre toutes. Seule dans la page, elle les ouvre : la journee se lit.
   const heuresOuvrantes = useMemo(() => {
     const sansJourneeFermee = timedEvents.filter((/** @type {any} */ event) => (
-      !event?.raw?.closureBand || event.raw.closureBand.kind === 'block'
+      !estJourneeFermee(event)
     ));
     return sansJourneeFermee.length ? sansJourneeFermee : timedEvents;
   }, [timedEvents]);
@@ -346,6 +357,20 @@ function PlanningWeekTimelineView({
       for (let hour = startHour; hour <= inclusiveEnd; hour += 1) values.add(hour);
     });
 
+    // RET-FERMETURE-HEURES (03/11, Adel) : fermé quelques heures, le reste du jour se réserve ; ses
+    // heures doivent se voir, sinon 8 h et 18 h n'ont pas de case.
+    // ponytail: jusqu'à 22 h, la grille ne connaît pas la fermeture de l'installation ; sortie : la
+    // lui passer comme `firstHour`.
+    const fermeeQuelquesHeures = timedEvents.some((/** @type {any} */ event) => (
+      event?.raw?.closureBand && event.raw.closureBand.kind !== 'block'
+      && event.raw.closureJourEntier === false
+    ));
+    if (fermeeQuelquesHeures) {
+      for (let hour = typeof firstHour === 'number' ? firstHour : 8; hour < 22; hour += 1) {
+        values.add(hour);
+      }
+    }
+
     if (mode === 'day') {
       freeSlotAnnotations.forEach((annotation) => {
         for (let hour = Math.floor(annotation.startMinutes / 60);
@@ -354,7 +379,7 @@ function PlanningWeekTimelineView({
     }
 
     return values;
-  }, [freeSlotAnnotations, heuresOuvrantes, mode]);
+  }, [firstHour, freeSlotAnnotations, heuresOuvrantes, mode, timedEvents]);
 
   const timelineBlocks = useMemo(() => {
     const blocks = [];
@@ -459,8 +484,7 @@ function PlanningWeekTimelineView({
 
       // COLL-C4B-BIS : une JOURNEE fermee couvre toute la colonne (`.ferme-bande` : top 0,
       // bottom 0).
-      const journeeFermee = Boolean(event?.raw?.closureBand)
-        && event.raw.closureBand.kind !== 'block';
+      const journeeFermee = estJourneeFermee(event);
       const positionedEvent = {
         ...event,
         bottom: journeeFermee ? totalHeight : Math.max(top + minEventHeight, bottom),
@@ -1358,7 +1382,7 @@ function PlanningWeekTimelineView({
     const date = getPlanningItemDate(event);
     if (!fermeture || !date) return;
     const temps = extractTime(event);
-    const plage = fermeture.kind === 'block' && temps
+    const plage = !estJourneeFermee(event) && temps
       ? {
         end: temps.endHour * 60 + temps.endMinute,
         start: temps.startHour * 60 + temps.startMinute,

@@ -398,6 +398,21 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     expect(ligne).toBe('2 équipes à la fois · fermeture ce jour-là');
   });
 
+  it('RET-FERMETURE-HEURES : fermé quelques heures, la ligne de la place ne dit pas toute la journée', async () => {
+    gereLaVille();
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue({
+      ...reponse([]),
+      meta: {
+        ...reponse([]).meta,
+        closures: [{ ...FERMETURE_DU_JOUR, endTime: '13:00', startTime: '09:00' }],
+      },
+    });
+    const arbre = await rendre();
+    const ligne = textes(arbre).find((/** @type {string} */ texte) => / à la fois · /.test(texte));
+    expect(ligne).not.toContain('fermeture ce jour-là');
+    expect(bande().raw.closureJourEntier).toBe(false);
+  });
+
   it('2. la mairie touche la plage : Modifier ou Rouvrir', async () => {
     gereLaVille();
     avecFermeture();

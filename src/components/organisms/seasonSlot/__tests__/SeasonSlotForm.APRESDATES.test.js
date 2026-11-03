@@ -22,7 +22,7 @@ import SeasonSlotForm from '../SeasonSlotForm';
 //   l'ancienne heure.
 // - Q3-09 : des jours différents n'ont pas de « jour » : « Voir les heures libres du <jour> »
 //   proposait 8 h – 22 h (aucune heure pleine n'est calculée dans ce cas).
-// - Q3-13 : « Mercredi » puis « Des dates choisies » : le récapitulatif annonçait « Mercredi »,
+// - Q3-13 : « Mercredi » puis « Des créneaux ponctuels » : le récapitulatif annonçait « Mercredi »,
 //   un jour de semaine qui ne part pas au serveur.
 // - Voisin (trouvé par le lot, « Q1 = A » du chef 27/10) : « Répéter » toutes les 2 semaines (ou une
 //   période), puis retour à « chaque semaine jusqu'à la fin de saison » : la forme restait l'ancienne,
@@ -263,13 +263,13 @@ test('Q3-09 — des jours différents, place complète : pas de « Voir les heur
   expect(arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'attribuer-voir-libres')).toHaveLength(0);
 });
 
-test('Q3-13 — « Mercredi » puis « Des dates choisies » : le récapitulatif ne dit plus « Mercredi »', async () => {
+test('Q3-13 — « Mercredi » puis « Des créneaux ponctuels » : le récapitulatif ne dit plus « Mercredi »', async () => {
   const arbre = await monter({ slot: CRENEAU_DU_MERCREDI });
-  for (let pas = 0; pas < 4 && !choix(arbre, 'Des dates choisies'); pas += 1) {
+  for (let pas = 0; pas < 4 && !choix(arbre, 'Des créneaux ponctuels'); pas += 1) {
     // eslint-disable-next-line no-await-in-loop
     await avancer(arbre);
   }
-  await choisir(arbre, 'Des dates choisies');
+  await choisir(arbre, 'Des créneaux ponctuels');
   await appeler(() => jourDuCalendrier(arbre, '2026-10-24').props.onPress());
   await appeler(() => jourDuCalendrier(arbre, '2026-10-31').props.onPress());
   await jusquAuRecap(arbre);

@@ -297,9 +297,9 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
     const arbre = await monter();
     await jusquAuQuand(arbre);
     await repeter(arbre, { au: new Date(2026, 9, 27), jours: [3, 6, 2] });
-    expect(lus(arbre)).toEqual(expect.arrayContaining(['3 dates choisies', 'mer. 21 oct. · sam. 24 oct. · mar. 27 oct.']));
+    expect(lus(arbre)).toEqual(expect.arrayContaining(['3 créneaux ponctuels', 'mer. 21 oct. · sam. 24 oct. · mar. 27 oct.']));
     await avancer(arbre);
-    expect(lus(arbre)).toEqual(expect.arrayContaining(['Heures', '17:30 – 19:00', '3 dates choisies']));
+    expect(lus(arbre)).toEqual(expect.arrayContaining(['Heures', '17:30 – 19:00', '3 créneaux ponctuels']));
     await appeler(() => tunnel(arbre).onNext());
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       club: 'basket', dates: ['2026-10-21', '2026-10-24', '2026-10-27'], endTime: '19:00', recurrence: 'dates', startTime: '17:30',

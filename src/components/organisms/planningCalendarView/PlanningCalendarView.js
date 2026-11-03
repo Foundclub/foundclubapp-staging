@@ -20,6 +20,7 @@ import {
   closureBandLabel,
   closureHoursLabel,
   closureOfDay,
+  closureTakesWholeDay,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -152,8 +153,10 @@ function PlanningCalendarDay({
   const dateString = date?.dateString;
   if (!dateString) return null;
   // COLL-C4B-BIS (03/10) : un jour ferme toute la journee se HACHURE (comme la grille, planche
-  // P4v3-fermer) ; un jour bloque (une plage) se cerne d orange.
-  const journeeFermee = Boolean(fermetureDuJour) && fermetureDuJour.kind !== 'block';
+  // P4v3-fermer) ; un jour bloque ou ferme quelques heures (RET-FERMETURE-HEURES) se cerne
+  // d orange.
+  const journeeFermee = Boolean(fermetureDuJour)
+    && closureTakesWholeDay(fermetureDuJour, dateString);
   const jourBloque = Boolean(fermetureDuJour) && !journeeFermee;
   let testIDDuJour;
   if (journeeFermee) testIDDuJour = `jour-ferme-${dateString}`;

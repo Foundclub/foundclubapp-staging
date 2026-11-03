@@ -199,7 +199,7 @@ const appuyer = async (/** @type {any} */ noeud) => {
   await act(async () => { noeud.props.onPress(); });
 };
 
-const LE_BOUTON = 'Ce club fait partie de ma collectivité';
+const LE_BOUTON = 'Ajouter ce club à ma collectivité';
 const ADRESSE_DU_LIEN = 'https://foundclub.example.invalid/invitation-ville/CodeDeLaVille0123456789ab';
 
 const demande = (/** @type {Record<string, unknown>} */ champs) => ({
@@ -279,7 +279,16 @@ describe('R17INVIT · I2 — « Le club n’est pas sur FoundClub ? »', () => {
 });
 
 describe('R17INVIT · I3 — le bouton de chaque carte', () => {
-  it('« Ce club fait partie de ma collectivité » envoie la demande à CE club', async () => {
+  // RET-VILLE 4 (02/11, Adel « A ») : le bouton dit le geste, la phrase dit que rien n'est fait tant
+  // que le club n'a pas accepté.
+  it('sous le bouton de chaque carte : le club devra accepter', async () => {
+    const arbre = await monter();
+    const phrases = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text'
+      && [n.props.children].flat().join('') === 'Le club devra accepter : ses dirigeants reçoivent la demande.');
+    expect(phrases).toHaveLength(mockClubs.length);
+  });
+
+  it('« Ajouter ce club à ma collectivité » envoie la demande à CE club', async () => {
     const arbre = await monter();
     const carte = dans(arbre, 'carte-judo-e');
     const [bouton] = boutons(carte, LE_BOUTON);

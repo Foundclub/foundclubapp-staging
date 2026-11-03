@@ -298,10 +298,10 @@ test('C4B-A1/1 FERMER : la carte nomme les seances touchees et les clubs prevenu
 // FINITIONS19 3 (T17 §7.4, decision d'Adel « actualité A » du 07/10) : la case « Publier aussi une
 // actualite Fermeture » est DECOCHEE par defaut — cochee, un appui distrait sur « Fermer » publiait une
 // actualite a TOUS les membres des clubs rattaches. Elle n'est plus choisie a la place de la Ville.
-test('C4B-A1/2 le motif « Travaux » est choisi par defaut ; la case « Publier aussi une actualite Fermeture » est DECOCHEE', async () => {
+test('C4B-A1/2 aucun motif par defaut (RET-VILLE 2, Adel « 1- A » : un nom seul suffit) ; la case « Publier aussi une actualite Fermeture » est DECOCHEE', async () => {
   const arbre = await rendre();
   const travaux = parTestID(arbre, 'fermeture-motif-travaux');
-  expect(travaux.props.accessibilityState).toEqual({ checked: true });
+  expect(travaux.props.accessibilityState).toEqual({ checked: false });
   const publier = parTestID(arbre, 'fermeture-publier');
   expect(publier.props.accessibilityRole).toBe('checkbox');
   expect(publier.props.accessibilityState).toEqual({ checked: false });
@@ -313,6 +313,7 @@ test('C4B-A1/2 le motif « Travaux » est choisi par defaut ; la case « Publier
 test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer » envoie le bon corps, puis revient', async () => {
   const arbre = await rendre();
   await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-motif-travaux'));
   // CRFERM (planche P4v4) : le nom et le mot sont repliés derrière un lien.
   await appuyer(parTestID(arbre, 'fermeture-deplier'));
   await saisir('Un mot pour les clubs (facultatif)', 'Réfection du sol');

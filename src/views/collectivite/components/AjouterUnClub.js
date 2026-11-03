@@ -199,17 +199,26 @@ function AjouterUnClub({ club, collectiviteId, onInviterParLien }) {
       </View>
     );
   } else {
+    // RET-VILLE 4 (02/11, Adel « A ») : le bouton n'ajoute rien tout de suite, la phrase le dit.
     contenu = (
-      <Button
-        isLoading={proposer.isPending}
-        onPress={envoyer}
-        size="sm"
-        style={BOUTON}
-        title={t(
-          'collectiviteRattachement.ajouter.belongs',
-          'Ce club fait partie de ma collectivité',
-        )}
-      />
+      <View style={{ gap: 4 }}>
+        <Button
+          isLoading={proposer.isPending}
+          onPress={envoyer}
+          size="sm"
+          style={BOUTON}
+          title={t(
+            'collectiviteRattachement.ajouter.belongs',
+            'Ajouter ce club à ma collectivité',
+          )}
+        />
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteRattachement.ajouter.clubDevraAccepter',
+            'Le club devra accepter : ses dirigeants reçoivent la demande.',
+          )}
+        </Text>
+      </View>
     );
   }
 

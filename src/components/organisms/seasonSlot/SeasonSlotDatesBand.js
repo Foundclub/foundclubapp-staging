@@ -8,8 +8,9 @@ import useTheme from '@/theme/themeContext';
 
 /**
  * 🗓️ R17-QUAND-1, point 6 (planche P11-quand-v2-ordi, état A ; P11-quand-ou-ca-vit, 2) — LA BANDE
- * « DATES CHOISIES, HORS SEMAINE TYPE ». Un créneau aux dates choisies n'a pas de jour fixe : il ne
- * tient dans aucune colonne de la semaine type. Il se lit ici, sous la grille (au téléphone, en
+ * « CRÉNEAUX PONCTUELS » (RET-VILLE 18, Adel). Un créneau aux dates choisies n'a pas de jour
+ * fixe : il ne tient dans aucune colonne de la semaine type. Il se lit ici, sous la grille (au
+ * téléphone, en
  * groupe sous les jours) : qui, quelles heures, quelles dates, combien. Dans le planning daté, il
  * s'affiche à ses dates comme les autres (serveur). Un appui ouvre le créneau (« Gérer »).
  * @param {{ creneaux: any[], onCreneau?: (creneau: any) => void }} props - Tous les créneaux de
@@ -22,7 +23,7 @@ function SeasonSlotDatesBand({ creneaux, onCreneau }) {
   const aDates = (Array.isArray(creneaux) ? creneaux : [])
     .filter((creneau) => slotShape(creneau).recurrence === 'dates');
   if (!aDates.length) return null;
-  const titre = t('collectiviteCreneaux.quand.bandeTitre', 'Dates choisies, hors semaine type');
+  const titre = t('collectiviteCreneaux.quand.bandeTitre', 'Créneaux ponctuels');
   return (
     <View
       accessibilityLabel={titre}

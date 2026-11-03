@@ -206,6 +206,46 @@ describe('COLL-C4B-BIS point 5 — un jour ferme n a aucune heure libre', () => 
     expect(casesLibres(arbre)).toEqual([]);
   });
 
+  // RET-FERMETURE-HEURES (03/11, Adel) : avant et après ses heures, l'installation reste ouverte.
+  it('fermeture de 17:00 a 19:00 : ses heures ne sont pas libres, les autres oui', async () => {
+    const fermeture = {
+      closureBand: {
+        documentId: 'f2', endTime: '19:00', kind: 'closure', reason: 'travaux', startTime: '17:00',
+      },
+      closureJourEntier: false,
+      documentId: null,
+      endAt: new Date(2026, 9, 7, 19, 0).toISOString(),
+      hasExplicitTime: true,
+      startAt: new Date(2026, 9, 7, 17, 0).toISOString(),
+      title: 'Fermé · travaux',
+    };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <PlanningWeekTimelineView
+          cardDisplayProfile="clubFocused"
+          compactFullscreen
+          currentDate={MERCREDI}
+          events={normalizePlanningItems([fermeture])}
+          firstHour={8}
+          mode="day"
+          onFreeSlotPress={jest.fn()}
+          showHeader={false}
+          showUntimedSection={false}
+        />,
+      );
+    });
+    arbresMontes.push(arbre);
+    const cases = casesLibres(arbre);
+    expect(cases).not.toContain('heure-libre-2026-10-07-17');
+    expect(cases).not.toContain('heure-libre-2026-10-07-18');
+    expect(cases).toContain('heure-libre-2026-10-07-19');
+    // Le reste du jour se réserve, avant comme après : ses heures ont leur case.
+    expect(cases).toContain('heure-libre-2026-10-07-8');
+    expect(cases).toContain('heure-libre-2026-10-07-21');
+  });
+
   it('blocage de 17:00 a 19:00 : ses heures ne sont pas libres, les autres oui', async () => {
     const blocage = {
       closureBand: {

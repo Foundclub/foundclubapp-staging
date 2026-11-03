@@ -741,25 +741,22 @@ function CollectiviteClubDetails() {
   const ville = collectivite?.name
     ? formatCollectiviteOfferedBy(collectivite.name)
     : t('collectiviteClubs.detail.theCity', 'la Ville');
+  // RET-VILLE 24 (02/11, Adel « A ») : la carte se garde quand la Ville paie ; l'abonnement d'un
+  // club qui paie lui-même ne la regarde pas. Ça change D70 (le renvoi vers FoundClub partout).
   const renderOffre = () => {
     const offre = club?.offer || {};
-    let ligne = t('collectiviteClubs.detail.offerNone', 'Aucune offre en cours pour ce club.');
-    if (offre.kind === 'collectivite') {
-      ligne = t(
-        'collectiviteClubs.detail.offerCity',
-        'Abonnement offert par {{ville}}.',
-        { ville, ...SANS_ECHAPPEMENT },
-      );
-    } else if (offre.kind === 'own') {
-      ligne = t('collectiviteClubs.detail.offerOwn', 'Son propre abonnement.');
-    }
+    if (offre.kind !== 'collectivite') return null;
     // FINITIONS15 point 8 : planche P2-fiche, « Depuis le jeu. 1 oct. ».
-    const depuis = offre.kind === 'collectivite' && offre.since
-      ? formatCollectiviteDay(offre.since)
-      : '';
+    const depuis = offre.since ? formatCollectiviteDay(offre.since) : '';
     return (
       <BlocDeFiche testID="fiche-club-offre" titre={t('collectiviteClubs.detail.offer', 'L’offre')}>
-        <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral100]}>
+          {t(
+            'collectiviteClubs.detail.offerCity',
+            'Abonnement offert par {{ville}}.',
+            { ville, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
         {depuis ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {unSeulPointFinal(t('collectiviteClubs.detail.offerSince', 'Depuis le {{date}}.', {
@@ -781,71 +778,77 @@ function CollectiviteClubDetails() {
             )}
           </Text>
         </TouchableOpacity>
-        {/* CORR-COLLECTIVITES 101 (31/10, Adel A) : la Ville détache le club (le club est
-            prévenu). */}
-        {confirmerDetacher ? (
-          <View
-            accessibilityRole="alert"
-            style={{ gap: 8 }}
-            testID="fiche-club-detacher-confirmation"
-          >
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t(
-                offre.kind === 'collectivite'
-                  ? 'collectiviteClubs.detail.detacherQuestionOffre'
-                  : 'collectiviteClubs.detail.detacherQuestion',
-                offre.kind === 'collectivite'
-                  ? 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement '
-                    + 'offert par la Ville s’arrête. Ses dirigeants sont prévenus.'
-                  : 'Détacher {{club}} ? Il ne verra plus vos installations. '
-                    + 'Ses dirigeants sont prévenus.',
-                { club: club?.name || '', ...SANS_ECHAPPEMENT },
-              )}
-            </Text>
-            {erreurDetacher ? (
-              <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
-                {erreurDetacher}
-              </Text>
-            ) : null}
-            <Button
-              disabled={detacher.isPending}
-              onPress={async () => {
-                setErreurDetacher('');
-                try {
-                  await detacher.mutateAsync({ clubId, collectiviteId });
-                  setConfirmerDetacher(false);
-                  navigation.navigate(RouteNames.CollectiviteClubs, { collectiviteId });
-                } catch (refus) {
-                  setErreurDetacher(getErrorMessage(/** @type {any} */ (refus)));
-                }
-              }}
-              title={t('collectiviteClubs.detail.detacherOui', 'Oui, détacher')}
-              variant="DangerFilled"
-            />
-            <Button
-              onPress={() => setConfirmerDetacher(false)}
-              title={t('common.cancel', 'Annuler')}
-              variant="Ghost"
-            />
-          </View>
-        ) : (
-          <Button
-            onPress={() => setConfirmerDetacher(true)}
-            style={{ alignSelf: 'flex-start' }}
-            title={t('collectiviteClubs.detail.detacher', 'Détacher ce club')}
-            // REPRISE-COLLECTIVITES 101 (01/11) : rouge, pas gris (on le prenait pour un bouton
-            // éteint) ; la confirmation est pleine.
-            variant="Danger"
-          />
-        )}
       </BlocDeFiche>
     );
   };
 
+  // CORR-COLLECTIVITES 101 (31/10, Adel A) : la Ville détache le club (le club est prévenu).
+  // RET-VILLE 24 : hors de la carte de l'offre, qui n'existe plus pour tous les clubs.
+  const renderDetacher = () => {
+    const offerte = club?.offer?.kind === 'collectivite';
+    if (confirmerDetacher) {
+      return (
+        <View
+          accessibilityRole="alert"
+          style={{ gap: 8 }}
+          testID="fiche-club-detacher-confirmation"
+        >
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t(
+              offerte
+                ? 'collectiviteClubs.detail.detacherQuestionOffre'
+                : 'collectiviteClubs.detail.detacherQuestion',
+              offerte
+                ? 'Détacher {{club}} ? Il ne verra plus vos installations, et l’abonnement '
+                  + 'offert par la Ville s’arrête. Ses dirigeants sont prévenus.'
+                : 'Détacher {{club}} ? Il ne verra plus vos installations. '
+                  + 'Ses dirigeants sont prévenus.',
+              { club: club?.name || '', ...SANS_ECHAPPEMENT },
+            )}
+          </Text>
+          {erreurDetacher ? (
+            <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+              {erreurDetacher}
+            </Text>
+          ) : null}
+          <Button
+            disabled={detacher.isPending}
+            onPress={async () => {
+              setErreurDetacher('');
+              try {
+                await detacher.mutateAsync({ clubId, collectiviteId });
+                setConfirmerDetacher(false);
+                navigation.navigate(RouteNames.CollectiviteClubs, { collectiviteId });
+              } catch (refus) {
+                setErreurDetacher(getErrorMessage(/** @type {any} */ (refus)));
+              }
+            }}
+            title={t('collectiviteClubs.detail.detacherOui', 'Oui, détacher')}
+            variant="DangerFilled"
+          />
+          <Button
+            onPress={() => setConfirmerDetacher(false)}
+            title={t('common.cancel', 'Annuler')}
+            variant="Ghost"
+          />
+        </View>
+      );
+    }
+    return (
+      <Button
+        onPress={() => setConfirmerDetacher(true)}
+        style={{ alignSelf: 'flex-start' }}
+        title={t('collectiviteClubs.detail.detacher', 'Détacher ce club')}
+        // REPRISE-COLLECTIVITES 101 (01/11) : rouge, pas gris (on le prenait pour un bouton
+        // éteint) ; la confirmation est pleine.
+        variant="Danger"
+      />
+    );
+  };
+
   const renderPastilleOffre = () => {
-    const kind = club?.offer?.kind;
-    if (kind !== 'collectivite' && kind !== 'own') return null;
-    const offerte = kind === 'collectivite';
+    // RET-VILLE 24 : comme la carte, seulement quand la Ville paie.
+    if (club?.offer?.kind !== 'collectivite') return null;
     return (
       <View
         style={[
@@ -854,16 +857,14 @@ function CollectiviteClubDetails() {
           Spaces.paddingVertical[4],
           {
             alignSelf: 'flex-start',
-            backgroundColor: withAlpha(offerte ? Colors.success500 : Colors.neutral00, 0.12),
-            borderColor: withAlpha(offerte ? Colors.success500 : Colors.neutral00, 0.45),
+            backgroundColor: withAlpha(Colors.success500, 0.12),
+            borderColor: withAlpha(Colors.success500, 0.45),
             borderWidth: 1,
           },
         ]}
       >
-        <Text style={[Fonts.p4Bold, { color: offerte ? Colors.success200 : Colors.neutral100 }]}>
-          {offerte
-            ? t('collectiviteClubs.detail.badgeCity', 'Offert par la Ville')
-            : t('collectiviteClubs.detail.badgeOwn', 'Son propre abonnement')}
+        <Text style={[Fonts.p4Bold, { color: Colors.success200 }]}>
+          {t('collectiviteClubs.detail.badgeCity', 'Offert par la Ville')}
         </Text>
       </View>
     );
@@ -916,6 +917,7 @@ function CollectiviteClubDetails() {
             <CouleurClubPlanning club={club} collectiviteId={String(collectiviteId)} />
           ) : null}
           {renderOffre()}
+          {renderDetacher()}
         </View>
         <View style={{ flex: 1, gap: 14, minWidth: 0 }}>
           {renderCreneaux()}
@@ -939,6 +941,7 @@ function CollectiviteClubDetails() {
         {renderPartenaires()}
         {renderUtilisation()}
         {renderOffre()}
+        {renderDetacher()}
       </View>
     );
   }

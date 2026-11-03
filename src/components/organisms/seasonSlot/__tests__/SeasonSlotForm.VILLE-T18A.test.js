@@ -240,11 +240,22 @@ describe('VILLE-T18A point 2 — planche 23 état 3 : la capacité dépassée, s
     return arbre;
   };
 
+  it('RET-VILLE 17 : sans dépassement, la carte garde « Déjà là »', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockImplementation(async () => ({
+      data: { capacity: 2, needsConfirmation: false, occupants: [PLEIN.occupants[0]] },
+    }));
+    const lus = textes(await remplirLeComplet());
+    expect(lus).toContain('Déjà là : AS Montrivage · U15.');
+    expect(lus.filter((ligne) => ligne.startsWith('Complet'))).toEqual([]);
+  });
+
   it('pendant la saisie, « complet » offre les 3 gestes de la planche (et plus « Attribuer le créneau »)', async () => {
     const arbre = await remplirLeComplet();
     const lus = textes(arbre);
     expect(lus).toContain('Mardi 18:00 – 19:30 : complet');
-    expect(lus).toContain('Attribuer met 3 équipes pour 2 places, chaque mardi de la saison.');
+    expect(lus).toContain('Complet : AS Montrivage · U15 et Montrivage FC y sont déjà. Si vous attribuez, 3 équipes partageront 2 places.');
+    // RET-VILLE 17 (03/11, tranché par le chef) : pas deux fois la même chose sur la carte.
+    expect(lus.filter((ligne) => ligne.startsWith('Déjà là'))).toEqual([]);
     expect(touchable(arbre, 'Voir les heures libres du mardi')).toBeDefined();
     expect(touchable(arbre, 'Attribuer quand même')).toBeDefined();
     expect(touchable(arbre, 'Changer l’heure')).toBeDefined();

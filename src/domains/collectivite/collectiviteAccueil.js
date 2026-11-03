@@ -30,23 +30,15 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
   {
     icon: 'calendar', key: 'assignSlot', lot: 'C2a + C2b', route: 'CollectiviteInstallations',
   },
-  // Les actualités de la Ville (lot C4a, 02/10 : le formulaire « Nouvelle actualité »).
-  {
-    icon: 'send', key: 'publishNews', lot: 'C4a', route: 'CollectiviteActualiteForm',
-  },
-  // Fermer une installation, bloquer un créneau (lot C4b, 02/10 : le formulaire de la fermeture).
+  // RET-VILLE 21 (02/11, Adel « A ») : plus de « Publier une actualité » ici, le bloc « Actualités
+  // de la Ville » de l'accueil la garde, même pour une Ville sans actualité.
+  // Fermer une installation (lot C4b, 02/10). RET-VILLE 2 (02/11, Adel « 1- A ») : « Bloquer un
+  // créneau » ne se présente plus ici, l'écran prend aussi des heures sur un seul jour.
   {
     icon: 'close',
     key: 'closeInstallation',
     lot: 'C4b',
     params: { mode: 'fermer' },
-    route: 'CollectiviteFermeture',
-  },
-  {
-    icon: 'flag',
-    key: 'blockSlot',
-    lot: 'C4b',
-    params: { mode: 'bloquer' },
     route: 'CollectiviteFermeture',
   },
   // Inviter un club absent de FoundClub (lot C-CLUBS : le lien de la Ville, « Par FoundClub »).
