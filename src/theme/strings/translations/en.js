@@ -6970,7 +6970,6 @@ export default {
     club: {
       accept: 'Accept',
       attached: 'Your club is attached to {{ville}}.',
-      // eslint-disable-next-line max-len
       attachedElsewhere: '{{sujet}} offers to attach your club, but it is already attached to another city.',
       cancelMine: 'Cancel my request',
       kicker: 'Attachment to the town',
