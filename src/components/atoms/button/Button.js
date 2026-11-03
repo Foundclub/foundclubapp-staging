@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useContext, useRef } from 'react';
 import {
   Image, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -6,6 +6,7 @@ import {
 import useTheme from '@/theme/themeContext';
 // Components
 import Loader from '@/components/atoms/loader/Loader';
+import { PiedFlottantContext } from '@/components/atoms/piedFlottant/PiedFlottant';
 
 // CORR-ROBUSTESSE point 52 — durée pendant laquelle un 2e appui est ignoré quand `onPress`
 // ne renvoie pas de promesse (un double clic du système dure au plus 500 ms).
@@ -59,11 +60,32 @@ function Button({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const isDisabled = isLoading || disabled;
+  // BOUTONS-FLOTTANTS (03/11) : au-dessus du contenu qui défile, sans bloc derrière, le bouton
+  // porte son propre fond opaque, dans sa forme : à contour, il garderait le contenu sous son
+  // libellé ; grisé, son opacité le laisserait lire au travers. Il passe après `style`, parce que
+  // des écrans ajoutent leur opacité d'état en attente.
+  const auDessusDuContenu = useContext(PiedFlottantContext);
+  const griseSurContenu = auDessusDuContenu && isDisabled;
+  const styleDeVariante = ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`];
+  let fondSurContenu = null;
+  if (griseSurContenu) {
+    fondSurContenu = {
+      backgroundColor: Colors.primary800,
+      borderColor: Colors.primary700,
+      borderWidth: 1,
+      opacity: 1,
+    };
+  } else if (auDessusDuContenu && styleDeVariante?.backgroundColor === 'transparent') {
+    fondSurContenu = { backgroundColor: Colors.primary900 };
+  }
+  const couleurGrisee = griseSurContenu ? Colors.neutral300 : null;
+  const couleurDuLibelle = couleurGrisee || ApplicationStyle[`buttonText${variant}`]?.color;
 
   const imageStyle = {
     aspectRatio: 1,
     height: 20,
-    tintColor: iconColor || ApplicationStyle[`buttonText${variant}`]?.color,
+    tintColor: couleurGrisee || iconColor || couleurDuLibelle,
     width: 20,
   };
   const normalizedSize = size === 'small' ? 'sm' : size;
@@ -98,7 +120,6 @@ function Button({
   // TOUS les libellés ; un interligne passé par l'appelant l'emporte toujours.
   /** @type {import('react-native').TextStyle | null} */
   const iosLabelStyle = Platform.OS === 'ios' ? { lineHeight: undefined } : null;
-  const isDisabled = isLoading || disabled;
   // CORR-ROBUSTESSE point 52 (recette du site, 30/10) — deux appuis dans la même milliseconde
   // créaient deux fiches, deux annulations, deux contrôles : `isLoading` (souvent `isPending`
   // de react-query) n'arrive qu'au rendu suivant. Verrou synchrone : rouvert à la réponse
@@ -166,16 +187,17 @@ function Button({
       onKeyDown={handleKeyDown}
       onPress={onPress ? handlePress : undefined}
       style={[
-        ApplicationStyle[`button${variant}${isOption ? 'Option' : ''}`],
+        styleDeVariante,
         sizeStyle,
         !title && ApplicationStyle[`buttonIcon${isOption ? 'Option' : ''}`],
         !title && sizeIconStyle,
         isDisabled && ApplicationStyle.buttonDisabled,
         style,
+        fondSurContenu,
       ]}
     >
       {isLoading && !(keepTitleWhileLoading && title)
-        ? <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
+        ? <Loader color={couleurDuLibelle || Colors.primary100} />
         : (
           // FINITIONS (recette Android 16 du 2026-09-28) — la rangée couvre TOUT le
           // bouton et centre son contenu : c'est ce qui permet au libellé seul de
@@ -192,7 +214,7 @@ function Button({
           >
             {/* ST-MONMATCH (écran 9, état 4) — la roue À CÔTÉ du libellé, sur demande. */}
             {isLoading ? (
-              <Loader color={/** @type {string} */ (ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100)} />
+              <Loader color={/** @type {string} */ (couleurDuLibelle || Colors.primary100)} />
             ) : null}
             {title ? (
               // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit
@@ -218,6 +240,7 @@ function Button({
                   iconLabelStyle,
                   iosLabelStyle,
                   textStyle,
+                  couleurGrisee ? { color: couleurGrisee } : null,
                 ]}
               >
                 {title}

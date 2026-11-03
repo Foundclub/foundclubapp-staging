@@ -19629,6 +19629,7 @@ export default {
       telephoneSeulement: 'Phone only',
       terrain: 'Pitch',
       vide: 'No free pitch with these filters.',
+      videSansFiltre: 'No pitch available in this area for now.',
       villes: 'Towns',
       voirDemain: 'See tomorrow',
       voirLeComplexe: '{{nom}}: see the venue',
