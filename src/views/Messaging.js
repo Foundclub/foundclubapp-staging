@@ -52,7 +52,6 @@ import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
-import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import { etatDEnvoi } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
@@ -72,7 +71,6 @@ import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessage
 import LigneAssistance from '@/views/chat/LigneAssistance';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 
-import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -181,7 +179,7 @@ function Messaging({ navigation, route }) {
   );
   // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
   const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
-  const { dockClearance, floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
+  const { dockClearance, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
   const { width: largeurDeLaFenetre } = useWindowDimensions();
   // MSG-VILLE-NOUVELLE (20/10, décisions d’Adel « 1- B » / « 2- A ») — dans l’espace de
@@ -192,24 +190,20 @@ function Messaging({ navigation, route }) {
   const roleQuiOuvreUneConversation = ['coach', 'president', 'superAdmin']
     .includes(getUserRoleKey(userData?.role?.name));
   const canCreateConversation = espaceVille ? Boolean(villeId) : roleQuiOuvreUneConversation;
-  // FIN-PLACE (02/11/2026, D-COACH-11) : sur le site, le bouton monte dans la ligne du titre ; en
-  // flottant, il couvrait les « ⋮ » et les dates des lignes, dès l'arrivée sur la page.
-  const boutonQuiFlotte = canCreateConversation && !isWeb;
+  // D-COACH-11 (FIN-PLACE 02/11, téléphone T3-PLACE 03/11) : le bouton est dans la ligne du
+  // titre ; flottant, il couvrait les « ⋮ » et les dates des lignes.
   const libelleNouvelleConversation = t('messaging.newConversation', 'Nouvelle conversation');
   const ouvrirNouvelleConversation = () => navigation.navigate(RouteNames.NewConversation, {
     chatScope: chatScopeFilter,
     ...(espaceVille ? { collectiviteId: villeId, espace: 'ville' } : {}),
   });
-  const floatingButtonBottom = floatingActionBottomOffset;
   // CORR-MESSAGERIE 100b (31/10) — sur le site, la coque réserve déjà la barre du bas (le
   // socle : `dockClearance` vaut 0) ; la liste la recomptait et la page défilait de 235 px
-  // dans le vide à 390 px. Elle ne garde que ce qui dépasse de la coque : la place du bouton.
+  // dans le vide à 390 px.
   const reserveDeLaCoque = Platform.OS === 'web'
     ? Math.max(sceneBottomInset - (dockClearance ?? sceneBottomInset), 0)
     : 0;
-  const chatListBottomInset = Math.max((boutonQuiFlotte
-    ? Math.max(sceneBottomInset, floatingButtonBottom + 84)
-    : sceneBottomInset) - reserveDeLaCoque, 0);
+  const chatListBottomInset = Math.max(sceneBottomInset - reserveDeLaCoque, 0);
   const listOpenLoggedRef = useRef(false);
   const listPrimaryLoggedRef = useRef(false);
   const listFirstRenderedLoggedRef = useRef(false);
@@ -886,11 +880,22 @@ function Messaging({ navigation, route }) {
                 MARQUEE — le nom de la conversation (club, équipe, groupe) se
                 lit en entier : c'est lui qui dit à qui on parle.
               */}
-              <MarqueeText
-                containerStyle={{ flex: 1 }}
-                style={[stylesDeLaListe.titre, { color: Colors.neutral00 }]}
-                text={titreDeLaLigne}
-              />
+              {/* T3-PLACE (03/11) : sur le site, pas de défilement ni d'infobulle au doigt : un
+                  nom long restait coupé à 390. Il passe sur deux lignes. */}
+              {isWeb ? (
+                <Text
+                  numberOfLines={2}
+                  style={[stylesDeLaListe.titre, { color: Colors.neutral00, flex: 1 }]}
+                >
+                  {titreDeLaLigne}
+                </Text>
+              ) : (
+                <MarqueeText
+                  containerStyle={{ flex: 1 }}
+                  style={[stylesDeLaListe.titre, { color: Colors.neutral00 }]}
+                  text={titreDeLaLigne}
+                />
+              )}
               {chatIsLeague && (
               <View style={[stylesDeLaListe.puceLigue, { backgroundColor: Colors.gold500 }]}>
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
@@ -1119,7 +1124,7 @@ function Messaging({ navigation, route }) {
                         <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00]}>
                           {t('messaging.title')}
                         </Text>
-                        {canCreateConversation && !boutonQuiFlotte ? (
+                        {canCreateConversation ? (
                           <TouchableOpacity
                             accessibilityLabel={libelleNouvelleConversation}
                             accessibilityRole="button"
@@ -1179,76 +1184,6 @@ function Messaging({ navigation, route }) {
           </View>
         </OnboardingWrapper>
 
-        {boutonQuiFlotte ? (
-          <WebFloatingOverlay
-            style={getFloatingActionContainerStyle(floatingButtonBottom, { zIndex: 1100 })}
-          >
-            <TouchableOpacity
-              accessibilityLabel={t('messaging.newConversation', 'Nouvelle conversation')}
-              accessibilityRole="button"
-              activeOpacity={0.85}
-              onPress={ouvrirNouvelleConversation}
-              style={[
-                ApplicationStyle.shadow200,
-                {
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary500,
-                  borderColor: 'rgba(255,255,255,0.18)',
-                  borderRadius: 32,
-                  borderWidth: 1,
-                  elevation: 8,
-                  height: 64,
-                  justifyContent: 'center',
-                  shadowColor: '#000',
-                  shadowOffset: {
-                    height: 6,
-                    width: 0,
-                  },
-                  shadowOpacity: 0.32,
-                  shadowRadius: 12,
-                  width: 64,
-                },
-              ]}
-              testID="messaging-nouvelle-conversation"
-            >
-              <Image
-                resizeMode="contain"
-                source={Images.envelope}
-                style={{
-                  // Icone sur fond primary500 : encre primary900 (cf. THEME.md).
-                  height: 24,
-                  tintColor: Colors.primary900,
-                  width: 24,
-                }}
-              />
-              <View
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: Colors.primary200,
-                  borderColor: 'rgba(255,255,255,0.36)',
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  height: 20,
-                  justifyContent: 'center',
-                  position: 'absolute',
-                  right: 8,
-                  top: 8,
-                  width: 20,
-                }}
-              >
-                <Image
-                  resizeMode="contain"
-                  source={Images.plus}
-                  style={{
-                    height: 10,
-                    tintColor: Colors.primary900,
-                    width: 10,
-                  }}
-                />
-              </View>
-            </TouchableOpacity>
-          </WebFloatingOverlay>
-        ) : null}
         {apercu && isWeb ? (
           <MenuDuFil
             entrees={entreesDeLApercu(apercu).map((entree) => ({

@@ -854,12 +854,16 @@ function FacilityForm() {
   const feuilleDesTypes = isCollectiviteMode ? (
     <BottomModal
       close={() => setFeuilleTypeOuverte(false)}
+      hideCloseButton={false}
       isVisible={feuilleTypeOuverte}
       snapPoints={FEUILLE_TYPE_HAUTEUR}
       webPresentation="dialog"
     >
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
-        <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+        <Text
+          accessibilityRole="header"
+          style={[Fonts.h4Bold, Fonts.neutral00, Spaces.marginRight[32]]}
+        >
           {t('collectiviteCreneaux.formulaire.typeTitre', 'Type d’installation')}
         </Text>
         {TYPES_DE_MAIRIE.map((type) => {

@@ -693,12 +693,12 @@ function PlayerConvocationScreen() {
 
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
-      {reponsesOuvertes ? (
+      {/* T3-PLACE (03/11) : match annulé, plus rien à répondre : le bandeau suffit, plus de barre. */}
+      {reponsesOuvertes && !estAnnule ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
           <View style={styles.footerRow}>
             <Button
-              disabled={estAnnule}
               isLoading={pendingAnswer === 'present'}
               onPress={() => handleAnswer('present')}
               style={styles.footerCta}
@@ -706,7 +706,6 @@ function PlayerConvocationScreen() {
               variant={answer === 'present' ? 'Primary' : 'Secondary'}
             />
             <Button
-              disabled={estAnnule}
               isLoading={pendingAnswer === 'absent'}
               onPress={() => handleAnswer('absent')}
               style={styles.footerCta}

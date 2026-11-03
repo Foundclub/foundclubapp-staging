@@ -363,7 +363,12 @@ function TournamentManagement({ navigation, route }) {
   // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
   // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
   const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
-  useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDuLecteur });
+  // T3-PLACE (03/11) : un nom long se coupait dans la barre et se répétait juste dessous.
+  useDeclarerPageDuSite({
+    titre: canManageTournament && !isClosed
+      ? null
+      : t('tournamentManagement.competition', 'Compétition'),
+  });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);

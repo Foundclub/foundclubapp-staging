@@ -489,11 +489,12 @@ describe('CORR-MESSAGERIE 100b — la marge du bas de la liste ne recompte pas l
     expect(margeDuBas()).toBe(0);
   });
 
-  test('téléphone : inchangé (la barre flotte au-dessus de la liste)', async () => {
+  // T3-PLACE (03/11) : plus de bouton rond au téléphone, seule la barre reste à laisser libre.
+  test('téléphone : la marge laisse la place de la barre', async () => {
     Platform.OS = 'ios';
     mockDock = { dockClearance: 104, floatingActionBottomOffset: 146, sceneBottomInset: 92 };
     await monter({ collectiviteId: 'ville-1', espace: 'ville' });
-    expect(margeDuBas()).toBe(146 + 84);
+    expect(margeDuBas()).toBe(92);
   });
 });
 

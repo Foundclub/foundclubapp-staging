@@ -223,12 +223,15 @@ describe('CORR-EVENEMENTS 133 — le cockpit parle français', () => {
 describe('FIN-TEXTES 130 — la barre fine du site', () => {
   afterEach(() => { mockPeutGerer.value = true; });
 
-  test('🔴 un parent y lit le nom du tournoi', async () => {
+  // T3-PLACE (03/11) : à 390, le nom se coupait dans la barre et se répétait juste en dessous. La
+  // barre dit « Compétition », le nom reste en entier dans la page.
+  test('🔴 un parent y lit « Compétition », et le nom en entier dans la page', async () => {
     mockPeutGerer.value = false;
     const donnees = tableau();
-    await monter({ ...donnees, event: { ...donnees.event, name: 'Tournoi de Noël' } });
+    const arbre = await monter({ ...donnees, event: { ...donnees.event, name: 'Tournoi de Noël' } });
 
-    expect(lirePageDuSite().titre).toBe('Tournoi de Noël');
+    expect(lirePageDuSite().titre).toBe('Compétition');
+    expect(texte(arbre)).toContain('Tournoi de Noël');
   });
 
   test('🔴 sans nom de tournoi, le parent lit « Compétition », jamais le pilotage', async () => {
