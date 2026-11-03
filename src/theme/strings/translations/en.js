@@ -24393,6 +24393,14 @@ export default {
     tournamentMatch: 'Tournament match',
     winShort: 'W',
   },
+  tournamentInvitation: {
+    error: 'The request could not be sent.',
+    noTeam: 'You need to coach a team to ask to take part.',
+    organizedBy: 'Organized by {{club}}',
+    private: 'This tournament is private: the organizer approves each team.',
+    request: 'Ask for {{team}}',
+    sent: 'Request sent. You will see the tournament once the organizer accepts it.',
+  },
   tournamentInvites: {
     accepted: 'Registered',
     cancel: 'Remove the invitation',
@@ -24411,14 +24419,6 @@ export default {
     sent: 'Invitation sent. It awaits the answer of its coach.',
     shareLink: 'Share the link',
     title: 'Guests',
-  },
-  tournamentInvitation: {
-    error: 'The request could not be sent.',
-    noTeam: 'You need to coach a team to ask to take part.',
-    organizedBy: 'Organized by {{club}}',
-    private: 'This tournament is private: the organizer approves each team.',
-    request: 'Ask for {{team}}',
-    sent: 'Request sent. You will see the tournament once the organizer accepts it.',
   },
   tournamentManagement: {
     aClubTeam: 'a club team',

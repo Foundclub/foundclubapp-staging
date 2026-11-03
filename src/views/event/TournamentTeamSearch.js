@@ -3,25 +3,35 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { getClubs } from '@/services/club/clubService';
-import { getTeams } from '@/services/team/teamService';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 
+import { getClubs } from '@/services/club/clubService';
+import { getTeams } from '@/services/team/teamService';
+
 const LONGUEUR_MINIMALE = 2;
 const NOMBRE_DE_CLUBS = 10;
 
 /**
- * T3-TOURNOI-PRIVE (Adel « 6 A », 02/11) — trouver une équipe d'un autre club : son club, puis l'équipe.
- * Ne passe pas par `EventWizardOpponentInvite` : il écrit dans le brouillon du tunnel de création,
+ * T3-TOURNOI-PRIVE (Adel « 6 A », 02/11) — trouver une équipe d'un autre club :
+ * son club, puis l'équipe.
+ * Ne passe pas par `EventWizardOpponentInvite` : il écrit dans le brouillon du tunnel,
  * qui survit en `sessionStorage`, et un match créé ensuite aurait emporté l'équipe du tournoi.
- * @param {{ exclureClubId?: string | null, onChoisir: (equipe: any) => void, equipesDejaInvitees: Set<string> }} props - Le choix.
+ * @param {{
+ *   exclureClubId?: string | null,
+ *   onChoisir: (equipe: any) => void,
+ *   equipesDejaInvitees: Set<string>,
+ * }} props - Le choix.
  * @returns {import('react').JSX.Element} La recherche.
  */
-export default function TournamentTeamSearch({ equipesDejaInvitees, exclureClubId = null, onChoisir }) {
+export default function TournamentTeamSearch({
+  equipesDejaInvitees,
+  exclureClubId = null,
+  onChoisir,
+}) {
   const { t } = useTranslation();
   const { ApplicationStyle, Fonts, Spaces } = useTheme();
   const [saisie, setSaisie] = useState('');
@@ -44,17 +54,26 @@ export default function TournamentTeamSearch({ equipesDejaInvitees, exclureClubI
     queryKey: ['tournoi-recherche-equipes', club?.documentId],
   });
 
-  const clubsTrouves = (Array.isArray(clubs.data?.data) ? clubs.data.data : [])
-    .filter((/** @type {any} */ candidat) => candidat?.documentId && candidat.documentId !== exclureClubId);
-  const equipesDuClub = (Array.isArray(equipes.data?.data) ? equipes.data.data : [])
-    .filter((/** @type {any} */ equipe) => equipe?.documentId && !equipesDejaInvitees.has(equipe.documentId));
+  const clubsRecus = clubs.data?.data;
+  const equipesRecues = equipes.data?.data;
+  const clubsTrouves = (Array.isArray(clubsRecus) ? clubsRecus : [])
+    .filter((/** @type {any} */ candidat) => (
+      candidat?.documentId && candidat.documentId !== exclureClubId
+    ));
+  const equipesDuClub = (Array.isArray(equipesRecues) ? equipesRecues : [])
+    .filter((/** @type {any} */ equipe) => (
+      equipe?.documentId && !equipesDejaInvitees.has(equipe.documentId)
+    ));
   const enPanne = clubs.isError || equipes.isError;
   const rienTrouve = club
     ? !equipes.isLoading && !equipes.isError && !equipesDuClub.length
     : nom.length >= LONGUEUR_MINIMALE && !clubs.isLoading && !clubs.isError && !clubsTrouves.length;
 
   return (
-    <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12]]} testID="tournoi-recherche">
+    <View
+      style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12]]}
+      testID="tournoi-recherche"
+    >
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {t('tournamentInvites.otherClubTitle', "Inviter l'équipe d'un autre club")}
       </Text>
@@ -88,7 +107,11 @@ export default function TournamentTeamSearch({ equipesDejaInvitees, exclureClubI
             withFilter={false}
           />
           {clubsTrouves.map((/** @type {any} */ candidat) => (
-            <ClubSearchResultCard item={candidat} key={candidat.documentId} onPress={() => setClub(candidat)} />
+            <ClubSearchResultCard
+              item={candidat}
+              key={candidat.documentId}
+              onPress={() => setClub(candidat)}
+            />
           ))}
         </>
       )}
@@ -101,7 +124,10 @@ export default function TournamentTeamSearch({ equipesDejaInvitees, exclureClubI
       ) : null}
       {enPanne ? (
         <Text style={[Fonts.p3, Fonts.error500]}>
-          {t('tournamentInvites.searchError', 'La recherche a échoué. Réessaie dans un instant.')}
+          {t(
+            'tournamentInvites.searchError',
+            'La recherche a échoué. Réessaie dans un instant.',
+          )}
         </Text>
       ) : null}
     </View>

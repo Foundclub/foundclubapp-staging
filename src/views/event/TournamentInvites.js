@@ -4,18 +4,25 @@ import { useTranslation } from 'react-i18next';
 import { Share, Text, View } from 'react-native';
 
 import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
-import { getEventTeamAudiences, inviteEventTeamAudience, respondEventTeamAudience } from '@/services/event/eventService';
-import { getTeams } from '@/services/team/teamService';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+
+import {
+  getEventTeamAudiences,
+  inviteEventTeamAudience,
+  respondEventTeamAudience,
+} from '@/services/event/eventService';
+import { getTeams } from '@/services/team/teamService';
+
 import TournamentTeamSearch from './TournamentTeamSearch';
 
 const STATUTS_VIVANTS = ['ACCEPTED', 'PENDING'];
 
 /**
- * T3-TOURNOI-PRIVE (Adel « 8 A », 02/11) — la liste d'invités d'un tournoi privé, côté organisateur :
- * toutes les équipes de son club d'un geste, une équipe d'un autre club, le lien à partager. Une équipe
+ * T3-TOURNOI-PRIVE (Adel « 8 A », 02/11) — la liste d'invités d'un tournoi privé, côté
+ * organisateur : toutes les équipes de son club d'un geste, une équipe d'un autre club,
+ * le lien à partager. Une équipe
  * invitée qui accepte est inscrite ; une demande par le lien arrive dans « Équipes inscrites ».
  * @param {{ clubId?: string | null, eventId: string }} props - Le tournoi.
  * @returns {import('react').JSX.Element} Le bloc.
@@ -32,8 +39,12 @@ export default function TournamentInvites({ clubId = null, eventId }) {
     queryKey: cleDesInvites,
   });
   const invites = (Array.isArray(reponse?.data) ? reponse.data : [])
-    .filter((/** @type {any} */ audience) => STATUTS_VIVANTS.includes(audience?.status) && audience?.team?.documentId);
-  const dejaInvitees = new Set(invites.map((/** @type {any} */ audience) => audience.team.documentId));
+    .filter((/** @type {any} */ audience) => (
+      STATUTS_VIVANTS.includes(audience?.status) && audience?.team?.documentId
+    ));
+  const dejaInvitees = new Set(invites.map((/** @type {any} */ audience) => (
+    audience.team.documentId
+  )));
 
   const apresEcriture = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: cleDesInvites }),
@@ -45,21 +56,31 @@ export default function TournamentInvites({ clubId = null, eventId }) {
 
   const monClub = useMutation({
     mutationFn: async () => {
-      const equipes = await getTeams({ clubId, pageSize: 100, summary: true });
-      const aInviter = (Array.isArray(equipes?.data) ? equipes.data : [])
-        .filter((/** @type {any} */ equipe) => equipe?.documentId && !dejaInvitees.has(equipe.documentId));
+      const equipes = await getTeams({ clubId: clubId ?? undefined, pageSize: 100, summary: true });
+      const aInviter = /** @type {any[]} */ (Array.isArray(equipes?.data) ? equipes.data : [])
+        .filter((equipe) => equipe?.documentId && !dejaInvitees.has(equipe.documentId));
       // Une par une : le tournoi peut être plein, et ce qui est passé doit le rester.
-      for (const equipe of aInviter) {
-        // eslint-disable-next-line no-await-in-loop
-        await inviteEventTeamAudience(eventId, { audienceKind: 'internal_invited', teamId: equipe.documentId });
-      }
+      await aInviter.reduce(
+        (suite, equipe) => suite.then(() => inviteEventTeamAudience(eventId, {
+          audienceKind: 'internal_invited',
+          teamId: equipe.documentId,
+        })),
+        Promise.resolve(),
+      );
       return aInviter.length;
     },
     onError: direLErreur,
     onSettled: apresEcriture,
     onSuccess: (/** @type {number} */ nombre) => setMessage(nombre
-      ? t('tournamentInvites.clubInvited', 'Équipes de ton club inscrites : {{count}}.', { count: nombre })
-      : t('tournamentInvites.clubAlreadyInvited', 'Toutes les équipes de ton club sont déjà invitées.')),
+      ? t(
+        'tournamentInvites.clubInvited',
+        'Équipes de ton club inscrites : {{count}}.',
+        { count: nombre },
+      )
+      : t(
+        'tournamentInvites.clubAlreadyInvited',
+        'Toutes les équipes de ton club sont déjà invitées.',
+      )),
   });
 
   const inviter = useMutation({
@@ -69,11 +90,16 @@ export default function TournamentInvites({ clubId = null, eventId }) {
     }),
     onError: direLErreur,
     onSettled: apresEcriture,
-    onSuccess: () => setMessage(t('tournamentInvites.sent', 'Invitation envoyée. Elle attend la réponse de son entraîneur.')),
+    onSuccess: () => setMessage(t(
+      'tournamentInvites.sent',
+      'Invitation envoyée. Elle attend la réponse de son entraîneur.',
+    )),
   });
 
   const retirer = useMutation({
-    mutationFn: (/** @type {string} */ audienceId) => respondEventTeamAudience(audienceId, 'cancel'),
+    mutationFn: (/** @type {string} */ audienceId) => (
+      respondEventTeamAudience(audienceId, 'cancel')
+    ),
     onError: direLErreur,
     onSettled: apresEcriture,
   });
@@ -85,9 +111,14 @@ export default function TournamentInvites({ clubId = null, eventId }) {
 
   return (
     <View style={Spaces.gap[12]} testID="tournoi-invites">
-      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('tournamentInvites.title', 'Invités')}</Text>
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+        {t('tournamentInvites.title', 'Invités')}
+      </Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>
-        {t('tournamentInvites.hint', "Avec le lien, une équipe demande à participer : c'est toi qui acceptes.")}
+        {t(
+          'tournamentInvites.hint',
+          "Avec le lien, une équipe demande à participer : c'est toi qui acceptes.",
+        )}
       </Text>
 
       {clubId ? (
@@ -111,7 +142,11 @@ export default function TournamentInvites({ clubId = null, eventId }) {
         onChoisir={(/** @type {any} */ equipe) => inviter.mutate(equipe)}
       />
 
-      {message ? <Text accessibilityLiveRegion="polite" style={[Fonts.p3, Fonts.primary100]}>{message}</Text> : null}
+      {message ? (
+        <Text accessibilityLiveRegion="polite" style={[Fonts.p3, Fonts.primary100]}>
+          {message}
+        </Text>
+      ) : null}
 
       {invites.map((/** @type {any} */ audience) => (
         <View key={audience.documentId} style={Spaces.gap[4]}>

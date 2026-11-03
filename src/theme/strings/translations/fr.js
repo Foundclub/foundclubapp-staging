@@ -11969,7 +11969,8 @@ export default {
         visibilityGroup: 'Visibilité',
         visibilityPrivate: 'Privé',
         visibilityPrivateHint: "Réservé aux membres de l'équipe et aux invités.",
-        visibilityPrivateTournamentHint: "Réservé aux équipes que tu invites, depuis l'onglet Équipes du tournoi.",
+        visibilityPrivateTournamentHint:
+          "Réservé aux équipes que tu invites, depuis l'onglet Équipes du tournoi.",
         visibilityPublic: 'Public',
         visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },
@@ -25440,6 +25441,14 @@ export default {
     tournamentMatch: 'Match tournoi',
     winShort: 'V',
   },
+  tournamentInvitation: {
+    error: "La demande n'a pas pu partir.",
+    noTeam: 'Il faut encadrer une équipe pour demander à participer.',
+    organizedBy: 'Organisé par {{club}}',
+    private: "Ce tournoi est privé : l'organisateur valide chaque équipe.",
+    request: 'Demander pour {{team}}',
+    sent: "Demande envoyée. Tu verras le tournoi dès que l'organisateur l'aura acceptée.",
+  },
   tournamentInvites: {
     accepted: 'Inscrite',
     cancel: "Retirer l'invitation",
@@ -25458,14 +25467,6 @@ export default {
     sent: 'Invitation envoyée. Elle attend la réponse de son entraîneur.',
     shareLink: 'Partager le lien',
     title: 'Invités',
-  },
-  tournamentInvitation: {
-    error: "La demande n'a pas pu partir.",
-    noTeam: 'Il faut encadrer une équipe pour demander à participer.',
-    organizedBy: 'Organisé par {{club}}',
-    private: "Ce tournoi est privé : l'organisateur valide chaque équipe.",
-    request: 'Demander pour {{team}}',
-    sent: "Demande envoyée. Tu verras le tournoi dès que l'organisateur l'aura acceptée.",
   },
   tournamentManagement: {
     aClubTeam: 'une équipe club',

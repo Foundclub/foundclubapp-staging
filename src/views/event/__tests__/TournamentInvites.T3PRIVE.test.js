@@ -1,9 +1,10 @@
 /* eslint-disable max-len -- les témoins se lisent en entier. */
-import renderer, { act } from 'react-test-renderer';
 import { Share, Text, TouchableOpacity } from 'react-native';
+import renderer, { act } from 'react-test-renderer';
 
-import { readInviteLink } from '@/domains/invitations/inviteLink';
 import { resolveInviteDestination } from '@/domains/invitations/InvitationLinkHost';
+import { readInviteLink } from '@/domains/invitations/inviteLink';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import TournamentInvitationRequest from '../TournamentInvitationRequest';
@@ -17,7 +18,9 @@ const mockInviter = jest.fn(() => Promise.resolve({}));
 const mockRepondre = jest.fn(() => Promise.resolve({}));
 const mockEquipes = jest.fn();
 const mockInscrire = jest.fn(() => Promise.resolve({}));
-const mockQuery = { audiences: [], apercu: null, clubs: [], equipes: [] };
+const mockQuery = {
+  apercu: null, audiences: [], clubs: [], equipes: [],
+};
 const mockUtilisateur = { value: { trainedTeams: [] } };
 
 jest.mock('@tanstack/react-query', () => ({
@@ -50,7 +53,9 @@ jest.mock('@/theme/themeContext', () => {
   const Colors = generateColors();
   return {
     __esModule: true,
-    default: () => ({ ApplicationStyle: { card: {} }, Colors, Fonts: generateFonts(Colors), Spaces: jest.requireActual('@/theme/spaces').default }),
+    default: () => ({
+      ApplicationStyle: { card: {} }, Colors, Fonts: generateFonts(Colors), Spaces: jest.requireActual('@/theme/spaces').default,
+    }),
   };
 });
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -190,9 +195,9 @@ describe('TournamentInvites', () => {
     const fs = jest.requireActual('fs');
     const path = jest.requireActual('path');
     const lire = (/** @type {string} */ nom) => fs.readFileSync(path.join(__dirname, '..', nom), 'utf8');
-    for (const nom of ['TournamentInvites.js', 'TournamentTeamSearch.js']) {
+    ['TournamentInvites.js', 'TournamentTeamSearch.js'].forEach((nom) => {
       expect(lire(nom)).not.toMatch(/^import .*(useEventWizard|EventWizardOpponentInvite)/m);
-    }
+    });
   });
 
   it('une invitation en attente se retire ; une équipe inscrite, non ; une invitation refusée ne s\'affiche plus', async () => {

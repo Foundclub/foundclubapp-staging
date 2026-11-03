@@ -36,17 +36,17 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
+
 import {
   TournamentBracketBoard,
   TournamentGroupCards,
   TournamentMatchCard,
   TournamentStandingsTable,
 } from './tournamentCompetitionComponents';
-import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
-
+import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import TournamentInvitationRequest from './TournamentInvitationRequest';
 import TournamentInvites from './TournamentInvites';
-import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
   getTournamentClosure,
   getTournamentCompetitionActions,
@@ -363,7 +363,11 @@ function TournamentManagement({ navigation, route }) {
   };
 
   // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé se lit, il ne se pilote plus.
-  const { closedAt, isClosed } = getTournamentClosure({ ...event, tournamentConfig, tournamentTeams });
+  const { closedAt, isClosed } = getTournamentClosure({
+    ...event,
+    tournamentConfig,
+    tournamentTeams,
+  });
   const estPrive = normalizeTournamentText(event?.sessionStatus) === 'closed';
   // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
   // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
@@ -719,7 +723,8 @@ function TournamentManagement({ navigation, route }) {
     return renderOverviewTab();
   };
 
-  // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ; un compte sans lien y demande à participer.
+  // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ;
+  // un compte sans lien y demande à participer.
   if (isAccessRefusalError(error)) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene">

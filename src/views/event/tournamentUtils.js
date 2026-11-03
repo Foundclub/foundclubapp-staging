@@ -284,7 +284,9 @@ export const getTournamentClosure = (event) => {
   const estFerme = String(event?.sessionStatus || '').toLowerCase() === 'closed';
   const equipes = Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [];
   const toutesArchivees = equipes.length > 0
-    && equipes.every((/** @type {any} */ team) => String(team?.status || '').toLowerCase() === 'archived');
+    && equipes.every((/** @type {any} */ team) => (
+      String(team?.status || '').toLowerCase() === 'archived'
+    ));
   return { closedAt, isClosed: estFerme && toutesArchivees && closedAt !== undefined };
 };
 
