@@ -339,6 +339,21 @@ describe('COLL1D — la carte d une installation, cote CLUB', () => {
   });
 });
 
+describe('T3-STADE — la carte d une partie', () => {
+  it('une partie nomme son tout, une installation seule non', () => {
+    mockFacilityContext.data = {
+      allFacilities: [{
+        ...INSTALLATION_DE_LA_VILLE,
+        parentFacility: { documentId: 'stade', name: 'Stade' },
+      }],
+      cmId: null,
+    };
+    expect(textesVisibles(rendre())).toContain('Partie de {{nom}} · Gymnase');
+    mockFacilityContext.data = { allFacilities: [INSTALLATION_DE_LA_VILLE], cmId: null };
+    expect(textesVisibles(rendre())).not.toContain('Partie de {{nom}}');
+  });
+});
+
 jest.mock(
   '@/components/atoms/skeletonLoader/SkeletonLoader',
   () => function SkeletonMock({ children }) { return children; },

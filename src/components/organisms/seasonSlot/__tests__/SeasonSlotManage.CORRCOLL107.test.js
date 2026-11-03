@@ -166,3 +166,10 @@ describe('CORR-COLLECTIVITES 107 — un seul mot : « le créneau »', () => {
     expect(textes(arbre).some((texte) => /la série/.test(texte))).toBe(false);
   });
 });
+
+describe('T3-STADE — la gestion d un créneau', () => {
+  it('un créneau entier le dit, un autre non', async () => {
+    expect(textes(await monter({ ...UNE_DATE, wholeFacility: true }))).toContain('Toute l’installation');
+    expect(textes(await monter(UNE_DATE))).not.toContain('Toute l’installation');
+  });
+});
