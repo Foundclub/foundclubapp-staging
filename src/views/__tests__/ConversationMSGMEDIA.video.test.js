@@ -371,6 +371,27 @@ const appuyerSurLaTuile = async (cle) => {
  */
 const textesDesBandeaux = () => JSON.stringify(mockShowBanner.mock.calls);
 
+/**
+ * Le bandeau de préparation à l'écran.
+ * @returns {any} Ses propriétés, ou undefined s'il n'est plus là.
+ */
+const bandeauDePreparation = () => {
+  // eslint-disable-next-line global-require
+  const { Children, isValidElement } = require('react');
+  /**
+   * Cherche le bandeau dans l'arbre.
+   * @param {any} noeud
+   * @returns {any} Ses propriétés, ou undefined.
+   */
+  const chercher = (noeud) => {
+    if (!isValidElement(noeud)) return undefined;
+    const { props } = /** @type {any} */ (noeud);
+    if ('pourcent' in props) return props;
+    return Children.toArray(props.children).map(chercher).find(Boolean);
+  };
+  return chercher(mockGiftedRenders[mockGiftedRenders.length - 1].renderInputToolbar({}));
+};
+
 describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
   const vraiFormData = global.FormData;
   beforeAll(() => {
@@ -630,6 +651,53 @@ describe('MSG-MEDIA — photo OU vidéo dans la messagerie', () => {
     expect(mockLaunchImageLibrary).toHaveBeenCalledTimes(1);
 
     await act(async () => { rendre({ didCancel: true }); });
+  });
+
+  test('12 — « 6- b et C » : le bandeau dit où ça en est, Annuler arrête', async () => {
+    /**
+     * Fait avancer la compression.
+     * @type {(progres: number) => void}
+     */
+    let avancer = () => {};
+    mockCompress.mockImplementation((_uri, options, surProgres) => {
+      options.getCancellationId('id-12');
+      avancer = surProgres;
+      return new Promise(() => {});
+    });
+    mockLaunchImageLibrary.mockResolvedValue({ assets: [VIDEO_LOURDE] });
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+
+    act(() => { avancer(0.4); });
+    const bandeau = bandeauDePreparation();
+    expect(bandeau.pourcent).toBe(40);
+
+    act(() => { bandeau.onCancel(); });
+    expect(mockCancel).toHaveBeenCalledWith('id-12');
+    expect(bandeauDePreparation()).toBeUndefined();
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  test('13 — Annuler pendant la copie : le fichier revenu ne part pas', async () => {
+    /**
+     * Rend la réponse de la galerie.
+     * @type {(reponse: object) => void}
+     */
+    let rendre = () => {};
+    mockLaunchImageLibrary.mockImplementationOnce(() => new Promise((resolve) => {
+      rendre = resolve;
+    }));
+    monterLaConversation();
+    await appuyerSurLaTuile('photos');
+
+    const bandeau = bandeauDePreparation();
+    expect(bandeau.pourcent).toBeNull();
+    act(() => { bandeau.onCancel(); });
+
+    await act(async () => { rendre({ assets: [VIDEO_LOURDE] }); });
+    expect(mockCompress).not.toHaveBeenCalled();
+    expect(mockPost).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith('/var/mobile/app/tmp/match.mov');
   });
 
   test('9 — une photo reste à sa place après l envoi', async () => {

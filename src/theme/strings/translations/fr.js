@@ -9377,6 +9377,8 @@ export default {
       label: 'Vidéo',
       openInBrowser: 'Ouvrir dans le navigateur',
       play: 'Lire la vidéo',
+      preparing: 'Préparation de la vidéo… {{pourcent}} %',
+      preparingFile: 'Préparation du fichier…',
       tooLarge: 'Vidéo trop lourde : {{max}} Mo maximum.',
       tooLargeUncompressed: 'Vidéo trop lourde : {{max}} Mo maximum. '
         + 'Le téléphone n’a pas pu la réduire.',

@@ -59,15 +59,17 @@ export const ouvrirGalerieUneSeuleFois = async (ouvrir) => {
 /** Côté le plus long d'une vidéo compressée, en pixels (720p : lisible plein écran). */
 export const VIDEO_COMPRESSION_MAX_SIDE = 1280;
 
-/**
- * Le débit visé au plus bas pour ce côté : 1,2 Mb/s d'image et 128 kb/s de son, en octets par
- * seconde (`estimateBitrate`, react-native-compressor 1.19.4, iOS).
- */
-const PLANCHER_OCTETS_PAR_SECONDE = (1200000 + 128000) / 8;
+/** Le son d'une vidéo compressée, en bits par seconde (`VideoMain.swift`). */
+const DEBIT_DU_SON = 128000;
 
-// ponytail: ce débit est une moyenne visée, une image très fixe peut passer dessous. La marge de
-// 2 évite de refuser à tort ; entre 16 et 32 min, le téléphone peut encore travailler pour rien.
-const MARGE_DU_REFUS_D_AVANCE = 2;
+/** Le débit le plus haut du réglage normal à 1280 px, son compris (`estimateBitrate`). */
+const DEBIT_NORMAL_MAXIMUM = 2000000 + DEBIT_DU_SON;
+
+/** En dessous, l'image d'un 720p devient illisible : c'est ce qui borne à 30 min environ. */
+const DEBIT_D_IMAGE_MINIMUM = 500000;
+
+/** Ce débit est une moyenne visée : on vise 90 % de la limite pour ne pas la dépasser à la fin. */
+const PART_DE_LA_LIMITE_VISEE = 0.9;
 
 /**
  * Le module natif, chargé à l'appel seulement.
@@ -99,16 +101,29 @@ let preparationEnCours = null;
 const enMp4 = (fileName) => `${String(fileName || 'video').replace(/\.[^./]+$/, '')}.mp4`;
 
 /**
- * Trop longue pour tenir, même réduite ? Une taille, une durée ou une image inconnue : on tente.
- * @param {Media & { height?: number, width?: number }} asset
+ * VIDEO-RAME (« 6- b ») — Le débit d'image qui fait tenir une longue vidéo sous la limite.
+ * ⚠️ Ce réglage plus fort n'a jamais tourné sur un iPhone : à mesurer sur une vraie longue vidéo.
+ * @param {Media} asset
+ * @returns {number} 0 : le réglage normal suffit (ou durée inconnue, ou original sous la limite).
+ */
+const debitPourTenir = (asset) => {
+  const duree = Number(asset.duration) || 0;
+  const taille = Number(asset.size) || 0;
+  if (duree <= 0 || (taille > 0 && taille <= VIDEO_MAX_BYTES)) return 0;
+  const limiteVisee = VIDEO_MAX_BYTES * 8 * PART_DE_LA_LIMITE_VISEE;
+  if (duree * DEBIT_NORMAL_MAXIMUM <= limiteVisee) return 0;
+  return Math.floor(limiteVisee / duree) - DEBIT_DU_SON;
+};
+
+/**
+ * Trop longue pour tenir, même au réglage le plus fort ? Taille ou durée inconnue : on tente.
+ * @param {Media} asset
  * @returns {boolean}
  */
 const neTiendraPas = (asset) => {
-  const coteLong = Math.max(Number(asset.width) || 0, Number(asset.height) || 0);
-  if (coteLong < VIDEO_COMPRESSION_MAX_SIDE) return false;
   if ((Number(asset.size) || 0) <= VIDEO_MAX_BYTES) return false;
-  const plancher = (Number(asset.duration) || 0) * PLANCHER_OCTETS_PAR_SECONDE;
-  return plancher > VIDEO_MAX_BYTES * MARGE_DU_REFUS_D_AVANCE;
+  const debit = debitPourTenir(asset);
+  return debit > 0 && debit < DEBIT_D_IMAGE_MINIMUM;
 };
 
 /**
@@ -150,9 +165,10 @@ export const annulerPreparationVideo = () => {
 /**
  * Prépare une pièce jointe avant l'envoi : une vidéo est compressée, le reste passe tel quel.
  * @param {Media} asset - La pièce jointe normalisée (Conversation.js, `normalizePickedAsset`).
+ * @param {{ onProgres?: (pourcent: number) => void }} [suivi]
  * @returns {Promise<VideoPreparee>}
  */
-export const preparerVideo = async (asset) => {
+export const preparerVideo = async (asset, { onProgres } = {}) => {
   if (!isVideoMime(asset?.type) || !asset?.uri) return { asset, compressee: false };
   if (preparationEnCours) return { refus: texteDejaEnPreparation() };
   if (neTiendraPas(asset)) return { refus: videoSizeRefusal(asset.size) };
@@ -161,11 +177,17 @@ export const preparerVideo = async (asset) => {
   preparationEnCours = preparation;
   try {
     const { getFileSize, Video } = moduleDeCompression();
+    const debitVise = debitPourTenir(asset);
+    const debit = debitVise && Math.max(debitVise, DEBIT_D_IMAGE_MINIMUM);
     const uri = await Video.compress(String(asset.uri), {
-      compressionMethod: 'auto',
+      ...(debit ? { bitrate: debit, compressionMethod: 'manual' } : { compressionMethod: 'auto' }),
       getCancellationId: (/** @type {string} */ id) => { preparation.id = id; },
       maxSize: VIDEO_COMPRESSION_MAX_SIDE,
-    });
+      // Sans ce pas, le module enverrait un événement par image dès qu'on l'écoute.
+      progressDivider: 5,
+    }, ...(onProgres ? [(/** @type {number} */ progres) => onProgres(
+      Math.round(progres <= 1 ? progres * 100 : progres),
+    )] : []));
     if (preparation.annulee) {
       await oublierFichierVideo(uri);
       return { annulee: true };

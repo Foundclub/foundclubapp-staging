@@ -81,12 +81,50 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     expect(resultat).toMatchObject({ compressee: true });
   });
 
-  test('longue mais petite image (20 min en 640 px) : tentée, elle peut tenir', async () => {
-    const resultat = await preparerVideo(video({
-      duration: 1200, height: 360, size: 400 * MO, width: 640,
-    }));
-    expect(mockCompress).toHaveBeenCalledTimes(1);
+  // « 6- b » : de 10 à 30 min, le téléphone réduit plus fort pour tenir sous 150 Mo.
+  const LIMITE_EN_BITS = 150 * MO * 8;
+  const AUDIO = 128000;
+
+  test('10 min 36, 6,48 Go (Adel) : réduite plus fort, elle tient', async () => {
+    const resultat = await preparerVideo(video({ duration: 636, size: 6636 * MO }));
+    const [, options] = mockCompress.mock.calls[0];
+    expect(options.compressionMethod).toBe('manual');
+    expect((options.bitrate + AUDIO) * 636).toBeLessThan(LIMITE_EN_BITS);
+    expect(options.bitrate).toBeGreaterThan(1000000);
     expect(resultat).toMatchObject({ compressee: true });
+  });
+
+  test('3 min 33, 1,8 Go : le réglage normal suffit, pas de perte de qualité', async () => {
+    await preparerVideo(video({ duration: 213, size: 1843 * MO }));
+    const [, options] = mockCompress.mock.calls[0];
+    expect(options.compressionMethod).toBe('auto');
+    expect(options.bitrate).toBeUndefined();
+  });
+
+  test('29 min : encore tentée, au plus bas, et toujours sous la limite', async () => {
+    await preparerVideo(video({ duration: 1740, size: 4096 * MO }));
+    const [, options] = mockCompress.mock.calls[0];
+    expect(options.compressionMethod).toBe('manual');
+    expect(options.bitrate).toBeGreaterThanOrEqual(500000);
+    expect((options.bitrate + AUDIO) * 1740).toBeLessThan(LIMITE_EN_BITS);
+  });
+
+  test('31 min trop lourde : refus d avance, l image serait illisible', async () => {
+    const resultat = await preparerVideo(video({ duration: 1860, size: 4096 * MO }));
+    expect(mockCompress).not.toHaveBeenCalled();
+    expect(resultat).toEqual({ refus: expect.stringContaining('150') });
+  });
+
+  test('le progrès remonte, sans une alerte par image', async () => {
+    const onProgres = jest.fn();
+    mockCompress.mockImplementation(async (_uri, options, surProgres) => {
+      surProgres(0.4);
+      return options ? 'file:///tmp/reduit.mp4' : '';
+    });
+    await preparerVideo(video(), { onProgres });
+    expect(onProgres).toHaveBeenCalledWith(40);
+    const [, options] = mockCompress.mock.calls[0];
+    expect(options.progressDivider).toBe(5);
   });
 
   test('sous la limite et longue : jamais refusée d avance, l original peut partir', async () => {
@@ -98,11 +136,6 @@ describe('VIDEO-RAME — la compression d une vidéo lourde', () => {
     const resultat = await preparerVideo(video({ duration: 3600, size: 10240 * MO }));
     expect(mockCompress).not.toHaveBeenCalled();
     expect(resultat).toEqual({ refus: expect.stringContaining('150') });
-  });
-
-  test('20 min en 1080p, 1 Go : tentée, une image fixe peut passer dessous', async () => {
-    await preparerVideo(video({ duration: 1200, size: 1024 * MO }));
-    expect(mockCompress).toHaveBeenCalledTimes(1);
   });
 
   test('durée inconnue, 10 Go : tentée, on ne refuse pas ce qu on n a pas mesuré', async () => {
