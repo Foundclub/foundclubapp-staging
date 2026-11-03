@@ -146,7 +146,7 @@ describe.each([
     expect(mockDispatch).toHaveBeenCalledWith({ type: 'LOGOUT_CURRENT_SESSION' });
   });
 
-  it('plafond atteint (`jwt: null`) : le jeton reste, rien n est déconnecté', async () => {
+  it('le serveur ne donne pas de jeton (`jwt: null`) : le jeton reste, rien n est déconnecté', async () => {
     const vieux = fauxJeton(8);
     mockSnapshot.current = { auth: session(vieux, 'A'), authSessions: [session(vieux, 'A')] };
     adapter.mockImplementation((config) => repond(config, 200, config.url.includes('renew-token') ? { jwt: null } : {}));
