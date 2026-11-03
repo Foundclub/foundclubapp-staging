@@ -693,7 +693,7 @@ function PlayerConvocationScreen() {
 
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
-      {/* T3-PLACE (03/11) : match annulé, plus rien à répondre : le bandeau suffit, plus de barre. */}
+      {/* T3-PLACE (03/11) : match annulé, plus rien à répondre : le bandeau suffit. */}
       {reponsesOuvertes && !estAnnule ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}

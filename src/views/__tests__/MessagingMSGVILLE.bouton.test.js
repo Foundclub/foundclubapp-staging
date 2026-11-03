@@ -252,7 +252,7 @@ describe('FIN-PLACE — D-COACH-11, le bouton rond sur le site', () => {
   });
 
   // T3-PLACE (03/11, réponse du chef à FIN-PLACE) : le téléphone suit le site.
-  test.each(['web', 'ios', 'android'])('%s : le bouton est là, et plus rien ne flotte', async (os) => {
+  test.each(['web', 'ios', 'android'])('%s : le bouton est là, rien ne flotte', async (os) => {
     Platform.OS = /** @type {any} */ (os);
     mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
     const arbre = await monter({});
@@ -265,5 +265,4 @@ describe('FIN-PLACE — D-COACH-11, le bouton rond sur le site', () => {
     expect(contient(arbre.root.findByType(FlashList).props.ListHeaderComponent)).toBe(true);
     expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(0);
   });
-
 });
