@@ -290,7 +290,7 @@ function EvenementDeLaVille() {
         {evenement.description ? (
           <Text style={[Fonts.p2, Fonts.neutral100]}>{evenement.description}</Text>
         ) : null}
-        {/* T3-VILLE-PRESENCE (03/11, fiche 9 A) : répondre pour soi ; ce que la Ville et le dirigeant lisent. */}
+        {/* T3-VILLE-PRESENCE (03/11, fiche 9 A) : répondre ; ce que lisent Ville et dirigeant. */}
         <PresenceEvenementVille deLaVille={deLaVille} evenement={evenement} />
         {deLaVille && !annule ? (
           <View style={{ gap: 12 }}>

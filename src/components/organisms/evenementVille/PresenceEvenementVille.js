@@ -23,10 +23,11 @@ const totauxLabel = (t, compte) => [
 ].join(' · ');
 
 /**
- * 🏛️ T3-VILLE-PRESENCE (03/11/2026, fiche 9 option A d'Adel) — sur la fiche d'un événement de la Ville :
+ * 🏛️ T3-VILLE-PRESENCE (03/11/2026, fiche 9 option A d'Adel) — sur la fiche d'un événement
+ * de la Ville :
  *   - le lecteur dit s'il vient, pour lui seul (`evenement.presence`, écrit par le serveur) ;
- *   - la Ville lit les totaux et les encadrants nommés ; le dirigeant, la liste de son club (règles Q9 B
- *     et Q10 B du 19/10 : c'est le serveur qui choisit ce qu'il rend).
+ *   - la Ville lit les totaux et les encadrants nommés ; le dirigeant, la liste de son club
+ *     (règles Q9 B et Q10 B du 19/10 : c'est le serveur qui choisit ce qu'il rend).
  * Les places restent une information : rien ici ne les compte. Un serveur pas encore à jour n'écrit
  * pas `presence` et ne connaît pas `/reponses` : rien ne s'affiche.
  * @param {{ deLaVille: boolean, evenement: any }} props - La fiche, et si la Ville la regarde.
@@ -56,7 +57,9 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
 
   const fonctionLabel = (/** @type {string} */ fonction) => {
     if (fonction === 'dirigeant') return t('collectiviteEvenement.presence.dirigeant', 'Dirigeant');
-    if (fonction === 'entraineur') return t('collectiviteEvenement.presence.entraineur', 'Entraîneur');
+    if (fonction === 'entraineur') {
+      return t('collectiviteEvenement.presence.entraineur', 'Entraîneur');
+    }
     return '';
   };
 
@@ -106,7 +109,12 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
                     }}
                     testID={`presence-${choix}`}
                   >
-                    <Text style={[Fonts.p2Bold, { color: choisi ? Colors.primary900 : Colors.neutral00 }]}>
+                    <Text
+                      style={[
+                        Fonts.p2Bold,
+                        { color: choisi ? Colors.primary900 : Colors.neutral00 },
+                      ]}
+                    >
                       {motDeLaReponse(choix)}
                     </Text>
                   </TouchableOpacity>

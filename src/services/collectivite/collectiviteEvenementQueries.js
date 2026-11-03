@@ -120,7 +120,8 @@ export const useReponsesEvenement = (evenementId) => useQuery({
 /**
  * T3-VILLE-PRESENCE : répondre, pour soi. La fiche (et donc les réponses lues) est relue après.
  * @param {string|null|undefined} evenementId - L'événement.
- * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, 'absent'|'present'>} Le geste.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, 'absent'|'present'>}
+ * Le geste.
  */
 export const useRepondreEvenement = (evenementId) => {
   const queryClient = useQueryClient();

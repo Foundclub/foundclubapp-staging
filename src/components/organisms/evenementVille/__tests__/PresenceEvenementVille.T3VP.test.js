@@ -4,12 +4,14 @@ import renderer, { act } from 'react-test-renderer';
 
 import PresenceEvenementVille from '../PresenceEvenementVille';
 
-// T3-VILLE-PRESENCE (03/11/2026, fiche 9 option A d'Adel) — « Présent » ou « Absent » sur la fiche d'un
-// événement de la Ville, chacun pour soi. Le serveur juge (témoin admin T3VP-1) ; ce témoin fige l'écran :
+// T3-VILLE-PRESENCE (03/11/2026, fiche 9 option A d'Adel) — « Présent » ou « Absent » sur la fiche
+// d'un événement de la Ville, chacun pour soi. Le serveur juge (témoin admin T3VP-1) ; ce témoin
+// fige l'écran :
 //   - le lecteur répond, sa réponse se redit, il change d'avis ;
 //   - annulé, terminé, moins de 13 ans : plus aucun bouton ;
 //   - la Ville lit les totaux et les encadrants nommés, le dirigeant la liste de son club ;
-//   - un joueur ne lit jamais les réponses des autres ; un serveur sans `presence` : rien ne s'affiche.
+//   - un joueur ne lit jamais les réponses des autres ;
+//   - un serveur sans `presence` : rien ne s'affiche.
 
 const mockRepondre = jest.fn();
 const mockGetReponses = jest.fn();
@@ -45,7 +47,11 @@ const laisserPasser = () => act(async () => {
   await new Promise((resolve) => { setTimeout(resolve, 0); });
 });
 
-const fiche = (/** @type {any} */ presence) => ({ documentId: 'evt-1', name: 'Tournois', presence });
+const fiche = (/** @type {any} */ presence) => ({
+  documentId: 'evt-1',
+  name: 'Tournois',
+  presence,
+});
 
 const monter = async (/** @type {any} */ props) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,7 +60,7 @@ const monter = async (/** @type {any} */ props) => {
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
-        <PresenceEvenementVille {...props} />
+        <PresenceEvenementVille deLaVille={props.deLaVille} evenement={props.evenement} />
       </QueryClientProvider>,
     );
   });
@@ -63,10 +69,14 @@ const monter = async (/** @type {any} */ props) => {
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => [].concat(noeud.props.children).join(''));
-const bouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => arbre.root
-  .findAll((/** @type {any} */ n) => n.props.testID === (titre === 'Présent' ? 'presence-present' : 'presence-absent')
-    && n.props.onPress)[0];
-const aBouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => Boolean(bouton(arbre, titre));
+const bouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => {
+  const testID = titre === 'Présent' ? 'presence-present' : 'presence-absent';
+  return arbre.root
+    .findAll((/** @type {any} */ n) => n.props.testID === testID && n.props.onPress)[0];
+};
+const aBouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => Boolean(
+  bouton(arbre, titre),
+);
 
 beforeEach(() => {
   mockRepondre.mockReset();

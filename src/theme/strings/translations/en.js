@@ -6418,7 +6418,6 @@ export default {
       aria: 'Town event: {{nom}}, {{heures}}, {{place}}',
       toute: 'Town · whole facility',
     },
-    publier: 'Publish the event',
     presence: {
       absent: 'Absent',
       absents_one: '{{count}} absent',
@@ -6438,6 +6437,7 @@ export default {
       presents_other: '{{count}} present',
       titre: 'Are you coming?',
     },
+    publier: 'Publish the event',
     quand: {
       a: 'To',
       choisir: 'Choose',

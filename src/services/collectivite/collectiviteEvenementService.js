@@ -79,18 +79,22 @@ export const getEvenementDeLaVille = (evenementId) => lire(
 );
 
 /**
- * POST /evenements-de-la-ville/:id/reponse — T3-VILLE-PRESENCE : « Présent » ou « Absent », pour soi.
+ * POST /evenements-de-la-ville/:id/reponse — T3-VILLE-PRESENCE : « Présent » ou « Absent »,
+ * pour soi.
  * @param {{ answer: 'absent'|'present', evenementId: string }} params - L'événement et la réponse.
  * @returns {Promise<any>} `{ data: presence }`.
  */
 export const repondreEvenement = async ({ answer, evenementId }) => {
   const http = await client();
-  return (await http.post(`/evenements-de-la-ville/${evenementId}/reponse`, { data: { answer } })).data;
+  const reponse = await http.post(`/evenements-de-la-ville/${evenementId}/reponse`, {
+    data: { answer },
+  });
+  return reponse.data;
 };
 
 /**
- * GET /evenements-de-la-ville/:id/reponses — T3-VILLE-PRESENCE : qui vient (la Ville, ou le dirigeant
- * pour son club ; sinon 403).
+ * GET /evenements-de-la-ville/:id/reponses — T3-VILLE-PRESENCE : qui vient (la Ville, ou le
+ * dirigeant pour son club ; sinon 403).
  * @param {string} evenementId - L'événement.
  * @returns {Promise<any>} `{ data: { vue, totaux, ... } }`.
  */

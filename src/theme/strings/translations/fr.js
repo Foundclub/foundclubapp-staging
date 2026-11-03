@@ -7006,7 +7006,6 @@ export default {
       aria: 'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
       toute: 'Ville · toute l’installation',
     },
-    publier: 'Publier l’événement',
     presence: {
       absent: 'Absent',
       absents_one: '{{count}} absent',
@@ -7026,6 +7025,7 @@ export default {
       presents_other: '{{count}} présents',
       titre: 'Tu viens ?',
     },
+    publier: 'Publier l’événement',
     quand: {
       a: 'À',
       choisir: 'Choisir',
