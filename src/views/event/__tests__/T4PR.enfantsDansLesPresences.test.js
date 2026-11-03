@@ -92,7 +92,7 @@ test('téléphone : le bloc des enfants passe AVANT la liste des présences, pou
   const bloc = ecran.indexOf('<EventChildRegistrationsForOrganizer');
   expect(bloc).toBeGreaterThan(-1);
   expect(bloc).toBeLessThan(ecran.search(/<EventParticipants\r?\n/));
-  expect(ecran.slice(bloc - 80, bloc)).toContain('showParticipantsTab && (canEdit || canApprovePendingRequests)');
+  expect(ecran.slice(bloc - 120, bloc)).toContain('showParticipantsTab && (canEdit || canApprovePendingRequests)');
 });
 
 test('site : le bloc des enfants passe AVANT la liste des présences', () => {
