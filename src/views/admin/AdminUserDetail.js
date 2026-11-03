@@ -261,7 +261,7 @@ function AdminUserDetail() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={[Spaces.padding[16], { paddingBottom: 16 + retraitBas }]}
         showsVerticalScrollIndicator={false}

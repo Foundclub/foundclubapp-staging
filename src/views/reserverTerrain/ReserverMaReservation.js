@@ -146,7 +146,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   ) : (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView

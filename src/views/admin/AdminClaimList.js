@@ -385,7 +385,7 @@ function AdminClaimList() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       title={t('adminClaimList.screenTitle', 'Revendications et demandes')}
     >
       <FlatList

@@ -246,7 +246,7 @@ function PublicLicensePayment({ route }) {
   }
 
   return (
-    <ScreenContainer bottomInsetMode="edge-to-edge" withHeaderPadding>
+    <ScreenContainer bottomInsetMode="scroll-edge" withHeaderPadding>
       <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 + retraitBas }]} showsVerticalScrollIndicator={false}>
         <View style={[ApplicationStyle.card, {
           backgroundColor: Colors.primary700,

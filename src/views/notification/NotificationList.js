@@ -639,7 +639,7 @@ function NotificationList() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       // CORR-SOCLE (30/10, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
       contentContainerStyle={[Spaces.paddingTop[16]]}
     >

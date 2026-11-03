@@ -50,7 +50,7 @@ function TrainingVideoQueue({ navigation }) {
   const total = useMemo(() => totalARelever(file), [file]);
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={[{ paddingBottom: 24 + retraitBas }]}
         showsVerticalScrollIndicator={false}

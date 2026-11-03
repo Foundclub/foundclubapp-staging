@@ -281,7 +281,7 @@ function CadreDeLaFiche({
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[
         // T3-BANDE-BAS (03/11) : sur le téléphone, rien sous le contenu ; le site ignore ce mode.
         Platform.OS === 'web' ? Spaces.paddingVertical[24] : Spaces.paddingTop[24],

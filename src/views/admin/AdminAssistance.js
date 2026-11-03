@@ -96,7 +96,7 @@ function AdminAssistance() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <FlatList
         contentContainerStyle={{ paddingBottom: 32 + retraitBas, paddingHorizontal: 16 }}
         data={conversations}

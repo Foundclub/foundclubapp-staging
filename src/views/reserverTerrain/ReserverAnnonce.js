@@ -89,7 +89,7 @@ function ReserverAnnonce() {
   const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView

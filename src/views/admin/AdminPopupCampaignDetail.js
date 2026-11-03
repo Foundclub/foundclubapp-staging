@@ -198,7 +198,7 @@ function AdminPopupCampaignDetail() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Spaces.paddingTop[24]]}
     >
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], { paddingBottom: 56 + retraitBas }, Spaces.gap[16]]}>

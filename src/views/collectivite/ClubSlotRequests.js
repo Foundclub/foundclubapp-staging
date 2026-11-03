@@ -274,7 +274,7 @@ function ClubSlotRequests() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={{ gap: 12, paddingBottom: 24 + retraitBas, paddingTop: 16 }}
         refreshControl={(

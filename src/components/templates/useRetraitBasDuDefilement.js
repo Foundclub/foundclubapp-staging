@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// T3-BANDE-BAS (03/11, décision d'Adel) : avec `bottomInsetMode="edge-to-edge"`, le contenu descend
+// T3-BANDE-BAS (03/11, décision d'Adel) : avec `bottomInsetMode="scroll-edge"`, le contenu descend
 // jusqu'au bord de l'écran, sans bande au-dessus de la barre du téléphone. Le retrait passe du
 // cadre à la fin de ce qui défile : le dernier élément s'arrête au même endroit qu'avant. Le site
 // n'a pas de barre du téléphone et ignore ce mode : rien à y ajouter.

@@ -137,7 +137,7 @@ describe('T3-BANDE-BAS : le bas des écrans', () => {
 
   test.each(FAITS)('%s : le cadre ne garde rien, la fin du défilement garde tout', (fichier) => {
     const ecran = lire(fichier);
-    expect(ecran.mode).toBe('"edge-to-edge"');
+    expect(ecran.mode).toBe('"scroll-edge"');
     expect(ecran.marges).not.toMatch(/paddingBottom|paddingVertical|padding\[/);
     expect(ecran.retraits.length).toBeGreaterThan(0);
     ecran.retraits.forEach((retrait) => expect(retrait).toMatch(/paddingBottom: [^,}]*retraitBas/));
@@ -146,12 +146,12 @@ describe('T3-BANDE-BAS : le bas des écrans', () => {
 
   test.each(Object.entries(FICHES))('%s : le défilement garde sa variable', (fichier, variable) => {
     const { source } = lire(fichier);
-    expect(source).toMatch(/bottomInsetMode="edge-to-edge"/);
+    expect(source).toMatch(/bottomInsetMode="scroll-edge"/);
     expect(source).toMatch(new RegExp(`paddingBottom: [^,}]*${variable}`));
   });
 
   test.each(Object.entries(LAISSES))('%s reste protégé par son cadre (%s)', (fichier) => {
-    expect(lire(fichier).mode).not.toBe('"edge-to-edge"');
+    expect(lire(fichier).mode).not.toBe('"scroll-edge"');
   });
 
   describe('la valeur du retrait', () => {

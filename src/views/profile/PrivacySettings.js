@@ -60,7 +60,7 @@ function PrivacySettings() {
   const isPrivate = visible === false;
 
   return (
-    <ScreenContainer bottomInsetMode="edge-to-edge">
+    <ScreenContainer bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={[
           Spaces.gap[16],

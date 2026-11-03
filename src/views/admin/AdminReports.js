@@ -276,7 +276,7 @@ function AdminReports() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       title={t('adminReports.title', 'Signalements')}
     >
       <FlatList

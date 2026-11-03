@@ -821,7 +821,7 @@ function CollectiviteRequests() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DecisionCreneauModal

@@ -237,7 +237,7 @@ function AdminClubOnboardingList() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       title={t('adminClubOnboardingList.screenTitle', 'Clubs à onboarder')}
     >
       <FlatList

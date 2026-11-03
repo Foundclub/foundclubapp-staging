@@ -49,7 +49,7 @@ function TrainingEnrolled({ navigation, route = undefined }) {
   } = route?.params || {};
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={[{ flexGrow: 1, paddingBottom: 24 + retraitBas }]}
         showsVerticalScrollIndicator={false}

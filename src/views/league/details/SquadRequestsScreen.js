@@ -309,7 +309,7 @@ function SquadRequestsScreen({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="edge-to-edge"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[
         Alignments.fill,
         Spaces.paddingTop[16],

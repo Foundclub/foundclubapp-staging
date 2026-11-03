@@ -67,7 +67,7 @@ function PlayerCardGallery() {
   const cardWidth = Math.min(width - 64, 520);
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 48 + retraitBas }]}
         showsVerticalScrollIndicator={false}

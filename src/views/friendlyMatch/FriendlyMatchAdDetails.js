@@ -381,7 +381,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" responsivePadding>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge" responsivePadding>
       <ScrollView
         contentContainerStyle={[Spaces.gap[16], { paddingBottom: 128 + retraitBas }]}
         showsVerticalScrollIndicator={false}

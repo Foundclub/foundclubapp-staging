@@ -216,7 +216,7 @@ function RequestsDashboard({ navigation, route }) {
       userId={userData?.documentId}
     >
       <ScreenContainer
-        bottomInsetMode="edge-to-edge"
+        bottomInsetMode="scroll-edge"
         title={t('requests.title', 'Demandes en attente')}
       >
         <OnboardingWrapper

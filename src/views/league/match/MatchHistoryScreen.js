@@ -249,7 +249,7 @@ function MatchHistoryScreen() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 60 }}>
         <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 24 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8, padding: 8 }}>

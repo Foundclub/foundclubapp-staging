@@ -258,7 +258,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
-        bottomInsetMode="edge-to-edge"
+        bottomInsetMode="scroll-edge"
         contentContainerStyle={[
           Spaces.paddingTop[24],
           Alignments.column,
