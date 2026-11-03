@@ -6303,6 +6303,7 @@ export default {
       ensuite: '{{qui}} arrive à {{heure}}.',
       equipe: 'Équipe (facultatif)',
       fermee: {
+        carte: '{{moment}} : installation fermée',
         plusieurs: '{{nombre}} séances sur {{total}} tombent dans une fermeture{{raison}}.',
         questionAttribuer: 'Attribuer quand même ?',
         questionEnregistrer: 'Enregistrer quand même ?',
@@ -7131,6 +7132,9 @@ export default {
       voirToutes: 'Voir les {{count}} fermetures à venir',
     },
     bandeau: {
+      masquerAutres: 'Masquer les autres fermetures',
+      voirAutres_one: 'Voir l’autre fermeture',
+      voirAutres_other: 'Voir les {{count}} autres fermetures',
       bloque: 'Bloquée par la Ville, {{heures}}',
       bloqueLe: 'Bloquée par la Ville le {{jour}}, {{heures}}',
       fermeJour: 'L’installation est fermée ce jour-là',
@@ -7314,6 +7318,8 @@ export default {
     },
     planning: {
       aDeplacer: 'à déplacer',
+      motBloque: 'bloqué',
+      motFerme: 'fermé',
       bloque: 'Bloqué par la Ville · {{motif}}',
       bloqueSeul: 'Bloqué par la Ville',
       ferme: 'Fermé · {{motif}}',

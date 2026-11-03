@@ -447,3 +447,58 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => function Botto
     </>
   ) : null;
 });
+
+describe('T3-FINITIONS-VILLE — la carte de place', () => {
+  const carte = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props.testID === id,
+  )[0];
+
+  test('point 4 : la seule séance tombe dans une fermeture : ni « place libre », ni « Personne n’y est »', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2,
+        closures: [{
+          endDate: '2026-10-21', endTime: '20:00:00.000', kind: 'closure', label: 'Travaux', startDate: '2026-10-21', startTime: '17:00:00.000',
+        }],
+        needsConfirmation: false,
+        occupants: [],
+      },
+    });
+    const arbre = await monter();
+    await jusquAuQuand(arbre);
+    await repeter(arbre, { au: MERCREDI });
+    await avancer(arbre);
+    const textes = lus(arbre).join(' | ');
+    expect(textes).not.toContain('place libre');
+    expect(textes).not.toContain('Personne n’y est.');
+    expect(textes).toContain(': installation fermée');
+    expect(carte(arbre, 'carte-fermee')).toBeDefined();
+  });
+
+  test('point 4 : une séance sur 37 fermée : la place reste libre le reste de l année', async () => {
+    const arbre = await monter();
+    await jusquAuQuand(arbre);
+    await avancer(arbre);
+    expect(lus(arbre).join(' | ')).toContain('place libre');
+  });
+
+  test('point 3 : complet, le message passe AU-DESSUS du choix des heures', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 1,
+        closures: [],
+        needsConfirmation: true,
+        occupants: [{ club: { name: 'T20 Club Karim' } }],
+        overCapacity: true,
+        peak: 1,
+        teamsAfter: 2,
+      },
+    });
+    const arbre = await monter();
+    await jusquAuQuand(arbre);
+    // Dans `sousLaDate` : au-dessus de Début et Fin, et une seule fois sur l étape.
+    const parTest = (/** @type {any} */ n) => n.props.testID === 'carte-complet' && n.type === View;
+    expect(arbre.root.findAll(parTest)).toHaveLength(1);
+    expect(modele(arbre).props.sousLaDate).not.toBeNull();
+  });
+});

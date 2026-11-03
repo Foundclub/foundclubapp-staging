@@ -5749,6 +5749,7 @@ export default {
       ensuite: '{{qui}} arrives at {{heure}}.',
       equipe: 'Team (optional)',
       fermee: {
+        carte: '{{moment}}: facility closed',
         plusieurs: '{{nombre}} sessions out of {{total}} fall within a closure{{raison}}.',
         questionAttribuer: 'Assign anyway?',
         questionEnregistrer: 'Save anyway?',
@@ -6540,6 +6541,9 @@ export default {
       voirToutes: 'See the {{count}} upcoming closures',
     },
     bandeau: {
+      masquerAutres: 'Hide the other closures',
+      voirAutres_one: 'See the other closure',
+      voirAutres_other: 'See the {{count}} other closures',
       bloque: 'Blocked by the town, {{heures}}',
       bloqueLe: 'Blocked by the town on {{jour}}, {{heures}}',
       fermeJour: 'The facility is closed that day',
@@ -6719,6 +6723,8 @@ export default {
     },
     planning: {
       aDeplacer: 'to move',
+      motBloque: 'blocked',
+      motFerme: 'closed',
       bloque: 'Blocked by the town · {{motif}}',
       bloqueSeul: 'Blocked by the town',
       ferme: 'Closed · {{motif}}',

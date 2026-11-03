@@ -1,3 +1,4 @@
+import { Image } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -106,5 +107,17 @@ describe('ClubLogoMark — avec logo : le vrai logo, en variant logo', () => {
   it('le chemin logo ne passe JAMAIS par le repli « personne » de ProfileAvatar', () => {
     const tree = render({ club: { logo: { url: 'https://exemple.test/f.png' }, name: 'FC F' } });
     expect(textsOf(tree)).not.toContain('·');
+  });
+});
+
+describe('T3-FINITIONS-VILLE point 9 — un logo qui ne se charge pas', () => {
+  it('l image échoue : l écusson et ses initiales, plus un carré blanc', () => {
+    const tree = render({ logoUrl: 'https://exemple.invalid/logo.png', name: 'T20 Club Karim' });
+    const image = tree.root.findAllByType(Image).find((n) => typeof n.props.onError === 'function');
+    expect(image).toBeDefined();
+    act(() => { image.props.onError(); });
+    expect(tree.root.findAllByType(ProfileAvatar)).toHaveLength(0);
+    expect(tree.root.findAllByType(TeamShield)).toHaveLength(1);
+    expect(textsOf(tree)).toContain('TC');
   });
 });

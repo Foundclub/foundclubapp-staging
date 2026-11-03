@@ -949,7 +949,7 @@ function FormulaireDeFermeture({
                 onChange={(/** @type {string} */ valeur) => setHeureDebut(
                   String(valeur || '').trim(),
                 )}
-                placeholder="14:00"
+                placeholder="09:00"
                 value={heureDebut}
               />
             </View>
@@ -962,7 +962,7 @@ function FormulaireDeFermeture({
                 onChange={(/** @type {string} */ valeur) => setHeureFin(
                   String(valeur || '').trim(),
                 )}
-                placeholder="12:00"
+                placeholder="13:00"
                 value={heureFin}
               />
             </View>
@@ -1261,6 +1261,9 @@ function FormulaireDeFermeture({
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
+      // T3-FINITIONS-VILLE (M0144, capture d'Adel) : sans borne, le contenu prend la hauteur du
+      // défilement PLUS celle du pied, et le bouton sort de l'écran.
+      contentContainerStyle={[{ flex: 1 }]}
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >

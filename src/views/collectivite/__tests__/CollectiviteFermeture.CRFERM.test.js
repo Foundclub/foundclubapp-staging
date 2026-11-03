@@ -53,6 +53,8 @@ let mockInstallations;
 /** @type {any[]} */
 const mockInputProps = [];
 /** @type {any[]} */
+const mockScreenStyle = [];
+/** @type {any[]} */
 const mockDateProps = [];
 
 jest.mock('@react-navigation/native', () => ({
@@ -102,7 +104,9 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 
 jest.mock(
   '@/components/templates/ScreenContainer',
-  () => function ScreenContainerMock({ children }) {
+  () => function ScreenContainerMock({ children, contentContainerStyle }) {
+    mockScreenStyle.length = 0;
+    mockScreenStyle.push(contentContainerStyle);
     return children;
   },
 );
@@ -576,3 +580,21 @@ jest.mock(
 jest.mock('@/context/AppFeedbackContext', () => ({
   useAppFeedback: () => ({ showBanner: jest.fn() }),
 }));
+
+test('T3-FINITIONS-VILLE point 5 — sur plusieurs jours, l exemple du début précède celui de la fin', async () => {
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
+  const arbre = await rendre();
+  const [interrupteur] = arbre.root.findAllByType(Switch);
+  await changer(date('Du'), '16/10/2026');
+  await changer(date('Au'), '19/10/2026');
+  await act(async () => { interrupteur.props.onValueChange(false); });
+  await attendre();
+  expect(champ('Heure de début').placeholder).toBe('09:00');
+  expect(champ('Heure de fin').placeholder).toBe('13:00');
+});
+
+test('T3-FINITIONS-VILLE M0144 — le gabarit se borne à l écran : le bouton du bas n en sort plus', async () => {
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
+  await rendre();
+  expect(mockScreenStyle[0]).toEqual([{ flex: 1 }]);
+});

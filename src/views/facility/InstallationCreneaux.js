@@ -149,7 +149,10 @@ function CreneauRetire({ slot }) {
       <Text style={[Fonts.p2Bold, Fonts.neutral200]}>{slotWho(slot)}</Text>
       <Text style={[Fonts.p3, Fonts.neutral300]}>
         {[
-          `${weekdayName(slot.weekday)} ${timeRange(slot.startTime, slot.endTime)}`,
+          // T3-FINITIONS-VILLE (point 6) : un créneau ponctuel n'a pas de jour de semaine, il a ses dates.
+          slotShape(slot).dates
+            ? formeEnMots(t, slot, { heures: timeRange(slot.startTime, slot.endTime) })
+            : `${weekdayName(slot.weekday)} ${timeRange(slot.startTime, slot.endTime)}`,
           slot.withdrawnFrom
             ? t('collectiviteCreneaux.creneaux.retireLe', 'retiré à partir du {{date}}', {
               date: formatDay(slot.withdrawnFrom, { withYear: false }),

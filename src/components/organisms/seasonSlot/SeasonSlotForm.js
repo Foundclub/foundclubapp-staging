@@ -1210,6 +1210,9 @@ function SeasonSlotForm({
       : `${weekdayName(Number(jour))} ${timeRange(debut, fin)}`;
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
     const surPlateau = place.plateau && typeof place.plateau === 'object' ? place.plateau : null;
+    // T3-FINITIONS-VILLE (point 4) : toutes les séances tombent dans une fermeture, « place libre »
+    // serait faux ; une partie seulement : la place reste libre le reste du temps.
+    const toutFerme = seancesFermees.length > 0 && seancesFermees.length === seancesVues.length;
     let titre;
     if (surPlateau) {
       titre = surPlateau.free
@@ -1221,6 +1224,11 @@ function SeasonSlotForm({
           plateau: surPlateau.name,
           ...SANS_ECHAPPEMENT,
         });
+    } else if (toutFerme) {
+      titre = t('collectiviteCreneaux.attribuer.fermee.carte', '{{moment}} : installation fermée', {
+        moment,
+        ...SANS_ECHAPPEMENT,
+      });
     } else {
       titre = besoinDeConfirmer
         ? t('collectiviteCreneaux.attribuer.complet', '{{moment}} : complet', {
@@ -1248,7 +1256,7 @@ function SeasonSlotForm({
         qui: occupants.map(slotWho).filter(Boolean).join(', '),
         ...SANS_ECHAPPEMENT,
       }));
-    } else if (!depassement) {
+    } else if (!depassement && !toutFerme) {
       lignes.push(t('collectiviteCreneaux.attribuer.personne', 'Personne n’y est.'));
     }
     if (place.next?.club) {
@@ -1258,7 +1266,9 @@ function SeasonSlotForm({
         ...SANS_ECHAPPEMENT,
       }));
     }
-    const couleur = besoinDeConfirmer ? Colors.warning500 : Colors.success500;
+    let carteTestID = besoinDeConfirmer ? 'carte-complet' : 'carte-place-libre';
+    if (toutFerme) carteTestID = 'carte-fermee';
+    const couleur = besoinDeConfirmer || toutFerme ? Colors.warning500 : Colors.success500;
     return (
       <View
         accessibilityLiveRegion="polite"
@@ -1272,7 +1282,7 @@ function SeasonSlotForm({
             gap: 4,
           },
         ]}
-        testID={besoinDeConfirmer ? 'carte-complet' : 'carte-place-libre'}
+        testID={carteTestID}
       >
         <View style={[Alignments.row, Alignments.alignCenter, ENTRE_DEUX]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
@@ -1310,6 +1320,9 @@ function SeasonSlotForm({
       </View>
     );
   })();
+  // T3-FINITIONS-VILLE (point 3) : voir `sousLaDate`.
+  const carteAuDessusDesHeures = avecLeModele && visible('horaires') && besoinDeConfirmer
+    && !disponibilitesEnErreur && !disponibilitesEnCours && Boolean(carteDeLaPlace);
 
   // VILLE-T18A — « Libre ce mardi : » et une puce par plage ; un appui pose ses heures.
   const lesHeuresLibres = voirLibres && jour && !repartition && formeChoisie !== 'dates'
@@ -2040,15 +2053,22 @@ function SeasonSlotForm({
           // 🗓️ DATESDABORD (25/10, « 7- B » d'Adel) — sous la date choisie, les heures déjà
           // complètes ce jour-là, avec les mots de la planche P4v2 (« complet … ») ; les puces
           // de jours ne reviennent pas.
-          sousLaDate={pleinesDuJourChoisi.length ? (
-            <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="date-complet-du-jour">
-              {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
-                heures: pleinesDuJourChoisi
-                  .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
-                  .join(', '),
-                ...SANS_ECHAPPEMENT,
-              })}
-            </Text>
+          // T3-FINITIONS-VILLE (point 3) : la carte « Complet » aussi, au-dessus des heures : la grille
+          // ouverte la poussait sous le bord à 390.
+          sousLaDate={pleinesDuJourChoisi.length || carteAuDessusDesHeures ? (
+            <>
+              {pleinesDuJourChoisi.length ? (
+                <Text style={[Fonts.p3Bold, Fonts.warning500]} testID="date-complet-du-jour">
+                  {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                    heures: pleinesDuJourChoisi
+                      .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                      .join(', '),
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+              ) : null}
+              {carteAuDessusDesHeures ? carteDeLaPlace : null}
+            </>
           ) : null}
           // Le tunnel plein écran est un <Modal> (couche 9999 sur le site) : la feuille « Répéter »
           // passe dessus, comme celle des vacances (porte du site, 390 px, DATESDABORD).
@@ -2433,7 +2453,7 @@ function SeasonSlotForm({
             );
           }
           if (disponibilitesEnCours) return <ChargementDesChoix />;
-          return carteDeLaPlace;
+          return carteAuDessusDesHeures ? null : carteDeLaPlace;
         })()
       ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}

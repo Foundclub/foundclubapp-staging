@@ -1535,6 +1535,7 @@ function PlanningWeekFullscreen() {
         // plateaux (la grille les pose sous toutes les colonnes).
         // Recolte 03/10 : avec COLL-C3B-BIS, les blocs affiches portent aussi la place « U13 ? » en pointille.
         events={[...bandesDeFermeture, ...blocsDesEvenementsDeLaVille, ...evenementsAffiches]}
+        fermetureEnMinutes={isFacilitySource ? fermetureDuJour : undefined}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         freeSlotAnnotations={annotationsVacances}
         // 🏛️ COLL-R-APP-PLANNING (COL-012) : des fleches aussi dans la rangee des jours (la ou est
@@ -2327,6 +2328,7 @@ function PlanningWeekFullscreen() {
             <FacilityClosureBanner
               closures={fermeturesDuBandeau}
               facilityType={facilityMeta?.type}
+              replie
               testID="planning-bandeau-fermeture"
               withDays
             />

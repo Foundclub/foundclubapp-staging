@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { closureBannerText } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -24,6 +25,8 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * 🚧 CRFERM (13/10, « D8 B », planche P8v4-fermee état 3) : `pourUnMembre` — le bandeau d'un
  * joueur ou d'un parent : sans le mot de la Ville, avec ce qui va se passer (« Ton club peut
  * déplacer ou annuler la séance : tu seras prévenu·e. »).
+ * T3-FINITIONS-VILLE (03/11, point 7) : `replie` (le planning) ne garde que la plus proche et un
+ * bouton pour les autres : trois bandeaux poussaient le calendrier sous le bord de l écran.
  * @param {{
  *   closure?: any,
  *   closures?: any[],
@@ -31,6 +34,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  *   onMove?: () => void,
  *   onCancel?: () => void,
  *   pourUnMembre?: boolean,
+ *   replie?: boolean,
  *   testID?: string,
  *   withDays?: boolean,
  * }} props
@@ -43,11 +47,13 @@ function FacilityClosureBanner({
   onCancel,
   onMove,
   pourUnMembre = false,
+  replie = false,
   testID = 'bandeau-fermeture',
   withDays = false,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
+  const [deplie, setDeplie] = useState(false);
   if (Array.isArray(closures)) {
     const liste = closures.filter(Boolean);
     if (liste.length < 2) {
@@ -60,9 +66,18 @@ function FacilityClosureBanner({
         />
       ) : null;
     }
+    const autres = liste.length - 1;
+    let libelleDesAutres = t('collectiviteFermetures.bandeau.masquerAutres', 'Masquer les autres fermetures');
+    if (!deplie) {
+      libelleDesAutres = t('collectiviteFermetures.bandeau.voirAutres', {
+        count: autres,
+        defaultValue_one: 'Voir l’autre fermeture',
+        defaultValue_other: 'Voir les {{count}} autres fermetures',
+      });
+    }
     return (
       <View style={{ gap: 8 }}>
-        {liste.map((une, rang) => (
+        {(replie && !deplie ? liste.slice(0, 1) : liste).map((une, rang) => (
           <FacilityClosureBanner
             closure={une}
             facilityType={facilityType}
@@ -71,6 +86,18 @@ function FacilityClosureBanner({
             withDays={withDays}
           />
         ))}
+        {replie ? (
+          <TouchableOpacity
+            accessibilityLabel={libelleDesAutres}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: deplie }}
+            onPress={() => setDeplie(!deplie)}
+            style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+            testID={`${testID}-autres`}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.warning400 }]}>{libelleDesAutres}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }

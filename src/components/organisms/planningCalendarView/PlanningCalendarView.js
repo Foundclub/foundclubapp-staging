@@ -21,7 +21,7 @@ import {
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   closureBandLabel,
-  closureHoursLabel,
+  closureHoursOfDay,
   closureOfDay,
   closureTakesWholeDay,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -688,7 +688,7 @@ function PlanningCalendarView({
               {closureBandLabel(t, fermetureDuJourChoisi)}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
-              {closureHoursLabel(t, fermetureDuJourChoisi)}
+              {closureHoursOfDay(t, fermetureDuJourChoisi, selectedDate)}
             </Text>
           </View>
         ) : null}

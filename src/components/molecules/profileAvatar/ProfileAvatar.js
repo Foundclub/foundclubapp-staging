@@ -22,6 +22,7 @@ const REPLI_SANS_NOM = '·';
  * Displays an avatar that opens a full-screen preview on tap.
  * @param {object} props
  * @param {string} [props.imageUrl] - The URL of the avatar image
+ * @param {() => void} [props.onImageError] - The image did not load
  * @param {string} [props.name] - Display name of the PERSON, used to build the
  *   initials fallback when no photo is available (ignored in logo variant).
  * @param {number} [props.size] - Size of the avatar (width/height)
@@ -39,6 +40,7 @@ function ProfileAvatar({
   fitMode,
   imageStyle,
   imageUrl,
+  onImageError,
   name,
   safeInsetRatio,
   shape = 'auto',
@@ -183,6 +185,7 @@ function ProfileAvatar({
             </View>
           ) : (
             <Image
+              onError={onImageError}
               resizeMode={resolvedFitMode}
               source={hasImage ? { uri: processedUrl } : Images.roundAvatar}
               style={[
