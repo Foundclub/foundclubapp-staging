@@ -39,7 +39,7 @@ export default function TournamentInvitationRequest({ eventId }) {
   const equipes = (userData?.trainedTeams || []).filter((/** @type {any} */ equipe) => equipe?.documentId);
 
   return (
-    <View style={[Spaces.gap[12], Spaces.paddingVertical[24]]} testID="tournoi-demande">
+    <View style={[Spaces.gap[12], Spaces.paddingVertical[24], { maxWidth: 560, width: '100%' }]} testID="tournoi-demande">
       <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{apercu.name}</Text>
       {apercu.club?.name ? (
         <Text style={[Fonts.p2, Fonts.neutral100]}>

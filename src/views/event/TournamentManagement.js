@@ -776,6 +776,7 @@ function TournamentManagement({ navigation, route }) {
                   key={option.value}
                   onPress={() => setActiveTab(option.value)}
                   style={tournamentDs.getPillStyle(selected)}
+                  testID={`tournoi-onglet-${option.value}`}
                 >
                   <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
                 </TouchableOpacity>

@@ -1,6 +1,6 @@
 /* eslint-disable max-len -- les témoins se lisent en entier. */
 import renderer, { act } from 'react-test-renderer';
-import { Share, Text } from 'react-native';
+import { Share, Text, TouchableOpacity } from 'react-native';
 
 import { readInviteLink } from '@/domains/invitations/inviteLink';
 import { resolveInviteDestination } from '@/domains/invitations/InvitationLinkHost';
@@ -17,7 +17,7 @@ const mockInviter = jest.fn(() => Promise.resolve({}));
 const mockRepondre = jest.fn(() => Promise.resolve({}));
 const mockEquipes = jest.fn();
 const mockInscrire = jest.fn(() => Promise.resolve({}));
-const mockQuery = { audiences: [], apercu: null };
+const mockQuery = { audiences: [], apercu: null, clubs: [], equipes: [] };
 const mockUtilisateur = { value: { trainedTeams: [] } };
 
 jest.mock('@tanstack/react-query', () => ({
@@ -29,7 +29,13 @@ jest.mock('@tanstack/react-query', () => ({
     ),
   }),
   useQuery: (/** @type {any} */ options) => ({
-    data: options.queryKey[0] === 'tournament-invites' ? { data: mockQuery.audiences } : mockQuery.apercu,
+    data: {
+      'tournament-invitation-preview': mockQuery.apercu,
+      'tournament-invites': { data: mockQuery.audiences },
+      'tournoi-recherche-clubs': { data: mockQuery.clubs },
+      'tournoi-recherche-equipes': { data: mockQuery.equipes },
+    }[options.queryKey[0]],
+    isError: false,
     isLoading: false,
   }),
   useQueryClient: () => ({ invalidateQueries: jest.fn(() => Promise.resolve()) }),
@@ -44,7 +50,7 @@ jest.mock('@/theme/themeContext', () => {
   const Colors = generateColors();
   return {
     __esModule: true,
-    default: () => ({ Colors, Fonts: generateFonts(Colors), Spaces: jest.requireActual('@/theme/spaces').default }),
+    default: () => ({ ApplicationStyle: { card: {} }, Colors, Fonts: generateFonts(Colors), Spaces: jest.requireActual('@/theme/spaces').default }),
   };
 });
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -63,11 +69,19 @@ jest.mock('@/services/team/teamService', () => ({
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   registerClubTeamToTournament: (/** @type {any[]} */ ...args) => mockInscrire(...args),
 }));
-jest.mock('../wizard/components/EventWizardOpponentInvite', () => {
+jest.mock('@/services/club/clubService', () => ({ getClubs: jest.fn() }));
+jest.mock('@/components/molecules/clubSearchResultCard/ClubSearchResultCard', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function CarteDouble(/** @type {any} */ props) {
+    return react.createElement(rn.Pressable, { accessibilityLabel: props.item.name, onPress: props.onPress });
+  };
+});
+jest.mock('@/components/molecules/searchBar/SearchBar', () => {
   const react = jest.requireActual('react');
   const rn = jest.requireActual('react-native');
   return function RechercheDouble(/** @type {any} */ props) {
-    return react.createElement(rn.Pressable, { onPress: () => props.onTeamInvited({ documentId: 'eq-externe' }), testID: 'recherche' });
+    return react.createElement(rn.TextInput, { onChangeText: props.onChangeText, testID: 'recherche', value: props.value });
   };
 });
 jest.mock('@/components/atoms/button/Button', () => {
@@ -91,10 +105,15 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ titre) =>
 const texte = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ n) => [n.props.children].flat().join('')).join(' | ');
 
+const texteDe = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
+  .map((/** @type {any} */ n) => [n.props.children].flat().join('')).join(' ');
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockQuery.audiences = [];
   mockQuery.apercu = null;
+  mockQuery.clubs = [];
+  mockQuery.equipes = [];
   mockUtilisateur.value = { trainedTeams: [] };
 });
 
@@ -140,11 +159,40 @@ describe('TournamentInvites', () => {
   });
 
   it('🐞 une équipe trouvée dans un autre club reçoit une invitation à laquelle elle doit répondre', async () => {
+    jest.useFakeTimers();
+    mockQuery.clubs = [{ documentId: 'club-1', name: 'Mon club' }, { documentId: 'club-2', name: 'US Voisine' }];
+    mockQuery.equipes = [{ documentId: 'eq-1', name: 'U13 déjà là' }, { documentId: 'eq-externe', name: 'U15 B' }];
+    mockQuery.audiences = [{ documentId: 'a1', status: 'PENDING', team: { documentId: 'eq-1', name: 'U13 déjà là' } }];
     const arbre = await monter(<TournamentInvites clubId="club-1" eventId="tournoi" />);
-    const recherche = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'recherche' && n.props.onPress)[0];
-    await act(async () => { await recherche.props.onPress(); });
+    const champ = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'recherche' && n.props.onChangeText)[0];
+    await act(async () => { champ.props.onChangeText('Voi'); jest.advanceTimersByTime(300); });
+    jest.useRealTimers();
+    // Son propre club se passe de cette recherche : c'est « Inviter mon club ».
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props.accessibilityLabel === 'Mon club')).toHaveLength(0);
+    await appuyer(arbre, 'US Voisine');
+    const equipe = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => texteDe(n) === 'U15 B');
+    expect(arbre.root.findAllByType(TouchableOpacity).some((/** @type {any} */ n) => texteDe(n) === 'U13 déjà là')).toBe(false);
+    await act(async () => { await equipe[0].props.onPress(); });
     expect(mockInviter).toHaveBeenCalledWith('tournoi', { audienceKind: 'external_invited', teamId: 'eq-externe' });
     expect(texte(arbre)).toContain('Invitation envoyée');
+  });
+
+  it('🐞 toutes déjà invitées : le message le dit, pas « 0 équipe inscrite »', async () => {
+    mockQuery.audiences = [{ documentId: 'a1', status: 'ACCEPTED', team: { documentId: 'eq-1', name: 'U13' } }];
+    mockEquipes.mockResolvedValue({ data: [{ documentId: 'eq-1' }] });
+    const arbre = await monter(<TournamentInvites clubId="club-1" eventId="tournoi" />);
+    await appuyer(arbre, 'Inviter mon club');
+    expect(mockInviter).not.toHaveBeenCalled();
+    expect(texte(arbre)).toContain('déjà invitées');
+  });
+
+  it('🐞 la recherche ne touche pas au brouillon du tunnel de création', () => {
+    const fs = jest.requireActual('fs');
+    const path = jest.requireActual('path');
+    const lire = (/** @type {string} */ nom) => fs.readFileSync(path.join(__dirname, '..', nom), 'utf8');
+    for (const nom of ['TournamentInvites.js', 'TournamentTeamSearch.js']) {
+      expect(lire(nom)).not.toMatch(/^import .*(useEventWizard|EventWizardOpponentInvite)/m);
+    }
   });
 
   it('une invitation en attente se retire ; une équipe inscrite, non ; une invitation refusée ne s\'affiche plus', async () => {

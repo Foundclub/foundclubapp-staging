@@ -9,7 +9,7 @@ import { getTeams } from '@/services/team/teamService';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import EventWizardOpponentInvite from './wizard/components/EventWizardOpponentInvite';
+import TournamentTeamSearch from './TournamentTeamSearch';
 
 const STATUTS_VIVANTS = ['ACCEPTED', 'PENDING'];
 
@@ -17,10 +17,10 @@ const STATUTS_VIVANTS = ['ACCEPTED', 'PENDING'];
  * T3-TOURNOI-PRIVE (Adel « 8 A », 02/11) — la liste d'invités d'un tournoi privé, côté organisateur :
  * toutes les équipes de son club d'un geste, une équipe d'un autre club, le lien à partager. Une équipe
  * invitée qui accepte est inscrite ; une demande par le lien arrive dans « Équipes inscrites ».
- * @param {{ clubId?: string | null, eventId: string, surfaceStyle?: any }} props - Le tournoi.
+ * @param {{ clubId?: string | null, eventId: string }} props - Le tournoi.
  * @returns {import('react').JSX.Element} Le bloc.
  */
-export default function TournamentInvites({ clubId = null, eventId, surfaceStyle = null }) {
+export default function TournamentInvites({ clubId = null, eventId }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const queryClient = useQueryClient();
@@ -57,11 +57,9 @@ export default function TournamentInvites({ clubId = null, eventId, surfaceStyle
     },
     onError: direLErreur,
     onSettled: apresEcriture,
-    onSuccess: (/** @type {number} */ nombre) => setMessage(t(
-      'tournamentInvites.clubInvited',
-      nombre ? '{{count}} équipe(s) de ton club inscrite(s).' : 'Toutes les équipes de ton club sont déjà invitées.',
-      { count: nombre },
-    )),
+    onSuccess: (/** @type {number} */ nombre) => setMessage(nombre
+      ? t('tournamentInvites.clubInvited', 'Équipes de ton club inscrites : {{count}}.', { count: nombre })
+      : t('tournamentInvites.clubAlreadyInvited', 'Toutes les équipes de ton club sont déjà invitées.')),
   });
 
   const inviter = useMutation({
@@ -107,7 +105,11 @@ export default function TournamentInvites({ clubId = null, eventId, surfaceStyle
         title={t('tournamentInvites.shareLink', 'Partager le lien')}
         variant="Secondary"
       />
-      <EventWizardOpponentInvite onTeamInvited={(/** @type {any} */ equipe) => inviter.mutate(equipe)} surfaceStyle={surfaceStyle} />
+      <TournamentTeamSearch
+        equipesDejaInvitees={dejaInvitees}
+        exclureClubId={clubId}
+        onChoisir={(/** @type {any} */ equipe) => inviter.mutate(equipe)}
+      />
 
       {message ? <Text accessibilityLiveRegion="polite" style={[Fonts.p3, Fonts.primary100]}>{message}</Text> : null}
 
