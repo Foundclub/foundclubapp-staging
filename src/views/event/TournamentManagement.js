@@ -37,6 +37,7 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import { BREAKPOINTS } from '@/responsive';
 import {
   TournamentBracketBoard,
   TournamentGroupCards,
@@ -55,8 +56,6 @@ import {
   isTournamentTeamNonCompliant,
   normalizeTournamentText,
 } from './tournamentUtils';
-
-import { BREAKPOINTS } from '@/responsive';
 
 // I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
 // l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
