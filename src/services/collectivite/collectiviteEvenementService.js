@@ -80,14 +80,15 @@ export const getEvenementDeLaVille = (evenementId) => lire(
 
 /**
  * POST /evenements-de-la-ville/:id/reponse — T3-VILLE-PRESENCE : « Présent » ou « Absent »,
- * pour soi.
- * @param {{ answer: 'absent'|'present', evenementId: string }} params - L'événement et la réponse.
+ * pour soi, ou pour son enfant.
+ * @param {{ answer: 'absent'|'present', enfant?: string, evenementId: string }} params - La
+ * réponse, l'événement et, pour un enfant, sa fiche ou son compte.
  * @returns {Promise<any>} `{ data: presence }`.
  */
-export const repondreEvenement = async ({ answer, evenementId }) => {
+export const repondreEvenement = async ({ answer, enfant, evenementId }) => {
   const http = await client();
   const reponse = await http.post(`/evenements-de-la-ville/${evenementId}/reponse`, {
-    data: { answer },
+    data: enfant ? { answer, enfant } : { answer },
   });
   return reponse.data;
 };

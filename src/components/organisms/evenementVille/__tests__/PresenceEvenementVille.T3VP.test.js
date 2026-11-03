@@ -218,3 +218,95 @@ describe('qui lit les réponses', () => {
     expect(arbre.toJSON()).toBeNull();
   });
 });
+
+// T3-VILLE-PRESENCE, tranche 2 (03/11, Adel : « la réponse est oui ») : le parent répond pour lui
+// ET pour chacun de ses enfants ; Q8 A : un 13-17 ans répond lui-même, son parent lit.
+describe('le parent, pour ses enfants', () => {
+  const LINA = { documentId: 'fiche-lina', peutRepondre: true, prenom: 'Lina', reponse: null };
+  const NOAH = { documentId: 'u-noah', peutRepondre: false, prenom: 'Noah', reponse: null };
+  const boutonEnfant = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props.testID === testID && n.props.onPress)[0];
+  const parent = (/** @type {any[]} */ enfants, etat = 'ouverte') => fiche({
+    enfants, etat, maReponse: null, voitLesReponses: false,
+  });
+
+  it('répond pour lui, ou « Pour Lina » : la réponse part pour cette enfant', async () => {
+    mockRepondre.mockResolvedValue({ data: {} });
+    const arbre = await monter({ deLaVille: false, evenement: parent([LINA]) });
+    expect(textes(arbre)).toContain('Tu viens ?');
+    expect(textes(arbre)).toContain('Pour Lina');
+    const present = boutonEnfant(arbre, 'presence-enfant-fiche-lina-present');
+    expect(present.props.accessibilityLabel).toBe('Présent pour Lina');
+    await act(async () => { await present.props.onPress(); });
+    await laisserPasser();
+    expect(mockRepondre).toHaveBeenCalledWith({
+      answer: 'present', enfant: 'fiche-lina', evenementId: 'evt-1',
+    });
+    await act(async () => { await bouton(arbre, 'Absent').props.onPress(); });
+    await laisserPasser();
+    expect(mockRepondre).toHaveBeenLastCalledWith({ answer: 'absent', evenementId: 'evt-1' });
+  });
+
+  it('la réponse pour l’enfant se redit, sans toucher à celle du parent', async () => {
+    const arbre = await monter({
+      deLaVille: false,
+      evenement: parent([{ ...LINA, reponse: 'absent' }]),
+    });
+    expect(textes(arbre)).toContain('Réponse pour Lina : absent. Tu peux changer d’avis.');
+    expect(boutonEnfant(arbre, 'presence-enfant-fiche-lina-absent').props.accessibilityState)
+      .toEqual({ selected: true });
+    expect(bouton(arbre, 'Absent').props.accessibilityState).toEqual({ selected: false });
+  });
+
+  it('un 13-17 ans : pas de bouton, son parent lit sa réponse', async () => {
+    const arbre = await monter({
+      deLaVille: false,
+      evenement: parent([
+        NOAH,
+        { ...NOAH, documentId: 'u-ines', prenom: 'Inès', reponse: 'present' },
+      ]),
+    });
+    expect(boutonEnfant(arbre, 'presence-enfant-u-noah-present')).toBeUndefined();
+    expect(textes(arbre)).toContain('Noah n’a pas encore répondu.');
+    expect(textes(arbre)).toContain('Inès a répondu : présent.');
+  });
+
+  it('un refus se dit sous cet enfant, pas sous le parent', async () => {
+    mockRepondre.mockRejectedValue(new Error('refus'));
+    const arbre = await monter({ deLaVille: false, evenement: parent([LINA]) });
+    await act(async () => {
+      await boutonEnfant(arbre, 'presence-enfant-fiche-lina-absent').props.onPress();
+    });
+    await laisserPasser();
+    expect(textes(arbre)).toContain('La réponse pour Lina n’est pas partie. Réessaie.');
+    expect(textes(arbre)).not.toContain('Ta réponse n’est pas partie. Réessaie.');
+  });
+
+  it('terminé : plus de bouton, la réponse donnée reste lisible', async () => {
+    const arbre = await monter({
+      deLaVille: false,
+      evenement: parent([{ ...LINA, reponse: 'present' }], 'terminee'),
+    });
+    expect(boutonEnfant(arbre, 'presence-enfant-fiche-lina-present')).toBeUndefined();
+    expect(textes(arbre)).toContain('Réponse pour Lina : présent.');
+  });
+
+  it('le dirigeant lit l’enfant de sa fiche : son prénom, et son parent a répondu', async () => {
+    mockGetReponses.mockResolvedValue({
+      data: {
+        club: 'AS Ville A',
+        reponses: [{ fonction: 'membre', nom: 'Lina', pourEnfant: true, reponse: 'present' }],
+        totaux: { absent: 0, present: 1 },
+        vue: 'club',
+      },
+    });
+    const arbre = await monter({
+      deLaVille: false,
+      evenement: fiche({
+        enfants: [], etat: 'ouverte', maReponse: null, voitLesReponses: true,
+      }),
+    });
+    expect(textes(arbre)).toContain('Lina');
+    expect(textes(arbre)).toContain('Réponse de son parent · Présent');
+  });
+});

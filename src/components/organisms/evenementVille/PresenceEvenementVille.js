@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import {
@@ -25,7 +26,9 @@ const totauxLabel = (t, compte) => [
 /**
  * 🏛️ T3-VILLE-PRESENCE (03/11/2026, fiche 9 option A d'Adel) — sur la fiche d'un événement
  * de la Ville :
- *   - le lecteur dit s'il vient, pour lui seul (`evenement.presence`, écrit par le serveur) ;
+ *   - le lecteur dit s'il vient (`evenement.presence`, écrit par le serveur) ;
+ *   - le parent répond aussi pour son enfant de moins de 13 ans, et lit la réponse de son jeune
+ *     de 13 à 17 ans (tranche 2, règle Q8 A du 19/10) ;
  *   - la Ville lit les totaux et les encadrants nommés ; le dirigeant, la liste de son club
  *     (règles Q9 B et Q10 B du 19/10 : c'est le serveur qui choisit ce qu'il rend).
  * Les places restent une information : rien ici ne les compte. Un serveur pas encore à jour n'écrit
@@ -48,8 +51,12 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
     ? t('collectiviteEvenement.presence.present', 'Présent')
     : t('collectiviteEvenement.presence.absent', 'Absent'));
 
-  const ligneDePersonne = (/** @type {any} */ personne, /** @type {string} */ detail) => (
-    <View key={personne.nom} style={{ gap: 2 }}>
+  const ligneDePersonne = (
+    /** @type {any} */ personne,
+    /** @type {string} */ detail,
+    /** @type {number} */ rang,
+  ) => (
+    <View key={`${personne.nom}-${rang}`} style={{ gap: 2 }}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{personne.nom}</Text>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{detail}</Text>
     </View>
@@ -61,6 +68,135 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
       return t('collectiviteEvenement.presence.entraineur', 'Entraîneur');
     }
     return '';
+  };
+
+  const boutonsDeReponse = (
+    /** @type {string|null} */ choisie,
+    /** @type {string|undefined} */ enfant,
+    /** @type {string} */ prefixe,
+    /** @type {(choix: string) => string|undefined} */ libelle,
+  ) => (
+    <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 12 }}>
+      {CHOIX.map((choix) => {
+        const choisi = choisie === choix;
+        return (
+          <TouchableOpacity
+            accessibilityLabel={libelle(choix)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: choisi }}
+            disabled={repondre.isPending}
+            key={choix}
+            onPress={() => repondre.mutateAsync({ answer: choix, enfant }).catch(() => undefined)}
+            style={{
+              alignItems: 'center',
+              backgroundColor: choisi ? Colors.primary100 : 'transparent',
+              borderColor: choisi ? Colors.primary100 : withAlpha(Colors.neutral00, 0.32),
+              borderRadius: 12,
+              borderWidth: 1,
+              flex: 1,
+              justifyContent: 'center',
+              minHeight: 48,
+              opacity: repondre.isPending ? 0.6 : 1,
+            }}
+            testID={`${prefixe}-${choix}`}
+          >
+            <Text
+              style={[
+                Fonts.p2Bold,
+                { color: choisi ? Colors.primary900 : Colors.neutral00 },
+              ]}
+            >
+              {motDeLaReponse(choix)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  const sectionEnfants = () => {
+    const enfants = Array.isArray(presence?.enfants) ? presence.enfants : [];
+    if (!enfants.length) return null;
+    const ouverte = presence.etat !== 'annulee' && presence.etat !== 'terminee';
+    return enfants.map((/** @type {any} */ enfant) => {
+      const { documentId, peutRepondre, prenom, reponse: laSienne } = enfant;
+      const valeurs = {
+        mot: laSienne ? motDeLaReponse(laSienne).toLowerCase() : '',
+        prenom,
+        ...SANS_ECHAPPEMENT,
+      };
+      if (!peutRepondre) {
+        return (
+          <Text
+            key={documentId}
+            style={[Fonts.p2, Fonts.neutral200]}
+            testID={`presence-jeune-${documentId}`}
+          >
+            {laSienne
+              ? t(
+                'collectiviteEvenement.presence.jeuneReponse',
+                '{{prenom}} a répondu : {{mot}}.',
+                valeurs,
+              )
+              : t(
+                'collectiviteEvenement.presence.jeuneAucune',
+                '{{prenom}} n’a pas encore répondu.',
+                valeurs,
+              )}
+          </Text>
+        );
+      }
+      if (!ouverte && !laSienne) return null;
+      const enErreur = repondre.isError && repondre.variables?.enfant === documentId;
+      return (
+        <View key={documentId} style={{ gap: 12 }} testID={`presence-enfant-${documentId}`}>
+          {ouverte ? (
+            <>
+              <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('collectiviteEvenement.presence.pour', 'Pour {{prenom}}', valeurs)}
+              </Text>
+              {boutonsDeReponse(laSienne, documentId, `presence-enfant-${documentId}`, (choix) => (
+                choix === 'present'
+                  ? t(
+                    'collectiviteEvenement.presence.presentPour',
+                    'Présent pour {{prenom}}',
+                    valeurs,
+                  )
+                  : t(
+                    'collectiviteEvenement.presence.absentPour',
+                    'Absent pour {{prenom}}',
+                    valeurs,
+                  )
+              ))}
+            </>
+          ) : null}
+          {laSienne ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {ouverte
+                ? t(
+                  'collectiviteEvenement.presence.enfantReponseOuverte',
+                  'Réponse pour {{prenom}} : {{mot}}. Tu peux changer d’avis.',
+                  valeurs,
+                )
+                : t(
+                  'collectiviteEvenement.presence.enfantReponse',
+                  'Réponse pour {{prenom}} : {{mot}}.',
+                  valeurs,
+                )}
+            </Text>
+          ) : null}
+          {enErreur ? (
+            <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.error300 }]}>
+              {t(
+                'collectiviteEvenement.presence.enfantErreur',
+                'La réponse pour {{prenom}} n’est pas partie. Réessaie.',
+                valeurs,
+              )}
+            </Text>
+          ) : null}
+        </View>
+      );
+    });
   };
 
   const sectionReponse = () => {
@@ -86,41 +222,7 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
             <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
               {t('collectiviteEvenement.presence.titre', 'Tu viens ?')}
             </Text>
-            <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: 12 }}>
-              {CHOIX.map((choix) => {
-                const choisi = maReponse === choix;
-                return (
-                  <TouchableOpacity
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: choisi }}
-                    disabled={repondre.isPending}
-                    key={choix}
-                    onPress={() => repondre.mutateAsync(choix).catch(() => undefined)}
-                    style={{
-                      alignItems: 'center',
-                      backgroundColor: choisi ? Colors.primary100 : 'transparent',
-                      borderColor: choisi ? Colors.primary100 : withAlpha(Colors.neutral00, 0.32),
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      flex: 1,
-                      justifyContent: 'center',
-                      minHeight: 48,
-                      opacity: repondre.isPending ? 0.6 : 1,
-                    }}
-                    testID={`presence-${choix}`}
-                  >
-                    <Text
-                      style={[
-                        Fonts.p2Bold,
-                        { color: choisi ? Colors.primary900 : Colors.neutral00 },
-                      ]}
-                    >
-                      {motDeLaReponse(choix)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {boutonsDeReponse(maReponse, undefined, 'presence', () => undefined)}
           </>
         ) : null}
         {maReponse ? (
@@ -134,7 +236,7 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
               : t('collectiviteEvenement.presence.maReponse', 'Ta réponse : {{mot}}.', { mot })}
           </Text>
         ) : null}
-        {repondre.isError ? (
+        {repondre.isError && !repondre.variables?.enfant ? (
           <Text
             accessibilityRole="alert"
             style={[Fonts.p3, { color: Colors.error300 }]}
@@ -178,11 +280,20 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
             <Text style={[Fonts.p2Bold, Fonts.primary200]} testID="presence-totaux">
               {totauxLabel(t, reponses.totaux)}
             </Text>
-            {(personne || []).map((/** @type {any} */ ligne) => ligneDePersonne(
-              ligne,
-              [fonctionLabel(ligne.fonction), ligne.club, motDeLaReponse(ligne.reponse)]
-                .filter(Boolean)
-                .join(' · '),
+            {(personne || []).map((/** @type {any} */ ligne, /** @type {number} */ rang) => (
+              ligneDePersonne(
+                ligne,
+                [
+                  ligne.pourEnfant
+                    ? t('collectiviteEvenement.presence.parentARepondu', 'Réponse de son parent')
+                    : fonctionLabel(ligne.fonction),
+                  ligne.club,
+                  motDeLaReponse(ligne.reponse),
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+                rang,
+              )
             ))}
             {reponses.vue === 'ville' ? (
               <Text style={[Fonts.p3, Fonts.neutral200]} testID="presence-autres">
@@ -199,11 +310,13 @@ function PresenceEvenementVille({ deLaVille, evenement }) {
   };
 
   const reponse = sectionReponse();
+  const pourLesEnfants = sectionEnfants();
   const lue = sectionLecture();
-  if (!reponse && !lue) return null;
+  if (!reponse && !pourLesEnfants && !lue) return null;
   return (
     <View style={{ gap: 16 }}>
       {reponse}
+      {pourLesEnfants}
       {lue}
     </View>
   );
