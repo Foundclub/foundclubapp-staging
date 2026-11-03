@@ -181,6 +181,10 @@ const avancer = (/** @type {any} */ arbre) => {
   expect(tunnel(arbre).isNextDisabled).not.toBe(true);
   return appeler(() => tunnel(arbre).onNext());
 };
+// RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : attribuer sur une fermeture se confirme.
+const confirmerFermeture = (/** @type {any} */ arbre) => appeler(() => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props.testID === 'confirmer-fermeture-oui' && typeof n.props.onPress === 'function',
+)[0].props.onPress());
 const texte = (/** @type {any} */ n) => [].concat(n.props.children).join('');
 const lus = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map(texte);
 const choix = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll(
@@ -291,6 +295,7 @@ test.each([
   await avancer(arbre);
   expect(lus(arbre)).toContain('Toute la saison · 21 oct. – 30 juin');
   await appeler(() => tunnel(arbre).onNext());
+  await confirmerFermeture(arbre);
   expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
     club: 'basket', endTime: '19:00', startTime: '17:30', weekday: 3,
   });

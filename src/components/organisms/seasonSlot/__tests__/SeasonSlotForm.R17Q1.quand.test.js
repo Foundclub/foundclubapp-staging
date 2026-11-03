@@ -1,6 +1,6 @@
 /* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -185,6 +185,10 @@ const avancer = (/** @type {any} */ arbre) => {
   expect(tunnel(arbre).isNextDisabled).not.toBe(true);
   return appeler(() => tunnel(arbre).onNext());
 };
+// RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : attribuer sur une fermeture se confirme.
+const confirmerFermeture = (/** @type {any} */ arbre) => appeler(() => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props.testID === 'confirmer-fermeture-oui' && typeof n.props.onPress === 'function',
+)[0].props.onPress());
 const texte = (/** @type {any} */ n) => [].concat(n.props.children).join('');
 const lus = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map(texte);
 const choix = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll(
@@ -256,6 +260,7 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
     expect(tunnel(arbre).title).toBe('Récapitulatif');
     expect(lus(arbre)).toEqual(expect.arrayContaining(['Toute la saison · 21 oct. – 30 juin', '37 mercredis, dont 2 fermés (23 déc., 30 déc.)']));
     await appeler(() => tunnel(arbre).onNext());
+    await confirmerFermeture(arbre);
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       club: 'basket', endTime: '19:00', startTime: '17:30', weekday: 3,
     });
@@ -269,6 +274,7 @@ describe('R17Q1-4 — « Quand ? » : quatre formes, après le jour et l’heure
     await avancer(arbre);
     expect(lus(arbre)).toContain('Toutes les 2 semaines · 21 oct. – 30 juin');
     await appeler(() => tunnel(arbre).onNext());
+    await confirmerFermeture(arbre);
     expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', {
       anchorDate: '2026-10-21', club: 'basket', endTime: '19:00', everyWeeks: 2, recurrence: 'weekly', startTime: '17:30', validFrom: '2026-10-21', validUntil: '2027-06-30', weekday: 3,
     });
@@ -325,6 +331,84 @@ describe('R17Q1-4 — « Des jours différents » (Q4 B) : le calendrier libre',
     const noel = jourDuCalendrier(arbre, '2026-12-23');
     expect(noel.props.accessibilityState).toEqual({ disabled: true, selected: false });
     expect(noel.props.accessibilityLabel).toBe('mer. 23 déc., fermé (Vacances de Noël)');
+  });
+});
+
+// RET-FERMETURE-HEURES, question 9 (Adel, 03/11, « A oui avec un petit message d'avertissement êtes-vous
+// sûr car ») : la Ville garde le droit d'attribuer pendant une fermeture, mais on lui demande de confirmer.
+describe('RET-FERMETURE-HEURES Q9 — attribuer pendant une fermeture se confirme', () => {
+  const TRAVAUX = {
+    endDate: '2026-10-21', endTime: '20:00:00.000', kind: 'closure', label: 'Travaux', startDate: '2026-10-21', startTime: '17:00:00.000',
+  };
+  const dialogue = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props.testID === 'confirmer-fermeture' && n.type === View,
+  )[0];
+  const bouton = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props.testID === testID && typeof n.props.onPress === 'function',
+  )[0];
+  const jusquAuRecap = async (/** @type {any} */ arbre, /** @type {any} */ suite) => {
+    await jusquAuQuand(arbre);
+    if (suite) await repeter(arbre, suite);
+    await avancer(arbre);
+    expect(tunnel(arbre).title).toBe('Récapitulatif');
+  };
+
+  test('une séance sur une fermeture à heures : le motif et les heures, rien ne part avant « Attribuer quand même »', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2, closures: [TRAVAUX], needsConfirmation: false, occupants: [],
+      },
+    });
+    const arbre = await monter();
+    await jusquAuRecap(arbre, { au: MERCREDI });
+    await appeler(() => tunnel(arbre).onNext());
+    expect(attributeSeasonSlot).not.toHaveBeenCalled();
+    expect(dialogue(arbre)).toBeDefined();
+    expect(lus(arbre)).toEqual(expect.arrayContaining([
+      'Êtes-vous sûr ?',
+      'Cette installation est fermée sur ce créneau (Travaux, 17:00 – 20:00). Attribuer quand même ?',
+    ]));
+    await appeler(() => bouton(arbre, 'confirmer-fermeture-oui').props.onPress());
+    expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
+    expect(/** @type {any} */ (attributeSeasonSlot).mock.calls[0][1]).not.toHaveProperty('confirmOverCapacity');
+  });
+
+  test('plusieurs séances : combien, sur combien, et le motif ; « Annuler » ne fait rien partir', async () => {
+    const arbre = await monter();
+    await jusquAuRecap(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    expect(lus(arbre)).toContain(
+      '2 séances sur 37 tombent dans une fermeture (Vacances de Noël). Attribuer quand même ?',
+    );
+    await appeler(() => bouton(arbre, 'confirmer-fermeture-non').props.onPress());
+    expect(dialogue(arbre)).toBeUndefined();
+    expect(attributeSeasonSlot).not.toHaveBeenCalled();
+  });
+
+  test('sans fermeture touchée : pas de question, ça part', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2, closures: [], needsConfirmation: false, occupants: [],
+      },
+    });
+    const arbre = await monter();
+    await jusquAuRecap(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    expect(dialogue(arbre)).toBeUndefined();
+    expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
+  });
+
+  test('complet ET fermé : la confirmation du complet part avec, une seule question', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2, closures: [NOEL], needsConfirmation: true, occupants: [],
+      },
+    });
+    const arbre = await monter();
+    await jusquAuRecap(arbre);
+    await appeler(() => tunnel(arbre).onNext());
+    await appeler(() => bouton(arbre, 'confirmer-fermeture-oui').props.onPress());
+    expect(/** @type {any} */ (attributeSeasonSlot).mock.calls[0][1]).toMatchObject({ confirmOverCapacity: true });
   });
 });
 

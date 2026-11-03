@@ -6302,6 +6302,13 @@ export default {
       enregistrerQuandMeme: 'Enregistrer quand même',
       ensuite: '{{qui}} arrive à {{heure}}.',
       equipe: 'Équipe (facultatif)',
+      fermee: {
+        plusieurs: '{{nombre}} séances sur {{total}} tombent dans une fermeture{{raison}}.',
+        questionAttribuer: 'Attribuer quand même ?',
+        questionEnregistrer: 'Enregistrer quand même ?',
+        titre: 'Êtes-vous sûr ?',
+        une: 'Cette installation est fermée sur ce créneau{{raison}}.',
+      },
       fin: 'Fin',
       heureFormat: 'Une heure s’écrit HH:MM (par exemple 17:30).',
       heureOrdre: 'La fin doit suivre le début.',
@@ -17863,6 +17870,7 @@ export default {
     labels: {
       noTime: 'Sans horaire',
     },
+    // eslint-disable-next-line max-len
     legendeDesPoints: 'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
     mode: {
       monthDescription: 'Vue globale du mois',

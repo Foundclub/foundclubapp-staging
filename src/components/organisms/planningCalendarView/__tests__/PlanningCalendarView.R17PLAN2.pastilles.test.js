@@ -95,8 +95,8 @@ const monter = async (
     arbre = renderer.create(
       <PlanningCalendarView
         compterLesSeances={compterLesSeances}
-        legendeDesPoints={legendeDesPoints}
         currentDate={new Date(2026, 9, 10, 12, 0)}
+        legendeDesPoints={legendeDesPoints}
         // Comme la section (`blocsDuMois`) : la couleur se pose APRÈS la normalisation.
         events={normalizePlanningItems(seances).map((/** @type {any} */ e) => ({
           ...e, displayColor: seances.find((s) => s.documentId === e.documentId)?.displayColor,
