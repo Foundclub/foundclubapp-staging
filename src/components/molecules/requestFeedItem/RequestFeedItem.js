@@ -96,6 +96,10 @@ const getActionLabel = (action, item, t) => {
   }
 };
 
+// T4-PARENT-RETOURS (M0091) : ces types seulement portent l'heure de la demande dans `createdAt` ;
+// ailleurs, le tri y met souvent la date de l'événement ou du créneau.
+const TYPES_AVEC_HEURE_DE_RECEPTION = new Set(['club', 'event', 'interest', 'team']);
+
 /**
  * @param {{
  *  item: import('@/domains/requests/requestMappers').RequestHubItem;
@@ -145,6 +149,16 @@ function RequestFeedItem({
   const isTeamInvitation = item?.type === 'teamInvite';
   // S10-C / D1 — la date de l evenement, avec LE formateur deja present dans ce
   // fichier plutot qu un second dans le mappeur.
+  const recueLe = item?.createdAt ? new Date(item.createdAt) : null;
+  const recueLeLabel = recueLe && !Number.isNaN(recueLe.getTime())
+    && TYPES_AVEC_HEURE_DE_RECEPTION.has(item?.type)
+    && (item?.type !== 'event' || Boolean(requesterId))
+    ? t('requestsHub.receivedAt', 'Reçue le {{date}} à {{time}}', {
+      date: recueLe.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+      time: recueLe.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+      ...SANS_ECHAPPEMENT,
+    })
+    : '';
   const invitationDateLabel = isTeamInvitation
     ? formatWindowLabel(item?.meta?.eventDate, null)
     : '';
@@ -477,6 +491,11 @@ function RequestFeedItem({
       </View>
 
       {bodyContent}
+      {recueLeLabel ? (
+        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]} testID="request-received-at">
+          {recueLeLabel}
+        </Text>
+      ) : null}
 
       {stackActions ? null : profileButton}
 

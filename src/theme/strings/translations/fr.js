@@ -19855,6 +19855,7 @@ export default {
     // silence), donc ce qui reste affiché est toujours réessayable.
     partialErrorRetry: 'Réessayer',
     partialErrorServer: 'Le chargement est temporairement indisponible. Réessaie dans un instant.',
+    receivedAt: 'Reçue le {{date}} à {{time}}',
     rejectEventMessage: 'L\'événement sera annulé.',
     rejectEventTitle: 'Refuser la demande ?',
     rejectFeaturedMessage: 'Le demandeur sera notifié du refus.',

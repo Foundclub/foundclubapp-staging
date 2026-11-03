@@ -19062,6 +19062,7 @@ export default {
     partialErrorLabel: 'unavailable',
     partialErrorRetry: 'Try again',
     partialErrorServer: 'Loading is temporarily unavailable. Try again shortly.',
+    receivedAt: 'Received on {{date}} at {{time}}',
     rejectEventMessage: 'The event will be cancelled.',
     rejectEventTitle: 'Decline the request?',
     rejectFeaturedMessage: 'The requester will be notified of the refusal.',
