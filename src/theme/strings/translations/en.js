@@ -13310,6 +13310,11 @@ export default {
       primary: 'Send my request',
       title: 'Invitation to join a team',
     },
+    tournament: {
+      body: 'You received a link to a private tournament. Do you want to open it?',
+      primary: 'See the tournament',
+      title: 'Tournament invitation',
+    },
   },
   leagueActionPromptHost: {
     actions: {
@@ -24386,6 +24391,26 @@ export default {
     toBeDecided: 'To be decided',
     tournamentMatch: 'Tournament match',
     winShort: 'W',
+  },
+  tournamentInvites: {
+    accepted: 'Registered',
+    cancel: 'Remove the invitation',
+    clubInvited: '{{count}} team(s) of your club registered.',
+    error: 'The invitation could not be sent.',
+    hint: 'With the link, a team asks to take part: you decide.',
+    myClub: 'Invite my club',
+    pending: 'Awaiting its answer',
+    sent: 'Invitation sent. It awaits the answer of its coach.',
+    shareLink: 'Share the link',
+    title: 'Guests',
+  },
+  tournamentInvitation: {
+    error: 'The request could not be sent.',
+    noTeam: 'You need to coach a team to ask to take part.',
+    organizedBy: 'Organized by {{club}}',
+    private: 'This tournament is private: the organizer approves each team.',
+    request: 'Ask for {{team}}',
+    sent: 'Request sent. You will see the tournament once the organizer accepts it.',
   },
   tournamentManagement: {
     aClubTeam: 'a club team',

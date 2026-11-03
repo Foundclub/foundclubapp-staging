@@ -585,6 +585,16 @@ export const getEventById = async (documentId) => getEventByIdResponse(documentI
  * @param {string} documentId - The event ID
  * @returns {Promise<FCEvent>} The event
  */
+/**
+ * T3-TOURNOI-PRIVE : l'aperçu d'un tournoi privé pour un compte sans lien (ni équipes ni personnes).
+ * @param {string} documentId - Le tournoi.
+ * @returns {Promise<any>} L'aperçu ; une ancienne version du serveur répond 404.
+ */
+export const getTournamentInvitationPreview = async (documentId) => {
+  const response = await client.get(`/events/${documentId}`, { params: { invitation: 1 } });
+  return response?.data?.data ?? null;
+};
+
 export const getEventByIdForEdit = async (documentId) => getEventByIdResponse(documentId, {
   projection: 'edit',
 });

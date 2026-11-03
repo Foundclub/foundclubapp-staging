@@ -14130,6 +14130,11 @@ export default {
       primary: 'Envoyer ma demande',
       title: 'Invitation à rejoindre une équipe',
     },
+    tournament: {
+      body: "Tu as reçu un lien vers un tournoi privé. Veux-tu l'ouvrir ?",
+      primary: 'Voir le tournoi',
+      title: 'Invitation à un tournoi',
+    },
   },
   leagueActionPromptHost: {
     actions: {
@@ -25433,6 +25438,26 @@ export default {
     toBeDecided: 'À définir',
     tournamentMatch: 'Match tournoi',
     winShort: 'V',
+  },
+  tournamentInvites: {
+    accepted: 'Inscrite',
+    cancel: "Retirer l'invitation",
+    clubInvited: '{{count}} équipe(s) de ton club inscrite(s).',
+    error: "L'invitation n'a pas pu partir.",
+    hint: "Avec le lien, une équipe demande à participer : c'est toi qui acceptes.",
+    myClub: 'Inviter mon club',
+    pending: 'Attend sa réponse',
+    sent: 'Invitation envoyée. Elle attend la réponse de son entraîneur.',
+    shareLink: 'Partager le lien',
+    title: 'Invités',
+  },
+  tournamentInvitation: {
+    error: "La demande n'a pas pu partir.",
+    noTeam: 'Il faut encadrer une équipe pour demander à participer.',
+    organizedBy: 'Organisé par {{club}}',
+    private: "Ce tournoi est privé : l'organisateur valide chaque équipe.",
+    request: 'Demander pour {{team}}',
+    sent: "Demande envoyée. Tu verras le tournoi dès que l'organisateur l'aura acceptée.",
   },
   tournamentManagement: {
     aClubTeam: 'une équipe club',

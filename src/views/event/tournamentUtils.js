@@ -277,8 +277,15 @@ export const getTournamentClosure = (event) => {
     .map((/** @type {any} */ team) => Date.parse(team?.archivedAt || ''))
     .filter(Number.isFinite)
     .sort((/** @type {number} */ gauche, /** @type {number} */ droite) => droite - gauche)[0];
+  // T3-TOURNOI-PRIVE : le serveur date la clôture. Sans date, un ancien tournoi clôturé a archivé
+  // TOUTES ses équipes ; une seule équipe archivée par l'organisateur ne clôt rien.
+  const dateDuServeur = Date.parse(event?.tournamentConfig?.closedAt || '');
+  if (Number.isFinite(dateDuServeur)) return { closedAt: dateDuServeur, isClosed: true };
   const estFerme = String(event?.sessionStatus || '').toLowerCase() === 'closed';
-  return { closedAt, isClosed: estFerme && closedAt !== undefined };
+  const equipes = Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [];
+  const toutesArchivees = equipes.length > 0
+    && equipes.every((/** @type {any} */ team) => String(team?.status || '').toLowerCase() === 'archived');
+  return { closedAt, isClosed: estFerme && toutesArchivees && closedAt !== undefined };
 };
 
 /**
