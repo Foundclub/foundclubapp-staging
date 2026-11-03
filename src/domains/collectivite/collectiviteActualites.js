@@ -240,7 +240,7 @@ export const clubsPrecisPreview = (t, {
   if (nombre === 0) {
     return t(
       'collectiviteActualites.apercu.clubsPrecis.personne',
-      'Personne ne la recevra : ces clubs n’ont personne avec ces rôles pour l’instant.',
+      'Personne ne la recevra : ces clubs n’ont personne avec ces rôles.',
     );
   }
   const personnes = nombre === 1

@@ -5568,14 +5568,15 @@ export default {
       calcul: 'Nous comptons les clubs qui la recevront…',
       clubsPrecis: {
         calcul: 'Nous comptons les personnes qui la recevront…',
-        clubUn: '1 club',
         clubs: '{{nombre}} clubs',
+        clubUn: '1 club',
         cocherClubs: 'Cochez les clubs qui la recevront.',
         cocherRoles: 'Cochez les rôles qui la recevront.',
+        // eslint-disable-next-line max-len
         notification: 'Une notification part aux dirigeants et entraîneurs cochés, et aux joueurs et parents qui l’ont activée. Personne n’y répond.',
-        personne: 'Personne ne la recevra : ces clubs n’ont personne avec ces rôles pour l’instant.',
-        personneUne: '1 personne',
+        personne: 'Personne ne la recevra : ces clubs n’ont personne avec ces rôles.',
         personnes: '{{nombre}} personnes',
+        personneUne: '1 personne',
         recue: 'Reçue par {{personnes}} dans {{clubs}}.',
         recueEnviron: 'Reçue par environ {{personnes}} dans {{clubs}}.',
       },
@@ -5654,8 +5655,8 @@ export default {
     form: {
       ajouter: 'Ajouter une photo ou un document',
       annuler: 'Annuler',
-      aucunClub: 'Aucun club n’est rattaché à votre collectivité.',
       apercu: 'Ce que liront les membres',
+      aucunClub: 'Aucun club n’est rattaché à votre collectivité.',
       camera: 'Caméra',
       choisirInstallation: 'Choisissez l’installation : ses clubs la recevront.',
       clubsIllisibles: 'Les clubs n’ont pas pu être lus.',
