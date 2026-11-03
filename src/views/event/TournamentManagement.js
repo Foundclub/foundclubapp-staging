@@ -37,7 +37,6 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
-import { BREAKPOINTS } from '@/responsive';
 import {
   TournamentBracketBoard,
   TournamentGroupCards,
@@ -59,8 +58,9 @@ import {
 
 // I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
 // l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
-// La barre fine à 390 : 238 px pour le titre (fenêtre - marges - retour - vide), ~22 signes.
-const SIGNES_DE_LA_BARRE_ETROITE = 22;
+// La barre fine laisse au titre la fenêtre moins 152 px (marges, retour, vide) ; un signe : ~11 px.
+const PLACE_PRISE_DANS_LA_BARRE = 152;
+const LARGEUR_D_UN_SIGNE = 11;
 
 const TAB_OPTIONS = [
   {
@@ -371,8 +371,8 @@ function TournamentManagement({ navigation, route }) {
   const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
   // T3-PLACE (03/11) : à 390, un nom long se coupait dans la barre et se répétait juste dessous.
   // ponytail: « il tient » est estimé en signes ; sortie : mesurer le texte de la barre.
-  const nomTropLongPourLaBarre = largeurDeLaFenetre < BREAKPOINTS.tablet
-    && titreDuLecteur.length > SIGNES_DE_LA_BARRE_ETROITE;
+  const nomTropLongPourLaBarre = titreDuLecteur.length * LARGEUR_D_UN_SIGNE
+    > largeurDeLaFenetre - PLACE_PRISE_DANS_LA_BARRE;
   const titreDeLaBarre = nomTropLongPourLaBarre
     ? t('tournamentManagement.competition', 'Compétition')
     : titreDuLecteur;
