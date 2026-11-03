@@ -142,6 +142,11 @@ jest.mock('@/services/home/homeSummaryQueries', () => ({
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useAdminCollectivitesATraiter: () => ({ demandesGestionnaire: 0, mairiesAActiver: 0 }),
 }));
+// T3-TICKETS-VILLE (03/11) : « Ma collectivité » du dirigeant.
+const mockMaCollectivite = jest.fn(() => ({ data: undefined, isSuccess: false }));
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useMaCollectivite: (/** @type {any} */ clubId) => mockMaCollectivite(clubId),
+}));
 jest.mock('@/views/home/useHomeEventAnswer', () => ({
   useHomeEventAnswer: () => ({
     answer: null, canAnswer: false, isAnswering: false, sentAnswer: null, submit: () => {},
@@ -453,5 +458,59 @@ describe('REC17-001-B — la carte dit le nombre et UNE pastille', () => {
     expect(lus.nombre).toBe('');
     expect(lus.pastille).toBe('');
     act(() => arbre.unmount());
+  });
+});
+
+describe('T3-TICKETS-VILLE — la section « Ma collectivité » de l accueil', () => {
+  const dirigeant = {
+    ...compte('Dirigeant'),
+    userData: {
+      club: { documentId: 'club-1' },
+      documentId: 'compte-yb',
+      firstname: 'Yanis',
+      role: { name: 'Dirigeant' },
+    },
+  };
+  const titres = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ n) => n.type === HomeActionCard)
+    .map((/** @type {any} */ n) => n.props.title);
+  afterEach(() => {
+    mockMaCollectivite.mockImplementation(() => ({ data: undefined, isSuccess: false }));
+  });
+
+  it('un dirigeant dont le club a une Ville : ses deux portes, qui ouvrent le bon onglet', () => {
+    mockAuth = dirigeant;
+    mockMaCollectivite.mockImplementation(() => ({
+      data: { attached: { name: 'Ville de Montrivage' } },
+      isSuccess: true,
+    }));
+    const { arbre, navigate } = monterLAccueil();
+    expect(mockMaCollectivite).toHaveBeenCalledWith('club-1');
+    expect(titres(arbre)).toEqual(expect.arrayContaining(['Écrire à ma Ville', 'Signaler un problème']));
+    const carte = arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === HomeActionCard && n.props.title === 'Signaler un problème',
+    )[0];
+    act(() => carte.props.onPress());
+    expect(navigate).toHaveBeenCalledWith('MaVille', { clubId: 'club-1', onglet: 'signaler' });
+  });
+
+  it('un dirigeant sans Ville : une seule porte, vers le rattachement', () => {
+    mockAuth = dirigeant;
+    mockMaCollectivite.mockImplementation(() => ({ data: { attached: null }, isSuccess: true }));
+    const liste = titres(monterLAccueil().arbre);
+    expect(liste).toContain('Trouver ma Ville');
+    expect(liste).not.toContain('Écrire à ma Ville');
+  });
+
+  it('une panne ne fait pas croire qu il n y a pas de Ville, et un joueur ne voit rien', () => {
+    mockAuth = dirigeant;
+    mockMaCollectivite.mockImplementation(() => ({ data: undefined, isSuccess: false }));
+    expect(titres(monterLAccueil().arbre)).not.toContain('Trouver ma Ville');
+    mockAuth = compte('Joueur');
+    mockMaCollectivite.mockImplementation(() => ({ data: undefined, isSuccess: false }));
+    mockMaCollectivite.mockClear();
+    const joueur = titres(monterLAccueil().arbre);
+    expect(mockMaCollectivite).toHaveBeenCalledWith(null);
+    expect(joueur).not.toContain('Écrire à ma Ville');
   });
 });

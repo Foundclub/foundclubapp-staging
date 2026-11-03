@@ -2166,6 +2166,12 @@ export default {
     FACILITY_REPORT_MANAGER_REQUIRED: 'Seule la Ville traite un signalement.',
     FACILITY_REPORT_MEMBER_REQUIRED:
       'Seuls les membres des clubs qui utilisent cette installation peuvent la signaler.',
+    COLLECTIVITE_QUESTION_INVALID_PAYLOAD: 'Écris ta question avant de l’envoyer (1000 caractères au plus).',
+    COLLECTIVITE_QUESTION_MANAGER_REQUIRED: 'Ce geste est réservé au dirigeant du club ou à la Ville.',
+    COLLECTIVITE_QUESTION_NOT_FOUND: 'Cette question est introuvable.',
+    COLLECTIVITE_QUESTION_NO_CITY: 'Ton club n’est rattaché à aucune Ville.',
+    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'Cette question ne peut plus changer de statut.',
+    COLLECTIVITE_QUESTION_TOO_MANY_OPEN: 'Trop de questions de ton club attendent encore une réponse.',
     FACILITY_REPORT_NOT_FOUND: 'Ce signalement est introuvable.',
     FACILITY_REPORT_NOTE_REQUIRED: 'Un mot pour l’auteur est obligatoire.',
     FACILITY_REPORT_PHOTO_AGE:
@@ -6113,6 +6119,24 @@ export default {
   // d'Adel) : la Ville cherche un club déjà sur FoundClub et lui envoie sa demande, elle juge
   // celles venues de son lien ; le club répond et suit ses demandes. La mairie est vouvoyée
   // (`ajouter`, `add`, `demandes`, `ville`), le club tutoyé (`club`).
+  collectiviteQuestions: {
+    accueilATraiter_one: '1 question d’un club à traiter',
+    accueilATraiter_other: '{{count}} questions de clubs à traiter',
+    accueilDetail: 'Ce que les clubs vous écrivent, et où vous en êtes.',
+    erreurChargement: 'Les questions n’ont pas pu être chargées.',
+    motDeLaVille: '{{ville}} : « {{note}} »',
+    prendre: 'Passer en cours',
+    statuts: {
+      en_cours: 'En cours',
+      recue: 'Reçue',
+      traitee: 'Traitée',
+    },
+    titre: 'Questions des clubs',
+    titreFiche: 'Question à la Ville',
+    traiter: 'Marquer comme traitée',
+    vide: 'Aucun club ne vous a encore écrit.',
+    votreMot: 'Votre réponse au club (facultatif)',
+  },
   collectiviteRattachement: {
     add: {
       button: 'Ajouter un club',
@@ -16965,6 +16989,25 @@ export default {
     share: {
       message: 'Paiement cotisation FoundClub : {{payerLink}}',
     },
+  },
+  maVille: {
+    aucuneInstallation: 'Ta Ville n’a pas encore d’installation ici.',
+    aucuneQuestion: 'Aucune question pour l’instant.',
+    choisirInstallation: 'Sur quelle installation ?',
+    envoye: 'C’est envoyé. Tu seras prévenu de la réponse.',
+    envoyer: 'Envoyer à ma Ville',
+    erreurChargement: 'Tes questions n’ont pas pu être chargées.',
+    erreurInstallations: 'Les installations n’ont pas pu être chargées.',
+    erreurVille: 'Ta collectivité n’a pas pu être chargée.',
+    mesQuestions: 'Les questions du club',
+    ongletEcrire: 'Écrire à ma Ville',
+    ongletSignaler: 'Signaler un problème',
+    placeholder: 'Une question, une information, un besoin : écris-le ici.',
+    rattacher: 'Trouver ma Ville',
+    rattacherDetail: 'Rattache ton club à ta Ville.',
+    reessayer: 'Réessayer',
+    signalerDetail: 'Sur une installation de ta Ville.',
+    tonMessage: 'Ta question',
   },
   myLicenses: {
     archive: {

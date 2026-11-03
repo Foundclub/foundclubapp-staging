@@ -318,6 +318,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.FacilityReportNew]: '/signaler-un-probleme',
   [RouteNames.FacilityReportDetails]: '/signalements/:reportId',
   [RouteNames.MyFacilityReports]: '/mes-signalements',
+  // T3-TICKETS-VILLE (03/11/2026, fiche 20 option B).
+  [RouteNames.MaVille]: '/ma-ville/:onglet?',
+  [RouteNames.CollectiviteQuestions]: '/collectivite/:collectiviteId/questions',
+  [RouteNames.CollectiviteQuestion]: '/questions-a-la-ville/:questionId',
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export.
   [RouteNames.CollectiviteChiffres]: '/collectivite/:collectiviteId/chiffres',
   // R17-EVT-1 (20/10/2026) — ajouter ou modifier un événement de la Ville ; sa fiche.

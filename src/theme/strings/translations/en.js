@@ -1988,6 +1988,12 @@ export default {
     FACILITY_REPORT_MANAGER_REQUIRED: 'Only the city handles a report.',
     FACILITY_REPORT_MEMBER_REQUIRED:
       'Only members of the clubs that use this facility can report it.',
+    COLLECTIVITE_QUESTION_INVALID_PAYLOAD: 'Write your question before sending it (1000 characters at most).',
+    COLLECTIVITE_QUESTION_MANAGER_REQUIRED: 'Only a club manager or the city can do this.',
+    COLLECTIVITE_QUESTION_NOT_FOUND: 'This question cannot be found.',
+    COLLECTIVITE_QUESTION_NO_CITY: 'Your club is not attached to a city.',
+    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'This question can no longer change status.',
+    COLLECTIVITE_QUESTION_TOO_MANY_OPEN: 'Too many of your club’s questions are still waiting for an answer.',
     FACILITY_REPORT_NOT_FOUND: 'This report cannot be found.',
     FACILITY_REPORT_NOTE_REQUIRED: 'A note for the author is required.',
     FACILITY_REPORT_PHOTO_AGE: 'Photos are for people aged 15 and over. Your coach can add one.',
@@ -6943,6 +6949,24 @@ export default {
       pourquoi: 'What you need to tell the city council: who really uses what.',
       tenues: 'sessions held',
     },
+  },
+  collectiviteQuestions: {
+    accueilATraiter_one: '1 club question to handle',
+    accueilATraiter_other: '{{count}} club questions to handle',
+    accueilDetail: 'What clubs write to you, and where you stand.',
+    erreurChargement: 'The questions could not be loaded.',
+    motDeLaVille: '{{ville}}: “{{note}}”',
+    prendre: 'Mark as in progress',
+    statuts: {
+      en_cours: 'In progress',
+      recue: 'Received',
+      traitee: 'Handled',
+    },
+    titre: 'Club questions',
+    titreFiche: 'Question to the city',
+    traiter: 'Mark as handled',
+    vide: 'No club has written to you yet.',
+    votreMot: 'Your answer to the club (optional)',
   },
   collectiviteRattachement: {
     add: {
@@ -16201,6 +16225,25 @@ export default {
     share: {
       message: 'FoundClub fee payment: {{payerLink}}',
     },
+  },
+  maVille: {
+    aucuneInstallation: 'Your city has no facility here yet.',
+    aucuneQuestion: 'No questions yet.',
+    choisirInstallation: 'Which facility?',
+    envoye: 'Sent. You will be told when there is an answer.',
+    envoyer: 'Send to my city',
+    erreurChargement: 'Your questions could not be loaded.',
+    erreurInstallations: 'The facilities could not be loaded.',
+    erreurVille: 'Your city could not be loaded.',
+    mesQuestions: 'Club questions',
+    ongletEcrire: 'Write to my city',
+    ongletSignaler: 'Report a problem',
+    placeholder: 'A question, some information, a need: write it here.',
+    rattacher: 'Find my city',
+    rattacherDetail: 'Attach your club to your city.',
+    reessayer: 'Try again',
+    signalerDetail: 'On one of your city’s facilities.',
+    tonMessage: 'Your question',
   },
   myLicenses: {
     archive: {

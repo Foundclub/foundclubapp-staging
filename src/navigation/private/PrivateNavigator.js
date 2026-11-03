@@ -519,6 +519,32 @@ function PrivateNavigator() {
             headerTitle: t('facilityReports.membre.mesTitre', 'Mes signalements'),
           }}
         />
+        {/* T3-TICKETS-VILLE (03/11/2026, fiche 20 option B) — « Ma collectivité » du dirigeant, la
+            boîte de la Ville, une question. Le serveur juge qui voit quoi. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/MaVille').default}
+          name={RouteNames.MaVille}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.home.header', 'Ma collectivité'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteQuestions').default}
+          name={RouteNames.CollectiviteQuestions}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteQuestions.titre', 'Questions des clubs'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteQuestion').default}
+          name={RouteNames.CollectiviteQuestion}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteQuestions.titreFiche', 'Question à la Ville'),
+          }}
+        />
         {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la
             mairie (2 etapes, aucune question de sport) et l ecran « ou en est ma demande ».
             Montes SANS CONDITION : le choix du statut (UserRole) y mene, et un compte Ville
