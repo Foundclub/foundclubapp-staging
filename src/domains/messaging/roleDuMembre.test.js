@@ -1,4 +1,4 @@
-import { mentionDuFil, clefDuRole, libelleDuRole } from './roleDuMembre';
+import { clefDuRole, libelleDuRole, mentionDuFil } from './roleDuMembre';
 
 // MSG1BA (§3.1) — le libelle sous le nom d'un membre, dans « Infos du groupe ».
 // Le pack montre « Entraîneur », « Joueur »... ; l'app ecrivait « Membre » pour tout le monde.
@@ -44,20 +44,20 @@ describe('roleDuMembre (§3.1)', () => {
 });
 
 describe('T3-PARENT-FIL — la mention à côté du nom', () => {
-  const t = (_cle, repli, options) => String(repli).replace('{{prenoms}}', options?.prenoms);
+  const tPrenoms = (_cle, repli, options) => String(repli).replace('{{prenoms}}', options?.prenoms);
 
   test('un parent : « Parent de Lina », deux enfants : les deux prénoms', () => {
-    expect(mentionDuFil('parent:Lina', t)).toBe('Parent de Lina');
-    expect(mentionDuFil('parent:Lina, Sam', t)).toBe('Parent de Lina, Sam');
+    expect(mentionDuFil('parent:Lina', tPrenoms)).toBe('Parent de Lina');
+    expect(mentionDuFil('parent:Lina, Sam', tPrenoms)).toBe('Parent de Lina, Sam');
   });
 
   test('le dirigeant et le coach gardent leur mention', () => {
-    expect(mentionDuFil('dirigeant', t)).toBe('Dirigeant');
-    expect(mentionDuFil('entraineur', t)).toBe('Coach / Prof');
+    expect(mentionDuFil('dirigeant', tPrenoms)).toBe('Dirigeant');
+    expect(mentionDuFil('entraineur', tPrenoms)).toBe('Coach / Prof');
   });
 
   test('une clef absente ou inconnue : rien', () => {
-    expect(mentionDuFil(undefined, t)).toBe('');
-    expect(mentionDuFil('parent', t)).toBe('');
+    expect(mentionDuFil(undefined, tPrenoms)).toBe('');
+    expect(mentionDuFil('parent', tPrenoms)).toBe('');
   });
 });
