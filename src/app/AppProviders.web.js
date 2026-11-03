@@ -1,15 +1,16 @@
+/* eslint-disable import/no-unresolved -- react-dom n'est installé que dans le dépôt du site. */
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { GUIDE_SUR_LE_SITE } from '@/config/fonctionsMasquees';
+import isGuideSupported from '@/domains/tour/guideSupport';
 
 import SharedAppProviders from './AppProviders.shared';
 import '@/navigation/gardienDesFleches';
 
 // T3-GUIDE-SITE : chargée à part, le site éteint ne paie pas la couche du guide.
-const TourGuideLayer = GUIDE_SUR_LE_SITE
+const TourGuideLayer = isGuideSupported()
   ? React.lazy(() => import('@/components/molecules/tour/TourGuideLayer'))
   : null;
 

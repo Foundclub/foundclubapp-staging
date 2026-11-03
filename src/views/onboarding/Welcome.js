@@ -9,8 +9,8 @@ import {
   getUserRoleKey,
   markOnboardingComplete,
 } from '@/domains/auth/authUseCases';
-import isGuideSupported from '@/domains/tour/guideSupport';
 import useAuth from '@/domains/auth/useAuth';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { storage, useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';

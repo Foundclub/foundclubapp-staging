@@ -106,6 +106,7 @@ export const dockBarOf = (dockRects, screenHeight) => {
 };
 
 /**
+ * Ce qui reste visible d'une cible au-dessus de la barre d'onglets du bas.
  * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
  * @param {{ y: number } | null} dock - Barre d'onglets du bas (`dockBarOf`), ou rien.
  * @returns {{ height: number; width: number; x: number; y: number } | null} Partie visible.

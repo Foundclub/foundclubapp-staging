@@ -37,7 +37,6 @@ import {
   resumeDeLAlerte,
   StatutAlerte,
 } from '@/domains/searchAlert/alerteEvenement';
-import { useTour } from '@/context/useTour';
 import useAlerteEvenement from '@/domains/searchAlert/useAlerteEvenement';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
@@ -56,6 +55,7 @@ import {
 } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
@@ -76,7 +76,7 @@ import { mapSearchPayload } from '@/services/search/searchService';
 import { createLogger } from '@/utils/logger/logger';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
-import JoinEventModal from '../joinEventModal/JoinEventModal';
+import { useTour } from '@/context/useTour';
 
 const eventListLogger = createLogger('event-list');
 const FEATURED_CLUB_SCOPES = ['SECTION', 'CM'];

@@ -298,7 +298,7 @@ function FriendlyMatchListContent({
   }, [t]);
 
   const handlePublishPress = useCallback(() => {
-    // T3-GUIDE-SITE : les écrans du tunnel existent sur le site ; seul son nom de pile n'y mène pas.
+    // T3-GUIDE-SITE : les écrans du tunnel existent sur le site, seul le nom de pile n'y mène pas.
     if (Platform.OS === 'web' && isGuideSupported()) {
       navigation.navigate(RouteNames.FriendlyMatchWizardTeam);
       return;

@@ -159,18 +159,18 @@ describe('clipAboveDock', () => {
 });
 
 describe('T3-GUIDE-SITE : dockBarOf', () => {
-  const H = 900;
+  const HAUTEUR = 900;
 
   it('des onglets en haut à gauche (site à 1440) ne sont pas une barre du bas', () => {
-    expect(dockBarOf([{ y: 80 }, { y: 130 }, { y: 180 }], H)).toBeNull();
+    expect(dockBarOf([{ y: 80 }, { y: 130 }, { y: 180 }], HAUTEUR)).toBeNull();
   });
 
   it('une barre du bas (téléphone, site à 390) garde son haut', () => {
-    expect(dockBarOf([{ y: 800 }, { y: 802 }], H)).toMatchObject({ y: 800 });
+    expect(dockBarOf([{ y: 800 }, { y: 802 }], HAUTEUR)).toMatchObject({ y: 800 });
   });
 
   it('aucun onglet : pas de barre', () => {
-    expect(dockBarOf([], H)).toBeNull();
+    expect(dockBarOf([], HAUTEUR)).toBeNull();
   });
 });
 

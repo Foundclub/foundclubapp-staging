@@ -23,9 +23,9 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
-import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import {
   bubbleRoom,
   clipAboveDock,

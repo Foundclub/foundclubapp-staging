@@ -21,7 +21,6 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
-import isGuideSupported from '@/domains/tour/guideSupport';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import {
@@ -32,6 +31,7 @@ import {
   getSubscriptionBadgeLevel,
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
