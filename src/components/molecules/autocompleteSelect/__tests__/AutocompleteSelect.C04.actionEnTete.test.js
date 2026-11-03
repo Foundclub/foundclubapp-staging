@@ -124,3 +124,32 @@ test('action en tête : referme SANS toucher à la valeur, même après onDismis
   act(() => arbre.unmount());
   jest.useRealTimers();
 });
+
+// RET-FENETRES (02/11/2026, fiche 6, Adel « A ») — « Un autre lieu » : rien ne disait comment
+// sortir de la fenêtre. Une croix visible, avec un nom, pour les 27 fichiers qui s'en servent.
+it('RET-FENETRES — la fenêtre ouverte porte une croix nommée qui la ferme', () => {
+  jest.useFakeTimers();
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(
+      <AutocompleteSelect
+        isSearchable
+        label="Un autre lieu"
+        options={OPTIONS}
+        setValue={jest.fn()}
+        value={null}
+      />,
+    );
+  });
+  const ouvrir = arbre.root.findAll((/** @type {any} */ n) => n.props.accessibilityRole === 'button'
+    && typeof n.props.onPress === 'function')[0];
+  act(() => { ouvrir.props.onPress(); });
+  act(() => { jest.advanceTimersByTime(300); });
+  const croix = arbre.root.findAll((/** @type {any} */ n) => (
+    n.props.accessibilityLabel === 'common.close' && typeof n.props.onPress === 'function'
+  ));
+  expect(croix.length).toBeGreaterThan(0);
+  act(() => arbre.unmount());
+  jest.useRealTimers();
+});

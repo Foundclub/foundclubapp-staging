@@ -5,7 +5,10 @@ import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
+import {
+  etiquetteDuPlanning,
+  installationDuPlanning,
+} from '@/domains/collectivite/evenementDeLaVille';
 import {
   closureBandLabel,
   closureHoursLabel,
@@ -204,6 +207,14 @@ function FacilityPlanningList({
                   >
                     {etiquetteDuPlanning(t, evenementVille)}
                   </Text>
+                  {installationDuPlanning(evenementVille) ? (
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p3, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+                    >
+                      {installationDuPlanning(evenementVille)}
+                    </Text>
+                  ) : null}
                   <Text
                     numberOfLines={2}
                     style={[Fonts.p2Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}

@@ -145,7 +145,12 @@ describe('R17-EVT-1-BIS — la vue Mois et l’événement de la Ville', () => {
     const carte = parID(arbre, 'liste-evenement-ville-evt-1');
     expect(carte).toHaveLength(1);
     expect(carte[0].findAllByType(Text).map((/** @type {any} */ t) => String(t.props.children)))
-      .toEqual(['Ville · toute l’installation', 'Fête du sport', '14:00 – 15:30']);
+      .toEqual([
+        'Ville de Montrivage · toute l’installation',
+        'Stade municipal',
+        'Fête du sport',
+        '14:00 – 15:30',
+      ]);
     await act(async () => {
       arbre.root.findAllByType(TouchableOpacity)
         .find((/** @type {any} */ n) => n.props.testID === 'liste-evenement-ville-evt-1')

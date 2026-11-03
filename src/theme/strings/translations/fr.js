@@ -5103,21 +5103,13 @@ export default {
         dit: 'Une installation, un jour, un club, toute la saison.',
         titre: 'Attribuer un créneau',
       },
-      blockSlot: {
-        dit: 'Forum, manifestation de la Ville.',
-        titre: 'Bloquer un créneau',
-      },
       closeInstallation: {
-        dit: 'Vacances, travaux : les clubs sont prévenus.',
-        titre: 'Fermer une installation',
+        dit: 'Vacances, travaux, forum : les clubs sont prévenus.',
+        titre: 'Fermer',
       },
       inviteClub: {
         dit: 'Le trouver sur FoundClub, ou l’inviter.',
         titre: 'Inviter un club',
-      },
-      publishNews: {
-        dit: 'Lue par tous les membres de vos clubs.',
-        titre: 'Publier une actualité',
       },
       titre: 'Vos actions',
     },
@@ -5739,7 +5731,6 @@ export default {
       acceptedOne: '{{nombre}} acceptée',
       address: 'Adresse',
       badgeCity: 'Offert par la Ville',
-      badgeOwn: 'Son propre abonnement',
       coachNotListed: 'L’entraîneur n’est pas listé : la Ville s’adresse aux dirigeants.',
       contact: 'Coordonnées du club',
       detacher: 'Détacher ce club',
@@ -5761,8 +5752,6 @@ export default {
       offer: 'L’offre',
       offerChange: 'Pour la changer, écrivez à l’équipe FoundClub.',
       offerCity: 'Abonnement offert par {{ville}}.',
-      offerNone: 'Aucune offre en cours pour ce club.',
-      offerOwn: 'Son propre abonnement.',
       offerSince: 'Depuis le {{date}}.',
       phone: 'Téléphone',
       refusedMany: '{{nombre}} refusées',
@@ -5822,7 +5811,7 @@ export default {
       foundclubIntro: 'FoundClub l’invite au nom de la Ville. Une fois inscrit, il vous est rattaché par l’équipe FoundClub.',
       header: 'Inviter un club',
       // eslint-disable-next-line max-len
-      linkHint: 'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment : l’ancien ne marche plus.',
+      linkHint: 'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment avec le bouton ci-dessous : l’ancien ne marche plus.',
       // eslint-disable-next-line max-len
       linkIntro: 'Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de {{ville}} : il inscrit son club et demande à vous rejoindre ; vous acceptez sa demande dans vos clubs.',
       linkLabel: 'Lien d’invitation de la Ville',
@@ -6123,9 +6112,10 @@ export default {
       attached: 'Déjà rattaché à la Ville',
       awaitingLeader: 'Demande enregistrée : elle attend le premier dirigeant du club',
       backToSearch: 'Chercher un club déjà sur FoundClub',
-      belongs: 'Ce club fait partie de ma collectivité',
+      belongs: 'Ajouter ce club à ma collectivité',
+      clubDevraAccepter: 'Le club devra accepter : ses dirigeants reçoivent la demande.',
       elsewhere: 'Rattaché à une autre collectivité',
-      introSearch: 'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
+      introSearch: 'Trouvez le club, puis « Ajouter ce club à ma collectivité ».',
       inviteByLink: 'Inviter par le lien',
       loading: 'Recherche…',
       // eslint-disable-next-line max-len
@@ -6296,18 +6286,29 @@ export default {
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+      aucunClubTrouve: 'Aucun club ne correspond à cette recherche.',
       aucuneLibre: 'Aucune heure libre ce {{jour}}.',
       changerHeure: 'Changer l’heure',
       club: 'Club',
       complet: '{{moment}} : complet',
+      completQui_one: 'Complet : {{qui}} y est déjà.',
+      completQui_other: 'Complet : {{qui}} y sont déjà.',
+      completSansNom: 'Complet.',
       debut: 'Début',
       dejaLa: 'Déjà là : {{qui}}.',
-      depassement_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, {{quand}}.',
-      depassement_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, {{quand}}.',
+      depassement_one: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} place.',
+      depassement_other: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} places.',
       enregistrer: 'Enregistrer',
       enregistrerQuandMeme: 'Enregistrer quand même',
       ensuite: '{{qui}} arrive à {{heure}}.',
       equipe: 'Équipe (facultatif)',
+      fermee: {
+        plusieurs: '{{nombre}} séances sur {{total}} tombent dans une fermeture{{raison}}.',
+        questionAttribuer: 'Attribuer quand même ?',
+        questionEnregistrer: 'Enregistrer quand même ?',
+        titre: 'Êtes-vous sûr ?',
+        une: 'Cette installation est fermée sur ce créneau{{raison}}.',
+      },
       fin: 'Fin',
       heureFormat: 'Une heure s’écrit HH:MM (par exemple 17:30).',
       heureOrdre: 'La fin doit suivre le début.',
@@ -6316,6 +6317,7 @@ export default {
       jour: 'Jour',
       libre: '{{moment}} : place libre',
       libreCe: 'Libre ce {{jour}} :',
+      nomsEt: '{{debut}} et {{fin}}',
       personne: 'Personne n’y est.',
       places: 'Places prises : {{prises}} sur {{capacite}}',
       plateau: 'Plateau',
@@ -6325,6 +6327,7 @@ export default {
       prevenu: '{{club}} sera prévenu, et verra ce créneau dans son planning.',
       prevenuChangement: '{{club}} sera prévenu du changement.',
       quandMeme: 'Attribuer quand même',
+      rechercherClub: 'Rechercher un club',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
       voirLibres: 'Voir les heures libres du {{jour}}',
@@ -6353,8 +6356,8 @@ export default {
       // 🌴 R17-QUAND-2 (planche P11-quand-v2-ordi, A).
       vacances: 'vacances : {{zone}}',
       vide: 'Aucun créneau attribué',
-      videTexte: 'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
-        + 'choisies : le club y pose ses entraînements sans rien vous demander.',
+      videTexte: 'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste '
+        + 'ponctuel : le club y pose ses entraînements sans rien vous demander.',
     },
     erreurs: {
       club: 'Ce club n’est pas rattaché à la Ville.',
@@ -6515,7 +6518,6 @@ export default {
     // les lignes du récapitulatif.
     // R17-QUAND-1 (19/10) — l’étape « Quand ? » : planches P10-quand, P11-quand-v2 validées par Adel.
     quand: {
-      aLeursDates: 'aux dates choisies',
       aPartirDu: 'À partir du',
       apresSaison: 'La saison finit le {{date}} : choisissez une date avant.',
       aucuneDate: 'Aucune date cochée.',
@@ -6523,7 +6525,7 @@ export default {
       aucuneSeance: 'Aucune séance à venir dans cette période.',
       bandeCompte_one: '{{count}} créneau',
       bandeCompte_other: '{{count}} créneaux',
-      bandeTitre: 'Dates choisies, hors semaine type',
+      bandeTitre: 'Créneaux ponctuels',
       calendrier: {
         choisi: '{{etat}}, choisi',
         complet: '{{date}}, complet de {{heures}}',
@@ -6537,12 +6539,10 @@ export default {
         suivant: 'Mois suivant',
         vacances: '{{date}}, vacances ({{nom}})',
       },
-      chaqueDeLaPeriode: 'chaque {{jour}} de la période',
-      chaqueDeLaSaison: 'chaque {{jour}} de la saison',
       chaqueJourCourt: 'chaque {{jour}}',
-      dates: 'Des dates choisies',
-      datesChoisies_one: '{{count}} date choisie',
-      datesChoisies_other: '{{count}} dates choisies',
+      dates: 'Des créneaux ponctuels',
+      datesChoisies_one: '{{count}} créneau ponctuel',
+      datesChoisies_other: '{{count}} créneaux ponctuels',
       datesDetail: 'Les jours que vous cochez',
       deuxSemaines: 'Toutes les 2 semaines',
       deuxSemainesDetail: 'Un {{jour}} sur deux',
@@ -6552,7 +6552,7 @@ export default {
       fermees_other: '{{count}} tombent dans « {{fermeture}} » ({{dates}}) : le club y verra '
         + '« fermé », comme aujourd’hui.',
       finDeSaison: 'Fin de saison',
-      groupeDates: 'Dates choisies',
+      groupeDates: 'Créneaux ponctuels',
       joursDifferents: 'Des jours différents',
       joursDifferentsDetail: 'Vous les choisirez dans un calendrier',
       jusqua: 'Jusqu’à',
@@ -6575,7 +6575,7 @@ export default {
       recapPeriode: 'Une période · {{du}} – {{au}}',
       recapSaison: 'Toute la saison · {{du}} – {{au}}',
       repeterLeCreneau: 'Répéter le créneau',
-      rythmeDates: 'Dates choisies · {{suite}}',
+      rythmeDates: 'Créneaux ponctuels · {{suite}}',
       rythmeDeux: 'Un {{jour}} sur deux · {{suite}}',
       saison: 'Toute la saison',
       saisonDetail: 'Chaque {{jour}}, du {{du}} au {{au}}',
@@ -6975,6 +6975,7 @@ export default {
       occupationComplet: 'Complet sur ces heures',
       occupationErreur: 'Impossible de vérifier',
       occupationFermee: 'Fermeture ce jour-là',
+      occupationFermeeHeures: 'Fermeture sur ces heures',
       occupationLibre: 'Libre sur ces heures',
       occupationPlusieurs: '{{nombre}} séances sur ces heures',
       occupationUne: '1 séance sur ces heures',
@@ -7003,8 +7004,10 @@ export default {
     },
     planning: {
       aCote: 'Ville · à côté',
+      aCoteDe: '{{ville}} · à côté',
       aria: 'Événement de la Ville : {{nom}}, {{heures}}, {{place}}',
       toute: 'Ville · toute l’installation',
+      touteDe: '{{ville}} · toute l’installation',
     },
     presence: {
       absent: 'Absent',
@@ -7272,7 +7275,7 @@ export default {
         heures: 'Choisissez les heures.',
         installation: 'Choisissez l’installation.',
         jour: 'Choisissez le jour.',
-        motif: 'Choisissez un motif.',
+        motif: 'Choisissez un motif ou écrivez un nom.',
       },
       mot: 'Un mot pour les clubs (facultatif)',
       motExemple: 'Réfection du sol',
@@ -7416,6 +7419,9 @@ export default {
       fermeCeJour: '{{lieu}} est fermé ce jour-là{{motif}}.',
       fermeCeJourFeminin: '{{lieu}} est fermée ce jour-là{{motif}}.',
       fermeCeJourSansNom: 'L’installation est fermée ce jour-là{{motif}}.',
+      fermeHeures: '{{lieu}} est fermé {{quand}}{{motif}}.',
+      fermeHeuresFeminin: '{{lieu}} est fermée {{quand}}{{motif}}.',
+      fermeHeuresSansNom: 'L’installation est fermée {{quand}}{{motif}}.',
       impossibles: 'Pas possible à cette heure',
       libres: 'Libres à cette heure',
       titre: 'Où la déplacer ?',
@@ -12071,6 +12077,12 @@ export default {
           ferme: 'Cette installation est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
           // eslint-disable-next-line max-len
           fermeFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeures: 'Cette installation est fermée {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeuresFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeHeuresMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
           // eslint-disable-next-line max-len
           fermeMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
           // eslint-disable-next-line max-len
@@ -17882,6 +17894,8 @@ export default {
     labels: {
       noTime: 'Sans horaire',
     },
+    // eslint-disable-next-line max-len
+    legendeDesPoints: 'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
     mode: {
       monthDescription: 'Vue globale du mois',
       monthShort: 'Mois',
@@ -17891,6 +17905,10 @@ export default {
       weekShort: 'Semaine',
     },
     noEventsForDate: 'Aucun événement ce jour-là',
+    reservationTerrain: {
+      collecte: 'Collecte · {{complexe}}',
+      demande: 'Demande · {{complexe}}',
+    },
     status: {
       pendingParticipation: 'Demande en attente',
     },

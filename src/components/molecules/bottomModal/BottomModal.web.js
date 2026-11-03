@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /** Les feuilles ouvertes, de la plus ancienne à celle du dessus (Échap ferme la dernière). */
 /** @type {Array<() => void>} */
@@ -55,7 +56,6 @@ function BottomModal({
     Alignments,
     ApplicationStyle,
     Colors,
-    Fonts,
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
@@ -230,33 +230,38 @@ function BottomModal({
           </View>
         ) : null}
         {!hideCloseButton ? (
+          // RET-FENETRES (02/11, fiche 6) : `hitSlop` n'existe pas sur le site : c'est la boîte
+          // elle-même qui fait 44 px, autour de la croix de 28.
           <TouchableOpacity
             accessibilityLabel={t('common.close')}
             accessibilityRole="button"
-            hitSlop={ApplicationStyle.hitSlop.min44From28}
             onPress={close}
             style={[
               Alignments.absolute,
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
               {
-                height: 28,
-                right: 20,
-                top: 20,
-                width: 28,
+                height: 44,
+                right: 12,
+                top: 12,
+                width: 44,
               },
             ]}
+            testID="bottom-modal-fermer"
           >
             <View
               style={[
-                Alignments.fill,
                 Alignments.alignCenter,
                 Alignments.justifyCenter,
                 {
                   backgroundColor: withAlpha(Colors.neutral00, 0.08),
                   borderRadius: 14,
+                  height: 28,
+                  width: 28,
                 },
               ]}
             >
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>x</Text>
+              <SvgIcon color={Colors.neutral00} height={12} name="close" width={12} />
             </View>
           </TouchableOpacity>
         ) : null}

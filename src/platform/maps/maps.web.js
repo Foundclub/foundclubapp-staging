@@ -50,6 +50,7 @@ const MAP_LOAD_TIMEOUT_MS = 6500;
  * @param {{ dataCount?: number; renderableCount?: number; markerCount?: number; clusterCount?: number; fallbackActive?: boolean } | null} [props.renderStats]
  * @param {string} [props.markerColor]
  * @param {string} [props.message]
+ * @param {(etat: 'loading' | 'ready' | 'error') => void} [props.onEtat] - L'état de la carte.
  * @param {(itemId: string) => void} [props.onOpenItem]
  * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
  * @param {(stats: { renderableCount?: number; markerCount?: number; clusterCount?: number }) => void} [props.onRenderStats]
@@ -71,6 +72,7 @@ function SearchMapIframeRuntime({
   items = [],
   markerColor = '#01b3f4',
   message = 'Carte indisponible.',
+  onEtat,
   onOpenItem,
   onRegionChangeComplete,
   onRenderStats,
@@ -95,6 +97,9 @@ function SearchMapIframeRuntime({
     tileUrl ? /** @type {'loading' | 'ready' | 'error'} */ ('loading') : 'error',
   );
   const mapId = useMemo(() => `search-map-web-${mapRenderKey}`, [mapRenderKey]);
+  useEffect(() => {
+    onEtat?.(mapStatus);
+  }, [mapStatus, onEtat]);
   const frameLoaded = cadreCharge === mapId;
   const loadingCopy = useMemo(() => getSearchMapLoadingCopy(), []);
   const { t } = useTranslation();
@@ -472,11 +477,14 @@ export const renderMap = ({
  * déplacement (`onRegionChangeComplete`).
  * @param {object} props
  * @param {number} [props.height]
+ * @param {(etat: string) => void} [props.onEtat] - RET-FENETRES (fiche 12) : l'état de la carte.
  * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
-export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint = null } = {}) => {
+export const renderPinMap = ({
+  height = 360, onEtat, onRegionChangeComplete, regionHint = null,
+} = {}) => {
   // Les tuiles suivent la carte de recherche (TomTom si la clé est là), mais une carte à épingle
   // n'a pas d'état « clé manquante » : le site n'a pas de clé TomTom, il prend OpenStreetMap.
   const tomTomApiKey = getTomTomApiKey();
@@ -487,6 +495,7 @@ export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint 
       height={height}
       items={[]}
       message=""
+      onEtat={onEtat}
       onRegionChangeComplete={onRegionChangeComplete}
       regionHint={regionHint}
       tileAttribution={tomTomApiKey

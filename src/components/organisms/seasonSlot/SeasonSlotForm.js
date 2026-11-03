@@ -4,7 +4,7 @@ import {
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ImageBackground, Modal, Text, TouchableOpacity, View,
+  ImageBackground, Modal, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -17,6 +17,7 @@ import {
   isoWeekdayOf,
   isTime,
   overCapacityPreviewOf,
+  phraseDuComplet,
   SEASON_SLOT_WEEKDAYS,
   seasonSlotErrorMessage,
   slotOccursOn,
@@ -83,15 +84,23 @@ const ENTRE_DEUX = /** @type {const} */ ({ gap: 8, justifyContent: 'space-betwee
  */
 export const HAUTEUR_DE_LA_FEUILLE = 0.85;
 
+const CLUBS_POUR_LA_RECHERCHE = 6;
+const sansAccents = (/** @type {unknown} */ texte) => String(texte || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 /**
- * Une puce a choisir (design `chip-c`) : un bouton radio.
- * @param {{ actif: boolean, libelle: string, onPress: () => void, testID?: string }} props
+ * Une puce a choisir (design `chip-c`) : un bouton radio. RET-PLANNING fiche 16 : celle d un club
+ * porte son logo, ou son initiale.
+ * @param {{ actif: boolean, club?: { logoUrl?: string | null, name: string } | null,
+ *   libelle: string, onPress: () => void, testID?: string }} props - La puce.
  * @returns {import('react').ReactElement} La puce.
  */
 export function PuceDeChoix({
-  actif, libelle, onPress, testID,
+  actif, club = null, libelle, onPress, testID,
 }) {
-  const { Colors, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
   return (
     <TouchableOpacity
       accessibilityRole="radio"
@@ -99,6 +108,7 @@ export function PuceDeChoix({
       onPress={onPress}
       style={[
         Spaces.paddingHorizontal[12],
+        club ? [Alignments.row, Alignments.alignCenter, { gap: 8 }] : null,
         {
           backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.04),
           borderColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.18),
@@ -111,6 +121,11 @@ export function PuceDeChoix({
       ]}
       testID={testID}
     >
+      {club ? (
+        <View testID="club-marque">
+          <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={24} />
+        </View>
+      ) : null}
       {/* VILLE-T18A — une puce epouse son texte GRAS : sous Android 16, « AS Montrivage » choisi
           devenait « AS » (capture T18 G29a). Espaces insecables : le libelle reste entier. */}
       <Text style={[Fonts.p3Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>
@@ -189,7 +204,9 @@ function LigneDeChoix({
         ) : null}
       </View>
       {club ? (
-        <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+        <View testID="club-marque">
+          <ClubLogoMark logoUrl={club.logoUrl || undefined} name={club.name} size={28} />
+        </View>
       ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{libelle}</Text>
@@ -537,6 +554,7 @@ function SeasonSlotForm({
   const plateaux = Array.isArray(meta.facility?.plateaux) ? meta.facility.plateaux : [];
   const capacite = Math.max(1, Number(installation?.maxSlots) || 1);
 
+  const [rechercheClub, setRechercheClub] = useState('');
   const [club, setClub] = useState(
     fixedClubId || slot?.club?.documentId || (clubs.length === 1 ? clubs[0].documentId : null),
   );
@@ -687,6 +705,10 @@ function SeasonSlotForm({
   const quandJuste = repartition
     || (!erreurDuQuand && (formeChoisie === 'saison' || seances.length > 0));
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
+  // RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : l'envoi qui attend « Attribuer quand même ».
+  const [envoiSurFermeture, setEnvoiSurFermeture] = useState(
+    /** @type {{ quandMeme: boolean } | null} */ (null),
+  );
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // VILLE-T18A — « Voir les heures libres du <jour> » : la liste est ouverte.
   const [voirLibres, setVoirLibres] = useState(false);
@@ -1028,24 +1050,6 @@ function SeasonSlotForm({
   const nomDuJour = jour && !joursDifferents
     ? weekdayName(Number(jour), { inSentence: true })
     : '';
-  const quandDuDepassement = (() => {
-    if (formeChoisie === 'dates') {
-      return t('collectiviteCreneaux.quand.aLeursDates', 'aux dates choisies');
-    }
-    if (formeChoisie === 'deuxSemaines') {
-      return t('collectiviteCreneaux.quand.unSurDeuxCourt', 'un {{jour}} sur deux', {
-        jour: nomDuJour, ...SANS_ECHAPPEMENT,
-      });
-    }
-    if (formeChoisie === 'periode') {
-      return t('collectiviteCreneaux.quand.chaqueDeLaPeriode', 'chaque {{jour}} de la période', {
-        jour: nomDuJour, ...SANS_ECHAPPEMENT,
-      });
-    }
-    return t('collectiviteCreneaux.quand.chaqueDeLaSaison', 'chaque {{jour}} de la saison', {
-      jour: nomDuJour, ...SANS_ECHAPPEMENT,
-    });
-  })();
   const listeDeDates = (/** @type {string[]} */ jours, /** @type {number} */ max = 4) => {
     const lus = jours.slice(0, max).map((jourCivil) => formatDay(jourCivil, { withYear: false }));
     return jours.length > max
@@ -1054,12 +1058,12 @@ function SeasonSlotForm({
       })
       : lus.join(' · ');
   };
-  // « 37 mercredis » / « 3 dates choisies ».
+  // « 37 mercredis » / « 3 créneaux ponctuels ».
   const titreDesSeances = formeChoisie === 'dates'
     ? t('collectiviteCreneaux.quand.datesChoisies', {
       count: seancesVues.length,
-      defaultValue_one: '{{count}} date choisie',
-      defaultValue_other: '{{count}} dates choisies',
+      defaultValue_one: '{{count}} créneau ponctuel',
+      defaultValue_other: '{{count}} créneaux ponctuels',
     })
     : t('collectiviteCreneaux.quand.seances', {
       count: seancesVues.length,
@@ -1095,6 +1099,18 @@ function SeasonSlotForm({
       fermeture: noms.join(', '),
       ...SANS_ECHAPPEMENT,
     });
+  })();
+  // RET-FERMETURE-HEURES, question 9 (Adel, 03/11) : la Ville garde le droit d'attribuer pendant
+  // une fermeture ; on lui demande de confirmer, en disant pourquoi. Le serveur ne change pas.
+  const envoyerOuDemander = (/** @type {boolean} */ quandMeme) => {
+    if (seancesFermees.length) setEnvoiSurFermeture({ quandMeme });
+    else envoyer(quandMeme);
+  };
+  const raisonDeLaFermeture = (() => {
+    const noms = [...new Set(seancesFermees.map((ligne) => ligne.label).filter(Boolean))];
+    const heures = [...new Set(seancesFermees.map((ligne) => ligne.heures))];
+    const details = heures.length === 1 && heures[0] ? [...noms, heures[0]] : noms;
+    return details.length ? ` (${details.join(', ')})` : '';
   })();
   // La ligne « Quand » du récapitulatif : la forme et ses bornes, puis le compte.
   const libelleDuQuand = (() => {
@@ -1216,13 +1232,23 @@ function SeasonSlotForm({
           ...SANS_ECHAPPEMENT,
         });
     }
+    const depassement = besoinDeConfirmer
+      && Number(place.teamsAfter) > Number(place.capacity || capacite)
+      ? phraseDuComplet(t, {
+        equipes: Number(place.teamsAfter),
+        occupants,
+        places: Number(place.capacity || capacite),
+      })
+      : null;
     const lignes = [];
-    if (occupants.length) {
+    // RET-VILLE 17 (03/11) : le message orange dit déjà qui y est, pas deux fois sur la carte ; et
+    // « Personne n'y est » contredirait son « Complet ».
+    if (!depassement && occupants.length) {
       lignes.push(t('collectiviteCreneaux.attribuer.dejaLa', 'Déjà là : {{qui}}.', {
         qui: occupants.map(slotWho).filter(Boolean).join(', '),
         ...SANS_ECHAPPEMENT,
       }));
-    } else {
+    } else if (!depassement) {
       lignes.push(t('collectiviteCreneaux.attribuer.personne', 'Personne n’y est.'));
     }
     if (place.next?.club) {
@@ -1232,18 +1258,6 @@ function SeasonSlotForm({
         ...SANS_ECHAPPEMENT,
       }));
     }
-    const depassement = besoinDeConfirmer
-      && Number(place.teamsAfter) > Number(place.capacity || capacite)
-      ? t('collectiviteCreneaux.attribuer.depassement', {
-        capacite: Number(place.capacity || capacite),
-        count: Number(place.teamsAfter),
-        defaultValue_one: 'Attribuer met {{count}} équipe pour {{capacite}} places, {{quand}}.',
-        defaultValue_other: 'Attribuer met {{count}} équipes pour {{capacite}} places, {{quand}}.',
-        // R17-QUAND-1 — « chaque mercredi de la saison » n'est vrai que pour toute la saison.
-        quand: quandDuDepassement,
-        ...SANS_ECHAPPEMENT,
-      })
-      : null;
     const couleur = besoinDeConfirmer ? Colors.warning500 : Colors.success500;
     return (
       <View
@@ -1390,6 +1404,7 @@ function SeasonSlotForm({
     const puce = (
       <PuceDeChoix
         actif={option.actif}
+        club={option.club}
         key={option.key}
         libelle={option.libelleCourt || option.libelle}
         onPress={option.onPress}
@@ -1470,7 +1485,7 @@ function SeasonSlotForm({
   // R17-QUAND-1 — le rythme dit la forme choisie : « chaque mercredi » n'est plus toujours vrai.
   const rythme = (/** @type {string} */ suite) => {
     if (formeChoisie === 'dates') {
-      return t('collectiviteCreneaux.quand.rythmeDates', 'Dates choisies · {{suite}}', {
+      return t('collectiviteCreneaux.quand.rythmeDates', 'Créneaux ponctuels · {{suite}}', {
         suite, ...SANS_ECHAPPEMENT,
       });
     }
@@ -1681,7 +1696,7 @@ function SeasonSlotForm({
       actif: formeChoisie === 'dates',
       detail: t('collectiviteCreneaux.quand.datesDetail', 'Les jours que vous cochez'),
       key: 'quand-dates',
-      libelle: t('collectiviteCreneaux.quand.dates', 'Des dates choisies'),
+      libelle: t('collectiviteCreneaux.quand.dates', 'Des créneaux ponctuels'),
       onPress: () => choisirForme('dates'),
       testID: 'quand-dates',
     },
@@ -1831,19 +1846,64 @@ function SeasonSlotForm({
                 </View>
               );
             }
-            return listeDeChoix((fixedClubId
+            // RET-PLANNING fiche 16 (Adel « A ») : une recherche à partir de 6 clubs. Le club déjà
+            // choisi reste à l'écran, quelle que soit la recherche.
+            const chercheUnClub = !fixedClubId && clubs.length >= CLUBS_POUR_LA_RECHERCHE;
+            const cherche = sansAccents(rechercheClub.trim());
+            const clubsProposes = (fixedClubId
               ? clubs.filter((ligne) => ligne.documentId === fixedClubId)
-              : clubs).map((ligne) => ({
-              actif: ligne.documentId === club,
-              club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
-              key: ligne.documentId,
-              libelle: ligne.name,
-              onPress: () => {
-                setClub(ligne.documentId);
-                setEquipe(null);
-                toucherLaSaisie();
-              },
-            })));
+              : clubs).filter((ligne) => (
+              !chercheUnClub
+              || !cherche
+              || ligne.documentId === club
+              || sansAccents(ligne.name).includes(cherche)
+            ));
+            return (
+              <View style={{ gap: 8 }}>
+                {chercheUnClub ? (
+                  <TextInput
+                    accessibilityLabel={t(
+                      'collectiviteCreneaux.attribuer.rechercherClub',
+                      'Rechercher un club',
+                    )}
+                    onChangeText={setRechercheClub}
+                    placeholder={t(
+                      'collectiviteCreneaux.attribuer.rechercherClub',
+                      'Rechercher un club',
+                    )}
+                    placeholderTextColor={Colors.neutral400}
+                    style={[Fonts.p2, Fonts.neutral00, {
+                      borderColor: withAlpha(Colors.neutral00, 0.18),
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      minHeight: 44,
+                      paddingHorizontal: 12,
+                    }]}
+                    testID="recherche-club"
+                    value={rechercheClub}
+                  />
+                ) : null}
+                {clubsProposes.length === 0 ? (
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'collectiviteCreneaux.attribuer.aucunClubTrouve',
+                      'Aucun club ne correspond à cette recherche.',
+                    )}
+                  </Text>
+                ) : null}
+                {listeDeChoix(clubsProposes.map((ligne) => ({
+                  actif: ligne.documentId === club,
+                  club: { logoUrl: ligne.logoUrl || null, name: ligne.name },
+                  key: ligne.documentId,
+                  libelle: ligne.name,
+                  onPress: () => {
+                    setClub(ligne.documentId);
+                    setEquipe(null);
+                    toucherLaSaisie();
+                  },
+                })))}
+              </View>
+            );
           })()}
         </View>
       )}
@@ -2479,6 +2539,77 @@ function SeasonSlotForm({
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
       ) : null}
 
+      {envoiSurFermeture ? (
+        <BottomModal
+          close={() => setEnvoiSurFermeture(null)}
+          isVisible
+          webPresentation="dialog"
+          {.../** @type {any} */ ({ webZIndex: tunnelPleinEcran ? 10000 : undefined })}
+        >
+          <View
+            accessibilityRole="alert"
+            style={{ gap: 16, paddingBottom: 16 }}
+            testID="confirmer-fermeture"
+          >
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('collectiviteCreneaux.attribuer.fermee.titre', 'Êtes-vous sûr ?')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {seancesFermees.length === 1
+                ? t(
+                  'collectiviteCreneaux.attribuer.fermee.une',
+                  'Cette installation est fermée sur ce créneau{{raison}}.',
+                  { raison: raisonDeLaFermeture, ...SANS_ECHAPPEMENT },
+                )
+                : t(
+                  'collectiviteCreneaux.attribuer.fermee.plusieurs',
+                  '{{nombre}} séances sur {{total}} tombent dans une fermeture{{raison}}.',
+                  {
+                    nombre: seancesFermees.length,
+                    raison: raisonDeLaFermeture,
+                    total: seancesVues.length,
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
+              {' '}
+              {modification
+                ? t(
+                  'collectiviteCreneaux.attribuer.fermee.questionEnregistrer',
+                  'Enregistrer quand même ?',
+                )
+                : t(
+                  'collectiviteCreneaux.attribuer.fermee.questionAttribuer',
+                  'Attribuer quand même ?',
+                )}
+            </Text>
+            <View style={{ gap: 8 }}>
+              <Button
+                onPress={() => {
+                  const { quandMeme } = envoiSurFermeture;
+                  setEnvoiSurFermeture(null);
+                  envoyer(quandMeme);
+                }}
+                testID="confirmer-fermeture-oui"
+                title={modification
+                  ? t(
+                    'collectiviteCreneaux.attribuer.enregistrerQuandMeme',
+                    'Enregistrer quand même',
+                  )
+                  : t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même')}
+                variant="Primary"
+              />
+              <Button
+                onPress={() => setEnvoiSurFermeture(null)}
+                testID="confirmer-fermeture-non"
+                textStyle={{ color: Colors.primary200 }}
+                title={t('common.cancel', 'Annuler')}
+                variant="Ghost"
+              />
+            </View>
+          </View>
+        </BottomModal>
+      ) : null}
+
       {tunnelPleinEcran ? null : (() => {
         if (!confirmationFinale) {
           return (
@@ -2495,7 +2626,7 @@ function SeasonSlotForm({
             <Button
               disabled={!pret}
               isLoading={envoiEnCours}
-              onPress={() => envoyer(besoinDeConfirmer)}
+              onPress={() => envoyerOuDemander(besoinDeConfirmer)}
               title={libelleDeConfirmation}
               variant="Primary"
             />
@@ -2541,7 +2672,7 @@ function SeasonSlotForm({
         nextLabel={confirmationFinale ? libelleDeConfirmation : t('common.next', 'Suivant')}
         onBack={etape > 0 ? reculer : undefined}
         onClose={onCancel}
-        onNext={confirmationFinale ? () => envoyer(besoinDeConfirmer) : avancer}
+        onNext={confirmationFinale ? () => envoyerOuDemander(besoinDeConfirmer) : avancer}
         onSkip={actionDuBas?.onPress}
         showSkip={Boolean(actionDuBas)}
         skipLabel={actionDuBas?.libelle}

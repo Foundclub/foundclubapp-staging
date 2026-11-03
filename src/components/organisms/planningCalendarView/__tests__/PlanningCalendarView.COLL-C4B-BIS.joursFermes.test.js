@@ -98,13 +98,16 @@ afterEach(async () => {
     arbresMontes.splice(0).forEach((arbre) => arbre.unmount());
   });
 });
-const monter = async (/** @type {Date} */ jour) => {
+const monter = async (
+  /** @type {Date} */ jour,
+  /** @type {any[]} */ closures = [FERMETURE_DU_VENDREDI, BLOCAGE_DU_SAMEDI],
+) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
     arbre = renderer.create(
       <PlanningCalendarView
-        closures={[FERMETURE_DU_VENDREDI, BLOCAGE_DU_SAMEDI]}
+        closures={closures}
         currentDate={jour}
         events={[]}
       />,
@@ -137,6 +140,16 @@ describe('COLL-C4B-BIS point 4 — la vue Mois marque les jours fermes', () => {
     expect(samedi).toBeDefined();
     expect(StyleSheet.flatten(samedi.props.style).borderColor).toBe(COULEURS.warning500);
     expect(samedi.findAll((/** @type {any} */ n) => n.props.testID === 'hachures')).toHaveLength(0);
+  });
+
+  it('RET-FERMETURE-HEURES : le vendredi fermé de 9 h à 13 h se cerne, sans journée hachurée', async () => {
+    const arbre = await monter(new Date(2026, 9, 7, 12, 0), [{
+      ...FERMETURE_DU_VENDREDI, endTime: '13:00', startTime: '09:00',
+    }]);
+    expect(parTestID(arbre, 'jour-ferme-2026-10-09')).toHaveLength(0);
+    const vendredi = parTestID(arbre, 'jour-bloque-2026-10-09')[0];
+    expect(vendredi).toBeDefined();
+    expect(vendredi.findAll((/** @type {any} */ n) => n.props.testID === 'hachures')).toHaveLength(0);
   });
 
   it('3. la liste du jour choisi commence par la fermeture', async () => {

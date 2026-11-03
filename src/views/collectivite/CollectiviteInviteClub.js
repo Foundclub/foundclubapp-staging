@@ -240,7 +240,7 @@ function CollectiviteInviteClub() {
         {t(
           'collectiviteClubs.invite.linkHint',
           // eslint-disable-next-line max-len
-          'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment : l’ancien ne marche plus.',
+          'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment avec le bouton ci-dessous : l’ancien ne marche plus.',
         )}
       </Text>
       {confirmerLeChangement ? (
@@ -388,7 +388,7 @@ function CollectiviteInviteClub() {
         <Text style={[Fonts.p2, Fonts.neutral100]}>
           {t(
             'collectiviteRattachement.ajouter.introSearch',
-            'Trouvez le club, puis « Ce club fait partie de ma collectivité ».',
+            'Trouvez le club, puis « Ajouter ce club à ma collectivité ».',
           )}
         </Text>
       </View>

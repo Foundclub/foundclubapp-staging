@@ -14,12 +14,16 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
-import { etiquetteDuPlanning } from '@/domains/collectivite/evenementDeLaVille';
+import {
+  etiquetteDuPlanning,
+  installationDuPlanning,
+} from '@/domains/collectivite/evenementDeLaVille';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import {
   closureBandLabel,
   closureHoursLabel,
   closureOfDay,
+  closureTakesWholeDay,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -152,8 +156,10 @@ function PlanningCalendarDay({
   const dateString = date?.dateString;
   if (!dateString) return null;
   // COLL-C4B-BIS (03/10) : un jour ferme toute la journee se HACHURE (comme la grille, planche
-  // P4v3-fermer) ; un jour bloque (une plage) se cerne d orange.
-  const journeeFermee = Boolean(fermetureDuJour) && fermetureDuJour.kind !== 'block';
+  // P4v3-fermer) ; un jour bloque ou ferme quelques heures (RET-FERMETURE-HEURES) se cerne
+  // d orange.
+  const journeeFermee = Boolean(fermetureDuJour)
+    && closureTakesWholeDay(fermetureDuJour, dateString);
   const jourBloque = Boolean(fermetureDuJour) && !journeeFermee;
   let testIDDuJour;
   if (journeeFermee) testIDDuJour = `jour-ferme-${dateString}`;
@@ -178,10 +184,12 @@ function PlanningCalendarDay({
   });
   const uniqueColors = [...seancesParCouleur.keys()].slice(0, 3);
   // Avec les nombres, « +n » compte les seances des couleurs qui n ont pas de pastille.
+  // RET-PLANNING fiche 15 : avec des points, il compte les couleurs (les clubs) en plus : un seul
+  // club avec 5 seances disait « +2 » a cote de son unique point.
   const extraCount = compterLesSeances
     ? dayEvents.length - uniqueColors.reduce((total, couleur) => (
       total + (seancesParCouleur.get(couleur) || 0)), 0)
-    : Math.max(0, dayEvents.length - 3);
+    : seancesParCouleur.size - uniqueColors.length;
   const libelleDuJour = [
     libelleDeFermeture,
     compterLesSeances && dayEvents.length ? compterLesSeances(dayEvents.length) : null,
@@ -293,6 +301,7 @@ function PlanningCalendarDay({
  * @param {{
  *   closures?: Array<any>;
  *   compterLesSeances?: ((count: number) => string) | null;
+ *   legendeDesPoints?: boolean;
  *   currentDate?: Date;
  *   events?: Array<any>;
  *   onDateSelect?: (date: Date) => void;
@@ -305,6 +314,7 @@ function PlanningCalendarView({
   compterLesSeances = null,
   currentDate: propDate,
   events = [],
+  legendeDesPoints = false,
   onDateSelect,
   onEventPress,
 }) {
@@ -393,6 +403,14 @@ function PlanningCalendarView({
           >
             {etiquetteDuPlanning(t, evenementVille)}
           </Text>
+          {installationDuPlanning(evenementVille) ? (
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p3, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+            >
+              {installationDuPlanning(evenementVille)}
+            </Text>
+          ) : null}
           <Text numberOfLines={2} style={[Fonts.p2Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}>
             {evenementVille.name}
           </Text>
@@ -492,6 +510,7 @@ function PlanningCalendarView({
     ApplicationStyle.backgroundColor.primary700,
     ApplicationStyle.borderRadius24,
     Colors.neutral00,
+    Colors.neutral200,
     Colors.neutral300,
     Colors.gold500,
     Colors.primary100,
@@ -632,6 +651,16 @@ function PlanningCalendarView({
           todayTextColor: Colors.primary500,
         }}
       />
+
+      {legendeDesPoints ? (
+        <Text style={[Fonts.p4, Fonts.neutral200, Spaces.marginTop[8]]}>
+          {t(
+            'planning.legendeDesPoints',
+            // eslint-disable-next-line max-len
+            'Un point par club, 3 au maximum : ses séances et ses créneaux attribués. « +2 » : 2 clubs de plus.',
+          )}
+        </Text>
+      ) : null}
 
       <View style={[Spaces.marginTop[24], Alignments.fill]}>
         <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[16]]}>

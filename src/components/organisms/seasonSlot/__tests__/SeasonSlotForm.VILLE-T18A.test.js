@@ -164,7 +164,7 @@ const monter = async (/** @type {any} */ props = {}) => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
         <SeasonSlotForm
-          clubs={[{ documentId: 'basket', name: 'Montrivage Basket' }]}
+          clubs={props.clubs || [{ documentId: 'basket', name: 'Montrivage Basket' }]}
           facilityId="salle-t18"
           initial={{ weekday: 2 }}
           onCancel={jest.fn()}
@@ -240,11 +240,22 @@ describe('VILLE-T18A point 2 — planche 23 état 3 : la capacité dépassée, s
     return arbre;
   };
 
+  it('RET-VILLE 17 : sans dépassement, la carte garde « Déjà là »', async () => {
+    /** @type {any} */ (previewFacilitySeasonSlot).mockImplementation(async () => ({
+      data: { capacity: 2, needsConfirmation: false, occupants: [PLEIN.occupants[0]] },
+    }));
+    const lus = textes(await remplirLeComplet());
+    expect(lus).toContain('Déjà là : AS Montrivage · U15.');
+    expect(lus.filter((ligne) => ligne.startsWith('Complet'))).toEqual([]);
+  });
+
   it('pendant la saisie, « complet » offre les 3 gestes de la planche (et plus « Attribuer le créneau »)', async () => {
     const arbre = await remplirLeComplet();
     const lus = textes(arbre);
     expect(lus).toContain('Mardi 18:00 – 19:30 : complet');
-    expect(lus).toContain('Attribuer met 3 équipes pour 2 places, chaque mardi de la saison.');
+    expect(lus).toContain('Complet : AS Montrivage · U15 et Montrivage FC y sont déjà. Si vous attribuez, 3 équipes partageront 2 places.');
+    // RET-VILLE 17 (03/11, tranché par le chef) : pas deux fois la même chose sur la carte.
+    expect(lus.filter((ligne) => ligne.startsWith('Déjà là'))).toEqual([]);
     expect(touchable(arbre, 'Voir les heures libres du mardi')).toBeDefined();
     expect(touchable(arbre, 'Attribuer quand même')).toBeDefined();
     expect(touchable(arbre, 'Changer l’heure')).toBeDefined();
@@ -303,4 +314,37 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => function Botto
       {footerComponent}
     </>
   ) : null;
+});
+
+describe('RET-PLANNING fiche 16 — « Pour qui ? » : logos et recherche', () => {
+  const CLUB_LOGO = { documentId: 'logo', logoUrl: 'https://x/l.png', name: 'Club au logo' };
+  const CLUBS = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Échos'].map((name, index) => ({
+    documentId: `club-${index}`, name,
+  }));
+  const recherche = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'recherche-club',
+  )[0];
+
+  it('🐞 la puce d’un club porte son logo, ou son initiale', async () => {
+    const arbre = await monter({ clubs: [CLUB_LOGO, CLUBS[0]] });
+    const marques = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'club-marque');
+
+    expect(marques.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('5 clubs : pas de recherche', async () => {
+    const arbre = await monter({ clubs: CLUBS });
+
+    expect(recherche(arbre)).toBeUndefined();
+  });
+
+  it('🐞 6 clubs : la recherche filtre, sans tenir compte des accents', async () => {
+    const arbre = await monter({ clubs: [...CLUBS, CLUB_LOGO] });
+
+    expect(recherche(arbre)).toBeDefined();
+    await act(async () => { recherche(arbre).props.onChangeText('echos'); });
+    const lus = textes(arbre);
+    expect(lus).toContain('Échos');
+    expect(lus).not.toContain('Alpha');
+  });
 });

@@ -348,6 +348,43 @@ export const slotWho = (creneau) => [creneau?.club?.name, creneau?.team?.name]
   .join(' · ');
 
 /**
+ * RET-VILLE 17 (02/11, Adel « A ») — le message orange d'un créneau complet : qui y est déjà, puis
+ * ce que l'attribution donne. Il y a toujours plus d'équipes que de places : « équipes » reste au
+ * pluriel, « place » suit le nombre de places.
+ * @param {(cle: string, options?: any) => string} t - La traduction.
+ * @param {{ equipes: number, occupants: any[], places: number }} valeurs - Ce que dit le serveur.
+ * @returns {string} La phrase.
+ */
+export const phraseDuComplet = (t, { equipes, occupants, places }) => {
+  const interpolation = { escapeValue: false };
+  const noms = [...new Set(occupants.map(slotWho).filter(Boolean))];
+  const complet = noms.length
+    ? t('collectiviteCreneaux.attribuer.completQui', {
+      count: noms.length,
+      defaultValue_one: 'Complet : {{qui}} y est déjà.',
+      defaultValue_other: 'Complet : {{qui}} y sont déjà.',
+      interpolation,
+      qui: noms.length > 1
+        ? t('collectiviteCreneaux.attribuer.nomsEt', {
+          debut: noms.slice(0, -1).join(', '),
+          defaultValue: '{{debut}} et {{fin}}',
+          fin: noms[noms.length - 1],
+          interpolation,
+        })
+        : noms[0],
+    })
+    : t('collectiviteCreneaux.attribuer.completSansNom', { defaultValue: 'Complet.' });
+  const partage = t('collectiviteCreneaux.attribuer.depassement', {
+    count: places,
+    defaultValue_one: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} place.',
+    defaultValue_other: 'Si vous attribuez, {{equipes}} équipes partageront {{count}} places.',
+    equipes,
+    interpolation,
+  });
+  return `${complet} ${partage}`;
+};
+
+/**
  * Les creneaux ranges par jour de la semaine, puis par heure (le serveur trie deja).
  * @param {any[]} creneaux - Les creneaux.
  * @returns {Array<{ weekday: number, slots: any[] }>} Les jours qui en ont, du lundi au dimanche.

@@ -118,6 +118,16 @@ afterEach(() => {
 });
 
 describe('E-P07 — une réservation confirmée, avant le délai', () => {
+  it('T3-RESA-PLANNING : « Voir mon planning » ouvre le jour de la partie', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Voir mon planning');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.HomeTab,
+      { params: { date: maReservation().date }, screen: RouteNames.MyEventList },
+      { pop: true },
+    );
+  });
+
   it('l’en-tête, la pastille, « Quand, où », le prix', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([

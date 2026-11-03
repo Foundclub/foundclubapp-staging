@@ -3591,7 +3591,7 @@ function ClubDetails({ navigation, route }) {
           ) : null}
 
           {/* R17-INVITER (19/10, REC17-009) — la Ville qui ouvre la fiche depuis « Ajouter un
-              club » : « Ce club fait partie de ma collectivité ». Rien pour les autres comptes (le
+              club » : « Ajouter ce club à ma collectivité ». Rien pour les autres comptes (le
               bouton ne s'affiche qu'au gestionnaire de CETTE Ville, garde serveur). */}
           {routeCollectiviteId && club?.documentId ? (
             <AjouterUnClub

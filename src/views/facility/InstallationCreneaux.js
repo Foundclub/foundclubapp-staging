@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
-import { useLayoutEffect, useState } from 'react';
+import { useContext, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -48,6 +48,8 @@ import SeasonSlotForm, {
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import SeasonSlotWeekGrid from '@/components/organisms/seasonSlot/SeasonSlotWeekGrid';
+import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
+import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -248,6 +250,9 @@ function InstallationCreneaux() {
     .find((installation) => installation?.documentId === facilityId) || null;
   const installation = { ...(meta.facility || {}), ...(ligne || {}) };
   const nom = installation.name || meta.facility?.name || '';
+  // RET-FENETRES (02/11, fiche 22) : sur le site, le nom passe dans la barre fine.
+  const sousUneBarreDuSite = useContext(BarreDeTitreDuSiteContext);
+  useDeclarerPageDuSite({ titre: nom || null });
   const capacite = Math.max(1, Number(installation.maxSlots) || 1);
   const creneaux = Array.isArray(actifs.data?.data) ? actifs.data.data : [];
   // 🎨 COLL-R-A6 (13/10, COL-019, décision d'Adel D13 = A) : chaque créneau à la couleur de SON
@@ -416,8 +421,8 @@ function InstallationCreneaux() {
             : undefined}
           description={t(
             'collectiviteCreneaux.creneaux.videTexte',
-            'Un créneau attribué revient chaque semaine, une semaine sur deux ou à des dates '
-              + 'choisies : le club y pose ses entraînements sans rien vous demander.',
+            'Un créneau attribué revient chaque semaine ou une semaine sur deux, ou reste '
+            + 'ponctuel : le club y pose ses entraînements sans rien vous demander.',
           )}
           onAction={canManage ? () => attribuer() : undefined}
           title={t('collectiviteCreneaux.creneaux.vide', 'Aucun créneau attribué')}
@@ -486,7 +491,7 @@ function InstallationCreneaux() {
               accessibilityRole="header"
               style={[Fonts.p2Bold, Fonts.primary200, Spaces.marginTop[8]]}
             >
-              {t('collectiviteCreneaux.quand.groupeDates', 'Dates choisies')}
+              {t('collectiviteCreneaux.quand.groupeDates', 'Créneaux ponctuels')}
             </Text>
             {aDates.map(carteDeCreneau)}
           </View>
@@ -659,7 +664,9 @@ function InstallationCreneaux() {
         <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
           {t('collectiviteCreneaux.creneaux.surtitre', 'Installations de la Ville')}
         </Text>
-        <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>{nom}</Text>
+        {sousUneBarreDuSite ? null : (
+          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>{nom}</Text>
+        )}
         {metaLigne ? <Text style={[Fonts.p2, Fonts.neutral200]}>{metaLigne}</Text> : null}
       </View>
 

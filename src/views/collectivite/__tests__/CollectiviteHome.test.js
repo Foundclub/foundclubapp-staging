@@ -387,16 +387,14 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     const lus = textes(arbre);
     expect(lus).toContain('Vos actions');
     expect(lus).toContain('Ajouter une installation');
-    // COLL-C4A (02/10) : « Publier une actualité » a son écran (« Nouvelle actualité »).
-    expect(lus).toContain('Publier une actualité');
-    // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » ont leur écran.
-    expect(lus).toContain('Fermer une installation');
-    expect(lus).toContain('Bloquer un créneau');
-    await appuyer(arbre, 'collectivite-home-action-publishNews');
-    expect(mockNavigate).toHaveBeenCalledWith(
-      'CollectiviteActualiteForm',
-      { collectiviteId: 'ville-montrivage' },
-    );
+    // RET-VILLE 21 (02/11, Adel « A ») : plus dans « Vos actions », le bloc « Actualités » la
+    // garde.
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-action-publishNews')).toHaveLength(0);
+    // RET-VILLE 2 (02/11, Adel « 1- A ») : un seul bouton « Fermer ».
+    expect(lus).toContain('Fermer');
+    expect(lus).not.toContain('Fermer une installation');
+    expect(lus).not.toContain('Bloquer un créneau');
     await appuyer(arbre, 'collectivite-home-action-addInstallation');
     expect(mockNavigate).toHaveBeenCalledWith(
       'CollectiviteInstallationForm',
@@ -530,7 +528,7 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
 // ROUGES avant le lot.
 describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet', () => {
   const ORDRE_DE_LA_PLANCHE = [
-    'assignSlot', 'publishNews', 'closeInstallation', 'blockSlot', 'inviteClub', 'addInstallation',
+    'assignSlot', 'closeInstallation', 'inviteClub', 'addInstallation',
     // R17-EVT-1 (20/10, planche P11-evenement-ou-ca-vit) : « Ajouter un événement », en 7e.
     'addEvent',
   ];
@@ -599,16 +597,16 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
   // R17-EVT-1-BIS (i) (20/10, tri du chef) : avec la 7e action, une rangée unique repliait les
   // libellés sur 3 lignes à 1 360 px. DEUX rangées, 4 puis 3 : chaque carte part d un quart
   // (22 % + 3 espaces de 12 px), les 3 dernières s élargissent. ROUGE avant (flexBasis 0).
-  it('🔴 ordinateur : sept actions sur DEUX rangées (4 puis 3), l icône à gauche', async () => {
+  it('🔴 ordinateur : cinq actions sur DEUX rangées (3 puis 2), l icône à gauche', async () => {
     mockLargeur = 1280;
     const arbre = await monter();
     const cartes = cartesDAction(arbre);
-    expect(cartes).toHaveLength(7);
+    expect(cartes).toHaveLength(5);
     cartes.forEach((/** @type {any} */ carte) => {
       const style = StyleSheet.flatten(carte.props.style);
-      // Un quart chacune : 4 tiennent sur la rangée (4 × 22 % + 36 px), la 5e passe à la ligne.
+      // RET-VILLE 2 : un tiers chacune, 3 tiennent sur la rangée, la 4e passe à la ligne.
       expect(style).toEqual(expect.objectContaining({
-        flexBasis: '22%', flexDirection: 'row', flexGrow: 1,
+        flexBasis: '30%', flexDirection: 'row', flexGrow: 1,
       }));
       expect(style.maxWidth).toBeUndefined();
     });
@@ -624,7 +622,7 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     mockLargeur = 1280;
     const arbre = await monter();
     const cartes = cartesDAction(arbre);
-    expect(cartes).toHaveLength(7);
+    expect(cartes).toHaveLength(5);
     cartes.forEach((/** @type {any} */ carte) => {
       const style = StyleSheet.flatten(carte.props.style);
       const [pastille] = carte.findAll((/** @type {any} */ n) => typeof n.type === 'string'
@@ -880,10 +878,6 @@ describe('COLL-C4B — « Fermeture à venir » et les deux actions de fermeture
     await appuyer(arbre, 'collectivite-home-action-closeInstallation');
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteFermeture', {
       collectiviteId: 'ville-montrivage', mode: 'fermer',
-    });
-    await appuyer(arbre, 'collectivite-home-action-blockSlot');
-    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteFermeture', {
-      collectiviteId: 'ville-montrivage', mode: 'bloquer',
     });
   });
 });

@@ -127,6 +127,8 @@ function LieuSurCarteOuvert({
   );
   const [erreur, setErreur] = useState('');
   const [hauteurCarte, setHauteurCarte] = useState(0);
+  // RET-FENETRES (02/11, fiche 12) : l'épingle attend la carte ; elle passait sur « Chargement… ».
+  const [etatDeLaCarte, setEtatDeLaCarte] = useState('loading');
   const creerLieu = useCreateLieu();
 
   // Rien de tapé ne se trouve : la commune tapée, la ville de l'objet, puis la position
@@ -254,6 +256,7 @@ function LieuSurCarteOuvert({
         >
           {mapsPlatform.renderPinMap({
             height: hauteurCarte || 360,
+            onEtat: setEtatDeLaCarte,
             onRegionChangeComplete: (/** @type {any} */ region) => setCentre({
               lat: Number(region?.lat),
               lng: Number(region?.lng),
@@ -262,26 +265,28 @@ function LieuSurCarteOuvert({
             regionHint: cadrage,
           })}
           {/* L'épingle ne bouge pas : sa pointe est le centre de la carte. */}
-          <View
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            pointerEvents="none"
-            style={[
-              Alignments.absolute,
-              Alignments.fullSize,
-              Alignments.alignCenter,
-              Alignments.justifyCenter,
-            ]}
-          >
-            <Image
-              source={Images.pin}
+          {etatDeLaCarte === 'ready' ? (
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              pointerEvents="none"
               style={[
-                ApplicationStyle.icon48,
-                ApplicationStyle.tintColor.primary500,
-                { marginBottom: 48 },
+                Alignments.absolute,
+                Alignments.fullSize,
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
               ]}
-            />
-          </View>
+            >
+              <Image
+                source={Images.pin}
+                style={[
+                  ApplicationStyle.icon48,
+                  ApplicationStyle.tintColor.primary500,
+                  { marginBottom: 48 },
+                ]}
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={[Spaces.padding[16], Spaces.gap[12], { paddingBottom: insets.bottom + 16 }]}>

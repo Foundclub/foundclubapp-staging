@@ -71,3 +71,23 @@ describe('CORR-SOCLE (site) — pas de vide sous le bouton du pied', () => {
     expect(styleDeLaListe({ snapPoints: ['86%'], webPresentation: 'dialog' }).maxHeight).toBe(520);
   });
 });
+
+// RET-FENETRES (02/11/2026, fiche 6) : `hitSlop` n'existe pas sur le site, la croix faisait 28 px.
+describe('RET-FENETRES (site) — la croix se touche facilement', () => {
+  it('sa boîte fait 44 px et elle porte un nom', () => {
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(createElement(
+        BottomModal,
+        { close: () => {}, hideCloseButton: false, isVisible: true },
+        createElement(Text, null, 'Contenu'),
+      ));
+    });
+    const croix = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props.accessibilityLabel === 'common.close' && typeof n.props.onPress === 'function'
+    ))[0];
+    expect(StyleSheet.flatten(croix.props.style)).toMatchObject({ height: 44, width: 44 });
+    act(() => arbre.unmount());
+  });
+});

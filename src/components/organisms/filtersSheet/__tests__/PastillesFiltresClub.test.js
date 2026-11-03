@@ -338,21 +338,19 @@ describe('PastillesFiltresClub — où s ouvre le choix', () => {
     expect(arbre.root.findByProps({ testID: 'recherche-du-panneau' }).props.autoFocus).toBe(true);
   });
 
-  test('✅ site à 1 280 px : une liste SOUS la pastille (≤ 340 px), pas de panneau du bas', () => {
+  // RET-FENETRES (02/11, fiche 5, Adel « A ») : la liste sort de la page, dans un calque au-dessus
+  // de tout, sous sa pastille. Sa place se mesure dans un vrai navigateur (T6,
+  // annuaire-etape1.spec.ts) : ce moteur n'a pas de boîtes à lire. Décision plus récente que la
+  // liste dans le flux.
+  test('✅ site à 1 280 px : pas de panneau du bas', () => {
     Platform.OS = 'web';
     mockDimensions.width = 1280;
+    window.addEventListener = jest.fn();
+    window.removeEventListener = jest.fn();
     rendre({ activity: 'sport-foot' });
     act(() => { pastille('Filtrer par sport — ').props.onPress(); });
 
     expect(panneauOuvert('panneau-du-bas')).toBe(false);
-    const liste = arbre.root.findAll(
-      (/** @type {any} */ noeud) => noeud.props?.testID === 'choix-sport'
-        && typeof noeud.type === 'string',
-    )[0];
-    const style = Object.assign({}, ...[liste.props.style].flat(Infinity).filter(Boolean));
-    expect(style).toEqual(expect.objectContaining({
-      left: 0, position: 'absolute', top: '100%', width: 340,
-    }));
   });
 });
 
