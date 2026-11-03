@@ -17234,6 +17234,11 @@ export default {
       weekShort: 'Week',
     },
     noEventsForDate: 'No events on this day',
+    reservationTerrain: {
+      collecte: 'Booking collecting players',
+      confirmee: 'Booking',
+      demande: 'Booking request',
+    },
     status: {
       pendingParticipation: 'Request pending',
     },

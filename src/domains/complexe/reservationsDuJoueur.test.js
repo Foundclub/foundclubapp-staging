@@ -1,8 +1,11 @@
 import {
   annulationHorsDelai,
+  creneauxDeMesReservations,
+  estAuPlanning,
   estDemain,
   etatDeLaVeille,
   joursDeMesReservations,
+  joursDeMesReservationsAVenir,
   PERIODES_DE_MES_RESERVATIONS,
 } from '@/domains/complexe/reservationsDuJoueur';
 import { etatAffiche } from '@/domains/complexe/reserverTerrain';
@@ -105,5 +108,100 @@ describe('E-P10 — « Mes réservations »', () => {
     expect(etatAffiche(passee, MAINTENANT)).toBe('jouee');
     expect(etatAffiche({ ...passee, noShowAt: '2026-10-11T19:00:00.000Z' }, MAINTENANT))
       .toBe('nonHonoree');
+  });
+});
+
+// T3-RESA-PLANNING (03/11, Adel « 9- A ») — la réservation entre au planning du joueur.
+describe('créneaux de mes réservations au planning', () => {
+  const PLAGE = { from: '2026-11-02', to: '2026-11-08' };
+  const t = (/** @type {string} */ _cle, /** @type {string} */ repli) => repli;
+  const reservation = (/** @type {object} */ champs = {}) => ({
+    complexe: { name: 'Complexe Test' },
+    date: '2026-11-05',
+    documentId: 'resa-1',
+    endsAt: '2026-11-05T19:00:00.000Z',
+    from: '19:00',
+    role: 'reserveur',
+    startsAt: '2026-11-05T18:00:00.000Z',
+    status: 'confirmee',
+    terrain: { name: 'Terrain 1' },
+    to: '20:00',
+    ...champs,
+  });
+
+  test('ROUGE-AVANT — une réservation confirmée devient un bloc du planning, à ses heures', () => {
+    const [bloc] = creneauxDeMesReservations(t, [reservation()], PLAGE);
+    expect(bloc).toMatchObject({
+      documentId: 'resa-1',
+      endTime: '20:00',
+      location: 'Terrain 1',
+      startAt: '2026-11-05T18:00:00.000Z',
+      startTime: '19:00',
+      title: 'Complexe Test',
+      typeLabel: 'Réservation',
+    });
+    expect(bloc.reservationTerrain.documentId).toBe('resa-1');
+    expect(bloc.participationStatus).toBeNull();
+  });
+
+  test('ROUGE-AVANT — hors de la fenêtre lue, pas de bloc ; les deux bornes sont dedans', () => {
+    const jours = ['2026-11-01', '2026-11-02', '2026-11-08', '2026-11-09'];
+    const blocs = creneauxDeMesReservations(
+      t,
+      jours.map((date) => reservation({ date, documentId: date })),
+      PLAGE,
+    );
+    expect(blocs.map((bloc) => bloc.documentId)).toEqual(['2026-11-02', '2026-11-08']);
+  });
+
+  test('ROUGE-AVANT — demande et collecte se disent, un invité absent ne la voit pas', () => {
+    const blocs = creneauxDeMesReservations(t, [
+      reservation({ documentId: 'demande', status: 'en_attente' }),
+      reservation({ documentId: 'collecte', status: 'en_collecte' }),
+      reservation({
+        documentId: 'present', myResponse: 'present', role: 'participant',
+      }),
+      reservation({
+        documentId: 'absent', myResponse: 'absent', role: 'participant',
+      }),
+    ], PLAGE);
+    expect(blocs.map((bloc) => [bloc.documentId, bloc.typeLabel, bloc.participationStatus]))
+      .toEqual([
+        ['demande', 'Demande de réservation', 'pending'],
+        ['collecte', 'Réservation en collecte', null],
+        ['present', 'Réservation', null],
+      ]);
+  });
+
+  test('ROUGE-AVANT — une même réservation lue deux fois ne fait qu\'un bloc', () => {
+    const blocs = creneauxDeMesReservations(t, [reservation(), reservation()], PLAGE);
+    expect(blocs).toHaveLength(1);
+  });
+
+  test('ROUGE-AVANT — une annulée ou une refusée n\'est pas au planning', () => {
+    const lues = [
+      reservation({ documentId: 'annulee', status: 'annulee' }),
+      reservation({ documentId: 'refusee', status: 'refusee' }),
+    ];
+    expect(creneauxDeMesReservations(t, lues, PLAGE)).toEqual([]);
+    expect(estAuPlanning(lues[0])).toBe(false);
+    expect(estAuPlanning(reservation())).toBe(true);
+    expect(estAuPlanning(reservation({ myResponse: 'absent' }))).toBe(false);
+  });
+
+  test('ROUGE-AVANT — les jours à venir comptent pour la vue d\'arrivée, même hors fenêtre', () => {
+    const jours = joursDeMesReservationsAVenir([
+      reservation(),
+      reservation({ documentId: 'absent', myResponse: 'absent' }),
+      reservation({ documentId: 'annulee', status: 'annulee' }),
+    ]);
+    expect(jours).toHaveLength(1);
+    expect(jours[0]).toBeInstanceOf(Date);
+    expect(joursDeMesReservationsAVenir(undefined)).toEqual([]);
+  });
+
+  test('ROUGE-AVANT — rien de lu : aucun bloc, jamais de plantage', () => {
+    expect(creneauxDeMesReservations(t, undefined, PLAGE)).toEqual([]);
+    expect(creneauxDeMesReservations(t, { data: [] }, PLAGE)).toEqual([]);
   });
 });

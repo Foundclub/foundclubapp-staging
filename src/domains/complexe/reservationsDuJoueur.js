@@ -1,5 +1,7 @@
 import { ajouterJours, jourDeParis } from '@/domains/complexe/reserverTerrain';
 
+import { getPlanningItemDate } from '@/utils/planning/planningSlots';
+
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 
 /**
@@ -124,3 +126,69 @@ export const joursDeMesReservations = (reservations) => {
   });
   return jours;
 };
+
+const ETATS_AU_PLANNING = Object.freeze(['confirmee', 'en_attente', 'en_collecte']);
+
+/**
+ * T3-RESA-PLANNING — une réservation est-elle au planning du joueur ? Un créneau confirmé, demandé
+ * ou en collecte, sauf pour l'invité qui a répondu absent : il ne viendra pas.
+ * @param {any} reservation - La réservation lue.
+ * @returns {boolean} Vrai si elle y est.
+ */
+export const estAuPlanning = (reservation) => (
+  ETATS_AU_PLANNING.includes(reservation?.status) && reservation?.myResponse !== 'absent'
+);
+
+/**
+ * T3-RESA-PLANNING — les jours à venir de ses réservations, pour la vue d'arrivée du planning : une
+ * réservation lointaine et seule ouvre son mois, comme un événement.
+ * @param {any} reservations - Les réservations à venir lues.
+ * @returns {Array<Date | null>} Leurs jours.
+ */
+export const joursDeMesReservationsAVenir = (reservations) => (
+  Array.isArray(reservations) ? reservations : []
+)
+  .filter(estAuPlanning)
+  .map((reservation) => getPlanningItemDate({ startAt: reservation.startsAt }));
+
+/**
+ * T3-RESA-PLANNING (03/11, Adel « 9- A ») — ses réservations dans « Mon planning » : un bloc par
+ * réservation de la fenêtre lue, avec `reservationTerrain` pour ouvrir SA fiche et non celle d'un
+ * événement. Calculé ici et non versé par `/users/me/planning` : un serveur qui verse ces blocs les
+ * montrerait aussi aux anciennes apps des stores, où toucher ouvrirait un événement introuvable.
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {any} reservations - Les réservations lues (`lireMesReservations`).
+ * @param {{ from: string, to: string }} plage - La fenêtre lue (AAAA-MM-JJ), bornes comprises.
+ * @returns {any[]} Les blocs, à la forme d'un créneau du planning.
+ */
+export const creneauxDeMesReservations = (t, reservations, plage) => (
+  Array.isArray(reservations) ? reservations : []
+)
+  .filter((reservation, rang, toutes) => {
+    const date = String(reservation?.date || '');
+    return date >= plage.from
+      && date <= plage.to
+      && estAuPlanning(reservation)
+      // Les deux lectures (à venir, passées) peuvent la rendre deux fois si elle finit entre elles.
+      && toutes.findIndex((autre) => autre?.documentId === reservation.documentId) === rang;
+  })
+  .map((reservation) => {
+    let typeLabel = t('planning.reservationTerrain.confirmee', 'Réservation');
+    if (reservation.status === 'en_attente') {
+      typeLabel = t('planning.reservationTerrain.demande', 'Demande de réservation');
+    } else if (reservation.status === 'en_collecte') {
+      typeLabel = t('planning.reservationTerrain.collecte', 'Réservation en collecte');
+    }
+    return {
+      documentId: reservation.documentId,
+      endAt: reservation.endsAt,
+      endTime: reservation.to,
+      location: reservation.terrain?.name || null,
+      participationStatus: reservation.status === 'en_attente' ? 'pending' : null,
+      reservationTerrain: reservation,
+      startAt: reservation.startsAt,
+      startTime: reservation.from,
+      title: reservation.complexe?.name || null,
+      typeLabel,
+    };
+  });

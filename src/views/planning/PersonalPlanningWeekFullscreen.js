@@ -97,6 +97,7 @@ import {
   useManagingCollectivite,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
+import { useMesReservationsAuPlanning } from '@/services/complexe/complexeJoueurQueries';
 import {
   getClubPlanning,
   getMyPlanning,
@@ -356,6 +357,14 @@ function PlanningWeekFullscreen() {
       : getPlanningRange(currentDate, vue === VUES.mois ? 'month' : 'week')),
     [currentDate, isFacilitySource, vue],
   );
+  // T3-RESA-PLANNING (03/11, « 9- A ») : ses reservations, dans SON planning seulement.
+  const {
+    creneaux: reservations, joursAVenir, lu: reservationsLues,
+  } = useMesReservationsAuPlanning(
+    t,
+    planningRange,
+    { enabled: sourceType === FULLSCREEN_SOURCE_TYPES.personal },
+  );
   const planningQuery = useMemo(() => getPlanningQuery({
     clubId,
     cmId,
@@ -404,7 +413,10 @@ function PlanningWeekFullscreen() {
   const { enDecision, garderLeChoix } = useVueInitiale({
     actif: arriveeAujourdhui && planningQuery.enabled && !error,
     appliquer: appliquerLaVue,
-    evenements: data && !isPlaceholderData ? (data.data || []) : undefined,
+    datesDeLaListe: joursAVenir,
+    evenements: data && !isPlaceholderData && reservationsLues
+      ? [...(data.data || []), ...reservations]
+      : undefined,
     lectureDeLaSuite,
     vueDeBase,
   });
@@ -451,8 +463,11 @@ function PlanningWeekFullscreen() {
   // « en attente » a sa place ; un MEMBRE voit son club en couleur et les autres en gris.
   // PARENT-PLANNING : le prenom de l enfant sur ses creneaux (les autres sources n en portent pas).
   const normalizedEvents = useMemo(
-    () => withViewerChildrenTitles(normalizePlanningItems(data?.data || []), t),
-    [data, t],
+    () => withViewerChildrenTitles(
+      normalizePlanningItems([...(data?.data || []), ...reservations]),
+      t,
+    ),
+    [data, reservations, t],
   );
   // 🎨 COLL-R-A6 (13/10, COL-019, D13 A) : la liste des clubs de la Ville est lue dès que la Ville
   // GÈRE l'installation (avant : seulement en ouvrant un bloc) — l'ordre de cette liste donne à
@@ -1179,6 +1194,12 @@ function PlanningWeekFullscreen() {
     setBrouillon(null);
   }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
+    if (bloc?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: bloc.documentId,
+      });
+      return;
+    }
     // R17-EVT-1-BIS (b) (20/10) : vues Mois et Liste, l événement de la Ville ouvre SA fiche.
     if (bloc?.raw?.evenementDeLaVille) {
       ouvrirLEvenementDeLaVille(bloc.raw.evenementDeLaVille);
@@ -1288,6 +1309,12 @@ function PlanningWeekFullscreen() {
 
   const handleEventPress = useCallback((event) => {
     if (!event?.documentId) return;
+    if (event?.raw?.reservationTerrain) {
+      /** @type {any} */ (navigation).navigate(RouteNames.ReserverMaReservation, {
+        reservationId: event.documentId,
+      });
+      return;
+    }
 
     // COLL-R-DEPLACER (14/10, COL-013, planche P5v4-deplacer-tel écran 1) — le bloc « à
     // déplacer » de son club ouvre « Déplacer la séance » pour qui peut la déplacer ; les autres

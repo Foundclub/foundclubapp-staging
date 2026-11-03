@@ -1,6 +1,14 @@
 import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
+import { useMemo } from 'react';
+
+import {
+  creneauxDeMesReservations,
+  joueurDesComplexesAllume,
+  joursDeMesReservationsAVenir,
+} from '@/domains/complexe/reservationsDuJoueur';
+import { jourDeParis } from '@/domains/complexe/reserverTerrain';
 
 import {
   ajouterAuxFavoris,
@@ -212,16 +220,54 @@ export const useAnnulerMaReservation = () => useGesteDuJoueur(
  * RESA-L6B-1 — E-P10 : SES réservations d'un onglet (la clef commence par celle de ses
  * réservations : un geste du joueur la relit).
  * @param {'a-venir' | 'passees' | 'refusees'} periode - L'onglet.
+ * @param {object} [options] - Options react-query de plus (`enabled`, `retry`, `meta`).
  * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les réservations.
  */
-export const useMesReservations = (periode) => useQuery({
+export const useMesReservations = (periode, options = {}) => useQuery({
   queryFn: async () => {
     const liste = donnees(await lireMesReservations(periode));
     return Array.isArray(liste) ? liste : [];
   },
   queryKey: [...MES_RESERVATIONS_CLEF, 'mine', periode],
   staleTime: DEMI_MINUTE,
+  ...options,
 });
+
+/** Une panne de cette lecture ne dit rien : le planning et ses événements restent. */
+const LECTURE_DISCRETE = Object.freeze({ meta: { preventToastError: true }, retry: false });
+
+/**
+ * T3-RESA-PLANNING (03/11, Adel « 9- A ») — ses réservations dans « Mon planning » (mêmes clefs que
+ * E-P10 : réserver ou annuler relit le planning aussi). Les passées ne se lisent que si la fenêtre
+ * touche aujourd'hui ou avant : une partie finie ce matin reste au planning du jour.
+ * ponytail: 50 réservations au plus par période (limite du serveur) ; au-delà, les plus lointaines
+ * manquent au planning, « Mes réservations » reste complet. Sortie : une lecture par fenêtre.
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {{ from: string, to: string }} plage - La fenêtre lue.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
+ * @returns {{ creneaux: any[], joursAVenir: Array<Date | null>, lu: boolean }} Les blocs de la
+ *   fenêtre ; les jours à venir, pour la vue d'arrivée ; `lu` : lecture revenue, ou échouée.
+ */
+export const useMesReservationsAuPlanning = (t, plage, { enabled = true } = {}) => {
+  const actif = enabled && joueurDesComplexesAllume();
+  const aVenir = useMesReservations('a-venir', { ...LECTURE_DISCRETE, enabled: actif });
+  const passees = useMesReservations('passees', {
+    ...LECTURE_DISCRETE,
+    enabled: actif && plage.from <= jourDeParis(),
+  });
+  const donneesAVenir = aVenir.data;
+  const donneesPassees = passees.data;
+  const creneaux = useMemo(() => creneauxDeMesReservations(
+    t,
+    [
+      ...(Array.isArray(donneesPassees) ? donneesPassees : []),
+      ...(Array.isArray(donneesAVenir) ? donneesAVenir : []),
+    ],
+    plage,
+  ), [donneesAVenir, donneesPassees, plage, t]);
+  const joursAVenir = useMemo(() => joursDeMesReservationsAVenir(donneesAVenir), [donneesAVenir]);
+  return { creneaux, joursAVenir, lu: !aVenir.isLoading && !passees.isLoading };
+};
 
 /**
  * RESA-L6B-1 — E-P14 : répondre à la question de la veille.

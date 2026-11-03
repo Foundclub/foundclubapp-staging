@@ -122,9 +122,10 @@ function CarteEnAttente() {
  * Standard event list screen component for participants
  * @param {object} props
  * @param {object} props.navigation - Navigation object
+ * @param {string} [props.dateVisee] - T3-RESA-PLANNING : le jour que le planning doit montrer.
  * @returns {React.ReactElement} ParticipantEventList component
  */
-function ParticipantEventList({ navigation }) {
+function ParticipantEventList({ dateVisee, navigation }) {
   const { t } = useTranslation();
   const {
     Alignments,
@@ -800,6 +801,7 @@ function ParticipantEventList({ navigation }) {
     const planningContent = (
       <PersonalPlanningContainer
         datesAVenir={datesAVenir}
+        dateVisee={dateVisee}
         onDataResolved={handlePlanningDataResolved}
         onSummaryPress={handleSummaryPress}
         withChildren={hasViewerChildren}
@@ -892,6 +894,7 @@ function ParticipantEventList({ navigation }) {
     Spaces.gap,
     Spaces.marginBottom,
     Spaces.marginTop,
+    dateVisee,
     datesAVenir,
     featuredEvents,
     handleDateConfirm,

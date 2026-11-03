@@ -17863,6 +17863,11 @@ export default {
       weekShort: 'Semaine',
     },
     noEventsForDate: 'Aucun événement ce jour-là',
+    reservationTerrain: {
+      collecte: 'Réservation en collecte',
+      confirmee: 'Réservation',
+      demande: 'Demande de réservation',
+    },
     status: {
       pendingParticipation: 'Demande en attente',
     },
