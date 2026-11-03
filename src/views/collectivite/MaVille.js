@@ -52,7 +52,7 @@ function OngletEcrire({ clubId }) {
     setRefus(null);
     setEnvoye(false);
     envoi.mutate(texte.trim(), {
-      onError: (/** @type {any} */ erreur) => setRefus(getErrorMessage(erreur, t)),
+      onError: (/** @type {any} */ erreur) => setRefus(getErrorMessage(erreur)),
       onSuccess: () => {
         setTexte('');
         setEnvoye(true);
@@ -119,7 +119,6 @@ function OngletEcrire({ clubId }) {
       <Button
         disabled={!texte.trim() || envoi.isPending}
         onPress={envoyer}
-        testID="ma-ville-envoyer"
         title={t('maVille.envoyer', 'Envoyer à ma Ville')}
       />
       <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00, { marginTop: 8 }]}>

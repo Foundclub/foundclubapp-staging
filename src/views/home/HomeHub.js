@@ -2860,6 +2860,7 @@ function HomeHubContent({ auth, navigation, route }) {
           Alignments={Alignments}
           cards={maVilleCards}
           Fonts={Fonts}
+          registerTutorialTargetNode={registerTutorialTargetNode}
           Spaces={Spaces}
           title={t('collectivite.home.header', 'Ma collectivité')}
         />

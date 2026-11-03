@@ -2134,6 +2134,15 @@ export default {
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON: 'Une relance par jour : le club a été prévenu il y a moins de 24 heures.',
+    COLLECTIVITE_QUESTION_INVALID_PAYLOAD:
+      'Écris ta question avant de l’envoyer (1000 caractères au plus).',
+    COLLECTIVITE_QUESTION_MANAGER_REQUIRED:
+      'Ce geste est réservé au dirigeant du club ou à la Ville.',
+    COLLECTIVITE_QUESTION_NO_CITY: 'Ton club n’est rattaché à aucune Ville.',
+    COLLECTIVITE_QUESTION_NOT_FOUND: 'Cette question est introuvable.',
+    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'Cette question ne peut plus changer de statut.',
+    COLLECTIVITE_QUESTION_TOO_MANY_OPEN:
+      'Trop de questions de ton club attendent encore une réponse.',
     COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
@@ -2166,12 +2175,6 @@ export default {
     FACILITY_REPORT_MANAGER_REQUIRED: 'Seule la Ville traite un signalement.',
     FACILITY_REPORT_MEMBER_REQUIRED:
       'Seuls les membres des clubs qui utilisent cette installation peuvent la signaler.',
-    COLLECTIVITE_QUESTION_INVALID_PAYLOAD: 'Écris ta question avant de l’envoyer (1000 caractères au plus).',
-    COLLECTIVITE_QUESTION_MANAGER_REQUIRED: 'Ce geste est réservé au dirigeant du club ou à la Ville.',
-    COLLECTIVITE_QUESTION_NOT_FOUND: 'Cette question est introuvable.',
-    COLLECTIVITE_QUESTION_NO_CITY: 'Ton club n’est rattaché à aucune Ville.',
-    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'Cette question ne peut plus changer de statut.',
-    COLLECTIVITE_QUESTION_TOO_MANY_OPEN: 'Trop de questions de ton club attendent encore une réponse.',
     FACILITY_REPORT_NOT_FOUND: 'Ce signalement est introuvable.',
     FACILITY_REPORT_NOTE_REQUIRED: 'Un mot pour l’auteur est obligatoire.',
     FACILITY_REPORT_PHOTO_AGE:
@@ -16086,6 +16089,25 @@ export default {
       waitingVenue: 'En attente terrain',
     },
   },
+  maVille: {
+    aucuneInstallation: 'Ta Ville n’a pas encore d’installation ici.',
+    aucuneQuestion: 'Aucune question pour l’instant.',
+    choisirInstallation: 'Sur quelle installation ?',
+    envoye: 'C’est envoyé. Tu seras prévenu de la réponse.',
+    envoyer: 'Envoyer à ma Ville',
+    erreurChargement: 'Tes questions n’ont pas pu être chargées.',
+    erreurInstallations: 'Les installations n’ont pas pu être chargées.',
+    erreurVille: 'Ta collectivité n’a pas pu être chargée.',
+    mesQuestions: 'Les questions du club',
+    ongletEcrire: 'Écrire à ma Ville',
+    ongletSignaler: 'Signaler un problème',
+    placeholder: 'Une question, une information, un besoin : écris-le ici.',
+    rattacher: 'Trouver ma Ville',
+    rattacherDetail: 'Rattache ton club à ta Ville.',
+    reessayer: 'Réessayer',
+    signalerDetail: 'Sur une installation de ta Ville.',
+    tonMessage: 'Ta question',
+  },
   media: {
     errors: {
       browserRequired: 'Le navigateur est requis pour enregistrer une note vocale.',
@@ -16989,25 +17011,6 @@ export default {
     share: {
       message: 'Paiement cotisation FoundClub : {{payerLink}}',
     },
-  },
-  maVille: {
-    aucuneInstallation: 'Ta Ville n’a pas encore d’installation ici.',
-    aucuneQuestion: 'Aucune question pour l’instant.',
-    choisirInstallation: 'Sur quelle installation ?',
-    envoye: 'C’est envoyé. Tu seras prévenu de la réponse.',
-    envoyer: 'Envoyer à ma Ville',
-    erreurChargement: 'Tes questions n’ont pas pu être chargées.',
-    erreurInstallations: 'Les installations n’ont pas pu être chargées.',
-    erreurVille: 'Ta collectivité n’a pas pu être chargée.',
-    mesQuestions: 'Les questions du club',
-    ongletEcrire: 'Écrire à ma Ville',
-    ongletSignaler: 'Signaler un problème',
-    placeholder: 'Une question, une information, un besoin : écris-le ici.',
-    rattacher: 'Trouver ma Ville',
-    rattacherDetail: 'Rattache ton club à ta Ville.',
-    reessayer: 'Réessayer',
-    signalerDetail: 'Sur une installation de ta Ville.',
-    tonMessage: 'Ta question',
   },
   myLicenses: {
     archive: {

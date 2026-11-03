@@ -42,7 +42,7 @@ function CollectiviteQuestion() {
   const poser = (/** @type {string} */ status) => {
     setRefus(null);
     statut.mutate({ note: mot.trim(), status }, {
-      onError: (/** @type {any} */ erreur) => setRefus(getErrorMessage(erreur, t)),
+      onError: (/** @type {any} */ erreur) => setRefus(getErrorMessage(erreur)),
       onSuccess: () => setMot(''),
     });
   };
@@ -59,10 +59,10 @@ function CollectiviteQuestion() {
     corps = (
       <>
         <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-          {t(
+          {String(t(
             /** @type {string} */ (`collectiviteQuestions.statuts.${question.status}`),
             question.status,
-          )}
+          ))}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {[question.club?.name, question.author?.name, reportDayLabel(question.createdAt)]
@@ -94,7 +94,6 @@ function CollectiviteQuestion() {
               <Button
                 disabled={statut.isPending}
                 onPress={() => poser('en_cours')}
-                testID="question-en-cours"
                 title={t('collectiviteQuestions.prendre', 'Passer en cours')}
                 variant="Secondary"
               />
@@ -102,7 +101,6 @@ function CollectiviteQuestion() {
             <Button
               disabled={statut.isPending}
               onPress={() => poser('traitee')}
-              testID="question-traitee"
               title={t('collectiviteQuestions.traiter', 'Marquer comme traitée')}
             />
           </View>

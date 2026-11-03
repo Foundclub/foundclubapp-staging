@@ -1,6 +1,7 @@
 /* eslint-disable max-len -- les témoins se lisent en entier. */
 import '@/theme/strings';
 
+import i18next from 'i18next';
 import renderer, { act } from 'react-test-renderer';
 
 import { buildWebPath } from '@/navigation/webRoutes';
@@ -88,6 +89,7 @@ const monter = (/** @type {any} */ Ecran) => {
   return JSON.stringify(arbre.toJSON());
 };
 const parTestId = (/** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === id && typeof n.props?.onPress === 'function')[0];
+const parTitre = (/** @type {string} */ titre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.title === titre && typeof n.props?.onPress === 'function')[0];
 const parTexteDe = (/** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === id && typeof n.props?.onChangeText === 'function')[0];
 
 beforeEach(() => {
@@ -124,9 +126,9 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
 
   test('envoyer : le texte tapé part, et ne se vide qu après l accord du serveur', () => {
     monter(MaVille);
-    expect(parTestId('ma-ville-envoyer').props.disabled).toBe(true);
+    expect(parTitre('Envoyer à ma Ville').props.disabled).toBe(true);
     act(() => parTexteDe('ma-ville-texte').props.onChangeText('  Une question  '));
-    act(() => parTestId('ma-ville-envoyer').props.onPress());
+    act(() => parTitre('Envoyer à ma Ville').props.onPress());
     expect(mockEnvoyer.mock.calls[0][0]).toBe('Une question');
     expect(parTexteDe('ma-ville-texte').props.value).toBe('  Une question  ');
     act(() => mockEnvoyer.mock.calls[0][1].onSuccess());
@@ -137,10 +139,20 @@ describe('T3TV — « Ma collectivité » du dirigeant', () => {
   test('un refus du serveur se dit, et le texte reste', () => {
     monter(MaVille);
     act(() => parTexteDe('ma-ville-texte').props.onChangeText('Une question'));
-    act(() => parTestId('ma-ville-envoyer').props.onPress());
+    act(() => parTitre('Envoyer à ma Ville').props.onPress());
     act(() => mockEnvoyer.mock.calls[0][1].onError({ response: { data: { error: { details: { code: 'COLLECTIVITE_QUESTION_TOO_MANY_OPEN' } } }, status: 409 } }));
     expect(parTexteDe('ma-ville-texte').props.value).toBe('Une question');
     expect(JSON.stringify(arbre.toJSON())).not.toContain('C’est envoyé');
+  });
+
+  test('un refus sans code connu : la phrase générique, jamais une clé de traduction', () => {
+    monter(MaVille);
+    act(() => parTexteDe('ma-ville-texte').props.onChangeText('Une question'));
+    act(() => parTitre('Envoyer à ma Ville').props.onPress());
+    act(() => mockEnvoyer.mock.calls[0][1].onError({}));
+    const ecran = JSON.stringify(arbre.toJSON());
+    expect(ecran).not.toContain('APIerrors');
+    expect(ecran).toContain(i18next.t('APIerrors.generic'));
   });
 
   test('Signaler : on choisit l installation, et le signalement existant s ouvre avec elle', () => {
@@ -200,9 +212,9 @@ describe('T3TV — une question', () => {
     mockParams = { questionId: 'q-1' };
     monter(CollectiviteQuestion);
     act(() => parTexteDe('question-votre-mot').props.onChangeText(' Lundi. '));
-    act(() => parTestId('question-traitee').props.onPress());
+    act(() => parTitre('Marquer comme traitée').props.onPress());
     expect(mockPoser.mock.calls[0][0]).toEqual({ note: 'Lundi.', status: 'traitee' });
-    expect(parTestId('question-en-cours')).toBeTruthy();
+    expect(parTitre('Passer en cours')).toBeTruthy();
   });
 
   test('le club lit, sans bouton, et lit le mot de la Ville', () => {
@@ -210,18 +222,18 @@ describe('T3TV — une question', () => {
     const texte = monter(CollectiviteQuestion);
     expect(texte).toContain('Traitée');
     expect(texte).toContain('Lundi.');
-    expect(parTestId('question-traitee')).toBeUndefined();
+    expect(parTitre('Marquer comme traitée')).toBeUndefined();
   });
 
   test('traitée, la Ville n a plus de geste ; en cours, plus « Passer en cours »', () => {
     mockFiche = charge({ data: { ...QUESTION, status: 'traitee' }, meta: { canManage: true } });
     monter(CollectiviteQuestion);
-    expect(parTestId('question-traitee')).toBeUndefined();
+    expect(parTitre('Marquer comme traitée')).toBeUndefined();
     act(() => arbre.unmount());
     mockFiche = charge({ data: { ...QUESTION, status: 'en_cours' }, meta: { canManage: true } });
     monter(CollectiviteQuestion);
-    expect(parTestId('question-en-cours')).toBeUndefined();
-    expect(parTestId('question-traitee')).toBeTruthy();
+    expect(parTitre('Passer en cours')).toBeUndefined();
+    expect(parTitre('Marquer comme traitée')).toBeTruthy();
   });
 
   test('refusée : introuvable', () => {
