@@ -148,6 +148,26 @@ jest.mock('@/platform/media', () => ({
 jest.mock('@/services/collectivite/collectiviteActualiteService', () => ({
   uploadActualiteFile: (/** @type {any} */ fichier) => mockTeleverser(fichier),
 }));
+// T3-ACTU-CIBLE : « Des clubs précis », les clubs et le nombre de destinataires.
+/** @type {any} */
+let mockClubs = { data: [] };
+const mockDestinataires = jest.fn();
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteClubs: () => mockClubs,
+}));
+jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
+  useActualiteRecipients: (/** @type {any} */ _id, /** @type {any} */ cible) => {
+    mockDestinataires(cible);
+    return {
+      data: {
+        approximate: cible.roles.includes('membres'),
+        audience: 'clubs',
+        clubsCount: cible.clubIds.length,
+        personsCount: 42,
+      },
+    };
+  },
+}));
 jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => {
   const reactActuel = jest.requireActual('react');
   const {
@@ -933,5 +953,113 @@ describe('VILLEEVT-CODE — un refus au moment de publier se dit au récapitulat
     await touche(arbre, 'tunnel-suivant');
     expect(onPublier).not.toHaveBeenCalled();
     expect(textes(arbre)).toContain('Ce jour est déjà passé.');
+  });
+});
+
+// 🏛️ T3-ACTU-CIBLE (décision d'Adel du 03/11/2026) — « L'actualité va à » : une 3ᵉ pastille « Des
+// clubs précis », le même bloc que l'actualité de la Ville. ROUGE avant : elle n'existait pas.
+describe('T3-ACTU-CIBLE — « Des clubs précis »', () => {
+  const CLUBS = [
+    { documentId: 'c-foot', name: 'AS Foot', sports: ['Football'] },
+    { documentId: 'c-tennis', name: 'TC Tennis', sports: ['Tennis'] },
+  ];
+  const VUE = {
+    audience: 'clubs',
+    audienceClubIds: ['c-tennis'],
+    audienceRoles: ['entraineurs'],
+    documentId: 'evt-1',
+    endDate: '2026-10-24',
+    endTime: '17:00',
+    facility: { documentId: 'stade', name: 'Stade municipal' },
+    kind: 'manifestation',
+    name: 'Fête du sport',
+    startDate: '2026-10-24',
+    startTime: '10:00',
+    takesPlace: false,
+    visibility: 'actualite',
+  };
+
+  beforeEach(() => {
+    mockClubs = { data: CLUBS };
+    mockDestinataires.mockClear();
+  });
+
+  it('🔴 rien ne se déplie ni ne se compte sans la pastille', async () => {
+    const arbre = await monter();
+    await remplirJusquaQui(arbre);
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Les dirigeants', 'Des clubs précis']));
+    expect(textes(arbre)).not.toContain('AS Foot');
+    expect(mockDestinataires).not.toHaveBeenCalled();
+  });
+
+  it('🔴 le tunnel : sans club, l’étape ne s’ouvre pas ; le nombre se lit ; le corps part', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ onPublier });
+    await remplirJusquaQui(arbre);
+    await touche(arbre, 'evenement-audience-clubs');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'AS Foot', 'TC Tennis', 'Cochez les clubs qui la recevront.',
+    ]));
+
+    await touche(arbre, 'tunnel-suivant');
+    expect(titre(arbre)).toBe('Qui le voit ?');
+    expect(textes(arbre)).toContain('Cochez au moins un club.');
+
+    await touche(arbre, 'actualite-form-club-c-foot');
+    expect(textes(arbre)).not.toContain('Cochez au moins un club.');
+    expect(textes(arbre).join(' ')).toContain('42 personnes');
+
+    await touche(arbre, 'tunnel-suivant');
+    expect(titre(arbre)).toBe('Récapitulatif');
+    expect(textes(arbre)).toContain('Les clubs + actualité à 1 club choisi');
+
+    await touche(arbre, 'tunnel-suivant');
+    expect(onPublier).toHaveBeenCalledTimes(1);
+    expect(onPublier.mock.calls[0][0].data).toEqual(expect.objectContaining({
+      audience: 'clubs',
+      clubIds: ['c-foot'],
+      roles: ['dirigeants', 'entraineurs', 'membres'],
+      visibility: 'actualite',
+    }));
+  });
+
+  it('🔴 revenir aux dirigeants n’envoie plus de liste', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ onPublier });
+    await remplirJusquaQui(arbre);
+    await touche(arbre, 'evenement-audience-clubs');
+    await touche(arbre, 'actualite-form-club-c-foot');
+    await touche(arbre, 'evenement-audience-dirigeants');
+    expect(textes(arbre)).not.toContain('AS Foot');
+    await touche(arbre, 'tunnel-suivant');
+    await touche(arbre, 'tunnel-suivant');
+    const corps = onPublier.mock.calls[0][0].data;
+    expect(corps.audience).toBe('dirigeants');
+    expect(corps.clubIds).toBeUndefined();
+    expect(corps.roles).toBeUndefined();
+  });
+
+  it('🔴 « Modifier » : le panneau reprend les clubs et les rôles de l’événement', async () => {
+    const onPublier = jest.fn(async () => ({ data: { documentId: 'evt-1' } }));
+    const arbre = await monter({ evenement: VUE, onPublier, presentation: 'panneau' });
+    const ligne = arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ n) => n.props.testID === 'actualite-form-club-c-tennis')
+      .at(-1);
+    expect(ligne.props.accessibilityState).toEqual({ checked: true });
+    await touche(arbre, 'bouton:Enregistrer');
+    expect(onPublier.mock.calls[0][0].data).toEqual(expect.objectContaining({
+      audience: 'clubs',
+      clubIds: ['c-tennis'],
+      roles: ['entraineurs'],
+    }));
+  });
+
+  it('🔴 le panneau : décocher le dernier club se refuse et n’envoie rien', async () => {
+    const onPublier = jest.fn();
+    const arbre = await monter({ evenement: VUE, onPublier, presentation: 'panneau' });
+    await touche(arbre, 'actualite-form-club-c-tennis');
+    await touche(arbre, 'bouton:Enregistrer');
+    expect(onPublier).not.toHaveBeenCalled();
+    expect(textes(arbre)).toContain('Cochez au moins un club.');
   });
 });

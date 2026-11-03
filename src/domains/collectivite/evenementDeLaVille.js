@@ -3,6 +3,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
+import { ACTUALITE_ROLES } from '@/domains/collectivite/collectiviteActualites';
 import { closureCoversDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -85,6 +86,8 @@ export const etatInitial = (initial = {}) => ({
   afficheModifiee: false,
   ailleurs: false,
   audience: 'dirigeants',
+  // T3-ACTU-CIBLE : « Des clubs précis » : aucun club d'office, les trois rôles d'office.
+  clubIds: [],
   date: initial?.date || '',
   dateFin: '',
   description: '',
@@ -100,6 +103,7 @@ export const etatInitial = (initial = {}) => ({
   // (`{ frequence, intervalleTexte, jours, du, au }`), ou null (« Une seule fois ») ; « Sauf vacances
   // scolaires » à côté.
   repetition: null,
+  roles: [...ACTUALITE_ROLES],
   saufVacances: false,
   takesPlace: true,
   visibility: 'actualite',
@@ -120,6 +124,7 @@ export const etatDepuisLaVue = (vue) => ({
   ailleurs: !vue?.facility?.documentId,
   audience: vue?.audience || 'dirigeants',
   capacite: Number.isInteger(vue?.capacity) ? String(vue.capacity) : '',
+  clubIds: Array.isArray(vue?.audienceClubIds) ? vue.audienceClubIds : [],
   date: vue?.startDate || '',
   dateFin: vue?.endDate && vue.endDate !== vue.startDate ? vue.endDate : '',
   description: vue?.description || '',
@@ -129,6 +134,7 @@ export const etatDepuisLaVue = (vue) => ({
   kind: EVENEMENT_TYPES.includes(vue?.kind) ? vue.kind : 'autre',
   name: vue?.name || '',
   plusieursJours: Boolean(vue?.endDate && vue.endDate !== vue.startDate),
+  roles: Array.isArray(vue?.audienceRoles) ? vue.audienceRoles : [...ACTUALITE_ROLES],
   takesPlace: Boolean(vue?.takesPlace),
   visibility: NIVEAUX.includes(vue?.visibility) ? vue.visibility : 'clubs',
 });
@@ -210,6 +216,10 @@ export const verifierEvenement = (etat, { maintenant = new Date(), modification 
   if (etat?.ailleurs ? !String(etat?.adresse || '').trim() : !etat?.facilityId) {
     erreurs.lieu = 'collectiviteEvenement.refus.lieu';
   }
+  if (etat?.visibility === 'actualite' && etat?.audience === 'clubs') {
+    if (!etat?.clubIds?.length) erreurs.clubs = 'collectiviteActualites.form.fautes.clubs';
+    if (!etat?.roles?.length) erreurs.roles = 'collectiviteActualites.form.fautes.roles';
+  }
   return erreurs;
 };
 
@@ -222,7 +232,7 @@ export const verifierEvenement = (etat, { maintenant = new Date(), modification 
 export const versCorpsDeLApi = (etat) => {
   let audience = null;
   if (etat?.visibility === 'actualite') {
-    audience = etat.audience === 'membres' ? 'membres' : 'dirigeants';
+    audience = ['clubs', 'membres'].includes(etat.audience) ? etat.audience : 'dirigeants';
   }
   if (etat?.visibility === 'public') audience = 'membres';
   const description = String(etat?.description || '').trim();
@@ -236,6 +246,7 @@ export const versCorpsDeLApi = (etat) => {
       ...(etat?.ailleurs ? { addressLocation: pointDe(etat?.adresseLieu) } : {}),
       audience,
       capacity: Number.isInteger(places) ? places : null,
+      ...(audience === 'clubs' ? { clubIds: etat.clubIds, roles: etat.roles } : {}),
       description: description || null,
       endDate: etat?.plusieursJours && etat?.dateFin ? etat.dateFin : null,
       endTime: etat?.heureFin,
@@ -438,12 +449,22 @@ export const lieuLabel = (t, { address, facilityName, takesPlace }) => {
  * La ligne « Qui le voit » du récapitulatif : « Les clubs », « Les clubs + actualité aux
  * dirigeants », « Les clubs + actualité à tous les membres », « Tout le monde ».
  * @param {any} t - i18next.
- * @param {{ audience?: string|null, visibility?: string }} evenement - Le niveau et l'audience.
+ * @param {{ audience?: string|null, clubsCount?: number, visibility?: string }} evenement - Le
+ *   niveau et l'audience ; T3-ACTU-CIBLE : le nombre de clubs de « Des clubs précis ».
  * @returns {string} La phrase.
  */
-export const quiLeVoitLabel = (t, { audience, visibility }) => {
+export const quiLeVoitLabel = (t, { audience, clubsCount, visibility }) => {
   if (visibility === 'public') return t('collectiviteEvenement.qui.recapPublic', 'Tout le monde');
   if (visibility === 'actualite') {
+    if (audience === 'clubs') {
+      return Number(clubsCount) === 1
+        ? t('collectiviteEvenement.qui.recapClubUn', 'Les clubs + actualité à 1 club choisi')
+        : t(
+          'collectiviteEvenement.qui.recapClubsPrecis',
+          'Les clubs + actualité à {{nombre}} clubs choisis',
+          { nombre: Number(clubsCount) || 0 },
+        );
+    }
     return audience === 'membres'
       ? t('collectiviteEvenement.qui.recapMembres', 'Les clubs + actualité à tous les membres')
       : t('collectiviteEvenement.qui.recapDirigeants', 'Les clubs + actualité aux dirigeants');

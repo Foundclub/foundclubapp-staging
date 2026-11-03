@@ -430,3 +430,59 @@ describe('C05 (Q2-08) — les blocs d un événement de la Ville sont à l heure
     expect(bloc.endAt).toBe('2026-10-27T10:00:00.000Z');
   });
 });
+
+// 🏛️ T3-ACTU-CIBLE (décision d'Adel du 03/11/2026) — « Des clubs précis ».
+describe('T3-ACTU-CIBLE — des clubs précis', () => {
+  const CIBLE = {
+    ...etatInitial(),
+    audience: 'clubs',
+    clubIds: ['c-foot'],
+    roles: ['membres'],
+    visibility: 'actualite',
+  };
+
+  it('aucun club d’office, les trois rôles d’office', () => {
+    expect(etatInitial().clubIds).toEqual([]);
+    expect(etatInitial().roles).toEqual(['dirigeants', 'entraineurs', 'membres']);
+  });
+
+  it('le corps ne porte la liste qu’au niveau 2, et seulement pour cette pastille', () => {
+    expect(versCorpsDeLApi(CIBLE).data).toEqual(expect.objectContaining({
+      audience: 'clubs', clubIds: ['c-foot'], roles: ['membres'],
+    }));
+    const dirigeants = versCorpsDeLApi({ ...CIBLE, audience: 'dirigeants' }).data;
+    expect(dirigeants.clubIds).toBeUndefined();
+    expect(dirigeants.roles).toBeUndefined();
+    const publique = versCorpsDeLApi({ ...CIBLE, visibility: 'public' }).data;
+    expect(publique.audience).toBe('membres');
+    expect(publique.clubIds).toBeUndefined();
+    const clubs = versCorpsDeLApi({ ...CIBLE, visibility: 'clubs' }).data;
+    expect(clubs.audience).toBeNull();
+    expect(clubs.clubIds).toBeUndefined();
+  });
+
+  it('un club et un rôle sont demandés, seulement pour cette pastille au niveau 2', () => {
+    const vide = { ...CIBLE, clubIds: [], roles: [] };
+    const erreurs = verifierEvenement(vide);
+    expect(erreurs.clubs).toBe('collectiviteActualites.form.fautes.clubs');
+    expect(erreurs.roles).toBe('collectiviteActualites.form.fautes.roles');
+    expect(verifierEvenement({ ...vide, visibility: 'public' }).clubs).toBeUndefined();
+    expect(verifierEvenement({ ...vide, audience: 'membres' }).roles).toBeUndefined();
+  });
+
+  it('« Modifier » repart de la liste et des rôles de la vue', () => {
+    const etat = etatDepuisLaVue({
+      audience: 'clubs', audienceClubIds: ['c-omni'], audienceRoles: ['entraineurs'], visibility: 'actualite',
+    });
+    expect(etat.audience).toBe('clubs');
+    expect(etat.clubIds).toEqual(['c-omni']);
+    expect(etat.roles).toEqual(['entraineurs']);
+  });
+
+  it('le récapitulatif et la fiche disent le nombre de clubs', () => {
+    expect(quiLeVoitLabel(t, { audience: 'clubs', clubsCount: 1, visibility: 'actualite' }))
+      .toBe('Les clubs + actualité à 1 club choisi');
+    expect(quiLeVoitLabel(t, { audience: 'clubs', clubsCount: 3, visibility: 'actualite' }))
+      .toBe('Les clubs + actualité à 3 clubs choisis');
+  });
+});
