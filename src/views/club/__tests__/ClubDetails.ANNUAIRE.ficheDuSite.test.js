@@ -3,6 +3,7 @@ import {
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import { lirePageDuSite, noterOngletAllume } from '@/components/templates/pageDuSite';
 
 import ClubDetails from '../ClubDetails';
@@ -614,7 +615,9 @@ describe('ANNUAIRE-E1 · sur l annuaire du site (`annuaire`)', () => {
     const arbre = monter();
     expect(texteDe(pied(arbre))).toContain('Je joue dans ce club');
     expect(texteDe(pied(arbre))).toContain('Je dirige ce club');
-    expect(style(pied(arbre))).toEqual(expect.objectContaining({ bottom: 0, position: 'fixed' }));
+    // BOUTONS-FLOTTANTS (03/11) : rendu dans le corps de la page, un conteneur à flou enfermerait
+    // sinon le `position: fixed`.
+    expect(arbre.root.findByType(WebFloatingOverlay).props.style.bottom).toBe(0);
   });
 
   it('✅ ordinateur : les deux boutons en colonne à droite, qui suit la page', () => {
@@ -645,6 +648,16 @@ describe('ANNUAIRE-E1 · sur l annuaire du site (`annuaire`)', () => {
     ['0612345678', 'president.dupont@gmail.com', 'Killian', 'Mercier'].forEach((fuite) => {
       expect(texte).not.toContain(fuite);
     });
+  });
+
+  // BOUTONS-FLOTTANTS (03/11, contre-recette finale) : connecté, à 390, « Intéressé par le club »
+  // tombait sous la barre d'onglets (776-828 pour une barre à 774).
+  it('🔴 connecté : le pied flotte au-dessus de la barre d onglets', () => {
+    Platform.OS = 'web';
+    mockUserData = { documentId: 'moi', role: { name: 'Joueur', type: 'player' } };
+    mockRoute = { params: { annuaire: true, clubId: 'club-1' } };
+
+    expect(monter().root.findByType(WebFloatingOverlay).props.style.bottom).toBeGreaterThanOrEqual(70);
   });
 });
 

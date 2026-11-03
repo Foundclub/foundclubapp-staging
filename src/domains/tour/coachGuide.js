@@ -1204,6 +1204,22 @@ const REVIEW_STEPS = [
   },
 ];
 
+// FIN-GUIDE2 (Adel « 1- A », 02/11) : 03/11 00:00 à Paris. Le rattrapage du 29/10 a daté les
+// comptes déjà inscrits, ils tombent avant.
+const GUIDE_OFFER_SINCE = Date.parse('2026-11-02T23:00:00.000Z');
+
+/**
+ * Vrai si cette fin d'inscription, datée par le serveur, ouvre droit à la proposition du guide.
+ *
+ * ponytail: un ancien compte que le rattrapage n'a pas daté reçoit sa date au prochain lancement,
+ * et voit donc une proposition qu'il peut refuser. Sortie : envoyer `createdAt` dans le profil.
+ * @param {string | null | undefined} completedAt - `onboardingCompletedAt` du profil.
+ * @returns {boolean} Vrai à partir de la frontière ; faux sans date ou date illisible.
+ */
+export const isGuideOfferDate = (completedAt) => (
+  Date.parse(String(completedAt)) >= GUIDE_OFFER_SINCE
+);
+
 export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne

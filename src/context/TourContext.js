@@ -7,8 +7,10 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+import { isGuideOfferDate } from '@/domains/tour/coachGuide';
 import { getTourProfile, TOUR_HOME_TARGET } from '@/domains/tour/tourCatalog';
 import {
   firstIndexOfNextMission,
@@ -66,6 +68,16 @@ export const getBonusLaterKey = (userId) => `tourBonusLater_${String(userId || '
 const getGuideDoneKey = (userId) => `tourGuideDone_${String(userId || 'anonymous')}`;
 
 /**
+ * Marqueur « ne plus me le proposer » de la proposition de l'accueil (FIN-GUIDE2).
+ *
+ * ponytail: gardé sur l'appareil, comme tout l'état du guide ; une réinstallation repropose le
+ * guide à un compte daté après la frontière. Sortie : un champ du profil, donc une migration.
+ * @param {string | null | undefined} userId - Identifiant de la personne.
+ * @returns {string} Clé MMKV.
+ */
+const getOfferDeclinedKey = (userId) => `tourOfferDeclined_${String(userId || 'anonymous')}`;
+
+/**
  * Vrai pour un guide à missions (TUTOE), faux pour un tour v2.
  * @param {any} profile - Profil du catalogue.
  * @returns {boolean} Guide à missions ?
@@ -112,6 +124,7 @@ export function TourProvider({ children }) {
 
   const [tourState, setTourState] = useState(/** @type {any} */ (null));
   const [guideDone, setGuideDone] = useState(false);
+  const [offerDeclinedCount, setOfferDeclinedCount] = useState(0);
   const tourStateRef = useRef(/** @type {any} */ (null));
   tourStateRef.current = tourState;
   const userDataRef = useRef(userData);
@@ -786,12 +799,33 @@ export function TourProvider({ children }) {
   const isWaitOver = Boolean(isGuide && tourState?.status === 'paused' && currentStep?.pausedLabel
     && !isStepAvailable(currentStep, guideContext(tourState)));
 
+  // FIN-GUIDE2 (Adel « 1- A », 02/11) : le stockage est lu ici, pas après coup dans un effet, pour
+  // que la carte ne clignote pas au montage devant un guide déjà lancé.
+  const isGuideOfferable = useMemo(() => Boolean(
+    Platform.OS !== 'web'
+    && userId
+    && !tourState
+    && !guideDone
+    && getUserRoleKey(userData?.role?.name) === 'coach'
+    && isGuideOfferDate(userData?.onboardingCompletedAt)
+    && ![getOfferDeclinedKey, getGuideDoneKey, getBonusLaterKey, getStorageKey]
+      .some((getKey) => storage.getString(getKey(userId))),
+  // `offerDeclinedCount` relit le stockage après un refus.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [guideDone, offerDeclinedCount, tourState, userData, userId]);
+
+  const declineGuideOffer = useCallback(() => {
+    if (userId) storage.set(getOfferDeclinedKey(userId), '1');
+    setOfferDeclinedCount((count) => count + 1);
+  }, [userId]);
+
   const value = useMemo(() => ({
     blocked: tourState?.blocked || null,
     completeCurrentStep,
     created: tourState?.created || {},
     currentMission,
     currentStep,
+    declineGuideOffer,
     dismissBlocked,
     exitTour,
     finishGuide,
@@ -799,6 +833,7 @@ export function TourProvider({ children }) {
     gauge: Number(tourState?.gauge || 0),
     hasGuideHistory: guideDone,
     isGuide,
+    isGuideOfferable,
     isLockedStep: Boolean(currentMission?.locked),
     isReview: Boolean(tourState?.review),
     isTourActive: Boolean(tourState),
@@ -822,11 +857,13 @@ export function TourProvider({ children }) {
     completeCurrentStep,
     currentMission,
     currentStep,
+    declineGuideOffer,
     dismissBlocked,
     exitTour,
     finishGuide,
     guideDone,
     isGuide,
+    isGuideOfferable,
     isWaitOver,
     pauseTour,
     profile,
