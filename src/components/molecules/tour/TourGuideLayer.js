@@ -25,6 +25,7 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
+import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import {
   bubbleRoom,
   clipAboveDock,
@@ -476,11 +477,9 @@ function TourGuideLayer() {
   // GUIDE-RELANCE (bloquant n° 6) : l'écran a refusé le geste ; sans voile.
   if (tourStatus === 'active' && tour.blocked) return <TourBlockedCard />;
 
-  // FIN-GUIDE, point 1 : la question de la mission 1. Chargée au geste : elle tire le client HTTP,
-  // que la couche, montée partout, n'a pas à charger pour autant (voir `useTour.js`).
+  // FIN-GUIDE, point 1 : la question de la mission 1.
   if (tourStatus === 'active' && currentStep?.kind === 'teamChoice') {
-    // eslint-disable-next-line global-require
-    const TourTeamChoice = require('@/components/molecules/tour/TourTeamChoice').default;
+    const TourTeamChoice = loadTourTeamChoice();
     return <TourTeamChoice />;
   }
 
