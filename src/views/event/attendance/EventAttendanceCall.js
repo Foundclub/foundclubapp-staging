@@ -26,7 +26,6 @@ import {
 import texteInsecable from '@/utils/texteInsecable';
 
 import { EventChildResponsesForOrganizer } from '../components/EventChildResponses';
-
 import {
   buildArrivedAtIso,
   countAnswers,

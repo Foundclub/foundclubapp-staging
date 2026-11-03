@@ -46,7 +46,9 @@ const texte = (item) => {
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(<RequestFeedItem item={item} />); });
-  return arbre.root.findAllByType(Text).map((noeud) => [].concat(noeud.props.children).join('')).join(' | ');
+  return arbre.root.findAllByType(Text)
+    .map((noeud) => [].concat(noeud.props.children).join(''))
+    .join(' | ');
 };
 
 test.each(['interest', 'team', 'club'])('une demande « %s » dit son jour et son heure', (type) => {
@@ -55,7 +57,8 @@ test.each(['interest', 'team', 'club'])('une demande « %s » dit son jour et so
   expect(rendu).toContain('13:29');
 });
 
-test.each(['installation', 'teamInvite', 'featured', 'friendly'])('« %s » n invente pas d heure de réception', (type) => {
+const SANS_HEURE = ['installation', 'teamInvite', 'featured', 'friendly'];
+test.each(SANS_HEURE)('« %s » n invente pas d heure de réception', (type) => {
   expect(texte(carte(type))).not.toContain('Reçue le');
 });
 

@@ -6,9 +6,9 @@ import renderer, { act } from 'react-test-renderer';
 import { EventChildRegistrationsForOrganizer } from '../components/EventChildRegistration';
 import { EventChildResponsesForOrganizer } from '../components/EventChildResponses';
 
-// T4-PARENT-RETOURS (03/11/2026, M0090, décision d'Adel « 6- A ») — le parent répond pour son enfant,
-// le coach doit le lire là où il regarde ses présences, pas sous toute la liste. Un compte que le
-// serveur refuse ne lit pas une erreur : il n'a simplement pas ce bloc.
+// T4-PARENT-RETOURS (03/11/2026, M0090, décision d'Adel « 6- A ») — le parent répond pour son
+// enfant, le coach doit le lire là où il regarde ses présences, pas sous toute la liste. Un compte
+// que le serveur refuse ne lit pas une erreur : il n'a simplement pas ce bloc.
 const mockResponses = { current: {} };
 const mockRegistrations = { current: {} };
 
@@ -54,7 +54,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (/** @type {string} */ cle) => cle }),
 }));
 
-const refus = { isError: true, error: { status: 403 }, refetch: jest.fn() };
+const refus = { error: { status: 403 }, isError: true, refetch: jest.fn() };
 const rendu = (element) => {
   /** @type {any} */
   let arbre;
@@ -87,12 +87,13 @@ test('un refus du serveur (403) sur les inscriptions laisse passer les réponses
   expect(texte).not.toContain('childEventRegistration.organizer.title');
 });
 
-test('téléphone : le bloc des enfants passe AVANT la liste des présences, pour tout encadrant', () => {
+test('téléphone : le bloc des enfants passe AVANT la liste, pour tout encadrant', () => {
   const ecran = source('EventDetails.js');
   const bloc = ecran.indexOf('<EventChildRegistrationsForOrganizer');
   expect(bloc).toBeGreaterThan(-1);
   expect(bloc).toBeLessThan(ecran.search(/<EventParticipants\r?\n/));
-  expect(ecran.slice(bloc - 120, bloc)).toContain('showParticipantsTab && (canEdit || canApprovePendingRequests)');
+  expect(ecran.slice(bloc - 120, bloc))
+    .toContain('showParticipantsTab && (canEdit || canApprovePendingRequests)');
 });
 
 test('site : le bloc des enfants passe AVANT la liste des présences', () => {
