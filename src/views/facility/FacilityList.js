@@ -192,7 +192,7 @@ function BandeauDeFermetureDeLaVille({ facilityId, facilityType = null }) {
 
 /**
  * T3-STADE (03/11, Adel) — une partie nomme son tout : « Partie de Stade ».
- * @param {(cle: string, repli: string, options: any) => string} t - La traduction.
+ * @param {any} t - La traduction.
  * @param {any} item - L'installation.
  * @returns {string | null} Le libellé, ou rien.
  */

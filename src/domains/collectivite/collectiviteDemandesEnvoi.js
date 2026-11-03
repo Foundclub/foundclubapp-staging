@@ -10,7 +10,8 @@ import { createEventPayload, formatDateTimeToSend } from '@/domains/event/eventU
  * « Un mot pour la mairie » en devient le motif (`facilityRequestNote`). Une série partage un
  * `recurrenceGroupId` : la mairie la tranche d'un geste.
  * @param {{ clubId: string, dates: string[], debut: string, facilityId: string, fin: string,
- *   groupe?: string | null, mot?: string, teamId: string, type: string, typeName: string }} demande
+ *   groupe?: string | null, mot?: string, teamId: string, touteInstallation?: boolean,
+ *   type: string, typeName: string }} demande
  * @returns {Array<Record<string, any>>} Les corps de POST /events.
  */
 export const payloadsDeLaDemande = ({
