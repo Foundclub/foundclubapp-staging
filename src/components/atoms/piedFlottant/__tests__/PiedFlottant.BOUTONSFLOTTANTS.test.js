@@ -1,7 +1,9 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
@@ -51,7 +53,9 @@ const styleDuLibelle = (/** @type {any} */ arbre) => StyleSheet.flatten(
 describe('BOUTONS-FLOTTANTS — chaque bouton porte son fond', () => {
   test.each(['Secondary', 'SecondaryLight', 'Danger'])('%s à contour : fond opaque', (variant) => {
     const arbre = rendre(
-      <PiedFlottant><Button title="Bloquer" variant={/** @type {any} */ (variant)} /></PiedFlottant>,
+      <PiedFlottant>
+        <Button title="Bloquer" variant={/** @type {any} */ (variant)} />
+      </PiedFlottant>,
     );
     expect(styleDuBouton(arbre).backgroundColor).toBe(couleurs.primary900);
   });
@@ -84,12 +88,13 @@ describe('BOUTONS-FLOTTANTS — chaque bouton porte son fond', () => {
 
   test('le pied laisse passer appuis et défilement entre ses boutons', () => {
     const arbre = rendre(<PiedFlottant testID="pied"><Button title="A" /></PiedFlottant>);
-    const pied = arbre.root.findAllByType(View).find((/** @type {any} */ v) => v.props.testID === 'pied');
+    const pied = arbre.root.findAllByType(View)
+      .find((/** @type {any} */ v) => v.props.testID === 'pied');
     expect(pied.props.pointerEvents).toBe('box-none');
   });
 });
 
-// Le témoin de la cartographie : ces écrans passent par la pièce commune et ne reposent plus de bloc.
+// Le témoin de la cartographie : ces écrans passent par la pièce commune, sans bloc.
 describe('BOUTONS-FLOTTANTS — les pieds de la cartographie', () => {
   test.each([
     'views/profile/UserDetails.js',
@@ -99,6 +104,7 @@ describe('BOUTONS-FLOTTANTS — les pieds de la cartographie', () => {
     'views/tactical_v2/TacticalSelection.js',
     'views/onboarding/components/OnboardingStickyFooter.js',
   ])('%s', (fichier) => {
-    expect(readFileSync(resolve(__dirname, '../../../..', fichier), 'utf8')).toContain('<PiedFlottant');
+    expect(readFileSync(resolve(__dirname, '../../../..', fichier), 'utf8'))
+      .toContain('<PiedFlottant');
   });
 });

@@ -256,8 +256,6 @@ const personneRegardee = {
   role: { name: 'Joueur', type: 'player' },
 };
 
-const COULEURS = jest.requireActual('@/theme/colors').default();
-
 /**
  * Le pied flottant : le bloc pose en absolu qui porte « Bloquer cette personne ».
  * @param {any} arbre - L'arbre rendu.

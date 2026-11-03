@@ -61,8 +61,8 @@ function Button({
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const isDisabled = isLoading || disabled;
-  // BOUTONS-FLOTTANTS (03/11) : au-dessus du contenu qui défile, sans bloc derrière, le bouton porte
-  // son propre fond opaque, dans sa forme : à contour, il garderait le texte du contenu sous son
+  // BOUTONS-FLOTTANTS (03/11) : au-dessus du contenu qui défile, sans bloc derrière, le bouton
+  // porte son propre fond opaque, dans sa forme : à contour, il garderait le contenu sous son
   // libellé ; grisé, son opacité le laisserait lire au travers. Il passe après `style`, parce que
   // des écrans ajoutent leur opacité d'état en attente.
   const auDessusDuContenu = useContext(PiedFlottantContext);
@@ -80,11 +80,12 @@ function Button({
     fondSurContenu = { backgroundColor: Colors.primary900 };
   }
   const couleurGrisee = griseSurContenu ? Colors.neutral300 : null;
+  const couleurDuLibelle = couleurGrisee || ApplicationStyle[`buttonText${variant}`]?.color;
 
   const imageStyle = {
     aspectRatio: 1,
     height: 20,
-    tintColor: couleurGrisee || iconColor || ApplicationStyle[`buttonText${variant}`]?.color,
+    tintColor: couleurGrisee || iconColor || couleurDuLibelle,
     width: 20,
   };
   const normalizedSize = size === 'small' ? 'sm' : size;
@@ -196,7 +197,7 @@ function Button({
       ]}
     >
       {isLoading && !(keepTitleWhileLoading && title)
-        ? <Loader color={couleurGrisee || ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
+        ? <Loader color={couleurDuLibelle || Colors.primary100} />
         : (
           // FINITIONS (recette Android 16 du 2026-09-28) — la rangée couvre TOUT le
           // bouton et centre son contenu : c'est ce qui permet au libellé seul de
@@ -213,7 +214,7 @@ function Button({
           >
             {/* ST-MONMATCH (écran 9, état 4) — la roue À CÔTÉ du libellé, sur demande. */}
             {isLoading ? (
-              <Loader color={/** @type {string} */ (couleurGrisee || ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100)} />
+              <Loader color={/** @type {string} */ (couleurDuLibelle || Colors.primary100)} />
             ) : null}
             {title ? (
               // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit
