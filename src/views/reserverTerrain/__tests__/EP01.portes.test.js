@@ -8,7 +8,7 @@ import renderer, { act } from 'react-test-renderer';
 //   1. l'onglet « Réservations » du dock s'ACTIVE au lieu d'ouvrir la feuille « Bientôt » ;
 //   2. le panneau « Réservations » de la recherche monte la recherche de terrains (E-P01), et lui
 //      dit s'il est l'onglet visible ;
-//   3. la case « Réservations » de l'accueil est allumée depuis RESA-OUVERTURE (Adel « 5- B », 02/11).
+//   3. la case « Réservations » de l'accueil est allumée depuis RESA-OUVERTURE.
 
 jest.mock('@/config/fonctionsMasquees', () => ({
   ...jest.requireActual('@/config/fonctionsMasquees'),

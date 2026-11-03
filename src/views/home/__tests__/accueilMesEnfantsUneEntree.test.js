@@ -22,7 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 /** @type {any} */
 let mockAuth;
 
-// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+// RESA-OUVERTURE : COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
 jest.mock('@/views/complexe/components/BasculeComplexe', () => () => null);
 
 jest.mock('@react-navigation/bottom-tabs', () => ({

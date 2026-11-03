@@ -245,7 +245,10 @@ const ATTENDU = {
   ],
   player: [
     [],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [
+      'search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities',
+      'search-amicaux',
+    ],
     [],
     [],
     ['training-mine', 'training-find', 'training-logbook'],
@@ -259,7 +262,10 @@ const ATTENDU = {
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [
+      'search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities',
+      'search-amicaux',
+    ],
     [],
     [],
     ['training-mine', 'training-find', 'training-logbook'],

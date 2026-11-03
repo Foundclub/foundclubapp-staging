@@ -46,8 +46,8 @@ export const RESERVATIONS_SUR_ACCUEIL = true;
 export const COMPLEXES_GERANT = true;
 
 /**
- * RESA-L6A (14/10/2026) — la RÉSERVATION D'UN TERRAIN, CÔTÉ JOUEUR (chantier Réservation), allumée
- * par RESA-OUVERTURE (Adel « 5- B », 02/11/2026) :
+ * RESA-L6A (14/10/2026) — la RÉSERVATION D'UN TERRAIN, CÔTÉ JOUEUR (chantier Réservation),
+ * allumée par RESA-OUVERTURE (Adel « 5- B », 02/11/2026) :
  *   · le panneau « Réservations » de la recherche (E-P01) au lieu de « Bientôt disponible », et
  *     l'onglet qui s'active au lieu d'expliquer ;
  *   · les écrans du joueur (page du complexe, créneaux, récapitulatif, résultat, ma réservation,

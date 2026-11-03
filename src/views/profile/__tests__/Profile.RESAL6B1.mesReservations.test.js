@@ -30,7 +30,7 @@ import { RouteNames } from '@/navigation/routeNames';
 let mockAuth = null;
 
 // R17-SIGNALER-1 (staging 20/10) : « Mes signalements » lit ses signalements (doublure).
-// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+// RESA-OUVERTURE : COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
 jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
 
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({

@@ -30,7 +30,7 @@ let mockRequetes = [];
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
 /** @type {any[]} */
 let mockDemandesGestionnaire = [];
-// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+// RESA-OUVERTURE : COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
 jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
 
 jest.mock('@/services/facilityReport/facilityReportQueries', () => ({

@@ -14,7 +14,7 @@ import Profile from '../Profile';
 let mockUserData;
 /** @type {any} */
 let mockTour;
-// RESA-OUVERTURE (03/11) : interrupteur COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
+// RESA-OUVERTURE : COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
 jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
 
 jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
