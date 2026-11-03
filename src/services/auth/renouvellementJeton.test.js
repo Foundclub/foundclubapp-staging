@@ -70,6 +70,7 @@ describe.each([
       200,
       config.url.includes('renew-token') ? { jwt: 'jeton-neuf' } : {},
     ));
+    // eslint-disable-next-line no-param-reassign -- le client testé, seul moyen de couper le réseau
     client.defaults.adapter = adapter;
   });
 
