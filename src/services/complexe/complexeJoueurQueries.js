@@ -242,7 +242,7 @@ const LECTURE_DISCRETE = Object.freeze({ meta: { preventToastError: true }, retr
  * touche aujourd'hui ou avant : une partie finie ce matin reste au planning du jour.
  * ponytail: 50 réservations au plus par période (limite du serveur) ; au-delà, les plus lointaines
  * manquent au planning, « Mes réservations » reste complet. Sortie : une lecture par fenêtre.
- * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {{ from: string, to: string }} plage - La fenêtre lue.
  * @param {{ enabled?: boolean }} [options] - `enabled` faux : rien n'est lu.
  * @returns {{ creneaux: any[], joursAVenir: Array<Date | null>, lu: boolean }} Les blocs de la

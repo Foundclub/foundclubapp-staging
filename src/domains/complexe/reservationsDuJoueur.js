@@ -157,7 +157,7 @@ export const joursDeMesReservationsAVenir = (reservations) => (
  * réservation de la fenêtre lue, avec `reservationTerrain` pour ouvrir SA fiche et non celle d'un
  * événement. Calculé ici et non versé par `/users/me/planning` : un serveur qui verse ces blocs les
  * montrerait aussi aux anciennes apps des stores, où toucher ouvrirait un événement introuvable.
- * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {any} reservations - Les réservations lues (`lireMesReservations`).
  * @param {{ from: string, to: string }} plage - La fenêtre lue (AAAA-MM-JJ), bornes comprises.
  * @returns {any[]} Les blocs, à la forme d'un créneau du planning.
