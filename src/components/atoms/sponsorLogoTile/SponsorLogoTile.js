@@ -8,6 +8,35 @@ import useTheme from '@/theme/themeContext';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
+ * PERFIMAGES (03/11) — la taille d'un logo ne se demande qu'une fois. Une ligne de sponsors pose
+ * le meme logo sur 4 a 8 tuiles, et le serveur interdit au telephone de reutiliser sa reponse
+ * (`max-age=0`) : chaque tuile de chaque carte repartait au reseau. Mesure en prod : 991 demandes
+ * d'un meme logo en 21 secondes depuis un seul reseau. Une demande ratee s'oublie, pour etre retentee.
+ * ponytail: garde tout jusqu'au plafond, puis repart de zero. Sortie : une memoire LRU si des
+ * listes de plus de 500 logos differents apparaissent.
+ * @type {Map<string, Promise<{ height: number, width: number }>>}
+ */
+const logoSizes = new Map();
+const MAX_KNOWN_LOGO_SIZES = 500;
+
+/**
+ * @param {string} uri
+ * @returns {Promise<{ height: number, width: number }>}
+ */
+const readLogoSize = (uri) => {
+  const known = logoSizes.get(uri);
+  if (known) return known;
+
+  if (logoSizes.size >= MAX_KNOWN_LOGO_SIZES) logoSizes.clear();
+  const request = new Promise((resolve, reject) => {
+    Image.getSize(uri, (width, height) => resolve({ height, width }), reject);
+  });
+  logoSizes.set(uri, request);
+  request.catch(() => logoSizes.delete(uri));
+  return request;
+};
+
+/**
  * @typedef {object} SponsorLogoTileProps
  * @property {string} [imageUrl]
  * @property {string} [title]
@@ -68,11 +97,10 @@ function SponsorLogoTile({
       };
     }
 
-    Image.getSize(
-      uri,
-      (naturalWidth, naturalHeight) => {
-        if (isMounted && naturalWidth > 0 && naturalHeight > 0) {
-          setImageNaturalSize({ height: naturalHeight, width: naturalWidth });
+    readLogoSize(uri).then(
+      (size) => {
+        if (isMounted && size.width > 0 && size.height > 0) {
+          setImageNaturalSize(size);
         }
       },
       () => {
