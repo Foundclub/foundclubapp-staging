@@ -16,6 +16,9 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 import { useTour } from '@/context/useTour';
 
+// T3-GUIDE-SITE : sur un grand écran, une colonne lisible plutôt que toute la largeur.
+const FULL_SCREEN_MAX_WIDTH = 560;
+
 /**
  * Anneau de jauge (04_COUCHE_VISUELLE §4) : piste, arc, pourcentage au centre.
  * @param {object} props - Propriétés.
@@ -476,18 +479,24 @@ function TourFullScreen({ kind }) {
       </Svg>
       <ScrollView
         contentContainerStyle={{
+          alignSelf: 'center',
+          maxWidth: FULL_SCREEN_MAX_WIDTH,
           paddingBottom: 16,
           paddingHorizontal: 22,
           paddingTop: Math.max(64, insets.top + 24),
           rowGap: 18,
+          width: '100%',
         }}
       >
         {content}
       </ScrollView>
       <View style={{
+        alignSelf: 'center',
+        maxWidth: FULL_SCREEN_MAX_WIDTH,
         paddingBottom: Math.max(40, insets.bottom + 16),
         paddingHorizontal: 22,
         rowGap: 8,
+        width: '100%',
       }}
       >
         {cta}

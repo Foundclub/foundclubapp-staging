@@ -11,6 +11,7 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { isGuideOfferDate } from '@/domains/tour/coachGuide';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { getTourProfile, TOUR_HOME_TARGET } from '@/domains/tour/tourCatalog';
 import {
   firstIndexOfNextMission,
@@ -362,12 +363,12 @@ export function TourProvider({ children }) {
     /** @type {string} */ profileKey,
     /** @type {{ fromMission?: string; review?: boolean }} */ options = {},
   ) => {
-    // Sur le site, TourBanner n'est pas monté (audit 2026-07-31 §4.5) : démarrer
-    // baladerait l'utilisateur de page en page sans instruction ni porte de
-    // sortie. Refuser ⇒ Welcome navigue vers l'accueil (son chemin `!started`).
-    if (Platform.OS === 'web') return false;
     const profile = getTourProfile(profileKey);
     if (!profile || profile.steps.length === 0) return false;
+    // Sur le site, TourBanner n'est pas monté (audit 2026-07-31 §4.5) : un tour v2 baladerait
+    // l'utilisateur de page en page sans instruction ni porte de sortie. Refuser ⇒ Welcome navigue
+    // vers l'accueil (son chemin `!started`). Le guide à missions a sa couche (T3-GUIDE-SITE).
+    if (Platform.OS === 'web' && !(isGuideSupported() && isGuideProfile(profile))) return false;
     clearSuccessTimer();
 
     if (isGuideProfile(profile) && options.review) {
@@ -460,8 +461,8 @@ export function TourProvider({ children }) {
   // « déjà lancé », reposée par `startTour`) ; rien de réel n'est effacé. Ce qui
   // existe déjà est reconnu par les drapeaux de départ (équipe ⇒ M1 validée, FIN-GUIDE).
   const restartTour = useCallback((/** @type {string} */ profileKey) => {
-    // Le site ne joue aucun guide : on n'efface rien pour ne rien relancer.
-    if (Platform.OS === 'web') return false;
+    // Sans guide sur le site : on n'efface rien pour ne rien relancer.
+    if (!isGuideSupported()) return false;
     if (userId) {
       storage.delete(getStorageKey(userId));
       storage.delete(getBonusLaterKey(userId));
@@ -802,7 +803,7 @@ export function TourProvider({ children }) {
   // FIN-GUIDE2 (Adel « 1- A », 02/11) : le stockage est lu ici, pas après coup dans un effet, pour
   // que la carte ne clignote pas au montage devant un guide déjà lancé.
   const isGuideOfferable = useMemo(() => Boolean(
-    Platform.OS !== 'web'
+    isGuideSupported()
     && userId
     && !tourState
     && !guideDone

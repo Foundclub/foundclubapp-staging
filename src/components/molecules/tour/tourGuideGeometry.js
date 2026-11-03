@@ -78,6 +78,38 @@ export const isOnScreen = (rect, screenWidth, screenHeight, minVisible = 0) => {
  * @param {{ height: number; width: number; x: number; y: number } | null} dock - Barre.
  * @returns {{ height: number; width: number; x: number; y: number } | null} Cible.
  */
+// T3-GUIDE-SITE : au-delà, la bulle sans flèche reste une bulle, centrée, pas un bandeau.
+const WIDE_BUBBLE_MAX = 520;
+
+/**
+ * Cadre d'une bulle sans flèche : toute la largeur sur un téléphone, centrée sur un grand écran.
+ * @param {number} width - Largeur de la couche.
+ * @returns {{ left: number; width: number }} Cadre horizontal.
+ */
+export const wideBubbleFrame = (width) => {
+  const bubbleWidth = Math.min(width - 28, WIDE_BUBBLE_MAX);
+  return { left: (width - bubbleWidth) / 2, width: bubbleWidth };
+};
+
+/**
+ * Haut de la barre d'onglets, si elle est en bas de l'écran. T3-GUIDE-SITE : à 1440, les onglets du
+ * site sont à gauche, en haut de page ; les prendre pour une barre du bas coupait tout l'écran.
+ * @param {{ y: number }[]} dockRects - Mesures des onglets.
+ * @param {number} screenHeight - Hauteur de la couche.
+ * @returns {{ height: number; width: number; x: number; y: number } | null} La barre, ou rien.
+ */
+export const dockBarOf = (dockRects, screenHeight) => {
+  const bar = dockRects.filter((rect) => rect.y > screenHeight / 2);
+  return bar.length ? {
+    height: 1, width: 1, x: 0, y: Math.min(...bar.map((rect) => rect.y)),
+  } : null;
+};
+
+/**
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
+ * @param {{ y: number } | null} dock - Barre d'onglets du bas (`dockBarOf`), ou rien.
+ * @returns {{ height: number; width: number; x: number; y: number } | null} Partie visible.
+ */
 export const clipAboveDock = (rect, dock) => {
   if (!dock || rect.y + rect.height <= dock.y) return rect;
   const height = dock.y - rect.y;
@@ -198,9 +230,8 @@ export const placeBubble = ({
     return {
       arrow: 'none',
       arrowX: 0,
-      left: 14,
+      ...wideBubbleFrame(width),
       top: Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP),
-      width: width - 28,
     };
   }
   if (top || !primary) {
@@ -216,7 +247,7 @@ export const placeBubble = ({
         : Math.max(insetTop + 4, primary.y - HEADER_GAP - bubbleHeight);
     }
     return {
-      arrow: 'none', arrowX: 0, left: 14, top: bubbleTop, width: width - 28,
+      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: bubbleTop,
     };
   }
   const bubbleWidth = Math.min(BUBBLE_WIDTH, width - 28);

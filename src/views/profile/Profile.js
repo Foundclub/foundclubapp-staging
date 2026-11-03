@@ -21,6 +21,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import {
@@ -1149,7 +1150,7 @@ function Profile({ navigation, route }) {
     // téléphone seulement (le site ne joue aucun tour).
     // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
     // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
-    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' ? [{
+    ...(currentRoleKey === 'coach' && isGuideSupported() ? [{
       accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
         <PastilleDEtat
           testID="coachGuide-pause"
@@ -1164,7 +1165,7 @@ function Profile({ navigation, route }) {
         ? setIsGuideChoiceOpen((ouvert) => !ouvert)
         : tour.startTour('coach')),
     }] : []),
-    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' && isGuideChoiceOpen
+    ...(currentRoleKey === 'coach' && isGuideSupported() && isGuideChoiceOpen
       && tour.hasGuideHistory ? [
         ...(isGuideInProgress ? [{
           icon: Images.flag,

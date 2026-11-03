@@ -13,6 +13,14 @@
 // jamais une protection — seulement une mise en avant retirée.
 
 /**
+ * T3-GUIDE-SITE (Adel « 3- A », 03/11/2026) — le guide de l'entraîneur sur le SITE.
+ * `false` : le site reste sans guide, ni carte, ni bulle, ni entrée dans Mon compte.
+ * Rallumer : quand les 4 missions sont prouvées sur le site, à 390 et 1440, avec l'accord d'Adel.
+ * @type {boolean}
+ */
+export const GUIDE_SUR_LE_SITE = false;
+
+/**
  * A01 + A02 — FoundClub League sur l'accueil.
  * `false` : la rubrique « FoundClub League » disparaît de l'accueil, le logo en
  * haut à gauche n'est plus un interrupteur (il ramène en haut de l'accueil), et un

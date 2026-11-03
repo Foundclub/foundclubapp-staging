@@ -30,6 +30,7 @@ import {
   clipAboveDock,
   compactBubbleFits,
   computeBlockers,
+  dockBarOf,
   headerBottomOf,
   isOnScreen,
   placeBubble,
@@ -37,6 +38,7 @@ import {
   toAbsoluteStyle,
   toCutout,
   toLayerFrame,
+  wideBubbleFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
 
 import { useTour } from '@/context/useTour';
@@ -335,12 +337,7 @@ function TourGuideLayer() {
   }, [isStepVisible, pulse, reduceMotion]);
 
   const dockRects = DOCK_IDS.map((id) => rects[id]).filter(Boolean);
-  const dock = dockRects.length ? {
-    height: 1,
-    width: 1,
-    x: 0,
-    y: Math.min(...dockRects.map((rect) => rect.y)),
-  } : null;
+  const dock = dockBarOf(dockRects, height);
   /** @type {Record<string, any>} */
   const visibleRects = Object.fromEntries(variant.targets.map((id) => [
     id,
@@ -414,7 +411,7 @@ function TourGuideLayer() {
   const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
   const position = slot
     ? {
-      arrow: 'none', arrowX: 0, left: 14, top: slot.y, width: width - 28,
+      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: slot.y,
     }
     : placeBubble({
       bottomLimit,
