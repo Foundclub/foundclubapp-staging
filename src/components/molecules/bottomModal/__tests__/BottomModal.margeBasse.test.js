@@ -258,6 +258,7 @@ describe('FEUILLES-BAS — la derniere rangee s ecarte du bord de l ecran', () =
       const style = styleApplique({
         footerComponent: createElement(Text, null, 'PIED'),
         scrollable: false,
+        snapPoints: ['60%'],
       }, 'zone-fixe');
 
       expect(margeSousLaDerniereRangee(style)).toBe(16);

@@ -118,6 +118,7 @@ function ChampsSuivisParLeClavier({
  * @param {() => void} [props.onDismissed] - Optional callback fired when modal is fully dismissed
  * @param {() => void} [props.onOpened] - Une fois par ouverture, quand la feuille est ARRIVEE
  * (fin de son animation). Le moment pour donner le clavier a un champ (CLAV-ADVERSAIRE).
+ * @param {boolean} [props.piedHorsMesure] - Garde le pied sous la zone mesurée (voir plus bas).
  * @param {boolean} [props.preventStartupPresentation] - Prevent presenting until startup is stable
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
  * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
@@ -164,6 +165,7 @@ function BottomModal({
   maxContentHeightRatio = 0.7,
   onDismissed,
   onOpened,
+  piedHorsMesure = false,
   preventStartupPresentation = false,
   scrollable = true,
   scrollViewProps,
@@ -442,6 +444,21 @@ function BottomModal({
       {headerComponent}
     </View>
   ) : null;
+  // T3-FEUILLES-PIED (M0096, « Q5 A ») — MEME CAUSE POUR LE PIED : la bibliotheque ne le mesure
+  // pas, il sortait de l'ecran (Adel, « Pratique aussi », portrait). Sans cran, il entre dans la
+  // zone mesuree ; avec des snapPoints, il reste fixe, plus bas.
+  // ponytail: une longue feuille sans cran fait defiler son pied avec le contenu, au lieu de le
+  // garder fixe ; pour un pied toujours visible, lui donner des snapPoints (filet D19).
+  // Temoin : __tests__/BottomModal.T3FEUILLESPIED.piedMesure.test.js.
+  // ponytail: `piedHorsMesure` garde le comportement d'avant sur les 2 feuilles à champ non déclaré
+  // (refus, mot du signalement), dont le pied peut sortir de l'écran : mesuré, Android 15+ à 3
+  // boutons les cachait derrière le clavier. Sortie : le lot clavier retire cette option.
+  const piedDansLaMesure = Boolean(footerComponent) && !snapPoints && !piedHorsMesure;
+  const piedMesure = piedDansLaMesure ? (
+    <View style={Spaces.paddingTop[16]}>
+      {footerComponent}
+    </View>
+  ) : null;
   const contentBottomPadding = useMemo(
     () => {
       if (Number.isFinite(contentBottomPaddingOverride)) {
@@ -449,10 +466,17 @@ function BottomModal({
       }
       // Avec pied, c'est le pied qui reserve la barre de gestes
       // (`12 + systemBottomInset`) : la compter aussi au-dessus de lui la doublerait.
+      if (piedDansLaMesure) return 12 + systemBottomInset;
       if (footerComponent) return 16 + sheetBottomInset;
       return 40 + systemBottomInset;
     },
-    [contentBottomPaddingOverride, footerComponent, sheetBottomInset, systemBottomInset],
+    [
+      contentBottomPaddingOverride,
+      footerComponent,
+      piedDansLaMesure,
+      sheetBottomInset,
+      systemBottomInset,
+    ],
   );
 
   if (!shouldRender) {
@@ -546,6 +570,7 @@ function BottomModal({
           >
             {enTeteMesure}
             {children}
+            {piedMesure}
           </BottomSheetScrollView>
         ) : (
           <BottomSheetView style={StyleSheet.flatten([
@@ -559,11 +584,12 @@ function BottomModal({
           >
             {enTeteMesure}
             {children}
+            {piedMesure}
           </BottomSheetView>
         )}
 
         {/* Fixed Footer */}
-        {footerComponent && (
+        {footerComponent && !piedDansLaMesure && (
           <View style={[
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
