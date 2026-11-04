@@ -45,7 +45,9 @@ function CollectiviteTabNavigator() {
   );
   const collectiviteId = params?.collectiviteId || null;
   const pending = useCollectiviteRequests(collectiviteId, 'pending');
-  const { unreadCount } = useUnreadMessages();
+  // T3-PASTILLE (Adel « 8- A ») : l'onglet ne compte que les fils de cette Ville.
+  const { nonLusDeLaVille } = useUnreadMessages();
+  const unreadCount = nonLusDeLaVille(collectiviteId);
   const pendingCount = Array.isArray(pending.data) ? pending.data.length : 0;
 
   const renderIcone = (/** @type {{ badge: number, color: string, source: any }} */ {

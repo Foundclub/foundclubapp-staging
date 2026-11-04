@@ -8828,6 +8828,7 @@ export default {
       entraineur: 'Coach / Instructor',
       joueur: 'Player / Participant',
       parent: 'Parent',
+      parentDe: 'Parent of {{prenoms}}',
     },
     typing: {
       header_one: '{{names}} is typing…',

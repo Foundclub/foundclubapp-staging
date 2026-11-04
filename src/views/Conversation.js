@@ -80,7 +80,7 @@ import {
   summarizeReactionPeople,
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
-import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
+import { libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
@@ -6013,13 +6013,7 @@ function Conversation({ navigation, route }) {
       : '';
     // 🏷️ MSG1A (§3.1, `genre A`) — « Karim · Entraîneur » : la clef du serveur, un libelle
     // unique pour tout le monde (le serveur ne connait pas le genre).
-    const libellesDesRoles = {
-      dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
-      entraineur: t('conversation.staffRole.entraineur', 'Coach / Prof'),
-    };
-    const roleEnTete = nomEnTete
-      ? libellesDesRoles[String(currentMessage.user?.staffRole || '')] || ''
-      : '';
+    const roleEnTete = nomEnTete ? mentionDuFil(currentMessage.user?.staffRole, t) : '';
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
