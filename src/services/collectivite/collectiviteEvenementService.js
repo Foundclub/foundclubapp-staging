@@ -80,7 +80,8 @@ export const getEvenementDeLaVille = (evenementId) => lire(
 
 /**
  * GET /evenements-de-la-ville?q= — la recherche publique (niveau 3).
- * @param {{ q?: string }} [params] - Le mot cherché.
+ * @param {{ lat?: number, lon?: number, q?: string, radius?: number }} [params] - Le mot cherché,
+ *   ou le lieu choisi dans les filtres.
  * @returns {Promise<any>} `{ data: [...] }`.
  */
 export const getEvenementsPublicsDeLaVille = (params = {}) => lire(

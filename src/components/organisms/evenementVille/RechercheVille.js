@@ -9,6 +9,8 @@ import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import coordonneesDeLaVille from '@/components/organisms/filtersSheet/cityCoordinates';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -23,6 +25,8 @@ import {
  * visiteur sans compte : la lecture sans compte attend le GO d'Adel).
  * R17-EVT-1-BIS (g) (20/10) : elle suit le mot tapé dans la recherche (`eventFilters.q`, le champ
  * le retient déjà 300 ms) ; le serveur filtre sur le nom, le lieu et la Ville.
+ * T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) : sans mot, le serveur ne rend
+ * que ce qui est proche du lieu choisi dans les filtres, sinon de l'adresse du compte.
  * @returns {import('react').ReactElement | null} La bande, ou rien.
  */
 function EvenementsVilleRecherche() {
@@ -30,7 +34,11 @@ function EvenementsVilleRecherche() {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const [{ eventFilters }] = useAppContext();
-  const lecture = useEvenementsPublicsDeLaVille(String(eventFilters?.q || '').trim());
+  const coordonnees = coordonneesDeLaVille(eventFilters?.city);
+  const lecture = useEvenementsPublicsDeLaVille(
+    String(eventFilters?.q || '').trim(),
+    coordonnees ? { ...coordonnees, radius: eventFilters?.radius } : null,
+  );
   const evenements = Array.isArray(lecture.data) ? lecture.data.slice(0, 10) : [];
   if (!evenements.length) return null;
   return (
