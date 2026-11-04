@@ -300,8 +300,8 @@ describe('point 4 — le retour du partage', () => {
     expect(stepId()).toBe('m3-dock');
   });
 
-  // GUIDE-STORES : la fiche d'équipe et la fiche de séance n'ont pas de barre d'onglets, et la bulle
-  // disait « ouvre l'accueil » : rien à toucher, le coach reste devant une bulle sans bouton.
+  // GUIDE-STORES : ces fiches n'ont pas de barre d'onglets, et la bulle disait « ouvre l'accueil » :
+  // rien à toucher, le coach reste devant une bulle sans bouton.
   it('mission 2 finie : le guide ramène à l accueil, sans demander un onglet absent', () => {
     toPick();
     action('team.invite.shared', { teamId: 'team-1' });

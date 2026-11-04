@@ -82,9 +82,10 @@ const VARIANT_WAIT_MS = 2000;
 const MAX_FONT_SCALE = 1.3;
 // Toucher minimal (accessibilité) : croix et bouton de la bulle.
 const MIN_TOUCH = 44;
+// Signal d'une liste de choix ouverte (AutocompleteSelect) : la bulle se retire.
+const SELECT_SHEET_ID = 'select.sheet';
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
-const SELECT_SHEET_ID = 'select.sheet';
 const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
@@ -230,6 +231,7 @@ function TourGuideLayer() {
     && tourStatus === 'active' && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
+      SELECT_SHEET_ID,
       ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
       ...(currentStep.belowTargets || []),
       ...(currentStep.fallback?.targets || []),
@@ -241,7 +243,6 @@ function TourGuideLayer() {
       ...DOCK_IDS,
       ...HEADER_IDS,
       ...stepTargets,
-      SELECT_SHEET_ID,
     ])]
     : [];
   const targetKey = allTargetIds.join('|');
