@@ -421,7 +421,7 @@ function RequestFeedItem({
         disabled={isBusy}
         icon="envelope"
         onPress={() => onChatPress && onChatPress(item)}
-        title={getActionLabel('chat', item, t)}
+        title={t('requestsHub.actions.openChat', 'Ouvrir une conversation')}
         variant="Secondary"
       />
     </View>

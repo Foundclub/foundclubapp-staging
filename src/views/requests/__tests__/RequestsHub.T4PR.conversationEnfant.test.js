@@ -4,14 +4,15 @@ import path from 'node:path';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
-
 import { mapClubInterestRequestToHubItem } from '@/domains/requests/requestMappers';
+
+import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 
 import InterestConversationSheet from '../InterestConversationSheet';
 
 // T4-PARENT-RETOURS (04/11/2026, Adel « 20- A », registre des mineurs, ligne 56) — le club parle au
-// parent AVANT de décider : la carte garde Accepter et Refuser, et gagne « Ouvrir une conversation ».
+// parent AVANT de décider : la carte garde Accepter et Refuser, et gagne
+// « Ouvrir une conversation ».
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;
   const generateFonts = jest.requireActual('@/theme/fonts').default;

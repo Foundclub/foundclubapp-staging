@@ -11,6 +11,10 @@ import Button from '@/components/atoms/button/Button';
 
 import { useGetTeam } from '@/services/team/teamQueries';
 
+const INFO_ENFANT = (
+  'La demande reste à traiter. {{child}} n’entre pas dans ce fil : vous échangez entre adultes.'
+);
+
 /**
  * « Karim B. » : le prénom et l'initiale du nom, comme la planche 7.
  * @param {{ firstname?: string, lastname?: string, username?: string } | null | undefined} person
@@ -246,7 +250,7 @@ function InterestConversationSheet({
             {childFirstname
               ? t('requestsHub.conversation.infoChild', {
                 child: childFirstname,
-                defaultValue: 'La demande reste à traiter. {{child}} n’entre pas dans ce fil : vous échangez entre adultes.',
+                defaultValue: INFO_ENFANT,
                 ...SANS_ECHAPPEMENT,
               })
               : t(
