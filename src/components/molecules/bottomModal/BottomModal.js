@@ -442,6 +442,18 @@ function BottomModal({
       {headerComponent}
     </View>
   ) : null;
+  // T3-FEUILLES-PIED (M0096, « Q5 A ») — MEME CAUSE POUR LE PIED : la bibliotheque ne le mesure pas,
+  // il sortait de l'ecran (Adel, « Pratique aussi », portrait). Sans cran, il entre dans la zone
+  // mesuree ; avec des snapPoints, il reste fixe, plus bas.
+  // ponytail: une longue feuille sans cran fait defiler son pied avec le contenu, au lieu de le
+  // garder fixe ; pour un pied toujours visible, lui donner des snapPoints (filet D19).
+  // Temoin : __tests__/BottomModal.T3FEUILLESPIED.piedMesure.test.js.
+  const piedDansLaMesure = Boolean(footerComponent) && !snapPoints;
+  const piedMesure = piedDansLaMesure ? (
+    <View style={Spaces.paddingTop[16]}>
+      {footerComponent}
+    </View>
+  ) : null;
   const contentBottomPadding = useMemo(
     () => {
       if (Number.isFinite(contentBottomPaddingOverride)) {
@@ -449,10 +461,17 @@ function BottomModal({
       }
       // Avec pied, c'est le pied qui reserve la barre de gestes
       // (`12 + systemBottomInset`) : la compter aussi au-dessus de lui la doublerait.
+      if (piedDansLaMesure) return 12 + systemBottomInset;
       if (footerComponent) return 16 + sheetBottomInset;
       return 40 + systemBottomInset;
     },
-    [contentBottomPaddingOverride, footerComponent, sheetBottomInset, systemBottomInset],
+    [
+      contentBottomPaddingOverride,
+      footerComponent,
+      piedDansLaMesure,
+      sheetBottomInset,
+      systemBottomInset,
+    ],
   );
 
   if (!shouldRender) {
@@ -546,6 +565,7 @@ function BottomModal({
           >
             {enTeteMesure}
             {children}
+            {piedMesure}
           </BottomSheetScrollView>
         ) : (
           <BottomSheetView style={StyleSheet.flatten([
@@ -559,11 +579,12 @@ function BottomModal({
           >
             {enTeteMesure}
             {children}
+            {piedMesure}
           </BottomSheetView>
         )}
 
         {/* Fixed Footer */}
-        {footerComponent && (
+        {footerComponent && !piedDansLaMesure && (
           <View style={[
             Spaces.paddingHorizontal[24],
             Spaces.paddingTop[16],
