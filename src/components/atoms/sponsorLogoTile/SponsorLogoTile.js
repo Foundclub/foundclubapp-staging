@@ -11,7 +11,8 @@ import { getImageUrl } from '@/utils/imageUrl';
  * PERFIMAGES (03/11) — la taille d'un logo ne se demande qu'une fois. Une ligne de sponsors pose
  * le meme logo sur 4 a 8 tuiles, et le serveur interdit au telephone de reutiliser sa reponse
  * (`max-age=0`) : chaque tuile de chaque carte repartait au reseau. Mesure en prod : 991 demandes
- * d'un meme logo en 21 secondes depuis un seul reseau. Une demande ratee s'oublie, pour etre retentee.
+ * d'un meme logo en 21 secondes depuis un seul reseau. Une demande ratee s'oublie, pour etre
+ * retentee.
  * ponytail: garde tout jusqu'au plafond, puis repart de zero. Sortie : une memoire LRU si des
  * listes de plus de 500 logos differents apparaissent.
  * @type {Map<string, Promise<{ height: number, width: number }>>}
@@ -20,6 +21,7 @@ const logoSizes = new Map();
 const MAX_KNOWN_LOGO_SIZES = 500;
 
 /**
+ * La taille d'un logo, demandee une seule fois par adresse.
  * @param {string} uri
  * @returns {Promise<{ height: number, width: number }>}
  */

@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,6 +22,7 @@ import {
   getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
+import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import { withAlpha } from '@/theme/colors';

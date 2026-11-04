@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
@@ -15,6 +14,7 @@ import {
   getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
+import { mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -371,7 +371,11 @@ function PollDetails({ navigation, route }) {
                                     </span>
                                   </div>
                                 )}
-                                <span>{voter.mention ? `${voter.displayName} · ${voter.mention}` : voter.displayName}</span>
+                                <span>
+                                  {voter.mention
+                                    ? `${voter.displayName} · ${voter.mention}`
+                                    : voter.displayName}
+                                </span>
                               </div>
                             ))}
                           </div>
