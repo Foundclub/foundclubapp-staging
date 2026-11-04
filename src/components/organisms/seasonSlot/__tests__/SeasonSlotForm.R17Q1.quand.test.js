@@ -13,6 +13,7 @@ import {
   previewFacilitySeasonSlot,
 } from '@/services/seasonSlot/seasonSlotService';
 
+import RondsDePlaces from '../RondsDePlaces';
 import SeasonSlotForm from '../SeasonSlotForm';
 
 // 🧪 R17-QUAND-1, point 4 (REC17-007) — L'ÉTAPE « QUAND ? » DU TUNNEL « ATTRIBUER UN CRÉNEAU »
@@ -467,12 +468,19 @@ describe('T3-FINITIONS-VILLE — la carte de place', () => {
     const arbre = await monter();
     await jusquAuQuand(arbre);
     await repeter(arbre, { au: MERCREDI });
+    // T3-FINITIONS-VILLE-3 (contre-recette du train 3) : pas de « Toutes » pour une seule date.
+    const dateEtHoraire = lus(arbre).join(' | ');
+    expect(dateEtHoraire).not.toContain('Toutes tombent');
+    expect(dateEtHoraire).toContain('Cette date tombe dans une fermeture (Travaux).');
+    expect(dateEtHoraire).toContain('le club verra sa séance « fermé »');
     await avancer(arbre);
     const textes = lus(arbre).join(' | ');
     expect(textes).not.toContain('place libre');
     expect(textes).not.toContain('Personne n’y est.');
     expect(textes).toContain(': installation fermée');
     expect(carte(arbre, 'carte-fermee')).toBeDefined();
+    // Pas de rond de place libre sur la carte fermée.
+    expect(carte(arbre, 'carte-fermee').findAllByType(RondsDePlaces)).toHaveLength(0);
   });
 
   test('point 4 : une séance sur 37 fermée : la place reste libre le reste de l année', async () => {

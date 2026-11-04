@@ -38,6 +38,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Hachures from '@/components/atoms/hachures/Hachures';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';
@@ -51,6 +52,8 @@ import {
   isPlanningPendingParticipation,
   resolvePlanningCardContent,
 } from '@/utils/planning/planningSlots';
+
+import { useIsDesktop } from '@/responsive';
 
 const DEFAULT_HOUR_HEIGHT = 60;
 const DEFAULT_COLLAPSED_HEIGHT = 18;
@@ -266,6 +269,7 @@ function PlanningWeekTimelineView({
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
+  const isDesktop = useIsDesktop();
   const [internalDate, setInternalDate] = useState(getPlanningDefaultDate());
   const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
   const couleurDAttente = Colors.warning400 || pendingAccentColor;
@@ -861,50 +865,75 @@ function PlanningWeekTimelineView({
             width: `${width}%`,
           }]}
         >
-          {/* RET-PLANNING fiche 8 : le nom de la Ville allonge l'étiquette, la vue semaine est
-              étroite : elle passe à la ligne au lieu de couper. */}
-          <Text
-            numberOfLines={3}
-            style={[Fonts.p4Bold, {
-              color: plein ? Colors.primary700 : Colors.primary100,
-              fontSize: 9,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-            }]}
-          >
-            {etiquette}
-          </Text>
-          {installationDuPlanning(evenementVille) ? (
-            <Text
-              numberOfLines={2}
-              style={[Fonts.p4Bold, {
-                color: plein ? Colors.primary700 : Colors.primary100,
-                fontSize: 10,
-              }]}
-            >
-              {installationDuPlanning(evenementVille)}
-            </Text>
-          ) : null}
-          {event.height > 34 ? (
-            <Text
-              numberOfLines={1}
-              style={[Fonts.p4Bold, {
-                color: plein ? Colors.primary700 : Colors.primary100,
-                fontSize: 10,
-              }]}
-            >
-              {heures}
-            </Text>
-          ) : null}
-          <Text
-            numberOfLines={3}
-            style={[Fonts.p3Bold, {
-              color: plein ? Colors.primary900 : Colors.neutral00,
-              fontSize: mode === 'week' ? 10 : 12,
-            }]}
-          >
-            {evenementVille.name}
-          </Text>
+          {mode === 'week' ? (
+            // T3-CARTE-VILLE (04/11, Adel « 26- A ») : la colonne est étroite : le nom d'abord, qui
+            // défile s'il est long, la Ville sur ordinateur ; le reste est sur la fiche.
+            <>
+              <MarqueeText
+                style={[Fonts.p3Bold, {
+                  color: plein ? Colors.primary900 : Colors.neutral00,
+                  fontSize: 10,
+                }]}
+                text={evenementVille.name}
+              />
+              {isDesktop && evenementVille.collectivite?.name ? (
+                <MarqueeText
+                  style={[Fonts.p4Bold, {
+                    color: plein ? Colors.primary700 : Colors.primary100,
+                    fontSize: 9,
+                  }]}
+                  text={evenementVille.collectivite.name}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              {/* RET-PLANNING fiche 8 : le nom de la Ville allonge l'étiquette, la vue semaine est
+                  étroite : elle passe à la ligne au lieu de couper. */}
+              <Text
+                numberOfLines={3}
+                style={[Fonts.p4Bold, {
+                  color: plein ? Colors.primary700 : Colors.primary100,
+                  fontSize: 9,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                }]}
+              >
+                {etiquette}
+              </Text>
+              {installationDuPlanning(evenementVille) ? (
+                <Text
+                  numberOfLines={2}
+                  style={[Fonts.p4Bold, {
+                    color: plein ? Colors.primary700 : Colors.primary100,
+                    fontSize: 10,
+                  }]}
+                >
+                  {installationDuPlanning(evenementVille)}
+                </Text>
+              ) : null}
+              {event.height > 34 ? (
+                <Text
+                  numberOfLines={1}
+                  style={[Fonts.p4Bold, {
+                    color: plein ? Colors.primary700 : Colors.primary100,
+                    fontSize: 10,
+                  }]}
+                >
+                  {heures}
+                </Text>
+              ) : null}
+              <Text
+                numberOfLines={3}
+                style={[Fonts.p3Bold, {
+                  color: plein ? Colors.primary900 : Colors.neutral00,
+                  fontSize: mode === 'week' ? 10 : 12,
+                }]}
+              >
+                {evenementVille.name}
+              </Text>
+            </>
+          )}
         </EventBlock>
       );
     }

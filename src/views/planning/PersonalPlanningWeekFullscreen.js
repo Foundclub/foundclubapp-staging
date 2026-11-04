@@ -780,16 +780,14 @@ function PlanningWeekFullscreen() {
     // n est pas « libre toute la semaine ».
     const debutPlage = String(planningRange.from).slice(0, 10);
     const finPlage = String(planningRange.to).slice(0, 10);
-    const fermetureDansLaPlage = vue !== VUES.jour
-      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((
-        /** @type {any} */ fermeture,
-      ) => (
-        fermeture?.kind !== 'block'
-        && fermeture?.startDate
-        && fermeture?.endDate
-        && fermeture.startDate <= finPlage
-        && debutPlage <= fermeture.endDate
-      ));
+    const fermeturesLues = Array.isArray(data?.meta?.closures) ? data.meta.closures : [];
+    const fermetureDansLaPlage = fermeturesLues.some((/** @type {any} */ fermeture) => (
+      fermeture?.kind !== 'block'
+      && fermeture?.startDate
+      && fermeture?.endDate
+      && fermeture.startDate <= finPlage
+      && debutPlage <= fermeture.endDate
+    ));
     let suite;
     if (jourFerme) {
       suite = t('collectiviteCreneaux.planning.fermeJour', 'fermeture ce jour-là');
@@ -801,13 +799,13 @@ function PlanningWeekFullscreen() {
         ...SANS_ECHAPPEMENT,
       });
     } else if (pic === 0) {
-      if (vue === VUES.jour) {
-        suite = t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
-      } else if (fermetureDansLaPlage) {
+      if (fermetureDansLaPlage) {
         suite = t(
           'collectiviteCreneaux.planning.libreHorsFermeture',
           'libre en dehors de la fermeture',
         );
+      } else if (vue === VUES.jour) {
+        suite = t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
       } else suite = t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine');
     } else {
       suite = t('collectiviteCreneaux.planning.placesLibres', {
@@ -2584,6 +2582,8 @@ function PlanningWeekFullscreen() {
                 borderRadius: 24,
                 borderWidth: 1,
                 flexGrow: 0,
+                // T3-FINITIONS-VILLE-3 : la page défile, le bouton du panneau y reste collé.
+                overflow: panneau?.type === 'fermeture' ? 'visible' : undefined,
                 width: 380,
               }}
             >

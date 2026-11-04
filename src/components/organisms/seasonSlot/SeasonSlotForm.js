@@ -1082,12 +1082,15 @@ function SeasonSlotForm({
     const noms = [...new Set(seancesFermees.map((ligne) => ligne.label).filter(Boolean))];
     const dates = seancesFermees.slice(0, 4).map((ligne) => formatDayMonth(ligne.date)).join(', ');
     if (seancesFermees.length === seancesVues.length) {
-      return t(
-        'collectiviteCreneaux.quand.toutesFermees',
-        'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez attribuer quand même : '
-          + 'le club verra ses séances « fermé ».',
-        { fermeture: noms.join(', '), ...SANS_ECHAPPEMENT },
-      );
+      return t('collectiviteCreneaux.quand.toutesFermees', {
+        count: seancesVues.length,
+        defaultValue_one: 'Cette date tombe dans une fermeture ({{fermeture}}). Vous pouvez '
+          + 'attribuer quand même : le club verra sa séance « fermé ».',
+        defaultValue_other: 'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez '
+          + 'attribuer quand même : le club verra ses séances « fermé ».',
+        fermeture: noms.join(', '),
+        ...SANS_ECHAPPEMENT,
+      });
     }
     return t('collectiviteCreneaux.quand.fermees', {
       count: seancesFermees.length,
@@ -1286,11 +1289,13 @@ function SeasonSlotForm({
       >
         <View style={[Alignments.row, Alignments.alignCenter, ENTRE_DEUX]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
-          <RondsDePlaces
-            capacite={Number(place.capacity || capacite)}
-            pleine={besoinDeConfirmer}
-            prises={Number(place.peak) || occupants.length}
-          />
+          {toutFerme ? null : (
+            <RondsDePlaces
+              capacite={Number(place.capacity || capacite)}
+              pleine={besoinDeConfirmer}
+              prises={Number(place.peak) || occupants.length}
+            />
+          )}
         </View>
         {lignes.map((ligne) => (
           <Text key={ligne} style={[Fonts.p3, Fonts.neutral200]}>{ligne}</Text>

@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
 import { getClubInitials } from '@/domains/club/clubUseCase';
+import { colors } from '@/theme/colors';
 
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { getImageUrl } from '@/utils/imageUrl';
 
-const LOGO_BACKGROUND = '#FFFFFF';
+// T3-FINITIONS-VILLE-3 (contre-recette du train 3, T20 : croix blanche sur fond blanc) : un gris
+// moyen, où un logo blanc comme un logo noir se lisent. Un logo opaque le recouvre.
+const LOGO_BACKGROUND = colors.neutral400;
 
 // Ratio largeur / hauteur de chaque logo déjà mesuré : une liste de clubs qui
 // défile ne remesure pas le même fichier à chaque carte recyclée.
@@ -133,7 +136,7 @@ function ClubLogoMark({
     //  2. les bandes d'un logo non carré en « contain » → le cadre prend la forme
     //     du logo DANS la place prévue (size × size) : la mise en page ne bouge
     //     pas, le logo est au pire un peu plus étroit ;
-    //  3. un trait de la couleur du fond (blanc sur blanc) → retiré.
+    //  3. un trait de la couleur du fond, ou blanc (l'ancien fond) → retiré.
     // Un écran qui donne au cadre une autre taille que size × size (fiche
     // d'équipe) a déjà choisi sa forme : il la garde.
     const frame = /** @type {import('react-native').ViewStyle} */ (
@@ -156,7 +159,8 @@ function ClubLogoMark({
     const hasBackgroundColoredBorder = typeof frame.borderWidth === 'number'
       && frame.borderWidth > 0
       && normalizeColor(frame.borderColor) !== ''
-      && normalizeColor(frame.borderColor) === normalizeColor(frame.backgroundColor);
+      && [normalizeColor(colors.neutral00), normalizeColor(frame.backgroundColor)]
+        .includes(normalizeColor(frame.borderColor));
 
     return (
       <View style={{

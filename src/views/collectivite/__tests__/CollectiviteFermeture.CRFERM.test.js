@@ -596,5 +596,5 @@ test('T3-FINITIONS-VILLE point 5 — sur plusieurs jours, l exemple du début pr
 test('T3-FINITIONS-VILLE M0144 — le gabarit se borne à l écran : le bouton du bas n en sort plus', async () => {
   mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
   await rendre();
-  expect(mockScreenStyle[0]).toEqual([{ flex: 1 }]);
+  expect(mockScreenStyle[0]).toEqual([{ flex: 1, paddingBottom: 0 }]);
 });

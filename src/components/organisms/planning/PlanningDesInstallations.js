@@ -35,6 +35,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
@@ -464,9 +465,11 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
    * son nom, et ses heures (avec son installation dans la liste de la semaine).
    * @param {any} bloc - Le bloc de l'événement.
    * @param {boolean} avecInstallation - Il dit son installation (liste de la semaine).
+   * @param {boolean} etroite - Une colonne de la semaine : le nom d'abord, puis la Ville
+   *   (T3-CARTE-VILLE, Adel « 26- A ») ; le reste est sur la fiche.
    * @returns {import('react').ReactElement} Le bouton.
    */
-  const caseEvenement = (bloc, avecInstallation = false) => {
+  const caseEvenement = (bloc, avecInstallation = false, etroite = false) => {
     const evenement = bloc.raw?.evenementDeLaVille || {};
     const plein = Boolean(evenement.takesPlace);
     const heures = `${evenement.startTime || ''} – ${evenement.endTime || ''}`;
@@ -499,37 +502,54 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         }}
         testID={`toutes-evenement-ville-${evenement.documentId}-${cle}`}
       >
-        <Text
-          numberOfLines={1}
-          style={[Fonts.p4Bold, {
-            color: plein ? Colors.primary700 : Colors.primary100,
-            textTransform: 'uppercase',
-          }]}
-        >
-          {etiquetteDuPlanning(t, evenement)}
-        </Text>
-        {installationDuPlanning(evenement) ? (
-          <Text
-            numberOfLines={1}
-            style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
-          >
-            {installationDuPlanning(evenement)}
-          </Text>
-        ) : null}
-        <Text
-          numberOfLines={2}
-          style={[Fonts.p3Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
-        >
-          {evenement.name}
-        </Text>
-        <Text
-          numberOfLines={1}
-          style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
-        >
-          {avecInstallation && !installationDuPlanning(evenement)
-            ? `${bloc.installation?.name || ''} · ${heures}`
-            : heures}
-        </Text>
+        {etroite ? (
+          <>
+            <MarqueeText
+              style={[Fonts.p3Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
+              text={evenement.name}
+            />
+            {evenement.collectivite?.name ? (
+              <MarqueeText
+                style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+                text={evenement.collectivite.name}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p4Bold, {
+                color: plein ? Colors.primary700 : Colors.primary100,
+                textTransform: 'uppercase',
+              }]}
+            >
+              {etiquetteDuPlanning(t, evenement)}
+            </Text>
+            {installationDuPlanning(evenement) ? (
+              <Text
+                numberOfLines={1}
+                style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+              >
+                {installationDuPlanning(evenement)}
+              </Text>
+            ) : null}
+            <Text
+              numberOfLines={2}
+              style={[Fonts.p3Bold, { color: plein ? Colors.primary700 : Colors.neutral00 }]}
+            >
+              {evenement.name}
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={[Fonts.p4, { color: plein ? Colors.primary700 : Colors.neutral200 }]}
+            >
+              {avecInstallation && !installationDuPlanning(evenement)
+                ? `${bloc.installation?.name || ''} · ${heures}`
+                : heures}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
     );
   };
@@ -852,7 +872,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     {fermeturesDuJour(fermetures, rangee.installation, jours[rang])
                       .map((fermeture) => plageFermee(fermeture, jours[rang]))}
                     {evenementsDuJour(rangee.installation, jours[rang])
-                      .map((bloc) => caseEvenement(bloc))}
+                      .map((bloc) => caseEvenement(bloc, false, true))}
                     {blocsDuJour.map(caseDeLaGrille)}
                   </View>
                 ))}

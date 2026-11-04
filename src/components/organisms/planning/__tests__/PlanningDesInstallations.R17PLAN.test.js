@@ -715,8 +715,10 @@ describe('R17-EVT-1-BIS — l’événement de la Ville, toutes les installation
       .map((/** @type {any} */ n) => aplatir(n.props.children));
     expect(lusStade)
       .toEqual(expect.arrayContaining([
-        'Ville de Montrivage · toute l’installation', 'Stade municipal', 'Fête du sport',
+        'Fête du sport', 'Ville de Montrivage',
       ]));
+    // T3-CARTE-VILLE (Adel « 26- A ») : en colonne, le nom d'abord ; le reste est sur la fiche.
+    expect(lusStade.join(' ')).not.toContain('toute l’installation');
     expect(lusStade.join(' ')).not.toMatch(/Bloqué par la Ville/);
     // Une seule case (le bouton, pas ses nœuds natifs).
     const case22 = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => (
