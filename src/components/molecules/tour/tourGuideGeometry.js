@@ -125,11 +125,15 @@ export const clipAboveDock = (rect, dock) => {
  * @returns {{ height: number; width: number; x: number; y: number }} Découpe.
  */
 export const toCutout = (rect, screenWidth, screenHeight) => {
-  const x = Math.max(2, rect.x - CUTOUT_MARGIN);
-  const y = Math.max(2, rect.y - CUTOUT_MARGIN);
+  // GUIDE-STORES : une ancre plus petite que le bouton qu'elle marque (les 3 points de ⋮) laissait
+  // un trou de 16 pt : à côté, le doigt tombait sur le voile.
+  const marginX = Math.max(CUTOUT_MARGIN, (MIN_TOUCH - rect.width) / 2);
+  const marginY = Math.max(CUTOUT_MARGIN, (MIN_TOUCH - rect.height) / 2);
+  const x = Math.max(2, rect.x - marginX);
+  const y = Math.max(2, rect.y - marginY);
   return {
-    height: Math.min(screenHeight - 2, rect.y + rect.height + CUTOUT_MARGIN) - y,
-    width: Math.min(screenWidth - 2, rect.x + rect.width + CUTOUT_MARGIN) - x,
+    height: Math.min(screenHeight - 2, rect.y + rect.height + marginY) - y,
+    width: Math.min(screenWidth - 2, rect.x + rect.width + marginX) - x,
     x,
     y,
   };

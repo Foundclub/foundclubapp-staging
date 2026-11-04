@@ -321,6 +321,8 @@ const M2_ELSEWHERE = [
   },
   { goto: 'm2-sent', key: 'team.invite.dismissed', type: 'interaction' },
   { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
+  // GUIDE-STORES : le retour Android quitte le menu et la fiche ; ni ⋮ ni repli sur Mes équipes.
+  { goto: 'm2-card', key: RouteNames.MyTeamList, type: 'route' },
 ];
 
 const STEPS = [
@@ -667,6 +669,7 @@ const STEPS = [
       { goto: 'm2-sent', key: 'team.invite.dismissed', type: 'interaction' },
       // Android ne dit pas si le lien est parti (teamInviteShare) : on demande.
       { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
+      { goto: 'm2-card', key: RouteNames.MyTeamList, type: 'route' },
     ],
     // La fiche garde son titre et ses onglets lisibles (capture 4 d'Adel).
     belowTargets: ['team.tabs'],
@@ -694,6 +697,7 @@ const STEPS = [
       {
         completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
       },
+      { goto: 'm2-card', key: RouteNames.MyTeamList, type: 'route' },
     ],
     // La fiche garde ses onglets lisibles, comme « Envoie-le » (capture 4 d'Adel).
     belowTargets: ['team.tabs'],
@@ -750,7 +754,8 @@ const STEPS = [
     id: 'm3-team',
     missionId: 'coach_m3',
     resumeFrom: 'm3-type',
-    targets: ['eventWizard.team.0', 'teamWizard.next'],
+    // GUIDE-STORES : un coach de plusieurs équipes doit pouvoir choisir la sienne.
+    targets: ['teamWizard.field', 'teamWizard.next'],
     get text() { return t('m3-team', 'Rattache la séance à ton équipe.'); },
   },
   {
@@ -760,8 +765,8 @@ const STEPS = [
     bubbles: [
       // Courtes (arbitrage du chef, 28/10) : la bulle tient entre l'en-tête et le champ.
       () => t('m3-place-1', 'Club : une installation du club. Extérieur : une autre adresse.'),
-      () => t('m3-place-2', 'Les installations de ton club : touche celle de ta séance.'),
-      () => t('m3-place-3', 'Ton terrain n’y est pas ? Ajoute-le ici, il resservira.'),
+      () => t('m3-place-2', 'Ton club a des installations ? Touche celle de ta séance.'),
+      () => t('m3-place-3', 'Ton terrain n’y est pas ? Choisis « Extérieur » et tape son adresse.'),
       () => t('m3-place-4', 'Choisis ton lieu, puis Suivant.'),
     ],
     id: 'm3-place',
@@ -800,8 +805,8 @@ const STEPS = [
     get text() {
       return t(
         'm3-when',
-        'Touche la date et les heures pour les choisir. Ta séance revient chaque semaine ? Ouvre '
-          + '« Répéter » et applique. Puis Suivant.',
+        'Touche la date et les heures pour les choisir. Chaque semaine ? Touche « '
+          + 'Chaque semaine » ou « Plus d’options ». Puis Suivant.',
       );
     },
     // Feuille « Répéter » ouverte : une bulle par zone (pack 02, M3).
@@ -823,8 +828,8 @@ const STEPS = [
   },
   wizardStep('m3-access', 'coach_m3', RouteNames.EventWizardDescription, 'm3-type', () => t(
     'm3-access',
-    'Public : tout le monde le trouve dans Rechercher et peut demander à venir. Privé : seulement '
-      + 'ton équipe et tes invités. Pour un entraînement, garde Privé.',
+    'Pour un entraînement, garde Privé : ton équipe et tes invités. Public : '
+      + 'visible dans Rechercher.',
   )),
   wizardStep('m3-desc', 'coach_m3', RouteNames.EventWizardRecap, 'm3-type', () => t(
     'm3-desc',
@@ -909,6 +914,8 @@ const STEPS = [
     id: 'm4-tab-ev',
     missionId: 'coach_m4',
     resumeFrom: 'm4-back',
+    // GUIDE-STORES : m4-read demande de défiler, et les onglets défilent avec la liste.
+    scrollListToTop: true,
     targets: ['search.tab.events'],
     get text() {
       return t(
@@ -968,7 +975,8 @@ const STEPS = [
     )],
     ['m4-am4', RouteNames.FriendlyMatchWizardOpponent, () => t(
       'm4-am4',
-      'Touche ton terrain, ou tape ta ville. Puis choisis jusqu’où tu acceptes de te déplacer.',
+      'Tape ta ville, ou touche ton terrain s’il est proposé. Puis choisis jusqu’où '
+        + 'tu te déplaces.',
     )],
     ['m4-am5', RouteNames.FriendlyMatchWizardDescription, () => t(
       'm4-am5',
@@ -1084,6 +1092,8 @@ const STEPS = [
     },
     // Seulement par le `goto` de b1-relance : une relance réussie le saute.
     when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['event.participants.empty']),
+    // GUIDE-STORES : « ici » montre une liste qui doit rester lisible et défiler.
+    veil: false,
   },
 
   // ── B2 · Convoquer pour un match (bonus SIMULÉ : rien n'est envoyé) ──────
@@ -1197,12 +1207,13 @@ const reviewStep = (id, missionId, navTarget, targets, text) => ({
 const REVIEW_STEPS = [
   reviewStep('rv-m1', 'coach_m1', teamHubTarget, ['teams.fab', 'teams.newTeam'], () => t(
     'rv-m1',
-    'Tes équipes sont ici. « Nouvelle équipe » en crée une : un nom, une catégorie, un niveau.',
+    'Tes équipes sont ici. Le bouton entouré en crée une : un nom, une catégorie, '
+      + 'un niveau.',
   )),
   reviewStep('rv-m2', 'coach_m2', teamHubTarget, ['teams.trained.0'], () => t(
     'rv-m2',
-    'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes '
-      + 'joueur·se·s.',
+    'Dans la fiche d’une équipe, « ⋮ » puis « Partager un lien d’invitation » '
+      + 'envoie l’invitation à tes joueur·se·s.',
   )),
   extendStep(reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
     'rv-m3',

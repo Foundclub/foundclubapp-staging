@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TourTarget from '@/components/molecules/tour/TourTarget';
@@ -11,6 +11,8 @@ import RecruitmentProfilesList from '../RecruitmentProfilesList';
 // de l'écran, hors de la liste. Les ancres de la liste sont coupées à sa zone
 // visible, comme celles des tunnels (`teamWizard.viewport`).
 
+let mockTourStep = null;
+jest.mock('@/context/useTour', () => ({ useTour: () => ({ currentStep: mockTourStep }) }));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
 }));
@@ -103,6 +105,22 @@ describe('RecruitmentProfilesList — comportement actuel', () => {
     const tree = render();
     expect(byTestId(tree, 'search-component')).toBeUndefined();
     expect(byTestId(tree, 'card.u1')).toBeUndefined();
+  });
+});
+
+describe('GUIDE-STORES — l étape qui vise le haut de la liste l y ramène', () => {
+  afterEach(() => { mockTourStep = null; });
+
+  it('la liste remonte à l arrivée de l étape, sans bouger pour une autre', () => {
+    mockTourStep = { id: 'm4-read' };
+    const tree = render();
+    const scrollToOffset = jest.fn();
+    tree.root.findByType(FlatList).instance.scrollToOffset = scrollToOffset;
+    act(() => { tree.update(<RecruitmentProfilesList />); });
+    expect(scrollToOffset).not.toHaveBeenCalled();
+    mockTourStep = { id: 'm4-tab-ev', scrollListToTop: true };
+    act(() => { tree.update(<RecruitmentProfilesList />); });
+    expect(scrollToOffset).toHaveBeenCalledWith({ animated: true, offset: 0 });
   });
 });
 
