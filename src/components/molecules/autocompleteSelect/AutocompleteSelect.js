@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { registerTourTarget } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -101,6 +102,11 @@ import Input, {
  * Autocomplete select component.
  * @inheritdoc
  */
+const SELECT_SHEET_TARGET = 'select.sheet';
+const SELECT_SHEET_RECT = {
+  height: 1, width: 1, x: 0, y: 0,
+};
+
 const AutocompleteSelect = forwardRef(
   /**
    * Autocomplete select component function.
@@ -214,6 +220,12 @@ const AutocompleteSelect = forwardRef(
       }
       wasValuesVisibleRef.current = areValuesVisible;
     }, [areValuesVisible, hydrateSelectedOptionsFromProps]);
+
+    // GUIDE-STORES : posée dans sa place réservée, la bulle du guide recouvrait la recherche et la
+    // croix de cette feuille. La feuille ouverte le dit au guide, qui se retire le temps du choix.
+    useEffect(() => (areValuesVisible
+      ? registerTourTarget(SELECT_SHEET_TARGET, (done) => done(SELECT_SHEET_RECT))
+      : undefined), [areValuesVisible]);
 
     // methods
     // 🎯 EVEDIT-3 (R5) — LE PREMIER APPUI OUVRE LE CHAMP. TOUT DE SUITE.

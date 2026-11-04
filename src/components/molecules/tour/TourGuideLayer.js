@@ -82,6 +82,8 @@ const VARIANT_WAIT_MS = 2000;
 const MAX_FONT_SCALE = 1.3;
 // Toucher minimal (accessibilité) : croix et bouton de la bulle.
 const MIN_TOUCH = 44;
+// Signal d'une liste de choix ouverte (AutocompleteSelect) : la bulle se retire.
+const SELECT_SHEET_ID = 'select.sheet';
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
 const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
@@ -229,6 +231,7 @@ function TourGuideLayer() {
     && tourStatus === 'active' && currentStep && !currentStep.kind);
   const allTargetIds = isStepVisible
     ? [...new Set([
+      SELECT_SHEET_ID,
       ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
       ...(currentStep.belowTargets || []),
       ...(currentStep.fallback?.targets || []),
@@ -376,7 +379,8 @@ function TourGuideLayer() {
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
-  const isHidden = isStale || isChoosingVariant;
+  // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
+  const isHidden = isStale || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque

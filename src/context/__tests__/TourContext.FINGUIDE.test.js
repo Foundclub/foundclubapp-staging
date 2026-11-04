@@ -300,6 +300,24 @@ describe('point 4 — le retour du partage', () => {
     expect(stepId()).toBe('m3-dock');
   });
 
+  // GUIDE-STORES : ces fiches n'ont pas de barre d'onglets, la bulle disait « ouvre l'accueil » :
+  // rien à toucher, le coach reste devant une bulle sans bouton.
+  it('mission 2 finie : le guide ramène à l accueil, sans demander un onglet absent', () => {
+    toPick();
+    action('team.invite.shared', { teamId: 'team-1' });
+    mockNavigate.mockClear();
+    flush();
+    expect(stepId()).toBe('m3-dock');
+    expect(mockNavigate.mock.calls.map(([name]) => name)).toContain(RouteNames.HomeTab);
+    route(RouteNames.SearchHome);
+    expect(stepId()).toBe('m3-card');
+  });
+
+  it('mission 3 finie : le guide ramène à l accueil depuis la fiche de la séance', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    expect(COACH_GUIDE.steps.find((one) => one.id === 'm4-back').navigateOnEnter).toBe(true);
+  });
+
   it('partage annulé ou sans résultat : le guide demande, il ne recule pas', () => {
     toPick();
     interaction('team.invite.dismissed');

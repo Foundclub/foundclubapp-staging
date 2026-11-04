@@ -272,6 +272,37 @@ describe('point 4 — la bulle de M2 sous les onglets', () => {
   });
 });
 
+// GUIDE-STORES : lieu du match amical, la bulle dans sa place réservée recouvrait la recherche et
+// la croix de la feuille d'adresse : ni taper, ni fermer. Et la couche reste montée, sinon elle ne
+// se mesure plus et la bulle ne revient jamais (constaté à l'émulateur).
+describe('une liste de choix ouverte par-dessus l écran', () => {
+  const layerOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.layer'
+    && typeof node.type === 'string')[0];
+  const openSheet = () => registerTourTarget('select.sheet', (done) => done({
+    height: 1, width: 1, x: 0, y: 0,
+  }));
+
+  it('la bulle se retire tant que la feuille est ouverte, et ne bloque aucun toucher', async () => {
+    WIZARD_RECTS();
+    openSheet();
+    mockTour = activeTour(step('m4-am4'));
+    const tree = await renderLayer();
+    expect(styleOf(layerOf(tree)).opacity).toBe(0);
+    expect(layerOf(tree).props.pointerEvents).toBe('none');
+  });
+
+  it('la feuille refermée, la bulle revient', async () => {
+    WIZARD_RECTS();
+    const close = openSheet();
+    mockTour = activeTour(step('m4-am4'));
+    const tree = await renderLayer();
+    await act(async () => { close(); });
+    await flush();
+    expect(styleOf(layerOf(tree)).opacity).toBe(1);
+    expect(hostBubbleOf(tree)).toBeDefined();
+  });
+});
+
 describe('point 1 — la question plein écran', () => {
   it('étape « teamChoice » : la question, sans bulle', async () => {
     mockTour = activeTour(step('m1-choice'));

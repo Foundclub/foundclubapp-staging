@@ -720,6 +720,8 @@ const STEPS = [
     advanceOn: { key: RouteNames.SearchHome, type: 'route' },
     id: 'm3-dock',
     missionId: 'coach_m3',
+    // GUIDE-STORES : la mission 2 finit sur la fiche d'équipe, qui n'a pas de barre d'onglets.
+    navigateOnEnter: true,
     navTarget: homeTarget,
     targets: ['dock.home'],
     get text() { return t('m3-dock', 'Programme maintenant ta séance : ouvre l’accueil.'); },
@@ -857,6 +859,8 @@ const STEPS = [
     advanceOn: { key: RouteNames.SearchHome, type: 'route' },
     id: 'm4-back',
     missionId: 'coach_m4',
+    // GUIDE-STORES : la mission 3 finit sur la fiche de la séance, sans barre d'onglets.
+    navigateOnEnter: true,
     navTarget: homeTarget,
     targets: ['dock.home'],
     get text() {
