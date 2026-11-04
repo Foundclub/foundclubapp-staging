@@ -29,6 +29,8 @@ import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 const STALE_DISMISS_WINDOW_MS = 400;
 // `@gorhom/bottom-sheet` 5.2.4 (constants INITIAL_LAYOUT_VALUE) : mesure pas encore reçue.
 const INITIAL_LAYOUT_VALUE = -999;
+const DELAI_DE_RELANCE_MS = 120;
+const DECALAGE_DE_RELANCE = 0.01;
 
 // ⌨️ CLAVREGLE (23/10) — LA RÈGLE DU CLAVIER, POUR TOUTES LES FEUILLES : un champ touché se place
 // au-dessus du clavier. `@gorhom/bottom-sheet` 5.2.4 ne suit le clavier que si un champ est
@@ -59,6 +61,14 @@ const INITIAL_LAYOUT_VALUE = -999;
 // Témoin : __tests__/BottomModalCLAVIERFOND.clavier.test.js (code installé de la bibliothèque).
 // ponytail: si une version de @gorhom recalcule elle-même ce conteneur, l'écart serait retiré deux
 // fois ; le témoin exécute le code installé et le dira.
+// ⌨️ T3-CLAVIER-FEUILLES (04/11) — ANDROID 15+ : le conteneur réduit, la bibliothèque place la
+// feuille d'une seule écriture, sans animation (setToPosition), et cette écriture peut ne jamais
+// atteindre l'écran. Mesuré : position lue 226, feuille affichée à 515, voile resté à l'index
+// d'avant, feuille derrière le clavier, 7 ouvertures sur 8 à 3 boutons. Une écriture de plus, un
+// instant après, l'y amène : 10 sur 10, 3 boutons et gestes.
+// ponytail: la raison de la perte n'est pas établie, le délai vient de la mesure (Pixel 9,
+// Android 16). Sortie : une version de Reanimated ou de @gorhom qui ne perd plus cette écriture.
+// Témoin : __tests__/BottomModal.T3CLAVIERFEUILLES.relance.test.js.
 /**
  * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
  * @param {object} props
@@ -77,7 +87,7 @@ function ChampsSuivisParLeClavier({
     const ecart = basDuConteneur - basPrecedentRef.current;
     basPrecedentRef.current = basDuConteneur;
     const mise = interne?.animatedLayoutState;
-    if (!ecart || !mise) return;
+    if (!ecart || !mise) return undefined;
     mise.modify((/** @type {any} */ etat) => {
       'worklet';
 
@@ -85,6 +95,20 @@ function ChampsSuivisParLeClavier({
       if (etat.containerHeight === INITIAL_LAYOUT_VALUE) return etat;
       return { ...etat, containerHeight: etat.containerHeight - ecart };
     });
+    if (Platform.OS !== 'android') return undefined;
+    const decaler = (/** @type {number} */ decalage) => interne.animatedPosition.modify((
+      /** @type {any} */ position,
+    ) => {
+      'worklet';
+
+      return position + decalage;
+    });
+    const aller = setTimeout(() => decaler(DECALAGE_DE_RELANCE), DELAI_DE_RELANCE_MS);
+    const retour = setTimeout(() => decaler(-DECALAGE_DE_RELANCE), 2 * DELAI_DE_RELANCE_MS);
+    return () => {
+      clearTimeout(aller);
+      clearTimeout(retour);
+    };
   }, [basDuConteneur, interne]);
   const declarer = useCallback((/** @type {any} */ event) => {
     const target = event?.nativeEvent?.target;
@@ -118,7 +142,6 @@ function ChampsSuivisParLeClavier({
  * @param {() => void} [props.onDismissed] - Optional callback fired when modal is fully dismissed
  * @param {() => void} [props.onOpened] - Une fois par ouverture, quand la feuille est ARRIVEE
  * (fin de son animation). Le moment pour donner le clavier a un champ (CLAV-ADVERSAIRE).
- * @param {boolean} [props.piedHorsMesure] - Garde le pied sous la zone mesurée (voir plus bas).
  * @param {boolean} [props.preventStartupPresentation] - Prevent presenting until startup is stable
  * @param {boolean} [props.scrollable] - Whether the content should be scrollable (default: true)
  * @param {boolean} [props.closeOnBackdropPress] - Whether backdrop press closes modal
@@ -165,7 +188,6 @@ function BottomModal({
   maxContentHeightRatio = 0.7,
   onDismissed,
   onOpened,
-  piedHorsMesure = false,
   preventStartupPresentation = false,
   scrollable = true,
   scrollViewProps,
@@ -450,10 +472,7 @@ function BottomModal({
   // ponytail: une longue feuille sans cran fait defiler son pied avec le contenu, au lieu de le
   // garder fixe ; pour un pied toujours visible, lui donner des snapPoints (filet D19).
   // Temoin : __tests__/BottomModal.T3FEUILLESPIED.piedMesure.test.js.
-  // ponytail: `piedHorsMesure` garde le comportement d'avant sur les 2 feuilles à champ non déclaré
-  // (refus, mot du signalement), dont le pied peut sortir de l'écran : mesuré, Android 15+ à 3
-  // boutons les cachait derrière le clavier. Sortie : le lot clavier retire cette option.
-  const piedDansLaMesure = Boolean(footerComponent) && !snapPoints && !piedHorsMesure;
+  const piedDansLaMesure = Boolean(footerComponent) && !snapPoints;
   const piedMesure = piedDansLaMesure ? (
     <View style={Spaces.paddingTop[16]}>
       {footerComponent}

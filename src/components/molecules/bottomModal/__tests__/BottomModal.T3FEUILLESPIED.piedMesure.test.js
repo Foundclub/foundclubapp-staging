@@ -139,19 +139,10 @@ describe('le pied d\'une feuille en hauteur automatique', () => {
     expect(piedsDans(zone)).toBe(0);
     expect(piedsDans(arbre.root)).toBe(1);
   });
-
-  test('avec piedHorsMesure, le pied reste dessous, comme avant', () => {
-    const zone = zoneMesuree({ piedHorsMesure: true });
-    expect(piedsDans(zone)).toBe(0);
-    expect(piedsDans(arbre.root)).toBe(1);
-    expect(zone.props.contentContainerStyle.paddingBottom).toBe(16);
-  });
 });
 
-// Décision du chef (« D », 04/11) : à l'émulateur, Android 15+ à 3 boutons, une feuille à champ non
-// déclaré passait derrière le clavier avec le pied mesuré. Ces 2 feuilles restent à l'ancienne
-// jusqu'au lot clavier ; les 9 autres prennent le correctif. La feuille de match, vue sans souci,
-// en fait partie malgré son champ.
+// Les 11 feuilles à pied sans cran prennent le correctif. Le refus et le mot du signalement, qui
+// passaient derrière le clavier, l'ont rejoint avec T3-CLAVIER-FEUILLES.
 describe('qui prend le correctif', () => {
   /**
    * Lit le source d'une feuille.
@@ -161,14 +152,10 @@ describe('qui prend le correctif', () => {
   const source = (chemin) => readFileSync(join(__dirname, '../../../..', chemin), 'utf8');
 
   test.each([
-    'views/event/components/EventChildRegistration.js',
+    'components/molecules/bottomModal/BottomModal.js',
     'components/organisms/facilityReport/FacilityReportPanel.js',
-  ])('%s : à l\'ancienne', (chemin) => {
-    expect(source(chemin)).toMatch(/^\s*piedHorsMesure$/m);
-  });
-
-  test.each([
     'components/organisms/seasonSlot/SeasonSlotForm.js',
+    'views/event/components/EventChildRegistration.js',
     'views/event/components/CancelSeriesSheet.js',
     'views/event/components/ChildRegistrationCancel.js',
     'views/event/components/TournamentTeamSheet.js',
