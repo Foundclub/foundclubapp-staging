@@ -1879,6 +1879,15 @@ export default {
     COLLECTIVITE_INVITATION_DECIDED: 'This request has already been answered.',
     COLLECTIVITE_NOT_FOUND: 'This local authority cannot be found: it may have been deleted.',
     COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON: 'One reminder a day: the club was notified less than 24 hours ago.',
+    COLLECTIVITE_QUESTION_INVALID_PAYLOAD:
+      'Write your ticket before sending it (1000 characters at most).',
+    COLLECTIVITE_QUESTION_MANAGER_REQUIRED:
+      'Only a club manager or the city can do this.',
+    COLLECTIVITE_QUESTION_NO_CITY: 'Your club is not attached to a city.',
+    COLLECTIVITE_QUESTION_NOT_FOUND: 'This ticket cannot be found.',
+    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'This ticket can no longer change status.',
+    COLLECTIVITE_QUESTION_TOO_MANY_OPEN:
+      'Too many of your club’s tickets are still waiting for an answer.',
     COLLECTIVITE_USER_NOT_FOUND: 'This account cannot be found.',
     DATABASE_ERROR: 'Database error.',
     DEPARTMENT_IMPORT_ERROR: "Error importing the department's data.",
@@ -7026,6 +7035,24 @@ export default {
       pourquoi: 'What you need to tell the city council: who really uses what.',
       tenues: 'sessions held',
     },
+  },
+  collectiviteQuestions: {
+    accueilATraiter_one: '1 club ticket to handle',
+    accueilATraiter_other: '{{count}} club tickets to handle',
+    accueilDetail: 'What clubs write to you, and where you stand.',
+    erreurChargement: 'The tickets could not be loaded.',
+    motDeLaVille: '{{ville}}: “{{note}}”',
+    prendre: 'Mark as in progress',
+    statuts: {
+      en_cours: 'In progress',
+      recue: 'Received',
+      traitee: 'Handled',
+    },
+    titre: 'Club tickets',
+    titreFiche: 'Ticket to the city',
+    traiter: 'Mark as handled',
+    vide: 'No club has written to you yet.',
+    votreMot: 'Your answer to the club (optional)',
   },
   collectiviteRattachement: {
     add: {
@@ -15222,6 +15249,25 @@ export default {
       waitingScore: 'Score to enter',
       waitingVenue: 'Awaiting pitch',
     },
+  },
+  maVille: {
+    aucuneInstallation: 'Your city has no facility here yet.',
+    aucuneQuestion: 'No tickets yet.',
+    choisirInstallation: 'Which facility?',
+    envoye: 'Ticket sent. You will be told when there is an answer.',
+    envoyer: 'Send the ticket',
+    erreurChargement: 'Your tickets could not be loaded.',
+    erreurInstallations: 'The facilities could not be loaded.',
+    erreurVille: 'Your city could not be loaded.',
+    mesQuestions: 'My tickets',
+    ongletEcrire: 'Open a ticket',
+    ongletSignaler: 'Report a problem',
+    placeholder: 'Some information, a need, an issue: write it here.',
+    rattacher: 'Find my city',
+    rattacherDetail: 'Attach your club to your city.',
+    reessayer: 'Try again',
+    signalerDetail: 'On one of your city’s facilities.',
+    tonMessage: 'Your message',
   },
   media: {
     errors: {

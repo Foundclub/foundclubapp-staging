@@ -72,6 +72,9 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 import {
+  useCollectiviteQuestions,
+} from '@/services/collectivite/collectiviteQuestionQueries';
+import {
   useCollectiviteClubRequests,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 import {
@@ -172,6 +175,7 @@ function CollectiviteHome() {
   // R17-SIGNALER-1 (19/10, planche P11-securite-ou-ca-vit 1) — « Ce qui vous attend » gagne les
   // signalements à traiter (« Envoyé »). Seulement pour le gestionnaire de CETTE Ville.
   const signalements = useCollectiviteFacilityReportsSummary(collectivite ? collectiviteId : null);
+  const questionsDesClubs = useCollectiviteQuestions(collectivite ? collectiviteId : null);
   // R17-CONTROLES (20/10, Q6 B) — les controles a refaire dans les 30 jours, ou en retard.
   const controles = useCollectiviteFacilityChecksSummary(collectivite ? collectiviteId : null);
   // CORR-COLLECTIVITES 89 (31/10, Adel A) : un club qui demande à rejoindre la Ville l'attend aussi
@@ -569,6 +573,32 @@ function CollectiviteHome() {
     ? signalements.data.meta.toHandle
     : [];
   const nombreATraiter = Number(signalements.data?.meta?.toHandleCount) || aTraiter.length;
+  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — la porte de « Tickets des clubs » : présente
+  // dès qu'un club a écrit, même sans rien à traiter (l'historique reste atteignable).
+  const nombreDeQuestions = Array.isArray(questionsDesClubs.data?.data)
+    ? questionsDesClubs.data.data.length
+    : 0;
+  const questionsATraiter = Number(questionsDesClubs.data?.meta?.toHandleCount) || 0;
+  const blocDesQuestions = nombreDeQuestions ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => ouvrir(RouteNames.CollectiviteQuestions)}
+      style={[ApplicationStyle.card, Spaces.padding[16], { gap: 4 }]}
+      testID="collectivite-home-questions"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {questionsATraiter
+          ? t('collectiviteQuestions.accueilATraiter', { count: questionsATraiter })
+          : t('collectiviteQuestions.titre', 'Tickets des clubs')}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t(
+          'collectiviteQuestions.accueilDetail',
+          'Ce que les clubs vous écrivent, et où vous en êtes.',
+        )}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
   const blocDesSignalements = aTraiter.length ? (
     <TouchableOpacity
       accessibilityRole="button"
@@ -728,13 +758,14 @@ function CollectiviteHome() {
     }
     // COLL-C4B — aucune demande, mais une fermeture à venir (R17-SIGNALER-1 : ou un signalement
     // à traiter) : elle seule attend.
-    const blocsATraiter = blocDesRattachements || blocDesSignalements
+    const blocsATraiter = blocDesRattachements || blocDesQuestions || blocDesSignalements
       || blocDesControles || blocDesFermetures;
     if (!enTete && blocsATraiter) {
       return (
         <View style={{ gap: 12 }}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
           {blocDesRattachements}
+          {blocDesQuestions}
           {blocDesSignalements}
           {blocDesControles}
           {blocDesFermetures}
@@ -809,6 +840,7 @@ function CollectiviteHome() {
           )}
         </View>
         {blocDesRattachements}
+        {blocDesQuestions}
         {blocDesSignalements}
         {blocDesControles}
         {blocDesFermetures}

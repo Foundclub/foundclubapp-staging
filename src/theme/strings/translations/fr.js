@@ -2134,6 +2134,15 @@ export default {
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON: 'Une relance par jour : le club a été prévenu il y a moins de 24 heures.',
+    COLLECTIVITE_QUESTION_INVALID_PAYLOAD:
+      'Écris ton ticket avant de l’envoyer (1000 caractères au plus).',
+    COLLECTIVITE_QUESTION_MANAGER_REQUIRED:
+      'Ce geste est réservé au dirigeant du club ou à la Ville.',
+    COLLECTIVITE_QUESTION_NO_CITY: 'Ton club n’est rattaché à aucune Ville.',
+    COLLECTIVITE_QUESTION_NOT_FOUND: 'Ce ticket est introuvable.',
+    COLLECTIVITE_QUESTION_STATUS_LOCKED: 'Ce ticket ne peut plus changer de statut.',
+    COLLECTIVITE_QUESTION_TOO_MANY_OPEN:
+      'Trop de tickets de ton club attendent encore une réponse.',
     COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
@@ -6136,6 +6145,24 @@ export default {
   // d'Adel) : la Ville cherche un club déjà sur FoundClub et lui envoie sa demande, elle juge
   // celles venues de son lien ; le club répond et suit ses demandes. La mairie est vouvoyée
   // (`ajouter`, `add`, `demandes`, `ville`), le club tutoyé (`club`).
+  collectiviteQuestions: {
+    accueilATraiter_one: '1 ticket d’un club à traiter',
+    accueilATraiter_other: '{{count}} tickets de clubs à traiter',
+    accueilDetail: 'Ce que les clubs vous écrivent, et où vous en êtes.',
+    erreurChargement: 'Les tickets n’ont pas pu être chargés.',
+    motDeLaVille: '{{ville}} : « {{note}} »',
+    prendre: 'Passer en cours',
+    statuts: {
+      en_cours: 'En cours',
+      recue: 'Reçu',
+      traitee: 'Traité',
+    },
+    titre: 'Tickets des clubs',
+    titreFiche: 'Ticket à la Ville',
+    traiter: 'Marquer comme traité',
+    vide: 'Aucun club ne vous a encore écrit.',
+    votreMot: 'Votre réponse au club (facultatif)',
+  },
   collectiviteRattachement: {
     add: {
       button: 'Ajouter un club',
@@ -16176,6 +16203,25 @@ export default {
       waitingScore: 'Score à saisir',
       waitingVenue: 'En attente terrain',
     },
+  },
+  maVille: {
+    aucuneInstallation: 'Ta Ville n’a pas encore d’installation ici.',
+    aucuneQuestion: 'Aucun ticket pour l’instant.',
+    choisirInstallation: 'Sur quelle installation ?',
+    envoye: 'Ticket envoyé. Tu seras prévenu de la réponse.',
+    envoyer: 'Envoyer le ticket',
+    erreurChargement: 'Tes tickets n’ont pas pu être chargés.',
+    erreurInstallations: 'Les installations n’ont pas pu être chargées.',
+    erreurVille: 'Ta collectivité n’a pas pu être chargée.',
+    mesQuestions: 'Mes tickets',
+    ongletEcrire: 'Ouvrir un ticket',
+    ongletSignaler: 'Signaler un problème',
+    placeholder: 'Une information, un besoin, un souci : écris-le ici.',
+    rattacher: 'Trouver ma Ville',
+    rattacherDetail: 'Rattache ton club à ta Ville.',
+    reessayer: 'Réessayer',
+    signalerDetail: 'Sur une installation de ta Ville.',
+    tonMessage: 'Ton message',
   },
   media: {
     errors: {

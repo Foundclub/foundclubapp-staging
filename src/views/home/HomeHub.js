@@ -90,6 +90,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { useAdminCollectivitesATraiter } from '@/services/collectivite/collectiviteQueries';
+import { useMaCollectivite } from '@/services/collectivite/collectiviteRattachementQueries';
 import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
@@ -1910,6 +1911,51 @@ function HomeHubContent({ auth, navigation, route }) {
     t,
   ]);
 
+  // T3-TICKETS-VILLE (03/11, fiche 20 option B) — « Ma collectivité » pour tous les dirigeants :
+  // deux portes si le club a une Ville ; sinon une seule, vers le rattachement existant.
+  const clubDuDirigeant = clubVerificationSummary?.clubDocumentId
+    || userData?.club?.documentId
+    || null;
+  const maCollectivite = useMaCollectivite(isPresident ? clubDuDirigeant : null);
+  const villeDuClub = maCollectivite.data?.attached?.name || null;
+  /** @type {HomeCard[]} */
+  const maVilleCards = useMemo(() => {
+    if (!isPresident || !clubDuDirigeant || !maCollectivite.isSuccess) return [];
+    const ouvrirMaVille = (/** @type {string} */ onglet) => navigation.navigate(
+      RouteNames.MaVille,
+      { clubId: clubDuDirigeant, onglet },
+    );
+    if (!villeDuClub) {
+      return [{
+        icon: 'flag',
+        key: 'ma-ville-rattacher',
+        layout: 'full',
+        onPress: () => ouvrirMaVille('ecrire'),
+        subtitle: t('maVille.rattacherDetail', 'Rattache ton club à ta Ville.'),
+        subtitleLines: 2,
+        title: t('maVille.rattacher', 'Trouver ma Ville'),
+      }];
+    }
+    return [
+      {
+        icon: 'bell',
+        key: 'ma-ville-ecrire',
+        onPress: () => ouvrirMaVille('ecrire'),
+        subtitle: villeDuClub,
+        subtitleLines: 2,
+        title: t('maVille.ongletEcrire', 'Ouvrir un ticket'),
+      },
+      {
+        icon: 'stadium',
+        key: 'ma-ville-signaler',
+        onPress: () => ouvrirMaVille('signaler'),
+        subtitle: t('maVille.signalerDetail', 'Sur une installation de ta Ville.'),
+        subtitleLines: 2,
+        title: t('maVille.ongletSignaler', 'Signaler un problème'),
+      },
+    ];
+  }, [clubDuDirigeant, isPresident, maCollectivite.isSuccess, navigation, t, villeDuClub]);
+
   /** @type {HomeCard[]} */
   const manageSectionCards = useMemo(() => {
     if (isPresident) {
@@ -2812,6 +2858,15 @@ function HomeHubContent({ auth, navigation, route }) {
           ) : null}
           <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={manageSectionTitle} />
         </View>
+        {/* T3-TICKETS-VILLE (03/11, fiche 20 option B) : hors de l'ancre `search` du guide. */}
+        <HomeSection
+          Alignments={Alignments}
+          cards={maVilleCards}
+          Fonts={Fonts}
+          registerTutorialTargetNode={registerTutorialTargetNode}
+          Spaces={Spaces}
+          title={t('collectivite.home.header', 'Ma collectivité')}
+        />
         <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>
           <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.search')} />
         </View>
