@@ -236,7 +236,7 @@ function PollDetails({ navigation, route }) {
   const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
-    /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string }>} */
+    /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string; mention?: string }>} */
     const directory = new Map();
     // T19-RESTES — la règle commune : le nom le plus frais l'emporte (votants lus au serveur,
     // participants, mon compte, puis les messages du plus récent au plus ancien). Avant, le nom
