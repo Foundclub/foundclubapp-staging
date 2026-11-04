@@ -245,7 +245,7 @@ describe('R17INVIT · I1 — la recherche habituelle, sans onglets', () => {
     expect(typeof mockListeProps.actionDeCarte).toBe('function');
   });
 
-  it('sans `onglet` (le raccourci « Inviter un club » de l’accueil) : la même recherche', async () => {
+  it('sans `onglet` (le raccourci « Ajouter un club » de l’accueil) : la même recherche', async () => {
     mockRoute = { params: { collectiviteId: 'ville-de-recette' } };
     const arbre = await monter();
     expect(dans(arbre, 'recherche-habituelle')).toBeTruthy();
@@ -258,7 +258,7 @@ describe('R17INVIT · I2 — « Le club n’est pas sur FoundClub ? »', () => {
     const arbre = await monter();
     await appuyer(dans(arbre, 'inviter-absent'));
     expect(dans(arbre, 'recherche-habituelle')).toBeUndefined();
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['Inviter un club absent de FoundClub', ADRESSE_DU_LIEN]));
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Ajouter un club absent de FoundClub', ADRESSE_DU_LIEN]));
     const [choix] = onglets(arbre);
     expect(choix.props.options.map((/** @type {any} */ o) => o.value)).toEqual(['lien', 'foundclub']);
     await act(async () => { choix.props.onChange('foundclub'); });

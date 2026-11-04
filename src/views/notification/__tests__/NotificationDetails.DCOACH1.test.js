@@ -199,3 +199,24 @@ describe('FIN-MESSAGERIE p48 — « sera présent » mène au planning', () => {
     expect(texte).not.toContain('Voir mon planning');
   });
 });
+
+// T3-TEXTES (03/11) : « Nouvelle réponse » était écrit deux fois, dans la barre et dans la carte.
+describe('T3-TEXTES : le titre de la notification, une seule fois', () => {
+  beforeEach(() => {
+    mockRoute.params = {
+      notification: {
+        body: 'Mathis R. sera présent samedi 18 h (2/4).',
+        data: { type: 'complexeReservationJoueur' },
+        title: 'Nouvelle réponse',
+      },
+    };
+  });
+
+  it('la barre le dit, la carte ne le répète pas', () => {
+    let arbre;
+    act(() => { arbre = renderer.create(<NotificationDetails />); });
+    const textes = arbre.root.findAllByType(Text).map((n) => [n.props.children].flat().join(''));
+    expect(textes.filter((texte) => texte === 'Nouvelle réponse')).toHaveLength(1);
+    expect(textes).toContain('Mathis R. sera présent samedi 18 h (2/4).');
+  });
+});

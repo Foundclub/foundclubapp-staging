@@ -41,7 +41,7 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
     params: { mode: 'fermer' },
     route: 'CollectiviteFermeture',
   },
-  // Inviter un club absent de FoundClub (lot C-CLUBS : le lien de la Ville, « Par FoundClub »).
+  // Ajouter un club absent de FoundClub (lot C-CLUBS : le lien de la Ville, « Par FoundClub »).
   {
     icon: 'users', key: 'inviteClub', lot: 'C-CLUBS', route: 'CollectiviteInviteClub',
   },

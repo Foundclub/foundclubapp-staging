@@ -36,7 +36,7 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     const affichees = availableHomeActions();
     // COLL-C4A (02/10) : « Publier une actualité » a son écran.
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » aussi.
-    // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Inviter un club » (C-CLUBS).
+    // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Ajouter un club » (C-CLUBS).
     expect(affichees.map((action) => action.key)).toEqual([
       'assignSlot', 'closeInstallation',
       'inviteClub', 'addInstallation', 'addEvent',

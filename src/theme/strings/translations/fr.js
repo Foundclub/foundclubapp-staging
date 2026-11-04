@@ -5109,7 +5109,7 @@ export default {
       },
       inviteClub: {
         dit: 'Le trouver sur FoundClub, ou l’inviter.',
-        titre: 'Inviter un club',
+        titre: 'Ajouter un club',
       },
       titre: 'Vos actions',
     },
@@ -5809,7 +5809,7 @@ export default {
       copyFailed: 'La copie a échoué : sélectionnez le lien ci-dessus.',
       // eslint-disable-next-line max-len
       foundclubIntro: 'FoundClub l’invite au nom de la Ville. Une fois inscrit, il vous est rattaché par l’équipe FoundClub.',
-      header: 'Inviter un club',
+      header: 'Ajouter un club',
       // eslint-disable-next-line max-len
       linkHint: 'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment avec le bouton ci-dessous : l’ancien ne marche plus.',
       // eslint-disable-next-line max-len
@@ -5822,7 +5822,7 @@ export default {
       shareFailed: 'Le partage n’a pas pu s’ouvrir : copiez le lien.',
       shareMessage: '{{ville}} vous invite à inscrire votre club sur FoundClub : {{adresse}}',
       shareTitle: 'Invitation de la Ville sur FoundClub',
-      title: 'Inviter un club absent de FoundClub',
+      title: 'Ajouter un club absent de FoundClub',
     },
     join: {
       alreadyAttachedBody: 'Il est déjà rattaché à {{ville}}.',
@@ -5866,9 +5866,9 @@ export default {
       // eslint-disable-next-line max-len
       emptyHint: 'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
       error: 'Les clubs n’ont pas pu être lus.',
-      invite: 'Inviter un club absent de FoundClub',
-      inviteDesktop: 'Inviter un club absent',
-      inviteShort: 'Inviter un club',
+      invite: 'Ajouter un club absent de FoundClub',
+      inviteDesktop: 'Ajouter un club absent',
+      inviteShort: 'Ajouter un club',
       openHint: 'Ouvre la fiche du club.',
       retry: 'Réessayer',
       titleError: 'Clubs rattachés',
@@ -6129,8 +6129,9 @@ export default {
     },
     club: {
       accept: 'Accepter',
-      accepted: '{{sujet}} a accepté ta demande.',
       attached: 'Ton club est rattaché à {{ville}}.',
+      // eslint-disable-next-line max-len
+      attachedElsewhere: '{{sujet}} propose de rattacher ton club, mais il est déjà rattaché à une autre Ville.',
       cancelMine: 'Annuler ma demande',
       kicker: 'Rattachement à la Ville',
       noLongerAttached: 'Ton club n’est plus rattaché à {{ville}}.',
@@ -6145,7 +6146,6 @@ export default {
       refuseConfirm: 'Refuser la demande de {{ville}} ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.',
       refused: '{{sujet}} n’a pas accepté ta demande de rattachement.',
       refuseYes: 'Oui, refuser',
-      youAccepted: 'Tu as accepté la demande de {{ville}}.',
       youRefused: 'Tu as refusé la demande de {{ville}}.',
     },
     demandes: {

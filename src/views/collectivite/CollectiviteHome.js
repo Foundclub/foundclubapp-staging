@@ -848,7 +848,7 @@ function CollectiviteHome() {
             'collectiviteAccueil.actions.inviteClub.dit',
             'Le trouver sur FoundClub, ou l’inviter.',
           ),
-          titre: t('collectiviteAccueil.actions.inviteClub.titre', 'Inviter un club'),
+          titre: t('collectiviteAccueil.actions.inviteClub.titre', 'Ajouter un club'),
         };
       default:
         return {
@@ -1384,7 +1384,7 @@ function CollectiviteHome() {
       );
     return {
       bouton: t('collectiviteAccueil.clubs.voir', 'Voir les clubs'),
-      // COLL-ACCUEIL-BIS : « Un club manque ? Invitez-le. » (l'action « Inviter un club »).
+      // COLL-ACCUEIL-BIS : « Un club manque ? Invitez-le. » (l'action « Ajouter un club »).
       dit: `${rattaches} ${t(
         'collectiviteAccueil.premiersPas.clubs.manque',
         'Un club manque ? Invitez-le.',

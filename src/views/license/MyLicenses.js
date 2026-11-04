@@ -369,7 +369,6 @@ function ChildrenLicenses({ navigation }) {
             />
           )}
           description={t('myLicenses.children.empty', 'Aucun enfant déclaré pour l’instant.')}
-          title={t('myLicenses.title', 'Mes cotisations')}
         />
       </ScreenContainer>
     );
@@ -485,7 +484,6 @@ function OwnLicenses({ navigation }) {
             'myLicenses.empty.description',
             'Aucune cotisation n’est encore rattachée à ton compte.',
           )}
-          title={t('myLicenses.title', 'Mes cotisations')}
         />
       </ScreenContainer>
     );
