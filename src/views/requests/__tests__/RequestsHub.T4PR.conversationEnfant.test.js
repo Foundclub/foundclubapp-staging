@@ -10,7 +10,7 @@ import { mapClubInterestRequestToHubItem } from '@/domains/requests/requestMappe
 
 import InterestConversationSheet from '../InterestConversationSheet';
 
-// T4-PARENT-RETOURS (04/11/2026, Q4 = A d'Adel, registre des mineurs, ligne 50) — le club parle au
+// T4-PARENT-RETOURS (04/11/2026, Adel « 20- A », registre des mineurs, ligne 56) — le club parle au
 // parent AVANT de décider : la carte garde Accepter et Refuser, et gagne « Ouvrir une conversation ».
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;
