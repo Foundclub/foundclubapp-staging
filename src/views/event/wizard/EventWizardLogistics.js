@@ -624,9 +624,8 @@ function EventWizardLogistics({ navigation, route }) {
   // l'installation dit à chaque horaire si le créneau est libre ou déjà pris ; une fermeture de la
   // Ville, ou une place pas encore lue, retient « Suivant ». Une adresse extérieure ne se juge pas.
   const [jugement, setJugement] = useState(
-    /** @type {{
-     *   attente: boolean, bloque: boolean, saufVacancesDuCreneau: boolean, vacances: any,
-     * }} */ ({
+    // eslint-disable-next-line max-len
+    /** @type {{ attente: boolean, bloque: boolean, saufVacancesDuCreneau: boolean, vacances: any }} */ ({
       attente: false, bloque: false, saufVacancesDuCreneau: false, vacances: null,
     }),
   );
