@@ -31,6 +31,9 @@ const STALE_DISMISS_WINDOW_MS = 400;
 const INITIAL_LAYOUT_VALUE = -999;
 const DELAI_DE_RELANCE_MS = 120;
 const DECALAGE_DE_RELANCE = 0.01;
+// Une fois la feuille posée sur le clavier, relance comprise.
+const DELAI_DU_CHAMP_MS = 3 * DELAI_DE_RELANCE_MS;
+const MARGE_AU_DESSUS_DU_CLAVIER = 12;
 
 // ⌨️ CLAVREGLE (23/10) — LA RÈGLE DU CLAVIER, POUR TOUTES LES FEUILLES : un champ touché se place
 // au-dessus du clavier. `@gorhom/bottom-sheet` 5.2.4 ne suit le clavier que si un champ est
@@ -69,19 +72,98 @@ const DECALAGE_DE_RELANCE = 0.01;
 // ponytail: la raison de la perte n'est pas établie, le délai vient de la mesure (Pixel 9,
 // Android 16). Sortie : une version de Reanimated ou de @gorhom qui ne perd plus cette écriture.
 // Témoin : __tests__/BottomModal.T3CLAVIERFEUILLES.relance.test.js.
+// ⌨️ T3-MATCH-CLAVIER (04/11) — ANDROID 15+ : Android ne fait défiler le champ touché qu'à son
+// focus (ReactScrollView.requestChildFocus), quand le clavier n'est pas encore là. Ensuite, plus
+// rien : « Commentaire privé » de la feuille de match restait à 1703 px, clavier à 1538 px. La
+// feuille l'amène donc au-dessus du clavier une fois posée, et réduit sa zone qui défile à la place
+// restante, sans quoi le bas du contenu reste inaccessible.
+// `measureInWindow` ignore la translation animée de la feuille (mesuré : zone vue à 114 points,
+// affichée à 168) : seuls les écarts entre deux vues de la feuille sont justes, et le haut de la
+// feuille se lit dans sa position.
+// ponytail: une seule fois par ouverture du clavier ; un champ qui grandit en écrivant, ou un autre
+// touché clavier ouvert, retombe sur le défilement natif, qui voit la zone réduite.
+// Témoin : __tests__/BottomModal.T3MATCHCLAVIER.champ.test.js.
+/**
+ * Position d'un noeud à l'écran.
+ * @param {any} noeud
+ * @returns {Promise<{ h: number, y: number }>} Son haut et sa hauteur.
+ */
+const mesurer = (noeud) => new Promise((resolve) => {
+  noeud.measureInWindow((
+    /** @type {number} */ _x,
+    /** @type {number} */ y,
+    /** @type {number} */ _l,
+    /** @type {number} */ h,
+  ) => resolve({ h, y }));
+});
+
+/**
+ * Amène le champ touché juste au-dessus du clavier, s'il est dessous.
+ * @param {object} args
+ * @param {any} args.champ - Le champ touché dans cette feuille.
+ * @param {any} args.defilement - La zone qui défile.
+ * @param {any} args.enveloppe - Le haut du contenu de la feuille.
+ * @param {number} args.hautDeLaFeuille - En points, depuis le haut de l'écran.
+ * @param {number} args.hautDuClavier - En points, depuis le haut de l'écran.
+ * @param {any} args.repere - Vue vide au tout début du contenu : dit de combien il a déjà défilé.
+ * @returns {Promise<void>}
+ */
+const amenerAuDessusDuClavier = async ({
+  champ, defilement, enveloppe, hautDeLaFeuille, hautDuClavier, repere,
+}) => {
+  if (!champ || !defilement || !enveloppe || !repere) return;
+  const [positionDuChamp, zone, debut, haut] = await Promise.all([
+    mesurer(champ), mesurer(defilement), mesurer(repere), mesurer(enveloppe),
+  ]);
+  const basDuChamp = hautDeLaFeuille + (positionDuChamp.y - haut.y) + positionDuChamp.h;
+  const depassement = basDuChamp + MARGE_AU_DESSUS_DU_CLAVIER - hautDuClavier;
+  if (depassement <= 0) return;
+  defilement.scrollTo({ animated: true, y: zone.y - debut.y + depassement });
+};
+
 /**
  * Enveloppe du contenu d'une feuille : déclare à la bibliothèque le champ qui prend le focus.
  * @param {object} props
  * @param {number} props.basDuConteneur - Part de `bottomInset` qui pose la feuille sur le clavier.
  * @param {React.ReactNode} props.children
  * @param {boolean} props.declare - Faux quand la feuille se pose elle-même sur le clavier.
+ * @param {React.MutableRefObject<any>} props.defilementRef - La zone qui défile.
+ * @param {number} props.hautDuClavier - En points, depuis le haut de l'écran.
+ * @param {number} props.hautDuConteneur - Où commence le conteneur de la feuille à l'écran.
+ * @param {React.MutableRefObject<any>} props.repereRef - Vue vide au début du contenu.
  * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.style]
+ * @param {boolean} props.suitLeChampTouche - Clavier ouvert, feuille posée dessus, zone qui défile.
  * @returns {React.ReactElement}
  */
 function ChampsSuivisParLeClavier({
-  basDuConteneur, children, declare, style,
+  basDuConteneur,
+  children,
+  declare,
+  defilementRef,
+  hautDuClavier,
+  hautDuConteneur,
+  repereRef,
+  style,
+  suitLeChampTouche,
 }) {
   const interne = useBottomSheetInternal(true);
+  const champRef = useRef(null);
+  const enveloppeRef = useRef(null);
+  useEffect(() => {
+    if (!suitLeChampTouche) return undefined;
+    const minuteur = setTimeout(() => {
+      if (!champRef.current) return;
+      amenerAuDessusDuClavier({
+        champ: champRef.current,
+        defilement: defilementRef.current,
+        enveloppe: enveloppeRef.current,
+        hautDeLaFeuille: hautDuConteneur + (interne?.animatedPosition.get() ?? 0),
+        hautDuClavier,
+        repere: repereRef.current,
+      });
+    }, DELAI_DU_CHAMP_MS);
+    return () => clearTimeout(minuteur);
+  }, [defilementRef, hautDuClavier, hautDuConteneur, interne, repereRef, suitLeChampTouche]);
   const basPrecedentRef = useRef(basDuConteneur);
   useEffect(() => {
     const ecart = basDuConteneur - basPrecedentRef.current;
@@ -111,17 +193,19 @@ function ChampsSuivisParLeClavier({
     };
   }, [basDuConteneur, interne]);
   const declarer = useCallback((/** @type {any} */ event) => {
+    champRef.current = event?.target ?? null;
     const target = event?.nativeEvent?.target;
     if (!interne || !target || !declare) return;
     interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target }));
   }, [declare, interne]);
   const oublier = useCallback((/** @type {any} */ event) => {
+    if (champRef.current === event?.target) champRef.current = null;
     const target = event?.nativeEvent?.target;
     if (!interne || !target || interne.animatedKeyboardState.get().target !== target) return;
     interne.animatedKeyboardState.set((/** @type {any} */ etat) => ({ ...etat, target: undefined }));
   }, [interne]);
   return (
-    <View onBlurCapture={oublier} onFocusCapture={declarer} style={style}>
+    <View onBlurCapture={oublier} onFocusCapture={declarer} ref={enveloppeRef} style={style}>
       {children}
     </View>
   );
@@ -210,6 +294,9 @@ function BottomModal({
   // resterait armé si la bibliothèque n'émettait jamais la fermeture périmée.
   const staleDismissUntilRef = useRef(0);
   const arriveeAnnonceeRef = useRef(false);
+  const repereDuContenuRef = useRef(null);
+  const defilementInterneRef = useRef(null);
+  const defilementRef = scrollViewRef ?? defilementInterneRef;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [shouldRender, setShouldRender] = useState(Boolean(isVisible));
   const insets = useSafeAreaInsets();
@@ -450,6 +537,8 @@ function BottomModal({
       ? (Number(cran.split('%')[0]) * conteneurSansClavier) / 100
       : cran));
   }, [insets.top, remonteeSurLeClavier, snapPoints]);
+  // T3-MATCH-CLAVIER — voir le haut du fichier.
+  const suitLeChampTouche = poseAndroid && scrollable && keyboardHeight > 0;
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
   // RECETTEWEB retour 5 (26/10) — EN HAUTEUR AUTOMATIQUE (sans snapPoints), `@gorhom/bottom-sheet`
@@ -549,7 +638,12 @@ function BottomModal({
       <ChampsSuivisParLeClavier
         basDuConteneur={remonteeSurLeClavier}
         declare={!poseSurLeClavier}
+        defilementRef={defilementRef}
+        hautDuClavier={Dimensions.get('window').height - remonteeSurLeClavier - insets.bottom}
+        hautDuConteneur={insets.top + 20}
+        repereRef={repereDuContenuRef}
         style={[snapPoints ? Alignments.fill : undefined]}
+        suitLeChampTouche={suitLeChampTouche}
       >
         {/* Fixed Header */}
         {headerComponent && !enTeteDansLaMesure && (
@@ -578,15 +672,29 @@ function BottomModal({
               { minHeight: 100 },
             ])}
             keyboardShouldPersistTaps="handled"
-            ref={scrollViewRef}
+            ref={defilementRef}
             style={[
               snapPoints
                 ? Alignments.fill
-                : { maxHeight: Dimensions.get('screen').height * maxContentHeightRatio },
+                : {
+                  maxHeight: suitLeChampTouche
+                    ? Math.min(
+                      Dimensions.get('screen').height * maxContentHeightRatio,
+                      Dimensions.get('window').height - (insets.top + 20) - remonteeSurLeClavier,
+                    )
+                    : Dimensions.get('screen').height * maxContentHeightRatio,
+                },
             ]}
             // eslint-disable-next-line react/jsx-props-no-spreading
             {...scrollViewProps}
           >
+            {poseAndroid ? (
+              <View
+                pointerEvents="none"
+                ref={repereDuContenuRef}
+                style={[Alignments.absolute, { top: 0 }]}
+              />
+            ) : null}
             {enTeteMesure}
             {children}
             {piedMesure}
