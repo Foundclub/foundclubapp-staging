@@ -1,9 +1,9 @@
 import { useEvenementsPublicsDeLaVille } from '../collectiviteEvenementQueries';
 import { getEvenementsPublicsDeLaVille } from '../collectiviteEvenementService';
 
-// 🏛️ T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) — ce que la recherche demande :
-// un mot passe seul, il trouve de loin ; le lieu des filtres ne part que sans mot ; sans lui, rien
-// ne part et le serveur lit l'adresse du compte (elle ne passe jamais dans l'adresse de la requête).
+// 🏛️ T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) — ce que la recherche
+// demande : un mot passe seul, il trouve de loin ; le lieu des filtres ne part que sans mot ; sans
+// lui, rien ne part et le serveur lit l'adresse du compte (jamais dans l'adresse de la requête).
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: jest.fn(),
@@ -16,6 +16,8 @@ jest.mock('../collectiviteEvenementService', () => ({
 }));
 
 const LYON = { lat: 45.76, lon: 4.84, radius: 30 };
+// useQuery est doublé par une fonction simple : le hook se lit ici hors de tout composant.
+const lireOptions = useEvenementsPublicsDeLaVille;
 /**
  * Ce que le hook envoie, et sa clé de cache.
  * @param {string} [mot] - Le mot tapé.
@@ -23,7 +25,7 @@ const LYON = { lat: 45.76, lon: 4.84, radius: 30 };
  * @returns {Promise<{ cle: any[], params: any }>} La demande.
  */
 const demande = async (mot, lieu) => {
-  const options = /** @type {any} */ (useEvenementsPublicsDeLaVille(mot, lieu));
+  const options = /** @type {any} */ (lireOptions(mot, lieu));
   await options.queryFn();
   return {
     cle: options.queryKey,
@@ -48,7 +50,8 @@ describe('T4-EVENEMENT-PROXIMITE — ce que la recherche demande', () => {
     expect((await demande()).params).toEqual({});
   });
 
-  it('les clés restent sous « evenements-de-la-ville », que les gestes de la Ville relisent', async () => {
-    expect((await demande('', LYON)).cle.slice(0, 2)).toEqual(['evenements-de-la-ville', 'publics']);
+  it('les clés restent sous celle que les gestes de la Ville relisent', async () => {
+    const { cle } = await demande('', LYON);
+    expect(cle.slice(0, 2)).toEqual(['evenements-de-la-ville', 'publics']);
   });
 });

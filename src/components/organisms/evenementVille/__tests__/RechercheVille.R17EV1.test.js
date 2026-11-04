@@ -110,8 +110,8 @@ describe('R17-EVT-1 — la recherche d’événements : ceux de la Ville', () =>
     expect(mockMotsDemandes.at(-1)).toBe('');
   });
 
-  // T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) : sans ville dans les filtres, le
-  // serveur part de l'adresse du compte. ROUGE avant : le lieu choisi ne partait jamais.
+  // T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) : sans ville dans les filtres,
+  // le serveur part de l'adresse du compte. ROUGE avant : le lieu choisi ne partait jamais.
   it('🔴 elle passe le lieu choisi dans les filtres, avec son rayon', async () => {
     mockPublics = { data: [FETE] };
     mockMot = '';
@@ -124,13 +124,14 @@ describe('R17-EVT-1 — la recherche d’événements : ceux de la Ville', () =>
   it('🔴 sans ville, ou une ville effacée : aucun lieu', async () => {
     mockPublics = { data: [FETE] };
     mockMot = '';
-    for (const filtres of [{}, { city: { label: '', value: '' }, radius: 20 }]) {
-      mockFiltres = filtres;
-      mockLieuxDemandes.length = 0;
-      // eslint-disable-next-line no-await-in-loop -- un montage après l'autre.
-      await monter();
-      expect(mockLieuxDemandes.at(-1)).toBeNull();
-    }
+    mockFiltres = {};
+    mockLieuxDemandes.length = 0;
+    await monter();
+    expect(mockLieuxDemandes.at(-1)).toBeNull();
+    mockFiltres = { city: { label: '', value: '' }, radius: 20 };
+    mockLieuxDemandes.length = 0;
+    await monter();
+    expect(mockLieuxDemandes.at(-1)).toBeNull();
     mockFiltres = {};
   });
 
