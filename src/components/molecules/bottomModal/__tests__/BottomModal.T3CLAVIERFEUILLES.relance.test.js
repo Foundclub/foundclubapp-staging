@@ -97,7 +97,10 @@ describe('T3-CLAVIER-FEUILLES : la position est réécrite après la réduction 
     });
   };
 
-  /** @param {string} nom */
+  /**
+   * Annonce un mouvement du clavier.
+   * @param {string} nom
+   */
   const annoncer = (nom) => {
     act(() => {
       ecoutes[nom]?.({ endCoordinates: { height: 288 } });
