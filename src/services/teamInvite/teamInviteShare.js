@@ -60,6 +60,22 @@ export const buildTeamInviteMessage = ({
 );
 
 /**
+ * T3-LIEN-TOURNOI (04/11) — partage le lien d'un tournoi privé : celui de cette version, car la
+ * recette ne connaît pas les tournois de la prod.
+ * @param {string} eventId - Le tournoi.
+ * @returns {Promise<any>} Ce que le partage a fait ; rien s'il est abandonné ou impossible.
+ */
+export const shareTournamentInviteLink = async (eventId) => {
+  const url = buildInviteWebUrl({
+    id: eventId,
+    origin: resolveInviteLinkOrigin(),
+    subject: 'tournament',
+  });
+  if (!url) return undefined;
+  return SharePlatform.share({ message: url, url }).catch(() => undefined);
+};
+
+/**
  * Guide Entraîneur (TUTOE, M2) : ce que la feuille de partage a rendu. Android ne distingue pas
  * l'abandon (toujours « partagé ») : le guide demande au lieu de conclure (GUIDE-FINITIONS-3,
  * n° 22). Sur iPhone, `sharedAction` est un envoi certain ; le reste, le guide le demande aussi.
