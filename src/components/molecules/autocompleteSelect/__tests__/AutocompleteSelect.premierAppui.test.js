@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { measureTourTarget, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
+
 import AutocompleteSelect from '../AutocompleteSelect';
 
 // EVEDIT-3 (R5, E6) — LE PREMIER APPUI DOIT OUVRIR LE CHAMP.
@@ -210,5 +212,19 @@ describe('EVEDIT-3 · AutocompleteSelect — le premier appui ouvre le champ', (
     ).map((/** @type {any} */ n) => n.props.testID))];
 
     expect(options).toEqual(['option-Entrainement', 'option-Match']);
+  });
+});
+
+describe('GUIDE-STORES · la liste ouverte le dit au guide', () => {
+  it('signal présent feuille ouverte, absent une fois fermée', async () => {
+    resetTourTargetsForTests();
+    const { appuyerUneFois, arbre } = monterFerme();
+    expect(await measureTourTarget('select.sheet')).toBeNull();
+
+    appuyerUneFois();
+    expect(await measureTourTarget('select.sheet')).not.toBeNull();
+
+    act(() => { arbre.unmount(); });
+    expect(await measureTourTarget('select.sheet')).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { registerTourTarget } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -22,7 +23,6 @@ import Input, {
   INPUT_ROW_IOS_BOTTOM_PADDING,
   INPUT_ROW_MIN_HEIGHT,
 } from '../input/Input';
-import TourTarget from '../tour/TourTarget';
 /**
  * @typedef {object} ActionEnTete
  * @property {string} titre - Le libellé (« Ajouter « Gymnase Toto » »).
@@ -102,6 +102,11 @@ import TourTarget from '../tour/TourTarget';
  * Autocomplete select component.
  * @inheritdoc
  */
+const SELECT_SHEET_TARGET = 'select.sheet';
+const SELECT_SHEET_RECT = {
+  height: 1, width: 1, x: 0, y: 0,
+};
+
 const AutocompleteSelect = forwardRef(
   /**
    * Autocomplete select component function.
@@ -215,6 +220,12 @@ const AutocompleteSelect = forwardRef(
       }
       wasValuesVisibleRef.current = areValuesVisible;
     }, [areValuesVisible, hydrateSelectedOptionsFromProps]);
+
+    // GUIDE-STORES : posée dans sa place réservée, la bulle du guide recouvrait la recherche et la
+    // croix de cette feuille. La feuille ouverte le dit au guide, qui se retire le temps du choix.
+    useEffect(() => (areValuesVisible
+      ? registerTourTarget(SELECT_SHEET_TARGET, (done) => done(SELECT_SHEET_RECT))
+      : undefined), [areValuesVisible]);
 
     // methods
     // 🎯 EVEDIT-3 (R5) — LE PREMIER APPUI OUVRE LE CHAMP. TOUT DE SUITE.
@@ -633,117 +644,115 @@ const AutocompleteSelect = forwardRef(
           scrollable
           snapPoints={modalSnapPoints}
         >
-          <TourTarget id="select.sheet">
-            <View
-              style={[
-                Spaces.gap[16],
-              ]}
-            >
-              {/* Search input */}
-              {props.isSearchable ? (
-                <Input
+          <View
+            style={[
+              Spaces.gap[16],
+            ]}
+          >
+            {/* Search input */}
+            {props.isSearchable ? (
+              <Input
                 // FIN-COLLECTIVITES p55 (02/11) : le texte d'attente s'efface à la frappe.
-                  accessibilityLabel={t('modals.actions.search')}
-                  autoCapitalize="none"
-                  autoComplete="off"
-                  autoCorrect={false}
-                  enterKeyHint="search"
-                  icon="search"
-                  inputMode="search"
-                  onChangeText={props.setSearchValue}
-                  placeholder={t('modals.actions.search')}
-                  ref={searchInputRef}
-                  useBottomSheetInput
-                  value={props.garderLaRecherche ? props.searchValue : undefined}
-                />
+                accessibilityLabel={t('modals.actions.search')}
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect={false}
+                enterKeyHint="search"
+                icon="search"
+                inputMode="search"
+                onChangeText={props.setSearchValue}
+                placeholder={t('modals.actions.search')}
+                ref={searchInputRef}
+                useBottomSheetInput
+                value={props.garderLaRecherche ? props.searchValue : undefined}
+              />
+            ) : null}
+
+            {/* Options - Scrollable area */}
+            <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
+              {/* ADRESSE-EN-PREMIER — la boîte d'une proposition, mais une ACTION : bord et */}
+              {/* fond de la couleur primaire, l'épingle à la place du rond à cocher. */}
+              {props.actionEnTete ? (
+                <TouchableOpacity
+                  accessibilityLabel={props.actionEnTete.accessibilityLabel}
+                  accessibilityRole="button"
+                  activeOpacity={0.82}
+                  onPress={handleActionEnTete}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    ApplicationStyle.borderRadius12,
+                    ApplicationStyle.borderWidth2,
+                    ApplicationStyle.borderColor.primary500,
+                    Spaces.marginTop[8],
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    { backgroundColor: withAlpha(Colors.primary500, 0.12) },
+                  ]}
+                >
+                  <Image
+                    source={Images.pin}
+                    style={[ApplicationStyle.icon24, ApplicationStyle.tintColor.primary500]}
+                  />
+                  <View style={[Alignments.fill, Spaces.gap[4]]}>
+                    <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                      {props.actionEnTete.titre}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.primary500]}>
+                      {props.actionEnTete.aide}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               ) : null}
-
-              {/* Options - Scrollable area */}
-              <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
-                {/* ADRESSE-EN-PREMIER — la boîte d'une proposition, mais une ACTION : bord et */}
-                {/* fond de la couleur primaire, l'épingle à la place du rond à cocher. */}
-                {props.actionEnTete ? (
-                  <TouchableOpacity
-                    accessibilityLabel={props.actionEnTete.accessibilityLabel}
-                    accessibilityRole="button"
-                    activeOpacity={0.82}
-                    onPress={handleActionEnTete}
-                    style={[
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      ApplicationStyle.borderRadius12,
-                      ApplicationStyle.borderWidth2,
-                      ApplicationStyle.borderColor.primary500,
-                      Spaces.marginTop[8],
-                      Spaces.padding[16],
-                      Spaces.gap[12],
-                      { backgroundColor: withAlpha(Colors.primary500, 0.12) },
-                    ]}
-                  >
-                    <Image
-                      source={Images.pin}
-                      style={[ApplicationStyle.icon24, ApplicationStyle.tintColor.primary500]}
-                    />
-                    <View style={[Alignments.fill, Spaces.gap[4]]}>
-                      <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {props.actionEnTete.titre}
-                      </Text>
-                      <Text style={[Fonts.p3, Fonts.primary500]}>
-                        {props.actionEnTete.aide}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : null}
-                {renderOptions.map(({ key, option }) => {
-                  if (option.isHeader) {
-                    return (
-                      <Text
-                        key={key}
-                        style={[
-                          Fonts.p3Bold,
-                          Fonts.neutral500,
-                          Spaces.marginTop[16],
-                          Spaces.marginBottom[8],
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    );
-                  }
-
-                  const isChecked = handleIsChecked(option);
+              {renderOptions.map(({ key, option }) => {
+                if (option.isHeader) {
                   return (
-                    <View
+                    <Text
                       key={key}
-                      style={[Alignments.row, Spaces.marginTop[8]]}
+                      style={[
+                        Fonts.p3Bold,
+                        Fonts.neutral500,
+                        Spaces.marginTop[16],
+                        Spaces.marginBottom[8],
+                      ]}
                     >
-                      <Checkable
-                        customFillColor={Colors.neutral00}
-                        disableBounceAnimation
-                        disabled={false}
-                        fontStyle={props.optionTextStyle}
-                        isChecked={isChecked}
-                        setIsChecked={
+                      {option.label}
+                    </Text>
+                  );
+                }
+
+                const isChecked = handleIsChecked(option);
+                return (
+                  <View
+                    key={key}
+                    style={[Alignments.row, Spaces.marginTop[8]]}
+                  >
+                    <Checkable
+                      customFillColor={Colors.neutral00}
+                      disableBounceAnimation
+                      disabled={false}
+                      fontStyle={props.optionTextStyle}
+                      isChecked={isChecked}
+                      setIsChecked={
                         () => (handleSelectOption(option))
                       }
-                        text={option.label}
-                        type={props.isMulti ? 'square' : 'circle'}
-                      >
-                        {props.renderOptionContent ? props.renderOptionContent(option, isChecked) : null}
-                      </Checkable>
-                    </View>
-                  );
-                })}
-                {props.options.length === 0 && (props.searchValue?.length || 0) > 0
+                      text={option.label}
+                      type={props.isMulti ? 'square' : 'circle'}
+                    >
+                      {props.renderOptionContent ? props.renderOptionContent(option, isChecked) : null}
+                    </Checkable>
+                  </View>
+                );
+              })}
+              {props.options.length === 0 && (props.searchValue?.length || 0) > 0
                 && !props.actionEnTete
-                  ? (
-                    <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
-                      {t('common.messages.noData')}
-                    </Text>
-                  ) : null}
-              </View>
+                ? (
+                  <Text style={[Fonts.p2, Spaces.margin[8], Fonts.neutral500]}>
+                    {t('common.messages.noData')}
+                  </Text>
+                ) : null}
             </View>
-          </TourTarget>
+          </View>
         </BottomModal>
       </View>
     );

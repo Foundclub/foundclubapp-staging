@@ -378,7 +378,8 @@ function TourGuideLayer() {
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
-  const isHidden = isStale || isChoosingVariant;
+  // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
+  const isHidden = isStale || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
@@ -490,11 +491,6 @@ function TourGuideLayer() {
   }
 
   if (!isStepVisible) return null;
-
-  // GUIDE-STORES : posée dans la place réservée, la bulle recouvrait la recherche et la croix de la
-  // feuille d'adresse (lieu du match amical). Elle revient quand la feuille se ferme.
-  const selectSheet = rects[SELECT_SHEET_ID];
-  if (selectSheet && isOnScreen(selectSheet, width, height)) return null;
 
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
