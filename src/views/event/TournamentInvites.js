@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Share, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -14,6 +13,7 @@ import {
   respondEventTeamAudience,
 } from '@/services/event/eventService';
 import { getTeams } from '@/services/team/teamService';
+import { shareTournamentInviteLink } from '@/services/teamInvite/teamInviteShare';
 
 import TournamentTeamSearch from './TournamentTeamSearch';
 
@@ -104,9 +104,12 @@ export default function TournamentInvites({ clubId = null, eventId }) {
     onSettled: apresEcriture,
   });
 
-  const partagerLeLien = () => {
-    const url = buildInviteWebUrl({ id: eventId, subject: 'tournament' });
-    if (url) Share.share({ message: url, url });
+  // T3-LIEN-TOURNOI : un navigateur sans feuille de partage copie le lien : il faut le dire.
+  const partagerLeLien = async () => {
+    const resultat = await shareTournamentInviteLink(eventId);
+    if (resultat?.action === 'copie') {
+      setMessage(t('tournamentInvites.linkCopied', 'Lien copié. Colle-le où tu veux.'));
+    }
   };
 
   return (

@@ -24451,6 +24451,7 @@ export default {
     clubInvited: 'Teams of your club registered: {{count}}.',
     error: 'The invitation could not be sent.',
     hint: 'With the link, a team asks to take part: you decide.',
+    linkCopied: 'Link copied. Paste it wherever you like.',
     myClub: 'Invite my club',
     noClub: 'No club found.',
     noTeam: 'No team to invite in this club.',

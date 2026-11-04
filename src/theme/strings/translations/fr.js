@@ -25509,6 +25509,7 @@ export default {
     clubInvited: 'Équipes de ton club inscrites : {{count}}.',
     error: "L'invitation n'a pas pu partir.",
     hint: "Avec le lien, une équipe demande à participer : c'est toi qui acceptes.",
+    linkCopied: 'Lien copié. Colle-le où tu veux.',
     myClub: 'Inviter mon club',
     noClub: 'Aucun club trouvé.',
     noTeam: 'Aucune équipe à inviter dans ce club.',

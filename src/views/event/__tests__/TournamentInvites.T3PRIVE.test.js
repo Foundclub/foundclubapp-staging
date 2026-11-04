@@ -218,7 +218,8 @@ describe('TournamentInvites', () => {
     const partage = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     const arbre = await monter(<TournamentInvites clubId="club-1" eventId="tournoi" />);
     await appuyer(arbre, 'Partager le lien');
-    expect(partage.mock.calls[0][0].url).toMatch(/\/i\/tournament\/tournoi$/);
+    // T3-LIEN-TOURNOI : hors production, le lien vise la recette, où le tournoi existe.
+    expect(partage.mock.calls[0][0].url).toBe('https://staging.foundclub.app/i/tournament/tournoi');
   });
 });
 
