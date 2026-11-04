@@ -8388,6 +8388,7 @@ export default {
       vide: 'The venue hasn\'t posted anything yet.',
     },
     clubReadNotice: "This club's conversations can be viewed by its club manager.",
+    parentsReadNotice: 'Parents of children under 13 can read this conversation.',
     connectionUnavailable: 'Messaging connection unavailable. Try again in a few seconds.',
     connectionUnavailableReconnect: 'Messaging connection unavailable. Try again once the conversation reconnects.',
     documentActions: {
