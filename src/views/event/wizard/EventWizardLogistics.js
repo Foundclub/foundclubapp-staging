@@ -624,7 +624,9 @@ function EventWizardLogistics({ navigation, route }) {
   // l'installation dit à chaque horaire si le créneau est libre ou déjà pris ; une fermeture de la
   // Ville, ou une place pas encore lue, retient « Suivant ». Une adresse extérieure ne se juge pas.
   const [jugement, setJugement] = useState(
-    /** @type {{ attente: boolean, bloque: boolean, saufVacancesDuCreneau: boolean, vacances: any }} */ ({
+    /** @type {{
+     *   attente: boolean, bloque: boolean, saufVacancesDuCreneau: boolean, vacances: any,
+     * }} */ ({
       attente: false, bloque: false, saufVacancesDuCreneau: false, vacances: null,
     }),
   );
@@ -635,8 +637,8 @@ function EventWizardLogistics({ navigation, route }) {
   // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case, quand la zone
   // de l'installation choisie est connue ; les séances des vacances ne partent pas (la série se
   // déplie dans l'app : `createReccurrentEventPayload`).
-  // VACANCES-REPETE (04/11, M0707) : sur un créneau « sauf vacances » de la Ville, elle arrive cochée ;
-  // le choix du coach, s'il y touche, l'emporte et tient au retour sur l'étape.
+  // VACANCES-REPETE (04/11, M0707) : sur un créneau « sauf vacances » de la Ville, elle arrive
+  // cochée ; le choix du coach, s'il y touche, l'emporte et tient au retour sur l'étape.
   const [choixSaufVacances, setChoixSaufVacances] = useState(
     /** @type {boolean | null} */ (state.exceptHolidaysChoix ?? null),
   );

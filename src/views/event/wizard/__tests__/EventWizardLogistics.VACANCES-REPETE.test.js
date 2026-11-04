@@ -17,6 +17,16 @@ import EventWizardLogistics from '../EventWizardLogistics';
 // Les doublures du service reprennent le contrat du serveur : le planning refuse plus de 31 jours
 // (`resolveFacilityPlanningWindow`), l'aperçu des créneaux rend la zone de la période demandée.
 
+// Horloge fixée à 14 h : passé 23 h, l'écran reporte une séance au lendemain, un autre jour que le créneau.
+jest.useFakeTimers({
+  doNotFake: [
+    'cancelAnimationFrame', 'cancelIdleCallback', 'clearImmediate', 'clearInterval', 'clearTimeout',
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'requestIdleCallback', 'setImmediate', 'setInterval', 'setTimeout',
+  ],
+  now: new Date(2027, 8, 15, 14, 0, 0),
+});
+
 const mockJour = (/** @type {number} */ decalage) => format(addDays(new Date(), decalage), 'yyyy-MM-dd');
 const TOUSSAINT = {
   end: mockJour(27), key: 'toussaint', name: 'Toussaint', start: mockJour(14),
