@@ -7,6 +7,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -57,6 +58,10 @@ import {
 
 // I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
 // l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
+// La barre fine laisse au titre la fenêtre moins 152 px (marges, retour, vide) ; un signe : ~11 px.
+const PLACE_PRISE_DANS_LA_BARRE = 152;
+const LARGEUR_D_UN_SIGNE = 11;
+
 const TAB_OPTIONS = [
   {
     get label() { return i18next.t('tournamentManagement.tabOverview', 'Vue d ensemble'); },
@@ -119,6 +124,7 @@ const TEAM_FILTER_OPTIONS = [
  */
 function TournamentManagement({ navigation, route }) {
   const { t } = useTranslation();
+  const { width: largeurDeLaFenetre } = useWindowDimensions();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
   const { canManageEvent } = useAuth();
@@ -363,7 +369,14 @@ function TournamentManagement({ navigation, route }) {
   // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
   // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
   const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
-  useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDuLecteur });
+  // T3-PLACE (03/11) : à 390, un nom long se coupait dans la barre et se répétait juste dessous.
+  // ponytail: « il tient » est estimé en signes ; sortie : mesurer le texte de la barre.
+  const nomTropLongPourLaBarre = titreDuLecteur.length * LARGEUR_D_UN_SIGNE
+    > largeurDeLaFenetre - PLACE_PRISE_DANS_LA_BARRE;
+  const titreDeLaBarre = nomTropLongPourLaBarre
+    ? t('tournamentManagement.competition', 'Compétition')
+    : titreDuLecteur;
+  useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDeLaBarre });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);

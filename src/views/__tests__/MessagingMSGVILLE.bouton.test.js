@@ -24,6 +24,7 @@ jest.mock('@shopify/flash-list', () => {
       return reactActuel.createElement(
         VueRN,
         null,
+        props.ListHeaderComponent,
         (props.data || []).map((/** @type {any} */ element, /** @type {number} */ index) => (
           reactActuel.createElement(
             VueRN,
@@ -250,8 +251,9 @@ describe('FIN-PLACE — D-COACH-11, le bouton rond sur le site', () => {
     Platform.OS = plateforme;
   });
 
-  test('site : le bouton est là, et plus rien ne flotte', async () => {
-    Platform.OS = 'web';
+  // T3-PLACE (03/11, réponse du chef à FIN-PLACE) : le téléphone suit le site.
+  test.each(['web', 'ios', 'android'])('%s : le bouton est là, rien ne flotte', async (os) => {
+    Platform.OS = /** @type {any} */ (os);
     mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
     const arbre = await monter({});
     // La doublure de FlashList ne monte pas l'en-tête : on le lit dans ses props.
@@ -262,11 +264,5 @@ describe('FIN-PLACE — D-COACH-11, le bouton rond sur le site', () => {
     };
     expect(contient(arbre.root.findByType(FlashList).props.ListHeaderComponent)).toBe(true);
     expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(0);
-  });
-
-  test('téléphone : le bouton rond flotte toujours', async () => {
-    mockAuth.userData = { documentId: 'moi', role: { name: 'Entraineur' } };
-    const arbre = await monter({});
-    expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(1);
   });
 });

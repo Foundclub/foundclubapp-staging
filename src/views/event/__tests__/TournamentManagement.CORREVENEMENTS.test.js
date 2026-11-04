@@ -223,12 +223,28 @@ describe('CORR-EVENEMENTS 133 — le cockpit parle français', () => {
 describe('FIN-TEXTES 130 — la barre fine du site', () => {
   afterEach(() => { mockPeutGerer.value = true; });
 
-  test('🔴 un parent y lit le nom du tournoi', async () => {
+  // T3-PLACE (03/11) : à 390, un nom long se coupait dans la barre et se répétait juste dessous.
+  // Le nom reste là où il tient (p130) ; sinon la barre dit « Compétition », le nom reste dans la page.
+  const NOM_LONG = 'Tournoi - 14/11/2026 - U11 de Montrivage';
+  test.each([
+    ['nom court, 390', 'Tournoi de Noël', 390, 'Tournoi de Noël'],
+    ['nom court, 1440', 'Tournoi de Noël', 1440, 'Tournoi de Noël'],
+    ['nom long, 1440', NOM_LONG, 1440, NOM_LONG],
+    ['nom long, 390', NOM_LONG, 390, 'Compétition'],
+  ])('🔴 un parent, %s', async (_cas, nom, largeur, attendu) => {
     mockPeutGerer.value = false;
+    const fenetre = jest.spyOn(
+      jest.requireActual('react-native/Libraries/Utilities/useWindowDimensions'),
+      'default',
+    ).mockReturnValue({
+      fontScale: 1, height: 844, scale: 1, width: largeur,
+    });
     const donnees = tableau();
-    await monter({ ...donnees, event: { ...donnees.event, name: 'Tournoi de Noël' } });
+    const arbre = await monter({ ...donnees, event: { ...donnees.event, name: nom } });
 
-    expect(lirePageDuSite().titre).toBe('Tournoi de Noël');
+    expect(lirePageDuSite().titre).toBe(attendu);
+    expect(texte(arbre)).toContain(nom);
+    fenetre.mockRestore();
   });
 
   test('🔴 sans nom de tournoi, le parent lit « Compétition », jamais le pilotage', async () => {

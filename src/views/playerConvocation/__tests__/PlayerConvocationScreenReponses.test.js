@@ -322,16 +322,15 @@ describe('CORR-EVENEMENTS 120 — convocation d un match annulé', () => {
       && typeof noeud.props?.onPress === 'function',
   ).map((/** @type {any} */ noeud) => Boolean(noeud.props.disabled));
 
-  it('🐞 match annulé : le bandeau le dit, Présent et Absent ne répondent plus', () => {
+  // T3-PLACE (03/11) : la barre grisée restait pour rien ; plus rien à répondre, plus de barre.
+  it('🐞 match annulé : le bandeau le dit, et la barre Présent / Absent disparaît', () => {
     mockConvocation = convocation(REPONSES);
     mockEvenement = { documentId: 'evt-1', status: 'cancelled' };
 
     const arbre = rendre();
 
     expect(texteVisible(arbre)).toContain('Match annulé');
-    const inactifs = boutonsInactifs(arbre);
-    expect(inactifs.length).toBeGreaterThan(0);
-    expect(inactifs.every(Boolean)).toBe(true);
+    expect(boutonsInactifs(arbre)).toEqual([]);
   });
 
   it('match maintenu : ni bandeau, ni bouton bloqué', () => {

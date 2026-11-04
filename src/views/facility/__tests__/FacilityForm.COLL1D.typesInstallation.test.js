@@ -106,9 +106,11 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 }));
 
 // COLL-C2B (02/10) : en mairie, le type se choisit dans une feuille du bas (design P4-form).
+const mockFeuille = { croixCachee: /** @type {any} */ (undefined) };
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
-  /** @type {any} */ { children, isVisible },
+  /** @type {any} */ { children, hideCloseButton, isVisible },
 ) {
+  if (isVisible) mockFeuille.croixCachee = hideCloseButton;
   return isVisible ? children : null;
 });
 
@@ -360,6 +362,8 @@ describe('COLL1D — les types d installation des mairies (D28), dans les DEUX f
     const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
     expect(pastillesDeType()).toEqual([]);
     await appuyerSur(arbre, 'Choisir le type');
+    // T3-PLACE (03/11) : la feuille du type a sa croix, comme les autres fenêtres de choix.
+    expect(mockFeuille.croixCachee).toBe(false);
     const lu = texteDe(arbre.root);
     LIBELLES_ATTENDUS
       .filter((libelle) => libelle !== 'Salle vidéo' && libelle !== 'Club House')
