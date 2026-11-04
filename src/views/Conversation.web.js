@@ -479,29 +479,31 @@ const PALETTE_DU_FIL = {
  * @param {{ children: string, testId: string }} props - Le texte et le temoin.
  * @returns {React.ReactElement} La notice.
  */
-const NoticeDeTeteDuFil = ({ children, testId }) => (
-  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 6px' }}>
-    <span
-      data-testid={testId}
-      style={{
-        alignItems: 'center',
-        background: PALETTE_DU_FIL.noticeFond,
-        borderRadius: 8,
-        color: PALETTE_DU_FIL.noticeTexte,
-        display: 'inline-flex',
-        fontSize: 11.5,
-        gap: 6,
-        lineHeight: '15px',
-        maxWidth: 320,
-        padding: '6px 12px',
-        textAlign: 'center',
-      }}
-    >
-      <GlyphIcon color={PALETTE_DU_FIL.noticeTexte} name="lockShut" size={12} />
-      {children}
-    </span>
-  </div>
-);
+function NoticeDeTeteDuFil({ children, testId }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 6px' }}>
+      <span
+        data-testid={testId}
+        style={{
+          alignItems: 'center',
+          background: PALETTE_DU_FIL.noticeFond,
+          borderRadius: 8,
+          color: PALETTE_DU_FIL.noticeTexte,
+          display: 'inline-flex',
+          fontSize: 11.5,
+          gap: 6,
+          lineHeight: '15px',
+          maxWidth: 320,
+          padding: '6px 12px',
+          textAlign: 'center',
+        }}
+      >
+        <GlyphIcon color={PALETTE_DU_FIL.noticeTexte} name="lockShut" size={12} />
+        {children}
+      </span>
+    </div>
+  );
+}
 
 /** Le style d un texte LU par le lecteur d ecran mais invisible a l ecran. */
 /** @type {import('react').CSSProperties} */
@@ -5318,7 +5320,10 @@ function Conversation({ navigation, route }) {
                 ) : null}
                 {filLuParDesParents(chatData) ? (
                   <NoticeDeTeteDuFil testId="conversation-parents-read-notice">
-                    {t('conversation.parentsReadNotice', 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.')}
+                    {t(
+                      'conversation.parentsReadNotice',
+                      'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
+                    )}
                   </NoticeDeTeteDuFil>
                 ) : null}
                 {hasNextPage ? (

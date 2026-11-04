@@ -7207,9 +7207,11 @@ function Conversation({ navigation, route }) {
    * defile avec les messages (comme la mention de chiffrement de WhatsApp). Elle est posee
    * en pied de la liste INVERSEE (= en haut du fil), et seulement quand le plus ancien
    * message est charge : plus haut, il n'y a plus rien.
+   * @param {string} testID - Le temoin.
+   * @param {string} texte - La phrase.
    * @returns {React.ReactElement} La notice.
    */
-  const renderNoticeDeTete = (/** @type {string} */ testID, /** @type {string} */ texte) => (
+  const renderNoticeDeTete = (testID, texte) => (
     <View
       style={[
         stylesDuFil.noticeDeTete,
@@ -7238,11 +7240,19 @@ function Conversation({ navigation, route }) {
   // T3-PARENT-LIGNE (« 24- A », 04/11) — au même endroit, et seulement si un tel parent peut lire.
   const noticeDesParents = filLuParDesParents(chatData) ? renderNoticeDeTete(
     'conversation-parents-read-notice',
-    t('conversation.parentsReadNotice', 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.'),
+    t(
+      'conversation.parentsReadNotice',
+      'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
+    ),
   ) : null;
   const noticeDeTete = hasNextPage || !(noticeDuClub || noticeDesParents)
     ? null
-    : <>{noticeDuClub}{noticeDesParents}</>;
+    : (
+      <>
+        {noticeDuClub}
+        {noticeDesParents}
+      </>
+    );
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;

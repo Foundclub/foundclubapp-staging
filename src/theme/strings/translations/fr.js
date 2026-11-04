@@ -8921,8 +8921,6 @@ export default {
     // s'affiche QUE sur un fil rattaché à un club (fil de club, fil d'équipe) :
     // ailleurs, aucun dirigeant ne peut lire, et la phrase serait fausse.
     clubReadNotice: 'Les conversations de ce club peuvent être consultées par son dirigeant.',
-    // T3-PARENT-LIGNE (« 24- A ») — seulement si un tel parent peut lire ce fil d'équipe.
-    parentsReadNotice: 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
     connectionUnavailable: 'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
     // eslint-disable-next-line max-len
     connectionUnavailableReconnect: 'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
@@ -9201,6 +9199,9 @@ export default {
       youDid: 'Vous avez {{action}}.',
       youLower: 'vous',
     },
+    // T3-PARENT-LIGNE (« 24- A ») — seulement si un tel parent peut lire ce fil d'équipe.
+    // eslint-disable-next-line max-len
+    parentsReadNotice: 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
     picker: {
       cameraOpenError: "Impossible d'ouvrir la caméra",
       cameraPermissionError: 'Impossible de vérifier la permission caméra.',

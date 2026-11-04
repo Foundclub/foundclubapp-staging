@@ -404,7 +404,7 @@ describe("CONVAVERT — l'avertissement en tête de conversation", () => {
     expect(fixes).toHaveLength(0);
   });
 
-  // T3-PARENT-LIGNE (« 24- A », 04/11) — la ligne ne se montre que si un tel parent peut lire ce fil.
+  // T3-PARENT-LIGNE (« 24- A », 04/11) — seulement si un tel parent peut lire ce fil.
   describe('T3-PARENT-LIGNE — la ligne des parents', () => {
     const LIGNE = 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.';
     const ROLES = { karim: 'entraineur', paola: 'parent:Lina' };
@@ -415,14 +415,16 @@ describe("CONVAVERT — l'avertissement en tête de conversation", () => {
       let arbre = null;
       act(() => { arbre = renderer.create(tete); });
       aDemonter.push(() => { act(() => { arbre.unmount(); }); });
-      return arbre.root.findAll((/** @type {any} */ n) => n?.props?.testID === 'conversation-parents-read-notice');
+      return arbre.root.findAll(
+        (/** @type {any} */ n) => n?.props?.testID === 'conversation-parents-read-notice',
+      );
     };
     const lignesAffichees = () => {
       monterLaConversation();
       return ligneDe(mockGiftedRenders[mockGiftedRenders.length - 1]);
     };
 
-    test('fil d equipe avec un parent : la ligne, mot pour mot, a cote de celle du dirigeant', () => {
+    test('fil d equipe avec un parent : la ligne, mot pour mot, avec celle du dirigeant', () => {
       mockChatData = { ...FIL_D_EQUIPE, staffRoles: ROLES };
 
       const lignes = lignesAffichees();
