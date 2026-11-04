@@ -10,8 +10,10 @@ import {
   getEvenementDeLaVille,
   getEvenementsDeLaVille,
   getEvenementsPublicsDeLaVille,
+  getReponsesEvenement,
   modifierEvenement,
   publierEvenement,
+  repondreEvenement,
 } from './collectiviteEvenementService';
 
 /**
@@ -101,6 +103,40 @@ export const useEvenementDeLaVille = (evenementId) => useQuery({
   queryKey: evenementDeLaVilleQueryKey(evenementId),
   staleTime: 30_000,
 });
+
+/**
+ * T3-VILLE-PRESENCE : qui vient. La Ville, ou le dirigeant pour son club ; `null` : aucune lecture.
+ * @param {string|null|undefined} evenementId - L'événement.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} La requête.
+ */
+export const useReponsesEvenement = (evenementId) => useQuery({
+  enabled: Boolean(evenementId),
+  queryFn: async () => (await getReponsesEvenement(String(evenementId)))?.data ?? null,
+  queryKey: [...evenementDeLaVilleQueryKey(evenementId), 'reponses'],
+  retry: false,
+  staleTime: 30_000,
+});
+
+/**
+ * T3-VILLE-PRESENCE : répondre, pour soi ou pour son enfant. La fiche (et donc les réponses lues)
+ * est relue après.
+ * @param {string|null|undefined} evenementId - L'événement.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, {
+ *   answer: 'absent'|'present', enfant?: string }>} Le geste.
+ */
+export const useRepondreEvenement = (evenementId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ answer, enfant }) => repondreEvenement({
+      answer,
+      enfant,
+      evenementId: String(evenementId),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: evenementDeLaVilleQueryKey(evenementId),
+    }),
+  });
+};
 
 /**
  * La recherche publique (niveau 3).

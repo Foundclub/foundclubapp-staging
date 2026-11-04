@@ -59,7 +59,7 @@ export const modifierEvenement = async ({ collectiviteId, data, evenementId }) =
 
 /**
  * POST /collectivites/:id/evenements/:evenementId/annuler — « Annuler l'événement ».
- * @param {{ collectiviteId: string, evenementId: string }} params - Lequel.
+ * @param {{ collectiviteId: string, evenementId: string, serie?: boolean }} params - Lequel.
  * @returns {Promise<any>} `{ data: vue }`.
  */
 export const annulerEvenement = async ({ collectiviteId, evenementId, serie = false }) => {
@@ -76,6 +76,31 @@ export const annulerEvenement = async ({ collectiviteId, evenementId, serie = fa
  */
 export const getEvenementDeLaVille = (evenementId) => lire(
   `/evenements-de-la-ville/${evenementId}`,
+);
+
+/**
+ * POST /evenements-de-la-ville/:id/reponse — T3-VILLE-PRESENCE : « Présent » ou « Absent »,
+ * pour soi, ou pour son enfant.
+ * @param {{ answer: 'absent'|'present', enfant?: string, evenementId: string }} params - La
+ * réponse, l'événement et, pour un enfant, sa fiche ou son compte.
+ * @returns {Promise<any>} `{ data: presence }`.
+ */
+export const repondreEvenement = async ({ answer, enfant, evenementId }) => {
+  const http = await client();
+  const reponse = await http.post(`/evenements-de-la-ville/${evenementId}/reponse`, {
+    data: enfant ? { answer, enfant } : { answer },
+  });
+  return reponse.data;
+};
+
+/**
+ * GET /evenements-de-la-ville/:id/reponses — T3-VILLE-PRESENCE : qui vient (la Ville, ou le
+ * dirigeant pour son club ; sinon 403).
+ * @param {string} evenementId - L'événement.
+ * @returns {Promise<any>} `{ data: { vue, totaux, ... } }`.
+ */
+export const getReponsesEvenement = (evenementId) => lire(
+  `/evenements-de-la-ville/${evenementId}/reponses`,
 );
 
 /**
