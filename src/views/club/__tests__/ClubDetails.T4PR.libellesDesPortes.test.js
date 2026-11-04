@@ -11,7 +11,7 @@ const ecran = fs.readFileSync(path.join(__dirname, '..', 'ClubDetails.js'), 'utf
 test('les deux textes disent pour qui', () => {
   expect(fr.clubDetails.clubInterest.buttonForMe).toBe('Pour moi : intéressé par le club');
   expect(fr.clubDetails.clubInterest.alreadySentForMe).toBe('Pour moi : intérêt déjà envoyé');
-  expect(fr.clubDetails.actions.askPlaceForMyChild).toBe('Pour mon enfant : demander une place');
+  expect(fr.clubDetails.actions.askPlaceForMyChild).toBe('Pour mon enfant : une place');
 });
 
 test('le libellé dépend de la présence des DEUX portes', () => {

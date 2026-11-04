@@ -670,7 +670,7 @@ describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l env
   it('la porte dit « pour un enfant », la feuille demande « Pour quel enfant ? »', async () => {
     const arbre = monter();
 
-    expect(texteDe(porteEnfant(arbre))).toBe('Pour mon enfant : demander une place');
+    expect(texteDe(porteEnfant(arbre))).toBe('Pour mon enfant : une place');
 
     await ouvrir(arbre);
     const texte = texteDe(feuille(arbre));
@@ -873,7 +873,7 @@ describe('PAR-L4 point 3 — l enfant transmis depuis SA fiche', () => {
     mockRoute = { params: { childDocumentId: 'c-inconnu', clubId: 'club-1' } };
     const arbre = monter();
 
-    expect(texteDe(porteEnfant(arbre))).toBe('Pour mon enfant : demander une place');
+    expect(texteDe(porteEnfant(arbre))).toBe('Pour mon enfant : une place');
     await ouvrir(arbre);
     expect(texteDe(feuille(arbre))).not.toContain('Tu viens de la fiche');
   });
@@ -954,7 +954,7 @@ describe('PARENT-FINITIONS 2 — la ligne d aide sous « Intéressé par le club
     expect(texte).toContain(AIDE);
     expect(texte.indexOf(AIDE)).toBeGreaterThan(texte.indexOf('Pour moi : intéressé par le club'));
     expect(texte.indexOf('Pour moi : intéressé par le club'))
-      .toBeGreaterThan(texte.indexOf('Pour mon enfant : demander une place'));
+      .toBeGreaterThan(texte.indexOf('Pour mon enfant : une place'));
   });
 
   it('sans enfant : une seule porte, pas de ligne d aide', () => {

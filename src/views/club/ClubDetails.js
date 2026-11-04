@@ -3048,7 +3048,7 @@ function ClubDetails({ navigation, route }) {
                 ...SANS_ECHAPPEMENT,
               })
               : (deuxPortes
-                ? t('clubDetails.actions.askPlaceForMyChild', 'Pour mon enfant : demander une place')
+                ? t('clubDetails.actions.askPlaceForMyChild', 'Pour mon enfant : une place')
                 : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant'))
           }
           variant="Primary"

@@ -2732,7 +2732,7 @@ export default {
       // PAR-L4 (13/10, design parent E10) — la porte du parent. Le prenom n'apparait que pour
       // l'enfant venu de SA fiche ; sinon la feuille demande « pour quel enfant ? ».
       askPlaceForChild: 'Demander une place pour un enfant',
-      askPlaceForMyChild: 'Pour mon enfant : demander une place',
+      askPlaceForMyChild: 'Pour mon enfant : une place',
       askPlaceForNamedChild: 'Demander une place pour {{firstname}}',
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait

@@ -2529,7 +2529,7 @@ export default {
     },
     actions: {
       askPlaceForChild: 'Request a place for a child',
-      askPlaceForMyChild: 'For my child: request a place',
+      askPlaceForMyChild: 'For my child: a place',
       askPlaceForNamedChild: 'Request a place for {{firstname}}',
       bringClubOver: 'This is my club',
       claimClub: 'This is my club',
