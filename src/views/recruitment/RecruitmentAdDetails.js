@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import { canManageTeamAd, isAdAuthor } from '@/domains/team/teamMembership';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -1502,10 +1503,13 @@ function RecruitmentAdDetails() {
                         <Button
                           disabled={updateApplicationStatusMutation.isPending}
                           isLoading={isDeclineLoading}
-                          onPress={() => updateApplicationStatusMutation.mutate({
-                            applicationId: application.documentId,
-                            status: 'declined',
-                          })}
+                          onPress={() => confirmerLeRefus(
+                            t,
+                            () => updateApplicationStatusMutation.mutate({
+                              applicationId: application.documentId,
+                              status: 'declined',
+                            }),
+                          )}
                           size="sm"
                           style={styles.candidateAction}
                           title={t('recruitmentAdDetails.candidates.decline', 'Refuser')}

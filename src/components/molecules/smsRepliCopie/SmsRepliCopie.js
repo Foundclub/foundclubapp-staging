@@ -40,7 +40,8 @@ function SmsRepliCopie({ message = '', testID = 'sms-repli-copie' }) {
         size="sm"
         testID={testID}
         title={t('smsRepliCopie.copier', 'Rien ne s’est ouvert ? Copier le message')}
-        variant="Ghost"
+        // T3-RETOURS-0411 (M0300, Adel : « trop peu visible ») : le contour de « Partager un lien ».
+        variant="SecondaryLight"
       />
       {issue ? (
         <Text accessibilityLiveRegion="polite" style={[Fonts.p4, Fonts.neutral200]}>

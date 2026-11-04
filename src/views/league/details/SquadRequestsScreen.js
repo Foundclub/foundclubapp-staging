@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -184,7 +185,7 @@ function SquadRequestsScreen({ navigation, route }) {
           <Button
             disabled={Boolean(pendingAction) || !userId}
             isLoading={pendingAction?.userId === userId && pendingAction?.decision === false}
-            onPress={() => handleRespond(String(userId || ''), false)}
+            onPress={() => confirmerLeRefus(t, () => handleRespond(String(userId || ''), false))}
             style={{ flex: 1 }}
             title={t('teamMembershipRequestList.actions.reject', 'Refuser')}
             variant="Secondary"

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
 import { canUserEditClub } from '@/domains/auth/authUseCases';
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -166,7 +167,10 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                   />
                   <Button
                     disabled={respondMutation.isPending}
-                    onPress={() => respondMutation.mutate({ action: 'refuse', audienceId })}
+                    onPress={() => confirmerLeRefus(
+                      t,
+                      () => respondMutation.mutate({ action: 'refuse', audienceId }),
+                    )}
                     title={t('eventTeamAudiencesSection.decline', 'Refuser')}
                     variant="Secondary"
                   />

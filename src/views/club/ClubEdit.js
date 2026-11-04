@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Switch, Text, TouchableOpacity, View,
+  Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -371,7 +371,13 @@ function ClubEdit({ navigation, route }) {
     <>
       <ScreenContainer
         bgImage="bg2"
-        contentContainerStyle={[Spaces.paddingVertical[24]]}
+        // T3-RETOURS-0411 (M0369, Adel : « Enregistrer trop bas ») : sur le site, le cadre prend la
+        // hauteur de la fenêtre ; le formulaire défile, les boutons restent en vue.
+        boundedHeight
+        contentContainerStyle={[
+          Spaces.paddingVertical[24],
+          Platform.OS === 'web' ? Alignments.fill : null,
+        ]}
         keyboardAvoiding
       >
         {/* 🤖 ANDROIDBAR-4 — l'évitement du clavier est celui du ScreenContainer : le

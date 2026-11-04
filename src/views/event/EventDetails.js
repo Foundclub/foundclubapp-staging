@@ -59,6 +59,7 @@ import {
   resolveParticipationFlow,
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import {
   canManageCompositionForClub,
   getSubscriptionQuotaItem,
@@ -7780,7 +7781,10 @@ function EventDetails({ navigation, route }) {
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
                     isOption
-                    onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined')}
+                    onPress={() => confirmerLeRefus(
+                      t,
+                      () => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined'),
+                    )}
                     style={{ borderColor: `${Colors.error500}55` }}
                     textStyle={{ color: Colors.error300 }}
                     title={t('eventDetails.decline', 'Refuser')}
