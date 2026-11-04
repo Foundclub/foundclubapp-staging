@@ -137,6 +137,7 @@ import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
 import VideoMessagePlayer from '@/components/molecules/videoMessage/VideoMessagePlayer';
 import VideoMessageTile from '@/components/molecules/videoMessage/VideoMessageTile';
+import VideoPreparationBand from '@/components/molecules/videoMessage/VideoPreparationBand';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -234,7 +235,9 @@ import { EVENTS } from '@/hooks/useSocket';
 import {
   buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
 } from '@/platform/media/photoLimits';
-import { preparerVideo } from '@/platform/media/preparerVideo';
+import {
+  annulerPreparationVideo, oublierFichierVideo, ouvrirGalerieUneSeuleFois, preparerVideo,
+} from '@/platform/media/preparerVideo';
 import {
   readVideoMessageText, VIDEO_MAX_BYTES, videoMessageText, videoSizeRefusal,
 } from '@/platform/media/videoLimits';
@@ -744,6 +747,8 @@ function Conversation({ navigation, route }) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
   const uploadInFlightRef = useRef(false);
+  const compressionDeCetEcranRef = useRef(false);
+  const annulationDuMediaRef = useRef(false);
   // MSG1/N5 — la derniere fois qu'on a prevenu le serveur qu'on ecrit.
   const lastTypingStartSentAtRef = useRef(0);
   const closeConversationPrompt = useCallback(() => {
@@ -1523,6 +1528,10 @@ function Conversation({ navigation, route }) {
     /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );
   const [isUploading, setIsUploading] = useState(false);
+  // VIDEO-RAME — le bandeau d'attente : `pourcent` à null tant que le fichier arrive de la galerie.
+  const [preparationDuMedia, setPreparationDuMedia] = useState(
+    /** @type {{ pourcent: number | null } | null} */ (null),
+  );
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
@@ -2521,17 +2530,45 @@ function Conversation({ navigation, route }) {
   const compresserSiVideo = useCallback(async (/** @type {AttachmentAsset} */ asset) => {
     if (!String(asset?.type || '').startsWith('video/')) return asset;
     setIsUploading(true);
+    compressionDeCetEcranRef.current = true;
+    setPreparationDuMedia({ pourcent: 0 });
     try {
-      const preparation = await preparerVideo(asset);
-      if ('refus' in preparation) {
-        showErrorBanner(preparation.refus);
-        return null;
-      }
-      return /** @type {AttachmentAsset} */ (preparation.asset);
+      const preparation = await preparerVideo(asset, {
+        onProgres: (pourcent) => setPreparationDuMedia((avant) => avant && { pourcent }),
+      });
+      if ('asset' in preparation) return /** @type {AttachmentAsset} */ (preparation.asset);
+      // VIDEO-RAME — la copie laissée par la galerie ne servira plus.
+      await oublierFichierVideo(asset.uri);
+      if ('refus' in preparation) showErrorBanner(preparation.refus);
+      return null;
     } finally {
+      compressionDeCetEcranRef.current = false;
+      setPreparationDuMedia(null);
       setIsUploading(false);
     }
   }, [showErrorBanner]);
+
+  const annulerPreparationDuMedia = useCallback(() => {
+    annulationDuMediaRef.current = true;
+    annulerPreparationVideo();
+    setPreparationDuMedia(null);
+  }, []);
+
+  // VIDEO-RAME — quitter la conversation arrête SA compression : le téléphone ne travaille plus
+  // pour un envoi que personne n'attend, et revenir n'en lance pas une seconde par-dessus.
+  useEffect(() => () => {
+    if (compressionDeCetEcranRef.current) annulerPreparationVideo();
+  }, []);
+
+  // VIDEO-RAME — une vidéo traitée ne laisse ni sa copie ni son fichier réduit dans le téléphone.
+  const oublierFichiersVideo = useCallback(async (
+    /** @type {AttachmentAsset} */ prete,
+    /** @type {AttachmentAsset} */ choisie,
+  ) => {
+    if (!String(prete?.type || '').startsWith('video/')) return;
+    await oublierFichierVideo(prete.uri);
+    if (choisie?.uri !== prete.uri) await oublierFichierVideo(choisie?.uri);
+  }, []);
 
   const queueOrSendPickedAsset = async (
     /** @type {AttachmentAsset} */ selectedAsset,
@@ -2573,18 +2610,42 @@ function Conversation({ navigation, route }) {
     await uploadAndSendAttachment(normalizedAsset, {
       replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
     });
+    await oublierFichiersVideo(normalizedAsset, selectedAsset);
     setReplyingTo(null);
   };
 
-  const handlePickMedia = async () => {
+  // VIDEO-RAME — la roue tourne aussi pendant que le téléphone copie le fichier choisi.
+  const ouvrirLaGalerie = useCallback(async () => {
+    annulationDuMediaRef.current = false;
+    setIsUploading(true);
+    setPreparationDuMedia({ pourcent: null });
     try {
-      logAttachmentDebug('handlePickMedia open picker');
-      const response = await launchImageLibrary({
+      const ouverture = await ouvrirGalerieUneSeuleFois(() => launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
         selectionLimit: 1,
         ...PHOTO_PICKER_LIMITS,
-      });
+      }));
+      if (!('reponse' in ouverture)) {
+        showErrorBanner(ouverture.refus);
+        return null;
+      }
+      if (!annulationDuMediaRef.current) return ouverture.reponse;
+      // Annulé pendant la copie : le fichier revenu ne sert plus.
+      const revenu = ouverture.reponse?.assets?.[0];
+      if (String(revenu?.type || '').startsWith('video/')) await oublierFichierVideo(revenu?.uri);
+      return null;
+    } finally {
+      setPreparationDuMedia(null);
+      setIsUploading(false);
+    }
+  }, [showErrorBanner]);
+
+  const handlePickMedia = async () => {
+    try {
+      logAttachmentDebug('handlePickMedia open picker');
+      const response = await ouvrirLaGalerie();
+      if (!response) return;
 
       if (response.didCancel) {
         logAttachmentDebug('handlePickMedia cancelled by user');
@@ -2833,11 +2894,13 @@ function Conversation({ navigation, route }) {
       showErrorBanner(buildAttachmentUploadErrorMessage(error));
     } finally {
       setIsEditMessageUploadingAttachment(false);
+      await oublierFichiersVideo(normalizedAsset, selectedAsset);
     }
   }, [
     buildAttachmentUploadErrorMessage,
     compresserSiVideo,
     normalizePickedAsset,
+    oublierFichiersVideo,
     showErrorBanner,
     uploadAttachmentAsset,
     validateAttachmentAsset,
@@ -2845,14 +2908,8 @@ function Conversation({ navigation, route }) {
 
   const handleEditPickMedia = useCallback(async () => {
     try {
-      const response = await launchImageLibrary({
-        includeBase64: false,
-        mediaType: 'mixed',
-        selectionLimit: 1,
-        ...PHOTO_PICKER_LIMITS,
-      });
-
-      if (response.didCancel) return;
+      const response = await ouvrirLaGalerie();
+      if (!response || response.didCancel) return;
       if (response.errorCode) {
         showErrorBanner(response.errorMessage || i18n.t(
           'conversation.picker.selectionError',
@@ -2871,7 +2928,7 @@ function Conversation({ navigation, route }) {
         "Impossible d'ouvrir la galerie.",
       ));
     }
-  }, [appendEditAttachmentsFromAsset, showErrorBanner]);
+  }, [appendEditAttachmentsFromAsset, ouvrirLaGalerie, showErrorBanner]);
 
   const handleEditTakePhoto = useCallback(async () => {
     try {
@@ -6768,10 +6825,17 @@ function Conversation({ navigation, route }) {
   const renderAccessory = () => {
     const hasMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
     const hasReplyPreview = !!replyingTo;
-    if (!hasMediaDraft && !hasReplyPreview) return null;
+    if (!hasMediaDraft && !hasReplyPreview && !preparationDuMedia) return null;
 
     return (
       <View style={Spaces.gap[8]}>
+        {preparationDuMedia ? (
+          <VideoPreparationBand
+            onCancel={annulerPreparationDuMedia}
+            pourcent={preparationDuMedia.pourcent}
+          />
+        ) : null}
+
         {hasMediaDraft ? (
           <View style={[
             Spaces.padding[8],

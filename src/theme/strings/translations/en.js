@@ -8839,10 +8839,14 @@ export default {
     },
     // MSG-MEDIA (29/10) — a video in the chat.
     video: {
+      alreadyPreparing: 'A video is already being prepared. Try again once it has been sent.',
       close: 'Close the video',
       label: 'Video',
       openInBrowser: 'Open in the browser',
+      pickTimeout: 'Your phone could not get this file. Try again.',
       play: 'Play the video',
+      preparing: 'Preparing the video… {{pourcent}}%',
+      preparingFile: 'Preparing the file…',
       tooLarge: 'Video too large: {{max}} MB maximum.',
       tooLargeUncompressed: 'Video too large: {{max}} MB maximum. Your phone could not shrink it.',
       unreadable: 'This video cannot be played here.',
