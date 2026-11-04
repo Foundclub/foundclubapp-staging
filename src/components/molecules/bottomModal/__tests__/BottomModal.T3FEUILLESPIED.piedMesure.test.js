@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import { createElement } from 'react';
 import { Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -135,5 +138,46 @@ describe('le pied d\'une feuille en hauteur automatique', () => {
     const zone = zoneMesuree({ snapPoints: ['90%'] });
     expect(piedsDans(zone)).toBe(0);
     expect(piedsDans(arbre.root)).toBe(1);
+  });
+
+  test('avec piedHorsMesure, le pied reste dessous, comme avant', () => {
+    const zone = zoneMesuree({ piedHorsMesure: true });
+    expect(piedsDans(zone)).toBe(0);
+    expect(piedsDans(arbre.root)).toBe(1);
+    expect(zone.props.contentContainerStyle.paddingBottom).toBe(16);
+  });
+});
+
+// Décision du chef (« D », 04/11) : à l'émulateur, Android 15+ à 3 boutons, une feuille à champ non
+// déclaré passait derrière le clavier avec le pied mesuré. Ces 2 feuilles restent à l'ancienne
+// jusqu'au lot clavier ; les 9 autres prennent le correctif. La feuille de match, vue sans souci,
+// en fait partie malgré son champ.
+describe('qui prend le correctif', () => {
+  /**
+   * Lit le source d'une feuille.
+   * @param {string} chemin Depuis src.
+   * @returns {string} Le source.
+   */
+  const source = (chemin) => readFileSync(join(__dirname, '../../../..', chemin), 'utf8');
+
+  test.each([
+    'views/event/components/EventChildRegistration.js',
+    'components/organisms/facilityReport/FacilityReportPanel.js',
+  ])('%s : à l\'ancienne', (chemin) => {
+    expect(source(chemin)).toMatch(/^\s*piedHorsMesure$/m);
+  });
+
+  test.each([
+    'components/organisms/seasonSlot/SeasonSlotForm.js',
+    'views/event/components/CancelSeriesSheet.js',
+    'views/event/components/ChildRegistrationCancel.js',
+    'views/event/components/TournamentTeamSheet.js',
+    'views/home/FeuillePratiqueAussi.js',
+    'views/matchStats/MatchStatsEditor.js',
+    'views/profile/parent/CommentCaMarche.js',
+    'views/profile/parent/FeuilleDAnnulation.js',
+    'views/profile/parent/MenuDeLEnfant.js',
+  ])('%s : au correctif', (chemin) => {
+    expect(source(chemin)).not.toContain('piedHorsMesure');
   });
 });

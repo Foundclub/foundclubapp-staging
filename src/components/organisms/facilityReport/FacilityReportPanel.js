@@ -488,6 +488,7 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
         </View>
       )}
       isVisible={feuilleOuverte}
+      piedHorsMesure
     >
       <View style={{ gap: 10, padding: 16 }} testID="signalement-feuille">
         <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
