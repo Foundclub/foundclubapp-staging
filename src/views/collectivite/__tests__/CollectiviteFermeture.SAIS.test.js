@@ -424,7 +424,9 @@ test('SAIS-1/ville une date vide dit « Choisir » (Fermer : Du, Au ; Bloquer : 
   expect(champ('Jour').placeholder).toBe('Choisir');
 });
 
-test('SAIS-2/8 dans le panneau d ordinateur, aucune garde : le planning a sa croix', async () => {
+// T3-CHEMINS (03/11) : « aucune garde » perdait la saisie en silence à la flèche du navigateur et aux
+// liens du menu (contre-recette Collectivité). La croix reste sans question (COLL-C4B-BIS).
+test('SAIS-2/8 dans le panneau d ordinateur, la saisie est gardée aussi', async () => {
   await rendre(
     <PanneauDeFermeture
       collectiviteId="ville-montrivage"
@@ -435,7 +437,7 @@ test('SAIS-2/8 dans le panneau d ordinateur, aucune garde : le planning a sa cro
     />,
   );
   await saisir('Du', '10/10/2030');
-  expect(mockNavigation.addListener).not.toHaveBeenCalledWith('beforeRemove', expect.anything());
+  expect(mockNavigation.addListener).toHaveBeenCalledWith('beforeRemove', expect.anything());
 });
 
 jest.mock(
