@@ -562,7 +562,6 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
           </View>
         )}
         isVisible={Boolean(refusing)}
-        piedHorsMesure
       >
         <View style={[Spaces.gap[12]]} testID="child-registration-refuse-sheet">
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
