@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { Image } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -18,7 +19,7 @@ jest.mock('@/theme/themeContext', () => ({
 const monter = async (props) => {
   let tree;
   await act(async () => {
-    tree = renderer.create(<SponsorLogoTile {...props} />);
+    tree = renderer.create(createElement(SponsorLogoTile, props));
   });
   return tree;
 };

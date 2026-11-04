@@ -21,7 +21,7 @@ const logoSizes = new Map();
 const MAX_KNOWN_LOGO_SIZES = 500;
 
 /**
- * La taille d'un logo, demandee une seule fois par adresse.
+ * La taille d'un logo : la demande deja partie si elle existe, sinon une nouvelle.
  * @param {string} uri
  * @returns {Promise<{ height: number, width: number }>}
  */
