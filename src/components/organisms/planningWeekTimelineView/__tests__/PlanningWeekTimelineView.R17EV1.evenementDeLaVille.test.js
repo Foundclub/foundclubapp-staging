@@ -3,6 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import { blocsDesEvenements } from '@/domains/collectivite/evenementDeLaVille';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+
 import { normalizePlanningItems } from '@/utils/planning/planningSlots';
 
 import PlanningWeekTimelineView from '../PlanningWeekTimelineViewV2';
@@ -17,6 +19,11 @@ import PlanningWeekTimelineView from '../PlanningWeekTimelineViewV2';
 
 jest.setTimeout(30000);
 
+let mockOrdinateur = false;
+jest.mock('@/responsive', () => ({
+  ...jest.requireActual('@/responsive'),
+  useIsDesktop: () => mockOrdinateur,
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
@@ -123,7 +130,7 @@ const monter = async (/** @type {any[]} */ evenements, /** @type {any} */ props 
         currentDate={SAMEDI}
         events={normalizePlanningItems([...blocs, ...(props.seances || [])])}
         firstHour={8}
-        mode="day"
+        mode={props.mode || 'day'}
         onEvenementVillePress={props.onEvenementVillePress}
         showHeader={false}
         showUntimedSection={false}
@@ -160,6 +167,52 @@ const montrerLaSemaine = async () => {
   arbresMontes.push(arbre);
   return arbre;
 };
+
+// T3-CARTE-VILLE (04/11/2026, décision d'Adel « 26- A ») : en Semaine, la colonne est étroite.
+describe('T3-CARTE-VILLE — la carte en vue Semaine', () => {
+  const AVEC_TOUT = {
+    ...FETE, collectivite: { name: 'Ville de Démouville' }, facility: { name: 'Gymnase Cosec' },
+  };
+  const lusDans = (/** @type {any} */ bloc) => bloc.findAllByType(MarqueeText)
+    .map((/** @type {any} */ n) => n.props.text);
+  afterEach(() => {
+    mockOrdinateur = false;
+  });
+
+  it('au téléphone : le nom seul, et il défile s’il est long', async () => {
+    const arbre = await monter([AVEC_TOUT], { mode: 'week' });
+    const bloc = blocDe(arbre, 'Fête du sport');
+
+    expect(lusDans(bloc)).toEqual(['Fête du sport']);
+    expect(textesDe(bloc).join(' ')).not.toContain('Ville de Démouville');
+    expect(textesDe(bloc).join(' ')).not.toContain('Gymnase Cosec');
+    expect(textesDe(bloc).join(' ')).not.toContain('10:00');
+  });
+
+  it('sur ordinateur : le nom d’abord, puis la Ville, le reste sur la fiche', async () => {
+    mockOrdinateur = true;
+    const arbre = await monter([AVEC_TOUT], { mode: 'week' });
+    const bloc = blocDe(arbre, 'Fête du sport');
+
+    expect(lusDans(bloc)).toEqual(['Fête du sport', 'Ville de Démouville']);
+    expect(textesDe(bloc).join(' ')).not.toContain('Gymnase Cosec');
+  });
+
+  it('le lecteur d’écran dit toujours tout', async () => {
+    const arbre = await monter([AVEC_TOUT], { mode: 'week' });
+
+    const { accessibilityLabel } = blocDe(arbre, 'Fête du sport').props;
+    expect(accessibilityLabel).toContain('10:00');
+    expect(accessibilityLabel).toContain('Ville de Démouville');
+  });
+
+  it('en vue Jour, rien ne change', async () => {
+    const arbre = await monter([AVEC_TOUT]);
+
+    expect(lusDans(blocDe(arbre, 'Fête du sport'))).toEqual([]);
+    expect(textesDe(blocDe(arbre, 'Fête du sport'))[1]).toBe('Gymnase Cosec');
+  });
+});
 
 describe('R17-EVT-1 — l’événement de la Ville sur le planning d’une installation', () => {
   it('🐞 RET-PLANNING fiche 8 : la Ville, puis l’installation, sans couper', async () => {
