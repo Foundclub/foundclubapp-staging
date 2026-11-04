@@ -5,8 +5,9 @@ import SponsorMarquee from '../SponsorMarquee';
 
 // PERFIMAGES (03/11) — le journal d'acces de la prod montre un seul reseau qui demande 2 106 images
 // en 21 secondes, dont deux logos 991 fois chacun. Le serveur envoie `Cache-Control: max-age=0` :
-// rien n'autorise le telephone a reutiliser une reponse. Or une ligne de sponsors demandait la taille
-// du meme logo a chaque tuile : la liste est repetee jusqu'a 4 elements, puis dupliquee pour la boucle.
+// rien n'autorise le telephone a reutiliser une reponse. Or une ligne de sponsors demandait la
+// taille du meme logo a chaque tuile : la liste est repetee jusqu'a 4 elements, puis dupliquee
+// pour la boucle.
 // Ce temoin compte les demandes de la carte. Les telechargements reels sur un iPhone ne sont pas
 // mesures ici.
 
@@ -58,7 +59,8 @@ describe('PERFIMAGES : une ligne de sponsors demande chaque logo une seule fois'
   };
 
   beforeEach(() => {
-    getSize = jest.spyOn(Image, 'getSize').mockImplementation((_uri, reussite) => reussite(200, 50));
+    getSize = jest.spyOn(Image, 'getSize')
+      .mockImplementation((_uri, reussite) => reussite(200, 50));
   });
 
   afterEach(() => {
