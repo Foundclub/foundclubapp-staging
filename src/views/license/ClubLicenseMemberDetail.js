@@ -125,7 +125,7 @@ function InfoRow({ label, value }) {
  *
  * @param root0
  * @param {boolean} [root0.isBusy] - Un envoi est en cours.
- * @param {number | null} [root0.maxCents] - Plafond du montant (remboursement).
+ * @param {number | null} [root0.maxCents] - Plafond du montant (remboursement, reste a payer).
  * @param root0.onClose
  * @param root0.onSubmit
  * @param root0.title
@@ -140,7 +140,9 @@ function ActionModal({
     Colors, Fonts, Spaces,
   } = useTheme();
   // BH11 P5-07 : un remboursement part du reste remboursable.
-  const [amount, setAmount] = useState(maxCents ? String(maxCents / 100).replace('.', ',') : '');
+  const [amount, setAmount] = useState(
+    type === 'refund' && maxCents ? String(maxCents / 100).replace('.', ',') : '',
+  );
   const [method, setMethod] = useState(methodOptions[0]?.mode || 'cash');
   const [note, setNote] = useState('');
   const [motifManquant, setMotifManquant] = useState(false);
@@ -190,7 +192,10 @@ function ActionModal({
         ) : null}
         {montantInvalide ? (
           <Text style={[Fonts.p3, { color: '#fda4af' }]}>
-            {t(
+            {type === 'payment' ? t(
+              'clubLicenseMemberDetail.actionModal.amountInvalidPayment',
+              'Indique un montant supérieur à 0, sans dépasser le reste à payer.',
+            ) : t(
               'clubLicenseMemberDetail.actionModal.amountInvalid',
               'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
             )}
@@ -332,6 +337,11 @@ function ClubLicenseMemberDetail({ route }) {
   // Y06 — la regle a demenage dans `licenseDesignSystem` : la LISTE porte
   // desormais le meme bouton, et elle doit obeir au MEME verdict.
   const canValidatePayment = canValidateAssignmentPayment(assignment, canUseSensitiveActions);
+  // PAYE-LIMITE — le droit ne suffit pas : il faut qu il reste quelque chose a encaisser.
+  // Meme mesure que la carte de la liste (`canAssignmentBeReminded`).
+  const canCollectPayment = canValidatePayment
+    && assignment?.status !== 'waived'
+    && Number(assignment?.amountRemainingCents) > 0;
   // Y06 — LA LISTE OUVRE CETTE FENETRE-CI. Elle ne recopie pas le formulaire
   // d encaissement : il n en existe qu un dans le depot, c est celui-la.
   // ⛔ L etat initial ne donne aucun droit : le rendu de la fenetre reste garde
@@ -403,13 +413,31 @@ function ClubLicenseMemberDetail({ route }) {
     && permissionQuery.isLoading
   );
   const hasError = query.isError || permissionQuery.isError;
+  let modalMaxCents = null;
+  if (modalType === 'refund') {
+    modalMaxCents = refundableAmount((assignment?.payments || []).find((payment) => (
+      String(payment?.documentId || payment?.id) === String(modal.paymentId))));
+  }
+  if (modalType === 'payment') modalMaxCents = Number(assignment?.amountRemainingCents);
 
   const submitModal = useCallback((payload) => {
     // W02 — encaisser suit `canValidatePayment` (le coach delegue y a droit) ;
     // tout le reste reste au dirigeant.
     if (modalType === 'payment' ? !canValidatePayment : !canUseSensitiveActions) return;
     const common = { onSuccess: () => { setModal(null); query.refetch(); } };
-    if (modalType === 'payment') manualPaymentMutation.mutate(payload, common);
+    if (modalType === 'payment') {
+      manualPaymentMutation.mutate(payload, {
+        ...common,
+        // PAYE-LIMITE — fiche perimee : le motif du serveur, pas un silence.
+        onError: (error) => Alert.alert(
+          t('clubLicenseMemberDetail.alerts.manualPayment.title', 'Paiement non enregistré'),
+          error?.message || t(
+            'clubLicenseMemberDetail.alerts.manualPayment.fallback',
+            'Le serveur a refusé ce paiement.',
+          ),
+        ),
+      });
+    }
     if (modalType === 'amount') amountMutation.mutate({ amountDueCents: payload.amountCents, note: payload.note }, common);
     if (modalType === 'waive') waiveMutation.mutate({ reason: payload.reason }, common);
     if (modalType === 'reject') rejectPaymentMutation.mutate({ paymentId: modal.paymentId, reason: payload.reason }, common);
@@ -1328,7 +1356,7 @@ function ClubLicenseMemberDetail({ route }) {
               (encaisser sur une exemption n a aucun sens, et le serveur la
               laisserait « waived » de toute facon).
             */}
-            {canValidatePayment && assignment?.status !== 'waived' ? (
+            {canCollectPayment ? (
               <Button
                 onPress={() => setModal({ type: 'payment' })}
                 title={t(
@@ -1374,14 +1402,11 @@ function ClubLicenseMemberDetail({ route }) {
           </>
         ) : null}
       </ScrollView>
-      {modal && (canUseSensitiveActions || (modalType === 'payment' && canValidatePayment)) ? (
+      {modal && (modalType === 'payment' ? canCollectPayment : canUseSensitiveActions) ? (
         <ActionModal
           isBusy={[manualPaymentMutation, amountMutation, waiveMutation, rejectPaymentMutation,
             refundMutation, reviewDocumentMutation].some((mutation) => mutation.isPending)}
-          maxCents={modalType === 'refund'
-            ? refundableAmount((assignment?.payments || []).find((payment) => (
-              String(payment?.documentId || payment?.id) === String(modal.paymentId))))
-            : null}
+          maxCents={modalMaxCents}
           methodOptions={manualMethodOptions}
           onClose={() => setModal(null)}
           onSubmit={submitModal}

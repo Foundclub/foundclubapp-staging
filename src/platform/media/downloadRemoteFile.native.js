@@ -111,7 +111,9 @@ export const downloadRemoteFile = async ({
   const blob = blobUtil();
   const dossierCache = blob?.fs?.dirs?.CacheDir
     || blob?.fs?.dirs?.DocumentDir;
-  const nomLocal = String(fileName || `foundclub-document.${extension}`);
+  // PAYE-LIMITE (04/11) — sans extension, l iPhone ne sait pas ouvrir le fichier (« données »).
+  const nomDemande = String(fileName || 'foundclub-document');
+  const nomLocal = extensionDeLUrl(nomDemande, '') ? nomDemande : `${nomDemande}.${extension}`;
   const cheminCible = `${dossierCache}/${Date.now()}-${nomLocal}`;
 
   const reponse = await blob
@@ -147,7 +149,7 @@ export const downloadRemoteFile = async ({
   return getShareLocalFile()({
     fileName: nomLocal,
     fileUri: cheminTelecharge.startsWith('file://') ? cheminTelecharge : `file://${cheminTelecharge}`,
-    mimeType: mimeType || undefined,
+    mimeType: mimeType || (extensionDeLUrl(nomLocal) === 'pdf' ? 'application/pdf' : undefined),
   });
 };
 

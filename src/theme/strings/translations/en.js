@@ -3485,6 +3485,7 @@ export default {
   clubLicenseMemberDetail: {
     actionModal: {
       amountInvalid: 'Enter an amount above 0, not more than what can be refunded.',
+      amountInvalidPayment: 'Enter an amount above 0, not more than what is left to pay.',
       amountPlaceholder: 'Amount in euros',
       noteOptional: 'Optional note',
       paymentMethod: 'Payment method',
@@ -3518,6 +3519,10 @@ export default {
         downloadFailedTitle: 'Download failed',
         unavailableMessage: 'No usable file is attached to this upload.',
         unavailableTitle: 'Document unavailable',
+      },
+      manualPayment: {
+        fallback: 'The server refused this payment.',
+        title: 'Payment not recorded',
       },
       officialLicense: {
         addedMessage: 'The official licence is now available to authorised people.',

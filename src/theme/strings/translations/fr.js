@@ -3805,6 +3805,7 @@ export default {
   clubLicenseMemberDetail: {
     actionModal: {
       amountInvalid: 'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
+      amountInvalidPayment: 'Indique un montant supérieur à 0, sans dépasser le reste à payer.',
       amountPlaceholder: 'Montant en euros',
       noteOptional: 'Note optionnelle',
       paymentMethod: 'Moyen de paiement',
@@ -3838,6 +3839,10 @@ export default {
         downloadFailedTitle: 'Téléchargement impossible',
         unavailableMessage: 'Aucun fichier exploitable n’est rattaché à ce dépôt.',
         unavailableTitle: 'Document indisponible',
+      },
+      manualPayment: {
+        fallback: 'Le serveur a refusé ce paiement.',
+        title: 'Paiement non enregistré',
       },
       officialLicense: {
         // eslint-disable-next-line max-len

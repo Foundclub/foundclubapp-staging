@@ -104,6 +104,41 @@ describe('downloadRemoteFile.native', () => {
     expect(mockFetch).toHaveBeenCalledWith('GET', ROUTE, { Authorization: 'Bearer jeton' });
     expect(mockPartager).toHaveBeenCalledWith(expect.objectContaining({ fileName: AFFICHE }));
   });
+
+  // PAYE-LIMITE (04/11, ligne M0157) — sur iPhone, le reçu s'ouvrait comme
+  // « 1793815150589-recu-FC-2026-86651-001387 · données » : sans extension, iOS ne sait pas
+  // ce qu'est le fichier. Les trois écrans du reçu passent un nom sans extension.
+  describe('PAYE-LIMITE — un nom que le téléphone sait ouvrir', () => {
+    const URL_RECU = 'https://api.test/uploads/recu_FC_2026_86651_001387_abc.pdf';
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue(reponseNative(200));
+      mockStat.mockResolvedValue({ size: 50000 });
+      mockPartager.mockResolvedValue({ opened: true, outcome: 'share-sheet' });
+    });
+
+    it('un nom sans extension prend celle de l’adresse, et le type PDF', async () => {
+      await telechargerNatif({ fileName: 'recu-FC-2026-86651-001387', url: URL_RECU });
+      expect(mockPartager).toHaveBeenCalledWith(expect.objectContaining({
+        fileName: 'recu-FC-2026-86651-001387.pdf', mimeType: 'application/pdf',
+      }));
+      expect(mockConfig.mock.calls[0][0].path).toMatch(/recu-FC-2026-86651-001387.pdf$/);
+    });
+
+    it('une adresse sans extension : PDF par défaut, comme le nom de secours', async () => {
+      await telechargerNatif({ fileName: 'recu-FC-1', url: 'https://api.test/fichier?x=1' });
+      expect(mockPartager).toHaveBeenCalledWith(expect.objectContaining({
+        fileName: 'recu-FC-1.pdf', mimeType: 'application/pdf',
+      }));
+    });
+
+    it('un nom qui a déjà son extension n est pas doublé, ni son type imposé', async () => {
+      await telechargerNatif({ fileName: 'modele.docx', url: 'https://api.test/uploads/x.docx' });
+      expect(mockPartager).toHaveBeenCalledWith(expect.objectContaining({
+        fileName: 'modele.docx', mimeType: undefined,
+      }));
+    });
+  });
 });
 
 describe('downloadRemoteFile.web', () => {
