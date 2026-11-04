@@ -561,7 +561,10 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
             />
           </View>
         )}
+        // T3-FEUILLES-PIED (« Q1 B », preuve à l'émulateur) : sans cran, pied mesuré, Android 15+ à
+        // 3 boutons cachait la feuille derrière le clavier (5 essais sur 5). Ce champ garde son cran.
         isVisible={Boolean(refusing)}
+        snapPoints={['50%']}
       >
         <View style={[Spaces.gap[12]]} testID="child-registration-refuse-sheet">
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>

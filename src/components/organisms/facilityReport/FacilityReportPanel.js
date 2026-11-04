@@ -487,7 +487,10 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
           />
         </View>
       )}
+      // T3-FEUILLES-PIED (« Q1 B », preuve à l'émulateur) : sans cran, pied mesuré, Android 15+ à
+      // 3 boutons cachait la feuille derrière le clavier (5 essais sur 5). Ce champ garde son cran.
       isVisible={feuilleOuverte}
+      snapPoints={['50%']}
     >
       <View style={{ gap: 10, padding: 16 }} testID="signalement-feuille">
         <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
