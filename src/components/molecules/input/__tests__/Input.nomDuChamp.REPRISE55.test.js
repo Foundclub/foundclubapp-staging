@@ -108,8 +108,12 @@ describe('REPRISE-ROBUSTESSE 55 et 57 — rôles et noms relevés par les contre
   });
 
   test('« Nouvelle conversation » de la messagerie est un bouton', () => {
-    expect(source('src/views/Messaging.js')).toMatch(
-      /accessibilityLabel=\{t\('messaging\.newConversation', 'Nouvelle conversation'\)\}\s+accessibilityRole="button"/,
+    const messagerie = source('src/views/Messaging.js');
+    expect(messagerie).toMatch(
+      /libelleNouvelleConversation = t\('messaging\.newConversation', 'Nouvelle conversation'\)/,
+    );
+    expect(messagerie).toMatch(
+      /accessibilityLabel=\{libelleNouvelleConversation\}\s+accessibilityRole="button"/,
     );
   });
 
