@@ -385,6 +385,15 @@ function TourGuideLayer() {
     ? [...passThrough, toCutout(rects[WIZARD_LIST_ID], width, height)]
     : passThrough;
   const primary = cutouts[0] || null;
+  // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
+  // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
+  // cible coupée doit pouvoir être amenée d'où qu'on pose le doigt : pas de voile, et la bulle le
+  // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
+  const isTargetCut = !currentStep?.bubbleSlot && !sheetGuide && measuredTargets.some((id) => (
+    clipSides[id]
+    || visibleRects[id].height < rects[id].height - 1
+    || rects[id].y + rects[id].height > height - 2
+  ));
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
@@ -405,19 +414,20 @@ function TourGuideLayer() {
     : null;
   // GUIDE-STORES : une cible coupée par sa liste n'a plus de mesure, ou seulement une lamelle ; sa
   // liste sait de quel côté elle est partie (onglets de Rechercher, après « Fais défiler »).
-  const clipSide = !primary && !sheetGuide
+  const clipSide = (!primary || isTargetCut) && !sheetGuide
     ? variant.targets.map((id) => clipSides[id]).find(Boolean)
     : null;
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
   if (clipSide === 'above' || (!clipSide && offTarget && offTarget.y < 0)) {
     scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
-  } else if (clipSide
+  } else if (clipSide || isTargetCut
     || (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2)) {
     scrollHint = t('tourGuide.scrollDown', 'Fais défiler vers le bas.');
   }
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
-  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
+  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute
+    && !isTargetCut;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
   const headerBottom = headerBottomOf(
     [...HEADER_IDS, ...(currentStep?.belowTargets || [])].map((id) => rects[id] || null),

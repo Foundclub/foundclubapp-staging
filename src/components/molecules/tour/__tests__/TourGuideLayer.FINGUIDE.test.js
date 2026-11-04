@@ -315,6 +315,39 @@ describe('la cible a été sortie de sa liste par un défilement', () => {
 });
 
 // GUIDE-STORES : « Vérifie le récap » sur un récap voilé, qui ne défilait pas.
+// GUIDE-STORES : sous le voile, l'écran ne défilait que si le doigt partait de la cible. Une cible
+// coupée doit pouvoir être amenée d'où qu'on pose le doigt, et la bulle le dit.
+describe('une cible coupée se fait défiler depuis tout l écran', () => {
+  const dockAt = (y) => ['dock.home', 'dock.planning', 'dock.teams'].forEach((id, index) => {
+    mountTarget(id, {
+      height: 60, width: 60, x: 20 + (index * 90), y,
+    });
+  });
+  const blockers = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.blocker');
+
+  it('rognée par la barre du bas : pas de bloqueur, et la bulle dit de défiler', async () => {
+    dockAt(760);
+    mountTarget('teams.trained.0', {
+      height: 200, width: 361, x: 16, y: 700,
+    });
+    mockTour = activeTour(step('m2-card'));
+    const tree = await renderLayer();
+    expect(blockers(tree)).toHaveLength(0);
+    expect(textsOf(tree)).toContain('Fais défiler vers le bas.');
+  });
+
+  it('témoin : entière, le voile et ses bloqueurs restent', async () => {
+    dockAt(760);
+    mountTarget('teams.trained.0', {
+      height: 200, width: 361, x: 16, y: 300,
+    });
+    mockTour = activeTour(step('m2-card'));
+    const tree = await renderLayer();
+    expect(blockers(tree).length).toBeGreaterThan(0);
+    expect(textsOf(tree).join(' ')).not.toMatch(/Fais défiler/);
+  });
+});
+
 describe('un récap à vérifier se lit en entier', () => {
   const blockersOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.blocker'
     && typeof node.type === 'string');
