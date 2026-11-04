@@ -173,20 +173,12 @@ describe('LOGO-CADRE — ce qui NE doit PAS bouger', () => {
     expect(cadre.backgroundColor).not.toBe('transparent');
   });
 
-  // T3-FINITIONS-VILLE-3 (contre-recette du train 3) : T20, un logo blanc sur fond blanc.
-  test('un logo blanc reste visible : le fond n\'est ni blanc ni noir', () => {
+  // T3-LOGO-RETOUR (04/11) : Adel n'a pas validé le gris, le fond blanc revient. Le défaut T20
+  // (croix blanche sur blanc) reste ouvert.
+  test('le fond derrière un logo reste blanc', () => {
     const { cadre } = mesurer({ image: { hauteur: 112, largeur: 112 } });
 
-    expect(cadre.backgroundColor).toBe(COULEURS.neutral400);
-  });
-
-  test('un écran qui choisit son fond (page du club) le garde', () => {
-    const { cadre } = mesurer({
-      image: { hauteur: 112, largeur: 112 },
-      props: { logoStyle: { backgroundColor: COULEURS.neutral00 } },
-    });
-
-    expect(cadre.backgroundColor).toBe(COULEURS.neutral00);
+    expect(cadre.backgroundColor.toLowerCase()).toBe(COULEURS.neutral00);
   });
 
   test('un trait de COULEUR (sélection de la recherche) est gardé', () => {
