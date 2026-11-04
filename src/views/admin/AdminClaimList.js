@@ -15,6 +15,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -33,6 +34,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  *
  */
 function AdminClaimList() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -383,10 +385,11 @@ function AdminClaimList() {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       title={t('adminClaimList.screenTitle', 'Revendications et demandes')}
     >
       <FlatList
-        contentContainerStyle={[Spaces.padding[16]]}
+        contentContainerStyle={[Spaces.padding[16], { paddingBottom: 16 + retraitBas }]}
         data={requests}
         keyExtractor={(item) => item.documentId}
         ListEmptyComponent={!isLoading ? (

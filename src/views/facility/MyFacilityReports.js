@@ -17,6 +17,7 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,6 +31,7 @@ import { useMyFacilityReports } from '@/services/facilityReport/facilityReportQu
  * @returns {import('react').ReactElement} L ecran.
  */
 function MyFacilityReports() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -157,9 +159,9 @@ function MyFacilityReports() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 16 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 24 + retraitBas, paddingTop: 16 }}
         testID="mes-signalements"
       >
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>

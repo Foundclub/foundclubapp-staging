@@ -232,6 +232,13 @@ afterAll(async () => {
 // (vignette, Q2 B) : un témoin de profil importe alors la vraie carte. Ces deux modules sont
 // livrés non transpilés (hors de transformIgnorePatterns) : une doublure neutre ici, qu'un
 // `jest.mock` local remplace toujours.
+// T3-BANDE-BAS (03/11) : les témoins d'écran remplacent ScreenContainer et n'ont pas de
+// SafeAreaProvider ; sans cette doublure, chaque écran du lot tomberait. La vraie valeur est gardée
+// par T3BANDEBAS.basDesEcrans.test.js.
+jest.mock('@/components/templates/useRetraitBasDuDefilement', () => ({
+  __esModule: true,
+  default: () => 0,
+}));
 jest.mock('react-native-linear-gradient', () => {
   const reactActuel = jest.requireActual('react');
   const { View: VueRN } = jest.requireActual('react-native');

@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -42,6 +43,7 @@ const sortActions = (actions = []) => [...actions].sort((left, right) => {
  *
  */
 function AdminPopupCampaignDetail() {
+  const retraitBas = useRetraitBasDuDefilement();
   const navigation = useNavigation();
   const route = useRoute();
   const campaignId = route?.params?.campaignId;
@@ -196,9 +198,10 @@ function AdminPopupCampaignDetail() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.paddingVertical[24]]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[24]]}
     >
-      <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32], Spaces.gap[16]]}>
+      <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], { paddingBottom: 56 + retraitBas }, Spaces.gap[16]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>{campaign.title || campaign.internalName}</Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
           {campaign.internalName}

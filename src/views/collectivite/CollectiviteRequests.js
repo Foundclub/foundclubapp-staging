@@ -36,6 +36,7 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import {
@@ -69,6 +70,7 @@ const LARGEUR_DEUX_VOLETS = 1024;
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteRequests() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -819,8 +821,8 @@ function CollectiviteRequests() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DecisionCreneauModal
         collectiviteId={collectiviteId}
@@ -829,7 +831,7 @@ function CollectiviteRequests() {
       />
 
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 48 + retraitBas, paddingTop: 12 }}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}

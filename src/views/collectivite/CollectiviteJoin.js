@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -40,6 +41,7 @@ import { useIsDesktop } from '@/responsive';
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteJoin() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -243,12 +245,12 @@ function CollectiviteJoin() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
         contentContainerStyle={[
-          { gap: 24, paddingBottom: 32, paddingTop: 32 },
+          { gap: 24, paddingBottom: 56 + retraitBas, paddingTop: 32 },
           isDesktop ? { flexDirection: 'row', maxWidth: 1040, width: '100%' } : null,
         ]}
         showsVerticalScrollIndicator={false}

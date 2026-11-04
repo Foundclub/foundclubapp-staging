@@ -9,6 +9,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { updateMe } from '@/services/auth/authService';
 
@@ -23,6 +24,7 @@ import { updateMe } from '@/services/auth/authService';
  * @returns {import('react').ReactElement} L'écran.
  */
 function PrivacySettings() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const { getAuthTokens, userData } = useAuth();
@@ -58,8 +60,14 @@ function PrivacySettings() {
   const isPrivate = visible === false;
 
   return (
-    <ScreenContainer bottomInsetMode="screen">
-      <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]}>
+    <ScreenContainer bottomInsetMode="scroll-edge">
+      <ScrollView
+        contentContainerStyle={[
+          Spaces.gap[16],
+          Spaces.paddingVertical[16],
+          { paddingBottom: 16 + retraitBas },
+        ]}
+      >
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
           {t('profile.privacy.title', 'Confidentialité')}
         </Text>

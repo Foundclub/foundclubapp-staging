@@ -52,6 +52,7 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import VilleSecurityOverview from '@/components/organisms/facilityReport/VilleSecurityOverview';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 // 📰 COLL-C4A (02/10) — « Actualités de la Ville », à la place laissée par COLL-ACCUEIL, et
 // le bandeau « Votre actualité · en ligne » (planche P3b-bandeau-tel, écran 1).
 import ActualitesDeLaVille from '@/views/collectivite/components/ActualitesDeLaVille';
@@ -109,6 +110,7 @@ const LARGEUR_COLONNES = 1024;
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteHome() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -1674,8 +1676,8 @@ function CollectiviteHome() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DecisionCreneauModal
         collectiviteId={collectiviteId}
@@ -1684,7 +1686,7 @@ function CollectiviteHome() {
       />
       {enTeteEcran}
       <ScrollView
-        contentContainerStyle={{ gap: 28, paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ gap: 28, paddingBottom: 48 + retraitBas, paddingTop: 12 }}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}

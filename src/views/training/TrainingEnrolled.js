@@ -10,6 +10,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,6 +40,7 @@ const A_PREPARER = ['partner', 'phone', 'tripod'];
  * @returns {React.ReactElement} l'écran de confirmation d'inscription
  */
 function TrainingEnrolled({ navigation, route = undefined }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
 
@@ -47,9 +49,9 @@ function TrainingEnrolled({ navigation, route = undefined }) {
   } = route?.params || {};
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingBottom[24], { flexGrow: 1 }]}
+        contentContainerStyle={[{ flexGrow: 1, paddingBottom: 24 + retraitBas }]}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >

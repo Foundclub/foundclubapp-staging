@@ -4,6 +4,7 @@ import { ScrollView } from 'react-native';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import FicheComplexeConsole from '@/views/admin/components/FicheComplexeConsole';
 
 /**
@@ -14,17 +15,18 @@ import FicheComplexeConsole from '@/views/admin/components/FicheComplexeConsole'
  * @returns {import('react').ReactElement} L'écran.
  */
 function AdminComplexeDetail() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { Alignments, Spaces } = useTheme();
   const route = useRoute();
   const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ paddingBottom: 24 + retraitBas, paddingTop: 12 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}

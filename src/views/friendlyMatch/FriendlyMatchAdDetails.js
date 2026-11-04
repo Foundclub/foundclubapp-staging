@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -83,6 +84,7 @@ const getLocationLabel = (location) => {
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchAdDetails({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { t } = useTranslation();
   const adId = route?.params?.adId;
   const {
@@ -379,9 +381,9 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" responsivePadding>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge" responsivePadding>
       <ScrollView
-        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[128]]}
+        contentContainerStyle={[Spaces.gap[16], { paddingBottom: 128 + retraitBas }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[Spaces.gap[4]]}>

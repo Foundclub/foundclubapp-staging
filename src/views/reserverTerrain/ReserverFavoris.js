@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import FeuilleRetirerFavori from '@/views/reserverTerrain/components/FeuilleRetirerFavori';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -61,6 +62,7 @@ const initiales = (nom) => String(nom || '')
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverFavoris() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -275,7 +277,7 @@ function ReserverFavoris() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="scroll-edge"
       boundedHeight
       contentContainerStyle={[Alignments.fill]}
     >
@@ -284,7 +286,7 @@ function ReserverFavoris() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24 + (Platform.OS === 'web' ? dockClearance : 0),
+          paddingBottom: 24 + retraitBas + (Platform.OS === 'web' ? dockClearance : 0),
           paddingTop: 12,
           width: '100%',
         }}

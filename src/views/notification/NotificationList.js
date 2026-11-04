@@ -28,6 +28,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
@@ -89,6 +90,7 @@ const getNotificationPayload = (/** @type {NotificationItem} */ notification) =>
  *
  */
 function NotificationList() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments,
     Colors,
@@ -637,8 +639,9 @@ function NotificationList() {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       // CORR-SOCLE (30/10, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
-      contentContainerStyle={[Spaces.paddingVertical[16]]}
+      contentContainerStyle={[Spaces.paddingTop[16]]}
     >
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginBottom[16]]}>
         <View style={{ width: 48 }}>
@@ -673,7 +676,7 @@ function NotificationList() {
         </View>
       </View>
       <FlatList
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 56 + retraitBas }}
         data={sections}
         keyExtractor={(item) => item.key}
         ListEmptyComponent={listEmpty}

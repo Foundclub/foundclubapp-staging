@@ -14,6 +14,7 @@ import Button from '@/components/atoms/button/Button';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -27,6 +28,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  *
  */
 function AdminUserDetail() {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -259,8 +261,11 @@ function AdminUserDetail() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <ScrollView contentContainerStyle={[Spaces.padding[16]]} showsVerticalScrollIndicator={false}>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
+      <ScrollView
+        contentContainerStyle={[Spaces.padding[16], { paddingBottom: 16 + retraitBas }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* User Info Card */}
         <View style={[
           ApplicationStyle.backgroundColor.neutral800,

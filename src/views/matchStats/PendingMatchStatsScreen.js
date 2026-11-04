@@ -27,6 +27,7 @@ import {
   resolveCoachStep,
 } from '@/components/organisms/matchStats/matchStatsPromptModel';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -169,6 +170,7 @@ export const describePendingLine = (prompt, t) => {
  * @returns {import('react').ReactElement}
  */
 function PendingMatchStatsScreen({ navigation }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -616,9 +618,9 @@ function PendingMatchStatsScreen({ navigation }) {
   }
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingBottom[24], { flexGrow: 1 }]}
+        contentContainerStyle={[{ flexGrow: 1, paddingBottom: 24 + retraitBas }]}
         refreshControl={(
           <RefreshControl
             onRefresh={refetch}

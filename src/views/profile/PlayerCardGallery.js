@@ -11,6 +11,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import PlayerCard from '@/components/organisms/playerCard/PlayerCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 const RARITIES = ['MOST_RARE', 'ULTRA_RARE', 'EPIC', 'RARE', 'COMMON'];
 
@@ -61,12 +62,16 @@ const renderDemoCard = (props) => (
 
 /** Galerie de revue design : 5 raretes + variantes de panneau bas. */
 function PlayerCardGallery() {
+  const retraitBas = useRetraitBasDuDefilement();
   const { width } = useWindowDimensions();
   const cardWidth = Math.min(width - 64, 520);
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 48 + retraitBas }]}
+        showsVerticalScrollIndicator={false}
+      >
         {RARITIES.map((rarity) => (
           <View key={rarity} style={styles.slot}>
             <Text style={styles.label}>{`${rarity} · HISTORIQUE`}</Text>

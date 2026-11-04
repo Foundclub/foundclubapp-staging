@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -57,6 +58,7 @@ const COLONNE = 560;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverAnnonce() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
@@ -87,7 +89,7 @@ function ReserverAnnonce() {
   const enveloppe = (/** @type {import('react').ReactNode} */ contenu) => (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Alignments.fill]}
     >
       <ScrollView
@@ -95,7 +97,7 @@ function ReserverAnnonce() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: surOrdinateur ? COLONNE : undefined,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 24,
           width: '100%',
         }}

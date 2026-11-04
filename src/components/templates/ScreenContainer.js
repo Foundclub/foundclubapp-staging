@@ -13,6 +13,10 @@ import useTheme from '@/theme/themeContext';
 
 import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions';
 
+// ponytail: Android ne dit pas au JS quelle navigation est choisie ; on la déduit de la hauteur de
+// la barre (48 dp à 3 boutons, 24 dp à gestes). Sortie : un module natif qui lit le réglage.
+const BARRE_A_TROIS_BOUTONS = 40;
+
 // U02 — UN STYLE ECRIT POUR UNE VIEW NE SE TRANSPOSE PAS TEL QUEL DANS UN
 // SCROLLVIEW. `flex: 1` y BORNE le contenu a la hauteur visible : le contenu ne
 // peut alors plus depasser, donc plus rien ne defile — en silence, et aucun
@@ -56,7 +60,10 @@ const toScrollableContentStyle = (styles) => {
  * - `tab-scene` : degagement du dock flottant.
  * - `edge-to-edge` : aucun plancher, pour les ecrans qui appliquent deja
  *   eux-memes `insets.bottom` a leur contenu (sinon il serait compte deux fois).
- * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
+ * - `scroll-edge` : aucun plancher non plus, le retrait est a la fin de ce qui defile
+ *   (`useRetraitBasDuDefilement`). Le contenu passe sous la barre du telephone : un fond la garde
+ *   lisible a 3 boutons (decision d'Adel « 7- B », 03/11).
+ * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge' | 'scroll-edge'} [props.bottomInsetMode]
  * @param {number} [props.bottomInsetExtra]
  * @param {boolean} [props.keyboardAvoiding]
  * Defilement sous le clavier (U02). Sans lui, l'evitement COMPRIME le contenu
@@ -97,7 +104,7 @@ function ScreenContainer({
 }) {
   // hooks
   const {
-    Alignments, Images,
+    Alignments, Colors, Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
   const headerHeightNative = useContext(HeaderHeightContext) || 0;
@@ -127,7 +134,7 @@ function ScreenContainer({
       paddingBottom = getFloatingTabBarScenePaddingBottom(insets.bottom, bottomInsetExtra);
     } else if (bottomInsetMode === 'screen') {
       paddingBottom = insets.bottom + bottomInsetExtra;
-    } else if (bottomInsetMode === 'edge-to-edge') {
+    } else if (bottomInsetMode === 'edge-to-edge' || bottomInsetMode === 'scroll-edge') {
       paddingBottom = 0;
     }
 
@@ -265,6 +272,23 @@ function ScreenContainer({
     );
   }
 
+  const fondDeLaBarre = bottomInsetMode === 'scroll-edge'
+    && Platform.OS === 'android'
+    && insets.bottom >= BARRE_A_TROIS_BOUTONS ? (
+      <View
+        pointerEvents="none"
+        style={{
+          backgroundColor: Colors.neutral900,
+          bottom: 0,
+          height: insets.bottom,
+          left: 0,
+          position: 'absolute',
+          right: 0,
+        }}
+        testID="fond-barre-trois-boutons"
+      />
+    ) : null;
+
   if (gradient) {
     return (
       <View style={[Alignments.fill, ...safeStyle]}>
@@ -280,6 +304,7 @@ function ScreenContainer({
           ]}
         >
           {body}
+          {fondDeLaBarre}
         </LinearGradient>
       </View>
     );
@@ -297,6 +322,7 @@ function ScreenContainer({
       ]}
     >
       {body}
+      {fondDeLaBarre}
     </ImageBackground>
   );
 }

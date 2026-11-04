@@ -14,6 +14,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import LigneBoiteAssistance, { nomDuTitulaire } from '@/views/chat/LigneBoiteAssistance';
 
@@ -34,6 +35,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @returns {import('react').ReactElement} La boîte.
  */
 function AdminAssistance() {
+  const retraitBas = useRetraitBasDuDefilement();
   const { Colors } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -94,9 +96,9 @@ function AdminAssistance() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <FlatList
-        contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingBottom: 32 + retraitBas, paddingHorizontal: 16 }}
         data={conversations}
         keyExtractor={(item, index) => String(item?.documentId || index)}
         ListEmptyComponent={(

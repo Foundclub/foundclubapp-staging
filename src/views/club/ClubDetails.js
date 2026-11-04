@@ -69,6 +69,7 @@ import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
@@ -280,8 +281,10 @@ function CadreDeLaFiche({
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[
-        Spaces.paddingVertical[24],
+        // T3-BANDE-BAS (03/11) : sur le téléphone, rien sous le contenu ; le site ignore ce mode.
+        Platform.OS === 'web' ? Spaces.paddingVertical[24] : Spaces.paddingTop[24],
         Alignments.column,
         Alignments.fill,
         Alignments.relative,
@@ -299,6 +302,7 @@ function CadreDeLaFiche({
  * @returns {import('react').ReactElement} Club details screen component
  */
 function ClubDetails({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { fromOnboardingAffiliation = false } = route?.params ?? {};
 
   // hooks
@@ -2197,10 +2201,11 @@ function ClubDetails({ navigation, route }) {
     showChildInterestAction,
   ].filter(Boolean).length;
   const hasFloatingClubActions = floatingClubActionsCount > 0;
-  const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
+  // T3-BANDE-BAS : le cadre ne pose plus de plancher sur le téléphone, la marge vient d'ici.
+  const floatingClubActionsBottomInset = Math.max(insets.bottom, retraitBas + 12);
   const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
     ? floatingActionsScrollPadding(floatingClubActionsCount, floatingClubActionsBottomInset)
-    : 40;
+    : retraitBas + 40;
   // ANNUAIRE-E1 — sur l'annuaire du site, la fiche n'a plus d'écran à elle : « en bas » veut dire
   // en bas de la FENÊTRE (fixé), et, sur grand écran, une colonne à droite qui suit la page.
   // BOUTONS-FLOTTANTS (03/11, demande d'Adel) — plus de bloc derriere les boutons. Celui de
@@ -3224,7 +3229,7 @@ function ClubDetails({ navigation, route }) {
           Spaces.gap[32],
           {
             paddingBottom: actionsEnColonne || piedDesActionsDansLeDefilement
-              ? 40 : floatingClubActionsScrollPaddingBottom,
+              ? retraitBas + 40 : floatingClubActionsScrollPaddingBottom,
           },
         ]}
         refreshControl={(

@@ -29,6 +29,7 @@ import OnboardingWrapper from '@/components/molecules/onboardingWrapper/Onboardi
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -106,6 +107,7 @@ const isForbiddenError = (error) => (
  * @param {{ navigation: any; route: { params?: { cmId?: string } } }} props
  */
 function CMDashboard({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { cmId } = route?.params ?? {};
   const { t } = useTranslation();
   const {
@@ -587,8 +589,9 @@ function CMDashboard({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
+        bottomInsetMode="scroll-edge"
         contentContainerStyle={[
-          Spaces.paddingVertical[24],
+          Spaces.paddingTop[24],
           Alignments.column,
           Alignments.fill,
         ]}
@@ -608,7 +611,7 @@ function CMDashboard({ navigation, route }) {
           title={t('multisport.tutorial.mainTitle', 'Gestion multisport')}
         >
           <ScrollView
-            contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
+            contentContainerStyle={[Spaces.gap[24], { paddingBottom: 64 + retraitBas }]}
             ref={scrollRef}
             refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading} />}
             showsVerticalScrollIndicator={false}

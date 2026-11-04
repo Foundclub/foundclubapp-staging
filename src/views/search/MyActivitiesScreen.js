@@ -25,6 +25,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
@@ -70,6 +71,7 @@ const getManagedTeamIds = (userData) => getManagedTeams(userData).map(documentKe
  * @returns {import('react').ReactElement} L ecran.
  */
 function MyActivitiesScreen({ navigation }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   // Les memes mots que les quatre listes de Recrutement (lot L42) : une panne
@@ -411,6 +413,7 @@ function MyActivitiesScreen({ navigation }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       // REPRISE-PLACE (01/11, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
       contentContainerStyle={[Alignments.fill]}
     >
@@ -439,7 +442,7 @@ function MyActivitiesScreen({ navigation }) {
 
       {loading ? <Loader /> : (
         <FlatList
-          contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[160], { flexGrow: 1 }]}
+          contentContainerStyle={[Spaces.gap[8], { flexGrow: 1, paddingBottom: 160 + retraitBas }]}
           data={items}
           keyExtractor={(item) => item.key}
           ListEmptyComponent={renderEmpty()}

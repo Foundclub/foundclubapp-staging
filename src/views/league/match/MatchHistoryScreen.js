@@ -16,6 +16,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -30,6 +31,7 @@ import { getEntityDocumentId } from '@/utils/entityId';
  *
  */
 function MatchHistoryScreen() {
+  const retraitBas = useRetraitBasDuDefilement();
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
@@ -247,7 +249,7 @@ function MatchHistoryScreen() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 60 }}>
         <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 24 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8, padding: 8 }}>
@@ -264,7 +266,7 @@ function MatchHistoryScreen() {
         </View>
 
         <FlatList
-          contentContainerStyle={{ paddingBottom: listBottomPadding }}
+          contentContainerStyle={{ paddingBottom: listBottomPadding + retraitBas }}
           data={matches}
           ItemSeparatorComponent={itemSeparator}
           keyExtractor={(/** @type {MatchHistoryEntry} */ item) => String(item.id || '')}

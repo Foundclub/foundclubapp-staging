@@ -11,6 +11,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import { fileDesRelevés, totalARelever } from '@/views/training/trainingVideo';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -35,6 +36,7 @@ import { useMyTraining } from '@/hooks/useTraining';
  * @returns {React.ReactElement} la file des relevés qui attendent
  */
 function TrainingVideoQueue({ navigation }) {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const {
@@ -48,9 +50,9 @@ function TrainingVideoQueue({ navigation }) {
   const total = useMemo(() => totalARelever(file), [file]);
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge">
       <ScrollView
-        contentContainerStyle={[Spaces.paddingBottom[24]]}
+        contentContainerStyle={[{ paddingBottom: 24 + retraitBas }]}
         showsVerticalScrollIndicator={false}
         style={{ flex: 1 }}
       >

@@ -23,6 +23,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -92,6 +93,7 @@ const extractApiErrorMessage = (error) => {
  * @returns {import('react').ReactElement} Club membership request list screen component
  */
 function ClubMembershipRequestList({ navigation, route }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const { clubId } = route?.params ?? {};
   const {
     clubVerificationSummary,
@@ -559,8 +561,9 @@ function ClubMembershipRequestList({ navigation, route }) {
     >
       <ScreenContainer
         bgImage="bg2"
+        bottomInsetMode="scroll-edge"
         contentContainerStyle={[
-          Spaces.paddingVertical[24],
+          Spaces.paddingTop[24],
           Alignments.justifySpaceBetween,
           Alignments.column,
           Alignments.fill,
@@ -616,6 +619,7 @@ function ClubMembershipRequestList({ navigation, route }) {
               ApplicationStyle.borderRadius2]}
             >
               <FlashList
+                contentContainerStyle={{ paddingBottom: 24 + retraitBas }}
                 data={requests}
                 keyExtractor={(item) => item?.documentId || 'unknown'}
                 ListEmptyComponent={renderEmptyList}

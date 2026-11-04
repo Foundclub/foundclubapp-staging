@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { getLeagueClosedMessageLines } from '@/services/league/leaguePlatformService';
 
@@ -86,6 +87,7 @@ function CountdownCell({ label, value }) {
  * @returns {import('react').ReactElement}
  */
 function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments,
     Colors,
@@ -116,6 +118,7 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Alignments.fill]}
       responsivePadding
       withHeaderPadding={false}
@@ -125,6 +128,7 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
           Alignments.grow1,
           Alignments.justifyCenter,
           Spaces.paddingVertical[28],
+          { paddingBottom: 28 + retraitBas },
         ]}
         showsVerticalScrollIndicator={false}
       >

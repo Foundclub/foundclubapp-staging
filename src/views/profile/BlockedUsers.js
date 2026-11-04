@@ -9,6 +9,7 @@ import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import {
   useGetMyBlockedUsers,
@@ -28,6 +29,7 @@ import {
  * @returns {import('react').ReactElement} L'ecran.
  */
 function BlockedUsers() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -50,8 +52,8 @@ function BlockedUsers() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <View style={[Alignments.alignCenter, { gap: 8 }]}>
         <Text style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
@@ -61,7 +63,7 @@ function BlockedUsers() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 20 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 48 + retraitBas, paddingTop: 20 }}
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >

@@ -18,6 +18,7 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -38,6 +39,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteJoinRequest() {
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -253,12 +255,12 @@ function CollectiviteJoinRequest() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
         contentContainerStyle={{
-          gap: 16, maxWidth: 640, paddingBottom: 24, paddingTop: 12, width: '100%',
+          gap: 16, maxWidth: 640, paddingBottom: 48 + retraitBas, paddingTop: 12, width: '100%',
         }}
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
