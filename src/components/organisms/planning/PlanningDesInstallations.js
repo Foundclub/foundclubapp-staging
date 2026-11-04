@@ -26,7 +26,7 @@ import {
 } from '@/domains/collectivite/evenementDeLaVille';
 import {
   closureBandLabel,
-  closureHoursLabel,
+  closureHoursOfDay,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { capitalize } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -431,9 +431,10 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
    * R17-PLANNING-2 — une fermeture dans une case (planche : « Fermé · désinfection »), et ses
    * heures si elle ne prend pas toute la journée.
    * @param {any} fermeture - La fermeture.
+   * @param {Date} jour - Le jour de la case.
    * @returns {import('react').ReactElement} La plage.
    */
-  const plageFermee = (fermeture) => (
+  const plageFermee = (fermeture, jour) => (
     <View
       key={`fermeture-${fermeture.documentId || fermeture.startDate}`}
       style={{
@@ -452,7 +453,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
         {closureBandLabel(t, fermeture)}
       </Text>
       <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>
-        {closureHoursLabel(t, fermeture)}
+        {closureHoursOfDay(t, fermeture, format(jour, 'yyyy-MM-dd'))}
       </Text>
     </View>
   );
@@ -849,7 +850,7 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                     style={[caseDuJour, { borderLeftColor: trait }]}
                   >
                     {fermeturesDuJour(fermetures, rangee.installation, jours[rang])
-                      .map(plageFermee)}
+                      .map((fermeture) => plageFermee(fermeture, jours[rang]))}
                     {evenementsDuJour(rangee.installation, jours[rang])
                       .map((bloc) => caseEvenement(bloc))}
                     {blocsDuJour.map(caseDeLaGrille)}
@@ -968,7 +969,8 @@ function PlanningDesInstallations({ collectiviteId, installations, onOuvrirInsta
                 </Text>
               </TouchableOpacity>
             </View>
-            {fermeturesDuJour(fermetures, ligne.installation, date).map(plageFermee)}
+            {fermeturesDuJour(fermetures, ligne.installation, date)
+              .map((fermeture) => plageFermee(fermeture, date))}
             {evenementsDuJour(ligne.installation, date).map((bloc) => caseEvenement(bloc))}
             {ligne.blocs.length
               ? ligne.blocs.map((/** @type {any} */ bloc) => ligneDeListe(bloc, false))

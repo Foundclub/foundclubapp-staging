@@ -4,8 +4,10 @@ import {
   closureBandsForRange,
   closureCoversDay,
   closureHoursLabel,
+  closureHoursOfDay,
   closureOfDay,
   closureTouchesBlock,
+  motDuBlocTouche,
   touchedSessionLine,
 } from './facilityClosureDisplay';
 
@@ -164,5 +166,27 @@ describe('CRFERM — une fermeture en plage d’heures', () => {
     expect(plages.map((plage) => [new Date(plage.startAt).getHours(), new Date(plage.endAt).getHours()])).toEqual([
       [14, 22], [8, 22], [8, 22], [8, 12],
     ]);
+  });
+});
+
+describe('T3-FINITIONS-VILLE — sur plusieurs jours, chaque jour dit SES heures', () => {
+  const TROIS_JOURS = {
+    endDate: '2026-11-04', endTime: '13:00:00', kind: 'closure', startDate: '2026-11-02', startTime: '09:00:00',
+  };
+  it('premier jour « dès », jour du milieu entier, dernier jour « jusqu’à »', () => {
+    expect(closureHoursOfDay(t, TROIS_JOURS, '2026-11-02')).toBe('dès 09:00');
+    expect(closureHoursOfDay(t, TROIS_JOURS, '2026-11-03')).toBe('Toute la journée');
+    expect(closureHoursOfDay(t, TROIS_JOURS, '2026-11-04')).toBe('jusqu’à 13:00');
+  });
+  it('un seul jour, un blocage, une fermeture sans heure : comme avant', () => {
+    expect(closureHoursOfDay(t, { ...TROIS_JOURS, endDate: '2026-11-02' }, '2026-11-02')).toBe('09:00 – 13:00');
+    expect(closureHoursOfDay(t, { ...TROIS_JOURS, kind: 'block' }, '2026-11-03')).toBe('09:00 – 13:00');
+    expect(closureHoursOfDay(t, { endDate: '2026-11-04', kind: 'closure', startDate: '2026-11-02' }, '2026-11-02'))
+      .toBe('Toute la journée');
+  });
+  it('le mot de la grille sur Mon planning : fermé, bloqué, jamais « à déplacer »', () => {
+    expect(motDuBlocTouche(t, { facilityClosure: { kind: 'closure' } })).toBe('fermé');
+    expect(motDuBlocTouche(t, { facilityClosure: { kind: 'block' } })).toBe('bloqué');
+    expect(motDuBlocTouche(t, { closure: { kind: 'closure' } })).toBe('à déplacer');
   });
 });

@@ -119,8 +119,10 @@ function ClubLogoMark({
   const resolvedLogoUrl = resolveLogoUrl({ club, logoUrl });
   const resolvedClubName = resolveClubName({ club, name });
   const logoRatio = useLogoRatio(resolvedLogoUrl ? getImageUrl(resolvedLogoUrl) || '' : '');
+  // T3-FINITIONS-VILLE (point 9) : un logo qui ne se charge pas laissait un carré blanc vide.
+  const [logoEnEchec, setLogoEnEchec] = useState(/** @type {string | null} */ (null));
 
-  if (resolvedLogoUrl) {
+  if (resolvedLogoUrl && logoEnEchec !== resolvedLogoUrl) {
     // LOGO-CADRE (15/09) — le fond blanc est voulu (un écusson transparent
     // disparaîtrait sur le fond sombre), mais autour d'un logo OPAQUE tout ce
     // qui dépasse de l'image se voit comme un cadre blanc. Trois sources, toutes
@@ -169,6 +171,7 @@ function ClubLogoMark({
             imageStyle,
           ]}
           imageUrl={resolvedLogoUrl}
+          onImageError={() => setLogoEnEchec(resolvedLogoUrl)}
           safeInsetRatio={effectiveInsetRatio}
           shape="rounded"
           size={size}

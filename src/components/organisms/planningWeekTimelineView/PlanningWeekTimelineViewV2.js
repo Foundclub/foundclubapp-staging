@@ -226,6 +226,7 @@ const estJourneeFermee = (event) => Boolean(event?.raw?.closureBand)
  *   › apres le dernier), les memes que celles de l en-tete.
  * @param {string[]} [root0.nomsDesFleches] - Leurs noms pour le lecteur d ecran
  *   (« Semaine precedente », « Semaine suivante »… : ceux des fleches de l ecran).
+ * @param {number} [root0.fermetureEnMinutes] - T3-FINITIONS-VILLE : aucune case libre au-delà.
  * @param {number} [root0.firstHour] - COLL-C2B : la grille commence au plus tard a cette heure
  *   (l ouverture de l installation), pour qu une heure libre du matin se touche.
  * @param {(jour: Date, heure: number, colonne?: number) => void} [root0.onFreeSlotPress] -
@@ -245,6 +246,7 @@ function PlanningWeekTimelineView({
   currentDate: propDate,
   events = [],
   expandToContent = false,
+  fermetureEnMinutes,
   firstHour,
   flechesDesJours = false,
   freeSlotAnnotations = [],
@@ -780,7 +782,9 @@ function PlanningWeekTimelineView({
         creneaux: motCreneaux, seances: motSeances,
       });
     }
-    const aDeplacer = event.events.some((/** @type {any} */ e) => e.raw?.closure);
+    const aDeplacer = event.events.some(
+      (/** @type {any} */ e) => e.raw?.closure || e.raw?.facilityClosure,
+    );
     return (
       <TouchableOpacity
         accessibilityLabel={[`${nombre} ${mot}`, ...seances.map((/** @type {any} */ e) => (
@@ -961,7 +965,8 @@ function PlanningWeekTimelineView({
       );
     }
     // COLL-C4B — une seance que la fermeture touche GARDE sa place (D16), cernee d orange.
-    const aDeplacer = Boolean(event?.raw?.closure);
+    // T3-FINITIONS-VILLE (M0144) : sur Mon planning, la marque est celle de la liste.
+    const aDeplacer = Boolean(event?.raw?.closure || event?.raw?.facilityClosure);
     // COLL-R-DEPLACER (14/10, COL-013) — ce qui arrive a la seance touchee, dit a sa place
     // (planche P5v4-deplacer-ville-tel ecran 6 b) ; la Liste dit le meme mot (CRDEP2).
     const motDeFermeture = motDuBlocTouche(t, event?.raw);
@@ -1076,8 +1081,19 @@ function PlanningWeekTimelineView({
     const nonTrancheeSeule = Boolean(nonTranchee) && !isTiny && !canShowSecondary
       && tient(tailleSeule);
     const aDeplacerSeul = aDeplacer && !isTiny && !canShowSecondary && tient(tailleSeule);
+    // T3-FINITIONS-VILLE (M0138, Adel) : « sauf vacances » se lit sur la carte, sans la toucher.
+    const saufVacances = event?.raw?.slot?.exceptHolidays === true
+      ? t('collectiviteCreneaux.quand.vacances.pastille', 'sauf vacances')
+      : null;
+    const montreVacances = Boolean(saufVacances) && !isTiny && tient(tailleSeule);
     const montreTertiaire = canShowTertiary && tient(9);
-    const libelleHeure = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    // T3-FINITIONS-VILLE (M0144) : une carte d'une heure n'a pas la place du mot seul : il passe devant
+    // l'heure, sinon le pointillé orange ne dit pas pourquoi.
+    const heureDeLaCarte = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    const motAvecLHeure = aDeplacer && !aDeplacerSeul && !canShowSecondary;
+    const libelleHeure = motAvecLHeure && heureDeLaCarte
+      ? `${motDeFermeture} · ${heureDeLaCarte}`
+      : heureDeLaCarte;
     const montreHeure = Boolean(libelleHeure) && tient(9);
     const montreMeta = canShowMeta && tient(8);
 
@@ -1086,6 +1102,7 @@ function PlanningWeekTimelineView({
       ? [
         [primaryLabel, contextLabel].filter(Boolean).join(' · '),
         getPlanningTimeLabel(event),
+        saufVacances,
         nonTranchee,
         attente,
       ].filter(Boolean).join(', ')
@@ -1217,6 +1234,18 @@ function PlanningWeekTimelineView({
             testID="a-deplacer"
           >
             {motDeFermeture}
+          </Text>
+        ) : null}
+        {montreVacances ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4, {
+              color: Colors.neutral200,
+              fontSize: tailleSeule,
+              marginTop: 2,
+            }]}
+          >
+            {saufVacances}
           </Text>
         ) : null}
         {montreTertiaire ? (
@@ -1428,6 +1457,9 @@ function PlanningWeekTimelineView({
     const joursOuverts = weekDays
       .map((day, dayIndex) => ({ day, dayIndex }))
       .filter(({ day }) => !estFermee(day, heure * 60, finDeLaCase));
+    // T3-FINITIONS-VILLE (point 8) : la ligne d une séance qui finit tard reste dessinée, mais on
+    // n attribue pas après la fermeture de l installation.
+    if (typeof fermetureEnMinutes === 'number' && heure * 60 >= fermetureEnMinutes) return [];
     return joursOuverts.flatMap(({ day, dayIndex }) => colonnesDesCases.map((
       colonne,
       colonneIndex,

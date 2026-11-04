@@ -98,8 +98,10 @@ const monter = async (/** @type {any[]} */ blocs, /** @type {any} */ props = {})
         compactFullscreen
         currentDate={MERCREDI}
         events={normalizePlanningItems(blocs)}
+        fermetureEnMinutes={props.fermetureEnMinutes}
         mode="day"
         onEventPress={props.onEventPress}
+        onFreeSlotPress={props.onFreeSlotPress}
         onReadOnlyEventPress={props.onReadOnlyEventPress}
         showHeader={false}
         showUntimedSection={false}
@@ -192,5 +194,62 @@ describe('FINITIONS12-COLL point 10 — « à déplacer » tient dans le bloc', 
     };
     const lignes = arbre.root.findAllByType(Text).map((n) => aplatir(n.props.children).trim());
     expect(lignes.some((ligne) => /U13.*à déplacer/.test(ligne))).toBe(true);
+  });
+});
+
+describe('T3-FINITIONS-VILLE — ce que la grille dit sans qu on touche', () => {
+  const lus = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+    .map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+
+  it('M0144 : sur Mon planning, la marque de la liste cerne la séance et dit « fermé »', async () => {
+    const arbre = await monter([bloc({
+      documentId: 'evt-mon-planning',
+      facilityClosure: { kind: 'closure', startDate: '2026-10-07' },
+    })]);
+    const touchee = styleDuBloc(arbre, 'AS Ville A');
+    expect(touchee.borderStyle).toBe('dashed');
+    expect(touchee.borderColor).toBe(COULEURS.warning500);
+    expect(lus(arbre).join(' ')).toContain('fermé');
+  });
+
+  it('M0144 : une carte d une heure, sans ligne libre : le mot passe devant l heure', async () => {
+    const arbre = await monter([bloc({
+      documentId: 'evt-courte',
+      endAt: new Date(2026, 9, 7, 19, 0).toISOString(),
+      endTime: '19:00:00.000',
+      facilityClosure: { kind: 'closure', startDate: '2026-10-07' },
+      startAt: new Date(2026, 9, 7, 18, 0).toISOString(),
+      startTime: '18:00:00.000',
+      team: null,
+      title: 'Entraînement',
+    })]);
+    expect(lus(arbre).join(' ')).toContain('fermé');
+  });
+
+  it('M0138 : un créneau « sauf vacances » le dit sur sa carte ; les autres non', async () => {
+    const arbre = await monter([
+      bloc({ documentId: 'evt-sv', slot: { exceptHolidays: true } }),
+      { ...AUTRE, documentId: 'evt-autre', slot: { exceptHolidays: false } },
+    ]);
+    expect(lus(arbre).filter((texte) => texte === 'sauf vacances')).toHaveLength(1);
+  });
+
+  it('point 8 : l installation ferme à 22:00, la case 22:00 ne s attribue plus', async () => {
+    const onFreeSlotPress = jest.fn();
+    const cases = (/** @type {any} */ arbre) => arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string' && String(n.props.testID || '').startsWith('heure-libre-'),
+    ).map((/** @type {any} */ n) => n.props.testID);
+    const LONG = bloc({
+      documentId: 'evt-tard',
+      endAt: new Date(2026, 9, 7, 23, 0).toISOString(),
+      endTime: '23:00:00.000',
+      startAt: new Date(2026, 9, 7, 20, 0).toISOString(),
+      startTime: '20:00:00.000',
+    });
+    const sansLimite = await monter([LONG], { onFreeSlotPress });
+    expect(cases(sansLimite).filter((id) => id.endsWith('-22'))).not.toHaveLength(0);
+    const limite = await monter([LONG], { fermetureEnMinutes: 22 * 60, onFreeSlotPress });
+    expect(cases(limite).filter((id) => id.endsWith('-22'))).toHaveLength(0);
+    expect(cases(limite).filter((id) => id.endsWith('-21'))).not.toHaveLength(0);
   });
 });

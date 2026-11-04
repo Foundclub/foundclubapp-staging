@@ -734,3 +734,29 @@ describe('R17Q2 — « Créneaux » : la zone de vacances et « sauf vacances »
     expect(lus.some((texte) => /^vacances : /.test(texte))).toBe(false);
   });
 });
+
+describe('T3-FINITIONS-VILLE point 6 — un créneau ponctuel retiré dit sa date', () => {
+  it('« mar. 3 nov. 10:00 – 11:00 · retiré à partir du … », jamais sans jour', async () => {
+    /** @type {any} */ (listFacilitySeasonSlots).mockImplementation(
+      (/** @type {string} */ _id, /** @type {any} */ { status }) => Promise.resolve(
+        status === 'withdrawn'
+          ? {
+            data: [creneau({
+              dates: ['2026-11-03'],
+              documentId: 'ponctuel-retire',
+              endTime: '11:00',
+              recurrence: 'dates',
+              startTime: '10:00',
+              status: 'withdrawn',
+              weekday: null,
+              withdrawnFrom: '2026-11-03',
+            })],
+            meta: META(),
+          }
+          : { data: CRENEAUX, meta: META() },
+      ),
+    );
+    const ligne = textes(await rendre()).find((texte) => texte.includes('retiré à partir'));
+    expect(ligne).toBe('mar. 3 nov. 10:00 – 11:00 · retiré à partir du mar. 3 nov.');
+  });
+});

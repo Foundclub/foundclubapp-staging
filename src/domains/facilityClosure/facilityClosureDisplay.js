@@ -59,6 +59,13 @@ export const reasonLabel = (t, reason) => {
  * @returns {string} Le mot.
  */
 export const motDuBlocTouche = (t, raw) => {
+  // T3-FINITIONS-VILLE (M0144) : sur Mon planning (`facilityClosure`), le mot vaut pour tous,
+  // joueur compris : l état, pas le geste. Le bouton « à déplacer » reste sur la carte de la liste.
+  if (raw?.facilityClosure) {
+    return raw.facilityClosure.kind === 'block'
+      ? t('collectiviteFermetures.planning.motBloque', 'bloqué')
+      : t('collectiviteFermetures.planning.motFerme', 'fermé');
+  }
   if (raw?.relocationProposal?.status === 'pending') {
     return t('deplacerSeance.planning.propositionEnvoyee', 'proposition envoyée');
   }
@@ -158,6 +165,26 @@ export const closureHoursLabel = (t, fermeture) => {
     })
     : '';
   return [des, jusqua].filter(Boolean).join(' · ');
+};
+
+/**
+ * T3-FINITIONS-VILLE (03/11, point 2) : les heures d UN jour d une fermeture sur plusieurs jours,
+ * « dès 09:00 » le premier, « Toute la journée » au milieu, « jusqu’à 13:00 » le dernier. Le
+ * libellé de la fermeture entière (`closureHoursLabel`) reste celui de sa fiche.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
+ * @param {{ kind?: string, startDate?: string|null, endDate?: string|null,
+ *   startTime?: string|null, endTime?: string|null }} fermeture - La fermeture.
+ * @param {string} jour - Le jour lu (AAAA-MM-JJ).
+ * @returns {string} Les heures de ce jour.
+ */
+export const closureHoursOfDay = (t, fermeture, jour) => {
+  const unJour = fermeture?.kind === 'block' || !fermeture?.endDate
+    || fermeture.startDate === fermeture.endDate;
+  if (unJour) return closureHoursLabel(t, fermeture);
+  return closureHoursLabel(t, {
+    endTime: jour === fermeture.endDate ? fermeture.endTime : null,
+    startTime: jour === fermeture.startDate ? fermeture.startTime : null,
+  });
 };
 
 /**

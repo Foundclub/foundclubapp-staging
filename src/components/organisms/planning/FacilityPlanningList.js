@@ -11,7 +11,7 @@ import {
 } from '@/domains/collectivite/evenementDeLaVille';
 import {
   closureBandLabel,
-  closureHoursLabel,
+  closureHoursOfDay,
   closureOfDay,
   closureRangesOfDay,
   motDuBlocTouche,
@@ -167,7 +167,7 @@ function FacilityPlanningList({
                   {closureBandLabel(t, fermetureDuJour)}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {closureHoursLabel(t, fermetureDuJour)}
+                  {closureHoursOfDay(t, fermetureDuJour, iso)}
                 </Text>
               </View>
             ) : null}
