@@ -5,8 +5,9 @@ import { Alert } from 'react-native';
 
 import { confirmerLeRefus } from '../confirmerLeRefus';
 
-// T3-RETOURS-0411 (M0251, « 1- A » du chef) : les refus d'une demande reçue qui partaient au premier
-// clic passent par la même fenêtre, sans texte neuf. Le témoin lit les sources : il dit qui l'appelle.
+// T3-RETOURS-0411 (M0251, « 1- A » du chef) : les refus d'une demande reçue qui partaient au
+// premier clic passent par la même fenêtre, sans texte neuf. Le témoin lit les sources : il dit
+// qui l'appelle, pas ce qui s'affiche.
 
 describe('confirmerLeRefus', () => {
   const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
