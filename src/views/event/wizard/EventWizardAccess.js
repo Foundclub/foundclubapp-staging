@@ -180,6 +180,15 @@ function EventWizardAccess({ navigation, route }) {
   // partagee avec les deux ecrans de modification.
   const canBeAskedToJoin = hasExternalAudience({ sessionStatus });
   const showValidationBlock = !isTournament && canBeAskedToJoin;
+  const privateHint = isTournament
+    ? t(
+      'eventWizard.steps.access.visibilityPrivateTournamentHint',
+      "Réservé aux équipes que tu invites, depuis l'onglet Équipes du tournoi.",
+    )
+    : t(
+      'eventWizard.steps.access.visibilityPrivateHint',
+      "Réservé aux membres de l'équipe et aux invités.",
+    );
 
   // S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25.
   //
@@ -265,10 +274,7 @@ function EventWizardAccess({ navigation, route }) {
           />
           <ChoiceHint>
             {sessionStatus === 'closed'
-              ? t(
-                'eventWizard.steps.access.visibilityPrivateHint',
-                "Réservé aux membres de l'équipe et aux invités.",
-              )
+              ? privateHint
               : t(
                 'eventWizard.steps.access.visibilityPublicHint',
                 'Découvrable par tous — recommandé pour une détection.',

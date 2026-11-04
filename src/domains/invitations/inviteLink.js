@@ -20,7 +20,7 @@
  */
 
 /** Les sujets d'invitation. Equipe ET evenement des le depart, pas « plus tard ». */
-export const INVITE_SUBJECTS = ['club', 'event', 'squad', 'team'];
+export const INVITE_SUBJECTS = ['club', 'event', 'squad', 'team', 'tournament'];
 
 /** Segment reserve du lien canonique : `/i/<sujet>/<id>`. */
 export const INVITE_PATH_SEGMENT = 'i';

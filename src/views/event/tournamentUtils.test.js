@@ -157,9 +157,8 @@ describe('getTournamentClosure', () => {
     expect(getTournamentClosure({
       sessionStatus: 'closed',
       tournamentTeams: [
-        { archivedAt: '2026-10-30T10:00:00.000Z' },
-        { archivedAt: '2026-10-31T10:00:00.000Z' },
-        { archivedAt: null },
+        { archivedAt: '2026-10-30T10:00:00.000Z', status: 'archived' },
+        { archivedAt: '2026-10-31T10:00:00.000Z', status: 'archived' },
       ],
     })).toEqual({ closedAt: Date.parse('2026-10-31T10:00:00.000Z'), isClosed: true });
   });

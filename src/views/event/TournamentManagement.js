@@ -37,6 +37,8 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
+
 import {
   TournamentBracketBoard,
   TournamentGroupCards,
@@ -44,6 +46,8 @@ import {
   TournamentStandingsTable,
 } from './tournamentCompetitionComponents';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import TournamentInvitationRequest from './TournamentInvitationRequest';
+import TournamentInvites from './TournamentInvites';
 import {
   getTournamentClosure,
   getTournamentCompetitionActions,
@@ -365,7 +369,12 @@ function TournamentManagement({ navigation, route }) {
   };
 
   // CORR-EVENEMENTS 131 (décision A) : un tournoi clôturé se lit, il ne se pilote plus.
-  const { closedAt, isClosed } = getTournamentClosure({ ...event, tournamentTeams });
+  const { closedAt, isClosed } = getTournamentClosure({
+    ...event,
+    tournamentConfig,
+    tournamentTeams,
+  });
+  const estPrive = normalizeTournamentText(event?.sessionStatus) === 'closed';
   // FIN-TEXTES (PARENT 130) : la barre fine du site lit la clé du registre (« Pilotage du
   // tournoi ») tant que l'écran ne déclare rien ; le lecteur y lit donc le nom du tournoi.
   const titreDuLecteur = event?.name || t('tournamentManagement.competition', 'Compétition');
@@ -562,6 +571,9 @@ function TournamentManagement({ navigation, route }) {
 
   const renderTeamsTab = () => (
     <View style={Spaces.gap[16]}>
+      {canManageTournament && estPrive && !isClosed ? (
+        <TournamentInvites clubId={event?.club?.documentId || null} eventId={eventId} />
+      ) : null}
       <View style={[Spaces.gap[12]]}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
           {t('tournamentManagement.registeredTeams', 'Équipes inscrites')}
@@ -724,6 +736,16 @@ function TournamentManagement({ navigation, route }) {
     return renderOverviewTab();
   };
 
+  // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ;
+  // un compte sans lien y demande à participer.
+  if (isAccessRefusalError(error)) {
+    return (
+      <ScreenContainer bottomInsetMode="tab-scene">
+        <TournamentInvitationRequest eventId={eventId} />
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer bottomInsetMode="tab-scene">
       <WithDataWrapper
@@ -772,6 +794,7 @@ function TournamentManagement({ navigation, route }) {
                   key={option.value}
                   onPress={() => setActiveTab(option.value)}
                   style={tournamentDs.getPillStyle(selected)}
+                  testID={`tournoi-onglet-${option.value}`}
                 >
                   <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
                 </TouchableOpacity>

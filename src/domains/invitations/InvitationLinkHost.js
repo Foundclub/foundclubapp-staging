@@ -96,6 +96,8 @@ export const resolveInviteDestination = (invite) => {
       return { params: { invite: true, teamId: id }, route: RouteNames.SquadDetails };
     case 'team':
       return { params: { invite: true, teamId: id }, route: RouteNames.TeamDetails };
+    case 'tournament':
+      return { params: { eventId: id }, route: RouteNames.TournamentManagement };
     default:
       return null;
   }
@@ -116,6 +118,17 @@ const describeInvite = (subject, t) => {
       ),
       primaryLabel: t('invitationLink.event.primary', 'Voir l\'événement'),
       title: t('invitationLink.event.title', 'Invitation à un événement'),
+    };
+  }
+
+  if (subject === 'tournament') {
+    return {
+      body: t(
+        'invitationLink.tournament.body',
+        "Tu as reçu un lien vers un tournoi privé. Veux-tu l'ouvrir ?",
+      ),
+      primaryLabel: t('invitationLink.tournament.primary', 'Voir le tournoi'),
+      title: t('invitationLink.tournament.title', 'Invitation à un tournoi'),
     };
   }
 

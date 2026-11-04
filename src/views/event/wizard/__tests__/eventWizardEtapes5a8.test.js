@@ -643,6 +643,19 @@ describe('D10 — etape 6 · Acces', () => {
     demonter();
   });
 
+  it('T3-TOURNOI-PRIVE : un tournoi prive dit que ses invites se gerent dans son onglet', () => {
+    const { arbre, demonter } = monter(EventWizardAccess, {
+      ...ETAT_DETECTION, sessionStatus: 'closed', type: { documentId: 'tournoi', name: 'Tournoi' },
+    });
+    const contenu = contenuDe(arbre);
+
+    expect(contenu).toContain(
+      "Réservé aux équipes que tu invites, depuis l'onglet Équipes du tournoi.",
+    );
+    expect(contenu).not.toContain("membres de l'équipe");
+    demonter();
+  });
+
   it('la grammaire d en-tete « focus » du lot D05 est ACTIVEE', () => {
     const { demonter } = monter(EventWizardAccess, ETAT_DETECTION);
 

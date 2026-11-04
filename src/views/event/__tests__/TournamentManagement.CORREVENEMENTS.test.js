@@ -14,6 +14,7 @@ import TournamentManagement from '../TournamentManagement';
 
 /** @type {any} */
 let mockDashboard = null;
+const mockErreurDuTableau = { value: /** @type {any} */ (null) };
 const mockGenerate = jest.fn();
 
 jest.mock('@tanstack/react-query', () => ({
@@ -27,6 +28,8 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: jest.fn(() => Promise.resolve()) }),
 }));
 
+jest.mock('../TournamentInvites', () => function InvitesDouble() { return null; });
+jest.mock('../TournamentInvitationRequest', () => function DemandeDouble() { return null; });
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -65,7 +68,7 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @
 jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
   useGetTournamentDashboard: () => ({
-    data: mockDashboard, error: null, isLoading: false, refetch: jest.fn(),
+    data: mockDashboard, error: mockErreurDuTableau.value, isLoading: false, refetch: jest.fn(),
   }),
 }));
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionService', () => ({
@@ -260,5 +263,22 @@ describe('FIN-TEXTES 130 — la barre fine du site', () => {
     await monter(tableau());
 
     expect(lirePageDuSite().titre).toBeNull();
+  });
+});
+
+describe('T3-TOURNOI-PRIVE — le lien et les invités', () => {
+  const doubles = (/** @type {any} */ arbre, /** @type {string} */ module) => arbre.root.findAllByType(jest.requireMock(module));
+  afterEach(() => { mockErreurDuTableau.value = null; });
+
+  test('🐞 un compte sans lien (403) voit la demande, jamais le contenu', async () => {
+    mockErreurDuTableau.value = { message: 'Ce tournoi est réservé à ses participants', name: 'ForbiddenError', status: 403 };
+    const arbre = await monter(null);
+    expect(doubles(arbre, '../TournamentInvitationRequest')).toHaveLength(1);
+  });
+
+  test('une autre panne garde son message d erreur : pas de demande', async () => {
+    mockErreurDuTableau.value = { message: 'panne', status: 500 };
+    const arbre = await monter(null);
+    expect(doubles(arbre, '../TournamentInvitationRequest')).toHaveLength(0);
   });
 });
