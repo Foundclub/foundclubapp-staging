@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { Platform } from 'react-native';
 
 import { exampleMatch } from '@/domains/tour/tourExamples';
 
@@ -295,6 +296,18 @@ const wizardStep = (id, missionId, nextRoute, resumeFrom, text) => ({
 });
 
 /**
+ * Complète une étape sans figer ses textes. T3-GUIDE-SITE : un `...` lit `get text()` au chargement
+ * du module, avant i18n sur le site (« undefined » dans la bulle).
+ * @param {any} step - Étape de base.
+ * @param {any} extras - Propriétés en plus.
+ * @returns {any} L'étape complétée.
+ */
+const extendStep = (step, extras) => Object.defineProperties(
+  step,
+  Object.getOwnPropertyDescriptors(extras),
+);
+
+/**
  * FIN-GUIDE, point 4 : on peut inviter sans passer par le lien du menu (« + » de la fiche, feuille
  * d'invitation). Une invitation envoyée valide M2 ; un lien repartagé ou un SMS, on demande.
  * @type {any[]}
@@ -354,7 +367,11 @@ const STEPS = [
     missionId: 'coach_m1',
     navTarget: homeTarget,
     targets: ['dock.teams'],
-    get text() { return t('m1-dock', 'Commence par ton équipe. Ouvre l’onglet Équipes.'); },
+    get text() {
+      return Platform.OS === 'web'
+        ? t('m1-dock-site', 'Commence par ton équipe. Ouvre l’onglet entouré.')
+        : t('m1-dock', 'Commence par ton équipe. Ouvre l’onglet Équipes.');
+    },
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && !isTeamJoinPending(ctx),
   },
   {
@@ -535,11 +552,10 @@ const STEPS = [
     },
     when: () => false,
   },
-  {
-    ...wizardStep('tw1', 'coach_m1', RouteNames.TeamWizardDescription, 'tw1', () => t(
-      'tw1',
-      'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
-    )),
+  extendStep(wizardStep('tw1', 'coach_m1', RouteNames.TeamWizardDescription, 'tw1', () => t(
+    'tw1',
+    'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
+  )), {
     navTarget: teamWizardTarget,
     // Club qui a déjà des équipes : la feuille de choix s'ouvre d'abord.
     variants: [{
@@ -552,7 +568,7 @@ const STEPS = [
       },
     }],
     when: (/** @type {any} */ ctx) => !hadTeam(ctx),
-  },
+  }),
   ...(/** @type {Array<[string, string, () => string]>} */ ([
     ['tw2', RouteNames.TeamWizardSection, () => t(
       'tw2',
@@ -578,10 +594,10 @@ const STEPS = [
       'tw7',
       'Coche-toi comme coach de l’équipe, puis Suivant.',
     )],
-  ])).map(([id, nextRoute, text]) => ({
-    ...wizardStep(id, 'coach_m1', nextRoute, 'tw1', text),
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx),
-  })),
+  ])).map(([id, nextRoute, text]) => extendStep(
+    wizardStep(id, 'coach_m1', nextRoute, 'tw1', text),
+    { when: (/** @type {any} */ ctx) => !hadTeam(ctx) },
+  )),
   {
     // L'alerte « Félicitations » n'a pas de rappel : la mission se valide au
     // succès serveur de la création (`team.created`).
@@ -603,7 +619,11 @@ const STEPS = [
     // FIN-GUIDE, point 1 : M1 validée d'emblée, on est encore sur l'accueil : on montre le chemin.
     fallback: {
       targets: ['dock.teams'],
-      get text() { return t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.'); },
+      get text() {
+        return Platform.OS === 'web'
+          ? t('m1-find-dock-site', 'Ton équipe est déjà là : ouvre l’onglet entouré.')
+          : t('m1-find-dock', 'Ton équipe est déjà là : ouvre l’onglet Équipes.');
+      },
     },
     id: 'm2-card',
     missionId: 'coach_m2',
@@ -900,6 +920,8 @@ const STEPS = [
     resumeFrom: 'm4-back',
     targets: ['search.tab.clubs'],
     get text() { return t('m4-tab-club', 'Les événements. Ouvre maintenant « Club ».'); },
+    // T3-GUIDE-SITE : sur le site, « Club » mène à l'annuaire public, sans « Matchs amicaux ».
+    when: () => Platform.OS !== 'web',
   },
   {
     advanceOn: { key: 'search.tab.amicaux', type: 'interaction' },
@@ -908,7 +930,11 @@ const STEPS = [
     missionId: 'coach_m4',
     resumeFrom: 'm4-back',
     targets: ['search.tab.amicaux'],
-    get text() { return t('m4-tab-fr', 'Les clubs. Dernier onglet : « Matchs amicaux ».'); },
+    get text() {
+      return Platform.OS === 'web'
+        ? t('m4-tab-fr-site', 'Les événements. Dernier onglet : « Matchs amicaux ».')
+        : t('m4-tab-fr', 'Les clubs. Dernier onglet : « Matchs amicaux ».');
+    },
   },
   {
     advanceOn: { key: RouteNames.FriendlyMatchWizardTeam, type: 'route' },
@@ -948,11 +974,11 @@ const STEPS = [
       'Un mot pour les autres coachs et qui arbitre : c’est facultatif. Sinon, « Passer cette '
         + 'étape ».',
     )],
-  ])).map(([id, nextRoute, text]) => ({
-    ...wizardStep(id, 'coach_m4', nextRoute, 'm4-frc', text),
+  ])).map(([id, nextRoute, text]) => extendStep(
+    wizardStep(id, 'coach_m4', nextRoute, 'm4-frc', text),
     // Les dates passent par des sélecteurs : rien n'est bloqué à cette étape.
-    ...(id === 'm4-am3' ? { veil: false } : {}),
-  })),
+    id === 'm4-am3' ? { veil: false } : {},
+  )),
   {
     advanceOn: { key: 'friendlyMatch.ad.published', type: 'action' },
     bubblePlacement: 'top',
@@ -1170,12 +1196,11 @@ const REVIEW_STEPS = [
     'Dans la fiche d’une équipe, « ⋯ » puis « Partager le lien » envoie l’invitation à tes '
       + 'joueur·se·s.',
   )),
-  {
-    ...reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
-      'rv-m3',
-      'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
+  extendStep(reviewStep('rv-m3', 'coach_m3', homeTarget, ['home.card.manage-add-event'], () => t(
+    'rv-m3',
+    'Depuis l’accueil, « Ajouter un événement » programme une séance : le type, l’équipe, '
         + 'le lieu, l’horaire.',
-    )),
+  )), {
     // GUIDE-FINITIONS-3 R2-7 (R03) : la visite restait sur Équipes ; la carte de
     // l'accueil absente, on montre l'onglet au lieu de parler d'un autre écran.
     fallback: {
@@ -1188,20 +1213,19 @@ const REVIEW_STEPS = [
         );
       },
     },
-  },
+  }),
   reviewStep('rv-m4', 'coach_m4', friendlySearchTarget, ['friendly.create'], () => t(
     'rv-m4',
     'Rechercher trouve des clubs, des événements et des matchs amicaux. Ici, « Créer un match '
       + 'amical » publie ton annonce.',
   )),
-  {
-    // GUIDE-FINITIONS-2 N10 : la visite finissait sans un mot, sur Rechercher (capture 14).
-    ...reviewStep('rv-end', '', homeTarget, [], () => t(
-      'rv-end',
-      'C’est tout pour la visite : rien n’a été créé. Le guide se relance depuis Mon compte.',
-    )),
+  // GUIDE-FINITIONS-2 N10 : la visite finissait sans un mot, sur Rechercher (capture 14).
+  extendStep(reviewStep('rv-end', '', homeTarget, [], () => t(
+    'rv-end',
+    'C’est tout pour la visite : rien n’a été créé. Le guide se relance depuis Mon compte.',
+  )), {
     get nextLabel() { return t('review.end', 'Terminer'); },
-  },
+  }),
 ];
 
 // FIN-GUIDE2 (Adel « 1- A », 02/11) : 03/11 00:00 à Paris. Le rattrapage du 29/10 a daté les

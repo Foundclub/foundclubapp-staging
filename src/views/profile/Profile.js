@@ -31,6 +31,7 @@ import {
   getSubscriptionBadgeLevel,
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
@@ -1149,7 +1150,7 @@ function Profile({ navigation, route }) {
     // téléphone seulement (le site ne joue aucun tour).
     // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
     // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
-    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' ? [{
+    ...(currentRoleKey === 'coach' && isGuideSupported() ? [{
       accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
         <PastilleDEtat
           testID="coachGuide-pause"
@@ -1164,7 +1165,7 @@ function Profile({ navigation, route }) {
         ? setIsGuideChoiceOpen((ouvert) => !ouvert)
         : tour.startTour('coach')),
     }] : []),
-    ...(currentRoleKey === 'coach' && Platform.OS !== 'web' && isGuideChoiceOpen
+    ...(currentRoleKey === 'coach' && isGuideSupported() && isGuideChoiceOpen
       && tour.hasGuideHistory ? [
         ...(isGuideInProgress ? [{
           icon: Images.flag,

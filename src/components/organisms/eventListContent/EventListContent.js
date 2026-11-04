@@ -55,6 +55,7 @@ import {
 } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
@@ -75,7 +76,7 @@ import { mapSearchPayload } from '@/services/search/searchService';
 import { createLogger } from '@/utils/logger/logger';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
-import JoinEventModal from '../joinEventModal/JoinEventModal';
+import { useTour } from '@/context/useTour';
 
 const eventListLogger = createLogger('event-list');
 const FEATURED_CLUB_SCOPES = ['SECTION', 'CM'];
@@ -197,6 +198,7 @@ function EventListContent({
   // ALERTES (A20) — ouverte POUR une alerte, la feuille s'ouvre sur la rangée Ville.
   const [feuillePourAlerte, setFeuillePourAlerte] = useState(false);
   const [propositionAlerteVisible, setPropositionAlerteVisible] = useState(false);
+  const { isTourActive } = useTour();
   const [guideAlertesVisible, setGuideAlertesVisible] = useState(false);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
@@ -699,12 +701,14 @@ function EventListContent({
   // attend que la liste ait répondu, pour ne pas couvrir un écran qui charge.
   useEffect(() => {
     if (!peutProposerUneAlerte || !screenActive || !hasResolvedActiveQuery) return;
-    if (filtersSheetVisible || propositionAlerteDejaVue) return;
+    // T3-GUIDE-SITE : le guide passe devant ; sa feuille resterait sous le voile, sans issue.
+    if (filtersSheetVisible || propositionAlerteDejaVue || isTourActive) return;
     marquerPropositionAlerteVue('auto');
     setPropositionAlerteVisible(true);
   }, [
     filtersSheetVisible,
     hasResolvedActiveQuery,
+    isTourActive,
     marquerPropositionAlerteVue,
     peutProposerUneAlerte,
     propositionAlerteDejaVue,

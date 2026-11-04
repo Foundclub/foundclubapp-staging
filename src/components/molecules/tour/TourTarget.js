@@ -2,8 +2,9 @@ import * as ReactNavigation from '@react-navigation/native';
 import {
   createContext, useContext, useEffect, useRef,
 } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 
+import isGuideSupported from '@/domains/tour/guideSupport';
 import {
   notifyTourTargetLayout,
   registerTourTarget,
@@ -22,8 +23,8 @@ const TourClipContext = createContext(/** @type {string | undefined} */ (undefin
  * registre. `style` ne sert qu'à garder la mise en page de l'enfant (ex.
  * `{ flex: 1 }` dans une rangée) : l'ancre n'a aucun style propre.
  *
- * Sur le site, le guide ne démarre jamais (`startTour` refuse) : l'ancre rend
- * l'enfant tel quel, sans boîte de plus dans le DOM.
+ * Sur le site, tant que son guide est éteint : l'ancre rend l'enfant tel quel,
+ * sans boîte de plus dans le DOM.
  *
  * TUTOE-CALIBRAGE : l'ancre ne compte que si son écran a le focus (un écran
  * resté monté sous la pile garde ses ancres, décalées par l'animation) ; hors
@@ -51,7 +52,7 @@ function TourTarget({
   const ownNavigation = /** @type {any} */ (useContext(NavigationContext));
   const navigation = focusFromParent ? ownNavigation?.getParent?.() : ownNavigation;
   useEffect(() => {
-    if (Platform.OS === 'web') return undefined;
+    if (!isGuideSupported()) return undefined;
     return registerTourTarget(id, (done) => {
       const node = viewRef.current;
       if (!node?.measureInWindow) {
@@ -74,7 +75,7 @@ function TourTarget({
     });
   }, [clipTo, id, navigation]);
 
-  if (Platform.OS === 'web') return /** @type {any} */ (children);
+  if (!isGuideSupported()) return /** @type {any} */ (children);
 
   return (
     <View

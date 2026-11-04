@@ -25163,9 +25163,11 @@ export default {
       'm1-csearch': 'Tape le nom de ton club, puis ouvre sa fiche.',
       'm1-cw': 'Crée ton club : remplis chaque écran, puis Suivant.',
       'm1-dock': 'Commence par ton équipe. Ouvre l’onglet Équipes.',
+      'm1-dock-site': 'Commence par ton équipe. Ouvre l’onglet entouré.',
       'm1-dock2': 'Retourne dans Équipes pour créer ton équipe.',
       'm1-find': 'Ton équipe est déjà là : ouvre-la.',
       'm1-find-dock': 'Ton équipe est déjà là : ouvre l’onglet Équipes.',
+      'm1-find-dock-site': 'Ton équipe est déjà là : ouvre l’onglet entouré.',
       'm1-gate': 'Une équipe appartient toujours à un club. Commence par trouver le tien. Pas de club ? « Je ne trouve pas mon club » te guidera pour le créer.',
       'm1-mine': 'C’est ton club ? Touche « C’est mon club ! ».',
       'm1-mine-ask': 'C’est ton club ? Demande à le rejoindre : un dirigeant validera.',
@@ -25230,6 +25232,7 @@ export default {
       'm4-tab-ev': 'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et '
         + 'détections près de chez toi.',
       'm4-tab-fr': 'Les clubs. Dernier onglet : « Matchs amicaux ».',
+      'm4-tab-fr-site': 'Les événements. Dernier onglet : « Matchs amicaux ».',
       missions: {
         b1: 'Voir qui vient et relancer',
         b2: 'Convoquer pour un match',

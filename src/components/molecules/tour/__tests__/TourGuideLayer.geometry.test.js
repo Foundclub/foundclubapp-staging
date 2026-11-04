@@ -1,4 +1,9 @@
-import { computeBlockers, placeBubble } from '../tourGuideGeometry';
+import {
+  computeBlockers,
+  dockBarOf,
+  placeBubble,
+  wideBubbleFrame,
+} from '../tourGuideGeometry';
 
 // TUTOE (27/10) — règle 4 du pack tutoriels : « un geste à la fois ». Les
 // bloqueurs couvrent tout l'écran SAUF les découpes ; la bulle se place sans
@@ -150,5 +155,31 @@ describe('clipAboveDock', () => {
     };
     expect(clipAboveDock(rect, null)).toBe(rect);
     expect(clipAboveDock(rect, dock)).toBe(rect);
+  });
+});
+
+describe('T3-GUIDE-SITE : dockBarOf', () => {
+  const HAUTEUR = 900;
+
+  it('des onglets en haut à gauche (site à 1440) ne sont pas une barre du bas', () => {
+    expect(dockBarOf([{ y: 80 }, { y: 130 }, { y: 180 }], HAUTEUR)).toBeNull();
+  });
+
+  it('une barre du bas (téléphone, site à 390) garde son haut', () => {
+    expect(dockBarOf([{ y: 800 }, { y: 802 }], HAUTEUR)).toMatchObject({ y: 800 });
+  });
+
+  it('aucun onglet : pas de barre', () => {
+    expect(dockBarOf([], HAUTEUR)).toBeNull();
+  });
+});
+
+describe('T3-GUIDE-SITE : wideBubbleFrame', () => {
+  it('téléphone : toute la largeur, comme avant', () => {
+    expect(wideBubbleFrame(390)).toEqual({ left: 14, width: 362 });
+  });
+
+  it('1440 : une bulle centrée, pas un bandeau', () => {
+    expect(wideBubbleFrame(1440)).toEqual({ left: 460, width: 520 });
   });
 });

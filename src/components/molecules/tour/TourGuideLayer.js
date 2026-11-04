@@ -23,6 +23,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
@@ -30,6 +31,7 @@ import {
   clipAboveDock,
   compactBubbleFits,
   computeBlockers,
+  dockBarOf,
   headerBottomOf,
   isOnScreen,
   placeBubble,
@@ -37,6 +39,7 @@ import {
   toAbsoluteStyle,
   toCutout,
   toLayerFrame,
+  wideBubbleFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
 
 import { useTour } from '@/context/useTour';
@@ -335,12 +338,7 @@ function TourGuideLayer() {
   }, [isStepVisible, pulse, reduceMotion]);
 
   const dockRects = DOCK_IDS.map((id) => rects[id]).filter(Boolean);
-  const dock = dockRects.length ? {
-    height: 1,
-    width: 1,
-    x: 0,
-    y: Math.min(...dockRects.map((rect) => rect.y)),
-  } : null;
+  const dock = dockBarOf(dockRects, height);
   /** @type {Record<string, any>} */
   const visibleRects = Object.fromEntries(variant.targets.map((id) => [
     id,
@@ -414,7 +412,7 @@ function TourGuideLayer() {
   const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
   const position = slot
     ? {
-      arrow: 'none', arrowX: 0, left: 14, top: slot.y, width: width - 28,
+      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: slot.y,
     }
     : placeBubble({
       bottomLimit,
@@ -479,11 +477,9 @@ function TourGuideLayer() {
   // GUIDE-RELANCE (bloquant n° 6) : l'écran a refusé le geste ; sans voile.
   if (tourStatus === 'active' && tour.blocked) return <TourBlockedCard />;
 
-  // FIN-GUIDE, point 1 : la question de la mission 1. Chargée au geste : elle tire le client HTTP,
-  // que la couche, montée partout, n'a pas à charger pour autant (voir `useTour.js`).
+  // FIN-GUIDE, point 1 : la question de la mission 1.
   if (tourStatus === 'active' && currentStep?.kind === 'teamChoice') {
-    // eslint-disable-next-line global-require
-    const TourTeamChoice = require('@/components/molecules/tour/TourTeamChoice').default;
+    const TourTeamChoice = loadTourTeamChoice();
     return <TourTeamChoice />;
   }
 

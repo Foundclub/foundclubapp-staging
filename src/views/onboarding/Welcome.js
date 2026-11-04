@@ -10,6 +10,7 @@ import {
   markOnboardingComplete,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import isGuideSupported from '@/domains/tour/guideSupport';
 import { storage, useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -47,10 +48,11 @@ function Welcome({ navigation }) {
     || roleKey === 'president'
     || roleKey === 'superAdmin';
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
-  // FIN-GUIDE (decision du chef, 02/11) : le site n'a pas de guide (`startTour` y refuse) ; il ne
-  // le promet donc pas.
-  const shouldOfferGuidedTour = (roleKey === 'coach' || roleKey === 'president')
-    && Platform.OS !== 'web';
+  // FIN-GUIDE (decision du chef, 02/11) : un site sans guide (`startTour` y refuse) ne le promet
+  // pas. T3-GUIDE-SITE : seul le guide de l'entraineur peut y jouer.
+  const shouldOfferGuidedTour = Platform.OS === 'web'
+    ? roleKey === 'coach' && isGuideSupported()
+    : roleKey === 'coach' || roleKey === 'president';
 
   /**
    * 👨‍👧 LES QUATRE PHRASES DE BIENVENUE, POUR LA BONNE PERSONNE.
