@@ -32,7 +32,7 @@ describe('P3 — une place pour un enfant, dans « Demandes »', () => {
   it('la ligne dit POUR QUI, avec le prenom et l age, et propose Accepter / Refuser', () => {
     const ligne = mapClubInterestRequestToHubItem(DEMANDE_POUR_LEA);
 
-    expect(ligne.actions).toEqual({ primary: 'accept', secondary: 'reject' });
+    expect(ligne.actions).toEqual({ primary: 'accept', secondary: 'reject', tertiary: 'chat' });
     expect(ligne.type).toBe('interest');
     expect(ligne.title).toBe('Léa, 7 ans');
     expect(ligne.subtitle).toBe('Demande une place dans U11.');

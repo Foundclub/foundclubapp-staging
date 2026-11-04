@@ -104,6 +104,7 @@ const TYPES_AVEC_HEURE_DE_RECEPTION = new Set(['club', 'event', 'interest', 'tea
  * @param {{
  *  item: import('@/domains/requests/requestMappers').RequestHubItem;
  *  isBusy?: boolean;
+ *  onChatPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onEventPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onPrimaryPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
  *  onRequesterPress?: (item: import('@/domains/requests/requestMappers').RequestHubItem) => void;
@@ -113,6 +114,7 @@ const TYPES_AVEC_HEURE_DE_RECEPTION = new Set(['club', 'event', 'interest', 'tea
 function RequestFeedItem({
   isBusy = false,
   item,
+  onChatPress,
   onEventPress,
   onPrimaryPress,
   onRequesterPress,
@@ -413,6 +415,18 @@ function RequestFeedItem({
     </View>
   ) : null;
 
+  const chatButton = item?.actions?.tertiary === 'chat' ? (
+    <View>
+      <Button
+        disabled={isBusy}
+        icon="envelope"
+        onPress={() => onChatPress && onChatPress(item)}
+        title={getActionLabel('chat', item, t)}
+        variant="Secondary"
+      />
+    </View>
+  ) : null;
+
   const cardSurfaceStyle = isInstallationRequest
     ? {
       backgroundColor: 'rgba(10, 37, 49, 0.96)',
@@ -498,6 +512,7 @@ function RequestFeedItem({
       ) : null}
 
       {stackActions ? null : profileButton}
+      {chatButton}
 
       {canOpenEvent ? (
         <View>

@@ -1991,6 +1991,8 @@ function ClubDetails({ navigation, route }) {
     isUserAlreadyAttachedToViewedClub,
     owners.length,
   ]);
+  // T4-PARENT-RETOURS (Q3 B d'Adel, M0094) — deux portes : chacune dit pour qui part l'intérêt.
+  const deuxPortes = showClubInterestAction && showChildInterestAction;
   const shouldShowSectionScopeToggle = hasParentMultisportClub && isMultisportAdmin;
 
   // ---------------------------------------------------------------------------
@@ -3045,7 +3047,9 @@ function ClubDetails({ navigation, route }) {
                 firstname: enfantDeLaFiche.firstname,
                 ...SANS_ECHAPPEMENT,
               })
-              : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant')
+              : (deuxPortes
+                ? t('clubDetails.actions.askPlaceForMyChild', 'Pour mon enfant : demander une place')
+                : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant'))
           }
           variant="Primary"
         />
@@ -3147,8 +3151,12 @@ function ClubDetails({ navigation, route }) {
               : null,
           ]}
           title={hasPendingEveryClubInterestOption
-            ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
-            : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
+            ? (deuxPortes
+              ? t('clubDetails.clubInterest.alreadySentForMe', 'Pour moi : intérêt déjà envoyé')
+              : t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé'))
+            : (deuxPortes
+              ? t('clubDetails.clubInterest.buttonForMe', 'Pour moi : intéressé par le club')
+              : t('clubDetails.clubInterest.button', 'Intéressé par le club'))}
           variant="Secondary"
         />
       ) : null}

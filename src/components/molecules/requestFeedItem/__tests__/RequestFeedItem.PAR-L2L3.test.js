@@ -177,7 +177,7 @@ describe('PAR-L2L3 · L3 — une demande de place parle de l ENFANT', () => {
     const surProfil = jest.fn();
     const carte = monter(PLACE_POUR_ANISSA, { onRequesterPress: surProfil });
 
-    expect(carte.titres).toEqual(['Profil du parent', 'Refuser', 'Accepter']);
+    expect(carte.titres).toEqual(['Profil du parent', 'Ouvrir une conversation', 'Refuser', 'Accepter']);
     const profil = carte.bouton('Profil du parent');
     expect(profil.props.accessibilityLabel).toBe('Profil du parent');
     expect(profil.props.accessibilityHint).toBe('Ouvre le profil du parent');

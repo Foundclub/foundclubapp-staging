@@ -2732,6 +2732,7 @@ export default {
       // PAR-L4 (13/10, design parent E10) — la porte du parent. Le prenom n'apparait que pour
       // l'enfant venu de SA fiche ; sinon la feuille demande « pour quel enfant ? ».
       askPlaceForChild: 'Demander une place pour un enfant',
+      askPlaceForMyChild: 'Pour mon enfant : demander une place',
       askPlaceForNamedChild: 'Demander une place pour {{firstname}}',
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
@@ -2978,9 +2979,11 @@ export default {
       alreadyMember: 'Tu es déjà rattaché à ce club.',
       alreadySent: 'Intérêt déjà envoyé.',
       alreadySentDescription: 'Le staff de cette équipe a déjà reçu ton intérêt.',
+      alreadySentForMe: 'Pour moi : intérêt déjà envoyé',
       alreadySentShort: 'Intérêt déjà envoyé',
       alreadySentTitle: 'Intérêt déjà envoyé',
       button: 'Intéressé par le club',
+      buttonForMe: 'Pour moi : intéressé par le club',
       cardHint: 'Le staff pourra répondre avec un message ou ouvrir une conversation.',
       confirmDescription: 'Le staff de {{teamName}} verra ton profil et pourra te répondre.',
       confirmTitle: 'Envoyer ton intérêt ?',
@@ -19780,12 +19783,15 @@ export default {
     conversation: {
       coachRow: '{{name}} · coach / prof {{team}}',
       info: "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
+      // eslint-disable-next-line max-len
+      infoChild: 'La demande reste à traiter. {{child}} n’entre pas dans ce fil : vous échangez entre adultes.',
       listError: 'La liste des coachs est indisponible : tu peux discuter toi-même.',
       listLoading: 'Chargement des coachs…',
       noCoach: 'Aucun·e coach dans {{team}}',
       open: 'Ouvrir la conversation',
       optionCoach: 'Un·e coach de {{team}} — je choisis qui.',
       optionMe: 'Moi — je discute directement avec {{firstname}}.',
+      subtitleChild: '{{name}} · place pour {{child}}',
       subtitleClub: '{{name}} · intérêt pour le club',
       subtitleTeam: '{{name}} · intérêt pour {{team}}',
       title: 'Ouvrir une conversation',

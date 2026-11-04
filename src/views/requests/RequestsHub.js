@@ -822,11 +822,14 @@ function RequestsHub({ navigation, route }) {
         responseType: 'chat',
       });
       setConversationItem(null);
-      setSettledItemIds((current) => (
-        item?.id && !current.includes(item.id) ? [...current, item.id] : current
-      ));
+      // T4-PARENT-RETOURS (Q4 A) : le fil d'une demande pour un enfant ne la tranche pas.
+      if (!item?.meta?.childId) {
+        setSettledItemIds((current) => (
+          item?.id && !current.includes(item.id) ? [...current, item.id] : current
+        ));
+        emitGuidanceAction('requests.processed', { requestType: 'interest' });
+      }
       invalidateRequestsInBackground();
-      emitGuidanceAction('requests.processed', { requestType: 'interest' });
       navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
       showBanner({
         title: phraseDArriveeDansLeFil({
@@ -1423,6 +1426,7 @@ function RequestsHub({ navigation, route }) {
             <RequestFeedItem
               isBusy={processingItemId === item.id}
               item={item}
+              onChatPress={setConversationItem}
               onEventPress={handleEventPress}
               onPrimaryPress={handlePrimaryPress}
               onRequesterPress={handleRequesterPress}
