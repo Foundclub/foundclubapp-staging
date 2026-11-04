@@ -129,6 +129,19 @@ export default function appReducer(state, action) {
           : state.returnSessionDocumentId,
       });
     }
+    // T3-SESSION-B (03/11) : par l'ancien jeton, pour qu'un compte déconnecté pendant l'appel
+    // ne ressuscite pas.
+    case 'RENEW_SESSION_TOKEN': {
+      const { ancienJeton, jeton } = action.payload;
+      const renouveler = (/** @type {any} */ session) => (
+        session?.token === ancienJeton ? { ...session, token: jeton } : session
+      );
+      return {
+        ...state,
+        auth: renouveler(state.auth),
+        authSessions: (state.authSessions || []).map(renouveler),
+      };
+    }
     case 'SET_ACTIVE_SESSION':
     case 'SWITCH_ACCOUNT': {
       const targetDocumentId = normalizeDocumentId(

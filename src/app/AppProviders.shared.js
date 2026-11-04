@@ -4,6 +4,8 @@ import React from 'react';
 import { AppProvider } from '@/store/appContext';
 import { ThemeProvider } from '@/theme/themeContext';
 
+import { enregistrerCacheDesSessions } from '@/services/auth/renouvellementJeton';
+
 import { AppFeedbackProvider } from '@/context/AppFeedbackContext';
 import { AppModeProvider } from '@/context/AppModeContext';
 import { BlockingOverlayProvider } from '@/context/BlockingOverlayContext';
@@ -21,6 +23,8 @@ import { TourProvider } from '@/context/TourContext';
  * @returns {import('react').ReactElement}
  */
 function SharedAppProviders({ children, queryClient }) {
+  enregistrerCacheDesSessions(queryClient);
+
   return React.createElement(
     QueryClientProvider,
     { client: queryClient },
