@@ -128,6 +128,19 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       });
     });
 
+    it('T3-LIEN-TOURNOI : le lien d un tournoi, sous ses 3 formes, mene a son ecran', () => {
+      const attendu = { invite: { id: 'tournoi-1', subject: 'tournament' }, kind: 'ask' };
+      [
+        'https://foundclub.app/i/tournament/tournoi-1',
+        'https://staging.foundclub.app/i/tournament/tournoi-1',
+        'foundclub://tournament/tournoi-1?invite=true',
+      ].forEach((lien) => expect(resolveInviteLinkOutcome(lien)).toEqual(attendu));
+      expect(resolveInviteDestination(attendu.invite)).toEqual({
+        params: { eventId: 'tournoi-1' },
+        route: RouteNames.TournamentManagement,
+      });
+    });
+
     it('un lien abime s explique au lieu de se taire', () => {
       expect(resolveInviteLinkOutcome('https://foundclub.app/i/team/').kind).toBe('explain');
       expect(resolveInviteLinkOutcome('https://foundclub.app/i/licorne/x-1').kind).toBe('explain');

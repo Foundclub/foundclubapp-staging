@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Share, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
 import useTheme from '@/theme/themeContext';
@@ -14,7 +14,9 @@ import {
   respondEventTeamAudience,
 } from '@/services/event/eventService';
 import { getTeams } from '@/services/team/teamService';
+import { resolveInviteLinkOrigin } from '@/services/teamInvite/teamInviteShare';
 
+import SharePlatform from '@/platform/share';
 import TournamentTeamSearch from './TournamentTeamSearch';
 
 const STATUTS_VIVANTS = ['ACCEPTED', 'PENDING'];
@@ -104,9 +106,19 @@ export default function TournamentInvites({ clubId = null, eventId }) {
     onSettled: apresEcriture,
   });
 
-  const partagerLeLien = () => {
-    const url = buildInviteWebUrl({ id: eventId, subject: 'tournament' });
-    if (url) Share.share({ message: url, url });
+  // T3-LIEN-TOURNOI : le lien de cette version (la recette ne connaît pas les tournois de
+  // la prod) ; un navigateur d'ordinateur ne sait pas partager : il copie, et il faut le dire.
+  const partagerLeLien = async () => {
+    const url = buildInviteWebUrl({
+      id: eventId,
+      origin: resolveInviteLinkOrigin(),
+      subject: 'tournament',
+    });
+    if (!url) return;
+    const resultat = await SharePlatform.share({ message: url, url }).catch(() => undefined);
+    if (resultat?.action === 'copie') {
+      setMessage(t('tournamentInvites.linkCopied', 'Lien copié. Colle-le où tu veux.'));
+    }
   };
 
   return (
