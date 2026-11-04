@@ -336,6 +336,16 @@ describe('une cible coupée se fait défiler depuis tout l écran', () => {
     expect(textsOf(tree)).toContain('Fais défiler vers le bas.');
   });
 
+  it('étape déjà sans voile : rien à lever, la bulle ne s allonge pas', async () => {
+    dockAt(760);
+    mountTarget('teamWizard.next', {
+      height: 200, width: 361, x: 16, y: 700,
+    });
+    mockTour = activeTour(step('m3-when'));
+    const tree = await renderLayer();
+    expect(textsOf(tree).join(' ')).not.toMatch(/Fais défiler/);
+  });
+
   it('témoin : entière, le voile et ses bloqueurs restent', async () => {
     dockAt(760);
     mountTarget('teams.trained.0', {

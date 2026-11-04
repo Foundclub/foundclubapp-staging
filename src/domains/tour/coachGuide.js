@@ -805,8 +805,8 @@ const STEPS = [
     get text() {
       return t(
         'm3-when',
-        'Touche la date et les heures pour les choisir. Chaque semaine ? Touche « '
-          + 'Chaque semaine » ou « Plus d’options ». Puis Suivant.',
+        'Touche la date et les heures. Chaque semaine ? Touche « Chaque semaine » ou '
+          + '« Plus d’options ». Puis Suivant.',
       );
     },
     // Feuille « Répéter » ouverte : une bulle par zone (pack 02, M3).
@@ -828,8 +828,7 @@ const STEPS = [
   },
   wizardStep('m3-access', 'coach_m3', RouteNames.EventWizardDescription, 'm3-type', () => t(
     'm3-access',
-    'Pour un entraînement, garde Privé : ton équipe et tes invités. Public : '
-      + 'visible dans Rechercher.',
+    'Pour un entraînement, garde Privé : ton équipe et tes invités.',
   )),
   wizardStep('m3-desc', 'coach_m3', RouteNames.EventWizardRecap, 'm3-type', () => t(
     'm3-desc',

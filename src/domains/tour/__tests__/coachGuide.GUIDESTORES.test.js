@@ -17,6 +17,7 @@ describe('les bulles disent ce que l écran montre', () => {
     expect(step('m3-when').text).not.toMatch(/Ouvre « Répéter »/);
     expect(step('m3-when').text).toMatch(/Chaque semaine/);
     expect(step('m3-when').text).toMatch(/Plus d’options/);
+    expect(step('m3-when').text.length).toBeLessThanOrEqual(110);
   });
 
   it('m4-am4 ne suppose pas un terrain proposé', () => {
@@ -31,7 +32,7 @@ describe('les bulles disent ce que l écran montre', () => {
 
   it('m3-access dit d abord l essentiel, dans la place de la bulle', () => {
     expect(step('m3-access').text).toMatch(/^Pour un entraînement, garde Privé/);
-    expect(step('m3-access').text.length).toBeLessThanOrEqual(100);
+    expect(step('m3-access').text.length).toBeLessThanOrEqual(70);
   });
 });
 

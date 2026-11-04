@@ -389,11 +389,12 @@ function TourGuideLayer() {
   // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
   // cible coupée doit pouvoir être amenée d'où qu'on pose le doigt : pas de voile, et la bulle le
   // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
-  const isTargetCut = !currentStep?.bubbleSlot && !sheetGuide && measuredTargets.some((id) => (
-    clipSides[id]
-    || visibleRects[id].height < rects[id].height - 1
-    || rects[id].y + rects[id].height > height - 2
-  ));
+  const isTargetCut = !currentStep?.bubbleSlot && currentStep?.veil !== false && !sheetGuide
+    && measuredTargets.some((id) => (
+      clipSides[id]
+      || visibleRects[id].height < rects[id].height - 1
+      || rects[id].y + rects[id].height > height - 2
+    ));
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
