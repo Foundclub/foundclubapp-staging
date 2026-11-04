@@ -18,7 +18,7 @@ jest.mock('@/theme/themeContext', () => ({
   __esModule: true,
   default: () => ({
     Alignments: { fill: { flex: 1 }, grow1: { flexGrow: 1 } },
-    Colors: { neutral900: '#0c0c0d' },
+    Colors: { neutral900: 'black' },
     Images: { bg1: 1, bg2: 2, bg3: 3 },
   }),
 }));
@@ -78,7 +78,7 @@ describe('fond derrière la barre à 3 boutons', () => {
   });
 
   test('il y est aussi avec un dégradé', () => {
-    expect(fondDuCadre('scroll-edge', '#000000')).toBeDefined();
+    expect(fondDuCadre('scroll-edge', 'black')).toBeDefined();
   });
 
   test('Android, gestes : rien', () => {
