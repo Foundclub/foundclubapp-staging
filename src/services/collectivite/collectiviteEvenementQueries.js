@@ -104,14 +104,19 @@ export const useEvenementDeLaVille = (evenementId) => useQuery({
 
 /**
  * La recherche publique (niveau 3).
- * @param {string} [mot] - Le mot cherché.
+ * @param {string} [mot] - Le mot cherché : il trouve de loin, le lieu ne part pas avec lui.
+ * @param {{ lat: number, lon: number, radius?: number }|null} [lieu] - Le lieu des filtres ; sans
+ *   lui, le serveur part de l'adresse du compte.
  * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La requête.
  */
-export const useEvenementsPublicsDeLaVille = (mot = '') => useQuery({
-  queryFn: async () => unwrapRows(await getEvenementsPublicsDeLaVille(mot ? { q: mot } : {})),
-  queryKey: ['evenements-de-la-ville', 'publics', mot || ''],
-  staleTime: 60_000,
-});
+export const useEvenementsPublicsDeLaVille = (mot = '', lieu = null) => {
+  const params = mot ? { q: mot } : (lieu || {});
+  return useQuery({
+    queryFn: async () => unwrapRows(await getEvenementsPublicsDeLaVille(params)),
+    queryKey: ['evenements-de-la-ville', 'publics', params],
+    staleTime: 60_000,
+  });
+};
 
 /**
  * Publier, modifier, annuler : puis relire ce qui les montre.

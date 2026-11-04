@@ -13,6 +13,11 @@ jest.setTimeout(30000);
 let mockPublics;
 // R17-EVT-1-BIS (g) : le mot tape dans la recherche (eventFilters.q, partage par la liste).
 let mockMot = '';
+// T4-EVENEMENT-PROXIMITE : la ville choisie dans les filtres, et son rayon.
+/** @type {any} */
+let mockFiltres = {};
+/** @type {any[]} */
+const mockLieuxDemandes = [];
 /** @type {string[]} */
 const mockMotsDemandes = [];
 const mockNavigate = jest.fn();
@@ -36,13 +41,14 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/collectivite/collectiviteEvenementQueries', () => ({
-  useEvenementsPublicsDeLaVille: (/** @type {string} */ mot) => {
+  useEvenementsPublicsDeLaVille: (/** @type {string} */ mot, /** @type {any} */ lieu) => {
     mockMotsDemandes.push(mot);
+    mockLieuxDemandes.push(lieu);
     return mockPublics;
   },
 }));
 jest.mock('@/store/appContext', () => ({
-  useAppContext: () => ([{ eventFilters: { q: mockMot } }, jest.fn()]),
+  useAppContext: () => ([{ eventFilters: { q: mockMot, ...mockFiltres } }, jest.fn()]),
 }));
 
 const FETE = {
@@ -102,6 +108,30 @@ describe('R17-EVT-1 — la recherche d’événements : ceux de la Ville', () =>
     mockMotsDemandes.length = 0;
     await monter();
     expect(mockMotsDemandes.at(-1)).toBe('');
+  });
+
+  // T4-EVENEMENT-PROXIMITE (décision d'Adel « 5- C » du 03/11/2026) : sans ville dans les filtres, le
+  // serveur part de l'adresse du compte. ROUGE avant : le lieu choisi ne partait jamais.
+  it('🔴 elle passe le lieu choisi dans les filtres, avec son rayon', async () => {
+    mockPublics = { data: [FETE] };
+    mockMot = '';
+    mockFiltres = { city: { label: 'Lyon', value: '4.84|45.76' }, radius: 30 };
+    mockLieuxDemandes.length = 0;
+    await monter();
+    expect(mockLieuxDemandes.at(-1)).toEqual({ lat: 45.76, lon: 4.84, radius: 30 });
+  });
+
+  it('🔴 sans ville, ou une ville effacée : aucun lieu', async () => {
+    mockPublics = { data: [FETE] };
+    mockMot = '';
+    for (const filtres of [{}, { city: { label: '', value: '' }, radius: 20 }]) {
+      mockFiltres = filtres;
+      mockLieuxDemandes.length = 0;
+      // eslint-disable-next-line no-await-in-loop -- un montage après l'autre.
+      await monter();
+      expect(mockLieuxDemandes.at(-1)).toBeNull();
+    }
+    mockFiltres = {};
   });
 
   it('aucun, ou le serveur ne répond pas : rien', async () => {
