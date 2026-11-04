@@ -102,6 +102,7 @@ const zoneMesuree = (props = {}) => {
 };
 
 /**
+ * Compte les pieds rendus.
  * @param {any} noeud Là où chercher.
  * @returns {number} Le nombre de fois où le pied y est rendu.
  */
