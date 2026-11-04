@@ -35,6 +35,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import DateEtHoraire from '@/components/organisms/dateEtHoraire/DateEtHoraire';
+import EvenementCiblageClubs from '@/components/organisms/evenementVille/EvenementCiblageClubs';
 import SeancesTouchees from '@/components/organisms/evenementVille/SeancesTouchees';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 
@@ -78,6 +79,8 @@ const AFFICHE_OCTETS_MAX = 10 * 1024 * 1024;
  * « Modifier » écrit au récapitulatif (ligne 10), le brouillon gardé sur le site (ligne 12) ; puis
  * « Répéter » (« Sauf vacances scolaires » compris, à la création seulement) et « Nombre de
  * places ».
+ * 🏛️ T3-ACTU-CIBLE (décision d'Adel du 03/11/2026) : « L'actualité va à » a une 3ᵉ pastille, « Des
+ * clubs précis » (EvenementCiblageClubs), avec les mêmes règles que l'actualité de la Ville.
  * @param {{ collectiviteId: string, collectiviteNom?: string, collectiviteVille?: string,
  *   etroit?: boolean, evenement?: any, initial?: any, installations?: any[],
  *   onClose: () => void, onPublier: (corps: any) => Promise<any>,
@@ -595,7 +598,7 @@ function EvenementDeLaVilleForm({
             style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
           >
             <PuceDeChoix
-              actif={etat.audience !== 'membres'}
+              actif={etat.audience === 'dirigeants'}
               libelle={t('collectiviteEvenement.qui.dirigeants', 'Les dirigeants')}
               onPress={() => changer({ audience: 'dirigeants' })}
               testID="evenement-audience-dirigeants"
@@ -606,7 +609,27 @@ function EvenementDeLaVilleForm({
               onPress={() => changer({ audience: 'membres' })}
               testID="evenement-audience-membres"
             />
+            <PuceDeChoix
+              actif={etat.audience === 'clubs'}
+              libelle={t('collectiviteEvenement.qui.clubsPrecis', 'Des clubs précis')}
+              onPress={() => changer({ audience: 'clubs' })}
+              testID="evenement-audience-clubs"
+            />
           </View>
+          {/* Tunnel : « Suivant » reste en bas de l'écran et l'étape s'ouvre par le haut ; sous la
+              liste, le refus resterait hors de l'écran et le bouton semblerait ne rien faire. */}
+          {presentation === 'tunnel' ? refus('clubs', 'evenement-refus-clubs') : null}
+          {etat.audience === 'clubs' ? (
+            <EvenementCiblageClubs
+              clubIds={etat.clubIds}
+              collectiviteId={collectiviteId}
+              onClubIds={(clubIds) => changer({ clubIds })}
+              onRoles={(roles) => changer({ roles })}
+              roles={etat.roles}
+            />
+          ) : null}
+          {presentation === 'tunnel' ? null : refus('clubs', 'evenement-refus-clubs')}
+          {refus('roles', 'evenement-refus-roles')}
         </View>
       ) : null}
       {ligneRadio({
@@ -874,7 +897,7 @@ function EvenementDeLaVilleForm({
     ou: ['lieu'],
     place: [],
     quand: ['date', 'heures', 'dateFin', 'repetition'],
-    qui: [],
+    qui: ['clubs', 'roles'],
     quoi: ['name', 'capacite'],
     recap: Object.keys(erreurs),
   };
@@ -947,7 +970,11 @@ function EvenementDeLaVilleForm({
         {ligneDuRecap(
           'qui',
           t('collectiviteEvenement.recap.qui', 'Qui le voit'),
-          quiLeVoitLabel(t, { audience: etat.audience, visibility: etat.visibility }),
+          quiLeVoitLabel(t, {
+            audience: etat.audience,
+            clubsCount: etat.clubIds.length,
+            visibility: etat.visibility,
+          }),
           'qui',
         )}
       </View>

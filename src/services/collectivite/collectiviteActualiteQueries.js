@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData, useMutation, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 
 import {
   getActualiteRecipients,
@@ -50,20 +52,34 @@ export const useCollectiviteActualites = (collectiviteId, options = {}) => useQu
 /**
  * « Reçue par les membres des n clubs » : relu à chaque changement de destinataires.
  * @param {string | null | undefined} collectiviteId - documentId.
- * @param {{ audience: string, facilityId?: string | null }} cible - Le choix en cours.
- * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} `data.clubsCount`.
+ * @param {{ audience: string, clubIds?: string[], facilityId?: string | null,
+ *   roles?: string[] }} cible - Le choix en cours.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} `data.clubsCount` ; pour
+ *   des clubs précis, `data.personsCount` aussi.
  */
-export const useActualiteRecipients = (collectiviteId, { audience, facilityId }) => useQuery({
-  enabled: Boolean(collectiviteId) && (audience !== 'installation' || Boolean(facilityId)),
-  queryFn: async () => (await getActualiteRecipients(String(collectiviteId), {
-    audience,
-    facilityId,
-  }))?.data || null,
-  queryKey: [
-    'collectivite', collectiviteId, 'actualites-destinataires', audience, facilityId || null,
-  ],
-  staleTime: 60_000,
-});
+export const useActualiteRecipients = (collectiviteId, {
+  audience, clubIds = [], facilityId, roles = [],
+}) => {
+  const clubs = audience === 'clubs';
+  return useQuery({
+    enabled: Boolean(collectiviteId)
+      && (audience !== 'installation' || Boolean(facilityId))
+      && (!clubs || (clubIds.length > 0 && roles.length > 0)),
+    // Le nombre affiché reste en place le temps de recompter, à chaque case cochée.
+    placeholderData: clubs ? keepPreviousData : undefined,
+    queryFn: async () => (await getActualiteRecipients(String(collectiviteId), {
+      audience,
+      clubIds,
+      facilityId,
+      roles,
+    }))?.data || null,
+    queryKey: [
+      'collectivite', collectiviteId, 'actualites-destinataires', audience, facilityId || null,
+      ...(clubs ? [[...clubIds].sort().join(','), roles.join(',')] : []),
+    ],
+    staleTime: 60_000,
+  });
+};
 
 /**
  * Publier, modifier, retirer : chacun relit la liste de la mairie.

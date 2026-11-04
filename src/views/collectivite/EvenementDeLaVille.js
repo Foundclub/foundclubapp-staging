@@ -255,6 +255,7 @@ function EvenementDeLaVille() {
               testID: 'evenement-qui',
               texte: quiLeVoitLabel(t, {
                 audience: evenement.audience,
+                clubsCount: evenement.audienceClubIds?.length,
                 visibility: evenement.visibility,
               }),
             })

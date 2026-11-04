@@ -3,11 +3,15 @@ import {
   ACTUALITE_CATEGORIES,
   actualiteFormErrors,
   attachmentBadge,
+  audienceLabel,
   audiencePreview,
   categoryLabel,
   categoryTone,
+  clubsDuSport,
+  clubsPrecisPreview,
   publicationDateLabel,
   recipientsLine,
+  sportsDesClubs,
   toActualitePayload,
 } from './collectiviteActualites';
 
@@ -19,10 +23,11 @@ const t = (/** @type {string} */ _cle, /** @type {string} */ repli, /** @type {a
 );
 
 describe('COLL-C4A — le registre', () => {
-  it('cinq types et trois destinataires, dans l ordre de la planche', () => {
+  it('cinq types et quatre destinataires, dans l ordre de la planche', () => {
     expect(ACTUALITE_CATEGORIES)
       .toEqual(['fermeture', 'forum', 'subventions', 'travaux', 'autre']);
-    expect(ACTUALITE_AUDIENCES).toEqual(['membres', 'dirigeants', 'installation']);
+    // « clubs » : T3-ACTU-CIBLE, fiche 3 option B d'Adel (03/11).
+    expect(ACTUALITE_AUDIENCES).toEqual(['membres', 'dirigeants', 'installation', 'clubs']);
     expect(categoryLabel(t, 'forum')).toBe('Forum, manifestation');
     expect(categoryLabel(t, 'inconnu')).toBe('Autre');
   });
@@ -101,5 +106,56 @@ describe('COLL-C4A — le formulaire', () => {
     expect(publicationDateLabel(t, 'illisible', maintenant)).toBe('');
     // FINITIONS15 point 8 — planche P3b-actu : « Fermeture · mar. 29 sept. ». ROUGE avant le lot.
     expect(publicationDateLabel(t, '2026-09-29T08:00:00', maintenant)).toBe('mar. 29 sept.');
+  });
+});
+
+describe('T3-ACTU-CIBLE — des clubs précis', () => {
+  it('le libellé, la ligne de la liste', () => {
+    expect(audienceLabel(t, 'clubs')).toBe('Des clubs précis');
+    expect(recipientsLine(t, { audience: 'clubs', clubsCount: 1 })).toBe('Envoyée à 1 club choisi');
+    expect(recipientsLine(t, { audience: 'clubs', clubsCount: 3 }))
+      .toBe('Envoyée à 3 clubs choisis');
+  });
+
+  it('il faut un club et un rôle ; les autres audiences n en demandent pas', () => {
+    const base = { audience: 'clubs', title: 'T' };
+    expect(actualiteFormErrors({ ...base, clubIds: [], roles: [] }))
+      .toEqual({ clubs: 'required', roles: 'required' });
+    expect(actualiteFormErrors({ ...base, clubIds: ['c'], roles: ['membres'] })).toEqual({});
+    expect(actualiteFormErrors({ audience: 'membres', title: 'T' })).toEqual({});
+  });
+
+  it('le corps envoyé : la liste et les rôles, pour cette audience seulement', () => {
+    expect(toActualitePayload({
+      audience: 'clubs', category: 'autre', clubIds: ['c'], roles: ['membres'], title: 'T',
+    })).toMatchObject({ clubIds: ['c'], roles: ['membres'] });
+    const autre = toActualitePayload({
+      audience: 'membres', category: 'autre', clubIds: ['c'], roles: ['membres'], title: 'T',
+    });
+    expect('clubIds' in autre).toBe(false);
+    expect('roles' in autre).toBe(false);
+  });
+
+  it('les sports, sans doublon, bien rangés ; un club omnisports passe dans les deux', () => {
+    const clubs = [{ sports: ['Tennis', 'Équitation'] }, { sports: ['Football', 'Tennis'] }, {}];
+    expect(sportsDesClubs(clubs)).toEqual(['Équitation', 'Football', 'Tennis']);
+    expect(clubsDuSport(clubs, 'Tennis')).toEqual([clubs[0], clubs[1]]);
+    expect(clubsDuSport(clubs, '')).toEqual(clubs);
+  });
+
+  it('la phrase avant l envoi', () => {
+    const base = { clubsCoches: 2, rolesCoches: 3 };
+    expect(clubsPrecisPreview(t, { ...base, clubsCoches: 0 }))
+      .toBe('Cochez les clubs qui la recevront.');
+    expect(clubsPrecisPreview(t, { ...base, rolesCoches: 0 }))
+      .toBe('Cochez les rôles qui la recevront.');
+    expect(clubsPrecisPreview(t, base)).toBe('Nous comptons les personnes qui la recevront…');
+    expect(clubsPrecisPreview(t, { ...base, clubsCount: 2, personsCount: 0 }))
+      .toMatch(/^Personne ne la recevra/);
+    expect(clubsPrecisPreview(t, { ...base, clubsCount: 2, personsCount: 1 }))
+      .toMatch(/^Reçue par 1 personne dans 2 clubs\. /);
+    expect(clubsPrecisPreview(t, {
+      ...base, approximate: true, clubsCount: 1, personsCount: 42,
+    })).toMatch(/^Reçue par environ 42 personnes dans 1 club\. /);
   });
 });
