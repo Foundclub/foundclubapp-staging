@@ -39,6 +39,6 @@ describe('confirmerLeRefus', () => {
     'views/recruitment/RecruitmentAdDetails.js',
   ])('%s confirme son refus', (chemin) => {
     const source = readFileSync(join(__dirname, '../../..', chemin), 'utf8');
-    expect(source).toContain('confirmerLeRefus(t, ');
+    expect(source).toMatch(/confirmerLeRefus\(\s*t,/);
   });
 });

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -250,7 +251,7 @@ function FriendlyMatchApplicationCard({
             />
             <Button
               disabled={isSubmitting}
-              onPress={() => respond('decline')}
+              onPress={() => confirmerLeRefus(t, () => respond('decline'))}
               title={t('friendlyMatchApplicationCard.decline', 'Refuser')}
               variant="Secondary"
             />

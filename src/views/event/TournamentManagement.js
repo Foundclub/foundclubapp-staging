@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -661,7 +662,10 @@ function TournamentManagement({ navigation, route }) {
                   />
                   <Button
                     isLoading={reviewMutation.isPending}
-                    onPress={() => handleReview(team?.documentId, 'declined')}
+                    onPress={() => confirmerLeRefus(
+                      t,
+                      () => handleReview(team?.documentId, 'declined'),
+                    )}
                     size="sm"
                     style={{ borderColor: `${Colors.error500}55`, flex: 1 }}
                     textStyle={{ color: Colors.error500 }}

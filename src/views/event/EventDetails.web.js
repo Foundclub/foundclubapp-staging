@@ -34,6 +34,7 @@ import {
   resolveClientSourceTeamForUser,
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
+import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -3813,7 +3814,10 @@ function EventDetails({ navigation, route }) {
                                     {t('eventDetails.approve', 'Valider')}
                                   </button>
                                   <button
-                                    onClick={() => handleReviewTournamentTeam(team?.documentId, 'declined')}
+                                    onClick={() => confirmerLeRefus(
+                                      t,
+                                      () => handleReviewTournamentTeam(team?.documentId, 'declined'),
+                                    )}
                                     style={{
                                       background: 'transparent',
                                       border: '1px solid rgba(255, 107, 129, 0.38)',
