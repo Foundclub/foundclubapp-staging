@@ -6587,8 +6587,10 @@ export default {
       seances_other: '{{count}} {{jour}}s',
       titre: 'Quand ?',
       titreDates: 'Quelles dates ?',
-      toutesFermees: 'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez attribuer quand '
-        + 'même : le club verra ses séances « fermé ».',
+      toutesFermees_one: 'Cette date tombe dans une fermeture ({{fermeture}}). Vous pouvez '
+        + 'attribuer quand même : le club verra sa séance « fermé ».',
+      toutesFermees_other: 'Toutes tombent dans une fermeture ({{fermeture}}). Vous pouvez '
+        + 'attribuer quand même : le club verra ses séances « fermé ».',
       uneDate: 'Une date',
       unJourFixe: 'Un jour fixe chaque semaine',
       unSurDeuxCourt: 'un {{jour}} sur deux',

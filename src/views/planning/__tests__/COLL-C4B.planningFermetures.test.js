@@ -410,6 +410,8 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     const arbre = await rendre();
     const ligne = textes(arbre).find((/** @type {string} */ texte) => / à la fois · /.test(texte));
     expect(ligne).not.toContain('fermeture ce jour-là');
+    // T3-FINITIONS-VILLE-3 (contre-recette du train 3) : « libre toute la journée » sous le bandeau.
+    expect(ligne).toBe('2 équipes à la fois · libre en dehors de la fermeture');
     expect(bande().raw.closureJourEntier).toBe(false);
   });
 

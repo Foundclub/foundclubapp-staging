@@ -5,7 +5,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Switch, Text, TouchableOpacity, View,
+  Platform, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -31,6 +31,7 @@ import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitDeLaBarreDuSite from '@/views/collectivite/useRetraitDeLaBarreDuSite';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -48,6 +49,7 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getFacilityTypeLabel, getFacilityTypeNoun } from '@/utils/facilityTypes';
 
 import useGardeDeSortie from '@/hooks/useGardeDeSortie';
+
 import { useIsDesktop } from '@/responsive';
 
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -254,6 +256,7 @@ function FormulaireDeFermeture({
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const retraitDeLaBarre = useRetraitDeLaBarreDuSite();
   const navigation = /** @type {any} */ (useNavigation());
   const modification = Boolean(existante?.documentId);
   const sorte = existante?.kind || (params.mode === 'bloquer' ? 'block' : 'closure');
@@ -1252,7 +1255,17 @@ function FormulaireDeFermeture({
           </TouchableOpacity>
         </View>
         {corps}
-        {pied}
+        {/* T3-FINITIONS-VILLE-3 : le panneau défile avec la page ; le bouton reste au bas de l'écran. */}
+        <View
+          style={{
+            backgroundColor: Colors.primary800,
+            bottom: 0,
+            paddingVertical: 8,
+            ...(Platform.OS === 'web' ? { position: /** @type {any} */ ('sticky') } : null),
+          }}
+        >
+          {pied}
+        </View>
         {confirmation}
       </View>
     );
@@ -1263,9 +1276,12 @@ function FormulaireDeFermeture({
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
+      // T3-FINITIONS-VILLE-3 (contre-recette du train 3, 749-796 à 390×844) : sur le site,
+      // `flex: 1` seul ne borne rien : `boundedHeight`, puis la place de la barre d'onglets.
+      boundedHeight
       // T3-FINITIONS-VILLE (M0144, capture d'Adel) : sans borne, le contenu prend la hauteur du
       // défilement PLUS celle du pied, et le bouton sort de l'écran.
-      contentContainerStyle={[{ flex: 1 }]}
+      contentContainerStyle={[{ flex: 1, paddingBottom: retraitDeLaBarre }]}
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
