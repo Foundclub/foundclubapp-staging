@@ -97,7 +97,7 @@ function ChampsSuivisParLeClavier({
     });
     if (Platform.OS !== 'android') return undefined;
     const decaler = (/** @type {number} */ decalage) => interne.animatedPosition.modify((
-      /** @type {number} */ position,
+      /** @type {any} */ position,
     ) => {
       'worklet';
 
