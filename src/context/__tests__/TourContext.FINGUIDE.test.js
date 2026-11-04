@@ -300,7 +300,7 @@ describe('point 4 — le retour du partage', () => {
     expect(stepId()).toBe('m3-dock');
   });
 
-  // GUIDE-STORES : ces fiches n'ont pas de barre d'onglets, et la bulle disait « ouvre l'accueil » :
+  // GUIDE-STORES : ces fiches n'ont pas de barre d'onglets, la bulle disait « ouvre l'accueil » :
   // rien à toucher, le coach reste devant une bulle sans bouton.
   it('mission 2 finie : le guide ramène à l accueil, sans demander un onglet absent', () => {
     toPick();
