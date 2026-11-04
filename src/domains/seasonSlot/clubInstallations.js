@@ -112,6 +112,18 @@ export const creneauDeLaSeance = (slots, { start = null, teamId = null } = {}) =
 };
 
 /**
+ * VACANCES-REPETE (04/11/2026, M0707) — le créneau « sauf vacances » du club à cette heure, ce
+ * jour-là, même si ce jour tombe pendant des vacances (`creneauDeLaSeance` ne l'y voit pas).
+ * @param {any[] | null | undefined} slots - Les créneaux du club sur l'installation.
+ * @param {{ start?: string | null, teamId?: string | null }} seance - Le début et l'équipe.
+ * @returns {any | null} Le créneau tel que lu, ou null.
+ */
+export const creneauSaufVacancesDeLaSeance = (slots, seance) => (
+  (Array.isArray(slots) ? slots : []).find((slot) => slot?.exceptHolidays === true
+    && creneauDeLaSeance([{ ...slot, exceptHolidays: false, holidayDates: [] }], seance)) || null
+);
+
+/**
  * FINITIONS16 · POINT 4 (T15) — LES INSTALLATIONS PROPOSÉES À UNE SÉANCE, une seule liste pour
  * le téléphone (`FacilitySelector`) et le site (`EventEdit.web.js`). Sur le site, « Modifier »
  * une séance au Gymnase de la Ville affichait « Aucune installation » : le formulaire ne lisait

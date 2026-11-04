@@ -31,8 +31,13 @@ function JugementDuCreneau({
   const attente = jugement.enLecture || jugement.enPanne;
 
   useEffect(() => {
-    onEtat({ attente, bloque: jugement.bloque, vacances: jugement.vacances });
-  }, [attente, jugement.bloque, jugement.vacances, onEtat]);
+    onEtat({
+      attente,
+      bloque: jugement.bloque,
+      saufVacancesDuCreneau: jugement.saufVacancesDuCreneau,
+      vacances: jugement.vacances,
+    });
+  }, [attente, jugement.bloque, jugement.saufVacancesDuCreneau, jugement.vacances, onEtat]);
 
   return (
     <View style={[Spaces.gap[8]]} testID="date-jugement-du-creneau">
