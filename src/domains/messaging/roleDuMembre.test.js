@@ -1,4 +1,9 @@
-import { clefDuRole, libelleDuRole, mentionDuFil } from './roleDuMembre';
+import {
+  clefDuRole,
+  filLuParDesParents,
+  libelleDuRole,
+  mentionDuFil,
+} from './roleDuMembre';
 
 // MSG1BA (§3.1) — le libelle sous le nom d'un membre, dans « Infos du groupe ».
 // Le pack montre « Entraîneur », « Joueur »... ; l'app ecrivait « Membre » pour tout le monde.
@@ -59,5 +64,23 @@ describe('T3-PARENT-FIL — la mention à côté du nom', () => {
   test('une clef absente ou inconnue : rien', () => {
     expect(mentionDuFil(undefined, tPrenoms)).toBe('');
     expect(mentionDuFil('parent', tPrenoms)).toBe('');
+  });
+});
+
+describe('T3-PARENT-LIGNE — le fil dit qu un parent peut le lire', () => {
+  test('un fil d equipe avec un parent de moins de 13 ans : oui', () => {
+    const fil = { staffRoles: { karim: 'entraineur', paola: 'parent:Lina' }, type: 'team' };
+    expect(filLuParDesParents(fil)).toBe(true);
+  });
+
+  test('un fil d equipe sans parent, ou un serveur d avant ce champ : non', () => {
+    expect(filLuParDesParents({ staffRoles: { karim: 'entraineur' }, type: 'team' })).toBe(false);
+    expect(filLuParDesParents({ staffRoles: {}, type: 'team' })).toBe(false);
+    expect(filLuParDesParents({ type: 'team' })).toBe(false);
+    expect(filLuParDesParents(null)).toBe(false);
+  });
+
+  test('un autre type de fil : non, meme avec une clef parent', () => {
+    expect(filLuParDesParents({ staffRoles: { paola: 'parent:Lina' }, type: 'club' })).toBe(false);
   });
 });

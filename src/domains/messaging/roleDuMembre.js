@@ -72,3 +72,14 @@ export const mentionDuFil = (cle, t) => {
     entraineur: t('conversation.staffRole.entraineur', 'Coach / Prof'),
   })[valeur] || '';
 };
+
+/**
+ * T3-PARENT-LIGNE (« 24- A », 04/11) — un parent d'enfant de moins de 13 ans peut-il lire ce fil ?
+ * La carte `staffRoles` du détail le dit (clef `parent:Lina`), et la phrase reste donc vraie.
+ * ponytail: un parent qui entraîne aussi cette équipe y reste `entraineur` : seul parent du fil, il
+ * ne fait pas apparaître la ligne. Sortie : un champ calculé par le serveur.
+ * @param {any} chat - Le détail du fil.
+ * @returns {boolean}
+ */
+export const filLuParDesParents = (chat) => chat?.type === 'team'
+  && Object.values(chat?.staffRoles || {}).some((cle) => String(cle).startsWith('parent:'));

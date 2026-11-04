@@ -9201,6 +9201,9 @@ export default {
       youDid: 'Vous avez {{action}}.',
       youLower: 'vous',
     },
+    // T3-PARENT-LIGNE (« 24- A ») — seulement si un tel parent peut lire ce fil d'équipe.
+    // eslint-disable-next-line max-len
+    parentsReadNotice: 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
     picker: {
       cameraOpenError: "Impossible d'ouvrir la caméra",
       cameraPermissionError: 'Impossible de vérifier la permission caméra.',

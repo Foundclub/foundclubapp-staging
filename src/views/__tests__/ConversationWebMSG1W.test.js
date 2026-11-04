@@ -421,6 +421,35 @@ describe('MSG1W §3.10 — « consultées par son dirigeant », en tête du fil'
   });
 });
 
+// T3-PARENT-LIGNE (« 24- A », 04/11) — la ligne ne se montre que si un tel parent peut lire ce fil.
+describe('T3-PARENT-LIGNE — la ligne des parents, en tete du fil', () => {
+  const LIGNE = 'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.';
+  const ROLES = { bruno: 'entraineur', paola: 'parent:Lina' };
+
+  test('fil d equipe avec un parent : la ligne, mot pour mot, DANS le fil qui defile', async () => {
+    mockFil = { ...mockFil, staffRoles: ROLES };
+    const { arbre } = await monter();
+    const [fil] = parTestId(arbre, 'MSG1W-fil');
+    const lignes = fil.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'conversation-parents-read-notice',
+    );
+    expect(lignes.length).toBeGreaterThan(0);
+    expect(texteDe(lignes[0])).toBe(LIGNE);
+  });
+
+  test('fil d equipe sans parent : pas de ligne', async () => {
+    mockFil = { ...mockFil, staffRoles: { bruno: 'entraineur' } };
+    const { arbre } = await monter();
+    expect(texteDe(arbre.root)).not.toContain(LIGNE);
+  });
+
+  test('fil de club : pas de ligne, meme avec une clef parent', async () => {
+    mockFil = { ...mockFil, staffRoles: ROLES, type: 'club' };
+    const { arbre } = await monter();
+    expect(texteDe(arbre.root)).not.toContain(LIGNE);
+  });
+});
+
 // 📐 §3.11 — LE CANAL EN LECTURE SEULE. Le site offrait la saisie partout ; le serveur refusait
 // ensuite l envoi dans un canal de club. La regle est celle du telephone (canWriteInChat.js).
 describe('MSG1W §3.11 — « Canal d annonce (lecture seule) »', () => {

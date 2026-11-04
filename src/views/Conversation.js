@@ -80,7 +80,7 @@ import {
   summarizeReactionPeople,
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
-import { libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
+import { filLuParDesParents, libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
@@ -7207,35 +7207,52 @@ function Conversation({ navigation, route }) {
    * defile avec les messages (comme la mention de chiffrement de WhatsApp). Elle est posee
    * en pied de la liste INVERSEE (= en haut du fil), et seulement quand le plus ancien
    * message est charge : plus haut, il n'y a plus rien.
-   * @returns {React.ReactElement | null} La notice, ou rien si le fil n'a pas de club.
+   * @param {string} testID - Le temoin.
+   * @param {string} texte - La phrase.
+   * @returns {React.ReactElement} La notice.
    */
-  const renderClubReadNotice = () => {
-    if (!clubReadNoticeClubId) return null;
-
-    return (
-      <View
-        style={[
-          stylesDuFil.noticeDeTete,
-          {
-            backgroundColor: withAlpha(Colors.chatBackground, 0.9),
-            borderColor: withAlpha(Colors.primary500, 0.22),
-          },
-        ]}
+  const renderNoticeDeTete = (testID, texte) => (
+    <View
+      style={[
+        stylesDuFil.noticeDeTete,
+        {
+          backgroundColor: withAlpha(Colors.chatBackground, 0.9),
+          borderColor: withAlpha(Colors.primary500, 0.22),
+        },
+      ]}
+    >
+      <GlyphIcon color={Colors.primary500} name="information" size={16} />
+      <Text
+        style={[stylesDuFil.noticeDeTeteTexte, { color: withAlpha(Colors.neutral00, 0.82) }]}
+        testID={testID}
       >
-        <GlyphIcon color={Colors.primary500} name="information" size={16} />
-        <Text
-          style={[stylesDuFil.noticeDeTeteTexte, { color: withAlpha(Colors.neutral00, 0.82) }]}
-          testID="conversation-club-read-notice"
-        >
-          {t(
-            'conversation.clubReadNotice',
-            'Les conversations de ce club peuvent être consultées par son dirigeant.',
-          )}
-        </Text>
-      </View>
+        {texte}
+      </Text>
+    </View>
+  );
+  const noticeDuClub = clubReadNoticeClubId ? renderNoticeDeTete(
+    'conversation-club-read-notice',
+    t(
+      'conversation.clubReadNotice',
+      'Les conversations de ce club peuvent être consultées par son dirigeant.',
+    ),
+  ) : null;
+  // T3-PARENT-LIGNE (« 24- A », 04/11) — au même endroit, et seulement si un tel parent peut lire.
+  const noticeDesParents = filLuParDesParents(chatData) ? renderNoticeDeTete(
+    'conversation-parents-read-notice',
+    t(
+      'conversation.parentsReadNotice',
+      'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
+    ),
+  ) : null;
+  const noticeDeTete = hasNextPage || !(noticeDuClub || noticeDesParents)
+    ? null
+    : (
+      <>
+        {noticeDuClub}
+        {noticeDesParents}
+      </>
     );
-  };
-  const noticeDeTete = hasNextPage ? null : renderClubReadNotice();
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
