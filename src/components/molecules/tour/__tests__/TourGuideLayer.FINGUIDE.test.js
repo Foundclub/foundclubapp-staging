@@ -275,6 +275,67 @@ describe('point 4 — la bulle de M2 sous les onglets', () => {
 // GUIDE-STORES : lieu du match amical, la bulle dans sa place réservée recouvrait la recherche et
 // la croix de la feuille d'adresse : ni taper, ni fermer. Et la couche reste montée, sinon elle ne
 // se mesure plus et la bulle ne revient jamais (constaté à l'émulateur).
+// GUIDE-STORES (recette RECETTE-GUIDE-AZ) : « Fais défiler pour voir les profils », puis l'onglet
+// visé est sorti de la liste : ni cadre, ni voile, ni bouton, et aucune indication de sens.
+describe('la cible a été sortie de sa liste par un défilement', () => {
+  const VIEWPORT = {
+    height: 700, width: 361, x: 16, y: 100,
+  };
+  const tabAt = (y) => {
+    mountTarget('search.viewport', VIEWPORT);
+    registerTourTarget('search.tab.events', (done) => done({
+      height: 44, width: 44, x: 16, y,
+    }), { clipTo: 'search.viewport' });
+    mockTour = activeTour(step('m4-tab-ev'));
+  };
+
+  it('au-dessus de la liste, même sans passer le haut de l écran : vers le haut', async () => {
+    tabAt(40);
+    const tree = await renderLayer();
+    expect(textsOf(tree)).toContain('Fais défiler vers le haut.');
+  });
+
+  it('à peine dépassant du haut de la liste : jamais « vers le bas »', async () => {
+    tabAt(90);
+    const tree = await renderLayer();
+    expect(textsOf(tree)).not.toContain('Fais défiler vers le bas.');
+  });
+
+  it('sous la liste : vers le bas', async () => {
+    tabAt(900);
+    const tree = await renderLayer();
+    expect(textsOf(tree)).toContain('Fais défiler vers le bas.');
+  });
+
+  it('témoin : dans la liste, elle est cadrée, sans indication', async () => {
+    tabAt(300);
+    const tree = await renderLayer();
+    expect(textsOf(tree).join(' ')).not.toMatch(/Fais défiler/);
+  });
+});
+
+// GUIDE-STORES : « Vérifie le récap » sur un récap voilé, qui ne défilait pas.
+describe('un récap à vérifier se lit en entier', () => {
+  const blockersOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.blocker'
+    && typeof node.type === 'string');
+
+  it.each(['m3-create', 'm4-am7'])('%s : la liste se touche sous le voile', async (id) => {
+    mountTarget('teamWizard.viewport', {
+      height: 300, width: 361, x: 16, y: 120,
+    });
+    mountTarget('teamWizard.next', {
+      height: 56, width: 361, x: 16, y: 440,
+    });
+    mockTour = activeTour(step(id));
+    const tree = await renderLayer();
+    const blockers = blockersOf(tree).map((node) => styleOf(node));
+    expect(blockers.length).toBeGreaterThan(0);
+    const covers = (b) => b.left <= 200 && b.left + b.width >= 200
+      && b.top <= 270 && b.top + b.height >= 270;
+    expect(blockers.some(covers)).toBe(false);
+  });
+});
+
 describe('une liste de choix ouverte par-dessus l écran', () => {
   const layerOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.layer'
     && typeof node.type === 'string')[0];

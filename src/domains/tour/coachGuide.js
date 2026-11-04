@@ -844,6 +844,8 @@ const STEPS = [
           + '« Répéter ». Crée !',
       );
     },
+    // GUIDE-STORES : un récap à vérifier doit pouvoir défiler sous le voile.
+    listScrolls: true,
   },
   {
     bubblePlacement: 'top',
@@ -997,6 +999,8 @@ const STEPS = [
         'Tout est bon ? Publie : les équipes de ta zone pourront te proposer un match.',
       );
     },
+    // GUIDE-STORES : un récap à vérifier doit pouvoir défiler sous le voile.
+    listScrolls: true,
   },
 
   { id: 'palier', kind: 'milestone' },
