@@ -41,7 +41,7 @@ test('un nom plus large que sa carte défile', async () => {
   act(() => arbre.unmount());
 });
 
-test('« réduire les animations » : aucune boucle, le nom coupé par « … » reste visible', async () => {
+test('« réduire les animations » : aucune boucle, le nom reste visible, coupé', async () => {
   const arbre = await monter(true);
 
   expect(getActiveMarqueeCount()).toBe(0);
