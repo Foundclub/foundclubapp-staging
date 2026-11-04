@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -51,6 +52,7 @@ export default function TournamentInvitationRequest({ eventId }) {
         <Text style={[Fonts.p2, Fonts.neutral100]}>
           {t('tournamentInvitation.organizedBy', 'Organisé par {{club}}', {
             club: apercu.club.name,
+            ...SANS_ECHAPPEMENT,
           })}
         </Text>
       ) : null}
@@ -82,7 +84,10 @@ export default function TournamentInvitationRequest({ eventId }) {
           isLoading={demander.isPending}
           key={equipe.documentId}
           onPress={() => { setErreur(''); demander.mutate(equipe.documentId); }}
-          title={t('tournamentInvitation.request', 'Demander pour {{team}}', { team: equipe.name })}
+          title={t('tournamentInvitation.request', 'Demander pour {{team}}', {
+            team: equipe.name,
+            ...SANS_ECHAPPEMENT,
+          })}
           variant="Primary"
         />
       )) : null}
