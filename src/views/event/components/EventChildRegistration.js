@@ -410,8 +410,11 @@ export function EventChildRegistrationsForOrganizer({ eventId }) {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
   const {
-    data, isError, isFetching, refetch,
-  } = /** @type {ListeLue} */ (useEventChildRegistrations(eventId));
+    data, error: erreurDeLecture, isError: lectureEnErreur, isFetching, refetch,
+  } = /** @type {any} */ (useEventChildRegistrations(eventId));
+  // T4-PARENT-RETOURS (M0090) : le coach d'une équipe invitée n'a pas ces inscriptions, seulement
+  // les réponses de son équipe. Le refus du serveur n'est pas une panne à lui montrer.
+  const isError = lectureEnErreur && erreurDeLecture?.status !== 403;
   const rows = Array.isArray(data) ? data : [];
   const decide = /** @type {GesteServeur} */ (useDecideChildRegistration(eventId));
   // La phrase du dernier refus du serveur, par ligne.

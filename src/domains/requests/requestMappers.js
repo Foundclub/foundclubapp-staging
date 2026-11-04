@@ -12,7 +12,9 @@
  * @property {string | null} createdAt
  * @property {string} title
  * @property {string} subtitle
- * @property {{ primary?: RequestHubAction; secondary?: RequestHubAction }} actions
+ * @property {{
+ *   primary?: RequestHubAction; secondary?: RequestHubAction; tertiary?: RequestHubAction
+ * }} actions
  * @property {Record<string, any>} meta
  */
 
@@ -334,7 +336,8 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
       );
     const destination = teamName || clubName;
     return {
-      actions: { primary: 'accept', secondary: 'reject' },
+      // T4-PARENT-RETOURS (Q4 A) : la conversation s'ajoute aux deux décisions, sans en être une.
+      actions: { primary: 'accept', secondary: 'reject', tertiary: 'chat' },
       createdAt: toIsoString(request?.createdAt),
       id: `interest:${requestId}`,
       meta: {

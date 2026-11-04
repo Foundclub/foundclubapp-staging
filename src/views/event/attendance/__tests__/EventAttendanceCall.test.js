@@ -82,6 +82,9 @@ jest.mock('@/services/event/eventQueries', () => ({
 // 🪤 PIEGE DE COPIE DE TRAVAIL : surtout PAS de `requireActual` ici. Le hook
 // importe `eventService`, qui importe `react-native-blob-util` — publie en ESM
 // et non transforme : la SUITE ENTIERE meurt au chargement, 0 test execute.
+jest.mock('../../components/EventChildResponses', () => ({
+  EventChildResponsesForOrganizer: () => null,
+}));
 jest.mock('../useAttendanceCallMutations', () => ({
   useAttendanceCallMutations: () => ({
     absenceMutation: { isPending: false, mutate: mockAbsenceMutate },

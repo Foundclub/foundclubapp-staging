@@ -1995,6 +1995,17 @@ function ClubDetails({ navigation, route }) {
     isUserAlreadyAttachedToViewedClub,
     owners.length,
   ]);
+  // T4-PARENT-RETOURS (Q3 B d'Adel, M0094) — deux portes : chacune dit pour qui part l'intérêt.
+  const deuxPortes = showClubInterestAction && showChildInterestAction;
+  const libellePlaceEnfant = deuxPortes
+    ? t('clubDetails.actions.askPlaceForMyChild', 'Pour mon enfant : une place')
+    : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant');
+  const libelleInteretEnvoye = deuxPortes
+    ? t('clubDetails.clubInterest.alreadySentForMe', 'Pour moi : intérêt déjà envoyé')
+    : t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé');
+  const libelleInteret = deuxPortes
+    ? t('clubDetails.clubInterest.buttonForMe', 'Pour moi : intéressé par le club')
+    : t('clubDetails.clubInterest.button', 'Intéressé par le club');
   const shouldShowSectionScopeToggle = hasParentMultisportClub && isMultisportAdmin;
 
   // ---------------------------------------------------------------------------
@@ -3050,7 +3061,7 @@ function ClubDetails({ navigation, route }) {
                 firstname: enfantDeLaFiche.firstname,
                 ...SANS_ECHAPPEMENT,
               })
-              : t('clubDetails.actions.askPlaceForChild', 'Demander une place pour un enfant')
+              : libellePlaceEnfant
           }
           variant="Primary"
         />
@@ -3151,9 +3162,7 @@ function ClubDetails({ navigation, route }) {
               ? { opacity: 0.7 }
               : null,
           ]}
-          title={hasPendingEveryClubInterestOption
-            ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
-            : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
+          title={hasPendingEveryClubInterestOption ? libelleInteretEnvoye : libelleInteret}
           variant="Secondary"
         />
       ) : null}

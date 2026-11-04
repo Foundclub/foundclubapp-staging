@@ -38,6 +38,9 @@ const mockResetMutate = jest.fn();
 const mockPopTo = jest.fn();
 const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate, popTo: mockPopTo };
 
+jest.mock('../../components/EventChildResponses', () => ({
+  EventChildResponsesForOrganizer: () => null,
+}));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => ({ params: { eventId: 'evt-1' } }),

@@ -25,6 +25,7 @@ import {
 
 import texteInsecable from '@/utils/texteInsecable';
 
+import { EventChildResponsesForOrganizer } from '../components/EventChildResponses';
 import {
   buildArrivedAtIso,
   countAnswers,
@@ -504,6 +505,10 @@ function EventAttendanceCall() {
           )}
         </Text>
       ) : null}
+      {/* T4-PARENT-RETOURS (M0090) — ponytail: l enfant sans compte n a pas de ligne de pointage
+          (`event-attendance` pointe un `user`) ; sa reponse se lit ici, sans se pointer. Sortie :
+          un pointage a lui, le meme que `listConvoquesSansCompte` attend. */}
+      <EventChildResponsesForOrganizer eventId={eventId} />
       {sansCompte.length > 0 ? (
         <View style={styles.sansCompte}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>

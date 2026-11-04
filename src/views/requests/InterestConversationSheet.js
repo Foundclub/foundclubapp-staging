@@ -11,6 +11,10 @@ import Button from '@/components/atoms/button/Button';
 
 import { useGetTeam } from '@/services/team/teamQueries';
 
+const INFO_ENFANT = (
+  'La demande reste à traiter. {{child}} n’entre pas dans ce fil : vous échangez entre adultes.'
+);
+
 /**
  * « Karim B. » : le prénom et l'initiale du nom, comme la planche 7.
  * @param {{ firstname?: string, lastname?: string, username?: string } | null | undefined} person
@@ -81,7 +85,8 @@ function InterestConversationSheet({
   const selectedCoach = coaches.find((coach) => coach.documentId === coachId) || null;
   const canOpen = choice === 'me' || (choice === 'coach' && Boolean(selectedCoach));
 
-  const subtitle = teamName
+  const childFirstname = String(item?.meta?.childFirstname || '').trim();
+  const subtitleOfAdult = teamName
     ? t('requestsHub.conversation.subtitleTeam', {
       defaultValue: '{{name}} · intérêt pour {{team}}',
       name: requesterName,
@@ -93,6 +98,15 @@ function InterestConversationSheet({
       name: requesterName,
       ...SANS_ECHAPPEMENT,
     });
+  // T4-PARENT-RETOURS (Q4 A) : une demande pour un enfant, entre adultes.
+  const subtitle = childFirstname
+    ? t('requestsHub.conversation.subtitleChild', {
+      child: childFirstname,
+      defaultValue: '{{name}} · place pour {{child}}',
+      name: requesterName,
+      ...SANS_ECHAPPEMENT,
+    })
+    : subtitleOfAdult;
 
   /**
    * Une rangée à choix unique, cible de 44 points au moins.
@@ -233,10 +247,16 @@ function InterestConversationSheet({
           </View>
 
           <Text style={[Fonts.p3, Fonts.primary100]}>
-            {t(
-              'requestsHub.conversation.info',
-              "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
-            )}
+            {childFirstname
+              ? t('requestsHub.conversation.infoChild', {
+                child: childFirstname,
+                defaultValue: INFO_ENFANT,
+                ...SANS_ECHAPPEMENT,
+              })
+              : t(
+                'requestsHub.conversation.info',
+                "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
+              )}
           </Text>
 
           <View style={[Spaces.gap[8]]}>

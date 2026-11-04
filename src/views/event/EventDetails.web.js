@@ -3242,6 +3242,10 @@ function EventDetails({ navigation, route }) {
                   </div>
                 </div>
               ) : null}
+              {/* 👪 PAR-L11c (14/10) point 3 — les enfants inscrits par leurs parents, a accepter
+                  ou refuser, et les reponses des enfants de l equipe : le MEME bloc que le
+                  telephone (EventDetails.js). T4-PARENT-RETOURS (M0090) : AVANT la liste. */}
+              {canEdit ? <EventChildRegistrationsForOrganizer eventId={event?.documentId} /> : null}
               {renderParticipantsSection()}
 
               {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
@@ -3291,10 +3295,6 @@ function EventDetails({ navigation, route }) {
                       ))}
                     </div>
                   )}
-                  {/* 👪 PAR-L11c (14/10) point 3 — les enfants inscrits par leurs parents,
-                      a accepter ou refuser : le MEME bloc que le telephone (EventDetails.js),
-                      qui ne s affiche que s il y a au moins une inscription. */}
-                  <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
                 </>
               ) : null}
             </section>

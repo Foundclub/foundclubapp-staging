@@ -8634,6 +8634,14 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
+              {/* 👪 PAR-L11b — chez l organisateur, les enfants inscrits par leurs parents
+                  (prenom, age, parent), a accepter ou refuser, et les reponses des enfants de
+                  l equipe. T4-PARENT-RETOURS (M0090) : AVANT la liste, et pour tout encadrant
+                  (un coach invite lit les reponses de son equipe). Rien sans enfant. */}
+              {showParticipantsTab && (canEdit || canApprovePendingRequests) ? (
+                <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
+              ) : null}
+
               {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
                 <EventParticipants
                   // @ts-ignore: FIXME: Baseline TS regression
@@ -8661,13 +8669,6 @@ function EventDetails({ navigation, route }) {
                   rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
                   teamParticipationSections={sectionsDEquipe}
                 />
-              ) : null}
-
-              {/* 👪 PAR-L11b — chez l organisateur, les enfants inscrits par leurs parents
-                  (prenom, age, parent), a accepter ou refuser. Rien ne s affiche quand aucun
-                  enfant n est inscrit. */}
-              {showParticipantsTab && canApprovePendingRequests ? (
-                <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
               ) : null}
 
               {/* 👥 N2 — « Personnes » SUR UN TOURNOI. La liste des participations

@@ -117,6 +117,8 @@ export function EventChildResponsesForOrganizer({ eventId }) {
   const { Fonts, Spaces } = useTheme();
   const query = useChildEventResponsesForOrganizer(eventId);
   const rows = Array.isArray(query.data) ? query.data : [];
+  // T4-PARENT-RETOURS (M0090) : un refus n'est pas une panne, ce compte n'a pas ce bloc.
+  if (query.isError && /** @type {any} */ (query.error)?.status === 403) return null;
   if (query.isError) {
     return (
       <View>

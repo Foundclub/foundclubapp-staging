@@ -118,22 +118,6 @@ function FeuillePratiqueAussi({
   return (
     <BottomModal
       close={onClose}
-      footerComponent={(
-        <View style={{ gap: 8 }}>
-          <Button
-            disabled={passage.isPending}
-            isLoading={passage.isPending}
-            onPress={confirmer}
-            title={t('playerMode.sheet.confirm')}
-            variant="Primary"
-          />
-          <Button
-            onPress={onClose}
-            title={t('playerMode.sheet.later')}
-            variant="Ghost"
-          />
-        </View>
-      )}
       isVisible={isVisible}
     >
       <View style={{ gap: 12 }} testID="feuille-pratique-aussi">
@@ -152,6 +136,22 @@ function FeuillePratiqueAussi({
             {t('playerMode.sheet.error')}
           </Text>
         ) : null}
+        {/* T4-PARENT-RETOURS (M0096) : dans le contenu, pas en `footerComponent` : en hauteur
+            automatique, la feuille ne mesure pas son pied et il sortait de l'écran en portrait. */}
+        <View style={{ gap: 8, marginTop: 4 }}>
+          <Button
+            disabled={passage.isPending}
+            isLoading={passage.isPending}
+            onPress={confirmer}
+            title={t('playerMode.sheet.confirm')}
+            variant="Primary"
+          />
+          <Button
+            onPress={onClose}
+            title={t('playerMode.sheet.later')}
+            variant="Ghost"
+          />
+        </View>
       </View>
     </BottomModal>
   );

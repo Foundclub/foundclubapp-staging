@@ -101,7 +101,7 @@ describe('P3 — « Demandes » et les places demandees pour un enfant', () => {
 
     expect(resultat.items).toHaveLength(1);
     expect(resultat.items[0]).toEqual(expect.objectContaining({
-      actions: { primary: 'accept', secondary: 'reject' },
+      actions: { primary: 'accept', secondary: 'reject', tertiary: 'chat' },
       id: 'interest:interest-lea',
       type: 'interest',
     }));
