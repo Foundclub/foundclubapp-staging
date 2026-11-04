@@ -443,8 +443,8 @@ function BottomModal({
     </View>
   ) : null;
   // T3-FEUILLES-PIED (M0096, « Q5 A ») — MEME CAUSE POUR LE PIED : la bibliotheque ne le mesure
-  // pas, il sortait de l'ecran (Adel, « Pratique aussi », portrait). Sans cran, il entre dans la zone
-  // mesuree ; avec des snapPoints, il reste fixe, plus bas.
+  // pas, il sortait de l'ecran (Adel, « Pratique aussi », portrait). Sans cran, il entre dans la
+  // zone mesuree ; avec des snapPoints, il reste fixe, plus bas.
   // ponytail: une longue feuille sans cran fait defiler son pied avec le contenu, au lieu de le
   // garder fixe ; pour un pied toujours visible, lui donner des snapPoints (filet D19).
   // Temoin : __tests__/BottomModal.T3FEUILLESPIED.piedMesure.test.js.
