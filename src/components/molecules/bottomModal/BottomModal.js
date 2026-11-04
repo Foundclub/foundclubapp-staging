@@ -689,7 +689,11 @@ function BottomModal({
             {...scrollViewProps}
           >
             {poseAndroid ? (
-              <View pointerEvents="none" ref={repereDuContenuRef} style={[Alignments.absolute, { top: 0 }]} />
+              <View
+                pointerEvents="none"
+                ref={repereDuContenuRef}
+                style={[Alignments.absolute, { top: 0 }]}
+              />
             ) : null}
             {enTeteMesure}
             {children}

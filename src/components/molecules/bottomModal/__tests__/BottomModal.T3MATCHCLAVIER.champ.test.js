@@ -104,7 +104,7 @@ describe('T3-MATCH-CLAVIER : le champ touché défile au-dessus du clavier', () 
    * @param {number} [options.version]
    * @param {object} [options.props]
    */
-  const monter = ({ os = 'android', version = 35, props = {} } = {}) => {
+  const monter = ({ os = 'android', props = {}, version = 35 } = {}) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
     Object.defineProperty(Platform, 'Version', { configurable: true, value: version });
     act(() => {
