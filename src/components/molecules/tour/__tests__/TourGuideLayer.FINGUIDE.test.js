@@ -272,6 +272,27 @@ describe('point 4 — la bulle de M2 sous les onglets', () => {
   });
 });
 
+// GUIDE-STORES : lieu du match amical, la bulle dans sa place réservée recouvrait la recherche et
+// la croix de la feuille d'adresse : ni taper, ni fermer.
+describe('une liste de choix ouverte par-dessus l écran', () => {
+  it('la bulle se retire tant que la feuille est ouverte', async () => {
+    WIZARD_RECTS();
+    mountTarget('select.sheet', {
+      height: 300, width: 361, x: 16, y: 190,
+    });
+    mockTour = activeTour(step('m4-am4'));
+    const tree = await renderLayer();
+    expect(hostBubbleOf(tree)).toBeUndefined();
+  });
+
+  it('témoin : feuille fermée, la bulle est là', async () => {
+    WIZARD_RECTS();
+    mockTour = activeTour(step('m4-am4'));
+    const tree = await renderLayer();
+    expect(hostBubbleOf(tree)).toBeDefined();
+  });
+});
+
 describe('point 1 — la question plein écran', () => {
   it('étape « teamChoice » : la question, sans bulle', async () => {
     mockTour = activeTour(step('m1-choice'));

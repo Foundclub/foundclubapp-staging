@@ -84,6 +84,7 @@ const MAX_FONT_SCALE = 1.3;
 const MIN_TOUCH = 44;
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
+const SELECT_SHEET_ID = 'select.sheet';
 const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
@@ -240,6 +241,7 @@ function TourGuideLayer() {
       ...DOCK_IDS,
       ...HEADER_IDS,
       ...stepTargets,
+      SELECT_SHEET_ID,
     ])]
     : [];
   const targetKey = allTargetIds.join('|');
@@ -488,6 +490,11 @@ function TourGuideLayer() {
   }
 
   if (!isStepVisible) return null;
+
+  // GUIDE-STORES : posée dans la place réservée, la bulle recouvrait la recherche et la croix de la
+  // feuille d'adresse (lieu du match amical). Elle revient quand la feuille se ferme.
+  const selectSheet = rects[SELECT_SHEET_ID];
+  if (selectSheet && isOnScreen(selectSheet, width, height)) return null;
 
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
