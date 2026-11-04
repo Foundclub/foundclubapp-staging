@@ -191,6 +191,19 @@ function BandeauDeFermetureDeLaVille({ facilityId, facilityType = null }) {
 }
 
 /**
+ * T3-STADE (03/11, Adel) — une partie nomme son tout : « Partie de Stade ».
+ * @param {any} t - La traduction.
+ * @param {any} item - L'installation.
+ * @returns {string | null} Le libellé, ou rien.
+ */
+const partieDe = (t, item) => (item?.parentFacility?.name
+  ? t('facilityForm.parent.partieDe', 'Partie de {{nom}}', {
+    nom: item.parentFacility.name,
+    ...SANS_ECHAPPEMENT,
+  })
+  : null);
+
+/**
  * Facility list screen.
  * @returns {import('react').ReactElement}
  */
@@ -605,6 +618,7 @@ function FacilityList() {
     // COLL1D : cote club aussi (restes du lot 1b : recus, jamais affiches) ; une
     // installation sans horaires n en montre pas. Le type se lit par son libelle.
     const metaLabel = [
+      partieDe(t, item),
       getFacilityTypeLabel(item?.type),
       capacityLabel,
       formatOpeningHours(item?.openingTime, item?.closingTime),
@@ -854,6 +868,7 @@ function FacilityList() {
     const nom = item?.name || t('facilityList.defaults.facilityName', 'Installation');
     const equipes = Math.max(1, Number(item?.maxSlots || 1));
     const meta = [
+      partieDe(t, item),
       getFacilityTypeLabel(item?.type),
       t('collectiviteCreneaux.liste.capacite', {
         count: equipes,
@@ -1271,6 +1286,7 @@ function FacilityList() {
     const equipes = Math.max(1, Number(item?.maxSlots || 1));
     const couleur = resolveFacilityPlanningColor(item) || Colors.primary500;
     const meta = [
+      partieDe(t, item),
       getFacilityTypeLabel(item?.type),
       t('collectiviteCreneaux.liste.capacite', {
         count: equipes,

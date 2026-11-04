@@ -264,19 +264,20 @@ describe('COLL-C2B planche 2 — six groupes, et le type dans une feuille', () =
     expect(parTexte(arbre, 'Créer').props.disabled).toBe(false);
   });
 
-  it('la feuille propose les 11 types d une mairie, pas ceux d un club', async () => {
+  it('la feuille propose les 13 types d une mairie, pas ceux d un club', async () => {
     const arbre = await monterVille();
     await appuyer(parLibelle(arbre, 'Type'));
     const lus = textes(arbre);
     ['Gymnase', 'Salle de sport', 'Dojo', 'Terrain', 'Terrain multisport', 'Terrain de rugby',
-      'Piste d’athlétisme', 'Piscine', 'Court de tennis', 'Skatepark', 'Vestiaire']
+      'Piste d’athlétisme', 'Piscine', 'Court de tennis', 'Skatepark', 'Vestiaire', 'Stade',
+      'Terrain de football']
       .forEach((type) => expect(lus).toContain(type));
     expect(lus).not.toContain('Salle vidéo');
     expect(lus).not.toContain('Club House');
     const lignes = arbre.root.findAllByType(TouchableOpacity)
       .filter((/** @type {any} */ noeud) => noeud.props?.accessibilityRole === 'radio'
         && String(noeud.props?.testID || '').startsWith('type-'));
-    expect(lignes).toHaveLength(11);
+    expect(lignes).toHaveLength(13);
   });
 
   it('creer : le type choisi dans la feuille part au serveur', async () => {

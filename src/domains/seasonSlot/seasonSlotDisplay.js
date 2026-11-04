@@ -348,6 +348,17 @@ export const slotWho = (creneau) => [creneau?.club?.name, creneau?.team?.name]
   .join(' · ');
 
 /**
+ * T3-STADE (03/11, Adel) — un occupant et, s'il vient d'une autre partie du lieu, laquelle :
+ * « AS Foot (Terrain de foot) ».
+ * @param {any} occupant - L'occupant de l'aperçu (`part` : la partie, ou le tout).
+ * @returns {string} Le club et l'équipe, puis la partie entre parenthèses.
+ */
+export const occupantWho = (occupant) => {
+  const qui = slotWho(occupant);
+  return qui && occupant?.part ? `${qui} (${occupant.part})` : qui;
+};
+
+/**
  * RET-VILLE 17 (02/11, Adel « A ») — le message orange d'un créneau complet : qui y est déjà, puis
  * ce que l'attribution donne. Il y a toujours plus d'équipes que de places : « équipes » reste au
  * pluriel, « place » suit le nombre de places.
@@ -357,7 +368,7 @@ export const slotWho = (creneau) => [creneau?.club?.name, creneau?.team?.name]
  */
 export const phraseDuComplet = (t, { equipes, occupants, places }) => {
   const interpolation = { escapeValue: false };
-  const noms = [...new Set(occupants.map(slotWho).filter(Boolean))];
+  const noms = [...new Set(occupants.map(occupantWho).filter(Boolean))];
   const complet = noms.length
     ? t('collectiviteCreneaux.attribuer.completQui', {
       count: noms.length,

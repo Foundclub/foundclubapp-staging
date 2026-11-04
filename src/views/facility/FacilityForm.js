@@ -22,6 +22,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import CaseACocher from '@/components/atoms/caseACocher/CaseACocher';
 import Loader from '@/components/atoms/loader/Loader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -339,7 +340,8 @@ function FacilityForm() {
   const collectiviteId = sanitizeRouteParam(/** @type {any} */ (route.params)?.collectiviteId);
   const isCollectiviteMode = Boolean(collectiviteId);
   const collectiviteInstallations = useCollectiviteInstallations(collectiviteId, {
-    enabled: Boolean(collectiviteId && routedFacilityId && !routedFacility),
+    // T3-STADE : la liste sert aussi à choisir le parent d'une partie.
+    enabled: Boolean(collectiviteId),
   });
   const saveCollectiviteInstallation = useSaveCollectiviteInstallation();
   const facilityQuery = useGetFacility(routedFacilityId, {
@@ -360,6 +362,10 @@ function FacilityForm() {
     }
     : facilityQuery;
   const facility = routedFacility || fetchedFacility || null;
+  const [parentChoisi, setParentChoisi] = useState(/** @type {string | null} */ (null));
+  useEffect(() => {
+    setParentChoisi(facility?.parentFacility?.documentId || null);
+  }, [facility?.parentFacility?.documentId]);
   const isEdit = Boolean(routedFacilityId || facility?.documentId || facility?.id);
   const contextClubId = isCollectiviteMode ? null : route.params?.clubId
     || facility?.club?.documentId
@@ -600,6 +606,10 @@ function FacilityForm() {
       champPlateaux = { plateaux: [] };
     }
 
+    // T3-STADE : seul un parent changé part (un serveur d'avant ne le connaît pas).
+    const parentDeDepart = facility?.parentFacility?.documentId || null;
+    const champParent = parentChoisi === parentDeDepart ? {} : { parentFacility: parentChoisi };
+
     setLoading(true);
     try {
       if (isCollectiviteMode) {
@@ -613,6 +623,7 @@ function FacilityForm() {
             planningColor: data.planningColor,
             type: data.type,
             ...champPlateaux,
+            ...champParent,
           },
           facilityId: isEdit ? facilityDocumentId : null,
         });
@@ -1070,6 +1081,41 @@ function FacilityForm() {
   // interrupteur, puis un nom par plateau. Autant de plateaux que d equipes a la fois ; ne
   // rien nommer garde l installation telle qu aujourd hui. Un plateau suppose 2 equipes.
   const nombreDePlateauxAffiches = Math.max(2, Number(equipesALaFois) || 2);
+  // T3-STADE (03/11, Adel) — un stade et ses parties : une partie est une installation rattachée.
+  // Pas de partie de partie : ni une partie, ni une installation qui a déjà des parties.
+  const parentsPossibles = collectiviteRows.filter((ligne) => (
+    ligne?.documentId
+    && ligne.documentId !== facility?.documentId
+    && !ligne.parentFacility?.documentId
+  ));
+  const aDesParties = collectiviteRows.some((ligne) => (
+    Boolean(facility?.documentId) && ligne?.parentFacility?.documentId === facility?.documentId
+  ));
+  const blocParent = isCollectiviteMode && parentsPossibles.length && !aDesParties ? (
+    <View style={[Spaces.gap[12]]} testID="installation-parent">
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('facilityForm.parent.titre', 'Fait partie de')}
+      </Text>
+      {parentsPossibles.map((ligne) => (
+        <CaseACocher
+          actif={parentChoisi === ligne.documentId}
+          key={ligne.documentId}
+          onBasculer={() => setParentChoisi(
+            parentChoisi === ligne.documentId ? null : ligne.documentId,
+          )}
+          testID={`installation-parent-${ligne.documentId}`}
+          titre={ligne.name}
+        />
+      ))}
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {t(
+          'facilityForm.parent.aide',
+          'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
   const blocPlateaux = plateauxPossibles ? (
     <View style={[Spaces.gap[12]]}>
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
@@ -1371,6 +1417,7 @@ function FacilityForm() {
                   <>
                     {blocCapacite}
                     {blocPlateaux}
+                    {blocParent}
                   </>
                 ),
               ),

@@ -358,6 +358,8 @@ const buildWizardFormData = (wizardState) => {
     validationMode: isTournament
       ? (wizardState.tournamentRegistrationMode || 'manual')
       : (wizardState.validationMode || 'auto'),
+    // T3-STADE (03/11, Adel) : « faire une demande pour avoir toute l'installation ».
+    wholeFacility: wizardState.wholeFacility === true,
   };
 };
 

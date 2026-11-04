@@ -297,7 +297,7 @@ function CollectiviteRequests() {
   // COLL-C3B-BIS (planche 34) — UNE SÉRIE SE LIT EN ENTIER : « 3 mercredis du 9 octobre au
   // 23 octobre : », puis ce qu'il y a sur place CHAQUE semaine (« Complet 1 fois sur 3 : mer.
   // 16 oct. »), et la conséquence. Avant : la première date seule.
-  const surPlaceDeLaSerie = (/** @type {any} */ lecture) => {
+  const surPlaceDeLaSerie = (/** @type {any} */ lecture, /** @type {any} */ demande) => {
     const toutes = lecture.completes.length === lecture.nombre;
     const certaines = lecture.completes.length > 0 && !toutes;
     // 🧮 FINITIONS13-COLL (04/10) — TOUTES PLEINES, PAS TOUTES PAREILLES (tournée T13, C2_1c) :
@@ -379,6 +379,14 @@ function CollectiviteRequests() {
         ]}
         testID="collectivite-request-conflict"
       >
+        {demande?.event?.wholeFacility === true ? (
+          <Text
+            style={[Fonts.p2Bold, Fonts.warning500]}
+            testID="collectivite-request-toute-installation"
+          >
+            {t('collectiviteDemandes.touteInstallation.demande', 'Demande toute l’installation')}
+          </Text>
+        ) : null}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t('collectiviteDemandes.serie.entete', '{{nombre}} {{jours}} du {{du}} au {{au}} :', {
             au: lecture.au,
@@ -397,7 +405,7 @@ function CollectiviteRequests() {
   // Ce qu'il y a sur place, en une phrase ; qui est déjà là ; la conséquence.
   const surPlace = (/** @type {any} */ demande) => {
     const lecture = lectureDeLaSerie(demande);
-    if (lecture) return surPlaceDeLaSerie(lecture);
+    if (lecture) return surPlaceDeLaSerie(lecture, demande);
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     let phrasePlace;
@@ -435,6 +443,14 @@ function CollectiviteRequests() {
         ]}
         testID="collectivite-request-conflict"
       >
+        {demande?.event?.wholeFacility === true ? (
+          <Text
+            style={[Fonts.p2Bold, Fonts.warning500]}
+            testID="collectivite-request-toute-installation"
+          >
+            {t('collectiviteDemandes.touteInstallation.demande', 'Demande toute l’installation')}
+          </Text>
+        ) : null}
         {estDemandeHebdo(demande) && moment ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t('collectiviteDemandes.place.premiereDate', 'Pour la première date, le {{jour}} :', {

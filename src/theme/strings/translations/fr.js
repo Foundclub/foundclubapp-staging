@@ -6332,6 +6332,8 @@ export default {
       prevenuChangement: '{{club}} sera prévenu du changement.',
       quandMeme: 'Attribuer quand même',
       rechercherClub: 'Rechercher un club',
+      touteInstallation: 'Toute l’installation',
+      touteInstallationDit: 'Aucune autre équipe à ces heures.',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
       voirLibres: 'Voir les heures libres du {{jour}}',
@@ -6749,6 +6751,11 @@ export default {
     consequence: {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
+    },
+    touteInstallation: {
+      case: 'Demander toute l’installation',
+      demande: 'Demande toute l’installation',
+      dit: 'La Ville décide. Si elle accepte, aucune autre équipe à ces heures.',
     },
     // COLL-C3B-BIS (03/10) — accepter une série date par date (planche 33).
     dates: {
@@ -10214,6 +10221,7 @@ export default {
     trainingCamp: 'STAGE',
   },
   eventDetails: {
+    facilityWhole: '{{nom}} · Toute l’installation',
     // FINITIONS7 (02/10) — les noms que le lecteur d ecran annonce dans la barre du haut.
     a11y: {
       reportEvent: 'Signaler l’événement',
@@ -12543,6 +12551,11 @@ export default {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
+    parent: {
+      aide: 'Le terrain d’un stade, par exemple : réserver le stade entier bloque ses parties.',
+      partieDe: 'Partie de {{nom}}',
+      titre: 'Fait partie de',
+    },
     // TEXTES-COLLECTIVITES (01/10, « ton A ») — le formulaire sert au club ET à la mairie :
     // la mairie, vouvoyée, a ses propres clefs ; un club n’est jamais vouvoyé par ricochet.
     collectivite: {
@@ -12646,6 +12659,7 @@ export default {
       changingRoom: 'Vestiaire',
       clubHouse: 'Club House',
       dojo: 'Dojo',
+      footballPitch: 'Terrain de football',
       gym: 'Gymnase',
       multisportPitch: 'Terrain multisport',
       pitch: 'Terrain',
@@ -12653,6 +12667,7 @@ export default {
       rugbyPitch: 'Terrain de rugby',
       skatepark: 'Skatepark',
       sportsHall: 'Salle de sport',
+      stadium: 'Stade',
       tennisCourt: 'Court de tennis',
       videoRoom: 'Salle vidéo',
     },

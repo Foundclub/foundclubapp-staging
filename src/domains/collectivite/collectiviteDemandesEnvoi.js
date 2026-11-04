@@ -10,11 +10,22 @@ import { createEventPayload, formatDateTimeToSend } from '@/domains/event/eventU
  * « Un mot pour la mairie » en devient le motif (`facilityRequestNote`). Une série partage un
  * `recurrenceGroupId` : la mairie la tranche d'un geste.
  * @param {{ clubId: string, dates: string[], debut: string, facilityId: string, fin: string,
- *   groupe?: string | null, mot?: string, teamId: string, type: string, typeName: string }} demande
+ *   groupe?: string | null, mot?: string, teamId: string, touteInstallation?: boolean,
+ *   type: string, typeName: string }} demande
  * @returns {Array<Record<string, any>>} Les corps de POST /events.
  */
 export const payloadsDeLaDemande = ({
-  clubId, dates, debut, facilityId, fin, groupe = null, mot = '', teamId, type, typeName,
+  clubId,
+  dates,
+  debut,
+  facilityId,
+  fin,
+  groupe = null,
+  mot = '',
+  teamId,
+  touteInstallation = false,
+  type,
+  typeName,
 }) => dates.map((jour) => {
   const [annee, mois, date] = jour.split('-');
   const jourFr = `${date}/${mois}/${annee}`;
@@ -36,5 +47,7 @@ export const payloadsDeLaDemande = ({
   corps.endDate = formatDateTimeToSend(jourFr, fin);
   if (groupe && dates.length > 1) corps.recurrenceGroupId = groupe;
   if (String(mot || '').trim()) corps.facilityRequestNote = String(mot).trim();
+  // T3-STADE (03/11, Adel) : sur une date ou sur toute une série, le serveur juge chaque date.
+  if (touteInstallation) corps.wholeFacility = true;
   return corps;
 });

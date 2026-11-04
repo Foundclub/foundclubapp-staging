@@ -417,6 +417,9 @@ function CollectiviteClubDetails() {
               creneau?.facility?.name,
               creneau?.team?.name || t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
               creneau?.plateau?.name,
+              creneau?.wholeFacility === true
+                ? t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation')
+                : null,
             ].filter(Boolean).join(' · ')}
           </Text>
           {/* R17-QUAND-1 (planche P11-quand-ou-ca-vit, 1) : chaque ligne dit sa forme. */}

@@ -262,6 +262,23 @@ describe('VILLE-T18A point 2 — planche 23 état 3 : la capacité dépassée, s
     expect(lus).not.toContain('Attribuer le créneau');
   });
 
+  // T3-STADE (03/11, Adel, fiche 11 B) : la Ville coche « Toute l'installation ».
+  it('« Toute l installation » : l aperçu et l attribution le disent au serveur', async () => {
+    const arbre = await remplirLeComplet();
+    const laCase = () => arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'attribuer-toute-installation' && n.props?.onPress
+    ))[0];
+    expect(laCase().props.accessibilityState).toEqual({ checked: false });
+    await act(async () => { laCase().props.onPress(); });
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 0); }); });
+    expect(laCase().props.accessibilityState).toEqual({ checked: true });
+    expect(dernierApercu()).toEqual(expect.objectContaining({ wholeFacility: 'true' }));
+    await presser(arbre, 'Attribuer quand même');
+    expect(attributeSeasonSlot).toHaveBeenCalledWith('salle-t18', expect.objectContaining({
+      wholeFacility: true,
+    }));
+  });
+
   it('« Attribuer quand même » confirme d emblée (aucun aller-retour 409)', async () => {
     const arbre = await remplirLeComplet();
     await presser(arbre, 'Attribuer quand même');

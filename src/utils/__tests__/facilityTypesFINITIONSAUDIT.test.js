@@ -39,6 +39,8 @@ const VALEURS_DU_SERVEUR = [
   'Salle de sport',
   'Terrain multisport',
   'Skatepark',
+  'Stade',
+  'Terrain de football',
 ];
 
 afterAll(async () => {
@@ -46,7 +48,7 @@ afterAll(async () => {
 });
 
 describe('FINITIONS-AUDIT (1) — les types d installation', () => {
-  it('garde les 13 valeurs du serveur, dans l ordre et a l identique', () => {
+  it('garde les 15 valeurs du serveur, dans l ordre et a l identique', () => {
     expect(FACILITY_TYPES.map((type) => type.value)).toEqual(VALEURS_DU_SERVEUR);
   });
 
@@ -54,7 +56,7 @@ describe('FINITIONS-AUDIT (1) — les types d installation', () => {
     await i18next.changeLanguage('fr');
     expect(getFacilityTypeLabel('Salle vidéo')).toBe('Salle vidéo');
     expect(getFacilityTypeLabel("Piste d'athlétisme")).toBe('Piste d’athlétisme');
-    expect(FACILITY_TYPES.map((type) => type.label)).toHaveLength(13);
+    expect(FACILITY_TYPES.map((type) => type.label)).toHaveLength(15);
 
     await i18next.changeLanguage('en');
     expect(getFacilityTypeLabel('Salle vidéo')).toBe('Video room');

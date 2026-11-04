@@ -16,6 +16,7 @@ import {
   fullRangesOfSlots,
   isoWeekdayOf,
   isTime,
+  occupantWho,
   overCapacityPreviewOf,
   phraseDuComplet,
   SEASON_SLOT_WEEKDAYS,
@@ -43,6 +44,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import CaseACocher from '@/components/atoms/caseACocher/CaseACocher';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -575,6 +577,8 @@ function SeasonSlotForm({
   const [plateau, setPlateau] = useState(
     Number(slot?.plateau?.number || initial.plateau) || null,
   );
+  // T3-STADE (03/11, Adel) : la Ville attribue toute l'installation, aucune autre équipe avec.
+  const [touteInstallation, setTouteInstallation] = useState(slot?.wholeFacility === true);
   const [aPartirDu, setAPartirDu] = useState(
     // APRESDATES / Q3-02 — un creneau a dates n'a pas de jour : aujourd'hui (le lundi suivant
     // laissait aux seances d'avant l'ancienne heure, le serveur coupant a cette date).
@@ -750,6 +754,7 @@ function SeasonSlotForm({
       excludeSlot: slot?.documentId || undefined,
       plateau: plateau || undefined,
       startTime: debut,
+      ...(touteInstallation ? { wholeFacility: 'true' } : {}),
       ...(formeChoisie === 'dates' ? {} : { weekday: jour }),
       ...formeDeLApercu,
       ...(saufVacances ? { exceptHolidays: '1' } : {}),
@@ -1012,6 +1017,7 @@ function SeasonSlotForm({
             ...(avecVacances && gardees.length ? { keepHolidays: gardees } : {}),
             ...(equipe ? { team: equipe } : {}),
             ...(plateau ? { plateau } : {}),
+            ...(touteInstallation ? { wholeFacility: true } : {}),
             ...confirmation,
           },
           facilityId,
@@ -1256,7 +1262,7 @@ function SeasonSlotForm({
     // « Personne n'y est » contredirait son « Complet ».
     if (!depassement && occupants.length) {
       lignes.push(t('collectiviteCreneaux.attribuer.dejaLa', 'Déjà là : {{qui}}.', {
-        qui: occupants.map(slotWho).filter(Boolean).join(', '),
+        qui: occupants.map(occupantWho).filter(Boolean).join(', '),
         ...SANS_ECHAPPEMENT,
       }));
     } else if (!depassement && !toutFerme) {
@@ -1265,7 +1271,7 @@ function SeasonSlotForm({
     if (place.next?.club) {
       lignes.push(t('collectiviteCreneaux.attribuer.ensuite', '{{qui}} arrive à {{heure}}.', {
         heure: String(place.next.startTime || '').slice(0, 5),
-        qui: slotWho(place.next),
+        qui: occupantWho(place.next),
         ...SANS_ECHAPPEMENT,
       }));
     }
@@ -2462,6 +2468,22 @@ function SeasonSlotForm({
         })()
       ) : null}
       {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
+
+      {visible('horaires') && !modification && !repartition && capacite > 1 ? (
+        <CaseACocher
+          actif={touteInstallation}
+          dit={t(
+            'collectiviteCreneaux.attribuer.touteInstallationDit',
+            'Aucune autre équipe à ces heures.',
+          )}
+          onBasculer={() => {
+            setTouteInstallation(!touteInstallation);
+            toucherLaSaisie();
+          }}
+          testID="attribuer-toute-installation"
+          titre={t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation')}
+        />
+      ) : null}
 
       {/* D66 : le champ « Plateau » n existe que si l installation a des plateaux nommes. */}
       {visible('horaires') && plateaux.length && !repartition ? (

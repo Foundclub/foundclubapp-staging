@@ -259,6 +259,15 @@ function FacilityPlanningList({
                       {timeRange(bloc.startTime, bloc.endTime)}
                     </Text>
                     {origine ? <Text style={[Fonts.p4, Fonts.neutral300]}>{origine}</Text> : null}
+                    {/* T3-STADE : le bloc prend toutes les places du lieu. */}
+                    {bloc?.raw?.wholeFacility === true ? (
+                      <Text style={[Fonts.p4, Fonts.primary200]} testID="bloc-toute-installation">
+                        {t(
+                          'collectiviteCreneaux.attribuer.touteInstallation',
+                          'Toute l’installation',
+                        )}
+                      </Text>
+                    ) : null}
                     {aDeplacer ? (
                       <Text style={[Fonts.p4, Fonts.warning500]}>
                         {/* CRDEP2 : le meme mot que la grille (« n a pas lieu »…). */}

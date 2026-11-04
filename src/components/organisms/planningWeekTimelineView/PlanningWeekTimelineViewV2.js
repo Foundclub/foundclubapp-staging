@@ -1041,6 +1041,10 @@ function PlanningWeekTimelineView({
     ) {
       tertiaryLabel = tertiaryLocationLabel;
     }
+    // T3-STADE (03/11, Adel) : le bloc prend toutes les places du lieu.
+    if (event?.raw?.wholeFacility === true) {
+      tertiaryLabel = t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation');
+    }
 
     const metaLabel = quaternaryMetaLabel;
     const showPrimaryAsType = !isTeamFocusedCard && Boolean(typeLabel);

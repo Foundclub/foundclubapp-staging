@@ -5778,6 +5778,8 @@ export default {
       prevenuChangement: '{{club}} will be notified of the change.',
       quandMeme: 'Assign anyway',
       rechercherClub: 'Search for a club',
+      touteInstallation: 'The whole facility',
+      touteInstallationDit: 'No other team at these times.',
       toutLeClub: 'The whole club',
       valider: 'Assign the slot',
       voirLibres: 'See the free times on {{jour}}',
@@ -6176,6 +6178,11 @@ export default {
     consequence: {
       depasse: 'Accepting puts {{equipes}} for {{places}}.',
       libre: 'Accepting bothers nobody.',
+    },
+    touteInstallation: {
+      case: 'Request the whole facility',
+      demande: 'Whole facility requested',
+      dit: 'The local authority decides. If it accepts, no other team at these times.',
     },
     // COLL-C3B-BIS (03/10) — accepting a series date by date (board 33).
     dates: {
@@ -9635,6 +9642,7 @@ export default {
     trainingCamp: 'TRAINING CAMP',
   },
   eventDetails: {
+    facilityWhole: '{{nom}} · Whole facility',
     // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
     a11y: {
       reportEvent: 'Report the event',
@@ -11860,6 +11868,11 @@ export default {
       gpsActive: 'GPS active',
       planningColor: 'It helps spot the facility in the planning — it appears as a dot on its card.',
     },
+    parent: {
+      aide: 'A stadium’s pitch, for example: booking the whole stadium blocks its parts.',
+      partieDe: 'Part of {{nom}}',
+      titre: 'Part of',
+    },
     placeholders: {
       address: 'E.g. 12 Rue du Stade...',
       name: 'E.g. Terrain Honneur, Salle A...',
@@ -11888,6 +11901,7 @@ export default {
       changingRoom: 'Changing room',
       clubHouse: 'Club house',
       dojo: 'Dojo',
+      footballPitch: 'Football pitch',
       gym: 'Sports hall',
       multisportPitch: 'Multi-sport pitch',
       pitch: 'Pitch',
@@ -11895,6 +11909,7 @@ export default {
       rugbyPitch: 'Rugby pitch',
       skatepark: 'Skatepark',
       sportsHall: 'Sports hall',
+      stadium: 'Stadium',
       tennisCourt: 'Tennis court',
       videoRoom: 'Video room',
     },

@@ -420,6 +420,28 @@ describe('COLL-C2B planche 3 — 1. l onglet Creneaux liste ce que rend §4.1', 
   });
 });
 
+describe('T3-STADE — les créneaux d une installation', () => {
+  it('un créneau entier le dit sur sa ligne, un autre non', async () => {
+    const entier = creneau({
+      documentId: 'mar-entier',
+      endTime: '19:00',
+      startTime: '17:30',
+      team: { documentId: 'team-u15', name: 'U15' },
+      weekday: 2,
+      wholeFacility: true,
+    });
+    /** @type {any} */ (listFacilitySeasonSlots)
+      .mockResolvedValue({ data: [entier], meta: META() });
+    const lus = textes(await rendre());
+    expect(lus.some((texte) => /Toute l’installation/.test(texte))).toBe(true);
+  });
+
+  it('sans la case : rien', async () => {
+    const lus = textes(await rendre());
+    expect(lus.some((texte) => /Toute l’installation/.test(texte))).toBe(false);
+  });
+});
+
 describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 409', () => {
   const remplir = async (/** @type {any} */ arbre) => {
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));

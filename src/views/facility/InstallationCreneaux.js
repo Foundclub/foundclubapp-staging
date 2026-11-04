@@ -323,6 +323,9 @@ function InstallationCreneaux() {
   const libelleDuCreneau = (/** @type {any} */ creneau) => [
     timeRange(creneau.startTime, creneau.endTime),
     creneau.plateau?.name || null,
+    creneau.wholeFacility === true
+      ? t('collectiviteCreneaux.attribuer.touteInstallation', 'Toute l’installation')
+      : null,
     // 🗓️ R17-QUAND-1 (planche P11-quand-ou-ca-vit, 2) — la forme quand ce n'est pas « chaque
     // semaine » : « un mercredi sur deux », ou les dates choisies (alors sans « du … au … »).
     // R17-QUAND-2 (planche P11-quand-ou-ca-vit, 2) : et « sauf vacances ».
@@ -522,6 +525,10 @@ function InstallationCreneaux() {
           getFacilityConflictMode(installation) === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
             ? t('facilityForm.conflictModes.allow.label', 'Autoriser et notifier')
             : t('facilityForm.conflictModes.pending.label', 'Demande à valider'),
+        ],
+        [
+          t('facilityForm.parent.titre', 'Fait partie de'),
+          installation.parentFacility?.name,
         ],
         [
           t('collectiviteCreneaux.infos.plateaux', 'Plateaux'),

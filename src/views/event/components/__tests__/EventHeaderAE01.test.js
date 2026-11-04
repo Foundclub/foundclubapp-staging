@@ -338,3 +338,16 @@ describe('R9 - LE TITRE NE MONTE PLUS DANS LES BOUTONS DE LA BARRE', () => {
     expect(titre.props.numberOfLines).toBe(2);
   });
 });
+
+describe('T3-STADE — la fiche d une séance', () => {
+  const lieu = (/** @type {any} */ champs) => textContentOf(renderHeader({
+    ...makeEvent({ typeName: 'Entrainement' }),
+    facility: { name: 'Stade' },
+    ...champs,
+  })).join(' ');
+
+  test('une séance entière le dit à côté du lieu, une autre non', () => {
+    expect(lieu({ wholeFacility: true })).toMatch(/eventDetails\.facilityWhole|Toute l’installation/);
+    expect(lieu({})).not.toMatch(/eventDetails\.facilityWhole|Toute l’installation/);
+  });
+});
