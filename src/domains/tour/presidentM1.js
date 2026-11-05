@@ -80,8 +80,8 @@ const PART_INFOS = [
     get text() {
       return t(
         'm1-info',
-        '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que voient les '
-          + 'joueur·se·s.',
+        '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que '
+          + 'voient les joueur·se·s.',
       );
     },
   },
@@ -136,8 +136,8 @@ const PART_PARTNERS = [
     get text() {
       return t(
         'm1-partners-visit',
-        '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur tes cartes équipe et '
-          + 'la page du club.',
+        '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur tes cartes '
+          + 'équipe et la page du club.',
       );
     },
     when: noClubPlan,
@@ -450,7 +450,9 @@ const PART_POSTER = [
     navTarget: clubHubTarget,
     resumeFrom: 'm1-poster',
     targets: ['club.poster'],
-    get text() { return t('m1-poster', '5/5 · Dernière étape : l’affiche « Rejoindre le club ».'); },
+    get text() {
+      return t('m1-poster', '5/5 · Dernière étape : l’affiche « Rejoindre le club ».');
+    },
   },
   {
     advanceOn: { key: 'poster.model', type: 'interaction' },
