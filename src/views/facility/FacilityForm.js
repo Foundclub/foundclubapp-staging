@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { seasonSlotErrorMessage } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+import { seasonSlotErrorMessage } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { reportTourField } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
@@ -393,10 +393,12 @@ function FacilityForm() {
     control,
     name: ['name', 'type', 'address', 'maxSlots', 'plateauxActifs', 'plateaux'],
   });
-  // Guide Dirigeant : « Suivant » attend ces champs obligatoires (la saisie vit dans ce formulaire).
-  useEffect(() => { reportTourField('facility.name', Boolean(String(nomSaisi || '').trim())); }, [nomSaisi]);
-  useEffect(() => { reportTourField('facility.type', Boolean(typeChoisi)); }, [typeChoisi]);
-  useEffect(() => { reportTourField('facility.address', Boolean(adresseSaisie)); }, [adresseSaisie]);
+  // Guide Dirigeant : « Suivant » attend ces champs obligatoires (la saisie vit ici).
+  useEffect(() => {
+    reportTourField('facility.name', Boolean(String(nomSaisi || '').trim()));
+    reportTourField('facility.type', Boolean(typeChoisi));
+    reportTourField('facility.address', Boolean(adresseSaisie));
+  }, [adresseSaisie, nomSaisi, typeChoisi]);
   const plateauxPossibles = isCollectiviteMode && Number(equipesALaFois || 1) >= 2;
   const [feuilleTypeOuverte, setFeuilleTypeOuverte] = useState(false);
   // Un refus du serveur, dit au-dessus du bouton (design P4-form, ecran 5) : plus de fenetre.

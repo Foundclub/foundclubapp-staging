@@ -3333,208 +3333,214 @@ function ClubDetails({ navigation, route }) {
           ) : null}
           {!isClubSubPage && !enTeteCompact ? (
             <TourTarget id="club.card">
-            <View style={[
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.backgroundColor.primary700,
-              Alignments.alignCenter,
-              Spaces.gap[16],
-              Spaces.paddingHorizontal[24],
-              Spaces.paddingBottom[40],
-              // CORR-SOCLE (30/10, point 5), REPRISE-PLACE (01/11) puis FIN-PLACE (02/11) : plus de
-              // bande vide sous la barre de titre, et l'écusson est DANS la carte (il dépassait de
-              // 12 et son haut touchait le bord) : carte à 24 px de la barre, écusson à 40.
-              { overflow: 'visible' },
-            ]}
-            >
-              {canEdit ? (
-                <TourTarget id="club.edit" style={[Alignments.absolute, { right: 16, top: 16, zIndex: 10 }]}>
-                <TouchableOpacity
-                  onPress={handleEditClub}
-                  style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
-                >
-                  <Image
-                    source={Images.edit}
-                    style={[
-                      ApplicationStyle.icon20,
-                      ApplicationStyle.tintColor.primary500,
-                    ]}
-                  />
-                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                    {t('clubDetails.actions.editInfo') || 'Modifier'}
-                  </Text>
-                </TouchableOpacity>
-                </TourTarget>
-              ) : null}
-              <View style={{ marginTop: 16, zIndex: 1 }} testID="fiche-club-ecusson">
-                <ClubLogoMark
-                  club={club}
-                  logoStyle={[
-                    ApplicationStyle.borderWidth1,
-                    ApplicationStyle.borderColor.neutral00,
-                    ApplicationStyle.backgroundColor.neutral00,
-                    { borderRadius: 20 },
-                  ]}
-                  size={80}
-                />
-              </View>
               <View style={[
-                Spaces.gap[4],
-                Alignments.alignCenter]}
+                ApplicationStyle.borderRadius24,
+                ApplicationStyle.backgroundColor.primary700,
+                Alignments.alignCenter,
+                Spaces.gap[16],
+                Spaces.paddingHorizontal[24],
+                Spaces.paddingBottom[40],
+                // CORR-SOCLE (30/10, point 5), REPRISE-PLACE (01/11) puis FIN-PLACE (02/11) :
+                // plus de
+                // bande vide sous la barre de titre, et l'écusson est DANS la carte (il dépassait
+                // de
+                // 12 et son haut touchait le bord) : carte à 24 px de la barre, écusson à 40.
+                { overflow: 'visible' },
+              ]}
               >
-                {/* D50 : le pack veut le nom du club en capitales sur la carte.
-                    C'est une transformation de STYLE : le texte rendu reste le
-                    nom tel qu'il est en base, donc rien ne change pour un
-                    lecteur d'ecran ni pour une recherche. */}
-                <Text
-                  // eslint-disable-next-line react/jsx-props-no-spreading
-                  {...proprietesDeTitre(1)}
-                  style={[
-                    Fonts.h3Black,
-                    Fonts.neutral00,
-                    Fonts.textCenter,
-                    { textTransform: 'uppercase' },
-                  ]}
-                >
-                  {club?.name}
-                </Text>
-                <View
-                  style={[
-                    ApplicationStyle.borderRadius24,
-                    Spaces.paddingVertical[4],
-                    Spaces.paddingHorizontal[12],
-                    {
-                      backgroundColor: clubCertificationPalette.backgroundColor,
-                      borderColor: clubCertificationPalette.borderColor,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, { color: clubCertificationPalette.textColor }]}>
-                    {clubCertificationLabel}
-                  </Text>
+                {canEdit ? (
+                  <TourTarget
+                    id="club.edit"
+                    style={[Alignments.absolute, { right: 16, top: 16, zIndex: 10 }]}
+                  >
+                    <TouchableOpacity
+                      onPress={handleEditClub}
+                      style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+                    >
+                      <Image
+                        source={Images.edit}
+                        style={[
+                          ApplicationStyle.icon20,
+                          ApplicationStyle.tintColor.primary500,
+                        ]}
+                      />
+                      <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                        {t('clubDetails.actions.editInfo') || 'Modifier'}
+                      </Text>
+                    </TouchableOpacity>
+                  </TourTarget>
+                ) : null}
+                <View style={{ marginTop: 16, zIndex: 1 }} testID="fiche-club-ecusson">
+                  <ClubLogoMark
+                    club={club}
+                    logoStyle={[
+                      ApplicationStyle.borderWidth1,
+                      ApplicationStyle.borderColor.neutral00,
+                      ApplicationStyle.backgroundColor.neutral00,
+                      { borderRadius: 20 },
+                    ]}
+                    size={80}
+                  />
                 </View>
-                <Text style={[Fonts.p2, Fonts.primary100]}>
-                  {(() => {
-                    const parsedAddress = safeJsonParse(club?.addressDetails, null);
-                    return parsedAddress?.address || club?.addressDetails || '';
-                  })()}
-                </Text>
-                {/* COLL-C2C (02/10) — planche P8-club-tel (écran 15) : le bandeau qui valorise
-                    la mairie (SPEC §3) devient un vrai bandeau en CARTE sous la carte du club —
-                    l écusson de la Ville (son initiale, faute de logo), « Offert par … », et ses
-                    installations à un appui. Dirigeant et entraîneur (leur droit porte la Ville) ;
-                    le joueur, non. « Gérer mon club » ne bouge pas (décision du 01/10). */}
-                {collectiviteOffer ? (
-                  <TouchableOpacity
-                    accessibilityLabel={t(
-                      'clubDetails.collectiviteOffer.ouvrir',
-                      '{{offert}} : voir ses installations',
-                      { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
-                    )}
-                    accessibilityRole="link"
-                    onPress={handleOpenFacilityList}
+                <View style={[
+                  Spaces.gap[4],
+                  Alignments.alignCenter]}
+                >
+                  {/* D50 : le pack veut le nom du club en capitales sur la carte.
+                      C'est une transformation de STYLE : le texte rendu reste le
+                      nom tel qu'il est en base, donc rien ne change pour un
+                      lecteur d'ecran ni pour une recherche. */}
+                  <Text
+                    // eslint-disable-next-line react/jsx-props-no-spreading
+                    {...proprietesDeTitre(1)}
                     style={[
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Spaces.gap[12],
-                      Spaces.padding[12],
+                      Fonts.h3Black,
+                      Fonts.neutral00,
+                      Fonts.textCenter,
+                      { textTransform: 'uppercase' },
+                    ]}
+                  >
+                    {club?.name}
+                  </Text>
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      Spaces.paddingVertical[4],
+                      Spaces.paddingHorizontal[12],
                       {
-                        alignSelf: 'stretch',
-                        backgroundColor: withAlpha(Colors.success500, 0.08),
-                        borderColor: withAlpha(Colors.success500, 0.4),
-                        borderRadius: 16,
+                        backgroundColor: clubCertificationPalette.backgroundColor,
+                        borderColor: clubCertificationPalette.borderColor,
                         borderWidth: 1,
-                        marginTop: 8,
                       },
                     ]}
                   >
-                    <View
+                    <Text style={[Fonts.p4Bold, { color: clubCertificationPalette.textColor }]}>
+                      {clubCertificationLabel}
+                    </Text>
+                  </View>
+                  <Text style={[Fonts.p2, Fonts.primary100]}>
+                    {(() => {
+                      const parsedAddress = safeJsonParse(club?.addressDetails, null);
+                      return parsedAddress?.address || club?.addressDetails || '';
+                    })()}
+                  </Text>
+                  {/* COLL-C2C (02/10) — planche P8-club-tel (écran 15) : le bandeau qui valorise
+                      la mairie (SPEC §3) devient un vrai bandeau en CARTE sous la carte du club —
+                      l écusson de la Ville (son initiale, faute de logo), « Offert par … », et ses
+                      installations à un appui.
+                      Dirigeant et entraîneur (leur droit porte la Ville) ;
+                      le joueur, non. « Gérer mon club » ne bouge pas (décision du 01/10). */}
+                  {collectiviteOffer ? (
+                    <TouchableOpacity
+                      accessibilityLabel={t(
+                        'clubDetails.collectiviteOffer.ouvrir',
+                        '{{offert}} : voir ses installations',
+                        { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
+                      )}
+                      accessibilityRole="link"
+                      onPress={handleOpenFacilityList}
                       style={[
+                        Alignments.row,
                         Alignments.alignCenter,
-                        Alignments.justifyCenter,
+                        Spaces.gap[12],
+                        Spaces.padding[12],
                         {
-                          backgroundColor: withAlpha(Colors.success500, 0.16),
-                          borderBottomLeftRadius: 18,
-                          borderBottomRightRadius: 18,
-                          borderColor: withAlpha(Colors.success500, 0.6),
-                          borderTopLeftRadius: 6,
-                          borderTopRightRadius: 6,
+                          alignSelf: 'stretch',
+                          backgroundColor: withAlpha(Colors.success500, 0.08),
+                          borderColor: withAlpha(Colors.success500, 0.4),
+                          borderRadius: 16,
                           borderWidth: 1,
-                          height: 40,
-                          width: 36,
+                          marginTop: 8,
                         },
                       ]}
                     >
-                      <Text style={[Fonts.p1Bold, { color: Colors.success200 }]}>
-                        {collectiviteInitial(collectiviteOffer.name)}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={[Fonts.p2Bold, { color: Colors.success200 }]}>
-                        {offertParLaVille}
-                      </Text>
-                      <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t(
-                          'clubDetails.collectiviteOffer.voir',
-                          'Voir les installations de la Ville',
-                        )}
-                      </Text>
-                    </View>
-                    <Image
-                      source={Images.arrowRight}
-                      style={{ height: 14, tintColor: Colors.success200, width: 14 }}
-                    />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-              <View style={[
-                Spaces.gap[4],
-                Alignments.alignCenter,
-                Spaces.paddingHorizontal[24]]}
-              >
-                {showsPrivateClubDetails && club?.phoneNumber ? (
-                  <View style={[Alignments.row, Spaces.gap[4]]}>
-                    <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
-                    <TouchableOpacity
-                      accessibilityLabel={t('clubDetails.a11y.callClub', {
-                        defaultValue: 'Appeler le club au {{phoneNumber}}',
-                        phoneNumber: club?.phoneNumber,
-                      })}
-                      accessibilityRole="link"
-                      onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}
-                    >
-                      <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
-                        {club?.phoneNumber}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-                {showsPrivateClubDetails && club?.email ? (
-                  <View style={[
-                    Alignments.row, Spaces.gap[4]]}
-                  >
-                    <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
-                    <TouchableOpacity
-                      accessibilityLabel={t('clubDetails.a11y.emailClub', {
-                        defaultValue: 'Envoyer un e-mail à {{email}}',
-                        email: club?.email,
-                        // FINITIONS7 : l adresse vient du serveur, elle sort telle quelle.
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                      accessibilityRole="link"
-                      onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}
-                    >
-                      <Text
-                        numberOfLines={1}
-                        style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
+                      <View
+                        style={[
+                          Alignments.alignCenter,
+                          Alignments.justifyCenter,
+                          {
+                            backgroundColor: withAlpha(Colors.success500, 0.16),
+                            borderBottomLeftRadius: 18,
+                            borderBottomRightRadius: 18,
+                            borderColor: withAlpha(Colors.success500, 0.6),
+                            borderTopLeftRadius: 6,
+                            borderTopRightRadius: 6,
+                            borderWidth: 1,
+                            height: 40,
+                            width: 36,
+                          },
+                        ]}
                       >
-                        {club?.email}
-                      </Text>
+                        <Text style={[Fonts.p1Bold, { color: Colors.success200 }]}>
+                          {collectiviteInitial(collectiviteOffer.name)}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[Fonts.p2Bold, { color: Colors.success200 }]}>
+                          {offertParLaVille}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {t(
+                            'clubDetails.collectiviteOffer.voir',
+                            'Voir les installations de la Ville',
+                          )}
+                        </Text>
+                      </View>
+                      <Image
+                        source={Images.arrowRight}
+                        style={{ height: 14, tintColor: Colors.success200, width: 14 }}
+                      />
                     </TouchableOpacity>
-                  </View>
-                ) : null}
+                  ) : null}
+                </View>
+                <View style={[
+                  Spaces.gap[4],
+                  Alignments.alignCenter,
+                  Spaces.paddingHorizontal[24]]}
+                >
+                  {showsPrivateClubDetails && club?.phoneNumber ? (
+                    <View style={[Alignments.row, Spaces.gap[4]]}>
+                      <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
+                      <TouchableOpacity
+                        accessibilityLabel={t('clubDetails.a11y.callClub', {
+                          defaultValue: 'Appeler le club au {{phoneNumber}}',
+                          phoneNumber: club?.phoneNumber,
+                        })}
+                        accessibilityRole="link"
+                        onPress={() => { Linking.openURL(`tel:${club?.phoneNumber}`); }}
+                      >
+                        <Text style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}>
+                          {club?.phoneNumber}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                  {showsPrivateClubDetails && club?.email ? (
+                    <View style={[
+                      Alignments.row, Spaces.gap[4]]}
+                    >
+                      <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
+                      <TouchableOpacity
+                        accessibilityLabel={t('clubDetails.a11y.emailClub', {
+                          defaultValue: 'Envoyer un e-mail à {{email}}',
+                          email: club?.email,
+                          // FINITIONS7 : l adresse vient du serveur, elle sort telle quelle.
+                          ...SANS_ECHAPPEMENT,
+                        })}
+                        accessibilityRole="link"
+                        onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[Fonts.p2, Fonts.primary100, Fonts.underlineText]}
+                        >
+                          {club?.email}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
               </View>
-            </View>
             </TourTarget>
           ) : null}
 

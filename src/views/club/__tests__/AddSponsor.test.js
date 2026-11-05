@@ -2,6 +2,7 @@ import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import { updateClub } from '@/services/club/clubService';
 import { updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 

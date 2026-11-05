@@ -5,6 +5,7 @@ import renderer, { act } from 'react-test-renderer';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { isTourFieldValid } from '@/domains/tour/tourTargetRegistry';
+
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
 
 import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';

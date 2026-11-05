@@ -52,9 +52,9 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
-import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
@@ -1188,29 +1188,29 @@ function FacilityList() {
   // COLL-C2C (02/10) — l ajout en pointille (D34) : en pied de liste, ou sous « Au club ».
   const boutonAjouter = (
     <TourTarget id="facility.add">
-    <TouchableOpacity
-      accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-      accessibilityRole="button"
-      disabled={isMissingContext}
-      onPress={handleCreate}
-      style={[
-        Alignments.alignCenter,
-        Alignments.justifyCenter,
-        Spaces.marginTop[12],
-        {
-          backgroundColor: withAlpha(Colors.primary500, 0.06),
-          borderColor: withAlpha(Colors.primary500, 0.4),
-          borderRadius: 16,
-          borderStyle: 'dashed',
-          borderWidth: 1.5,
-          minHeight: 52,
-        },
-      ]}
-    >
-      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-        {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
-      </Text>
-    </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+        accessibilityRole="button"
+        disabled={isMissingContext}
+        onPress={handleCreate}
+        style={[
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          Spaces.marginTop[12],
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.06),
+            borderColor: withAlpha(Colors.primary500, 0.4),
+            borderRadius: 16,
+            borderStyle: 'dashed',
+            borderWidth: 1.5,
+            minHeight: 52,
+          },
+        ]}
+      >
+        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+          {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
+        </Text>
+      </TouchableOpacity>
     </TourTarget>
   );
 
@@ -1471,21 +1471,22 @@ function FacilityList() {
 
   const etatVide = (
     <TourTarget id="facility.add">
-    <EmptyState
-      actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-      description={isCollectiviteMode
-        ? t(
-          'facilityList.collectiviteEmpty',
+      <EmptyState
+        actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+        description={isCollectiviteMode
+          ? t(
+            'facilityList.collectiviteEmpty',
 
-          'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
-        )
-        : t(
-          'facilityList.empty.description',
-          'Ajoute les terrains, gymnases ou salles de ton club.',
-        )}
-      onAction={handleCreate}
-      title={t('facilityList.empty.title', 'Aucune installation')}
-    />
+            'Ajoutez les gymnases, terrains et salles de la Ville : '
+              + 'les clubs verront leur planning.',
+          )
+          : t(
+            'facilityList.empty.description',
+            'Ajoute les terrains, gymnases ou salles de ton club.',
+          )}
+        onAction={handleCreate}
+        title={t('facilityList.empty.title', 'Aucune installation')}
+      />
     </TourTarget>
   );
 

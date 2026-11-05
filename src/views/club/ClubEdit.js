@@ -400,7 +400,8 @@ function ClubEdit({ navigation, route }) {
               <View style={[Alignments.fill, Spaces.gap[24]]}>
                 {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
                     déjà 24. */}
-                {/* REPRISE-PLACE (01/11, point 5) : le « + » dépasse de 12 px, touchait la barre. */}
+                {/* REPRISE-PLACE (01/11, point 5) :
+                    le « + » dépasse de 12 px, touchait la barre. */}
                 <TourTarget id="clubEdit.logo">
                   <View style={[Alignments.row, Spaces.paddingTop[12]]}>
                     <SelectAvatar
@@ -499,7 +500,8 @@ function ClubEdit({ navigation, route }) {
                 </TourTarget>
 
                 {/* R17-ADRESSE (19/10) — plus de texte libre : la saisie des lieux publics. Le */}
-                {/* point enregistré suit l'adresse ; introuvable, le lieu se place sur la carte. */}
+                {/* point enregistré suit l'adresse ;
+                    introuvable, le lieu se place sur la carte. */}
                 <TourTarget id="clubEdit.address">
                   <Controller
                     control={control}
@@ -569,7 +571,10 @@ function ClubEdit({ navigation, route }) {
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
+                        {t(
+                          'clubEdit.publicMembers.switchLabel',
+                          'Afficher les membres publiquement',
+                        )}
                       </Text>
                       <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
                         {t(
@@ -652,7 +657,9 @@ function ClubEdit({ navigation, route }) {
                                       Alignments.justifyCenter,
                                       {
                                         backgroundColor: isSelected ? `${Colors.primary500}22` : 'transparent',
-                                        borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
+                                        borderColor: isSelected
+                                          ? Colors.primary500
+                                          : Colors.neutral500,
                                         borderRadius: 11,
                                         borderWidth: 2,
                                         height: 22,
@@ -735,7 +742,10 @@ function ClubEdit({ navigation, route }) {
                               accessibilityRole="switch"
                               onValueChange={(isOn) => onChange(isOn ? 'COACH_ALLOWED' : 'CLUB_OWNER_ONLY')}
                               thumbColor={value !== 'CLUB_OWNER_ONLY' ? Colors.primary500 : Colors.neutral300}
-                              trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                              trackColor={{
+                                false: Colors.neutral500,
+                                true: `${Colors.primary500}66`,
+                              }}
                               value={value !== 'CLUB_OWNER_ONLY'}
                             />
                           )}
@@ -753,7 +763,8 @@ function ClubEdit({ navigation, route }) {
                           <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
                             {t(
                               'clubEdit.teamCreation.requiresValidation.description',
-                              "L'équipe est bien créée, mais elle n'apparaît dans le club qu'une fois "
+                              "L'équipe est bien créée, mais elle n'apparaît dans le club "
+                              + "qu'une fois "
                               + "que tu l'as validée.",
                             )}
                           </Text>
@@ -770,7 +781,10 @@ function ClubEdit({ navigation, route }) {
                               accessibilityRole="switch"
                               onValueChange={onChange}
                               thumbColor={value ? Colors.primary500 : Colors.neutral300}
-                              trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                              trackColor={{
+                                false: Colors.neutral500,
+                                true: `${Colors.primary500}66`,
+                              }}
                               value={value === true}
                             />
                           )}
