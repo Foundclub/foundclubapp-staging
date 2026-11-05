@@ -79,7 +79,7 @@ export default {
       },
     },
     hints: {
-      invitation: 'Une invitation SMS lui sera envoyée pour rejoindre le club.',
+      invitation: 'Tu lui enverras le SMS juste après.',
     },
     roles: {
       manager: 'Dirigeant·e',
@@ -18601,6 +18601,7 @@ export default {
       // PARENT-LIEN (30/09) — la porte de l'ENFANT : accepter, refuser, retirer le lien.
       myParent: 'Mon parent',
       myTeams: 'Mes équipes',
+      presidentGuide: 'Guide dirigeant·e',
       previewPublic: 'Voir mon profil comme les autres',
       save: 'Continuer',
       // A17 (audit V1, 30/09) — venue de la rubrique « Mon profil » de l'accueil.

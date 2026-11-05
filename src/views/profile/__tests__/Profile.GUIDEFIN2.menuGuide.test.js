@@ -260,6 +260,13 @@ describe('L1 — Mon compte d’un dirigeant', () => {
     expect(aLaRangee()).toBe(true);
   });
 
+  it('guide Dirigeant : pas de « Revoir », ce profil n’a pas de visite', async () => {
+    mockTour = tourDe({ hasGuideHistory: true, isGuide: true, profileKey: 'president' });
+    await monter({ name: 'President', type: 'president' });
+    await toucher('Guide entraîneur·e');
+    expect(rangeeDe('Revoir le guide sans rien créer')).toBeUndefined();
+  });
+
   it('témoin : dirigeant sans guide joué, pas de rangée pour l’instant', async () => {
     mockTour = tourDe({ hasGuideHistory: false });
     await monter({ name: 'President', type: 'president' });

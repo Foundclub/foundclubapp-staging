@@ -1184,13 +1184,14 @@ function Profile({ navigation, route }) {
           onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
           sousLigne: true,
         }] : []),
-        {
+        // Guide Dirigeant : pas d'étape de visite, la ligne ne mènerait à rien.
+        ...(guideProfile?.steps?.some((/** @type {any} */ step) => step.review) ? [{
           icon: Images.flag,
           key: 'coachGuide-review',
           label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
           onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
           sousLigne: true,
-        },
+        }] : []),
         // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
         ...(isGuideInProgress ? [] : [{
           icon: Images.flag,

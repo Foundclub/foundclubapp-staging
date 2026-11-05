@@ -183,6 +183,7 @@ export function TourProvider({ children }) {
         gauge: nextState.gauge || 0,
         missionStatus: nextState.missionStatus || {},
         profileKey: nextState.profileKey,
+        skippedSubMissions: nextState.skippedSubMissions || [],
         // FIN-GUIDE : l'id d'abord ; une étape ajoutée au catalogue décale les rangs.
         stepId: getTourProfile(nextState.profileKey)?.steps?.[nextState.stepIndex]?.id,
         stepIndex: nextState.stepIndex,
@@ -241,6 +242,7 @@ export function TourProvider({ children }) {
           profileKey: saved.profileKey,
           // Relancement de l'app : un brouillon de tunnel est perdu ⇒ `resumeFrom`.
           restored: true,
+          skippedSubMissions: saved.skippedSubMissions || [],
           status: 'paused',
           stepIndex,
           version: GUIDE_VERSION,

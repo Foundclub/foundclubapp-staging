@@ -142,7 +142,7 @@ const M2_STEPS = [
     },
     resumeFrom: 'm2-staff',
     targets: ['cf-fields'],
-    // Décision 5 : l'écran dit « Une invitation SMS lui sera envoyée » ; rien ne part tout seul.
+    // Décision 5 : rien ne part tout seul ; l'écran le dit aussi (`addCoach.hints.invitation`).
     get text() {
       return t(
         'm2-fields',

@@ -212,6 +212,23 @@ describe('une partie de mission qu’on peut passer', () => {
     expect(stepId()).toBe('sms');
   });
 
+  it('relancement : la partie passée le reste', () => {
+    toPartners();
+    act(() => { tour.skipSubMission(); });
+    const key = [...mockStore.keys()].find((k) => mockStore.get(k).includes('"stepId"'));
+    const saved = JSON.parse(mockStore.get(key));
+    expect(saved.skippedSubMissions).toEqual(['partenaires']);
+    // On repart d'avant la partie : au relancement, elle doit rester sautée.
+    mockStore.set(key, JSON.stringify({ ...saved, stepId: 'champ', stepIndex: 1 }));
+    act(() => tree.unmount());
+    mount();
+    act(() => { tour.resumeTour(); });
+    expect(stepId()).toBe('champ');
+    act(() => { reportTourField('club.name', true); });
+    pressNext();
+    expect(stepId()).toBe('b');
+  });
+
   it('témoin : une étape sans partie ne se passe pas', () => {
     start();
     act(() => { tour.skipSubMission(); });

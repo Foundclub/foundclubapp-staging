@@ -542,10 +542,10 @@ describe('AddCoach — fusion D51 ecran 10 : ce que les champs annoncent', () =>
     expect(texteDe(arbre.root)).toContain('Date de naissance — optionnelle');
   });
 
-  it('l ecran annonce l invitation SMS avant de l envoyer', async () => {
+  it('l ecran dit que c est lui qui enverra le SMS', async () => {
     const arbre = await monterEcran();
 
-    expect(texteDe(arbre.root)).toContain('invitation SMS');
+    expect(texteDe(arbre.root)).toContain('SMS juste après');
   });
 
   it('le bouton dit ce qu il envoie', async () => {

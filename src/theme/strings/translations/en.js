@@ -82,7 +82,7 @@ export default {
       },
     },
     hints: {
-      invitation: 'An SMS invitation will be sent to them to join the club.',
+      invitation: 'You will send them the text right after.',
     },
     roles: {
       manager: 'Club manager',
@@ -17908,6 +17908,7 @@ export default {
       myLicenses: 'My fees',
       myParent: 'My parent',
       myTeams: 'My teams',
+      presidentGuide: 'Club manager guide',
       previewPublic: 'See my profile as others do',
       save: 'Continue',
       sportsHistory: 'Sporting history',
