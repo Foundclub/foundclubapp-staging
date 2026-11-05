@@ -1,5 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -28,6 +30,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useSearchProfiles } from '@/services/search/searchQueries';
 import { mapSearchPayload } from '@/services/search/searchService';
+
+import { useTour } from '@/context/useTour';
 
 /**
  * @param {{
@@ -59,6 +63,12 @@ function RecruitmentProfilesList({
   const [{ mercatoFilters }, appDispatch] = useAppContext();
   const [searchValue, setSearchValue] = useState(String(mercatoFilters?.q || ''));
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
+  // GUIDE-STORES : l'étape qui vise le haut de la liste l'y ramène (`scrollListToTop`).
+  const listRef = useRef(/** @type {any} */ (null));
+  const scrollListToTop = Boolean(useTour().currentStep?.scrollListToTop);
+  useEffect(() => {
+    if (scrollListToTop) listRef.current?.scrollToOffset?.({ animated: true, offset: 0 });
+  }, [scrollListToTop]);
   const recruitmentSurface = `${Colors.primary900}F0`;
   const recruitmentSurfaceStrong = `${Colors.primary700}70`;
   const recruitmentSurfaceSoft = `${Colors.primary500}14`;
@@ -368,6 +378,7 @@ function RecruitmentProfilesList({
               }
             }}
             onEndReachedThreshold={0.35}
+            ref={listRef}
             refreshControl={(
               <RefreshControl
                 onRefresh={refetch}

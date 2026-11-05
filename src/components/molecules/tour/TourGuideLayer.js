@@ -16,7 +16,11 @@ import Svg, {
 } from 'react-native-svg';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
-import { measureTourTarget, subscribeToTourTargets } from '@/domains/tour/tourTargetRegistry';
+import {
+  measureTourTarget,
+  measureTourTargetClipSide,
+  subscribeToTourTargets,
+} from '@/domains/tour/tourTargetRegistry';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -213,6 +217,7 @@ function TourGuideLayer() {
   const isOffStepRoute = Boolean(stepRoute && route && route !== stepRoute);
 
   const [rects, setRects] = useState(/** @type {Record<string, any>} */ ({}));
+  const [clipSides, setClipSides] = useState(/** @type {Record<string, any>} */ ({}));
   const [bubbleHeight, setBubbleHeight] = useState(110);
   // GUIDE-PETIT-ECRAN : hauteur du contenu entier (la bulle bornée défile) ; la
   // place se choisit sur ce que la bulle voudrait, pas sur sa hauteur bornée.
@@ -233,6 +238,7 @@ function TourGuideLayer() {
     ? [...new Set([
       SELECT_SHEET_ID,
       ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
+      ...(currentStep.listScrolls ? [WIZARD_LIST_ID] : []),
       ...(currentStep.belowTargets || []),
       ...(currentStep.fallback?.targets || []),
       ...(currentStep.subGuides || []).flatMap((/** @type {any} */ guide) => [
@@ -254,12 +260,20 @@ function TourGuideLayer() {
     setSeenRoute(null);
     if (!targetKey) {
       setRects({});
+      setClipSides({});
       return undefined;
     }
     let cancelled = false;
     const ids = targetKey.split('|');
     const measureAll = () => {
       const routeAtStart = routeRef.current;
+      Promise.all(ids.map(measureTourTargetClipSide)).then((sides) => {
+        if (cancelled) return;
+        const next = Object.fromEntries(ids.map((id, index) => [id, sides[index]]));
+        setClipSides((previous) => (
+          JSON.stringify(previous) === JSON.stringify(next) ? previous : next
+        ));
+      });
       Promise.all([
         measureLayerOrigin(layerRef.current),
         ...ids.map(measureTourTarget),
@@ -366,10 +380,21 @@ function TourGuideLayer() {
   ];
   // FIN-GUIDE, point 3 : petit écran, le champ d'un tunnel peut être sous le bord de la liste ; le
   // voile ne doit pas empêcher de l'y chercher. La liste défile, elle reste sous le voile.
-  const touchable = currentStep?.bubbleSlot && rects[WIZARD_LIST_ID]
+  const listScrolls = currentStep?.bubbleSlot || currentStep?.listScrolls;
+  const touchable = listScrolls && rects[WIZARD_LIST_ID]
     ? [...passThrough, toCutout(rects[WIZARD_LIST_ID], width, height)]
     : passThrough;
   const primary = cutouts[0] || null;
+  // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
+  // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
+  // cible coupée doit pouvoir être amenée d'où qu'on pose le doigt : pas de voile, et la bulle le
+  // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
+  const isTargetCut = !currentStep?.bubbleSlot && currentStep?.veil !== false && !sheetGuide
+    && measuredTargets.some((id) => (
+      clipSides[id]
+      || visibleRects[id].height < rects[id].height - 1
+      || rects[id].y + rects[id].height > height - 2
+    ));
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
@@ -388,15 +413,22 @@ function TourGuideLayer() {
   const offTarget = !primary && !sheetGuide
     ? variant.targets.map((id) => rects[id]).find(Boolean)
     : null;
+  // GUIDE-STORES : une cible coupée par sa liste n'a plus de mesure, ou seulement une lamelle ; sa
+  // liste sait de quel côté elle est partie (onglets de Rechercher, après « Fais défiler »).
+  const clipSide = (!primary || isTargetCut) && !sheetGuide
+    ? variant.targets.map((id) => clipSides[id]).find(Boolean)
+    : null;
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
-  if (offTarget && offTarget.y < 0) {
+  if (clipSide === 'above' || (!clipSide && offTarget && offTarget.y < 0)) {
     scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
-  } else if (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2) {
+  } else if (clipSide || isTargetCut
+    || (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2)) {
     scrollHint = t('tourGuide.scrollDown', 'Fais défiler vers le bas.');
   }
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
-  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute;
+  const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute
+    && !isTargetCut;
   const isTop = currentStep?.bubblePlacement === 'top' || !primary || Boolean(sheetGuide);
   const headerBottom = headerBottomOf(
     [...HEADER_IDS, ...(currentStep?.belowTargets || [])].map((id) => rects[id] || null),

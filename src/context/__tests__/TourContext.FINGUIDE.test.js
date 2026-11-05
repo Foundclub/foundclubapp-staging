@@ -318,6 +318,19 @@ describe('point 4 — le retour du partage', () => {
     expect(COACH_GUIDE.steps.find((one) => one.id === 'm4-back').navigateOnEnter).toBe(true);
   });
 
+  // GUIDE-STORES : le retour Android quitte le menu et la fiche ; la bulle du menu restait sans
+  // cible sur Mes équipes.
+  it.each(['team.actions.open', 'teamActions.shareLink'])('Mes équipes après %s', (key) => {
+    mockUserData = { ...mockUserData, trainedTeams: [SENIORS] };
+    start();
+    pressNext();
+    route(RouteNames.TeamDetails);
+    interaction('team.actions.open');
+    if (key === 'teamActions.shareLink') interaction(key);
+    route(RouteNames.MyTeamList);
+    expect(stepId()).toBe('m2-card');
+  });
+
   it('partage annulé ou sans résultat : le guide demande, il ne recule pas', () => {
     toPick();
     interaction('team.invite.dismissed');

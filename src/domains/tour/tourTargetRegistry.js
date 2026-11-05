@@ -110,6 +110,22 @@ export const measureTourTarget = async (id) => {
 };
 
 /**
+ * GUIDE-STORES : de quel côté de sa zone visible une ancre est sortie. La mesure coupée ne le dit
+ * pas (null, ou la lamelle restante), et le guide doit donner le sens du défilement.
+ * @param {string} id
+ * @returns {Promise<'above' | 'below' | null>} Le côté ; null si elle est entière ou sans zone.
+ */
+export const measureTourTargetClipSide = async (id) => {
+  const clipTo = activeEntry(id)?.clipTo;
+  if (!clipTo) return null;
+  const rect = /** @type {TourRect | null} */ (await measureRaw(id));
+  const clip = /** @type {TourRect | null} */ (await measureRaw(clipTo));
+  if (!rect || !clip) return null;
+  if (rect.y < clip.y) return 'above';
+  return rect.y + rect.height > clip.y + clip.height ? 'below' : null;
+};
+
+/**
  * Prévient quand une ancre apparaît, part ou bouge.
  * @param {() => void} listener
  * @returns {() => void}

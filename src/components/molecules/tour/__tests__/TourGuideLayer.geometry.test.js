@@ -2,6 +2,7 @@ import {
   computeBlockers,
   dockBarOf,
   placeBubble,
+  toCutout,
   wideBubbleFrame,
 } from '../tourGuideGeometry';
 
@@ -52,6 +53,18 @@ describe('computeBlockers', () => {
     expect(isBlocked(blockers, 200, 760)).toBe(false);
     expect(isBlocked(blockers, 200, 600)).toBe(true);
     expect(isBlocked(blockers, 5, 300)).toBe(true);
+  });
+});
+
+describe('toCutout, petite ancre', () => {
+  it('garde au moins 44 de large et de haut, centrés : les 3 points du menu ⋮', () => {
+    const cutout = toCutout({
+      height: 18, width: 4, x: 320, y: 100,
+    }, W, H);
+    expect(cutout.width).toBeGreaterThanOrEqual(44);
+    expect(cutout.height).toBeGreaterThanOrEqual(44);
+    expect(cutout.x + (cutout.width / 2)).toBe(322);
+    expect(cutout.y + (cutout.height / 2)).toBe(109);
   });
 });
 
