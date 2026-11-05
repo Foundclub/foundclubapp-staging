@@ -203,9 +203,14 @@ const invalidateCampaign = (/** @type {any} */ queryClient, /** @type {any} */ c
   }
 };
 
-export const useLicenseMutation = (/** @type {any} */ mutationFn, /** @type {any} */ campaignId) => {
+export const useLicenseMutation = (
+  /** @type {any} */ mutationFn,
+  /** @type {any} */ campaignId,
+  /** @type {any} */ options = {},
+) => {
   const queryClient = useQueryClient();
   return useMutation({
+    ...options,
     mutationFn,
     onSuccess: () => invalidateCampaign(queryClient, campaignId),
   });

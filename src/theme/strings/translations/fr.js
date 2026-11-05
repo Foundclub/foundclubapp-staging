@@ -1938,7 +1938,7 @@ export default {
 
     // Authorization errors
     FORBIDDEN: 'Accès refusé.',
-    // PAYE-LIMITE : refus du serveur sur un montant, lus par le filet global de l'app.
+    // PAYE-LIMITE : refus du serveur sur un montant, lus par displayErrorAlert.
     LICENSE_AMOUNT_EXCEEDS_REMAINING:
       "Ce montant dépasse ce qu'il reste à payer sur cette cotisation.",
     LICENSE_REFUND_EXCEEDS_REFUNDABLE:

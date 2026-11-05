@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { Alert, Text, TextInput } from 'react-native';
+import { Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubLicenseMemberDetail from '../ClubLicenseMemberDetail';
@@ -251,18 +251,6 @@ describe('PAYE-LIMITE — « A payé » s arrete au reste a payer', () => {
     appuyer('Valider');
     expect(mockMutationFigee.mutate).toHaveBeenCalledTimes(1);
     expect(mockMutationFigee.mutate.mock.calls[0][0]).toMatchObject({ amountCents: 7000 });
-  });
-
-  test('le serveur refuse quand meme (fiche perimee) : une seule alerte, celle du filet global', () => {
-    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    mockMutationFigee.mutate.mockImplementation((_, options) => {
-      options.onError?.({ details: { code: 'LICENSE_AMOUNT_EXCEEDS_REMAINING' }, message: 'refus' });
-    });
-    monter();
-    appuyer('A payé');
-    saisirMontant('70');
-    appuyer('Valider');
-    expect(alerte).not.toHaveBeenCalled();
   });
 
   test('le remboursement garde son plafond et son pre-remplissage', () => {

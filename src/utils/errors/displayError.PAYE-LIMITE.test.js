@@ -1,7 +1,6 @@
 /* eslint-disable no-underscore-dangle -- __DEV__ est le nom impose par React Native. */
-// PAYE-LIMITE (05/11) — un refus de montant passe par le filet global de l'app
-// (`App.js:onMutationError` → `displayErrorAlert`). En production, un code sans
-// traduction y devient « une erreur » : le dirigeant ne saurait pas pourquoi.
+// PAYE-LIMITE (05/11) — un refus de montant passe par `displayErrorAlert`. En production,
+// un code sans traduction y devient « une erreur » : le dirigeant ne saurait pas pourquoi.
 import en from '@/theme/strings/translations/en';
 import fr from '@/theme/strings/translations/fr';
 
