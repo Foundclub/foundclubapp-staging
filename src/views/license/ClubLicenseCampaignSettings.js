@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, USER_ROLES } from '@/domains/auth/authUseCases';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -59,6 +60,8 @@ import MediaPlatform from '@/platform/media';
 // U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
 // langue de la plateforme (UTI sur iOS, type MIME sur Android).
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
+
+import { useTour } from '@/context/useTour';
 
 import {
   buildEventCampaignDefaults,
@@ -2159,6 +2162,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const [reminderStartDate, setReminderStartDate] = useState(initialAutomation.startDate);
   const [reminderTargetStatuses, setReminderTargetStatuses] = useState(initialAutomation.targetStatuses);
   const [wizardStepIndex, setWizardStepIndex] = useState(0);
+  const { currentStep: tourStep, tourStatus } = useTour();
+  const isCampaignSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesCampaign);
+  // Le guide quitte le tunnel en changeant d'étape : l'état n'a pas encore suivi quand il sort.
+  const wasSimulatedRef = useRef(false);
+  if (isCampaignSimulated) wasSimulatedRef.current = true;
   // Une seule feuille ouverte a la fois : `null`, ou la cle de la feuille.
   // Les 8 feuilles du pack de design remplacent les 16 etapes retirees.
   const [openSheet, setOpenSheet] = useState(/** @type {string | null} */ (null));
@@ -2671,6 +2679,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   }, [clubId, navigation]);
 
   const persistCampaign = useCallback((options = {}) => {
+    // Guide Dirigeant·e, B1 : simulation, le geste est désarmé tant que le bonus est à l'écran.
+    if (isCampaignSimulated) {
+      emitGuidanceInteraction('licenseCampaign.open.example');
+      return;
+    }
     // S06 — un envoi deja en vol ne se relance pas. Le `ref` tranche AVANT tout
     // rendu : c'est lui qui rend le double appui inoffensif quel que soit le
     // rythme.
@@ -2914,6 +2927,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       },
     });
   }, [
+    isCampaignSimulated,
     campaign?.status,
     campaignId,
     documentRequests,
@@ -3415,6 +3429,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     t,
   ]);
 
+  // Guide Dirigeant·e, B1 : le tunnel tient sur une seule route ; l'écran dit où il en est.
+  useEffect(() => {
+    emitGuidanceInteraction(`licenseCampaign.step.${activeWizardStep.key}`);
+  }, [activeWizardStep.key]);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
       if (allowScreenExitRef.current) {
@@ -3423,6 +3442,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       }
 
       if (wizardStepIndex <= 0) {
+        return;
+      }
+
+      // Bonus passé ou fini : le guide ramène à l'accueil. Le retour, lui, recule comme d'habitude.
+      if (wasSimulatedRef.current && event?.data?.action?.type === 'NAVIGATE') {
         return;
       }
 

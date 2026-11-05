@@ -157,7 +157,7 @@ function TourFullScreen({ kind }) {
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
   // Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
-  const t = /** @type {any} */ ((
+  const t = /** Repli du profil. @type {any} */ ((
     /** @type {string} */ key,
     /** @type {any} */ fallback,
     /** @type {any} */ values,
