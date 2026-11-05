@@ -777,8 +777,7 @@ const STEPS = [
       anchor: 'facility.name',
       bubbles: [
         // G93 : le refus n'arrive qu'à « Créer » ; on prévient avant de faire remplir.
-        ['facility.name', () => t('m3-fac-0', 'L’installation demande l’offre Club. Sinon, '
-          + 'reviens et choisis « Extérieur ».')],
+        ['facility.name', () => t('m3-fac-0', 'Il faut l’offre Club. Sinon, reviens : « Extérieur ».')],
         ['facility.name', () => t('m3-fac-1', 'Donne un nom à l’installation et choisis son type '
           + '(obligatoire).')],
         ['facility.address', () => t('m3-fac-2', 'Adresse obligatoire : choisis-la dans la liste '
