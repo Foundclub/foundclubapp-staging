@@ -24160,7 +24160,7 @@ export default {
       'm3-create': 'Check the summary: a repeating session stops at the end date set in "Repeat". Create!',
       'm3-desc': 'Write a note for your team (e.g. meet 15 min before). Otherwise, skip.',
       'm3-dock': 'Now schedule your session: open the home screen.',
-      'm3-fac-0': 'A facility needs the Club plan. If not, go back and choose “External”.',
+      'm3-fac-0': 'Needs the Club plan. If not, go back: “External”.',
       'm3-fac-1': 'Give the venue a name and choose its type (required).',
       'm3-fac-2': 'Address required: pick it from the suggested list.',
       'm3-fac-3': "If two teams book the same slot: \"Needs approval\", a club official decides; \"Allow and notify\", it's booked straight away and the board is told.",

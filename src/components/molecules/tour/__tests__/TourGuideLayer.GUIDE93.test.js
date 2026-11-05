@@ -307,3 +307,39 @@ describe('sous-guide d installation (recette r3, e4 à e11)', () => {
     expect(textsOf(tree).join(' ')).not.toContain('Annuler');
   });
 });
+
+describe('n° 3 — après Annuler, le sens du défilement', () => {
+  const mountField = (y) => {
+    registerTourTarget('header.back', (done) => done({
+      height: 40, width: 40, x: 16, y: 60,
+    }));
+    registerTourTarget('teamWizard.field', (done) => done({
+      height: 900, width: 360, x: 16, y,
+    }));
+  };
+
+  it('tête du champ sous la bulle (« Extérieur » caché) : vers le haut', async () => {
+    mountField(150);
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    const texts = textsOf(tree).join(' ');
+    expect(texts).toContain('Fais défiler vers le haut');
+    expect(texts).not.toContain('Fais défiler vers le bas');
+  });
+
+  it('témoin : tête dégagée, seul le bas dépasse : vers le bas', async () => {
+    mountField(300);
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    expect(textsOf(tree).join(' ')).toContain('Fais défiler vers le bas');
+  });
+});
+
+describe('n° 3 — la 1re bulle du sous-guide', () => {
+  it('tient dans la place du 360×640 et garde la sortie « Extérieur »', () => {
+    const text = step('m3-place').subGuides[0].bubbles[0][1]();
+    expect(text.length).toBeLessThanOrEqual(54);
+    expect(text).toContain('Extérieur');
+    expect(text).toContain('offre Club');
+  });
+});

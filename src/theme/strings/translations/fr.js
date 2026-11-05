@@ -25213,7 +25213,7 @@ export default {
       'm3-create': 'Vérifie le récap : si ta séance se répète, elle s’arrête à la date de fin choisie dans « Répéter ». Crée !',
       'm3-desc': 'Écris une consigne pour ton équipe (ex. : rendez-vous 15 min avant). Sinon, passe.',
       'm3-dock': 'Programme maintenant ta séance : ouvre l’accueil.',
-      'm3-fac-0': 'L’installation demande l’offre Club. Sinon, reviens et choisis « Extérieur ».',
+      'm3-fac-0': 'Il faut l’offre Club. Sinon, reviens : « Extérieur ».',
       'm3-fac-1': 'Donne un nom à l’installation et choisis son type (obligatoire).',
       'm3-fac-2': 'Adresse obligatoire : choisis-la dans la liste proposée.',
       'm3-fac-3': 'Si deux équipes réservent le même créneau : « Demande à valider », un dirigeant tranche ; « Autoriser et notifier », c’est réservé tout de suite et le bureau est prévenu.',

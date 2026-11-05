@@ -508,6 +508,12 @@ function TourGuideLayer() {
     primary: isCompact ? null : primary,
     slot,
   });
+  // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle
+  // (« Extérieur » après Annuler) : on la retrouve vers le haut, même si son bas dépasse aussi.
+  const bubbleBottom = position.top + Math.min(wantedHeight, maxHeight);
+  if (isTargetCut && isTop && !slot && measuredTargets.some((id) => rects[id].y < bubbleBottom)) {
+    scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
+  }
 
   // Journal de calibrage (développement seulement) : une ligne par état de
   // l'étape, lue par `.local/outils/tutoe-calibrage.py` (cible, trou, bulle,
