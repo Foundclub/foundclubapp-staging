@@ -777,12 +777,12 @@ const STEPS = [
       anchor: 'facility.name',
       bubbles: [
         // G93 : le refus n'arrive qu'à « Créer » ; on prévient avant de faire remplir.
-        ['facility.name', () => t('m3-fac-0', 'Une installation demande l’offre Club. Sans elle, '
-          + 'reviens en arrière et choisis « Extérieur ».')],
+        ['facility.name', () => t('m3-fac-0', 'L’installation demande l’offre Club. Sinon, '
+          + 'reviens et choisis « Extérieur ».')],
         ['facility.name', () => t('m3-fac-1', 'Donne un nom à l’installation et choisis son type '
           + '(obligatoire).')],
-        ['facility.address', () => t('m3-fac-2', 'Adresse obligatoire : choisis-la dans la liste. '
-          + 'Tes joueur·se·s l’ouvriront dans leur GPS.')],
+        ['facility.address', () => t('m3-fac-2', 'Adresse obligatoire : choisis-la dans la liste '
+          + 'proposée.')],
         ['facility.conflict', () => t('m3-fac-3', 'Si deux équipes réservent le même créneau : '
           + '« Demande à valider », un dirigeant tranche ; « Autoriser et notifier », c’est '
           + 'réservé tout de suite et le bureau est prévenu.')],
@@ -796,8 +796,8 @@ const STEPS = [
       // G93 : offre refusée, la mission continue par « Extérieur » ; la bulle donne le chemin.
       refused: {
         key: 'paywall.facility-manage-required',
-        text: () => t('m3-fac-refused', 'Sans offre Club, rien n’est créé. Ferme cette offre, '
-          + 'touche « Annuler », puis choisis « Extérieur ».'),
+        text: () => t('m3-fac-refused', 'Sans offre Club : ferme l’offre, touche '
+          + '« Annuler », puis « Extérieur ».'),
       },
     }],
     targets: WIZARD,
