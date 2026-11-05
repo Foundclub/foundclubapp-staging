@@ -25403,7 +25403,8 @@ export default {
       a5v: 'Cette annonce a une validation : choisis comment, puis Suivant.',
       a6: 'Facultatif : les idées à inclure t’aident. Tu peux passer.',
       a7: 'Relis ton annonce, puis touche le bouton : simulation, rien ne sera publié.',
-      'b1-camp': 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » pour lui envoyer un rappel.',
+      'b1-camp': 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » pour lui '
+        + 'envoyer un rappel.',
       'b1-card': 'Les cotisations du club se gèrent ici. Ouvre-les.',
       'b1-new': 'Lance une campagne. C’est une simulation : rien ne sera envoyé.',
       'b1-new-setup': 'Touche « Continuer ». C’est une simulation : rien ne sera envoyé.',
@@ -25429,7 +25430,8 @@ export default {
         + 'Suivant.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
-      'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux en faire une affiche à partager.',
+      'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux '
+        + 'en faire une affiche à partager.',
       'b4-card': 'Ouvre « Recruter ». C’est une simulation : rien ne sera publié.',
       'b4-dock': 'Bonus suivant : recruter. Retourne à l’accueil.',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
@@ -25463,10 +25465,10 @@ export default {
         skipped: 'PASSÉ',
         subtitle: 'Bonne saison !',
         team: '{{team}} créée',
-        todoCoach: 'À faire : ton coach',
-        todoPartner: 'À faire : ton partenaire',
         title: 'Ton club est prêt',
         titlePartial: 'Le guide est fini',
+        todoCoach: 'À faire : ton coach',
+        todoPartner: 'À faire : ton partenaire',
         yourTeam: 'Ton équipe',
       },
       kicker: 'Guide dirigeant·e',
@@ -25909,9 +25911,11 @@ export default {
     enterTwoValidScoresFor: 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.',
     facility: 'Installation',
     facilityLine: 'Installation : {{name}}',
-    forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.',
+    forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, '
+      + 'modifiable.',
     forfeitOf: 'Forfait {{teamName}}',
-    forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.',
+    forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. '
+      + 'Corrige le score.',
     forfeitScoreRefusedTitle: 'Score refusé',
     groupLabel: '{{label}}',
     incompleteScore: 'Score incomplet',

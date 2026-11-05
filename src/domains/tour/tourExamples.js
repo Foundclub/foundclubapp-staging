@@ -130,6 +130,7 @@ export const examplePlanningEvents = ({ facility = null, now = new Date() } = {}
 );
 
 /**
+ * L'événement vient-il du planning d'exemple du guide ?
  * @param {any} event - Événement du planning.
  * @returns {boolean} Vrai pour un événement d'exemple du guide.
  */

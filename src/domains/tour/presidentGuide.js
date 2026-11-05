@@ -116,12 +116,12 @@ export const PRESIDENT_GUIDE = Object.freeze({
    * @param {string[]} [skipped] - Les parties passées.
    * @returns {string[]} Lignes.
    */
-  closingTodoLines: (text, skipped = []) => [
+  closingTodoLines: (text, skipped = []) => /** @type {string[]} */ ([
     skipped.includes('coach')
       && text('tourCatalog.president.close.todoCoach', 'À faire : ton coach'),
     skipped.includes('partners')
       && text('tourCatalog.president.close.todoPartner', 'À faire : ton partenaire'),
-  ].filter(Boolean),
+  ].filter(Boolean)),
   /**
    * Décision 1 : sans droit ouvert, l'achat est proposé en fin de guide ; rien n'est forcé.
    * @param {{ hasClubPlan?: boolean }} [flags] - Situation au départ.

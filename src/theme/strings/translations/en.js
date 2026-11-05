@@ -24373,7 +24373,8 @@ export default {
       'b3-sel': 'One member: a one-to-one chat. Several: a group. Tick at least 2, then Next.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
-      'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a poster to share.',
+      'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a '
+        + 'poster to share.',
       'b4-card': 'Open “Recruit”. It’s a simulation: nothing will be published.',
       'b4-dock': 'Next bonus: recruiting. Go back to the home screen.',
       'b5-back': 'One last look: go back to the home screen.',
@@ -24406,10 +24407,10 @@ export default {
         skipped: 'SKIPPED',
         subtitle: 'Have a great season!',
         team: '{{team}} created',
-        todoCoach: 'To do: your coach',
-        todoPartner: 'To do: your partner',
         title: 'Your club is ready',
         titlePartial: 'The guide is finished',
+        todoCoach: 'To do: your coach',
+        todoPartner: 'To do: your partner',
         yourTeam: 'Your team',
       },
       kicker: 'Club manager guide',
@@ -24834,7 +24835,8 @@ export default {
     facilityLine: 'Facility: {{name}}',
     forfeitNotice: 'Forfeit {{teamName}}: score pre-filled 3-0 for the other team, editable.',
     forfeitOf: 'Forfeit {{teamName}}',
-    forfeitScoreRefused: 'The forfeiting team ({{teamName}}) cannot win or draw. Correct the score.',
+    forfeitScoreRefused: 'The forfeiting team ({{teamName}}) cannot win or draw. Correct the '
+      + 'score.',
     forfeitScoreRefusedTitle: 'Score refused',
     groupLabel: '{{label}}',
     incompleteScore: 'Incomplete score',

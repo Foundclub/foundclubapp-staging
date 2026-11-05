@@ -20,11 +20,11 @@ import {
   View,
 } from 'react-native';
 
-import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   clubSlotParts,
   groupClubInstallations,

@@ -85,6 +85,11 @@ const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
 // Montant à éditer : zéro reste vide, le champ montre son indice. Une VALEUR « 0,00 » bloquait la
 // saisie : la touche tapée au bout tombe au-delà de 2 décimales (`normalizeAmountInput`).
+/**
+ * Montant à éditer, vide pour zéro.
+ * @param {number | null | undefined} value - Centimes.
+ * @returns {string} Texte du champ.
+ */
 const centsToAmountInput = (value) => (value ? centsToEuro(value) : '');
 const parseIsoDateValue = (value) => {
   const normalized = String(value || '').trim();
