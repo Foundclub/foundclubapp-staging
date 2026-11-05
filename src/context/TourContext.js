@@ -966,6 +966,7 @@ export function TourProvider({ children }) {
     reward: tourState?.reward || null,
     skipBlockedMission,
     skipMission,
+    skippedSubMissions: tourState?.skippedSubMissions || [],
     skipSubMission,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),

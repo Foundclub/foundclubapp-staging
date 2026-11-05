@@ -110,6 +110,19 @@ export const PRESIDENT_GUIDE = Object.freeze({
       && text('tourCatalog.president.close.group', 'Groupe créé'),
   ].filter(Boolean),
   /**
+   * Décision 5 : coach et partenaire se passent, la jauge va quand même à 100 % ; le bilan dit ce
+   * qui reste à faire.
+   * @param {(key: string, ...args: any[]) => string} text - `t` de l'écran.
+   * @param {string[]} [skipped] - Les parties passées.
+   * @returns {string[]} Lignes.
+   */
+  closingTodoLines: (text, skipped = []) => [
+    skipped.includes('coach')
+      && text('tourCatalog.president.close.todoCoach', 'À faire : ton coach'),
+    skipped.includes('partners')
+      && text('tourCatalog.president.close.todoPartner', 'À faire : ton partenaire'),
+  ].filter(Boolean),
+  /**
    * Décision 1 : sans droit ouvert, l'achat est proposé en fin de guide ; rien n'est forcé.
    * @param {{ hasClubPlan?: boolean }} [flags] - Situation au départ.
    * @returns {string | null} L'écran de l'offre, ou rien.

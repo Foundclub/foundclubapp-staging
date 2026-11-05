@@ -151,7 +151,7 @@ function TourFullScreen({ kind }) {
   const insets = useSafeAreaInsets();
   const {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
-    profileKey,
+    profileKey, skippedSubMissions,
   } = useTour();
   // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
   const guideKey = profileKey || 'coach';
@@ -429,6 +429,11 @@ function TourFullScreen({ kind }) {
             </View>
           ))}
         </View>
+        {(guide?.closingTodoLines?.(t, skippedSubMissions) || []).map((/** @type {any} */ line) => (
+          <Text key={line} style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+            {line}
+          </Text>
+        ))}
         {/* n° 29 : le match d'exemple de B2 n'a rien laissé. */}
         {missionStatus?.[guide?.exampleMissionId] === 'done' ? (
           <Text style={[Fonts.p3, { color: Colors.neutral200, textAlign: 'center' }]}>

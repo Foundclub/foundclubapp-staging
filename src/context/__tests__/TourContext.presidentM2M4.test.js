@@ -400,3 +400,14 @@ describe('recette L10 — retour sur l’écran d’exemple de B4', () => {
     );
   });
 });
+
+describe('bilan : les parties passées arrivent jusqu’à la clôture', () => {
+  it('le coach passé est exposé par le contexte', () => {
+    start();
+    touch('club.section.staff');
+    route(RouteNames.AddCoach);
+    expect(tour.skippedSubMissions).toEqual([]);
+    act(() => { tour.skipSubMission(); });
+    expect(tour.skippedSubMissions).toEqual(['coach']);
+  });
+});

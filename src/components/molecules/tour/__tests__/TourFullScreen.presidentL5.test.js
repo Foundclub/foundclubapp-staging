@@ -187,6 +187,20 @@ describe('clôture', () => {
     expect(texts).toContain('Mon compte');
   });
 
+  // Décision 5 d'Adel : coach et partenaire se passent, et la jauge va à 100 %. Le bilan dit ce
+  // qui reste à faire (tri du chef, 05/11).
+  it('coach et partenaire passés : le bilan dit ce qui reste à faire', () => {
+    mockTour = tourAt({ skippedSubMissions: ['coach', 'partners'] });
+    const texts = textsOf('closing');
+    expect(texts).toContain('À faire : ton coach');
+    expect(texts).toContain('À faire : ton partenaire');
+  });
+
+  it('témoin : rien de passé, aucune ligne « à faire »', () => {
+    mockTour = tourAt({ skippedSubMissions: [] });
+    expect(textsOf('closing')).not.toContain('À faire');
+  });
+
   it('coach rattaché au lieu de créé : dit aussi, une seule fois', () => {
     const lines = PRESIDENT_GUIDE.closingLines(
       (_key, fallback) => fallback,

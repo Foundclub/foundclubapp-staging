@@ -24406,6 +24406,8 @@ export default {
         skipped: 'SKIPPED',
         subtitle: 'Have a great season!',
         team: '{{team}} created',
+        todoCoach: 'To do: your coach',
+        todoPartner: 'To do: your partner',
         title: 'Your club is ready',
         titlePartial: 'The guide is finished',
         yourTeam: 'Your team',

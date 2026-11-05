@@ -43,6 +43,7 @@ export const useTour = () => useContext(TourContext) || {
   reward: null,
   skipBlockedMission: () => {},
   skipMission: () => {},
+  skippedSubMissions: [],
   skipSubMission: () => {},
   startTour: () => false,
   stepIndex: 0,

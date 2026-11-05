@@ -25463,6 +25463,8 @@ export default {
         skipped: 'PASSÉ',
         subtitle: 'Bonne saison !',
         team: '{{team}} créée',
+        todoCoach: 'À faire : ton coach',
+        todoPartner: 'À faire : ton partenaire',
         title: 'Ton club est prêt',
         titlePartial: 'Le guide est fini',
         yourTeam: 'Ton équipe',
