@@ -25216,6 +25216,7 @@ export default {
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Pour un entraînement, garde Privé : ton équipe et tes invités.',
       'm3-card': 'Touche « Ajouter un événement ».',
+      'm3-create-free': 'Vérifie le récap, puis crée ta séance !',
       'm3-create': 'Vérifie le récap : si ta séance se répète, elle s’arrête à la date de fin choisie dans « Répéter ». Crée !',
       'm3-desc': 'Écris une consigne pour ton équipe (ex. : rendez-vous 15 min avant). Sinon, passe.',
       'm3-dock': 'Programme maintenant ta séance : ouvre l’accueil.',
@@ -25239,6 +25240,8 @@ export default {
       'm3-rep-5': 'Tout est bon ? Appuie sur Appliquer.',
       'm3-team': 'Rattache la séance à ton équipe.',
       'm3-type': 'Choisis « Entraînement ».',
+      'm3-when-free': 'Touche la date et les heures, puis Suivant. Répéter chaque semaine demande '
+        + 'l’offre Équipe.',
       'm3-when': 'Touche la date et les heures. Chaque semaine ? Touche « Chaque semaine » ou « Plus d’options ». Puis Suivant.',
       'm4-am1': 'Touche l’équipe qui cherche un adversaire.',
       'm4-am2': 'Tu reçois sur ton terrain, tu te déplaces, ou les deux. « Les deux » touche le plus d’équipes.',
