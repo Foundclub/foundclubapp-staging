@@ -156,14 +156,16 @@ function TourFullScreen({ kind }) {
   // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
-  // Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
-  const t = (
-    /** @type {string} */ key,
-    /** @type {any} */ fallback,
-    /** @type {any} */ values = undefined,
-  ) => {
+  /**
+   * Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
+   * @param {string} key - Clé i18n.
+   * @param {any} fallback - Repli du coach.
+   * @param {any} [values] - Interpolation.
+   * @returns {any} Texte.
+   */
+  const t = (key, fallback, values) => {
     const own = guide?.fullScreenTexts?.[key.replace(`tourCatalog.${guideKey}.`, '')];
-    return /** @type {any} */ (translate)(key, own ?? fallback, values);
+    return translate(key, own ?? fallback, values);
   };
 
   const essentials = missions.filter((/** @type {any} */ mission) => mission.locked);

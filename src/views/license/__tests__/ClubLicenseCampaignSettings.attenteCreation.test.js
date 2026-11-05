@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import ClubLicenseCampaignSettings from '../ClubLicenseCampaignSettings';
 
 // T03 (E6) — LA MESURE QUI DECIDE DU LOT : COMBIEN D ALLERS-RETOURS EN FILE ?
@@ -70,7 +72,7 @@ const mockInsetsFiges = {
 const mockClientRequeteFige = { invalidateQueries: jest.fn(), setQueryData: jest.fn() };
 
 const navigationFigee = {
-  addListener: () => () => {},
+  addListener: jest.fn(() => () => {}),
   canGoBack: () => true,
   goBack: jest.fn(),
   navigate: jest.fn(),
@@ -382,4 +384,79 @@ describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un'
 
     arbre.unmount();
   }, 30000);
+});
+
+/** Étape du guide lue par l'écran. */
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+  const cles = () => signaux.map((/** @type {any} */ signal) => signal.key);
+  const SIMULATION = { currentStep: { simulatesCampaign: true }, tourStatus: 'active' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockJournalReseau.length = 0;
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  it('à l écran du bonus : 0 requête, et le signal d exemple', async () => {
+    mockTour = SIMULATION;
+    await monterSurLaDerniereEtape();
+    await act(async () => { propsDuTunnel.onSkip(); });
+    await act(async () => { propsDuTunnel.onNext(); });
+    expect(mockJournalReseau).toEqual([]);
+    expect(uploadLicenseDocumentRequestTemplate).not.toHaveBeenCalled();
+    expect(upsertLicenseDocumentRequest).not.toHaveBeenCalled();
+    expect(cles()).toContain('licenseCampaign.open.example');
+  });
+
+  it('guide en pause ou hors guide : la vraie campagne part, comme avant', async () => {
+    mockTour = { ...SIMULATION, tourStatus: 'paused' };
+    await monterSurLaDerniereEtape();
+    await act(async () => { propsDuTunnel.onSkip(); });
+    expect(mockJournalReseau.length).toBeGreaterThan(0);
+    expect(cles()).not.toContain('licenseCampaign.open.example');
+  });
+
+  it('chaque écran du tunnel se dit au guide', async () => {
+    mockTour = SIMULATION;
+    await monterSurLaDerniereEtape();
+    ['identity', 'audience', 'payment', 'documents', 'reminders', 'review'].forEach((cle) => {
+      expect(cles()).toContain(`licenseCampaign.step.${cle}`);
+    });
+  });
+
+  it('le guide peut quitter le tunnel ; le retour, lui, recule d une étape', async () => {
+    mockTour = SIMULATION;
+    await monterSurLaDerniereEtape();
+    const garde = navigationFigee.addListener.mock.calls
+      .filter(([nom]) => nom === 'beforeRemove').pop()[1];
+    const parLeGuide = { data: { action: { type: 'NAVIGATE' } }, preventDefault: jest.fn() };
+    garde(parLeGuide);
+    expect(parLeGuide.preventDefault).not.toHaveBeenCalled();
+    const parLeRetour = { data: { action: { type: 'GO_BACK' } }, preventDefault: jest.fn() };
+    await act(async () => { garde(parLeRetour); });
+    expect(parLeRetour.preventDefault).toHaveBeenCalled();
+  });
+
+  it('hors du bonus, la garde ne change pas : toute sortie recule d une étape', async () => {
+    await monterSurLaDerniereEtape();
+    const garde = navigationFigee.addListener.mock.calls
+      .filter(([nom]) => nom === 'beforeRemove').pop()[1];
+    const sortie = { data: { action: { type: 'NAVIGATE' } }, preventDefault: jest.fn() };
+    await act(async () => { garde(sortie); });
+    expect(sortie.preventDefault).toHaveBeenCalled();
+  });
 });

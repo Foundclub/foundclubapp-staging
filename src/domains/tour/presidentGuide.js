@@ -1,4 +1,8 @@
 import { homeTarget } from '@/domains/tour/guideCommon';
+import { B1_MISSION, B1_STEPS } from '@/domains/tour/presidentBonusDues';
+import { B2_STEPS, B3_STEPS, BONUS_MESSAGES_MISSIONS } from '@/domains/tour/presidentBonusMessages';
+import { B4_MISSION, B4_STEPS } from '@/domains/tour/presidentBonusRecruit';
+import { B5_MISSION, B5_STEPS } from '@/domains/tour/presidentBonusSearch';
 import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 import { M1_MISSION, M1_STEPS } from '@/domains/tour/presidentM1';
 import { M2M3_MISSIONS, M2M3_STEPS } from '@/domains/tour/presidentM2M3';
@@ -62,6 +66,7 @@ const FULL_SCREEN_TEXTS = {
 
 export const PRESIDENT_GUIDE = Object.freeze({
   accountLabelKey: 'profile.actions.presidentGuide',
+  bonusFromMission: B1_MISSION.id,
   /**
    * Situation au départ, figée pour tout le guide.
    * @param {{ subscriptionAccessLevel?: string; userData: any }} context - Personne connectée.
@@ -122,7 +127,16 @@ export const PRESIDENT_GUIDE = Object.freeze({
     && Date.parse(String(completedAt)) >= Number(PRESIDENT_GUIDE_SETTINGS.offerSince),
   keyMissionId: 'president_m1',
   get kicker() { return t('kicker', 'Guide dirigeant·e'); },
-  missions: [M1_MISSION, ...M2M3_MISSIONS, ...M4_MISSIONS],
+  missions: [
+    M1_MISSION,
+    ...M2M3_MISSIONS,
+    ...M4_MISSIONS,
+    B1_MISSION,
+    BONUS_MESSAGES_MISSIONS.b2,
+    BONUS_MESSAGES_MISSIONS.b3,
+    B4_MISSION,
+    B5_MISSION,
+  ],
   offerMessageKey: 'tourGuide.offer.messagePresident',
   preStartSignals: ['club.created'],
   // « Prêt à 100 % » : les 4 missions, pas la seule M1.
@@ -133,7 +147,11 @@ export const PRESIDENT_GUIDE = Object.freeze({
     ...M2M3_STEPS,
     ...M4_STEPS,
     { id: 'palier', kind: 'milestone' },
-    // Les bonus (lots L6 à L9) se posent ici, entre le palier et la clôture.
+    ...B1_STEPS,
+    ...B2_STEPS,
+    ...B3_STEPS,
+    ...B4_STEPS,
+    ...B5_STEPS,
     { id: 'close', kind: 'closing' },
   ],
   version: 3,

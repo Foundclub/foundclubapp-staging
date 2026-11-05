@@ -1,0 +1,195 @@
+import { homeTarget } from '@/domains/tour/guideCommon';
+import t from '@/domains/tour/presidentText';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+/**
+ * Guide Dirigeant·e, bonus B2 « canal du club » et B3 « créer un groupe » (pack `05_` ; carte du
+ * 05/11 §5-1 ; décisions 6 et 7). L'app a raison :
+ * - le dirigeant écrit dans ce canal : il n'y a pas de pied « lecture seule » ;
+ * - le canal naît à 2 membres, un groupe demande 2 personnes : sans ça, une bulle et une sortie ;
+ * - les autorisations sont un `Modal` : pas de cadre dessus, la bulle les raconte avant.
+ */
+
+const messagingTarget = {
+  params: { screen: RouteNames.Chat },
+  pop: true,
+  routeName: RouteNames.HomeTab,
+};
+
+export const BONUS_MESSAGES_MISSIONS = {
+  b2: {
+    estimatedSeconds: 10,
+    gaugeStep: 0,
+    id: 'president_b2',
+    locked: false,
+    get title() { return t('missions.b2', 'Le canal de ton club'); },
+  },
+  b3: {
+    estimatedSeconds: 25,
+    gaugeStep: 0,
+    id: 'president_b3',
+    locked: false,
+    get title() { return t('missions.b3', 'Créer un groupe'); },
+  },
+};
+
+export const B2_STEPS = [
+  {
+    advanceOn: { key: RouteNames.Chat, type: 'route' },
+    id: 'b2-dock',
+    missionId: 'president_b2',
+    navigateOnEnter: true,
+    navTarget: homeTarget,
+    targets: ['dock.messages'],
+    get text() { return t('b2-dock', 'Ouvre les Messages.'); },
+  },
+  {
+    advanceOn: [
+      { key: RouteNames.Conversation, type: 'route' },
+      { goto: 'b2-none', key: 'messaging.canal.absent', type: 'interaction' },
+    ],
+    // La liste lue, l'écran dit si le canal manque : le guide ne lit pas les conversations.
+    checksCanal: true,
+    id: 'b2-canal',
+    missionId: 'president_b2',
+    resumeFrom: 'b2-dock',
+    targets: ['msg-canal'],
+    get text() { return t('b2-canal', 'Voici le canal de ton club. Ouvre-le.'); },
+  },
+  {
+    id: 'b2-info',
+    missionId: 'president_b2',
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'b2-dock',
+    targets: ['ch-info'],
+    get text() {
+      return t('b2-info', 'Ton canal d’annonce : tous les membres du club le reçoivent.');
+    },
+  },
+  {
+    completesMission: true,
+    id: 'b2-foot',
+    missionId: 'president_b2',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b2-dock',
+    targets: ['ch-input'],
+    get text() {
+      return t('b2-foot', 'Toi tu écris, eux lisent : idéal pour les annonces officielles.');
+    },
+  },
+  {
+    bubblePlacement: 'top',
+    completesMission: true,
+    id: 'b2-none',
+    missionId: 'president_b2',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b2-dock',
+    get text() {
+      return t('b2-none', 'Ton canal n’existe pas encore : il naît quand ton club compte 2 membres '
+        + 'et une équipe. Il apparaîtra ici.');
+    },
+    veil: false,
+    // Seulement par l'aiguillage de b2-canal.
+    when: () => false,
+  },
+];
+
+export const B3_STEPS = [
+  {
+    // Bonus précédent passé, ou canal absent : déjà ailleurs, l'étape passe toute seule.
+    advanceOn: { not: RouteNames.Conversation, type: 'route' },
+    id: 'b3-back',
+    missionId: 'president_b3',
+    navigateOnEnter: true,
+    navTarget: messagingTarget,
+    resumeFrom: 'b3-new',
+    targets: ['header.back'],
+    get text() {
+      return t('b3-back', 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou '
+        + 'glisse ton doigt depuis le bord gauche.');
+    },
+    // Le geste du bord, seul retour d'un iPhone, doit passer.
+    veil: false,
+  },
+  {
+    advanceOn: { key: RouteNames.NewConversation, type: 'route' },
+    id: 'b3-new',
+    missionId: 'president_b3',
+    navTarget: messagingTarget,
+    targets: ['msg-new'],
+    get text() { return t('b3-new', 'Touche ce bouton pour une nouvelle discussion.'); },
+  },
+  {
+    advanceOn: [
+      { goto: 'b3-name', key: 'conversation.step.name', type: 'interaction' },
+      { goto: 'b3-few', key: 'conversation.members.few', type: 'interaction' },
+      { goto: 'b3-whisper', key: RouteNames.Conversation, type: 'route' },
+    ],
+    bubblePlacement: 'top',
+    checksMembers: true,
+    id: 'b3-sel',
+    missionId: 'president_b3',
+    resumeFrom: 'b3-new',
+    targets: ['conv-list', 'conv-next'],
+    get text() {
+      return t(
+        'b3-sel',
+        'Un membre : discussion à deux. Plusieurs : un groupe. Coche-en au moins 2, puis Suivant.',
+      );
+    },
+    veil: false,
+  },
+  {
+    bubblePlacement: 'top',
+    id: 'b3-name',
+    missionId: 'president_b3',
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'b3-new',
+    targets: ['grp-name', 'grp-perms'],
+    get text() {
+      return t('b3-name', 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
+        + 'messages » pour que seuls les admins écrivent.');
+    },
+  },
+  {
+    advanceOn: { key: 'conversation.group.created', type: 'action' },
+    completesMission: true,
+    id: 'b3-create',
+    missionId: 'president_b3',
+    resumeFrom: 'b3-new',
+    targets: ['grp-create'],
+    get text() { return t('b3-create', 'Crée le groupe : il est réel, tes membres le verront.'); },
+  },
+  {
+    bubblePlacement: 'top',
+    completesMission: true,
+    id: 'b3-few',
+    missionId: 'president_b3',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b3-new',
+    get text() {
+      return t(
+        'b3-few',
+        'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore assez. Reviens '
+          + 'ici quand ils auront rejoint le club. On continue.',
+      );
+    },
+    veil: false,
+    when: () => false,
+  },
+  {
+    bubblePlacement: 'top',
+    completesMission: true,
+    id: 'b3-whisper',
+    missionId: 'president_b3',
+    get nextLabel() { return t('understood', 'Compris'); },
+    resumeFrom: 'b3-new',
+    get text() {
+      return t('b3-whisper', 'C’est une discussion à deux. Pour un groupe, coche au moins 2 '
+        + 'personnes depuis le même bouton. On continue.');
+    },
+    veil: false,
+    when: () => false,
+  },
+];

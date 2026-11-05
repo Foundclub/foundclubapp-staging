@@ -231,6 +231,63 @@ describe('M2 de bout en bout', () => {
   });
 });
 
+describe('les bonus de bout en bout', () => {
+  it('B2 sans canal : la bulle dit pourquoi, le bonus finit au bouton, B3 suit', () => {
+    start('president_b2');
+    route(RouteNames.Chat);
+    expect(stepId()).toBe('b2-canal');
+    touch('messaging.canal.absent');
+    expect(stepId()).toBe('b2-none');
+    next();
+    expect(tour.reward).toMatchObject({ isBonus: true, missionId: 'president_b2' });
+    flush();
+    // Déjà sur les messages : l'étape du retour passe toute seule.
+    expect(stepId()).toBe('b3-new');
+  });
+
+  it('B3 sans assez de membres : une visite, puis la suite, sans rien créer', () => {
+    start('president_b3');
+    route(RouteNames.NewConversation);
+    expect(stepId()).toBe('b3-sel');
+    touch('conversation.members.few');
+    expect(stepId()).toBe('b3-few');
+    next();
+    flush();
+    expect(stepId()).toBe('b4-dock');
+    expect(tour.created['conversation.group.created']).toBeUndefined();
+  });
+
+  it('B3 réel : le groupe créé valide le bonus et compte au bilan', () => {
+    start('president_b3');
+    route(RouteNames.NewConversation);
+    touch('conversation.step.name');
+    expect(stepId()).toBe('b3-name');
+    next();
+    action('conversation.group.created');
+    expect(tour.reward).toMatchObject({ missionId: 'president_b3' });
+    expect(tour.created['conversation.group.created']).toBeTruthy();
+  });
+
+  it('B4 et B1 : du récap à la bulle, le bonus se valide au bouton', () => {
+    start('president_b4');
+    route(RouteNames.SearchHome);
+    route(RouteNames.AdWizardAudienceType);
+    [
+      RouteNames.AdWizardTeam,
+      RouteNames.AdWizardPositions,
+      RouteNames.AdWizardInfo,
+      RouteNames.AdWizardLocation,
+      RouteNames.AdWizardDescription,
+      RouteNames.AdWizardRecap,
+    ].forEach(route);
+    expect(stepId()).toBe('a7');
+    touch('ad.publish.example');
+    expect(stepId()).toBe('a-stop');
+    next();
+    expect(tour.missionStatus.president_b4).toBe('done');
+  });
+});
+
 describe('M3 et M4 de bout en bout', () => {
   const toTeam = () => {
     start('president_m3');
@@ -279,7 +336,13 @@ describe('M3 et M4 de bout en bout', () => {
     expect(stepId()).toBe('palier');
     expect(tour.currentStep.tourExample).toBeUndefined();
     next();
-    expect(stepId()).toBe('close');
+    expect(stepId()).toBe('b1-card');
+    // « Passer ce bonus », partout : on arrive à la clôture sans rien avoir créé.
+    ['b2-dock', 'b3-new', 'b4-dock', 'b5-back', 'close'].forEach((id) => {
+      act(() => { tour.skipMission(); });
+      expect(stepId()).toBe(id);
+    });
+    expect(tour.missionStatus.president_b1).toBe('skipped');
     mockNavigate.mockClear();
     act(() => { tour.finishGuide(); });
     expect(tour.isTourActive).toBe(false);
