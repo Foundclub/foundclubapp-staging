@@ -5,8 +5,9 @@ import renderer, { act } from 'react-test-renderer';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 
-import { createFoundClubQueryClient } from '@/app/queryClient';
 import ClubLicenseMemberDetail from '../ClubLicenseMemberDetail';
+
+const { createFoundClubQueryClient } = require('@/app/queryClient');
 
 // PAYE-LIMITE (05/11, contre-recette du chef) — fiche perimee : le serveur refuse le montant.
 // Le telephone a un filet global (`App.js:onMutationError`), le site n en a pas
