@@ -5,7 +5,7 @@ import {
   emitGuidanceAction,
   resetGuidanceRuntimeForTests,
 } from '@/domains/guidance/guidanceRuntime';
-import { resetTourTargetsForTests, reportTourField } from '@/domains/tour/tourTargetRegistry';
+import { reportTourField, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
 
 import { TourProvider, useTour } from '../TourContext';
 
@@ -66,10 +66,10 @@ jest.mock('@/domains/tour/tourCatalog', () => {
   };
   return {
     ...actual,
-    GUIDE_PRE_START_SIGNALS: [...actual.GUIDE_PRE_START_SIGNALS, 'club.created'],
     getGuideKeyForRole: (role) => (
       role === 'president' ? 'president' : actual.getGuideKeyForRole(role)
     ),
+    GUIDE_PRE_START_SIGNALS: [...actual.GUIDE_PRE_START_SIGNALS, 'club.created'],
     getTourProfile: (key) => (key === 'president' ? guide : actual.getTourProfile(key)),
   };
 });

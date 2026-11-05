@@ -8,7 +8,6 @@ import {
   planningTarget,
   teamHubTarget,
   teamWizardSteps,
-  teamWizardTarget,
   trainsTeamInClub,
   WIZARD,
   wizardStep,

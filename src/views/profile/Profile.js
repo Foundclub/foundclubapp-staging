@@ -175,8 +175,8 @@ function Profile({ navigation, route }) {
   // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
   const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
-  // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi ») : il
-  // retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+  // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi »)
+  // : il retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
   const guideKey = (tour.isGuide && tour.profileKey)
     || getGuideKeyForRole(currentRoleKey)
     || (currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null);

@@ -7,8 +7,8 @@ import Svg, {
   Circle, Defs, LinearGradient, Rect, Stop,
 } from 'react-native-svg';
 
-import { withAlpha } from '@/theme/colors';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -195,7 +195,8 @@ function TourFullScreen({ kind }) {
           {/* FIN-GUIDE, point 1 : déjà coach d'une équipe, la mission 1 est validée d'emblée. */}
           <GaugeRing size={92} value={gauge} />
           <Text style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}>
-            {t(`tourCatalog.${guideKey}.open.gauge`, '{{count}} missions. Chacune fait monter ta jauge '
+            {t(`tourCatalog.${guideKey}.open.gauge`, '{{count}} missions. Chacune fait monter ta '
+              + 'jauge '
               + 'de 25 %.', { count: essentials.length })}
           </Text>
         </View>
@@ -271,7 +272,8 @@ function TourFullScreen({ kind }) {
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
           {blockedCount > 0
-            ? t(`tourCatalog.${guideKey}.palier.subtitlePartial`, '{{done}} missions sur {{total}} : '
+            ? t(`tourCatalog.${guideKey}.palier.subtitlePartial`, '{{done}} missions sur '
+              + '{{total}} : '
               + 'les autres attendent que l’app te le permette.', {
               done: essentials.length - blockedCount, total: essentials.length,
             })

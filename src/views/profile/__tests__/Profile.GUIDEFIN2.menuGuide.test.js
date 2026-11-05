@@ -260,7 +260,7 @@ describe('L1 — Mon compte d’un dirigeant', () => {
     expect(aLaRangee()).toBe(true);
   });
 
-  it('témoin : dirigeant sans guide joué, pas de rangée tant que son guide n’existe pas', async () => {
+  it('témoin : dirigeant sans guide joué, pas de rangée pour l’instant', async () => {
     mockTour = tourDe({ hasGuideHistory: false });
     await monter({ name: 'President', type: 'president' });
     expect(aLaRangee()).toBe(false);

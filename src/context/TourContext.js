@@ -20,7 +20,6 @@ import {
   GUIDE_PRE_START_SIGNALS,
   TOUR_HOME_TARGET,
 } from '@/domains/tour/tourCatalog';
-import { isTourFieldValid } from '@/domains/tour/tourTargetRegistry';
 import {
   firstIndexOfNextMission,
   getMission,
@@ -31,6 +30,7 @@ import {
   missionPosition,
   nextAvailableIndex,
 } from '@/domains/tour/tourGuideEngine';
+import { isTourFieldValid } from '@/domains/tour/tourTargetRegistry';
 import { storage } from '@/store/appContext';
 
 import { navigate as navigateRoot } from '@/navigation/navigationService';
@@ -318,7 +318,13 @@ export function TourProvider({ children }) {
       return;
     }
     const nextState = {
-      ...base, blocked: null, guardMessage: null, reward: null, status: 'active', stepIndex: index, stepRoute,
+      ...base,
+      blocked: null,
+      guardMessage: null,
+      reward: null,
+      status: 'active',
+      stepIndex: index,
+      stepRoute,
     };
     const already = depth < MAX_AUTO_ADVANCE && !base.review
       ? matchCurrentRoute(profile, index, lastRouteRef.current, guideContext(nextState))
@@ -548,7 +554,6 @@ export function TourProvider({ children }) {
       completes: profile.steps[index]?.missionId !== step.missionId,
       index,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyGuideMatch]);
 
   // « Rester » : la carte se ferme, la mission continue (autre club, offre prise).

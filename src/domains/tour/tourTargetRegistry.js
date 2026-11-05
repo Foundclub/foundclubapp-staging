@@ -151,8 +151,9 @@ const fields = new Map();
 export const reportTourField = (id, isValid) => { fields.set(id, Boolean(isValid)); };
 
 /**
+ * L'écran a-t-il dit ce champ valide ? Sans nouvelle de lui, non.
  * @param {string} id - Champ.
- * @returns {boolean} L'écran l'a-t-il dit valide ?
+ * @returns {boolean} Valide ?
  */
 export const isTourFieldValid = (id) => fields.get(id) === true;
 
