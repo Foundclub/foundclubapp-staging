@@ -32,6 +32,7 @@ import {
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
 import isGuideSupported from '@/domains/tour/guideSupport';
+import { getGuideKeyForRole, getTourProfile } from '@/domains/tour/tourCatalog';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
@@ -174,6 +175,12 @@ function Profile({ navigation, route }) {
   // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
   const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
+  // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi ») : il
+  // retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+  const guideKey = (tour.isGuide && tour.profileKey)
+    || getGuideKeyForRole(currentRoleKey)
+    || (currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null);
+  const guideProfile = /** @type {any} */ (getTourProfile(guideKey));
   /**
    * Choix du menu du guide : le menu se referme, puis le guide part.
    * @param {() => void} action - Ce que fait le choix.
@@ -1150,7 +1157,7 @@ function Profile({ navigation, route }) {
     // téléphone seulement (le site ne joue aucun tour).
     // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
     // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
-    ...(currentRoleKey === 'coach' && isGuideSupported() ? [{
+    ...(guideKey && isGuideSupported() ? [{
       accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
         <PastilleDEtat
           testID="coachGuide-pause"
@@ -1160,12 +1167,12 @@ function Profile({ navigation, route }) {
       ) : null,
       icon: Images.flag,
       key: 'coachGuide',
-      label: t('profile.actions.coachGuide', 'Guide entraîneur·e'),
+      label: t(guideProfile?.accountLabelKey, 'Guide entraîneur·e'),
       onPress: () => (tour.hasGuideHistory
         ? setIsGuideChoiceOpen((ouvert) => !ouvert)
-        : tour.startTour('coach')),
+        : tour.startTour(guideKey)),
     }] : []),
-    ...(currentRoleKey === 'coach' && isGuideSupported() && isGuideChoiceOpen
+    ...(guideKey && isGuideSupported() && isGuideChoiceOpen
       && tour.hasGuideHistory ? [
         ...(isGuideInProgress ? [{
           icon: Images.flag,
@@ -1178,7 +1185,7 @@ function Profile({ navigation, route }) {
           icon: Images.flag,
           key: 'coachGuide-review',
           label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
-          onPress: () => chooseGuide(() => tour.startTour('coach', { review: true })),
+          onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
           sousLigne: true,
         },
         // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
@@ -1188,7 +1195,9 @@ function Profile({ navigation, route }) {
           label: t('profile.coachGuide.bonus', 'Faire un bonus'),
           sousLigne: true,
           // N10 : lesquels (B1 puis B2, `startTour` part du premier).
-          onPress: () => chooseGuide(() => tour.startTour('coach', { fromMission: 'coach_b1' })),
+          onPress: () => chooseGuide(() => tour.startTour(guideKey, {
+            fromMission: guideProfile?.bonusFromMission,
+          })),
           value: t(
             'profile.coachGuide.bonusDetail',
             'Voir qui vient, puis convoquer pour un match',
@@ -1209,7 +1218,7 @@ function Profile({ navigation, route }) {
             [
               { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
               {
-                onPress: () => chooseGuide(() => tour.restartTour('coach')),
+                onPress: () => chooseGuide(() => tour.restartTour(guideKey)),
                 text: t('profile.coachGuide.restartConfirm.confirm', 'Recommencer'),
               },
             ],

@@ -31,6 +31,8 @@ export const isStepAvailable = (step, ctx) => {
   // jamais ; une mission refusée par l'écran (« blocked ») est sautée.
   if (Boolean(step?.review) !== Boolean(ctx?.review)) return false;
   if (ctx?.missionStatus?.[step?.missionId] === 'blocked') return false;
+  // Guide Dirigeant : une partie de mission passée (partenaire, coach) ; la mission continue.
+  if (step?.subMission && ctx?.skippedSubMissions?.includes(step.subMission)) return false;
   return typeof step?.when === 'function' ? Boolean(step.when(ctx)) : Boolean(step);
 };
 

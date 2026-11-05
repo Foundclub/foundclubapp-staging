@@ -1,7 +1,20 @@
 import i18next from 'i18next';
 import { Platform } from 'react-native';
 
+import {
+  extendStep,
+  hasTeamNow,
+  homeTarget,
+  planningTarget,
+  teamHubTarget,
+  teamWizardSteps,
+  teamWizardTarget,
+  trainsTeamInClub,
+  WIZARD,
+  wizardStep,
+} from '@/domains/tour/guideCommon';
 import { exampleMatch } from '@/domains/tour/tourExamples';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -30,31 +43,6 @@ const t = (id, fallback, values) => String(
   i18next.t(`tourCatalog.coach.${id}`, fallback, values),
 );
 
-const homeTarget = {
-  // L'accueil vit dans l'onglet `Search` (allerDansLOnglet.js) : sans l'onglet nommé,
-  // l'onglet au premier plan restait (clôture sur le Planning, GUIDE-FINITIONS-2 N7).
-  params: { params: { pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search },
-  // GUIDE-BONUS (L5) : revenir en dépilant ; un accueil empilé en doublon laissait
-  // l'onglet visé sans cadre ni voile (b1-dock, audit 39-41).
-  pop: true,
-  routeName: RouteNames.HomeTab,
-};
-const planningTarget = {
-  params: { screen: RouteNames.MyEventList },
-  pop: true,
-  routeName: RouteNames.HomeTab,
-};
-const teamHubTarget = {
-  params: { screen: RouteNames.MyTeamList },
-  routeName: RouteNames.HomeTab,
-};
-const teamWizardTarget = {
-  params: (/** @type {any} */ context) => ({
-    params: { clubId: context?.userData?.club?.documentId },
-    screen: RouteNames.TeamWizardName,
-  }),
-  routeName: RouteNames.TeamStack,
-};
 const eventWizardTarget = {
   params: { screen: RouteNames.EventWizardType },
   routeName: RouteNames.EventStack,
@@ -63,9 +51,6 @@ const friendlySearchTarget = {
   params: { activeType: 'amicaux' },
   routeName: RouteNames.SearchHub,
 };
-
-// Cibles communes des tunnels (posées une fois dans WizardStepLayout).
-const WIZARD = ['teamWizard.field', 'teamWizard.next', 'teamWizard.skip'];
 
 /**
  * GUIDE-FINITIONS-3 R2-1 (rejeu 2, A03-A15) : un coach qui rejoint son club en
@@ -160,29 +145,6 @@ const needsClub = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
 const joinedInGuide = (ctx) => !hadTeam(ctx) && !hadClub(ctx)
   && Boolean(ctx?.created?.['club.joined']);
 /**
- * Il entraîne une équipe de son club courant (l'écran Équipes ne montre que
- * celui-là ; tournée : Julien entraîne ailleurs, et « ouvre-la » visait son
- * équipe de JOUEUR).
- * @param {any} userData - Profil.
- * @returns {boolean}
- */
-const trainsTeamInClub = (userData) => (Array.isArray(userData?.trainedTeams)
-  ? userData.trainedTeams
-  : [])
-  .some((/** @type {any} */ team) => !userData?.club?.documentId
-    || !team?.club?.documentId
-    || team.club.documentId === userData.club.documentId);
-/**
- * GUIDE-FINITIONS-3 (réserve du n° 6) : une équipe existe MAINTENANT (créée
- * pendant le guide, ou profil relu) : inviter, programmer et publier restent
- * possibles même si M1 a été passée.
- * @param {any} ctx
- * @returns {boolean}
- */
-const hasTeamNow = (ctx) => Boolean(ctx?.created?.['team.created'])
-  || Boolean(ctx?.created?.['team.trained'])
-  || trainsTeamInClub(ctx?.userData);
-/**
  * FIN-GUIDE, point 1 : la question « Es-tu entraîneur·e d'une de ces équipes ? » se pose à qui a
  * un club, n'entraîne rien et n'attend aucune réponse.
  * @param {any} ctx
@@ -200,6 +162,8 @@ const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déj
 const MISSIONS = [
   {
     gaugeStep: 25,
+    // Le tunnel équipe ne repose pas la question : TourTeamChoice l'a posée.
+    asksTeamChoice: true,
     id: 'coach_m1',
     locked: true,
     // GUIDE-RELANCE : refus de l'écran (clé du signal ⇒ raison dite par le guide).
@@ -271,41 +235,6 @@ const MISSIONS = [
     get title() { return t('missions.b2', 'Convoquer pour un match'); },
   },
 ];
-
-/**
- * Étape de tunnel : bulle fixée en haut (les CTA sont en bas), on reprend au
- * début du tunnel après une fermeture de l'app.
- * @param {string} id - Id de l'étape.
- * @param {string} missionId - Mission.
- * @param {string} nextRoute - Route qui valide l'étape.
- * @param {string} resumeFrom - Étape de reprise.
- * @param {() => string} text - Texte de la bulle.
- * @returns {any} Étape.
- */
-const wizardStep = (id, missionId, nextRoute, resumeFrom, text) => ({
-  advanceOn: { key: nextRoute, type: 'route' },
-  bubblePlacement: 'top',
-  // GUIDE-FINITIONS-3 R2-2 : la bulle se pose sous le titre et la consigne de
-  // l'écran (place réservée par WizardStepLayout), plus dessus (A04-A10).
-  bubbleSlot: true,
-  id,
-  missionId,
-  resumeFrom,
-  targets: WIZARD,
-  get text() { return text(); },
-});
-
-/**
- * Complète une étape sans figer ses textes. T3-GUIDE-SITE : un `...` lit `get text()` au chargement
- * du module, avant i18n sur le site (« undefined » dans la bulle).
- * @param {any} step - Étape de base.
- * @param {any} extras - Propriétés en plus.
- * @returns {any} L'étape complétée.
- */
-const extendStep = (step, extras) => Object.defineProperties(
-  step,
-  Object.getOwnPropertyDescriptors(extras),
-);
 
 /**
  * FIN-GUIDE, point 4 : on peut inviter sans passer par le lien du menu (« + » de la fiche, feuille
@@ -554,66 +483,27 @@ const STEPS = [
     },
     when: () => false,
   },
-  extendStep(wizardStep('tw1', 'coach_m1', RouteNames.TeamWizardDescription, 'tw1', () => t(
-    'tw1',
-    'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
-  )), {
-    navTarget: teamWizardTarget,
-    // Club qui a déjà des équipes : la feuille de choix s'ouvre d'abord.
-    variants: [{
-      targets: ['teams.sheet.newTeam'],
-      get text() {
-        return t(
-          'm1-sheet',
-          'Ton club a déjà des équipes : tu pourrais en rejoindre une. Ici, crée la tienne.',
-        );
-      },
-    }],
+  ...teamWizardSteps({
+    missionId: 'coach_m1',
+    texts: {
+      sheet: () => t(
+        'm1-sheet',
+        'Ton club a déjà des équipes : tu pourrais en rejoindre une. Ici, crée la tienne.',
+      ),
+      tw1: () => t(
+        'tw1',
+        'Donne un nom à ton équipe : tape-le ou choisis une suggestion, puis Suivant.',
+      ),
+      tw2: () => t('tw2', 'Optionnel : décris ton équipe, ou passe cette étape.'),
+      tw3: () => t('tw3', 'Choisis la section, puis Suivant.'),
+      tw4: () => t('tw4', 'Cherche ton sport (tape « foot »), choisis-le, puis Suivant.'),
+      tw5: () => t('tw5', 'La catégorie d’âge de l’équipe, puis Suivant.'),
+      tw6: () => t('tw6', 'Le niveau de compétition. Tu peux aussi continuer sans.'),
+      tw7: () => t('tw7', 'Coche-toi comme coach de l’équipe, puis Suivant.'),
+      tw8: () => t('tw8', 'Tout est bon ? Crée ton équipe.'),
+    },
     when: (/** @type {any} */ ctx) => !hadTeam(ctx),
   }),
-  ...(/** @type {Array<[string, string, () => string]>} */ ([
-    ['tw2', RouteNames.TeamWizardSection, () => t(
-      'tw2',
-      'Optionnel : décris ton équipe, ou passe cette étape.',
-    )],
-    ['tw3', RouteNames.TeamWizardActivity, () => t(
-      'tw3',
-      'Choisis la section, puis Suivant.',
-    )],
-    ['tw4', RouteNames.TeamWizardCategory, () => t(
-      'tw4',
-      'Cherche ton sport (tape « foot »), choisis-le, puis Suivant.',
-    )],
-    ['tw5', RouteNames.TeamWizardLevel, () => t(
-      'tw5',
-      'La catégorie d’âge de l’équipe, puis Suivant.',
-    )],
-    ['tw6', RouteNames.TeamWizardTrainers, () => t(
-      'tw6',
-      'Le niveau de compétition. Tu peux aussi continuer sans.',
-    )],
-    ['tw7', RouteNames.TeamWizardRecap, () => t(
-      'tw7',
-      'Coche-toi comme coach de l’équipe, puis Suivant.',
-    )],
-  ])).map(([id, nextRoute, text]) => extendStep(
-    wizardStep(id, 'coach_m1', nextRoute, 'tw1', text),
-    { when: (/** @type {any} */ ctx) => !hadTeam(ctx) },
-  )),
-  {
-    // L'alerte « Félicitations » n'a pas de rappel : la mission se valide au
-    // succès serveur de la création (`team.created`).
-    advanceOn: { key: 'team.created', type: 'action' },
-    bubblePlacement: 'top',
-    bubbleSlot: true,
-    completesMission: true,
-    id: 'tw8',
-    missionId: 'coach_m1',
-    resumeFrom: 'tw1',
-    targets: ['teamWizard.next'],
-    get text() { return t('tw8', 'Tout est bon ? Crée ton équipe.'); },
-    when: (/** @type {any} */ ctx) => !hadTeam(ctx),
-  },
 
   // ── M2 · Inviter tes joueur·se·s ─────────────────────────────────────────
   {
@@ -1295,10 +1185,64 @@ export const COACH_GUIDE = Object.freeze({
    * @returns {{ goto: string; missionId: string } | null} Mission à valider, étape qui suit.
    */
   liveMission: (ctx) => (hadTeam(ctx) || trainsTeamInClub(ctx?.userData)
-    ? { goto: 'm2-card', missionId: 'coach_m1' }
+    ? { flags: { hadTeam: true }, goto: 'm2-card', missionId: 'coach_m1' }
     : null),
+  // Mon compte : la rangée du guide.
+  accountLabelKey: 'profile.actions.coachGuide',
+  bonusFromMission: 'coach_b1',
+  /**
+   * Bilan de la clôture : ce qui existe pour de vrai grâce au guide.
+   * @param {(key: string, ...args: any[]) => string} text - `t` de l'écran.
+   * @param {{ created?: any; flags?: any }} state - Ce qui a été créé, et la situation au départ.
+   * @returns {string[]} Lignes.
+   */
+  closingLines: (text, { created, flags }) => [
+    created?.['club.joined']
+      ? text('tourCatalog.coach.close.club', '{{club}} rejoint', {
+        club: created['club.joined'].clubName
+          || text('tourCatalog.coach.close.yourClub', 'Ton club'),
+        ...SANS_ECHAPPEMENT,
+      })
+      : null,
+    created?.['team.created']
+      ? text('tourCatalog.coach.close.team', '{{team}} créée', {
+        team: created['team.created'].teamName
+          || text('tourCatalog.coach.close.yourTeam', 'Ton équipe'),
+        ...SANS_ECHAPPEMENT,
+      })
+      // n° 29 : l'équipe d'un coach qui l'avait déjà, ou reconnue dans la question de M1.
+      : ((flags?.hadTeam || created?.['team.trained'])
+        && text('tourCatalog.coach.close.teamReady', 'Ton équipe, déjà prête')) || null,
+    created?.['team.invite.shared']
+      ? text('tourCatalog.coach.close.link', "Lien d'invitation partagé")
+      : null,
+    created?.['team.invite.sent']
+      ? text('tourCatalog.coach.close.invited', 'Invitation envoyée')
+      : null,
+    created?.['event.created']
+      // n° 29 : pluriel d'i18next (`sessions_one` / `sessions_other`), plus de « (s) ».
+      ? text('tourCatalog.coach.close.sessions', {
+        count: Number(created['event.created'].occurrences) || 1,
+        defaultValue_one: '{{count}} séance programmée',
+        defaultValue_other: '{{count}} séances programmées',
+      })
+      : null,
+    created?.['friendlyMatch.ad.published']
+      ? text('tourCatalog.coach.close.friendly', 'Annonce de match amical publiée')
+      : null,
+  ].filter(Boolean),
+  // Le match d'exemple de B2 : la clôture dit qu'il n'a rien laissé.
+  exampleMissionId: 'coach_b2',
+  gaugeLabelKey: 'tourGuide.ringLabel',
+  gaugeSpokenKey: 'tourGuide.teamReady',
+  isOfferDate: isGuideOfferDate,
   get kicker() { return t('kicker', 'Guide entraîneur·e'); },
+  // Le palier dit « prêt » seulement si cette mission est faite.
+  keyMissionId: 'coach_m1',
   missions: MISSIONS,
+  offerMessageKey: 'tourGuide.offer.message',
+  // Retenus même avant le départ : le guide part souvent juste après (Bienvenue).
+  preStartSignals: ['team.created'],
   steps: [...STEPS, ...REVIEW_STEPS],
   version: 3,
 });

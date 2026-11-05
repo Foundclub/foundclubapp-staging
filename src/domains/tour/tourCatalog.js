@@ -309,3 +309,16 @@ export const TOUR_PROFILES = Object.freeze({
 export const getTourProfile = (profileKey) => (
   TOUR_PROFILES[/** @type {keyof typeof TOUR_PROFILES} */ (String(profileKey || ''))] || null
 );
+
+/**
+ * Le guide à missions d'un rôle. Le dirigeant y bascule quand son profil passe en `version: 3`.
+ * @param {string | null | undefined} roleKey - Rôle (`getUserRoleKey`).
+ * @returns {string | null} Clé du profil, ou rien.
+ */
+export const getGuideKeyForRole = (roleKey) => (
+  /** @type {any} */ (getTourProfile(roleKey))?.version === 3 ? String(roleKey) : null
+);
+
+// Signaux d'avant le départ que le moteur retient, tous guides confondus.
+export const GUIDE_PRE_START_SIGNALS = Object.values(TOUR_PROFILES)
+  .flatMap((/** @type {any} */ profile) => profile.preStartSignals || []);

@@ -25470,6 +25470,7 @@ export default {
     scrollDown: 'Fais défiler vers le bas.',
     scrollUp: 'Fais défiler vers le haut.',
     skipBonus: 'Passer ce bonus',
+    skipPart: 'Passer cette partie',
     teamReady: 'Équipe prête {{gauge}} %',
   },
   tournamentCompetitionComponents: {

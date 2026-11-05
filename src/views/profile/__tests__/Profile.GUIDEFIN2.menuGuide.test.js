@@ -197,14 +197,14 @@ const tourDe = (etat) => ({
 });
 
 let arbre;
-const monter = async () => {
+const monter = async (role = { name: 'Coach', type: 'coach' }) => {
   mockUserData = {
     club: { documentId: 'club-1', name: 'AS Test' },
     documentId: 'coach-1',
     firstname: 'Sam',
     lastname: 'Coach',
     multisportClubs: [],
-    role: { name: 'Coach', type: 'coach' },
+    role,
   };
   await act(async () => {
     arbre = renderer.create(
@@ -247,5 +247,22 @@ describe('N10 — le menu du guide se distingue des rangées', () => {
       .map((x) => aplatirTexte(x.props.children)).join(' ');
     expect(ligne).toMatch(/qui vient/i);
     expect(ligne).toMatch(/convo/i);
+  });
+});
+
+describe('L1 — Mon compte d’un dirigeant', () => {
+  const aLaRangee = () => arbre.root.findAllByType(Text)
+    .some((x) => aplatirTexte(x.props.children) === 'Guide entraîneur·e');
+
+  it('devenu dirigeant en créant son club (« Moi ») : il retrouve son guide', async () => {
+    mockTour = tourDe({ hasGuideHistory: true });
+    await monter({ name: 'President', type: 'president' });
+    expect(aLaRangee()).toBe(true);
+  });
+
+  it('témoin : dirigeant sans guide joué, pas de rangée tant que son guide n’existe pas', async () => {
+    mockTour = tourDe({ hasGuideHistory: false });
+    await monter({ name: 'President', type: 'president' });
+    expect(aLaRangee()).toBe(false);
   });
 });

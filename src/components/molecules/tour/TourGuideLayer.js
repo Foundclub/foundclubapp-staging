@@ -16,6 +16,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
   measureTourTarget,
   measureTourTargetClipSide,
@@ -818,7 +819,12 @@ function TourGuideLayer() {
               {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
                   visible, sur la ligne du titre pour que la bulle reste basse. */}
               <View
-                accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
+                accessibilityLabel={t(
+                  /** @type {any} */ (getTourProfile(tour.profileKey || 'coach'))?.gaugeSpokenKey
+                    || 'tourGuide.teamReady',
+                  'Équipe prête {{gauge}} %',
+                  { gauge },
+                )}
                 accessible
                 style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
                 testID={__DEV__ ? 'tour.gauge' : undefined}
@@ -879,6 +885,18 @@ function TourGuideLayer() {
             </Text>
             {buttonLabel ? nextButton : null}
           </View>
+          {tour.guardMessage ? (
+            <Text
+              allowFontScaling={false}
+              style={[
+                scaledFont(Fonts.p3Bold, fontScale),
+                { color: Colors.error700, marginTop: 4 },
+              ]}
+              testID={__DEV__ ? 'tour.guard' : undefined}
+            >
+              {tour.guardMessage}
+            </Text>
+          ) : null}
           {scrollHint ? (
             <Text
               allowFontScaling={false}
@@ -889,6 +907,23 @@ function TourGuideLayer() {
             >
               {scrollHint}
             </Text>
+          ) : null}
+          {currentStep.passable && !isLost ? (
+            <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={tour.skipSubMission}
+                style={{ justifyContent: 'center', minHeight: 44 }}
+                testID={__DEV__ ? 'tour.skipPart' : undefined}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
+                >
+                  {t('tourGuide.skipPart', 'Passer cette partie')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
           {isBonus ? (
             <View style={{ alignItems: 'flex-start', marginTop: 2 }}>

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import { getTourProfile } from '@/domains/tour/tourCatalog';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -21,6 +22,8 @@ function TourOfferCard() {
 
   if (!tour.isGuideOfferable) return null;
 
+  const guideKey = tour.offerGuideKey || 'coach';
+
   return (
     <View
       style={{
@@ -39,14 +42,15 @@ function TourOfferCard() {
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
           {t(
-            'tourGuide.offer.message',
+            /** @type {any} */ (getTourProfile(guideKey))?.offerMessageKey
+              || 'tourGuide.offer.message',
             '4 missions, environ 2 min. Tu le retrouves aussi dans Mon compte › Guide '
             + 'entraîneur·e.',
           )}
         </Text>
       </View>
       <Button
-        onPress={() => tour.startTour('coach')}
+        onPress={() => tour.startTour(guideKey)}
         title={t('tourGuide.offer.start', 'Lancer le guide')}
         variant="Primary"
       />

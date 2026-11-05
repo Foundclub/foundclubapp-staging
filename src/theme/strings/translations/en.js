@@ -24412,6 +24412,7 @@ export default {
     scrollDown: 'Scroll down.',
     scrollUp: 'Scroll up.',
     skipBonus: 'Skip this bonus',
+    skipPart: 'Skip this part',
     teamReady: 'Team ready {{gauge}} %',
   },
   tournamentCompetitionComponents: {
