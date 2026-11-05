@@ -45,6 +45,7 @@ import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats
 // ligne : le reste de l ecran garde ses controles de type.
 // @ts-ignore -- resolution par suffixe de plateforme, cf. ci-dessus
 import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import {
@@ -62,6 +63,13 @@ import {
   paymentModeLabels,
 } from './licenseDesignSystem';
 
+// PAYE-LIMITE — le telephone a un filet global (`App.js:onMutationError`), le site n en a pas
+// (`web/src/main.tsx`). Ces gestes disent donc eux-memes leur refus, et font taire le filet :
+// une seule alerte sur chaque plateforme.
+const REFUS_DIT_PAR_LE_GESTE = {
+  meta: { preventToastError: true },
+  onError: (/** @type {any} */ error) => { displayErrorAlert(error); },
+};
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const usefulReminderStatuses = ['pending', 'partial', 'overdue', 'manual_review'];
 const paymentStatusLabels = {
@@ -350,11 +358,19 @@ function ClubLicenseMemberDetail({ route }) {
   const [modal, setModal] = useState(
     route?.params?.openPaymentModal ? { type: 'payment' } : null,
   );
-  const manualPaymentMutation = useLicenseMutation((payload) => addManualLicensePayment(assignmentId, payload), campaignId);
+  const manualPaymentMutation = useLicenseMutation(
+    (payload) => addManualLicensePayment(assignmentId, payload),
+    campaignId,
+    REFUS_DIT_PAR_LE_GESTE,
+  );
   const approvePaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => approveExternalLicensePayment(paymentId, payload), campaignId);
   const rejectPaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => rejectExternalLicensePayment(paymentId, payload), campaignId);
   const receiptMutation = useLicenseMutation((paymentId) => generateLicenseReceipt(paymentId), campaignId);
-  const refundMutation = useLicenseMutation(({ paymentId, ...payload }) => refundLicensePayment(paymentId, payload), campaignId);
+  const refundMutation = useLicenseMutation(
+    ({ paymentId, ...payload }) => refundLicensePayment(paymentId, payload),
+    campaignId,
+    REFUS_DIT_PAR_LE_GESTE,
+  );
   const reviewDocumentMutation = useLicenseMutation(({ submissionId, ...payload }) => reviewLicenseDocument(submissionId, payload), campaignId);
   const officialLicenseMutation = useLicenseMutation((payload) => uploadOfficialLicenseDocument(assignmentId, payload), campaignId);
   const amountMutation = useLicenseMutation((payload) => updateLicenseAssignmentAmount(assignmentId, payload), campaignId);
