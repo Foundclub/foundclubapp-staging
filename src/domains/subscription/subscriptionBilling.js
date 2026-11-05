@@ -1205,6 +1205,20 @@ export const buildClubOfferAvailability = ({
 };
 
 /**
+ * L'essai (cadeau de bienvenue compris) en cours, s'il y en a un.
+ * @param {any} subscriptionSummary - le resume d'abonnement rendu par le serveur.
+ * @returns {any} - l'abonnement d'essai actif, ou null.
+ */
+export const getActiveTrial = (subscriptionSummary) => {
+  const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+    ? subscriptionSummary.payerSubscriptionsSummary
+    : [];
+  return payerSubscriptions.find((entry) => entry?.isTrial === true
+    && ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase()))
+    || null;
+};
+
+/**
  * UPGRADE / U6 — CE QUI ARRIVE AU CADEAU DE 7 JOURS QUAND ON ACHETE.
  *
  * Constat d'Adel du 2026-09-03 (ligne 45 du suivi stores) : pendant le cadeau,
@@ -1225,11 +1239,7 @@ export const buildClubOfferAvailability = ({
  * @returns {string} - la phrase a afficher, ou ''.
  */
 export const formatSubscriptionTrialHandoverNotice = (subscriptionSummary) => {
-  const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
-    ? subscriptionSummary.payerSubscriptionsSummary
-    : [];
-  const activeTrial = payerSubscriptions.find((entry) => entry?.isTrial === true
-    && ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase()));
+  const activeTrial = getActiveTrial(subscriptionSummary);
   if (!activeTrial) return '';
 
   const endTime = new Date(String(activeTrial?.currentPeriodEnd || '')).getTime();

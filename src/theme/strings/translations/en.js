@@ -26360,8 +26360,10 @@ export default {
         bullet2: '1 free event and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
+        kickerAfterGift: 'After the 7 days',
         title: 'Start for free',
       },
+      giftSubtitle: 'Club plan free for 7 days',
       hint: "You'll find these plans anytime in Profile, under My subscription.",
       team: {
         bullet1: 'Unlimited events and matches',

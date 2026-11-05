@@ -10,6 +10,7 @@ import {
   markOnboardingComplete,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { getActiveTrial } from '@/domains/subscription/subscriptionBilling';
 import isGuideSupported from '@/domains/tour/guideSupport';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import { storage, useAppContext } from '@/store/appContext';
@@ -39,10 +40,15 @@ function Welcome({ navigation }) {
   const {
     getPostOnboardingHomeRoute,
     refetchUserData,
+    subscriptionSummary,
     userData,
     userDataError,
     userDataLoading,
   } = useAuth();
+  // Décision d'Adel « 110- A » : pendant le cadeau, l'offre Club est ouverte ; la gratuité vient
+  // après.
+  const isClubGift = String(getActiveTrial(subscriptionSummary)?.planCode || '')
+    .toLowerCase() === 'fc_trial_club';
   const { startTour } = useTour();
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionWelcome = roleKey === 'coach'
@@ -158,7 +164,9 @@ function Welcome({ navigation }) {
       fillColor: withAlpha(Colors.neutral00, 0.05),
       isReached: true,
       key: 'free',
-      kicker: t('welcome.subscription.free.kicker', "Aujourd'hui"),
+      kicker: isClubGift
+        ? t('welcome.subscription.free.kickerAfterGift', 'Après les 7 jours')
+        : t('welcome.subscription.free.kicker', "Aujourd'hui"),
       kickerColor: Colors.success200,
       title: t('welcome.subscription.free.title', 'Commence sans payer'),
     },
@@ -397,14 +405,16 @@ function Welcome({ navigation }) {
               {t('welcome.subscription.title', 'Bienvenue dans FoundClub')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t(
-                roleKey === 'president'
-                  ? 'welcome.subscription.presidentSubtitle'
-                  : 'welcome.subscription.coachSubtitle',
-                roleKey === 'president'
-                  ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
-                  : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
-              )}
+              {isClubGift
+                ? t('welcome.subscription.giftSubtitle', 'Offre Club offerte 7 jours')
+                : t(
+                  roleKey === 'president'
+                    ? 'welcome.subscription.presidentSubtitle'
+                    : 'welcome.subscription.coachSubtitle',
+                  roleKey === 'president'
+                    ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
+                    : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
+                )}
             </Text>
           </View>
           {/* La cible est ZERO defilement : le ScrollView n'est qu'un filet pour

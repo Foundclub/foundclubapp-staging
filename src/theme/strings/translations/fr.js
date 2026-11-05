@@ -28058,8 +28058,10 @@ export default {
         bullet2: '1 événement et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
+        kickerAfterGift: 'Après les 7 jours',
         title: 'Commence sans payer',
       },
+      giftSubtitle: 'Offre Club offerte 7 jours',
       hint: 'Tu retrouveras les offres à tout moment dans Profil, rubrique Mon abonnement.',
       team: {
         bullet1: 'Événements et matchs illimités',

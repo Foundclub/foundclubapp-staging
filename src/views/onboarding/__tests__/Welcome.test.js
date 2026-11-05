@@ -63,11 +63,13 @@ jest.mock('@/domains/auth/authUseCases', () => ({
   markOnboardingComplete: (/** @type {string} */ id) => mockMarkOnboardingComplete(id),
 }));
 
+const mockSubscriptionSummary = { current: /** @type {any} */ (null) };
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     getPostOnboardingHomeRoute: () => 'HomeTab',
     refetchUserData: jest.fn(),
+    subscriptionSummary: mockSubscriptionSummary.current,
     userData: { documentId: 'user-d23', role: { name: 'Entraineur' } },
     userDataError: null,
     userDataLoading: false,
@@ -404,4 +406,36 @@ describe('fr.js — les quatre phrases de bienvenue se recollent sans faute', ()
       expect(catalogue.welcome.descriptions[clef].regular).toMatch(/^ /);
     },
   );
+});
+
+// Décision d'Adel « 110- A » (05/11) : pendant le cadeau de 7 jours, la Bienvenue ne promet plus
+// « 1 équipe offerte » à un club qui a toute l'offre Club.
+describe('Bienvenue pendant le cadeau de 7 jours', () => {
+  const cadeau = (status = 'active') => ({
+    payerSubscriptionsSummary: [{
+      currentPeriodEnd: '2026-11-12T00:00:00.000Z',
+      isTrial: true,
+      planCode: 'fc_trial_club',
+      status,
+    }],
+  });
+  afterEach(() => { mockSubscriptionSummary.current = null; });
+
+  it('dirigeant, cadeau en cours : « Offre Club offerte 7 jours »', () => {
+    mockRole.current = 'president';
+    mockSubscriptionSummary.current = cadeau();
+    const lus = textes(rendre().tree).join(' | ');
+    expect(lus).toContain('Offre Club offerte 7 jours');
+    expect(lus).not.toContain('Commence gratuitement');
+    expect(lus).toContain('Après les 7 jours');
+  });
+
+  it('témoin : sans cadeau, ou cadeau fini, rien ne change', () => {
+    mockRole.current = 'president';
+    expect(textes(rendre().tree).join(' | ')).toContain('Commence gratuitement');
+    mockSubscriptionSummary.current = cadeau('expired');
+    const lus = textes(rendre().tree).join(' | ');
+    expect(lus).toContain('Commence gratuitement');
+    expect(lus).not.toContain('Offre Club offerte');
+  });
 });
