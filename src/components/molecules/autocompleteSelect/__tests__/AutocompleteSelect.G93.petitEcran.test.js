@@ -3,8 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import AutocompleteSelect from '../AutocompleteSelect';
 
-// G93 (recette r3, a20-a21) : feuille d'adresse à 360×640, clavier ouvert. Titre et pied sont
-// fixes : il ne restait que 11 px au champ et aux résultats, on tapait à l'aveugle.
+// G93 : feuille d'adresse à 360×640, clavier ouvert : le pied s'efface et revient. Ce témoin ne dit
+// rien de l'affichage réel : la feuille vide du rejeu (r4) n'a pas été reproduite (05/11).
 
 const OPTIONS = [{ label: 'Lyon', value: 'lyon' }, { label: 'Lille', value: 'lille' }];
 
