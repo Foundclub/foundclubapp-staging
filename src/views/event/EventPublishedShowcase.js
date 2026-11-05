@@ -34,7 +34,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { getEventShowcaseShareIntro } from '@/domains/visuals/eventShowcaseTemplate';
 import { isLongWait } from '@/domains/visuals/renderProgress';
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
@@ -272,6 +272,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
       // absent, et savedNotice retombe alors sur null. Rien à changer côté web.
       const result = await fn();
       setDownloadNotice(savedNotice(result?.outcome, result?.messageCopied));
+      if (key === 'share' && subjectType === 'club') emitGuidanceAction('club.poster.shared');
     } catch (e) {
       setDownloadError(downloadErrorText(e));
     } finally {

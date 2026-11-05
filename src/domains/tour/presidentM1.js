@@ -509,7 +509,11 @@ const PART_POSTER = [
   {
     // ponytail: si l'affiche ne se fabrique pas, le bouton reste grisé et la bulle attend ;
     // sortie : « Réessayer » de l'écran, ou la pause du guide.
-    advanceOn: { key: 'poster.share.returned', type: 'interaction' },
+    // Partagée : le bilan le dira ; revenue sans partager : la bulle suivante, sans bilan.
+    advanceOn: [
+      { key: 'club.poster.shared', type: 'action' },
+      { key: 'poster.share.returned', type: 'interaction' },
+    ],
     bubblePlacement: 'top',
     id: 'm1-pshare',
     missionId: MISSION_ID,
