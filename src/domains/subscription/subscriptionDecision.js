@@ -2052,3 +2052,31 @@ export const getSubscriptionEntryPointLock = ({
     scope: /** @type {'team'} */ ('team'),
   };
 };
+
+/**
+ * QG3 (Adel, 05/11/2026) : la carte « Ajouter un événement » ouvre aussi les matchs, qui ont leur propre
+ * compteur. Elle reste donc ouverte tant qu'il reste un match offert ; le tunnel dit dès son entrée que les
+ * événements sont épuisés (bandeau de `EventWizardType`).
+ * @param {object} input
+ * @param {boolean} [input.eventOnly] - Le geste ne peut créer qu'un événement (M3 du guide Entraîneur).
+ * @param {any[]} input.freeUsageSummary - Compteurs gratuits de `GET /app/bootstrap`.
+ * @param {string} [input.roleKey] - Clé de rôle rendue par `getUserRoleKey`.
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [input.subscriptionAccessLevel]
+ * @returns {{ badgeLabel: string; decision: any; hint: string; scope: 'team' } | null} Le verrou.
+ */
+export const getAddEventEntryLock = ({
+  eventOnly = false,
+  freeUsageSummary,
+  roleKey,
+  subscriptionAccessLevel = 'FREE',
+}) => {
+  const lock = getSubscriptionEntryPointLock({
+    freeUsageSummary,
+    quotaType: 'EVENT_PUBLISH',
+    roleKey,
+    subscriptionAccessLevel,
+  });
+  if (!lock || eventOnly) return lock;
+  const matchQuota = getSubscriptionQuotaItem(freeUsageSummary, 'MATCH_PUBLISH', subscriptionAccessLevel);
+  return (matchQuota?.remaining ?? 0) > 0 ? null : lock;
+};
