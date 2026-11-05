@@ -15,6 +15,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
+import { navigate as navigateRoot } from '@/navigation/navigationService';
+
 import { useTour } from '@/context/useTour';
 
 // T3-GUIDE-SITE : sur un grand écran, une colonne lisible plutôt que toute la largeur.
@@ -29,7 +31,8 @@ const FULL_SCREEN_MAX_WIDTH = 560;
  */
 function GaugeRing({ size, value }) {
   const { profileKey } = useTour();
-  const gaugeLabelKey = /** @type {any} */ (getTourProfile(profileKey || 'coach'))?.gaugeLabelKey;
+  const { gaugeLabel, gaugeLabelKey } = /** @type {any} */ (getTourProfile(profileKey || 'coach'))
+    || {};
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
   const stroke = 8;
@@ -69,7 +72,7 @@ function GaugeRing({ size, value }) {
         {`${value} %`}
       </Text>
       <Text style={[Fonts.p4Bold, { color: Colors.neutral200 }]}>
-        {t(gaugeLabelKey || 'tourGuide.ringLabel', 'Équipe prête')}
+        {t(gaugeLabelKey || 'tourGuide.ringLabel', String(gaugeLabel || 'Équipe prête'))}
       </Text>
     </View>
   );
@@ -144,7 +147,7 @@ function MissionRow({
  */
 function TourFullScreen({ kind }) {
   const { Colors, Fonts } = useTheme();
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
@@ -153,6 +156,15 @@ function TourFullScreen({ kind }) {
   // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
+  // Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
+  const t = /** @type {any} */ ((
+    /** @type {string} */ key,
+    /** @type {any} */ fallback,
+    /** @type {any} */ values,
+  ) => {
+    const own = guide?.fullScreenTexts?.[key.replace(`tourCatalog.${guideKey}.`, '')];
+    return translate(key, own ?? fallback, values);
+  });
 
   const essentials = missions.filter((/** @type {any} */ mission) => mission.locked);
   const bonuses = missions.filter((/** @type {any} */ mission) => !mission.locked);
@@ -165,7 +177,10 @@ function TourFullScreen({ kind }) {
   const doneCount = essentials
     .filter((/** @type {any} */ mission) => missionStatus?.[mission.id] === 'done').length;
   let milestoneTitle = t(`tourCatalog.${guideKey}.palier.title`, 'Ton équipe est prête !');
-  if (missionStatus?.[guide?.keyMissionId] !== 'done') {
+  const isReady = guide?.readyNeedsAllMissions
+    ? doneCount === essentials.length
+    : missionStatus?.[guide?.keyMissionId] === 'done';
+  if (!isReady) {
     milestoneTitle = doneCount > 0
       ? t(`tourCatalog.${guideKey}.palier.titlePartial`, 'Une partie est faite')
       : t(`tourCatalog.${guideKey}.palier.titleNone`, 'Aucune mission faite pour l’instant');
@@ -201,7 +216,7 @@ function TourFullScreen({ kind }) {
           </Text>
         </View>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, index) => {
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
             const isDone = missionStatus?.[mission.id] === 'done';
             return (
               <MissionRow
@@ -284,7 +299,7 @@ function TourFullScreen({ kind }) {
             )}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, index) => (
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => (
             <MissionRow
               done={missionStatus?.[mission.id] !== 'blocked'}
               key={mission.id}
@@ -429,12 +444,29 @@ function TourFullScreen({ kind }) {
         </Text>
       </>
     );
+    const offerRoute = guide?.closingOfferRoute?.(flags);
     cta = (
-      <Button
-        onPress={() => finishGuide()}
-        title={t(`tourCatalog.${guideKey}.close.cta`, "Aller à l'accueil")}
-        variant="Primary"
-      />
+      <>
+        <Button
+          onPress={() => finishGuide()}
+          title={t(`tourCatalog.${guideKey}.close.cta`, "Aller à l'accueil")}
+          variant="Primary"
+        />
+        {offerRoute ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              finishGuide();
+              navigateRoot(offerRoute);
+            }}
+            style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
+              {t(`tourCatalog.${guideKey}.close.offer`, 'Voir l’offre')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </>
     );
   }
 

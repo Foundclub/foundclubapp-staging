@@ -496,7 +496,7 @@ export function TourProvider({ children }) {
     persist(nextState);
     goToStep(nextState, nextState.stepIndex);
     return true;
-  }, [enterGuideStep, goToStep, persist, userData, userId]);
+  }, [enterGuideStep, goToStep, persist, subscriptionAccessLevel, userData, userId]);
 
   // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : « Recommencer à zéro ».
   // Seule la PROGRESSION du guide repart de zéro (progression, bonus gardés, marque

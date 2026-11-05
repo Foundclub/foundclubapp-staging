@@ -8,4 +8,5 @@ export const M1_MISSION = {
   get title() { return t('missions.m1', 'Gérer ton club'); },
 };
 
+/** @type {any[]} */
 export const M1_STEPS = [];

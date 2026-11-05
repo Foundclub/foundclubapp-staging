@@ -12,8 +12,8 @@ export const PRESIDENT_GUIDE_SETTINGS = Object.freeze({
   // Date de la sortie, à poser le jour du départ ; sans date, aucune proposition à l'accueil.
   offerSince: null,
   // Décision 4 : la partie ② (partenaire) se passe. Décision 5 : M2 aussi.
-  partnerPassable: true,
   coachPassable: true,
+  partnerPassable: true,
   // Décision 8, A : B1 et B4 s'arrêtent au récap, puis une bulle.
   stopBonusAtRecap: true,
 });
