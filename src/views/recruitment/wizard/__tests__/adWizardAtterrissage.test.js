@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import AdWizardRecap from '../AdWizardRecap';
 
 // Filet R07 point 4 (E6 — ce fichier n'avait AUCUN test) — OU L'ON ATTERRIT
@@ -225,7 +227,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('LE TEMOIN : une fois publiee, c est l annonce qui est au premier plan', async () => {
     monterLeRecap();
-    await publier();
+    await publierLeRecap();
 
     const routes = pileDemandee();
     const dessus = routes[routes.length - 1];
@@ -239,7 +241,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('🔒 LE VERROU : le tunnel a QUITTE la pile, le retour n y ramene pas', async () => {
     monterLeRecap();
-    await publier();
+    await publierLeRecap();
 
     // C'est l'acquis D81. Sans ca, un seul « Retour » reposait le doigt sur
     // « Publier l'annonce » d'une annonce DEJA publiee — et on la publiait
@@ -250,7 +252,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('et ce retour mene a l accueil, jamais dans le vide', async () => {
     monterLeRecap();
-    await publier();
+    await publierLeRecap();
 
     // L'accueil reste SOUS l'annonce : la fleche retour a donc une
     // destination. Une pile reduite a la seule annonce laisserait un ecran
@@ -261,7 +263,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
   it('plusieurs postes : on atterrit sur la premiere annonce, jamais sur l accueil', async () => {
     mockEtatCourant = ETAT_DEUX_POSTES;
     monterLeRecap();
-    await publier();
+    await publierLeRecap();
 
     // Un brief a plusieurs postes cree UNE annonce PAR poste. Il n'existe pas
     // d'ecran « mes annonces » dans `routeNames.js` : on montre la premiere,
@@ -276,16 +278,67 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
     // comportement a un ecran vide.
     mockReponseCreation = { pasDIdentifiant: true };
     monterLeRecap();
-    await publier();
+    await publierLeRecap();
 
     expect(nomsDeLaPile()).toEqual(['HomeTab']);
   });
 
   it('sans parent, on retombe sur l ANCIEN comportement plutot que sur rien', async () => {
     monterLeRecap({ avecParent: false });
-    await publier();
+    await publierLeRecap();
 
     // Dernier recours : mieux vaut l'accueil qu'un ecran fige.
     expect(dernierRecours).toHaveBeenCalled();
+  });
+});
+
+/** Étape du guide lue par l'écran. */
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, B4 : « Publier » ne part pas pendant le bonus', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  const publierLeRecap = async () => {
+    await act(async () => {
+      await mockProprietesEtape[mockProprietesEtape.length - 1].onNext();
+    });
+  };
+
+  it('à l écran du bonus : 0 requête, et le signal d exemple', async () => {
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'active' };
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).not.toHaveBeenCalled();
+    expect(resetRacine).not.toHaveBeenCalled();
+    expect(signaux.map((signal) => signal.key)).toContain('ad.publish.example');
+  });
+
+  it('guide en pause : la vraie publication, comme hors guide', async () => {
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'paused' };
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).toHaveBeenCalled();
+    expect(signaux.map((signal) => signal.key)).not.toContain('ad.publish.example');
+  });
+
+  it('hors guide : la vraie publication', async () => {
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).toHaveBeenCalled();
   });
 });
