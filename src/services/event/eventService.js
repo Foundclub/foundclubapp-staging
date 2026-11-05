@@ -413,19 +413,22 @@ export const createEventSeries = async (payloads = [], options = {}) => {
       teamId: first?.team || null,
     });
   }
-  emitGuidanceAction('event.created', {
-    // Guide Entraîneur (GUIDE-FINITIONS-2 N11) : chaque date posée ; B1 vise la prochaine.
-    dates: (Array.isArray(reponse?.data) ? reponse.data : [reponse?.data])
-      .filter((/** @type {any} */ row) => row?.documentId)
-      .map((/** @type {any} */ row) => ({
+  const seancesPosees = (Array.isArray(reponse?.data) ? reponse.data : [reponse?.data])
+    .filter((/** @type {any} */ row) => row?.documentId);
+  if (seancesPosees.length) {
+    emitGuidanceAction('event.created', {
+      // Guide Entraîneur (GUIDE-FINITIONS-2 N11) : chaque date posée ; B1 vise la prochaine.
+      dates: seancesPosees.map((/** @type {any} */ row) => ({
         date: row.date || null, documentId: row.documentId, endDate: row.endDate || null,
       })),
-    // Guide Entraîneur (TUTOE, B1) : la 1re séance posée, visée dans le planning.
-    documentId: (Array.isArray(reponse?.data) ? reponse.data[0] : reponse?.data)?.documentId || null,
-    eventType: first?.type || null,
-    // Guide Entraîneur (TUTOE) : la clôture compte les séances programmées.
-    occurrences: payloads.length,
-  });
+      // Guide Entraîneur (TUTOE, B1) : la 1re séance posée, visée dans le planning.
+      documentId: seancesPosees[0].documentId,
+      eventType: first?.type || null,
+      // Guide Entraîneur (TUTOE) : la clôture compte les séances POSÉES ; un compte gratuit n'a que
+      // ses dates offertes, le serveur refuse les autres (M3 GRATUIT, 05/11).
+      occurrences: seancesPosees.length,
+    });
+  }
 
   if (Array.isArray(reponse?.data) && reponse?.meta?.series) {
     const instant = (/** @type {any} */ value) => new Date(value).getTime();

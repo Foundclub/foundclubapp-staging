@@ -155,6 +155,9 @@ const canAskTeamChoice = (ctx) => !hadTeam(ctx) && !hasTeamNow(ctx) && hasClubNo
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
   + 'une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.');
+// M3 GRATUIT (05/11) : une série d'un compte gratuit ne pose que ses dates offertes.
+const isFreePlan = (/** @type {any} */ ctx) => Boolean(ctx?.flags?.isFreePlan);
+const hasPaidPlan = (/** @type {any} */ ctx) => !isFreePlan(ctx);
 const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déjà tous ses événements : '
   + 'un nouvel événement demande l’offre Équipe. Rien n’a été créé.');
 
@@ -693,6 +696,23 @@ const STEPS = [
     get text() { return t('m3-place-4', 'Choisis ton lieu, puis Suivant.'); },
   },
   {
+    // Sans offre : ni invitation à répéter, ni bulle par zone de la feuille « Répéter ».
+    advanceOn: { key: RouteNames.EventWizardAccess, type: 'route' },
+    bubblePlacement: 'top',
+    id: 'm3-when-free',
+    missionId: 'coach_m3',
+    resumeFrom: 'm3-type',
+    targets: ['eventWizard.when', 'teamWizard.next'],
+    get text() {
+      return t(
+        'm3-when-free',
+        'Touche la date et les heures, puis Suivant. Répéter chaque semaine demande l’offre Équipe.',
+      );
+    },
+    veil: false,
+    when: isFreePlan,
+  },
+  {
     // Sélecteurs de date et feuille « Répéter » : rien n'est bloqué (voile coupé).
     advanceOn: { key: RouteNames.EventWizardAccess, type: 'route' },
     bubblePlacement: 'top',
@@ -723,6 +743,7 @@ const STEPS = [
       ],
     }],
     veil: false,
+    when: hasPaidPlan,
   },
   wizardStep('m3-access', 'coach_m3', RouteNames.EventWizardDescription, 'm3-type', () => t(
     'm3-access',
@@ -732,6 +753,17 @@ const STEPS = [
     'm3-desc',
     'Écris une consigne pour ton équipe (ex. : rendez-vous 15 min avant). Sinon, passe.',
   )),
+  {
+    advanceOn: { key: 'event.created', type: 'action' },
+    bubblePlacement: 'top',
+    id: 'm3-create-free',
+    listScrolls: true,
+    missionId: 'coach_m3',
+    resumeFrom: 'm3-type',
+    targets: ['eventWizard.occurrences', 'teamWizard.next'],
+    get text() { return t('m3-create-free', 'Vérifie le récap, puis crée ta séance !'); },
+    when: isFreePlan,
+  },
   {
     advanceOn: { key: 'event.created', type: 'action' },
     bubblePlacement: 'top',
@@ -748,6 +780,7 @@ const STEPS = [
     },
     // GUIDE-STORES : un récap à vérifier doit pouvoir défiler sous le voile.
     listScrolls: true,
+    when: hasPaidPlan,
   },
   {
     bubblePlacement: 'top',
@@ -1164,14 +1197,16 @@ export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
    * doit pas faire sauter la suite de la branche « sans club »).
-   * @param {{ created?: Record<string, any>; userData: any }} context - Personne connectée, et ce
+   * @param {{ created?: Record<string, any>; subscriptionAccessLevel?: string; userData: any }}
+   *   context - Personne connectée, son niveau d'offre, et ce
    *   qu'elle vient de créer (profil pas encore relu, FIN-GUIDE point 2).
-   * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean; joinPending: boolean }}
-   *   Drapeaux.
+   * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean; isFreePlan: boolean;
+   *   joinPending: boolean }} Drapeaux.
    */
-  buildFlags: ({ created, userData }) => ({
+  buildFlags: ({ created, subscriptionAccessLevel, userData }) => ({
     firstName: String(userData?.firstname || userData?.firstName || ''),
     hadClub: Boolean(userData?.club?.documentId),
+    isFreePlan: subscriptionAccessLevel === 'FREE',
     // n° 20 : l'ouverture ne dit pas « trouve ton club » à qui attend déjà le sien.
     joinPending: isJoinPending({ userData }),
     // Seules les équipes qu'il entraîne (décision du chef, 27/10), dans son club courant.
