@@ -26,7 +26,7 @@ export const teamHubTarget = {
   routeName: RouteNames.HomeTab,
 };
 
-// La fiche du club (« Gérer mon club »), son hub sans section. `pop` : on y revient, on n'empile pas.
+// La fiche du club (« Gérer mon club »), son hub sans section. `pop` : on y revient sans empiler.
 export const clubHubTarget = {
   params: (/** @type {any} */ context) => ({ clubId: context?.userData?.club?.documentId }),
   pop: true,

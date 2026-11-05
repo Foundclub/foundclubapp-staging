@@ -69,8 +69,8 @@ jest.mock('@/domains/tour/tourCatalog', () => {
     getGuideKeyForRole: (role) => (
       role === 'president' ? 'president' : actual.getGuideKeyForRole(role)
     ),
-    GUIDE_PRE_START_SIGNALS: [...actual.GUIDE_PRE_START_SIGNALS, 'club.created'],
     getTourProfile: (key) => (key === 'president' ? guide : actual.getTourProfile(key)),
+    GUIDE_PRE_START_SIGNALS: [...actual.GUIDE_PRE_START_SIGNALS, 'club.created'],
   };
 });
 

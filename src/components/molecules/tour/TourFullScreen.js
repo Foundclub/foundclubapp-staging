@@ -157,14 +157,14 @@ function TourFullScreen({ kind }) {
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
   // Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
-  const t = /** @type {any} */ ((
+  const t = (
     /** @type {string} */ key,
     /** @type {any} */ fallback,
-    /** @type {any} */ values,
+    /** @type {any} */ values = undefined,
   ) => {
     const own = guide?.fullScreenTexts?.[key.replace(`tourCatalog.${guideKey}.`, '')];
-    return translate(key, own ?? fallback, values);
-  });
+    return /** @type {any} */ (translate)(key, own ?? fallback, values);
+  };
 
   const essentials = missions.filter((/** @type {any} */ mission) => mission.locked);
   const bonuses = missions.filter((/** @type {any} */ mission) => !mission.locked);

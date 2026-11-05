@@ -1,5 +1,5 @@
 import { clubHubTarget, homeTarget } from '@/domains/tour/guideCommon';
-import PRESIDENT_GUIDE_SETTINGS from '@/domains/tour/presidentGuideSettings';
+import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 import t from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -127,10 +127,10 @@ const PART_INFOS = [
 
 const PART_PARTNERS = [
   {
-    get nextLabel() { return t('next', 'Suivant'); },
     id: 'm1-partners-visit',
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
+    get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'm1-partners-visit',
     targets: ['club.m.partners'],
     get text() {
@@ -205,10 +205,10 @@ const PART_PARTNERS = [
 
 const PART_FACILITIES = [
   {
-    get nextLabel() { return t('next', 'Suivant'); },
     id: 'm1-fac-visit',
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
+    get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'm1-fac-visit',
     targets: ['club.m.facilities'],
     get text() {

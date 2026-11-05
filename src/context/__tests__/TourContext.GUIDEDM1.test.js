@@ -27,7 +27,7 @@ jest.mock('@/navigation/navigationService', () => ({
 jest.mock('@/domains/tour/guideSupport', () => ({ __esModule: true, default: () => true }));
 jest.mock('@/domains/tour/presidentGuideSettings', () => ({
   __esModule: true,
-  default: {
+  PRESIDENT_GUIDE_SETTINGS: {
     enabled: true,
     offerSince: null,
     partnerPassable: true,
@@ -269,7 +269,8 @@ describe('le catalogue de M1 ne promet rien que le code n’ait', () => {
   it('chaque ancre de ①②③ est posée dans un écran', () => {
     const anchors = M1.flatMap((step) => step.targets || [])
       .filter((id) => !id.startsWith('home.card.') && !id.startsWith('planning.')
-        && !id.startsWith('poster.') && !id.startsWith('facility.plan') && !id.startsWith('club.poster'));
+        && !id.startsWith('poster.') && !id.startsWith('facility.plan')
+        && !id.startsWith('club.poster'));
     expect(anchors.length).toBeGreaterThan(15);
     anchors.forEach((id) => expect([id, SOURCES.includes(`"${id}"`)]).toEqual([id, true]));
   });
