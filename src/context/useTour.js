@@ -37,6 +37,7 @@ export const useTour = () => useContext(TourContext) || {
   profileKey: null,
   restartTour: () => false,
   resumeTour: () => {},
+  returnToGuide: () => {},
   reward: null,
   skipBlockedMission: () => {},
   skipMission: () => {},

@@ -33,11 +33,13 @@ import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   bubbleRoom,
   clipAboveDock,
+  clipBelowHeader,
   compactBubbleFits,
   computeBlockers,
   dockBarOf,
   headerBottomOf,
   isOnScreen,
+  isUnderHeader,
   placeBubble,
   stableHeight,
   toAbsoluteStyle,
@@ -86,6 +88,8 @@ const VARIANT_WAIT_MS = 2000;
 const MAX_FONT_SCALE = 1.3;
 // Toucher minimal (accessibilité) : croix et bouton de la bulle.
 const MIN_TOUCH = 44;
+// G93 : au-delà, l'écran affiché n'est pas un passage : le guide dit qu'on l'a quitté.
+const LOST_WAIT_MS = 1500;
 // Signal d'une liste de choix ouverte (AutocompleteSelect) : la bulle se retire.
 const SELECT_SHEET_ID = 'select.sheet';
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
@@ -94,6 +98,8 @@ const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
 const HEADER_IDS = ['header.back', 'screen.header'];
+// G93 : cibles posées DANS l'en-tête fixe ; les autres, sous son bas, sont passées dessous.
+const IN_HEADER_IDS = [...HEADER_IDS, 'team.more'];
 // GUIDE-FINITIONS-3 R2-2 : place réservée par l'écran sous son titre (TourBubbleSlot).
 const SLOT_ID = 'tour.bubbleSlot';
 // FIN-GUIDE, point 3 : la liste d'un tunnel, qui doit rester à portée du doigt (petit écran).
@@ -323,12 +329,27 @@ function TourGuideLayer() {
   const variant = sheetBubble
     ? { targets: [sheetBubble[0]], text: sheetBubble[1]() }
     : resolved;
+  // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
+  // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
+  // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
+  const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
+    && !variant.targets.some((id) => rects[id]));
+  // G93 : une sortie par la flèche laissait le guide actif et invisible, donc sans bulle ni
+  // pastille. Le temps de passer d'un écran à l'autre, rien ; ensuite la bulle le dit.
+  const [isStaleLong, setIsStaleLong] = useState(false);
+  useEffect(() => {
+    setIsStaleLong(false);
+    if (!isStale) return undefined;
+    const timer = setTimeout(() => setIsStaleLong(true), LOST_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [currentStep?.id, isStale]);
+  const isLost = isStale && isStaleLong;
   const bubbleTexts = !sheetGuide && Array.isArray(currentStep?.bubbles)
     ? currentStep.bubbles
     : null;
-  const text = bubbleTexts
-    ? bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]()
-    : variant.text;
+  let text = variant.text;
+  if (isLost) text = t('tourGuide.lost', 'Tu as quitté le guide ici. Reprends quand tu veux.');
+  else if (bubbleTexts) text = bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]();
 
   useEffect(() => { setFitScale(MAX_FONT_SCALE); }, [text]);
 
@@ -356,11 +377,15 @@ function TourGuideLayer() {
 
   const dockRects = DOCK_IDS.map((id) => rects[id]).filter(Boolean);
   const dock = dockBarOf(dockRects, height);
+  const fixedHeaderBottom = headerBottomOf(HEADER_IDS.map((id) => rects[id] || null), height);
+  const scrollsUnderHeader = (/** @type {string} */ id) => !DOCK_IDS.includes(id)
+    && !IN_HEADER_IDS.includes(id);
   /** @type {Record<string, any>} */
-  const visibleRects = Object.fromEntries(variant.targets.map((id) => [
-    id,
-    rects[id] && !DOCK_IDS.includes(id) ? clipAboveDock(rects[id], dock) : rects[id],
-  ]));
+  const visibleRects = Object.fromEntries(variant.targets.map((id) => {
+    if (!rects[id] || DOCK_IDS.includes(id)) return [id, rects[id]];
+    const below = scrollsUnderHeader(id) ? clipBelowHeader(rects[id], fixedHeaderBottom) : rects[id];
+    return [id, below && clipAboveDock(below, dock)];
+  }));
   const measuredTargets = variant.targets
     // La barre d'onglets est fixe : seule une cible de contenu doit montrer un toucher entier.
     .filter((id) => visibleRects[id] && isOnScreen(
@@ -395,17 +420,12 @@ function TourGuideLayer() {
       || visibleRects[id].height < rects[id].height - 1
       || rects[id].y + rects[id].height > height - 2
     ));
-  // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
-  // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
-  // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
-  const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
-    && !variant.targets.some((id) => rects[id]));
   // N9 : aucune ancre de l'étape ni de ses variantes encore mesurée.
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
   // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
-  const isHidden = isStale || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
+  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
@@ -418,9 +438,12 @@ function TourGuideLayer() {
   const clipSide = (!primary || isTargetCut) && !sheetGuide
     ? variant.targets.map((id) => clipSides[id]).find(Boolean)
     : null;
+  const isCutByHeader = (!primary || isTargetCut) && !sheetGuide
+    && variant.targets.some((id) => rects[id] && scrollsUnderHeader(id)
+      && isUnderHeader(rects[id], fixedHeaderBottom));
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
-  if (clipSide === 'above' || (!clipSide && offTarget && offTarget.y < 0)) {
+  if (clipSide === 'above' || isCutByHeader || (!clipSide && offTarget && offTarget.y < 0)) {
     scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
   } else if (clipSide || isTargetCut
     || (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2)) {
@@ -531,9 +554,11 @@ function TourGuideLayer() {
     && sheetIndex < sheetGuide.bubbles.length - 1;
   const hasMoreBubbles = hasMoreSheetBubbles
     || (Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1);
-  const buttonLabel = hasMoreBubbles
+  const canReturn = Boolean(!tour.isReview && (currentStep.resumeFrom || currentStep.navTarget));
+  let buttonLabel = hasMoreBubbles
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
+  if (isLost) buttonLabel = canReturn ? t('tourGuide.lostResume', 'Reprendre') : null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
   const fontScale = isCompact
     ? 1
@@ -558,7 +583,7 @@ function TourGuideLayer() {
   const nextButton = (
     <TouchableOpacity
       accessibilityRole="button"
-      onPress={() => {
+      onPress={isLost ? tour.returnToGuide : () => {
         if (hasMoreSheetBubbles) setSheetIndex((value) => value + 1);
         else if (hasMoreBubbles) setSubIndex((value) => value + 1);
         else tour.completeCurrentStep();

@@ -194,6 +194,8 @@ const canAskTeamChoice = (ctx) => !hadTeam(ctx) && !hasTeamNow(ctx) && hasClubNo
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
   + 'une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.');
+const facilityPlan = () => t('refusal.facilityPlan', 'Créer une installation demande l’offre Club : '
+  + 'rien n’a été créé. Reviens en arrière et choisis « Extérieur » pour ta séance.');
 const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déjà tous ses événements : '
   + 'un nouvel événement demande l’offre Équipe. Rien n’a été créé.');
 
@@ -238,6 +240,8 @@ const MISSIONS = [
     needs: ['coach_m1'],
     refusals: {
       get 'paywall.event-limit'() { return eventQuota(); },
+      // G93 : le dirigeant en offre gratuite, au bout du formulaire d'installation.
+      get 'paywall.facility-manage-required'() { return facilityPlan(); },
       get 'paywall.match-limit'() { return eventQuota(); },
     },
     get title() { return t('missions.m3', "Programmer l'entraînement de la semaine"); },
@@ -776,6 +780,9 @@ const STEPS = [
     subGuides: [{
       anchor: 'facility.name',
       bubbles: [
+        // G93 : le refus n'arrive qu'à « Créer » ; on prévient avant de faire remplir.
+        ['facility.name', () => t('m3-fac-0', 'Une installation demande l’offre Club. Sans elle, '
+          + 'reviens en arrière et choisis « Extérieur ».')],
         ['facility.name', () => t('m3-fac-1', 'Donne un nom à l’installation et choisis son type '
           + '(obligatoire).')],
         ['facility.address', () => t('m3-fac-2', 'L’adresse exacte : tes joueur·se·s pourront '

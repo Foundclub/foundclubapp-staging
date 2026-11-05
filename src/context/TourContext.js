@@ -684,6 +684,24 @@ export function TourProvider({ children }) {
     goToStep(nextState, nextState.stepIndex);
   }, [goToStep, persist, userData]);
 
+  // G93 : l'écran de l'étape a été quitté (flèche Retour) ; la bulle propose d'y revenir. L'étape
+  // repart de son point de reprise, le seul dont on sait qu'il se joue depuis n'importe quel écran.
+  const returnToGuide = useCallback(() => {
+    const { current } = tourStateRef;
+    const profile = getTourProfile(current?.profileKey);
+    if (!current || current.status !== 'active' || current.review || !isGuideProfile(profile)) {
+      return;
+    }
+    const step = profile.steps[current.stepIndex];
+    const from = step?.resumeFrom ? indexOfStep(profile, step.resumeFrom) : -1;
+    const wanted = from === -1 ? current.stepIndex : from;
+    const index = isStepAvailable(profile.steps[wanted], guideContext(current))
+      ? wanted
+      : nextAvailableIndex(profile, wanted, guideContext(current));
+    enterGuideStep(current, index);
+    navigateToTarget(profile.steps[index]?.navTarget, guideContext(current), { pop: true });
+  }, [enterGuideStep]);
+
   const exitTour = useCallback(() => {
     finishTour();
   }, [finishTour]);
@@ -868,6 +886,7 @@ export function TourProvider({ children }) {
     profileKey: tourState?.profileKey || null,
     restartTour,
     resumeTour,
+    returnToGuide,
     reward: tourState?.reward || null,
     skipBlockedMission,
     skipMission,
@@ -892,6 +911,7 @@ export function TourProvider({ children }) {
     profile,
     restartTour,
     resumeTour,
+    returnToGuide,
     skipBlockedMission,
     skipMission,
     startTour,
