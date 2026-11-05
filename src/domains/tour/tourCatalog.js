@@ -2,7 +2,7 @@ import i18next from 'i18next';
 
 import { COACH_GUIDE } from '@/domains/tour/coachGuide';
 import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
-import PRESIDENT_GUIDE_SETTINGS from '@/domains/tour/presidentGuideSettings';
+import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 
 import { RouteNames } from '@/navigation/routeNames';
 

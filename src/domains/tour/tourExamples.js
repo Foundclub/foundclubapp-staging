@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 
 import { getSimulationRoster } from '@/domains/tactical/simulationRosters';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * Données d'exemple du guide (TUTOE-2, pack `01_ARCHITECTURE.md` §6) : construites
@@ -52,3 +53,45 @@ export const exampleMatch = (context = {}) => {
  * @returns {Array<{ documentId: string; firstname: string; lastname: string }>} Profils.
  */
 export const exampleResponders = () => getSimulationRoster('football').slice(0, 3);
+
+/**
+ * Guide Dirigeant·e, M4 : la carte d'une demande pour rejoindre le club, fausse et dite fausse.
+ * Sans `requestId` ni `requesterId` : rien ne peut partir, et « Voir le profil » ne s'affiche pas.
+ * @param {{ coachFirstName?: string }} [context] - Prénom du coach ajouté à M2 (décision 10).
+ * @returns {any} Ligne de `RequestsHub`, de la forme de `requestMappers`.
+ */
+export const exampleMembershipRequest = ({ coachFirstName } = {}) => {
+  const isSameName = String(coachFirstName || '').trim().toLowerCase() === 'karim';
+  const firstName = isSameName ? 'Sami' : 'Karim';
+  const requesterName = `${firstName} Benali`;
+  return {
+    actions: { primary: 'accept', secondary: 'reject' },
+    createdAt: '',
+    id: 'tour-example-request',
+    meta: {
+      clubId: '',
+      clubName: '',
+      example: true,
+      requesterAvatarUrl: '',
+      requesterId: '',
+      requesterName,
+      requestId: '',
+      requestType: 'join',
+    },
+    status: 'pending',
+    subtitle: i18next.t(
+      'tourExamples.request.subtitle',
+      '{{name}} demande à rejoindre ton club comme coach.',
+      { name: requesterName, ...SANS_ECHAPPEMENT },
+    ),
+    title: i18next.t('tourExamples.request.title', 'Demande d’affiliation (exemple)'),
+    type: 'club',
+  };
+};
+
+/**
+ * Cette ligne est-elle la demande d'exemple du guide ?
+ * @param {any} item - Ligne de `RequestsHub`.
+ * @returns {boolean} Vrai pour l'exemple.
+ */
+export const isExampleRequest = (item) => Boolean(item?.meta?.example);
