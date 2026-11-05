@@ -8,8 +8,8 @@ import {
   Alert, Platform, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -20,8 +20,8 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
-import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -390,311 +390,167 @@ function ClubEdit({ navigation, route }) {
           style={[Alignments.justifySpaceBetween, Alignments.fill]}
         >
           <TourTarget clipChildren id="clubEdit.viewport" style={Alignments.fill}>
-          <ScrollView
-            contentContainerStyle={[
-              Spaces.gap[24],
-              Spaces.paddingBottom[40],
-            ]}
-            style={[Alignments.fill]}
-          >
-            <View style={[Alignments.fill, Spaces.gap[24]]}>
-              {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
-                  déjà 24. */}
-              {/* REPRISE-PLACE (01/11, point 5) : le « + » dépasse de 12 px, touchait la barre. */}
-              <TourTarget id="clubEdit.logo">
-              <View style={[Alignments.row, Spaces.paddingTop[12]]}>
-                <SelectAvatar
-                  containerStyle={{
-                    // width est calculee a partir du MEME ratio, et non laissee
-                    // a Yoga : SelectAvatar pose deja { height: size, width: size }
-                    // et un tableau de styles FUSIONNE au lieu de remplacer — sans
-                    // largeur explicite, le carre repasserait devant et aspectRatio
-                    // serait ignore (deux dimensions definies l'emportent).
-                    aspectRatio: logoPreviewRatio,
-                    height: LOGO_PREVIEW_HEIGHT,
-                    width: LOGO_PREVIEW_HEIGHT * logoPreviewRatio,
-                  }}
-                  currentAvatar={logo}
-                  imageResizeMode="contain"
-                  imageStyle={{ height: '100%', width: '100%' }}
-                  onAvatarSelected={setLogo}
-                  size={LOGO_PREVIEW_HEIGHT}
-                />
-              </View>
-              </TourTarget>
-
-              <TourTarget id="clubEdit.name">
-              <Controller
-                control={control}
-                name="name"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('club.fields.name.label') || 'Nom du club'}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('email')}
-                    placeholder={t('club.fields.name.placeholder') || 'Nom du club'}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
-              />
-              </TourTarget>
-
-              <TourTarget id="clubEdit.email">
-              <Controller
-                control={control}
-                name="email"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="email"
-                    keyboardType="email-address"
-                    label={t('club.fields.email.label') || 'Email'}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('phoneNumber')}
-                    placeholder={t('club.fields.email.placeholder') || 'Email'}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
-              />
-              </TourTarget>
-
-              <TourTarget id="clubEdit.phone">
-              <Controller
-                control={control}
-                name="phoneNumber"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="done"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="tel"
-                    keyboardType="phone-pad"
-                    label={t('club.fields.phoneNumber.label') || 'Téléphone'}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    placeholder={t('club.fields.phoneNumber.placeholder') || 'Téléphone'}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
-              />
-              </TourTarget>
-
-              {/* R17-ADRESSE (19/10) — plus de texte libre : la saisie des lieux publics. Le */}
-              {/* point enregistré suit l'adresse ; introuvable, le lieu se place sur la carte. */}
-              <TourTarget id="clubEdit.address">
-              <Controller
-                control={control}
-                name="address"
-                render={({ field: { name, onChange, value } }) => (
-                  <AutocompleteAddressInput
-                    address={value || undefined}
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('club.fields.address.label') || 'Adresse'}
-                    permettreLieuSurCarte
-                    placeholder={t('club.fields.address.placeholder') || 'Adresse'}
-                    setAddress={onChange}
-                    villeConnue={villeDuClub}
-                  />
-                )}
-              />
-              </TourTarget>
-
-              <Controller
-                control={control}
-                name="activites"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <AutocompleteSelect
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    isMulti
-                    isSearchable
-                    label={t('clubDetails.titles.activities') || 'Sports'}
-                    onBlur={onBlur}
-                    options={activityOptions}
-                    placeholder={t('clubFilters.fields.activity.placeholder') || 'Sélectionner une activité'}
-                    ref={ref}
-                    searchValue={activitySearch}
-                    setSearchValue={setActivitySearch}
-                    setValue={(/** @type {Option[] | null} */ options) => onChange(
-                      options?.map((option) => option.value).filter(Boolean) || [],
-                    )}
-                    value={(Array.isArray(value) ? value : [])
-                      .map((activityId) => activityOptions.find((option) => option.value === activityId)?.label)
-                      .filter(Boolean)
-                      .join(', ')}
-                  />
-                )}
-              />
-
-              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                {t('clubEdit.publicMembers.title', 'Visibilité des membres')}
-              </Text>
-              <View
-                style={[
-                  ApplicationStyle.card,
-                  Spaces.padding[16],
-                  Spaces.gap[12],
-                  {
-                    backgroundColor: 'rgba(4, 31, 44, 0.82)',
-                    borderColor: withAlpha(Colors.primary500, 0.24),
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                {/* D34 ecran 02 : le LIBELLE de l'interrupteur passe AVANT sa */}
-                {/* description. On lisait « Visibilite des membres », une phrase */}
-                {/* d'explication, l'interrupteur, PUIS seulement ce qu'il fait. */}
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
-                    </Text>
-                    <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                      {t(
-                        'clubEdit.publicMembers.description',
-                        'Choisis si les membres du club peuvent apparaître publiquement sur la page du club.',
-                      )}
-                    </Text>
+            <ScrollView
+              contentContainerStyle={[
+                Spaces.gap[24],
+                Spaces.paddingBottom[40],
+              ]}
+              style={[Alignments.fill]}
+            >
+              <View style={[Alignments.fill, Spaces.gap[24]]}>
+                {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
+                    déjà 24. */}
+                {/* REPRISE-PLACE (01/11, point 5) : le « + » dépasse de 12 px, touchait la barre. */}
+                <TourTarget id="clubEdit.logo">
+                  <View style={[Alignments.row, Spaces.paddingTop[12]]}>
+                    <SelectAvatar
+                      containerStyle={{
+                        // width est calculee a partir du MEME ratio, et non laissee
+                        // a Yoga : SelectAvatar pose deja { height: size, width: size }
+                        // et un tableau de styles FUSIONNE au lieu de remplacer — sans
+                        // largeur explicite, le carre repasserait devant et aspectRatio
+                        // serait ignore (deux dimensions definies l'emportent).
+                        aspectRatio: logoPreviewRatio,
+                        height: LOGO_PREVIEW_HEIGHT,
+                        width: LOGO_PREVIEW_HEIGHT * logoPreviewRatio,
+                      }}
+                      currentAvatar={logo}
+                      imageResizeMode="contain"
+                      imageStyle={{ height: '100%', width: '100%' }}
+                      onAvatarSelected={setLogo}
+                      size={LOGO_PREVIEW_HEIGHT}
+                    />
                   </View>
+                </TourTarget>
+
+                <TourTarget id="clubEdit.name">
                   <Controller
                     control={control}
-                    name="clubMembersPublicVisibility"
-                    render={({ field: { onChange, value } }) => (
-                      <Switch
-                        accessibilityLabel={t(
-                          'clubEdit.publicMembers.switchLabel',
-                          'Afficher les membres publiquement',
-                        )}
-                        accessibilityRole="switch"
-                        onValueChange={onChange}
-                        thumbColor={value ? Colors.primary500 : Colors.neutral300}
-                        trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
-                        value={value === true}
+                    name="name"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('club.fields.name.label') || 'Nom du club'}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('email')}
+                        placeholder={t('club.fields.name.placeholder') || 'Nom du club'}
+                        ref={ref}
+                        value={value}
                       />
                     )}
                   />
-                </View>
-              </View>
+                </TourTarget>
 
-              {/* D34 ecran 02 : « jamais de carte dans une carte ». Les deux */}
-              {/* rangees-radio portent DEJA leur propre bordure ; la carte qui */}
-              {/* les enfermait dessinait donc une seconde bordure autour. Le */}
-              {/* titre et son explication deviennent une etiquette de groupe. */}
-              <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                  {t('clubEdit.membership.title', "Demandes d'adhésion aux équipes")}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t(
-                    'clubEdit.membership.description',
-                    'Choisis si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
-                  )}
-                </Text>
-                <TourTarget id="clubEdit.delegation">
+                <TourTarget id="clubEdit.email">
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="next"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="email"
+                        keyboardType="email-address"
+                        label={t('club.fields.email.label') || 'Email'}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        onSubmitEditing={() => setFocus('phoneNumber')}
+                        placeholder={t('club.fields.email.placeholder') || 'Email'}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
+                  />
+                </TourTarget>
+
+                <TourTarget id="clubEdit.phone">
+                  <Controller
+                    control={control}
+                    name="phoneNumber"
+                    render={({
+                      field: {
+                        name, onBlur, onChange, ref, value,
+                      },
+                    }) => (
+                      <Input
+                        enterKeyHint="done"
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        inputMode="tel"
+                        keyboardType="phone-pad"
+                        label={t('club.fields.phoneNumber.label') || 'Téléphone'}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        placeholder={t('club.fields.phoneNumber.placeholder') || 'Téléphone'}
+                        ref={ref}
+                        value={value}
+                      />
+                    )}
+                  />
+                </TourTarget>
+
+                {/* R17-ADRESSE (19/10) — plus de texte libre : la saisie des lieux publics. Le */}
+                {/* point enregistré suit l'adresse ; introuvable, le lieu se place sur la carte. */}
+                <TourTarget id="clubEdit.address">
+                  <Controller
+                    control={control}
+                    name="address"
+                    render={({ field: { name, onChange, value } }) => (
+                      <AutocompleteAddressInput
+                        address={value || undefined}
+                        error={getFieldError({ errors: formErrors, fieldName: name })}
+                        label={t('club.fields.address.label') || 'Adresse'}
+                        permettreLieuSurCarte
+                        placeholder={t('club.fields.address.placeholder') || 'Adresse'}
+                        setAddress={onChange}
+                        villeConnue={villeDuClub}
+                      />
+                    )}
+                  />
+                </TourTarget>
+
                 <Controller
                   control={control}
-                  name="membershipRequestManagementMode"
-                  render={({ field: { onChange, value } }) => (
-                    <View style={[Spaces.gap[12]]}>
-                      {membershipModeOptions.map((option) => {
-                        const isSelected = (value || 'COACH_ALLOWED_BY_TEAM') === option.value;
-
-                        return (
-                          <TouchableOpacity
-                            accessibilityLabel={`${option.label}. ${option.description}`}
-                            accessibilityRole="radio"
-                            accessibilityState={{ checked: isSelected }}
-                            activeOpacity={0.9}
-                            key={option.value}
-                            onPress={() => onChange(option.value)}
-                            style={[
-                              Spaces.padding[16],
-                              Spaces.gap[8],
-                              {
-                                backgroundColor: isSelected
-                                  ? withAlpha(Colors.primary500, 0.14)
-                                  : withAlpha(Colors.neutral00, 0.03),
-                                borderColor: isSelected ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
-                                borderRadius: 18,
-                                borderWidth: 1,
-                              },
-                            ]}
-                          >
-                            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                              <Text style={[isSelected ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-                                {option.label}
-                              </Text>
-                              <View
-                                style={[
-                                  Alignments.alignCenter,
-                                  Alignments.justifyCenter,
-                                  {
-                                    backgroundColor: isSelected ? `${Colors.primary500}22` : 'transparent',
-                                    borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
-                                    borderRadius: 11,
-                                    borderWidth: 2,
-                                    height: 22,
-                                    width: 22,
-                                  },
-                                ]}
-                              >
-                                {isSelected ? (
-                                  <View
-                                    style={{
-                                      backgroundColor: Colors.primary500,
-                                      borderRadius: 4,
-                                      height: 8,
-                                      width: 8,
-                                    }}
-                                  />
-                                ) : null}
-                              </View>
-                            </View>
-                            <Text style={[Fonts.p3, Fonts.neutral200]}>
-                              {option.description}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                  name="activites"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <AutocompleteSelect
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      isMulti
+                      isSearchable
+                      label={t('clubDetails.titles.activities') || 'Sports'}
+                      onBlur={onBlur}
+                      options={activityOptions}
+                      placeholder={t('clubFilters.fields.activity.placeholder') || 'Sélectionner une activité'}
+                      ref={ref}
+                      searchValue={activitySearch}
+                      setSearchValue={setActivitySearch}
+                      setValue={(/** @type {Option[] | null} */ options) => onChange(
+                        options?.map((option) => option.value).filter(Boolean) || [],
+                      )}
+                      value={(Array.isArray(value) ? value : [])
+                        .map((activityId) => activityOptions.find((option) => option.value === activityId)?.label)
+                        .filter(Boolean)
+                        .join(', ')}
+                    />
                   )}
                 />
-                </TourTarget>
-              </View>
 
-              {/* LOT EQUIPES (Q3 et Q5, demande d Adel du 28/08) — CE QUE LE */}
-              {/* DIRIGEANT AUTORISE A SES ENTRAINEUR·ES SUR LA CREATION D EQUIPE. */}
-              {/* Pose juste apres son frere « Demandes d adhesion » : meme famille, */}
-              {/* meme proprietaire, meme endroit — on ne cree pas un 2e tiroir de */}
-              {/* reglages ailleurs dans l app. */}
-              <TourTarget id="clubEdit.teamCreation">
-              <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                  {t('clubEdit.teamCreation.title', "Création d'équipes")}
+                  {t('clubEdit.publicMembers.title', 'Visibilité des membres')}
                 </Text>
-
                 <View
                   style={[
                     ApplicationStyle.card,
@@ -707,65 +563,29 @@ function ClubEdit({ navigation, route }) {
                     },
                   ]}
                 >
+                  {/* D34 ecran 02 : le LIBELLE de l'interrupteur passe AVANT sa */}
+                  {/* description. On lisait « Visibilite des membres », une phrase */}
+                  {/* d'explication, l'interrupteur, PUIS seulement ce qu'il fait. */}
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {t(
-                          'clubEdit.teamCreation.coachAllowed.switchLabel',
-                          'Mes entraîneur·es peuvent créer des équipes',
-                        )}
+                        {t('clubEdit.publicMembers.switchLabel', 'Afficher les membres publiquement')}
                       </Text>
                       <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
                         {t(
-                          'clubEdit.teamCreation.coachAllowed.description',
-                          'Désactive si tu préfères créer toi-même toutes les équipes du club. '
-                          + 'Les équipes déjà créées ne changent pas.',
+                          'clubEdit.publicMembers.description',
+                          'Choisis si les membres du club peuvent apparaître publiquement sur la page du club.',
                         )}
                       </Text>
                     </View>
                     <Controller
                       control={control}
-                      name="teamCreationManagementMode"
+                      name="clubMembersPublicVisibility"
                       render={({ field: { onChange, value } }) => (
                         <Switch
                           accessibilityLabel={t(
-                            'clubEdit.teamCreation.coachAllowed.switchLabel',
-                            'Mes entraîneur·es peuvent créer des équipes',
-                          )}
-                          accessibilityRole="switch"
-                          onValueChange={(isOn) => onChange(isOn ? 'COACH_ALLOWED' : 'CLUB_OWNER_ONLY')}
-                          thumbColor={value !== 'CLUB_OWNER_ONLY' ? Colors.primary500 : Colors.neutral300}
-                          trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
-                          value={value !== 'CLUB_OWNER_ONLY'}
-                        />
-                      )}
-                    />
-                  </View>
-
-                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {t(
-                          'clubEdit.teamCreation.requiresValidation.switchLabel',
-                          'Leurs équipes doivent être validées par moi',
-                        )}
-                      </Text>
-                      <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                        {t(
-                          'clubEdit.teamCreation.requiresValidation.description',
-                          "L'équipe est bien créée, mais elle n'apparaît dans le club qu'une fois "
-                          + "que tu l'as validée.",
-                        )}
-                      </Text>
-                    </View>
-                    <Controller
-                      control={control}
-                      name="teamCreationByCoachesRequiresValidation"
-                      render={({ field: { onChange, value } }) => (
-                        <Switch
-                          accessibilityLabel={t(
-                            'clubEdit.teamCreation.requiresValidation.switchLabel',
-                            'Leurs équipes doivent être validées par moi',
+                            'clubEdit.publicMembers.switchLabel',
+                            'Afficher les membres publiquement',
                           )}
                           accessibilityRole="switch"
                           onValueChange={onChange}
@@ -777,21 +597,201 @@ function ClubEdit({ navigation, route }) {
                     />
                   </View>
                 </View>
+
+                {/* D34 ecran 02 : « jamais de carte dans une carte ». Les deux */}
+                {/* rangees-radio portent DEJA leur propre bordure ; la carte qui */}
+                {/* les enfermait dessinait donc une seconde bordure autour. Le */}
+                {/* titre et son explication deviennent une etiquette de groupe. */}
+                <View style={[Spaces.gap[12]]}>
+                  <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                    {t('clubEdit.membership.title', "Demandes d'adhésion aux équipes")}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'clubEdit.membership.description',
+                      'Choisis si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
+                    )}
+                  </Text>
+                  <TourTarget id="clubEdit.delegation">
+                    <Controller
+                      control={control}
+                      name="membershipRequestManagementMode"
+                      render={({ field: { onChange, value } }) => (
+                        <View style={[Spaces.gap[12]]}>
+                          {membershipModeOptions.map((option) => {
+                            const isSelected = (value || 'COACH_ALLOWED_BY_TEAM') === option.value;
+
+                            return (
+                              <TouchableOpacity
+                                accessibilityLabel={`${option.label}. ${option.description}`}
+                                accessibilityRole="radio"
+                                accessibilityState={{ checked: isSelected }}
+                                activeOpacity={0.9}
+                                key={option.value}
+                                onPress={() => onChange(option.value)}
+                                style={[
+                                  Spaces.padding[16],
+                                  Spaces.gap[8],
+                                  {
+                                    backgroundColor: isSelected
+                                      ? withAlpha(Colors.primary500, 0.14)
+                                      : withAlpha(Colors.neutral00, 0.03),
+                                    borderColor: isSelected ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
+                                    borderRadius: 18,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                              >
+                                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+                                  <Text style={[isSelected ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
+                                    {option.label}
+                                  </Text>
+                                  <View
+                                    style={[
+                                      Alignments.alignCenter,
+                                      Alignments.justifyCenter,
+                                      {
+                                        backgroundColor: isSelected ? `${Colors.primary500}22` : 'transparent',
+                                        borderColor: isSelected ? Colors.primary500 : Colors.neutral500,
+                                        borderRadius: 11,
+                                        borderWidth: 2,
+                                        height: 22,
+                                        width: 22,
+                                      },
+                                    ]}
+                                  >
+                                    {isSelected ? (
+                                      <View
+                                        style={{
+                                          backgroundColor: Colors.primary500,
+                                          borderRadius: 4,
+                                          height: 8,
+                                          width: 8,
+                                        }}
+                                      />
+                                    ) : null}
+                                  </View>
+                                </View>
+                                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                                  {option.description}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    />
+                  </TourTarget>
+                </View>
+
+                {/* LOT EQUIPES (Q3 et Q5, demande d Adel du 28/08) — CE QUE LE */}
+                {/* DIRIGEANT AUTORISE A SES ENTRAINEUR·ES SUR LA CREATION D EQUIPE. */}
+                {/* Pose juste apres son frere « Demandes d adhesion » : meme famille, */}
+                {/* meme proprietaire, meme endroit — on ne cree pas un 2e tiroir de */}
+                {/* reglages ailleurs dans l app. */}
+                <TourTarget id="clubEdit.teamCreation">
+                  <View style={[Spaces.gap[12]]}>
+                    <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                      {t('clubEdit.teamCreation.title', "Création d'équipes")}
+                    </Text>
+
+                    <View
+                      style={[
+                        ApplicationStyle.card,
+                        Spaces.padding[16],
+                        Spaces.gap[12],
+                        {
+                          backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                          borderColor: withAlpha(Colors.primary500, 0.24),
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {t(
+                              'clubEdit.teamCreation.coachAllowed.switchLabel',
+                              'Mes entraîneur·es peuvent créer des équipes',
+                            )}
+                          </Text>
+                          <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                            {t(
+                              'clubEdit.teamCreation.coachAllowed.description',
+                              'Désactive si tu préfères créer toi-même toutes les équipes du club. '
+                              + 'Les équipes déjà créées ne changent pas.',
+                            )}
+                          </Text>
+                        </View>
+                        <Controller
+                          control={control}
+                          name="teamCreationManagementMode"
+                          render={({ field: { onChange, value } }) => (
+                            <Switch
+                              accessibilityLabel={t(
+                                'clubEdit.teamCreation.coachAllowed.switchLabel',
+                                'Mes entraîneur·es peuvent créer des équipes',
+                              )}
+                              accessibilityRole="switch"
+                              onValueChange={(isOn) => onChange(isOn ? 'COACH_ALLOWED' : 'CLUB_OWNER_ONLY')}
+                              thumbColor={value !== 'CLUB_OWNER_ONLY' ? Colors.primary500 : Colors.neutral300}
+                              trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                              value={value !== 'CLUB_OWNER_ONLY'}
+                            />
+                          )}
+                        />
+                      </View>
+
+                      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {t(
+                              'clubEdit.teamCreation.requiresValidation.switchLabel',
+                              'Leurs équipes doivent être validées par moi',
+                            )}
+                          </Text>
+                          <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                            {t(
+                              'clubEdit.teamCreation.requiresValidation.description',
+                              "L'équipe est bien créée, mais elle n'apparaît dans le club qu'une fois "
+                              + "que tu l'as validée.",
+                            )}
+                          </Text>
+                        </View>
+                        <Controller
+                          control={control}
+                          name="teamCreationByCoachesRequiresValidation"
+                          render={({ field: { onChange, value } }) => (
+                            <Switch
+                              accessibilityLabel={t(
+                                'clubEdit.teamCreation.requiresValidation.switchLabel',
+                                'Leurs équipes doivent être validées par moi',
+                              )}
+                              accessibilityRole="switch"
+                              onValueChange={onChange}
+                              thumbColor={value ? Colors.primary500 : Colors.neutral300}
+                              trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                              value={value === true}
+                            />
+                          )}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </TourTarget>
               </View>
-              </TourTarget>
-            </View>
-          </ScrollView>
+            </ScrollView>
           </TourTarget>
 
           <View style={[Spaces.marginBottom[16]]}>
             <TourTarget id="clubEdit.save">
-            <Button
-              disabled={!clubData}
-              isLoading={updateClubMutation.isPending}
-              onPress={handleSubmit(handleFormSubmit)}
-              title={t('common.actions.save') || 'Enregistrer'}
-              variant="Primary"
-            />
+              <Button
+                disabled={!clubData}
+                isLoading={updateClubMutation.isPending}
+                onPress={handleSubmit(handleFormSubmit)}
+                title={t('common.actions.save') || 'Enregistrer'}
+                variant="Primary"
+              />
             </TourTarget>
             <View style={[Spaces.marginTop[8]]}>
               <Button
