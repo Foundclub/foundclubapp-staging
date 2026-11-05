@@ -24401,7 +24401,7 @@ export default {
         group: 'Group created',
         offer: 'See the Club plan',
         partner: 'Partner added',
-        poster: 'Poster shared',
+        poster: 'Poster ready to share',
         real: 'REAL',
         skipped: 'SKIPPED',
         subtitle: 'Have a great season!',
@@ -24447,8 +24447,7 @@ export default {
         + 'places still free.',
       'm1-pchips': 'Choose the facility shown. “All facilities” brings your whole club together: '
         + 'tap it.',
-      'm1-pclose': 'Sent! You stay on your poster to share it elsewhere. When you’re done, close '
-        + 'it with the cross.',
+      'm1-pclose': 'You stay on your poster to share it elsewhere. When you’re done, close it with the cross.',
       'm1-pdemo': 'Your schedule is still empty: we’ve added a few sample events to show you. '
         + 'They disappear at the end of the guide.',
       'm1-pempty': 'A period with no events looks like this. Your coaches’ slots will appear here '
@@ -24460,11 +24459,11 @@ export default {
       'm1-phone': 'The club’s phone number.',
       'm1-pmodel': 'Choose a style: Crest or Family.',
       'm1-pmonth': 'In Month view, a dot marks each day the facility is in use.',
-      'm1-poster': '5/5 · Last step: the “Join the club” poster.',
+      'm1-poster': 'Last step: the “Join the club” poster.',
       'm1-pposter': 'Here is your poster: the club name, your sport and the QR code leading to '
         + 'your club. You can change the style at any time.',
       'm1-psent': 'You can share it again, or continue when you’re done.',
-      'm1-psent-next': 'It’s sent',
+      'm1-psent-next': 'Done',
       'm1-pshare': 'The QR code leads straight to your club. Share the poster, or print it for '
         + 'the clubhouse.',
       'm1-ptext': 'You can also adapt the poster’s text. Tap “Customize the text”.',

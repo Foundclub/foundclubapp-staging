@@ -130,6 +130,11 @@ export const B4_STEPS = [
     missionId: 'president_b4',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: FROM,
+    // Retour pris sur l'exemple : « Reprendre » le rouvre, le tunnel reste rempli.
+    returnTarget: {
+      params: { screen: RouteNames.AdWizardRecap },
+      routeName: RouteNames.AdWizardStack,
+    },
     simulatesAd: true,
     targets: ['ad-cand', 'ad-poster'],
     get text() {

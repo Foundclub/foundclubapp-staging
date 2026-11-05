@@ -97,7 +97,7 @@ export const PRESIDENT_GUIDE = Object.freeze({
     created?.['facility.created']
       && text('tourCatalog.president.close.facility', 'Installation créée'),
     created?.['club.poster.shared']
-      && text('tourCatalog.president.close.poster', 'Affiche partagée'),
+      && text('tourCatalog.president.close.poster', 'Affiche prête à partager'),
     (created?.['staff.invited'] || created?.['staff.linked'])
       && text('tourCatalog.president.close.coach', 'Coach ajouté au club'),
     created?.['team.created']

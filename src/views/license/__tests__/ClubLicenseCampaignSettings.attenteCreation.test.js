@@ -1,3 +1,4 @@
+import { Alert, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
@@ -102,6 +103,9 @@ const campagneDeDepart = {
   ],
   seasonLabel: '2026-2027',
 };
+
+let mockTourEtat = { currentStep: null, tourStatus: null };
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTourEtat }));
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => mockClientRequeteFige,
@@ -485,4 +489,42 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
     await act(async () => { garde(sortie); });
     expect(sortie.preventDefault).toHaveBeenCalled();
   });
+});
+
+// Recette L10 : « Prix par défaut » restait à zéro, puis « Montant obligatoire ». Le champ partait
+// de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la limite
+// de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
+describe('recette L10 — le montant saisi arrive jusqu à la validation', () => {
+  afterEach(() => {
+    mockTourEtat = { currentStep: null, tourStatus: null };
+    jest.restoreAllMocks();
+  });
+
+  it.each([
+    ['hors du guide', { currentStep: null, tourStatus: null }],
+    ['guide actif', { currentStep: { id: 'c2', simulatesCampaign: true }, tourStatus: 'active' }],
+    ['guide en pause', { currentStep: { id: 'c2', simulatesCampaign: true }, tourStatus: 'paused' }],
+  ])('%s : 250 reste dans le champ, et Suivant passe', async (_cas, etat) => {
+    mockTourEtat = etat;
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <ClubLicenseCampaignSettings navigation={navigationFigee} route={{ params: { clubId: 'c' } }} />,
+      );
+    });
+    await act(async () => { propsDuTunnel.onSkip(); });
+    const champ = () => arbre.root.findAllByType(TextInput)
+      .find((noeud) => noeud.props.placeholder === '0,00');
+    await act(async () => { champ().props.onChangeText(`${champ().props.value}2`); });
+    await act(async () => { champ().props.onChangeText(`${champ().props.value}5`); });
+    await act(async () => { champ().props.onChangeText(`${champ().props.value}0`); });
+    expect(champ().props.value).toBe('250');
+    const etape = propsDuTunnel.stepIndex;
+    await act(async () => { propsDuTunnel.onNext(); });
+    expect(alerte).not.toHaveBeenCalled();
+    expect(propsDuTunnel.stepIndex).toBe(etape + 1);
+    arbre.unmount();
+  }, 30000);
 });

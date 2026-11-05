@@ -454,7 +454,7 @@ const PART_POSTER = [
     resumeFrom: 'm1-poster',
     targets: ['club.poster'],
     get text() {
-      return t('m1-poster', '5/5 · Dernière étape : l’affiche « Rejoindre le club ».');
+      return t('m1-poster', 'Dernière étape : l’affiche « Rejoindre le club ».');
     },
   },
   {
@@ -536,7 +536,7 @@ const PART_POSTER = [
     bubblePlacement: 'top',
     id: 'm1-psent',
     missionId: MISSION_ID,
-    get nextLabel() { return t('m1-psent-next', 'C’est envoyé'); },
+    get nextLabel() { return t('m1-psent-next', 'C’est fait'); },
     resumeFrom: 'm1-poster',
     targets: ['poster.share'],
     get text() {
@@ -554,8 +554,8 @@ const PART_POSTER = [
     get text() {
       return t(
         'm1-pclose',
-        'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, '
-          + 'ferme-la avec la croix.',
+        'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec '
+          + 'la croix.',
       );
     },
   },

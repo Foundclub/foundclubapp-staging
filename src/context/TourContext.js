@@ -745,6 +745,11 @@ export function TourProvider({ children }) {
       return;
     }
     const step = profile.steps[current.stepIndex];
+    // L'écran de l'étape se rouvre tel quel : rien à refaire (B4, annonce d'exemple).
+    if (step?.returnTarget) {
+      navigateToTarget(step.returnTarget, guideContext(current));
+      return;
+    }
     const from = step?.resumeFrom ? indexOfStep(profile, step.resumeFrom) : -1;
     const wanted = from === -1 ? current.stepIndex : from;
     const index = isStepAvailable(profile.steps[wanted], guideContext(current))

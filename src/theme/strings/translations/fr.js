@@ -25458,7 +25458,7 @@ export default {
         group: 'Groupe créé',
         offer: 'Voir l’offre Club',
         partner: 'Partenaire ajouté',
-        poster: 'Affiche partagée',
+        poster: 'Affiche prête à partager',
         real: 'RÉEL',
         skipped: 'PASSÉ',
         subtitle: 'Bonne saison !',
@@ -25508,8 +25508,7 @@ export default {
         + 'chargé et les places encore libres.',
       'm1-pchips': 'Choisis l’installation affichée. « Toutes installations » regroupe tout ton '
         + 'club : touche-le.',
-      'm1-pclose': 'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as '
-        + 'fini, ferme-la avec la croix.',
+      'm1-pclose': 'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec la croix.',
       'm1-pdemo': 'Ton planning est encore vide : on y a mis quelques événements d’exemple pour '
         + 'te montrer. Ils disparaissent à la fin du guide.',
       'm1-pempty': 'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs '
@@ -25522,11 +25521,11 @@ export default {
       'm1-phone': 'Le téléphone du club.',
       'm1-pmodel': 'Choisis un modèle : Écusson ou Famille.',
       'm1-pmonth': 'En vue Mois, un point signale chaque jour où l’installation est occupée.',
-      'm1-poster': '5/5 · Dernière étape : l’affiche « Rejoindre le club ».',
+      'm1-poster': 'Dernière étape : l’affiche « Rejoindre le club ».',
       'm1-pposter': 'Voici ton affiche : le nom du club, ton sport et le QR code qui mène à ton '
         + 'club. Tu pourras changer de modèle à tout moment.',
       'm1-psent': 'Tu peux la partager encore, ou continuer quand c’est fait.',
-      'm1-psent-next': 'C’est envoyé',
+      'm1-psent-next': 'C’est fait',
       'm1-pshare': 'Le QR code mène directement à ton club. Partage l’affiche, ou imprime-la pour '
         + 'le club-house.',
       'm1-ptext': 'Tu peux aussi adapter les textes de l’affiche. Touche « Personnaliser le texte '

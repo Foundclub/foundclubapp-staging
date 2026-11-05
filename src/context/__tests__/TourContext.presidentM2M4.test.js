@@ -374,3 +374,29 @@ describe('M3 et M4 de bout en bout', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('recette L10 — retour sur l’écran d’exemple de B4', () => {
+  const toExample = () => {
+    start('president_b4');
+    for (let guard = 0; guard < 40 && stepId() !== 'b4-cand'; guard += 1) {
+      const [signal] = [tour.currentStep.advanceOn].flat();
+      if (!signal) next();
+      else if (signal.type === 'route') route(signal.key);
+      else if (signal.type === 'action') action(signal.key);
+      else touch(signal.key);
+    }
+    expect(stepId()).toBe('b4-cand');
+  };
+
+  it('« Reprendre » rouvre l’annonce d’exemple, sans refaire le tunnel', () => {
+    toExample();
+    route(RouteNames.AdWizardDescription);
+    mockNavigate.mockClear();
+    act(() => { tour.returnToGuide(); });
+    expect(stepId()).toBe('b4-cand');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.AdWizardStack,
+      { screen: RouteNames.AdWizardRecap },
+    );
+  });
+});
