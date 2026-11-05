@@ -29,8 +29,14 @@ describe('PAYE-LIMITE — le refus d un montant se lit en production', () => {
   afterAll(() => { global.__DEV__ = dev; });
 
   test.each([
-    ['LICENSE_AMOUNT_EXCEEDS_REMAINING', "Ce montant dépasse ce qu'il reste à payer sur cette cotisation."],
-    ['LICENSE_REFUND_EXCEEDS_REFUNDABLE', "Ce montant dépasse ce qu'il reste à rembourser sur ce paiement."],
+    [
+      'LICENSE_AMOUNT_EXCEEDS_REMAINING',
+      "Ce montant dépasse ce qu'il reste à payer sur cette cotisation.",
+    ],
+    [
+      'LICENSE_REFUND_EXCEEDS_REFUNDABLE',
+      "Ce montant dépasse ce qu'il reste à rembourser sur ce paiement.",
+    ],
   ])('%s garde son motif en français, et existe en anglais', (code, message) => {
     mockLangue = fr;
     expect(getErrorMessage(refus(code, message))).toBe(message);

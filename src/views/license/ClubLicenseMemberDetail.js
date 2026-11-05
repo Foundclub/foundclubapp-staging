@@ -339,9 +339,10 @@ function ClubLicenseMemberDetail({ route }) {
   const canValidatePayment = canValidateAssignmentPayment(assignment, canUseSensitiveActions);
   // PAYE-LIMITE — le droit ne suffit pas : il faut qu il reste quelque chose a encaisser.
   // Meme mesure que la carte de la liste (`canAssignmentBeReminded`).
+  const remainingCents = Number(assignment?.amountRemainingCents || 0);
   const canCollectPayment = canValidatePayment
     && assignment?.status !== 'waived'
-    && Number(assignment?.amountRemainingCents) > 0;
+    && remainingCents > 0;
   // Y06 — LA LISTE OUVRE CETTE FENETRE-CI. Elle ne recopie pas le formulaire
   // d encaissement : il n en existe qu un dans le depot, c est celui-la.
   // ⛔ L etat initial ne donne aucun droit : le rendu de la fenetre reste garde
@@ -405,7 +406,7 @@ function ClubLicenseMemberDetail({ route }) {
     return manualPaymentMethods.map((mode) => ({ label: paymentModeLabels[mode], mode }));
   }, [assignment?.campaign?.paymentModes]);
   const canSendReminder = usefulReminderStatuses.includes(assignment?.status)
-    && Number(assignment?.amountRemainingCents || 0) > 0;
+    && remainingCents > 0;
   const isLoading = query.isLoading || (
     Boolean(campaignId)
     && routeCanManageLicenses === undefined
@@ -416,9 +417,9 @@ function ClubLicenseMemberDetail({ route }) {
   let modalMaxCents = null;
   if (modalType === 'refund') {
     modalMaxCents = refundableAmount((assignment?.payments || []).find((payment) => (
-      String(payment?.documentId || payment?.id) === String(modal.paymentId))));
+      String(payment?.documentId || payment?.id) === String(modal?.paymentId))));
   }
-  if (modalType === 'payment') modalMaxCents = Number(assignment?.amountRemainingCents);
+  if (modalType === 'payment') modalMaxCents = remainingCents;
 
   const submitModal = useCallback((payload) => {
     // W02 — encaisser suit `canValidatePayment` (le coach delegue y a droit) ;
