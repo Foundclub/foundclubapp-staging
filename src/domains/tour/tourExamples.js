@@ -55,6 +55,12 @@ export const exampleMatch = (context = {}) => {
 export const exampleResponders = () => getSimulationRoster('football').slice(0, 3);
 
 /**
+ * Guide Dirigeant·e, fin de B1 (décision « 80- B ») : les 2 membres fictifs de la campagne.
+ * @returns {Array<{ documentId: string; firstname: string; lastname: string }>} Profils.
+ */
+export const exampleCampaignMembers = () => getSimulationRoster('football').slice(0, 2);
+
+/**
  * Guide Dirigeant·e, M4 : la carte d'une demande pour rejoindre le club, fausse et dite fausse.
  * Sans `requestId` ni `requesterId` : rien ne peut partir, et « Voir le profil » ne s'affiche pas.
  * @param {{ coachFirstName?: string }} [context] - Prénom du coach ajouté à M2 (décision 10).

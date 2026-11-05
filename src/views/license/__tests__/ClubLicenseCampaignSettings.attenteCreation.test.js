@@ -389,6 +389,11 @@ describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un'
 /** Étape du guide lue par l'écran. */
 let mockTour = {};
 jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+const mockCampagneExemple = () => null;
+jest.mock('@/components/molecules/tour/TourCampagneExemple', () => ({
+  __esModule: true,
+  get default() { return mockCampagneExemple; },
+}));
 
 describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', () => {
   /** @type {any[]} */
@@ -420,6 +425,27 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
     expect(uploadLicenseDocumentRequestTemplate).not.toHaveBeenCalled();
     expect(upsertLicenseDocumentRequest).not.toHaveBeenCalled();
     expect(cles()).toContain('licenseCampaign.open.example');
+  });
+
+  it('« 80- B » : à b1-camp, la campagne d exemple remplace le récap, rien ne part', async () => {
+    mockTour = SIMULATION;
+    const arbre = await monterSurLaDerniereEtape();
+    mockTour = {
+      currentStep: { campaignExample: true, simulatesCampaign: true },
+      tourStatus: 'active',
+    };
+    await act(async () => {
+      arbre.update(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { campaign: campagneDeDepart, clubId: 'club-T03' } }}
+        />,
+      );
+    });
+    expect(arbre.root.findAllByType(mockCampagneExemple)).toHaveLength(1);
+    expect(arbre.root.findByType(mockCampagneExemple).props.name).toBeTruthy();
+    expect(mockJournalReseau).toEqual([]);
+    arbre.unmount();
   });
 
   it('guide en pause ou hors guide : la vraie campagne part, comme avant', async () => {

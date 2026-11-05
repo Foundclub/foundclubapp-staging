@@ -295,6 +295,11 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 /** Étape du guide lue par l'écran. */
 let mockTour = {};
 jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+const mockAnnonceExemple = () => null;
+jest.mock('@/components/molecules/tour/TourAnnonceExemple', () => ({
+  __esModule: true,
+  get default() { return mockAnnonceExemple; },
+}));
 
 describe('Guide Dirigeant·e, B4 : « Publier » ne part pas pendant le bonus', () => {
   /** @type {any[]} */
@@ -345,6 +350,24 @@ describe('Guide Dirigeant·e, B4 : « Publier » ne part pas pendant le bonus', 
     mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'active' };
     monterLeRecap();
     expect(mockProprietesEtape[mockProprietesEtape.length - 1].isNextDisabled).toBe(false);
+  });
+
+  it('« 80- B » : à b4-cand, l annonce d exemple remplace le récap, et rien ne part', () => {
+    mockTour = { currentStep: { adExample: true, simulatesAd: true }, tourStatus: 'active' };
+    mockCreerAnnonce.mockClear();
+    monterLeRecap();
+    const ecran = arbre.root.findByType(mockAnnonceExemple);
+    expect(ecran.props.positionLabel).toBe('Gardien');
+    expect(ecran.props.teamName).toBe('U17');
+    expect(mockProprietesEtape).toHaveLength(0);
+    expect(mockCreerAnnonce).not.toHaveBeenCalled();
+  });
+
+  it('« 80- B » : guide en pause sur b4-cand, le vrai récap revient', () => {
+    mockTour = { currentStep: { adExample: true, simulatesAd: true }, tourStatus: 'paused' };
+    monterLeRecap();
+    expect(arbre.root.findAllByType(mockAnnonceExemple)).toHaveLength(0);
+    expect(mockProprietesEtape.length).toBeGreaterThan(0);
   });
 
   it('hors guide : la vraie publication', async () => {

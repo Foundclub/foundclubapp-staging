@@ -29,6 +29,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourCampagneExemple from '@/components/molecules/tour/TourCampagneExemple';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -4320,6 +4321,18 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           />
         </View>
       </View>
+    );
+  }
+
+  // Guide Dirigeant·e, fin de B1 (« 80- B ») : la campagne d'exemple, le temps de l'étape.
+  if (isCampaignSimulated && tourStep?.campaignExample) {
+    return (
+      <TourCampagneExemple
+        amountCents={euroToCents(amount)}
+        currency={currency}
+        name={name}
+        navigation={navigation}
+      />
     );
   }
 

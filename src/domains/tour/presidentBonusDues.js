@@ -1,5 +1,4 @@
 import { homeTarget, WIZARD } from '@/domains/tour/guideCommon';
-import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 import t from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -13,8 +12,10 @@ import { RouteNames } from '@/navigation/routeNames';
  *
  * ponytail: les feuilles Tarif, Échéancier et Cadence restent libres, sans bulle par champ : les
  * bulles de c2, c3 et c5 les nomment. Sortie : des `subGuides` si la recette le demande.
- * ponytail: pas de campagne d'exemple (décision 8-A) ; `stopBonusAtRecap` garde la place de la
- * décision.
+ *
+ * Décision « 80- B » : « Ouvrir la campagne » mène à la campagne d'exemple. `campaignExample` la
+ * met à la place du récap (`TourCampagneExemple`) ; l'alerte native du pack, que la bulle ne
+ * recouvre pas, devient la bulle `b1-open`.
  */
 
 const FROM = 'b1-card';
@@ -138,23 +139,33 @@ export const B1_STEPS = [
       { key: 'licenseCampaign.open.example', type: 'interaction' },
       ...toOtherScreens('c6'),
     ],
-    get completesMission() { return !PRESIDENT_GUIDE_SETTINGS.stopBonusAtRecap; },
     listScrolls: true,
   })),
   {
-    // Décision 8-A : l'écran ne bouge pas, la bulle dit la suite de la vraie campagne.
     bubblePlacement: 'top',
+    id: 'b1-open',
+    missionId: 'president_b1',
+    get nextLabel() { return t('ok', 'OK'); },
+    resumeFrom: FROM,
+    simulatesCampaign: true,
+    get text() {
+      return t('b1-open', 'Ta campagne est ouverte : les membres concernés sont ajoutés '
+        + 'automatiquement.');
+    },
+    veil: false,
+  },
+  {
+    campaignExample: true,
     completesMission: true,
-    id: 'c-stop',
+    id: 'b1-camp',
     missionId: 'president_b1',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: FROM,
     simulatesCampaign: true,
+    targets: ['camp-list', 'camp-relance'],
     get text() {
-      return t('c-stop', 'Rien n’est parti. Une vraie campagne ajoute les membres concernés, et tu '
-        + 'suis ensuite qui a payé dans les cotisations.');
+      return t('b1-camp', 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » '
+        + 'pour lui envoyer un rappel.');
     },
-    veil: false,
-    when: () => PRESIDENT_GUIDE_SETTINGS.stopBonusAtRecap,
   },
 ];

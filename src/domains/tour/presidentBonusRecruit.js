@@ -1,5 +1,4 @@
 import { extendStep, homeTarget, wizardStep } from '@/domains/tour/guideCommon';
-import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 import t from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -10,10 +9,10 @@ import { RouteNames } from '@/navigation/routeNames';
  * `AdWizardValidation` existe selon l'annonce. Le poste du pack n'existe qu'au foot.
  *
  * Tout le bonus porte `simulatesAd` : tant qu'il est à l'écran, « Publier » ne part pas
- * (`AdWizardRecap`, témoin « 0 requête »). Le tunnel est le vrai, et son récap s'arrête là.
+ * (`AdWizardRecap`, témoin « 0 requête »). Le tunnel est le vrai.
  *
- * ponytail: pas d'annonce d'exemple « en ligne » (décision 8-A) ; `stopBonusAtRecap` garde la place
- * de la décision. Sortie : une fin d'exemple si Adel choisit B, soit un lot de plus.
+ * Décision « 80- B » : « Publier » mène à l'annonce d'exemple EN LIGNE. `adExample` la met à la
+ * place du récap (`TourAnnonceExemple`).
  */
 
 const FROM = 'b4-card';
@@ -113,7 +112,6 @@ export const B4_STEPS = [
     advanceOn: { key: 'ad.publish.example', type: 'interaction' },
     bubblePlacement: 'top',
     bubbleSlot: true,
-    get completesMission() { return !PRESIDENT_GUIDE_SETTINGS.stopBonusAtRecap; },
     id: 'a7',
     listScrolls: true,
     missionId: 'president_b4',
@@ -125,19 +123,18 @@ export const B4_STEPS = [
     },
   },
   {
-    // Décision 8-A : l'écran ne bouge pas, la bulle dit la suite de la vraie annonce.
-    bubblePlacement: 'top',
+    adExample: true,
     completesMission: true,
-    id: 'a-stop',
+    id: 'b4-cand',
+    lookOnly: true,
     missionId: 'president_b4',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: FROM,
     simulatesAd: true,
+    targets: ['ad-cand', 'ad-poster'],
     get text() {
-      return t('a-stop', 'Rien n’est parti. Une vraie annonce passe en ligne, et les candidatures '
-        + 'arrivent sur sa fiche, avec une affiche à partager.');
+      return t('b4-cand', 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et '
+        + 'tu peux en faire une affiche à partager.');
     },
-    veil: false,
-    when: () => PRESIDENT_GUIDE_SETTINGS.stopBonusAtRecap,
   },
 ];

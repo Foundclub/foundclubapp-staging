@@ -282,7 +282,7 @@ describe('les bonus de bout en bout', () => {
     ].forEach(route);
     expect(stepId()).toBe('a7');
     touch('ad.publish.example');
-    expect(stepId()).toBe('a-stop');
+    expect(stepId()).toBe('b4-cand');
     next();
     expect(tour.missionStatus.president_b4).toBe('done');
   });
