@@ -88,6 +88,7 @@ export const M4_STEPS = [
   },
   {
     id: 'm4-card2',
+    lookOnly: true,
     missionId: 'president_m4',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: 'm4-card',

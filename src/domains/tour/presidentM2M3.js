@@ -230,6 +230,7 @@ const M2_STEPS = [
       get text() { return t('m2-visit', 'Tes coachs s’ajoutent depuis « Staff ». Ouvre-le.'); },
     },
     id: 'm2-visit-add',
+    lookOnly: true,
     missionId: 'president_m2',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: 'm2-visit',

@@ -411,18 +411,21 @@ function TourGuideLayer() {
   const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
   // Décision d'Adel 4- A : l'en-tête ancré (Retour, Fermer) reste visible et
   // touchable sous le voile, sans cadre ; ce n'est pas la cible de l'étape.
-  const passThrough = [
-    ...cutouts,
-    ...HEADER_IDS.map((id) => rects[id])
-      .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
-      .map((rect) => toCutout(rect, width, height)),
-  ];
+  const headerHoles = HEADER_IDS.map((id) => rects[id])
+    .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
+    .map((rect) => toCutout(rect, width, height));
+  const passThrough = [...cutouts, ...headerHoles];
   // FIN-GUIDE, point 3 : petit écran, le champ d'un tunnel peut être sous le bord de la liste ; le
   // voile ne doit pas empêcher de l'y chercher. La liste défile, elle reste sous le voile.
   const listScrolls = currentStep?.bubbleSlot || currentStep?.listScrolls;
+  // L10 (05/11, m1-info) : une étape à lire (`lookOnly`) montre sa cible sans la laisser toucher ;
+  // le doigt parti de la carte faisait monter la liste, et le voile tombait.
+  // ponytail: une cible à toucher garde son trou, donc un glissement parti d'elle fait défiler : le
+  // voile tombe et la bulle donne le sens. Sortie : bloquer le défilement de chaque écran ancré.
+  const reachable = currentStep?.lookOnly ? headerHoles : passThrough;
   const touchable = listScrolls && rects[WIZARD_LIST_ID]
-    ? [...passThrough, toCutout(rects[WIZARD_LIST_ID], width, height)]
-    : passThrough;
+    ? [...reachable, toCutout(rects[WIZARD_LIST_ID], width, height)]
+    : reachable;
   const primary = cutouts[0] || null;
   // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
   // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une

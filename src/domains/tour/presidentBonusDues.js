@@ -75,6 +75,7 @@ export const B1_STEPS = [
   },
   {
     id: 'b1-sum',
+    lookOnly: true,
     missionId: 'president_b1',
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: FROM,

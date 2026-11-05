@@ -59,6 +59,7 @@ export const B2_STEPS = [
   },
   {
     id: 'b2-info',
+    lookOnly: true,
     missionId: 'president_b2',
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'b2-dock',

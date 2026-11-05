@@ -72,6 +72,7 @@ const PART_INFOS = [
   },
   {
     id: 'm1-info',
+    lookOnly: true,
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
     get nextLabel() { return t('next', 'Suivant'); },
@@ -128,6 +129,7 @@ const PART_INFOS = [
 const PART_PARTNERS = [
   {
     id: 'm1-partners-visit',
+    lookOnly: true,
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
     get nextLabel() { return t('next', 'Suivant'); },
@@ -206,6 +208,7 @@ const PART_PARTNERS = [
 const PART_FACILITIES = [
   {
     id: 'm1-fac-visit',
+    lookOnly: true,
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
     get nextLabel() { return t('next', 'Suivant'); },
