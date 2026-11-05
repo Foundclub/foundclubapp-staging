@@ -267,7 +267,7 @@ describe('sans offre Club (Adel « 77- C » : le premier de chaque est offert)',
     expect(tour.currentStep.targetsFor(tour)).toEqual(['facility.plan.f-9']);
   });
 
-  it('l’installation offerte déjà là : on le dit AVANT le formulaire, et la partie se passe', () => {
+  it('l’installation offerte déjà là : on le dit AVANT le formulaire, la partie se passe', () => {
     start();
     playPartOne();
     act(() => { tour.skipSubMission(); });

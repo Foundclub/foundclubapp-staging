@@ -8,10 +8,10 @@ import { RouteNames } from '@/navigation/routeNames';
  * Guide Dirigeant·e, M1 « Gérer ton club » (pack `05_GUIDE_D_DIRIGEANT.md`).
  * Cinq parties, ① à ⑤, qui repartent de la fiche du club.
  *
- * Écarts au pack, tranchés le 05/11 : ②③④ se jouent pour tous, car la première installation et le
- * premier partenaire sont offerts (Adel « 77- C ») ; ② se passe (décision 4) ; la bulle d'adresse se
- * dit AVANT d'ouvrir la feuille et se retire dedans, donc `m1-ffsearch` et `m1-ffsel` n'existent pas
- * (§3 bis, 1).
+ * Écarts au pack, tranchés le 05/11 : ②③④ se jouent pour tous, car la première installation
+ * et le premier partenaire sont offerts (Adel « 77- C ») ; ② se passe (décision 4) ; la bulle
+ * d'adresse se dit AVANT d'ouvrir la feuille et se retire dedans, donc `m1-ffsearch` et
+ * `m1-ffsel` n'existent pas (§3 bis, 1).
  */
 
 const MISSION_ID = 'president_m1';

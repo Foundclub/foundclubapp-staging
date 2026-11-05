@@ -1,11 +1,11 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
 import WeekendResultsCard from '@/views/multisportClub/components/WeekendResultsCard';
-
-import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 
